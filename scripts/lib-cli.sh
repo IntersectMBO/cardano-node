@@ -99,7 +99,7 @@ issue_genesis_utxo_expenditure() {
                 --tx                  "${tx}"
                 --wallet-key          "${from_key}"
                 --rich-addr-from      "\"${from_addr}\""
-                --txout               "(\"${to_addr}\",${lovelace})"
+                --txout               "'(\"${to_addr}\",${lovelace})'"
         )
         run_quiet cardano-cli cardano-cli "${ARGS[@]}"
 }
@@ -115,8 +115,8 @@ issue_utxo_expenditure() {
                 --config              "${config}"
                 --tx                  "${tx}"
                 --wallet-key          "${from_key}"
-                --txin                "(\"${txin}\",${txinoutputindex})"
-                --txout               "(\"${to_addr}\",${lovelace})"
+                --txin                "'(\"${txin}\",${txinoutputindex})'"
+                --txout               "'(\"${to_addr}\",${lovelace})'"
         )
         run_quiet cardano-cli cardano-cli "${ARGS[@]}"
 }
