@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX

@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Tx
   ( ByronTxError(..)

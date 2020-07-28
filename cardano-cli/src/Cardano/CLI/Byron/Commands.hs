@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Cardano.CLI.Byron.Commands
   ( ByronCommand (..)
