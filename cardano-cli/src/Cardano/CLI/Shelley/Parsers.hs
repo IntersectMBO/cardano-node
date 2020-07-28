@@ -25,7 +25,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
-import           Options.Applicative (Parser)
+import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 
 import           Network.Socket (PortNumber)
@@ -44,9 +44,8 @@ import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)
 
 
-import           Cardano.Config.Parsers (parseNodeAddress)
-import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile (..),
-                     UpdateProposalFile (..))
+import           Cardano.Config.Types (CertificateFile (..), NodeAddress(..),
+                   NodeHostAddress(..), SigningKeyFile(..), UpdateProposalFile (..))
 
 import           Cardano.CLI.Shelley.Commands
 
@@ -1947,6 +1946,31 @@ pProtocolVersion =
                     \ (old software canvalidate but not produce new blocks)."
         )
 
+parseNodeAddress :: Parser NodeAddress
+parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
+
+parseNodeHostAddress :: String -> Either String NodeHostAddress
+parseNodeHostAddress str =
+   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostAddress . Just) $ readMaybe str
+
+
+parseHostAddr :: Parser NodeHostAddress
+parseHostAddr =
+    option (eitherReader parseNodeHostAddress) (
+          long "host-addr"
+       <> metavar "HOST-NAME"
+       <> help "Optionally limit node to one ipv6 or ipv4 address"
+       <> value (NodeHostAddress Nothing)
+    )
+
+parsePort :: Parser PortNumber
+parsePort =
+    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+          long "port"
+       <> metavar "PORT"
+       <> help "The port number"
+       <> value 0 -- Use an ephemeral port
+    )
 
 --
 -- Shelley CLI flag field parsers

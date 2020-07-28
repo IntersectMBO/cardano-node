@@ -24,7 +24,6 @@ library
 
   exposed-modules:     Cardano.Config.Git.Rev
                        Cardano.Config.Git.RevFromGit
-                       Cardano.Config.Parsers
                        Cardano.Config.Types
 
   build-depends:       base >=4.12 && <5

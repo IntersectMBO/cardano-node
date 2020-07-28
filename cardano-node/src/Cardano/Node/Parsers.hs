@@ -6,17 +6,18 @@ module Cardano.Node.Parsers
   ) where
 
 import           Cardano.Prelude hiding (option)
+import           Prelude (String)
 
-import           Options.Applicative
-import           System.Posix.Types (Fd (..))
+import           Network.Socket (PortNumber)
+import           Options.Applicative hiding (str)
+import           System.Posix.Types (Fd(..))
 
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 
-import           Cardano.Config.Parsers (parseConfigFile, parseDbPath, parseNodeAddress,
-                     parseSocketPath)
 import           Cardano.Config.Types (DbFile (..), NodeProtocolMode (..), ProtocolFilepaths (..),
                      TopologyFile (..))
 import           Cardano.Node.Types
+import           Cardano.Config.Types (NodeAddress(..), NodeHostAddress(..), SocketPath(..))
 
 nodeCLIParser  :: Parser NodeCLI
 nodeCLIParser = nodeRealProtocolModeParser <|> nodeMockProtocolModeParser
@@ -119,6 +120,58 @@ nodeRealParser = do
     , shutdownIPC
     , shutdownOnSlotSynced
     }
+
+parseSocketPath :: Text -> Parser SocketPath
+parseSocketPath helpMessage =
+  SocketPath <$> strOption
+    ( long "socket-path"
+        <> (help $ toS helpMessage)
+        <> completer (bashCompleter "file")
+        <> metavar "FILEPATH"
+    )
+
+parseNodeAddress :: Parser NodeAddress
+parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
+
+parseHostAddr :: Parser NodeHostAddress
+parseHostAddr =
+    option (eitherReader parseNodeHostAddress) (
+          long "host-addr"
+       <> metavar "HOST-NAME"
+       <> help "Optionally limit node to one ipv6 or ipv4 address"
+       <> value (NodeHostAddress Nothing)
+    )
+
+parseNodeHostAddress :: String -> Either String NodeHostAddress
+parseNodeHostAddress str =
+   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostAddress . Just) $ readMaybe str
+
+parsePort :: Parser PortNumber
+parsePort =
+    option ((fromIntegral :: Int -> PortNumber) <$> auto) (
+          long "port"
+       <> metavar "PORT"
+       <> help "The port number"
+       <> value 0 -- Use an ephemeral port
+    )
+
+parseConfigFile :: Parser FilePath
+parseConfigFile =
+  strOption
+    ( long "config"
+    <> metavar "NODE-CONFIGURATION"
+    <> help "Configuration file for the cardano-node"
+    <> completer (bashCompleter "file")
+    )
+
+parseDbPath :: Parser FilePath
+parseDbPath =
+  strOption
+    ( long "database-path"
+    <> metavar "FILEPATH"
+    <> help "Directory where the state is stored."
+    <> completer (bashCompleter "file")
+    )
 
 parseValidateDB :: Parser Bool
 parseValidateDB =

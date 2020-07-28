@@ -23,7 +23,6 @@ import           Cardano.Api.Protocol.Shelley
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Typed (NetworkMagic (..))
 import           Cardano.Chairman (chairmanTest)
-import           Cardano.Config.Parsers (parseConfigFile, parseSocketPath)
 import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.Node.Types (ConfigYamlFilePath (..), Protocol (..), ncProtocol,
                      parseNodeConfigurationFP)
@@ -86,6 +85,24 @@ data ChairmanArgs = ChairmanArgs {
     , caSecurityParam :: !SecurityParam
     , caNetworkMagic :: !NetworkMagic
     }
+
+parseConfigFile :: Parser FilePath
+parseConfigFile =
+  strOption
+    ( long "config"
+    <> metavar "NODE-CONFIGURATION"
+    <> help "Configuration file for the cardano-node"
+    <> completer (bashCompleter "file")
+    )
+
+parseSocketPath :: Text -> Parser SocketPath
+parseSocketPath helpMessage =
+  SocketPath <$> strOption
+    ( long "socket-path"
+        <> (help $ toS helpMessage)
+        <> completer (bashCompleter "file")
+        <> metavar "FILEPATH"
+    )
 
 parseRunningTime :: Parser DiffTime
 parseRunningTime =
