@@ -55,8 +55,8 @@ cardano-node
    :titlesonly:
    :hidden:
 
+   reference/shelley-genesis
+   reference/configuring-a-node-using-yaml
    reference/cardano-node-cli-reference
    reference/building-and-signing-tx
    reference/diagnosing-transactions
-   reference/shelley-genesis
-   reference/configuring-a-node-using-yaml   

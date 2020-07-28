@@ -9,10 +9,10 @@ he can only use that to sign blocks _from now on_, but not blocks dating from _e
 A KES key can only evolve for a certain number of periods and becomes useless afterwards.
 This means that before that number of periods has passed, the node operator has to generate a new KES key pair, issue a new operational node certificate with that new key pair and restart the node with the new certificate.
 
-To find out how long one period is and for how long a key can evolve, we can look into the _genesis file_. If that file is called `shelley_testnet-genesis.json`,
+To find out how long one period is and for how long a key can evolve, we can look into the _genesis file_. If that file is called `mainnet-shelley-genesis.json`,
 we can type
 
-    cat shelley_testnet-genesis.json | grep KES
+    cat mainnet-shelley-genesis.json | grep KES
 
     > "slotsPerKESPeriod": 3600,
     > "maxKESEvolutions": 120,
@@ -23,7 +23,7 @@ Before we can create an operational certificate for our node, we need to figure 
 
 We check the current tip of the blockchain:
 
-    cardano-cli shelley query tip --testnet-magic 42
+    cardano-cli shelley query tip --mainnet
 
     {
     "blockNo": 36914,
@@ -44,5 +44,3 @@ With this we are able to generate an operational certificate for our stake pool:
     --operational-certificate-issue-counter cold.counter \
     --kes-period 251 \
     --out-file node.cert
-
-**`--testnet-magic 42` identifies the testnets, for mainnet use `--mainnet` **

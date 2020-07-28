@@ -62,12 +62,12 @@ Create a directory on your local machine to store your keys:
 
 We need to know the slots per KES period, we get it from the genesis file:
 
-    cat shelley_testnet-genesis.json | grep KESPeriod
+    cat mainnet-shelley-genesis.json | grep KESPeriod
     > "slotsPerKESPeriod": 3600,
 
 Then we need the current tip of the blockchain:
 
-    cardano-cli shelley query tip --testnet-magic 42
+    cardano-cli shelley query tip --mainnet
     {
     "blockNo": 36929,
     "headerHash": "44c2a2be237ea485c15bf2a50c12b4d2aabe6d4233cb1b2131efc080615a17d0",

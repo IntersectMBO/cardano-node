@@ -14,14 +14,14 @@ Creating a transaction requires various steps:
 Get the protocol parameters and save them to `protocol.json` with:
 
    cardano-cli shelley query protocol-parameters \
-   --testnet-magic 42 \
+   --mainnet \
    --out-file protocol.json
 
 #### Get the transaction hash and index of the **UTXO** to spend:
 
     cardano-cli shelley query utxo \
     --address $(cat payment.addr) \
-    --testnet-magic 42
+    --mainnet
 
 ```
                             TxHash                                 TxIx        Lovelace
@@ -58,7 +58,7 @@ Note that to calculate the fee you need to include the draft transaction
     --tx-out-count 2 \
     --witness-count 1 \
     --byron-witness-count 0 \
-    --testnet-magic 42 \
+    --mainnet \
     --protocol-params-file protocol.json
 
     > 167965
@@ -80,7 +80,7 @@ To build the transaction we need to specify the **TTL (Time to live)**, this is 
 
 Query the tip of the blockchain:
 
-    cardano-cli shelley query tip --testnet-magic 42
+    cardano-cli shelley query tip --mainnet
 
 Look for the value of `unSlotNo`
 
@@ -111,14 +111,14 @@ Sign the transaction with the signing key **payment.skey** and save the signed t
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
     --signing-key-file payment.skey \
-    --testnet-magic 42 \
+    --mainnet \
     --out-file tx.signed
 
 #### Submit the transaction
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
-    --testnet-magic 42
+    --mainnet
 
 #### Check the balances
 
@@ -126,7 +126,7 @@ We must give it some time to get incorporated into the blockchain, but eventuall
 
     cardano-cli shelley query utxo \
         --address $(cat payment.addr) \
-        --testnet-magic 42
+        --mainnet
 
     >                            TxHash                                 TxIx        Lovelace
     > ----------------------------------------------------------------------------------------
@@ -134,11 +134,11 @@ We must give it some time to get incorporated into the blockchain, but eventuall
 
     cardano-cli shelley query utxo \
         --address $(cat payment2.addr) \
-        --testnet-magic 42
+        --mainnet
 
     >                            TxHash                                 TxIx        Lovelace
     > ----------------------------------------------------------------------------------------
     > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     0         10000000
 
 
-**Note. `--testnet magic 42` identifies the testnets, for mainnet, use `--mainnet` instead.
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 42` instead. 
