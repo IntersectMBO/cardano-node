@@ -57,7 +57,7 @@ should be created offline, kept offline and only the verification keys shared.
 
 For a demo we're going to put all the keys together in once place
 
-To start, with we will set up our template directory:
+To start with, we will set up our template directory:
 ```
 $ cardano-cli shelley genesis create --genesis-dir example/
 ```
