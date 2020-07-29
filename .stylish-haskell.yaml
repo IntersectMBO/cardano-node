@@ -75,7 +75,7 @@ steps:
       #   >     (concat, foldl, foldr, head, init, last, length)
       #
       # Default: after_alias
-      list_align: new_line
+      list_align: with_module_name
 
 
       # Right-pad the module names to align imports in a group:
@@ -121,7 +121,7 @@ steps:
       #   >     )
       #
       # Default: inline
-      long_list_align: multiline
+      long_list_align: inline
 
       # Align empty list (importing instances)
       #
@@ -231,7 +231,7 @@ steps:
 # Set this to null to disable all line wrapping.
 #
 # Default: 80.
-columns: null
+columns: 100
 
 # By default, line endings are converted according to the OS. You can override
 # preferred format here.
@@ -286,4 +286,3 @@ language_extensions:
 #
 # Default: true
 cabal: true
-
