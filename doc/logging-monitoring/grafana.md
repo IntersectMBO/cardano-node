@@ -57,7 +57,7 @@ On the left panel open the Dashboards menu and go to manage:
 
 You can create a New Dashboard from scratch or import one of IOHK's dashboards. To import a dashboard, click on import
 
-Copy `cardano-application-dashboard-v2.json` from the [cardano-ops repository](chttps://raw.githubusercontent.com/input-output-hk/cardano-ops/ea161f35792e74b41efa749085ead64c901f784d/modules/grafana/cardano/cardano-application-dashboard-v2.json)
+Copy `cardano-application-dashboard-v2.json` from the [cardano-ops repository](https://raw.githubusercontent.com/input-output-hk/cardano-ops/ea161f35792e74b41efa749085ead64c901f784d/modules/grafana/cardano/cardano-application-dashboard-v2.json)
 
 and paste the json under `Import via panel json`
 
