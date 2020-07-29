@@ -15,7 +15,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyGenesisInitialTxIn :: Property
 golden_shelleyGenesisInitialTxIn = OP.propertyOnce $ do
-  OP.workspace "tmp/genesis-initial-txin" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
     goldenUtxoHashFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
     utxoHashFile <- OP.noteTempFile tempDir "utxo_hash"

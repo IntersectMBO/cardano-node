@@ -14,7 +14,7 @@ import qualified Test.OptParse as OP
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTextViewDecodeCbor :: Property
-golden_shelleyTextViewDecodeCbor = OP.propertyOnce $ OP.workspace "tmp/decode-cbor" $ \tempDir -> do
+golden_shelleyTextViewDecodeCbor = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
   unsignedTxFile <- OP.noteInputFile "test/Test/golden/shelley/tx/unsigned.tx"
   decodedTxtFile <- OP.noteTempFile tempDir "decoded.txt"
 

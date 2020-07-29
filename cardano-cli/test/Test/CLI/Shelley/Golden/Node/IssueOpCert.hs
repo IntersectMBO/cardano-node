@@ -15,7 +15,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyNodeIssueOpCert :: Property
 golden_shelleyNodeIssueOpCert = OP.propertyOnce $ do
-  OP.workspace "tmp/node-issue-op-cert" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     hotKesVerificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/kes_keys/verification_key"
     coldSigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_delegate_keys/signing_key"
     originalOperationalCertificateIssueCounterFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"

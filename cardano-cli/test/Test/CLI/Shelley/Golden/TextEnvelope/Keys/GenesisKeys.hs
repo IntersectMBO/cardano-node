@@ -11,16 +11,14 @@ import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. Check the TextEnvelope serialization format has not changed
 golden_shelleyGenesisKeys :: Property
-golden_shelleyGenesisKeys =
-  propertyOnce $ do
-
+golden_shelleyGenesisKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
     -- Reference keys
     let referenceVerKey = "test/Test/golden/shelley/keys/genesis_keys/verification_key"
         referenceSignKey = "test/Test/golden/shelley/keys/genesis_keys/signing_key"

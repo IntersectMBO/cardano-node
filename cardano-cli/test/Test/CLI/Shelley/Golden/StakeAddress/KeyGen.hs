@@ -14,7 +14,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyStakeAddressKeyGen :: Property
 golden_shelleyStakeAddressKeyGen = OP.propertyOnce $ do
-  OP.workspace "tmp/stake-address-key-gen" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     verificationKeyFile <- OP.noteTempFile tempDir "kes.vkey"
     signingKeyFile <- OP.noteTempFile tempDir "kes.skey"
 

@@ -13,7 +13,7 @@ import qualified Test.OptParse as OP
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionBuild :: Property
-golden_shelleyTransactionBuild = OP.propertyOnce $ OP.workspace "tmp/transaction-build" $ \tempDir -> do
+golden_shelleyTransactionBuild = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
   -- Use the same (faked) TxIn for both transactions.
   let txIn = "2392d2b1200b5139fe555c81261697b29a8ccf561c5c783d46e78a479d977053#0"
 

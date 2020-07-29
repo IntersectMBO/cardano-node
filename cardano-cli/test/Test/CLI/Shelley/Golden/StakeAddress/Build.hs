@@ -15,7 +15,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyStakeAddressBuild :: Property
 golden_shelleyStakeAddressBuild = OP.propertyOnce $ do
-  OP.workspace "tmp/stake-address-build" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
     rewardAddressFile <- OP.noteTempFile tempDir "reward-address.hex"
 

@@ -14,7 +14,7 @@ import qualified Test.OptParse as OP
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionCalculateMinFee :: Property
-golden_shelleyTransactionCalculateMinFee = OP.propertyOnce $ OP.workspace "tmp/transaction-calculate-min-fee" $ \tempDir -> do
+golden_shelleyTransactionCalculateMinFee = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
   protocolParamsJsonFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-calculate-min-fee/protocol-params.json"
   txBodyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-calculate-min-fee/tx-body-file"
   minFeeTxtFile <- OP.noteTempFile tempDir "min-fee.txt"

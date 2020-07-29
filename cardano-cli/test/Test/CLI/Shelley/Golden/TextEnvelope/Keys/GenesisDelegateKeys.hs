@@ -11,16 +11,14 @@ import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 
 -- | 1. Generate a key pair & operational certificate counter file
 --   2. Check for the existence of the key pair & counter file
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyGenesisDelegateKeys :: Property
-golden_shelleyGenesisDelegateKeys =
-  propertyOnce $ do
-
+golden_shelleyGenesisDelegateKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
     -- Reference keys
     let referenceVerKey = "test/Test/golden/shelley/keys/genesis_delegate_keys/verification_key"
         referenceSignKey = "test/Test/golden/shelley/keys/genesis_delegate_keys/signing_key"

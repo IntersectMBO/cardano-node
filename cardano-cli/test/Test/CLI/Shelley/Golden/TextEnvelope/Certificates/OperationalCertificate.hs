@@ -11,16 +11,14 @@ import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 -- | 1. Create KES key pair.
 --   2. Create cold keys.
 --   3. Create operational certificate.
 --   4. Check the TextEnvelope serialization format has not changed.
 golden_shelleyOperationalCertificate :: Property
-golden_shelleyOperationalCertificate =
-  propertyOnce $ do
-
+golden_shelleyOperationalCertificate = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
     -- Reference keys
     let referenceOperationalCertificate = "test/Test/golden/shelley/certificates/operational_certificate"
 

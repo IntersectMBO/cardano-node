@@ -11,15 +11,13 @@ import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 -- | 1. Generate a stake verification key
 --   2. Create a stake address registration certificate
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyStakeAddressCertificates :: Property
-golden_shelleyStakeAddressCertificates =
-  propertyOnce $ do
-
+golden_shelleyStakeAddressCertificates = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
     -- Reference files
     let referenceRegistrationCertificate = "test/Test/golden/shelley/certificates/stake_address_registration_certificate"
         referenceDeregistrationCertificate = "test/Test/golden/shelley/certificates/stake_address_deregistration_certificate"

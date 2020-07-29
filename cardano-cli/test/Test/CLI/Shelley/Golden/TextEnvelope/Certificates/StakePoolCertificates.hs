@@ -11,7 +11,7 @@ import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 -- | 1. Create cold key pair.
 --   2. Create stake key pair.
@@ -20,9 +20,7 @@ import           Test.OptParse
 --   5. Create stake pool deregistration/retirement certificate.
 --   6. Check the TextEnvelope serialization format has not changed.
 golden_shelleyStakePoolCertificates :: Property
-golden_shelleyStakePoolCertificates =
-  propertyOnce $ do
-
+golden_shelleyStakePoolCertificates = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
     -- Reference files
     let referenceRegistrationCertificate = "test/Test/golden/shelley/certificates/stake_pool_registration_certificate"
         referenceDeregistrationCertificate = "test/Test/golden/shelley/certificates/stake_pool_deregistration_certificate"
