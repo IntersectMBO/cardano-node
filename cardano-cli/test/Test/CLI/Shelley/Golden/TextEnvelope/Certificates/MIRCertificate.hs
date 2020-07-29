@@ -11,14 +11,13 @@ import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 -- | 1. Generate stake key pair
 --   2. Create MIR certificate
 --   s. Check the TextEnvelope serialization format has not changed.
 golden_shelleyMIRCertificate :: Property
-golden_shelleyMIRCertificate =
-  propertyOnce $ do
+golden_shelleyMIRCertificate = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
     -- Reference keys
     let referenceMIRCertificate = "test/Test/golden/shelley/certificates/mir_certificate"
 

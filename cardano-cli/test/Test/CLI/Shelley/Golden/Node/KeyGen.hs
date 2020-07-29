@@ -14,7 +14,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyNodeKeyGen :: Property
 golden_shelleyNodeKeyGen = OP.propertyOnce $ do
-  OP.workspace "tmp/node-key-gen" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     verificationKeyFile <- OP.noteTempFile tempDir "key-gen.vkey"
     signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
     opCertCounterFile <- OP.noteTempFile tempDir "op-cert.counter"

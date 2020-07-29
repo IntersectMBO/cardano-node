@@ -16,7 +16,7 @@ import qualified Test.OptParse as OP
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyAddressKeyGen :: Property
-golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.workspace "tmp/address-key-gen" $ \tempDir -> do
+golden_shelleyAddressKeyGen = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
   addressVKeyFile <- OP.noteTempFile tempDir "address.vkey"
   addressSKeyFile <- OP.noteTempFile tempDir "address.skey"
 

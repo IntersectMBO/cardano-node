@@ -9,12 +9,10 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 golden_stakePoolMetadataHash :: Property
-golden_stakePoolMetadataHash =
-    propertyOnce $ do
-
+golden_stakePoolMetadataHash = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
       let referenceStakePoolMetaData = "test/Test/golden/shelley/metadata/stake_pool_metadata_hash"
 
 

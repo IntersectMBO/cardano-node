@@ -14,7 +14,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyGenesisKeyGenDelegate :: Property
 golden_shelleyGenesisKeyGenDelegate = OP.propertyOnce $ do
-  OP.workspace "tmp/genesis-key-gen-delegate" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     verificationKeyFile <- OP.noteTempFile tempDir "key-gen.vkey"
     signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
     operationalCertificateIssueCounterFile <- OP.noteTempFile tempDir "op-cert.counter"

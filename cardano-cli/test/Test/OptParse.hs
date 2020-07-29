@@ -14,6 +14,7 @@ module Test.OptParse
   , formatIso8601
   , propertyOnce
   , workspace
+  , moduleWorkspace
   , withSnd
   , newFileWithContents
   , noteEval
@@ -40,9 +41,11 @@ import           Cardano.Api.Typed (FileError, displayError, readTextEnvelopeOfT
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (ClientCommand (..), renderClientCommandError, runClientCommand)
 
+import qualified Data.Maybe as M
 import qualified Data.List as L
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
+import qualified GHC.Stack as GHC
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.Exit as IO
@@ -232,6 +235,19 @@ workspace prefixPath f = withFrozenCallStack $ do
   H.annotate $ "Workspace: " <> cardanoCliPath <> "/" <> ws
   f ws
   liftIO $ IO.removeDirectoryRecursive ws
+
+-- | Create a workspace directory which will exist for at least the duration of
+-- the supplied block.
+--
+-- The directory will have the prefix as "$prefixPath/$moduleName" but contain a generated random
+-- suffix to prevent interference between tests
+--
+-- The directory will be deleted if the block succeeds, but left behind if
+-- the block fails.
+moduleWorkspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
+moduleWorkspace prefixPath f = withFrozenCallStack $ do
+  let srcModule = M.fromMaybe "UnknownModule" (fmap (GHC.srcLocModule . snd) (M.listToMaybe (getCallStack callStack)))
+  workspace (prefixPath <> "/" <> srcModule) f
 
 -- | Return the supply value with the result of the supplied function as a tuple
 withSnd :: (a -> b) -> a -> (a, b)

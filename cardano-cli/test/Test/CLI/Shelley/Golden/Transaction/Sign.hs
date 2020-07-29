@@ -13,7 +13,7 @@ import qualified Test.OptParse as OP
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionSign :: Property
-golden_shelleyTransactionSign = OP.propertyOnce $ OP.workspace "tmp/transaction-calculate-min-fee" $ \tempDir -> do
+golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
   txBodyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/tx-body-file"
   initialUtxo1SigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/initial-utxo1.skey"
   initialUtxo2SigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/initial-utxo2.skey"

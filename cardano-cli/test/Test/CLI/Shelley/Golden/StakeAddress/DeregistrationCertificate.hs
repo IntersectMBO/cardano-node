@@ -14,7 +14,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyStakeAddressDeregistrationCertificate :: Property
 golden_shelleyStakeAddressDeregistrationCertificate = OP.propertyOnce $ do
-  OP.workspace "tmp/stake-address-deregistration-certificate" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
     deregistrationCertFile <- OP.noteTempFile tempDir "deregistrationCertFile"
 

@@ -11,15 +11,14 @@ import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 
-import           Test.OptParse
+import           Test.OptParse as OP
 
 -- | 1. Generate a key pair
 --   2. Create tx body
 --   3. Sign tx body
 --   4. Check the TextEnvelope serialization format has not changed.
 golden_shelleyTx :: Property
-golden_shelleyTx =
-  propertyOnce $ do
+golden_shelleyTx = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
     -- Reference keys
     let referenceTx = "test/Test/golden/shelley/tx/tx"
 

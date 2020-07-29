@@ -15,7 +15,7 @@ import qualified Test.OptParse as OP
 
 golden_shelleyGenesisKeyHash :: Property
 golden_shelleyGenesisKeyHash = OP.propertyOnce $ do
-  OP.workspace "tmp/genesis-key-hash" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     referenceVerificationKey <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_keys/verification_key"
     goldenGenesisVerificationKeyHashFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_keys/verification_key.key-hash"
     genesisVerificationKeyHashFile <- OP.noteTempFile tempDir "key-hash.hex"

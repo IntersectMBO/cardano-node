@@ -71,7 +71,7 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
 
 golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = OP.propertyOnce $ do
-  OP.workspace "tmp/genesis-create" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     sourceGenesisSpecFile <- OP.noteInputFile "test/Test/golden/shelley/genesis/genesis.spec.json"
     genesisSpecFile <- OP.noteTempFile tempDir "genesis.spec.json"
 
@@ -146,7 +146,7 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
       OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
       OP.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
-  OP.workspace "tmp/genesis-create" $ \tempDir -> do
+  OP.moduleWorkspace "tmp" $ \tempDir -> do
     let genesisFile = tempDir <> "/genesis.json"
 
     fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
