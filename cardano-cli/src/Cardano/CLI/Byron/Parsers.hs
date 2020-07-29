@@ -51,13 +51,13 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
 import           Cardano.Chain.UTxO (TxId, TxIn (..), TxOut (..))
 
 import qualified Cardano.Api.Typed as Typed
-import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
+import           Cardano.CLI.Types
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =
@@ -199,9 +199,7 @@ parseKeyRelatedValues =
             $ Keygen
                 <$> parseCardanoEra
                 <*> parseNewSigningKeyFile "secret"
-                <*> parseFlag' GetPassword EmptyPassword
-                      "no-password"
-                      "Disable password protection."
+                <*> parsePassword
         , command'
             "to-verification"
             "Extract a verification key in its base64 form."
@@ -760,6 +758,9 @@ parseGenesisFile :: String -> Parser GenesisFile
 parseGenesisFile opt =
   GenesisFile <$> parseFilePath opt "Genesis JSON file."
 
-parseFlag' :: a -> a -> String -> String -> Parser a
-parseFlag' def active optname desc =
-  flag def active $ long optname <> help desc
+parsePassword :: Parser PasswordRequirement
+parsePassword =
+  flag GetPassword EmptyPassword
+    (  long "no-password"
+    <> help "Disable password protection."
+    )

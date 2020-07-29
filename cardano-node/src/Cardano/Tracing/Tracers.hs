@@ -16,7 +16,6 @@
 module Cardano.Tracing.Tracers
   ( BlockchainCounters
   , Tracers (..)
-  , TraceConstraints
   , TraceOptions
   , mkTracers
   , nullTracers
@@ -81,11 +80,11 @@ import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
-import           Cardano.Config.Types (HasKESMetricsData (..), KESMetricsData (..),
-                     MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
 import           Cardano.Node.TraceConfig
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Kernel
+import           Cardano.Tracing.Metrics (HasKESMetricsData (..), KESMetricsData (..),
+                     MaxKESEvolutions (..), OperationalCertStartKESPeriod (..))
 import           Cardano.Tracing.MicroBenchmarking
 import           Cardano.Tracing.Queries
 

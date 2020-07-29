@@ -22,8 +22,6 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Config.Types
-
 import           Cardano.Api.Typed (NetworkId (..), toByronProtocolMagicId)
 import qualified Cardano.Api.Typed as Typed
 
@@ -37,6 +35,7 @@ import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Byron.Vote
 
 import           Cardano.CLI.Helpers
+import           Cardano.CLI.Types
 
 -- | Data type that encompasses all the possible errors of the
 -- Byron client.

@@ -22,10 +22,10 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Ouroboros.Network.Block
 
 import           Cardano.Api.LocalChainSync (getLocalTip)
-import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.Config.Types (SocketPath (..))
--- TODO @intricate: This forces us to import "cardano-node". Fix this.
-import           Cardano.Tracing.OrphanInstances.HardFork ()
+import           Cardano.CLI.Environment
+                   (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Types (SocketPath (..))
+import           Cardano.Tracing.OrphanInstances.HardFork () -- TODO: This forces us to import "cardano-node". Fix this.
 
 
 data ByronQueryError

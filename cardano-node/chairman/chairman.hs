@@ -23,9 +23,7 @@ import           Cardano.Api.Protocol.Shelley
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Typed (NetworkMagic (..))
 import           Cardano.Chairman (chairmanTest)
-import           Cardano.Config.Types (SocketPath (..))
-import           Cardano.Node.Types (ConfigYamlFilePath (..), Protocol (..), ncProtocol,
-                     parseNodeConfigurationFP)
+import           Cardano.Node.Types
 
 main :: IO ()
 main = do

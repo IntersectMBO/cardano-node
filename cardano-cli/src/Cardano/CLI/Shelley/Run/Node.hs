@@ -16,9 +16,9 @@ import qualified Data.Text as Text
 import           Cardano.Api.Typed
 
 import           Cardano.Api.TextView (TextViewDescription (..))
-import           Cardano.Config.Types (SigningKeyFile (..))
 
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile(..))
 
 
 data ShelleyNodeCmdError

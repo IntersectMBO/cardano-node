@@ -19,7 +19,6 @@ import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Update (AVote (..), Vote, mkVote, recoverUpId, recoverVoteId)
 import           Cardano.CLI.Byron.UpdateProposal (ByronUpdateProposalError,
                      deserialiseByronUpdateProposal, readByronUpdateProposal)
-import           Cardano.Config.Types
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
@@ -30,7 +29,7 @@ import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, CardanoEra (..), readEraSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
-
+import           Cardano.CLI.Types
 
 
 data ByronVoteError

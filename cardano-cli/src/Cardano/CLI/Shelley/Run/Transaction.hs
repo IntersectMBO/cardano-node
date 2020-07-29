@@ -41,7 +41,7 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCryp
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Shelley.Parsers
-import           Cardano.Config.Types
+import           Cardano.CLI.Types
 
 import           Cardano.Api.Protocol
 import           Cardano.Api.TxSubmit as Api
@@ -127,8 +127,6 @@ runTransactionCmd cmd =
       runTxWitness txBodyfile witSignKeyFile mbNw outFile
     TxSignWitness txBodyFile witnessFile outFile ->
       runTxSignWitness txBodyFile witnessFile outFile
-
-    _ -> liftIO $ putStrLn $ "runTransactionCmd: " ++ show cmd
 
 runTxBuildRaw
   :: [Api.TxIn]

@@ -14,8 +14,8 @@ module Test.Cardano.Node.Gen
 
 import           Cardano.Prelude
 
-import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress (..))
 import           Cardano.Node.Topology (NetworkTopology (..), NodeSetup (..), RemoteAddress (..))
+import           Cardano.Node.Types (NodeAddress (..), NodeHostAddress (..))
 
 import qualified Data.IP as IP
 

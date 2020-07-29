@@ -46,12 +46,11 @@ import           Cardano.Api.Typed
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
-import           Cardano.CLI.Shelley.Commands (QueryFilter (..))
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
+import           Cardano.CLI.Types
 
 import           Cardano.Binary (decodeFull)
-import           Cardano.Config.Types (SocketPath (..))
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
 import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
@@ -122,7 +121,6 @@ runQueryCmd cmd =
       runQueryLedgerState protocol network mOutFile
     QueryUTxO protocol qFilter networkId mOutFile ->
       runQueryUTxO protocol qFilter networkId mOutFile
-    _ -> liftIO $ putStrLn $ "runQueryCmd: " ++ show cmd
 
 
 runQueryProtocolParameters

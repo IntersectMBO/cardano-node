@@ -45,7 +45,7 @@ import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.CLI.Helpers (textShow)
 import qualified Cardano.CLI.Legacy.Byron as Legacy
-import           Cardano.Config.Types (SigningKeyFile (..))
+import           Cardano.CLI.Types
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Random as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
@@ -72,10 +72,6 @@ renderByronKeyFailure err =
 
 newtype NewSigningKeyFile =
   NewSigningKeyFile FilePath
-  deriving (Eq, Ord, Show, IsString)
-
-newtype VerificationKeyFile =
-  VerificationKeyFile FilePath
   deriving (Eq, Ord, Show, IsString)
 
 newtype NewVerificationKeyFile =

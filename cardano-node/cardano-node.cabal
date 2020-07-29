@@ -51,6 +51,7 @@ library
                        Cardano.Node.Types
                        Cardano.Tracing.Constraints
                        Cardano.Tracing.Kernel
+                       Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
                        Cardano.Tracing.Queries
                        Cardano.Tracing.Tracers
@@ -148,6 +149,7 @@ library cardano-node-config
   exposed-modules:     Cardano.Node.Orphans
                        Cardano.Node.Types
                        Cardano.Node.TraceConfig
+                       Cardano.Tracing.Metrics
                        Cardano.Tracing.OrphanInstances.Common
 
   build-depends:       aeson
@@ -163,11 +165,15 @@ library cardano-node-config
                      , cardano-slotting
                      , filepath
                      , iohk-monitoring
+                     , iproute
                      , network
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
+                     , ouroboros-consensus-shelley
+                     , ouroboros-consensus-mock
                      , ouroboros-network
                      , scientific
+                     , shelley-spec-ledger
                      , text
                      , yaml
 

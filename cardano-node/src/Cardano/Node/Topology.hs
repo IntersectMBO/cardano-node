@@ -25,7 +25,6 @@ import qualified Data.Text as T
 import           Network.Socket (PortNumber, SockAddr (..))
 import           Text.Read (readMaybe)
 
-import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress (..), TopologyFile (..))
 import           Cardano.Node.Types
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
