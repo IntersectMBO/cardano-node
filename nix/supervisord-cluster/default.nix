@@ -327,6 +327,7 @@ let
   '';
 
   start = pkgs.writeScriptBin "start-cluster" ''
+    #!${pkgs.bash}/bin/bash
     set -euo pipefail
     if [ -f ${stateDir}/supervisord.pid ]
     then
@@ -338,11 +339,13 @@ let
     echo "Transfering genesis funds to pool owners, register pools and delegations"
     cardano-cli shelley transaction submit \
       --tx-file ${stateDir}/shelley/transfer-register-delegate-tx.tx \
-      --testnet-magic ${toString genesisSpecMergedJSON.networkMagic}
+      --testnet-magic ${toString genesisSpecMergedJSON.networkMagic} \
+      --shelley-mode
     sleep 5
     echo 'Cluster started. Run `stop-cluster` to stop'
   '';
   stop = pkgs.writeScriptBin "stop-cluster" ''
+    #!${pkgs.bash}/bin/bash
     set -euo pipefail
     ${pkgs.python3Packages.supervisor}/bin/supervisorctl stop all
     if [ -f ${stateDir}/supervisord.pid ]
