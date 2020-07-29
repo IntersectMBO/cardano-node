@@ -7,6 +7,7 @@ module Test.ITN
 import           Cardano.CLI.Shelley.Run.Key (decodeBech32Key)
 import           Cardano.Prelude
 import           Hedgehog (Property, (===))
+import           Test.OptParse
 
 import qualified Codec.Binary.Bech32 as Bech32
 import qualified Data.ByteString.Base16 as Base16
@@ -54,63 +55,61 @@ prop_convertITNKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> d
   -- Check for existence of the converted ITN keys
   OP.assertFilesExist [outputHaskellVerKeyFp, outputHaskellSignKeyFp]
 
-
 -- | 1. Convert a bech32 ITN extended signing key to a haskell stake signing key
 prop_convertITNExtendedSigningKey :: Property
-prop_convertITNExtendedSigningKey = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+prop_convertITNExtendedSigningKey = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   let itnExtendedSignKey = "\
     \ed25519e_sk1qpcplz38tg4fusw0fkqljzspe9qmj06ldu9lgcve99v4fphuk9a535kwj\
     \f38hkyn0shcycyaha4k9tmjy6xgvzaz7stw5t7rqjadyjcwfyx6k"
 
   -- ITN input file paths
-  itnSignKeyFp <- OP.noteTempFile tempDir "itnExtendedSignKey.key"
+  itnSignKeyFp <- noteTempFile tempDir "itnExtendedSignKey.key"
 
   -- Converted keys output file paths
-  outputHaskellSignKeyFp <- OP.noteTempFile tempDir "stake-signing.key"
+  outputHaskellSignKeyFp <- noteTempFile tempDir "stake-signing.key"
 
   -- Write ITN keys to disk
   liftIO $ writeFile itnSignKeyFp itnExtendedSignKey
-  OP.assertFilesExist [itnSignKeyFp]
+  assertFilesExist [itnSignKeyFp]
 
   -- Generate haskell signing key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","key","convert-itn-extended-key"
     , "--itn-signing-key-file", itnSignKeyFp
     , "--out-file", outputHaskellSignKeyFp
     ]
 
   -- Check for existence of the converted ITN keys
-  OP.assertFilesExist [outputHaskellSignKeyFp]
+  assertFilesExist [outputHaskellSignKeyFp]
 
 -- | 1. Convert a bech32 ITN BIP32 signing key to a haskell stake signing key
 prop_convertITNBIP32SigningKey :: Property
-prop_convertITNBIP32SigningKey = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+prop_convertITNBIP32SigningKey = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   let itnExtendedSignKey = "\
     \xprv1spkw5suj39723c40mr55gwh7j3vryjv2zdm4e47xs0deka\
     \jcza9ud848ckdqf48md9njzc5pkujfxwu2j8wdvtxkx02n3s2qa\
     \euhqnfx6zu9dyccpua6vf5x3kur9hsganq2kl0yw7y9hpunts0e9kc5xv3pz0yj"
 
   -- ITN input file paths
-  itnSignKeyFp <- OP.noteTempFile tempDir "itnBIP32SignKey.key"
+  itnSignKeyFp <- noteTempFile tempDir "itnBIP32SignKey.key"
 
   -- Converted keys output file paths
-  outputHaskellSignKeyFp <- OP.noteTempFile tempDir "stake-signing.key"
+  outputHaskellSignKeyFp <- noteTempFile tempDir "stake-signing.key"
 
   -- Write ITN keys to disk
   liftIO $ writeFile itnSignKeyFp itnExtendedSignKey
 
-  OP.assertFilesExist [itnSignKeyFp]
+  assertFilesExist [itnSignKeyFp]
 
   -- Generate haskell signing key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","key","convert-itn-bip32-key"
     , "--itn-signing-key-file", itnSignKeyFp
     , "--out-file", outputHaskellSignKeyFp
     ]
 
   -- Check for existence of the converted ITN keys
-  OP.assertFilesExist [outputHaskellSignKeyFp]
-
+  assertFilesExist [outputHaskellSignKeyFp]
 
 -- | We check our 'decodeBech32Key' outputs against https://slowli.github.io/bech32-buffer/
 -- using 'itnVerKey' & 'itnSignKey' as inputs.
