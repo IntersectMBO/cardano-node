@@ -107,6 +107,8 @@ data KeyCmd
   | KeyConvertByronKey ByronKeyType SomeKeyFile OutputFile
   | KeyConvertByronGenesisVKey VerificationKeyBase64 OutputFile
   | KeyConvertITNStakeKey SomeKeyFile OutputFile
+  | KeyConvertITNExtendedToStakeKey SomeKeyFile OutputFile
+  | KeyConvertITNBip32ToStakeKey SomeKeyFile OutputFile
   deriving (Eq, Show)
 
 data TransactionCmd

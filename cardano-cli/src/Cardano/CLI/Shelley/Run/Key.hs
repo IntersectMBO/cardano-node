@@ -12,12 +12,13 @@ module Cardano.CLI.Shelley.Run.Key
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as Text
 
 import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, newExceptT)
 
 import qualified Codec.Binary.Bech32 as Bech32
 
@@ -27,6 +28,7 @@ import qualified Cardano.Crypto.Signing as Byron.Crypto
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
+import           Cardano.Api.Shelley.ITN (xprvFromBytes)
 import           Cardano.Api.Typed hiding (Bech32DecodeError (..))
 
 import           Cardano.CLI.Byron.Key (CardanoEra (..))
@@ -44,6 +46,7 @@ data ShelleyKeyCmdError
       -- ^ Text representation of the parse error. Unfortunately, the actual
       -- error type isn't exported.
   | ShelleyKeyCmdItnKeyConvError !ConversionError
+  | ShelleyKeyCmdWrongKeyTypeError
   deriving Show
 
 renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
@@ -54,6 +57,8 @@ renderShelleyKeyCmdError err =
     ShelleyKeyCmdByronKeyFailure e -> Byron.renderByronKeyFailure e
     ShelleyKeyCmdByronKeyParseError errTxt -> errTxt
     ShelleyKeyCmdItnKeyConvError convErr -> renderConversionError convErr
+    ShelleyKeyCmdWrongKeyTypeError -> Text.pack "Please use a signing key file \
+                                                \when converting ITN BIP32 or Extended keys"
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =
@@ -72,6 +77,10 @@ runKeyCmd cmd =
 
     KeyConvertITNStakeKey itnKeyFile outFile ->
       runConvertITNStakeKey itnKeyFile outFile
+    KeyConvertITNExtendedToStakeKey itnPrivKeyFile outFile ->
+      runConvertITNExtendedToStakeKey itnPrivKeyFile outFile
+    KeyConvertITNBip32ToStakeKey itnPrivKeyFile outFile ->
+      runConvertITNBip32ToStakeKey itnPrivKeyFile outFile
 
 
 runGetVerificationKey :: SigningKeyFile
@@ -357,8 +366,7 @@ runConvertITNStakeKey
   :: SomeKeyFile
   -> OutputFile
   -> ExceptT ShelleyKeyCmdError IO ()
-runConvertITNStakeKey (AVerificationKeyFile (VerificationKeyFile vk))
-                      (OutputFile outFile) = do
+runConvertITNStakeKey (AVerificationKeyFile (VerificationKeyFile vk)) (OutputFile outFile) = do
   bech32publicKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $
                      readFileITNKey vk
   vkey <- hoistEither
@@ -367,8 +375,7 @@ runConvertITNStakeKey (AVerificationKeyFile (VerificationKeyFile vk))
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
     writeFileTextEnvelope outFile Nothing vkey
 
-runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk))
-                      (OutputFile outFile) = do
+runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
   bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $
                       readFileITNKey sk
   skey <- hoistEither
@@ -377,6 +384,23 @@ runConvertITNStakeKey (ASigningKeyFile (SigningKeyFile sk))
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
     writeFileTextEnvelope outFile Nothing skey
 
+runConvertITNExtendedToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
+runConvertITNExtendedToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
+runConvertITNExtendedToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
+  bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $ readFileITNKey sk
+  skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
+            $ convertITNExtendedSigningKey bech32privateKey
+  firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
+    $ writeFileTextEnvelope outFile Nothing skey
+
+runConvertITNBip32ToStakeKey :: SomeKeyFile -> OutputFile -> ExceptT ShelleyKeyCmdError IO ()
+runConvertITNBip32ToStakeKey (AVerificationKeyFile _) _ = left ShelleyKeyCmdWrongKeyTypeError
+runConvertITNBip32ToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile outFile) = do
+  bech32privateKey <- firstExceptT ShelleyKeyCmdItnKeyConvError . newExceptT $ readFileITNKey sk
+  skey <- hoistEither . first ShelleyKeyCmdItnKeyConvError
+            $ convertITNBIP32SigningKey bech32privateKey
+  firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
+    $ writeFileTextEnvelope outFile Nothing skey
 
 data ConversionError
   = Bech32DecodingError
@@ -404,9 +428,9 @@ renderConversionError err =
       "Error extracting a ByteString from DataPart: " <> Bech32.dataPartToText dp <>
       " With human readable part: " <> Bech32.humanReadablePartToText hRpart
     SigningKeyDeserializationError sKey ->
-      "Error deserialising signing key: " <> textShow (BS.unpack sKey)
+      "Error deserialising signing key: " <> textShow (BSC.unpack sKey)
     VerificationKeyDeserializationError vKey ->
-      "Error deserialising verification key: " <> textShow (BS.unpack vKey)
+      "Error deserialising verification key: " <> textShow (BSC.unpack vKey)
 
 -- | Convert public ed25519 key to a Shelley stake verification key
 convertITNVerificationKey :: Text -> Either ConversionError (VerificationKey StakeKey)
@@ -423,6 +447,26 @@ convertITNSigningKey privKey = do
   case DSIGN.rawDeserialiseSignKeyDSIGN keyBS of
     Just signKey -> Right $ StakeSigningKey signKey
     Nothing -> Left $ SigningKeyDeserializationError keyBS
+
+-- | Convert extended private ed22519 key to a Shelley signing key
+-- Extended private key = 64 bytes,
+-- Public key = 32 bytes.
+convertITNExtendedSigningKey :: Text -> Either ConversionError (SigningKey StakeExtendedKey)
+convertITNExtendedSigningKey privKey = do
+  (_, _, privkeyBS) <- decodeBech32Key privKey
+  let dummyChainCode = BS.replicate 32 0
+  case xprvFromBytes $ BS.concat [privkeyBS, dummyChainCode] of
+    Just xprv -> Right $ StakeExtendedSigningKey xprv
+    Nothing -> Left $ SigningKeyDeserializationError privkeyBS
+
+-- BIP32 Private key = 96 bytes (64 bytes extended private key + 32 bytes chaincode)
+-- BIP32 Public Key = 64 Bytes
+convertITNBIP32SigningKey :: Text -> Either ConversionError (SigningKey StakeExtendedKey)
+convertITNBIP32SigningKey privKey = do
+  (_, _, privkeyBS) <- decodeBech32Key privKey
+  case xprvFromBytes privkeyBS of
+    Just xprv -> Right $ StakeExtendedSigningKey xprv
+    Nothing -> Left $ SigningKeyDeserializationError privkeyBS
 
 -- | Convert ITN Bech32 public or private keys to 'ByteString's
 decodeBech32Key :: Text
@@ -441,4 +485,3 @@ readFileITNKey fp = do
   case eStr of
     Left e -> return . Left $ Bech32ReadError fp e
     Right str -> return . Right . Text.concat $ Text.words str
-
