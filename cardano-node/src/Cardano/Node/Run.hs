@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -17,7 +16,7 @@ module Cardano.Node.Run
 where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
-import           Prelude (error)
+import           Prelude (String, error)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Tracer
@@ -103,13 +102,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     nc <- parseNodeConfiguration npm
 
-    case ncTraceConfig nc of
-      TracingOff -> return ()
-      TracingOn traceConf ->
-        case traceVerbosity traceConf of
-          NormalVerbosity -> traceWith tracer $ "tracing verbosity = normal verbosity "
-          MinimalVerbosity -> traceWith tracer $ "tracing verbosity = minimal verbosity "
-          MaximalVerbosity -> traceWith tracer $ "tracing verbosity = maximal verbosity "
+    logTracingVerbosity nc tracer
 
     eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just protocolFiles)
 
@@ -139,34 +132,12 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Async.uninterruptibleCancel upTimeThread
         Async.uninterruptibleCancel peersThread
 
-      LiveView   -> do
+      LiveView -> do
 #ifdef UNIX
         let c = llConfiguration loggingLayer
-        -- TODO: This desperately needs to be refactored.
+
         -- check required tracers are turned on
-        let reqtrs = [ ("TraceBlockFetchDecisions",traceBlockFetchDecisions)
-                     , ("TraceChainDb",traceChainDB)
-                     , ("TraceForge",traceForge)
-                     , ("TraceMempool",traceMempool)
-                     ]
-
-            tracersOff = [ ("TraceBlockFetchDecisions", False)
-                         , ("TraceChainDb", False)
-                         , ("TraceForge", False)
-                         , ("TraceMempool", False)
-                         ]
-
-        trsactive <- case ncTraceConfig nc of
-                       TracingOff -> return tracersOff
-                       TracingOn traceConf -> return $ map (\(t,f) -> (t, f traceConf)) reqtrs
-
-        unless (List.all (\(_, tracerOn) -> tracerOn == True) trsactive) $ do
-            putTextLn "for full functional 'LiveView', please turn on the following tracers in the configuration file:"
-            forM_ trsactive $ \(m, _) ->
-                putTextLn m
-            putTextLn "     (press enter to continue)"
-            _ <- getLine
-            pure ()
+        checkLiveViewrequiredTracers (ncTraceConfig nc)
 
         -- We run 'handleSimpleNode' as usual and run TUI thread as well.
         -- turn off logging to the console, only forward it through a pipe to a central logging process
@@ -193,6 +164,37 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Async.uninterruptibleCancel peersThread
 #endif
     shutdownLoggingLayer loggingLayer
+
+logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
+logTracingVerbosity nc tracer =
+  case ncTraceConfig nc of
+    TracingOff -> return ()
+    TracingOn traceConf ->
+      case traceVerbosity traceConf of
+        NormalVerbosity -> traceWith tracer $ "tracing verbosity = normal verbosity "
+        MinimalVerbosity -> traceWith tracer $ "tracing verbosity = minimal verbosity "
+        MaximalVerbosity -> traceWith tracer $ "tracing verbosity = maximal verbosity "
+
+#ifdef UNIX
+checkLiveViewrequiredTracers :: TraceOptions -> IO ()
+checkLiveViewrequiredTracers traceConfig = do
+  reqTracers <- case traceConfig of
+                  TracingOn TraceSelection{ traceBlockFetchDecisions,traceChainDB
+                                          , traceForge,traceMempool} ->
+                    return [traceBlockFetchDecisions, traceChainDB, traceForge, traceMempool]
+                  TracingOff ->
+                    return [False]
+
+  if List.all (== True) reqTracers
+  then pure ()
+  else do putTextLn "for full functional 'LiveView', please turn on the following \
+                    \tracers in the configuration file: TraceBlockFetchDecisions, \\
+                    \TraceChainDb, TraceForge & TraceMempool"
+
+          putTextLn "     (press enter to continue)"
+          _ <- getLine
+          pure ()
+#endif
 
 -- | Add the application name and unqualified hostname to the logging
 -- layer basic trace.

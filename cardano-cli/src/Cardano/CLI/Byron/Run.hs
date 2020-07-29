@@ -170,13 +170,13 @@ runToVerification era skFp (NewVerificationKeyFile vkFp) = do
   firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile vkFp vKey
 
 runIssueDelegationCertificate
-        :: NetworkId
-        -> CardanoEra
-        -> EpochNumber
-        -> SigningKeyFile
-        -> VerificationKeyFile
-        -> NewCertificateFile
-        -> ExceptT ByronClientCmdError IO ()
+  :: NetworkId
+  -> CardanoEra
+  -> EpochNumber
+  -> SigningKeyFile
+  -> VerificationKeyFile
+  -> NewCertificateFile
+  -> ExceptT ByronClientCmdError IO ()
 runIssueDelegationCertificate nw era epoch issuerSK delegateVK cert = do
   vk <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVK
   sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era issuerSK
@@ -187,11 +187,11 @@ runIssueDelegationCertificate nw era epoch issuerSK delegateVK cert = do
 
 
 runCheckDelegation
-        :: NetworkId
-        -> CertificateFile
-        -> VerificationKeyFile
-        -> VerificationKeyFile
-        -> ExceptT ByronClientCmdError IO ()
+  :: NetworkId
+  -> CertificateFile
+  -> VerificationKeyFile
+  -> VerificationKeyFile
+  -> ExceptT ByronClientCmdError IO ()
 runCheckDelegation nw cert issuerVF delegateVF = do
   issuerVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey issuerVF
   delegateVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVF
@@ -206,14 +206,14 @@ runSubmitTx network fp = do
 
 
 runSpendGenesisUTxO
-        :: GenesisFile
-        -> NetworkId
-        -> CardanoEra
-        -> NewTxFile
-        -> SigningKeyFile
-        -> Common.Address
-        -> NonEmpty TxOut
-        -> ExceptT ByronClientCmdError IO ()
+  :: GenesisFile
+  -> NetworkId
+  -> CardanoEra
+  -> NewTxFile
+  -> SigningKeyFile
+  -> Common.Address
+  -> NonEmpty TxOut
+  -> ExceptT ByronClientCmdError IO ()
 runSpendGenesisUTxO genesisFile nw era (NewTxFile ctTx) ctKey genRichAddr outs = do
     genesis <- firstExceptT ByronCmdGenesisError $ readGenesis genesisFile nw
     sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era ctKey
@@ -222,13 +222,13 @@ runSpendGenesisUTxO genesisFile nw era (NewTxFile ctTx) ctKey genRichAddr outs =
     firstExceptT ByronCmdHelpersError $ ensureNewFileLBS ctTx $ toCborTxAux tx
 
 runSpendUTxO
-        :: NetworkId
-        -> CardanoEra
-        -> NewTxFile
-        -> SigningKeyFile
-        -> NonEmpty TxIn
-        -> NonEmpty TxOut
-        -> ExceptT ByronClientCmdError IO ()
+  :: NetworkId
+  -> CardanoEra
+  -> NewTxFile
+  -> SigningKeyFile
+  -> NonEmpty TxIn
+  -> NonEmpty TxOut
+  -> ExceptT ByronClientCmdError IO ()
 runSpendUTxO nw era (NewTxFile ctTx) ctKey ins outs = do
     sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey era ctKey
 
