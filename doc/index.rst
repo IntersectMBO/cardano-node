@@ -48,6 +48,7 @@ cardano-node
    logging-monitoring/prometheus
    logging-monitoring/grafana
    logging-monitoring/ekg
+   logging-monitoring/liveview
 
 .. toctree::
    :maxdepth: 3
