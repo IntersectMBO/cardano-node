@@ -12,7 +12,8 @@ module Cardano.CLI.Shelley.Run.Key
 
 import           Cardano.Prelude
 
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as Text
 
 import qualified Control.Exception as Exception
@@ -427,9 +428,9 @@ renderConversionError err =
       "Error extracting a ByteString from DataPart: " <> Bech32.dataPartToText dp <>
       " With human readable part: " <> Bech32.humanReadablePartToText hRpart
     SigningKeyDeserializationError sKey ->
-      "Error deserialising signing key: " <> textShow (BS.unpack sKey)
+      "Error deserialising signing key: " <> textShow (BSC.unpack sKey)
     VerificationKeyDeserializationError vKey ->
-      "Error deserialising verification key: " <> textShow (BS.unpack vKey)
+      "Error deserialising verification key: " <> textShow (BSC.unpack vKey)
 
 -- | Convert public ed25519 key to a Shelley stake verification key
 convertITNVerificationKey :: Text -> Either ConversionError (VerificationKey StakeKey)
@@ -453,7 +454,7 @@ convertITNSigningKey privKey = do
 convertITNExtendedSigningKey :: Text -> Either ConversionError (SigningKey StakeExtendedKey)
 convertITNExtendedSigningKey privKey = do
   (_, _, privkeyBS) <- decodeBech32Key privKey
-  let dummyChainCode = "00000000000000000000000000000000"
+  let dummyChainCode = BS.replicate 32 0
   case xprvFromBytes $ BS.concat [privkeyBS, dummyChainCode] of
     Just xprv -> Right $ StakeExtendedSigningKey xprv
     Nothing -> Left $ SigningKeyDeserializationError privkeyBS
