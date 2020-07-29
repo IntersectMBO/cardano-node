@@ -403,9 +403,9 @@ instance ( Condense (TxId (GenTx blk))
       => ToObject (AnyMessage (BlockFetch blk)) where
   toObject MaximalVerbosity (AnyMessage (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
-             , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
-             , "tx ids" .= toJSON (presentTx <$> extractTxs blk)
+             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+             , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
+             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where
         presentTx :: GenTx blk -> Value
@@ -413,8 +413,8 @@ instance ( Condense (TxId (GenTx blk))
 
   toObject _v (AnyMessage (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
-             , "block hash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "block size" .= toJSON (nodeBlockFetchSize (getHeader blk))
+             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+             , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
              ]
   toObject _v (AnyMessage MsgRequestRange{}) =
     mkObject [ "kind" .= String "MsgRequestRange" ]
