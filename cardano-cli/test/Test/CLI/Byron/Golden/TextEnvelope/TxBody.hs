@@ -6,9 +6,7 @@ module Test.CLI.Byron.Golden.TextEnvelope.TxBody
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  )
+import           Hedgehog (Property)
 
 
 golden_byronTxBody :: Property

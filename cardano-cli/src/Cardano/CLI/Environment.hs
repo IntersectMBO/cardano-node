@@ -7,27 +7,15 @@ module Cardano.CLI.Environment
   ) where
 
 import           Cardano.Prelude
-import           Prelude
-  ( String
-  )
+import           Prelude (String)
 
-import           Control.Monad.Trans.Except
-  ( ExceptT
-  )
-import           Control.Monad.Trans.Except.Extra
-  ( left
-  )
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.Text as Text
-import           System.Environment
-  ( lookupEnv
-  )
+import           System.Environment (lookupEnv)
 
-import           Cardano.CLI.Helpers
-  ( textShow
-  )
-import           Cardano.Config.Types
-  ( SocketPath (..)
-  )
+import           Cardano.CLI.Helpers (textShow)
+import           Cardano.Config.Types (SocketPath (..))
 
 data EnvSocketError
   = CliEnvVarLookup !Text deriving Show

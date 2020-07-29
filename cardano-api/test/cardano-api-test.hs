@@ -1,9 +1,7 @@
 
 import           Cardano.Prelude
 
-import           Hedgehog.Main
-  ( defaultMain
-  )
+import           Hedgehog.Main (defaultMain)
 
 import qualified Test.Cardano.Api.Ledger
 import qualified Test.Cardano.Api.Typed.Bech32

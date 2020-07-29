@@ -16,14 +16,8 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 
 import qualified Control.Exception as Exception
-import           Control.Monad.Trans.Except
-  ( ExceptT
-  )
-import           Control.Monad.Trans.Except.Extra
-  ( firstExceptT
-  , hoistEither
-  , newExceptT
-  )
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 
 import qualified Codec.Binary.Bech32 as Bech32
 
@@ -33,17 +27,11 @@ import qualified Cardano.Crypto.Signing as Byron.Crypto
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
-import           Cardano.Api.Typed hiding
-  ( Bech32DecodeError (..)
-  )
+import           Cardano.Api.Typed hiding (Bech32DecodeError (..))
 
-import           Cardano.CLI.Byron.Key
-  ( CardanoEra (..)
-  )
+import           Cardano.CLI.Byron.Key (CardanoEra (..))
 import qualified Cardano.CLI.Byron.Key as Byron
-import           Cardano.CLI.Helpers
-  ( textShow
-  )
+import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 
 

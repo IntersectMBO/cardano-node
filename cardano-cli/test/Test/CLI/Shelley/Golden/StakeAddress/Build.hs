@@ -6,10 +6,7 @@ module Test.CLI.Shelley.Golden.StakeAddress.Build
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  , (===)
-  )
+import           Hedgehog (Property, (===))
 
 import qualified System.IO as IO
 import qualified Test.OptParse as OP

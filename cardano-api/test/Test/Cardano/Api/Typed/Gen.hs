@@ -18,32 +18,20 @@ import           Cardano.Api.Typed
 
 import           Cardano.Prelude
 
-import           Control.Monad.Fail
-  ( fail
-  )
+import           Control.Monad.Fail (fail)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import           Cardano.Slotting.Slot
-  ( SlotNo (..)
-  )
-import           Ouroboros.Network.Magic
-  ( NetworkMagic (..)
-  )
+import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Network.Magic (NetworkMagic (..))
 
-import           Hedgehog
-  ( Gen
-  )
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           Test.Cardano.Chain.UTxO.Gen
-  ( genVKWitness
-  )
-import           Test.Cardano.Crypto.Gen
-  ( genProtocolMagicId
-  )
+import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
+import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 genAddressByron :: Gen (Address Byron)
 genAddressByron = makeByronAddress <$> genNetworkId

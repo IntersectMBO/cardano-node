@@ -19,33 +19,16 @@ module Cardano.Tracing.Kernel
   , fromSMaybe
   ) where
 
-import           Cardano.Prelude hiding
-  ( atomically
-  )
+import           Cardano.Prelude hiding (atomically)
 
-import           Data.IORef
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  )
-import           Shelley.Spec.Ledger.BaseTypes
-  ( StrictMaybe (..)
-  , fromSMaybe
-  )
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 
-import           Ouroboros.Consensus.Node
-  ( NodeKernel (..)
-  )
-import           Ouroboros.Consensus.Util.Orphans
-  ()
+import           Ouroboros.Consensus.Node (NodeKernel (..))
+import           Ouroboros.Consensus.Util.Orphans ()
 
-import           Ouroboros.Network.NodeToClient
-  ( LocalConnectionId
-  )
-import           Ouroboros.Network.NodeToNode
-  ( RemoteConnectionId
-  )
+import           Ouroboros.Network.NodeToClient (LocalConnectionId)
+import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 
 
 newtype NodeKernelData blk =

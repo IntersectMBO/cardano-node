@@ -6,20 +6,13 @@ module Cardano.Api.Protocol.Byron
   , mkSomeNodeClientProtocolByron
   ) where
 
-import           Cardano.Chain.Slotting
-  ( EpochSlots
-  )
+import           Cardano.Chain.Slotting (EpochSlots)
 
-import           Ouroboros.Consensus.Cardano
-  ( ProtocolByron
-  , ProtocolClient (ProtocolClientByron)
-  , SecurityParam
-  )
+import           Ouroboros.Consensus.Cardano (ProtocolByron, ProtocolClient (ProtocolClientByron),
+                     SecurityParam)
 import           Ouroboros.Consensus.Cardano.ByronHFC
 
-import           Cardano.Api.Protocol.Types
-  ( SomeNodeClientProtocol (..)
-  )
+import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 
 
 mkNodeClientProtocolByron :: EpochSlots

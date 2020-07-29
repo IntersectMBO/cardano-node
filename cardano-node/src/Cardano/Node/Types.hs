@@ -25,44 +25,22 @@ module Cardano.Node.Types
   ) where
 
 import           Cardano.Prelude
-import           Prelude
-  ( String
-  )
+import           Prelude (String)
 
-import           Control.Monad.Fail
-  ( fail
-  )
+import           Control.Monad.Fail (fail)
 import           Data.Aeson
-import           Data.Yaml
-  ( decodeFileThrow
-  )
-import           System.FilePath
-  ( takeDirectory
-  , (</>)
-  )
-import           System.Posix.Types
-  ( Fd
-  )
+import           Data.Yaml (decodeFileThrow)
+import           System.FilePath (takeDirectory, (</>))
+import           System.Posix.Types (Fd)
 
-import           Cardano.Api.Typed
-  ( EpochNo
-  )
+import           Cardano.Api.Typed (EpochNo)
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Config.Types
-import           Cardano.Crypto
-  ( RequiresNetworkMagic (..)
-  )
+import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
-import           Cardano.Node.TraceConfig
-  ( TraceOptions (..)
-  , traceConfigParser
-  )
-import           Ouroboros.Consensus.NodeId
-  ( CoreNodeId (..)
-  )
-import           Ouroboros.Network.Block
-  ( MaxSlotNo (..)
-  )
+import           Cardano.Node.TraceConfig (TraceOptions (..), traceConfigParser)
+import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
+import           Ouroboros.Network.Block (MaxSlotNo (..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
 -- use records with named fields in the CLI code.

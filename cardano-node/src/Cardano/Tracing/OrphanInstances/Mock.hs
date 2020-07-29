@@ -12,38 +12,18 @@ module Cardano.Tracing.OrphanInstances.Mock () where
 
 import           Cardano.Prelude
 
-import           Data.Text
-  ( pack
-  )
+import           Data.Text (pack)
 
 import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Consensus
-  ()
+import           Cardano.Tracing.OrphanInstances.Consensus ()
 
-import           Data.Aeson
-  ( ToJSON
-  , Value (..)
-  , toJSON
-  , (.=)
-  )
+import           Data.Aeson (ToJSON, Value (..), toJSON, (.=))
 
-import           Cardano.Crypto.Hash.Class
-  ( Hash
-  )
-import           Cardano.Crypto.KES.Class
-  ( VerKeyKES
-  , deriveVerKeyKES
-  , hashVerKeyKES
-  )
+import           Cardano.Crypto.Hash.Class (Hash)
+import           Cardano.Crypto.KES.Class (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
 
-import           Ouroboros.Consensus.Block
-  ( Header
-  )
-import           Ouroboros.Consensus.Ledger.SupportsMempool
-  ( GenTx
-  , TxId
-  , txId
-  )
+import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId, txId)
 import qualified Ouroboros.Consensus.Mock.Ledger as Mock
 import qualified Ouroboros.Consensus.Mock.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Util.Condense

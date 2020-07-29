@@ -6,9 +6,7 @@ module Test.CLI.Shelley.Golden.StakeAddress.DeregistrationCertificate
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  )
+import           Hedgehog (Property)
 
 import qualified Test.OptParse as OP
 

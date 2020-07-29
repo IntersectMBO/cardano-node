@@ -6,9 +6,7 @@ module Test.CLI.Shelley.Golden.Address.KeyGen
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  )
+import           Hedgehog (Property)
 
 import qualified Control.DeepSeq as CSD
 import qualified Control.Exception as E

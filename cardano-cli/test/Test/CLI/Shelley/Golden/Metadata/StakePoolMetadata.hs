@@ -6,9 +6,7 @@ module Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  )
+import           Hedgehog (Property)
 import qualified Hedgehog as H
 
 import           Test.OptParse

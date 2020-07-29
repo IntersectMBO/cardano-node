@@ -9,16 +9,11 @@ import           Cardano.Api.Typed
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Gen
-  , Property
-  , discover
-  )
+import           Hedgehog (Gen, Property, discover)
 import qualified Hedgehog as H
 
 import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Api.Typed.Orphans
-  ()
+import           Test.Cardano.Api.Typed.Orphans ()
 
 
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however

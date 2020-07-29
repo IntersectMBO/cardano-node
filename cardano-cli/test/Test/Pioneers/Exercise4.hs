@@ -6,9 +6,7 @@ module Test.Pioneers.Exercise4
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  )
+import           Hedgehog (Property)
 import qualified Hedgehog as H
 
 import           Test.OptParse

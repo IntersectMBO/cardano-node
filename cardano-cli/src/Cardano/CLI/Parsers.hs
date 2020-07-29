@@ -4,22 +4,14 @@ module Cardano.CLI.Parsers
   ) where
 
 import           Cardano.Prelude
-import           Prelude
-  ( String
-  )
+import           Prelude (String)
 
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Cardano.CLI.Byron.Parsers
-  ( parseByronCommands
-  )
-import           Cardano.CLI.Run
-  ( ClientCommand (..)
-  )
-import           Cardano.CLI.Shelley.Parsers
-  ( parseShelleyCommands
-  )
+import           Cardano.CLI.Byron.Parsers (parseByronCommands)
+import           Cardano.CLI.Run (ClientCommand (..))
+import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =

@@ -22,52 +22,23 @@ module Test.OptParse
   , noteTempFile
   ) where
 
-import           Cardano.Prelude hiding
-  ( lines
-  , stderr
-  , stdout
-  )
-import           Prelude
-  ( String
-  )
+import           Cardano.Prelude hiding (lines, stderr, stdout)
+import           Prelude (String)
 import qualified Prelude as Prelude
 
-import           Control.Monad.Trans.Except.Extra
-  ( runExceptT
-  )
+import           Control.Monad.Trans.Except.Extra (runExceptT)
 import qualified Data.Text as Text
-import           Options.Applicative
-  ( ParserHelp (..)
-  , ParserResult (..)
-  )
+import           Options.Applicative (ParserHelp (..), ParserResult (..))
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help.Chunk
 import           Options.Applicative.Help.Pretty
-import           System.Directory
-  ( doesFileExist
-  , removeFile
-  )
+import           System.Directory (doesFileExist, removeFile)
 import           System.IO.Error
 
-import           Cardano.Api.TextView
-  ( TextView (..)
-  , TextViewError
-  , TextViewType (..)
-  )
-import           Cardano.Api.Typed
-  ( FileError
-  , displayError
-  , readTextEnvelopeOfTypeFromFile
-  )
-import           Cardano.CLI.Parsers
-  ( opts
-  , pref
-  )
-import           Cardano.CLI.Run
-  ( ClientCommand (..)
-  , renderClientCommandError
-  , runClientCommand
-  )
+import           Cardano.Api.TextView (TextView (..), TextViewError, TextViewType (..))
+import           Cardano.Api.Typed (FileError, displayError, readTextEnvelopeOfTypeFromFile)
+import           Cardano.CLI.Parsers (opts, pref)
+import           Cardano.CLI.Run (ClientCommand (..), renderClientCommandError, runClientCommand)
 
 import qualified Data.List as L
 import qualified Data.Time.Clock as DT
@@ -80,22 +51,10 @@ import qualified System.IO.Temp as IO
 import qualified System.Process as IO
 
 import qualified Hedgehog as H
-import           Hedgehog.Internal.Property
-  ( Diff
-  , MonadTest
-  , liftTest
-  , mkTest
-  )
+import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
 import qualified Hedgehog.Internal.Property as H
-import           Hedgehog.Internal.Show
-  ( ValueDiff (ValueSame)
-  , mkValue
-  , showPretty
-  , valueDiff
-  )
-import           Hedgehog.Internal.Source
-  ( getCaller
-  )
+import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
+import           Hedgehog.Internal.Source (getCaller)
 
 -- | Purely evalutate the cardano-cli parser.
 -- e.g evalCardanoCLIParser ["shelley"] would be equivalent to cabal exec cardano-cli shelley

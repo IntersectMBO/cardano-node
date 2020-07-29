@@ -17,71 +17,34 @@
 
 module Cardano.Tracing.OrphanInstances.HardFork () where
 
-import           Cardano.Prelude hiding
-  ( All
-  )
+import           Cardano.Prelude hiding (All)
 
 import           Data.Aeson
 import           Data.SOP.Strict
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Consensus
-  ()
+import           Cardano.Tracing.OrphanInstances.Consensus ()
 
-import           Cardano.Slotting.Slot
-  ( EpochSize (..)
-  )
-import           Ouroboros.Consensus.Block
-  ( BlockProtocol
-  )
-import           Ouroboros.Consensus.BlockchainTime
-  ( getSlotLength
-  )
-import           Ouroboros.Consensus.Cardano.Condense
-  ()
+import           Cardano.Slotting.Slot (EpochSize (..))
+import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
+import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
-  ( EraMismatch (..)
-  , OneEraCannotLead (..)
-  , OneEraEnvelopeErr (..)
-  , OneEraLedgerError (..)
-  , OneEraLedgerUpdate (..)
-  , OneEraLedgerWarning (..)
-  , OneEraValidationErr (..)
-  , mkEraMismatch
-  )
-import           Ouroboros.Consensus.HardFork.Combinator.Condense
-  ()
-import           Ouroboros.Consensus.HardFork.History.EraParams
-  ( EraParams (..)
-  , SafeBeforeEpoch
-  , SafeZone
-  )
-import           Ouroboros.Consensus.HeaderValidation
-  ( OtherHeaderEnvelopeError
-  )
-import           Ouroboros.Consensus.Ledger.Abstract
-  ( LedgerError
-  )
-import           Ouroboros.Consensus.Ledger.Inspect
-  ( LedgerUpdate
-  , LedgerWarning
-  )
-import           Ouroboros.Consensus.Ledger.SupportsMempool
-  ( ApplyTxErr
-  , GenTx
-  , TxId
-  )
-import           Ouroboros.Consensus.Protocol.Abstract
-  ( CannotLead
-  , ChainIndepState
-  , ValidationErr
-  )
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
+                     OneEraCannotLead (..), OneEraEnvelopeErr (..), OneEraLedgerError (..),
+                     OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
+                     mkEraMismatch)
+import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeBeforeEpoch,
+                     SafeZone)
+import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
+import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, TxId)
+import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ChainIndepState, ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
-import           Ouroboros.Consensus.Util.Condense
-  ( Condense (..)
-  )
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
 --

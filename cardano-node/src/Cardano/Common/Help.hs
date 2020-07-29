@@ -10,13 +10,9 @@ where
 
 import           Prelude
 
-import           Data.Maybe
-  ( fromMaybe
-  )
+import           Data.Maybe (fromMaybe)
 import qualified Options.Applicative as Opt
-import           Options.Applicative.Help
-  ( (<$$>)
-  )
+import           Options.Applicative.Help ((<$$>))
 import qualified Options.Applicative.Help as OptI
 
 -- | Produce just the brief help header for a given CLI option parser,

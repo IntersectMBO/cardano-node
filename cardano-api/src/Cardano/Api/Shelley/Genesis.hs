@@ -13,20 +13,12 @@ import           Cardano.Prelude
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
 
-import           Cardano.Slotting.Slot
-  ( EpochSize (..)
-  )
+import           Cardano.Slotting.Slot (EpochSize (..))
 
-import           Ouroboros.Consensus.Shelley.Node
-  ( ShelleyGenesis (..)
-  , emptyGenesisStaking
-  )
+import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 
 import           Shelley.Spec.Ledger.BaseTypes as Ledger
-import           Shelley.Spec.Ledger.PParams as Ledger
-  ( PParams' (..)
-  , emptyPParams
-  )
+import           Shelley.Spec.Ledger.PParams as Ledger (PParams' (..), emptyPParams)
 
 
 -- | Some reasonable starting defaults for constructing a 'ShelleyGenesis'.
