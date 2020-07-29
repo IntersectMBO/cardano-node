@@ -16,52 +16,23 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 
 import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Consensus
-  ()
+import           Cardano.Tracing.OrphanInstances.Consensus ()
 
-import           Ouroboros.Consensus.Block
-  ( Header
-  )
-import           Ouroboros.Network.Block
-  ( blockHash
-  , blockNo
-  , blockSlot
-  )
+import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
-import           Ouroboros.Consensus.Byron.Ledger
-  ( ByronBlock (..)
-  , ByronOtherHeaderEnvelopeError (..)
-  , TxId (..)
-  , byronHeaderRaw
-  )
-import           Ouroboros.Consensus.Byron.Ledger.Inspect
-  ( ByronLedgerUpdate (..)
-  , ProtocolUpdate (..)
-  , UpdateState (..)
-  )
-import           Ouroboros.Consensus.Ledger.SupportsMempool
-  ( GenTx
-  , txId
-  )
-import           Ouroboros.Consensus.Util.Condense
-  ( condense
-  )
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
+                     ByronOtherHeaderEnvelopeError (..), TxId (..), byronHeaderRaw)
+import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
+                     ProtocolUpdate (..), UpdateState (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
+import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Chain.Block
-  ( ABlockOrBoundaryHdr (..)
-  , AHeader (..)
-  , ChainValidationError (..)
-  , delegationCertificate
-  )
-import           Cardano.Chain.Byron.API
-  ( ApplyMempoolPayloadErr (..)
-  )
-import           Cardano.Chain.Delegation
-  ( delegateVK
-  )
-import           Cardano.Crypto.Signing
-  ( VerificationKey
-  )
+import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
+                     ChainValidationError (..), delegationCertificate)
+import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
+import           Cardano.Chain.Delegation (delegateVK)
+import           Cardano.Crypto.Signing (VerificationKey)
 
 
 

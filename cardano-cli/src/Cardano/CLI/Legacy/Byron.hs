@@ -10,30 +10,17 @@ module Cardano.CLI.Legacy.Byron (
     , decodeLegacyDelegateKey
     ) where
 
-import           Cardano.Prelude hiding
-  ( option
-  )
+import           Cardano.Prelude hiding (option)
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
-import           Data.Coerce
-  ( coerce
-  )
-import           Data.Semigroup
-  ( (<>)
-  )
-import           Data.Text
-  ( Text
-  )
+import           Data.Coerce (coerce)
+import           Data.Semigroup ((<>))
+import           Data.Text (Text)
 import qualified Data.Text as T
-import           Lens.Micro
-  ( LensLike
-  , _Left
-  )
+import           Lens.Micro (LensLike, _Left)
 
-import           Cardano.Crypto.Signing
-  ( SigningKey (..)
-  )
+import           Cardano.Crypto.Signing (SigningKey (..))
 import qualified Cardano.Crypto.Wallet as Wallet
 
 -- | LegacyDelegateKey is a subset of the UserSecret's from the legacy codebase:

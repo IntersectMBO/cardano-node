@@ -33,57 +33,30 @@ module Cardano.Config.Types
     , parseNodeHostAddress
     ) where
 
-import           Cardano.Prelude hiding
-  ( show
-  )
-import           Prelude
-  ( show
-  )
+import           Cardano.Prelude hiding (show)
+import           Prelude (show)
 
 import           Data.Aeson
-import           Data.IP
-  ( IP
-  )
-import           Data.String
-  ( String
-  )
+import           Data.IP (IP)
+import           Data.String (String)
 import qualified Data.Text as Text
-import           Network.Socket
-  ( PortNumber
-  )
+import           Network.Socket (PortNumber)
 
 import qualified Cardano.Chain.Slotting as Byron
-import           Cardano.Crypto.KES.Class
-  ( Period
-  )
+import           Cardano.Crypto.KES.Class (Period)
 
-import           Ouroboros.Consensus.Block
-  ( ForgeState (..)
-  )
-import           Ouroboros.Consensus.Byron.Ledger.Block
-  ( ByronBlock
-  )
-import           Ouroboros.Consensus.Mock.Ledger.Block
-  ( SimpleBlock
-  )
-import           Ouroboros.Consensus.Shelley.Ledger.Block
-  ( ShelleyBlock
-  )
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool
-  ()
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey
-  ( HotKey (..)
-  )
-import           Ouroboros.Consensus.Util.Condense
-  ( Condense (..)
-  )
+import           Ouroboros.Consensus.Block (ForgeState (..))
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
+import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool ()
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.Unary
 
-import           Shelley.Spec.Ledger.OCert
-  ( KESPeriod (..)
-  )
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
 
 -- | Errors for the cardano-config module.

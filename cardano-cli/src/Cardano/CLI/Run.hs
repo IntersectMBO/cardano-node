@@ -9,46 +9,21 @@ module Cardano.CLI.Run
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except
-  ( ExceptT
-  )
-import           Control.Monad.Trans.Except.Extra
-  ( firstExceptT
-  )
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
 
-import           Cardano.CLI.Byron.Commands
-  ( ByronCommand
-  )
-import           Cardano.CLI.Byron.Run
-  ( ByronClientCmdError
-  , renderByronClientCmdError
-  , runByronClientCommand
-  )
-import           Cardano.CLI.Shelley.Commands
-  ( ShelleyCommand
-  )
-import           Cardano.CLI.Shelley.Run
-  ( ShelleyClientCmdError
-  , renderShelleyClientCmdError
-  , runShelleyClientCommand
-  )
+import           Cardano.CLI.Byron.Commands (ByronCommand)
+import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
+                     runByronClientCommand)
+import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
+import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
+                     runShelleyClientCommand)
 
-import           Cardano.Config.Git.Rev
-  ( gitRev
-  )
-import           Data.Version
-  ( showVersion
-  )
-import           Paths_cardano_cli
-  ( version
-  )
-import           System.Info
-  ( arch
-  , compilerName
-  , compilerVersion
-  , os
-  )
+import           Cardano.Config.Git.Rev (gitRev)
+import           Data.Version (showVersion)
+import           Paths_cardano_cli (version)
+import           System.Info (arch, compilerName, compilerVersion, os)
 
 -- | Sub-commands of 'cardano-cli'.
 data ClientCommand =

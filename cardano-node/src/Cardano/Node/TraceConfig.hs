@@ -8,24 +8,15 @@ module Cardano.Node.TraceConfig
   , traceConfigParser
   ) where
 
-import           Cardano.Prelude hiding
-  ( show
-  )
-import           Prelude
-  ( Show (..)
-  )
+import           Cardano.Prelude hiding (show)
+import           Prelude (Show (..))
 
 import           Data.Aeson
-import           Data.Aeson.Types
-  ( Parser
-  )
+import           Data.Aeson.Types (Parser)
 
-import           Cardano.BM.Tracing
-  ( TracingVerbosity (..)
-  )
+import           Cardano.BM.Tracing (TracingVerbosity (..))
 
-import           Cardano.Node.Orphans
-  ()
+import           Cardano.Node.Orphans ()
 
 
 data TraceOptions

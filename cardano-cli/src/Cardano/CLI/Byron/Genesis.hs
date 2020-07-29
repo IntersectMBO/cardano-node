@@ -16,91 +16,42 @@ module Cardano.CLI.Byron.Genesis
   )
 where
 
-import           Cardano.Prelude hiding
-  ( option
-  , show
-  , trace
-  )
-import           Prelude
-  ( String
-  , show
-  )
+import           Cardano.Prelude hiding (option, show, trace)
+import           Prelude (String, show)
 
-import           Control.Monad.Trans.Except
-  ( ExceptT
-  )
-import           Control.Monad.Trans.Except.Extra
-  ( firstExceptT
-  , left
-  , right
-  )
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
-import           Data.String
-  ( IsString
-  )
-import           Data.Text.Encoding
-  ( encodeUtf8
-  )
-import           Data.Text.Lazy.Builder
-  ( toLazyText
-  )
-import           Data.Time
-  ( UTCTime
-  )
+import           Data.String (IsString)
+import           Data.Text.Encoding (encodeUtf8)
+import           Data.Text.Lazy.Builder (toLazyText)
+import           Data.Time (UTCTime)
 import           Formatting.Buildable
-import           Text.Printf
-  ( printf
-  )
+import           Text.Printf (printf)
 
-import           System.Directory
-  ( createDirectory
-  , doesPathExist
-  )
-import           System.FilePath
-  ( (</>)
-  )
+import           System.Directory (createDirectory, doesPathExist)
+import           System.FilePath ((</>))
 #ifdef UNIX
-import           System.Posix.Files
-  ( ownerReadMode
-  , setFileMode
-  )
+import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
-import           System.Directory
-  ( emptyPermissions
-  , readable
-  , setPermissions
-  )
+import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
-import           Cardano.Api.Typed
-  ( NetworkId
-  , toByronRequiresNetworkMagic
-  )
+import           Cardano.Api.Typed (NetworkId, toByronRequiresNetworkMagic)
 
 import qualified Cardano.Chain.Common as Common
-import           Cardano.Chain.Delegation hiding
-  ( Map
-  , epoch
-  )
-import           Cardano.Chain.Genesis
-  ( GeneratedSecrets (..)
-  )
+import           Cardano.Chain.Delegation hiding (Map, epoch)
+import           Cardano.Chain.Genesis (GeneratedSecrets (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as UTxO
 
-import           Cardano.Config.Types
-  ( GenesisFile (..)
-  )
-import           Cardano.Crypto
-  ( SigningKey (..)
-  )
+import           Cardano.Config.Types (GenesisFile (..))
+import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
-import           Cardano.CLI.Helpers
-  ( textShow
-  )
+import           Cardano.CLI.Helpers (textShow)
 
 data ByronGenesisError
   = ByronDelegationCertSerializationError !ByronDelegationError

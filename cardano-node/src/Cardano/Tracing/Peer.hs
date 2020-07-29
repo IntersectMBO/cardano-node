@@ -9,70 +9,34 @@ module Cardano.Tracing.Peer
   , tracePeers
   ) where
 
-import           Cardano.Prelude hiding
-  ( atomically
-  )
-import           Prelude
-  ( String
-  )
+import           Cardano.Prelude hiding (atomically)
+import           Prelude (String)
 
 import qualified Control.Monad.Class.MonadSTM.Strict as STM
 
-import           Data.Aeson
-  ( ToJSON (..)
-  , Value (..)
-  , toJSON
-  , (.=)
-  )
+import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Text.Printf
-  ( printf
-  )
+import           Text.Printf (printf)
 
-import           Cardano.BM.Data.LogItem
-  ( LOContent (..)
-  , PrivacyAnnotation (..)
-  , mkLOMeta
-  )
-import           Cardano.BM.Data.Tracer
-  ( emptyObject
-  , mkObject
-  )
-import           Cardano.BM.Trace
-  ( appendName
-  , traceNamedObject
-  )
+import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
+import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.Block
-  ( Header
-  )
-import           Ouroboros.Consensus.Node
-  ( NodeKernel (..)
-  , remoteAddress
-  )
-import           Ouroboros.Consensus.Util.Orphans
-  ()
+import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Node (NodeKernel (..), remoteAddress)
+import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as Net
-import           Ouroboros.Network.Block
-  ( unSlotNo
-  )
+import           Ouroboros.Network.Block (unSlotNo)
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
-import           Ouroboros.Network.BlockFetch.ClientState
-  ( PeerFetchInFlight (..)
-  , PeerFetchStatus (..)
-  , readFetchClientState
-  )
-import           Ouroboros.Network.NodeToClient
-  ( LocalConnectionId
-  )
-import           Ouroboros.Network.NodeToNode
-  ( RemoteConnectionId
-  )
+import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
+                     PeerFetchStatus (..), readFetchClientState)
+import           Ouroboros.Network.NodeToClient (LocalConnectionId)
+import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 
 import           Cardano.Tracing.Kernel
 

@@ -7,9 +7,7 @@ module Test.CLI.Shelley.Golden.Genesis.Create
 
 import           Cardano.Prelude
 
-import           Prelude
-  ( String
-  )
+import           Prelude (String)
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
@@ -19,11 +17,7 @@ import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
 import qualified System.Directory as IO
 
-import           Hedgehog
-  ( Property
-  , forAll
-  , (===)
-  )
+import           Hedgehog (Property, forAll, (===))
 
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T

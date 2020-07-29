@@ -9,30 +9,18 @@ module Cardano.Node.Protocol
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except
-  ( ExceptT
-  )
-import           Control.Monad.Trans.Except.Extra
-  ( firstExceptT
-  )
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import           Cardano.Config.Types
-  ( ProtocolFilepaths (..)
-  )
-import           Cardano.Node.Types
-  ( MockProtocol (..)
-  , NodeConfiguration (..)
-  , NodeMockProtocolConfiguration (..)
-  , NodeProtocolConfiguration (..)
-  )
+import           Cardano.Config.Types (ProtocolFilepaths (..))
+import           Cardano.Node.Types (MockProtocol (..), NodeConfiguration (..),
+                     NodeMockProtocolConfiguration (..), NodeProtocolConfiguration (..))
 
 import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Mock
 import           Cardano.Node.Protocol.Shelley
-import           Cardano.Node.Protocol.Types
-  ( SomeConsensusProtocol (..)
-  )
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params

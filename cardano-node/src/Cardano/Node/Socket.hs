@@ -10,47 +10,25 @@ module Cardano.Node.Socket
   )
 where
 
-import           Cardano.Prelude hiding
-  ( local
-  )
-import           Prelude
-  ( String
-  )
+import           Cardano.Prelude hiding (local)
+import           Prelude (String)
 import qualified Prelude
 
-import           Control.Monad.Trans.Except.Extra
-  ( handleIOExceptT
-  )
-import           Network.Socket
-  ( AddrInfo (..)
-  , AddrInfoFlag (..)
-  , Socket
-  , SocketType (..)
-  , defaultHints
-  , getAddrInfo
-  )
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Socket, SocketType (..),
+                     defaultHints, getAddrInfo)
 
-import           Cardano.Config.Types
-  ( NodeAddress (..)
-  , NodeHostAddress (..)
-  , SocketPath (..)
-  )
+import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress (..), SocketPath (..))
 import           Cardano.Node.Types
 
 #if defined(mingw32_HOST_OS)
 #else
-import           System.Directory
-  ( removeFile
-  )
-import           System.IO.Error
-  ( isDoesNotExistError
-  )
+import           System.Directory (removeFile)
+import           System.IO.Error (isDoesNotExistError)
 #endif
 
 #ifdef SYSTEMD
-import           System.Systemd.Daemon
-  ( getActivatedSockets
-  )
+import           System.Systemd.Daemon (getActivatedSockets)
 #endif
 
 

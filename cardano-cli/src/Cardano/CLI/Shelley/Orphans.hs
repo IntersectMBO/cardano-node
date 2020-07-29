@@ -25,53 +25,25 @@ import qualified Data.Text.Encoding as Text
 
 import           Cardano.Crypto.Hash.Class as Crypto
 
-import           Ouroboros.Consensus.Byron.Ledger.Block
-  ( ByronHash (..)
-  )
-import           Ouroboros.Consensus.HardFork.Combinator
-  ( OneEraHash (..)
-  )
-import           Ouroboros.Consensus.Shelley.Ledger.Block
-  ( ShelleyHash (..)
-  )
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto
-  ( TPraosStandardCrypto
-  )
-import           Ouroboros.Network.Block
-  ( BlockNo (..)
-  , HeaderHash
-  , Tip (..)
-  )
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
+import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
+import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
-import           Shelley.Spec.Ledger.BaseTypes
-  ( StrictMaybe
-  )
-import           Shelley.Spec.Ledger.BlockChain
-  ( HashHeader (..)
-  )
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
+import           Shelley.Spec.Ledger.BlockChain (HashHeader (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
-import           Shelley.Spec.Ledger.Crypto
-  ( Crypto
-  )
+import           Shelley.Spec.Ledger.Crypto (Crypto)
 import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
-import           Shelley.Spec.Ledger.MetaData
-  ( MetaDataHash (..)
-  )
-import           Shelley.Spec.Ledger.PParams
-  ( PParams' (..)
-  )
+import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
+import           Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
 import qualified Shelley.Spec.Ledger.Rewards as Ledger
-import           Shelley.Spec.Ledger.TxData
-  ( TxId (..)
-  , TxIn (..)
-  , TxOut (..)
-  )
-import           Shelley.Spec.Ledger.UTxO
-  ( UTxO (..)
-  )
+import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
+import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 instance Crypto c => ToJSONKey (TxIn c) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)

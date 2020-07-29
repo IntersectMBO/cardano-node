@@ -6,9 +6,7 @@ module Test.CLI.Shelley.Golden.Node.KeyGen
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  )
+import           Hedgehog (Property)
 
 import qualified Test.OptParse as OP
 

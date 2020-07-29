@@ -26,16 +26,12 @@ module Cardano.Api.Protocol
 
 import           Cardano.Prelude
 
-import           Cardano.Chain.Slotting
-  ( EpochSlots (..)
-  )
+import           Cardano.Chain.Slotting (EpochSlots (..))
 
 import           Cardano.Api.Typed
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Node.Run
-  ( RunNode
-  )
+import           Ouroboros.Consensus.Node.Run (RunNode)
 
 
 data Protocol = MockProtocol !MockProtocol

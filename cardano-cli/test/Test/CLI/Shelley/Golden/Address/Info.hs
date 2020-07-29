@@ -6,9 +6,7 @@ module Test.CLI.Shelley.Golden.Address.Info
 
 import           Cardano.Prelude
 
-import           Hedgehog
-  ( Property
-  )
+import           Hedgehog (Property)
 
 import qualified Data.List as L
 import qualified Hedgehog as H

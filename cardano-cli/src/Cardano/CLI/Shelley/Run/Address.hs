@@ -6,41 +6,22 @@ module Cardano.CLI.Shelley.Run.Address
   , runAddressCmd
   ) where
 
-import           Cardano.Prelude hiding
-  ( putStrLn
-  )
-import           Prelude
-  ( putStrLn
-  )
+import           Cardano.Prelude hiding (putStrLn)
+import           Prelude (putStrLn)
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
-import           Control.Monad.Trans.Except
-  ( ExceptT
-  )
-import           Control.Monad.Trans.Except.Extra
-  ( firstExceptT
-  , newExceptT
-  )
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
-import           Cardano.Api.TextView
-  ( TextViewDescription (..)
-  )
+import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
-import           Cardano.CLI.Shelley.Parsers
-  ( AddressCmd (..)
-  , AddressKeyType (..)
-  , OutputFile (..)
-  , SigningKeyFile (..)
-  , VerificationKeyFile (..)
-  )
-import           Cardano.CLI.Shelley.Run.Address.Info
-  ( ShelleyAddressInfoError
-  , runAddressInfo
-  )
+import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..),
+                     SigningKeyFile (..), VerificationKeyFile (..))
+import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 
 data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
