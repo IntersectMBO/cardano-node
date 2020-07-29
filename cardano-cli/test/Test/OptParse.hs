@@ -21,43 +21,43 @@ module Test.OptParse
   , noteEvalM
   , noteInputFile
   , noteTempFile
+  , readFile
   ) where
-
-import           Cardano.Prelude hiding (lines, stderr, stdout)
-import           Prelude (String)
-import qualified Prelude as Prelude
-
-import           Control.Monad.Trans.Except.Extra (runExceptT)
-import qualified Data.Text as Text
-import           Options.Applicative (ParserHelp (..), ParserResult (..))
-import qualified Options.Applicative as Opt
-import           Options.Applicative.Help.Chunk
-import           Options.Applicative.Help.Pretty
-import           System.Directory (doesFileExist, removeFile)
-import           System.IO.Error
 
 import           Cardano.Api.TextView (TextView (..), TextViewError, TextViewType (..))
 import           Cardano.Api.Typed (FileError, displayError, readTextEnvelopeOfTypeFromFile)
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (ClientCommand (..), renderClientCommandError, runClientCommand)
+import           Cardano.Prelude hiding (lines, readFile, stderr, stdout)
+import           Control.Monad.Trans.Except.Extra (runExceptT)
+import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
+import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
+import           Hedgehog.Internal.Source (getCaller)
+import           Options.Applicative (ParserHelp (..), ParserResult (..))
+import           Options.Applicative.Help.Chunk
+import           Options.Applicative.Help.Pretty
+import           Prelude (String)
+import           System.Directory (doesFileExist, removeFile)
+import           System.IO.Error
 
-import qualified Data.Maybe as M
+import qualified Control.DeepSeq as CSD
+import qualified Control.Exception as E
 import qualified Data.List as L
+import qualified Data.Maybe as M
+import qualified Data.Text as Text
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
 import qualified GHC.Stack as GHC
+import qualified Hedgehog as H
+import qualified Hedgehog.Internal.Property as H
+import qualified Options.Applicative as Opt
+import qualified Prelude as Prelude
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.Exit as IO
 import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 import qualified System.Process as IO
-
-import qualified Hedgehog as H
-import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
-import qualified Hedgehog.Internal.Property as H
-import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
-import           Hedgehog.Internal.Source (getCaller)
 
 -- | Purely evalutate the cardano-cli parser.
 -- e.g evalCardanoCLIParser ["shelley"] would be equivalent to cabal exec cardano-cli shelley
@@ -158,13 +158,11 @@ execClientCommand cS fps cmd = do e <- lift . runExceptT $ runClientCommand cmd
 -- | Checks that the 'tvType' and 'tvDescription' are equivalent between two files.
 checkTextEnvelopeFormat
   :: HasCallStack
-  => [FilePath]
-  -- ^ Files to clean up on failure
-  -> TextViewType
+  => TextViewType
   -> FilePath
   -> FilePath
   -> H.PropertyT IO ()
-checkTextEnvelopeFormat fps tve reference created = do
+checkTextEnvelopeFormat tve reference created = do
 
   eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve reference
   refTextEnvelope <- handleTextEnvelope eRefTextEnvelope
@@ -176,14 +174,12 @@ checkTextEnvelopeFormat fps tve reference created = do
  where
    handleTextEnvelope :: Either (FileError TextViewError) TextView -> H.PropertyT IO TextView
    handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
-   handleTextEnvelope (Left fileErr) = do
-     liftIO $ fileCleanup fps
-     failWithCustom callStack Nothing . displayError $ fileErr
+   handleTextEnvelope (Left fileErr) = failWithCustom callStack Nothing . displayError $ fileErr
 
    typeTitleEquivalence :: TextView -> TextView -> H.PropertyT IO ()
    typeTitleEquivalence (TextView refType refTitle _) (TextView createdType createdTitle _) = do
-     equivalence fps refType createdType
-     equivalence fps refTitle createdTitle
+     equivalence refType createdType
+     equivalence refTitle createdTitle
 
 --------------------------------------------------------------------------------
 -- Helpers, Error rendering & Clean up
@@ -257,6 +253,10 @@ withSnd f a = (a, f a)
 formatIso8601 :: DT.UTCTime -> String
 formatIso8601 = DT.formatTime DT.defaultTimeLocale (DT.iso8601DateFormat (Just "%H:%M:%SZ"))
 
+-- | Assert the file contains the given number of occurences of the given string
+readFile :: HasCallStack => FilePath -> H.PropertyT IO String
+readFile filename = withFrozenCallStack $ H.evalM . liftIO $ E.evaluate . CSD.force =<< IO.readFile filename
+
 -- | Checks if all files gives exists. If this fails, all files are deleted.
 assertFilesExist :: HasCallStack => [FilePath] -> H.PropertyT IO ()
 assertFilesExist [] = return ()
@@ -324,18 +324,14 @@ propertyOnce =  H.withTests 1 . H.property
 -- | Check for equivalence between two types and perform a file cleanup on failure.
 equivalence
   :: (Eq a, Show a, HasCallStack)
-  => [FilePath]
-  -- ^ Files to clean up on failure.
-  -> a
+  => a
   -> a
   -> H.PropertyT IO ()
-equivalence fps x y = do
+equivalence x y = do
   ok <- H.eval (x == y)
-  if ok then
-    H.success
-  else do
-    liftIO $ fileCleanup fps
-    failDiffCustom callStack x y
+  if ok
+    then H.success
+    else failDiffCustom callStack x y
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
 failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a

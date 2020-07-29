@@ -19,7 +19,7 @@ golden_shelleyTransactionCalculateMinFee = OP.propertyOnce $ OP.moduleWorkspace 
   txBodyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-calculate-min-fee/tx-body-file"
   minFeeTxtFile <- OP.noteTempFile tempDir "min-fee.txt"
 
-  minFeeTxt <- OP.noteEvalM $ OP.execCardanoCLI
+  minFeeTxt <- OP.execCardanoCLI
     [ "shelley","transaction","calculate-min-fee"
     , "--tx-in-count", "32"
     , "--tx-out-count", "27"

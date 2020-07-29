@@ -4,48 +4,36 @@ module Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
   ( golden_shelleyGenesisKeys
   ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
-
+import           Cardano.Prelude
 import           Hedgehog (Property)
-import qualified Hedgehog as H
 
-import           Test.OptParse as OP
-
+import qualified Test.OptParse as OP
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. Check the TextEnvelope serialization format has not changed
 golden_shelleyGenesisKeys :: Property
-golden_shelleyGenesisKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
-    -- Reference keys
-    let referenceVerKey = "test/Test/golden/shelley/keys/genesis_keys/verification_key"
-        referenceSignKey = "test/Test/golden/shelley/keys/genesis_keys/signing_key"
+golden_shelleyGenesisKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+  -- Reference keys
+  referenceVerKey <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_keys/verification_key"
+  referenceSignKey <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_keys/signing_key"
 
-    -- Key filepaths
-    let verKey = "genesis-verification-key-file"
-        signKey = "genesis-signing-key-file"
-        createdFiles = [verKey, signKey]
+  -- Key filepaths
+  verKey <- OP.noteTempFile tempDir "genesis-verification-key-file"
+  signKey <- OP.noteTempFile tempDir "genesis-signing-key-file"
 
-    -- Generate payment verification key
-    execCardanoCLIParser
-      createdFiles
-        $ evalCardanoCLIParser [ "shelley","genesis","key-gen-genesis"
-                               , "--verification-key-file", verKey
-                               , "--signing-key-file", signKey
-                               ]
+  -- Generate payment verification key
+  void $ OP.execCardanoCLI
+    [ "shelley","genesis","key-gen-genesis"
+    , "--verification-key-file", verKey
+    , "--signing-key-file", signKey
+    ]
 
-    assertFilesExist createdFiles
+  let signingKeyType = textEnvelopeType (AsSigningKey AsGenesisKey)
+      verificationKeyType = textEnvelopeType (AsVerificationKey AsGenesisKey)
 
-
-    let signingKeyType = textEnvelopeType (AsSigningKey AsGenesisKey)
-        verificationKeyType = textEnvelopeType (AsVerificationKey AsGenesisKey)
-
-    -- Check the newly created files have not deviated from the
-    -- golden files
-    checkTextEnvelopeFormat createdFiles verificationKeyType referenceVerKey verKey
-    checkTextEnvelopeFormat createdFiles signingKeyType referenceSignKey signKey
-
-    liftIO $ fileCleanup createdFiles
-    H.success
+  -- Check the newly created files have not deviated from the
+  -- golden files
+  OP.checkTextEnvelopeFormat verificationKeyType referenceVerKey verKey
+  OP.checkTextEnvelopeFormat signingKeyType referenceSignKey signKey

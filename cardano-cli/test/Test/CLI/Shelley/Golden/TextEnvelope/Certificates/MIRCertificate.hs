@@ -4,54 +4,45 @@ module Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
   ( golden_shelleyMIRCertificate
   ) where
 
-import           Cardano.Prelude
-
 import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
-
+import           Cardano.Prelude
 import           Hedgehog (Property)
-import qualified Hedgehog as H
 
-import           Test.OptParse as OP
+import qualified Test.OptParse as OP
 
 -- | 1. Generate stake key pair
 --   2. Create MIR certificate
 --   s. Check the TextEnvelope serialization format has not changed.
 golden_shelleyMIRCertificate :: Property
-golden_shelleyMIRCertificate = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
-    -- Reference keys
-    let referenceMIRCertificate = "test/Test/golden/shelley/certificates/mir_certificate"
+golden_shelleyMIRCertificate = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+  -- Reference keys
+  referenceMIRCertificate <- OP.noteInputFile "test/Test/golden/shelley/certificates/mir_certificate"
 
-    -- Key filepaths
-    let verKey = "stake-verification-key-file"
-        signKey = "stake-signing-key-file"
-        mirCertificate = "mir-certificate-file"
-        createdFiles = [verKey, signKey, mirCertificate]
+  -- Key filepaths
+  verKey <- OP.noteTempFile tempDir "stake-verification-key-file"
+  signKey <- OP.noteTempFile tempDir "stake-signing-key-file"
+  mirCertificate <- OP.noteTempFile tempDir "mir-certificate-file"
 
-    -- Generate stake key pair
-    execCardanoCLIParser
-      createdFiles
-        $ evalCardanoCLIParser [ "shelley","stake-address","key-gen"
-                               , "--verification-key-file", verKey
-                               , "--signing-key-file", signKey
-                               ]
+  -- Generate stake key pair
+  void $ OP.execCardanoCLI
+    [ "shelley","stake-address","key-gen"
+    , "--verification-key-file", verKey
+    , "--signing-key-file", signKey
+    ]
 
-    assertFilesExist [verKey, signKey]
+  OP.assertFilesExist [verKey, signKey]
 
-    -- Create MIR certificate
-    execCardanoCLIParser
-      createdFiles
-        $ evalCardanoCLIParser [ "shelley","governance","create-mir-certificate"
-                               , "--reserves" --TODO: Should also do "--reserves"
-                               , "--stake-verification-key-file", verKey
-                               , "--reward", "1000"
-                               , "--out-file", mirCertificate
-                               ]
+  -- Create MIR certificate
+  void $ OP.execCardanoCLI
+    [ "shelley","governance","create-mir-certificate"
+    , "--reserves" --TODO: Should also do "--reserves"
+    , "--stake-verification-key-file", verKey
+    , "--reward", "1000"
+    , "--out-file", mirCertificate
+    ]
 
-    assertFilesExist [mirCertificate]
+  OP.assertFilesExist [mirCertificate]
 
-    let registrationCertificateType = textEnvelopeType AsCertificate
+  let registrationCertificateType = textEnvelopeType AsCertificate
 
-    checkTextEnvelopeFormat createdFiles registrationCertificateType referenceMIRCertificate mirCertificate
-
-    liftIO $ fileCleanup createdFiles
-    H.success
+  OP.checkTextEnvelopeFormat registrationCertificateType referenceMIRCertificate mirCertificate

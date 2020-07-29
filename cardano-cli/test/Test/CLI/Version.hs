@@ -14,6 +14,6 @@ import qualified Test.OptParse as OP
 
 golden_version :: Property
 golden_version = OP.propertyOnce $ do
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ OP.execCardanoCLI
     [ "version"
     ]

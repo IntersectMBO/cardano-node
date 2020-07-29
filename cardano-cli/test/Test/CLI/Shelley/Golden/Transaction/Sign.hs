@@ -25,7 +25,7 @@ golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \te
 
   -- Defaults to signing a Mainnet transaction
 
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ OP.execCardanoCLI
     [ "shelley","transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
@@ -38,7 +38,7 @@ golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \te
 
   -- Sign for a testnet with a testnet network magic of 11, but use two signing keys
 
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ OP.execCardanoCLI
     [ "shelley","transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
@@ -53,7 +53,7 @@ golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \te
   -- Sign a pool registration transaction.
   -- TODO: This needs to use an unsigned tx with a registration certificate
 
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ OP.execCardanoCLI
     [ "shelley","transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile

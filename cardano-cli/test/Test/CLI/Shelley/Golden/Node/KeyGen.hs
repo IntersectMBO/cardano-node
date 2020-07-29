@@ -5,7 +5,6 @@ module Test.CLI.Shelley.Golden.Node.KeyGen
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
 
 import qualified Test.OptParse as OP
@@ -13,23 +12,22 @@ import qualified Test.OptParse as OP
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyNodeKeyGen :: Property
-golden_shelleyNodeKeyGen = OP.propertyOnce $ do
-  OP.moduleWorkspace "tmp" $ \tempDir -> do
-    verificationKeyFile <- OP.noteTempFile tempDir "key-gen.vkey"
-    signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
-    opCertCounterFile <- OP.noteTempFile tempDir "op-cert.counter"
+golden_shelleyNodeKeyGen = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+  verificationKeyFile <- OP.noteTempFile tempDir "key-gen.vkey"
+  signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
+  opCertCounterFile <- OP.noteTempFile tempDir "op-cert.counter"
 
-    void $ OP.execCardanoCLI
-        [ "shelley","node","key-gen"
-        , "--verification-key-file", verificationKeyFile
-        , "--signing-key-file", signingKeyFile
-        , "--operational-certificate-issue-counter", opCertCounterFile
-        ]
+  void $ OP.execCardanoCLI
+      [ "shelley","node","key-gen"
+      , "--verification-key-file", verificationKeyFile
+      , "--signing-key-file", signingKeyFile
+      , "--operational-certificate-issue-counter", opCertCounterFile
+      ]
 
-    OP.assertFileOccurences 1 "StakePoolVerificationKey_ed25519" $ verificationKeyFile
-    OP.assertFileOccurences 1 "StakePoolSigningKey_ed25519" $ signingKeyFile
-    OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ opCertCounterFile
+  OP.assertFileOccurences 1 "StakePoolVerificationKey_ed25519" $ verificationKeyFile
+  OP.assertFileOccurences 1 "StakePoolSigningKey_ed25519" $ signingKeyFile
+  OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ opCertCounterFile
 
-    OP.assertEndsWithSingleNewline verificationKeyFile
-    OP.assertEndsWithSingleNewline signingKeyFile
-    OP.assertEndsWithSingleNewline opCertCounterFile
+  OP.assertEndsWithSingleNewline verificationKeyFile
+  OP.assertEndsWithSingleNewline signingKeyFile
+  OP.assertEndsWithSingleNewline opCertCounterFile

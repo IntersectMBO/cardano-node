@@ -6,35 +6,23 @@ module Test.CLI.Shelley.Golden.Genesis.Create
   ) where
 
 import           Cardano.Prelude
-
+import           Hedgehog (Property, forAll, (===))
 import           Prelude (String)
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Set as S
-import qualified Data.Time.Clock as DT
-import qualified Data.Time.Format as DT
-import qualified System.Directory as IO
-
-import           Hedgehog (Property, forAll, (===))
-
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
+import qualified Data.Time.Clock as DT
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
+import qualified System.Directory as IO
 import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
-
--- | Format the given time as an ISO 8601 date-time string
-formatIso8601 :: DT.UTCTime -> String
-formatIso8601 = DT.formatTime DT.defaultTimeLocale (DT.iso8601DateFormat (Just "%H:%M:%SZ"))
-
--- | Return the supply value with the result of the supplied function as a tuple
-withSnd :: (a -> b) -> a -> (a, b)
-withSnd f a = (a, f a)
 
 parseMaxLovelaceSupply :: J.Value -> J.Parser Int
 parseMaxLovelaceSupply = J.withObject "Object" $ \o -> o J..: "maxLovelaceSupply"
@@ -79,11 +67,11 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
 
     let genesisFile = tempDir <> "/genesis.json"
 
-    fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
+    fmtStartTime <- fmap OP.formatIso8601 $ liftIO DT.getCurrentTime
 
-    (supply, fmtSupply) <- fmap (withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
-    (delegateCount, fmtDelegateCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
-    (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
+    (supply, fmtSupply) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
+    (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
+    (utxoCount, fmtUtxoCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
     void $ OP.execCardanoCLI
@@ -149,11 +137,11 @@ golden_shelleyGenesisCreate = OP.propertyOnce $ do
   OP.moduleWorkspace "tmp" $ \tempDir -> do
     let genesisFile = tempDir <> "/genesis.json"
 
-    fmtStartTime <- fmap formatIso8601 $ liftIO DT.getCurrentTime
+    fmtStartTime <- fmap OP.formatIso8601 $ liftIO DT.getCurrentTime
 
-    (supply, fmtSupply) <- fmap (withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
-    (delegateCount, fmtDelegateCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
-    (utxoCount, fmtUtxoCount) <- fmap (withSnd show) $ forAll $ G.int (R.linear 4 19)
+    (supply, fmtSupply) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
+    (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
+    (utxoCount, fmtUtxoCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
 
     -- Create the genesis json file and required keys
     void $ OP.execCardanoCLI

@@ -22,7 +22,7 @@ golden_shelleyTransactionBuild = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \t
 
   txBodyOutFile <- OP.noteTempFile tempDir "tx-body-out"
 
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ OP.execCardanoCLI
     [ "shelley","transaction","build-raw"
     , "--tx-in", txIn
     , "--tx-out", txOut
