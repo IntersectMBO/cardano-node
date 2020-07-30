@@ -127,7 +127,7 @@ module Cardano.Api.Typed (
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
-    TxMetadata,
+    TxMetadata (..),
     TxMetadataValue(..),
     makeTransactionMetadata,
 
@@ -1914,7 +1914,7 @@ data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
                      | TxMetaText   Text
                      | TxMetaList   [TxMetadataValue]
                      | TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
-    deriving stock (Eq, Show)
+    deriving stock (Eq, Ord, Show)
 
 -- | Merge metadata maps. When there are clashing entries the left hand side
 -- takes precedence.
@@ -1941,8 +1941,8 @@ instance SerialiseAsCBOR TxMetadata where
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
 makeTransactionMetadata =
     TxMetadata
-  . Shelley.MetaData
-  . Map.map toShelleyMetaDatum
+      . Shelley.MetaData
+      . Map.map toShelleyMetaDatum
   where
     toShelleyMetaDatum :: TxMetadataValue -> Shelley.MetaDatum
     toShelleyMetaDatum (TxMetaNumber x) = Shelley.I x
