@@ -1,3 +1,4 @@
+cabal-version:         3.0
 name:                  cardano-node
 version:               1.18.0
 description:           The cardano full node
@@ -8,7 +9,6 @@ license-files:
   LICENSE
   NOTICE
 build-type:            Simple
-cabal-version:         >= 1.10
 extra-source-files:    ChangeLog.md
 
 Flag unexpected_thunks
@@ -143,7 +143,7 @@ library
 
 
 library cardano-node-config
-
+  visibility:          public
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Node.Orphans
@@ -239,7 +239,7 @@ executable chairman
                      , cardano-prelude
                      , io-sim-classes
                      , network-mux
-                     , cardano-node-config
+                     , cardano-node:cardano-node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano

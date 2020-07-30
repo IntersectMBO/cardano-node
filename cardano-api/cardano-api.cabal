@@ -1,3 +1,4 @@
+cabal-version:          3.0
 name:                   cardano-api
 version:                1.18.0
 description:            The cardano api
@@ -8,7 +9,6 @@ license-files:
   LICENSE
   NOTICE
 build-type:             Simple
-cabal-version:          >= 1.10
 extra-source-files:     README.md, ChangeLog.md
 
 library

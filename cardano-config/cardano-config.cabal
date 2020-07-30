@@ -1,3 +1,4 @@
+cabal-version:         3.0
 name:                  cardano-config
 version:               0.1.0.0
 author:                IOHK
@@ -7,7 +8,6 @@ license-files:
   LICENSE
   NOTICE
 build-type:            Simple
-cabal-version:         >= 1.10
 extra-source-files:    README.md
 
 flag systemd
