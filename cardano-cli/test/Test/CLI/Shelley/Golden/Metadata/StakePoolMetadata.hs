@@ -5,45 +5,31 @@ module Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
-import qualified Hedgehog as H
-
 import           Test.OptParse as OP
 
 golden_stakePoolMetadataHash :: Property
-golden_stakePoolMetadataHash = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
-      let referenceStakePoolMetaData = "test/Test/golden/shelley/metadata/stake_pool_metadata_hash"
+golden_stakePoolMetadataHash = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  referenceStakePoolMetaData <- noteInputFile "test/Test/golden/shelley/metadata/stake_pool_metadata_hash"
 
+  stakePoolMetadataFile <- noteTempFile tempDir "stake-pool-metadata.json"
+  outputStakePoolMetadataHashFp <- noteTempFile tempDir "stake-pool-metadata-hash.txt"
 
-      let stakePoolMetadataFp = "stake-pool-metadata.json"
-          outputStakePoolMetadataHashFp = "stake-pool-metadata-hash.txt"
-          allFiles = [stakePoolMetadataFp, outputStakePoolMetadataHashFp]
+  -- Write the example stake pool metadata to disk
+  liftIO $ writeFile stakePoolMetadataFile exampleStakePoolMetadata
 
-      -- Write the example stake pool metadata to disk
-      liftIO $ writeFile stakePoolMetadataFp exampleStakePoolMetadata
-      assertFilesExist [stakePoolMetadataFp]
+  -- Hash the stake pool metadata
+  void $ execCardanoCLI
+    [ "shelley","stake-pool","metadata-hash"
+    , "--pool-metadata-file", stakePoolMetadataFile
+    , "--out-file", outputStakePoolMetadataHashFp
+    ]
 
-      -- Hash the stake pool metadata
-      execCardanoCLIParser
-        allFiles
-          $ evalCardanoCLIParser [ "shelley","stake-pool","metadata-hash"
-                                , "--pool-metadata-file", stakePoolMetadataFp
-                                , "--out-file", outputStakePoolMetadataHashFp
-                                ]
+  -- Check that the stake pool metadata hash file content is correct.
+  expectedStakePoolMetadataHash <- OP.readFile referenceStakePoolMetaData
+  actualStakePoolMetadataHash <- OP.readFile outputStakePoolMetadataHashFp
 
-      -- Check for existence of the stake pool metadata hash file.
-      assertFilesExist [outputStakePoolMetadataHashFp]
-
-      -- Check that the stake pool metadata hash file content is correct.
-      expectedStakePoolMetadataHash <- liftIO $ readFile referenceStakePoolMetaData
-      actualStakePoolMetadataHash <- liftIO $ readFile outputStakePoolMetadataHashFp
-
-      equivalence allFiles expectedStakePoolMetadataHash actualStakePoolMetadataHash
-
-      liftIO $ fileCleanup allFiles
-
-      H.success
+  equivalence expectedStakePoolMetadataHash actualStakePoolMetadataHash
   where
     exampleStakePoolMetadata :: Text
     exampleStakePoolMetadata = "{\"homepage\":\"https://iohk.io\",\"name\":\"Genesis Pool C\",\"ticker\":\"GPC\",\"description\":\"Lorem Ipsum Dolor Sit Amet.\"}"

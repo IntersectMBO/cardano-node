@@ -5,27 +5,25 @@ module Test.CLI.Shelley.Golden.Transaction.Sign
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionSign :: Property
-golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
-  txBodyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/tx-body-file"
-  initialUtxo1SigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/initial-utxo1.skey"
-  initialUtxo2SigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/initial-utxo2.skey"
-  utxoSigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/utxo.skey"
-  stakeSigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/stake.skey"
-  nodeColdSigningKeyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-sign/node-cold.skey"
-  signedTransactionFile <- OP.noteTempFile tempDir "signed.tx"
-  transactionPoolRegSignedFile <- OP.noteTempFile tempDir "tx-pool-reg.signed"
+golden_shelleyTransactionSign = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+  txBodyFile <- noteInputFile "test/Test/golden/shelley/transaction-sign/tx-body-file"
+  initialUtxo1SigningKeyFile <- noteInputFile "test/Test/golden/shelley/transaction-sign/initial-utxo1.skey"
+  initialUtxo2SigningKeyFile <- noteInputFile "test/Test/golden/shelley/transaction-sign/initial-utxo2.skey"
+  utxoSigningKeyFile <- noteInputFile "test/Test/golden/shelley/transaction-sign/utxo.skey"
+  stakeSigningKeyFile <- noteInputFile "test/Test/golden/shelley/transaction-sign/stake.skey"
+  nodeColdSigningKeyFile <- noteInputFile "test/Test/golden/shelley/transaction-sign/node-cold.skey"
+  signedTransactionFile <- noteTempFile tempDir "signed.tx"
+  transactionPoolRegSignedFile <- noteTempFile tempDir "tx-pool-reg.signed"
 
   -- Defaults to signing a Mainnet transaction
 
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
@@ -33,12 +31,12 @@ golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \te
     , "--tx-file", signedTransactionFile
     ]
 
-  OP.assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
-  OP.assertEndsWithSingleNewline signedTransactionFile
+  assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
+  assertEndsWithSingleNewline signedTransactionFile
 
   -- Sign for a testnet with a testnet network magic of 11, but use two signing keys
 
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
@@ -47,13 +45,13 @@ golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \te
     , "--tx-file", signedTransactionFile
     ]
 
-  OP.assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
-  OP.assertEndsWithSingleNewline signedTransactionFile
+  assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
+  assertEndsWithSingleNewline signedTransactionFile
 
   -- Sign a pool registration transaction.
   -- TODO: This needs to use an unsigned tx with a registration certificate
 
-  void . OP.noteEvalM $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
@@ -63,5 +61,5 @@ golden_shelleyTransactionSign = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \te
     , "--tx-file", transactionPoolRegSignedFile
     ]
 
-  OP.assertFileOccurences 1 "TxSignedShelley" transactionPoolRegSignedFile
-  OP.assertEndsWithSingleNewline transactionPoolRegSignedFile
+  assertFileOccurences 1 "TxSignedShelley" transactionPoolRegSignedFile
+  assertEndsWithSingleNewline transactionPoolRegSignedFile

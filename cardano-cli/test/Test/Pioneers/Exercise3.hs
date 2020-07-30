@@ -5,64 +5,55 @@ module Test.Pioneers.Exercise3
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
-import qualified Hedgehog as H
-
 import           Test.OptParse
+
+import qualified Hedgehog as H
 
 -- | 1. Create KES key pair.
 --   2. Create cold keys.
 --   3. Create operational certificate.
 --   4. Create VRF key pair.
 prop_createOperationalCertificate :: Property
-prop_createOperationalCertificate =
-  propertyOnce $ do
-    -- Key filepaths
-    let kesVerKey = "KES-verification-key-file"
-        kesSignKey = "KES-signing-key-file"
-        coldVerKey = "cold-verification-key-file"
-        coldSignKey = "cold-signing-key-file"
-        operationalCertCounter = "operational-certificate-counter-file"
-        operationalCert = "operational-certificate-file"
-        allFiles = [kesVerKey, kesSignKey, coldVerKey, coldSignKey, operationalCertCounter, operationalCert]
+prop_createOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  -- Key filepaths
+  kesVerKey <- noteTempFile tempDir "KES-verification-key-file"
+  kesSignKey <- noteTempFile tempDir "KES-signing-key-file"
+  coldVerKey <- noteTempFile tempDir "cold-verification-key-file"
+  coldSignKey <- noteTempFile tempDir "cold-signing-key-file"
+  operationalCertCounter <- noteTempFile tempDir "operational-certificate-counter-file"
+  operationalCert <- noteTempFile tempDir "operational-certificate-file"
 
-    -- Create KES key pair
-    execCardanoCLIParser
-      allFiles
-        $ evalCardanoCLIParser [ "shelley","node","key-gen-KES"
-                               , "--verification-key-file", kesVerKey
-                               , "--signing-key-file", kesSignKey
-                               ]
+  -- Create KES key pair
+  void $ execCardanoCLI
+    [ "shelley","node","key-gen-KES"
+    , "--verification-key-file", kesVerKey
+    , "--signing-key-file", kesSignKey
+    ]
 
-    assertFilesExist [kesSignKey, kesVerKey]
+  assertFilesExist [kesSignKey, kesVerKey]
 
-    -- Create cold key pair
-    execCardanoCLIParser
-      allFiles
-        $ evalCardanoCLIParser [ "shelley","node","key-gen"
-                               , "--cold-verification-key-file", coldVerKey
-                               , "--cold-signing-key-file", coldSignKey
-                               , "--operational-certificate-issue-counter", operationalCertCounter
-                               ]
+  -- Create cold key pair
+  void $ execCardanoCLI
+    [ "shelley","node","key-gen"
+    , "--cold-verification-key-file", coldVerKey
+    , "--cold-signing-key-file", coldSignKey
+    , "--operational-certificate-issue-counter", operationalCertCounter
+    ]
 
-    assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
+  assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
 
-    -- Create operational certificate
-    execCardanoCLIParser
-      allFiles
-        $ evalCardanoCLIParser [ "shelley","node","issue-op-cert"
-                               , "--kes-verification-key-file", kesVerKey
-                               , "--cold-signing-key-file", coldSignKey
-                               , "--operational-certificate-issue-counter", operationalCertCounter
-                               , "--kes-period", "1000"
-                               , "--out-file", operationalCert
-                               ]
+  -- Create operational certificate
+  void $ execCardanoCLI
+    [ "shelley","node","issue-op-cert"
+    , "--kes-verification-key-file", kesVerKey
+    , "--cold-signing-key-file", coldSignKey
+    , "--operational-certificate-issue-counter", operationalCertCounter
+    , "--kes-period", "1000"
+    , "--out-file", operationalCert
+    ]
 
-    assertFilesExist allFiles
-
-    liftIO $ fileCleanup allFiles
-    H.success
+  assertFilesExist [kesVerKey, kesSignKey, coldVerKey, coldSignKey, operationalCertCounter, operationalCert]
 
 -- -----------------------------------------------------------------------------
 
