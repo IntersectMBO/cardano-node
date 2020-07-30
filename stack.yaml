@@ -59,7 +59,7 @@ extra-deps:
   - websockets-0.12.6.1
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 5011965ff8b44e3f7954e8e664fd73c020d13aeb
+    commit: b9abc3844248aa63c3af21f38ad328cc417c8c79
     subdirs:
       # small-steps
       - semantics/executable-spec
