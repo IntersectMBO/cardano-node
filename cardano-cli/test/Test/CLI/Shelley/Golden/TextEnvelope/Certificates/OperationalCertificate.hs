@@ -7,47 +7,46 @@ module Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
 import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 -- | 1. Create KES key pair.
 --   2. Create cold keys.
 --   3. Create operational certificate.
 --   4. Check the TextEnvelope serialization format has not changed.
 golden_shelleyOperationalCertificate :: Property
-golden_shelleyOperationalCertificate = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceOperationalCertificate <- OP.noteInputFile "test/Test/golden/shelley/certificates/operational_certificate"
+  referenceOperationalCertificate <- noteInputFile "test/Test/golden/shelley/certificates/operational_certificate"
 
   -- Key filepaths
-  kesVerKey <- OP.noteTempFile tempDir "KES-verification-key-file"
-  kesSignKey <- OP.noteTempFile tempDir "KES-signing-key-file"
-  coldVerKey <- OP.noteTempFile tempDir "cold-verification-key-file"
-  coldSignKey <- OP.noteTempFile tempDir "cold-signing-key-file"
-  operationalCertCounter <- OP.noteTempFile tempDir "operational-certificate-counter-file"
-  operationalCert <- OP.noteTempFile tempDir "operational-certificate-file"
+  kesVerKey <- noteTempFile tempDir "KES-verification-key-file"
+  kesSignKey <- noteTempFile tempDir "KES-signing-key-file"
+  coldVerKey <- noteTempFile tempDir "cold-verification-key-file"
+  coldSignKey <- noteTempFile tempDir "cold-signing-key-file"
+  operationalCertCounter <- noteTempFile tempDir "operational-certificate-counter-file"
+  operationalCert <- noteTempFile tempDir "operational-certificate-file"
 
   -- Create KES key pair
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","node","key-gen-KES"
     , "--verification-key-file", kesVerKey
     , "--signing-key-file", kesSignKey
     ]
 
-  OP.assertFilesExist [kesSignKey, kesVerKey]
+  assertFilesExist [kesSignKey, kesVerKey]
 
   -- Create cold key pair
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","node","key-gen"
     , "--cold-verification-key-file", coldVerKey
     , "--cold-signing-key-file", coldSignKey
     , "--operational-certificate-issue-counter", operationalCertCounter
     ]
 
-  OP.assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
+  assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
 
   -- Create operational certificate
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","node","issue-op-cert"
     , "--kes-verification-key-file", kesVerKey
     , "--cold-signing-key-file", coldSignKey
@@ -60,4 +59,4 @@ golden_shelleyOperationalCertificate = OP.propertyOnce . OP.moduleWorkspace "tmp
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  OP.checkTextEnvelopeFormat operationalCertificateType referenceOperationalCertificate operationalCert
+  checkTextEnvelopeFormat operationalCertificateType referenceOperationalCertificate operationalCert

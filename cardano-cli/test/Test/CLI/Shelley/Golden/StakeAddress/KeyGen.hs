@@ -6,24 +6,23 @@ module Test.CLI.Shelley.Golden.StakeAddress.KeyGen
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyStakeAddressKeyGen :: Property
-golden_shelleyStakeAddressKeyGen = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
-  verificationKeyFile <- OP.noteTempFile tempDir "kes.vkey"
-  signingKeyFile <- OP.noteTempFile tempDir "kes.skey"
+golden_shelleyStakeAddressKeyGen = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  verificationKeyFile <- noteTempFile tempDir "kes.vkey"
+  signingKeyFile <- noteTempFile tempDir "kes.skey"
 
-  void $ OP.execCardanoCLI
-      [ "shelley","stake-address","key-gen"
-      , "--verification-key-file", verificationKeyFile
-      , "--signing-key-file", signingKeyFile
-      ]
+  void $ execCardanoCLI
+    [ "shelley","stake-address","key-gen"
+    , "--verification-key-file", verificationKeyFile
+    , "--signing-key-file", signingKeyFile
+    ]
 
-  OP.assertFileOccurences 1 "StakeVerificationKeyShelley_ed25519" verificationKeyFile
-  OP.assertFileOccurences 1 "StakeSigningKeyShelley_ed25519" signingKeyFile
+  assertFileOccurences 1 "StakeVerificationKeyShelley_ed25519" verificationKeyFile
+  assertFileOccurences 1 "StakeSigningKeyShelley_ed25519" signingKeyFile
 
-  OP.assertEndsWithSingleNewline verificationKeyFile
-  OP.assertEndsWithSingleNewline signingKeyFile
+  assertEndsWithSingleNewline verificationKeyFile
+  assertEndsWithSingleNewline signingKeyFile

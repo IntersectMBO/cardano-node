@@ -6,6 +6,7 @@ module Test.CLI.Shelley.Golden.Genesis.InitialTxIn
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
+import           Test.OptParse
 
 import qualified System.IO as IO
 import qualified Test.OptParse as OP
@@ -13,19 +14,19 @@ import qualified Test.OptParse as OP
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyGenesisInitialTxIn :: Property
-golden_shelleyGenesisInitialTxIn = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
-  verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
-  goldenUtxoHashFile <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
-  utxoHashFile <- OP.noteTempFile tempDir "utxo_hash"
+golden_shelleyGenesisInitialTxIn = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  verificationKeyFile <- noteInputFile "test/Test/golden/shelley/keys/genesis_verification_keys/genesis-utxo.vkey"
+  goldenUtxoHashFile <- noteInputFile "test/Test/golden/shelley/keys/genesis_utxo_hashes/utxo_hash"
+  utxoHashFile <- noteTempFile tempDir "utxo_hash"
 
-  utxoHash <- OP.execCardanoCLI
-      [ "shelley","genesis","initial-txin"
-      , "--testnet-magic", "16"
-      , "--verification-key-file", verificationKeyFile
-      ]
+  utxoHash <- execCardanoCLI
+    [ "shelley","genesis","initial-txin"
+    , "--testnet-magic", "16"
+    , "--verification-key-file", verificationKeyFile
+    ]
 
   liftIO $ IO.writeFile utxoHashFile utxoHash
 
   goldenUtxoHash <- OP.readFile goldenUtxoHashFile
 
-  OP.equivalence utxoHash goldenUtxoHash
+  equivalence utxoHash goldenUtxoHash

@@ -12,7 +12,6 @@ import           Test.OptParse
 import qualified Codec.Binary.Bech32 as Bech32
 import qualified Data.ByteString.Base16 as Base16
 import qualified Hedgehog as H
-import qualified Test.OptParse as OP
 
 -- | Bech32 verification key
 itnVerKey :: Text
@@ -25,35 +24,35 @@ itnSignKey = "ed25519_sk1yhnetcmla9pskrvp5z5ff2v8gkenhmluy736jd6nrxrlxcgn70zsy94
 -- | 1. Convert a bech32 ITN key pair to a haskell stake verification key and signing key
 --   2. Derive the haskell verification key from the haskell signing key.
 prop_convertITNKeys :: Property
-prop_convertITNKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+prop_convertITNKeys = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   -- ITN input file paths
-  itnVerKeyFp <- OP.noteTempFile tempDir "itnVerKey.key"
-  itnSignKeyFp <- OP.noteTempFile tempDir "itnSignKey.key"
+  itnVerKeyFp <- noteTempFile tempDir "itnVerKey.key"
+  itnSignKeyFp <- noteTempFile tempDir "itnSignKey.key"
 
   -- Converted keys output file paths
-  outputHaskellVerKeyFp <- OP.noteTempFile tempDir "haskell-verification-key.key"
-  outputHaskellSignKeyFp <- OP.noteTempFile tempDir "haskell-signing-key.key"
+  outputHaskellVerKeyFp <- noteTempFile tempDir "haskell-verification-key.key"
+  outputHaskellSignKeyFp <- noteTempFile tempDir "haskell-signing-key.key"
 
   -- Write ITN keys to disk
   liftIO $ writeFile itnVerKeyFp itnVerKey
   liftIO $ writeFile itnSignKeyFp itnSignKey
-  OP.assertFilesExist [itnVerKeyFp, itnSignKeyFp]
+  assertFilesExist [itnVerKeyFp, itnSignKeyFp]
 
   -- Generate haskell stake verification key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","key","convert-itn-key"
     , "--itn-verification-key-file", itnVerKeyFp
     , "--out-file", outputHaskellVerKeyFp
     ]
   -- Generate haskell signing key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","key","convert-itn-key"
     , "--itn-signing-key-file", itnSignKeyFp
     , "--out-file", outputHaskellSignKeyFp
     ]
 
   -- Check for existence of the converted ITN keys
-  OP.assertFilesExist [outputHaskellVerKeyFp, outputHaskellSignKeyFp]
+  assertFilesExist [outputHaskellVerKeyFp, outputHaskellSignKeyFp]
 
 -- | 1. Convert a bech32 ITN extended signing key to a haskell stake signing key
 prop_convertITNExtendedSigningKey :: Property
@@ -114,7 +113,7 @@ prop_convertITNBIP32SigningKey = propertyOnce . moduleWorkspace "tmp" $ \tempDir
 -- | We check our 'decodeBech32Key' outputs against https://slowli.github.io/bech32-buffer/
 -- using 'itnVerKey' & 'itnSignKey' as inputs.
 golden_bech32Decode :: Property
-golden_bech32Decode = OP.propertyOnce $ do
+golden_bech32Decode = propertyOnce $ do
   (vHumReadPart, vDataPart , _) <- H.evalEither $ decodeBech32Key itnVerKey
   Just vDataPartBase16 <- pure (dataPartToBase16 vDataPart)
 

@@ -6,35 +6,35 @@ module Test.Pioneers.Exercise4
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
+import           Test.OptParse
 
 import qualified Hedgehog as H
-import qualified Test.OptParse as OP
 
 -- | 1. Generate a stake verification key
 --   2. Create a stake address registration certificate
 prop_createStakeAddressRegistrationCertificate :: Property
-prop_createStakeAddressRegistrationCertificate = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+prop_createStakeAddressRegistrationCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   -- Key filepaths
-  verKey <- OP.noteTempFile tempDir "stake-verification-key-file"
-  signKey <- OP.noteTempFile tempDir "stake-signing-key-file"
-  stakeRegCert <- OP.noteTempFile tempDir "stake-registration-certificate-file"
+  verKey <- noteTempFile tempDir "stake-verification-key-file"
+  signKey <- noteTempFile tempDir "stake-signing-key-file"
+  stakeRegCert <- noteTempFile tempDir "stake-registration-certificate-file"
 
   -- Generate stake verification key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","stake-address","key-gen"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]
-  OP.assertFilesExist [verKey, signKey]
+  assertFilesExist [verKey, signKey]
 
   -- Create stake address registration certificate
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","stake-address","registration-certificate"
     , "--stake-verification-key-file", verKey
     , "--out-file", stakeRegCert
     ]
 
-  OP.assertFilesExist [verKey, signKey, stakeRegCert]
+  assertFilesExist [verKey, signKey, stakeRegCert]
 
 -- -----------------------------------------------------------------------------
 

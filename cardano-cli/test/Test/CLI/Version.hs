@@ -5,15 +5,13 @@ module Test.CLI.Version
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_version :: Property
-golden_version = OP.propertyOnce $ do
-  void $ OP.execCardanoCLI
+golden_version = propertyOnce $ do
+  void $ execCardanoCLI
     [ "version"
     ]

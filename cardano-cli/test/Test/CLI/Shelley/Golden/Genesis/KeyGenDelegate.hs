@@ -6,31 +6,30 @@ module Test.CLI.Shelley.Golden.Genesis.KeyGenDelegate
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyGenesisKeyGenDelegate :: Property
-golden_shelleyGenesisKeyGenDelegate = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
-  verificationKeyFile <- OP.noteTempFile tempDir "key-gen.vkey"
-  signingKeyFile <- OP.noteTempFile tempDir "key-gen.skey"
-  operationalCertificateIssueCounterFile <- OP.noteTempFile tempDir "op-cert.counter"
+golden_shelleyGenesisKeyGenDelegate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  verificationKeyFile <- noteTempFile tempDir "key-gen.vkey"
+  signingKeyFile <- noteTempFile tempDir "key-gen.skey"
+  operationalCertificateIssueCounterFile <- noteTempFile tempDir "op-cert.counter"
 
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","genesis","key-gen-delegate"
     , "--verification-key-file", verificationKeyFile
     , "--signing-key-file", signingKeyFile
     , "--operational-certificate-issue-counter", operationalCertificateIssueCounterFile
     ]
 
-  OP.assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ verificationKeyFile
-  OP.assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ signingKeyFile
-  OP.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ operationalCertificateIssueCounterFile
+  assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ verificationKeyFile
+  assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ signingKeyFile
+  assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ operationalCertificateIssueCounterFile
 
-  OP.assertFileOccurences 1 "Genesis delegate operator key" $ verificationKeyFile
-  OP.assertFileOccurences 1 "Genesis delegate operator key" $ signingKeyFile
+  assertFileOccurences 1 "Genesis delegate operator key" $ verificationKeyFile
+  assertFileOccurences 1 "Genesis delegate operator key" $ signingKeyFile
 
-  OP.assertEndsWithSingleNewline verificationKeyFile
-  OP.assertEndsWithSingleNewline signingKeyFile
-  OP.assertEndsWithSingleNewline operationalCertificateIssueCounterFile
+  assertEndsWithSingleNewline verificationKeyFile
+  assertEndsWithSingleNewline signingKeyFile
+  assertEndsWithSingleNewline operationalCertificateIssueCounterFile

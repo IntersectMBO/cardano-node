@@ -5,21 +5,20 @@ module Test.CLI.Shelley.Golden.Transaction.CalculateMinFee
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
+import           Test.OptParse
 
 import qualified System.IO as IO
-import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionCalculateMinFee :: Property
-golden_shelleyTransactionCalculateMinFee = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
-  protocolParamsJsonFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-calculate-min-fee/protocol-params.json"
-  txBodyFile <- OP.noteInputFile "test/Test/golden/shelley/transaction-calculate-min-fee/tx-body-file"
-  minFeeTxtFile <- OP.noteTempFile tempDir "min-fee.txt"
+golden_shelleyTransactionCalculateMinFee = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+  protocolParamsJsonFile <- noteInputFile "test/Test/golden/shelley/transaction-calculate-min-fee/protocol-params.json"
+  txBodyFile <- noteInputFile "test/Test/golden/shelley/transaction-calculate-min-fee/tx-body-file"
+  minFeeTxtFile <- noteTempFile tempDir "min-fee.txt"
 
-  minFeeTxt <- OP.execCardanoCLI
+  minFeeTxt <- execCardanoCLI
     [ "shelley","transaction","calculate-min-fee"
     , "--tx-in-count", "32"
     , "--tx-out-count", "27"
@@ -32,6 +31,6 @@ golden_shelleyTransactionCalculateMinFee = OP.propertyOnce $ OP.moduleWorkspace 
 
   liftIO $ IO.writeFile minFeeTxtFile minFeeTxt
 
-  OP.assertFileOccurences 1 "2541502" minFeeTxtFile
-  OP.assertFileLines (== 1) minFeeTxtFile
-  OP.assertEndsWithSingleNewline minFeeTxtFile
+  assertFileOccurences 1 "2541502" minFeeTxtFile
+  assertFileLines (== 1) minFeeTxtFile
+  assertEndsWithSingleNewline minFeeTxtFile

@@ -7,33 +7,32 @@ module Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
 import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 -- | 1. Generate a key pair
 --   2. Create tx body
 --   3. Sign tx body
 --   4. Check the TextEnvelope serialization format has not changed.
 golden_shelleyTx :: Property
-golden_shelleyTx = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTx = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
   let referenceTx = "test/Test/golden/shelley/tx/tx"
 
   -- Key filepaths
-  paymentVerKey <- OP.noteTempFile tempDir "payment-verification-key-file"
-  paymentSignKey <- OP.noteTempFile tempDir "payment-signing-key-file"
-  transactionFile <- OP.noteTempFile tempDir "tx-file"
-  transactionBodyFile <- OP.noteTempFile tempDir "tx-body-file"
+  paymentVerKey <- noteTempFile tempDir "payment-verification-key-file"
+  paymentSignKey <- noteTempFile tempDir "payment-signing-key-file"
+  transactionFile <- noteTempFile tempDir "tx-file"
+  transactionBodyFile <- noteTempFile tempDir "tx-body-file"
 
   -- Generate payment signing key to sign transaction
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","address","key-gen"
     , "--verification-key-file", paymentVerKey
     , "--signing-key-file", paymentSignKey
     ]
 
   -- Create transaction body
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","transaction", "build-raw"
     , "--tx-in", "91999ea21177b33ebe6b8690724a0c026d410a11ad7521caa350abdafa5394c3#0"
     , "--tx-out", "addr1v9wmu83pzajplrtpsq6tsqdgwr98x888trpmah2u0ezznsge7del3+100000000"
@@ -43,7 +42,7 @@ golden_shelleyTx = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
     ]
 
   -- Sign transaction
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","transaction", "sign"
     , "--tx-body-file", transactionBodyFile
     , "--signing-key-file", paymentSignKey
@@ -55,4 +54,4 @@ golden_shelleyTx = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  OP.checkTextEnvelopeFormat txType referenceTx transactionFile
+  checkTextEnvelopeFormat txType referenceTx transactionFile

@@ -6,22 +6,21 @@ module Test.CLI.Shelley.Golden.StakeAddress.Build
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyStakeAddressBuild :: Property
-golden_shelleyStakeAddressBuild = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \_ -> do
-  verificationKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
-  goldenRewardAddressFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/reward_address"
+golden_shelleyStakeAddressBuild = propertyOnce . moduleWorkspace "tmp" $ \_ -> do
+  verificationKeyFile <- noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
+  goldenRewardAddressFile <- noteInputFile "test/Test/golden/shelley/keys/stake_keys/reward_address"
 
-  rewardAddress <- OP.execCardanoCLI
-      [ "shelley","stake-address","build"
-      , "--mainnet"
-      , "--staking-verification-key-file", verificationKeyFile
-      ]
+  rewardAddress <- execCardanoCLI
+    [ "shelley","stake-address","build"
+    , "--mainnet"
+    , "--staking-verification-key-file", verificationKeyFile
+    ]
 
   goldenRewardsAddress <- OP.readFile goldenRewardAddressFile
 
-  OP.equivalence rewardAddress goldenRewardsAddress
+  equivalence rewardAddress goldenRewardsAddress

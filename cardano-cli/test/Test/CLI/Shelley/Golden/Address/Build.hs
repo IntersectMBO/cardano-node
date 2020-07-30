@@ -6,24 +6,24 @@ module Test.CLI.Shelley.Golden.Address.Build
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
+import           Test.OptParse as OP
 
 import qualified System.IO as IO
-import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyAddressBuild :: Property
-golden_shelleyAddressBuild = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
-  addressVKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/payment_keys/verification_key"
-  addressSKeyFile <- OP.noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
-  goldenStakingAddressHexFile <- OP.noteInputFile "test/Test/golden/shelley/addresses/staking-address.hex"
-  goldenEnterpriseAddressHexFile <- OP.noteInputFile "test/Test/golden/shelley/addresses/enterprise-address.hex"
-  stakingAddressHexFile <- OP.noteTempFile tempDir "staking-address.hex"
-  enterpriseAddressHexFile <- OP.noteTempFile tempDir "enterprise-address.hex"
+golden_shelleyAddressBuild = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  addressVKeyFile <- noteInputFile "test/Test/golden/shelley/keys/payment_keys/verification_key"
+  addressSKeyFile <- noteInputFile "test/Test/golden/shelley/keys/stake_keys/verification_key"
+  goldenStakingAddressHexFile <- noteInputFile "test/Test/golden/shelley/addresses/staking-address.hex"
+  goldenEnterpriseAddressHexFile <- noteInputFile "test/Test/golden/shelley/addresses/enterprise-address.hex"
+  stakingAddressHexFile <- noteTempFile tempDir "staking-address.hex"
+  enterpriseAddressHexFile <- noteTempFile tempDir "enterprise-address.hex"
 
   void $ OP.readFile addressVKeyFile
 
-  stakingAddressText <- OP.execCardanoCLI
+  stakingAddressText <- execCardanoCLI
     [ "shelley","address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile
@@ -34,11 +34,11 @@ golden_shelleyAddressBuild = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempD
 
   liftIO $ IO.writeFile stakingAddressHexFile stakingAddressText
 
-  OP.equivalence stakingAddressText goldenStakingAddressHex
+  equivalence stakingAddressText goldenStakingAddressHex
 
   void $ OP.readFile addressSKeyFile
 
-  enterpriseAddressText <- OP.execCardanoCLI
+  enterpriseAddressText <- execCardanoCLI
     [ "shelley","address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile
@@ -49,4 +49,4 @@ golden_shelleyAddressBuild = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempD
 
   liftIO $ IO.writeFile enterpriseAddressHexFile enterpriseAddressText
 
-  OP.equivalence enterpriseAddressText goldenEnterpriseAddressHex
+  equivalence enterpriseAddressText goldenEnterpriseAddressHex

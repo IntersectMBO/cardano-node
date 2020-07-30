@@ -5,22 +5,21 @@ module Test.CLI.Shelley.Golden.Address.Info
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
+import           Test.OptParse
 
 import qualified Data.List as L
 import qualified Hedgehog as H
-import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyAddressInfo :: Property
-golden_shelleyAddressInfo = OP.propertyOnce $ do
+golden_shelleyAddressInfo = propertyOnce $ do
   -- Disable as per commit: e69984d797fc3bdd5d71bdd99a0328110d71f6ad
   when False $ do
     let byronBase58 = "DdzFFzCqrhsg9F1joqXWJdGKwn6MaNavCqPsrZcjADRjA4ifEtrBmREJZyCojtuexKjMKNFr6CoU7Gx6PPR7pq14JxvPZuuk2xVkzn8p"
 
-    infoText1 <- OP.execCardanoCLI
+    infoText1 <- execCardanoCLI
       [ "shelley","address","info"
       , "--address", byronBase58
       ]
@@ -30,7 +29,7 @@ golden_shelleyAddressInfo = OP.propertyOnce $ do
 
     let byronHex = "82d818584283581c120e97e4ca7b831373c1060853d4896314e17d567a5723879b9a20eaa101581e581c135a115dd5dba68c28fb7e9409729ffc0503219ff7f9c08e84d13319001a28d0b871"
 
-    infoText2 <- OP.execCardanoCLI
+    infoText2 <- execCardanoCLI
       [ "shelley","address","info"
       , "--address", byronHex
       ]
@@ -40,7 +39,7 @@ golden_shelleyAddressInfo = OP.propertyOnce $ do
 
     let shelleyHex = "82065820d8b4a892f2f6f1820d350c207d17d4cd7e7a1f7e0a83059e2d698a65ab8f96ed"
 
-    infoText3 <- OP.execCardanoCLI
+    infoText3 <- execCardanoCLI
       [ "shelley","address","info"
       , "--address", shelleyHex
       ]

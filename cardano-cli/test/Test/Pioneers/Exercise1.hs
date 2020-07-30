@@ -6,30 +6,30 @@ module Test.Pioneers.Exercise1
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
+import           Test.OptParse
 
 import qualified Hedgehog as H
-import qualified Test.OptParse as OP
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. We use the generated verification key to build a shelley payment address.
 prop_buildShelleyPaymentAddress :: Property
-prop_buildShelleyPaymentAddress = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+prop_buildShelleyPaymentAddress = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   -- Key filepaths
-  verKey <- OP.noteTempFile tempDir "payment-verification-key-file"
-  signKey <- OP.noteTempFile tempDir "payment-signing-key-file"
+  verKey <- noteTempFile tempDir "payment-verification-key-file"
+  signKey <- noteTempFile tempDir "payment-signing-key-file"
 
   -- Generate payment verification key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","address","key-gen"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]
 
-  OP.assertFilesExist [verKey, signKey]
+  assertFilesExist [verKey, signKey]
 
   -- Build shelley payment address
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley", "address", "build"
     , "--payment-verification-key-file", verKey
     , "--mainnet"
@@ -41,31 +41,31 @@ prop_buildShelleyPaymentAddress = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \
 --   3. We use the payment verification key & staking verification key
 --      to build a shelley stake address.
 prop_buildShelleyStakeAddress :: Property
-prop_buildShelleyStakeAddress = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+prop_buildShelleyStakeAddress = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   -- Key filepaths
-  stakeVerKey <- OP.noteTempFile tempDir "stake-verification-key-file"
-  stakeSignKey <- OP.noteTempFile tempDir "stake-signing-key-file"
-  paymentVerKey <- OP.noteTempFile tempDir "payment-verification-key-file"
-  paymentSignKey <- OP.noteTempFile tempDir "payment-signing-key-file"
+  stakeVerKey <- noteTempFile tempDir "stake-verification-key-file"
+  stakeSignKey <- noteTempFile tempDir "stake-signing-key-file"
+  paymentVerKey <- noteTempFile tempDir "payment-verification-key-file"
+  paymentSignKey <- noteTempFile tempDir "payment-signing-key-file"
 
   -- Generate payment verification key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","address","key-gen"
     , "--verification-key-file", paymentVerKey
     , "--signing-key-file", paymentSignKey
     ]
 
   -- Generate stake verification key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","stake-address","key-gen"
     , "--verification-key-file", stakeVerKey
     , "--signing-key-file", stakeSignKey
     ]
 
-  OP.assertFilesExist [stakeVerKey, stakeSignKey, paymentVerKey, paymentSignKey]
+  assertFilesExist [stakeVerKey, stakeSignKey, paymentVerKey, paymentSignKey]
 
   -- Build shelley stake address
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley", "address", "build"
     , "--payment-verification-key-file", paymentVerKey
     , "--stake-verification-key-file", stakeVerKey

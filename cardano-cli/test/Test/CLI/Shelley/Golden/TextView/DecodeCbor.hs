@@ -5,31 +5,30 @@ module Test.CLI.Shelley.Golden.TextView.DecodeCbor
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
+import           Test.OptParse
 
 import qualified System.IO as IO
-import qualified Test.OptParse as OP
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTextViewDecodeCbor :: Property
-golden_shelleyTextViewDecodeCbor = OP.propertyOnce $ OP.moduleWorkspace "tmp" $ \tempDir -> do
-  unsignedTxFile <- OP.noteInputFile "test/Test/golden/shelley/tx/unsigned.tx"
-  decodedTxtFile <- OP.noteTempFile tempDir "decoded.txt"
+golden_shelleyTextViewDecodeCbor = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+  unsignedTxFile <- noteInputFile "test/Test/golden/shelley/tx/unsigned.tx"
+  decodedTxtFile <- noteTempFile tempDir "decoded.txt"
 
   -- Defaults to signing a Mainnet transaction.
 
-  decodedTxt <- OP.execCardanoCLI
+  decodedTxt <- execCardanoCLI
     [ "shelley","text-view","decode-cbor"
     , "--file", unsignedTxFile
     ]
 
   liftIO $ IO.writeFile decodedTxtFile decodedTxt
 
-  OP.assertFileOccurences 1 "# int(4999998000)" decodedTxtFile
-  OP.assertFileOccurences 1 "# int(2000)" decodedTxtFile
-  OP.assertFileOccurences 1 "# int(1000)" decodedTxtFile
+  assertFileOccurences 1 "# int(4999998000)" decodedTxtFile
+  assertFileOccurences 1 "# int(2000)" decodedTxtFile
+  assertFileOccurences 1 "# int(1000)" decodedTxtFile
 
-  OP.assertEndsWithSingleNewline decodedTxtFile
-  OP.assertFileLines (>= 10) decodedTxtFile
+  assertEndsWithSingleNewline decodedTxtFile
+  assertFileLines (>= 10) decodedTxtFile

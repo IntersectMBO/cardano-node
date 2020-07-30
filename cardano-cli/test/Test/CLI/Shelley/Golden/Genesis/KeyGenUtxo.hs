@@ -6,24 +6,23 @@ module Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyGenesisKeyGenUtxo :: Property
-golden_shelleyGenesisKeyGenUtxo = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
-  utxoVerificationKeyFile <- OP.noteTempFile tempDir "utxo.vkey"
-  utxoSigningKeyFile <- OP.noteTempFile tempDir "utxo.skey"
+golden_shelleyGenesisKeyGenUtxo = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  utxoVerificationKeyFile <- noteTempFile tempDir "utxo.vkey"
+  utxoSigningKeyFile <- noteTempFile tempDir "utxo.skey"
 
-  void $ OP.execCardanoCLI
-      [ "shelley","genesis","key-gen-utxo"
-      , "--verification-key-file", utxoVerificationKeyFile
-      , "--signing-key-file", utxoSigningKeyFile
-      ]
+  void $ execCardanoCLI
+    [ "shelley","genesis","key-gen-utxo"
+    , "--verification-key-file", utxoVerificationKeyFile
+    , "--signing-key-file", utxoSigningKeyFile
+    ]
 
-  OP.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" $ utxoVerificationKeyFile
-  OP.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ utxoSigningKeyFile
+  assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" $ utxoVerificationKeyFile
+  assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ utxoSigningKeyFile
 
-  OP.assertEndsWithSingleNewline utxoVerificationKeyFile
-  OP.assertEndsWithSingleNewline utxoSigningKeyFile
+  assertEndsWithSingleNewline utxoVerificationKeyFile
+  assertEndsWithSingleNewline utxoSigningKeyFile

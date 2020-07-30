@@ -7,24 +7,23 @@ module Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
 import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
 import           Hedgehog (Property)
-
-import qualified Test.OptParse as OP
+import           Test.OptParse
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. Check the TextEnvelope serialization format has not changed
 golden_shelleyGenesisKeys :: Property
-golden_shelleyGenesisKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyGenesisKeys = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceVerKey <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_keys/verification_key"
-  referenceSignKey <- OP.noteInputFile "test/Test/golden/shelley/keys/genesis_keys/signing_key"
+  referenceVerKey <- noteInputFile "test/Test/golden/shelley/keys/genesis_keys/verification_key"
+  referenceSignKey <- noteInputFile "test/Test/golden/shelley/keys/genesis_keys/signing_key"
 
   -- Key filepaths
-  verKey <- OP.noteTempFile tempDir "genesis-verification-key-file"
-  signKey <- OP.noteTempFile tempDir "genesis-signing-key-file"
+  verKey <- noteTempFile tempDir "genesis-verification-key-file"
+  signKey <- noteTempFile tempDir "genesis-signing-key-file"
 
   -- Generate payment verification key
-  void $ OP.execCardanoCLI
+  void $ execCardanoCLI
     [ "shelley","genesis","key-gen-genesis"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
@@ -35,5 +34,5 @@ golden_shelleyGenesisKeys = OP.propertyOnce . OP.moduleWorkspace "tmp" $ \tempDi
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  OP.checkTextEnvelopeFormat verificationKeyType referenceVerKey verKey
-  OP.checkTextEnvelopeFormat signingKeyType referenceSignKey signKey
+  checkTextEnvelopeFormat verificationKeyType referenceVerKey verKey
+  checkTextEnvelopeFormat signingKeyType referenceSignKey signKey
