@@ -1,7 +1,9 @@
 module Cardano.Api.MetaData
   ( MetaDataJsonConversionError (..)
   , jsonFromMetadata
+  , jsonFromMetadataValue
   , jsonToMetadata
+  , jsonToMetadataValue
   , renderMetaDataJsonConversionError
   ) where
 
@@ -42,24 +44,24 @@ jsonFromMetadata (Api.TxMetadata (MetaData meta)) =
     Aeson.Object $ HashMap.fromList (map convertPair $ Map.toList meta)
   where
     convertPair :: (Word64, MetaDatum) -> (Text, Aeson.Value)
-    convertPair (w, d) = (Text.pack (show w), toAeson d)
+    convertPair (w, d) = (Text.pack (show w), jsonFromMetadataValue d)
 
-    toAeson :: MetaDatum -> Aeson.Value
-    toAeson md =
-      case md of
-        S txt -> Aeson.String txt
-        B bs -> Aeson.String ("0x" <> Text.decodeUtf8 (Base16.encode bs))
-        I i -> Aeson.Number (fromInteger i)
-        List xs -> Aeson.toJSON $ map toAeson xs
-        Map xs -> tryToHashMap xs
-
+jsonFromMetadataValue :: MetaDatum -> Aeson.Value
+jsonFromMetadataValue md =
+    case md of
+      S txt -> Aeson.String txt
+      B bs -> Aeson.String ("0x" <> Text.decodeUtf8 (Base16.encode bs))
+      I i -> Aeson.Number (fromInteger i)
+      List xs -> Aeson.toJSON $ map jsonFromMetadataValue xs
+      Map xs -> tryToHashMap xs
+  where
     tryToHashMap :: [(MetaDatum, MetaDatum)] -> Aeson.Value
     tryToHashMap xs =
       -- Try to convert it to an Aeson Object and if that fails, use an Array.
       -- Object is basically a 'HashMap Text Value' but if the first element of
       -- the tuple is not Text, convert it to an Array instead.
       case traverse collapseLeft xs of
-        Nothing -> Aeson.toJSON $ map (\ (a, b) -> (toAeson a, toAeson b)) xs
+        Nothing -> Aeson.toJSON $ map (\ (a, b) -> (jsonFromMetadataValue a, jsonFromMetadataValue b)) xs
         Just zs -> Aeson.Object $ HashMap.fromList zs
 
     collapseLeft :: (MetaDatum, MetaDatum) -> Maybe (Text, Aeson.Value)
@@ -68,8 +70,8 @@ jsonFromMetadata (Api.TxMetadata (MetaData meta)) =
         Map _ -> Nothing
         List _ -> Nothing
         I _ -> Nothing
-        B bs -> Just ("0x" <> Text.decodeUtf8 (Base16.encode bs), toAeson b)
-        S txt -> Just (txt, toAeson b)
+        B bs -> Just ("0x" <> Text.decodeUtf8 (Base16.encode bs), jsonFromMetadataValue b)
+        S txt -> Just (txt, jsonFromMetadataValue b)
 
 
 jsonToMetadata :: Aeson.Value
