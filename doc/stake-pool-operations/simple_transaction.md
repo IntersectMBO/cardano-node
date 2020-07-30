@@ -14,17 +14,17 @@ Creating a transaction requires various steps:
 Get the protocol parameters and save them to `protocol.json` with:
 
 ```
-   cardano-cli shelley query protocol-parameters \
-   --mainnet \
-   --out-file protocol.json
+cardano-cli shelley query protocol-parameters \
+  --mainnet \
+  --out-file protocol.json
 ```
 
 #### Get the transaction hash and index of the **UTXO** to spend:
 
 ```
-    cardano-cli shelley query utxo \
-    --address $(cat payment.addr) \
-    --mainnet
+cardano-cli shelley query utxo \
+  --address $(cat payment.addr) \
+  --mainnet
 ```
 
 ```
