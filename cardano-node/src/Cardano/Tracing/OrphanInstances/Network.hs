@@ -9,23 +9,18 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.Tracing.OrphanInstances.Network
-  ( renderHeaderHash
-  , showTip
-  , showPoint
-  ) where
+module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Cardano.Prelude hiding (show)
-import           Prelude (String, id, show)
+import           Prelude (String, show)
 
-import qualified Data.ByteString.Base16 as B16
 import           Data.Text (pack)
-import qualified Data.Text.Encoding as Text
 
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket (SockAddr)
 
 import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Tracing.Render
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), TxId, txId)
@@ -57,32 +52,6 @@ import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbo
 -- We do need some consensus imports to provide useful trace messages for some
 -- network protocols
 import           Ouroboros.Consensus.Util.Condense (Condense, condense)
-
-
-showTip :: Condense (HeaderHash blk)
-        => TracingVerbosity
-        -> Tip blk
-        -> String
-showTip verb = showPoint verb . getTipPoint
-
-showPoint :: Condense (HeaderHash blk)
-          => TracingVerbosity
-          -> Point blk
-          -> String
-showPoint verb pt =
-  case pt of
-    GenesisPoint -> "genesis (origin)"
-    BlockPoint slot h -> trim (condense h) ++ "@" ++ condense slot
- where
-  trim :: [a] -> [a]
-  trim = case verb of
-    MinimalVerbosity -> take 7
-    NormalVerbosity -> take 7
-    MaximalVerbosity -> id
-
--- | Hex encode and render a 'HeaderHash' as text.
-renderHeaderHash :: ConvertRawHash blk => proxy blk -> HeaderHash blk -> Text
-renderHeaderHash p = Text.decodeLatin1 . B16.encode . toRawHash p
 
 
 --
@@ -538,12 +507,17 @@ instance (Show txid, Show tx)
       [ "kind" .= String "MsgKThxBye" ]
 
 
-instance Condense (HeaderHash blk)
+instance ConvertRawHash blk
       => ToObject (Point blk) where
-  toObject MinimalVerbosity p = toObject NormalVerbosity p
-  toObject verb p =
-    mkObject [ "kind" .= String "Tip" --TODO: why is this a Tip not a Point?
-             , "tip" .= showPoint verb p ]
+  toObject _verb GenesisPoint =
+    mkObject
+      [ "kind" .= String "GenesisPoint" ]
+  toObject verb (BlockPoint slot h) =
+    mkObject
+      [ "kind" .= String "BlockPoint"
+      , "slot" .= toJSON (unSlotNo slot)
+      , "headerHash" .= renderHeaderHashForVerbosity (Proxy @blk) verb h
+      ]
 
 
 instance ToObject SlotNo where

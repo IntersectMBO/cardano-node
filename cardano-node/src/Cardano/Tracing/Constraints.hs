@@ -21,7 +21,6 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Consensus.Util.Condense (Condense)
-import           Ouroboros.Network.Block (HeaderHash)
 
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -34,7 +33,6 @@ import           Ouroboros.Network.Block (HeaderHash)
 type TraceConstraints blk =
     ( Condense blk
     , Condense (Header blk)
-    , Condense (HeaderHash blk)
     , Condense (GenTx blk)
     , Condense (TxId (GenTx blk))
     , HasTxs blk

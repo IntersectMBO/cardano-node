@@ -54,6 +54,7 @@ library
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
                        Cardano.Tracing.Queries
+                       Cardano.Tracing.Render
                        Cardano.Tracing.Tracers
                        Cardano.Tracing.OrphanInstances.Byron
                        Cardano.Tracing.OrphanInstances.Common
