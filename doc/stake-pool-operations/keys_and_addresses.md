@@ -64,6 +64,8 @@ This address __CAN'T__ receive payments but will receive the rewards from partic
 
 #### Query the balance of an address
 
+> NOTE: Ensure that your node has synced to the current height which can be checked at [explorer.cardano.org](https://explorer.cardano.org)
+
 To query the balance of an address we need a running node and the environment variable `CARDANO_NODE_SOCKET_PATH` set to the path to the node.socket:
 
 ```
