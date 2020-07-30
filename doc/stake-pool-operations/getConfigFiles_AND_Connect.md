@@ -1,6 +1,6 @@
 # Get configuration files
 
-Starting the node and connecting it to the testnet requires 3 configuration files:
+Starting the node and connecting it to the network requires 3 configuration files:
 
 * topology.json
 * genesis.json
