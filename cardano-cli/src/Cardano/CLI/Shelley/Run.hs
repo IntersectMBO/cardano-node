@@ -62,17 +62,6 @@ runShelleyClientCommand (TransactionCmd  cmd) = firstExceptT ShelleyCmdTransacti
 runShelleyClientCommand (NodeCmd         cmd) = firstExceptT ShelleyCmdNodeError $ runNodeCmd cmd
 runShelleyClientCommand (PoolCmd         cmd) = firstExceptT ShelleyCmdPoolError $ runPoolCmd cmd
 runShelleyClientCommand (QueryCmd        cmd) = firstExceptT ShelleyCmdQueryError $ runQueryCmd cmd
-runShelleyClientCommand (BlockCmd        cmd) = runBlockCmd cmd
-runShelleyClientCommand (SystemCmd       cmd) = runSystemCmd cmd
 runShelleyClientCommand (GovernanceCmd   cmd) = firstExceptT ShelleyCmdGovernanceError $ runGovernanceCmd cmd
 runShelleyClientCommand (GenesisCmd      cmd) = firstExceptT ShelleyCmdGenesisError $ runGenesisCmd cmd
 runShelleyClientCommand (TextViewCmd     cmd) = firstExceptT ShelleyCmdTextViewError $ runTextViewCmd cmd
-
-
---TODO: if you fill any of these in, move them into their own modules first!
-
-runBlockCmd :: BlockCmd -> ExceptT ShelleyClientCmdError IO ()
-runBlockCmd cmd = liftIO $ putStrLn $ "TODO: runBlockCmd: " ++ show cmd
-
-runSystemCmd:: SystemCmd -> ExceptT ShelleyClientCmdError IO ()
-runSystemCmd cmd = liftIO $ putStrLn $ "TODO: runSystemCmd: " ++ show cmd

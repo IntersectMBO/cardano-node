@@ -57,7 +57,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Ouroboros.Network.Protocol.ChainSync.Type
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 
-import           Cardano.Config.Types (SocketPath (..))
+import           Cardano.Node.Types (SocketPath (..))
 
 
 -- | The chairman checks for consensus and progress.

@@ -41,8 +41,7 @@ import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ByronHFC
 
-import           Cardano.Config.Types (GenesisFile (..), ProtocolFilepaths (..))
-import           Cardano.Node.Types (GenesisHash (..), NodeByronProtocolConfiguration (..))
+import           Cardano.Node.Types
 
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()

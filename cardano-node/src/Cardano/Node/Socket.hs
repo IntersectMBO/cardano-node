@@ -18,7 +18,6 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Socket, SocketType (..),
                      defaultHints, getAddrInfo)
 
-import           Cardano.Config.Types (NodeAddress (..), NodeHostAddress (..), SocketPath (..))
 import           Cardano.Node.Types
 
 #if defined(mingw32_HOST_OS)

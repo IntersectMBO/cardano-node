@@ -47,8 +47,7 @@ import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 import           Cardano.Api.Typed hiding (FileError)
 import qualified Cardano.Api.Typed as Api (FileError)
 
-import           Cardano.Config.Types (GenesisFile (..), ProtocolFilepaths (..))
-import           Cardano.Node.Types (GenesisHash (..), NodeShelleyProtocolConfiguration (..))
+import           Cardano.Node.Types
 
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()

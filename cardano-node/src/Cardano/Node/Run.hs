@@ -52,11 +52,8 @@ import           Cardano.Node.Logging (LoggingLayer (..), Severity (..), shutdow
 #ifdef UNIX
 import           Cardano.Node.TraceConfig (traceBlockFetchDecisions)
 #endif
-import           Cardano.Config.Types
 import           Cardano.Node.TraceConfig (TraceOptions (..), TraceSelection (..))
-import           Cardano.Node.Types (NodeCLI (..), NodeConfiguration (..),
-                     NodeMockProtocolConfiguration (..), NodeProtocolConfiguration (..),
-                     ncProtocol, parseNodeConfiguration)
+import           Cardano.Node.Types
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus

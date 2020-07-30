@@ -51,15 +51,13 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
 import           Cardano.Chain.UTxO (TxId, TxIn (..), TxOut (..))
 
 import qualified Cardano.Api.Typed as Typed
-import           Cardano.Config.Parsers (parseFilePath, parseFlag', parseFraction, parseGenesisFile,
-                     parseIntegral, parseLovelace, parseSigningKeyFile, readDouble)
-import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
+import           Cardano.CLI.Types
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =
@@ -201,9 +199,7 @@ parseKeyRelatedValues =
             $ Keygen
                 <$> parseCardanoEra
                 <*> parseNewSigningKeyFile "secret"
-                <*> parseFlag' GetPassword EmptyPassword
-                      "no-password"
-                      "Disable password protection."
+                <*> parsePassword
         , command'
             "to-verification"
             "Extract a verification key in its base64 form."
@@ -721,3 +717,50 @@ cliParseTxId :: String -> TxId
 cliParseTxId =
   either (panic . ("Bad Lovelace value: " <>) . show) identity
   . decodeHash . Text.pack
+
+parseFraction :: String -> String -> Parser Rational
+parseFraction optname desc =
+  option (toRational <$> readDouble) $
+      long optname
+   <> metavar "DOUBLE"
+   <> help desc
+
+parseIntegral :: Integral a => String -> String -> Parser a
+parseIntegral optname desc = option (fromInteger <$> auto)
+  $ long optname <> metavar "INT" <> help desc
+
+parseLovelace :: String -> String -> Parser Lovelace
+parseLovelace optname desc =
+  either (panic . show) identity . mkLovelace
+    <$> parseIntegral optname desc
+
+readDouble :: ReadM Double
+readDouble = do
+  f <- auto
+  when (f < 0) $ readerError "fraction must be >= 0"
+  when (f > 1) $ readerError "fraction must be <= 1"
+  return f
+
+parseFilePath :: String -> String -> Parser FilePath
+parseFilePath optname desc =
+  strOption
+    ( long optname
+    <> metavar "FILEPATH"
+    <> help desc
+    <> completer (bashCompleter "file")
+    )
+
+parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
+parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
+
+
+parseGenesisFile :: String -> Parser GenesisFile
+parseGenesisFile opt =
+  GenesisFile <$> parseFilePath opt "Genesis JSON file."
+
+parsePassword :: Parser PasswordRequirement
+parsePassword =
+  flag GetPassword EmptyPassword
+    (  long "no-password"
+    <> help "Disable password protection."
+    )

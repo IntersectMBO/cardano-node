@@ -16,13 +16,13 @@ import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
 
 import           Cardano.Api.Typed (NetworkId)
-import           Cardano.Config.Types
 
 import           Cardano.CLI.Byron.UpdateProposal
 
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
+import           Cardano.CLI.Types
 
 import           Cardano.Chain.Common (Address (..))
 import           Cardano.Chain.UTxO (TxIn (..), TxOut (..))

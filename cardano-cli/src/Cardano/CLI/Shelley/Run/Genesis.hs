@@ -46,6 +46,7 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Parsers (renderTxIn)
+import           Cardano.CLI.Types
 
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdReadGenesisAesonDecodeError !FilePath !Text

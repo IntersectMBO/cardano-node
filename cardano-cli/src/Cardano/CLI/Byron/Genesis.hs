@@ -45,13 +45,13 @@ import           Cardano.Chain.Genesis (GeneratedSecrets (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as UTxO
 
-import           Cardano.Config.Types (GenesisFile (..))
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Helpers (textShow)
+import           Cardano.CLI.Types (GenesisFile(..))
 
 data ByronGenesisError
   = ByronDelegationCertSerializationError !ByronDelegationError

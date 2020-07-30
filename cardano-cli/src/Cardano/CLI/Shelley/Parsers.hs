@@ -25,7 +25,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
-import           Options.Applicative (Parser)
+import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 
 import           Network.Socket (PortNumber)
@@ -44,11 +44,8 @@ import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)
 
 
-import           Cardano.Config.Parsers (parseNodeAddress)
-import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile (..),
-                     UpdateProposalFile (..))
-
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Types
 
 import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, Hash (..), hashFromBytesAsHex)
 
@@ -79,10 +76,6 @@ parseShelleyCommands =
                , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
                ]
             )
-      , Opt.command "block"
-          (Opt.info (BlockCmd <$> pBlockCmd) $ Opt.progDesc "Shelley block commands")
-      , Opt.command "system"
-          (Opt.info (SystemCmd <$> pSystemCmd) $ Opt.progDesc "Shelley system commands")
       , Opt.command "genesis"
           (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
       , Opt.command "governance"
@@ -187,12 +180,6 @@ pStakeAddress =
           (Opt.info pStakeAddressBuild $ Opt.progDesc "Build a stake address")
       , Opt.command "key-hash"
           (Opt.info pStakeAddressKeyHash $ Opt.progDesc "Print the hash of a stake address key.")
-      , Opt.command "register"
-          (Opt.info pStakeAddressRegister $ Opt.progDesc "Register a stake address")
-      , Opt.command "delegate"
-          (Opt.info pStakeAddressDelegate $ Opt.progDesc "Delegate from a stake address to a stake pool")
-      , Opt.command "de-register"
-          (Opt.info pStakeAddressDeRegister $ Opt.progDesc "De-register a stake address")
       , Opt.command "registration-certificate"
           (Opt.info pStakeAddressRegistrationCert $ Opt.progDesc "Create a stake address registration certificate")
       , Opt.command "deregistration-certificate"
@@ -214,16 +201,6 @@ pStakeAddress =
                                            <*> pNetworkId
                                            <*> pMaybeOutputFile
 
-    pStakeAddressRegister :: Parser StakeAddressCmd
-    pStakeAddressRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
-
-    pStakeAddressDelegate :: Parser StakeAddressCmd
-    pStakeAddressDelegate =
-      StakeKeyDelegate <$> pPrivKeyFile <*> pPoolId <*> pDelegationFee <*> parseNodeAddress
-
-    pStakeAddressDeRegister :: Parser StakeAddressCmd
-    pStakeAddressDeRegister = StakeKeyDeRegister <$> pPrivKeyFile <*> parseNodeAddress
-
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
     pStakeAddressRegistrationCert = StakeKeyRegistrationCert
                                       <$> pStakeVerificationKeyFile
@@ -239,15 +216,6 @@ pStakeAddress =
                                     <$> pStakeVerificationKeyFile
                                     <*> pStakePoolVerificationKeyHashOrFile
                                     <*> pOutputFile
-
-pDelegationFee :: Parser Lovelace
-pDelegationFee =
-  Lovelace <$>
-    Opt.option Opt.auto
-      (  Opt.long "delegation-fee"
-      <> Opt.metavar "LOVELACE"
-      <> Opt.help "The delegation fee in Lovelace."
-      )
 
 pKeyCmd :: Parser KeyCmd
 pKeyCmd =
@@ -433,8 +401,6 @@ pTransaction =
           (Opt.info pTransactionWitness $ Opt.progDesc "Witness a transaction")
       , Opt.command "sign-witness"
           (Opt.info pTransactionSignWit $ Opt.progDesc "Sign and witness a transaction")
-      , Opt.command "check"
-          (Opt.info pTransactionCheck $ Opt.progDesc "Check a transaction")
       , Opt.command "submit"
           (Opt.info pTransactionSubmit . Opt.progDesc $
              mconcat
@@ -475,9 +441,6 @@ pTransaction =
     pTransactionSignWit = TxSignWitness <$> pTxBodyFile Input
                                         <*> some pWitnessFile
                                         <*> pOutputFile
-
-    pTransactionCheck  :: Parser TransactionCmd
-    pTransactionCheck = pure TxCheck
 
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pProtocol
@@ -569,13 +532,7 @@ pPoolCmd :: Parser PoolCmd
 pPoolCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "register"
-          (Opt.info pPoolRegster $ Opt.progDesc "Register a stake pool")
-      , Opt.command "re-register"
-          (Opt.info pPoolReRegster $ Opt.progDesc "Re-register a stake pool")
-      , Opt.command "retire"
-          (Opt.info pPoolRetire $ Opt.progDesc "Retire a stake pool")
-      , Opt.command "registration-certificate"
+      [ Opt.command "registration-certificate"
           (Opt.info pStakePoolRegistrationCert $ Opt.progDesc "Create a stake pool registration certificate")
       , Opt.command "deregistration-certificate"
           (Opt.info pStakePoolRetirementCert $ Opt.progDesc "Create a stake pool deregistration certificate")
@@ -586,15 +543,6 @@ pPoolCmd =
           (Opt.info pPoolMetaDataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
-    pPoolRegster :: Parser PoolCmd
-    pPoolRegster = PoolRegister <$> pPoolId
-
-    pPoolReRegster :: Parser PoolCmd
-    pPoolReRegster = PoolReRegister <$> pPoolId
-
-    pPoolRetire :: Parser PoolCmd
-    pPoolRetire = PoolRetire <$> pPoolId <*> pEpochNo <*> parseNodeAddress
-
     pId :: Parser PoolCmd
     pId = PoolGetId <$> pVerificationKeyFile Output
 
@@ -606,9 +554,7 @@ pQueryCmd :: Parser QueryCmd
 pQueryCmd =
   Opt.subparser $
     mconcat
-      [ Opt.command "pool-id"
-          (Opt.info pQueryPoolId $ Opt.progDesc "Get the node's pool id")
-      , Opt.command "protocol-parameters"
+      [ Opt.command "protocol-parameters"
           (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
       , Opt.command "tip"
           (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
@@ -621,17 +567,10 @@ pQueryCmd =
       , Opt.command "utxo"
           (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
                                               \filtering by address(es)")
-      , Opt.command "version"
-          (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
       , Opt.command "ledger-state"
           (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current state of the node")
-      , Opt.command "status"
-          (Opt.info pQueryStatus $ Opt.progDesc "Get the status of the node")
       ]
   where
-    pQueryPoolId :: Parser QueryCmd
-    pQueryPoolId = QueryPoolId <$> parseNodeAddress
-
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
@@ -665,26 +604,8 @@ pQueryCmd =
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-    pQueryVersion :: Parser QueryCmd
-    pQueryVersion = QueryVersion <$> parseNodeAddress
-
     pQueryLedgerState :: Parser QueryCmd
     pQueryLedgerState = QueryLedgerState <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
-
-    pQueryStatus :: Parser QueryCmd
-    pQueryStatus = QueryStatus <$> parseNodeAddress
-
-
-pBlockCmd :: Parser BlockCmd
-pBlockCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "info"
-          (Opt.info pBlockInfo $ Opt.progDesc "Get the node's pool id")
-      ]
-  where
-    pBlockInfo :: Parser BlockCmd
-    pBlockInfo = BlockInfo <$> pBlockId <*> parseNodeAddress
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
@@ -696,10 +617,6 @@ pGovernanceCmd =
       , Opt.command "create-update-proposal"
           (Opt.info pUpdateProposal $
             Opt.progDesc "Create an update proposal")
-      , Opt.command "protocol-update"
-          (Opt.info pProtocolUpdate $ Opt.progDesc "Protocol update")
-      , Opt.command "cold-keys"
-          (Opt.info pColdKeys $ Opt.progDesc "Cold keys")
       ]
   where
     pMIRCertificate :: Parser GovernanceCmd
@@ -727,20 +644,6 @@ pGovernanceCmd =
                         <*> some pGenesisVerificationKeyFile
                         <*> pShelleyProtocolParametersUpdate
 
-    pProtocolUpdate :: Parser GovernanceCmd
-    pProtocolUpdate = GovernanceProtocolUpdate <$> pColdSigningKeyFile
-
-    pColdKeys :: Parser GovernanceCmd
-    pColdKeys = GovernanceColdKeys <$> pGenesisKeyFile
-
-    pGenesisKeyFile :: Parser SigningKeyFile
-    pGenesisKeyFile =
-      pColdSigningKeyFile
-        <|> Opt.strOption
-              (  Opt.long "genesis-key"
-              <> Opt.internal
-              )
-
 pRewardAmt :: Parser Lovelace
 pRewardAmt =
     Opt.option (readerFromAttoParser parseLovelace)
@@ -748,23 +651,6 @@ pRewardAmt =
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The reward for the relevant reward account."
       )
-
-pSystemCmd :: Parser SystemCmd
-pSystemCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "start"
-          (Opt.info pSystemStart $ Opt.progDesc "Start system")
-      , Opt.command "stop"
-          (Opt.info pSystemStop $ Opt.progDesc "Stop system")
-      ]
-  where
-    pSystemStart :: Parser SystemCmd
-    pSystemStart = SysStart <$> pGenesisFile <*> parseNodeAddress
-
-    pSystemStop :: Parser SystemCmd
-    pSystemStop = SysStop <$> parseNodeAddress
-
 
 pGenesisCmd :: Parser GenesisCmd
 pGenesisCmd =
@@ -1067,15 +953,6 @@ pWitnessSigningKeyFile =
         )
     )
 
-pBlockId :: Parser BlockId
-pBlockId =
-  BlockId <$>
-    Opt.strOption
-      (  Opt.long "block-id"
-      <> Opt.metavar "STRING"
-      <> Opt.help "The block identifier."
-      )
-
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =
   KESPeriod <$>
@@ -1151,32 +1028,6 @@ pOutputFile =
       <> Opt.help "The output file."
       <> Opt.completer (Opt.bashCompleter "file")
       )
-
-pPoolId :: Parser PoolId
-pPoolId =
-  PoolId <$>
-    Opt.strOption
-      (  Opt.long "pool-id"
-      <> Opt.metavar "STRING"
-      <> Opt.help "The pool identifier."
-      )
-
-pPrivKeyFile :: Parser PrivKeyFile
-pPrivKeyFile =
-  PrivKeyFile <$>
-    ( Opt.strOption
-        (  Opt.long "signing-key-file"
-        <> Opt.metavar "FILE"
-        <> Opt.help "The private key file."
-        <> Opt.completer (Opt.bashCompleter "file")
-        )
-    <|>
-      Opt.strOption
-        (  Opt.long "private-key"
-        <> Opt.internal
-        )
-
-    )
 
 pColdVerificationKeyFile :: Parser VerificationKeyFile
 pColdVerificationKeyFile =
@@ -1946,7 +1797,6 @@ pProtocolVersion =
         <> Opt.help "Minor protocol version. An increase indicates a soft fork\
                     \ (old software canvalidate but not produce new blocks)."
         )
-
 
 --
 -- Shelley CLI flag field parsers

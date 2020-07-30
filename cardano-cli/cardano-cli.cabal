@@ -25,6 +25,7 @@ library
   exposed-modules:     Cardano.CLI.Helpers
                        Cardano.CLI.Parsers
                        Cardano.CLI.Run
+                       Cardano.CLI.Types
 
                        Cardano.CLI.Environment
 

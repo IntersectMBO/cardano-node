@@ -15,8 +15,8 @@ import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState (..))
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 
-import           Cardano.Config.Types (HasKESMetricsData)
 import           Cardano.Tracing.Constraints (TraceConstraints)
+import           Cardano.Tracing.Metrics (HasKESMetricsData)
 
 type SomeConsensusProtocolConstraints blk =
      ( HasKESMetricsData blk

@@ -46,15 +46,16 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import           Ouroboros.Consensus.Cardano (SecurityParam (..))
-import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (DegenGenTx))
+import           Ouroboros.Consensus.Cardano (SecurityParam(..))
+import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
+                   (GenTx(DegenGenTx))
 
-import           Cardano.Api.Typed (LocalNodeConnectInfo (..), NetworkId, NodeConsensusMode (..),
-                     submitTxToNodeLocal, toByronProtocolMagicId)
+import           Cardano.Api.Typed
+                   (NetworkId, LocalNodeConnectInfo(..), NodeConsensusMode(..),
+                    submitTxToNodeLocal, toByronProtocolMagicId)
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.Config.Types (SocketPath (..))
-
+import           Cardano.CLI.Types (SocketPath(..))
 
 data ByronTxError
   = TxDeserialisationFailed !FilePath !Binary.DecoderError

@@ -6,18 +6,30 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Node.Types
-  ( ConfigYamlFilePath(..)
+  ( ConfigError(..)
+  , ConfigYamlFilePath(..)
+  , DbFile(..)
+  , GenesisFile(..)
   , NodeCLI(..)
   , NodeConfiguration(..)
   , Protocol(..)
+  , ProtocolFilepaths (..)
   , MockProtocol(..)
   , GenesisHash(..)
+  , MaxConcurrencyBulkSync(..)
+  , MaxConcurrencyDeadline(..)
+  , NodeAddress(..)
+  , NodeHostAddress (..)
   , NodeByronProtocolConfiguration(..)
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
   , NodeMockProtocolConfiguration(..)
+  , NodeProtocolMode(..)
+  , SocketPath(..)
+  , TopologyFile(..)
   , TraceOptions(..)
+  , ViewMode(..)
   , ncProtocol
   , parseNodeConfiguration
   , parseNodeConfigurationFP
@@ -29,13 +41,15 @@ import           Prelude (String)
 
 import           Control.Monad.Fail (fail)
 import           Data.Aeson
+import           Data.IP (IP)
+import qualified Data.Text as Text
 import           Data.Yaml (decodeFileThrow)
+import           Network.Socket (PortNumber)
 import           System.FilePath (takeDirectory, (</>))
 import           System.Posix.Types (Fd)
 
 import           Cardano.Api.Typed (EpochNo)
 import qualified Cardano.Chain.Update as Byron
-import           Cardano.Config.Types
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.TraceConfig (TraceOptions (..), traceConfigParser)
@@ -45,12 +59,99 @@ import           Ouroboros.Network.Block (MaxSlotNo (..))
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
 -- use records with named fields in the CLI code.
 
+-- | Errors for the cardano-config module.
+data ConfigError
+    = ConfigErrorFileNotFound !FilePath
+    deriving Show
+
 -- | Filepath of the configuration yaml file. This file determines
 -- all the configuration settings required for the cardano node
 -- (logging, tracing, protocol, slot length etc)
 newtype ConfigYamlFilePath = ConfigYamlFilePath
   { unConfigPath :: FilePath }
   deriving newtype (Eq, Show)
+
+newtype DbFile = DbFile
+  { unDB :: FilePath }
+  deriving newtype Show
+
+newtype GenesisFile = GenesisFile
+  { unGenesisFile :: FilePath }
+  deriving stock (Eq, Ord)
+  deriving newtype (IsString, Show)
+
+instance FromJSON GenesisFile where
+  parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
+  parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
+                           <> "Encountered: " <> (Text.pack $ show invalid)
+
+-- Node can be run in two modes.
+data ViewMode = LiveView    -- Live mode with TUI
+              | SimpleView  -- Simple mode, just output text.
+              deriving (Eq, Show)
+
+instance FromJSON ViewMode where
+  parseJSON (String str) = case str of
+                            "LiveView" -> pure LiveView
+                            "SimpleView" -> pure SimpleView
+                            view -> panic $ "Parsing of ViewMode: "
+                                          <> view <> " failed. "
+                                          <> view <> " is not a valid view mode"
+  parseJSON invalid = panic $ "Parsing of ViewMode failed due to type mismatch. "
+                            <> "Encountered: " <> (Text.pack $ show invalid)
+
+newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
+  { unMaxConcurrencyBulkSync :: Word }
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, Show)
+
+newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
+  { unMaxConcurrencyDeadline :: Word }
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, Show)
+
+
+-- | IPv4 address with a port number.
+data NodeAddress = NodeAddress
+  { naHostAddress :: !NodeHostAddress
+  , naPort :: !PortNumber
+  } deriving (Eq, Ord, Show)
+
+instance FromJSON NodeAddress where
+  parseJSON = withObject "NodeAddress" $ \v -> do
+    NodeAddress
+      <$> v .: "addr"
+      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
+
+instance ToJSON NodeAddress where
+  toJSON na =
+    object
+      [ "addr" .= toJSON (naHostAddress na)
+      , "port" .= (fromIntegral (naPort na) :: Int)
+      ]
+
+-- Embedding a Maybe inside a newtype is somewhat icky but this seems to work
+-- and removing the Maybe breaks the functionality in a subtle way that is difficult
+-- to diagnose.
+newtype NodeHostAddress
+  = NodeHostAddress { unNodeHostAddress :: Maybe IP }
+  deriving newtype Show
+  deriving (Eq, Ord)
+
+instance FromJSON NodeHostAddress where
+  parseJSON (String ipStr) =
+    case readMaybe $ Text.unpack ipStr of
+      Just ip -> pure $ NodeHostAddress (Just ip)
+      Nothing -> panic $ "Parsing of IP failed: " <> ipStr
+  parseJSON Null = pure $ NodeHostAddress Nothing
+  parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
+                            <> "Encountered: " <> (Text.pack $ show invalid) <> "\n"
+
+instance ToJSON NodeHostAddress where
+  toJSON mha =
+    case unNodeHostAddress mha of
+      Just ip -> String (Text.pack $ show ip)
+      Nothing -> Null
 
 data NodeCLI = NodeCLI
   { nodeMode        :: !NodeProtocolMode
@@ -258,6 +359,15 @@ instance FromJSON Protocol where
 deriving instance NFData Protocol
 deriving instance NoUnexpectedThunks Protocol
 
+data ProtocolFilepaths =
+     ProtocolFilepaths {
+       byronCertFile   :: !(Maybe FilePath)
+     , byronKeyFile    :: !(Maybe FilePath)
+     , shelleyKESFile  :: !(Maybe FilePath)
+     , shelleyVRFFile  :: !(Maybe FilePath)
+     , shelleyCertFile :: !(Maybe FilePath)
+     }
+
 data MockProtocol = MockBFT
                   | MockPBFT
                   | MockPraos
@@ -277,6 +387,11 @@ data NodeProtocolConfiguration =
                                         NodeShelleyProtocolConfiguration
                                         NodeHardForkProtocolConfiguration
   deriving Show
+
+-- | Mock protocols requires different parameters to real protocols.
+-- Therefore we distinguish this at the top level on the command line.
+data NodeProtocolMode = MockProtocolMode
+                      | RealProtocolMode
 
 data NodeShelleyProtocolConfiguration =
      NodeShelleyProtocolConfiguration {
@@ -364,6 +479,15 @@ data NodeHardForkProtocolConfiguration =
      , npcTestShelleyHardForkAtVersion :: Maybe Word
      }
   deriving Show
+
+newtype SocketPath = SocketPath
+  { unSocketPath :: FilePath }
+  deriving stock (Eq, Ord)
+  deriving newtype (FromJSON, IsString, Show)
+
+newtype TopologyFile = TopologyFile
+  { unTopology :: FilePath }
+  deriving newtype Show
 
 instance AdjustFilePaths NodeProtocolConfiguration where
 

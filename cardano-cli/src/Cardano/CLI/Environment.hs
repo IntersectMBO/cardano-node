@@ -15,7 +15,7 @@ import qualified Data.Text as Text
 import           System.Environment (lookupEnv)
 
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.Config.Types (SocketPath (..))
+import           Cardano.CLI.Types (SocketPath (..))
 
 data EnvSocketError
   = CliEnvVarLookup !Text deriving Show

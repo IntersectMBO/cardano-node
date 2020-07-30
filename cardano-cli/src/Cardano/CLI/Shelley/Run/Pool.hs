@@ -22,6 +22,7 @@ import           Cardano.Api.Typed
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Types (VerificationKeyFile (..))
 
 
 data ShelleyPoolCmdError
@@ -50,7 +51,6 @@ runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
 runPoolCmd (PoolGetId sPvkey) = runPoolId sPvkey
 runPoolCmd (PoolMetaDataHash poolMdFile mOutFile) = runPoolMetaDataHash poolMdFile mOutFile
-runPoolCmd cmd = liftIO $ putStrLn $ "runPoolCmd: " ++ show cmd
 
 
 --
