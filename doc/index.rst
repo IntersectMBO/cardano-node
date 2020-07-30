@@ -26,6 +26,7 @@ cardano-node
    :maxdepth: 3
    :caption: Stakepool Operations
    :titlesonly:
+   :numbered:
    :hidden:
 
    stake-pool-operations/getConfigFiles_AND_Connect
