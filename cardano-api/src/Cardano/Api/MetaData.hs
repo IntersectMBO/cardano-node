@@ -14,8 +14,8 @@ import           Cardano.Api.Typed as Api
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Attoparsec.Text as Atto
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map

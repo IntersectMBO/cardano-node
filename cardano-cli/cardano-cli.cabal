@@ -22,7 +22,9 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.CLI.Helpers
+  exposed-modules:     Cardano.CLI.Git.Rev
+                       Cardano.CLI.Git.RevFromGit
+                       Cardano.CLI.Helpers
                        Cardano.CLI.Parsers
                        Cardano.CLI.Run
                        Cardano.CLI.Types
@@ -73,7 +75,6 @@ library
                      , canonical-json >= 0.6 && < 0.7
                      , cardano-api
                      , cardano-binary
-                     , cardano-config
                      , cardano-crypto
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
@@ -86,6 +87,7 @@ library
                      , cborg >= 0.2.2 && < 0.3
                      , containers
                      , directory
+                     , file-embed
                      , filepath
                      , formatting
                      , io-sim-classes
@@ -105,6 +107,7 @@ library
                      , scientific
                      , shelley-spec-ledger
                      , small-steps
+                     , template-haskell
                      , text
                      , time
                      , transformers
