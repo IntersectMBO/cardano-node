@@ -24,6 +24,7 @@ library
                         Cardano.Api.TextView
                         Cardano.Api.Typed
                         Cardano.Api.LocalChainSync
+                        Cardano.Api.MetaData
                         Cardano.Api.TxSubmit
 
   other-modules:        Cardano.Api.TxSubmit.ErrorRender
@@ -116,11 +117,14 @@ test-suite cardano-api-test
                       , ouroboros-network
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
+                      , text
                       , time
+                      , unordered-containers
 
   other-modules:        Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Ledger
+                        Test.Cardano.Api.MetaData
                         Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
