@@ -1,3 +1,5 @@
+cabal-version: 2.4
+
 name:                  cardano-cli
 version:               1.18.0
 description:           The Cardano command-line interface.
@@ -8,7 +10,6 @@ license-files:
   LICENSE
   NOTICE
 build-type:            Simple
-cabal-version:         >= 1.10
 extra-source-files:    README.md
 
 Flag unexpected_thunks
@@ -224,6 +225,7 @@ test-suite cardano-cli-test
                         Test.Pioneers.Exercise2
                         Test.Pioneers.Exercise3
                         Test.Pioneers.Exercise4
+                        Test.Process
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
@@ -236,4 +238,4 @@ test-suite cardano-cli-test
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
-  build-tools:          cardano-cli
+  build-tool-depends:   cardano-cli:cardano-cli
