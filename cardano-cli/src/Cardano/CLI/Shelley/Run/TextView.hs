@@ -21,15 +21,15 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
 data ShelleyTextViewFileError
-  = ShelleyTextViewReadFileError ((FileError TextEnvelopeError))
-  | ShelleyTextViewCBORPrettyPrintError !HelpersError
+  = TextViewReadFileError ((FileError TextEnvelopeError))
+  | TextViewCBORPrettyPrintError !HelpersError
   deriving Show
 
 renderShelleyTextViewFileError :: ShelleyTextViewFileError -> Text
 renderShelleyTextViewFileError err =
   case err of
-    ShelleyTextViewReadFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyTextViewCBORPrettyPrintError hlprsErr ->
+    TextViewReadFileError fileErr -> Text.pack (displayError fileErr)
+    TextViewCBORPrettyPrintError hlprsErr ->
       "Error pretty printing CBOR: " <> renderHelpersError hlprsErr
 
 
@@ -40,8 +40,8 @@ runTextViewCmd cmd =
 
 runTextViewInfo :: FilePath -> Maybe OutputFile -> ExceptT ShelleyTextViewFileError IO ()
 runTextViewInfo fpath mOutFile = do
-  tv <- firstExceptT ShelleyTextViewReadFileError $ newExceptT (readTextEnvelopeFromFile fpath)
+  tv <- firstExceptT TextViewReadFileError $ newExceptT (readTextEnvelopeFromFile fpath)
   let lbCBOR = LBS.fromStrict (tvRawCBOR tv)
   case mOutFile of
     Just (OutputFile oFpath) -> liftIO $ LBS.writeFile oFpath lbCBOR
-    Nothing -> firstExceptT ShelleyTextViewCBORPrettyPrintError $ pPrintCBOR lbCBOR
+    Nothing -> firstExceptT TextViewCBORPrettyPrintError $ pPrintCBOR lbCBOR

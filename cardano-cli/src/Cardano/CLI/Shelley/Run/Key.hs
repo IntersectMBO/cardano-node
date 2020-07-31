@@ -62,7 +62,7 @@ renderShelleyKeyCmdError err =
     ShelleyKeyCmdByronKeyParseError errTxt -> errTxt
     ShelleyKeyCmdItnKeyConvError convErr -> renderConversionError convErr
     ShelleyKeyCmdWrongKeyTypeError -> Text.pack "Please use a signing key file \
-                                                \when converting ITN BIP32 or Extended keys"
+                                   \when converting ITN BIP32 or Extended keys"
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =

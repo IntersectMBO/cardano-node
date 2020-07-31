@@ -20,23 +20,23 @@ import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
 data ShelleyStakeAddressCmdError
-  = ShelleyStakeAddressKeyPairError
+  = ShelleyStakeAddressCmdStakeAddressKeyPairError
       !Text
       -- ^ bech32 private key
       !Text
       -- ^ bech32 public key
-  | ShelleyStakeAddressReadFileError !(FileError TextEnvelopeError)
-  | ShelleyStakeAddressWriteFileError !(FileError ())
+  | ShelleyStakeAddressCmdReadFileError !(FileError TextEnvelopeError)
+  | ShelleyStakeAddressCmdWriteFileError !(FileError ())
   deriving Show
 
 renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
 renderShelleyStakeAddressCmdError err =
   case err of
-    ShelleyStakeAddressKeyPairError bech32PrivKey bech32PubKey ->
+    ShelleyStakeAddressCmdStakeAddressKeyPairError bech32PrivKey bech32PubKey ->
       "Error while deriving the shelley verification key from bech32 private Key: " <> bech32PrivKey <>
       " Corresponding bech32 public key: " <> bech32PubKey
-    ShelleyStakeAddressReadFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyStakeAddressWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyStakeAddressCmdReadFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyStakeAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
 
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
@@ -59,10 +59,10 @@ runStakeAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT Shelle
 runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
     skey <- liftIO $ generateSigningKey AsStakeKey
     let vkey = getVerificationKey skey
-    firstExceptT ShelleyStakeAddressWriteFileError
+    firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope skFp (Just skeyDesc) skey
-    firstExceptT ShelleyStakeAddressWriteFileError
+    firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope vkFp (Just vkeyDesc) vkey
   where
@@ -72,7 +72,7 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
 
 runStakeAddressKeyHash :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp = do
-  vkey <- firstExceptT ShelleyStakeAddressReadFileError
+  vkey <- firstExceptT ShelleyStakeAddressCmdReadFileError
     . newExceptT
     $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkeyPath
 
@@ -85,7 +85,7 @@ runStakeAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp = do
 runStakeAddressBuild :: VerificationKeyFile -> NetworkId -> Maybe OutputFile
                      -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp = do
-    stakeVerKey <- firstExceptT ShelleyStakeAddressReadFileError
+    stakeVerKey <- firstExceptT ShelleyStakeAddressCmdReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stkVkeyFp
 
@@ -100,12 +100,12 @@ runStakeAddressBuild (VerificationKeyFile stkVkeyFp) network mOutputFp = do
 
 runStakeKeyRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
-    stakeVerKey <- firstExceptT ShelleyStakeAddressReadFileError
+    stakeVerKey <- firstExceptT ShelleyStakeAddressCmdReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkFp
     let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
         regCert = makeStakeAddressRegistrationCertificate stakeCred
-    firstExceptT ShelleyStakeAddressWriteFileError
+    firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope oFp (Just regCertDesc) regCert
   where
@@ -121,7 +121,7 @@ runStakeKeyDelegationCert
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyDelegationCert (VerificationKeyFile stkKey) poolVKeyHashOrFile (OutputFile outFp) = do
-    stakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
+    stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stkKey
 
@@ -130,7 +130,7 @@ runStakeKeyDelegationCert (VerificationKeyFile stkKey) poolVKeyHashOrFile (Outpu
         StakePoolVerificationKeyHash hash -> pure hash
         StakePoolVerificationKeyFile (VerificationKeyFile fp) ->
           bimapExceptT
-            ShelleyStakeAddressReadFileError
+            ShelleyStakeAddressCmdReadFileError
             verificationKeyHash
             (newExceptT $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) fp)
 
@@ -138,7 +138,7 @@ runStakeKeyDelegationCert (VerificationKeyFile stkKey) poolVKeyHashOrFile (Outpu
         delegCert = makeStakeAddressDelegationCertificate
                       stakeCred
                       poolStakeVKeyHash
-    firstExceptT ShelleyStakeAddressWriteFileError
+    firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
   where
@@ -148,12 +148,12 @@ runStakeKeyDelegationCert (VerificationKeyFile stkKey) poolVKeyHashOrFile (Outpu
 
 runStakeKeyDeRegistrationCert :: VerificationKeyFile -> OutputFile -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeKeyDeRegistrationCert (VerificationKeyFile vkFp) (OutputFile oFp) = do
-    stakeVkey <- firstExceptT ShelleyStakeAddressReadFileError
+    stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakeKey) vkFp
     let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
         deRegCert = makeStakeAddressDeregistrationCertificate stakeCred
-    firstExceptT ShelleyStakeAddressWriteFileError
+    firstExceptT ShelleyStakeAddressCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
   where

@@ -26,7 +26,7 @@ import           Cardano.CLI.Shelley.Run.TextView
 data ShelleyClientCmdError
   = ShelleyCmdAddressError !ShelleyAddressCmdError
   | ShelleyCmdGenesisError !ShelleyGenesisCmdError
-  | ShelleyCmdGovernanceError !ShelleyGovernanceError
+  | ShelleyCmdGovernanceError !ShelleyGovernanceCmdError
   | ShelleyCmdNodeError !ShelleyNodeCmdError
   | ShelleyCmdPoolError !ShelleyPoolCmdError
   | ShelleyCmdStakeAddressError !ShelleyStakeAddressCmdError
