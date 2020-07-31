@@ -8,6 +8,7 @@ module Cardano.Tracing.Constraints
 import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
+import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Queries (LedgerQueries)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
@@ -19,7 +20,6 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,  HasTxI
                      HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Util.Condense (Condense)
 
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -30,7 +30,7 @@ import           Ouroboros.Consensus.Util.Condense (Condense)
 -- remove all `Condense` constaints by defining the relevant 'ToObject' instance
 -- in 'cardano-node'
 type TraceConstraints blk =
-    ( Condense (TxId (GenTx blk))
+    ( ConvertTxId blk
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk

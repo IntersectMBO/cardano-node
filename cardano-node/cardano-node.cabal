@@ -47,6 +47,7 @@ library
                        Cardano.Node.Types
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
+                       Cardano.Tracing.ConvertTxId
                        Cardano.Tracing.Kernel
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
@@ -147,6 +148,7 @@ library cardano-node-config
                        Cardano.Node.Types
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
+                       Cardano.Tracing.ConvertTxId
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.OrphanInstances.Common
                        Cardano.Tracing.Queries
