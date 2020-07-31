@@ -1,6 +1,7 @@
 module Cardano.CLI.Byron.Parsers
   ( ByronCommand(..)
   , NodeCmd(..)
+  , backwardsCompatibilityCommands
   , parseByronCommands
   , parseHeavyDelThd
   , parseInstallerHash
@@ -23,6 +24,7 @@ module Cardano.CLI.Byron.Parsers
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
+import           Control.Applicative ((<|>))
 import           Data.Bifunctor (first, second)
 import qualified Data.ByteString.Lazy.Char8 as C8
 import qualified Data.List.NonEmpty as NE
@@ -57,6 +59,7 @@ import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
+import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Types
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
@@ -64,24 +67,41 @@ command' c descr p =
     command c $ info (p <**> helper)
               $ mconcat [ progDesc descr ]
 
-parseByronCommands :: Mod CommandFields ByronCommand
+backwardsCompatibilityCommands :: Parser ClientCommand
+backwardsCompatibilityCommands =
+  foldl (<|>) (convertToByronCommand parseGenesisRelatedValues) hiddenCmds
+ where
+  convertToByronCommand :: Mod CommandFields ByronCommand -> Parser ClientCommand
+  convertToByronCommand p = ByronCommand <$> Opt.subparser (p <> Opt.internal)
+
+  hiddenCmds :: [Parser ClientCommand]
+  hiddenCmds = map convertToByronCommand [ parseKeyRelatedValues
+                                         , parseDelegationRelatedValues
+                                         , parseTxRelatedValues
+                                         , parseLocalNodeQueryValues
+                                         , parseMiscellaneous
+                                         ]
+
+parseByronCommands :: Parser ByronCommand
 parseByronCommands =
-  mconcat
-    [ parseNode
-    , parseGenesisRelatedValues
-    , parseKeyRelatedValues
-    , parseDelegationRelatedValues
-    , parseTxRelatedValues
-    , parseLocalNodeQueryValues
-    , parseMiscellaneous
-    ]
+  Opt.subparser $
+    mconcat
+      [ Opt.command "key"
+          (Opt.info (Opt.subparser parseKeyRelatedValues) $ Opt.progDesc "Byron key utility commands")
+      , Opt.command "transaction"
+          (Opt.info (Opt.subparser parseTxRelatedValues) $ Opt.progDesc "Byron transaction commands")
+      , Opt.command "query"
+          (Opt.info (Opt.subparser parseLocalNodeQueryValues) $ Opt.progDesc "Byron node query commands.")
+      , Opt.command "genesis"
+          (Opt.info (Opt.subparser parseGenesisRelatedValues) $ Opt.progDesc "Byron genesis block commands")
+      , Opt.command "governance"
+          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Byron governance commands")
+      , Opt.command "delegation"
+          (Opt.info (Opt.subparser parseDelegationRelatedValues) $ Opt.progDesc "Byron delegation commands")
+      , Opt.command "miscellaneous"
+          (Opt.info (Opt.subparser parseMiscellaneous) $ Opt.progDesc "Byron miscellaneous commands")
+      ]
 
-
-parseNode :: Mod CommandFields ByronCommand
-parseNode = mconcat
-    [ Opt.command "byron"
-        (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Byron node operation commands")
-    ]
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum

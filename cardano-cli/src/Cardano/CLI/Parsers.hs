@@ -9,7 +9,7 @@ import           Prelude (String)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Cardano.CLI.Byron.Parsers (parseByronCommands)
+import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 
@@ -34,7 +34,7 @@ pref = Opt.prefs showHelpOnEmpty
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
   asum
-    [ parseByron
+    [ parseByron <|> backwardsCompatibilityCommands
     , parseShelley
     , parseDisplayVersion
     ]
@@ -45,7 +45,10 @@ parseByron =
   subparser $ mconcat
     [ commandGroup "Byron specific commands"
     , metavar "Byron specific commands"
-    , parseByronCommands
+    , command'
+        "byron"
+        "Byron specific commands"
+         parseByronCommands
     ]
 
 parseShelley :: Parser ClientCommand
