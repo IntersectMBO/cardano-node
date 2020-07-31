@@ -29,9 +29,9 @@ import           Cardano.BM.Data.Backend (BackendKind (..), IsBackend (..), IsEf
 import           Cardano.BM.Data.Counter (Platform (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LogObject (..), utc2ns)
 import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Node.Protocol.Types (MockProtocol (..), Protocol (..))
 import           Cardano.Node.TUI.Drawing (ColorTheme (..), LiveViewState (..), LiveViewThread (..),
                      Screen (..), darkTheme, drawUI, lightTheme)
-import           Cardano.Node.Types (MockProtocol (..), Protocol (..))
 
 import           Paths_cardano_node (version)
 

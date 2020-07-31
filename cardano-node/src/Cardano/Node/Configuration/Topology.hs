@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Node.Topology
+module Cardano.Node.Configuration.Topology
   ( TopologyError(..)
   , NetworkTopology(..)
   , NodeHostAddress(..)

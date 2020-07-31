@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Node.Socket
+module Cardano.Node.Configuration.Socket
   ( gatherConfiguredSockets
   , SocketOrSocketInfo(..)
   , SocketConfigError(..)

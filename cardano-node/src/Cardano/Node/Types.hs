@@ -1,9 +1,6 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Node.Types
   ( ConfigError(..)
@@ -12,9 +9,7 @@ module Cardano.Node.Types
   , GenesisFile(..)
   , NodeCLI(..)
   , NodeConfiguration(..)
-  , Protocol(..)
   , ProtocolFilepaths (..)
-  , MockProtocol(..)
   , GenesisHash(..)
   , MaxConcurrencyBulkSync(..)
   , MaxConcurrencyDeadline(..)
@@ -28,7 +23,6 @@ module Cardano.Node.Types
   , NodeProtocolMode(..)
   , SocketPath(..)
   , TopologyFile(..)
-  , TraceOptions(..)
   , ViewMode(..)
   , ncProtocol
   , parseNodeConfiguration
@@ -39,7 +33,7 @@ module Cardano.Node.Types
 import           Cardano.Prelude
 import           Prelude (String)
 
-import           Control.Monad.Fail (fail)
+import           Control.Monad (fail)
 import           Data.Aeson
 import           Data.IP (IP)
 import qualified Data.Text as Text
@@ -52,7 +46,8 @@ import           Cardano.Api.Typed (EpochNo)
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
-import           Cardano.Node.TraceConfig (TraceOptions (..), traceConfigParser)
+import           Cardano.Node.Protocol.Types (MockProtocol (..), Protocol (..))
+import           Cardano.Tracing.Config (TraceOptions (..), traceConfigParser)
 import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 
@@ -328,37 +323,6 @@ instance FromJSON NodeConfiguration where
                npcShelleyHardForkNotBeforeEpoch
              }
 
-data Protocol = MockProtocol !MockProtocol
-              | ByronProtocol
-              | ShelleyProtocol
-              | CardanoProtocol
-  deriving (Eq, Show, Generic)
-
-instance FromJSON Protocol where
-  parseJSON =
-    withText "Protocol" $ \str -> case str of
-
-      -- The new names
-      "MockBFT"   -> pure (MockProtocol MockBFT)
-      "MockPBFT"  -> pure (MockProtocol MockPBFT)
-      "MockPraos" -> pure (MockProtocol MockPraos)
-      "Byron"     -> pure ByronProtocol
-      "Shelley"   -> pure ShelleyProtocol
-      "Cardano"   -> pure CardanoProtocol
-
-      -- The old names
-      "BFT"       -> pure (MockProtocol MockBFT)
-    --"MockPBFT"  -- same as new name
-      "Praos"     -> pure (MockProtocol MockPraos)
-      "RealPBFT"  -> pure ByronProtocol
-      "TPraos"    -> pure ShelleyProtocol
-
-      _           -> fail $ "Parsing of Protocol failed. "
-                         <> show str <> " is not a valid protocol"
-
-deriving instance NFData Protocol
-deriving instance NoUnexpectedThunks Protocol
-
 data ProtocolFilepaths =
      ProtocolFilepaths {
        byronCertFile   :: !(Maybe FilePath)
@@ -367,14 +331,6 @@ data ProtocolFilepaths =
      , shelleyVRFFile  :: !(Maybe FilePath)
      , shelleyCertFile :: !(Maybe FilePath)
      }
-
-data MockProtocol = MockBFT
-                  | MockPBFT
-                  | MockPraos
-  deriving (Eq, Show, Generic)
-
-deriving instance NFData MockProtocol
-deriving instance NoUnexpectedThunks MockProtocol
 
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)

@@ -23,6 +23,7 @@ import           Cardano.Api.Protocol.Shelley
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Typed (NetworkMagic (..))
 import           Cardano.Chairman (chairmanTest)
+import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 
 main :: IO ()

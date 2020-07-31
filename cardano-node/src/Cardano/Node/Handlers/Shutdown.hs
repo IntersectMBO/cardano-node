@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Node.Shutdown
+module Cardano.Node.Handlers.Shutdown
   (
   -- * Generalised shutdown handling
     ShutdownFDs

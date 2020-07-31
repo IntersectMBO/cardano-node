@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Node.TraceConfig
+module Cardano.Tracing.Config
   ( TraceOptions (..)
   , TraceSelection (..)
   , traceConfigParser

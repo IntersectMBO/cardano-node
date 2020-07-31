@@ -22,14 +22,14 @@ import           Formatting (Format, sformat)
 import           Cardano.Binary (Annotated (..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
-import qualified Cardano.CLI.Legacy.Byron as Legacy
+import qualified Cardano.CLI.Byron.Legacy as Legacy
 import           Cardano.Crypto (ProtocolMagicId, SigningKey)
 import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, CardanoEra (..), renderByronKeyFailure,
                      serialiseSigningKey)
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Types (CertificateFile(..))
+import           Cardano.CLI.Types (CertificateFile (..))
 
 data ByronDelegationError
   = CertificateValidationErrors !FilePath ![Text]

@@ -1,7 +1,6 @@
-module Cardano.Node.TopHandler
+module Cardano.Node.Handlers.TopLevel
   ( toplevelExceptionHandler
-  )
-where
+  ) where
 
 -- The code in this module derives from multiple authors over many years.
 -- It is all under the BSD3 license below.

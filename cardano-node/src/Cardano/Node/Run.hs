@@ -12,8 +12,7 @@
 
 module Cardano.Node.Run
   ( runNode
-  )
-where
+  ) where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (String, error)
@@ -47,11 +46,11 @@ import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
 import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Node.Logging (LoggingLayer (..), Severity (..), shutdownLoggingLayer)
+import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..), shutdownLoggingLayer)
 #ifdef UNIX
-import           Cardano.Node.TraceConfig (traceBlockFetchDecisions)
+import           Cardano.Tracing.Config (traceBlockFetchDecisions)
 #endif
-import           Cardano.Node.TraceConfig (TraceOptions (..), TraceSelection (..))
+import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Node.Types
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
@@ -78,9 +77,9 @@ import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (
 
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..), mkConsensusProtocol,
                      renderProtocolInstantiationError)
-import           Cardano.Node.Shutdown
-import           Cardano.Node.Socket (SocketOrSocketInfo (..), gatherConfiguredSockets)
-import           Cardano.Node.Topology
+import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..), gatherConfiguredSockets)
+import           Cardano.Node.Configuration.Topology
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
