@@ -156,12 +156,16 @@ module Cardano.Api.Typed (
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
+    Script,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
+    scriptHash,
 
-    -- ** Multi-sig scripts
+    -- ** Multi-signature scripts
     -- | Making multi-signature scripts.
+    MultiSigScript(..),
+    makeMultiSigScript,
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
@@ -1548,14 +1552,33 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
 -- Scripts
 --
 
-data Script
+newtype Script = Script (Shelley.Script ShelleyCrypto)
+  deriving (Eq, Ord, Show)
 
 newtype instance Hash Script = ScriptHash (Shelley.ScriptHash ShelleyCrypto)
   deriving (Eq, Ord, Show)
 
+data MultiSigScript = RequireSignature (Hash PaymentKey)
+                    | RequireAllOf [MultiSigScript]
+                    | RequireAnyOf [MultiSigScript]
+                    | RequireMOf Int [MultiSigScript]
+  deriving (Eq, Show)
+
+scriptHash :: Script -> Hash Script
+scriptHash (Script s) = ScriptHash (Shelley.hashAnyScript s)
+
+makeMultiSigScript :: MultiSigScript -> Script
+makeMultiSigScript = Script . Shelley.MultiSigScript . go
+  where
+    go :: MultiSigScript -> Shelley.MultiSig ShelleyCrypto
+    go (RequireSignature (PaymentKeyHash kh))
+                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
+    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
+    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
+    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
 
 makeShelleyScriptWitness :: Script -> Witness Shelley
-makeShelleyScriptWitness = undefined
+makeShelleyScriptWitness (Script s) = ShelleyScriptWitness s
 
 
 -- ----------------------------------------------------------------------------
