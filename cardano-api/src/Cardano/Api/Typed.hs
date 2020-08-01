@@ -1553,7 +1553,8 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
 --
 
 newtype Script = Script (Shelley.Script ShelleyCrypto)
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (ToCBOR)
 
 newtype instance Hash Script = ScriptHash (Shelley.ScriptHash ShelleyCrypto)
   deriving (Eq, Ord, Show)
@@ -1563,6 +1564,32 @@ data MultiSigScript = RequireSignature (Hash PaymentKey)
                     | RequireAnyOf [MultiSigScript]
                     | RequireMOf Int [MultiSigScript]
   deriving (Eq, Show)
+
+instance HasTypeProxy Script where
+    data AsType Script = AsScript
+    proxyToAsType _ = AsScript
+
+instance SerialiseAsRawBytes (Hash Script) where
+    serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
+      Crypto.hashToBytes h
+
+    deserialiseFromRawBytes (AsHash AsScript) bs =
+      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
+
+instance SerialiseAsCBOR Script where
+    serialiseToCBOR (Script s) =
+      CBOR.serialize' s
+
+    deserialiseFromCBOR AsScript bs =
+      Script <$>
+        CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+instance HasTextEnvelope Script where
+    textEnvelopeType _ = "Script"
+    textEnvelopeDefaultDescr (Script script) =
+      case script of
+        Shelley.MultiSigScript {} -> "Multi-signature script"
+
 
 scriptHash :: Script -> Hash Script
 scriptHash (Script s) = ScriptHash (Shelley.hashAnyScript s)
