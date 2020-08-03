@@ -18,7 +18,7 @@ import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Mock
 import           Cardano.Node.Protocol.Shelley
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Protocol.Types (MockProtocol (..), SomeConsensusProtocol (..))
 
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params

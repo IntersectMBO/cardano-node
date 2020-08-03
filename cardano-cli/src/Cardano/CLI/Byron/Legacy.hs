@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.CLI.Legacy.Byron (
+module Cardano.CLI.Byron.Legacy (
       LegacyDelegateKey(..)
     , encodeLegacyDelegateKey
     , decodeLegacyDelegateKey

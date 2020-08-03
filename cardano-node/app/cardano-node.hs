@@ -9,17 +9,18 @@ import           Prelude (String)
 import           Data.Semigroup ((<>))
 import           Options.Applicative
 import qualified Options.Applicative as Opt
+import           Options.Applicative.Help ((<$$>))
 
 import           Cardano.Config.Git.Rev (gitRev)
 import           Data.Version (showVersion)
 import           Paths_cardano_node (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
 
-import           Cardano.Common.Help
-import           Cardano.Node.Logging (createLoggingLayer)
-import           Cardano.Node.Parsers (nodeCLIParser)
+import           Cardano.Node.Configuration.Logging (createLoggingLayer)
+import           Cardano.Node.Handlers.TopLevel
+import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
+                     renderHelpDoc)
 import           Cardano.Node.Run (runNode)
-import           Cardano.Node.TopHandler
 import           Cardano.Node.Types (NodeCLI (..))
 
 main :: IO ()

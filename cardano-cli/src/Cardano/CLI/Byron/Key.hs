@@ -43,8 +43,8 @@ import           System.IO (hFlush, hSetEcho, stdin, stdout)
 
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis
+import qualified Cardano.CLI.Byron.Legacy as Legacy
 import           Cardano.CLI.Helpers (textShow)
-import qualified Cardano.CLI.Legacy.Byron as Legacy
 import           Cardano.CLI.Types
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Random as Crypto

@@ -39,7 +39,7 @@ import qualified Graphics.Vty as Vty
 import           Numeric (showFFloat)
 import           Text.Printf (printf)
 
-import           Cardano.Node.Types (Protocol (..))
+import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Tracing.Peer (Peer (..), ppPeer)
 
 data ColorTheme

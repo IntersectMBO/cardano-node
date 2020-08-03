@@ -33,8 +33,10 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Common.Help
-                       Cardano.Node.Logging
+  exposed-modules:     Cardano.Node.Configuration.Topology
+                       Cardano.Node.Configuration.Logging
+                       Cardano.Node.Handlers.Shutdown
+                       Cardano.Node.Handlers.TopLevel
                        Cardano.Node.Orphans
                        Cardano.Node.Protocol
                        Cardano.Node.Protocol.Byron
@@ -44,11 +46,8 @@ library
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Parsers
                        Cardano.Node.Run
-                       Cardano.Node.Shutdown
-                       Cardano.Node.TopHandler
-                       Cardano.Node.Topology
-                       Cardano.Node.TraceConfig
                        Cardano.Node.Types
+                       Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
                        Cardano.Tracing.Kernel
                        Cardano.Tracing.Metrics
@@ -66,7 +65,7 @@ library
 
 
   other-modules:       Paths_cardano_node
-                       Cardano.Node.Socket
+                       Cardano.Node.Configuration.Socket
                        Cardano.Tracing.MicroBenchmarking
 
   build-depends:       aeson
@@ -148,10 +147,13 @@ library cardano-node-config
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Node.Orphans
+                       Cardano.Node.Protocol.Types
                        Cardano.Node.Types
-                       Cardano.Node.TraceConfig
+                       Cardano.Tracing.Config
+                       Cardano.Tracing.Constraints
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.OrphanInstances.Common
+                       Cardano.Tracing.Queries
 
   build-depends:       aeson
                      , base >=4.12 && <5
@@ -164,11 +166,13 @@ library cardano-node-config
                      , cardano-config
                      , cardano-prelude
                      , cardano-slotting
+                     , containers
                      , filepath
                      , iohk-monitoring
                      , iproute
                      , network
                      , ouroboros-consensus
+                     , ouroboros-consensus-cardano
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-shelley
                      , ouroboros-consensus-mock

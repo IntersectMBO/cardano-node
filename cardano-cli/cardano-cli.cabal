@@ -29,14 +29,13 @@ library
 
                        Cardano.CLI.Environment
 
-                       Cardano.CLI.Legacy.Byron
-
                        Cardano.CLI.Byron.Commands
                        Cardano.CLI.Byron.Parsers
                        Cardano.CLI.Byron.Run
                        Cardano.CLI.Byron.Delegation
                        Cardano.CLI.Byron.Genesis
                        Cardano.CLI.Byron.Key
+                       Cardano.CLI.Byron.Legacy
                        Cardano.CLI.Byron.Tx
                        Cardano.CLI.Byron.Query
                        Cardano.CLI.Byron.UpdateProposal
