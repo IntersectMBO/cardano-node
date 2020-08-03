@@ -225,7 +225,6 @@ test-suite cardano-cli-test
                         Test.Pioneers.Exercise2
                         Test.Pioneers.Exercise3
                         Test.Pioneers.Exercise4
-                        Test.Process
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude

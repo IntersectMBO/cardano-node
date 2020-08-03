@@ -275,6 +275,7 @@ test-suite cardano-node-test
                       , cardano-slotting
                       , containers
                       , cryptonite
+                      , directory
                       , hedgehog
                       , hedgehog-corpus
                       , iproute
