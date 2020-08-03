@@ -237,8 +237,7 @@ executable chairman
                      , contra-tracer
                      , cardano-prelude
                      , io-sim-classes
-                     , network-mux
-                     , cardano-node-config
+                     , network-mux                    , cardano-node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano
@@ -285,6 +284,7 @@ test-suite cardano-node-test
                       , process
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
+                      , temporary
                       , time
 
   other-modules:        Test.Cardano.Node.Chairman

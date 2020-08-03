@@ -23,13 +23,13 @@ prop_spawnOneNode = H.propertyOnce $ do
 
   (_mIn, _mOut, _mErr, hProcess) <- H.createProcess =<< H.procNode
     [ "run"
-    , "--database-path", base <> "/db/node-2/"
-    , "--socket-path", base <> "/socket/node-2-socket"
+    , "--database-path", base <> "/chairman/db/node-2"
+    , "--socket-path", base <> "/chairman/socket/node-2-socket"
     , "--port", "3002"
-    , "--topology", base <> "/configuration/defaults/simpleview/topology-node-2.json"
-    , "--config", base <> "/configuration/defaults/simpleview/config-2.yaml"
-    , "--signing-key", base <> "/configuration/defaults/simpleview/genesis/delegate-keys.002.key"
-    , "--delegation-certificate", base <> "/configuration/defaults/simpleview/genesis/delegation-cert.002.json"
+    , "--topology", base <> "/chairman/configuration/defaults/simpleview/topology-node-2.json"
+    , "--config", base <> "/chairman/configuration/defaults/simpleview/config-2.yaml"
+    , "--signing-key", base <> "/chairman/configuration/defaults/simpleview/genesis/delegate-keys.002.key"
+    , "--delegation-certificate", base <> "/chairman/configuration/defaults/simpleview/genesis/delegation-cert.002.json"
     ]
 
   H.threadDelay 10000000
