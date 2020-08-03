@@ -14,7 +14,13 @@ import qualified Test.Common.Base as H
 import qualified Test.Common.Process as H
 
 prop_spawnOneNode :: Property
-prop_spawnOneNode = H.propertyOnce $ do
+prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> do
+  let dbDir = tempDir <> "/db/node-2"
+  let socketDir = tempDir <> "/socket"
+
+  H.createDirectoryIfMissing dbDir
+  H.createDirectoryIfMissing socketDir
+
   base <- H.getProjectBase
 
   dirContents <- liftIO $ IO.listDirectory base
@@ -23,8 +29,8 @@ prop_spawnOneNode = H.propertyOnce $ do
 
   (_mIn, _mOut, _mErr, hProcess) <- H.createProcess =<< H.procNode
     [ "run"
-    , "--database-path", base <> "/chairman/db/node-2"
-    , "--socket-path", base <> "/chairman/socket/node-2-socket"
+    , "--database-path", dbDir
+    , "--socket-path", socketDir <> "/node-2-socket"
     , "--port", "3002"
     , "--topology", base <> "/chairman/configuration/defaults/simpleview/topology-node-2.json"
     , "--config", base <> "/chairman/configuration/defaults/simpleview/config-2.yaml"

@@ -4,6 +4,7 @@ module Test.Common.Base
   , threadDelay
   , workspace
   , moduleWorkspace
+  , createDirectoryIfMissing
   ) where
 
 import           Control.Monad.IO.Class (liftIO)
@@ -53,8 +54,10 @@ failWithCustom cs mdiff msg = liftTest $ mkTest (Left $ H.Failure (getCaller cs)
 -- the block fails.
 workspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
 workspace prefixPath f = GHC.withFrozenCallStack $ do
-  liftIO $ IO.createDirectoryIfMissing True prefixPath
-  ws <- liftIO $ IO.createTempDirectory prefixPath "test"
+  systemTemp <- liftIO $ IO.getCanonicalTemporaryDirectory
+  let systemPrefixPath = systemTemp <> "/" <> prefixPath
+  liftIO $ IO.createDirectoryIfMissing True systemPrefixPath
+  ws <- liftIO $ IO.createTempDirectory systemPrefixPath "test"
   H.annotate $ "Workspace: " <> cardanoCliPath <> "/" <> ws
   f ws
   liftIO $ IO.removeDirectoryRecursive ws
@@ -71,3 +74,6 @@ moduleWorkspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -
 moduleWorkspace prefixPath f = GHC.withFrozenCallStack $ do
   let srcModule = fromMaybe "UnknownModule" (fmap (GHC.srcLocModule . snd) (listToMaybe (getCallStack callStack)))
   workspace (prefixPath <> "/" <> srcModule) f
+
+createDirectoryIfMissing :: HasCallStack => FilePath -> H.PropertyT IO ()
+createDirectoryIfMissing filePath = H.evalM . liftIO $ IO.createDirectoryIfMissing True filePath
