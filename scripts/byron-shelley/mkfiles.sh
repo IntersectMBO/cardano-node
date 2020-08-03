@@ -243,7 +243,7 @@ cardano-cli issue-genesis-utxo-expenditure \
             --txout "(\"$(head -n 1 byron/address-000)\", $FUNDS_PER_BYRON_ADDRESS)"
 
 # Update Proposal and votes
-cardano-cli byron create-update-proposal \
+cardano-cli byron governance create-update-proposal \
             --filepath update-proposal \
             --testnet-magic 42 \
             --signing-key byron/delegate-keys.000.key \
@@ -256,7 +256,7 @@ cardano-cli byron create-update-proposal \
             --installer-hash 0
 
 for N in ${BFT_NODES_N}; do
-    cardano-cli byron create-proposal-vote \
+    cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath update-proposal \
                 --testnet-magic 42 \
                 --signing-key byron/delegate-keys.00$((${N} - 1)).key \
@@ -264,7 +264,7 @@ for N in ${BFT_NODES_N}; do
                 --output-filepath update-vote.00$((${N} - 1))
 done
 
-cardano-cli byron create-update-proposal \
+cardano-cli byron governance create-update-proposal \
             --filepath update-proposal-1 \
             --testnet-magic 42 \
             --signing-key byron/delegate-keys.000.key \
@@ -277,7 +277,7 @@ cardano-cli byron create-update-proposal \
             --installer-hash 0
 
 for N in ${BFT_NODES_N}; do
-    cardano-cli byron create-proposal-vote \
+    cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath update-proposal-1 \
                 --testnet-magic 42 \
                 --signing-key byron/delegate-keys.00$((${N} - 1)).key \
