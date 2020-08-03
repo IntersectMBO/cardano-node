@@ -57,6 +57,7 @@ runGetLocalNodeTip networkId = do
       tip <- getLocalTip connctInfo
       putTextLn (getTipOutput tip)
   where
+    -- TODO: Remove `Condense (HeaderHash blk)`.
     getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text
     getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
     getTipOutput (Tip slotNo headerHash blkNo) =

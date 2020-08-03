@@ -5,8 +5,6 @@ module Cardano.Tracing.Constraints
   ( TraceConstraints
   ) where
 
-import           Cardano.Prelude
-
 import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
@@ -16,12 +14,11 @@ import           Ouroboros.Consensus.Block (BlockProtocol, Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId, HasTxId,
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,  HasTxId,
                      HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Consensus.Util.Condense (Condense)
-import           Ouroboros.Network.Block (HeaderHash)
 
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -32,19 +29,10 @@ import           Ouroboros.Network.Block (HeaderHash)
 -- remove all `Condense` constaints by defining the relevant 'ToObject' instance
 -- in 'cardano-node'
 type TraceConstraints blk =
-    ( Condense blk
-    , Condense (Header blk)
-    , Condense (HeaderHash blk)
-    , Condense (GenTx blk)
-    , Condense (TxId (GenTx blk))
+    ( Condense (TxId (GenTx blk))
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk
-    , Show (ApplyTxErr blk)
-    , Show (GenTx blk)
-    , Show (GenTxId blk)
-    , Show blk
-    , Show (TxId (GenTx blk))
     , ToJSON   (TxId (GenTx blk))
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)

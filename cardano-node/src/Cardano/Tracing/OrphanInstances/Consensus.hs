@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -19,10 +20,13 @@ import           Data.Text (pack)
 import qualified Data.Text as Text
 
 import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Network (showPoint, showTip)
+import           Cardano.Tracing.OrphanInstances.Network ()
+import           Cardano.Tracing.Render (renderHeaderHash, renderHeaderHashForVerbosity,
+                     renderPoint, renderPointForVerbosity, renderRealPoint, renderTipForVerbosity,
+                     renderWithOrigin)
 
-import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState (..), Header, RealPoint,
-                     getHeader, headerPoint, realPointHash, realPointSlot)
+import           Ouroboros.Consensus.Block (BlockProtocol, ConvertRawHash (..), ForgeState (..),
+                     Header, RealPoint, getHeader, headerPoint, realPointHash, realPointSlot)
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -47,14 +51,19 @@ import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HeaderHash, SlotNo (..),
-                     StandardHash, blockHash, pointSlot)
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
+                     blockHash, pointSlot)
 import           Ouroboros.Network.Point (withOrigin)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 
+
+instance ConvertRawHash (Header blk) where
+  toShortRawHash = toShortRawHash
+  fromShortRawHash = fromShortRawHash
+  hashSize = hashSize
 
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
@@ -204,12 +213,12 @@ instance HasTextFormatter (TraceBlockFetchServerEvent blk) where
   formatText _ = pack . show . toList
 
 
-instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => Transformable Text IO (TraceChainSyncClientEvent blk) where
   trTransformer = trStructured
 
 
-instance Condense (HeaderHash blk)
+instance ConvertRawHash blk
       => Transformable Text IO (TraceChainSyncServerEvent blk) where
   trTransformer = trStructured
 
@@ -227,7 +236,6 @@ showT = pack . show
 
 
 instance ( tx ~ GenTx blk
-         , Condense (HeaderHash blk)
          , HasTxId tx
          , RunNode blk
          , Show (TxId tx)
@@ -246,7 +254,7 @@ instance ToObject (ChainIndepState (BlockProtocol blk))
   trTransformer = trStructuredText
 
 instance ( tx ~ GenTx blk
-         , Condense (HeaderHash blk)
+         , ConvertRawHash blk
          , HasTxId tx
          , LedgerSupportsProtocol blk
          , Show (TxId tx))
@@ -255,7 +263,7 @@ instance ( tx ~ GenTx blk
     TraceAdoptedBlock slotNo blk txs -> const $
       "Adopted block forged in slot "
         <> showT (unSlotNo slotNo)
-        <> ": " <> condenseT (blockHash blk)
+        <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
         <> ", TxIds: " <> showT (map txId txs)
     TraceBlockFromFuture currentSlot tipSlot -> const $
       "Couldn't forge block because current tip is in the future: "
@@ -263,7 +271,7 @@ instance ( tx ~ GenTx blk
         <> ", current slot: " <> showT (unSlotNo currentSlot)
     TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo -> const $
       "Couldn't forge block because current slot is immutable: "
-        <> "immutable tip: " <> pack (showPoint MaximalVerbosity immutableTipPoint)
+        <> "immutable tip: " <> renderPoint immutableTipPoint
         <> ", immutable tip block no: " <> showT (unBlockNo immutableTipBlkNo)
         <> ", current slot: " <> showT (unSlotNo slotNo)
     TraceDidntAdoptBlock slotNo _ -> const $
@@ -285,7 +293,7 @@ instance ( tx ~ GenTx blk
         <> showT reason
     TraceNoLedgerState slotNo pt -> const $
       "Could not obtain ledger state for point "
-        <> pack (showPoint MaximalVerbosity pt)
+        <> renderPoint pt
         <> ", current slot: "
         <> showT (unSlotNo slotNo)
     TraceNoLedgerView slotNo _ -> const $
@@ -298,7 +306,7 @@ instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer = trStructured
 
 
-instance ( Condense (HeaderHash blk)
+instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , InspectLedger blk
          , ToObject (Header blk)
@@ -310,71 +318,71 @@ instance ( Condense (HeaderHash blk)
 
 
 
-instance ( Condense (HeaderHash blk)
+instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt -> const $
-          "Ignoring block older than K: " <> condenseT pt
+          "Ignoring block older than K: " <> renderRealPoint pt
         ChainDB.IgnoreBlockAlreadyInVolDB pt -> \_o ->
-          "Ignoring block already in DB: " <> condenseT pt
+          "Ignoring block already in DB: " <> renderRealPoint pt
         ChainDB.IgnoreInvalidBlock pt _reason -> \_o ->
-          "Ignoring previously seen invalid block: " <> condenseT pt
+          "Ignoring previously seen invalid block: " <> renderRealPoint pt
         ChainDB.AddedBlockToQueue pt sz -> \_o ->
-          "Block added to queue: " <> condenseT pt <> " queue size " <> condenseT sz
+          "Block added to queue: " <> renderRealPoint pt <> " queue size " <> condenseT sz
         ChainDB.BlockInTheFuture pt slot -> \_o ->
-          "Ignoring block from future: " <> condenseT pt <> ", slot " <> condenseT slot
+          "Ignoring block from future: " <> renderRealPoint pt <> ", slot " <> condenseT slot
         ChainDB.StoreButDontChange pt -> \_o ->
-          "Ignoring block: " <> condenseT pt
+          "Ignoring block: " <> renderRealPoint pt
         ChainDB.TryAddToCurrentChain pt -> \_o ->
-          "Block fits onto the current chain: " <> condenseT pt
+          "Block fits onto the current chain: " <> renderRealPoint pt
         ChainDB.TrySwitchToAFork pt _ -> \_o ->
-          "Block fits onto some fork: " <> condenseT pt
+          "Block fits onto some fork: " <> renderRealPoint pt
         ChainDB.AddedToCurrentChain es _ _ c -> \_o ->
-          "Chain extended, new tip: " <> condenseT (AF.headPoint c) <>
+          "Chain extended, new tip: " <> renderPoint (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
         ChainDB.SwitchedToAFork es _ _ c -> \_o ->
-          "Switched to a fork, new tip: " <> condenseT (AF.headPoint c) <>
+          "Switched to a fork, new tip: " <> renderPoint (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt -> \_o ->
-            "Invalid block " <> condenseT pt <> ": " <> showT err
+            "Invalid block " <> renderRealPoint pt <> ": " <> showT err
           ChainDB.InvalidCandidate c -> \_o ->
-            "Invalid candidate " <> condenseT (AF.headPoint c)
+            "Invalid candidate " <> renderPoint (AF.headPoint c)
           ChainDB.ValidCandidate c -> \_o ->
-            "Valid candidate " <> condenseT (AF.headPoint c)
+            "Valid candidate " <> renderPoint (AF.headPoint c)
           ChainDB.CandidateContainsFutureBlocks c hdrs -> \_o ->
             "Candidate contains blocks from near future:  " <>
-            condenseT (AF.headPoint c) <> ", slots " <>
-            Text.intercalate ", " (map (condenseT . headerPoint) hdrs)
+            renderPoint (AF.headPoint c) <> ", slots " <>
+            Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
           ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs -> \_o ->
             "Candidate contains blocks from future exceeding clock skew limit: " <>
-            condenseT (AF.headPoint c) <> ", slots " <>
-            Text.intercalate ", " (map (condenseT . headerPoint) hdrs)
+            renderPoint (AF.headPoint c) <> ", slots " <>
+            Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
         ChainDB.AddedBlockToVolDB pt _ _ -> \_o ->
-          "Chain added block " <> condenseT pt
+          "Chain added block " <> renderRealPoint pt
         ChainDB.ChainSelectionForFutureBlock pt -> \_o ->
-          "Chain selection run for block previously from future: " <> condenseT pt
+          "Chain selection run for block previously from future: " <> renderRealPoint pt
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo -> \_o ->
           "Replaying ledger from genesis"
         LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> \_o ->
           "Replaying ledger from snapshot " <> showT snap <> " at " <>
-            condenseT tip'
+            renderWithOrigin renderRealPoint tip'
         LedgerDB.ReplayedBlock pt replayTo -> \_o ->
           "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
       ChainDB.TraceLedgerEvent ev -> case ev of
         LedgerDB.TookSnapshot snap pt -> \_o ->
-          "Took ledger snapshot " <> showT snap <> " at " <> condenseT pt
+          "Took ledger snapshot " <> showT snap <> " at " <> renderWithOrigin renderRealPoint pt
         LedgerDB.DeletedSnapshot snap -> \_o ->
           "Deleted old snapshot " <> showT snap
         LedgerDB.InvalidSnapshot snap failure -> \_o ->
           "Invalid snapshot " <> showT snap <> showT failure
       ChainDB.TraceCopyToImmDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmDB pt -> \_o ->
-          "Copied block " <> condenseT pt <> " to the ImmutableDB"
+          "Copied block " <> renderPoint pt <> " to the ImmutableDB"
         ChainDB.NoBlocksToCopyToImmDB -> \_o ->
           "There are no blocks to copy to the ImmutableDB"
       ChainDB.TraceGCEvent ev -> case ev of
@@ -384,13 +392,13 @@ instance ( Condense (HeaderHash blk)
           "Scheduled a garbage collection for " <> condenseT slot
       ChainDB.TraceOpenEvent ev -> case ev of
         ChainDB.OpenedDB immTip tip' -> \_o ->
-          "Opened db with immutable tip at " <> condenseT immTip <>
-          " and tip " <> condenseT tip'
+          "Opened db with immutable tip at " <> renderPoint immTip <>
+          " and tip " <> renderPoint tip'
         ChainDB.ClosedDB immTip tip' -> \_o ->
-          "Closed db with immutable tip at " <> condenseT immTip <>
-          " and tip " <> condenseT tip'
+          "Closed db with immutable tip at " <> renderPoint immTip <>
+          " and tip " <> renderPoint tip'
         ChainDB.OpenedImmDB immTip epoch -> \_o ->
-          "Opened imm db with immutable tip at " <> condenseT immTip <>
+          "Opened imm db with immutable tip at " <> renderPoint immTip <>
           " and epoch " <> showT epoch
         ChainDB.OpenedVolDB -> \_o -> "Opened vol db"
         ChainDB.OpenedLgrDB -> \_o -> "Opened lgr db"
@@ -487,7 +495,7 @@ instance ( StandardHash blk
       ]
 
 
-instance ( Condense (HeaderHash blk)
+instance ( ConvertRawHash blk
          , StandardHash blk
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
@@ -543,13 +551,13 @@ instance (Show (PBFT.PBftVerKeyHash c))
       ]
 
 
-instance Condense (HeaderHash blk)
+instance ConvertRawHash blk
       => ToObject (RealPoint blk) where
   toObject verb p =
     mkObject $
         [ "kind" .= String "Point"
-        , "slot" .= unSlotNo (realPointSlot p) ]
-     ++ [ "hash" .= condense (realPointHash p) | verb == MaximalVerbosity ]
+        , "slot" .= unSlotNo (realPointSlot p)
+        , "hash" .= renderHeaderHashForVerbosity (Proxy @blk) verb (realPointHash p) ]
 
 
 instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
@@ -559,7 +567,7 @@ instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
     LedgerWarning warning -> toObject verb warning
 
 
-instance ( Condense (HeaderHash blk)
+instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk))
@@ -595,7 +603,7 @@ instance ( Condense (HeaderHash blk)
     ChainDB.AddedToCurrentChain events _ base extended ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
-               , "newtip" .= showPoint verb (AF.headPoint extended)
+               , "newtip" .= renderPointForVerbosity verb (AF.headPoint extended)
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
@@ -604,7 +612,7 @@ instance ( Condense (HeaderHash blk)
     ChainDB.SwitchedToAFork events _ old new ->
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
-               , "newtip" .= showPoint verb (AF.headPoint new)
+               , "newtip" .= renderPointForVerbosity verb (AF.headPoint new)
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
@@ -617,18 +625,18 @@ instance ( Condense (HeaderHash blk)
                  , "error" .= show err ]
       ChainDB.InvalidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidCandidate"
-                 , "block" .= showPoint verb (AF.headPoint c) ]
+                 , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.ValidCandidate"
-                 , "block" .= showPoint verb (AF.headPoint c) ]
+                 , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
       ChainDB.CandidateContainsFutureBlocks c hdrs ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocks"
-                 , "block"   .= showPoint verb (AF.headPoint c)
-                 , "headers" .= map (showPoint verb . headerPoint) hdrs ]
+                 , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
+                 , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
       ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
-                 , "block"   .= showPoint verb (AF.headPoint c)
-                 , "headers" .= map (showPoint verb . headerPoint) hdrs ]
+                 , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
+                 , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
     ChainDB.AddedBlockToVolDB pt (BlockNo bn) _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolDB"
                , "block" .= toObject verb pt
@@ -734,7 +742,7 @@ instance ToObject (TraceBlockFetchServerEvent blk) where
     mkObject [ "kind" .= String "TraceBlockFetchServerEvent" ]
 
 
-instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => ToObject (TraceChainSyncClientEvent blk) where
   toObject verb ev = case ev of
     TraceDownloadedHeader pt ->
@@ -750,25 +758,25 @@ instance (Condense (HeaderHash blk), LedgerSupportsProtocol blk)
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
 
 
-instance Condense (HeaderHash blk)
+instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
   toObject verb ev = case ev of
     TraceChainSyncServerRead tip (AddBlock hdr) ->
       mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
-               , "tip" .= (String (pack $ showTip verb tip))
-               , "addedBlock" .= (String (pack $ condense hdr)) ]
+               , "tip" .= (String (renderTipForVerbosity verb tip))
+               , "addedBlock" .= (String (renderPointForVerbosity verb hdr)) ]
     TraceChainSyncServerRead tip (RollBack pt) ->
       mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.RollBack"
-               , "tip" .= (String (pack $ showTip verb tip))
-               , "rolledBackBlock" .= (String (pack $ showPoint verb pt)) ]
+               , "tip" .= (String (renderTipForVerbosity verb tip))
+               , "rolledBackBlock" .= (String (renderPointForVerbosity verb pt)) ]
     TraceChainSyncServerReadBlocked tip (AddBlock hdr) ->
       mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock"
-               , "tip" .= (String (pack $ showTip verb tip))
-               , "addedBlock" .= (String (pack $ condense hdr)) ]
+               , "tip" .= (String (renderTipForVerbosity verb tip))
+               , "addedBlock" .= (String (renderPointForVerbosity verb hdr)) ]
     TraceChainSyncServerReadBlocked tip (RollBack pt) ->
       mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.RollBack"
-               , "tip" .= (String (pack $ showTip verb tip))
-               , "rolledBackBlock" .= (String (pack $ showPoint verb pt)) ]
+               , "tip" .= (String (renderTipForVerbosity verb tip))
+               , "rolledBackBlock" .= (String (renderPointForVerbosity verb pt)) ]
 
 
 instance ( Show (ApplyTxErr blk), ToObject (ApplyTxErr blk), ToObject (GenTx blk),
@@ -822,7 +830,7 @@ instance ToObject (ChainIndepState (BlockProtocol blk))
     toObject verb chainIndepState
 
 instance ( tx ~ GenTx blk
-         , Condense (HeaderHash blk)
+         , ConvertRawHash blk
          , HasTxId tx
          , RunNode blk
          , Show (TxId tx)
@@ -835,15 +843,23 @@ instance ( tx ~ GenTx blk
     mkObject
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
-      , "blockHash" .=  (condense $ blockHash blk)
+      , "blockHash" .=
+          (renderHeaderHashForVerbosity
+            (Proxy @blk)
+            MaximalVerbosity
+            (blockHash blk))
       , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
       , "txIds" .= toJSON (map (show . txId) txs)
       ]
-  toObject _verb (TraceAdoptedBlock slotNo blk _txs) =
+  toObject verb (TraceAdoptedBlock slotNo blk _txs) =
     mkObject
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
-      , "blockHash" .=  (condense $ blockHash blk)
+      , "blockHash" .=
+          (renderHeaderHashForVerbosity
+            (Proxy @blk)
+            verb
+            (blockHash blk))
       , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
       ]
   toObject _verb (TraceBlockFromFuture currentSlot tip) =
@@ -856,7 +872,7 @@ instance ( tx ~ GenTx blk
     mkObject
       [ "kind" .= String "TraceSlotIsImmutable"
       , "slot" .= toJSON (unSlotNo slotNo)
-      , "tip" .= showPoint verb tipPoint
+      , "tip" .= renderPointForVerbosity verb tipPoint
       , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
       ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =

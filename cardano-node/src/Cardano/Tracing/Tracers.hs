@@ -48,7 +48,8 @@ import           Cardano.BM.ElidingTracer
 import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.Block (BlockProtocol, ForgeState, Header, realPointSlot)
+import           Ouroboros.Consensus.Block (BlockProtocol, ConvertRawHash, ForgeState, Header,
+                     realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                      TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -68,8 +69,8 @@ import           Ouroboros.Consensus.Util.Condense (Condense)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), HeaderHash, Point,
-                     StandardHash, blockNo, pointSlot, unBlockNo, unSlotNo)
+import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
+                     blockNo, pointSlot, unBlockNo, unSlotNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -345,7 +346,7 @@ mkTracers TracingOff _ _ =
 --------------------------------------------------------------------------------
 
 teeTraceChainTip
-  :: ( Condense (HeaderHash blk)
+  :: ( ConvertRawHash blk
      , LedgerSupportsProtocol blk
      , InspectLedger blk
      , ToObject (Header blk)
@@ -362,7 +363,7 @@ teeTraceChainTip (TracingOn trSel) elided tr =
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided tr) ev
 
 teeTraceChainTipElide
-  :: ( Condense (HeaderHash blk)
+  :: ( ConvertRawHash blk
      , LedgerSupportsProtocol blk
      , InspectLedger blk
      , ToObject (Header blk)
@@ -409,8 +410,7 @@ teeTraceChainTip' tr =
 --------------------------------------------------------------------------------
 
 mkConsensusTracers
-  :: ( Condense (HeaderHash blk) -- to remove
-     , Show peer
+  :: ( Show peer
      , Eq peer
      , LedgerQueries blk
      , ToJSON (GenTxId blk)
@@ -480,8 +480,7 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
 
 teeForge ::
   forall blk
-  . ( Condense (HeaderHash blk)
-     , Consensus.RunNode blk
+  . ( Consensus.RunNode blk
      , LedgerQueries blk
      , ToObject (CannotLead (BlockProtocol blk))
      , ToObject (LedgerErr (LedgerState blk))
@@ -561,8 +560,7 @@ teeForge' tr =
 
 
 forgeTracer
-  :: ( Condense (HeaderHash blk)
-     , Consensus.RunNode blk
+  :: ( Consensus.RunNode blk
      , LedgerQueries blk
      , ToObject (CannotLead (BlockProtocol blk))
      , ToObject (LedgerErr (LedgerState blk))
