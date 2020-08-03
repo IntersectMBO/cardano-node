@@ -2,6 +2,7 @@
 # shellcheck disable=SC1090,SC2034
 
 DEFAULT_VERBOSE=t
+echo "========= shell-test-net.sh ========="
 . "$(dirname "$0")"/common.sh
 . "$(dirname "$0")"/lib-cli.sh
 . "$(dirname "$0")"/lib-node.sh

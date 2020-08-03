@@ -56,6 +56,7 @@ do tmux select-pane -t ${i}
       DEFAULT_TRACE=${DEFAULT_TRACE};
 
       . ${__COMMON_SRCROOT}/scripts/common.sh;
+      echo "========= shelley-testnet.tmux1.sh ========="
       . ${__COMMON_SRCROOT}/scripts/lib-cli.sh;
       . ${__COMMON_SRCROOT}/scripts/lib-node.sh;
 

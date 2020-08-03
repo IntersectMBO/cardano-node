@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1090,SC2154,SC2155,SC2034,SC2039,SC2240,SC2124
 
+echo "========= issue-genesis-utxo-expenditure.sh ========="
 . "$(dirname "$0")"/common.sh
 . "$(dirname "$0")"/lib-cli.sh
 

@@ -3,6 +3,7 @@
 # ./scripts/chairman.sh --nix ./socket/node-[012]-socket
 
 DEFAULT_VERBOSE=t
+echo "========= chairman.sh ========="
 . "$(dirname "$0")"/common.sh
 . "$(dirname "$0")"/lib-cli.sh
 

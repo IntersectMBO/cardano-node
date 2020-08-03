@@ -33,6 +33,7 @@ EOF
 scripts_dir=$(dirname "$0")/..
 
 __COMMON_SRCROOT=$(realpath "${scripts_dir}/..")
+echo "========= cluster-test.sh ========="
 . "${scripts_dir}"/common.sh
 . "${scripts_dir}"/lib.sh
 . "${scripts_dir}"/lib-cli.sh

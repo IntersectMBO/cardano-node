@@ -28,6 +28,7 @@ This syncs the mainnet chain.
 EOF
 }
 
+echo "========= mainnet.sh ========="
 . "$(dirname "$0")"/common.sh
 . "$(dirname "$0")"/lib-cli.sh
 . "$(dirname "$0")"/lib-node.sh

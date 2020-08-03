@@ -88,6 +88,7 @@ do case "$1" in
            ## Remaining options handled in 'lib/common.sh'
            * )                 break;; esac; shift; done
 
+echo "========= mainnet-via-fetcher.sh ========="
 . "$(dirname "$0")"/common.sh
 . "$(dirname "$0")"/lib-cli.sh
 . "$(dirname "$0")"/lib-node.sh
