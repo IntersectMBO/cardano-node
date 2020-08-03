@@ -69,39 +69,46 @@ command' c descr p =
 
 backwardsCompatibilityCommands :: Parser ClientCommand
 backwardsCompatibilityCommands =
-  foldl (<|>) (convertToByronCommand parseGenesisRelatedValues) hiddenCmds
+  asum hiddenCmds
  where
   convertToByronCommand :: Mod CommandFields ByronCommand -> Parser ClientCommand
   convertToByronCommand p = ByronCommand <$> Opt.subparser (p <> Opt.internal)
 
   hiddenCmds :: [Parser ClientCommand]
-  hiddenCmds = map convertToByronCommand [ parseKeyRelatedValues
+  hiddenCmds = map convertToByronCommand [ parseGenesisRelatedValues
+                                         , parseKeyRelatedValues
                                          , parseDelegationRelatedValues
                                          , parseTxRelatedValues
                                          , parseLocalNodeQueryValues
                                          , parseMiscellaneous
                                          ]
 
+-- Implemented with asum so all commands don't get hidden when trying to hide
+-- the 'pNodeCmdBackwardCompatible' parser.
 parseByronCommands :: Parser ByronCommand
-parseByronCommands =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key"
-          (Opt.info (Opt.subparser parseKeyRelatedValues) $ Opt.progDesc "Byron key utility commands")
-      , Opt.command "transaction"
-          (Opt.info (Opt.subparser parseTxRelatedValues) $ Opt.progDesc "Byron transaction commands")
-      , Opt.command "query"
-          (Opt.info (Opt.subparser parseLocalNodeQueryValues) $ Opt.progDesc "Byron node query commands.")
-      , Opt.command "genesis"
-          (Opt.info (Opt.subparser parseGenesisRelatedValues) $ Opt.progDesc "Byron genesis block commands")
-      , Opt.command "governance"
-          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Byron governance commands")
-      , Opt.command "delegation"
-          (Opt.info (Opt.subparser parseDelegationRelatedValues) $ Opt.progDesc "Byron delegation commands")
-      , Opt.command "miscellaneous"
-          (Opt.info (Opt.subparser parseMiscellaneous) $ Opt.progDesc "Byron miscellaneous commands")
-      ]
+parseByronCommands = asum
+  [ subParser "key" (Opt.info (Opt.subparser parseKeyRelatedValues)
+      $ Opt.progDesc "Byron key utility commands")
+  , subParser "transaction" (Opt.info (Opt.subparser parseTxRelatedValues)
+      $ Opt.progDesc "Byron transaction commands")
+  , subParser "query" (Opt.info (Opt.subparser parseLocalNodeQueryValues)
+      $ Opt.progDesc "Byron node query commands.")
+  , subParser "genesis" (Opt.info (Opt.subparser parseGenesisRelatedValues)
+      $ Opt.progDesc "Byron genesis block commands")
+  , subParser "governance" (Opt.info (NodeCmd <$> Opt.subparser pNodeCmd)
+      $ Opt.progDesc "Byron governance commands")
+  , subParser "delegation" (Opt.info (Opt.subparser parseDelegationRelatedValues)
+      $ Opt.progDesc "Byron delegation commands")
+  , subParser "miscellaneous" (Opt.info (Opt.subparser parseMiscellaneous)
+      $ Opt.progDesc "Byron miscellaneous commands")
+  , NodeCmd <$> pNodeCmdBackwardCompatible
+  ]
+ where
+   subParser :: String -> ParserInfo ByronCommand -> Parser ByronCommand
+   subParser name pInfo = Opt.subparser $ Opt.command name pInfo
 
+pNodeCmdBackwardCompatible :: Parser NodeCmd
+pNodeCmdBackwardCompatible = Opt.subparser $ pNodeCmd <> Opt.internal
 
 parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
@@ -255,6 +262,7 @@ parseKeyRelatedValues =
                 <*> parseCardanoEra -- New CardanoEra
                 <*> parseNewSigningKeyFile "to"
         ]
+
 parseLocalNodeQueryValues :: Mod CommandFields ByronCommand
 parseLocalNodeQueryValues =
     mconcat
@@ -361,9 +369,8 @@ parseTxRelatedValues =
 parseVerificationKeyFile :: String -> String -> Parser VerificationKeyFile
 parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt desc
 
-pNodeCmd :: Parser NodeCmd
+pNodeCmd :: Mod CommandFields NodeCmd
 pNodeCmd =
-  Opt.subparser $
     mconcat
       [ Opt.command "create-update-proposal"
           (Opt.info parseByronUpdateProposal $ Opt.progDesc  "Create an update proposal.")
