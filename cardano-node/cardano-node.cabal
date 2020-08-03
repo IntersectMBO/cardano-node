@@ -263,6 +263,7 @@ test-suite cardano-node-test
   build-depends:
                         base >= 4.12 && < 5
                       , aeson
+                      , async
                       , bytestring
                       , cardano-config
                       , cardano-crypto-class
@@ -301,5 +302,3 @@ test-suite cardano-node-test
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
-  build-tool-depends:   cardano-node:cardano-node
