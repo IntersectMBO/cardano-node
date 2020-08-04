@@ -161,6 +161,7 @@ data NodeCLI = NodeCLI
   , protocolFiles   :: !ProtocolFilepaths
   , validateDB      :: !Bool
   , shutdownIPC     :: !(Maybe Fd)
+  , shutdownFile     :: !(Maybe FilePath)
   , shutdownOnSlotSynced :: !MaxSlotNo
   }
 

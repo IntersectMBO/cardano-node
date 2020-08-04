@@ -21,7 +21,6 @@ where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 
-import qualified Control.Concurrent.Async as Async
 import           Data.Text (pack)
 
 import qualified GHC.IO.Handle.FD as IO (fdToHandle)
@@ -67,21 +66,38 @@ newtype ShutdownDoorbell = ShutdownDoorbell { _doorbellFd :: Fd }
 -- | FD we're listening on for the EOF signalling the shutdown.
 newtype ShutdownListener = ShutdownListener { _listenerFd :: Fd }
 
+raceAll :: [IO ()] -> IO ()
+raceAll (a:b:as) = race_ a (raceAll (b:as))
+raceAll [a] = a
+raceAll [] = IO.hPutStrLn IO.stderr "Nothing to race"
+
 -- | Gracefully handle shutdown requests, if requested by 'ShutdownFDs'.
 --
 -- The file descriptor wrapped in a 'ShutdownListener' designates the
 -- receiving end of the shutdown signalling communication channel.
 -- The opposite end might be either internal or external to the node process.
-withShutdownHandler :: ShutdownFDs -> Trace IO Text -> IO () -> IO ()
-withShutdownHandler sfds trace action
-  | Just (ShutdownListener fd) <- sfdsListener sfds =
-      Async.race_ (wrapUninterruptableIO $ waitForEOF fd) action
-  | otherwise = action
+withShutdownHandler :: ShutdownFDs -> Maybe FilePath -> Trace IO Text -> IO () -> IO ()
+withShutdownHandler sfds maybeShutdownFile trace action = raceAll $ catMaybes
+  [ maybeShutdownAction
+  , maybeShutdownFileAction
+  , Just action
+  ]
   where
-    waitForEOF :: Fd -> IO ()
-    waitForEOF (Fd fd) = do
-      hnd <- IO.fdToHandle fd
-      r   <- try $ IO.hGetChar hnd
+    maybeShutdownAction :: Maybe (IO ())
+    maybeShutdownAction = case sfdsListener sfds of
+      Just (ShutdownListener fd) -> Just (wrapUninterruptableIO $ waitForFdEOF fd)
+      Nothing -> Nothing
+
+    maybeShutdownFileAction :: Maybe (IO ())
+    maybeShutdownFileAction = case maybeShutdownFile of
+      Just filePath -> if filePath == "-"
+        then Just (waitForHandleEOF IO.stdin)
+        else Just (waitForHandleEOF =<< IO.openFile filePath ReadMode)
+      Nothing -> Nothing
+
+    waitForHandleEOF :: Handle -> IO ()
+    waitForHandleEOF h = do
+      r <- try $ IO.hGetChar h
       case r of
         Left e
           | IO.isEOFError e -> traceWith tracer "received shutdown request"
@@ -89,6 +105,9 @@ withShutdownHandler sfds trace action
 
         Right _  ->
           throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
+
+    waitForFdEOF :: Fd -> IO ()
+    waitForFdEOF (Fd fd) = IO.fdToHandle fd >>= waitForHandleEOF
 
     sfdsListener :: ShutdownFDs -> Maybe ShutdownListener
     sfdsListener = \case
@@ -137,7 +156,7 @@ withShutdownHandling
   -> IO ()
 withShutdownHandling cli trace action = do
   sfds <- decideShutdownFds cli
-  withShutdownHandler sfds trace (action sfds)
+  withShutdownHandler sfds (shutdownFile cli) trace (action sfds)
  where
    decideShutdownFds :: NodeCLI -> IO ShutdownFDs
    decideShutdownFds NodeCLI{shutdownIPC = Just fd} =

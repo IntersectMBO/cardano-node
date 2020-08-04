@@ -58,6 +58,7 @@ nodeMockParser = do
 
   validate <- parseValidateDB
   shutdownIPC <- parseShutdownIPC
+  shutdownFile <- parseShutdownFile
   shutdownOnSlotSynced <- parseShutdownOnSlotSynced
 
   pure $ NodeCLI
@@ -76,6 +77,7 @@ nodeMockParser = do
              }
            , validateDB = validate
            , shutdownIPC
+           , shutdownFile
            , shutdownOnSlotSynced
            }
 
@@ -102,6 +104,7 @@ nodeRealParser = do
 
   validate <- parseValidateDB
   shutdownIPC <- parseShutdownIPC
+  shutdownFile <- parseShutdownFile
 
   shutdownOnSlotSynced <- parseShutdownOnSlotSynced
 
@@ -121,6 +124,7 @@ nodeRealParser = do
       }
     , validateDB = validate
     , shutdownIPC
+    , shutdownFile
     , shutdownOnSlotSynced
     }
 
@@ -191,6 +195,14 @@ parseShutdownIPC =
       <> help "Shut down the process when this inherited FD reaches EOF"
       <> hidden
     )
+
+parseShutdownFile :: Parser (Maybe FilePath)
+parseShutdownFile = optional . strOption $ mconcat
+    [ long "shutdown-file"
+    , metavar "FILEPATH"
+    , help "Shut down the process when EOF is read from the file"
+    , completer (bashCompleter "file")
+    ]
 
 parseShutdownOnSlotSynced :: Parser MaxSlotNo
 parseShutdownOnSlotSynced =
