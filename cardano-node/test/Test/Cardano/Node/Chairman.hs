@@ -37,7 +37,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     , "--config", base <> "/chairman/configuration/defaults/simpleview/config-2.yaml"
     , "--signing-key", base <> "/chairman/configuration/defaults/simpleview/genesis/delegate-keys.002.key"
     , "--delegation-certificate", base <> "/chairman/configuration/defaults/simpleview/genesis/delegation-cert.002.json"
-    , "--shutdown-file", "-"
+    , "--shutdown-ipc", "0"
     ]
 
   H.threadDelay 10000000
