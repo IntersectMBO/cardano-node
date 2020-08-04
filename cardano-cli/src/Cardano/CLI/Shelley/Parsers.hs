@@ -276,9 +276,17 @@ pKeyCmd =
     pKeyConvertByronKey :: Parser KeyCmd
     pKeyConvertByronKey =
       KeyConvertByronKey
-        <$> pByronKeyType
+        <$> optional pPassword
+        <*> pByronKeyType
         <*> pByronKeyFile
         <*> pOutputFile
+
+    pPassword :: Parser Text
+    pPassword = Opt.strOption
+                  (  Opt.long "password"
+                  <> Opt.metavar "TEXT"
+                  <> Opt.help "Password for signing key (if applicable)."
+                  )
 
     pByronKeyType :: Parser ByronKeyType
     pByronKeyType =

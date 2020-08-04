@@ -91,7 +91,7 @@ data StakeAddressCmd
 data KeyCmd
   = KeyGetVerificationKey SigningKeyFile VerificationKeyFile
   | KeyNonExtendedKey  VerificationKeyFile VerificationKeyFile
-  | KeyConvertByronKey ByronKeyType SomeKeyFile OutputFile
+  | KeyConvertByronKey (Maybe Text) ByronKeyType SomeKeyFile OutputFile
   | KeyConvertByronGenesisVKey VerificationKeyBase64 OutputFile
   | KeyConvertITNStakeKey SomeKeyFile OutputFile
   | KeyConvertITNExtendedToStakeKey SomeKeyFile OutputFile

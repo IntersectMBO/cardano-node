@@ -15,6 +15,7 @@ import           Cardano.Prelude
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as Text
+import           Data.Text.Encoding (encodeUtf8)
 
 import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except (ExceptT)
@@ -24,6 +25,8 @@ import qualified Codec.Binary.Bech32 as Bech32
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Signing as Byron.Crypto
+import qualified Cardano.Crypto.Signing as Crypto
+import qualified Cardano.Crypto.Wallet as Crypto
 
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
@@ -35,7 +38,7 @@ import           Cardano.CLI.Byron.Key (CardanoEra (..))
 import qualified Cardano.CLI.Byron.Key as Byron
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile(..))
+import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 
 data ShelleyKeyCmdError
@@ -70,8 +73,8 @@ runKeyCmd cmd =
     KeyNonExtendedKey evkf vkf ->
       runNonExtendedKey evkf vkf
 
-    KeyConvertByronKey keytype skfOld skfNew ->
-      runConvertByronKey keytype skfOld skfNew
+    KeyConvertByronKey mPassword keytype skfOld skfNew ->
+      runConvertByronKey mPassword keytype skfOld skfNew
 
     KeyConvertByronGenesisVKey oldVk newVkf ->
       runConvertByronGenesisVerificationKey oldVk newVkf
@@ -220,44 +223,45 @@ readExtendedVerificationKeyFile (VerificationKeyFile evkfile) =
 
 
 runConvertByronKey
-  :: ByronKeyType
+  :: Maybe Text      -- ^ Password (if applicable)
+  -> ByronKeyType
   -> SomeKeyFile     -- ^ Input file: old format
   -> OutputFile      -- ^ Output file: new format
   -> ExceptT ShelleyKeyCmdError IO ()
-runConvertByronKey (ByronPaymentKey format) (ASigningKeyFile skeyPathOld) =
-    convertByronSigningKey format convert skeyPathOld
+runConvertByronKey mPwd (ByronPaymentKey format) (ASigningKeyFile skeyPathOld) =
+    convertByronSigningKey mPwd format convert skeyPathOld
   where
     convert :: Byron.SigningKey -> SigningKey ByronKey
     convert = ByronSigningKey
 
-runConvertByronKey (ByronGenesisKey format) (ASigningKeyFile skeyPathOld) =
-    convertByronSigningKey format convert skeyPathOld
+runConvertByronKey mPwd (ByronGenesisKey format) (ASigningKeyFile skeyPathOld) =
+    convertByronSigningKey mPwd format convert skeyPathOld
   where
     convert :: Byron.SigningKey -> SigningKey GenesisExtendedKey
     convert (Byron.SigningKey xsk) = GenesisExtendedSigningKey xsk
 
-runConvertByronKey (ByronDelegateKey format) (ASigningKeyFile skeyPathOld) =
-    convertByronSigningKey format convert skeyPathOld
+runConvertByronKey mPwd (ByronDelegateKey format) (ASigningKeyFile skeyPathOld) =
+    convertByronSigningKey mPwd format convert skeyPathOld
   where
     convert :: Byron.SigningKey -> SigningKey GenesisDelegateExtendedKey
     convert (Byron.SigningKey xsk) = GenesisDelegateExtendedSigningKey xsk
 
-runConvertByronKey (ByronPaymentKey NonLegacyByronKeyFormat)
-                   (AVerificationKeyFile vkeyPathOld) =
+runConvertByronKey _ (ByronPaymentKey NonLegacyByronKeyFormat)
+                     (AVerificationKeyFile vkeyPathOld) =
     convertByronVerificationKey convert vkeyPathOld
   where
     convert :: Byron.VerificationKey -> VerificationKey ByronKey
     convert = ByronVerificationKey
 
-runConvertByronKey (ByronGenesisKey NonLegacyByronKeyFormat)
-                   (AVerificationKeyFile vkeyPathOld) =
+runConvertByronKey _ (ByronGenesisKey NonLegacyByronKeyFormat)
+                     (AVerificationKeyFile vkeyPathOld) =
     convertByronVerificationKey convert vkeyPathOld
   where
     convert :: Byron.VerificationKey -> VerificationKey GenesisExtendedKey
     convert (Byron.VerificationKey xvk) = GenesisExtendedVerificationKey xvk
 
-runConvertByronKey (ByronDelegateKey NonLegacyByronKeyFormat)
-                   (AVerificationKeyFile vkeyPathOld) =
+runConvertByronKey _ (ByronDelegateKey NonLegacyByronKeyFormat)
+                     (AVerificationKeyFile vkeyPathOld) =
     convertByronVerificationKey convert vkeyPathOld
   where
     convert :: Byron.VerificationKey
@@ -265,16 +269,16 @@ runConvertByronKey (ByronDelegateKey NonLegacyByronKeyFormat)
     convert (Byron.VerificationKey xvk) =
       GenesisDelegateExtendedVerificationKey xvk
 
-runConvertByronKey (ByronPaymentKey  LegacyByronKeyFormat)
-                    AVerificationKeyFile{} =
+runConvertByronKey _ (ByronPaymentKey  LegacyByronKeyFormat)
+                      AVerificationKeyFile{} =
     const legacyVerificationKeysNotSupported
 
-runConvertByronKey (ByronGenesisKey  LegacyByronKeyFormat)
-                    AVerificationKeyFile{} =
+runConvertByronKey _ (ByronGenesisKey  LegacyByronKeyFormat)
+                      AVerificationKeyFile{} =
     const legacyVerificationKeysNotSupported
 
-runConvertByronKey (ByronDelegateKey LegacyByronKeyFormat)
-                    AVerificationKeyFile{} =
+runConvertByronKey _ (ByronDelegateKey LegacyByronKeyFormat)
+                      AVerificationKeyFile{} =
     const legacyVerificationKeysNotSupported
 
 legacyVerificationKeysNotSupported :: ExceptT e IO a
@@ -289,20 +293,28 @@ legacyVerificationKeysNotSupported =
 convertByronSigningKey
   :: forall keyrole.
      Key keyrole
-  => ByronKeyFormat
+  => Maybe Text          -- ^ Password (if applicable)
+  -> ByronKeyFormat
   -> (Byron.SigningKey -> SigningKey keyrole)
   -> SigningKeyFile      -- ^ Input file: old format
   -> OutputFile          -- ^ Output file: new format
   -> ExceptT ShelleyKeyCmdError IO ()
-convertByronSigningKey byronFormat convert
+convertByronSigningKey mPwd byronFormat convert
                        skeyPathOld
                        (OutputFile skeyPathNew) = do
 
-    sk <- firstExceptT ShelleyKeyCmdByronKeyFailure $
-            Byron.readEraSigningKey (toCarandoEra byronFormat) skeyPathOld
+    sk@(Crypto.SigningKey xprv) <-
+      firstExceptT ShelleyKeyCmdByronKeyFailure
+        $ Byron.readEraSigningKey (toCarandoEra byronFormat) skeyPathOld
+
+    unprotectedSk <- case mPwd of
+                       -- Change password to empty string
+                       Just pwd -> return . Crypto.SigningKey
+                                     $ Crypto.xPrvChangePass (encodeUtf8 pwd) (encodeUtf8 "") xprv
+                       Nothing -> return sk
 
     let sk' :: SigningKey keyrole
-        sk' = convert sk
+        sk' = convert unprotectedSk
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
       writeFileTextEnvelope skeyPathNew Nothing sk'
