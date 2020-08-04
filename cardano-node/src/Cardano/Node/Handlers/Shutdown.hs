@@ -10,7 +10,6 @@ module Cardano.Node.Handlers.Shutdown
 
   -- * Requesting shutdown
   , ShutdownDoorbell
-  , getShutdownDoorbell
   , triggerShutdown
 
   -- * Watch ChainDB for passing a configured slot sync limit threshold,
@@ -71,52 +70,25 @@ raceAll (a:b:as) = race_ a (raceAll (b:as))
 raceAll [a] = a
 raceAll [] = IO.hPutStrLn IO.stderr "Nothing to race"
 
--- | Gracefully handle shutdown requests, if requested by 'ShutdownFDs'.
---
--- The file descriptor wrapped in a 'ShutdownListener' designates the
--- receiving end of the shutdown signalling communication channel.
--- The opposite end might be either internal or external to the node process.
-withShutdownHandler :: ShutdownFDs -> Maybe FilePath -> Trace IO Text -> IO () -> IO ()
-withShutdownHandler sfds maybeShutdownFile trace action = raceAll $ catMaybes
-  [ maybeShutdownAction
-  , maybeShutdownFileAction
-  , Just action
-  ]
-  where
-    maybeShutdownAction :: Maybe (IO ())
-    maybeShutdownAction = case sfdsListener sfds of
-      Just (ShutdownListener fd) -> Just (wrapUninterruptableIO $ waitForFdEOF fd)
-      Nothing -> Nothing
+maybeShutdownFileAction :: Trace IO Text ->  Maybe FilePath -> Maybe (IO ())
+maybeShutdownFileAction trace maybeShutdownFile = case maybeShutdownFile of
+  Just filePath -> if filePath == "-"
+    then Just (waitForHandleEOF trace IO.stdin)
+    else Just (waitForHandleEOF trace =<< IO.openFile filePath ReadMode)
+  Nothing -> Nothing
 
-    maybeShutdownFileAction :: Maybe (IO ())
-    maybeShutdownFileAction = case maybeShutdownFile of
-      Just filePath -> if filePath == "-"
-        then Just (waitForHandleEOF IO.stdin)
-        else Just (waitForHandleEOF =<< IO.openFile filePath ReadMode)
-      Nothing -> Nothing
+waitForHandleEOF :: Trace IO Text -> Handle -> IO ()
+waitForHandleEOF trace h = do
+  r <- try $ IO.hGetChar h
+  case r of
+    Left e
+      | IO.isEOFError e -> traceWith tracer "received shutdown request"
+      | otherwise       -> throwIO e
 
-    waitForHandleEOF :: Handle -> IO ()
-    waitForHandleEOF h = do
-      r <- try $ IO.hGetChar h
-      case r of
-        Left e
-          | IO.isEOFError e -> traceWith tracer "received shutdown request"
-          | otherwise       -> throwIO e
-
-        Right _  ->
-          throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
-
-    waitForFdEOF :: Fd -> IO ()
-    waitForFdEOF (Fd fd) = IO.fdToHandle fd >>= waitForHandleEOF
-
-    sfdsListener :: ShutdownFDs -> Maybe ShutdownListener
-    sfdsListener = \case
-      ExternalShutdown r -> Just r
-      InternalShutdown r _w -> Just r
-      _ -> Nothing
-
-    tracer :: Tracer IO Text
-    tracer = trTransformer MaximalVerbosity (severityNotice trace)
+    Right _  ->
+      throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
+  where tracer :: Tracer IO Text
+        tracer = trTransformer MaximalVerbosity (severityNotice trace)
 
 -- | Windows blocking file IO calls like 'hGetChar' are not interruptable by
 -- asynchronous exceptions, as used by async 'cancel' (as of base-4.12).
@@ -129,12 +101,6 @@ withShutdownHandler sfds maybeShutdownFile trace action = raceAll $ catMaybes
 --
 wrapUninterruptableIO :: IO a -> IO a
 wrapUninterruptableIO action = async action >>= wait
-
--- | If 'ShutdownFDs' supports internal shutdown requests,
--- return its shutdown doorbell.
-getShutdownDoorbell :: ShutdownFDs -> Maybe ShutdownDoorbell
-getShutdownDoorbell (InternalShutdown _l doorbell) = Just doorbell
-getShutdownDoorbell _ = Nothing
 
 -- | Given the 'ShutdownDoorbell' component of 'ShutdownFDs',
 --   and an explanation of the reason, request a graceful shutdown.
@@ -155,20 +121,30 @@ withShutdownHandling
   -> (ShutdownFDs -> IO ())
   -> IO ()
 withShutdownHandling cli trace action = do
-  sfds <- decideShutdownFds cli
-  withShutdownHandler sfds (shutdownFile cli) trace (action sfds)
- where
-   decideShutdownFds :: NodeCLI -> IO ShutdownFDs
-   decideShutdownFds NodeCLI{shutdownIPC = Just fd} =
-     pure $ ExternalShutdown (ShutdownListener fd)
-   decideShutdownFds NodeCLI{shutdownOnSlotSynced = MaxSlotNo{}} =
-     mkInternalShutdown
-   decideShutdownFds _ = pure NoShutdownFDs
+  sfds <- case cli of
+    NodeCLI{shutdownIPC = Just fd} -> pure $ ExternalShutdown (ShutdownListener fd)
+    NodeCLI{shutdownOnSlotSynced = MaxSlotNo{}} -> do
+      (r, w) <- IO.createPipeFd
+      pure $ InternalShutdown (ShutdownListener $ Fd r) (ShutdownDoorbell $ Fd w)
+    _ -> pure NoShutdownFDs
 
-   mkInternalShutdown :: IO ShutdownFDs
-   mkInternalShutdown = do
-     (r, w) <- IO.createPipeFd
-     pure $ InternalShutdown (ShutdownListener $ Fd r) (ShutdownDoorbell $ Fd w)
+  raceAll $ catMaybes
+    [ maybeShutdownAction sfds
+    , maybeShutdownFileAction trace (shutdownFile cli)
+    , Just (action sfds)
+    ]
+  where maybeShutdownAction :: ShutdownFDs -> Maybe (IO ())
+        maybeShutdownAction sfds = case sfdsListener sfds of
+          Just (ShutdownListener fd) -> Just (wrapUninterruptableIO $ waitForFdEOF fd)
+          Nothing -> Nothing
+          where sfdsListener :: ShutdownFDs -> Maybe ShutdownListener
+                sfdsListener = \case
+                  ExternalShutdown r -> Just r
+                  InternalShutdown r _w -> Just r
+                  _ -> Nothing
+
+                waitForFdEOF :: Fd -> IO ()
+                waitForFdEOF (Fd fd) = IO.fdToHandle fd >>= waitForHandleEOF trace
 
 -- | If configuration in 'NodeCLI' and 'ShutdownFDs' agree,
 -- spawn a thread that would cause node to shutdown upon ChainDB reaching the
