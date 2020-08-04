@@ -39,7 +39,7 @@ import           Data.IP (IP)
 import qualified Data.Text as Text
 import           Data.Yaml (decodeFileThrow)
 import           Network.Socket (PortNumber)
-import           System.FilePath (takeDirectory, (</>))
+import           System.FilePath (takeDirectory)
 import           System.Posix.Types (Fd)
 
 import           Cardano.Api.Typed (EpochNo)
@@ -501,7 +501,7 @@ parseNodeConfigurationFP :: ConfigYamlFilePath -> IO NodeConfiguration
 parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
     nc <- decodeFileThrow fp
     -- Make all the files be relative to the location of the config file.
-    pure $ adjustFilePaths (takeDirectory fp </>) nc
+    pure $ adjustFilePaths (\p -> takeDirectory fp <> "/" <> p) nc
 
 -- | A human readable name for the protocol
 --
