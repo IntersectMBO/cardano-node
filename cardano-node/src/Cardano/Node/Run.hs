@@ -281,7 +281,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
 
   eitherTopology <- readTopologyFile npm
 
-  nt <- either (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err) pure eitherTopology
+  nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
 
   let diffusionArguments :: DiffusionArguments
       diffusionArguments = createDiffusionArguments publicSocketsOrAddrs
@@ -370,7 +370,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
                 nc tr tracer cfg = do
          eitherTopology <- readTopologyFile npm'
          nt <- either
-                 (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
+                 (\err -> panic $ "Cardano.Node.Run.createTracers.readTopologyFile: " <> err)
                  pure
                  eitherTopology
 
@@ -413,7 +413,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
                 _tr tracer cfg = do
          eitherTopology <- readTopologyFile npm'
          (MockNodeTopology nodeSetups) <- either
-                                            (\err -> panic $ "Cardano.Node.Run.readTopologyFile: " <> err)
+                                            (\err -> panic $ "Cardano.Node.Run.createTracers.readTopologyFile: " <> err)
                                             pure
                                             eitherTopology
 
