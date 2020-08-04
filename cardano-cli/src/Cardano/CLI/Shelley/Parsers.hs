@@ -1350,14 +1350,26 @@ pPoolStakeVerificationKeyFile =
 pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
 pStakePoolVerificationKeyHash =
     Opt.option
-      (Opt.maybeReader spvkHash)
-        (  Opt.long "cold-verification-key-hash"
-        <> Opt.metavar "HASH"
-        <> Opt.help "Stake pool verification key hash (hex-encoded)."
+      (Opt.maybeReader pBech32OrHexStakePoolId)
+        (  Opt.long "stake-pool-id"
+        <> Opt.metavar "STAKE-POOL-ID"
+        <> Opt.help "Stake pool ID/verification key hash (either \
+                    \Bech32-encoded or hex-encoded)."
         )
   where
-    spvkHash :: String -> Maybe (Hash StakePoolKey)
-    spvkHash = deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+    pBech32OrHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pBech32OrHexStakePoolId str =
+      pBech32StakePoolId str <|> pHexStakePoolId str
+
+    pHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pHexStakePoolId =
+      deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+
+    pBech32StakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pBech32StakePoolId =
+      either (const Nothing) Just
+        . deserialiseFromBech32 (AsHash AsStakePoolKey)
+        . Text.pack
 
 pStakePoolVerificationKeyHashOrFile :: Parser StakePoolVerificationKeyHashOrFile
 pStakePoolVerificationKeyHashOrFile =
