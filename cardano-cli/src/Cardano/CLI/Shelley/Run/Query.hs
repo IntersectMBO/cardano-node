@@ -23,7 +23,6 @@ import           Prelude (String)
 import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
-import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.HashMap.Strict (HashMap)
@@ -405,10 +404,8 @@ instance ToJSON DelegationsAndRewards where
           (Aeson.object ["delegation" .= d, "rewardAccountBalance" .= r])
           acc
 
-      toKey = Text.decodeLatin1
-            . B16.encode
-            . Ledger.serialiseRewardAcnt
-            . Ledger.RewardAcnt (toShelleyNetwork nw)
+      toKey :: Ledger.Credential Ledger.Staking TPraosStandardCrypto -> Text
+      toKey = serialiseAddress . StakeAddress (toShelleyNetwork nw)
 
 
 -- | Query the current protocol parameters from a Shelley node via the local
