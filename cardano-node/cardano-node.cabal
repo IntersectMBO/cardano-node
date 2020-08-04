@@ -1,3 +1,5 @@
+cabal-version: 2.4
+
 name:                  cardano-node
 version:               1.18.0
 description:           The cardano full node
@@ -8,7 +10,6 @@ license-files:
   LICENSE
   NOTICE
 build-type:            Simple
-cabal-version:         >= 1.10
 extra-source-files:    ChangeLog.md
 
 Flag unexpected_thunks
@@ -20,9 +21,7 @@ flag systemd
   default:     True
   manual:      False
 
-
 library
-
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
 
@@ -243,8 +242,7 @@ executable chairman
                      , contra-tracer
                      , cardano-prelude
                      , io-sim-classes
-                     , network-mux
-                     , cardano-node-config
+                     , network-mux                    , cardano-node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano
@@ -269,29 +267,36 @@ test-suite cardano-node-test
   build-depends:
                         base >= 4.12 && < 5
                       , aeson
+                      , async
                       , bytestring
-                      , cardano-node
                       , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-crypto-wrapper
+                      , cardano-node
                       , cardano-prelude
                       , cardano-prelude-test
                       , cardano-slotting
                       , containers
                       , cryptonite
+                      , directory
+                      , hedgehog
+                      , hedgehog-corpus
                       , iproute
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
+                      , process
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
+                      , temporary
                       , time
-                      , hedgehog
-                      , hedgehog-corpus
 
-  other-modules:        Test.Cardano.Node.Gen
+  other-modules:        Test.Cardano.Node.Chairman
+                        Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
+                        Test.Common.Base
+                        Test.Common.Process
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
