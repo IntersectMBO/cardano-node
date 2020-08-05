@@ -156,12 +156,16 @@ module Cardano.Api.Typed (
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
+    Script,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
+    scriptHash,
 
-    -- ** Multi-sig scripts
+    -- ** Multi-signature scripts
     -- | Making multi-signature scripts.
+    MultiSigScript(..),
+    makeMultiSigScript,
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
@@ -1548,14 +1552,60 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
 -- Scripts
 --
 
-data Script
+newtype Script = Script (Shelley.Script ShelleyCrypto)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (ToCBOR)
 
 newtype instance Hash Script = ScriptHash (Shelley.ScriptHash ShelleyCrypto)
   deriving (Eq, Ord, Show)
 
+data MultiSigScript = RequireSignature (Hash PaymentKey)
+                    | RequireAllOf [MultiSigScript]
+                    | RequireAnyOf [MultiSigScript]
+                    | RequireMOf Int [MultiSigScript]
+  deriving (Eq, Show)
+
+instance HasTypeProxy Script where
+    data AsType Script = AsScript
+    proxyToAsType _ = AsScript
+
+instance SerialiseAsRawBytes (Hash Script) where
+    serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
+      Crypto.hashToBytes h
+
+    deserialiseFromRawBytes (AsHash AsScript) bs =
+      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
+
+instance SerialiseAsCBOR Script where
+    serialiseToCBOR (Script s) =
+      CBOR.serialize' s
+
+    deserialiseFromCBOR AsScript bs =
+      Script <$>
+        CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+instance HasTextEnvelope Script where
+    textEnvelopeType _ = "Script"
+    textEnvelopeDefaultDescr (Script script) =
+      case script of
+        Shelley.MultiSigScript {} -> "Multi-signature script"
+
+
+scriptHash :: Script -> Hash Script
+scriptHash (Script s) = ScriptHash (Shelley.hashAnyScript s)
+
+makeMultiSigScript :: MultiSigScript -> Script
+makeMultiSigScript = Script . Shelley.MultiSigScript . go
+  where
+    go :: MultiSigScript -> Shelley.MultiSig ShelleyCrypto
+    go (RequireSignature (PaymentKeyHash kh))
+                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
+    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
+    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
+    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
 
 makeShelleyScriptWitness :: Script -> Witness Shelley
-makeShelleyScriptWitness = undefined
+makeShelleyScriptWitness (Script s) = ShelleyScriptWitness s
 
 
 -- ----------------------------------------------------------------------------
