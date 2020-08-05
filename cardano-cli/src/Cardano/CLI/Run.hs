@@ -39,18 +39,20 @@ data ClientCommand =
 
 data ClientCommandErrors
   = ByronClientError ByronClientCmdError
-  | ShelleyClientError ShelleyClientCmdError
+  | ShelleyClientError ShelleyCommand ShelleyClientCmdError
   deriving Show
   --TODO: We should include an AgnosticClientError
 
 runClientCommand :: ClientCommand -> ExceptT ClientCommandErrors IO ()
-runClientCommand (ByronCommand   c) = firstExceptT ByronClientError $ runByronClientCommand c
-runClientCommand (ShelleyCommand c) = firstExceptT ShelleyClientError $ runShelleyClientCommand c
-runClientCommand DisplayVersion     = runDisplayVersion
+runClientCommand (ByronCommand c) = firstExceptT ByronClientError $ runByronClientCommand c
+runClientCommand (ShelleyCommand c) = firstExceptT (ShelleyClientError c) $ runShelleyClientCommand c
+runClientCommand DisplayVersion = runDisplayVersion
 
 renderClientCommandError :: ClientCommandErrors -> Text
-renderClientCommandError (ByronClientError err) = renderByronClientCmdError err
-renderClientCommandError (ShelleyClientError err) = renderShelleyClientCmdError err
+renderClientCommandError (ByronClientError err) =
+  renderByronClientCmdError err
+renderClientCommandError (ShelleyClientError cmd err) =
+  runIdentity $ renderShelleyClientCmdError cmd err
 
 runDisplayVersion :: ExceptT ClientCommandErrors IO ()
 runDisplayVersion = do

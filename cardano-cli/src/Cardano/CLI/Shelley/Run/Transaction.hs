@@ -193,7 +193,7 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
 runTxSubmit :: Protocol -> NetworkId -> FilePath
             -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit protocol network txFile = do
-    SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError $ readEnvSocketPath
+    SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
     tx <- firstExceptT ShelleyTxCmdReadTextViewFileError
       . newExceptT
       $ Api.readFileTextEnvelopeAnyOf
