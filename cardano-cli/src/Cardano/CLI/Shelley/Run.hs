@@ -36,19 +36,36 @@ data ShelleyClientCmdError
   | ShelleyCmdKeyError !ShelleyKeyCmdError
   deriving Show
 
-renderShelleyClientCmdError :: ShelleyClientCmdError -> Text
-renderShelleyClientCmdError err =
-  case err of
-    ShelleyCmdAddressError addrCmdErr -> renderShelleyAddressCmdError addrCmdErr
-    ShelleyCmdGenesisError genesisCmdErr -> renderShelleyGenesisCmdError genesisCmdErr
-    ShelleyCmdGovernanceError govCmdErr -> renderShelleyGovernanceError govCmdErr
-    ShelleyCmdNodeError nodeCmdErr -> renderShelleyNodeCmdError nodeCmdErr
-    ShelleyCmdPoolError poolCmdErr -> renderShelleyPoolCmdError poolCmdErr
-    ShelleyCmdStakeAddressError stakeAddrCmdErr -> renderShelleyStakeAddressCmdError stakeAddrCmdErr
-    ShelleyCmdTextViewError txtViewErr -> renderShelleyTextViewFileError txtViewErr
-    ShelleyCmdTransactionError txErr -> renderShelleyTxCmdError txErr
-    ShelleyCmdQueryError queryErr -> renderShelleyQueryCmdError queryErr
-    ShelleyCmdKeyError keyErr -> renderShelleyKeyCmdError keyErr
+-- Identity monad is used to avoid boilerplate
+renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Identity Text
+renderShelleyClientCmdError cmd err = do
+  cmdError <- case err of
+                ShelleyCmdAddressError addrCmdErr ->
+                  return $ renderShelleyAddressCmdError addrCmdErr
+                ShelleyCmdGenesisError genesisCmdErr ->
+                  return $ renderShelleyGenesisCmdError genesisCmdErr
+                ShelleyCmdGovernanceError govCmdErr ->
+                  return $ renderShelleyGovernanceError govCmdErr
+                ShelleyCmdNodeError nodeCmdErr ->
+                  return $ renderShelleyNodeCmdError nodeCmdErr
+                ShelleyCmdPoolError poolCmdErr ->
+                  return $ renderShelleyPoolCmdError poolCmdErr
+                ShelleyCmdStakeAddressError stakeAddrCmdErr ->
+                  return $ renderShelleyStakeAddressCmdError stakeAddrCmdErr
+                ShelleyCmdTextViewError txtViewErr ->
+                  return $ renderShelleyTextViewFileError txtViewErr
+                ShelleyCmdTransactionError txErr ->
+                  return $ renderShelleyTxCmdError txErr
+                ShelleyCmdQueryError queryErr ->
+                  return $ renderShelleyQueryCmdError queryErr
+                ShelleyCmdKeyError keyErr ->
+                  return $ renderShelleyKeyCmdError keyErr
+
+  return $ "Shelley command failed: "
+         <> renderShelleyCommand cmd
+         <> "  Error: "
+         <> cmdError
+
 
 --
 -- CLI shelley command dispatch
