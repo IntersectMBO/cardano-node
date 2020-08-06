@@ -1,7 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -48,7 +46,7 @@ instance IsEffectuator (LiveViewBackend blk) Text where
             LogObject "cardano.node.metrics" meta content -> do
                 let currentTimeInNs = utc2ns (tstamp meta)
                 case content of
-                    LogValue "Meresident" (PureI pages) ->
+                    LogValue "Mem.resident" (PureI pages) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
                             let !mbytes     = fromIntegral (pages * pagesize) / 1024 / 1024 :: Float
                             let !maxMemory  = max (lvsMemoryUsageMax lvs) mbytes
@@ -61,7 +59,7 @@ instance IsEffectuator (LiveViewBackend blk) Text where
                                          , lvsUpTime          = uptime
                                          }
 
-                    LogValue "Meresident_size" (Bytes bytes) ->   -- Darwin
+                    LogValue "Mem.resident_size" (Bytes bytes) ->   -- Darwin
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
                             let !mbytes     = fromIntegral bytes / 1024 / 1024 :: Float
                             let !maxMemory  = max (lvsMemoryUsageMax lvs) mbytes
