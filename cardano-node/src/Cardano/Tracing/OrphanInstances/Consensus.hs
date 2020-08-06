@@ -60,10 +60,10 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 
 
-instance ConvertRawHash (Header blk) where
-  toShortRawHash = toShortRawHash
-  fromShortRawHash = fromShortRawHash
-  hashSize = hashSize
+instance ConvertRawHash blk => ConvertRawHash (Header blk) where
+  toShortRawHash _ h = toShortRawHash (Proxy @blk) h
+  fromShortRawHash _ bs = fromShortRawHash (Proxy @blk) bs
+  hashSize _ = hashSize (Proxy @blk)
 
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
