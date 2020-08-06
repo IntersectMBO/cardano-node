@@ -72,9 +72,9 @@ newtype ShutdownListener = ShutdownListener { _listenerFd :: Fd }
 -- The file descriptor wrapped in a 'ShutdownListener' designates the
 -- receiving end of the shutdown signalling communication channel.
 -- The opposite end might be either internal or external to the node process.
-withShutdownHandler :: ShutdownFDs -> Trace IO Text -> IO () -> IO ()
-withShutdownHandler sfds trace action
-  | Just (ShutdownListener fd) <- sfdsListener sfds =
+withShutdownHandler :: Maybe ShutdownListener -> Trace IO Text -> IO () -> IO ()
+withShutdownHandler listener trace action
+  | Just (ShutdownListener fd) <- listener =
       Async.race_ (wrapUninterruptableIO $ waitForEOF fd) action
   | otherwise = action
   where
@@ -90,14 +90,14 @@ withShutdownHandler sfds trace action
         Right _  ->
           throwIO $ IO.userError "--shutdown-ipc FD does not expect input"
 
-    sfdsListener :: ShutdownFDs -> Maybe ShutdownListener
-    sfdsListener = \case
-      ExternalShutdown r -> Just r
-      InternalShutdown r _w -> Just r
-      _ -> Nothing
-
     tracer :: Tracer IO Text
     tracer = trTransformer MaximalVerbosity (severityNotice trace)
+
+sfdsListener :: ShutdownFDs -> Maybe ShutdownListener
+sfdsListener = \case
+  ExternalShutdown r -> Just r
+  InternalShutdown r _w -> Just r
+  _ -> Nothing
 
 -- | Windows blocking file IO calls like 'hGetChar' are not interruptable by
 -- asynchronous exceptions, as used by async 'cancel' (as of base-4.12).
@@ -137,7 +137,7 @@ withShutdownHandling
   -> IO ()
 withShutdownHandling cli trace action = do
   sfds <- decideShutdownFds cli
-  withShutdownHandler sfds trace (action sfds)
+  withShutdownHandler (sfdsListener sfds) trace (action sfds)
  where
    decideShutdownFds :: NodeCLI -> IO ShutdownFDs
    decideShutdownFds NodeCLI{shutdownIPC = Just fd} =
