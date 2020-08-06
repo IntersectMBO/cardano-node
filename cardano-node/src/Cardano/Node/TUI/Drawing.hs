@@ -99,6 +99,9 @@ data LiveViewState blk a = LiveViewState
   , lvsNetworkUsageOutNs    :: !Word64
   , lvsMempoolMaxTxs        :: !Word64
   , lvsMempoolMaxBytes      :: !Word64
+  , lvsOpCertStartKESPeriod :: !Word64
+  , lvsCurrentKESPeriod     :: !Word64
+  , lvsRemainingKESPeriods  :: !Word64
   , lvsMessage              :: !(Maybe a)
   -- Async threads.
   , lvsUIThread             :: !LiveViewThread
@@ -184,23 +187,33 @@ keysMessageW =
            , txt " return to main screen"
            ]
 
-nodeInfoLabels :: Widget ()
-nodeInfoLabels =
+nodeInfoLabels :: LiveViewState blk a -> Widget ()
+nodeInfoLabels p =
       padRight (Pad 3)
-    $ vBox [                    txt "version:"
-           ,                    txt "commit:"
-           ,                    txt "platform:"
-           , padTop (Pad 1) $ txt "uptime:"
-           , padTop (Pad 1) $ txt "epoch / slot:"
-           ,                    txt "block number:"
-           ,                    txt "chain density:"
-           , padTop (Pad 1) $ txt "blocks minted:"
-           ,                    txt "slots lead:"
-           ,                    txt "slots missed:"
-           ,                    txt "cannot lead:"
-           , padTop (Pad 1) $ txt "TXs processed:"
-           , padTop (Pad 1) $ txt "peers:"
-           ]
+    $ vBox $ [                    txt "version:"
+             ,                    txt "commit:"
+             ,                    txt "platform:"
+             , padTop (Pad 1) $ txt "uptime:"
+             , padTop (Pad 1) $ txt "epoch / slot:"
+             ,                    txt "block number:"
+             ,                    txt "chain density:"
+             , padTop (Pad 1) $ txt "blocks minted:"
+             ,                    txt "slots lead:"
+             ,                    txt "slots missed:"
+             ,                    txt "cannot lead:"
+             , padTop (Pad 1) $ txt "TXs processed:"
+             , padTop (Pad 1) $ txt "peers:"
+             ] ++ kesMetricsLabels
+  where
+    kesMetricsLabels =
+      -- This value cannot be such a big, so it wasn't replaced by
+      -- real metrics, it means there's no KES at all.
+      if lvsOpCertStartKESPeriod p == 9999999999
+        then []
+        else [ padTop (Pad 1) $ txt "Start KES period:"
+             ,                    txt "KES period:"
+             ,                    txt "KES remaining:"
+             ]
 
 nodeInfoW :: LiveViewState blk a -> Widget ()
 nodeInfoW p =
@@ -208,28 +221,38 @@ nodeInfoW p =
     . padLeft   (Pad 1)
     . padRight  (Pad 2)
     . padBottom (Pad 2)
-    $ hBox [nodeInfoLabels, nodeInfoValues p]
+    $ hBox [nodeInfoLabels p, nodeInfoValues p]
 
 
 nodeInfoValues :: LiveViewState blk a -> Widget ()
 nodeInfoValues lvs =
       withAttr valueAttr
-    $ vBox [                  str (lvsVersion lvs)
-           ,                  str (take 7 $ lvsCommit lvs)
-           ,                  str (lvsPlatform lvs)
-           , padTop (Pad 1) $ str (formatTime defaultTimeLocale "%X" $
-                                        -- NominalDiffTime is not an instance of FormatTime before time-1.9.1
-                                        addUTCTime (lvsUpTime lvs) (UTCTime (ModifiedJulianDay 0) 0))
-           , padTop (Pad 1) $ str $ show (lvsEpoch lvs) ++ " / " ++ show (lvsSlotNum lvs)
-           ,                  str (show . lvsBlockNum $ lvs)
-           ,                  str $ withOneDecimal (lvsChainDensity lvs) ++ " %"
-           , padTop (Pad 1) $ str (show . lvsBlocksMinted $ lvs)
-           ,                  str (show . lvsLeaderNum $ lvs)
-           ,                  str (show . lvsSlotsMissedNum $ lvs)
-           ,                  str (show . lvsNodeCannotLead $ lvs)
-           , padTop (Pad 1) $ str (show . lvsTransactions $ lvs)
-           , padTop (Pad 1) $ str (show . lvsPeersConnected $ lvs)
-           ]
+    $ vBox $ [                  str (lvsVersion lvs)
+             ,                  str (take 7 $ lvsCommit lvs)
+             ,                  str (lvsPlatform lvs)
+             , padTop (Pad 1) $ str (formatTime defaultTimeLocale "%X" $
+                                          -- NominalDiffTime is not an instance of FormatTime before time-1.9.1
+                                          addUTCTime (lvsUpTime lvs) (UTCTime (ModifiedJulianDay 0) 0))
+             , padTop (Pad 1) $ str $ show (lvsEpoch lvs) ++ " / " ++ show (lvsSlotNum lvs)
+             ,                  str (show . lvsBlockNum $ lvs)
+             ,                  str $ withOneDecimal (lvsChainDensity lvs) ++ " %"
+             , padTop (Pad 1) $ str (show . lvsBlocksMinted $ lvs)
+             ,                  str (show . lvsLeaderNum $ lvs)
+             ,                  str (show . lvsSlotsMissedNum $ lvs)
+             ,                  str (show . lvsNodeCannotLead $ lvs)
+             , padTop (Pad 1) $ str (show . lvsTransactions $ lvs)
+             , padTop (Pad 1) $ str (show . lvsPeersConnected $ lvs)
+             ] ++ kesMetrics
+  where
+    kesMetrics =
+      -- This value cannot be such a big, so it wasn't replaced by
+      -- real metrics, it means there's no KES at all.
+      if lvsOpCertStartKESPeriod lvs == 9999999999
+        then []
+        else [ padTop (Pad 1) $ str (show . lvsOpCertStartKESPeriod $ lvs)
+             ,                  str (show . lvsCurrentKESPeriod $ lvs)
+             ,                  str (show . lvsRemainingKESPeriods $ lvs)
+             ]
 
 peerListContentW :: LiveViewState blk a -> Widget ()
 peerListContentW lvs
