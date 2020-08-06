@@ -145,4 +145,4 @@ We must give it some time to get incorporated into the blockchain, but eventuall
     > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     0         10000000
 
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 42` instead. 
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead. 

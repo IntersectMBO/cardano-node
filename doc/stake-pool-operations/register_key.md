@@ -91,4 +91,4 @@ And submit it:
 
 Your stake key is now registered on the blockchain.
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 42` instead.
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.

@@ -1025,7 +1025,7 @@ given as 42. The network "magic" number is used as a simple sanity check (not a
 security measure of course) when nodes connect to each other, to stop nodes
 accidentally connecting to nodes running different blockchains, e.g. testnet
 vs mainnet. We have the same sanity check when we connect to the local node.
-So we have to specify `--testnet-magic 42`, otherwise it defaults to mainnet
+So we have to specify `--testnet-magic 1097911063`, otherwise it defaults to mainnet
 and then the handshake would fail.
 
 This command of course connects to a local node. The socket for the local
@@ -1040,7 +1040,7 @@ time in the command.
 ```
 $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query protocol-parameters \
-    --testnet-magic 42
+    --testnet-magic 1097911063
 {
     "poolDecayRate": 0,
     "poolDeposit": 0,
@@ -1099,7 +1099,7 @@ this command to use the right address(es) from your `genesis.json`.
 ```
 $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query filtered-utxo \
-    --testnet-magic 42 \
+    --testnet-magic 1097911063 \
     --address 8206582080edb9890519e08847aff26f55a076a439b9835baa7113d04ad1ed9b2ea55817
 
                            TxHash                                 TxIx        Lovelace
@@ -1288,7 +1288,7 @@ In our example we need just the one signature, using the `utxo1.skey`.
 $ cardano-cli shelley transaction sign \
   --tx-body-file example/tx1.txbody \
   --signing-key-file example/utxo-keys/utxo1.skey \
-  --testnet-magic 42 \
+  --testnet-magic 1097911063 \
   --tx-file example/tx1.tx
 ```
 
@@ -1309,7 +1309,7 @@ Available options:
 ```
 This command also needs the `CARDANO_NODE_SOCKET_PATH` like the other commands
 that need to talk to a local node. And as mentioned above in the section on
-querying the node, we have to specify `--testnet-magic 42`, otherwise it
+querying the node, we have to specify `--testnet-magic 1097911063`, otherwise it
 defaults to mainnet and then the handshake with the node would fail.
 
 So let's do it.
@@ -1317,7 +1317,7 @@ So let's do it.
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley transaction submit \
       --tx-file example/tx1.tx \
-      --testnet-magic 42
+      --testnet-magic 1097911063
 ```
 
 If we now go look at the node logs (or stdout) for node1 we should see that
@@ -1329,7 +1329,7 @@ the funds to
 ```
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query filtered-utxo \
-      --testnet-magic 42 \
+      --testnet-magic 1097911063 \
       --address 82065820cd44104b49b97dae659dabf040cc7d588ea28e52addffc66fd126bb23be87451
 
                            TxHash                                 TxIx        Lovelace
