@@ -73,6 +73,11 @@ let
     checks = recurseIntoAttrs {
       # `checks.tests` collect results of executing the tests:
       tests = collectChecks haskellPackages;
+
+      hlint = callPackage iohkNix.tests.hlint {
+        src = ./. ;
+        projects = attrNames (selectProjectPackages cardanoNodeHaskellPackages);
+      };
     };
 
     shell = import ./shell.nix {

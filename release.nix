@@ -103,8 +103,19 @@ let
       map (drv: drv // { inherit packageName; }) (collectJobs' package)
     ) ds);
 
+  nonDefaultBuildSystems = tail supportedSystems;
+
+  # Paths of derivations to build only on the default system (ie. linux on hydra):
+  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ];
+  # Paths or prefix of paths for which cross-builds are disabled:
+  noCrossBuild = [ ["dockerImage"] ["shell"] ["cluster"] ]
+    ++ onlyBuildOnDefaultSystem;
+
   # Remove build jobs for which cross compiling does not make sense.
-  filterJobsCross = filterAttrs (n: _: n != "dockerImage" && n != "shell" && n != "cluster");
+  filterJobsCross = mapAttrsRecursiveCond (a: !(isDerivation a)) (path: value:
+    if (any (p: take (length p) path == p) noCrossBuild) then null
+    else value
+  );
 
   inherit (systems.examples) mingwW64 musl64;
 
@@ -112,7 +123,11 @@ let
 
   jobs = {
     inherit dockerImageArtifact;
-    native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
+    native =
+      let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
+        if (elem path onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
+        (packagePlatforms project);
+      in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
     musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
