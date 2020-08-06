@@ -69,4 +69,4 @@ Check that the node is syncing by fetching the current tip. When syncing slotNo 
         "slotNo": 888561
         }
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 42` instead.
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.
