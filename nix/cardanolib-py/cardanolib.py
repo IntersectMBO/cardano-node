@@ -215,8 +215,7 @@ class CardanoCLIWrapper:
                 "shelley",
                 "query",
                 *cli_args,
-                "--testnet-magic",
-                str(self.network_magic),
+                "--mainnet"
             ]
         )
 
