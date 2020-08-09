@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Test.Common.Base
   ( propertyOnce
   , failWithCustom
@@ -5,11 +7,17 @@ module Test.Common.Base
   , workspace
   , moduleWorkspace
   , createDirectoryIfMissing
+  , copyFile
+  , noteShow
+  , noteShowM
+  , noteShowIO
   ) where
 
+import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Bool
 import           Data.Either (Either (..))
+import           Data.Eq
 import           Data.Function (($), (.))
 import           Data.Int
 import           Data.Maybe (Maybe (..), listToMaybe, maybe)
@@ -22,22 +30,21 @@ import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (Diff, liftTest, mkTest)
 import           Hedgehog.Internal.Source (getCaller)
 import           System.IO (FilePath, IO)
+import           Text.Show
 
 import qualified Control.Concurrent as IO
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
+import qualified System.Info as IO
 import qualified System.IO.Temp as IO
-
-cardanoCliPath :: FilePath
-cardanoCliPath = "cardano-cli"
 
 propertyOnce :: H.PropertyT IO () -> H.Property
 propertyOnce = H.withTests 1 . H.property
 
 threadDelay :: Int -> H.PropertyT IO ()
-threadDelay = liftIO . IO.threadDelay
+threadDelay = H.evalM . liftIO . IO.threadDelay
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
 failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a
@@ -53,13 +60,13 @@ failWithCustom cs mdiff msg = liftTest $ mkTest (Left $ H.Failure (getCaller cs)
 -- the block fails.
 workspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
 workspace prefixPath f = GHC.withFrozenCallStack $ do
-  systemTemp <- liftIO $ IO.getCanonicalTemporaryDirectory
+  systemTemp <- H.evalM . liftIO $ IO.getCanonicalTemporaryDirectory
   let systemPrefixPath = systemTemp <> "/" <> prefixPath
-  liftIO $ IO.createDirectoryIfMissing True systemPrefixPath
-  ws <- liftIO $ IO.createTempDirectory systemPrefixPath "test"
-  H.annotate $ "Workspace: " <> cardanoCliPath <> "/" <> ws
+  H.evalM . liftIO $ IO.createDirectoryIfMissing True systemPrefixPath
+  ws <- H.evalM . liftIO $ IO.createTempDirectory systemPrefixPath "test"
+  H.annotate $ "Workspace: " <> ws
   f ws
-  liftIO $ IO.removeDirectoryRecursive ws
+  when (IO.os /= "mingw32") . H.evalM . liftIO $ IO.removeDirectoryRecursive ws
 
 -- | Create a workspace directory which will exist for at least the duration of
 -- the supplied block.
@@ -76,3 +83,26 @@ moduleWorkspace prefixPath f = GHC.withFrozenCallStack $ do
 
 createDirectoryIfMissing :: HasCallStack => FilePath -> H.PropertyT IO ()
 createDirectoryIfMissing filePath = H.evalM . liftIO $ IO.createDirectoryIfMissing True filePath
+
+copyFile :: HasCallStack => FilePath -> FilePath -> H.PropertyT IO ()
+copyFile src dst = GHC.withFrozenCallStack $ do
+  H.annotate $ "Copy from " <> show src <> " to " <> show dst
+  H.evalM . liftIO $ IO.copyFile src dst
+
+noteShow :: (HasCallStack, Show a) => a -> H.PropertyT IO a
+noteShow a = GHC.withFrozenCallStack $ do
+  !b <- H.eval a
+  H.annotateShow b
+  return b
+
+noteShowM :: (HasCallStack, Show a) => H.PropertyT IO a -> H.PropertyT IO a
+noteShowM a = GHC.withFrozenCallStack $ do
+  !b <- H.evalM a
+  H.annotateShow b
+  return b
+
+noteShowIO :: (HasCallStack, Show a) => IO a -> H.PropertyT IO a
+noteShowIO a = GHC.withFrozenCallStack $ do
+  !b <- H.evalM . liftIO $ a
+  H.annotateShow b
+  return b
