@@ -11,9 +11,8 @@ import           Control.Monad.IO.Class (liftIO)
 import           Data.Bool
 import           Data.Either (Either (..))
 import           Data.Function (($), (.))
-import           Data.Functor
 import           Data.Int
-import           Data.Maybe (Maybe (..), fromMaybe, listToMaybe)
+import           Data.Maybe (Maybe (..), listToMaybe, maybe)
 import           Data.Monoid (Monoid (..))
 import           Data.Semigroup (Semigroup (..))
 import           Data.String (String)
@@ -72,7 +71,7 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
 -- the block fails.
 moduleWorkspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT IO ()) -> H.PropertyT IO ()
 moduleWorkspace prefixPath f = GHC.withFrozenCallStack $ do
-  let srcModule = fromMaybe "UnknownModule" (fmap (GHC.srcLocModule . snd) (listToMaybe (getCallStack callStack)))
+  let srcModule = maybe "UnknownModule"  (GHC.srcLocModule . snd) (listToMaybe (getCallStack callStack))
   workspace (prefixPath <> "/" <> srcModule) f
 
 createDirectoryIfMissing :: HasCallStack => FilePath -> H.PropertyT IO ()

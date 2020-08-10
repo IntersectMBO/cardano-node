@@ -34,7 +34,7 @@ createProcess :: HasCallStack
   -> H.PropertyT IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 createProcess cp = GHC.withFrozenCallStack $ do
   case IO.cmdspec cp of
-    RawCommand cmd args -> H.annotate $ "Command line: " <> cmd <> " " <> L.intercalate " " args
+    RawCommand cmd args -> H.annotate $ "Command line: " <> cmd <> " " <> L.unwords args
     ShellCommand cmd -> H.annotate $ "Command line: " <> cmd
   H.evalM . liftIO $ IO.createProcess cp
 
