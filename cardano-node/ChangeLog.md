@@ -1,5 +1,11 @@
 # Changelog for cardano-node
 
+## 1.18.1 -- August 2020
+- Performance improvements
+- Script address hash size correction to 28 bytes and fix script serialization bug
+- Update pool ranking query for nonmyopic rewards
+- Add CLI commands to convert ITN extended and bip32 signing keys (#1579)
+
 ## 1.18.0 -- July 2020
 
 ### node changes
