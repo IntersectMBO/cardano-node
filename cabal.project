@@ -161,78 +161,78 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: byron/ledger/impl
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: byron/crypto
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: byron/ledger/impl/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: byron/crypto/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: byron/chain/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: semantics/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: semantics/small-steps-test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: shelley/chain-and-ledger/dependencies/non-integer
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: shelley/chain-and-ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: b9abc3844248aa63c3af21f38ad328cc417c8c79
-  --sha256: 1d39llgm13h7dbzpsgsf9qawqxinzhiyc9iyk49lw25p07f58aif
+  tag: e8cf708f8db5189cfbf4dc04a67173d7c8890cca
+  --sha256: 1q9dfaqq3axvc3ljwis51prriknpjmpch2lhkyicz13bbszhcj9y
   subdir: shelley/chain-and-ledger/executable-spec/test
 
 source-repository-package
