@@ -6,11 +6,10 @@
 , stdenv
 , haskell-nix
 , buildPackages
-, config ? {}
 # GHC attribute name
-, compiler ? config.haskellNix.compiler or "ghc865"
+, compiler
 # Enable profiling
-, profiling ? config.haskellNix.profiling or false
+, profiling ? false
 # Enable asserts for given packages
 , assertedPackages ? []
 # Version info, to be passed when not building from a git work tree
@@ -39,12 +38,6 @@ let
   } // {
     inherit src;
     compiler-nix-name = compiler;
-    #ghc = buildPackages.haskell-nix.compiler.${compiler};
-    pkg-def-extras = lib.optional stdenv.hostPlatform.isLinux (hackage: {
-      packages = {
-        "systemd" = (((hackage.systemd)."2.2.0").revisions).default;
-      };
-    });
     modules = [
       { compiler.nix-name = compiler; }
       # Allow reinstallation of Win32

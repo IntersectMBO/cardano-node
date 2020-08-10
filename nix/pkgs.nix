@@ -1,7 +1,10 @@
 # our packages overlay
-pkgs: _: with pkgs; {
+pkgs: _: with pkgs;
+  let
+    compiler = config.haskellNix.compiler or "ghc865";
+  in {
   cardanoNodeHaskellPackages = import ./haskell.nix {
-    inherit config
+    inherit compiler
       pkgs
       lib
       stdenv
@@ -11,7 +14,7 @@ pkgs: _: with pkgs; {
       ;
   };
   cardanoNodeProfiledHaskellPackages = import ./haskell.nix {
-    inherit config
+    inherit compiler
       pkgs
       lib
       stdenv
@@ -53,4 +56,11 @@ pkgs: _: with pkgs; {
   mkCluster = callPackage ./supervisord-cluster;
   hfcCluster = callPackage ./supervisord-cluster/hfc {};
   cardanolib-py = callPackage ./cardanolib-py {};
+
+  inherit ((haskell-nix.hackage-package {
+    name = "hlint";
+    version = "3.1.6";
+    compiler-nix-name = compiler;
+    inherit (cardanoNodeHaskellPackages) index-state;
+  }).components.exes) hlint;
 }
