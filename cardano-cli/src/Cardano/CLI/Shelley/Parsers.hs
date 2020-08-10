@@ -552,7 +552,7 @@ pPoolCmd =
       ]
   where
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pVerificationKeyFile Output
+    pId = PoolGetId <$> pVerificationKeyFile Output <*> pOutputFormat
 
     pPoolMetaDataHashSubCmd :: Parser PoolCmd
     pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile <*> pMaybeOutputFile
@@ -1016,6 +1016,17 @@ pOperatorCertIssueCounterFile =
     )
 
 
+pOutputFormat :: Parser OutputFormat
+pOutputFormat =
+  Opt.option readOutputFormat
+    (  Opt.long "output-format"
+    <> Opt.metavar "STRING"
+    <> Opt.help "Optional output format. Accepted output formats are \"hex\" \
+                \and \"bech32\" (default is \"bech32\")."
+    <> Opt.value OutputFormatBech32
+    )
+
+
 pMaybeOutputFile :: Parser (Maybe OutputFile)
 pMaybeOutputFile =
   optional $
@@ -1350,14 +1361,26 @@ pPoolStakeVerificationKeyFile =
 pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
 pStakePoolVerificationKeyHash =
     Opt.option
-      (Opt.maybeReader spvkHash)
-        (  Opt.long "cold-verification-key-hash"
-        <> Opt.metavar "HASH"
-        <> Opt.help "Stake pool verification key hash (hex-encoded)."
+      (Opt.maybeReader pBech32OrHexStakePoolId)
+        (  Opt.long "stake-pool-id"
+        <> Opt.metavar "STAKE-POOL-ID"
+        <> Opt.help "Stake pool ID/verification key hash (either \
+                    \Bech32-encoded or hex-encoded)."
         )
   where
-    spvkHash :: String -> Maybe (Hash StakePoolKey)
-    spvkHash = deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+    pBech32OrHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pBech32OrHexStakePoolId str =
+      pBech32StakePoolId str <|> pHexStakePoolId str
+
+    pHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pHexStakePoolId =
+      deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+
+    pBech32StakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pBech32StakePoolId =
+      either (const Nothing) Just
+        . deserialiseFromBech32 (AsHash AsStakePoolKey)
+        . Text.pack
 
 pStakePoolVerificationKeyHashOrFile :: Parser StakePoolVerificationKeyHashOrFile
 pStakePoolVerificationKeyHashOrFile =
@@ -1842,6 +1865,17 @@ lexPlausibleAddressString =
 --------------------------------------------------------------------------------
 -- Helpers
 --------------------------------------------------------------------------------
+
+readOutputFormat :: Opt.ReadM OutputFormat
+readOutputFormat = do
+  s <- Opt.str
+  case s of
+    "hex" -> pure OutputFormatHex
+    "bech32" -> pure OutputFormatBech32
+    _ ->
+      fail $ "Invalid output format: \""
+        <> s
+        <> "\". Accepted output formats are \"hex\" and \"bech32\"."
 
 readURIOfMaxLength :: Int -> Opt.ReadM URI
 readURIOfMaxLength maxLen = do
