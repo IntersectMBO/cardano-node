@@ -397,9 +397,9 @@ instance ( ConvertRawHash blk
         ChainDB.ClosedDB immTip tip' -> \_o ->
           "Closed db with immutable tip at " <> renderPoint immTip <>
           " and tip " <> renderPoint tip'
-        ChainDB.OpenedImmDB immTip epoch -> \_o ->
+        ChainDB.OpenedImmDB immTip chunk -> \_o ->
           "Opened imm db with immutable tip at " <> renderPoint immTip <>
-          " and epoch " <> showT epoch
+          " and chunk " <> showT chunk
         ChainDB.OpenedVolDB -> \_o -> "Opened vol db"
         ChainDB.OpenedLgrDB -> \_o -> "Opened lgr db"
       ChainDB.TraceReaderEvent ev -> case ev of
