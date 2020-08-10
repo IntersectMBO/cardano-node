@@ -329,7 +329,6 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
              , "addrs"   .= addrs
              ]
 
-
 renderBadInputsUTxOErr ::  Set (TxIn c) -> Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
