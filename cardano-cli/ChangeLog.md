@@ -1,5 +1,7 @@
 # Changelog for cardano-cli
 
+## 1.18.1 -- August 2020
+
 ## 1.18.0 -- July 2020
 
 ## 1.17.0 -- July 2020
