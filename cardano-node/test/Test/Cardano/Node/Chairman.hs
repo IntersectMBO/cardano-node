@@ -12,7 +12,6 @@ import           Hedgehog (Property, discover)
 import qualified Data.Time.Clock as DTC
 import qualified Data.Time.Clock.POSIX as DTC
 import qualified Hedgehog as H
-import qualified System.IO as IO
 import qualified Test.Common.Base as H
 import qualified Test.Common.Process as H
 
@@ -42,7 +41,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     ]
 
   -- Launch cluster of three nodes
-  procResults <- forM [0..2] $ \i -> do
+  forM_ [0..2] $ \i -> do
     si <- H.noteShow $ show @Int i
     dbDir <- H.noteShow $ tempDir <> "/db/node-" <> si
     socketDir <- H.noteShow $ tempDir <> "/socket"
@@ -53,7 +52,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     H.copyFile (baseConfig <> "/topology-node-" <> si <> ".json") (tempDir <> "/topology-node-" <> si <> ".json")
     H.copyFile (baseConfig <> "/config-" <> si <> ".yaml") (tempDir <> "/config-" <> si <> ".yaml")
 
-    (Just hIn, _mOut, _mErr, hProcess) <- H.createProcess =<< H.procNode
+    (Just hIn, _mOut, _mErr, hProcess, _) <- H.createProcess =<< H.procNode
       [ "run"
       , "--database-path", dbDir
       , "--socket-path", socketDir <> "/node-" <> si <> "-socket"
@@ -68,10 +67,6 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     return (hIn, hProcess)
 
   H.threadDelay 10000000
-
-  -- Signal for cluster to shutdown and wait for shutdown to complete
-  forM_ procResults $ \(hIn, _) -> liftIO $ IO.hClose hIn
-  forM_ procResults $ \(_, hProcess) -> void $ H.waitForProcess hProcess
 
 tests :: IO Bool
 tests = H.checkParallel $$discover
