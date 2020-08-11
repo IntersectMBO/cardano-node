@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Cardano.CLI.Shelley.Run.Pool
   ( ShelleyPoolCmdError
   , renderShelleyPoolCmdError
