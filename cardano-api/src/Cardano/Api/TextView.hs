@@ -56,8 +56,8 @@ data TextView = TextView
   } deriving (Eq, Show)
 
 instance ToJSON TextView where
-  toJSON (TextView (TextViewType tvType) (TextViewDescription desc) rawCBOR) =
-    object [ "type" .= Text.decodeUtf8 tvType
+  toJSON (TextView (TextViewType tvType') (TextViewDescription desc) rawCBOR) =
+    object [ "type" .= Text.decodeUtf8 tvType'
            , "description" .= Text.decodeUtf8 desc
            , "cborHex" .= (Text.decodeUtf8 $ Base16.encode rawCBOR)
            ]
