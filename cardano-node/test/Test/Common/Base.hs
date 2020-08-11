@@ -12,6 +12,7 @@ module Test.Common.Base
   , noteShowM
   , noteShowIO
   , noteTempFile
+  , Integration
   ) where
 
 import           Control.Monad
@@ -43,10 +44,12 @@ import qualified System.Directory as IO
 import qualified System.Info as IO
 import qualified System.IO.Temp as IO
 
-propertyOnce :: HasCallStack => H.PropertyT (ResourceT IO) () -> H.Property
+type Integration a = H.PropertyT (ResourceT IO) a
+
+propertyOnce :: HasCallStack => Integration () -> H.Property
 propertyOnce = H.withTests 1 . H.property . hoist runResourceT
 
-threadDelay :: Int -> H.PropertyT (ResourceT IO) ()
+threadDelay :: Int -> Integration ()
 threadDelay = H.evalM . liftIO . IO.threadDelay
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
@@ -61,7 +64,7 @@ failWithCustom cs mdiff msg = liftTest $ mkTest (Left $ H.Failure (getCaller cs)
 --
 -- The directory will be deleted if the block succeeds, but left behind if
 -- the block fails.
-workspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT (ResourceT IO) ()) -> H.PropertyT (ResourceT IO) ()
+workspace :: HasCallStack => FilePath -> (FilePath -> Integration ()) -> Integration ()
 workspace prefixPath f = GHC.withFrozenCallStack $ do
   systemTemp <- H.evalM . liftIO $ IO.getCanonicalTemporaryDirectory
   let systemPrefixPath = systemTemp <> "/" <> prefixPath
@@ -79,32 +82,32 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
 --
 -- The directory will be deleted if the block succeeds, but left behind if
 -- the block fails.
-moduleWorkspace :: HasCallStack => FilePath -> (FilePath -> H.PropertyT (ResourceT IO) ()) -> H.PropertyT (ResourceT IO) ()
+moduleWorkspace :: HasCallStack => FilePath -> (FilePath -> Integration ()) -> Integration ()
 moduleWorkspace prefixPath f = GHC.withFrozenCallStack $ do
   let srcModule = maybe "UnknownModule"  (GHC.srcLocModule . snd) (listToMaybe (getCallStack callStack))
   workspace (prefixPath <> "/" <> srcModule) f
 
-createDirectoryIfMissing :: HasCallStack => FilePath -> H.PropertyT (ResourceT IO) ()
+createDirectoryIfMissing :: HasCallStack => FilePath -> Integration ()
 createDirectoryIfMissing filePath = H.evalM . liftIO $ IO.createDirectoryIfMissing True filePath
 
-copyFile :: HasCallStack => FilePath -> FilePath -> H.PropertyT (ResourceT IO) ()
+copyFile :: HasCallStack => FilePath -> FilePath -> Integration ()
 copyFile src dst = GHC.withFrozenCallStack $ do
   H.annotate $ "Copy from " <> show src <> " to " <> show dst
   H.evalM . liftIO $ IO.copyFile src dst
 
-noteShow :: (HasCallStack, Show a) => a -> H.PropertyT (ResourceT IO) a
+noteShow :: (HasCallStack, Show a) => a -> Integration a
 noteShow a = GHC.withFrozenCallStack $ do
   !b <- H.eval a
   H.annotateShow b
   return b
 
-noteShowM :: (HasCallStack, Show a) => H.PropertyT (ResourceT IO) a -> H.PropertyT (ResourceT IO) a
+noteShowM :: (HasCallStack, Show a) => Integration a -> Integration a
 noteShowM a = GHC.withFrozenCallStack $ do
   !b <- H.evalM a
   H.annotateShow b
   return b
 
-noteShowIO :: (HasCallStack, Show a) => IO a -> H.PropertyT (ResourceT IO) a
+noteShowIO :: (HasCallStack, Show a) => IO a -> Integration a
 noteShowIO a = GHC.withFrozenCallStack $ do
   !b <- H.evalM . liftIO $ a
   H.annotateShow b

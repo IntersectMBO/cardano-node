@@ -15,7 +15,7 @@ import           Control.Concurrent.Async
 import           Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
-import           Control.Monad.Trans.Resource (ReleaseKey, ResourceT, register)
+import           Control.Monad.Trans.Resource (ReleaseKey, register)
 import           Data.Bool
 import           Data.Either
 import           Data.Function
@@ -29,8 +29,9 @@ import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (Diff, liftTest, mkTest)
 import           Hedgehog.Internal.Source (getCaller)
 import           System.Exit (ExitCode)
-import           System.IO (Handle, IO)
+import           System.IO (Handle)
 import           System.Process (CmdSpec (..), CreateProcess (..), ProcessHandle)
+import           Test.Common.Base (Integration)
 import           Text.Show
 
 import qualified Data.List as L
@@ -63,7 +64,7 @@ argQuote arg = if ' ' `L.elem` arg || '"' `L.elem` arg || '$' `L.elem` arg
 -- | Create a process returning handles to stdin, stdout, and stderr as well as the process handle.
 createProcess :: HasCallStack
   => CreateProcess
-  -> H.PropertyT (ResourceT IO) (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
+  -> Integration (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
 createProcess cp = GHC.withFrozenCallStack $ do
   case IO.cmdspec cp of
     RawCommand cmd args -> H.annotate $ "Command line: " <> cmd <> " " <> L.unwords args
@@ -87,7 +88,7 @@ execFlex :: HasCallStack
   => String
   -> String
   -> [String]
-  -> H.PropertyT (ResourceT IO) String
+  -> Integration String
 execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
   maybeEnvBin <- liftIO $ IO.lookupEnv envBin
   (actualBin, actualArguments) <- case maybeEnvBin of
@@ -110,12 +111,12 @@ execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
     IO.ExitSuccess -> return stdout
 
 -- | Run cardano-cli, returning the stdout
-execCli :: HasCallStack => [String] -> H.PropertyT (ResourceT IO) String
+execCli :: HasCallStack => [String] -> Integration String
 execCli = GHC.withFrozenCallStack $ execFlex "cardano-cli" "CARDANO_CLI"
 
 waitForProcess :: HasCallStack
   => ProcessHandle
-  -> H.PropertyT (ResourceT IO) (Maybe ExitCode)
+  -> Integration (Maybe ExitCode)
 waitForProcess hProcess = GHC.withFrozenCallStack $ do
   H.evalM . liftIO $ catch (fmap Just (IO.waitForProcess hProcess)) $ \(_ :: AsyncCancelled) -> return Nothing
 
@@ -127,7 +128,7 @@ procFlex
   -- ^ Environment variable pointing to the binary to run
   -> [String]
   -- ^ Arguments to the CLI command
-  -> H.PropertyT (ResourceT IO) CreateProcess
+  -> Integration CreateProcess
   -- ^ Captured stdout
 procFlex pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
   maybeEnvBin <- liftIO $ IO.lookupEnv binaryEnv
@@ -139,7 +140,7 @@ procCli
   :: HasCallStack
   => [String]
   -- ^ Arguments to the CLI command
-  -> H.PropertyT (ResourceT IO) CreateProcess
+  -> Integration CreateProcess
   -- ^ Captured stdout
 procCli = procFlex "cardano-cli" "CARDANO_CLI"
 
@@ -147,11 +148,11 @@ procNode
   :: HasCallStack
   => [String]
   -- ^ Arguments to the CLI command
-  -> H.PropertyT (ResourceT IO) CreateProcess
+  -> Integration CreateProcess
   -- ^ Captured stdout
 procNode = procFlex "cardano-node" "CARDANO_NODE"
 
-getProjectBase :: H.PropertyT (ResourceT IO) String
+getProjectBase :: Integration String
 getProjectBase = do
   maybeNodeSrc <- liftIO $ IO.lookupEnv "CARDANO_NODE_SRC"
   case maybeNodeSrc of
