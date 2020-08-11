@@ -16,8 +16,8 @@ module Test.Common.Base
 
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
-import           Control.Monad.Morph
-import           Control.Monad.Trans.Resource
+import           Control.Monad.Morph (hoist)
+import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import           Data.Bool
 import           Data.Either (Either (..))
 import           Data.Eq

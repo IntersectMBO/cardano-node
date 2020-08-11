@@ -14,8 +14,8 @@ module Test.Common.Process
 import           Control.Concurrent.Async
 import           Control.Exception
 import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Resource
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Resource (ReleaseKey, ResourceT, register)
 import           Data.Bool
 import           Data.Either
 import           Data.Function
