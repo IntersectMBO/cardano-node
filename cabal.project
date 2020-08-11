@@ -279,13 +279,6 @@ source-repository-package
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   tag: efa4b5ecd7f0a13124616b12679cd42517cd905a
   --sha256: 0h1h5ifl5d7dl3y6fym9pjd6rfrbh5rbyxs0xw5las503pibv2bf
-  subdir:   plugins/scribe-systemd
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: efa4b5ecd7f0a13124616b12679cd42517cd905a
-  --sha256: 0h1h5ifl5d7dl3y6fym9pjd6rfrbh5rbyxs0xw5las503pibv2bf
   subdir:   plugins/backend-aggregation
 
 source-repository-package
@@ -424,3 +417,7 @@ constraints:
 
 package comonad
   flags: -test-doctests
+
+-- force systemd off until there's a solution to
+-- https://github.com/haskell/cabal/issues/5444
+flags: -systemd
