@@ -206,11 +206,14 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
+  -- do not report the number of elided messages for this type; contains a timestamp not a counter
+  reportelided _tverb _tr (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain{}))) _count = pure ()
+  reportelided tverb tr ev count = defaultelidedreporting tverb tr ev count
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain{}))) (_old, oldt) = do
       tnow <- fromIntegral <$> getMonotonicTimeNSec
       let deltat = tnow - oldt
-      if (deltat > 1250000000)  -- report at most every 1250 ms
+      if deltat > 1250000000  -- report at most every 1250 ms
         then do
           traceWith (toLogObject' tverb tr) ev
           return (Just ev, tnow)

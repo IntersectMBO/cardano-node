@@ -97,9 +97,8 @@ extra-deps:
   - git: https://github.com/input-output-hk/goblins
     commit: 312198a1523736181ef7ddab15958bb32a9d9052
 
-    # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 8190b00d6930927a812baff97d02566176b6bd3b
+    commit: d4d668111800fc6dc0d24f17befa24356cccaded
     subdirs:
       - contra-tracer
       - iohk-monitoring
