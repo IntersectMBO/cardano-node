@@ -291,6 +291,7 @@ test-suite cardano-node-test
                       , resourcet
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
+                      , stm
                       , temporary
                       , time
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -9,6 +10,7 @@ module Test.Cardano.Node.Chairman
 import           Cardano.Prelude
 import           Hedgehog (Property, discover)
 
+import qualified Control.Concurrent.STM as STM
 import qualified Data.Time.Clock as DTC
 import qualified Data.Time.Clock.POSIX as DTC
 import qualified Hedgehog as H
@@ -16,6 +18,13 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Test.Common.Base as H
 import qualified Test.Common.Process as H
+
+prop_lazyAnnotations :: Property
+prop_lazyAnnotations = H.propertyOnce $ do
+  tv <- H.newTVar @Int 0
+  void . H.evalM . liftIO . STM.atomically $ STM.writeTVar tv 1
+  _ <- H.lazyShowTVar tv
+  H.failure
 
 prop_spawnOneNode :: Property
 prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> do

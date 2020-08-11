@@ -13,6 +13,8 @@ module Test.Common.Base
   , noteShowIO
   , noteTempFile
   , Integration
+  , newTVar
+  , lazyShowTVar
   ) where
 
 import           Control.Monad
@@ -37,12 +39,14 @@ import           System.IO (FilePath, IO)
 import           Text.Show
 
 import qualified Control.Concurrent as IO
+import qualified Control.Concurrent.STM as STM
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Info as IO
 import qualified System.IO.Temp as IO
+import qualified System.IO.Unsafe as IO
 
 type Integration a = H.PropertyT (ResourceT IO) a
 
@@ -107,6 +111,12 @@ noteShowM a = GHC.withFrozenCallStack $ do
   H.annotateShow b
   return b
 
+data Lazy a
+  = Exception
+  | Undefined
+  | EvaluatedTo a
+  deriving (Eq, Show)
+
 noteShowIO :: (HasCallStack, Show a) => IO a -> Integration a
 noteShowIO a = GHC.withFrozenCallStack $ do
   !b <- H.evalM . liftIO $ a
@@ -119,3 +129,16 @@ noteTempFile tempDir filePath = GHC.withFrozenCallStack $ do
   let relPath = tempDir <> "/" <> filePath
   H.annotate relPath
   return relPath
+
+newTVar :: (HasCallStack, Show a) => a -> Integration (STM.TVar a)
+newTVar a = GHC.withFrozenCallStack $ do
+  ta <- H.evalM . liftIO $ STM.newTVarIO a
+  a' <- liftIO $ IO.unsafeInterleaveIO . STM.atomically $ STM.readTVar ta
+  H.annotate $ show a <> " -> " <> show a'
+  return ta
+
+lazyShowTVar :: (HasCallStack, Show a) => STM.TVar a -> Integration ()
+lazyShowTVar ta = GHC.withFrozenCallStack $ do
+  a <- liftIO $ IO.unsafeInterleaveIO . STM.atomically $ STM.readTVar ta
+  H.annotateShow a
+  return ()
