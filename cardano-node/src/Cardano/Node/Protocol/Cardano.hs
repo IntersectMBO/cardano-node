@@ -24,28 +24,23 @@ import           Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import           Data.SOP.Strict (NP ((:*), Nil))
 import qualified Data.Text as T
 
 import qualified Cardano.Chain.Update as Byron
 
-import           Ouroboros.Consensus.Block (ForgeState)
 import           Ouroboros.Consensus.Cardano hiding (Protocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import           Ouroboros.Consensus.HardFork.Combinator.Forge (distribForgeState)
 
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import           Ouroboros.Consensus.Cardano.Condense ()
 
-import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Node.Types
 
-import           Cardano.Tracing.Metrics
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
@@ -53,19 +48,6 @@ import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 
 import           Cardano.Node.Protocol.Types
-
-
-
---TODO: move ToObject tracing instances to Cardano.Tracing.OrphanInstances.Consensus
---      and do them generically for the hard fork combinator
-instance forall c. HasKESMetricsData (CardanoBlock c) where
-  getKESMetricsData cardanoForgeState =
-    let (_byronForgeState :* shelleyForgeState :* Nil) = distribForgeState cardanoForgeState
-     in getKESMetricsData (shelleyForgeState :: ForgeState (ShelleyBlock c))
-
--- TODO: Ideally, we would like to distinguish here between whether we are in
--- the Byron or Shelley era, but that's currently not possible to determine
--- from the ForgeState alone.
 
 ------------------------------------------------------------------------------
 -- Real Cardano protocol

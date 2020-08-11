@@ -13,7 +13,6 @@ import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 
 instance FromJSON TracingVerbosity where
   parseJSON (String str) = case str of
@@ -26,9 +25,6 @@ instance FromJSON TracingVerbosity where
                              <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
 
 deriving instance Show TracingVerbosity
-
-instance FromJSON CoreNodeId where
-  parseJSON v = CoreNodeId <$> parseJSON v
 
 instance FromJSON Update.ApplicationName where
   parseJSON (String x) = pure $ Update.ApplicationName x

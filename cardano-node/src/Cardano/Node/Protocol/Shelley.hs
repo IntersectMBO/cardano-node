@@ -39,7 +39,7 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ShelleyGenesis,
                      TPraosLeaderCredentials (..))
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosIsCoreNode (..), TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..), TPraosStandardCrypto)
 
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -162,13 +162,13 @@ readLeaderCredentials (Just ProtocolFilepaths {
       firstExceptT FileError . newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile
 
     return $ Just TPraosLeaderCredentials {
-               tpraosLeaderCredentialsIsCoreNode =
-                 TPraosIsCoreNode {
-                   tpraosIsCoreNodeOpCert     = opcert,
-                   tpraosIsCoreNodeColdVerKey = coerceKeyRole vkey,
-                   tpraosIsCoreNodeSignKeyVRF = vrfKey
+               tpraosLeaderCredentialsCanBeLeader =
+                 TPraosCanBeLeader {
+                   tpraosCanBeLeaderOpCert     = opcert,
+                   tpraosCanBeLeaderColdVerKey = coerceKeyRole vkey,
+                   tpraosCanBeLeaderSignKeyVRF = vrfKey
                  },
-               tpraosLeaderCredentialsSignKey = kesKey
+               tpraosLeaderCredentialsInitSignKey = kesKey
              }
 
 -- But not ok to supply some of the files without the others.

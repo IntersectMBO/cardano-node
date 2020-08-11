@@ -104,7 +104,6 @@ options:
 ##########################################################
 
 
-NodeId:
 Protocol: RealPBFT
 GenesisFile: genesis/genesis.json
 NumCoreNodes: 1

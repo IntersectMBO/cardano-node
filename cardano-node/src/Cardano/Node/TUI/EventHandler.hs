@@ -27,7 +27,7 @@ import           Cardano.BM.Data.Backend (BackendKind (..), IsBackend (..), IsEf
 import           Cardano.BM.Data.Counter (Platform (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LogObject (..), utc2ns)
 import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Node.Protocol.Types (MockProtocol (..), Protocol (..))
+import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.TUI.Drawing (ColorTheme (..), LiveViewState (..), LiveViewThread (..),
                      Screen (..), darkTheme, drawUI, lightTheme)
 
@@ -355,7 +355,7 @@ initLiveViewState = do
     return $ LiveViewState
                 { lvsScreen                 = MainView
                 , lvsRelease                = "Release not set yet"
-                , lvsProtocol               = MockProtocol MockPBFT -- Needs a real value. Will be overwritten later.
+                , lvsProtocol               = CardanoProtocol -- Needs a real value. Will be overwritten later.
                 , lvsNodeId                 = "NodeId not set yet"
                 , lvsVersion                = showVersion version
                 , lvsCommit                 = Text.unpack gitRev

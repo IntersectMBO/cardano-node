@@ -155,7 +155,7 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash ncReqNetworkMagic = do
 readLeaderCredentials :: Genesis.Config
                       -> Maybe ProtocolFilepaths
                       -> ExceptT ByronProtocolInstantiationError IO
-                                 (Maybe PBftLeaderCredentials)
+                                 (Maybe ByronLeaderCredentials)
 readLeaderCredentials _ Nothing = return Nothing
 readLeaderCredentials genesisConfig
                       (Just ProtocolFilepaths {
@@ -177,9 +177,9 @@ readLeaderCredentials genesisConfig
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 
-         bimapExceptT PbftError Just
+         bimapExceptT CredentialsError Just
            . hoistEither
-           $ mkPBftLeaderCredentials genesisConfig signingKey delegCert
+           $ mkByronLeaderCredentials genesisConfig signingKey delegCert
 
   where
     deserialiseSigningKey :: LB.ByteString
@@ -198,7 +198,7 @@ data ByronProtocolInstantiationError =
   | DelegationCertificateFilepathNotSpecified
   | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
-  | PbftError !PBftLeaderCredentialsError
+  | CredentialsError !ByronLeaderCredentialsError
   | SigningKeyDeserialiseFailure !FilePath !DeserialiseFailure
   | SigningKeyFilepathNotSpecified
   deriving Show
@@ -219,8 +219,8 @@ renderByronProtocolInstantiationError pie =
                                                        <> " Error: " <> (Text.pack $ show genesisConfigError)
     GenesisReadError fp err ->  "There was an error parsing the genesis file: " <> toS fp
                                 <> " Error: " <> (Text.pack $ show err)
-    -- TODO: Implement PBftLeaderCredentialsError render function in ouroboros-network
-    PbftError pbftLeaderCredentialsError -> "PBFT leader credentials error: " <> (Text.pack $ show pbftLeaderCredentialsError)
+    -- TODO: Implement ByronLeaderCredentialsError render function in ouroboros-network
+    CredentialsError byronLeaderCredentialsError -> "Byron leader credentials error: " <> (Text.pack $ show byronLeaderCredentialsError)
     SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
                                                            <> " Error: " <> (Text.pack $ show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"

@@ -25,8 +25,6 @@ import qualified Shelley.Spec.Ledger.UTxO as Shelley
 import qualified Ouroboros.Consensus.Cardano as Cardano
 import qualified Ouroboros.Consensus.Cardano.Block as Cardano
 
-import qualified Ouroboros.Consensus.Mock.Ledger as Mock
-
 
 class LedgerQueries blk where
   ledgerUtxoSize :: LedgerState blk -> Int
@@ -47,6 +45,3 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateByron   ledgerByron   -> ledgerUtxoSize ledgerByron
     Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
     _ -> error "ledgerUtxoSize:  unhandled CardanoBlock case"
-
-instance LedgerQueries (Mock.SimpleBlock a b) where
-  ledgerUtxoSize _ = error "ledgerUtxoSize:  not implemented for SimpleBlock"

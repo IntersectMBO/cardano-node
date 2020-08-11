@@ -61,7 +61,6 @@ import qualified Cardano.Chain.Update as Update
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
 
 
@@ -83,10 +82,6 @@ instance FromJSON TracingVerbosity where
                  <> err <> " is not a valid TracingVerbosity"
   parseJSON invalid  = panic $ "Parsing of TracingVerbosity failed due to type mismatch. "
                              <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
-
-instance FromJSON CoreNodeId where
-  parseJSON v = CoreNodeId <$> parseJSON v
-
 
 instance FromJSON PortNumber where
   parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of

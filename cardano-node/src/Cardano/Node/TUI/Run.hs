@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Cardano.Node.TUI.Run
@@ -52,16 +51,10 @@ liveViewPostSetup lvbe ncli nc = do
     -- listening socket via systemd socket activation.
     nodeId :: Text
     nodeId =
-      case ncProtocolConfig nc of
-        NodeProtocolConfigurationMock
-          NodeMockProtocolConfiguration { npcMockNodeId } ->
-            Text.pack (show npcMockNodeId)
-
-        _ -> Text.pack $ "Port: " <>
-          case naPort <$> nodeAddr ncli of
-            Nothing -> "-"
-            Just port -> show port
-
+        Text.pack $ "Port: " <>
+        case naPort <$> nodeAddr ncli of
+          Nothing -> "-"
+          Just port -> show port
 
 setNodeThread :: NFData a => LiveViewBackend blk a -> Async.Async () -> IO ()
 setNodeThread lvbe nodeThr =

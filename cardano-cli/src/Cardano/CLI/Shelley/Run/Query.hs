@@ -59,8 +59,7 @@ import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
-import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
-import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger (PoolDistr (..))
+import           Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Shelley.Spec.Ledger.LedgerState (EpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
@@ -307,7 +306,7 @@ printStakeDistribution (PoolDistr stakeDist) = do
     putStrLn $ replicate (Text.length title + 2) '-'
     sequence_
       [ putStrLn $ showStakeDistr (StakePoolKeyHash poolId) stakeFraction (VrfKeyHash vrfKeyId)
-      | (poolId, (stakeFraction, vrfKeyId)) <- Map.toList stakeDist ]
+      | (poolId, (IndividualPoolStake stakeFraction vrfKeyId)) <- Map.toList stakeDist ]
   where
     title :: Text
     title =
@@ -448,7 +447,7 @@ queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
 --
 queryStakeDistributionFromLocalState
   :: LocalNodeConnectInfo mode block
-  -> ExceptT LocalStateQueryError IO (Ledger.PoolDistr TPraosStandardCrypto)
+  -> ExceptT LocalStateQueryError IO (PoolDistr TPraosStandardCrypto)
 queryStakeDistributionFromLocalState LocalNodeConnectInfo{
                                        localNodeConsensusMode = ByronMode{}
                                      } =

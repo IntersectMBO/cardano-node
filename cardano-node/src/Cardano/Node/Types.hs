@@ -19,8 +19,6 @@ module Cardano.Node.Types
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
-  , NodeMockProtocolConfiguration(..)
-  , NodeProtocolMode(..)
   , SocketPath(..)
   , TopologyFile(..)
   , ViewMode(..)
@@ -46,9 +44,8 @@ import           Cardano.Api.Typed (EpochNo)
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
-import           Cardano.Node.Protocol.Types (MockProtocol (..), Protocol (..))
+import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Tracing.Config (TraceOptions (..), traceConfigParser)
-import           Ouroboros.Consensus.NodeId (CoreNodeId (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
@@ -149,8 +146,7 @@ instance ToJSON NodeHostAddress where
       Nothing -> Null
 
 data NodeCLI = NodeCLI
-  { nodeMode        :: !NodeProtocolMode
-  , nodeAddr        :: !(Maybe NodeAddress)
+  { nodeAddr        :: !(Maybe NodeAddress)
     -- | Filepath of the configuration yaml file. This file determines
     -- all the configuration settings required for the cardano node
     -- (logging, tracing, protocol, slot length etc)
@@ -219,9 +215,6 @@ instance FromJSON NodeConfiguration where
       protocol <- v .: "Protocol" .!= ByronProtocol
       ncProtocolConfig <-
         case protocol of
-          MockProtocol ptcl ->
-            NodeProtocolConfigurationMock <$> parseMockProtocol ptcl v
-
           ByronProtocol ->
             NodeProtocolConfigurationByron <$> parseByronProtocol v
 
@@ -243,15 +236,6 @@ instance FromJSON NodeConfiguration where
            , ncTraceConfig
            }
     where
-      parseMockProtocol npcMockProtocol v = do
-        npcMockNodeId       <- v .: "NodeId"
-        npcMockNumCoreNodes <- v .: "NumCoreNodes"
-        pure NodeMockProtocolConfiguration {
-               npcMockProtocol
-             , npcMockNodeId
-             , npcMockNumCoreNodes
-             }
-
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"
         secondary <- v .:? "GenesisFile"
@@ -336,18 +320,12 @@ newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)
 
 data NodeProtocolConfiguration =
-       NodeProtocolConfigurationMock    NodeMockProtocolConfiguration
-     | NodeProtocolConfigurationByron   NodeByronProtocolConfiguration
+       NodeProtocolConfigurationByron   NodeByronProtocolConfiguration
      | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
      | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
                                         NodeShelleyProtocolConfiguration
                                         NodeHardForkProtocolConfiguration
   deriving Show
-
--- | Mock protocols requires different parameters to real protocols.
--- Therefore we distinguish this at the top level on the command line.
-data NodeProtocolMode = MockProtocolMode
-                      | RealProtocolMode
 
 data NodeShelleyProtocolConfiguration =
      NodeShelleyProtocolConfiguration {
@@ -397,14 +375,6 @@ data NodeByronProtocolConfiguration =
      }
   deriving Show
 
-data NodeMockProtocolConfiguration =
-     NodeMockProtocolConfiguration {
-       npcMockProtocol     :: MockProtocol
-     , npcMockNodeId       :: CoreNodeId
-     , npcMockNumCoreNodes :: Word64
-     }
-  deriving Show
-
 -- | Configuration relating to a hard forks themselves, not the specific eras.
 --
 data NodeHardForkProtocolConfiguration =
@@ -447,9 +417,6 @@ newtype TopologyFile = TopologyFile
 
 instance AdjustFilePaths NodeProtocolConfiguration where
 
-  adjustFilePaths f (NodeProtocolConfigurationMock pc) =
-    NodeProtocolConfigurationMock (adjustFilePaths f pc)
-
   adjustFilePaths f (NodeProtocolConfigurationByron pc) =
     NodeProtocolConfigurationByron (adjustFilePaths f pc)
 
@@ -460,10 +427,6 @@ instance AdjustFilePaths NodeProtocolConfiguration where
     NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                      (adjustFilePaths f pcs)
                                      pch
-
-
-instance AdjustFilePaths NodeMockProtocolConfiguration where
-  adjustFilePaths _f x = x -- Contains no file paths
 
 instance AdjustFilePaths NodeByronProtocolConfiguration where
   adjustFilePaths f x@NodeByronProtocolConfiguration {
@@ -489,7 +452,6 @@ instance AdjustFilePaths a => AdjustFilePaths (Maybe a) where
 ncProtocol :: NodeConfiguration -> Protocol
 ncProtocol nc =
     case ncProtocolConfig nc of
-      NodeProtocolConfigurationMock npc  -> MockProtocol (npcMockProtocol npc)
       NodeProtocolConfigurationByron{}   -> ByronProtocol
       NodeProtocolConfigurationShelley{} -> ShelleyProtocol
       NodeProtocolConfigurationCardano{} -> CardanoProtocol
@@ -506,9 +468,6 @@ parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
 -- | A human readable name for the protocol
 --
 protocolName :: Protocol -> String
-protocolName (MockProtocol MockBFT)   = "Mock BFT"
-protocolName (MockProtocol MockPBFT)  = "Mock PBFT"
-protocolName (MockProtocol MockPraos) = "Mock Praos"
-protocolName  ByronProtocol           = "Byron"
-protocolName  ShelleyProtocol         = "Shelley"
-protocolName  CardanoProtocol         = "Byron; Shelley"
+protocolName ByronProtocol   = "Byron"
+protocolName ShelleyProtocol = "Shelley"
+protocolName CardanoProtocol = "Byron; Shelley"

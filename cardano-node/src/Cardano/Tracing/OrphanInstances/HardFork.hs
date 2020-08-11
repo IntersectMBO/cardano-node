@@ -27,14 +27,15 @@ import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.Block (BlockProtocol)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
+                     ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
-                     OneEraCannotLead (..), OneEraEnvelopeErr (..), OneEraLedgerError (..),
+                     OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraLedgerError (..),
                      OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
-                     mkEraMismatch)
+                     PerEraForgeStateInfo (..), PerEraForgeStateUpdateError (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeBeforeEpoch,
                      SafeZone)
@@ -42,9 +43,10 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, TxId)
-import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ChainIndepState, ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
+import qualified Ouroboros.Consensus.Util.OptNP as OptNP
 
 
 --
@@ -296,36 +298,74 @@ instance ToObject (ValidationErr (BlockProtocol blk)) => ToObject (WrapValidatio
 
 
 --
--- instances for HardForkCannotLead
+-- instances for HardForkCannotForge
 --
 
 -- It's a type alias:
--- type HardForkCannotLead xs = OneEraCannotLead xs
+-- type HardForkCannotForge xs = OneEraCannotForge xs
 
-instance All (ToObject `Compose` WrapCannotLead) xs => ToObject (OneEraCannotLead xs) where
+instance All (ToObject `Compose` WrapCannotForge) xs => ToObject (OneEraCannotForge xs) where
     toObject verb =
         hcollapse
-      . hcmap (Proxy @ (ToObject `Compose` WrapCannotLead))
+      . hcmap (Proxy @ (ToObject `Compose` WrapCannotForge))
               (K . toObject verb)
-      . getOneEraCannotLead
+      . getOneEraCannotForge
 
-instance ToObject (CannotLead (BlockProtocol blk)) => ToObject (WrapCannotLead blk) where
-    toObject verb = toObject verb . unwrapCannotLead
+instance ToObject (CannotForge blk) => ToObject (WrapCannotForge blk) where
+    toObject verb = toObject verb . unwrapCannotForge
 
 
 --
--- instances for PerEraChainIndepState
+-- instances for HardForkForgeStateInfo
 --
 
-instance All (ToObject `Compose` WrapChainIndepState) xs
-      => ToObject (PerEraChainIndepState xs) where
-  toObject verb =
-      mconcat -- Mash all the eras together, hope they do not clash
-    . hcollapse
-    . hcmap (Proxy @ (ToObject `Compose` WrapChainIndepState))
-            (K . toObject verb)
-    . getPerEraChainIndepState
+-- It's a type alias:
+-- type HardForkForgeStateInfo xs = PerEraForgeStateInfo xs
 
-instance ToObject (ChainIndepState (BlockProtocol blk))
-      => ToObject (WrapChainIndepState blk) where
-    toObject verb = toObject verb . unwrapChainIndepState
+instance All (ToObject `Compose` WrapForgeStateInfo) xs => ToObject (PerEraForgeStateInfo xs) where
+    toObject verb forgeStateInfo =
+        mkObject
+          [ "kind" .= String "HardForkForgeStateInfo"
+          , "forgeStateInfos" .= toJSON forgeStateInfos
+          ]
+      where
+        forgeStateInfos :: [Object]
+        forgeStateInfos =
+              catMaybes
+            . hcollapse
+            . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateInfo))
+                    (K . fmap (toObject verb) . unComp)
+            . OptNP.toNP
+            . getPerEraForgeStateInfo
+            $ forgeStateInfo
+
+instance ToObject (ForgeStateInfo blk) => ToObject (WrapForgeStateInfo blk) where
+    toObject verb = toObject verb . unwrapForgeStateInfo
+
+
+--
+-- instances for HardForkForgeStateUpdateError
+--
+
+-- It's a type alias:
+-- type HardForkForgeStateUpdateError xs = PerEraForgeStateUpdateError xs
+
+instance All (ToObject `Compose` WrapForgeStateUpdateError) xs => ToObject (PerEraForgeStateUpdateError xs) where
+    toObject verb forgeStateUpdateError =
+        mkObject
+          [ "kind" .= String "HardForkForgeStateUpdateError"
+          , "forgeStateUpdateErrors" .= toJSON forgeStateUpdateErrors
+          ]
+      where
+        forgeStateUpdateErrors :: [Object]
+        forgeStateUpdateErrors =
+              catMaybes
+            . hcollapse
+            . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateUpdateError))
+                    (K . fmap (toObject verb) . unComp)
+            . OptNP.toNP
+            . getPerEraForgeStateUpdateError
+            $ forgeStateUpdateError
+
+instance ToObject (ForgeStateUpdateError blk) => ToObject (WrapForgeStateUpdateError blk) where
+    toObject verb = toObject verb . unwrapForgeStateUpdateError

@@ -59,7 +59,7 @@ extra-deps:
   - websockets-0.12.6.1
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 183a70c001587d9b1977541deae28c3e44713907
+    commit: b82a3393d19d1caaa45df6875d925e4d87db5ff5
     subdirs:
       # small-steps
       - semantics/executable-spec
@@ -73,19 +73,19 @@ extra-deps:
       - byron/chain/executable-spec
       - shelley/chain-and-ledger/dependencies/non-integer
       - shelley/chain-and-ledger/executable-spec
-      - shelley/chain-and-ledger/executable-spec/test
+      - shelley/chain-and-ledger/shelley-spec-ledger-test
 
   - git: https://github.com/input-output-hk/cardano-crypto
     commit: 2547ad1e80aeabca2899951601079408becbc92c
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
+    commit: 71ea865408f2e03e6d6832359423546699730849
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 7d795c3040ea7785812efa1c97864bbb41b15d3e
+    commit: df8687488449f71dce3d881800c21e41fe1b7fc1
     subdirs:
       - binary
       - binary/test
@@ -95,7 +95,7 @@ extra-deps:
 
     # Needed for `cardano-ledger-specs`
   - git: https://github.com/input-output-hk/goblins
-    commit: 26d35ad52fe9ade3391532dbfeb2f416f07650bc
+    commit: 312198a1523736181ef7ddab15958bb32a9d9052
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
@@ -122,7 +122,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: ec74d1c463b6d18bdca2b714abe730c1d237cc32
+    commit: fbfae1dbed1f22ba4cceacd881e60a2bc25a39d3
     subdirs:
         - io-sim
         - io-sim-classes
@@ -130,7 +130,6 @@ extra-deps:
         - ouroboros-network
         - ouroboros-consensus
         - ouroboros-consensus-byron
-        - ouroboros-consensus/ouroboros-consensus-mock
         - ouroboros-consensus-cardano
         - ouroboros-consensus-shelley
         - typed-protocols

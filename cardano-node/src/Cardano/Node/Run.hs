@@ -15,14 +15,13 @@ module Cardano.Node.Run
   ) where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
-import           Prelude (String, error)
+import           Prelude (String)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Tracer
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
-import qualified Data.List as List
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take, unlines)
@@ -64,7 +63,6 @@ import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTra
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.NodeId
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
@@ -181,7 +179,7 @@ checkLiveViewrequiredTracers traceConfig = do
                   TracingOff ->
                     return [False]
 
-  if List.all (== True) reqTracers
+  if all (== True) reqTracers
   then pure ()
   else do putTextLn "for full functional 'LiveView', please turn on the following \
                     \tracers in the configuration file: TraceBlockFetchDecisions, \\
@@ -366,7 +364,7 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     -> Tracer IO Text
     -> Consensus.TopLevelConfig blk
     -> IO ()
-  createTracers npm'@NodeCLI{nodeMode = RealProtocolMode, nodeAddr, validateDB}
+  createTracers npm'@NodeCLI{nodeAddr, validateDB}
                 nc tr tracer cfg = do
          eitherTopology <- readTopologyFile npm'
          nt <- either
@@ -399,49 +397,6 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
          traceNamedObject cTr (meta, LogMessage gitRev)
 
          when validateDB $ traceWith tracer "Performing DB validation"
-
-  --TODO: there's still lots of duplication here, when only minor things are
-  -- different
-  createTracers npm'@NodeCLI{nodeMode = MockProtocolMode, nodeAddr, validateDB}
-                NodeConfiguration {
-                  ncProtocolConfig =
-                    NodeProtocolConfigurationMock
-                      NodeMockProtocolConfiguration {
-                        npcMockNodeId = CoreNodeId nodeid
-                      }
-                }
-                _tr tracer cfg = do
-         eitherTopology <- readTopologyFile npm'
-         (MockNodeTopology nodeSetups) <- either
-                                            (\err -> panic $ "Cardano.Node.Run.createTracers.readTopologyFile: " <> err)
-                                            pure
-                                            eitherTopology
-
-         traceWith tracer $ "System started at " <> show (getSystemStart $ Consensus.configBlock cfg)
-         let producersList = map (\ns -> (nodeId ns, producers ns)) nodeSetups
-             producers' = case (List.lookup nodeid producersList) of
-                            Just ps ->  ps
-                            Nothing -> error $ "handleSimpleNode: own address "
-                                         <> show nodeAddr
-                                         <> ", Node Id "
-                                         <> show nodeid
-                                         <> " not found in topology"
-
-         traceWith tracer $ unlines
-                               [ ""
-                               , "**************************************"
-                               , "I am Node "        <> show nodeAddr
-                                          <> " Id: " <> show nodeid
-                               , "My producers are " <> show producers'
-                               , "**************************************"
-                               ]
-
-         when validateDB $ traceWith tracer "Performing DB validation"
-
-  createTracers NodeCLI{nodeMode = MockProtocolMode} _ _ _ _ =
-    --TODO: this ability to have a mismatch is silly. We should merge the info
-    -- from the config file and the cli early and resolve it all.
-    panic "createTracers: run in mock mode but config in non-mock mode"
 
 --------------------------------------------------------------------------------
 -- Helper functions

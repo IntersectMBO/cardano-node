@@ -25,8 +25,9 @@ import           Cardano.Tracing.Render (renderHeaderHash, renderHeaderHashForVe
                      renderPoint, renderPointForVerbosity, renderRealPoint, renderTipForVerbosity,
                      renderWithOrigin)
 
-import           Ouroboros.Consensus.Block (BlockProtocol, ConvertRawHash (..), ForgeState (..),
-                     Header, RealPoint, getHeader, headerPoint, realPointHash, realPointSlot)
+import           Ouroboros.Consensus.Block (BlockProtocol, ConvertRawHash (..),
+                     CannotForge, ForgeStateUpdateError, Header, RealPoint,
+                     getHeader, headerPoint, realPointHash, realPointSlot)
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -158,10 +159,6 @@ instance HasPrivacyAnnotation (TraceEventMempool blk)
 instance HasSeverityAnnotation (TraceEventMempool blk) where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation (ForgeState c)
-instance HasSeverityAnnotation (ForgeState c) where
-  getSeverityAnnotation _ = Info
-
 instance HasPrivacyAnnotation ()
 instance HasSeverityAnnotation () where
   getSeverityAnnotation () = Info
@@ -171,8 +168,9 @@ instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceForgedBlock {}            = Info
   getSeverityAnnotation TraceStartLeadershipCheck {}   = Info
   getSeverityAnnotation TraceNodeNotLeader {}          = Info
-  getSeverityAnnotation TraceNodeCannotLead {}         = Error
+  getSeverityAnnotation TraceNodeCannotForge {}        = Error
   getSeverityAnnotation TraceNodeIsLeader {}           = Info
+  getSeverityAnnotation TraceForgeStateUpdateError {}  = Error
   getSeverityAnnotation TraceNoLedgerState {}          = Error
   getSeverityAnnotation TraceNoLedgerView {}           = Error
   getSeverityAnnotation TraceBlockFromFuture {}        = Error
@@ -242,22 +240,18 @@ instance ( tx ~ GenTx blk
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk))
-         , ToObject (CannotLead (BlockProtocol blk)))
+         , ToObject (CannotForge blk)
+         , ToObject (ForgeStateUpdateError blk))
       => Transformable Text IO (TraceForgeEvent blk) where
-  trTransformer = trStructuredText
-
-instance HasTextFormatter (ForgeState blk) where
-  formatText _ = pack . show . toList
-
-instance ToObject (ChainIndepState (BlockProtocol blk))
-      => Transformable Text IO (ForgeState blk) where
   trTransformer = trStructuredText
 
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk
          , HasTxId tx
          , LedgerSupportsProtocol blk
-         , Show (TxId tx))
+         , Show (TxId tx)
+         , Show (ForgeStateUpdateError blk)
+         , Show (CannotForge blk))
       => HasTextFormatter (TraceForgeEvent blk) where
   formatText = \case
     TraceAdoptedBlock slotNo blk txs -> const $
@@ -286,10 +280,15 @@ instance ( tx ~ GenTx blk
       "Leading slot " <> showT (unSlotNo slotNo)
     TraceNodeNotLeader slotNo -> const $
       "Not leading slot " <> showT (unSlotNo slotNo)
-    TraceNodeCannotLead slotNo reason -> const $
+    TraceForgeStateUpdateError slotNo reason -> const $
+      "Updating the forge state in slot "
+        <> showT (unSlotNo slotNo)
+        <> " failed because: "
+        <> showT reason
+    TraceNodeCannotForge slotNo reason -> const $
       "We are the leader in slot "
         <> showT (unSlotNo slotNo)
-        <> ", but we cannot lead because: "
+        <> ", but we cannot forge because: "
         <> showT reason
     TraceNoLedgerState slotNo pt -> const $
       "Could not obtain ledger state for point "
@@ -538,15 +537,15 @@ instance (Show (PBFT.PBftVerKeyHash c))
 
 
 instance (Show (PBFT.PBftVerKeyHash c))
-      => ToObject (PBFT.PBftCannotLead c) where
-  toObject _verb (PBFT.PBftCannotLeadInvalidDelegation vkhash) =
+      => ToObject (PBFT.PBftCannotForge c) where
+  toObject _verb (PBFT.PBftCannotForgeInvalidDelegation vkhash) =
     mkObject
-      [ "kind" .= String "PBftCannotLeadInvalidDelegation"
+      [ "kind" .= String "PBftCannotForgeInvalidDelegation"
       , "vk" .= String (pack $ show vkhash)
       ]
-  toObject _verb (PBFT.PBftCannotLeadThresholdExceeded numForged) =
+  toObject _verb (PBFT.PBftCannotForgeThresholdExceeded numForged) =
     mkObject
-      [ "kind" .= String "PBftCannotLeadThresholdExceeded"
+      [ "kind" .= String "PBftCannotForgeThresholdExceeded"
       , "numForged" .= numForged
       ]
 
@@ -819,15 +818,9 @@ instance ToObject MempoolSize where
 instance HasTextFormatter () where
   formatText _ = pack . show . toList
 
--- ForgeState default value = ()
+-- ForgeStateInfo default value = ()
 instance Transformable Text IO () where
   trTransformer = trStructuredText
-
-instance ToObject (ChainIndepState (BlockProtocol blk))
-      => ToObject (ForgeState blk) where
-  toObject verb ForgeState { chainIndepState, extraForgeState = _ } =
-    -- We assume there's nothing interesting in the extraForgeState
-    toObject verb chainIndepState
 
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk
@@ -837,7 +830,8 @@ instance ( tx ~ GenTx blk
          , ToObject (LedgerError blk)
          , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk))
-         , ToObject (CannotLead (BlockProtocol blk)))
+         , ToObject (CannotForge blk)
+         , ToObject (ForgeStateUpdateError blk))
       => ToObject (TraceForgeEvent blk) where
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject
@@ -901,9 +895,15 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceNodeNotLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
-  toObject verb (TraceNodeCannotLead slotNo reason) =
+  toObject verb (TraceForgeStateUpdateError slotNo reason) =
     mkObject
-      [ "kind" .= String "TraceNodeCannotLead"
+      [ "kind" .= String "TraceForgeStateUpdateError"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= toObject verb reason
+      ]
+  toObject verb (TraceNodeCannotForge slotNo reason) =
+    mkObject
+      [ "kind" .= String "TraceNodeCannotForge"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "reason" .= toObject verb reason
       ]
