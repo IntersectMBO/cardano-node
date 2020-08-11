@@ -283,10 +283,12 @@ test-suite cardano-node-test
                       , hedgehog
                       , hedgehog-corpus
                       , iproute
+                      , mmorph
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , process
+                      , resourcet
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
                       , temporary
