@@ -21,7 +21,7 @@ import           Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.IP as IP
-import qualified Data.Text as T
+import qualified Data.Text as Text
 import           Network.Socket (PortNumber, SockAddr (..))
 import           Text.Read (readMaybe)
 
@@ -133,10 +133,13 @@ readTopologyFile ncli = do
   eBs <- Exception.try $ BS.readFile (unTopology $ topologyFile ncli)
 
   case eBs of
-    Left e -> pure . Left $ handler e
-    Right bs -> pure . first T.pack . eitherDecode $ LBS.fromStrict bs
+    Left e -> return . Left $ handler e
+    Right bs -> return . first handlerJSON . eitherDecode $ LBS.fromStrict bs
 
  where
   handler :: IOException -> Text
-  handler e = T.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
-                     ++ displayException e
+  handler e = Text.pack $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
+                        ++ displayException e
+  handlerJSON :: String -> Text
+  handlerJSON err = "Is your topology file formatted correctly? \
+                    \The port and valency fields should be numerical. " <> Text.pack err
