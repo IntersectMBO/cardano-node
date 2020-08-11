@@ -131,13 +131,9 @@ procFlex
   -- ^ Captured stdout
 procFlex pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
   maybeEnvBin <- liftIO $ IO.lookupEnv binaryEnv
-  cp <- case maybeEnvBin of
+  case maybeEnvBin of
     Just envBin -> return $ IO.proc envBin arguments
     Nothing -> return $ IO.proc "cabal" ("exec":"--":pkg:arguments)
-  return $ cp
-    { IO.create_group = True
-    , IO.std_in = IO.CreatePipe
-    }
 
 procCli
   :: HasCallStack

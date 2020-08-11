@@ -12,6 +12,8 @@ import           Hedgehog (Property, discover)
 import qualified Data.Time.Clock as DTC
 import qualified Data.Time.Clock.POSIX as DTC
 import qualified Hedgehog as H
+import qualified System.IO as IO
+import qualified System.Process as IO
 import qualified Test.Common.Base as H
 import qualified Test.Common.Process as H
 
@@ -45,6 +47,8 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     si <- H.noteShow $ show @Int i
     dbDir <- H.noteShow $ tempDir <> "/db/node-" <> si
     socketDir <- H.noteShow $ tempDir <> "/socket"
+    nodeStdoutFile <- H.noteTempFile tempDir "cardano-node.stdout.log"
+    nodeStderrFile <- H.noteTempFile tempDir "cardano-node.stderr.log"
 
     H.createDirectoryIfMissing dbDir
     H.createDirectoryIfMissing socketDir
@@ -52,17 +56,29 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     H.copyFile (baseConfig <> "/topology-node-" <> si <> ".json") (tempDir <> "/topology-node-" <> si <> ".json")
     H.copyFile (baseConfig <> "/config-" <> si <> ".yaml") (tempDir <> "/config-" <> si <> ".yaml")
 
-    (Just hIn, _mOut, _mErr, hProcess, _) <- H.createProcess =<< H.procNode
-      [ "run"
-      , "--database-path", dbDir
-      , "--socket-path", socketDir <> "/node-" <> si <> "-socket"
-      , "--port", "300" <> si <> ""
-      , "--topology", tempDir <> "/topology-node-" <> si <> ".json"
-      , "--config", tempDir <> "/config-" <> si <> ".yaml"
-      , "--signing-key", tempDir <> "/genesis/delegate-keys.00" <> si <> ".key"
-      , "--delegation-certificate", tempDir <> "/genesis/delegation-cert.00" <> si <> ".json"
-      , "--shutdown-ipc", "0"
-      ]
+    hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
+    hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
+
+    (Just hIn, _mOut, _mErr, hProcess, _) <- H.createProcess =<<
+      ( ( H.procNode
+          [ "run"
+          , "--database-path", dbDir
+          , "--socket-path", socketDir <> "/node-" <> si <> "-socket"
+          , "--port", "300" <> si <> ""
+          , "--topology", tempDir <> "/topology-node-" <> si <> ".json"
+          , "--config", tempDir <> "/config-" <> si <> ".yaml"
+          , "--signing-key", tempDir <> "/genesis/delegate-keys.00" <> si <> ".key"
+          , "--delegation-certificate", tempDir <> "/genesis/delegation-cert.00" <> si <> ".json"
+          , "--shutdown-ipc", "0"
+          ]
+        ) <&>
+        ( \cp -> cp
+          { IO.std_in = IO.CreatePipe
+          , IO.std_out = IO.UseHandle hNodeStdout
+          , IO.std_err = IO.UseHandle hNodeStderr
+          }
+        )
+      )
 
     return (hIn, hProcess)
 

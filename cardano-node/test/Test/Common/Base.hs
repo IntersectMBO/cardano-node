@@ -11,6 +11,7 @@ module Test.Common.Base
   , noteShow
   , noteShowM
   , noteShowIO
+  , noteTempFile
   ) where
 
 import           Control.Monad
@@ -108,3 +109,10 @@ noteShowIO a = GHC.withFrozenCallStack $ do
   !b <- H.evalM . liftIO $ a
   H.annotateShow b
   return b
+
+-- | Return the test file path after annotating it relative to the project root directory
+noteTempFile :: (Monad m, HasCallStack) => FilePath -> FilePath -> H.PropertyT m FilePath
+noteTempFile tempDir filePath = GHC.withFrozenCallStack $ do
+  let relPath = tempDir <> "/" <> filePath
+  H.annotate relPath
+  return relPath
