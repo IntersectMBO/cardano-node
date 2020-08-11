@@ -106,7 +106,7 @@ let
   nonDefaultBuildSystems = tail supportedSystems;
 
   # Paths or prefixes of paths of derivations to build only on the default system (ie. linux on hydra):
-  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ["dockerImage"] ];
+  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ["dockerImage"] ["clusterTests"] ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [ ["shell"] ]
     ++ onlyBuildOnDefaultSystem;

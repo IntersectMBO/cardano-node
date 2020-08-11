@@ -60,7 +60,7 @@ let
 
     inherit (haskellPackages.cardano-node.identifier) version;
 
-    clusterTests = import ./nix/supervisord-cluster/tests { inherit pkgs mkCluster cardano-cli cardano-node cardanolib-py; };
+    clusterTests = recRecurseIntoAttrs (import ./nix/supervisord-cluster/tests { inherit pkgs; });
 
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
