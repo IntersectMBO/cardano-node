@@ -105,17 +105,19 @@ let
 
   nonDefaultBuildSystems = tail supportedSystems;
 
-  # Paths of derivations to build only on the default system (ie. linux on hydra):
-  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ];
-  # Paths or prefix of paths for which cross-builds are disabled:
-  noCrossBuild = [ ["dockerImage"] ["shell"] ["cluster"] ]
+  # Paths or prefixes of paths of derivations to build only on the default system (ie. linux on hydra):
+  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ["dockerImage"] ];
+  # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
+  noCrossBuild = [ ["shell"] ]
     ++ onlyBuildOnDefaultSystem;
+  noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ]
+    ++ noCrossBuild;
 
   # Remove build jobs for which cross compiling does not make sense.
-  filterJobsCross = mapAttrsRecursiveCond (a: !(isDerivation a)) (path: value:
-    if (any (p: take (length p) path == p) noCrossBuild) then null
+  filterProject = noBuildList: mapAttrsRecursiveCond (a: !(isDerivation a)) (path: value:
+    if (isDerivation value && (any (p: take (length p) path == p) noBuildList)) then null
     else value
-  );
+  ) project;
 
   inherit (systems.examples) mingwW64 musl64;
 
@@ -125,10 +127,10 @@ let
     inherit dockerImageArtifact;
     native =
       let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
-        if (elem path onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
+        if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
         (packagePlatforms project);
       in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
-    musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
+    musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterProject noMusl64Build));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
       inherit nixpkgs;
@@ -145,7 +147,7 @@ let
       exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.musl64.exes);
     };
   } // (optionalAttrs windowsBuild {
-    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
+    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterProject noCrossBuild));
     cardano-node-win64 = import ./nix/binary-release.nix {
       inherit pkgs project;
       platform = "win64";
