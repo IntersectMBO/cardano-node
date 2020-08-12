@@ -166,8 +166,8 @@ createLoggingLayer ver nodecli@NodeCLI{configFile} = do
      -> Trace IO Text
      -> IO ()
    loggingPreInit nodeConfig logConfig switchBoard trace = do
-     Config.getEKGport logConfig >>= \p ->
-       when (p > 0) $
+     Config.getEKGBindAddr logConfig >>= \mbEndpoint ->
+       when (isJust mbEndpoint) $
          Cardano.BM.Backend.EKGView.plugin logConfig trace switchBoard
            >>= loadPlugin switchBoard
 
