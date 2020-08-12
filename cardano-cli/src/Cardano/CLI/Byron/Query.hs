@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Byron.Query
   ( ByronQueryError(..)
@@ -9,23 +10,21 @@ module Cardano.CLI.Byron.Query
   , runGetLocalNodeTip
   ) where
 
-import           Cardano.Prelude hiding (unlines)
-import           Prelude (unlines)
+import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import qualified Data.Text as T
+import qualified Data.Text as Text
 
 import           Cardano.Api.Typed
 import           Cardano.Chain.Slotting (EpochSlots (..))
+import           Ouroboros.Consensus.Block (ConvertRawHash (..))
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
-import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import           Ouroboros.Network.Block
 
 import           Cardano.Api.LocalChainSync (getLocalTip)
-import           Cardano.CLI.Environment
-                   (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Types (SocketPath (..))
-import           Cardano.Tracing.OrphanInstances.HardFork () -- TODO: This forces us to import "cardano-node". Fix this.
+import           Cardano.Tracing.Render (renderHeaderHash, renderSlotNo) -- TODO: This forces us to import "cardano-node". Fix this.
 
 
 data ByronQueryError
@@ -57,13 +56,13 @@ runGetLocalNodeTip networkId = do
       tip <- getLocalTip connctInfo
       putTextLn (getTipOutput tip)
   where
-    -- TODO: Remove `Condense (HeaderHash blk)`.
-    getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text
+    getTipOutput :: forall blk. ConvertRawHash blk => Tip blk -> Text
     getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
-    getTipOutput (Tip slotNo headerHash blkNo) =
-      T.pack $ unlines [ "\n"
-                        , "Current tip: "
-                        , "Block hash: " <> condense headerHash
-                        , "Slot: " <> condense slotNo
-                        , "Block number: " <> condense blkNo
-                        ]
+    getTipOutput (Tip slotNo headerHash (BlockNo blkNo)) =
+      Text.unlines
+        [ "\n"
+        , "Current tip: "
+        , "Block hash: " <> renderHeaderHash (Proxy @blk) headerHash
+        , "Slot: " <> renderSlotNo slotNo
+        , "Block number: " <> show blkNo
+        ]
