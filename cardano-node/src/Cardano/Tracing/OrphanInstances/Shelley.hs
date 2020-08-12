@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -34,9 +35,8 @@ import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Crypto.Hash.Class (Hash)
-import           Cardano.Crypto.KES.Class (VerKeyKES, deriveVerKeyKES, hashVerKeyKES)
-
 import           Cardano.Crypto.Hash.Class as Crypto
+
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
@@ -45,15 +45,12 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotLead (..), TPraosStandardCrypto,
-                     TPraosUnusableKey (..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
+import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (KeyHash (..))
 import           Shelley.Spec.Ledger.LedgerState (WitHashes (..))
 import           Shelley.Spec.Ledger.OCert
@@ -73,7 +70,6 @@ import           Shelley.Spec.Ledger.STS.Newpp
 import           Shelley.Spec.Ledger.STS.Ocert
 import           Shelley.Spec.Ledger.STS.Overlay
 import           Shelley.Spec.Ledger.STS.Pool
-import           Shelley.Spec.Ledger.STS.PoolReap
 import           Shelley.Spec.Ledger.STS.Ppup
 import           Shelley.Spec.Ledger.STS.Prtcl
 import           Shelley.Spec.Ledger.STS.Rupd
@@ -82,7 +78,6 @@ import           Shelley.Spec.Ledger.STS.Tick
 import           Shelley.Spec.Ledger.STS.Tickn
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
-import           Shelley.Spec.Ledger.STS.Utxow
 import           Shelley.Spec.Ledger.TxData (MIRPot (..), TxId (..), TxIn (..), TxOut (..))
 
 
@@ -113,39 +108,14 @@ instance Crypto c => ToObject (ApplyTxError c) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
-instance ToObject (HotKey TPraosStandardCrypto) where
-  toObject _verb HotKey {
-                   hkStart,
-                   hkEnd,
-                   hkEvolution,
-                   hkKey
-                 } =
+instance ToObject (TPraosCannotForge c) where
+  toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
     mkObject
-      [ "kind"      .= String "HotKey"
-      , "start"     .= hkStart
-      , "end"       .= hkEnd
-      , "evolution" .= hkEvolution
-      , "vkey"      .= (hashVerKeyKES (deriveVerKeyKES hkKey)
-                        :: Hash (HASH TPraosStandardCrypto)
-                                (VerKeyKES (KES TPraosStandardCrypto)))
+      [ "kind" .= String "TPraosCannotForgeKeyNotUsableYet"
+      , "keyStart" .= keyStartPeriod
+      , "wallClock" .= wallClockPeriod
       ]
-
-instance ToObject (TPraosCannotLead c) where
-  toObject _verb (TPraosCannotLeadUnusableKESKey
-                    TPraosUnusableKey {
-                      tpraosUnusableKeyStart,
-                      tpraosUnusableKeyEnd,
-                      tpraosUnusableKeyCurrent,
-                      tpraosUnusableWallClock
-                    }) =
-    mkObject
-      [ "kind" .= String "TPraosCannotLeadUnusableKESKey"
-      , "keyStart"   .= tpraosUnusableKeyStart
-      , "keyEnd"     .= tpraosUnusableKeyEnd
-      , "keyCurrent" .= tpraosUnusableKeyCurrent
-      , "wallClock"  .= tpraosUnusableWallClock
-      ]
-  toObject _verb (TPraosCannotLeadWrongVRF genDlgVRFHash coreNodeVRFHash) =
+  toObject _verb (TPraosCannotForgeWrongVRF genDlgVRFHash coreNodeVRFHash) =
     mkObject
       [ "kind" .= String "TPraosCannotLeadWrongVRF"
       , "expected" .= genDlgVRFHash
@@ -153,6 +123,29 @@ instance ToObject (TPraosCannotLead c) where
       ]
 
 deriving newtype instance ToJSON KESPeriod
+
+instance ToObject HotKey.KESInfo where
+  toObject _verb (HotKey.KESInfo { kesStartPeriod, kesEndPeriod, kesEvolution }) =
+    mkObject
+      [ "kind" .= String "KESInfo"
+      , "startPeriod" .= kesStartPeriod
+      , "endPeriod" .= kesEndPeriod
+      , "evolution" .= kesEvolution
+      ]
+
+instance ToObject HotKey.KESEvolutionError where
+  toObject verb (HotKey.KESCouldNotEvolve kesInfo targetPeriod) =
+    mkObject
+      [ "kind" .= String "KESCouldNotEvolve"
+      , "kesInfo" .= toObject verb kesInfo
+      , "targetPeriod" .= targetPeriod
+      ]
+  toObject verb (HotKey.KESKeyAlreadyPoisoned kesInfo targetPeriod) =
+    mkObject
+      [ "kind" .= String "KESKeyAlreadyPoisoned"
+      , "kesInfo" .= toObject verb kesInfo
+      , "targetPeriod" .= targetPeriod
+      ]
 
 instance Crypto c =>  ToObject (ShelleyLedgerError c) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
@@ -323,6 +316,9 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
     mkObject [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
              , "addrs"   .= addrs
+             ]
+  toObject _verb ScriptsEmbargoed =
+    mkObject [ "kind" .= String "ScriptsEmbargoed"
              ]
 
 

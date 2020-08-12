@@ -35,6 +35,7 @@ import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import           Shelley.Spec.Ledger.BlockChain (HashHeader (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Crypto (Crypto)
+import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger
 import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
@@ -106,6 +107,7 @@ deriving newtype instance ToJSON Ledger.Likelihood
 deriving newtype instance ToJSON (Ledger.Stake TPraosStandardCrypto)
 
 deriving anyclass instance ToJSON (Ledger.GenDelegs TPraosStandardCrypto)
+deriving anyclass instance ToJSON (Ledger.IndividualPoolStake TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.ProposedPPUpdates TPraosStandardCrypto)
 deriving anyclass instance ToJSON (Ledger.PPUPState TPraosStandardCrypto)
 

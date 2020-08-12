@@ -64,7 +64,6 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
-                      , ouroboros-consensus-mock
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework

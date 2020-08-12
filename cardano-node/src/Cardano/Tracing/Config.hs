@@ -43,7 +43,7 @@ data TraceSelection
   , traceDnsSubscription :: !Bool
   , traceErrorPolicy :: !Bool
   , traceForge :: !Bool
-  , traceForgeState :: !Bool
+  , traceForgeStateInfo :: !Bool
   , traceHandshake :: !Bool
   , traceIpSubscription :: !Bool
   , traceLocalChainSyncProtocol :: !Bool
@@ -81,7 +81,7 @@ traceConfigParser v =
     <*> v .:? "TraceDNSSubscription" .!= True
     <*> v .:? "TraceErrorPolicy" .!= True
     <*> v .:? "TraceForge" .!= True
-    <*> v .:? "TraceForgeState" .!= True
+    <*> v .:? "TraceForgeStateInfo" .!= True
     <*> v .:? "TraceHandshake" .!= False
     <*> v .:? "TraceIpSubscription" .!= True
     <*> v .:? "TraceLocalChainSyncProtocol" .!= False

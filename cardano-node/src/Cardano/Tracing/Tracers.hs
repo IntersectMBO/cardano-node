@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -48,8 +49,9 @@ import           Cardano.BM.ElidingTracer
 import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.Block (BlockProtocol, ConvertRawHash, ForgeState, Header,
-                     realPointSlot)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
+                     ConvertRawHash, ForgeStateInfo, ForgeStateUpdateError,
+                     Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                      TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -64,7 +66,7 @@ import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.Protocol.Abstract (CannotLead, ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Util.Condense (Condense)
 import           Ouroboros.Consensus.Util.Orphans ()
 
@@ -129,7 +131,8 @@ data ForgeTracers = ForgeTracers
   , ftDidntAdoptBlock :: Trace IO Text
   , ftForgedInvalid   :: Trace IO Text
   , ftTraceNodeNotLeader  :: Trace IO Text
-  , ftTraceNodeCannotLead :: Trace IO Text
+  , ftTraceNodeCannotForge :: Trace IO Text
+  , ftTraceForgeStateUpdateError :: Trace IO Text
   , ftTraceBlockFromFuture :: Trace IO Text
   , ftTraceSlotIsImmutable :: Trace IO Text
   , ftTraceNodeIsLeader :: Trace IO Text
@@ -253,7 +256,7 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 data BlockchainCounters = BlockchainCounters
   { bcTxsProcessedNum        :: !Word64
   , bcBlocksForgedNum        :: !Word64
-  , bcNodeCannotLeadNum      :: !Word64
+  , bcNodeCannotForgeNum     :: !Word64
   , bcNodeIsLeaderNum        :: !Word64
   , bcSlotsMissedNum         :: !Word64
   }
@@ -310,7 +313,7 @@ mkTracers TracingOff _ _ =
       , Consensus.blockFetchDecisionTracer = nullTracer
       , Consensus.blockFetchClientTracer = nullTracer
       , Consensus.blockFetchServerTracer = nullTracer
-      , Consensus.forgeStateTracer = nullTracer
+      , Consensus.forgeStateInfoTracer = nullTracer
       , Consensus.txInboundTracer = nullTracer
       , Consensus.txOutboundTracer = nullTracer
       , Consensus.localTxSubmissionServerTracer = nullTracer
@@ -410,16 +413,18 @@ teeTraceChainTip' tr =
 --------------------------------------------------------------------------------
 
 mkConsensusTracers
-  :: ( Show peer
+  :: forall blk peer localPeer.
+     ( Show peer
      , Eq peer
      , LedgerQueries blk
      , ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
-     , ToObject (CannotLead (BlockProtocol blk))
+     , ToObject (CannotForge blk)
      , ToObject (GenTx blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      )
@@ -442,7 +447,7 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision $ appendName "BlockFetchDecision" tr
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
-    , Consensus.forgeStateTracer = tracerOnOff' (traceForgeState trSel) $ forgeStateTracer trSel tr
+    , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $ forgeStateInfoTracer (Proxy @ blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff (traceTxInbound trSel) verb "TxInbound" tr
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
@@ -473,7 +478,8 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
        <*> (counting $ liftCounting staticMeta name "didnt-adopt" tr)
        <*> (counting $ liftCounting staticMeta name "forged-invalid" tr)
        <*> (counting $ liftCounting staticMeta name "node-not-leader" tr)
-       <*> (counting $ liftCounting staticMeta name "not-cannot-lead" tr)
+       <*> (counting $ liftCounting staticMeta name "cannot-forge" tr)
+       <*> (counting $ liftCounting staticMeta name "forge-state-update-error" tr)
        <*> (counting $ liftCounting staticMeta name "block-from-future" tr)
        <*> (counting $ liftCounting staticMeta name "slot-is-immutable" tr)
        <*> (counting $ liftCounting staticMeta name "node-is-leader" tr)
@@ -482,10 +488,11 @@ teeForge ::
   forall blk
   . ( Consensus.RunNode blk
      , LedgerQueries blk
-     , ToObject (CannotLead (BlockProtocol blk))
+     , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (ForgeStateUpdateError blk)
      )
   => ForgeTracers
   -> NodeKernelData blk
@@ -495,7 +502,8 @@ teeForge ::
 teeForge ft nodeKern tverb tr = Tracer $ \ev@(WithSeverity sev event) -> do
   flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
     case e of
-      Consensus.TraceNodeCannotLead _ _ -> teeForge' (ftTraceNodeCannotLead ft)
+      Consensus.TraceNodeCannotForge {} -> teeForge' (ftTraceNodeCannotForge ft)
+      Consensus.TraceForgeStateUpdateError{} -> teeForge' (ftTraceForgeStateUpdateError ft)
       Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftForgeAboutToLead ft)
       Consensus.TraceNoLedgerState{} -> teeForge' (ftCouldNotForge ft)
@@ -533,8 +541,10 @@ teeForge' tr =
     meta <- mkLOMeta Critical Confidential
     traceNamedObject (appendName "metrics" tr) . (meta,) $
       case ev of
-        Consensus.TraceNodeCannotLead slot _reason ->
-          LogValue "nodeCannotLead" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceNodeCannotForge slot _reason ->
+          LogValue "nodeCannotForge" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgeStateUpdateError slot _reason ->
+          LogValue "forgeStateUpdateError" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgedBlock slot _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceStartLeadershipCheck slot ->
@@ -562,10 +572,11 @@ teeForge' tr =
 forgeTracer
   :: ( Consensus.RunNode blk
      , LedgerQueries blk
-     , ToObject (CannotLead (BlockProtocol blk))
+     , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
+     , ToObject (ForgeStateUpdateError blk)
      )
   => TracingVerbosity
   -> Trace IO Text
@@ -593,13 +604,13 @@ notifyBlockForging bcCounters tr = Tracer $ \case
                                                                    in (cnts { bcBlocksForgedNum = nc }, nc)
                                                          )
     traceCounter "blocksForgedNum" updatedBlocksForged tr
-  Consensus.TraceNodeCannotLead {} -> do
+  Consensus.TraceNodeCannotForge {} -> do
     -- It means that node have tried to forge new block, but because of misconfiguration
     -- (for example, invalid key) it's impossible.
-    updatedNodeCannotLead <- atomicModifyIORef' bcCounters $ \cnts ->
-      let nc = bcNodeCannotLeadNum cnts + 1
-      in (cnts { bcNodeCannotLeadNum = nc }, nc)
-    traceCounter "nodeCannotLead" updatedNodeCannotLead tr
+    updatedNodeCannotForge <- atomicModifyIORef' bcCounters $ \cnts ->
+      let nc = bcNodeCannotForgeNum cnts + 1
+      in (cnts { bcNodeCannotForgeNum = nc }, nc)
+    traceCounter "nodeCannotForge" updatedNodeCannotForge tr
   -- The rest of the constructors.
   _ -> pure ()
 
@@ -694,15 +705,16 @@ mpTracer :: ( Show (ApplyTxErr blk)
 mpTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
 
 --------------------------------------------------------------------------------
--- ForgeState Tracers
+-- ForgeStateInfo Tracers
 --------------------------------------------------------------------------------
 
-forgeStateMetricsTraceTransformer
+forgeStateInfoMetricsTraceTransformer
   :: forall a blk. HasKESMetricsData blk
-  => Trace IO a
-  -> Tracer IO (ForgeState blk)
-forgeStateMetricsTraceTransformer tr = Tracer $ \forgeState -> do
-    case getKESMetricsData forgeState of
+  => Proxy blk
+  -> Trace IO a
+  -> Tracer IO (ForgeStateInfo blk)
+forgeStateInfoMetricsTraceTransformer p tr = Tracer $ \forgeStateInfo -> do
+    case getKESMetricsData p forgeStateInfo of
       NoKESMetricsData -> pure ()
       TPraosKESMetricsData kesPeriodOfKey
                            (MaxKESEvolutions maxKesEvos)
@@ -756,20 +768,21 @@ forgeStateMetricsTraceTransformer tr = Tracer $ \forgeState -> do
         <> (Text.pack . show) kesPeriodsUntilExpiry
         <> " KES periods."
 
-forgeStateTracer
+forgeStateInfoTracer
   :: forall blk.
      ( HasKESMetricsData blk
-     , Show (ForgeState blk)
+     , Show (ForgeStateInfo blk)
      )
-  => TraceSelection
+  => Proxy blk
+  -> TraceSelection
   -> Trace IO Text
-  -> Tracer IO (ForgeState blk)
-forgeStateTracer _ts tracer = Tracer $ \ev -> do
+  -> Tracer IO (ForgeStateInfo blk)
+forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
     let tr = appendName "Forge" tracer
-    traceWith (forgeStateMetricsTraceTransformer tr) ev
+    traceWith (forgeStateInfoMetricsTraceTransformer p tr) ev
     traceWith (fsTracer tr) ev
   where
-    fsTracer :: Trace IO Text -> Tracer IO (ForgeState blk)
+    fsTracer :: Trace IO Text -> Tracer IO (ForgeStateInfo blk)
     fsTracer tr = showTracing $ contramap Text.pack $ toLogObject tr
 
 --------------------------------------------------------------------------------

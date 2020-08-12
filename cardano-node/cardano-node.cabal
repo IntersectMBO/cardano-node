@@ -40,7 +40,6 @@ library
                        Cardano.Node.Protocol
                        Cardano.Node.Protocol.Byron
                        Cardano.Node.Protocol.Cardano
-                       Cardano.Node.Protocol.Mock
                        Cardano.Node.Protocol.Shelley
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Parsers
@@ -58,7 +57,6 @@ library
                        Cardano.Tracing.OrphanInstances.Common
                        Cardano.Tracing.OrphanInstances.Consensus
                        Cardano.Tracing.OrphanInstances.HardFork
-                       Cardano.Tracing.OrphanInstances.Mock
                        Cardano.Tracing.OrphanInstances.Network
                        Cardano.Tracing.OrphanInstances.Shelley
 
@@ -101,7 +99,6 @@ library
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
-                     , ouroboros-consensus-mock
                      , ouroboros-consensus-shelley
                      , ouroboros-network
                      , ouroboros-network-framework
@@ -174,7 +171,6 @@ library cardano-node-config
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-shelley
-                     , ouroboros-consensus-mock
                      , ouroboros-network
                      , scientific
                      , shelley-spec-ledger

@@ -55,10 +55,6 @@ main = do
 mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
 mkNodeClientProtocol protocol =
     case protocol of
-      MockProtocol _ ->
-        panic "TODO: mkNodeClientProtocol NodeProtocolConfigurationMock"
-
-      -- Real protocols
       ByronProtocol ->
         mkSomeNodeClientProtocolByron
           (EpochSlots 21600) (SecurityParam 2160)
