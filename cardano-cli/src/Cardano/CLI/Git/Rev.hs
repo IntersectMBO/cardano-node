@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Cardano.Config.Git.Rev (
+module Cardano.CLI.Git.Rev (
       gitRev
     ) where
 
@@ -13,7 +13,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
 
-import           Cardano.Config.Git.RevFromGit (gitRevFromGit)
+import           Cardano.CLI.Git.RevFromGit (gitRevFromGit)
 
 gitRev :: Text
 gitRev | gitRevEmbed /= zeroRev = gitRevEmbed

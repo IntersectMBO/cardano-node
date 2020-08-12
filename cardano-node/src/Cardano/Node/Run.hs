@@ -44,7 +44,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..)
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
                      shutdownLoggingLayer)
 import           Cardano.Node.Types
