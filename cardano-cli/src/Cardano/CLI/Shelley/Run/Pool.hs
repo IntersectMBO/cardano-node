@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Cardano.CLI.Shelley.Run.Pool
   ( ShelleyPoolCmdError
   , renderShelleyPoolCmdError
@@ -99,13 +97,13 @@ runStakePoolRegistrationCert
     stakePoolVerKey <- firstExceptT ShelleyPoolReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) sPvkeyFp
-    let stakePoolId = verificationKeyHash stakePoolVerKey
+    let stakePoolId' = verificationKeyHash stakePoolVerKey
 
     -- VRF verification key
     vrfVerKey <- firstExceptT ShelleyPoolReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsVrfKey) vrfVkeyFp
-    let vrfKeyHash = verificationKeyHash vrfVerKey
+    let vrfKeyHash' = verificationKeyHash vrfVerKey
 
     -- Pool reward account
     stakeVerKey <- firstExceptT ShelleyPoolReadFileError
@@ -123,17 +121,17 @@ runStakePoolRegistrationCert
             $ readFileTextEnvelope (AsVerificationKey AsStakeKey) fp
         )
         ownerVerFps
-    let stakePoolOwners = map verificationKeyHash sPoolOwnerVkeys
+    let stakePoolOwners' = map verificationKeyHash sPoolOwnerVkeys
 
     let stakePoolParams =
           StakePoolParameters
-            { stakePoolId = stakePoolId
-            , stakePoolVRF = vrfKeyHash
+            { stakePoolId = stakePoolId'
+            , stakePoolVRF = vrfKeyHash'
             , stakePoolCost = pCost
             , stakePoolMargin = pMrgn
             , stakePoolRewardAccount = rewardAccountAddr
             , stakePoolPledge = pldg
-            , stakePoolOwners = stakePoolOwners
+            , stakePoolOwners = stakePoolOwners'
             , stakePoolRelays = relays
             , stakePoolMetadata = mbMetadata
             }
@@ -158,8 +156,8 @@ runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFil
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) sPvkeyFp
 
-    let stakePoolId = verificationKeyHash stakePoolVerKey
-        retireCert = makeStakePoolRetirementCertificate stakePoolId retireEpoch
+    let stakePoolId' = verificationKeyHash stakePoolVerKey
+        retireCert = makeStakePoolRetirementCertificate stakePoolId' retireEpoch
 
     firstExceptT ShelleyPoolWriteFileError
       . newExceptT

@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.Tracing.Metrics
   ( KESMetricsData (..)
@@ -16,12 +15,12 @@ import           Cardano.Prelude
 import           Cardano.Crypto.KES.Class (Period)
 import           Ouroboros.Consensus.Block (ForgeState (..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import           Ouroboros.Consensus.HardFork.Combinator
+import           Ouroboros.Consensus.HardFork.Combinator.Unary
 import           Ouroboros.Consensus.Mock.Ledger.Block (SimpleBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool ()
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto.HotKey (HotKey (..))
-import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.Unary
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
 
