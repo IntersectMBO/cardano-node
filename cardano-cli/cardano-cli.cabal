@@ -150,7 +150,7 @@ executable cardano-cli
 
 test-suite cardano-cli-test
   hs-source-dirs:       test
-  main-is:              Main.hs
+  main-is:              cardano-cli-test.hs
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
@@ -174,56 +174,97 @@ test-suite cardano-cli-test
                       , transformers-except
                       , unordered-containers
 
-  other-modules:        Test.CLI.Byron.Golden.TextEnvelope.PaymentKeys
-                        Test.CLI.Byron.Golden.TextEnvelope.Tx
-                        Test.CLI.Byron.Golden.TextEnvelope.TxBody
-                        Test.CLI.Byron.Golden.TextEnvelope.Witness
-                        Test.CLI.Shelley.Golden.Address.Build
-                        Test.CLI.Shelley.Golden.Address.Info
-                        Test.CLI.Shelley.Golden.Address.KeyGen
-                        Test.CLI.Shelley.Golden.Genesis.Create
-                        Test.CLI.Shelley.Golden.Genesis.InitialTxIn
-                        Test.CLI.Shelley.Golden.Genesis.KeyGenDelegate
-                        Test.CLI.Shelley.Golden.Genesis.KeyGenGenesis
-                        Test.CLI.Shelley.Golden.Genesis.KeyGenUtxo
-                        Test.CLI.Shelley.Golden.Genesis.KeyHash
-                        Test.CLI.Shelley.Golden.Node.IssueOpCert
-                        Test.CLI.Shelley.Golden.Node.KeyGen
-                        Test.CLI.Shelley.Golden.Node.KeyGenKes
-                        Test.CLI.Shelley.Golden.Node.KeyGenVrf
-                        Test.CLI.Shelley.Golden.Metadata.StakePoolMetadata
-                        Test.CLI.Shelley.Golden.StakeAddress.Build
-                        Test.CLI.Shelley.Golden.StakeAddress.DeregistrationCertificate
-                        Test.CLI.Shelley.Golden.StakeAddress.KeyGen
-                        Test.CLI.Shelley.Golden.StakeAddress.RegistrationCertificate
-                        Test.CLI.Shelley.Golden.StakePool.RegistrationCertificate
-                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.MIRCertificate
-                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.OperationalCertificate
-                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakeAddressCertificates
-                        Test.CLI.Shelley.Golden.TextEnvelope.Certificates.StakePoolCertificates
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.ExtendedPaymentKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisDelegateKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.GenesisUTxOKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.KESKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.PaymentKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.StakeKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Keys.VRFKeys
-                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.Tx
-                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.TxBody
-                        Test.CLI.Shelley.Golden.TextEnvelope.Tx.Witness
-                        Test.CLI.Shelley.Golden.TextView.DecodeCbor
-                        Test.CLI.Shelley.Golden.Transaction.Build
-                        Test.CLI.Shelley.Golden.Transaction.CalculateMinFee
-                        Test.CLI.Shelley.Golden.Transaction.Sign
-                        Test.CLI.Shelley.Tests
-                        Test.CLI.Version
-                        Test.ITN
+  other-modules:        Test.Cli.ITN
+                        Test.Cli.Pioneers.Exercise1
+                        Test.Cli.Pioneers.Exercise2
+                        Test.Cli.Pioneers.Exercise3
+                        Test.Cli.Pioneers.Exercise4
                         Test.OptParse
-                        Test.Pioneers.Exercise1
-                        Test.Pioneers.Exercise2
-                        Test.Pioneers.Exercise3
-                        Test.Pioneers.Exercise4
+
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+  build-tool-depends:   cardano-cli:cardano-cli
+
+test-suite cardano-cli-golden
+  hs-source-dirs:       test
+  main-is:              cardano-cli-golden.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        base
+                      , aeson
+                      , bech32 >= 1.1.0
+                      , bytestring
+                      , base16-bytestring
+                      , cardano-api
+                      , cardano-cli
+                      , cardano-prelude
+                      , containers
+                      , deepseq
+                      , directory
+                      , hedgehog
+                      , lifted-base
+                      , optparse-applicative
+                      , process
+                      , temporary
+                      , text
+                      , time
+                      , transformers-except
+                      , unordered-containers
+
+  other-modules:        Test.Golden.Shelley
+                        Test.Golden.Byron.TextEnvelope.PaymentKeys
+                        Test.Golden.Byron.TextEnvelope.Tx
+                        Test.Golden.Byron.TextEnvelope.TxBody
+                        Test.Golden.Byron.TextEnvelope.Witness
+                        Test.Golden.Shelley.Address.Build
+                        Test.Golden.Shelley.Address.Info
+                        Test.Golden.Shelley.Address.KeyGen
+                        Test.Golden.Shelley.Genesis.Create
+                        Test.Golden.Shelley.Genesis.InitialTxIn
+                        Test.Golden.Shelley.Genesis.KeyGenDelegate
+                        Test.Golden.Shelley.Genesis.KeyGenGenesis
+                        Test.Golden.Shelley.Genesis.KeyGenUtxo
+                        Test.Golden.Shelley.Genesis.KeyHash
+                        Test.Golden.Shelley.Node.IssueOpCert
+                        Test.Golden.Shelley.Node.KeyGen
+                        Test.Golden.Shelley.Node.KeyGenKes
+                        Test.Golden.Shelley.Node.KeyGenVrf
+                        Test.Golden.Shelley.Metadata.StakePoolMetadata
+                        Test.Golden.Shelley.StakeAddress.Build
+                        Test.Golden.Shelley.StakeAddress.DeregistrationCertificate
+                        Test.Golden.Shelley.StakeAddress.KeyGen
+                        Test.Golden.Shelley.StakeAddress.RegistrationCertificate
+                        Test.Golden.Shelley.StakePool.RegistrationCertificate
+                        Test.Golden.Shelley.TextEnvelope.Certificates.MIRCertificate
+                        Test.Golden.Shelley.TextEnvelope.Certificates.OperationalCertificate
+                        Test.Golden.Shelley.TextEnvelope.Certificates.StakeAddressCertificates
+                        Test.Golden.Shelley.TextEnvelope.Certificates.StakePoolCertificates
+                        Test.Golden.Shelley.TextEnvelope.Keys.ExtendedPaymentKeys
+                        Test.Golden.Shelley.TextEnvelope.Keys.GenesisDelegateKeys
+                        Test.Golden.Shelley.TextEnvelope.Keys.GenesisKeys
+                        Test.Golden.Shelley.TextEnvelope.Keys.GenesisUTxOKeys
+                        Test.Golden.Shelley.TextEnvelope.Keys.KESKeys
+                        Test.Golden.Shelley.TextEnvelope.Keys.PaymentKeys
+                        Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys
+                        Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys
+                        Test.Golden.Shelley.TextEnvelope.Tx.Tx
+                        Test.Golden.Shelley.TextEnvelope.Tx.TxBody
+                        Test.Golden.Shelley.TextEnvelope.Tx.Witness
+                        Test.Golden.Shelley.TextView.DecodeCbor
+                        Test.Golden.Shelley.Transaction.Build
+                        Test.Golden.Shelley.Transaction.CalculateMinFee
+                        Test.Golden.Shelley.Transaction.Sign
+                        Test.Golden.Version
+                        Test.OptParse
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
