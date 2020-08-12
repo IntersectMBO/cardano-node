@@ -14,7 +14,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.List as List
 import qualified Data.Text as Text
 
-import           Hedgehog (Gen, Property, discover)
+import           Hedgehog (Gen, Property, discover, forAll)
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Range (Range)
@@ -23,8 +23,10 @@ import qualified Hedgehog.Range as Range
 -- This test is fragile to changes in the way Metadata is converted to/from JSON.
 prop_round_trip_json_metadatum :: Property
 prop_round_trip_json_metadatum = do
-  Hedgehog.withTests 1000 . Hedgehog.property $ do
-    md <- Hedgehog.forAll genMetaData
+  Hedgehog.withTests 100000 . Hedgehog.property $ do
+    idxs <- forAll $ List.nub <$> Gen.list (Range.linear 1 5) (Gen.word64 Range.constantBounded)
+    xs <- forAll $ mapM (\i -> (i,) <$> genTxMetadataValue) idxs
+    md <- forAll $ pure $ makeTransactionMetadata (Map.fromList xs)
     Hedgehog.tripping md jsonFromMetadata jsonToMetadata
 
 -- -----------------------------------------------------------------------------
