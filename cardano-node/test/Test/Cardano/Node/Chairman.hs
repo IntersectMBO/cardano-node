@@ -15,10 +15,12 @@ import qualified Hedgehog as H
 import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Test.Common.Base as H
+import qualified Test.Common.Network as IO
 import qualified Test.Common.Process as H
 
 prop_spawnOneNode :: Property
 prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> do
+  let nodeCount = 3
   base <- H.noteShowM H.getProjectBase
   baseConfig <- H.noteShow $ base <> "/configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -43,7 +45,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     ]
 
   -- Launch cluster of three nodes
-  forM_ [0..2] $ \i -> do
+  forM_ [0..nodeCount - 1] $ \i -> do
     si <- H.noteShow $ show @Int i
     dbDir <- H.noteShow $ tempDir <> "/db/node-" <> si
     socketDir <- H.noteShow $ tempDir <> "/socket"
@@ -81,6 +83,10 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
       )
 
     return (hIn, hProcess)
+
+  deadline <- H.noteShowIO $ DTC.addUTCTime 180 <$> DTC.getCurrentTime -- 60 seconds from now
+
+  forM_ [0..nodeCount - 1] $ \i -> H.assertByDeadlineIO deadline $ IO.isPortOpen (3000 + i)
 
   H.threadDelay 10000000
 

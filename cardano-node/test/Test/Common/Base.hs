@@ -12,11 +12,12 @@ module Test.Common.Base
   , noteShowM
   , noteShowIO
   , noteTempFile
+  , assertByDeadlineIO
   , Integration
   ) where
 
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Morph (hoist)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import           Data.Bool
@@ -26,8 +27,10 @@ import           Data.Function (($), (.))
 import           Data.Int
 import           Data.Maybe (Maybe (..), listToMaybe, maybe)
 import           Data.Monoid (Monoid (..))
+import           Data.Ord
 import           Data.Semigroup (Semigroup (..))
 import           Data.String (String)
+import           Data.Time.Clock (UTCTime)
 import           Data.Tuple
 import           GHC.Stack (CallStack, HasCallStack, callStack, getCallStack)
 import           Hedgehog (MonadTest)
@@ -37,6 +40,7 @@ import           System.IO (FilePath, IO)
 import           Text.Show
 
 import qualified Control.Concurrent as IO
+import qualified Data.Time.Clock as DTC
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -119,3 +123,19 @@ noteTempFile tempDir filePath = GHC.withFrozenCallStack $ do
   let relPath = tempDir <> "/" <> filePath
   H.annotate relPath
   return relPath
+
+-- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
+--
+-- Expiration of the deadline results in an assertion failure
+assertByDeadlineIO :: (MonadIO m, HasCallStack) => UTCTime -> IO Bool -> H.PropertyT m ()
+assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
+  success <- liftIO f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        assertByDeadlineIO deadline f
+      else do
+        H.annotateShow currentTime
+        failWithCustom GHC.callStack Nothing "Condition not met by deadline"
