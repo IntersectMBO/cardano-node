@@ -22,12 +22,12 @@ import qualified Data.Text as Text
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderHeaderHash, renderHeaderHashForVerbosity,
-                     renderPoint, renderPointForVerbosity, renderRealPoint, renderTipForVerbosity,
-                     renderWithOrigin)
+                     renderPoint, renderPointAsPhrase, renderPointForVerbosity, renderRealPoint,
+                     renderTipForVerbosity, renderWithOrigin)
 
-import           Ouroboros.Consensus.Block (BlockProtocol, ConvertRawHash (..),
-                     CannotForge, ForgeStateUpdateError, Header, RealPoint,
-                     getHeader, headerPoint, realPointHash, realPointSlot)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash (..),
+                     ForgeStateUpdateError, Header, RealPoint, getHeader, headerPoint,
+                     realPointHash, realPointSlot)
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -265,7 +265,7 @@ instance ( tx ~ GenTx blk
         <> ", current slot: " <> showT (unSlotNo currentSlot)
     TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo -> const $
       "Couldn't forge block because current slot is immutable: "
-        <> "immutable tip: " <> renderPoint immutableTipPoint
+        <> "immutable tip: " <> renderPointAsPhrase immutableTipPoint
         <> ", immutable tip block no: " <> showT (unBlockNo immutableTipBlkNo)
         <> ", current slot: " <> showT (unSlotNo slotNo)
     TraceDidntAdoptBlock slotNo _ -> const $
@@ -292,7 +292,7 @@ instance ( tx ~ GenTx blk
         <> showT reason
     TraceNoLedgerState slotNo pt -> const $
       "Could not obtain ledger state for point "
-        <> renderPoint pt
+        <> renderPointAsPhrase pt
         <> ", current slot: "
         <> showT (unSlotNo slotNo)
     TraceNoLedgerView slotNo _ -> const $
@@ -340,25 +340,25 @@ instance ( ConvertRawHash blk
         ChainDB.TrySwitchToAFork pt _ -> \_o ->
           "Block fits onto some fork: " <> renderRealPoint pt
         ChainDB.AddedToCurrentChain es _ _ c -> \_o ->
-          "Chain extended, new tip: " <> renderPoint (AF.headPoint c) <>
+          "Chain extended, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
         ChainDB.SwitchedToAFork es _ _ c -> \_o ->
-          "Switched to a fork, new tip: " <> renderPoint (AF.headPoint c) <>
+          "Switched to a fork, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt -> \_o ->
             "Invalid block " <> renderRealPoint pt <> ": " <> showT err
           ChainDB.InvalidCandidate c -> \_o ->
-            "Invalid candidate " <> renderPoint (AF.headPoint c)
+            "Invalid candidate " <> renderPointAsPhrase (AF.headPoint c)
           ChainDB.ValidCandidate c -> \_o ->
-            "Valid candidate " <> renderPoint (AF.headPoint c)
+            "Valid candidate " <> renderPointAsPhrase (AF.headPoint c)
           ChainDB.CandidateContainsFutureBlocks c hdrs -> \_o ->
             "Candidate contains blocks from near future:  " <>
-            renderPoint (AF.headPoint c) <> ", slots " <>
+            renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
             Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
           ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs -> \_o ->
             "Candidate contains blocks from future exceeding clock skew limit: " <>
-            renderPoint (AF.headPoint c) <> ", slots " <>
+            renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
             Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
         ChainDB.AddedBlockToVolDB pt _ _ -> \_o ->
           "Chain added block " <> renderRealPoint pt
@@ -381,7 +381,7 @@ instance ( ConvertRawHash blk
           "Invalid snapshot " <> showT snap <> showT failure
       ChainDB.TraceCopyToImmDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmDB pt -> \_o ->
-          "Copied block " <> renderPoint pt <> " to the ImmutableDB"
+          "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
         ChainDB.NoBlocksToCopyToImmDB -> \_o ->
           "There are no blocks to copy to the ImmutableDB"
       ChainDB.TraceGCEvent ev -> case ev of
@@ -391,13 +391,13 @@ instance ( ConvertRawHash blk
           "Scheduled a garbage collection for " <> condenseT slot
       ChainDB.TraceOpenEvent ev -> case ev of
         ChainDB.OpenedDB immTip tip' -> \_o ->
-          "Opened db with immutable tip at " <> renderPoint immTip <>
-          " and tip " <> renderPoint tip'
+          "Opened db with immutable tip at " <> renderPointAsPhrase immTip <>
+          " and tip " <> renderPointAsPhrase tip'
         ChainDB.ClosedDB immTip tip' -> \_o ->
-          "Closed db with immutable tip at " <> renderPoint immTip <>
-          " and tip " <> renderPoint tip'
+          "Closed db with immutable tip at " <> renderPointAsPhrase immTip <>
+          " and tip " <> renderPointAsPhrase tip'
         ChainDB.OpenedImmDB immTip chunk -> \_o ->
-          "Opened imm db with immutable tip at " <> renderPoint immTip <>
+          "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
           " and chunk " <> showT chunk
         ChainDB.OpenedVolDB -> \_o -> "Opened vol db"
         ChainDB.OpenedLgrDB -> \_o -> "Opened lgr db"

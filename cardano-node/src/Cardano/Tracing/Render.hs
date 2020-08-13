@@ -5,6 +5,7 @@ module Cardano.Tracing.Render
   ( renderHeaderHash
   , renderHeaderHashForVerbosity
   , renderPoint
+  , renderPointAsPhrase
   , renderPointForVerbosity
   , renderRealPoint
   , renderSlotNo
@@ -73,6 +74,18 @@ renderPointForVerbosity verb point =
 
 renderPoint :: ConvertRawHash blk => Point blk -> Text
 renderPoint = renderPointForVerbosity MaximalVerbosity
+
+-- | Render a short phrase describing a 'Point'.
+-- e.g. "62292d753b2ee7e903095bc5f10b03cf4209f456ea08f55308e0aaab4350dda4 at
+-- slot 39920" or "genesis (origin)" in the case of a genesis point.
+renderPointAsPhrase :: forall blk. ConvertRawHash blk => Point blk -> Text
+renderPointAsPhrase point =
+  case point of
+    GenesisPoint -> "genesis (origin)"
+    BlockPoint slot h ->
+      renderHeaderHash (Proxy @blk) h
+        <> " at slot "
+        <> renderSlotNo slot
 
 renderTipForVerbosity
   :: ConvertRawHash blk
