@@ -18,6 +18,27 @@ package cardano-config
 package cardano-node
   ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
+-- ---------------------------------------------------------
+-- Disable all tests by default
+
+tests: False
+
+test-show-details: direct
+
+-- Then enable specific tests in this repo
+
+package cardano-api
+  tests: True
+
+package cardano-cli
+  tests: True
+
+package cardano-node
+  tests: True
+
+-- The following is needed because Nix is doing something crazy.
+package byron-spec-ledger
+  tests: False
 
 package ouroboros-consensus
   tests: False
@@ -25,89 +46,23 @@ package ouroboros-consensus
 package ouroboros-consensus-cardano
   tests: False
 
-package ouroboros-consensus-byron
-  tests: False
-
-package ouroboros-consensus-shelley
-  tests: False
-
-package bech32
-  tests: False
-
-package byron-spec-chain
-  tests: False
-
-package byron-spec-ledger
-  tests: False
-
-package small-steps-test
-  tests: False
-
-package cardano-crypto
-  tests: False
-
-package cborg
-  tests: False
-
-package http-client
-  tests: False
-
-package goblins
-  tests: False
-
-package io-sim
-  tests: False
-
-package io-sim-classes
-  tests: False
-
-package shelley-spec-non-integral
-  tests: False
-
-package network-mux
-  tests: False
-
-package typed-protocols
-  tests: False
-
-package typed-protocols-examples
-  tests: False
-
-package cardano-prelude
-  tests: False
-
-package iohk-monitoring
-  tests: False
-
-package cardano-binary
-  tests: False
-
-package cardano-sl-x509
-  tests: False
-
-package cardano-crypto-class
-  tests: False
-
-package cardano-crypto-wrapper
-  tests: False
-
-package ouroboros-network-framework
-  tests: False
-
-package lobemo-backend-monitoring
-  tests: False
-
-package small-steps
+package ouroboros-consensus-cardano
   tests: False
 
 package ouroboros-network
   tests: False
 
-package shelley-spec-ledger
+package ouroboros-network-framework
   tests: False
 
-package cardano-ledger
+package small-steps
   tests: False
+
+package small-steps-test
+  tests: False
+
+-- ---------------------------------------------------------
+
 
 -- The two following one-liners will restore / cut off the remainder of this file (for nix-shell users):
 -- git checkout HEAD "$(git rev-parse --show-toplevel)"/cabal.project
