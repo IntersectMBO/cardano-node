@@ -282,20 +282,25 @@ test-suite cardano-node-test
                       , hedgehog-corpus
                       , iproute
                       , mmorph
+                      , network
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , process
+                      , random
                       , resourcet
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
                       , temporary
                       , time
+                      , unliftio
 
   other-modules:        Test.Cardano.Node.Chairman
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
                         Test.Common.Base
+                        Test.Common.Network
+                        Test.Common.NetworkSpec
                         Test.Common.Process
 
   default-language:     Haskell2010
