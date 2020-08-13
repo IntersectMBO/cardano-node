@@ -22,15 +22,14 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HMS
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
+import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
 
 import           Control.Monad.Trans.Except (ExceptT)
@@ -386,22 +385,21 @@ data DelegationsAndRewards
 
 instance ToJSON DelegationsAndRewards where
   toJSON (DelegationsAndRewards nw delegsAndRwds) =
-      Aeson.Object $
-        Map.foldlWithKey' delegAndRwdToJson HMS.empty delegsAndRwds
+      Aeson.Array . Vector.fromList
+        . map delegAndRwdToJson $ Map.toList delegsAndRwds
     where
       delegAndRwdToJson
-        :: HashMap Text Aeson.Value
-        -> Ledger.Credential Ledger.Staking TPraosStandardCrypto
-        -> (Maybe (Hash StakePoolKey), Coin)
-        -> HashMap Text Aeson.Value
-      delegAndRwdToJson acc k (d, r) =
-        HMS.insert
-          (toKey k)
-          (Aeson.object ["delegation" .= d, "rewardAccountBalance" .= r])
-          acc
+        :: (Ledger.Credential 'Ledger.Staking TPraosStandardCrypto, (Maybe (Hash StakePoolKey), Coin))
+        -> Aeson.Value
+      delegAndRwdToJson (k, (d, r)) =
+        Aeson.object
+          [ "address" .= renderAddress k
+          , "delegation" .= d
+          , "rewardAccountBalance" .= r
+          ]
 
-      toKey :: Ledger.Credential Ledger.Staking TPraosStandardCrypto -> Text
-      toKey = serialiseAddress . StakeAddress (toShelleyNetwork nw)
+      renderAddress :: Ledger.Credential Ledger.Staking TPraosStandardCrypto -> Text
+      renderAddress = serialiseAddress . StakeAddress (toShelleyNetwork nw)
 
 
 -- | Query the current protocol parameters from a Shelley node via the local
