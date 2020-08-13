@@ -200,27 +200,27 @@ pStakeAddress =
                             <*> pSigningKeyFile Output
 
     pStakeAddressKeyHash :: Parser StakeAddressCmd
-    pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyFile <*> pMaybeOutputFile
+    pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyOrFile <*> pMaybeOutputFile
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile
+    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyOrFile
                                            <*> pNetworkId
                                            <*> pMaybeOutputFile
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
     pStakeAddressRegistrationCert = StakeKeyRegistrationCert
-                                      <$> pStakeVerificationKeyFile
+                                      <$> pStakeVerificationKeyOrFile
                                       <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
     pStakeAddressDeregistrationCert = StakeKeyDeRegistrationCert
-                                        <$> pStakeVerificationKeyFile
+                                        <$> pStakeVerificationKeyOrFile
                                         <*> pOutputFile
 
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
     pStakeAddressDelegationCert = StakeKeyDelegationCert
-                                    <$> pStakeVerificationKeyFile
-                                    <*> pStakePoolVerificationKeyHashOrFile
+                                    <$> pStakeVerificationKeyOrFile
+                                    <*> pStakePoolVerificationKeyOrHashOrFile
                                     <*> pOutputFile
 
 pKeyCmd :: Parser KeyCmd
@@ -1529,6 +1529,32 @@ pAddress =
       <> Opt.help "A Cardano address"
       )
 
+pStakeVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pStakeVerificationKeyOrFile =
+  VerificationKeyValue <$> pStakeVerificationKey
+    <|> VerificationKeyFilePath <$> pStakeVerificationKeyFile
+
+pStakeVerificationKey :: Parser (VerificationKey StakeKey)
+pStakeVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromBech32OrHex)
+        (  Opt.long "stake-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Stake verification key (Bech32 or hex-encoded)."
+        )
+  where
+    asType :: AsType (VerificationKey StakeKey)
+    asType = AsVerificationKey AsStakeKey
+
+    keyFormats :: NonEmpty (InputFormat (VerificationKey StakeKey))
+    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
+
+    deserialiseFromBech32OrHex
+      :: String
+      -> Either String (VerificationKey StakeKey)
+    deserialiseFromBech32OrHex str =
+      first (Text.unpack . renderInputDecodeError) $
+        deserialiseInput asType keyFormats (BSC.pack str)
 
 pStakeVerificationKeyFile :: Parser VerificationKeyFile
 pStakeVerificationKeyFile =
@@ -1547,8 +1573,8 @@ pStakeVerificationKeyFile =
     )
 
 
-pPoolStakeVerificationKeyFile :: Parser VerificationKeyFile
-pPoolStakeVerificationKeyFile =
+pStakePoolVerificationKeyFile :: Parser VerificationKeyFile
+pStakePoolVerificationKeyFile =
   VerificationKeyFile <$>
     (  Opt.strOption
          (  Opt.long "cold-verification-key-file"
@@ -1587,10 +1613,48 @@ pStakePoolVerificationKeyHash =
         . deserialiseFromBech32 (AsHash AsStakePoolKey)
         . Text.pack
 
-pStakePoolVerificationKeyHashOrFile :: Parser StakePoolVerificationKeyHashOrFile
-pStakePoolVerificationKeyHashOrFile =
-  StakePoolVerificationKeyFile <$> pPoolStakeVerificationKeyFile
-    <|> StakePoolVerificationKeyHash <$> pStakePoolVerificationKeyHash
+pStakePoolVerificationKey :: Parser (VerificationKey StakePoolKey)
+pStakePoolVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromBech32OrHex)
+        (  Opt.long "stake-pool-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Stake pool verification key (Bech32 or hex-encoded)."
+        )
+  where
+    asType :: AsType (VerificationKey StakePoolKey)
+    asType = AsVerificationKey AsStakePoolKey
+
+    deserialiseFromBech32OrHex
+      :: String
+      -> Either String (VerificationKey StakePoolKey)
+    deserialiseFromBech32OrHex str =
+      case deserialiseFromBech32 asType (Text.pack str) of
+        Right res -> Right res
+
+        -- The input was valid Bech32, but some other error occurred.
+        Left err@(Bech32UnexpectedPrefix _ _) -> Left (displayError err)
+        Left err@(Bech32DataPartToBytesError _) -> Left (displayError err)
+        Left err@(Bech32DeserialiseFromBytesError _) -> Left (displayError err)
+        Left err@(Bech32WrongPrefix _ _) -> Left (displayError err)
+
+        -- The input was not valid Bech32. Attempt to deserialize it as hex.
+        Left (Bech32DecodingError _) ->
+          case deserialiseFromRawBytesHex asType (BSC.pack str) of
+            Just res' -> Right res'
+            Nothing -> Left "Invalid stake pool verification key."
+
+pStakePoolVerificationKeyOrFile
+  :: Parser (VerificationKeyOrFile StakePoolKey)
+pStakePoolVerificationKeyOrFile =
+  VerificationKeyValue <$> pStakePoolVerificationKey
+    <|> VerificationKeyFilePath <$> pStakePoolVerificationKeyFile
+
+pStakePoolVerificationKeyOrHashOrFile
+  :: Parser (VerificationKeyOrHashOrFile StakePoolKey)
+pStakePoolVerificationKeyOrHashOrFile =
+  VerificationKeyOrFile <$> pStakePoolVerificationKeyOrFile
+    <|> VerificationKeyHash <$> pStakePoolVerificationKeyHash
 
 pVrfVerificationKeyFile :: Parser VerificationKeyFile
 pVrfVerificationKeyFile =
@@ -1816,7 +1880,7 @@ pStakePoolMetadataHash =
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
  PoolRegistrationCert
-  <$> pPoolStakeVerificationKeyFile
+  <$> pStakePoolVerificationKeyFile
   <*> pVrfVerificationKeyFile
   <*> pPoolPledge
   <*> pPoolCost
@@ -1831,7 +1895,7 @@ pStakePoolRegistrationCert =
 pStakePoolRetirementCert :: Parser PoolCmd
 pStakePoolRetirementCert =
   PoolRetirementCert
-    <$> pPoolStakeVerificationKeyFile
+    <$> pStakePoolVerificationKeyFile
     <*> pEpochNo
     <*> pOutputFile
 

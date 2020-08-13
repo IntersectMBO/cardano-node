@@ -53,7 +53,7 @@ import           Cardano.Api.Typed hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile)
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, VerificationKeyOrHashOrFile)
 import           Cardano.CLI.Types
 
 import           Shelley.Spec.Ledger.TxBody (MIRPot)
@@ -111,11 +111,14 @@ renderAddressCmd cmd =
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
-  | StakeAddressKeyHash VerificationKeyFile (Maybe OutputFile)
-  | StakeAddressBuild VerificationKeyFile NetworkId (Maybe OutputFile)
-  | StakeKeyRegistrationCert VerificationKeyFile OutputFile
-  | StakeKeyDelegationCert VerificationKeyFile StakePoolVerificationKeyHashOrFile OutputFile
-  | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
+  | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
+  | StakeAddressBuild (VerificationKeyOrFile StakeKey) NetworkId (Maybe OutputFile)
+  | StakeKeyRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
+  | StakeKeyDelegationCert
+      (VerificationKeyOrFile StakeKey)
+      (VerificationKeyOrHashOrFile StakePoolKey)
+      OutputFile
+  | StakeKeyDeRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
   deriving (Eq, Show)
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text
