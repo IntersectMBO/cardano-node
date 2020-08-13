@@ -64,10 +64,14 @@ let
         # 2. then drop windows for the test
         packages.cardano-cli.components.tests.cardano-cli-test.platforms =
           with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
+        packages.cardano-cli.components.tests.cardano-cli-golden.platforms =
+          with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
 
         # Needed for the CLI tests.
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
+          lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
+        packages.cardano-cli.components.tests.cardano-cli-golden.build-tools =
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
       }
       {
