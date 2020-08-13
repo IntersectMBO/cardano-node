@@ -8,6 +8,7 @@ module Cardano.Tracing.Render
   , renderPointAsPhrase
   , renderPointForVerbosity
   , renderRealPoint
+  , renderRealPointAsPhrase
   , renderSlotNo
   , renderTip
   , renderTipForVerbosity
@@ -56,6 +57,19 @@ renderRealPoint
 renderRealPoint (RealPoint slotNo headerHash) =
   renderHeaderHash (Proxy @blk) headerHash
     <> "@"
+    <> renderSlotNo slotNo
+
+-- | Render a short phrase describing a 'RealPoint'.
+-- e.g. "62292d753b2ee7e903095bc5f10b03cf4209f456ea08f55308e0aaab4350dda4 at
+-- slot 39920"
+renderRealPointAsPhrase
+  :: forall blk.
+     ConvertRawHash blk
+  => RealPoint blk
+  -> Text
+renderRealPointAsPhrase (RealPoint slotNo headerHash) =
+  renderHeaderHash (Proxy @blk) headerHash
+    <> " at slot "
     <> renderSlotNo slotNo
 
 renderPointForVerbosity

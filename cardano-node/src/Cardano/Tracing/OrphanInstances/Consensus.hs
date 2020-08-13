@@ -22,8 +22,8 @@ import qualified Data.Text as Text
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderHeaderHash, renderHeaderHashForVerbosity,
-                     renderPoint, renderPointAsPhrase, renderPointForVerbosity, renderRealPoint,
-                     renderTipForVerbosity, renderWithOrigin)
+                     renderPoint, renderPointAsPhrase, renderPointForVerbosity,
+                     renderRealPointAsPhrase, renderTipForVerbosity, renderWithOrigin)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash (..),
                      ForgeStateUpdateError, Header, RealPoint, getHeader, headerPoint,
@@ -324,21 +324,21 @@ instance ( ConvertRawHash blk
     formatText = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt -> const $
-          "Ignoring block older than K: " <> renderRealPoint pt
+          "Ignoring block older than K: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreBlockAlreadyInVolDB pt -> \_o ->
-          "Ignoring block already in DB: " <> renderRealPoint pt
+          "Ignoring block already in DB: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreInvalidBlock pt _reason -> \_o ->
-          "Ignoring previously seen invalid block: " <> renderRealPoint pt
+          "Ignoring previously seen invalid block: " <> renderRealPointAsPhrase pt
         ChainDB.AddedBlockToQueue pt sz -> \_o ->
-          "Block added to queue: " <> renderRealPoint pt <> " queue size " <> condenseT sz
+          "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
         ChainDB.BlockInTheFuture pt slot -> \_o ->
-          "Ignoring block from future: " <> renderRealPoint pt <> ", slot " <> condenseT slot
+          "Ignoring block from future: " <> renderRealPointAsPhrase pt <> ", slot " <> condenseT slot
         ChainDB.StoreButDontChange pt -> \_o ->
-          "Ignoring block: " <> renderRealPoint pt
+          "Ignoring block: " <> renderRealPointAsPhrase pt
         ChainDB.TryAddToCurrentChain pt -> \_o ->
-          "Block fits onto the current chain: " <> renderRealPoint pt
+          "Block fits onto the current chain: " <> renderRealPointAsPhrase pt
         ChainDB.TrySwitchToAFork pt _ -> \_o ->
-          "Block fits onto some fork: " <> renderRealPoint pt
+          "Block fits onto some fork: " <> renderRealPointAsPhrase pt
         ChainDB.AddedToCurrentChain es _ _ c -> \_o ->
           "Chain extended, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
@@ -347,7 +347,7 @@ instance ( ConvertRawHash blk
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt -> \_o ->
-            "Invalid block " <> renderRealPoint pt <> ": " <> showT err
+            "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
           ChainDB.InvalidCandidate c -> \_o ->
             "Invalid candidate " <> renderPointAsPhrase (AF.headPoint c)
           ChainDB.ValidCandidate c -> \_o ->
@@ -361,20 +361,20 @@ instance ( ConvertRawHash blk
             renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
             Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
         ChainDB.AddedBlockToVolDB pt _ _ -> \_o ->
-          "Chain added block " <> renderRealPoint pt
+          "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt -> \_o ->
-          "Chain selection run for block previously from future: " <> renderRealPoint pt
+          "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo -> \_o ->
           "Replaying ledger from genesis"
         LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> \_o ->
           "Replaying ledger from snapshot " <> showT snap <> " at " <>
-            renderWithOrigin renderRealPoint tip'
+            renderWithOrigin renderRealPointAsPhrase tip'
         LedgerDB.ReplayedBlock pt replayTo -> \_o ->
           "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
       ChainDB.TraceLedgerEvent ev -> case ev of
         LedgerDB.TookSnapshot snap pt -> \_o ->
-          "Took ledger snapshot " <> showT snap <> " at " <> renderWithOrigin renderRealPoint pt
+          "Took ledger snapshot " <> showT snap <> " at " <> renderWithOrigin renderRealPointAsPhrase pt
         LedgerDB.DeletedSnapshot snap -> \_o ->
           "Deleted old snapshot " <> showT snap
         LedgerDB.InvalidSnapshot snap failure -> \_o ->
