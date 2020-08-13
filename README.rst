@@ -32,15 +32,7 @@ The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardan
 How to build
 ============
 
-Cabal
------
-
-Use `Cabal - Version 3.0 <https://www.haskell.org/cabal/>`_ to build this project:
-
-.. code-block:: console
-
-    $ cd cardano-node
-    $ cabal build
+Documentation for building the node can be found `here <https://docs.cardano.org/projects/cardano-node/en/latest/getting-started/install.html>`_.
 
 Windows Executable
 ==================
