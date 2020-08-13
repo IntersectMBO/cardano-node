@@ -1,0 +1,12 @@
+{
+    "atLeast": {
+        "paymentKeyHashes": [
+            "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413",
+            "f856c0c5839bab22673747d53f1ae9eed84afafb085f086e8e988614",
+            "b275b08c999097247f7c17e77007c7010cd19f20cc086ad99d398538",
+            "686024aecb5884d73a11b9ae4e63931112ba737e878d74638b78513a"
+        ],
+        "required": 2,
+        "total": 4
+    }
+}

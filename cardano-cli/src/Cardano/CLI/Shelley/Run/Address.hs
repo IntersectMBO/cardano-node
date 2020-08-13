@@ -7,14 +7,16 @@ module Cardano.CLI.Shelley.Run.Address
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
-import           Prelude (putStrLn)
+import           Prelude (String, putStrLn)
 
+import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
 
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
@@ -25,7 +27,9 @@ import           Cardano.CLI.Types
 
 data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
+  | ShelleyAddressCmdAesonDecodeError !FilePath !Text
   | ShelleyAddressCmdReadFileError !(FileError TextEnvelopeError)
+  | ShelleyAddressCmdReadFileException !(FileError ())
   | ShelleyAddressCmdWriteFileError !(FileError ())
   deriving Show
 
@@ -36,6 +40,9 @@ renderShelleyAddressCmdError err =
       Text.pack (displayError addrInfoErr)
     ShelleyAddressCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyAddressCmdAesonDecodeError fp decErr -> "Error decoding multisignature JSON object at: "
+                                                   <> Text.pack fp <> " Error: " <> decErr
+    ShelleyAddressCmdReadFileException fileErr -> Text.pack (displayError fileErr)
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
@@ -44,8 +51,8 @@ runAddressCmd cmd =
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
     AddressBuildMultiSig {} -> runAddressBuildMultiSig
+    AddressBuildScript sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
-
 
 runAddressKeyGen :: AddressKeyType
                  -> VerificationKeyFile
@@ -181,3 +188,24 @@ readAddressVerificationKeyFile (VerificationKeyFile vkfile) =
 runAddressBuildMultiSig :: ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildMultiSig =
     liftIO $ putStrLn ("runAddressBuildMultiSig: TODO")
+
+--
+-- Script addresses
+--
+
+runAddressBuildScript
+  :: ScriptFile
+  -> NetworkId
+  -> Maybe OutputFile
+  -> ExceptT ShelleyAddressCmdError IO ()
+runAddressBuildScript (ScriptFile fp) nId mOutFp = do
+  scriptLB <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp)
+                $ LB.readFile fp
+  script <- case eitherDecode scriptLB :: Either String MultiSigScript of
+               Right mss -> return $ makeMultiSigScript mss
+               Left err -> left . ShelleyAddressCmdAesonDecodeError fp $ Text.pack err
+  let payCred = PaymentCredentialByScript $ scriptHash script
+      scriptAddr = serialiseAddress $ makeShelleyAddress nId payCred NoStakeAddress
+  case mOutFp of
+    Just (OutputFile oFp) -> liftIO $ Text.writeFile oFp scriptAddr
+    Nothing -> liftIO $ Text.putStr scriptAddr

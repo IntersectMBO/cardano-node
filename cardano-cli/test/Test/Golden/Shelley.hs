@@ -4,6 +4,7 @@ module Test.Golden.Shelley
   ( keyTests
   , certificateTests
   , metaDatatests
+  , multiSigTests
   , txTests
   ) where
 
@@ -14,8 +15,7 @@ import           Test.Golden.Shelley.Address.Info (golden_shelleyAddressInfo)
 import           Test.Golden.Shelley.Address.KeyGen (golden_shelleyAddressKeyGen)
 import           Test.Golden.Shelley.Genesis.Create (golden_shelleyGenesisCreate)
 import           Test.Golden.Shelley.Genesis.InitialTxIn (golden_shelleyGenesisInitialTxIn)
-import           Test.Golden.Shelley.Genesis.KeyGenDelegate
-                     (golden_shelleyGenesisKeyGenDelegate)
+import           Test.Golden.Shelley.Genesis.KeyGenDelegate (golden_shelleyGenesisKeyGenDelegate)
 import           Test.Golden.Shelley.Genesis.KeyGenGenesis (golden_shelleyGenesisKeyGenGenesis)
 import           Test.Golden.Shelley.Genesis.KeyGenUtxo (golden_shelleyGenesisKeyGenUtxo)
 import           Test.Golden.Shelley.Genesis.KeyHash (golden_shelleyGenesisKeyHash)
@@ -41,6 +41,9 @@ import           Test.Golden.Shelley.TextEnvelope.Certificates.StakePoolCertific
                      (golden_shelleyStakePoolCertificates)
 
 import           Test.Golden.Shelley.Metadata.StakePoolMetadata (golden_stakePoolMetadataHash)
+import           Test.Golden.Shelley.MultiSig.Address (golden_shelleyAllMultiSigAddressBuild,
+                     golden_shelleyAnyMultiSigAddressBuild,
+                     golden_shelleyAtLeastMultiSigAddressBuild)
 import           Test.Golden.Shelley.TextEnvelope.Keys.ExtendedPaymentKeys
                      (golden_shelleyExtendedPaymentKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisDelegateKeys
@@ -125,4 +128,13 @@ metaDatatests =
   H.checkSequential
     $ H.Group "Metadata Goldens"
         [ ("golden_stakePoolMetadataHash", golden_stakePoolMetadataHash)
+        ]
+
+multiSigTests :: IO Bool
+multiSigTests =
+  H.checkSequential
+    $ H.Group "Multisig Goldens"
+        [ ("golden_shelleyAllMultiSigAddressBuild", golden_shelleyAllMultiSigAddressBuild)
+        , ("golden_shelleyAnyMultiSigAddressBuild", golden_shelleyAnyMultiSigAddressBuild)
+        , ("golden_shelleyAtLeastMultiSigAddressBuild", golden_shelleyAtLeastMultiSigAddressBuild)
         ]
