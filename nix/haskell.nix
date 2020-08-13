@@ -56,17 +56,6 @@ let
           # "stm" "terminfo"
         ];
 
-
-        # Tell hydra to skip this test on windows (it does not build)
-        # 1. Set them to all ...
-        packages.cardano-cli.components.all.platforms =
-          with stdenv.lib.platforms; lib.mkForce [ linux darwin windows ];
-        # 2. then drop windows for the test
-        packages.cardano-cli.components.tests.cardano-cli-test.platforms =
-          with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
-        packages.cardano-cli.components.tests.cardano-cli-golden.platforms =
-          with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
-
         # Needed for the CLI tests.
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
