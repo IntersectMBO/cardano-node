@@ -1,10 +1,7 @@
 {
   pkgs
-, mkCluster
-, cardano-cli
-, cardanolib-py
-, cardano-node
 }: let
+  inherit (pkgs) mkCluster cardano-cli cardanolib-py cardano-node;
   stateDir = "./state-cluster-test";
   # We want a really short duration for tests
   cluster' = mkCluster {
