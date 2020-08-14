@@ -94,6 +94,8 @@ Add the following to your .bashrc file and source it.
 
 #### Download the source code for cardano-node
 
+Back in the home directory: 
+
     git clone https://github.com/input-output-hk/cardano-node.git
 
 Change the working directory to the downloaded source code folder:
