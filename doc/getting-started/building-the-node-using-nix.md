@@ -1,4 +1,4 @@
-# Building Cardano Node using Nix
+# Building Cardano Node
 
 There are a number of ways the Cardano Node can be built and run, but the following document
 details the Nix and Ubuntu/Debian methods. The Nix method is probably more robust and foolproof
@@ -50,9 +50,13 @@ to use the ghcup command for the next steps
 
 Now install and activate the required GHC version
 ```
-ghcup install 8.6.5
-ghcup set 8.6.5
+ghcup install ghc 8.6.5
+ghcup set ghc 8.6.5
 ghc --version
+```
+or use the interactive TUI to do so:
+```
+ghcup tui
 ```
 The code in the Haskell node also requires that the development packages for a couple of Linux
 system libraries be installed:
