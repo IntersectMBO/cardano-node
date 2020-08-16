@@ -37,6 +37,9 @@ library
                        Cardano.Node.Handlers.Shutdown
                        Cardano.Node.Handlers.TopLevel
                        Cardano.Node.Orphans
+                       Cardano.Node.Platform.Constants
+                       Cardano.Node.Platform.Posix
+                       Cardano.Node.Platform.Windows
                        Cardano.Node.Protocol
                        Cardano.Node.Protocol.Byron
                        Cardano.Node.Protocol.Cardano

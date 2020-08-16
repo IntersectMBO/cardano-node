@@ -1,25 +1,30 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
-
 module Cardano.Node.Run
   ( runNode
   ) where
 
+import           Cardano.BM.Data.Aggregated (Measurable (..))
+import           Cardano.BM.Data.Backend
+import           Cardano.BM.Data.BackendKind (BackendKind (..))
+import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
+import           Cardano.BM.Data.Transformers (setHostname)
+import           Cardano.BM.Trace
+import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
+                     shutdownLoggingLayer)
+import           Cardano.Node.Platform.Constants (isPosix)
+import           Cardano.Node.Types
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
-import           Prelude (String)
-
-import qualified Control.Concurrent.Async as Async
+import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..),
+                     traceBlockFetchDecisions)
 import           Control.Tracer
-import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
 import           Data.Proxy (Proxy (..))
@@ -29,38 +34,12 @@ import           Data.Version (showVersion)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
-import           System.Directory (canonicalizePath, makeAbsolute)
-import           System.Environment (lookupEnv)
-
-import           Cardano.BM.Data.Aggregated (Measurable (..))
-import           Paths_cardano_node (version)
-#ifdef UNIX
-import qualified Cardano.BM.Configuration.Model as CM
-import           Cardano.BM.Data.Backend
-import           Cardano.BM.Data.BackendKind (BackendKind (..))
-#endif
-import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
-import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
-import           Cardano.BM.Data.Transformers (setHostname)
-import           Cardano.BM.Trace
-
-import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..), shutdownLoggingLayer)
-#ifdef UNIX
-import           Cardano.Tracing.Config (traceBlockFetchDecisions)
-#endif
-import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
-import           Cardano.Node.Types
-
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
                      NodeKernel, RunNode (..), RunNodeArgs (..))
-import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -68,23 +47,32 @@ import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), RemoteConnectionId)
+import           Paths_cardano_node (version)
+import           Prelude (String)
+import           System.Directory (canonicalizePath, makeAbsolute)
+import           System.Environment (lookupEnv)
 
-import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
+import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
+                     gatherConfiguredSockets)
+import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..), mkConsensusProtocol,
                      renderProtocolInstantiationError)
-import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..), gatherConfiguredSockets)
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.TUI.Run
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
-#ifdef UNIX
-import           Cardano.Node.TUI.Run
-#endif
 
+import qualified Cardano.BM.Configuration.Model as CM
+import qualified Control.Concurrent.Async as Async
+import qualified Data.ByteString.Char8 as BSC
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import qualified Ouroboros.Consensus.Config as Consensus
+import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
 runNode
   :: LoggingLayer
@@ -105,11 +93,7 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
-#ifdef UNIX
-    let viewmode = ncViewMode nc
-#else
-    let viewmode = SimpleView
-#endif
+    let viewmode = if isPosix then ncViewMode nc else SimpleView
 
     upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
 
@@ -126,37 +110,36 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
         Async.uninterruptibleCancel upTimeThread
         Async.uninterruptibleCancel peersThread
 
-      LiveView -> do
-#ifdef UNIX
-        let c = llConfiguration loggingLayer
+      LiveView -> if isPosix
+        then do
+          let c = llConfiguration loggingLayer
 
-        -- check required tracers are turned on
-        checkLiveViewrequiredTracers (ncTraceConfig nc)
+          -- check required tracers are turned on
+          checkLiveViewrequiredTracers (ncTraceConfig nc)
 
-        -- We run 'handleSimpleNode' as usual and run TUI thread as well.
-        -- turn off logging to the console, only forward it through a pipe to a central logging process
-        CM.setDefaultBackends c [KatipBK, TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
+          -- We run 'handleSimpleNode' as usual and run TUI thread as well.
+          -- turn off logging to the console, only forward it through a pipe to a central logging process
+          CM.setDefaultBackends c [KatipBK, TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
 
-        be :: LiveViewBackend blk Text <- realize c
-        let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
-        llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
-        liveViewPostSetup be npm nc
-        captureCounters be trace
+          be :: LiveViewBackend blk Text <- realize c
+          let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
+          llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
+          liveViewPostSetup be npm nc
+          captureCounters be trace
 
-        -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace tracers npm
-                       (setNodeKernel nodeKernelData)
-        setNodeThread be nodeThread
+          -- User will see a terminal graphics and will be able to interact with it.
+          nodeThread <- Async.async $ handleSimpleNode p trace tracers npm
+                        (setNodeKernel nodeKernelData)
+          setNodeThread be nodeThread
 
-        peersThread <- Async.async $ handlePeersList trace nodeKernelData be
+          peersThread <- Async.async $ handlePeersList trace nodeKernelData be
 
-        void $ Async.waitAny [nodeThread, upTimeThread, peersThread]
-#else
-        peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
-        handleSimpleNode p trace tracers npm (const $ pure ())
-        Async.uninterruptibleCancel upTimeThread
-        Async.uninterruptibleCancel peersThread
-#endif
+          void $ Async.waitAny [nodeThread, upTimeThread, peersThread]
+        else do
+          peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
+          handleSimpleNode p trace tracers npm (const $ pure ())
+          Async.uninterruptibleCancel upTimeThread
+          Async.uninterruptibleCancel peersThread
     shutdownLoggingLayer loggingLayer
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
@@ -169,7 +152,6 @@ logTracingVerbosity nc tracer =
         MinimalVerbosity -> traceWith tracer $ "tracing verbosity = minimal verbosity "
         MaximalVerbosity -> traceWith tracer $ "tracing verbosity = maximal verbosity "
 
-#ifdef UNIX
 checkLiveViewrequiredTracers :: TraceOptions -> IO ()
 checkLiveViewrequiredTracers traceConfig = do
   reqTracers <- case traceConfig of
@@ -182,13 +164,12 @@ checkLiveViewrequiredTracers traceConfig = do
   if all (== True) reqTracers
   then pure ()
   else do putTextLn "for full functional 'LiveView', please turn on the following \
-                    \tracers in the configuration file: TraceBlockFetchDecisions, \\
+                    \tracers in the configuration file: TraceBlockFetchDecisions, \
                     \TraceChainDb, TraceForge & TraceMempool"
 
           putTextLn "     (press enter to continue)"
           _ <- getLine
           pure ()
-#endif
 
 -- | Add the application name and unqualified hostname to the logging
 -- layer basic trace.
@@ -222,7 +203,6 @@ traceNodeUpTime tr nodeLaunchTime = do
   threadDelay 1000000
   traceNodeUpTime tr nodeLaunchTime
 
-#ifdef UNIX
 -- | Every 2 seconds get the current peers list and store it to LiveViewBackend
 --   (if it's activated) and trace it (for example, for forwarding to an exterrnal process).
 handlePeersList
@@ -236,7 +216,6 @@ handlePeersList tr nodeKern lvbe = forever $ do
   storePeersInLiveView peers lvbe
   tracePeers tr peers
   threadDelay 2000000 -- 2 seconds.
-#endif
 
 handlePeersListSimple
   :: Trace IO Text
