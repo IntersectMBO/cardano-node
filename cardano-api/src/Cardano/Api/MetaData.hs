@@ -78,7 +78,7 @@ validateTxMetadata
   :: TxMetadata
   -> Either TxMetadataValidationError TxMetadata
 validateTxMetadata txMd@(TxMetadata (MetaData mdMap)) =
-    txMd <$ for_ (Map.elems mdMap) validate
+    txMd <$ for_ mdMap validate
   where
     validate :: MetaDatum -> Either TxMetadataValidationError ()
     validate metaDatum =
