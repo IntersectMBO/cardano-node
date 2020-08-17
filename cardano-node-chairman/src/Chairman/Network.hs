@@ -38,6 +38,7 @@ canConnect sockAddr = IO.bracket (IO.socket AF_INET Stream 6) IO.close' $ \sock 
     Left e
       | (Errno <$> IO.ioe_errno e) == Just eCONNREFUSED -> return False
       | "WSAECONNREFUSED" `L.isInfixOf` show e -> return False
+      | "WSAECONNRESET" `L.isInfixOf` show e -> return False
       | otherwise -> IO.throwIO e
 
 -- | Open a socket at the specified port for listening
