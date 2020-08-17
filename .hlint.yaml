@@ -19,7 +19,6 @@
 - ignore: {name: "Avoid lambda"}
 - ignore: {name: "Reduce duplication"}
 - ignore: {name: "Redundant as"}
-- ignore: {name: "Parse error: lexical error in string/character literal at character '\\n'"}
 - ignore: {name: "Replace case with maybe"}
 - ignore: {name: "Use first"}
 - ignore: {name: "Use record patterns"}
