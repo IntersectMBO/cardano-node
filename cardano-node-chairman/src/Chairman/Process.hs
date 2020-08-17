@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Common.Process
+module Chairman.Process
   ( createProcess
   , execFlex
   , getProjectBase
@@ -11,6 +11,7 @@ module Test.Common.Process
   , waitForProcess
   ) where
 
+import           Chairman.Base (Integration)
 import           Control.Concurrent.Async
 import           Control.Exception
 import           Control.Monad
@@ -31,7 +32,6 @@ import           Hedgehog.Internal.Source (getCaller)
 import           System.Exit (ExitCode)
 import           System.IO (Handle)
 import           System.Process (CmdSpec (..), CreateProcess (..), ProcessHandle)
-import           Test.Common.Base (Integration)
 import           Text.Show
 
 import qualified Data.List as L

@@ -6,6 +6,7 @@ packages:
   - cardano-cli
   - cardano-config
   - cardano-node
+  - cardano-node-chairman
 
 ghc-options:
   cardano-config:       -Wall -fwarn-redundant-constraints

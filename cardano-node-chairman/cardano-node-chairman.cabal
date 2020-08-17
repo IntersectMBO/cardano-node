@@ -1,0 +1,67 @@
+cabal-version: 2.4
+
+name:                   cardano-node-chairman
+version:                1.18.0
+description:            The cardano full node
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+extra-source-files:     ChangeLog.md
+
+library
+  hs-source-dirs:       src
+  build-depends:        base >= 4.12 && < 5
+                      , async
+                      , directory
+                      , hedgehog
+                      , mmorph
+                      , network
+                      , process
+                      , random
+                      , resourcet
+                      , temporary
+                      , time
+                      , unliftio
+  exposed-modules:      Chairman.Base
+                        Chairman.Network
+                        Chairman.Process
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+
+test-suite cardano-node-chairman-test
+  hs-source-dirs:       test
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+  build-depends:        base >= 4.12 && < 5
+                      , async
+                      , cardano-node-chairman
+                      , directory
+                      , hedgehog
+                      , mmorph
+                      , network
+                      , process
+                      , random
+                      , resourcet
+                      , temporary
+                      , time
+                      , unliftio
+  other-modules:        Test.Cardano.Node.Chairman
+                        Test.Common.NetworkSpec
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

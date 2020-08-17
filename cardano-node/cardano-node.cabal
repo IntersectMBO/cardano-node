@@ -296,13 +296,8 @@ test-suite cardano-node-test
                       , time
                       , unliftio
 
-  other-modules:        Test.Cardano.Node.Chairman
-                        Test.Cardano.Node.Gen
+  other-modules:        Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
-                        Test.Common.Base
-                        Test.Common.Network
-                        Test.Common.NetworkSpec
-                        Test.Common.Process
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
