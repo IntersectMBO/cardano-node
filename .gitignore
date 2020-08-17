@@ -47,3 +47,4 @@ hie.yaml
 tmp
 /cardano-node/logs
 /chairman/db
+/html

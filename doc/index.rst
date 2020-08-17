@@ -18,6 +18,7 @@ cardano-node
 
    getting-started/install
    getting-started/building-the-node-using-nix
+   getting-started/building-the-documentation
    getting-started/understanding-config-files
    getting-started/cli
 
