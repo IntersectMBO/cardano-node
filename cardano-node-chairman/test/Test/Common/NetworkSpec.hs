@@ -19,13 +19,13 @@ import           Network.Socket (Socket)
 import           Prelude (error)
 import           System.IO (IO)
 
+import qualified Chairman.Base as H
+import qualified Chairman.Network as IO
 import qualified Control.Monad.Trans.Resource as IO
 import qualified Data.List as L
 import qualified Hedgehog as H
 import qualified Network.Socket as IO
 import qualified System.Random as IO
-import qualified Test.Common.Base as H
-import qualified Test.Common.Network as IO
 import qualified UnliftIO.Exception as IO
 
 prop_isPortOpen_False :: Property
