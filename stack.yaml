@@ -23,6 +23,7 @@ extra-deps:
   - binary-0.8.7.0
   - bimap-0.4.0
   - canonical-json-0.6.0.0
+  - cborg-0.2.4.0
   - clock-0.8
   - config-ini-0.2.4.0
   - containers-0.5.11.0
@@ -137,12 +138,6 @@ extra-deps:
         - ouroboros-network-testing
         - ouroboros-network-framework
         - Win32-network
-
-    # Includes updated pretty printing function
-  - git: https://github.com/well-typed/cborg.git
-    commit: 42a83192749774268337258f4f94c97584b80ca6
-    subdirs:
-        - cborg
 
 nix:
     shell-file: nix/stack-shell.nix
