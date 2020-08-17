@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Common.Base
+module Chairman.Base
   ( propertyOnce
   , failWithCustom
   , threadDelay

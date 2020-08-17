@@ -1,4 +1,4 @@
-module Test.Common.Network
+module Chairman.Network
   ( isPortOpen
   , listenOn
   ) where

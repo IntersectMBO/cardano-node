@@ -97,7 +97,7 @@ let
         packages.cardano-cli.preCheck = "export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli";
 
         # cardano-node-test depends on cardano-node
-        packages.cardano-node.preCheck = "
+        packages.cardano-node-chairman.preCheck = "
           export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli
           export CARDANO_NODE=${pkgSet.cardano-node.components.exes.cardano-node}/bin/cardano-node
           export CARDANO_NODE_SRC=${ ./.. }

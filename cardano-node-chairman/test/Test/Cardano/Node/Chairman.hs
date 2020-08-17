@@ -19,13 +19,15 @@ import           Hedgehog (Property, discover)
 import           System.IO (IO)
 import           Text.Show
 
+import qualified Chairman.Base as H
+import qualified Chairman.Network as IO
+import qualified Chairman.Process as H
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified Test.Common.Base as H
-import qualified Test.Common.Network as IO
-import qualified Test.Common.Process as H
+
+{- HLINT ignore "Redundant <&>" -}
 
 prop_spawnOneNode :: Property
 prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> do
