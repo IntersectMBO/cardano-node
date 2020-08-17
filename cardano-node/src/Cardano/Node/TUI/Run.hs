@@ -50,11 +50,7 @@ liveViewPostSetup lvbe ncli nc = do
     -- an ID. We don't even have a port number that we know if we're given our
     -- listening socket via systemd socket activation.
     nodeId :: Text
-    nodeId =
-        Text.pack $ "Port: " <>
-        case naPort <$> nodeAddr ncli of
-          Nothing -> "-"
-          Just port -> show port
+    nodeId = Text.pack $ "Port: " <> maybe "-" show (naPort <$> nodeAddr ncli)
 
 setNodeThread :: NFData a => LiveViewBackend blk a -> Async.Async () -> IO ()
 setNodeThread lvbe nodeThr =
