@@ -126,6 +126,8 @@ pAddressCmd =
           (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
       , Opt.command "build-multisig"
           (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a Shelley payment multi-sig address.")
+      , Opt.command "build-script"
+          (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address.")
       , Opt.command "info"
           (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
       ]
@@ -150,6 +152,12 @@ pAddressCmd =
     pAddressBuildMultiSig :: Parser AddressCmd
     pAddressBuildMultiSig = pure AddressBuildMultiSig
 
+    pAddressBuildScript :: Parser AddressCmd
+    pAddressBuildScript = AddressBuildScript
+                            <$> pScript
+                            <*> pNetworkId
+                            <*> pMaybeOutputFile
+
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
 
@@ -169,6 +177,16 @@ pPaymentVerificationKeyFile =
         )
     )
 
+pScript :: Parser ScriptFile
+pScript =
+  ScriptFile <$>
+    ( Opt.strOption
+        (  Opt.long "script-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the script."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+    )
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =

@@ -10,6 +10,7 @@ module Cardano.CLI.Types
   , SigningKeyFile (..)
   , SocketPath (..)
   , StakePoolVerificationKeyHashOrFile (..)
+  , ScriptFile (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
   ) where
@@ -78,3 +79,6 @@ newtype UpdateProposalFile = UpdateProposalFile { unUpdateProposalFile :: FilePa
 newtype VerificationKeyFile
   = VerificationKeyFile FilePath
   deriving (Eq, Show)
+
+newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
+                     deriving (Eq, Show)
