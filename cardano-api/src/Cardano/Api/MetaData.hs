@@ -78,23 +78,13 @@ validateTxMetadata
   :: TxMetadata
   -> Either TxMetadataValidationError TxMetadata
 validateTxMetadata txMd@(TxMetadata (MetaData mdMap)) =
-    txMd <$ traverse_ validate (Map.elems mdMap)
+    txMd <$ for_ (Map.elems mdMap) validate
   where
     validate :: MetaDatum -> Either TxMetadataValidationError ()
     validate metaDatum =
       case metaDatum of
-        Map [] -> Right ()
-        Map ((k, v):mdPairs) ->
-          case (validate k, validate v) of
-            (Left err, _) -> Left err
-            (_, Left err) -> Left err
-            _ -> validate (Map mdPairs)
-
-        List [] -> Right ()
-        List (md:mds) ->
-          case validate md of
-            Right _ -> validate (List mds)
-            Left err -> Left err
+        Map mdPairs -> for_ mdPairs $ \(k, v) -> validate k >> validate v
+        List mds -> for_ mds validate
 
         I _ -> Right ()
 
