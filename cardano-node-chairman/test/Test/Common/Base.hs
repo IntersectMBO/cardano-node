@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Common.Base
   ( propertyOnce
@@ -13,6 +14,7 @@ module Test.Common.Base
   , noteShowIO
   , noteTempFile
   , assertByDeadlineIO
+  , showUTCTimeSeconds
   , Integration
   ) where
 
@@ -36,11 +38,13 @@ import           GHC.Stack (CallStack, HasCallStack, callStack, getCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (Diff, liftTest, mkTest)
 import           Hedgehog.Internal.Source (getCaller)
+import           Prelude (floor)
 import           System.IO (FilePath, IO)
 import           Text.Show
 
 import qualified Control.Concurrent as IO
 import qualified Data.Time.Clock as DTC
+import qualified Data.Time.Clock.POSIX as DTC
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -139,3 +143,7 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
       else do
         H.annotateShow currentTime
         failWithCustom GHC.callStack Nothing "Condition not met by deadline"
+
+-- | Show 'UTCTime' in seconds since epoch
+showUTCTimeSeconds :: UTCTime -> String
+showUTCTimeSeconds time = show @Int64 (floor (DTC.utcTimeToPOSIXSeconds time))
