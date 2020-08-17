@@ -6,8 +6,21 @@ module Test.Cardano.Node.Chairman
   ( tests
   ) where
 
-import           Cardano.Prelude
+import           Control.Monad
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Bool
+import           Data.Function
+import           Data.Functor
+import           Data.Int
+import           Data.Maybe
+import           Data.Semigroup
+import           Data.String (String)
+import           Data.Time.Clock (UTCTime)
+import           GHC.Num
 import           Hedgehog (Property, discover)
+import           Prelude (floor)
+import           System.IO (IO)
+import           Text.Show
 
 import qualified Data.Time.Clock as DTC
 import qualified Data.Time.Clock.POSIX as DTC
@@ -17,6 +30,10 @@ import qualified System.Process as IO
 import qualified Test.Common.Base as H
 import qualified Test.Common.Network as IO
 import qualified Test.Common.Process as H
+
+
+showUTCTimeSeconds :: UTCTime -> String
+showUTCTimeSeconds time = show @Int64 (floor (DTC.utcTimeToPOSIXSeconds time))
 
 prop_spawnOneNode :: Property
 prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> do
@@ -30,7 +47,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
   void $ H.execCli
     [ "genesis"
     , "--genesis-output-dir", tempDir <> "/genesis"
-    , "--start-time", show @Int64 (floor (DTC.utcTimeToPOSIXSeconds startTime))
+    , "--start-time", showUTCTimeSeconds startTime
     , "--protocol-parameters-file", base <> "/scripts/protocol-params.json"
     , "--k", "2160"
     , "--protocol-magic", "459045235"

@@ -5,6 +5,7 @@ packages:
     cardano-cli
     cardano-config
     cardano-node
+    cardano-node-chairman
 
 package cardano-api
   ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
@@ -16,6 +17,9 @@ package cardano-config
   ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
 package cardano-node
+  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+
+package cardano-node-chairman
   ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
 -- ---------------------------------------------------------
@@ -34,6 +38,9 @@ package cardano-cli
   tests: True
 
 package cardano-node
+  tests: True
+
+package cardano-node-chairman
   tests: True
 
 -- The following is needed because Nix is doing something crazy.
