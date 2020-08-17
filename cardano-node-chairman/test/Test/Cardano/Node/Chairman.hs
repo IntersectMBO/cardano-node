@@ -101,5 +101,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
 
   H.threadDelay 10000000
 
+  H.failure
+
 tests :: IO Bool
 tests = H.checkParallel $$discover
