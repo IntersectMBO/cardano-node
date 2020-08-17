@@ -84,12 +84,10 @@ let
   } // (builtins.listToAttrs (map makeRelease [
     # Environments we want to build scripts for on hydra
     "mainnet"
-    "mainnet_candidate"
+    "testnet"
     "staging"
     "shelley_qa"
-    "shelley_staging"
-    "shelley_testnet"
-    "testnet"
+    "mainnet_candidate_4"
   ]));
 
   # restrict supported systems to a subset where tests (if exist) are required to pass:
@@ -159,7 +157,7 @@ let
       (collectJobs jobs.native.exes)
       (optional windowsBuild jobs.cardano-node-win64)
       (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
-      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" "shelley_testnet" ])
+      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" ])
       [
         jobs.cardano-node-linux
         jobs.cardano-node-macos
