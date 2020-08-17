@@ -46,9 +46,6 @@ package ouroboros-consensus
 package ouroboros-consensus-cardano
   tests: False
 
-package ouroboros-consensus-cardano
-  tests: False
-
 package ouroboros-network
   tests: False
 
