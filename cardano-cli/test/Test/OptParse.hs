@@ -39,7 +39,7 @@ import qualified Data.Time.Format as DT
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
-import qualified Prelude as Prelude
+import qualified Prelude
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.Exit as IO
