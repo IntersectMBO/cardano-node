@@ -7,7 +7,6 @@
 
 
 # Warnings currently triggered by your code
-- ignore: {name: "Use bimap"}
 - ignore: {name: "Move brackets to avoid $"}
 - ignore: {name: "Redundant bracket"}
 - ignore: {name: "Redundant flip"}
