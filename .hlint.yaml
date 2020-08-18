@@ -15,7 +15,6 @@
 - ignore: {name: "Use camelCase"}
 - ignore: {name: "Use newtype instead of data"}
 - ignore: {name: "Redundant $"}
-- ignore: {name: "Avoid lambda"}
 - ignore: {name: "Reduce duplication"}
 - ignore: {name: "Use first"}
 - ignore: {name: "Use record patterns"}

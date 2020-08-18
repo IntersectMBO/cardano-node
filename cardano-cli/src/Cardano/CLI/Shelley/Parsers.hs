@@ -1509,12 +1509,10 @@ eDNSName str =
     Just dnsName -> Right . Text.encodeUtf8 . Shelley.dnsToText $ dnsName
 
 pSingleHostAddress :: Parser StakePoolRelay
-pSingleHostAddress =
-  liftA3
-    (\ip4 ip6 port -> singleHostAddress ip4 ip6 port)
-    (optional pIpV4)
-    (optional pIpV6)
-    pPort
+pSingleHostAddress = singleHostAddress
+  <$> optional pIpV4
+  <*> optional pIpV6
+  <*> pPort
  where
   singleHostAddress :: Maybe IP.IPv4 -> Maybe IP.IPv6 -> PortNumber -> StakePoolRelay
   singleHostAddress ipv4 ipv6 port =
