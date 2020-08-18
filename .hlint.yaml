@@ -17,7 +17,6 @@
 - ignore: {name: "Redundant $"}
 - ignore: {name: "Avoid lambda"}
 - ignore: {name: "Reduce duplication"}
-- ignore: {name: "Redundant as"}
 - ignore: {name: "Use first"}
 - ignore: {name: "Use record patterns"}
 - ignore: {name: "Use :"}
