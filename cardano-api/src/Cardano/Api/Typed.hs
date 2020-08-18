@@ -2300,7 +2300,7 @@ makeShelleyUpdateProposal params genesisKeyHashes epochno =
            (Map.fromList
               [ (kh, ppup) | GenesisKeyHash kh <- genesisKeyHashes ]))
         epochno
-  where
+
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
                        -> Shelley.PParamsUpdate
 toShelleyPParamsUpdate

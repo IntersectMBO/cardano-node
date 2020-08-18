@@ -48,3 +48,4 @@ tmp
 /cardano-node/logs
 /cardano-node-chairman/logs
 /chairman/db
+/html
