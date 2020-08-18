@@ -1,6 +1,16 @@
 # Changelog for cardano-api
 
+## 1.19.0 -- August 2020
+
+- Support for scripts and specifically multi-sig scripts (#1623)
+- Support for JSON syntax for multi-sig scripts (#1660)
+- Support for converting tx metadata to/from JSON (#1606, #1682)
+- Support for Bech32-encoded stake pool IDs (#1528, #1638)
+- Code tidying using hlint and style tool (#1590, #1625, #1663, #1707, #1708)
+
 ## 1.18.0 -- July 2020
+
+None
 
 ## 1.17.0 -- July 2020
 
