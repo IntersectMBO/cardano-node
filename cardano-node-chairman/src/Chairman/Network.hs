@@ -8,17 +8,17 @@ import           Control.Monad.Fail
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Data.Bool
 import           Data.Either
-import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Int
 import           Data.Maybe
-import           Foreign.C.Error (Errno (..), eCONNREFUSED)
+import           Foreign.C.Error (Errno (..))
 import           Network.Socket (Family (AF_INET), SockAddr (..), Socket, SocketType (Stream))
 import           System.IO (IO)
 import           Text.Show (show)
 
 import qualified Data.List as L
+import qualified Foreign.C.Error as E
 import qualified GHC.IO.Exception as IO
 import qualified Network.Socket as IO
 import qualified UnliftIO.Exception as IO
@@ -36,10 +36,12 @@ canConnect sockAddr = IO.bracket (IO.socket AF_INET Stream 6) IO.close' $ \sock 
   case result of
     Right () -> return True
     Left e
-      | (Errno <$> IO.ioe_errno e) == Just eCONNREFUSED -> return False
+      | matchingErrNo (Errno <$> IO.ioe_errno e) -> return False
       | "WSAECONNREFUSED" `L.isInfixOf` show e -> return False
       | "WSAECONNRESET" `L.isInfixOf` show e -> return False
       | otherwise -> IO.throwIO e
+  where matchingErrNo :: Maybe Errno -> Bool
+        matchingErrNo = maybe False (`L.elem` [E.eCONNRESET, E.eCONNREFUSED])
 
 -- | Open a socket at the specified port for listening
 listenOn :: (MonadIO m, MonadFail m) => Int -> m Socket
