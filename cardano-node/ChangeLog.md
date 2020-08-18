@@ -1,5 +1,47 @@
 # Changelog for cardano-node
 
+## 1.19.0 -- August 2020
+
+### node changes
+- Code organisation refactoring (#1457, #1594, #1621)
+- Fix the live view display of memory metrics (#1552)
+- Add the KES current and remaining periods to the live view (#1503)
+- Fix incorrect console state after live view shutdown (#1569)
+- Minor improvement to rendering of points in unstructured log output (#1693)
+- Minor internal cleanup of tracing code (#570, #1619, #1651)
+- New node+cli integration tests (#1617, #1644, #1657, #1680, #1683, #1705)
+- Improve error messages for problems in the JSON topology file (#1446, #1634)
+- Code tidying using hlint and style tool (#1590, #1625, #1663, #1707, #1708)
+
+### consensus changes
+- Performance optimisations (#2512, #2520, 2521)
+- Fix size accounting in block forging to avoid over-filling blocks (#2469)
+- Fix size accounting for block fetching (#2480, #2481, #2484)
+- Support to forget old copies of KES keys, pending crypto support (#2446)
+- Various internal clean-ups and refactoring (#2446)
+- Extended automatic tests to cover more parameters (#2497, #2498, #2235, #2491)
+- Improve automatic Shelley consensus tests based on ledger tests (#2490, #2503)
+- Drop an unnecessary runtime dependency on the io-sim test library (#2507)
+- Allow the db-validator tool to work with networks other than mainnet (#2493)
+
+### ledger changes
+- Performance optimisations (#1707, #1760, #1771, #1779, #1785, #1786)
+- Additions to enable consensus layer performance optimisations (#1742, #1789)
+- Fix pool ranking calculation for newly registered pools (#1724)
+- Correct which hash algorithm is used for script hashes (#1746)
+- Minor corrections to the formal spec arising from internal review and internal
+  audit (#1714, #1717, #1725, #1733, #1728, #1745, #1748, #1751, #1752, #1753,
+  #1764, #1765, #1773)
+- Minor correction to the CDDL specification for tx metadata (#1743)
+- Refactoring to how the tests handle crypto types (#1735, #1739, #1754)
+- Extend test tx generator to cover tx metadata (#1731)
+- Refactoring in the automatic tests (#1749)
+- Reorganise the ledger rule examples (#1741, #1757, #1763, #1778)
+- Additional ledger assertions, to use in tests (#1780)
+
+### network changes
+- Introduce a new keep-alive mini protocol, but not yet used (#2251)
+
 ## 1.18.0 -- July 2020
 
 ### node changes
