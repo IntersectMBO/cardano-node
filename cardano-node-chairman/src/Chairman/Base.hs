@@ -14,7 +14,11 @@ module Chairman.Base
   , noteShowIO
   , noteTempFile
   , assertByDeadlineIO
+  , assertFileExists
   , showUTCTimeSeconds
+  , listDirectory
+  , writeFile
+  , maxUnixDomainSocketNameLength
   , Integration
   ) where
 
@@ -50,6 +54,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Info as IO
+import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 
 type Integration a = H.PropertyT (ResourceT IO) a
@@ -144,6 +149,20 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
         H.annotateShow currentTime
         failWithCustom GHC.callStack Nothing "Condition not met by deadline"
 
+assertFileExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+assertFileExists path = GHC.withFrozenCallStack $ do
+  fileExists <- H.evalIO $ IO.doesFileExist path
+  unless fileExists $ failWithCustom GHC.callStack Nothing $ "Missing file: " <> path
+
 -- | Show 'UTCTime' in seconds since epoch
 showUTCTimeSeconds :: UTCTime -> String
 showUTCTimeSeconds time = show @Int64 (floor (DTC.utcTimeToPOSIXSeconds time))
+
+listDirectory :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m [FilePath]
+listDirectory = GHC.withFrozenCallStack . H.evalIO . IO.listDirectory
+
+writeFile :: (MonadIO m, HasCallStack) => FilePath -> String -> H.PropertyT m ()
+writeFile filePath contents = GHC.withFrozenCallStack . H.evalIO $ IO.writeFile filePath contents
+
+maxUnixDomainSocketNameLength :: Int
+maxUnixDomainSocketNameLength = 104
