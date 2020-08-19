@@ -20,7 +20,6 @@ import           Prelude (String)
 import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -58,7 +57,8 @@ import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
-import           Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
+import           Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..),
+                     PoolDistr (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Shelley.Spec.Ledger.LedgerState (EpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
@@ -317,7 +317,7 @@ printStakeDistribution (PoolDistr stakeDist) = do
                    -> String
     showStakeDistr poolId stakeFraction _vrfKeyId =
       concat
-        [ BS.unpack (serialiseToRawBytesHex poolId)
+        [ Text.unpack (serialiseToBech32 poolId)
         , "   "
         , showEFloat (Just 3) (fromRational stakeFraction :: Double) ""
 -- TODO: we could show the VRF id, but it will then not fit in 80 cols
