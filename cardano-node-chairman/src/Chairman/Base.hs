@@ -14,7 +14,6 @@ module Chairman.Base
   , noteShowIO
   , noteTempFile
   , assertByDeadlineIO
-  , assertFileExists
   , showUTCTimeSeconds
   , listDirectory
   , writeFile
@@ -149,11 +148,6 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
       else do
         H.annotateShow currentTime
         failWithCustom GHC.callStack Nothing "Condition not met by deadline"
-
-assertFileExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
-assertFileExists path = GHC.withFrozenCallStack $ do
-  fileExists <- H.evalIO $ IO.doesFileExist path
-  unless fileExists $ failWithCustom GHC.callStack Nothing $ "Missing file: " <> path
 
 -- | Show 'UTCTime' in seconds since epoch
 showUTCTimeSeconds :: UTCTime -> String

@@ -89,7 +89,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
     hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
-    H.diff (L.length socketFile) (<=) H.maxUnixDomainSocketNameLength
+    H.diff (L.length socketFile) (<=) IO.maxSocketNameLength
 
     (Just hIn, _mOut, _mErr, hProcess, _) <- H.createProcess =<<
       ( H.procNode
