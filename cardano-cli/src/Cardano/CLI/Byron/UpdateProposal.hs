@@ -106,7 +106,7 @@ createProtocolParametersUpdate
   :: ProtocolParametersUpdate
   -> [ParametersToUpdate]
   -> ProtocolParametersUpdate
-createProtocolParametersUpdate init paramsToUpdate = go init paramsToUpdate
+createProtocolParametersUpdate = go
  where go i [] = i
        go i (paramToUpdate : rest) =
          case paramToUpdate of
