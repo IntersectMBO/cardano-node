@@ -45,7 +45,7 @@ library
                         -Wpartial-fields
                         -Wcompat
 
-test-suite cardano-node-chairman-test
+test-suite test
   hs-source-dirs:       test
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
