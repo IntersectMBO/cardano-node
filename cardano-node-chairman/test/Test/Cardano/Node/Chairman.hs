@@ -73,7 +73,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
     dbDir <- H.noteShow $ tempDir <> "/db/node-" <> si
     nodeStdoutFile <- H.noteTempFile tempDir $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempDir $ "cardano-node-" <> si <> ".stderr.log"
-    socketFile <- H.noteShow . IO.adjustSocketPath $ socketDir <> "/node-" <> si <> "-socket"
+    socketFile <- H.noteShow . IO.adjustSocketPath $ socketDir <> "/node-" <> si
     portString <- H.noteShow $ "300" <> si <> ""
     topologyFile <- H.noteShow $ tempDir <> "/topology-node-" <> si <> ".json"
     configFile <- H.noteShow $ tempDir <> "/config-" <> si <> ".yaml"
@@ -119,7 +119,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    socketFile <- H.noteShow . IO.adjustSocketPath $ socketDir <> "/node-" <> si <> "-socket"
+    socketFile <- H.noteShow . IO.adjustSocketPath $ socketDir <> "/node-" <> si
     H.assertM $ H.doesSocketExist socketFile
 
 tests :: IO Bool
