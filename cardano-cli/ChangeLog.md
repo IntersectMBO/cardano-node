@@ -1,6 +1,21 @@
 # Changelog for cardano-cli
 
+## 1.19.0 -- August 2020
+
+- Support for converting ITN extended keys to Shelley stake keys (#1579)
+- Support for converting password-protected Byron signing keys (#1633)
+- Support for building script addresses (#1641)
+- Improve the output of the stake-address-info query (#1546, #1636, #1671)
+- Support for Bech32-encoded stake pool IDs (#1528, #1638, #1730)
+- Reorganise the Byron CLI commands similarly to the Shelley ones (#1609, #1628)
+- Code organisation refactoring (#1457, #1594)
+- Extra tests and refactoring of tests (#1565, #1566, #1602, #1668)
+- Code tidying using hlint and style tool (#1590, #1625, #1663, #1707, #1708)
+
 ## 1.18.0 -- July 2020
+
+- Properly display the tx hash in the UTxO query command output (#1526, #1535)
+- Refactoring and minor improvements in tests (#1538, #1541)
 
 ## 1.17.0 -- July 2020
 
