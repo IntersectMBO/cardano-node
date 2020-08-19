@@ -314,6 +314,7 @@ import           Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
 import           Data.Proxy (Proxy (..))
+import           Data.Scientific (toBoundedInteger)
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -1561,111 +1562,129 @@ data MultiSigScript = RequireSignature (Hash PaymentKey)
   deriving (Eq, Show)
 
 instance ToJSON MultiSigScript where
-  toJSON (RequireSignature payKeyHash) = String . Text.decodeUtf8 $ serialiseToRawBytesHex payKeyHash
+  toJSON (RequireSignature payKeyHash) = String . Text.decodeUtf8 . serialiseToRawBytesHex $ payKeyHash
   toJSON (RequireAnyOf reqSigs) = object [ "any" .= map toJSON reqSigs ]
   toJSON (RequireAllOf reqSigs) = object [ "all" .= map toJSON reqSigs ]
   toJSON (RequireMOf reqNum reqSigs) = toJSONmOfnChecks reqSigs reqNum (length reqSigs)
 
 toJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> Value
 toJSONmOfnChecks keys required total
+  | total <= 0 = error $ "Please include at least one payment \
+                         \key hash in the multisig script: " <> show keys
   | length keys /= total = error $ "The number of payment key hashes submitted \
-                                 \does not equal total. " ++ " total: " ++ show total
-                                 ++ "Number of key hashes: " ++ show (length keys)
+                                \does not equal total. " ++ " total: " ++ show total
+                                ++ "Number of key hashes: " ++ show (length keys)
 
   | length keys < required = error $ "required exceeds the number of payment key \
-                                   \hashes. Number of keys: " ++ show (length keys)
-                                   ++ " required: " ++ show required
+                                  \hashes. Number of keys: " ++ show (length keys)
+                                  ++ " required: " ++ show required
 
-  | required <= 0 = error "The required number of payment key hashes cannot be less than or equal to 0."
-  | required == 1 = error "required is equal to one, you should use the \"any\" multisig script"
+  | required <= 0 = error "The required number of payment key \
+                          \hashes cannot be less than or equal to 0."
+  | required == 1 = error "required is equal to one, you should use \
+                          \the \"any\" multisig script"
 
-  | required == total = error "required is equal to the total, you should use \
-                              \the \"all\" multisig script"
-
-  | length keys == total = object [ "atLeast" .= object
-                                    [ "required" .= required
-                                    , "total" .= total
-                                    , "paymentKeyHashes" .= keys
-                                    ]
+  | length keys == total = object [ "atLeast" .= object [ "required" .= required
+                                                        , "list" .= map toJSON keys
+                                                        ]
                                   ]
+
 
   | otherwise = error $ "Cardano.Api.Typed.toJSONmofnChecks failure occured: " ++ " required: "
                       ++ show required ++ " total: " ++  show total
                       ++ " number of key hashes: " ++ show (length keys)
 
 instance FromJSON MultiSigScript where
-  parseJSON = Aeson.withObject "MultiSigScript" $ \obj ->
-   select [all' obj, any' obj, mofn (Object obj)]
-
-select :: [ParseMultiSigScript] -> Aeson.Parser MultiSigScript
-select [] = fail "No multisig scripts found"
-select (x : xs) = case x of
-                    All mss -> mss
-                    Any mss -> mss
-                    MofN mss  -> mss
-                    ScriptNotFound -> select xs
-
-data ParseMultiSigScript = All (Aeson.Parser MultiSigScript)
-                         | Any (Aeson.Parser MultiSigScript)
-                         | MofN (Aeson.Parser MultiSigScript)
-                         | ScriptNotFound
-
--- Parse "all" multisig objects
-all' :: HMS.HashMap Text Value -> ParseMultiSigScript
-all' obj = case HMS.lookup "all" obj of
-             Just (Array vecAllReqHashes) ->
-               All . return . RequireAllOf $ gatherSignatures vecAllReqHashes
-             _ -> ScriptNotFound
-
--- Parse "any" multisig objects
-any' :: HMS.HashMap Text Value -> ParseMultiSigScript
-any' obj = case HMS.lookup "any" obj of
-             Just (Array vecAnyReqHashes) ->
-               Any . return . RequireAnyOf $ gatherSignatures vecAnyReqHashes
-             _ -> ScriptNotFound
-
--- Parse "mofn" multisig objects
-mofn :: Value -> ParseMultiSigScript
-mofn val =
-  MofN $ Aeson.withObject "mofn"
-           (\o -> do mofnObj <- o .: "atLeast"
-                     required <- mofnObj .: "required"
-                     total <- mofnObj .: "total"
-                     keyHashes <- case HMS.lookup "paymentKeyHashes" mofnObj of
-                                    Just (Array keyhashes) -> return $ gatherSignatures keyhashes
-                                    _ -> return []
-                     fromJSONmOfnChecks keyHashes required total)
-           val
+  parseJSON = Aeson.withObject "MultiSigScript" $ \obj -> return (parseMultiSigScript obj)
 
 
-
-fromJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> Aeson.Parser MultiSigScript
-fromJSONmOfnChecks keys required total
-  | required <= 0 = error  "The required number of payment key hashes cannot be less than or equal to 0."
-  | required == 1 = fail "required is equal to one, you should use the \"any\" multisig script"
-  | required == total = fail "required is equal to the total, you should \
-                             \use the \"all\" multisig script"
-  | length keys < required = fail $ "required exceeds the number of payment key hashes. \
-                                    \Number of keys: " ++ show (length keys)
-                                  ++ " required: " ++ show required
-  | length keys == total = return $ RequireMOf required keys
-  | otherwise = fail $ "Cardano.Api.Typed.fromJSONmOfnChecks failure occured. required: "
-                     ++ show required ++ " total: " ++ show total
-                     ++ " keys: " ++ show keys
-
-gatherSignatures :: Vector Value -> [MultiSigScript]
-gatherSignatures anyList =
-  let mPaymentKeyHashes = Vector.map (fmap RequireSignature . filterValue) anyList
-  in catMaybes $ Vector.toList mPaymentKeyHashes
+parseMultiSigScript :: HMS.HashMap Text Value -> MultiSigScript
+parseMultiSigScript hms = case  all' hms <|> any' hms <|> atLeast hms of
+                            Just mss -> mss
+                            Nothing -> error "No multisig script found"
  where
-  filterValue :: Value -> Maybe (Hash PaymentKey)
-  filterValue (String hpk) = Just $ convertToHash hpk
-  filterValue _ = Nothing
+  convertValueToMultiSigScript :: Value -> Maybe MultiSigScript
+  convertValueToMultiSigScript (String pkH) = Just . RequireSignature $ convertToHash pkH
+  convertValueToMultiSigScript (Object valueHm) =
+    any' valueHm  <|> all' valueHm <|> atLeast valueHm
+  convertValueToMultiSigScript _ = Nothing
 
-convertToHash :: Text -> Hash PaymentKey
-convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
-                      Just payKeyHash -> payKeyHash
-                      Nothing -> error $ "Error deserialising payment key hash: " <> Text.unpack txt
+  gatherMultiSigScripts :: Vector Value -> [MultiSigScript]
+  gatherMultiSigScripts = catMaybes . Vector.toList . Vector.map convertValueToMultiSigScript
+
+  any' :: HMS.HashMap Text Value -> Maybe MultiSigScript
+  any' hm = case HMS.lookup "any" hm of
+             Just (Array anyValue) ->
+               Just . RequireAnyOf $ gatherMultiSigScripts anyValue
+             _ -> Nothing
+
+  all' :: HMS.HashMap Text Value -> Maybe MultiSigScript
+  all' hm = case HMS.lookup "all" hm of
+             Just (Array allVectorValue) ->
+               Just . RequireAllOf $ gatherMultiSigScripts allVectorValue
+             _ -> Nothing
+
+  atLeast :: HMS.HashMap Text Value -> Maybe MultiSigScript
+  atLeast hm = case HMS.lookup "atLeast" hm of
+                 Just (Object atLeastHm) ->
+                   case previousScriptSyntax atLeastHm of
+                     Nothing ->  case (HMS.lookup "required" atLeastHm, HMS.lookup "list" atLeastHm) of
+                                   (Nothing, Nothing) ->
+                                     error "atLeast multisig missing \"required\" and \"list\" keys"
+                                   (Just _, Nothing) ->
+                                     error "atLeast multisig missing \"list\" key"
+                                   (Nothing, Just _) ->
+                                     error "atLeast multisig missing \"required\" key"
+                                   (Just (Number sci), Just (Array listVectorValue)) ->
+                                      case toBoundedInteger sci of
+                                        Just reqInt ->
+                                          Just $ fromJSONmOfnChecks
+                                                   (gatherMultiSigScripts listVectorValue)
+                                                   reqInt
+                                                   (Vector.length listVectorValue)
+                                        Nothing -> error $ "Error in multisig \"required\" key: "
+                                                         <> show sci <> " is not a valid Int"
+                                   (_, _) -> Nothing
+                     Just mss -> Just mss
+                 _ -> Nothing
+
+  -- To account for backwards compatibility
+  previousScriptSyntax :: HMS.HashMap Text Value -> Maybe MultiSigScript
+  previousScriptSyntax hm =
+        case HMS.lookup "paymentKeyHashes" hm of
+          Just (Array pkhListVectorValue) ->
+            case HMS.lookup "required" hm of
+              Nothing ->
+                error "atLeast multisig missing \"required\" key"
+              Just (Number sci) ->
+                case toBoundedInteger sci of
+                  Just reqInt ->
+                    Just $ fromJSONmOfnChecks
+                             (gatherMultiSigScripts pkhListVectorValue)
+                             reqInt
+                             (Vector.length pkhListVectorValue)
+                  Nothing -> error $ "Error in multisig \"required\" key: "
+                                   <> show sci <> " is not a valid Int"
+              _ -> Nothing
+          _ -> Nothing
+
+  fromJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> MultiSigScript
+  fromJSONmOfnChecks keys required total
+    | total <= 0 = error $ "No payment key hashes were parsed from multiscript object: " <> show keys
+    | required <= 0 = error "The required number of payment key hashes cannot be less than or equal to 0."
+    | required == 1 = error "required is equal to one, you should use the \"any\" multisig script"
+    | length keys < required = error $ "required exceeds the number of payment key hashes. \
+                                       \Number of keys: " ++ show (length keys)
+                                     ++ " required: " ++ show required
+    | length keys == total = RequireMOf required keys
+    | otherwise = error $ "Cardano.Api.Typed.fromJSONmOfnChecks failure occured. required: "
+                        ++ show required ++ " total: " ++ show total
+                        ++ " keys: " ++ show keys
+
+  convertToHash :: Text -> Hash PaymentKey
+  convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
+                        Just payKeyHash -> payKeyHash
+                        Nothing -> error $ "Error deserialising payment key hash: " <> Text.unpack txt
 
 
 instance HasTypeProxy Script where
