@@ -14,11 +14,10 @@ module Chairman.Base
   , noteShowIO
   , noteTempFile
   , assertByDeadlineIO
-  , assertFileExists
   , showUTCTimeSeconds
   , listDirectory
   , writeFile
-  , maxUnixDomainSocketNameLength
+  , assertM
   , Integration
   ) where
 
@@ -149,11 +148,6 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
         H.annotateShow currentTime
         failWithCustom GHC.callStack Nothing "Condition not met by deadline"
 
-assertFileExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
-assertFileExists path = GHC.withFrozenCallStack $ do
-  fileExists <- H.evalIO $ IO.doesFileExist path
-  unless fileExists $ failWithCustom GHC.callStack Nothing $ "Missing file: " <> path
-
 -- | Show 'UTCTime' in seconds since epoch
 showUTCTimeSeconds :: UTCTime -> String
 showUTCTimeSeconds time = show @Int64 (floor (DTC.utcTimeToPOSIXSeconds time))
@@ -164,5 +158,5 @@ listDirectory = GHC.withFrozenCallStack . H.evalIO . IO.listDirectory
 writeFile :: (MonadIO m, HasCallStack) => FilePath -> String -> H.PropertyT m ()
 writeFile filePath contents = GHC.withFrozenCallStack . H.evalIO $ IO.writeFile filePath contents
 
-maxUnixDomainSocketNameLength :: Int
-maxUnixDomainSocketNameLength = 104
+assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()
+assertM = (>>= H.assert)

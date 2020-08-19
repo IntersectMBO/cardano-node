@@ -21,7 +21,8 @@ import           System.IO (IO)
 import           Text.Show
 
 import qualified Chairman.Base as H
-import qualified Chairman.Network as IO
+import qualified Chairman.IO.Network as IO
+import qualified Chairman.Network as H
 import qualified Chairman.Process as H
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
@@ -72,7 +73,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
     dbDir <- H.noteShow $ tempDir <> "/db/node-" <> si
     nodeStdoutFile <- H.noteTempFile tempDir $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempDir $ "cardano-node-" <> si <> ".stderr.log"
-    socketFile <- H.noteShow $ socketDir <> "/node-" <> si <> "-socket"
+    socketFile <- H.noteShow . IO.adjustSocketPath $ socketDir <> "/node-" <> si <> "-socket"
     portString <- H.noteShow $ "300" <> si <> ""
     topologyFile <- H.noteShow $ tempDir <> "/topology-node-" <> si <> ".json"
     configFile <- H.noteShow $ tempDir <> "/config-" <> si <> ".yaml"
@@ -88,7 +89,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
     hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
-    H.diff (L.length socketFile) (<=) H.maxUnixDomainSocketNameLength
+    H.diff (L.length socketFile) (<=) IO.maxSocketNameLength
 
     (Just hIn, _mOut, _mErr, hProcess, _) <- H.createProcess =<<
       ( H.procNode
@@ -117,7 +118,10 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
 
   forM_ [0..nodeCount - 1] $ \i -> H.assertByDeadlineIO deadline $ IO.isPortOpen (3000 + i)
 
-  forM_ nodeIndexes $ \i -> H.assertFileExists $ socketDir <> "/node-" <> show i <> "-socket"
+  forM_ nodeIndexes $ \i -> do
+    si <- H.noteShow $ show @Int i
+    socketFile <- H.noteShow . IO.adjustSocketPath $ socketDir <> "/node-" <> si <> "-socket"
+    H.assertM $ H.doesSocketExist socketFile
 
 tests :: IO Bool
 tests = H.checkParallel $$discover

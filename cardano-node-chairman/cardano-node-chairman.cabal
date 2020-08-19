@@ -25,9 +25,17 @@ library
                       , temporary
                       , time
                       , unliftio
+                      , Win32-network
   exposed-modules:      Chairman.Base
+                        Chairman.IO.Constants
+                        Chairman.IO.Network
+                        Chairman.IO.Network.Base
+                        Chairman.IO.Network.Posix
                         Chairman.Network
                         Chairman.Process
+  if os(windows)
+    exposed-modules:
+                        Chairman.IO.Network.Win32
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
