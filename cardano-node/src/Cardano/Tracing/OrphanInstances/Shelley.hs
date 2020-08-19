@@ -317,10 +317,6 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
              , "network" .= network
              , "addrs"   .= addrs
              ]
-  toObject _verb ScriptsEmbargoed =
-    mkObject [ "kind" .= String "ScriptsEmbargoed"
-             ]
-
 
 renderBadInputsUTxOErr ::  Set (TxIn c) -> Value
 renderBadInputsUTxOErr txIns
