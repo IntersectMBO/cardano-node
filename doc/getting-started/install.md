@@ -1,6 +1,6 @@
 # Installing the node from source
 
-**Latest version: 1.19.0**
+**Latest version: https://github.com/input-output-hk/cardano-node/releases**
 
 #### Prerequisites
 
