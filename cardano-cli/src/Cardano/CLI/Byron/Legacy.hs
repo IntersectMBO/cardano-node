@@ -29,7 +29,7 @@ import qualified Cardano.Crypto.Wallet as Wallet
 -- 3. the rest must be absent (Nothing)
 --
 -- Legacy reference: https://github.com/input-output-hk/cardano-sl/blob/release/3.0.1/lib/src/Pos/Util/UserSecret.hs#L189
-data LegacyDelegateKey =  LegacyDelegateKey { lrkSigningKey :: !SigningKey}
+newtype LegacyDelegateKey =  LegacyDelegateKey { lrkSigningKey :: SigningKey}
 
 encodeXPrv :: Wallet.XPrv -> E.Encoding
 encodeXPrv a = E.encodeBytes $ Wallet.unXPrv a

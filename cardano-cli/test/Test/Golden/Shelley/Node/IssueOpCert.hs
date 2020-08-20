@@ -37,8 +37,8 @@ golden_shelleyNodeIssueOpCert = propertyOnce . moduleWorkspace "tmp" $ \tempDir 
     , "--out-file", operationalCertFile
     ]
 
-  assertFileOccurences 1 "NodeOperationalCertificate" $ operationalCertFile
-  assertFileOccurences 1 "Next certificate issue number: 1" $ operationalCertificateIssueCounterFile
+  assertFileOccurences 1 "NodeOperationalCertificate" operationalCertFile
+  assertFileOccurences 1 "Next certificate issue number: 1" operationalCertificateIssueCounterFile
 
   assertEndsWithSingleNewline operationalCertFile
   assertEndsWithSingleNewline operationalCertificateIssueCounterFile

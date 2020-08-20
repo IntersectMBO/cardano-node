@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+{- HLINT ignore "Use camelCase" -}
+
 -- | 1. Create KES key pair.
 --   2. Create cold keys.
 --   3. Create operational certificate.

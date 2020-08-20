@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+{- HLINT ignore "Use camelCase" -}
+
 -- | 1. Generate stake key pair
 --   2. Create MIR certificate
 --   s. Check the TextEnvelope serialization format has not changed.

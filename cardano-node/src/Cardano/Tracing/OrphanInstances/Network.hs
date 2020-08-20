@@ -51,6 +51,7 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
+{- HLINT ignore "Use record patterns" -}
 
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
@@ -454,10 +455,12 @@ instance ToObject (AnyMessage (ChainSync blk tip)) where
 instance ToObject (FetchDecision [Point header]) where
   toObject _verb (Left decline) =
     mkObject [ "kind" .= String "FetchDecision declined"
-             , "declined" .= String (pack $ show $ decline) ]
+             , "declined" .= String (pack (show decline))
+             ]
   toObject _verb (Right results) =
     mkObject [ "kind" .= String "FetchDecision results"
-             , "length" .= String (pack $ show $ length results) ]
+             , "length" .= String (pack $ show $ length results)
+             ]
 
 
 instance ToObject NtC.HandshakeTr where
@@ -536,17 +539,17 @@ instance ToObject SlotNo where
 
 
 instance ToObject (TraceFetchClientState header) where
-  toObject _verb (AddedFetchRequest {}) =
+  toObject _verb AddedFetchRequest {} =
     mkObject [ "kind" .= String "AddedFetchRequest" ]
-  toObject _verb (AcknowledgedFetchRequest {}) =
+  toObject _verb AcknowledgedFetchRequest {} =
     mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb (CompletedBlockFetch {}) =
+  toObject _verb CompletedBlockFetch {} =
     mkObject [ "kind" .= String "CompletedBlockFetch" ]
-  toObject _verb (CompletedFetchBatch {}) =
+  toObject _verb CompletedFetchBatch {} =
     mkObject [ "kind" .= String "CompletedFetchBatch" ]
-  toObject _verb (StartedFetchBatch {}) =
+  toObject _verb StartedFetchBatch {} =
     mkObject [ "kind" .= String "StartedFetchBatch" ]
-  toObject _verb (RejectedFetchBatch {}) =
+  toObject _verb RejectedFetchBatch {} =
     mkObject [ "kind" .= String "RejectedFetchBatch" ]
 
 

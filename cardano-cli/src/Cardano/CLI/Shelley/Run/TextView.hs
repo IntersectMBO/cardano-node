@@ -21,7 +21,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
 data ShelleyTextViewFileError
-  = ShelleyTextViewReadFileError ((FileError TextEnvelopeError))
+  = ShelleyTextViewReadFileError (FileError TextEnvelopeError)
   | ShelleyTextViewCBORPrettyPrintError !HelpersError
   deriving Show
 

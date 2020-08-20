@@ -203,7 +203,7 @@ renderShelleyProtocolInstantiationError pie =
   case pie of
     GenesisReadError fp err ->
         "There was an error reading the genesis file: "
-     <> toS fp <> " Error: " <> (T.pack $ show err)
+     <> toS fp <> " Error: " <> T.pack (show err)
 
     GenesisHashMismatch actual expected ->
         "Wrong Shelley genesis file: the actual hash is " <> show actual
@@ -212,7 +212,7 @@ renderShelleyProtocolInstantiationError pie =
 
     GenesisDecodeError fp err ->
         "There was an error parsing the genesis file: "
-     <> toS fp <> " Error: " <> (T.pack $ show err)
+     <> toS fp <> " Error: " <> T.pack (show err)
 
     FileError fileErr -> T.pack $ displayError fileErr
 

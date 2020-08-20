@@ -81,21 +81,20 @@ instance FromJSON TracingVerbosity where
     err -> panic $ "Parsing of TracingVerbosity failed, "
                  <> err <> " is not a valid TracingVerbosity"
   parseJSON invalid  = panic $ "Parsing of TracingVerbosity failed due to type mismatch. "
-                             <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
+                             <> "Encountered: " <> Text.pack (Prelude.show invalid)
 
 instance FromJSON PortNumber where
   parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of
-                                 Just port -> pure port
-                                 Nothing -> panic $ (show portNum)
-                                                  <> " is not a valid port number."
+    Just port -> pure port
+    Nothing -> panic $ show portNum <> " is not a valid port number."
   parseJSON invalid  = panic $ "Parsing of port number failed due to type mismatch. "
-                             <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
+                             <> "Encountered: " <> Text.pack (Prelude.show invalid)
 
 instance FromJSON Update.ApplicationName where
   parseJSON (String x) = pure $ Update.ApplicationName x
   parseJSON invalid  =
     panic $ "Parsing of application name failed due to type mismatch. "
-    <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
+    <> "Encountered: " <> Text.pack (Prelude.show invalid)
 
 instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
   toJSON TipGenesis = object [ "genesis" .= True ]

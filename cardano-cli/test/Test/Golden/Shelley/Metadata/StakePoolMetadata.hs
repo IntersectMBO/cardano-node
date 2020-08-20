@@ -8,6 +8,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse as OP
 
+{- HLINT ignore "Use camelCase" -}
+
 golden_stakePoolMetadataHash :: Property
 golden_stakePoolMetadataHash = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
   referenceStakePoolMetaData <- noteInputFile "test/data/golden/shelley/metadata/stake_pool_metadata_hash"

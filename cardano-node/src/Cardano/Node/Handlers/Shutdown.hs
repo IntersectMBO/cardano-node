@@ -165,7 +165,7 @@ maybeSpawnOnSlotSyncedShutdownHandler cli sfds trace registry chaindb =
   case (shutdownOnSlotSynced cli, sfds) of
     (MaxSlotNo maxSlot, InternalShutdown _sl sd) -> do
       traceWith (trTransformer MaximalVerbosity $ severityNotice trace)
-        ("will terminate upon reaching " <> (pack $ show maxSlot) :: Text)
+        ("will terminate upon reaching " <> pack (show maxSlot))
       spawnSlotLimitTerminator maxSlot sd
     (MaxSlotNo{}, _) -> panic
       "internal error: slot-limited shutdown requested, but no proper ShutdownFDs passed."

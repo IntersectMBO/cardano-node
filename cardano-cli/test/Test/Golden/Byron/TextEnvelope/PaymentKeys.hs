@@ -5,9 +5,9 @@ module Test.Golden.Byron.TextEnvelope.PaymentKeys
   ) where
 
 import           Cardano.Prelude
-
 import           Hedgehog (Property)
 
+{- HLINT ignore "Use camelCase" -}
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair

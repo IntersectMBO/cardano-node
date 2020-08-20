@@ -21,8 +21,8 @@ golden_shelleyGenesisKeyGenUtxo = propertyOnce . moduleWorkspace "tmp" $ \tempDi
     , "--signing-key-file", utxoSigningKeyFile
     ]
 
-  assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" $ utxoVerificationKeyFile
-  assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ utxoSigningKeyFile
+  assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" utxoVerificationKeyFile
+  assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" utxoSigningKeyFile
 
   assertEndsWithSingleNewline utxoVerificationKeyFile
   assertEndsWithSingleNewline utxoSigningKeyFile

@@ -13,6 +13,8 @@ import qualified Codec.Binary.Bech32 as Bech32
 import qualified Data.ByteString.Base16 as Base16
 import qualified Hedgehog as H
 
+{- HLINT ignore "Reduce duplication" -}
+
 -- | Bech32 verification key
 itnVerKey :: Text
 itnVerKey = "ed25519_pk1demeytzdadayd4qrqeg2raadp2eceg3mrdmefxyfxx73q60hg4xsjjyzyq"

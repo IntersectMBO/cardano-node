@@ -6,15 +6,14 @@ module Test.Cardano.Api.Typed.CBOR
   ) where
 
 import           Cardano.Api.Typed
-
 import           Cardano.Prelude
-
 import           Hedgehog (Gen, Property, discover)
-import qualified Hedgehog as H
-
 import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 
+import qualified Hedgehog as H
+
+{- HLINT ignore "Use camelCase" -}
 
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv

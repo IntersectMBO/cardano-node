@@ -17,8 +17,7 @@ import           System.Environment (lookupEnv)
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Types (SocketPath (..))
 
-data EnvSocketError
-  = CliEnvVarLookup !Text deriving Show
+newtype EnvSocketError = CliEnvVarLookup Text deriving Show
 
 renderEnvSocketError :: EnvSocketError -> Text
 renderEnvSocketError err =

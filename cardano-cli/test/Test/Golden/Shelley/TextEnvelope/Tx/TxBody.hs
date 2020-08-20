@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+{- HLINT ignore "Use camelCase" -}
+
 -- | 1. We create a 'TxBody Shelley' file.
 --   2. Check the TextEnvelope serialization format has not changed.
 golden_shelleyTxBody :: Property

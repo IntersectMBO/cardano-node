@@ -23,12 +23,12 @@ golden_shelleyGenesisKeyGenDelegate = propertyOnce . moduleWorkspace "tmp" $ \te
     , "--operational-certificate-issue-counter", operationalCertificateIssueCounterFile
     ]
 
-  assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ verificationKeyFile
-  assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ signingKeyFile
-  assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ operationalCertificateIssueCounterFile
+  assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" verificationKeyFile
+  assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" signingKeyFile
+  assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" operationalCertificateIssueCounterFile
 
-  assertFileOccurences 1 "Genesis delegate operator key" $ verificationKeyFile
-  assertFileOccurences 1 "Genesis delegate operator key" $ signingKeyFile
+  assertFileOccurences 1 "Genesis delegate operator key" verificationKeyFile
+  assertFileOccurences 1 "Genesis delegate operator key" signingKeyFile
 
   assertEndsWithSingleNewline verificationKeyFile
   assertEndsWithSingleNewline signingKeyFile

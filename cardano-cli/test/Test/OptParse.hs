@@ -265,7 +265,7 @@ failDiffCustom cS x y =
     Nothing ->
       withFrozenCallStack $
         failWithCustom cS Nothing $
-        Prelude.unlines $ [
+        Prelude.unlines [
             "Failed"
           , "━━ lhs ━━"
           , showPretty x

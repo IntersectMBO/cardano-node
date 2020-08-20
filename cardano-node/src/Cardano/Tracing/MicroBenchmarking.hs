@@ -136,10 +136,10 @@ instance (Monad m, HasTxId (GenTx blk)) => Outcome m (MeasureTxs blk) where
     computeOutcomeMetric _ xs ys = pure . computeFinalValues $ computeIntermediateValues xsTxId ysTxId
       where
         --xsTxId :: [(GenTxId blk, Time)]
-        xsTxId = map (\(genTx, _time) -> (txId genTx, _time)) xs
+        xsTxId = map (first txId) xs
 
         --ysTxId :: [(GenTxId blk, Time)]
-        ysTxId = map (\(genTx, _time) -> (txId genTx, _time)) ys
+        ysTxId = map (first txId) ys
 
         -- | Here we filter and match all the transactions that made it into
         -- a block.
@@ -196,7 +196,7 @@ instance (Monad m, MonadTime m) => Outcome m (TraceForgeEvent blk) where
 
     --computeOutcomeMetric   :: a -> IntermediateValue a -> IntermediateValue a -> m (OutcomeMetric a)
     computeOutcomeMetric _ (startSlot, absTimeStart, _) (stopSlot, absTimeStop, mempoolSize)
-        | startSlot == stopSlot = pure $ Just (startSlot, (diffTime absTimeStop absTimeStart), mempoolSize)
+        | startSlot == stopSlot = pure $ Just (startSlot, diffTime absTimeStop absTimeStart, mempoolSize)
         | otherwise             = pure Nothing
 
 instance HasPrivacyAnnotation (Either

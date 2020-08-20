@@ -46,7 +46,7 @@ newtype GenesisFile = GenesisFile
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
-                           <> "Encountered: " <> (Text.pack $ show invalid)
+                           <> "Encountered: " <> Text.pack (show invalid)
 
 -- | The desired output format.
 data OutputFormat

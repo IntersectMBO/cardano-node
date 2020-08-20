@@ -126,7 +126,7 @@ runQueryProtocolParameters protocol network mOutFile = do
     SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr
                            readEnvSocketPath
     pparams <- firstExceptT ShelleyQueryNodeLocalStateQueryError $
-               withlocalNodeConnectInfo protocol network sockPath $
+               withlocalNodeConnectInfo protocol network sockPath
                  queryPParamsFromLocalState
     writeProtocolParameters mOutFile pparams
 
@@ -305,7 +305,7 @@ printStakeDistribution (PoolDistr stakeDist) = do
     putStrLn $ replicate (Text.length title + 2) '-'
     sequence_
       [ putStrLn $ showStakeDistr (StakePoolKeyHash poolId) stakeFraction (VrfKeyHash vrfKeyId)
-      | (poolId, (IndividualPoolStake stakeFraction vrfKeyId)) <- Map.toList stakeDist ]
+      | (poolId, IndividualPoolStake stakeFraction vrfKeyId) <- Map.toList stakeDist ]
   where
     title :: Text
     title =
@@ -550,7 +550,7 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
           )
       case result of
         QueryResultEraMismatch err -> throwError (EraMismatchError err)
-        QueryResultSuccess drs -> return $ (uncurry toDelegsAndRwds) drs
+        QueryResultSuccess drs -> return $ uncurry toDelegsAndRwds drs
   where
     toDelegsAndRwds
       :: Map (Ledger.Credential Ledger.Staking TPraosStandardCrypto)

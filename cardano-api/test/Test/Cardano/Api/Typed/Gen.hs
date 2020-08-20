@@ -246,12 +246,12 @@ genShelleyWitness = Gen.choice [genShelleyKeyWitness, genShelleyBootstrapWitness
 
 genShelleyWitnessSigningKey :: Gen ShelleyWitnessSigningKey
 genShelleyWitnessSigningKey =
-  Gen.choice [ WitnessPaymentKey <$>  (genSigningKey AsPaymentKey)
-             , WitnessPaymentExtendedKey <$>  (genSigningKey AsPaymentExtendedKey)
-             , WitnessStakeKey <$>  (genSigningKey AsStakeKey)
-             , WitnessStakePoolKey <$>  (genSigningKey AsStakePoolKey)
-             , WitnessGenesisDelegateKey <$>  (genSigningKey AsGenesisDelegateKey)
-             , WitnessGenesisUTxOKey <$>  (genSigningKey AsGenesisUTxOKey)
+  Gen.choice [ WitnessPaymentKey <$>  genSigningKey AsPaymentKey
+             , WitnessPaymentExtendedKey <$>  genSigningKey AsPaymentExtendedKey
+             , WitnessStakeKey <$>  genSigningKey AsStakeKey
+             , WitnessStakePoolKey <$>  genSigningKey AsStakePoolKey
+             , WitnessGenesisDelegateKey <$>  genSigningKey AsGenesisDelegateKey
+             , WitnessGenesisUTxOKey <$>  genSigningKey AsGenesisUTxOKey
              ]
 {-
 -- TODO: makeShelleyScriptWitness = undefined

@@ -186,8 +186,7 @@ readAddressVerificationKeyFile (VerificationKeyFile vkfile) =
 --
 
 runAddressBuildMultiSig :: ExceptT ShelleyAddressCmdError IO ()
-runAddressBuildMultiSig =
-    liftIO $ putStrLn ("runAddressBuildMultiSig: TODO")
+runAddressBuildMultiSig = liftIO $ putStrLn "runAddressBuildMultiSig: TODO"
 
 --
 -- Script addresses

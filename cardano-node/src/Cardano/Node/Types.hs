@@ -52,8 +52,7 @@ import           Ouroboros.Network.Block (MaxSlotNo (..))
 -- use records with named fields in the CLI code.
 
 -- | Errors for the cardano-config module.
-data ConfigError
-    = ConfigErrorFileNotFound !FilePath
+newtype ConfigError = ConfigErrorFileNotFound FilePath
     deriving Show
 
 -- | Filepath of the configuration yaml file. This file determines
@@ -75,7 +74,7 @@ newtype GenesisFile = GenesisFile
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
-                           <> "Encountered: " <> (Text.pack $ show invalid)
+                           <> "Encountered: " <> Text.pack (show invalid)
 
 -- Node can be run in two modes.
 data ViewMode = LiveView    -- Live mode with TUI
@@ -90,7 +89,7 @@ instance FromJSON ViewMode where
                                           <> view <> " failed. "
                                           <> view <> " is not a valid view mode"
   parseJSON invalid = panic $ "Parsing of ViewMode failed due to type mismatch. "
-                            <> "Encountered: " <> (Text.pack $ show invalid)
+                            <> "Encountered: " <> Text.pack (show invalid)
 
 newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
   { unMaxConcurrencyBulkSync :: Word }
@@ -137,12 +136,12 @@ instance FromJSON NodeHostAddress where
       Nothing -> panic $ "Parsing of IP failed: " <> ipStr
   parseJSON Null = pure $ NodeHostAddress Nothing
   parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
-                            <> "Encountered: " <> (Text.pack $ show invalid) <> "\n"
+                            <> "Encountered: " <> Text.pack (show invalid) <> "\n"
 
 instance ToJSON NodeHostAddress where
   toJSON mha =
     case unNodeHostAddress mha of
-      Just ip -> String (Text.pack $ show ip)
+      Just ip -> String (Text.pack (show ip))
       Nothing -> Null
 
 data NodeCLI = NodeCLI

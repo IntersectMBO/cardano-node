@@ -73,18 +73,17 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
     (Just hIn, _mOut, _mErr, hProcess, _) <- H.createProcess =<<
-      ( ( H.procNode
-          [ "run"
-          , "--database-path", dbDir
-          , "--socket-path", socketDir <> "/node-" <> si <> "-socket"
-          , "--port", "300" <> si <> ""
-          , "--topology", tempDir <> "/topology-node-" <> si <> ".json"
-          , "--config", tempDir <> "/config-" <> si <> ".yaml"
-          , "--signing-key", tempDir <> "/genesis/delegate-keys.00" <> si <> ".key"
-          , "--delegation-certificate", tempDir <> "/genesis/delegation-cert.00" <> si <> ".json"
-          , "--shutdown-ipc", "0"
-          ]
-        ) <&>
+      ( H.procNode
+        [ "run"
+        , "--database-path", dbDir
+        , "--socket-path", socketDir <> "/node-" <> si <> "-socket"
+        , "--port", "300" <> si <> ""
+        , "--topology", tempDir <> "/topology-node-" <> si <> ".json"
+        , "--config", tempDir <> "/config-" <> si <> ".yaml"
+        , "--signing-key", tempDir <> "/genesis/delegate-keys.00" <> si <> ".key"
+        , "--delegation-certificate", tempDir <> "/genesis/delegation-cert.00" <> si <> ".json"
+        , "--shutdown-ipc", "0"
+        ] <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe
           , IO.std_out = IO.UseHandle hNodeStdout

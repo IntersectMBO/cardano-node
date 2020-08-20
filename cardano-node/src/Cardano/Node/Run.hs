@@ -166,9 +166,9 @@ logTracingVerbosity nc tracer =
     TracingOff -> return ()
     TracingOn traceConf ->
       case traceVerbosity traceConf of
-        NormalVerbosity -> traceWith tracer $ "tracing verbosity = normal verbosity "
-        MinimalVerbosity -> traceWith tracer $ "tracing verbosity = minimal verbosity "
-        MaximalVerbosity -> traceWith tracer $ "tracing verbosity = maximal verbosity "
+        NormalVerbosity -> traceWith tracer "tracing verbosity = normal verbosity "
+        MinimalVerbosity -> traceWith tracer "tracing verbosity = minimal verbosity "
+        MaximalVerbosity -> traceWith tracer "tracing verbosity = maximal verbosity "
 
 -- | Add the application name and unqualified hostname to the logging
 -- layer basic trace.

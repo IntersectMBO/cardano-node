@@ -333,14 +333,14 @@ systemStatsW p =
                                  , (mempoolToDoAttr, progressIncompleteAttr)
                                  ]
                  ) $ bar mempoolLabel (lvsMempoolPerc p)
-    mempoolLabel = Just $ (show . lvsMempool $ p)
+    mempoolLabel = Just . show $ lvsMempool p
     memPoolBytesBar :: forall n. Widget n
     memPoolBytesBar = updateAttrMap
                  (A.mapAttrNames [ (mempoolDoneAttr, progressCompleteAttr)
                                  , (mempoolToDoAttr, progressIncompleteAttr)
                                  ]
                  ) $ bar mempoolBytesLabel (lvsMempoolBytesPerc p)
-    mempoolBytesLabel = Just $ (show . lvsMempoolBytes $ p)
+    mempoolBytesLabel = Just . show $ lvsMempoolBytes p
     memUsageBar :: forall n. Widget n
     memUsageBar = updateAttrMap
                   (A.mapAttrNames [ (memDoneAttr, progressCompleteAttr)
@@ -463,42 +463,42 @@ bold a = Vty.withStyle a Vty.bold
 
 lightThemeAttributes :: [(A.AttrName, Vty.Attr)]
 lightThemeAttributes =
-    [ (cardanoAttr,       bold $ fg Vty.black)
-    , (releaseAttr,       bold $ fg Vty.blue)
-    , (nodeIdAttr,        bold $ fg Vty.blue)
-    , (valueAttr,         bold $ fg Vty.black)
-    , (keyAttr,           bold $ fg Vty.magenta)
-    , (barValueAttr,      bold $ fg Vty.black)
-    , (mempoolDoneAttr,   bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (mempoolToDoAttr,   bold $ progressToDoColorLFG `on` progressToDoColorLBG)
-    , (memDoneAttr,       bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (memToDoAttr,       bold $ progressToDoColorLFG `on` progressToDoColorLBG)
-    , (cpuDoneAttr,       bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (cpuToDoAttr,       bold $ progressToDoColorLFG `on` progressToDoColorLBG)
-    , (diskIODoneAttr,    bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (diskIOToDoAttr,    bold $ progressToDoColorLFG `on` progressToDoColorLBG)
-    , (networkIODoneAttr, bold $ progressDoneColorLFG `on` progressDoneColorLBG)
-    , (networkIOToDoAttr, bold $ progressToDoColorLFG `on` progressToDoColorLBG)
+    [ (cardanoAttr,       bold (fg Vty.black))
+    , (releaseAttr,       bold (fg Vty.blue))
+    , (nodeIdAttr,        bold (fg Vty.blue))
+    , (valueAttr,         bold (fg Vty.black))
+    , (keyAttr,           bold (fg Vty.magenta))
+    , (barValueAttr,      bold (fg Vty.black))
+    , (mempoolDoneAttr,   bold (progressDoneColorLFG `on` progressDoneColorLBG))
+    , (mempoolToDoAttr,   bold (progressToDoColorLFG `on` progressToDoColorLBG))
+    , (memDoneAttr,       bold (progressDoneColorLFG `on` progressDoneColorLBG))
+    , (memToDoAttr,       bold (progressToDoColorLFG `on` progressToDoColorLBG))
+    , (cpuDoneAttr,       bold (progressDoneColorLFG `on` progressDoneColorLBG))
+    , (cpuToDoAttr,       bold (progressToDoColorLFG `on` progressToDoColorLBG))
+    , (diskIODoneAttr,    bold (progressDoneColorLFG `on` progressDoneColorLBG))
+    , (diskIOToDoAttr,    bold (progressToDoColorLFG `on` progressToDoColorLBG))
+    , (networkIODoneAttr, bold (progressDoneColorLFG `on` progressDoneColorLBG))
+    , (networkIOToDoAttr, bold (progressToDoColorLFG `on` progressToDoColorLBG))
     ]
 
 darkThemeAttributes :: [(A.AttrName, Vty.Attr)]
 darkThemeAttributes =
-    [ (cardanoAttr,       bold $ fg Vty.white)
-    , (releaseAttr,       bold $ fg Vty.cyan)
-    , (nodeIdAttr,        bold $ fg Vty.cyan)
-    , (valueAttr,         bold $ fg Vty.white)
-    , (keyAttr,           bold $ fg Vty.white)
-    , (barValueAttr,      bold $ fg Vty.white)
-    , (mempoolDoneAttr,   bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (mempoolToDoAttr,   bold $ progressToDoColorDFG `on` progressToDoColorDBG)
-    , (memDoneAttr,       bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (memToDoAttr,       bold $ progressToDoColorDFG `on` progressToDoColorDBG)
-    , (cpuDoneAttr,       bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (cpuToDoAttr,       bold $ progressToDoColorDFG `on` progressToDoColorDBG)
-    , (diskIODoneAttr,    bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (diskIOToDoAttr,    bold $ progressToDoColorDFG `on` progressToDoColorDBG)
-    , (networkIODoneAttr, bold $ progressDoneColorDFG `on` progressDoneColorDBG)
-    , (networkIOToDoAttr, bold $ progressToDoColorDFG `on` progressToDoColorDBG)
+    [ (cardanoAttr,       bold (fg Vty.white))
+    , (releaseAttr,       bold (fg Vty.cyan))
+    , (nodeIdAttr,        bold (fg Vty.cyan))
+    , (valueAttr,         bold (fg Vty.white))
+    , (keyAttr,           bold (fg Vty.white))
+    , (barValueAttr,      bold (fg Vty.white))
+    , (mempoolDoneAttr,   bold (progressDoneColorDFG `on` progressDoneColorDBG))
+    , (mempoolToDoAttr,   bold (progressToDoColorDFG `on` progressToDoColorDBG))
+    , (memDoneAttr,       bold (progressDoneColorDFG `on` progressDoneColorDBG))
+    , (memToDoAttr,       bold (progressToDoColorDFG `on` progressToDoColorDBG))
+    , (cpuDoneAttr,       bold (progressDoneColorDFG `on` progressDoneColorDBG))
+    , (cpuToDoAttr,       bold (progressToDoColorDFG `on` progressToDoColorDBG))
+    , (diskIODoneAttr,    bold (progressDoneColorDFG `on` progressDoneColorDBG))
+    , (diskIOToDoAttr,    bold (progressToDoColorDFG `on` progressToDoColorDBG))
+    , (networkIODoneAttr, bold (progressDoneColorDFG `on` progressDoneColorDBG))
+    , (networkIOToDoAttr, bold (progressToDoColorDFG `on` progressToDoColorDBG))
     ]
 
 lightTheme :: Theme

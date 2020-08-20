@@ -48,6 +48,8 @@ import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 import           Cardano.CLI.Types
 
+{- HLINT ignore "Reduce duplication" -}
+
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdReadGenesisAesonDecodeError !FilePath !Text
   | ShelleyGenesisCmdReadGenesisIOError !FilePath !IOException

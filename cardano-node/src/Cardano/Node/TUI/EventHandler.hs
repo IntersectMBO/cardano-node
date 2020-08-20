@@ -114,8 +114,8 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
                     LogValue "Stat.utime" (PureI ticks) ->
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
-                            let !tdiff      = max 1 $ (fromIntegral (currentTimeInNs - lvsCPUUsageNs lvs)) / 1000000000 :: Float
-                                !cpuperc    = (fromIntegral (ticks - lvsCPUUsageLast lvs)) / (fromIntegral clktck) / tdiff
+                            let !tdiff      = max 1 $ fromIntegral (currentTimeInNs - lvsCPUUsageNs lvs) / 1000000000 :: Float
+                                !cpuperc    = fromIntegral (ticks - lvsCPUUsageLast lvs) / fromIntegral clktck / tdiff
                                 !uptime     = diffUTCTime (tstamp meta) (lvsStartTime lvs)
 
                             checkForUnexpectedThunks ["Stat.utime LiveViewBackend"] lvs
@@ -128,7 +128,7 @@ instance IsEffectuator (LiveViewBackend blk) Text where
 
                     LogValue "Sys.SysUserTime" (Nanoseconds nsecs) ->   -- Darwin, Windows
                         modifyMVar_ (getbe lvbe) $ \lvs -> do
-                            let !tdiff      = max 1 $ (fromIntegral (currentTimeInNs - lvsCPUUsageNs lvs)) :: Float
+                            let !tdiff      = max 1 $ fromIntegral (currentTimeInNs - lvsCPUUsageNs lvs) :: Float
                                 !deltacpu   = fromIntegral nsecs - fromIntegral (lvsCPUUsageLast lvs) :: Float
                                 !cpuperc    = deltacpu * 10 / tdiff
                                 !uptime     = diffUTCTime (tstamp meta) (lvsStartTime lvs)
