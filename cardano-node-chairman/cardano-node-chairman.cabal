@@ -45,7 +45,7 @@ library
                         -Wpartial-fields
                         -Wcompat
 
-test-suite test
+test-suite tests
   hs-source-dirs:       test
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
