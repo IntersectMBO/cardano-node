@@ -1,6 +1,6 @@
 # Installing the node from source
 
-**Latest version:** [https://github.com/input-output-hk/cardano-node/releases](https://github.com/input-output-hk/cardano-node/releases)
+> The **latest** version of the node may be downloaded from [cardano-node GitHub Releases](https://github.com/input-output-hk/cardano-node/releases)
 
 #### Prerequisites
 
@@ -70,7 +70,7 @@ Update cabal
 Confirm that you installed cabal version `3.2.0.0`.
 
     cabal --version
-       
+
 **Note:** We no longer provide supported `stack` or `nix` installer packages. We recommend `cabal` instead.
 
 
@@ -80,16 +80,16 @@ Create a working directory for your builds:
 
     mkdir -p ~/src
     cd ~/src
- 
+
  Download and install the latest version of GHC:
- 
+
     wget https://downloads.haskell.org/ghc/8.10.2/ghc-8.10.2-x86_64-deb9-linux.tar.xz
     tar -xf ghc-8.10.2-x86_64-deb9-linux.tar.xz
     rm ghc-8.10.2-x86_64-deb9-linux.tar.xz
     cd ghc-8.10.2
     ./configure
     sudo make install
-    
+
 This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions.
 
 #### Install Libsodium
@@ -98,7 +98,7 @@ Create a working directory for your builds:
 
     mkdir -p ~/src
     cd ~/src
- 
+
 Download and install libsodium
 
     git clone https://github.com/input-output-hk/libsodium
@@ -120,7 +120,7 @@ Create a working directory for your builds:
 
     mkdir -p ~/src
     cd ~/src
-    
+
 Download the Cardano node sources:
 
     git clone https://github.com/input-output-hk/cardano-node.git
@@ -143,7 +143,7 @@ We explicitly use the GHC version that we installed earlier.  This avoids defaul
     cabal configure --with-compiler=ghc-8.10.2
 
 Update the local project file to use the VRF library that you installed earlier.
-   
+
     echo "package cardano-crypto-praos" >>  cabal.project.local
     echo "  flags: -external-libsodium-vrf" >>  cabal.project.local
 
