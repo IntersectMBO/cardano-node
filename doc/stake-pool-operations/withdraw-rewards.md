@@ -16,7 +16,9 @@
     ]
 
 
-You'll withdraw rewards into a payment.addr wich will pay for the transaction fees, Query the payment address balance
+### Query the payment address balance
+
+You'll withdraw rewards into a payment.addr wich will pay for the transaction fees.
 
     cardano-cli shelley query utxo --address $(cat payment.addr) --mainnet
 
