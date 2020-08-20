@@ -1,5 +1,7 @@
 # Installing the node from source
 
+**Latest version: 1.19.0**
+
 #### Prerequisites
 
 Set up your platform:
