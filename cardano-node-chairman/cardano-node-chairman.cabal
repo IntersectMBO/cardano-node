@@ -14,7 +14,9 @@ extra-source-files:     ChangeLog.md
 library
   hs-source-dirs:       src
   build-depends:        base >= 4.12 && < 5
+                      , aeson
                       , async
+                      , bytestring
                       , directory
                       , hedgehog
                       , mmorph
@@ -23,10 +25,12 @@ library
                       , random
                       , resourcet
                       , temporary
+                      , text
                       , time
                       , unliftio
                       , Win32-network
   exposed-modules:      Chairman.Base
+                        Chairman.Plan
                         Chairman.IO.Constants
                         Chairman.IO.Network
                         Chairman.IO.Network.Base
@@ -50,6 +54,7 @@ test-suite tests
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
   build-depends:        base >= 4.12 && < 5
+                      , aeson
                       , async
                       , cardano-node-chairman
                       , directory

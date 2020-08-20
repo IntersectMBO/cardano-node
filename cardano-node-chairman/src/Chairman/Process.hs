@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -12,13 +13,16 @@ module Chairman.Process
   ) where
 
 import           Chairman.Base (Integration)
+import           Chairman.Plan
 import           Control.Concurrent.Async
 import           Control.Exception
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Resource (ReleaseKey, register)
+import           Data.Aeson (eitherDecode)
 import           Data.Bool
 import           Data.Either
+import           Data.Eq
 import           Data.Function
 import           Data.Int
 import           Data.Maybe (Maybe (..))
@@ -29,12 +33,15 @@ import           GHC.Stack (CallStack, HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (Diff, liftTest, mkTest)
 import           Hedgehog.Internal.Source (getCaller)
+import           Prelude (error)
 import           System.Exit (ExitCode)
 import           System.IO (Handle)
 import           System.Process (CmdSpec (..), CreateProcess (..), ProcessHandle)
 import           Text.Show
 
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
+import qualified Data.Text as T
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
@@ -66,6 +73,7 @@ createProcess :: HasCallStack
   => CreateProcess
   -> Integration (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
 createProcess cp = GHC.withFrozenCallStack $ do
+  H.annotate $ "CWD: " <> show (IO.cwd cp)
   case IO.cmdspec cp of
     RawCommand cmd args -> H.annotate $ "Command line: " <> cmd <> " " <> L.unwords args
     ShellCommand cmd -> H.annotate $ "Command line: " <> cmd
@@ -120,6 +128,28 @@ waitForProcess :: HasCallStack
 waitForProcess hProcess = GHC.withFrozenCallStack $ do
   H.evalM . liftIO $ catch (fmap Just (IO.waitForProcess hProcess)) $ \(_ :: AsyncCancelled) -> return Nothing
 
+procDist
+  :: String
+  -- ^ Package name
+  -> [String]
+  -- ^ Arguments to the CLI command
+  -> Integration CreateProcess
+  -- ^ Captured stdout
+procDist pkg arguments = do
+  contents <- liftIO $ LBS.readFile "../dist-newstyle/cache/plan.json"
+
+  case eitherDecode contents of
+    Right plan -> case L.filter matching (plan & installPlan) of
+      (component:_) -> case component & binFile of
+        Just bin -> return $ IO.proc (T.unpack bin) arguments
+        Nothing -> error $ "missing bin-file in: " <> show component
+      [] -> error $ "Cannot find exe:" <> pkg <> " in plan"
+    Left message -> error $ "Cannot decode plan: " <> message
+  where matching :: Component -> Bool
+        matching component = case componentName component of
+          Just name -> name == "exe:" <> T.pack pkg
+          Nothing -> False
+
 procFlex
   :: HasCallStack
   => String
@@ -134,7 +164,7 @@ procFlex pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
   maybeEnvBin <- liftIO $ IO.lookupEnv binaryEnv
   case maybeEnvBin of
     Just envBin -> return $ IO.proc envBin arguments
-    Nothing -> return $ IO.proc "cabal" ("exec":"--":pkg:arguments)
+    Nothing -> procDist pkg arguments
 
 procCli
   :: HasCallStack

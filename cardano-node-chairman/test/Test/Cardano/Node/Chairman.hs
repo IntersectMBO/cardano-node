@@ -27,7 +27,6 @@ import qualified Chairman.Process as H
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
-import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
 
@@ -40,11 +39,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
   baseConfig <- H.noteShow $ base <> "/configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
-  socketDir <- H.noteShow $ tempDir <> "/socket"
-  _ <- H.noteShowIO $ IO.lookupEnv "TEMP"
-  _ <- H.noteShowIO $ IO.lookupEnv "TEMPDIR"
-  _ <- H.noteShowIO $ IO.lookupEnv "TMP"
-  _ <- H.noteShowIO $ IO.lookupEnv "TMPDIR"
+  socketDir <- H.noteShow "./socket"
 
   -- Generate keys
   void $ H.execCli
@@ -86,7 +81,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
     delegationCertificateFile <- H.noteShow $ tempDir <> "/genesis/delegation-cert.00" <> si <> ".json"
 
     H.createDirectoryIfMissing dbDir
-    H.createDirectoryIfMissing socketDir
+    H.createDirectoryIfMissing $ tempDir <> "/" <> socketDir
 
     H.copyFile (baseConfig <> "/topology-node-" <> si <> ".json") (tempDir <> "/topology-node-" <> si <> ".json")
     H.copyFile (baseConfig <> "/config-" <> si <> ".yaml") (tempDir <> "/config-" <> si <> ".yaml")
@@ -113,6 +108,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
           { IO.std_in = IO.CreatePipe
           , IO.std_out = IO.UseHandle hNodeStdout
           , IO.std_err = IO.UseHandle hNodeStderr
+          , IO.cwd = Just tempDir
           }
         )
       )
@@ -125,7 +121,7 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    socketFile <- H.noteShow . IO.adjustSocketPath $ socketDir <> "/node-" <> si
+    socketFile <- H.noteShow . IO.adjustSocketPath $ tempDir <> "/" <> socketDir <> "/node-" <> si
     H.assertM $ H.doesSocketExist socketFile
 
 tests :: IO Bool
