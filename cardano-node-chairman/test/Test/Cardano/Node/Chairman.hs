@@ -15,7 +15,6 @@ import           Data.Int
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
-import           Data.Tuple
 import           GHC.Num
 import           Hedgehog (Property, discover)
 import           System.IO (IO)
@@ -42,7 +41,10 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
   socketDir <- H.noteShow $ tempDir <> "/socket"
-  _ <- H.noteShowIO $ fmap fst <$> IO.getEnvironment
+  _ <- H.noteShowIO $ IO.getEnv "TEMP"
+  _ <- H.noteShowIO $ IO.getEnv "TEMPDIR"
+  _ <- H.noteShowIO $ IO.getEnv "TMP"
+  _ <- H.noteShowIO $ IO.getEnv "TMPDIR"
 
   -- Generate keys
   void $ H.execCli
