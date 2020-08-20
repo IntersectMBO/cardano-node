@@ -59,7 +59,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
     --tx-out $(cat payment.addr)+193882981
     --withdrawal $(cat stake.addr)+550000000
     --ttl 12345678
-    --fee 0
+    --fee 171089
     --out-file withdraw_rewards.raw    
 
 ### Sign and submit the transactions
@@ -68,7 +68,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
     --tx-body-file withdraw_rewards.raw  \
     --signing-key-file payment.skey \
     --signing-key-file stake.skey \
-    --testnet-magic 42 \
+    --mainnet \
     --out-file withdraw_rewards.signed
 
     cardano-cli shelley transaction submit \
