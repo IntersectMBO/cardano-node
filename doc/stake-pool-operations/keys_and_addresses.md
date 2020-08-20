@@ -78,4 +78,10 @@ cardano-cli shelley query utxo \
 --------------------------------------------------------------------------------------------
 ```
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead. 
+#### Change permissions for your keys to prevent accidental deletion. 
+
+```
+chmod 400 payment.vkey payment.skey stake.vkey stake.skey
+```
+
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.

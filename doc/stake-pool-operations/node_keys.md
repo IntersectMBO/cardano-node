@@ -2,13 +2,13 @@
 
 A stake pool needs at least 2 running nodes: A __block-producing__ node and a __relay__ node.
 
-We need to setup our __block-producing__ node. You can build the node from source or maintain a single build on your local machine and only upload the binaries to your __block-producing__ and __relay__ servers. Just make sure you have consistent versions across them.
+We need to setup our __block-producing__ node. You can build the node from source or on each server or maintain a single build on your local machine and only upload the binaries to your __block-producing__ and __relay__ servers. Make sure you have consistent versions across them.
 
 
 
 ![network diagram](images/basic-network-with-relays-producers-passivenodes-walletnodes.png)
 
-The __block-producing__ node will only connect with it's __relay__, while the __relay__ will establish connections with other relays in the network.  Each node must run in an independent server.
+The __block-producing__ node will hold your KES and VRF keys and the operational certificate. It should only connect with it's __relay__, while the __relay__ will establish connections with other relays in the network.  Each node must run in an independent server.
 
 #### Basic block-producing node firewall configuration:
 
@@ -25,7 +25,7 @@ The __block-producing__ node will only connect with it's __relay__, while the __
 #### Creating keys for our block-producing node
 
 **WARNING:**
-You may want to use your __local machine__ for this process (assuming you have cardano-node and cardano-cli on it). Make sure you are not online until you have put your __cold keys__ in a secure storage and deleted the files from you local machine.
+You may want to use your __local machine__ for this process (you need cardano-node and cardano-cli on it). Make sure you are not online until you have put your __cold keys__ in a secure storage and deleted the files from you local machine.
 
 The __block-producing node__ or __pool node__ needs:
 
@@ -46,17 +46,29 @@ Create a directory on your local machine to store your keys:
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter-file cold.counter
 
+#### Change permissions for your cold keys to prevent accidental deletion.
+
+    chmod 400  cold.vkey cold.skey
+
 #### Generate VRF Key pair
 
     cardano-cli shelley node key-gen-VRF \
     --verification-key-file vrf.vkey \
     --signing-key-file vrf.skey
 
+#### Change permissions for your cold keys to prevent accidental deletion.
+
+    chmod 400  vrf.vkey vrf.skey
+
 #### Generate the KES Key pair
 
     cardano-cli shelley node key-gen-KES \
     --verification-key-file kes.vkey \
     --signing-key-file kes.skey
+
+#### Change permissions for your cold keys to prevent accidental deletion.
+
+    chmod 400  kes.vkey kes.skey
 
 #### Generate the Operational Certificate
 
