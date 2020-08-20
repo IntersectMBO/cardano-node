@@ -15,20 +15,17 @@ import           Cardano.Api.Typed as Api
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Attoparsec.Text as Atto
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Scientific as Scientific
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-
 import qualified Data.Vector as Vector
 
 import           Shelley.Spec.Ledger.MetaData (MetaData (..), MetaDatum (..))
-
-
 
 data MetaDataJsonConversionError
   = ConversionErrDecodeJSON !String
@@ -71,7 +68,7 @@ jsonFromPairList xs =
     -- element), then convert this into a JSON object.
     -- If one of more of the elements return 'Nothing' then represent it as a JSON list.
     case traverse collapseLeft xs of
-      Nothing -> Aeson.toJSON $ map (\ (a, b) -> (jsonFromMetadataValue a, jsonFromMetadataValue b)) xs
+      Nothing -> Aeson.toJSON $ map (bimap jsonFromMetadataValue jsonFromMetadataValue) xs
       Just zs -> Aeson.Object $ HashMap.fromList zs
   where
     collapseLeft :: (MetaDatum, MetaDatum) -> Maybe (Text, Aeson.Value)
