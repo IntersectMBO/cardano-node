@@ -10,7 +10,7 @@ than installing on Ubuntu/Debian.
 The [Nix Package Manager][nix] can be installed on most Linux distributions by downloading and
 running the installation script:
 ```
-curl https://nixos.org/nix/install > install-nix.sh
+curl -L https://nixos.org/nix/install > install-nix.sh
 ./install-nix.sh
 ```
 and following the directions.
