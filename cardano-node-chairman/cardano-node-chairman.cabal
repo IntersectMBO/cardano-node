@@ -9,7 +9,6 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-extra-source-files:     ChangeLog.md
 
 library
   hs-source-dirs:       src
