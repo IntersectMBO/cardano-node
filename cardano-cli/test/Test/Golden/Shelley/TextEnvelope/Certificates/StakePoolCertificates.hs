@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+{- HLINT ignore "Use camelCase" -}
+
 -- | 1. Create cold key pair.
 --   2. Create stake key pair.
 --   3. Create VRF key pair.

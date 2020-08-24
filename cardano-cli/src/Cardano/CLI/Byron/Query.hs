@@ -24,11 +24,11 @@ import           Ouroboros.Network.Block
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Types (SocketPath (..))
-import           Cardano.Tracing.Render (renderHeaderHash, renderSlotNo) -- TODO: This forces us to import "cardano-node". Fix this.
+import           Cardano.Tracing.Render (renderHeaderHash, renderSlotNo)
 
+{- HLINT ignore "Reduce duplication" -}
 
-data ByronQueryError
-  = ByronQueryEnvVarSocketErr !EnvSocketError
+newtype ByronQueryError = ByronQueryEnvVarSocketErr EnvSocketError
   deriving Show
 
 renderByronQueryError :: ByronQueryError -> Text
@@ -42,7 +42,7 @@ renderByronQueryError err =
 
 runGetLocalNodeTip :: NetworkId -> ExceptT ByronQueryError IO ()
 runGetLocalNodeTip networkId = do
-    SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr $
+    SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr
                            readEnvSocketPath
     let connctInfo =
           LocalNodeConnectInfo {
@@ -57,7 +57,7 @@ runGetLocalNodeTip networkId = do
       putTextLn (getTipOutput tip)
   where
     getTipOutput :: forall blk. ConvertRawHash blk => Tip blk -> Text
-    getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
+    getTipOutput TipGenesis = "Current tip: genesis (origin)"
     getTipOutput (Tip slotNo headerHash (BlockNo blkNo)) =
       Text.unlines
         [ "\n"

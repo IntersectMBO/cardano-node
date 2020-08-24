@@ -23,9 +23,9 @@ golden_shelleyNodeKeyGen = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
     , "--operational-certificate-issue-counter", opCertCounterFile
     ]
 
-  assertFileOccurences 1 "StakePoolVerificationKey_ed25519" $ verificationKeyFile
-  assertFileOccurences 1 "StakePoolSigningKey_ed25519" $ signingKeyFile
-  assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ opCertCounterFile
+  assertFileOccurences 1 "StakePoolVerificationKey_ed25519" verificationKeyFile
+  assertFileOccurences 1 "StakePoolSigningKey_ed25519" signingKeyFile
+  assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" opCertCounterFile
 
   assertEndsWithSingleNewline verificationKeyFile
   assertEndsWithSingleNewline signingKeyFile

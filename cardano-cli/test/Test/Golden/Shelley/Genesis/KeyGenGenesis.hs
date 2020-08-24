@@ -21,8 +21,8 @@ golden_shelleyGenesisKeyGenGenesis = propertyOnce . moduleWorkspace "tmp" $ \tem
     , "--signing-key-file", signingKeyFile
     ]
 
-  assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ verificationKeyFile
-  assertFileOccurences 1 "GenesisSigningKey_ed25519" $ signingKeyFile
+  assertFileOccurences 1 "GenesisVerificationKey_ed25519" verificationKeyFile
+  assertFileOccurences 1 "GenesisSigningKey_ed25519" signingKeyFile
 
   assertEndsWithSingleNewline verificationKeyFile
   assertEndsWithSingleNewline signingKeyFile

@@ -59,7 +59,7 @@ instance ToJSON TextView where
   toJSON (TextView (TextViewType tvType') (TextViewDescription desc) rawCBOR) =
     object [ "type" .= Text.decodeUtf8 tvType'
            , "description" .= Text.decodeUtf8 desc
-           , "cborHex" .= (Text.decodeUtf8 $ Base16.encode rawCBOR)
+           , "cborHex" .= Text.decodeUtf8 (Base16.encode rawCBOR)
            ]
 
 instance FromJSON TextView where
@@ -99,7 +99,7 @@ renderTextViewError tve =
      <> " Expected one of: "
      <> Text.intercalate ", "
           [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
-     <> " Actual: " <> (Text.decodeLatin1 (unTextViewType actType))
+     <> " Actual: " <> Text.decodeLatin1 (unTextViewType actType)
     TextViewAesonDecodeError decErr -> "TextView aeson decode error: " <> textShow decErr
     TextViewDecodeError decErr -> "TextView decode error: " <> textShow decErr
 

@@ -93,7 +93,7 @@ execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
   maybeEnvBin <- liftIO $ IO.lookupEnv envBin
   (actualBin, actualArguments) <- case maybeEnvBin of
     Just envBin' -> return (envBin', arguments)
-    Nothing -> return ("cabal", ("exec":"--":pkgBin:arguments))
+    Nothing -> return ("cabal", "exec":"--":pkgBin:arguments)
   H.annotate $ "Command: " <> actualBin <> " " <> L.unwords actualArguments
   (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readProcessWithExitCode actualBin actualArguments ""
   case exitResult of

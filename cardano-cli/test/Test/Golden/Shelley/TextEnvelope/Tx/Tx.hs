@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+{- HLINT ignore "Use camelCase" -}
+
 -- | 1. Generate a key pair
 --   2. Create tx body
 --   3. Sign tx body

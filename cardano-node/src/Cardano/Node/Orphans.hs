@@ -22,7 +22,7 @@ instance FromJSON TracingVerbosity where
     err -> panic $ "Parsing of TracingVerbosity failed, "
                  <> err <> " is not a valid TracingVerbosity"
   parseJSON invalid  = panic $ "Parsing of TracingVerbosity failed due to type mismatch. "
-                             <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
+                             <> "Encountered: " <> Text.pack (Prelude.show invalid)
 
 deriving instance Show TracingVerbosity
 
@@ -30,4 +30,4 @@ instance FromJSON Update.ApplicationName where
   parseJSON (String x) = pure $ Update.ApplicationName x
   parseJSON invalid  =
     panic $ "Parsing of application name failed due to type mismatch. "
-    <> "Encountered: " <> (Text.pack $ Prelude.show invalid)
+    <> "Encountered: " <> Text.pack (Prelude.show invalid)

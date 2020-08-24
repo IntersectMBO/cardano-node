@@ -216,11 +216,11 @@ renderByronProtocolInstantiationError pie =
     DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
     --TODO: Implement configuration error render function in cardano-ledger
     GenesisConfigurationError fp genesisConfigError -> "Genesis configuration error in: " <> toS fp
-                                                       <> " Error: " <> (Text.pack $ show genesisConfigError)
+                                                       <> " Error: " <> Text.pack (show genesisConfigError)
     GenesisReadError fp err ->  "There was an error parsing the genesis file: " <> toS fp
-                                <> " Error: " <> (Text.pack $ show err)
+                                <> " Error: " <> Text.pack (show err)
     -- TODO: Implement ByronLeaderCredentialsError render function in ouroboros-network
-    CredentialsError byronLeaderCredentialsError -> "Byron leader credentials error: " <> (Text.pack $ show byronLeaderCredentialsError)
+    CredentialsError byronLeaderCredentialsError -> "Byron leader credentials error: " <> Text.pack (show byronLeaderCredentialsError)
     SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
-                                                           <> " Error: " <> (Text.pack $ show deserialiseFailure)
+                                                           <> " Error: " <> Text.pack (show deserialiseFailure)
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"

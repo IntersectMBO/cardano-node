@@ -13,9 +13,9 @@ import           Cardano.Prelude
 import           Prelude (String)
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Text as Text
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
@@ -209,7 +209,7 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
 runTxSubmit :: Protocol -> NetworkId -> FilePath
             -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit protocol network txFile = do
-    SocketPath sockPath <- firstExceptT ShelleyTxSocketEnvError $ readEnvSocketPath
+    SocketPath sockPath <- firstExceptT ShelleyTxSocketEnvError readEnvSocketPath
     tx <- firstExceptT ShelleyTxReadFileError
       . newExceptT
       $ Api.readFileTextEnvelopeAnyOf

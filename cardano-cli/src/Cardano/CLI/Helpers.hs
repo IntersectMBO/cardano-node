@@ -43,10 +43,10 @@ renderHelpersError :: HelpersError -> Text
 renderHelpersError err =
   case err of
     OutputMustNotAlreadyExist fp -> "Output file/directory must not already exist: " <> Text.pack fp
-    ReadCBORFileFailure fp err' -> "CBOR read failure at: " <> Text.pack fp <> (Text.pack $ show err')
-    CBORPrettyPrintError err' -> "Error with CBOR decoding: " <> (Text.pack $ show err')
-    CBORDecodingError err' -> "Error with CBOR decoding: " <> (Text.pack $ show err')
-    IOError' fp ioE -> "Error at: " <> (Text.pack fp) <> " Error: " <> (Text.pack $ show ioE)
+    ReadCBORFileFailure fp err' -> "CBOR read failure at: " <> Text.pack fp <> Text.pack (show err')
+    CBORPrettyPrintError err' -> "Error with CBOR decoding: " <> Text.pack (show err')
+    CBORDecodingError err' -> "Error with CBOR decoding: " <> Text.pack (show err')
+    IOError' fp ioE -> "Error at: " <> Text.pack fp <> " Error: " <> Text.pack (show ioE)
 
 decodeCBOR
   :: LByteString
@@ -85,23 +85,23 @@ validateCBOR :: CBORObject -> LByteString -> Either HelpersError Text
 validateCBOR cborObject bs =
   case cborObject of
     CBORBlockByron epochSlots -> do
-      (const () ) <$> decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
+      () <$ decodeCBOR bs (fromCBORABlockOrBoundary epochSlots)
       Right "Valid Byron block."
 
     CBORDelegationCertificateByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
+      () <$ decodeCBOR bs (fromCBOR :: Decoder s Delegation.Certificate)
       Right "Valid Byron delegation certificate."
 
     CBORTxByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
+      () <$ decodeCBOR bs (fromCBOR :: Decoder s UTxO.Tx)
       Right "Valid Byron Tx."
 
     CBORUpdateProposalByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
+      () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Proposal)
       Right "Valid Byron update proposal."
 
     CBORVoteByron -> do
-      (const () ) <$> decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
+      () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
 
 

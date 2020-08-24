@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+{- HLINT ignore "Use camelCase" -}
+
 -- | 1. Generate a stake verification key
 --   2. Create a stake address registration certificate
 --   3. Check the TextEnvelope serialization format has not changed.

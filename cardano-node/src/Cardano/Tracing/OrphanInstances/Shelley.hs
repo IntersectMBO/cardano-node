@@ -80,6 +80,7 @@ import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.TxData (MIRPot (..), TxId (..), TxIn (..), TxOut (..))
 
+{- HLINT ignore "Use :" -}
 
 --
 -- | instances of @ToObject@
@@ -96,8 +97,7 @@ instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock c))) where
   toJSON i = toJSON (condense i)
 
 instance Crypto c => ToObject (Header (ShelleyBlock c)) where
-  toObject _verb b =
-    mkObject $
+  toObject _verb b = mkObject
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
         , "slotNo" .= condense (blockSlot b)
@@ -125,7 +125,7 @@ instance ToObject (TPraosCannotForge c) where
 deriving newtype instance ToJSON KESPeriod
 
 instance ToObject HotKey.KESInfo where
-  toObject _verb (HotKey.KESInfo { kesStartPeriod, kesEndPeriod, kesEvolution }) =
+  toObject _verb HotKey.KESInfo { kesStartPeriod, kesEndPeriod, kesEvolution } =
     mkObject
       [ "kind" .= String "KESInfo"
       , "startPeriod" .= kesStartPeriod
@@ -204,8 +204,8 @@ instance Crypto c => ToObject (PrtlSeqFailure c) where
              ]
   toObject _verb (WrongBlockSequencePrtclSeq lastAppliedHash currentHash) =
     mkObject [ "kind" .= String "WrongBlockSequence"
-             , "lastAppliedBlockHash" .= (String $ textShow lastAppliedHash)
-             , "currentBlockHash" .= (String $ textShow currentHash)
+             , "lastAppliedBlockHash" .= String (textShow lastAppliedHash)
+             , "currentBlockHash" .= String (textShow currentHash)
              ]
 
 instance Crypto c =>  ToObject (PredicateFailure (BBODY c)) where
@@ -508,21 +508,21 @@ instance Crypto c => ToObject (PredicateFailure (PRTCL c)) where
 instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
   toObject _verb (UnknownGenesisKeyOVERLAY (KeyHash genKeyHash)) =
     mkObject [ "kind" .= String "UnknownGenesisKeyOVERLAY"
-             , "unknownKeyHash" .= (String $ textShow genKeyHash)
+             , "unknownKeyHash" .= String (textShow genKeyHash)
              ]
   toObject _verb (VRFKeyBadLeaderValue seedNonce (SlotNo currSlotNo) prevHashNonce leaderElecVal) =
     mkObject [ "kind" .= String "VRFKeyBadLeaderValueOVERLAY"
-             , "seedNonce" .= (String $ textShow seedNonce)
-             , "currentSlot" .= (String $ textShow currSlotNo)
-             , "previousHashAsNonce" .= (String $ textShow prevHashNonce)
-             , "leaderElectionValue" .= (String $ textShow leaderElecVal)
+             , "seedNonce" .= String (textShow seedNonce)
+             , "currentSlot" .= String (textShow currSlotNo)
+             , "previousHashAsNonce" .= String (textShow prevHashNonce)
+             , "leaderElectionValue" .= String (textShow leaderElecVal)
              ]
   toObject _verb (VRFKeyBadNonce seedNonce (SlotNo currSlotNo) prevHashNonce blockNonce) =
     mkObject [ "kind" .= String "VRFKeyBadNonceOVERLAY"
-             , "seedNonce" .= (String $ textShow seedNonce)
-             , "currentSlot" .= (String $ textShow currSlotNo)
-             , "previousHashAsNonce" .= (String $ textShow prevHashNonce)
-             , "blockNonce" .= (String $ textShow blockNonce)
+             , "seedNonce" .= String (textShow seedNonce)
+             , "currentSlot" .= String (textShow currSlotNo)
+             , "previousHashAsNonce" .= String (textShow prevHashNonce)
+             , "blockNonce" .= String (textShow blockNonce)
              ]
   toObject _verb (VRFKeyWrongVRFKey issuerHash regVRFKeyHash unregVRFKeyHash) =
     mkObject [ "kind" .= String "VRFKeyWrongVRFKeyOVERLAY"
@@ -533,18 +533,18 @@ instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
   --TODO: Pipe slot number with VRFKeyUnknown
   toObject _verb (VRFKeyUnknown (KeyHash kHash)) =
     mkObject [ "kind" .= String "VRFKeyUnknownOVERLAY"
-             , "keyHash" .= (String $ textShow kHash)
+             , "keyHash" .= String (textShow kHash)
              ]
   toObject _verb (VRFLeaderValueTooBig leadElecVal weightOfDelegPool actSlotCoefff) =
     mkObject [ "kind" .= String "VRFLeaderValueTooBigOVERLAY"
-             , "leaderElectionValue" .= (String $ textShow leadElecVal)
-             , "delegationPoolWeight" .= (String $ textShow weightOfDelegPool)
-             , "activeSlotCoefficient" .= (String $ textShow actSlotCoefff)
+             , "leaderElectionValue" .= String (textShow leadElecVal)
+             , "delegationPoolWeight" .= String (textShow weightOfDelegPool)
+             , "activeSlotCoefficient" .= String (textShow actSlotCoefff)
              ]
   toObject _verb (NotActiveSlotOVERLAY notActiveSlotNo) =
     -- TODO: Elaborate on NotActiveSlot error
     mkObject [ "kind" .= String "NotActiveSlotOVERLAY"
-             , "slot" .= (String $ textShow notActiveSlotNo)
+             , "slot" .= String (textShow notActiveSlotNo)
              ]
   toObject _verb (WrongGenesisColdKeyOVERLAY actual expected) =
     mkObject [ "kind" .= String "WrongGenesisColdKeyOVERLAY"

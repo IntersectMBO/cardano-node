@@ -76,7 +76,7 @@ runStakePoolRegistrationCert
   -- ^ Pool owner stake verification key(s).
   -> [StakePoolRelay]
   -- ^ Stake pool relays.
-  -> (Maybe StakePoolMetadataReference)
+  -> Maybe StakePoolMetadataReference
   -- ^ Stake pool metadata.
   -> NetworkId
   -> OutputFile

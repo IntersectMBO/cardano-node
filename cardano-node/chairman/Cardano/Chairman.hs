@@ -87,7 +87,7 @@ chairmanTest tracer slotLength securityParam runningTime optionalProgressThresho
     traceWith tracer ("Will observe nodes for " ++ show runningTime)
     traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
-    SomeNodeClientProtocol (p :: ProtocolClient blk (BlockProtocol blk)) <- return $ someNodeClientProtocol
+    SomeNodeClientProtocol (p :: ProtocolClient blk (BlockProtocol blk)) <- return someNodeClientProtocol
 
     -- Run the chairman and get the final snapshot of the chain from each node.
     chainsSnapshot <- runChairman
@@ -98,7 +98,7 @@ chairmanTest tracer slotLength securityParam runningTime optionalProgressThresho
                         runningTime
                         socketPaths
 
-    traceWith tracer ("================== chairman results ==================")
+    traceWith tracer "================== chairman results =================="
 
     -- Test if we achieved consensus
     consensusSuccess <- either throwIO return $
@@ -111,7 +111,7 @@ chairmanTest tracer slotLength securityParam runningTime optionalProgressThresho
                          progressCondition progressThreshold consensusSuccess
 
     traceWith tracer (show progressSuccess)
-    traceWith tracer ("================== chairman results ==================")
+    traceWith tracer "================== chairman results =================="
 
   where
     progressThreshold = deriveProgressThreshold
@@ -240,9 +240,7 @@ consensusCondition (SecurityParam securityParam) chains =
           - fromWithOrigin 0 (AF.anchorToBlockNo intersection)
 
 
-data ProgressSuccess =
-     ProgressSuccess
-       BlockNo
+newtype ProgressSuccess = ProgressSuccess BlockNo
   deriving Show
 
 data ProgressFailure blk =

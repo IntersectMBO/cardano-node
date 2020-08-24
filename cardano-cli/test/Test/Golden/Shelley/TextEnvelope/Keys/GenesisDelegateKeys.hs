@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+{- HLINT ignore "Use camelCase" -}
+
 -- | 1. Generate a key pair & operational certificate counter file
 --   2. Check for the existence of the key pair & counter file
 --   3. Check the TextEnvelope serialization format has not changed.

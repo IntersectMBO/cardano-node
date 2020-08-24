@@ -140,7 +140,7 @@ readPaymentVerificationKey (VerificationKeyFile fp) = do
   -- Verification Key
   let eVk = hoistEither . Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB
   -- Convert error to 'CliError'
-  firstExceptT (VerificationKeyDeserialisationFailed fp . T.pack . show) $ eVk
+  firstExceptT (VerificationKeyDeserialisationFailed fp . T.pack . show) eVk
 
 
 serialisePoorKey :: CardanoEra -> Genesis.PoorSecret

@@ -23,6 +23,7 @@ import qualified Hedgehog.Range as R
 import qualified System.Directory as IO
 
 {- HLINT ignore "Use camelCase" -}
+{- HLINT ignore "Reduce duplication" -}
 
 parseMaxLovelaceSupply :: J.Value -> J.Parser Int
 parseMaxLovelaceSupply = J.withObject "Object" $ \o -> o J..: "maxLovelaceSupply"
@@ -31,7 +32,7 @@ parseSystemStart :: J.Value -> J.Parser String
 parseSystemStart = J.withObject "Object" $ \o -> o J..: "systemStart"
 
 parseHashMap :: J.Value -> J.Parser (HM.HashMap String J.Value)
-parseHashMap (J.Object hm) = pure $ HM.fromList $ fmap (first T.unpack) (HM.toList (hm))
+parseHashMap (J.Object hm) = pure $ HM.fromList $ fmap (first T.unpack) (HM.toList hm)
 parseHashMap v = J.typeMismatch "Object" v
 
 parseDelegateCount :: J.Value -> J.Parser Int

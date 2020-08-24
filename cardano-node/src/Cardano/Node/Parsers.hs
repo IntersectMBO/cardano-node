@@ -78,7 +78,7 @@ parseSocketPath :: Text -> Parser SocketPath
 parseSocketPath helpMessage =
   SocketPath <$> strOption
     ( long "socket-path"
-        <> (help $ toS helpMessage)
+        <> help (toS helpMessage)
         <> completer (bashCompleter "file")
         <> metavar "FILEPATH"
     )

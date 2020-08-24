@@ -51,7 +51,7 @@ import qualified Cardano.Crypto as Crypto
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Types (GenesisFile(..))
+import           Cardano.CLI.Types (GenesisFile (..))
 
 data ByronGenesisError
   = ByronDelegationCertSerializationError !ByronDelegationError
@@ -120,7 +120,7 @@ mkGenesisSpec gp = do
     ExceptT . pure $ canonicalDecodePretty protoParamsRaw
 
   -- We're relying on the generator to fake AVVM and delegation.
-  genesisDelegation <- withExceptT (MakeGenesisDelegationError) $
+  genesisDelegation <- withExceptT MakeGenesisDelegationError $
     Genesis.mkGenesisDelegation []
 
   withExceptT GenesisSpecError $
@@ -235,7 +235,7 @@ serialiseGenesis = canonicalEncodePretty
 
 writeSecrets :: FilePath -> String -> String -> (a -> IO (Either ByronGenesisError LB.ByteString)) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =
-  forM_ (zip xs $ [0::Int ..]) $
+  forM_ (zip xs [0::Int ..]) $
   \(secret, nr)-> do
     let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
     result <- secretOp secret

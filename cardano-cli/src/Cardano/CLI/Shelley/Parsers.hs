@@ -178,15 +178,12 @@ pPaymentVerificationKeyFile =
     )
 
 pScript :: Parser ScriptFile
-pScript =
-  ScriptFile <$>
-    ( Opt.strOption
-        (  Opt.long "script-file"
-        <> Opt.metavar "FILE"
-        <> Opt.help "Filepath of the script."
-        <> Opt.completer (Opt.bashCompleter "file")
-        )
-    )
+pScript = ScriptFile <$> Opt.strOption
+  (  Opt.long "script-file"
+  <> Opt.metavar "FILE"
+  <> Opt.help "Filepath of the script."
+  <> Opt.completer (Opt.bashCompleter "file")
+  )
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
@@ -344,7 +341,7 @@ pKeyCmd =
         Opt.strOption
           (  Opt.long "byron-signing-key-file"
           <> Opt.metavar "FILE"
-          <> Opt.help ("Input filepath of the Byron-format signing key.")
+          <> Opt.help "Input filepath of the Byron-format signing key."
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
@@ -354,7 +351,7 @@ pKeyCmd =
         Opt.strOption
           (  Opt.long "byron-verification-key-file"
           <> Opt.metavar "FILE"
-          <> Opt.help ("Input filepath of the Byron-format verification key.")
+          <> Opt.help "Input filepath of the Byron-format verification key."
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
@@ -954,7 +951,7 @@ pSomeSigningKeyFiles =
       Opt.strOption
       (  Opt.long "signing-key-file"
       <> Opt.metavar "FILE"
-      <> Opt.help ("Input filepath of the signing key (one or more).")
+      <> Opt.help "Input filepath of the signing key (one or more)."
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
@@ -969,15 +966,12 @@ pSigningKeyFile fdir =
       )
 
 pWitnessSigningKeyFile :: Parser SigningKeyFile
-pWitnessSigningKeyFile =
-  SigningKeyFile <$>
-    ( Opt.strOption
-        (  Opt.long "witness-signing-key-file"
-        <> Opt.metavar "FILE"
-        <> Opt.help "Filepath of the witness signing key."
-        <> Opt.completer (Opt.bashCompleter "file")
-        )
-    )
+pWitnessSigningKeyFile = SigningKeyFile <$> Opt.strOption
+  (  Opt.long "witness-signing-key-file"
+  <> Opt.metavar "FILE"
+  <> Opt.help "Filepath of the witness signing key."
+  <> Opt.completer (Opt.bashCompleter "file")
+  )
 
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =
@@ -1072,7 +1066,7 @@ pColdVerificationKeyFile =
     ( Opt.strOption
         (  Opt.long "cold-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the cold verification key.")
+        <> Opt.help "Filepath of the cold verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1226,7 +1220,7 @@ pWitnessFile =
     Opt.strOption
       (  Opt.long "witness-file"
       <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the witness.")
+      <> Opt.help "Filepath of the witness."
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
@@ -1349,7 +1343,7 @@ pStakeVerificationKeyFile =
     ( Opt.strOption
         (  Opt.long "stake-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the staking verification key.")
+        <> Opt.help "Filepath of the staking verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1366,7 +1360,7 @@ pPoolStakeVerificationKeyFile =
     (  Opt.strOption
          (  Opt.long "cold-verification-key-file"
          <> Opt.metavar "FILE"
-         <> Opt.help ("Filepath of the stake pool verification key.")
+         <> Opt.help "Filepath of the stake pool verification key."
          <> Opt.completer (Opt.bashCompleter "file")
          )
     <|>
@@ -1411,7 +1405,7 @@ pVRFVerificationKeyFile =
     Opt.strOption
       (  Opt.long "vrf-verification-key-file"
       <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the VRF verification key.")
+      <> Opt.help "Filepath of the VRF verification key."
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
@@ -1421,7 +1415,7 @@ pRewardAcctVerificationKeyFile =
     ( Opt.strOption
         (  Opt.long "pool-reward-account-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the reward account staking verification key.")
+        <> Opt.help "Filepath of the reward account staking verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1438,7 +1432,7 @@ pPoolOwner =
     ( Opt.strOption
         (  Opt.long "pool-owner-stake-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the pool owner staking verification key.")
+        <> Opt.help "Filepath of the pool owner staking verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1518,7 +1512,7 @@ pSingleHostAddress = singleHostAddress
   singleHostAddress ipv4 ipv6 port =
     case (ipv4, ipv6) of
       (Nothing, Nothing) ->
-        panic $ "Please enter either an IPv4 or IPv6 address for the pool relay"
+        panic "Please enter either an IPv4 or IPv6 address for the pool relay"
       (Just i4, Nothing) ->
         StakePoolRelayIp (Just i4) Nothing (Just port)
       (Nothing, Just i6) ->
@@ -1758,7 +1752,7 @@ pExtraEntropy =
   where
     parseEntropyBytes :: Atto.Parser ByteString
     parseEntropyBytes =
-      (fst . Base16.decode) <$> Atto.takeWhile1 Char.isHexDigit
+      fst . Base16.decode <$> Atto.takeWhile1 Char.isHexDigit
 
 
 pProtocol :: Parser Protocol

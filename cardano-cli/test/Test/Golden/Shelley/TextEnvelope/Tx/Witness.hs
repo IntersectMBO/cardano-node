@@ -7,5 +7,7 @@ module Test.Golden.Shelley.TextEnvelope.Tx.Witness
 import           Cardano.Prelude
 import           Hedgehog (Property)
 
+{- HLINT ignore "Use camelCase" -}
+
 golden_shelleyWitness :: Property
 golden_shelleyWitness = panic "TODO"

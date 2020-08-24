@@ -114,8 +114,9 @@ parseCBORObject :: Parser CBORObject
 parseCBORObject = asum
   [ CBORBlockByron <$> option auto
       (  long "byron-block"
-      <> (help $  "The CBOR file is a byron era block."
-               <> " Enter the number of slots in an epoch. The default value is 21600")
+      <> help
+          (   "The CBOR file is a byron era block."
+          <>  " Enter the number of slots in an epoch. The default value is 21600")
       <> metavar "INT"
       <> value (EpochSlots 21600)
       )
@@ -652,12 +653,12 @@ parseFractionWithDefault
   -> Double
   -> Parser Rational
 parseFractionWithDefault optname desc w =
-  toRational <$> ( option readDouble
-                 $ long optname
-                <> metavar "DOUBLE"
-                <> help desc
-                <> value w
-                )
+  toRational <$> option readDouble
+    ( long optname
+    <> metavar "DOUBLE"
+    <> help desc
+    <> value w
+    )
 
 pNetworkId :: Parser Typed.NetworkId
 pNetworkId =

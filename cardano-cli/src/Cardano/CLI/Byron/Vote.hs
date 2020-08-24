@@ -45,13 +45,13 @@ data ByronVoteError
 renderByronVoteError :: ByronVoteError -> Text
 renderByronVoteError bVerr =
   case bVerr of
-    ByronVoteDecodingError decoderErr -> "Error decoding Byron vote: " <> (Text.pack $ show decoderErr)
-    ByronVoteGenesisReadError genErr -> "Error reading the genesis file:" <> (Text.pack $ show genErr)
+    ByronVoteDecodingError decoderErr -> "Error decoding Byron vote: " <> Text.pack (show decoderErr)
+    ByronVoteGenesisReadError genErr -> "Error reading the genesis file:" <> Text.pack (show genErr)
     ByronVoteReadFileFailure fp err -> "Error reading Byron vote at " <> Text.pack fp <> " Error: " <> err
-    ByronVoteTxSubmissionError txErr -> "Error submitting the transaction: " <> (Text.pack $ show txErr)
-    ByronVoteUpdateProposalFailure err -> "Error reading the update proposal: " <> (Text.pack $ show err)
-    ByronVoteUpdateHelperError err ->"Error creating the vote: " <> (Text.pack $ show err)
-    ByronVoteKeyReadFailure err -> "Error reading the signing key: " <> (Text.pack $ show err)
+    ByronVoteTxSubmissionError txErr -> "Error submitting the transaction: " <> Text.pack (show txErr)
+    ByronVoteUpdateProposalFailure err -> "Error reading the update proposal: " <> Text.pack (show err)
+    ByronVoteUpdateHelperError err ->"Error creating the vote: " <> Text.pack (show err)
+    ByronVoteKeyReadFailure err -> "Error reading the signing key: " <> Text.pack (show err)
 
 
 runVoteCreation

@@ -49,9 +49,8 @@ import           Cardano.BM.ElidingTracer
 import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
-                     ConvertRawHash, ForgeStateInfo, ForgeStateUpdateError,
-                     Header, realPointSlot)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash,
+                     ForgeStateInfo, ForgeStateUpdateError, Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                      TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -93,6 +92,8 @@ import           Cardano.Tracing.Queries
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
 
+{- HLINT ignore "Redundant bracket" -}
+{- HLINT ignore "Use record patterns" -}
 
 data Tracers peer localPeer blk = Tracers
   { -- | Trace the ChainDB
@@ -205,10 +206,10 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
-  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain{}))) (_old, oldt) = do
+  conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent ChainDB.AddedToCurrentChain{})) (_old, oldt) = do
       tnow <- fromIntegral <$> getMonotonicTimeNSec
       let deltat = tnow - oldt
-      if (deltat > 1250000000)  -- report at most every 1250 ms
+      if deltat > 1250000000 -- report at most every 1250 ms
         then do
           traceWith (toLogObject' tverb tr) ev
           return (Just ev, tnow)
@@ -226,7 +227,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
           progress :: Double = (fromInteger slotno * 100.0) / fromInteger (max slotno endslot)
       when (count > 0 && (slotno - startslot) `mod` 1000 == 0) $ do  -- report every 1000th slot
           meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
-          traceNamedObject tr (meta, LogValue "block replay progress (%)" (PureD $ (fromInteger $ round (progress * 10.0)) / 10.0))
+          traceNamedObject tr (meta, LogValue "block replay progress (%)" (PureD (fromInteger (round (progress * 10.0)) / 10.0)))
       return (Just ev, fromInteger startslot)
   conteliding _ _ _ _ = return (Nothing, 0)
 
@@ -470,18 +471,18 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
      staticMeta <- mkLOMeta Critical Confidential
      let name :: LoggerName = "metrics.Forge"
      ForgeTracers
-       <$> (counting $ liftCounting staticMeta name "forged" tr)
-       <*> (counting $ liftCounting staticMeta name "forge-about-to-lead" tr)
-       <*> (counting $ liftCounting staticMeta name "could-not-forge" tr)
-       <*> (counting $ liftCounting staticMeta name "adopted" tr)
-       <*> (counting $ liftCounting staticMeta name "didnt-adopt" tr)
-       <*> (counting $ liftCounting staticMeta name "forged-invalid" tr)
-       <*> (counting $ liftCounting staticMeta name "node-not-leader" tr)
-       <*> (counting $ liftCounting staticMeta name "cannot-forge" tr)
-       <*> (counting $ liftCounting staticMeta name "forge-state-update-error" tr)
-       <*> (counting $ liftCounting staticMeta name "block-from-future" tr)
-       <*> (counting $ liftCounting staticMeta name "slot-is-immutable" tr)
-       <*> (counting $ liftCounting staticMeta name "node-is-leader" tr)
+       <$> counting (liftCounting staticMeta name "forged" tr)
+       <*> counting (liftCounting staticMeta name "forge-about-to-lead" tr)
+       <*> counting (liftCounting staticMeta name "could-not-forge" tr)
+       <*> counting (liftCounting staticMeta name "adopted" tr)
+       <*> counting (liftCounting staticMeta name "didnt-adopt" tr)
+       <*> counting (liftCounting staticMeta name "forged-invalid" tr)
+       <*> counting (liftCounting staticMeta name "node-not-leader" tr)
+       <*> counting (liftCounting staticMeta name "cannot-forge" tr)
+       <*> counting (liftCounting staticMeta name "forge-state-update-error" tr)
+       <*> counting (liftCounting staticMeta name "block-from-future" tr)
+       <*> counting (liftCounting staticMeta name "slot-is-immutable" tr)
+       <*> counting (liftCounting staticMeta name "node-is-leader" tr)
 
 teeForge ::
   forall blk
