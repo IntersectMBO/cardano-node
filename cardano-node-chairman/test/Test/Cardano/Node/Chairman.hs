@@ -13,6 +13,7 @@ import           Data.Function
 import           Data.Functor
 import           Data.Int
 import           Data.Maybe
+import           Data.Ord
 import           Data.Semigroup
 import           GHC.Num
 import           Hedgehog (Property, discover)
@@ -22,6 +23,7 @@ import           Text.Show
 import qualified Chairman.Base as H
 import qualified Chairman.Network as IO
 import qualified Chairman.Process as H
+import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified System.IO as IO
@@ -30,12 +32,13 @@ import qualified System.Process as IO
 {- HLINT ignore "Redundant <&>" -}
 
 prop_spawnOneNode :: Property
-prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> do
+prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
   let nodeCount = 3
   base <- H.noteShowM H.getProjectBase
   baseConfig <- H.noteShow $ base <> "/configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime 60 currentTime -- 60 seconds into the future
+  startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
+  socketDir <- H.noteShow $ tempDir <> "/socket"
 
   -- Generate keys
   void $ H.execCli
@@ -55,13 +58,26 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     , "--secret-seed", "2718281828"
     ]
 
+  H.writeFile (tempDir <> "/genesis/GENHASH") . L.unlines . L.reverse . L.take 1 . L.reverse . L.lines =<< H.execCli
+    [ "print-genesis-hash"
+    , "--genesis-json"
+    , tempDir <> "/genesis/genesis.json"
+    ]
+
+  let nodeIndexes = [0..nodeCount - 1]
+
   -- Launch cluster of three nodes
-  forM_ [0..nodeCount - 1] $ \i -> do
+  forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
     dbDir <- H.noteShow $ tempDir <> "/db/node-" <> si
-    socketDir <- H.noteShow $ tempDir <> "/socket"
-    nodeStdoutFile <- H.noteTempFile tempDir "cardano-node.stdout.log"
-    nodeStderrFile <- H.noteTempFile tempDir "cardano-node.stderr.log"
+    nodeStdoutFile <- H.noteTempFile tempDir $ "cardano-node-" <> si <> ".stdout.log"
+    nodeStderrFile <- H.noteTempFile tempDir $ "cardano-node-" <> si <> ".stderr.log"
+    socketFile <- H.noteShow $ socketDir <> "/node-" <> si <> "-socket"
+    portString <- H.noteShow $ "300" <> si <> ""
+    topologyFile <- H.noteShow $ tempDir <> "/topology-node-" <> si <> ".json"
+    configFile <- H.noteShow $ tempDir <> "/config-" <> si <> ".yaml"
+    signingKeyFile <- H.noteShow $ tempDir <> "/genesis/delegate-keys.00" <> si <> ".key"
+    delegationCertificateFile <- H.noteShow $ tempDir <> "/genesis/delegation-cert.00" <> si <> ".json"
 
     H.createDirectoryIfMissing dbDir
     H.createDirectoryIfMissing socketDir
@@ -72,18 +88,21 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
     hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
 
+    H.diff (L.length socketFile) (<=) H.maxUnixDomainSocketNameLength
+
     (Just hIn, _mOut, _mErr, hProcess, _) <- H.createProcess =<<
       ( H.procNode
         [ "run"
         , "--database-path", dbDir
-        , "--socket-path", socketDir <> "/node-" <> si <> "-socket"
-        , "--port", "300" <> si <> ""
-        , "--topology", tempDir <> "/topology-node-" <> si <> ".json"
-        , "--config", tempDir <> "/config-" <> si <> ".yaml"
-        , "--signing-key", tempDir <> "/genesis/delegate-keys.00" <> si <> ".key"
-        , "--delegation-certificate", tempDir <> "/genesis/delegation-cert.00" <> si <> ".json"
+        , "--socket-path", socketFile
+        , "--port", portString
+        , "--topology", topologyFile
+        , "--config", configFile
+        , "--signing-key", signingKeyFile
+        , "--delegation-certificate", delegationCertificateFile
         , "--shutdown-ipc", "0"
-        ] <&>
+        ]
+        <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe
           , IO.std_out = IO.UseHandle hNodeStdout
@@ -94,11 +113,11 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "temp/chairman" $ \tempDir -> d
 
     return (hIn, hProcess)
 
-  deadline <- H.noteShowIO $ DTC.addUTCTime 180 <$> DTC.getCurrentTime -- 60 seconds from now
+  deadline <- H.noteShowIO $ DTC.addUTCTime 60 <$> DTC.getCurrentTime -- 60 seconds from now
 
   forM_ [0..nodeCount - 1] $ \i -> H.assertByDeadlineIO deadline $ IO.isPortOpen (3000 + i)
 
-  H.threadDelay 10000000
+  forM_ nodeIndexes $ \i -> H.assertFileExists $ socketDir <> "/node-" <> show i <> "-socket"
 
 tests :: IO Bool
 tests = H.checkParallel $$discover
