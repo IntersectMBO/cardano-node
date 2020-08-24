@@ -17,7 +17,7 @@ For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
 
     cardano-cli shelley transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
-    --tx-out $(cat paymentwithstake.addr)+0 \
+    --tx-out $(cat payment.addr)+0 \
     --ttl 0 \
     --fee 0 \
     --out-file tx.raw \
@@ -68,7 +68,7 @@ Build the transaction, this time include  --ttl and --fee
 
     cardano-cli shelley transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
-    --tx-out $(cat paymentwithstake.addr)+997828515 \
+    --tx-out $(cat payment.addr)+997828515 \
     --ttl 987654 \
     --fee 171485 \
     --out-file tx.raw \
