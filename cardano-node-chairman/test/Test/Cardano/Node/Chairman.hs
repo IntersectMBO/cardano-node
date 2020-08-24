@@ -27,6 +27,7 @@ import qualified Chairman.Process as H
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
+import qualified System.Info as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
 
@@ -121,7 +122,9 @@ prop_spawnOneNode = H.propertyOnce . H.workspace "x" $ \tempDir -> do
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    socketFile <- H.noteShow . IO.adjustSocketPath $ tempDir <> "/" <> socketDir <> "/node-" <> si
+    socketFile <- if IO.os == "mingw32"
+      then H.noteShow . IO.adjustSocketPath $ tempDir <> "/" <> socketDir <> "/node-" <> si <> "-moo"
+      else H.noteShow . IO.adjustSocketPath $ tempDir <> "/" <> socketDir <> "/node-" <> si
     H.assertM $ H.doesSocketExist socketFile
 
 tests :: IO Bool
