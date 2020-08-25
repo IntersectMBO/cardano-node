@@ -15,6 +15,7 @@ cardano-cli 1.11.0 - linux-x86_64 - ghc-8.6
 ```
 
 Everything we'll be doing uses the `shelley` sub-command
+
 ```
 $ cardano-cli shelley
 Usage: cardano-cli shelley COMMAND
@@ -55,13 +56,16 @@ A real chain should use several genesis keys, and they should be created
 separately by the members of the federation bootstrapping the system. They
 should be created offline, kept offline and only the verification keys shared.
 
-For a demo we're going to put all the keys together in once place
+For a demo we're going to put all the keys together in one place.
 
 To start with, we will set up our template directory:
+
 ```
 $ cardano-cli shelley genesis create --genesis-dir example/
 ```
+
 This gives us
+
 ```
 $ ls example/*
 example/genesis.json  example/genesis.spec.json
@@ -72,6 +76,7 @@ example/genesis-keys:
 
 example/utxo-keys:
 ```
+
 Note that it created both a `genesis.spec.json` and a `genesis.json`. This
 command can be re-run at any time and it will re-generate the `genesis.json`
 based on the `genesis.spec.json` (which we can edit by hand) and any keys
@@ -86,6 +91,7 @@ Shelley supports decentralised block production but not yet decentralised
 governance, so we still have genesis keys with special governance powers.
 
 So the first step will be to make the genesis keys.
+
 ```
 $ cardano-cli shelley genesis key-gen-genesis
 Usage: cardano-cli shelley genesis key-gen-genesis --verification-key-file FILEPATH
@@ -98,7 +104,9 @@ Available options:
   --signing-key-file FILEPATH
                            Output filepath of the signing key.
 ```
+
 So let's make two example genesis key pairs
+
 ```
 $ cardano-cli shelley genesis key-gen-genesis \
     --verification-key-file example/genesis-keys/genesis1.vkey \
@@ -111,6 +119,7 @@ $ cardano-cli shelley genesis key-gen-genesis \
 ### Semi-readable file formats
 
 You can look at these files, they are semi-readable
+
 ```
 $ cat example/genesis-keys/genesis1.vkey
 type: Genesis verification key
@@ -118,11 +127,13 @@ title: Genesis key
 cbor-hex:
  582066361ff2e1b5fdf25bc14bc48424b64fa62cee7692ed7e86216eafd3bdb28cbd
 ```
+
 The "type" must not be edited. This is used as a sanity check. The "title"
 field is free-form and you can use it for whatever purpose you like, such as
 identifying different keys. Don't edit the binary data of course, but you
 can inspect it using any CBOR tool, e.g. [cbor.me] or the `cardano-cli`
 itself:
+
 ```
 cardano-cli shelley text-view decode-cbor
 Usage: cardano-cli shelley text-view decode-cbor --file FILENAME
@@ -131,7 +142,9 @@ Usage: cardano-cli shelley text-view decode-cbor --file FILENAME
 Available options:
   --file FILENAME          Input file.
 ```
+
 Like so
+
 ```
 $ cardano-cli shelley text-view decode-cbor \
     --file example/genesis-keys/genesis1.vkey
@@ -140,6 +153,7 @@ $ cardano-cli shelley text-view decode-cbor \
 c5 ba 84 f3 66 22 0a 15 0e 66 bb a8 71 87 2f 27
 7c ed  # bytes(32)
 ```
+
 So we can see this is just a 32 byte string. Not surprising, since this is of
 course just an ed25519 verification key.
 
@@ -156,6 +170,7 @@ genesis delegate keys.
 
 So we need to make genesis delegate keys, as many as you made genesis keys
 (just two in our example).
+
 ```
 $ cardano-cli shelley genesis key-gen-delegate
 Usage: cardano-cli shelley genesis key-gen-delegate --verification-key-file FILEPATH
@@ -172,10 +187,12 @@ Available options:
                            The file with the issue counter for the operational
                            certificate.
 ```
+
 Much the same as for genesis keys, but there is an additional output, the
 operational certificate issue counter. We will talk about this later.
 
 Let's make two genesis delegate key pairs, to use with our two genesis keys
+
 ```
 $ cardano-cli shelley genesis key-gen-delegate \
     --verification-key-file example/delegate-keys/delegate1.vkey \
@@ -186,7 +203,9 @@ $ cardano-cli shelley genesis key-gen-delegate \
     --signing-key-file example/delegate-keys/delegate2.skey \
     --operational-certificate-issue-counter example/delegate-keys/delegate-opcert2.counter
 ```
+
 Let's see what's in that counter file
+
 ```
 $ cat example/delegate-keys/delegate-opcert1.counter
 type: Node operational certificate issue counter
@@ -194,6 +213,7 @@ title: Next certificate issue number: 0
 cbor-hex:
  00
 ```
+
 Yes, we count from zero. We will talk about what this counter is for later.
 
 
@@ -205,6 +225,7 @@ keys for those addresses and later to sign transactions to spend the initial
 UTxO values.
 
 So we need to make genesis initial UTxO keys.
+
 ```
 $ cardano-cli shelley genesis key-gen-utxo
 Usage: cardano-cli shelley genesis key-gen-utxo --verification-key-file FILEPATH
@@ -219,6 +240,7 @@ Available options:
 ```
 
 We can make as many as is useful. Let's make two.
+
 ```
 $ cardano-cli shelley genesis key-gen-utxo \
     --verification-key-file example/utxo-keys/utxo1.vkey \
@@ -232,7 +254,8 @@ $ cardano-cli shelley genesis key-gen-utxo \
 
 When we set up our template using the `create` command, it generated an
 example genesis template for us in `example/genesis.spec.json`:
-```
+
+```json
 {
     "activeSlotsCoeff": 5.0e-2,
     "protocolParams": {
@@ -276,6 +299,7 @@ example genesis template for us in `example/genesis.spec.json`:
     "securityParam": 2160
 }
 ```
+
 TODO: the generated file puts the fields in an unhelpful order.
 
 We will mostly use these defaults for this demo. The meaning of all the ones
@@ -290,10 +314,13 @@ When we regenerate the genesis file it will fill in the:
 
 Let's regenerate the genesis file (note, this command does not set an initial
 Lovelace supply, that will be done later)
+
 ```
 $ cardano-cli shelley genesis create --genesis-dir example/
 ```
+
 and then look at it and understand what the command has done
+
 ```
 $ cat example/genesis.json
 {
@@ -351,6 +378,7 @@ representation in the JSON file is between key hashes.
 
 So to understand where it got the key hashes from we can use a command to
 get the key hash for each key:
+
 ```
 $ cardano-cli shelley genesis key-hash
 Usage: cardano-cli shelley genesis key-hash --verification-key-file FILEPATH
@@ -360,7 +388,9 @@ Available options:
   --verification-key-file FILEPATH
                            Input filepath of the verification key.
 ```
+
 Let's do that for our genesis key and genesis delegate key
+
 ```
 $ cardano-cli shelley genesis key-hash \
     --verification-key-file example/genesis-keys/genesis1.vkey
@@ -370,16 +400,20 @@ $ cardano-cli shelley genesis key-hash \
     --verification-key-file example/delegate-keys/delegate1.vkey
   b2ee836b2b92fd3dd5e4228c943d8854e673c0510983956ce4f4ea7afcd9f761
 ```
+
 So now we can see where the hashes from the `genDelegs` came from
-```
+
+```json
   "genDelegs": {
     "a4d927a8e50c7a51e0f7d41a75057073cd2fc49bfc87a44891a8a9f80800cd8a":
       "b2ee836b2b92fd3dd5e4228c943d8854e673c0510983956ce4f4ea7afcd9f761"
   },
 ```
+
 Next it's a similar deal with the `initialFunds`. This is a mapping from the
 initial _addresses_ to the initial values at those address. So we need a
 command to get the address corresponding to an initial UTxO verification key:
+
 ```
 $ cardano-cli shelley genesis initial-addr
 Usage: cardano-cli shelley genesis initial-addr --verification-key-file FILEPATH
@@ -389,19 +423,24 @@ Available options:
   --verification-key-file FILEPATH
                            Input filepath of the verification key.
 ```
+
 So let's do that for the UTxO key
+
 ```
 $ cardano-cli shelley genesis initial-addr \
     --verification-key-file example/utxo-keys/utxo1.vkey
   820658207c3c942eaa39dd0aec74415312cf80dfc92b34fa1d0e1c2fd2499ee105219305
 ```
+
 And if we compare this with the `initialFunds` from the generated file we see
+
 ```
   "initialFunds": {
     "820658207c3c942eaa39dd0aec74415312cf80dfc92b34fa1d0e1c2fd2499ee105219305": 0
     "8206582076cb9794a896ee640dcb54bd932f3a0ca6012aa99cb7d767aec9f4d717c88d7b": 0
   }
 ```
+
 This means we'll start with 0 lovelace in a special genesis UTxO at that
 address.
 
@@ -409,20 +448,24 @@ Ok, so zero lovelace is not that useful. We can however edit the
 `genesis.spec.json` and set the `maxLovelaceSupply` there, or we specify the
 initial supply when we re-generate the genesis file. Either way, it will be
 split equally between all the utxo keys.
+
 ```
 $ cardano-cli shelley genesis create \
     --genesis-dir example/ \
     --supply 1000000
 ```
+
 Yes [ONE MILLION LOVELACE].
 
 If we look again at the generated genesis file now we'll see
+
 ```
   "initialFunds": {
     "820658207c3c942eaa39dd0aec74415312cf80dfc92b34fa1d0e1c2fd2499ee105219305": 500000
     "8206582076cb9794a896ee640dcb54bd932f3a0ca6012aa99cb7d767aec9f4d717c88d7b": 500000
   }
 ```
+
 So we see the amount split between our two initial addresses.
 
 You will also see that the `maxLovelaceSupply` is set to this same supply. If
@@ -449,6 +492,7 @@ When doing it for real the people involved have to follow the manual method
 where keys are generated separately on secure offline machines.
 
 But for demos it is fine
+
 ```
 $ cardano-cli shelley genesis
 Usage: cardano-cli shelley genesis COMMAND
@@ -468,6 +512,7 @@ Available commands:
 
 The automagic method uses the last one, `create`, and all the others
 are for the manual method.
+
 ```
 $ cardano-cli shelley genesis create
 Usage: cardano-cli shelley genesis create --genesis-dir DIR
@@ -489,6 +534,7 @@ Available options:
   --supply LOVELACE        The initial coin supply in Lovelace which will be
                            evenly distributed across initial stake holders.
 ```
+
 This command will generate a genesis file. It can also generate all the keys,
 or it can pick up keys you created manually.
 
@@ -505,6 +551,7 @@ By default it will not create any keys for you, and will pick up any that you
 have created manually following the file layout convention.
 
 You can set up the directory layout with a default genesis spec file
+
 ```
 $ cardano-cli shelley genesis create --genesis-dir example/
 ```
@@ -515,7 +562,8 @@ specify the number of keys of each kind to generate.
 
 We still need a genesis spec to start from. Here's the default genesis spec
 file `example/genesis.spec.json`
-```
+
+```json
 {
     "activeSlotsCoeff": 5.0e-2,
     "protocolParams": {
@@ -559,6 +607,7 @@ file `example/genesis.spec.json`
     "securityParam": 2160
 }
 ```
+
 The `create` will read the `genesis.spec.json` and produce the
 `genesis.json` by filling in the:
 
@@ -571,6 +620,7 @@ Everything else we have to fill in manually, either in the template or
 afterwards.
 
 So let's try it:
+
 ```
 $ cardano-cli shelley genesis create \
     --genesis-dir example/ \
@@ -578,10 +628,12 @@ $ cardano-cli shelley genesis create \
     --gen-genesis-keys 2 \
     --gen-utxo-keys 2
 ```
+
 We're going for more zeros on our money supply this time, after all
 [why make trillions when we could make billions?]
 
 Let's have a look at the result
+
 ```
 $ cat example/genesis.json
 {
@@ -637,7 +689,9 @@ $ cat example/genesis.json
        }
 }
 ```
+
 And the files it made
+
 ```
 $ ls example/*/
 example/delegate-keys/:
@@ -742,6 +796,7 @@ purposes the genesis delegate and stake pool operator offline keys are the same:
 both get used to issue operational certs.
 
 We can create stake pool operator keys using:
+
 ```
 $ cardano-cli shelley node key-gen
 Usage: cardano-cli shelley node key-gen --verification-key-file FILEPATH
@@ -759,12 +814,14 @@ Available options:
                            The file with the issue counter for the operational
                            certificate.
 ```
+
 For now we will ignore stake pools however since we need to get the system
 bootstrapped with the BFT overlay.
 
 ### KES Keys
 
 There's a command to generate new KES keys
+
 ```
 cardano-cli shelley node key-gen-KES
 Usage: cardano-cli shelley node key-gen-KES --verification-key-file FILEPATH
@@ -779,6 +836,7 @@ Available options:
 ```
 
 So let's go ahead and create a KES key for our first two nodes
+
 ```
 $ mkdir example/{node1,node2}
 
@@ -796,6 +854,7 @@ especially compared to our normal ed25519 keys.
 ### VRF Keys
 
 And there's a command to generate new VRF keys
+
 ```
 $ cardano-cli shelley node key-gen-VRF
 Usage: cardano-cli shelley node key-gen-VRF --verification-key-file FILEPATH
@@ -810,6 +869,7 @@ Available options:
 ```
 
 So let's do that too
+
 ```
 $ cardano-cli shelley node key-gen-VRF \
     --verification-key-file example/node1/vrf.vkey \
@@ -847,8 +907,8 @@ Available options:
                            certificate.
   --kes-period NATURAL     The start of the KES key validity period.
   --out-file FILE          The output file.
-
 ```
+
 There's a few things here to understand.
 
 As discussed above, a certificate identifies an operational KES key that we
@@ -869,6 +929,7 @@ we are creating a system from scratch so we can start with period 0.
 
 So let's go ahead and issue ourselves an operational certificate. We will sign
 using use the genesis delegate keys we created earlier.
+
 ```
 $ cardano-cli shelley node issue-op-cert \
     --hot-kes-verification-key-file example/node1/kes.vkey \
@@ -895,15 +956,19 @@ The last things we need are node configuration and topology files.
 
 For the configuration file, we can start with the default
 [Byron mainnet configuration]
+
 ```
 $ cp cardano-node/configuration/defaults/byron-mainnet/configuration.yaml \
      example/
 ```
+
 and make a couple tweaks
+
 ```
 $ sed -i 's/Protocol: RealPBFT/Protocol: TPraos/' example/configuration.yaml
 $ sed -i 's/minSeverity: Info/minSeverity: Debug/' example/configuration.yaml
 ```
+
 We will share this `configuration.yaml` file between both nodes we run.
 
 The topology files tell nodes which other nodes to talk to. We will need one
@@ -913,7 +978,8 @@ talk to each other.
 
 So create the following two files as `example/node1/topology.json` and
 `example/node2/topology.json`.
-```
+
+```json
 {
   "Producers": [
     {
@@ -924,7 +990,8 @@ So create the following two files as `example/node1/topology.json` and
   ]
 }
 ```
-```
+
+```json
 {
   "Producers": [
     {
@@ -935,6 +1002,7 @@ So create the following two files as `example/node1/topology.json` and
   ]
 }
 ```
+
 So node1 will listen on port 3001 and contact node2 on port 3002, and the other
 way around for node2.
 
@@ -951,11 +1019,13 @@ So let's just re-generate our `genesis.json` which will set the start time to
 be 30 seconds into the future, and then we can start our nodes. This assumes
 you did not do any manual tweaking of the generated `genesis.json`, as it will
 be overwritten.
+
 ```
 $ cardano-cli shelley genesis create --genesis-dir example/
 ```
 
 So, now in two separate terminal windows we can launch our nodes. Node 1:
+
 ```
 $ cardano-node run \
     --config example/configuration.yaml \
@@ -969,6 +1039,7 @@ $ cardano-node run \
 ```
 
 And node 2:
+
 ```
 $ cardano-node run \
     --config example/configuration.yaml \
@@ -986,6 +1057,7 @@ log level up so we'll see even debug messages, so it will be pretty voluminous.
 
 If you did manage to start the nodes before the start time, you'll see them
 waiting:
+
 ```
 [localhost:cardano.node:Debug:5] [2020-05-10 21:46:40.77 UTC]
   Waiting 23.921899468s until genesis start time at 2020-05-10 21:47:04.701779756 UTC
@@ -1032,11 +1104,14 @@ This command of course connects to a local node. The socket for the local
 node is set via an environment variable `CARDANO_NODE_SOCKET_PATH`. Typically one
 only runs one node on a machine, and so it would make sense to set this for
 the whole terminal session:
+
 ```
 export CARDANO_NODE_SOCKET_PATH=$PWD/example/node1/node.sock
 ```
+
 In this demo we are running two nodes however so we'll specify the env var each
 time in the command.
+
 ```
 $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query protocol-parameters \
@@ -1068,6 +1143,7 @@ $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     "a0": 0
 }
 ```
+
 As we can see, it spits out the same set of protocol parameters from the
 `genesis.json` file we started with.
 
@@ -1079,6 +1155,7 @@ the `genesis.json`.
 
 There is a command to query the UTxO and return all the UTxOs at a given
 address.
+
 ```
 $ cardano-cli shelley query filtered-utxo
 Usage: cardano-cli shelley query filtered-utxo --address ADDRESS
@@ -1096,6 +1173,7 @@ Available options:
 So what address do we need? The one(s) from the `initialFunds` in the
 `genesis.json` of course. So let's try it. Obviously you will have to adjust
 this command to use the right address(es) from your `genesis.json`.
+
 ```
 $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query filtered-utxo \
@@ -1106,6 +1184,7 @@ $ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
 ----------------------------------------------------------------------------------------
 80edb9890519e08847aff26f55a076a439b9835baa7113d04ad1ed9b2ea55817     0         500000000
 ```
+
 So this tells us that there is exactly one UTxO entry at that address, with one
 unspent output (output zero).
 
@@ -1134,6 +1213,7 @@ For an output address, we will need to make one.
 
 To avoid confusion about which UTxO goes with which key, we have this handy
 command
+
 ```
 $ cardano-cli shelley genesis initial-txin
 Usage: cardano-cli shelley genesis initial-txin --verification-key-file FILEPATH
@@ -1143,18 +1223,22 @@ Available options:
   --verification-key-file FILEPATH
                            Input filepath of the verification key.
 ```
+
 Which we can use with our `example/utxo-keys/utxo1.vkey`
+
 ```
 $ cardano-cli shelley genesis initial-txin \
     --verification-key-file example/utxo-keys/utxo1.vkey
 80edb9890519e08847aff26f55a076a439b9835baa7113d04ad1ed9b2ea55817#0
 ```
+
 Note the TxIn syntax of "long hash # ix", here with index 0.
 
 ### Making new keys and addresses
 
 We will make a key pair and then build an address from that. Let's start with
 the keypair.
+
 ```
 $ cardano-cli shelley address key-gen
 Usage: cardano-cli shelley address key-gen --verification-key-file FILEPATH
@@ -1167,13 +1251,17 @@ Available options:
   --signing-key-file FILEPATH
                            Input filepath of the signing key.
 ```
+
 So let's do it
+
 ```
 $ cardano-cli shelley address key-gen \
     --verification-key-file example/addr1.vkey \
     --signing-key-file example/addr1.skey
 ```
+
 We can now build an address from our key.
+
 ```
 $ cardano-cli shelley address build
 Usage: cardano-cli shelley address build --payment-verification-key-file FILEPATH
@@ -1186,15 +1274,18 @@ Available options:
   --staking-verification-key-file FILEPATH
                            Filepath of the staking verification key.
 ```
+
 This command can also build payment addresses that are associated with stake
 addresses, and thus have the ability to delegate the stake rights.
 
 For now however let's see our boring address with no stake rights:
+
 ```
 $ cardano-cli shelley address build \
     --payment-verification-key-file example/addr1.vkey
 82065820cd44104b49b97dae659dabf040cc7d588ea28e52addffc66fd126bb23be87451
 ```
+
 The CLI uses a low-tech hex encoding for addresses, rather than fancy bech32.
 
 ### Building an unsigned transaction body
@@ -1202,6 +1293,7 @@ The CLI uses a low-tech hex encoding for addresses, rather than fancy bech32.
 We will be using the low level `build-raw` command because a more convenient
 command is not available yet, and because for spending a Genesis UTxO we have
 to use the low level command to select the exact UTxO to spend.
+
 ```
 $ cardano-cli shelley transaction build-raw
 Usage: cardano-cli shelley transaction build-raw --tx-in TX_IN --tx-out TX_OUT
@@ -1223,6 +1315,7 @@ Available options:
                            types of certificates (stake pool certificates, stake
                            key certificates etc)
 ```
+
 Yes, this is a very inconvenient way to build transactions, but at least you'll
 be able to say you understand the UTxO model a little better.
 
@@ -1249,6 +1342,7 @@ choose the fee, it just has to be above the minimum fee. With the demo genesis
 we made, the fees are zero so we can ignore this complication for now.
 
 So we build the unsigned transaction and place it in `example/tx1.txbody`
+
 ```
 $ cardano-cli shelley transaction build-raw \
     --tx-in  76cb9794a896ee640dcb54bd932f3a0ca6012aa99cb7d767aec9f4d717c88d7b#0 \
@@ -1284,6 +1378,7 @@ Available options:
 ```
 
 In our example we need just the one signature, using the `utxo1.skey`.
+
 ```
 $ cardano-cli shelley transaction sign \
   --tx-body-file example/tx1.txbody \
@@ -1295,6 +1390,7 @@ $ cardano-cli shelley transaction sign \
 ### Submitting the signed transaction
 
 Finally we need to submit the signed transaction
+
 ```
 $ cardano-cli shelley transaction submit
 Usage: cardano-cli shelley transaction submit --tx-file FILEPATH
@@ -1307,12 +1403,14 @@ Available options:
   --mainnet                Use the mainnet magic id.
   --testnet-magic INT      Specify a testnet magic id.
 ```
+
 This command also needs the `CARDANO_NODE_SOCKET_PATH` like the other commands
 that need to talk to a local node. And as mentioned above in the section on
 querying the node, we have to specify `--testnet-magic 1097911063`, otherwise it
 defaults to mainnet and then the handshake with the node would fail.
 
 So let's do it.
+
 ```
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley transaction submit \
@@ -1326,6 +1424,7 @@ see that the next block included the transaction.
 
 We can also check using the UTxO query, but now using the new address we moved
 the funds to
+
 ```
 CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli shelley query filtered-utxo \
@@ -1336,6 +1435,7 @@ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
 ----------------------------------------------------------------------------------------
 a961d5e14a3a2cd886787d04a2c14721a4ca6d7f15b6ed52ddc0900659200046     0         500000000
 ```
+
 So since the fees were zero we move the full amount, and we have a new UTxO
 entry at our target address.
 
