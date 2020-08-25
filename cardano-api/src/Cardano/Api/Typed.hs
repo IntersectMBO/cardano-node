@@ -302,6 +302,7 @@ module Cardano.Api.Typed (
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
     toShelleyNetwork,
+    toNetworkMagic,
   ) where
 
 import           Prelude
@@ -786,7 +787,7 @@ toShelleyNetwork  Mainnet    = Shelley.Mainnet
 toShelleyNetwork (Testnet _) = Shelley.Testnet
 
 toNetworkMagic :: NetworkId -> NetworkMagic
-toNetworkMagic  Mainnet     = NetworkMagic 764824073
+toNetworkMagic Mainnet      = NetworkMagic (Byron.unProtocolMagicId Byron.mainnetProtocolMagicId)
 toNetworkMagic (Testnet nm) = nm
 
 toShelleyAddr :: Address era -> Shelley.Addr ShelleyCrypto

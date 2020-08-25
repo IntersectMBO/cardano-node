@@ -290,7 +290,7 @@ runGenesisCreate (GenesisDir rootdir)
     createDirectoryIfMissing False deldir
     createDirectoryIfMissing False utxodir
 
-  template <- readShelleyGenesis (rootdir </> "genesis.spec.json")
+  template <- readShelleyGenesis (rootdir </> "genesis.spec.json") adjustTemplate
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys  gendir  index
@@ -307,6 +307,7 @@ runGenesisCreate (GenesisDir rootdir)
 
   writeShelleyGenesis (rootdir </> "genesis.json") finalGenesis
   where
+    adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
     gendir  = rootdir </> "genesis-keys"
     deldir  = rootdir </> "delegate-keys"
     utxodir = rootdir </> "utxo-keys"
@@ -352,8 +353,11 @@ getCurrentTimePlus30 =
     plus30sec = addUTCTime (30 :: NominalDiffTime)
 
 
-readShelleyGenesis :: FilePath -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis TPraosStandardCrypto)
-readShelleyGenesis fpath = do
+readShelleyGenesis
+  :: FilePath
+  -> (ShelleyGenesis TPraosStandardCrypto -> ShelleyGenesis TPraosStandardCrypto)
+  -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis TPraosStandardCrypto)
+readShelleyGenesis fpath adjustDefaults = do
     readAndDecode
       `catchError` \err ->
         case err of
@@ -367,7 +371,7 @@ readShelleyGenesis fpath = do
         . hoistEither $ Aeson.eitherDecode' lbs
 
     defaults :: ShelleyGenesis TPraosStandardCrypto
-    defaults = shelleyGenesisDefaults
+    defaults = adjustDefaults shelleyGenesisDefaults
 
     writeDefault = do
       handleIOExceptT (ShelleyGenesisCmdWriteDefaultGenesisIOError fpath) $
