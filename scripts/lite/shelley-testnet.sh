@@ -47,6 +47,9 @@ for i in 0 1 2; do
   mkdir -p "${db_dir}"
   mkdir -p "${socket_dir}"
 
+  esc=$(printf '\033')
+  node_tag="$(echo "\033[31m[node-$i]\e[0m")"
+
   # Launch a node instead for the testnet
   cabal run exe:cardano-node -- run \
     --database-path "${db_dir}" \
@@ -55,5 +58,17 @@ for i in 0 1 2; do
     --config "${data_dir}/config-$i.yaml" \
     --topology "${data_dir}/topology-node-$i.json" \
     --signing-key "${data_dir}/genesis/delegate-keys.00$i.key" \
-    --delegation-certificate "${data_dir}/genesis/delegation-cert.00$i.json" &
+    --delegation-certificate "${data_dir}/genesis/delegation-cert.00$i.json" \
+    | sed "s|^|${esc}[$((31+$i))m[node-$i]${esc}[0m |g" &
 done
+
+function cleanup()
+{
+  for child in $(jobs -p); do
+    echo kill "$child" && kill "$child"
+  done
+}
+
+cat
+
+trap cleanup EXIT
