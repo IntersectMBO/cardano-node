@@ -53,12 +53,12 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
 
 ### Build the raw transaction.
 
-    expr 194054070 - 171089
-    193882981
+    expr 194054070 + 550000000 - 171089
+    743882981
 
     cardano-cli shelley transaction build raw \
     --tx-in $(cat payment.addr)#1
-    --tx-out $(cat payment.addr)+193882981
+    --tx-out $(cat payment.addr)+743882981
     --withdrawal $(cat stake.addr)+550000000
     --ttl 12345678
     --fee 171089
