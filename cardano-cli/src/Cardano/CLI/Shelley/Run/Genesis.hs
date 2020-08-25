@@ -576,4 +576,4 @@ runGenesisHashFile (GenesisFile fpath) = do
               BS.readFile fpath
    let gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
        gh = Crypto.hashWith id content
-   liftIO $ print gh
+   liftIO $ Text.putStrLn (Crypto.hashToTextAsHex gh)
