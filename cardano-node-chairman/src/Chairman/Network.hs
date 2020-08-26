@@ -1,54 +1,39 @@
 module Chairman.Network
-  ( isPortOpen
-  , listenOn
+  ( doesFileExists
+  , isPortOpen
+  , doesSocketExist
+  , assertFileExists
+  , assertPortOpen
+  , assertSocketExists
   ) where
 
-import           Control.Monad
-import           Control.Monad.Fail
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (MonadIO)
 import           Data.Bool
-import           Data.Either
 import           Data.Function
-import           Data.Functor
 import           Data.Int
-import           Data.Maybe
-import           Foreign.C.Error (Errno (..))
-import           Network.Socket (Family (AF_INET), SockAddr (..), Socket, SocketType (Stream))
-import           System.IO (IO)
-import           Text.Show (show)
+import           GHC.Stack (HasCallStack)
+import           System.IO (FilePath)
 
-import qualified Data.List as L
-import qualified Foreign.C.Error as E
-import qualified GHC.IO.Exception as IO
-import qualified Network.Socket as IO
-import qualified UnliftIO.Exception as IO
+import qualified Chairman.Base as H
+import qualified Chairman.IO.Network.Socket as IO
+import qualified GHC.Stack as GHC
+import qualified Hedgehog as H
+import qualified System.Directory as IO
 
--- | Check if a TCP port is open
-isPortOpen :: Int -> IO Bool
-isPortOpen port = do
-  socketAddressInfo:_ <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
-  canConnect (IO.addrAddress socketAddressInfo)
+doesFileExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m Bool
+doesFileExists = GHC.withFrozenCallStack . H.evalIO . IO.doesFileExist
 
--- | Check if it is possible to connect to a socket address
-canConnect :: SockAddr -> IO Bool
-canConnect sockAddr = IO.bracket (IO.socket AF_INET Stream 6) IO.close' $ \sock -> do
-  result <- IO.try $ IO.connect sock sockAddr
-  case result of
-    Right () -> return True
-    Left e
-      | matchingErrNo (Errno <$> IO.ioe_errno e) -> return False
-      | "WSAECONNREFUSED" `L.isInfixOf` show e -> return False
-      | "WSAECONNRESET" `L.isInfixOf` show e -> return False
-      | otherwise -> IO.throwIO e
-  where matchingErrNo :: Maybe Errno -> Bool
-        matchingErrNo = maybe False (`L.elem` [E.eCONNRESET, E.eCONNREFUSED])
+isPortOpen :: (MonadIO m, HasCallStack) => Int -> H.PropertyT m Bool
+isPortOpen = GHC.withFrozenCallStack . H.evalIO . IO.isPortOpen
 
--- | Open a socket at the specified port for listening
-listenOn :: (MonadIO m, MonadFail m) => Int -> m Socket
-listenOn n = do
-  sock <- liftIO $ IO.socket AF_INET Stream 0
-  sockAddrInfo:_ <- liftIO $ IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show n))
-  liftIO $ IO.setSocketOption sock IO.ReuseAddr 1
-  liftIO $ IO.bind sock (IO.addrAddress sockAddrInfo)
-  liftIO $ IO.listen sock 2
-  return sock
+doesSocketExist :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m Bool
+doesSocketExist = GHC.withFrozenCallStack . H.evalIO . IO.doesSocketExist
+
+assertFileExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+assertFileExists = H.assertM . doesFileExists
+
+assertPortOpen :: (MonadIO m, HasCallStack) => Int -> H.PropertyT m ()
+assertPortOpen = H.assertM . isPortOpen
+
+assertSocketExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+assertSocketExists = H.assertM . doesSocketExist
