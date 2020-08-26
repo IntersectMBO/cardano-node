@@ -2,30 +2,34 @@
 
 A stake pool needs at least 2 running nodes: A __block-producing__ node and a __relay__ node.
 
-We need to setup our __block-producing__ node. You can build the node from source or on each server or maintain a single build on your local machine and only upload the binaries to your __block-producing__ and __relay__ servers. Make sure you have consistent versions across them.
+We need to setup our __block-producing__ node. You can build the node from source on each server or maintain a single build on your local machine and only upload the binaries to your __block-producing__ and __relay__ servers. Make sure you have consistent versions across them.
 
 
 
 ![network diagram](images/basic-network-with-relays-producers-passivenodes-walletnodes.png)
 
-The __block-producing__ node will hold your KES and VRF keys and the operational certificate. It should only connect with it's __relay__, while the __relay__ will establish connections with other relays in the network.  Each node must run in an independent server.
+The __block-producing__ node will hold your KES and VRF keys and the operational certificate. It should only connect with its __relay__, while the __relay__ will establish connections with other relays in the network.  Each node must run in an independent server.
+
+For your own security, we recommend the following *as a minimum*. You should also take steps to encrypt any disks or other storage, make sure that servers cannot be booted from the network or removable media, and monitor attempts to connect to your system, of course.
 
 #### Basic block-producing node firewall configuration:
 
-* Make sure you can only login with SSH Keys, not password.
-* Make sure to setup SSH connections in a port different than the default 22
-* Make sure to configure the firewall to only allow connections from your relay nodes by setting up their ip addresses.
+* Make sure you can only login with SSH Keys, not a password.
+* Make sure to setup SSH connections to a port that is different from the default SSH port (22).
+* Make sure to configure the firewall to only allow connections from your relay nodes by setting up their IP addresses.
+
 
 #### Basic relay node firewall configuration:
 
- * Make sure you can only login with SSH Keys, not password.
- * Make sure to setup SSH connections in a port different than the default 22.
- * Make sure you only have the strictly necessary ports opened.
+ * Make sure you can only login with SSH Keys, not a password.
+ * Make sure to setup SSH connections to a port that is different from the default SSH port (22).
+ * Make sure you only have the strictly necessary ports opened (ideally the incoming port to the relay, plus the outgoing ports to the external
+nodes, plus any ports that are needed for SSH connections and/or local administration).  
 
 #### Creating keys for our block-producing node
 
 **WARNING:**
-You may want to use your __local machine__ for this process (you need cardano-node and cardano-cli on it). Make sure you are not online until you have put your __cold keys__ in a secure storage and deleted the files from you local machine.
+It is best practice to use an __offline local machine__ for this process (it needs to have `cardano-node` and `cardano-cli` installed). Make sure the machine is not online during key generation, and until you have put your __cold keys__ in secure storage and securely deleted the corresponding files from your local machine. If possible, it is best practice to *never* connect this machine to the internet.
 
 The __block-producing node__ or __pool node__ needs:
 
@@ -72,7 +76,7 @@ Create a directory on your local machine to store your keys:
 
 #### Generate the Operational Certificate
 
-We need to know the slots per KES period, we get it from the genesis file:
+We need to know the slots per KES period. We can get this from the genesis file:
 
     cat mainnet-shelley-genesis.json | grep KESPeriod
     > "slotsPerKESPeriod": 3600,
@@ -86,7 +90,7 @@ Then we need the current tip of the blockchain:
     "slotNo": 906528
     }
 
-Look for Tip `slotNo` value. In this example we are on slot 906528. So we have KES period is 120:
+Look for Tip `slotNo` value. In this example we are on slot 906528. So the KES period is 120:
 
     expr 432571 / 3600
     > 251
