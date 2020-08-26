@@ -15,6 +15,10 @@ module Chairman.Base
   , noteTempFile
   , assertByDeadlineIO
   , showUTCTimeSeconds
+  , listDirectory
+  , writeFile
+  , assertM
+  , assertIO
   , Integration
   ) where
 
@@ -50,6 +54,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Info as IO
+import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 
 type Integration a = H.PropertyT (ResourceT IO) a
@@ -147,3 +152,15 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
 -- | Show 'UTCTime' in seconds since epoch
 showUTCTimeSeconds :: UTCTime -> String
 showUTCTimeSeconds time = show @Int64 (floor (DTC.utcTimeToPOSIXSeconds time))
+
+listDirectory :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m [FilePath]
+listDirectory = GHC.withFrozenCallStack . H.evalIO . IO.listDirectory
+
+writeFile :: (MonadIO m, HasCallStack) => FilePath -> String -> H.PropertyT m ()
+writeFile filePath contents = GHC.withFrozenCallStack . H.evalIO $ IO.writeFile filePath contents
+
+assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()
+assertM = (>>= H.assert)
+
+assertIO :: (MonadIO m, HasCallStack) => IO Bool -> H.PropertyT m ()
+assertIO f = H.evalIO f >>= H.assert

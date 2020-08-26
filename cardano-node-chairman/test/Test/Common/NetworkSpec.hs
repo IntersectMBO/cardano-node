@@ -20,7 +20,8 @@ import           Prelude (error)
 import           System.IO (IO)
 
 import qualified Chairman.Base as H
-import qualified Chairman.Network as IO
+import qualified Chairman.IO.Network.Socket as IO
+import qualified Chairman.Network as H
 import qualified Control.Monad.Trans.Resource as IO
 import qualified Data.List as L
 import qualified Hedgehog as H
@@ -34,8 +35,7 @@ prop_isPortOpen_False = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program
   ports <- H.evalM . liftIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
-  results <- forM ports $ \port -> do
-    H.evalM . liftIO $ IO.isPortOpen port
+  results <- forM ports H.isPortOpen
   H.assert (False `L.elem` results)
 
 prop_isPortOpen_True :: Property
@@ -46,7 +46,7 @@ prop_isPortOpen_True = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   ports <- H.evalM . liftIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
   (socket, port) <- liftIO $ openOnePortFrom ports
   void $ IO.register $ IO.close socket
-  result <- H.evalM . liftIO $ IO.isPortOpen port
+  result <- H.isPortOpen port
   result === True
   where openOnePortFrom :: [Int] -> IO (Socket, Int)
         openOnePortFrom ports = case ports of

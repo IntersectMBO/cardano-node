@@ -13,7 +13,9 @@ build-type:             Simple
 library
   hs-source-dirs:       src
   build-depends:        base >= 4.12 && < 5
+                      , aeson
                       , async
+                      , bytestring
                       , directory
                       , hedgehog
                       , mmorph
@@ -22,9 +24,16 @@ library
                       , random
                       , resourcet
                       , temporary
+                      , text
                       , time
                       , unliftio
+                      , Win32-network
   exposed-modules:      Chairman.Base
+                        Chairman.Plan
+                        Chairman.OS
+                        Chairman.IO.Network.NamedPipe
+                        Chairman.IO.Network.Socket
+                        Chairman.IO.Network.Sprocket
                         Chairman.Network
                         Chairman.Process
   default-language:     Haskell2010
@@ -36,14 +45,16 @@ library
                         -Wpartial-fields
                         -Wcompat
 
-test-suite cardano-node-chairman-test
+test-suite tests
   hs-source-dirs:       test
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
   build-depends:        base >= 4.12 && < 5
+                      , aeson
                       , async
                       , cardano-node-chairman
                       , directory
+                      , filepath
                       , hedgehog
                       , mmorph
                       , network
@@ -53,7 +64,7 @@ test-suite cardano-node-chairman-test
                       , temporary
                       , time
                       , unliftio
-  other-modules:        Test.Cardano.Node.Chairman
+  other-modules:        Test.Cardano.Node.Chairman.Byron
                         Test.Common.NetworkSpec
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
