@@ -20,7 +20,7 @@ golden_shelleyAllMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $
   allMultiSigFp <- noteInputFile "test/data/golden/shelley/multisig/scripts/all"
 
   allMultiSigAddress <- execCardanoCLI
-    [ "shelley", "address", "build-script"
+    [ "shelley", "address", "build-multisig"
     , "--script-file", allMultiSigFp
     , "--mainnet"
     ]
@@ -36,7 +36,7 @@ golden_shelleyAnyMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $
   anyMultiSigFp <- noteInputFile "test/data/golden/shelley/multisig/scripts/any"
 
   anyMultiSigAddress <- execCardanoCLI
-    [ "shelley", "address", "build-script"
+    [ "shelley", "address", "build-multisig"
     , "--script-file", anyMultiSigFp
     , "--mainnet"
     ]
@@ -52,7 +52,7 @@ golden_shelleyAtLeastMultiSigAddressBuild = propertyOnce . H.moduleWorkspace "tm
   atLeastMultiSigFp <- noteInputFile "test/data/golden/shelley/multisig/scripts/atleast"
 
   atLeastMultiSigAddress <- execCardanoCLI
-    [ "shelley", "address", "build-script"
+    [ "shelley", "address", "build-multisig"
     , "--script-file", atLeastMultiSigFp
     , "--mainnet"
     ]
