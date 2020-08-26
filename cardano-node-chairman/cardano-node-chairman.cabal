@@ -29,13 +29,14 @@ library
                       , unliftio
                       , Win32-network
   exposed-modules:      Chairman.Base
-                        Chairman.Plan
-                        Chairman.OS
                         Chairman.IO.Network.NamedPipe
                         Chairman.IO.Network.Socket
                         Chairman.IO.Network.Sprocket
                         Chairman.Network
+                        Chairman.OS
+                        Chairman.Plan
                         Chairman.Process
+                        Chairman.Time
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -64,7 +65,9 @@ test-suite tests
                       , temporary
                       , time
                       , unliftio
+                      , vector
   other-modules:        Test.Cardano.Node.Chairman.Byron
+                        Test.Cardano.Node.Chairman.Shelley
                         Test.Common.NetworkSpec
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude

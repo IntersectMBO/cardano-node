@@ -16,7 +16,10 @@ module Chairman.Base
   , assertByDeadlineIO
   , showUTCTimeSeconds
   , listDirectory
+  , readFile
   , writeFile
+  , lbsReadFile
+  , lbsWriteFile
   , assertM
   , assertIO
   , Integration
@@ -47,6 +50,7 @@ import           System.IO (FilePath, IO)
 import           Text.Show
 
 import qualified Control.Concurrent as IO
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Time.Clock as DTC
 import qualified Data.Time.Clock.POSIX as DTC
 import qualified GHC.Stack as GHC
@@ -156,8 +160,17 @@ showUTCTimeSeconds time = show @Int64 (floor (DTC.utcTimeToPOSIXSeconds time))
 listDirectory :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m [FilePath]
 listDirectory = GHC.withFrozenCallStack . H.evalIO . IO.listDirectory
 
+readFile :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m String
+readFile filePath = GHC.withFrozenCallStack . H.evalIO $ IO.readFile filePath
+
 writeFile :: (MonadIO m, HasCallStack) => FilePath -> String -> H.PropertyT m ()
 writeFile filePath contents = GHC.withFrozenCallStack . H.evalIO $ IO.writeFile filePath contents
+
+lbsReadFile :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m LBS.ByteString
+lbsReadFile filePath = GHC.withFrozenCallStack . H.evalIO $ LBS.readFile filePath
+
+lbsWriteFile :: (MonadIO m, HasCallStack) => FilePath -> LBS.ByteString -> H.PropertyT m ()
+lbsWriteFile filePath contents = GHC.withFrozenCallStack . H.evalIO $ LBS.writeFile filePath contents
 
 assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()
 assertM = (>>= H.assert)
