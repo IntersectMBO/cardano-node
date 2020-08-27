@@ -36,6 +36,7 @@ library
   build-depends:        aeson
                       , base16-bytestring
                       , bytestring
+                      , cardano-node
                       , containers
                       , directory
                       , exceptions
@@ -44,6 +45,7 @@ library
                       , hedgehog-extras
                       , http-client
                       , http-types
+                      , ouroboros-network
                       , process
                       , random
                       , resourcet
