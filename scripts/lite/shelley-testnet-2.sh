@@ -27,7 +27,11 @@ cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
 sed -i ${ROOT}/configuration.yaml \
     -e 's/^Protocol: RealPBFT/Protocol: TPraos/' \
     -e 's/^minSeverity: Info/minSeverity: Debug/' \
-    -e 's/^TraceBlockchainTime: False/TraceBlockchainTime: True/'
+    -e 's/^TraceBlockchainTime: False/TraceBlockchainTime: True/' \
+    -e 's/TargetNumberOfRootPeers:\s\+\d*/TargetNumberOfRootPeers: 1/' \
+    -e 's/TargetNumberOfKnownPeers:\s\+\d*/TargetNumberOfKnownPeers: 1/' \
+    -e 's/TargetNumberOfEstablishedPeers:\s\+\d*/TargetNumberOfEstablishedPeers: 1/' \
+    -e 's/TargetNumberOfActivePeers:\s\+\d*/TargetNumberOfActivePeers: 1/'
 
 # Set up our template
 $cardano_cli shelley genesis create --testnet-magic 42 --genesis-dir ${ROOT}
@@ -122,12 +126,12 @@ done
      {
        "addr": "127.0.0.1",
        "port": 3002,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3003,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -141,12 +145,12 @@ echo 3001 > node-bft1/port
      {
        "addr": "127.0.0.1",
        "port": 3001,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3003,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -160,12 +164,12 @@ echo 3002 > node-bft2/port
      {
        "addr": "127.0.0.1",
        "port": 3001,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3002,
-       "valency": 1
+       "advertise": false
      }
    ]
  }

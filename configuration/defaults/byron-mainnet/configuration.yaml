@@ -16,6 +16,16 @@ MaxConcurrencyBulkSync: 1
 # The maximum number of used peers when fetching newly forged blocks.
 MaxConcurrencyDeadline: 2
 
+##### P2P Governor Targets
+TargetNumberOfRootPeers:        10
+# Target number for known peers
+TargetNumberOfKnownPeers:       10
+# Target number of peers towards which we have a connection
+TargetNumberOfEstablishedPeers: 5
+# Target number of active peers (towards which we have a connection and it
+# runs consensus protocols)
+TargetNumberOfActivePeers:      3
+
 #TODO: These parameters cannot yet be used in the config file, only on the CLI:
 #DatabasePath: db/
 #Topology: configuration/mainnet-topology.json
@@ -58,7 +68,7 @@ TurnOnLogMetrics: True
 
 # Global logging severity filter. Messages must have at least this severity to
 # pass. Typical values would be Warning, Notice, Info or Debug.
-minSeverity: Info
+minSeverity: Debug
 
 # Log items can be rendered with more or less verbose detail.
 # Verbosity ranges from MinimalVerbosity, NormalVerbosity to MaximalVerbosity
@@ -182,23 +192,39 @@ TraceChainSyncProtocol: False
 # Trace DNS Resolver messages.
 TraceDNSResolver: True
 
-# Trace DNS Subscription messages.
-TraceDNSSubscription: True
-
-# Trace error policy resolution.
-TraceErrorPolicy: True
-
-# Trace local error policy resolution.
-TraceLocalErrorPolicy: True
-
 # Trace block forging.
 TraceForge: True
 
 # Trace Handshake protocol messages.
 TraceHandshake: False
 
-# Trace IP Subscription messages.
-TraceIpSubscription: True
+# Trace local root peers
+TraceLocalRootPeers: True
+
+# Trace public root peers
+TracePublicRootPeers: False
+
+# Trace peer selection
+TracePeerSelection: True
+
+# Debug peer selection
+TraceDebugPeerSelection: False
+
+# Trace peer selection actions (demotion / protmotion between cold / warm and
+# hot peers).
+TracePeerSelectionActions: True
+
+# Trace connection manager
+TraceConnectionManager: True
+
+# Trace server
+TraceServer: True
+
+# Trace local connection manager
+TraceLocalConnectionManager: False
+
+# Trace local server
+TraceLocalServer: False
 
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False
@@ -274,5 +300,7 @@ options:
   # needs to be at least as high.
   mapSeverity:
     cardano.node.ChainDB: Notice
-    cardano.node.DnsSubscription: Debug
+    cardano.node.TraceConnectionManager: Debug
+    cardano.node.TracePeerSelection: Debug
+    cardano.node.TraceDebugPeerSelection: Debug
 

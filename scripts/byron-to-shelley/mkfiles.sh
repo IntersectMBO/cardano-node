@@ -82,7 +82,11 @@ sed -i ${ROOT}/configuration.yaml \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
     -e 's/RequiresNoMagic/RequiresMagic/' \
     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
-    -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
+    -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/' \
+    -e 's/TargetNumberOfRootPeers:\s\+\d*/TargetNumberOfRootPeers: 1/' \
+    -e 's/TargetNumberOfKnownPeers:\s\+\d*/TargetNumberOfKnownPeers: 1/' \
+    -e 's/TargetNumberOfEstablishedPeers:\s\+\d*/TargetNumberOfEstablishedPeers: 1/' \
+    -e 's/TargetNumberOfActivePeers:\s\+\d*/TargetNumberOfActivePeers: 1/'
 # Options for making it easier to trigger the transition to Shelley
 # If neither of those are used, we have to
 # - post an update proposal + votes to go to protocol version 1
@@ -113,12 +117,12 @@ cat > node-bft1/topology.json <<EOF
      {
        "addr": "127.0.0.1",
        "port": 3002,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3003,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -131,12 +135,12 @@ cat > node-bft2/topology.json <<EOF
      {
        "addr": "127.0.0.1",
        "port": 3001,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3003,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -149,12 +153,12 @@ cat > node-pool1/topology.json <<EOF
      {
        "addr": "127.0.0.1",
        "port": 3001,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3002,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -349,6 +353,7 @@ fi
   echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+  echo "  --host-addr                       127.0.0.1 \\"
   echo "  --port                            $(cat ${NODE}/port)"
 
 done
@@ -561,6 +566,7 @@ for NODE in ${BFT_NODES}; do
   echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+  echo "  --host-addr                       127.0.0.1 \\"
   echo "  --port                            $(cat ${NODE}/port) \\"
   echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
   echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
@@ -577,6 +583,7 @@ for NODE in ${POOL_NODES}; do
   echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+  echo "  --host-addr                       127.0.0.1 \\"
   echo "  --port                            $(cat ${NODE}/port) \\"
   echo "  | tee ${NODE}.log"
 
