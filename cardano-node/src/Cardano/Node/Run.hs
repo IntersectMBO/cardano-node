@@ -19,9 +19,9 @@ import           Prelude (String)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Tracer
-import qualified Data.ByteString.Char8 as BSC
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
+import           Data.Maybe (catMaybes)
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
 import           Data.Text (Text, breakOn, pack, take, unlines)
@@ -60,8 +60,8 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
-                     NodeKernel, RunNode (..), RunNodeArgs (..))
+                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
+                     NodeArgs (..), NodeKernel, RunNode (..), RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -265,8 +265,9 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   createTracers nc trace tracer cfg
 
-  (publicSocketsOrAddrs,
-   localSocketOrPath) <- either throwIO return =<<
+  (publicIPv4SocketOrAddr
+    , publicIPv6SocketOrAddr
+    , localSocketOrPath) <- either throwIO return =<<
                            runExceptT (gatherConfiguredSockets nc)
 
   dbPath <- canonDbPath nc
@@ -275,17 +276,25 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
 
-  let diffusionArguments :: DiffusionArguments
-      diffusionArguments = createDiffusionArguments publicSocketsOrAddrs
-                                                    localSocketOrPath
-                                                    ipProducers dnsProducers
-      diffusionTracers :: DiffusionTracers
+  let diffusionTracers :: DiffusionTracers
       diffusionTracers = createDiffusionTracers nodeTracers
+
+      (ipProducerAddrs, dnsProducerAddrs) = producerAddresses nt
+
       dnsProducers :: [DnsSubscriptionTarget]
-      dnsProducers = dnsSubscriptionTarget <$> dnsProducerAddrs
+      dnsProducers = uncurry dnsSubscriptionTarget `map` dnsProducerAddrs
+
       ipProducers :: IPSubscriptionTarget
       ipProducers = ipSubscriptionTargets ipProducerAddrs
-      (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
+
+      diffusionArguments :: DiffusionArguments
+      diffusionArguments =
+        createDiffusionArguments
+          publicIPv4SocketOrAddr
+          publicIPv6SocketOrAddr
+          localSocketOrPath
+          ipProducers
+          dnsProducers
 
   withShutdownHandling nc trace $ \sfds ->
    Node.run
@@ -357,7 +366,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
     -> Tracer IO Text
     -> Consensus.TopLevelConfig blk
     -> IO ()
-  createTracers ncf@NodeConfiguration{ncNodeAddr, ncValidateDB}
+  createTracers ncf@NodeConfiguration{ncNodeIPv4Addr, ncNodeIPv6Addr, ncNodePortNumber, ncValidateDB}
                 tr tracer cfg = do
          eitherTopology <- readTopologyFile ncf
          nt <- either
@@ -365,7 +374,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
                  pure
                  eitherTopology
 
-         let (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
+         let (ipProducerAddrs, dnsProducerAddrs) = producerAddresses nt
 
          traceWith tracer $
            "System started at " <> show (getSystemStart $ Consensus.configBlock cfg)
@@ -373,9 +382,14 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
          traceWith tracer $ unlines
            [ ""
            , "**************************************"
-           , "Host node address: " <> show ncNodeAddr
-           , "My DNS producers are " <> show dnsProducerAddrs
-           , "My IP producers are " <> show ipProducerAddrs
+           , "Host node addresses: " <> show (catMaybes [ nodeHostIPv4AddressToIPAddress
+                                                          <$> ncNodeIPv4Addr
+                                                        , nodeHostIPv6AddressToIPAddress
+                                                          <$> ncNodeIPv6Addr
+                                                        ])
+           , "Node port number: " <> show ncNodePortNumber
+           , "My DNS producers are " <> show (fst `map` dnsProducerAddrs)
+           , "My IP producers are "  <> show ipProducerAddrs
            , "**************************************"
            ]
 
@@ -402,24 +416,31 @@ canonDbPath NodeConfiguration{ncDatabaseFile = DbFile dbFp} = do
   return fp
 
 createDiffusionArguments
-  :: SocketOrSocketInfo [Socket] [AddrInfo]
-   -- ^ Either a list of sockets provided by systemd or addresses to bind to
-   -- for NodeToNode communication.
+  :: Maybe (SocketOrSocketInfo Socket AddrInfo)
+   -- ^ Either a socket bound to IPv4 address provided by systemd or IPv4
+   -- address to bind to for NodeToNode communication.
+  -> Maybe (SocketOrSocketInfo Socket AddrInfo)
+   -- ^ Either a socket bound to IPv6 address provided by systemd or IPv6
+   -- address to bind to for NodeToNode communication.
   -> SocketOrSocketInfo Socket SocketPath
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
   -- NodeToClient communication.
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments
-createDiffusionArguments publicSocketsOrAddrs localSocketOrPath
-                         ipProducers dnsProducers =
+createDiffusionArguments publicIPv4SocketsOrAddrs
+                         publicIPv6SocketsOrAddrs
+                         localSocketOrPath
+                         ipProducers dnsProducers
+                         =
   DiffusionArguments
-    { daAddresses    = case publicSocketsOrAddrs of
-                         ActualSocket sockets -> Left sockets
-                         SocketInfo addrs     -> Right addrs
-    , daLocalAddress = case localSocketOrPath of
-                        ActualSocket socket          -> Left socket
-                        SocketInfo (SocketPath path) -> Right path
+    -- This is not elegant, but it will change once `coot/connection-manager` is
+    -- merged into `ouroboros-networ`.
+    { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPv4SocketsOrAddrs
+    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPv6SocketsOrAddrs
+    , daLocalAddress = fmap unSocketPath
+                     . eitherSocketOrSocketInfo
+                     $ localSocketOrPath
     , daIpProducers  = ipProducers
     , daDnsProducers = dnsProducers
     -- TODO: these limits are arbitrary at the moment;
@@ -430,29 +451,38 @@ createDiffusionArguments publicSocketsOrAddrs localSocketOrPath
       , acceptedConnectionsDelay     = 5
       }
     }
+  where
+    eitherSocketOrSocketInfo :: SocketOrSocketInfo a b -> Either a b
+    eitherSocketOrSocketInfo (ActualSocket a) = Left a
+    eitherSocketOrSocketInfo (SocketInfo b)   = Right b
 
-dnsSubscriptionTarget :: RemoteAddress -> DnsSubscriptionTarget
-dnsSubscriptionTarget ra =
-  DnsSubscriptionTarget { dstDomain  = BSC.pack (raAddress ra)
-                        , dstPort    = raPort ra
-                        , dstValency = raValency ra
+dnsSubscriptionTarget :: NodeDnsAddress -> Int -> DnsSubscriptionTarget
+dnsSubscriptionTarget na valency =
+  DnsSubscriptionTarget { dstDomain  = nodeHostDnsAddressToDomain (naHostAddress na)
+                        , dstPort    = naPort na
+                        , dstValency = valency
                         }
 
-ipSubscriptionTargets :: [NodeAddress] -> IPSubscriptionTarget
+ipSubscriptionTargets :: [NodeIPAddress] -> IPSubscriptionTarget
 ipSubscriptionTargets ipProdAddrs =
   let ips = nodeAddressToSockAddr <$> ipProdAddrs
   in IPSubscriptionTarget { ispIps = ips
                           , ispValency = length ips
                           }
 
-producerAddresses :: NetworkTopology -> ([RemoteAddress], [NodeAddress])
+
+producerAddresses
+  :: NetworkTopology
+  -> ( [NodeIPAddress]
+     , [(NodeDnsAddress, Int)])
 producerAddresses nt =
   case nt of
-    RealNodeTopology producers' -> partitionEithers $ map remoteOrNode producers'
+    RealNodeTopology producers' ->
+        partitionEithers
+      . mapMaybe remoteAddressToNodeAddress
+      $ producers'
     MockNodeTopology nodeSetup ->
-      partitionEithers . map remoteOrNode $ concatMap producers nodeSetup
- where
-   remoteOrNode :: RemoteAddress -> Either RemoteAddress NodeAddress
-   remoteOrNode ra = case remoteAddressToNodeAddress ra of
-                       Just na -> Right na
-                       Nothing -> Left ra
+        partitionEithers
+      . mapMaybe remoteAddressToNodeAddress
+      . concatMap producers
+      $ nodeSetup

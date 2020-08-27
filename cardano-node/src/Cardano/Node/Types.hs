@@ -1,10 +1,12 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Node.Types
-  ( AdjustFilePaths(..)
+  ( -- * Configuration
+    AdjustFilePaths(..)
   , ConfigError(..)
   , ConfigYamlFilePath(..)
   , DbFile(..)
@@ -13,14 +15,32 @@ module Cardano.Node.Types
   , GenesisHash(..)
   , MaxConcurrencyBulkSync(..)
   , MaxConcurrencyDeadline(..)
-  , NodeAddress(..)
-  , NodeHostAddress (..)
+    -- * Node addresses
+  , NodeAddress'(..)
+  , NodeIPAddress
+  , nodeAddressToSockAddr
+  , NodeIPv4Address
+  , NodeIPv6Address
+  , NodeDnsAddress
+  , nodeIPv4ToIPAddress
+  , nodeIPv6ToIPAddress
+  , nodeDnsAddressToDomainAddress
+  , NodeHostIPAddress (..)
+  , nodeHostIPAddressToSockAddr
+  , NodeHostIPv4Address (..)
+  , NodeHostIPv6Address (..)
+  , nodeHostIPv4AddressToIPAddress
+  , nodeHostIPv6AddressToIPAddress
+  , NodeHostDnsAddress (..)
+  , nodeHostDnsAddressToDomain
+  , PortNumber
+  , SocketPath(..)
+  , TopologyFile(..)
+    -- * Consensus protocol configuration
   , NodeByronProtocolConfiguration(..)
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
-  , SocketPath(..)
-  , TopologyFile(..)
   , ViewMode(..)
   , protocolName
   ) where
@@ -29,15 +49,21 @@ import           Cardano.Prelude
 import           Prelude (String)
 
 import           Data.Aeson
-import           Data.IP (IP)
+import           Data.IP (IP (..), IPv4, IPv6)
+import qualified Data.IP as IP
+import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Network.Socket (PortNumber)
+import qualified Data.Text.Encoding as Text
+import           Network.Socket (PortNumber, SockAddr (..))
+import qualified Network.DNS as DNS (Domain)
 
 import           Cardano.Api.Typed (EpochNo)
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Protocol.Types (Protocol (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAddress (..))
+
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
 -- use records with named fields in the CLI code.
 
@@ -92,47 +118,122 @@ newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
   deriving newtype (FromJSON, Show)
 
 
--- | IPv4 address with a port number.
-data NodeAddress = NodeAddress
-  { naHostAddress :: !NodeHostAddress
+-- | IPv4 or IPv6 address with a port number.
+data NodeAddress' addr = NodeAddress
+  { naHostAddress :: !addr
   , naPort :: !PortNumber
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Functor)
 
-instance FromJSON NodeAddress where
+type NodeIPAddress   = NodeAddress' NodeHostIPAddress
+type NodeIPv4Address = NodeAddress' NodeHostIPv4Address
+type NodeIPv6Address = NodeAddress' NodeHostIPv6Address
+type NodeDnsAddress  = NodeAddress' NodeHostDnsAddress
+
+
+instance FromJSON addr => FromJSON (NodeAddress' addr) where
   parseJSON = withObject "NodeAddress" $ \v -> do
     NodeAddress
       <$> v .: "addr"
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
 
-instance ToJSON NodeAddress where
+instance ToJSON addr => ToJSON (NodeAddress' addr) where
   toJSON na =
     object
       [ "addr" .= toJSON (naHostAddress na)
       , "port" .= (fromIntegral (naPort na) :: Int)
       ]
 
--- Embedding a Maybe inside a newtype is somewhat icky but this seems to work
--- and removing the Maybe breaks the functionality in a subtle way that is difficult
--- to diagnose.
-newtype NodeHostAddress
-  = NodeHostAddress { unNodeHostAddress :: Maybe IP }
+
+nodeIPv4ToIPAddress :: NodeIPv4Address -> NodeIPAddress
+nodeIPv4ToIPAddress = fmap nodeHostIPv4AddressToIPAddress
+
+nodeIPv6ToIPAddress :: NodeIPv6Address -> NodeIPAddress
+nodeIPv6ToIPAddress = fmap nodeHostIPv6AddressToIPAddress
+
+nodeDnsAddressToDomainAddress :: NodeDnsAddress -> DomainAddress
+nodeDnsAddressToDomainAddress NodeAddress { naHostAddress = NodeHostDnsAddress dns, naPort }
+  = DomainAddress (Text.encodeUtf8 dns) naPort
+
+nodeAddressToSockAddr :: NodeIPAddress -> SockAddr
+nodeAddressToSockAddr (NodeAddress addr port) =
+  case unNodeHostIPAddress addr of
+    IP.IPv4 ipv4 -> SockAddrInet  port   (IP.toHostAddress ipv4)
+    IP.IPv6 ipv6 -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
+
+nodeHostIPAddressToSockAddr :: NodeIPAddress -> SockAddr
+nodeHostIPAddressToSockAddr NodeAddress { naHostAddress = NodeHostIPAddress ip, naPort } =
+    case ip of
+      IPv4 ipv4 -> SockAddrInet  (fromIntegral naPort)   (IP.toHostAddress ipv4)
+      IPv6 ipv6 -> SockAddrInet6 (fromIntegral naPort) 0 (IP.toHostAddress6 ipv6) 0
+
+
+newtype NodeHostIPv4Address
+  = NodeHostIPv4Address { unNodeHostIPv4Address :: IPv4 }
   deriving newtype Show
   deriving (Eq, Ord)
 
-instance FromJSON NodeHostAddress where
+instance FromJSON NodeHostIPv4Address where
   parseJSON (String ipStr) =
     case readMaybe $ Text.unpack ipStr of
-      Just ip -> pure $ NodeHostAddress (Just ip)
+      Just ip -> pure $ NodeHostIPv4Address ip
+      Nothing -> panic $ "Parsing of IPv4 failed: " <> ipStr
+  parseJSON invalid = panic $ "Parsing of IPv4 failed due to type mismatch. "
+                            <> "Encountered: " <> Text.pack (show invalid) <> "\n"
+
+instance ToJSON NodeHostIPv4Address where
+  toJSON (NodeHostIPv4Address ip) = String (Text.pack $ show ip)
+
+
+newtype NodeHostIPv6Address
+  = NodeHostIPv6Address { unNodeHostIPv6Address :: IPv6 }
+  deriving newtype Show
+  deriving (Eq, Ord)
+
+instance FromJSON NodeHostIPv6Address where
+  parseJSON (String ipStr) =
+    case readMaybe $ Text.unpack ipStr of
+      Just ip -> pure $ NodeHostIPv6Address ip
+      Nothing -> panic $ "Parsing of IPv6 failed: " <> ipStr
+  parseJSON invalid = panic $ "Parsing of IPv6 failed due to type mismatch. "
+                            <> "Encountered: " <> Text.pack (show invalid) <> "\n"
+instance ToJSON NodeHostIPv6Address where
+  toJSON (NodeHostIPv6Address ip) = String (Text.pack $ show ip)
+
+
+newtype NodeHostIPAddress
+  = NodeHostIPAddress { unNodeHostIPAddress :: IP }
+  deriving newtype Show
+  deriving (Eq, Ord)
+
+instance FromJSON NodeHostIPAddress where
+  parseJSON (String ipStr) =
+    case readMaybe $ Text.unpack ipStr of
+      Just ip -> pure $ NodeHostIPAddress ip
       Nothing -> panic $ "Parsing of IP failed: " <> ipStr
-  parseJSON Null = pure $ NodeHostAddress Nothing
   parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
                             <> "Encountered: " <> Text.pack (show invalid) <> "\n"
 
-instance ToJSON NodeHostAddress where
-  toJSON mha =
-    case unNodeHostAddress mha of
-      Just ip -> String (Text.pack (show ip))
-      Nothing -> Null
+instance ToJSON NodeHostIPAddress where
+  toJSON (NodeHostIPAddress ip) = String (Text.pack $ show ip)
+
+
+nodeHostIPv6AddressToIPAddress :: NodeHostIPv6Address -> NodeHostIPAddress
+nodeHostIPv6AddressToIPAddress (NodeHostIPv6Address ip) = NodeHostIPAddress (IPv6 ip)
+
+nodeHostIPv4AddressToIPAddress :: NodeHostIPv4Address -> NodeHostIPAddress
+nodeHostIPv4AddressToIPAddress (NodeHostIPv4Address ip) = NodeHostIPAddress (IPv4 ip)
+
+
+-- | Domain name.
+--
+newtype NodeHostDnsAddress
+  = NodeHostDnsAddress { unNodeHostDnsAddress :: Text }
+  deriving newtype Show
+  deriving (Eq, Ord)
+
+nodeHostDnsAddressToDomain :: NodeHostDnsAddress -> DNS.Domain
+nodeHostDnsAddressToDomain = Text.encodeUtf8 . unNodeHostDnsAddress
+
 
 class AdjustFilePaths a where
   adjustFilePaths :: (FilePath -> FilePath) -> a -> a
