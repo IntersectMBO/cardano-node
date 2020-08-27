@@ -70,6 +70,13 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (totalBalance defaultTestnetOptions)
       )
+  <*> OA.option auto
+      (   OA.long "enable-p2p"
+      <>  OA.help "Enable P2P"
+      <>  OA.metavar "BOOL"
+      <>  OA.showDefault
+      <>  OA.value (enableP2P defaultTestnetOptions)
+      )
 
 runByronOptions :: ByronOptions -> IO ()
 runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))
