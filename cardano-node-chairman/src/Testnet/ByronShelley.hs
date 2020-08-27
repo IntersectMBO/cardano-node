@@ -18,11 +18,14 @@ module Testnet.ByronShelley
   ) where
 
 #ifdef UNIX
-import           Prelude (map)
+import           Prelude (map, Bool(..))
+#else
+import           Prelude (Bool (..))
 #endif
 
 import           Control.Monad
 import           Data.Aeson ((.=))
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -40,6 +43,11 @@ import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
 import           Text.Read
 import           Text.Show
+
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
@@ -83,6 +91,7 @@ data TestnetOptions = TestnetOptions
   , activeSlotsCoeff :: Double
   , epochLength :: Int
   , forkPoint :: ForkPoint
+  , enableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -92,10 +101,52 @@ defaultTestnetOptions = TestnetOptions
   , activeSlotsCoeff = 0.1
   , epochLength = 1500
   , forkPoint = AtVersion 1
+  , enableP2P = True
   }
+
+-- | Rewrite a line in the configuration file
+rewriteConfiguration :: Bool -> String -> String
+rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
+rewriteConfiguration False "EnableP2P: True" = "EnableP2P: False"
+rewriteConfiguration _ s                     = s
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
+
+mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
+mkTopologyConfig numNodes allPorts port False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        [ NonP2P.RemoteAddress (fromString ifaceAddress)
+                               (fromIntegral peerPort)
+                               (numNodes - 1)
+        | peerPort <- allPorts \\ [port]
+        ]
+mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
+  where
+    rootAddress :: P2P.RootAddress
+    rootAddress =
+      P2P.RootAddress
+        [ RelayAddress (fromString ifaceAddress)
+                       (fromIntegral peerPort)
+        | peerPort <- allPorts \\ [port]
+        ]
+        P2P.DoNotAdvertisePeer
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeers rootAddress
+                             (numNodes - 1)
+        ]
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
+
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
@@ -164,7 +215,9 @@ testnet testnetOptions H.Conf {..} = do
     AtEpoch n -> ["TestShelleyHardForkAtEpoch: " <> show @Int n]
 
   H.readFile (base </> "configuration/chairman/byron-shelley/configuration.yaml")
-    <&> L.unlines . (<> forkMethod) . L.lines
+    <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions))
+                  . (<> forkMethod)
+                  . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   forM_ allNodes $ \node -> do
@@ -175,17 +228,9 @@ testnet testnetOptions H.Conf {..} = do
   -- Make topology files
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
-      J.object
-      [ "Producers" .= J.toJSON
-        [ J.object
-          [ "addr" .= J.toJSON @String ifaceAddress
-          , "port" .= J.toJSON @Int peerPort
-          , "valency" .= J.toJSON @Int 1
-          ]
-        | peerPort <- allPorts \\ [port]
-        ]
-      ]
+    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
+      mkTopologyConfig (numBftNodes testnetOptions + numPoolNodes testnetOptions) allPorts port (enableP2P testnetOptions)
+
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json") . J.encode $ J.object

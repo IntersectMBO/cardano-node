@@ -101,13 +101,16 @@ test-suite chairman-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson             >= 1.5.6.0
+                      , bytestring
                       , containers
+                      , cardano-node
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras
                       , network
+                      , ouroboros-network
                       , process
                       , random
                       , resourcet
@@ -140,8 +143,10 @@ executable cardano-testnet
   main-is:              Main.hs
 
   build-depends:        aeson             >= 1.5.6.0
+                      , bytestring
                       , ansi-terminal
                       , cardano-config
+                      , cardano-node
                       , containers
                       , directory
                       , exceptions
@@ -149,6 +154,7 @@ executable cardano-testnet
                       , hedgehog
                       , hedgehog-extras
                       , optparse-applicative
+                      , ouroboros-network
                       , process
                       , random
                       , resourcet
