@@ -38,7 +38,9 @@ import           Ouroboros.Network.Block (MaxSlotNo (..))
 
 data NodeConfiguration
   = NodeConfiguration
-      {  ncNodeAddr        :: !(Maybe NodeAddress)
+      {  ncNodeIPv4Addr    :: !(Maybe NodeHostIPv4Address)
+      ,  ncNodeIPv6Addr    :: !(Maybe NodeHostIPv6Address)
+      ,  ncNodePortNumber  :: !(Maybe PortNumber)
           -- | Filepath of the configuration yaml file. This file determines
           -- all the configuration settings required for the cardano node
           -- (logging, tracing, protocol, slot length etc)
@@ -70,7 +72,9 @@ data NodeConfiguration
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
-      {  pncNodeAddr        :: !(Last NodeAddress)
+      {  pncNodeIPv4Addr    :: !(Last NodeHostIPv4Address)
+      ,  pncNodeIPv6Addr    :: !(Last NodeHostIPv6Address)
+      ,  pncNodePortNumber  :: !(Last PortNumber)
          -- | Filepath of the configuration yaml file. This file determines
          -- all the configuration settings required for the cardano node
          -- (logging, tracing, protocol, slot length etc)
@@ -150,7 +154,9 @@ instance FromJSON PartialNodeConfiguration where
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
            , pncLogMetrics = pncLogMetrics'
            , pncTraceConfig = pncTraceConfig'
-           , pncNodeAddr = mempty
+           , pncNodeIPv4Addr = mempty
+           , pncNodeIPv6Addr = mempty
+           , pncNodePortNumber = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
            , pncDatabaseFile = mempty
@@ -241,7 +247,9 @@ defaultPartialNodeConfiguration =
     , pncSocketPath = mempty
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncViewMode = Last $ Just SimpleView
-    , pncNodeAddr = mempty
+    , pncNodeIPv4Addr = mempty
+    , pncNodeIPv6Addr = mempty
+    , pncNodePortNumber = mempty
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
     , pncShutdownIPC = mempty
@@ -274,7 +282,9 @@ makeNodeConfiguration pnc = do
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
   return $ NodeConfiguration
-             { ncNodeAddr = getLast $ pncNodeAddr pnc
+             { ncNodeIPv4Addr = getLast $ pncNodeIPv4Addr pnc
+             , ncNodeIPv6Addr = getLast $ pncNodeIPv6Addr pnc
+             , ncNodePortNumber = getLast $ pncNodePortNumber pnc
              , ncConfigFile = configFile
              , ncTopologyFile = topologyFile
              , ncDatabaseFile = databaseFile
