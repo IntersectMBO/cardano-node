@@ -20,7 +20,7 @@
 #
 # Mount a volume into /ipc for establishing cross-container communication via node.socket
 #
-#   docker run -v node-ipc:/ipc inputoutput/cardano-node:
+#   docker run -v node-ipc:/ipc inputoutput/cardano-node
 #   docker run -v node-ipc:/ipc inputoutput/some-node-client
 ############################################################################
 
@@ -30,6 +30,7 @@
 
 # The main contents of the image.
 , cardano-node
+, cardano-cli
 , scripts
 
 # Set gitrev to null, to ensure the version below is used
@@ -60,6 +61,7 @@ let
   baseImage = dockerTools.buildImage {
     name = "${repoName}-env";
     contents = [
+      cardano-cli       # Provide cardano-cli capability
       bashInteractive   # Provide the BASH shell
       cacert            # X.509 certificates of public CA's
       coreutils         # Basic utilities expected in GNU OS's
