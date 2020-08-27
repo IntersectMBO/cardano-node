@@ -8,30 +8,38 @@ import           Cardano.Prelude
 
 import           Data.Aeson (decode, encode, fromJSON, toJSON)
 
-import           Cardano.Node.Types (NodeAddress (..), NodeHostAddress (..))
-
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
 
 import           Test.Cardano.Node.Gen
 
-prop_roundtrip_NodeAddress_JSON :: Property
-prop_roundtrip_NodeAddress_JSON =
+prop_roundtrip_NodeIPv4Address_JSON :: Property
+prop_roundtrip_NodeIPv4Address_JSON =
   Hedgehog.property $ do
-    na <- Hedgehog.forAll genNodeAddress
+    na <- Hedgehog.forAll genNodeIPv4Address
     Hedgehog.tripping na toJSON fromJSON
     Hedgehog.tripping na encode decode
-    Hedgehog.cover 1 "  has address" $ isJust (unNodeHostAddress $ naHostAddress na)
-    Hedgehog.cover 1 "  no address" $ isNothing (unNodeHostAddress $ naHostAddress na)
+
+prop_roundtrip_NodeIPv6Address_JSON :: Property
+prop_roundtrip_NodeIPv6Address_JSON =
+  Hedgehog.property $ do
+    na <- Hedgehog.forAll genNodeIPv6Address
+    Hedgehog.tripping na toJSON fromJSON
+    Hedgehog.tripping na encode decode
+
+prop_roundtrip_NodeIPAddress_JSON :: Property
+prop_roundtrip_NodeIPAddress_JSON =
+  Hedgehog.property $ do
+    na <- Hedgehog.forAll genNodeIPAddress
+    Hedgehog.tripping na toJSON fromJSON
+    Hedgehog.tripping na encode decode
 
 prop_roundtrip_NodeHostAddress_JSON :: Property
 prop_roundtrip_NodeHostAddress_JSON =
   Hedgehog.property $ do
-    nha <- Hedgehog.forAll genNodeHostAddress
+    nha <- Hedgehog.forAll genNodeHostIPAddress
     Hedgehog.tripping nha toJSON fromJSON
     Hedgehog.tripping nha encode decode
-    Hedgehog.cover 1 "  has address" $ isJust (unNodeHostAddress nha)
-    Hedgehog.cover 1 "  no address" $ isNothing (unNodeHostAddress nha)
 
 prop_roundtrip_NodeSetup_JSON :: Property
 prop_roundtrip_NodeSetup_JSON =
