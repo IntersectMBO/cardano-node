@@ -3,7 +3,8 @@
 set -e
 #set -x
 
-ROOT=example
+ROOT=${ROOT:-"example"}
+CARDANO_NODE_ROOT=${CARDANO_NODE_ROOT:-"."}
 
 BFT_NODES="node-bft1 node-bft2"
 BFT_NODES_N="1 2"
@@ -19,7 +20,7 @@ if ! mkdir "${ROOT}"; then
 fi
 
 # copy and tweak the configuration
-cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
+cp "${CARDANO_NODE_ROOT}/configuration/defaults/byron-mainnet/configuration.yaml" ${ROOT}/
 sed -i ${ROOT}/configuration.yaml \
     -e 's/Protocol: RealPBFT/Protocol: TPraos/' \
     -e 's/minSeverity: Info/minSeverity: Debug/'
@@ -124,12 +125,12 @@ done
      {
        "addr": "127.0.0.1",
        "port": 3002,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3003,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -143,12 +144,12 @@ echo 3001 > node-bft1/port
      {
        "addr": "127.0.0.1",
        "port": 3001,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3003,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -162,12 +163,12 @@ echo 3002 > node-bft2/port
      {
        "addr": "127.0.0.1",
        "port": 3001,
-       "valency": 1
+       "advertise": false
      }
    , {
        "addr": "127.0.0.1",
        "port": 3002,
-       "valency": 1
+       "advertise": false
      }
    ]
  }
@@ -328,6 +329,7 @@ for NODE in ${ALL_NODES}; do
   echo "  --shelley-kes-key                 ${ROOT}/${NODE}/kes.skey \\"
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/node.cert \\"
+  echo "  --host-addr                       127.0.0.1 \\"
   echo "  --port                            $(cat ${NODE}/port)"
 
 done
