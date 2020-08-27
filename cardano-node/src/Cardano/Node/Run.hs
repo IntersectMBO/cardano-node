@@ -6,7 +6,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TupleSections #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -295,7 +294,8 @@ handleSimpleNodeNonP2P scp runP trace nodeTracers nc onKernel = do
                      [ toSockAddr (addr, port)
                      | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
                      ]
-                     0
+                     (length ipProducerAddrs)
+
       diffusionArguments :: DiffusionArguments m
       diffusionArguments =
         createDiffusionArgumentsNonP2P
