@@ -45,6 +45,8 @@ LastKnownBlockVersion-Alt: 0
 ApplicationName: cardano-sl
 ApplicationVersion: 1
 
+##### Enable P2P Mode #####
+EnableP2P: False
 
 ##### Logging configuration #####
 
