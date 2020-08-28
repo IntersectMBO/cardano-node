@@ -204,7 +204,7 @@ traceNodeUpTime tr nodeLaunchTime = do
 
 #ifdef UNIX
 -- | Every 2 seconds get the current peers list and store it to LiveViewBackend
---   (if it's activated) and trace it (for example, for forwarding to an exterrnal process).
+--   (if it's activated) and trace it (for example, for forwarding to an external process).
 handlePeersList
   :: NFData a
   => Trace IO Text
