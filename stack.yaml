@@ -61,7 +61,7 @@ extra-deps:
   - websockets-0.12.6.1
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 460ee17d22cacb3ac4d90536ebe90500a356a1c9
+    commit: 74188f62ff743c690bdf287f7fa18eaa2ee354d4
     subdirs:
       # small-steps
       - semantics/executable-spec
@@ -81,13 +81,13 @@ extra-deps:
     commit: 2547ad1e80aeabca2899951601079408becbc92c
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 71ea865408f2e03e6d6832359423546699730849
+    commit: 0c5b0a6619fadf22f4d62a12154e181a6d035c1c
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: df8687488449f71dce3d881800c21e41fe1b7fc1
+    commit: 13f44ad35d2762dbf98b3d3be56b7ba2adf515f4
     subdirs:
       - binary
       - binary/test
@@ -97,11 +97,11 @@ extra-deps:
 
     # Needed for `cardano-ledger-specs`
   - git: https://github.com/input-output-hk/goblins
-    commit: 312198a1523736181ef7ddab15958bb32a9d9052
+    commit: cde90a2b27f79187ca8310b6549331e59595e7ba
 
     # iohk-monitoring-framework currently not pinned to a release
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 8190b00d6930927a812baff97d02566176b6bd3b
+    commit: 8f2086aff6b315b41a39b727f860c3477205ed8a
     subdirs:
       - contra-tracer
       - iohk-monitoring
@@ -120,7 +120,7 @@ extra-deps:
     #Ouroboros-network dependencies
 
   - git: https://github.com/input-output-hk/ouroboros-network
-    commit: aecfe77de784e6c75108172802ee59d2d7087eaf
+    commit: 01f1d62df87e546ef4c310b6fd74f1fb1d8210bf
     subdirs:
         - io-sim
         - io-sim-classes
