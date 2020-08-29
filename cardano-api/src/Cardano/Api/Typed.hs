@@ -684,10 +684,9 @@ instance SerialiseAsRawBytes StakeAddress where
 instance SerialiseAsBech32 (Address Shelley) where
     bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = "addr"
     bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = "addr_test"
-    bech32PrefixFor (ByronAddress _)                     = "addr_bootstrap"
+    bech32PrefixFor (ByronAddress _)                     = "addr"
 
-    bech32PrefixesPermitted AsShelleyAddress = ["addr", "addr_test",
-                                                "addr_bootstrap"]
+    bech32PrefixesPermitted AsShelleyAddress = ["addr", "addr_test"]
 
 
 instance SerialiseAsBech32 StakeAddress where
