@@ -655,7 +655,7 @@ pGovernanceCmd =
             (  Opt.long "reserves"
             <> Opt.help "Use the reserves pot."
             )
-      <|> Opt.flag' Shelley.ReservesMIR
+      <|> Opt.flag' Shelley.TreasuryMIR
             (  Opt.long "treasury"
             <> Opt.help "Use the treasury pot."
             )
