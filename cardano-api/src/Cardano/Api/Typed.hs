@@ -320,7 +320,6 @@ import           Data.String (IsString (fromString))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Typeable (Typeable)
 import           Data.Void (Void)
 import           Data.Word
 import           Numeric.Natural
@@ -2573,8 +2572,7 @@ nullLocalNodeClientProtocols =
 -- handlers.
 --
 connectToLocalNode :: forall mode block.
-                      (Typeable block, Typeable (ApplyTxErr block),
-                       ShowProxy block, ShowProxy (ApplyTxErr block),
+                      (ShowProxy block, ShowProxy (ApplyTxErr block),
                        ShowProxy (Query block), ShowProxy (GenTx block))
                        --TODO: too many constraints! we should pass
                        -- a single protocol to run, not all of them, until we
@@ -2665,8 +2663,7 @@ connectToLocalNode LocalNodeConnectInfo {
 -- local state query protocol.
 --
 queryNodeLocalState :: forall mode block result.
-                       (Typeable block, Typeable (ApplyTxErr block),
-                        ShowProxy block, ShowProxy (ApplyTxErr block),
+                       (ShowProxy block, ShowProxy (ApplyTxErr block),
                         ShowProxy (Query block), ShowProxy (GenTx block))
                     => LocalNodeConnectInfo mode block
                     -> (Point block, Query block result)
@@ -2707,8 +2704,7 @@ queryNodeLocalState connctInfo pointAndQuery = do
         }
 
 submitTxToNodeLocal :: forall mode block.
-                       (Typeable block, Typeable (ApplyTxErr block),
-                        ShowProxy block, ShowProxy (ApplyTxErr block),
+                       (ShowProxy block, ShowProxy (ApplyTxErr block),
                         ShowProxy (Query block), ShowProxy (GenTx block))
                     => LocalNodeConnectInfo mode block
                     -> GenTx block

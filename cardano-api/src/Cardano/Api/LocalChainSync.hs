@@ -19,8 +19,7 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 
 -- | Get the node's tip using the local chain sync protocol.
-getLocalTip :: (Typeable block, Typeable (ApplyTxErr block),
-                ShowProxy block, ShowProxy (ApplyTxErr block),
+getLocalTip :: (ShowProxy block, ShowProxy (ApplyTxErr block),
                 ShowProxy (Query block), ShowProxy (GenTx block))
             => LocalNodeConnectInfo mode block -> IO (Tip block)
 getLocalTip connctInfo = do
