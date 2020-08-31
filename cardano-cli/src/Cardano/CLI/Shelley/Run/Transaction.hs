@@ -35,7 +35,7 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Shelley.Key (SigningKeyDecodeError (..), readSigningKeyFileAnyOf)
+import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
@@ -313,8 +313,7 @@ instance Error ScriptJsonDecodeError where
 
 -- | Error reading the data required to construct a key witness.
 data ReadWitnessSigningDataError
-  = ReadWitnessSigningDataSigningKeyDecodeError
-      !(FileError SigningKeyDecodeError)
+  = ReadWitnessSigningDataSigningKeyDecodeError !(FileError InputDecodeError)
   | ReadWitnessSigningDataScriptError !(FileError ScriptJsonDecodeError)
   | ReadWitnessSigningDataSigningKeyAndAddressMismatch
   -- ^ A Byron address was specified alongside a non-Byron signing key.
@@ -346,7 +345,7 @@ readWitnessSigningData (ScriptWitnessSigningData (ScriptFile fp)) = do
 readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
     res <- firstExceptT ReadWitnessSigningDataSigningKeyDecodeError
       . newExceptT
-      $ readSigningKeyFileAnyOf textEnvFileTypes bech32FileTypes skFile
+      $ readSigningKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
     case (res, mbByronAddr) of
       (AByronSigningKey _ _, Just _) -> pure res
       (AByronSigningKey _ _, Nothing) -> pure res

@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Shelley CLI command types
@@ -42,7 +41,6 @@ module Cardano.CLI.Shelley.Commands
   , PoolMetaDataFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
-  , VerificationKeyOrHashOrFile (..)
   , WitnessSigningData (..)
   ) where
 
@@ -55,6 +53,7 @@ import           Cardano.Api.Typed hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrHashOrFile)
 import           Cardano.CLI.Types
 
 import           Shelley.Spec.Ledger.TxBody (MIRPot)
@@ -431,24 +430,6 @@ newtype TxFile
 newtype VerificationKeyBase64
   = VerificationKeyBase64 String
   deriving (Eq, Show)
-
--- | Either a verification key, verification key hash, or path to a
--- verification key file.
-data VerificationKeyOrHashOrFile keyrole
-  = VerificationKeyValue !(VerificationKey keyrole)
-  -- ^ A verification key.
-  | VerificationKeyHash !(Hash keyrole)
-  -- ^ A verification key hash.
-  | VerificationKeyFilePath !VerificationKeyFile
-  -- ^ A path to a verification key file.
-  -- Note that this file hasn't been validated at all (whether it exists,
-  -- contains a key of the correct type, etc.)
-
-deriving instance (Show (VerificationKey keyrole), Show (Hash keyrole))
-  => Show (VerificationKeyOrHashOrFile keyrole)
-
-deriving instance (Eq (VerificationKey keyrole), Eq (Hash keyrole))
-  => Eq (VerificationKeyOrHashOrFile keyrole)
 
 -- | Data required to construct a witness.
 data WitnessSigningData

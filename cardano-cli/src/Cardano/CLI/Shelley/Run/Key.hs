@@ -39,13 +39,13 @@ import           Cardano.CLI.Byron.Key (CardanoEra (..))
 import qualified Cardano.CLI.Byron.Key as Byron
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (SigningKeyDecodeError (..), readSigningKeyFileAnyOf)
+import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 
 data ShelleyKeyCmdError
   = ShelleyKeyCmdReadFileError !(FileError TextEnvelopeError)
-  | ShelleyKeyCmdReadSigningKeyFileError !(FileError SigningKeyDecodeError)
+  | ShelleyKeyCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyKeyCmdWriteFileError !(FileError ())
   | ShelleyKeyCmdByronKeyFailure !Byron.ByronKeyFailure
   | ShelleyKeyCmdByronKeyParseError
@@ -62,7 +62,7 @@ renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
 renderShelleyKeyCmdError err =
   case err of
     ShelleyKeyCmdReadFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyKeyCmdReadSigningKeyFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyKeyCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyKeyCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyKeyCmdByronKeyFailure e -> Byron.renderByronKeyFailure e
     ShelleyKeyCmdByronKeyParseError errTxt -> errTxt
@@ -101,7 +101,7 @@ runGetVerificationKey :: SigningKeyFile
                       -> VerificationKeyFile
                       -> ExceptT ShelleyKeyCmdError IO ()
 runGetVerificationKey skf (VerificationKeyFile vkf) = do
-    ssk <- firstExceptT ShelleyKeyCmdReadSigningKeyFileError $
+    ssk <- firstExceptT ShelleyKeyCmdReadKeyFileError $
              readSigningKeyFile skf
     withSomeSigningKey ssk $ \sk ->
       let vk = getVerificationKey sk in
@@ -147,10 +147,10 @@ withSomeSigningKey ssk f =
 
 readSigningKeyFile
   :: SigningKeyFile
-  -> ExceptT (FileError SigningKeyDecodeError) IO SomeSigningKey
+  -> ExceptT (FileError InputDecodeError) IO SomeSigningKey
 readSigningKeyFile skFile =
     newExceptT $
-      readSigningKeyFileAnyOf textEnvFileTypes bech32FileTypes skFile
+      readSigningKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
   where
     textEnvFileTypes =
       [ FromSomeType (AsSigningKey AsByronKey)

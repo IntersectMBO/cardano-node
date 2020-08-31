@@ -19,6 +19,8 @@ import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)
 import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
+                     VerificationKeyOrHashOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import           Control.Monad.Fail (fail)
@@ -36,6 +38,7 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import qualified Data.IP as IP
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -1218,11 +1221,15 @@ pGenesisVerificationKey =
         . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisKey)
         . BSC.pack
 
+pGenesisVerificationKeyOrFile :: Parser (VerificationKeyOrFile GenesisKey)
+pGenesisVerificationKeyOrFile =
+  VerificationKeyValue <$> pGenesisVerificationKey
+    <|> VerificationKeyFilePath <$> pGenesisVerificationKeyFile
+
 pGenesisVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile GenesisKey)
 pGenesisVerificationKeyOrHashOrFile =
-  VerificationKeyValue <$> pGenesisVerificationKey
+  VerificationKeyOrFile <$> pGenesisVerificationKeyOrFile
     <|> VerificationKeyHash <$> pGenesisVerificationKeyHash
-    <|> VerificationKeyFilePath <$> pGenesisVerificationKeyFile
 
 pGenesisDelegateVerificationKeyFile :: Parser VerificationKeyFile
 pGenesisDelegateVerificationKeyFile =
@@ -1266,12 +1273,17 @@ pGenesisDelegateVerificationKey =
         . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisDelegateKey)
         . BSC.pack
 
+pGenesisDelegateVerificationKeyOrFile
+  :: Parser (VerificationKeyOrFile GenesisDelegateKey)
+pGenesisDelegateVerificationKeyOrFile =
+  VerificationKeyValue <$> pGenesisDelegateVerificationKey
+    <|> VerificationKeyFilePath <$> pGenesisDelegateVerificationKeyFile
+
 pGenesisDelegateVerificationKeyOrHashOrFile
   :: Parser (VerificationKeyOrHashOrFile GenesisDelegateKey)
 pGenesisDelegateVerificationKeyOrHashOrFile =
-  VerificationKeyValue <$> pGenesisDelegateVerificationKey
+  VerificationKeyOrFile <$> pGenesisDelegateVerificationKeyOrFile
     <|> VerificationKeyHash <$> pGenesisDelegateVerificationKeyHash
-    <|> VerificationKeyFilePath <$> pGenesisDelegateVerificationKeyFile
 
 pKESVerificationKeyFile :: Parser VerificationKeyFile
 pKESVerificationKeyFile =
@@ -1617,30 +1629,25 @@ pVrfVerificationKey =
     asType :: AsType (VerificationKey VrfKey)
     asType = AsVerificationKey AsVrfKey
 
+    keyFormats :: NonEmpty (InputFormat (VerificationKey VrfKey))
+    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
+
     deserialiseFromBech32OrHex
       :: String
       -> Either String (VerificationKey VrfKey)
     deserialiseFromBech32OrHex str =
-      case deserialiseFromBech32 asType (Text.pack str) of
-        Right res -> Right res
+      first (Text.unpack . renderInputDecodeError) $
+        deserialiseInput asType keyFormats (BSC.pack str)
 
-        -- The input was valid Bech32, but some other error occurred.
-        Left err@(Bech32UnexpectedPrefix _ _) -> Left (displayError err)
-        Left err@(Bech32DataPartToBytesError _) -> Left (displayError err)
-        Left err@(Bech32DeserialiseFromBytesError _) -> Left (displayError err)
-        Left err@(Bech32WrongPrefix _ _) -> Left (displayError err)
-
-        -- The input was not valid Bech32. Attempt to deserialize it as hex.
-        Left (Bech32DecodingError _) ->
-          case deserialiseFromRawBytesHex asType (BSC.pack str) of
-            Just res' -> Right res'
-            Nothing -> Left "Invalid VRF verification key."
+pVrfVerificationKeyOrFile :: Parser (VerificationKeyOrFile VrfKey)
+pVrfVerificationKeyOrFile =
+  VerificationKeyValue <$> pVrfVerificationKey
+    <|> VerificationKeyFilePath <$> pVrfVerificationKeyFile
 
 pVrfVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile VrfKey)
 pVrfVerificationKeyOrHashOrFile =
-  VerificationKeyValue <$> pVrfVerificationKey
+  VerificationKeyOrFile <$> pVrfVerificationKeyOrFile
     <|> VerificationKeyHash <$> pVrfVerificationKeyHash
-    <|> VerificationKeyFilePath <$> pVrfVerificationKeyFile
 
 pRewardAcctVerificationKeyFile :: Parser VerificationKeyFile
 pRewardAcctVerificationKeyFile =

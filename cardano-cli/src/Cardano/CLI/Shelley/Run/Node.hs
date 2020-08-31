@@ -7,7 +7,7 @@ module Cardano.CLI.Shelley.Run.Node
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (SigningKeyDecodeError (..), readSigningKeyFileAnyOf)
+import           Cardano.CLI.Shelley.Key (InputDecodeError (..), readSigningKeyFileAnyOf)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 import           Cardano.Prelude
 import           Control.Monad.Trans.Except (ExceptT)
@@ -21,7 +21,7 @@ import qualified Data.Text as Text
 
 data ShelleyNodeCmdError
   = ShelleyNodeCmdReadFileError !(FileError TextEnvelopeError)
-  | ShelleyNodeCmdReadSigningKeyFileError !(FileError SigningKeyDecodeError)
+  | ShelleyNodeCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyNodeCmdWriteFileError !(FileError ())
   | ShelleyNodeCmdOperationalCertificateIssueError !OperationalCertIssueError
   deriving Show
@@ -31,7 +31,7 @@ renderShelleyNodeCmdError err =
   case err of
     ShelleyNodeCmdReadFileError fileErr -> Text.pack (displayError fileErr)
 
-    ShelleyNodeCmdReadSigningKeyFileError fileErr ->
+    ShelleyNodeCmdReadKeyFileError fileErr ->
       Text.pack (displayError fileErr)
 
     ShelleyNodeCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
@@ -178,11 +178,11 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsKesKey) vkeyKesPath
 
-    signKey <- firstExceptT ShelleyNodeCmdReadSigningKeyFileError
+    signKey <- firstExceptT ShelleyNodeCmdReadKeyFileError
       . newExceptT
       $ readSigningKeyFileAnyOf
-          textEnvPossibleBlockIssuers
           bech32PossibleBlockIssuers
+          textEnvPossibleBlockIssuers
           stakePoolSKeyFile
 
     (ocert, nextOcertCtr) <-
