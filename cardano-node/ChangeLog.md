@@ -1,5 +1,44 @@
 # Changelog for cardano-node
 
+## 1.19.1 -- September 2020
+
+### node changes
+- Code tidying using hlint and style tool (#1726, #1727, #1733)
+- Documentation updates (#1718, #1736, #1740, #1741, #1750, #1752, #1757, #1763,
+  #1764, #1770)
+- Extensions to the new node+cli integration tests (#1716, #1760, #1773, #1774)
+- Mention TraceBlockchainTime in config files and documentation (#1786)
+
+### consensus changes
+- Fix bugs related to the ledger view history (#1935, #2506, #2559, #2562, #2546)
+- Fix the reporting of the metrics for the opcert/KES status (#2529)
+- Fix an accidental memory use spike in block streaming (#2532)
+- Reduce memory use by not keeping unnecessary AVVM balances (#2533)
+- Extend automatic tests to include active stake pools (#2388, #2502)
+- Adjust the extended nightly tests for recent ledger updates (#2549, #2550)
+- Simplify the management of ledger state snapshots (#2440, #2459)
+- Internal code simplifications (#2432, #2538, #2543)
+- Preparations for adding the new network connection manager (#2548)
+- Rearrange the mock and test packages (#2551)
+- Merge and improve the db-validator and db-analyser tools (#2501, #2537)
+- Support building with GHC 8.10.x (#2542)
+
+### ledger changes
+- Minor performance optimisations (#1790, #1798)
+- Extend tests to cover different normal vs address hash algorithms (#1802)
+- Minor corrections to the formal spec arising from internal review and internal
+  audit (#1791, #1797, #1800, #1805, #1806, #1809
+- Support building with GHC 8.10.x (#1807)
+- Reduce unnecessary build-time dependencies (#1810)
+- Remove unused code spotted by the weeder tool (#1812)
+- Minor code rearrangements (#1814)
+
+### network changes
+- Publish two previously internal reports on the network design (#2522, #2527)
+- Preliminary refactoring to simplify adding the new connection manager (#2541)
+- Internal code simplifications (#2556)
+- Support building with GHC 8.10.x (#2539)
+
 ## 1.19.0 -- August 2020
 
 ### node changes

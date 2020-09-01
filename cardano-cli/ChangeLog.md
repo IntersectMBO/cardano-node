@@ -1,5 +1,12 @@
 # Changelog for cardano-cli
 
+## 1.19.1 -- September 2020
+
+- Fix the testnet vs mainnet argument for the genesis create command (#1761)
+- Fix the --treasury flag for MIR cert creation (#1780)
+- Fix the output rendering in the command to hash genesis files (#1713, #1767)
+- Validate CBOR tx metadata when building tx bodies (#1432, #1677)
+
 ## 1.19.0 -- August 2020
 
 - Support for converting ITN extended keys to Shelley stake keys (#1579)
