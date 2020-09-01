@@ -35,6 +35,7 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Shelley.Key (SigningKeyDecodeError (..), readSigningKeyFileAnyOf)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
@@ -47,6 +48,7 @@ data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
   | ShelleyTxCmdReadFileError !(FileError ())
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
+  | ShelleyTxCmdReadSigningKeyFileError !(FileError SigningKeyDecodeError)
   | ShelleyTxCmdWriteFileError !(FileError ())
   | ShelleyTxCmdMetaDataConversionError !FilePath !MetaDataJsonConversionError
   | ShelleyTxMetaValidationError !FilePath !TxMetadataValidationError
@@ -63,6 +65,7 @@ renderShelleyTxCmdError err =
   case err of
     ShelleyTxCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadTextViewFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdReadSigningKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdMetaDataConversionError fp metaDataErr ->
        "Error reading metadata at: " <> show fp
@@ -166,7 +169,7 @@ runTxSign :: TxBodyFile
 runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
     txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
                 Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
-    sks    <- firstExceptT ShelleyTxCmdReadTextViewFileError $
+    sks    <- firstExceptT ShelleyTxCmdReadSigningKeyFileError $
                 mapM readSigningKeyFile skFiles
 
     -- We have to handle Byron and Shelley key witnesses slightly differently
@@ -296,12 +299,12 @@ data SomeWitnessSigningKey
 
 readSigningKeyFile
   :: SigningKeyFile
-  -> ExceptT (Api.FileError Api.TextEnvelopeError) IO SomeWitnessSigningKey
-readSigningKeyFile (SigningKeyFile skfile) =
+  -> ExceptT (Api.FileError SigningKeyDecodeError) IO SomeWitnessSigningKey
+readSigningKeyFile skFile =
     newExceptT $
-      Api.readFileTextEnvelopeAnyOf fileTypes skfile
+      readSigningKeyFileAnyOf textEnvFileTypes bech32FileTypes skFile
   where
-    fileTypes =
+    textEnvFileTypes =
       [ Api.FromSomeType (Api.AsSigningKey Api.AsByronKey)
                           AByronSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey)
@@ -324,6 +327,21 @@ readSigningKeyFile (SigningKeyFile skfile) =
                           AGenesisDelegateExtendedSigningKey
       , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisUTxOKey)
                           AGenesisUTxOSigningKey
+      ]
+
+    bech32FileTypes =
+      [ Api.FromSomeType (Api.AsSigningKey Api.AsByronKey)
+                          AByronSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey)
+                          APaymentSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentExtendedKey)
+                          APaymentExtendedSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeKey)
+                          AStakeSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeExtendedKey)
+                          AStakeExtendedSigningKey
+      , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey)
+                          AStakePoolSigningKey
       ]
 
 categoriseWitnessSigningKey :: SomeWitnessSigningKey
@@ -359,7 +377,8 @@ runTxWitness
 runTxWitness (TxBodyFile txbodyFile) witSignKeyFile mbNw (OutputFile oFile) = do
   txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
               Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
-  someWitSignKey <- firstExceptT ShelleyTxCmdReadTextViewFileError $ readSigningKeyFile witSignKeyFile
+  someWitSignKey <- firstExceptT ShelleyTxCmdReadSigningKeyFileError $
+              readSigningKeyFile witSignKeyFile
 
   witness <-
     case (categoriseWitnessSigningKey someWitSignKey, mbNw) of
