@@ -1,4 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Shelley CLI command types
@@ -49,7 +52,9 @@ import           Prelude
 
 import           Cardano.Api.Shelley
 
+import           Data.String(IsString)
 import           Data.Text (Text)
+import           GHC.Generics (Generic)
 
 import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeIdentifier, StakeVerifier,
                    VerificationKeyOrFile, VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
@@ -332,7 +337,7 @@ data PoolCmd
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
       OutputFile
-  | PoolGetId (VerificationKeyOrFile StakePoolKey) PoolIdOutputFormat
+  | PoolGetId (VerificationKeyOrFile StakePoolKey) PoolIdOutputFormat (Maybe OutputFile)
   | PoolMetadataHash PoolMetadataFile (Maybe OutputFile)
   deriving Show
 
@@ -516,7 +521,8 @@ data MetadataFile = MetadataFileJSON FilePath
 
 newtype PoolMetadataFile = PoolMetadataFile
   { unPoolMetadataFile :: FilePath }
-  deriving Show
+  deriving Generic
+  deriving newtype (Eq, Ord, Show, IsString)
 
 newtype GenesisDir
   = GenesisDir FilePath

@@ -922,7 +922,7 @@ pPoolCmd =
       ]
   where
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pPoolIdOutputFormat
+    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pPoolIdOutputFormat <*> pMaybeOutputFile
 
     pPoolMetadataHashSubCmd :: Parser PoolCmd
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
@@ -3343,14 +3343,15 @@ readVerificationKey asType =
 
 readPoolIdOutputFormat :: Opt.ReadM PoolIdOutputFormat
 readPoolIdOutputFormat = do
-  s <- Opt.str
+  s <- Opt.str @String
   case s of
     "hex" -> pure PoolIdOutputFormatHex
     "bech32" -> pure PoolIdOutputFormatBech32
     _ ->
-      fail $ "Invalid output format: \""
-        <> s
-        <> "\". Accepted output formats are \"hex\" and \"bech32\"."
+      fail $ mconcat
+        [ "Invalid output format: " <> show s
+        , ". Accepted output formats are \"hex\" and \"bech32\"."
+        ]
 
 readURIOfMaxLength :: Int -> Opt.ReadM Text
 readURIOfMaxLength maxLen =
