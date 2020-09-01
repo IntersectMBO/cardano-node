@@ -965,8 +965,9 @@ $ cp cardano-node/configuration/defaults/byron-mainnet/configuration.yaml \
 and make a couple tweaks
 
 ```
-$ sed -i 's/Protocol: RealPBFT/Protocol: TPraos/' example/configuration.yaml
-$ sed -i 's/minSeverity: Info/minSeverity: Debug/' example/configuration.yaml
+$ sed -i 's/^Protocol: RealPBFT/Protocol: TPraos/' example/configuration.yaml
+$ sed -i 's/^minSeverity: Info/minSeverity: Debug/' example/configuration.yaml
+$ sed -i 's/^TraceBlockchainTime: False/TraceBlockchainTime: True/' example/configuration.yaml
 ```
 
 We will share this `configuration.yaml` file between both nodes we run.
