@@ -16,6 +16,7 @@ library
                       , aeson
                       , async
                       , bytestring
+                      , deepseq
                       , directory
                       , hedgehog
                       , mmorph
@@ -37,6 +38,7 @@ library
                         Chairman.OS
                         Chairman.Plan
                         Chairman.Process
+                        Chairman.String
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -54,9 +56,12 @@ test-suite tests
                       , aeson
                       , async
                       , cardano-node-chairman
+                      , containers
                       , directory
                       , filepath
                       , hedgehog
+                      , microlens
+                      , microlens-aeson
                       , mmorph
                       , network
                       , process
@@ -65,7 +70,9 @@ test-suite tests
                       , temporary
                       , time
                       , unliftio
+                      , unordered-containers
   other-modules:        Test.Cardano.Node.Chairman.Byron
+                        Test.Cardano.Node.Chairman.Shelley
                         Test.Common.NetworkSpec
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
