@@ -25,8 +25,9 @@ cardano_node="$(cabal exec -- which cardano-node)"
 # copy and tweak the configuration
 cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
 sed -i ${ROOT}/configuration.yaml \
-    -e 's/Protocol: RealPBFT/Protocol: TPraos/' \
-    -e 's/minSeverity: Info/minSeverity: Debug/'
+    -e 's/^Protocol: RealPBFT/Protocol: TPraos/' \
+    -e 's/^minSeverity: Info/minSeverity: Debug/' \
+    -e 's/^TraceBlockchainTime: False/TraceBlockchainTime: True/'
 
 # Set up our template
 $cardano_cli shelley genesis create --testnet-magic 42 --genesis-dir ${ROOT}

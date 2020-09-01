@@ -16,12 +16,14 @@ import           Data.Int
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
+import           Data.String (String)
 import           GHC.Num
 import           Hedgehog (Property, discover)
 import           System.IO (IO)
 import           Text.Show
 
 import qualified Chairman.Base as H
+import qualified Chairman.IO.File as IO
 import qualified Chairman.IO.Network.Socket as IO
 import qualified Chairman.IO.Network.Sprocket as IO
 import qualified Chairman.Process as H
@@ -33,6 +35,11 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 
 {- HLINT ignore "Redundant <&>" -}
+
+-- | Rewrite a line in the configuration file
+rewriteConfiguration :: String -> String
+rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
+rewriteConfiguration s = s
 
 prop_spawnByronCluster :: Property
 prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
@@ -88,7 +95,9 @@ prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath 
     H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
 
     H.copyFile (baseConfig <> "/topology-node-" <> si <> ".json") (tempAbsPath <> "/topology-node-" <> si <> ".json")
-    H.copyFile (baseConfig <> "/config-" <> si <> ".yaml") (tempAbsPath <> "/config-" <> si <> ".yaml")
+    H.writeFile (tempAbsPath <> "/config-" <> si <> ".yaml") . L.unlines . fmap rewriteConfiguration . L.lines =<<
+      H.evalIO (IO.readFile (baseConfig <> "/config-" <> si <> ".yaml"))
+
 
     hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
@@ -116,7 +125,7 @@ prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath 
         )
       )
 
-  deadline <- H.noteShowIO $ DTC.addUTCTime 60 <$> DTC.getCurrentTime -- 60 seconds from now
+  deadline <- H.noteShowIO $ DTC.addUTCTime 30 <$> DTC.getCurrentTime
 
   forM_ nodeIndexes $ \i -> H.assertByDeadlineIO deadline $ IO.isPortOpen (3000 + i)
 
@@ -125,6 +134,11 @@ prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath 
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.assertIO $ IO.doesSprocketExist sprocket
+
+  forM_ nodeIndexes $ \i -> do
+    si <- H.noteShow $ show @Int i
+    nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
+    H.assertByDeadlineIO deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
 
 tests :: IO Bool
 tests = H.checkParallel $$discover

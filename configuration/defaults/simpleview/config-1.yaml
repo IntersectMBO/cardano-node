@@ -146,6 +146,9 @@ TraceBlockFetchProtocolSerialised: False
 # Trace BlockFetch server.
 TraceBlockFetchServer: True
 
+# Trace BlockchainTime.
+TraceBlockchainTime: False
+
 # Verbose tracer of ChainDB
 TraceChainDb: False
 

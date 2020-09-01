@@ -211,6 +211,7 @@ Also enable the EKG backend if you want to use the EKG or Prometheus monitoring 
 	  "TraceBlockFetchProtocol": false,
 	  "TraceBlockFetchProtocolSerialised": false,
 	  "TraceBlockFetchServer": false,
+	  "TraceBlockchainTime": false,
 	  "TraceChainDb": true,
 	  "TraceChainSyncBlockServer": false,
 	  "TraceChainSyncClient": false,
