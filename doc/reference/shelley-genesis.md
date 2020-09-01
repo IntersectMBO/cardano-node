@@ -11,7 +11,7 @@ We also assume a Linux system, though it should work fine on OSX too.
 
 ```
 $ cardano-cli version
-cardano-cli 1.11.0 - linux-x86_64 - ghc-8.6
+cardano-cli 1.19.0 - linux-x86_64 - ghc-8.6
 ```
 
 Everything we'll be doing uses the `shelley` sub-command
