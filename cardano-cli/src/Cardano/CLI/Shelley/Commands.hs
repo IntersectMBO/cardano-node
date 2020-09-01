@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -324,8 +325,8 @@ data PoolCmd
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
       (File Certificate Out)
-  | PoolGetId (VerificationKeyOrFile StakePoolKey) PoolIdOutputFormat
-  | PoolMetadataHash (File StakePoolMetadata In) (Maybe (File () Out))
+  | PoolGetId (VerificationKeyOrFile StakePoolKey) PoolIdOutputFormat (Maybe (File () Out))
+  | PoolMetadataHash (StakePoolMetadataFile In) (Maybe (File () Out))
   deriving Show
 
 renderPoolCmd :: PoolCmd -> Text
