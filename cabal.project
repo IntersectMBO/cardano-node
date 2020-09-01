@@ -22,6 +22,11 @@ package cardano-node
 package cardano-node-chairman
   ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
+package cryptonite
+  -- Using RDRAND instead of /dev/urandom as an entropy source for key
+  -- generation is dubious. Set the flag so we use /dev/urandom by default.
+  flags: -support_rdrand
+
 -- ---------------------------------------------------------
 -- Disable all tests by default
 
