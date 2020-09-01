@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 1.19.1 -- September 2020
+
+- Adjust the tx metadata JSON schema to be fully recursive (#1735)
+- Audit compliance with CIP5 for common bech32 prefixes (#1781)
+- Add functionality for validating tx metadata (#1432, #1677)
+
 ## 1.19.0 -- August 2020
 
 - Support for scripts and specifically multi-sig scripts (#1623)
