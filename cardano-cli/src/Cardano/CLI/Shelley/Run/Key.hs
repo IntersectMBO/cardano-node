@@ -38,11 +38,13 @@ import           Cardano.CLI.Byron.Key (CardanoEra (..))
 import qualified Cardano.CLI.Byron.Key as Byron
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Key (SigningKeyDecodeError (..), readSigningKeyFileAnyOf)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 
 data ShelleyKeyCmdError
   = ShelleyKeyCmdReadFileError !(FileError TextEnvelopeError)
+  | ShelleyKeyCmdReadSigningKeyFileError !(FileError SigningKeyDecodeError)
   | ShelleyKeyCmdWriteFileError !(FileError ())
   | ShelleyKeyCmdByronKeyFailure !Byron.ByronKeyFailure
   | ShelleyKeyCmdByronKeyParseError
@@ -57,6 +59,7 @@ renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
 renderShelleyKeyCmdError err =
   case err of
     ShelleyKeyCmdReadFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyKeyCmdReadSigningKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyKeyCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyKeyCmdByronKeyFailure e -> Byron.renderByronKeyFailure e
     ShelleyKeyCmdByronKeyParseError errTxt -> errTxt
@@ -91,7 +94,7 @@ runGetVerificationKey :: SigningKeyFile
                       -> VerificationKeyFile
                       -> ExceptT ShelleyKeyCmdError IO ()
 runGetVerificationKey skf (VerificationKeyFile vkf) = do
-    ssk <- firstExceptT ShelleyKeyCmdReadFileError $
+    ssk <- firstExceptT ShelleyKeyCmdReadSigningKeyFileError $
              readSigningKeyFile skf
     withSomeSigningKey ssk $ \sk ->
       let vk = getVerificationKey sk in
@@ -137,11 +140,12 @@ withSomeSigningKey ssk f =
 
 readSigningKeyFile
   :: SigningKeyFile
-  -> ExceptT (FileError TextEnvelopeError) IO SomeSigningKey
-readSigningKeyFile (SigningKeyFile skfile) =
-    newExceptT $ readFileTextEnvelopeAnyOf fileTypes skfile
+  -> ExceptT (FileError SigningKeyDecodeError) IO SomeSigningKey
+readSigningKeyFile skFile =
+    newExceptT $
+      readSigningKeyFileAnyOf textEnvFileTypes bech32FileTypes skFile
   where
-    fileTypes =
+    textEnvFileTypes =
       [ FromSomeType (AsSigningKey AsByronKey)
                       AByronSigningKey
       , FromSomeType (AsSigningKey AsPaymentKey)
@@ -164,6 +168,25 @@ readSigningKeyFile (SigningKeyFile skfile) =
                       AGenesisDelegateExtendedSigningKey
       , FromSomeType (AsSigningKey AsGenesisUTxOKey)
                       AGenesisUTxOSigningKey
+      , FromSomeType (AsSigningKey AsVrfKey)
+                      AVrfSigningKey
+      , FromSomeType (AsSigningKey AsKesKey)
+                      AKesSigningKey
+      ]
+
+    bech32FileTypes =
+      [ FromSomeType (AsSigningKey AsByronKey)
+                      AByronSigningKey
+      , FromSomeType (AsSigningKey AsPaymentKey)
+                      APaymentSigningKey
+      , FromSomeType (AsSigningKey AsPaymentExtendedKey)
+                      APaymentExtendedSigningKey
+      , FromSomeType (AsSigningKey AsStakeKey)
+                      AStakeSigningKey
+      , FromSomeType (AsSigningKey AsStakeExtendedKey)
+                      AStakeExtendedSigningKey
+      , FromSomeType (AsSigningKey AsStakePoolKey)
+                      AStakePoolSigningKey
       , FromSomeType (AsSigningKey AsVrfKey)
                       AVrfSigningKey
       , FromSomeType (AsSigningKey AsKesKey)
