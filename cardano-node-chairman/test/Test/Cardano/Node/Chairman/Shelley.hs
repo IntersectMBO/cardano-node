@@ -11,6 +11,7 @@ module Test.Cardano.Node.Chairman.Shelley
   ( tests
   ) where
 
+import           Chairman.Aeson
 import           Chairman.IO.Network.Sprocket (Sprocket (..))
 import           Control.Concurrent.Async
 import           Control.Monad
@@ -21,17 +22,17 @@ import           Data.Char
 import           Data.Either
 import           Data.Function
 import           Data.Functor
+import           Data.HashMap.Lazy (HashMap)
 import           Data.Int
 import           Data.Map (Map)
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
+import           Data.Text (Text)
 import           GHC.Float
 import           GHC.Num
 import           Hedgehog (Property, discover, (===))
-import           Lens.Micro
-import           Lens.Micro.Aeson
 import           System.Exit (ExitCode (..))
 import           System.IO (IO)
 import           Text.Read
@@ -55,6 +56,7 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 
 {- HLINT ignore "Redundant <&>" -}
+{- HLINT ignore "Redundant flip" -}
 
 rewriteConfiguration :: String -> String
 rewriteConfiguration "Protocol: RealPBFT" = "Protocol: TPraos"
@@ -63,13 +65,15 @@ rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
 rewriteGenesisSpec :: Int -> Value -> Value
-rewriteGenesisSpec supply v = v
-  & key "slotLength" .~ toJSON @Double 0.2
-  & key "activeSlotsCoeff" .~ toJSON @Double 0.1
-  & key "securityParam" .~ toJSON @Int 10
-  & key "epochLength" .~ toJSON @Int 1500
-  & key "maxLovelaceSupply" .~ toJSON supply
-  & key "protocolParams" . key "decentralisationParam" .~ toJSON @Double 0.7
+rewriteGenesisSpec supply =
+  rewriteObject
+    $ HM.insert "activeSlotsCoeff" (toJSON @Double 0.1)
+    . HM.insert "securityParam" (toJSON @Int 10)
+    . HM.insert "epochLength" (toJSON @Int 1500)
+    . HM.insert "maxLovelaceSupply" (toJSON supply)
+    . flip HM.adjust "protocolParams"
+      ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
+      )
 
 prop_spawnShelleyCluster :: Property
 prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do

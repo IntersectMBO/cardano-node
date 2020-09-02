@@ -30,7 +30,8 @@ library
                       , unliftio
                       , unordered-containers
                       , Win32-network
-  exposed-modules:      Chairman.Base
+  exposed-modules:      Chairman.Aeson
+                        Chairman.Base
                         Chairman.IO.File
                         Chairman.IO.Network.NamedPipe
                         Chairman.IO.Network.Socket
@@ -61,8 +62,6 @@ test-suite tests
                       , directory
                       , filepath
                       , hedgehog
-                      , microlens
-                      , microlens-aeson
                       , mmorph
                       , network
                       , process
