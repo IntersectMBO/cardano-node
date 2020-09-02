@@ -31,6 +31,8 @@ import           Test.Golden.Shelley.StakeAddress.RegistrationCertificate
                      (golden_shelleyStakeAddressRegistrationCertificate)
 import           Test.Golden.Shelley.StakePool.RegistrationCertificate
                      (golden_shelleyStakePoolRegistrationCertificate)
+import           Test.Golden.Shelley.TextEnvelope.Certificates.GenesisKeyDelegationCertificate
+                     (golden_shelleyGenesisKeyDelegationCertificate)
 import           Test.Golden.Shelley.TextEnvelope.Certificates.MIRCertificate
                      (golden_shelleyMIRCertificate)
 import           Test.Golden.Shelley.TextEnvelope.Certificates.OperationalCertificate
@@ -121,6 +123,7 @@ certificateTests =
         , ("golden_shelleyOperationalCertificate", golden_shelleyOperationalCertificate)
         , ("golden_shelleyStakePoolCertificates", golden_shelleyStakePoolCertificates)
         , ("golden_shelleyMIRCertificate", golden_shelleyMIRCertificate)
+        , ("golden_shelleyGenesisKeyDelegationCertificate", golden_shelleyGenesisKeyDelegationCertificate)
         ]
 
 metaDatatests :: IO Bool

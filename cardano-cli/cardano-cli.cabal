@@ -245,6 +245,7 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.StakeAddress.KeyGen
                         Test.Golden.Shelley.StakeAddress.RegistrationCertificate
                         Test.Golden.Shelley.StakePool.RegistrationCertificate
+                        Test.Golden.Shelley.TextEnvelope.Certificates.GenesisKeyDelegationCertificate
                         Test.Golden.Shelley.TextEnvelope.Certificates.MIRCertificate
                         Test.Golden.Shelley.TextEnvelope.Certificates.OperationalCertificate
                         Test.Golden.Shelley.TextEnvelope.Certificates.StakeAddressCertificates
