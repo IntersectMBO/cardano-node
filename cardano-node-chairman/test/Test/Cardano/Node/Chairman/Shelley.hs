@@ -86,11 +86,11 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   socketDir <- H.noteShow $ tempRelPath <> "/socket"
   env <- H.evalIO IO.getEnvironment
 
-  let bftNodes = ["node-bft1", "node-bft2"] :: [String]
-  let bftNodesN = ["1", "2"] :: [String]
+  let praosNodes = ["node-praos1", "node-praos2"] :: [String]
+  let praosNodesN = ["1", "2"] :: [String]
   let poolNodes = ["node-pool1"] :: [String]
-  let allNodes = bftNodes <> poolNodes :: [String]
-  let numBftNodes = 3 :: Int
+  let allNodes = praosNodes <> poolNodes :: [String]
+  let numPraosNodes = 3 :: Int
 
   let userAddrs = ["user1"]
   let poolAddrs = ["pool-owner1"]
@@ -121,7 +121,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
     [ "shelley", "genesis", "create"
     , "--testnet-magic", "42"
     , "--genesis-dir", tempAbsPath
-    , "--gen-genesis-keys", show numBftNodes
+    , "--gen-genesis-keys", show numPraosNodes
     , "--gen-utxo-keys", "1"
     ]
 
@@ -144,12 +144,12 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
       ]
 
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
-  forM_ bftNodesN $ \n -> do
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".skey") (tempAbsPath <> "/node-bft" <> n <> "/operator.skey")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vkey") (tempAbsPath <> "/node-bft" <> n <> "/operator.vkey")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".counter") (tempAbsPath <> "/node-bft" <> n <> "/operator.counter")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vrf.vkey") (tempAbsPath <> "/node-bft" <> n <> "/vrf.vkey")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vrf.skey") (tempAbsPath <> "/node-bft" <> n <> "/vrf.skey")
+  forM_ praosNodesN $ \n -> do
+    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".skey") (tempAbsPath <> "/node-praos" <> n <> "/operator.skey")
+    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vkey") (tempAbsPath <> "/node-praos" <> n <> "/operator.vkey")
+    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".counter") (tempAbsPath <> "/node-praos" <> n <> "/operator.counter")
+    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vrf.vkey") (tempAbsPath <> "/node-praos" <> n <> "/vrf.vkey")
+    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vrf.skey") (tempAbsPath <> "/node-praos" <> n <> "/vrf.skey")
 
   --  Make hot keys and for all nodes
   forM_ allNodes $ \node -> do
@@ -171,7 +171,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
 
   -- Make topology files
   -- TODO generalise this over the N BFT nodes and pool nodes
-  H.writeFile (tempAbsPath <> "/node-bft1/topology.json") "\
+  H.writeFile (tempAbsPath <> "/node-praos1/topology.json") "\
     \{ \"Producers\":\
     \  [ { \"addr\": \"127.0.0.1\"\
     \    , \"port\": 3002\
@@ -183,9 +183,9 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
     \    }\
     \  ]\
     \}"
-  H.writeFile (tempAbsPath <> "/node-bft1/port") "3001"
+  H.writeFile (tempAbsPath <> "/node-praos1/port") "3001"
 
-  H.writeFile (tempAbsPath <> "/node-bft2/topology.json") "\
+  H.writeFile (tempAbsPath <> "/node-praos2/topology.json") "\
     \{ \"Producers\":\
     \  [ { \"addr\": \"127.0.0.1\"\
     \    , \"port\": 3001\
@@ -197,7 +197,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
     \    }\
     \  ]\
     \}"
-  H.writeFile (tempAbsPath <> "/node-bft2/port") "3002"
+  H.writeFile (tempAbsPath <> "/node-praos2/port") "3002"
 
   H.writeFile (tempAbsPath <> "/node-pool1/topology.json") "\
     \{ \"Producers\":\
