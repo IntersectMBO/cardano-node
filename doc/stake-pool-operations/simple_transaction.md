@@ -51,7 +51,7 @@ Note that for `--tx-in` we use the following syntax: `TxId#TxIx` where `TxId` is
 
 A simple transaction needs one input, a valid UTXO from `payment.addr`, and two outputs:
 
-* Output1: The address that receives the transaction. 2) The address to send the change  
+* Output1: The address that receives the transaction.
 * Output2: The address that receives the change of the transaction.
 
 Note that to calculate the fee you need to include the draft transaction
