@@ -154,26 +154,26 @@ rotation:
 # efficient at filtering out unwanted trace output.
 
 # Trace BlockFetch client.
-TraceBlockFetchClient: False
+TraceBlockFetchClient: True
 
 # Trace BlockFetch decisions made by the BlockFetch client.
 # needed to display "peers" and their block height in LiveView
-TraceBlockFetchDecisions: False
+TraceBlockFetchDecisions: True
 
 # Trace BlockFetch protocol messages.
-TraceBlockFetchProtocol: False
+TraceBlockFetchProtocol: True
 
 # Serialised Trace BlockFetch protocol messages.
 TraceBlockFetchProtocolSerialised: False
 
 # Trace BlockFetch server.
-TraceBlockFetchServer: False
+TraceBlockFetchServer: True
 
 # Trace BlockchainTime.
 TraceBlockchainTime: False
 
 # Verbose tracer of ChainDB
-TraceChainDb: True
+TraceChainDb: False
 
 # Trace ChainSync client.
 TraceChainSyncClient: False
@@ -185,16 +185,16 @@ TraceChainSyncBlockServer: False
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
-TraceChainSyncProtocol: False
+TraceChainSyncProtocol: True
 
 # Trace DNS Resolver messages.
-TraceDNSResolver: True
+TraceDNSResolver: False
 
 # Trace DNS Subscription messages.
-TraceDNSSubscription: True
+TraceDNSSubscription: False
 
 # Trace error policy resolution.
-TraceErrorPolicy: True
+TraceErrorPolicy: False
 
 # Trace local error policy resolution.
 TraceLocalErrorPolicy: True
@@ -206,19 +206,19 @@ TraceForge: True
 TraceHandshake: False
 
 # Trace IP Subscription messages.
-TraceIpSubscription: True
+TraceIpSubscription: False
 
 # Trace local ChainSync protocol messages.
-TraceLocalChainSyncProtocol: False
+TraceLocalChainSyncProtocol: True
 
 # Trace local Handshake protocol messages.
 TraceLocalHandshake: False
 
 # Trace local TxSubmission protocol messages.
-TraceLocalTxSubmissionProtocol: False
+TraceLocalTxSubmissionProtocol: True
 
 # Trace local TxSubmission server.
-TraceLocalTxSubmissionServer: False
+TraceLocalTxSubmissionServer: True
 
 # Trace mempool.
 TraceMempool: True
@@ -227,10 +227,10 @@ TraceMempool: True
 TraceMux: False
 
 # Trace TxSubmission server (inbound transactions).
-TraceTxInbound: False
+TraceTxInbound: True
 
 # Trace TxSubmission client (outbound transactions).
-TraceTxOutbound: False
+TraceTxOutbound: True
 
 # Trace TxSubmission protocol messages.
 TraceTxSubmissionProtocol: False
