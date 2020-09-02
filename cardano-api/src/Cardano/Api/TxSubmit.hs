@@ -26,7 +26,7 @@ import           Ouroboros.Consensus.Cardano.Block (CardanoApplyTxErr,
                      HardForkApplyTxErr (ApplyTxErrByron, ApplyTxErrShelley, ApplyTxErrWrongEra))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, mkShelleyTx)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto, StandardShelley)
 
 import           Cardano.Api.TxSubmit.ErrorRender
 import           Cardano.Api.Typed
@@ -57,11 +57,11 @@ data TxSubmitResultForMode mode where
        -> TxSubmitResultForMode ByronMode
 
      TxSubmitFailureShelleyMode
-       :: ApplyTxErr (ShelleyBlock TPraosStandardCrypto)
+       :: ApplyTxErr (ShelleyBlock StandardShelley)
        -> TxSubmitResultForMode ShelleyMode
 
      TxSubmitFailureCardanoMode
-       :: CardanoApplyTxErr TPraosStandardCrypto
+       :: CardanoApplyTxErr StandardCrypto
        -> TxSubmitResultForMode CardanoMode
 
 deriving instance Show (TxSubmitResultForMode ByronMode)

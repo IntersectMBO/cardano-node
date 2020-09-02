@@ -11,13 +11,13 @@ import           Ouroboros.Consensus.Cardano (ProtocolClient (ProtocolClientShel
                      ProtocolShelley)
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 
 
 mkNodeClientProtocolShelley :: ProtocolClient
-                                 (ShelleyBlockHFC TPraosStandardCrypto)
+                                 (ShelleyBlockHFC StandardShelley)
                                  ProtocolShelley
 mkNodeClientProtocolShelley = ProtocolClientShelley
 

@@ -22,7 +22,7 @@ import           Cardano.Api.Typed (MultiSigScript (..))
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
 import           Ouroboros.Consensus.Util.Time
 
 import           Shelley.Spec.Ledger.Address (Addr (..))
@@ -93,7 +93,7 @@ convertToHash txt =
     Nothing -> error $ "Test.Cardano.Api.Examples.convertToHash: Error deserialising payment key hash: "
                      <> Text.unpack txt
 
-exampleShelleyGenesis :: ShelleyGenesis TPraosStandardCrypto
+exampleShelleyGenesis :: ShelleyGenesis StandardShelley
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
@@ -121,22 +121,22 @@ exampleShelleyGenesis =
     }
  where
   -- hash of the genesis verification key
-  genesisVerKeyHash :: KeyHash Genesis TPraosStandardCrypto
+  genesisVerKeyHash :: KeyHash Genesis StandardShelley
   genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb194"
   -- hash of the delegators verification key
-  delegVerKeyHash :: KeyHash GenesisDelegate TPraosStandardCrypto
+  delegVerKeyHash :: KeyHash GenesisDelegate StandardShelley
   delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae6273827"
-  delegVrfKeyHash :: Hash TPraosStandardCrypto (VerKeyVRF TPraosStandardCrypto)
+  delegVrfKeyHash :: Hash StandardShelley (VerKeyVRF StandardShelley)
   delegVrfKeyHash = "231391e7ec1c450a8518134cf6fad1a8e0ed7ffd66d740f8e8271347a6de7bf2"
-  initialFundedAddress :: Addr TPraosStandardCrypto
+  initialFundedAddress :: Addr StandardShelley
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
     where
-      paymentCredential :: PaymentCredential TPraosStandardCrypto
+      paymentCredential :: PaymentCredential StandardShelley
       paymentCredential =
         KeyHashObj $ KeyHash
           "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
-      stakingCredential :: StakeCredential TPraosStandardCrypto
+      stakingCredential :: StakeCredential StandardShelley
       stakingCredential =
         KeyHashObj $ KeyHash
           "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee"

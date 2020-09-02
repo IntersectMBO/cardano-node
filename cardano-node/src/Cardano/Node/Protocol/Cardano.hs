@@ -36,7 +36,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import           Ouroboros.Consensus.Cardano.Condense ()
 
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Node.Types
@@ -89,7 +89,7 @@ mkConsensusProtocolCardano
   -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO
-             (Consensus.Protocol IO (CardanoBlock TPraosStandardCrypto)
+             (Consensus.Protocol IO (CardanoBlock StandardCrypto)
                                     ProtocolCardano)
 mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcByronGenesisFile,

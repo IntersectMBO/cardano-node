@@ -32,7 +32,7 @@ import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..),
                      HardForkApplyTxErr (ApplyTxErrByron, ApplyTxErrShelley, ApplyTxErrWrongEra))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Shelley.Parsers
@@ -59,7 +59,7 @@ data ShelleyTxCmdError
   | ShelleyTxWriteSignedTxError !(Api.FileError ())
   | ShelleyTxWriteUnsignedTxError !(Api.FileError ())
   | ShelleyTxSubmitErrorByron   !(ApplyTxErr ByronBlock)
-  | ShelleyTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock TPraosStandardCrypto))
+  | ShelleyTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
   | ShelleyTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxReadFileError !(Api.FileError Api.TextEnvelopeError)
   | ShelleyTxWriteFileError !(Api.FileError ())

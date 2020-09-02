@@ -37,7 +37,7 @@ import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import qualified Shelley.Spec.Ledger.Coin as Ledger
@@ -355,8 +355,8 @@ getCurrentTimePlus30 =
 
 readShelleyGenesis
   :: FilePath
-  -> (ShelleyGenesis TPraosStandardCrypto -> ShelleyGenesis TPraosStandardCrypto)
-  -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis TPraosStandardCrypto)
+  -> (ShelleyGenesis StandardShelley -> ShelleyGenesis StandardShelley)
+  -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis StandardShelley)
 readShelleyGenesis fpath adjustDefaults = do
     readAndDecode
       `catchError` \err ->
@@ -370,7 +370,7 @@ readShelleyGenesis fpath adjustDefaults = do
       firstExceptT (ShelleyGenesisCmdReadGenesisAesonDecodeError fpath . Text.pack)
         . hoistEither $ Aeson.eitherDecode' lbs
 
-    defaults :: ShelleyGenesis TPraosStandardCrypto
+    defaults :: ShelleyGenesis StandardShelley
     defaults = adjustDefaults shelleyGenesisDefaults
 
     writeDefault = do
@@ -384,8 +384,8 @@ updateTemplate
     -> Maybe Lovelace
     -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
     -> [Address Shelley]
-    -> ShelleyGenesis TPraosStandardCrypto
-    -> ShelleyGenesis TPraosStandardCrypto
+    -> ShelleyGenesis StandardShelley
+    -> ShelleyGenesis StandardShelley
 updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
     template
       { sgSystemStart = start
@@ -422,11 +422,11 @@ updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
                     ((addr, Lovelace eachAddrCoin) : acc, rest - eachAddrCoin)
       | otherwise = ((addr, Lovelace rest) : acc, 0)
 
-writeShelleyGenesis :: FilePath -> ShelleyGenesis TPraosStandardCrypto -> ExceptT ShelleyGenesisCmdError IO ()
+writeShelleyGenesis :: FilePath -> ShelleyGenesis StandardShelley -> ExceptT ShelleyGenesisCmdError IO ()
 writeShelleyGenesis fpath sg =
   handleIOExceptT (ShelleyGenesisCmdWriteGenesisIOError fpath) $ LBS.writeFile fpath (encodePretty sg)
 
-toShelleyAddr :: Address Shelley -> Ledger.Addr TPraosStandardCrypto
+toShelleyAddr :: Address Shelley -> Ledger.Addr StandardShelley
 toShelleyAddr (ByronAddress addr)        = Ledger.AddrBootstrap
                                              (Ledger.BootstrapAddress addr)
 toShelleyAddr (ShelleyAddress nw pc scr) = Ledger.Addr nw pc scr

@@ -87,16 +87,16 @@ import           Shelley.Spec.Ledger.TxData (MIRPot (..), TxId (..), TxIn (..), 
 --
 -- NOTE: this list is sorted in roughly topological order.
 
-instance Crypto c => ToObject (GenTx (ShelleyBlock c)) where
+instance Era era => ToObject (GenTx (ShelleyBlock era)) where
   toObject verb tx =
     mkObject $
         [ "txid" .= txId tx ]
      ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
 
-instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock c))) where
+instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
   toJSON i = toJSON (condense i)
 
-instance Crypto c => ToObject (Header (ShelleyBlock c)) where
+instance Era era => ToObject (Header (ShelleyBlock era)) where
   toObject _verb b = mkObject
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
@@ -104,11 +104,11 @@ instance Crypto c => ToObject (Header (ShelleyBlock c)) where
         , "blockNo" .= condense (blockNo b)
 --      , "delegate" .= condense (headerSignerVk h)
         ]
-instance Crypto c => ToObject (ApplyTxError c) where
+instance Era era => ToObject (ApplyTxError era) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
-instance ToObject (TPraosCannotForge c) where
+instance ToObject (TPraosCannotForge era) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
     mkObject
       [ "kind" .= String "TPraosCannotForgeKeyNotUsableYet"
@@ -147,7 +147,7 @@ instance ToObject HotKey.KESEvolutionError where
       , "targetPeriod" .= targetPeriod
       ]
 
-instance Crypto c =>  ToObject (ShelleyLedgerError c) where
+instance Era era =>  ToObject (ShelleyLedgerError era) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mkObject [ "kind" .= String "BBodyError"
              , "failures" .= map (toObject verb) fs
@@ -157,13 +157,13 @@ instance Crypto c =>  ToObject (ShelleyLedgerError c) where
              , "failures" .= map (toObject verb) fs
              ]
 
-instance Crypto c => ToObject (ChainTransitionError c) where
+instance Era era => ToObject (ChainTransitionError era) where
   toObject verb (ChainTransitionError fs) =
     mkObject [ "kind" .= String "ChainTransitionError"
              , "failures" .= map (toObject verb) fs
              ]
 
-instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
+instance Era era => ToObject (PredicateFailure (CHAIN era)) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
              , "headerSize" .= hdrSz
@@ -191,7 +191,7 @@ instance Crypto c => ToObject (PredicateFailure (CHAIN c)) where
   toObject verb (PrtclFailure f) = toObject verb f
   toObject verb (PrtclSeqFailure f) = toObject verb f
 
-instance Crypto c => ToObject (PrtlSeqFailure c) where
+instance Era era => ToObject (PrtlSeqFailure era) where
   toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
     mkObject [ "kind" .= String "WrongSlotInterval"
              , "lastSlot" .= lastSlot
@@ -208,7 +208,7 @@ instance Crypto c => ToObject (PrtlSeqFailure c) where
              , "currentBlockHash" .= String (textShow currentHash)
              ]
 
-instance Crypto c =>  ToObject (PredicateFailure (BBODY c)) where
+instance Era era =>  ToObject (PredicateFailure (BBODY era)) where
   toObject _verb (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
@@ -222,16 +222,16 @@ instance Crypto c =>  ToObject (PredicateFailure (BBODY c)) where
   toObject verb (LedgersFailure f) = toObject verb f
 
 
-instance Crypto c =>  ToObject (PredicateFailure (LEDGERS c)) where
+instance Era era =>  ToObject (PredicateFailure (LEDGERS era)) where
   toObject verb (LedgerFailure f) = toObject verb f
 
 
-instance Crypto c =>  ToObject (PredicateFailure (LEDGER c)) where
+instance Era era =>  ToObject (PredicateFailure (LEDGER era)) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
 
-instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
+instance Era era => ToObject (PredicateFailure (UTXOW era)) where
   toObject _verb (InvalidWitnessesUTXOW wits) =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits
@@ -267,7 +267,7 @@ instance Crypto c => ToObject (PredicateFailure (UTXOW c)) where
              , "fullMetaDataHash" .= fullMetaDataHash
              ]
 
-instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
+instance Era era => ToObject (PredicateFailure (UTXO era)) where
   toObject _verb (BadInputsUTxO badInputs) =
     mkObject [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
@@ -318,7 +318,7 @@ instance Crypto c => ToObject (PredicateFailure (UTXO c)) where
              , "addrs"   .= addrs
              ]
 
-renderBadInputsUTxOErr ::  Set (TxIn c) -> Value
+renderBadInputsUTxOErr ::  Set (TxIn era) -> Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
@@ -329,7 +329,7 @@ renderValueNotConservedErr consumed produced
   | consumed < produced = String "This transaction has produced more Lovelace than it has consumed."
   | otherwise = String "Impossible: Somehow this error has occurred in spite of the transaction being balanced."
 
-instance ToObject (PredicateFailure (PPUP c)) where
+instance ToObject (PredicateFailure (PPUP era)) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
     mkObject [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
@@ -345,7 +345,7 @@ instance ToObject (PredicateFailure (PPUP c)) where
              ]
 
 
-instance Crypto c => ToObject (PredicateFailure (DELEGS c)) where
+instance Era era => ToObject (PredicateFailure (DELEGS era)) where
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
     mkObject [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool
@@ -357,11 +357,11 @@ instance Crypto c => ToObject (PredicateFailure (DELEGS c)) where
   toObject verb (DelplFailure f) = toObject verb f
 
 
-instance ToObject (PredicateFailure (DELPL c)) where
+instance ToObject (PredicateFailure (DELPL era)) where
   toObject verb (PoolFailure f) = toObject verb f
   toObject verb (DelegFailure f) = toObject verb f
 
-instance ToObject (PredicateFailure (DELEG c)) where
+instance ToObject (PredicateFailure (DELEG era)) where
   toObject _verb (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
     mkObject [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
@@ -417,7 +417,7 @@ instance ToObject (PredicateFailure (DELEG c)) where
              ]
 
 
-instance ToObject (PredicateFailure (POOL c)) where
+instance ToObject (PredicateFailure (POOL era)) where
   toObject _verb (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) =
     mkObject [ "kind" .= String "StakePoolNotRegisteredOnKeyPOOL"
              , "unregisteredKeyHash" .= String (textShow unregStakePool)
@@ -455,14 +455,14 @@ instance ToObject (PredicateFailure (POOL c)) where
                     ]
 
 
-instance ToObject (PredicateFailure (TICK c)) where
+instance ToObject (PredicateFailure (TICK era)) where
   toObject verb (NewEpochFailure f) = toObject verb f
   toObject verb (RupdFailure f) = toObject verb f
 
 instance ToObject (PredicateFailure TICKN) where
   toObject _verb x = case x of {} -- no constructors
 
-instance ToObject (PredicateFailure (NEWEPOCH c)) where
+instance ToObject (PredicateFailure (NEWEPOCH era)) where
   toObject verb (EpochFailure f) = toObject verb f
   toObject verb (MirFailure f) = toObject verb f
   toObject _verb (CorruptRewardUpdate update) =
@@ -470,21 +470,21 @@ instance ToObject (PredicateFailure (NEWEPOCH c)) where
              , "update" .= String (show update) ]
 
 
-instance ToObject (PredicateFailure (EPOCH c)) where
+instance ToObject (PredicateFailure (EPOCH era)) where
   toObject verb (PoolReapFailure f) = toObject verb f
   toObject verb (SnapFailure f) = toObject verb f
   toObject verb (NewPpFailure f) = toObject verb f
 
 
-instance ToObject (PredicateFailure (POOLREAP c)) where
+instance ToObject (PredicateFailure (POOLREAP era)) where
   toObject _verb x = case x of {} -- no constructors
 
 
-instance ToObject (PredicateFailure (SNAP c)) where
+instance ToObject (PredicateFailure (SNAP era)) where
   toObject _verb x = case x of {} -- no constructors
 
 -- TODO: Need to elaborate more on this error
-instance ToObject (PredicateFailure (NEWPP c)) where
+instance ToObject (PredicateFailure (NEWPP era)) where
   toObject _verb (UnexpectedDepositPot outstandingDeposits depositPot) =
     mkObject [ "kind" .= String "UnexpectedDepositPot"
              , "outstandingDeposits" .= String (textShow outstandingDeposits)
@@ -492,20 +492,20 @@ instance ToObject (PredicateFailure (NEWPP c)) where
              ]
 
 
-instance ToObject (PredicateFailure (MIR c)) where
+instance ToObject (PredicateFailure (MIR era)) where
   toObject _verb x = case x of {} -- no constructors
 
 
-instance ToObject (PredicateFailure (RUPD c)) where
+instance ToObject (PredicateFailure (RUPD era)) where
   toObject _verb x = case x of {} -- no constructors
 
 
-instance Crypto c => ToObject (PredicateFailure (PRTCL c)) where
+instance Era era => ToObject (PredicateFailure (PRTCL era)) where
   toObject  verb (OverlayFailure f) = toObject verb f
   toObject  verb (UpdnFailure f) = toObject verb f
 
 
-instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
+instance Era era => ToObject (PredicateFailure (OVERLAY era)) where
   toObject _verb (UnknownGenesisKeyOVERLAY (KeyHash genKeyHash)) =
     mkObject [ "kind" .= String "UnknownGenesisKeyOVERLAY"
              , "unknownKeyHash" .= String (textShow genKeyHash)
@@ -558,7 +558,7 @@ instance Crypto c => ToObject (PredicateFailure (OVERLAY c)) where
   toObject verb (OcertFailure f) = toObject verb f
 
 
-instance ToObject (PredicateFailure (OCERT c)) where
+instance ToObject (PredicateFailure (OCERT era)) where
   toObject _verb (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
     mkObject [ "kind" .= String "KESBeforeStartOCERT"
              , "opCertKESStartPeriod" .= String (textShow oCertstart)
@@ -599,7 +599,7 @@ instance ToObject (PredicateFailure (OCERT c)) where
              ]
 
 
-instance ToObject (PredicateFailure (UPDN c)) where
+instance ToObject (PredicateFailure (UPDN era)) where
   toObject _verb x = case x of {} -- no constructors
 
 --------------------------------------------------------------------------------
@@ -616,20 +616,20 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 -- Common to cardano-cli
 
-deriving newtype instance Crypto c => ToJSON (MetaDataHash c)
+deriving newtype instance Era era => ToJSON (MetaDataHash era)
 
-deriving instance Crypto c => ToJSON (TxIn c)
-deriving newtype instance ToJSON (TxId c)
-instance Crypto c => ToJSONKey (TxIn c) where
+deriving instance Era era => ToJSON (TxIn era)
+deriving newtype instance ToJSON (TxId era)
+instance Era era => ToJSONKey (TxIn era) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
-txInToText :: Crypto c => TxIn c -> Text
+txInToText :: Era era => TxIn era -> Text
 txInToText (TxIn (TxId txidHash) ix) =
   hashToText txidHash
     <> Text.pack "#"
     <> Text.pack (show ix)
 
-instance Crypto c => ToJSON (TxOut c) where
+instance Era era => ToJSON (TxOut era) where
   toJSON (TxOut addr amount) =
     Aeson.object
       [ "address" .= addr
