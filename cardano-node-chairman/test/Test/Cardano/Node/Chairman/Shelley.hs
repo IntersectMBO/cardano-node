@@ -58,12 +58,6 @@ import qualified System.Process as IO
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
-rewriteConfiguration :: String -> String
-rewriteConfiguration "Protocol: RealPBFT" = "Protocol: TPraos"
-rewriteConfiguration "minSeverity: Info" = "minSeverity: Debug"
-rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
-rewriteConfiguration s = s
-
 rewriteGenesisSpec :: Int -> Value -> Value
 rewriteGenesisSpec supply =
   rewriteObject
@@ -96,8 +90,9 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   let poolAddrs = ["pool-owner1"]
   let addrs = userAddrs <> poolAddrs
 
-  H.writeFile (tempAbsPath <> "/configuration.yaml") . L.unlines . fmap rewriteConfiguration . L.lines =<<
-    H.evalIO (IO.readFile (base <> "/configuration/defaults/byron-mainnet/configuration.yaml"))
+  H.copyFile
+    (base <> "/configuration/chairman/shelly-only/configuration.yaml")
+    (tempAbsPath <> "/configuration.yaml")
 
   -- Set up our template
   void $ H.execCli
