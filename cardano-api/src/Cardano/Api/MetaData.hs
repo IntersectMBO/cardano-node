@@ -8,18 +8,23 @@ module Cardano.Api.MetaData
   , renderMetaDataJsonConversionError
   , renderTxMetadataValidationError
   , validateTxMetadata
+  , bytesPrefix
+  , txMetadataTextStringMaxByteLength
+  , txMetadataByteStringMaxLength
   ) where
 
 import           Cardano.Prelude hiding (MetaData)
 import           Prelude (String)
 
+
 import           Cardano.Api.Typed as Api
 
-import           Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Attoparsec.Text as Atto
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS
+import           Data.Bifunctor (bimap)
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -136,26 +141,31 @@ jsonFromMetadataValue md =
   where
     jsonFromByteString :: ByteString -> Aeson.Value
     jsonFromByteString bs =
-      Aeson.object [ "hex" .= Aeson.String (Text.decodeUtf8 $ Base16.encode bs) ]
+      Aeson.String $ bytesPrefix <> Text.decodeUtf8 (Base16.encode bs)
 
--- Try to convert it to an Aeson Object and if that fails, use an Array.
--- Object is basically a 'HashMap Text Value' but if the first element of
--- the tuple is not Text, convert it to an Array instead.
+-- JSON only allows keys to be strings. So, there really are two cases:
+--
+-- - Either the keys of the CBOR map are indeed strings and we render them as such
+-- - Or they are something else, and we render them as a serialized JSON string
+--
+-- So, for metadata coming from JSON in the first place, this will be pretty much invisible.
+-- And for more elaborated metadata crafted by other mean (via a CBOR library for instance),
+-- the key in the JSON-rendered metadata will look at bit funky.
 jsonFromPairList :: [(MetaDatum, MetaDatum)] -> Aeson.Value
-jsonFromPairList xs =
-    -- If all the left hand elements of 'xs' are 'S' ('collapseLeft' returns 'Just' for every
-    -- element), then convert this into a JSON object.
-    -- If one of more of the elements return 'Nothing' then represent it as a JSON list.
-    case traverse collapseLeft xs of
-      Nothing -> Aeson.toJSON $ map (bimap jsonFromMetadataValue jsonFromMetadataValue) xs
-      Just zs -> Aeson.Object $ HashMap.fromList zs
+jsonFromPairList =
+    Aeson.toJSON . Map.fromList . fmap (bimap metadataValueToString jsonFromMetadataValue)
   where
-    collapseLeft :: (MetaDatum, MetaDatum) -> Maybe (Text, Aeson.Value)
-    collapseLeft (a, b) =
-      case a of
-        S txt -> Just (txt, jsonFromMetadataValue b)
-        _otherwise -> Nothing
+    metadataValueToString :: MetaDatum -> Text
+    metadataValueToString (S txt) = txt
+    metadataValueToString someValue
+      = Text.decodeUtf8
+      $ stripQuotes
+      $ BL.toStrict
+      $ Aeson.encode
+      $ jsonFromMetadataValue someValue
 
+    stripQuotes :: ByteString -> ByteString
+    stripQuotes = BS.tail . BS.init
 
 jsonToMetadata :: Aeson.Value
                -> Either MetaDataJsonConversionError Api.TxMetadata
@@ -172,7 +182,6 @@ jsonToMetadata av =
       first (const ConversionErrToplevelBadKey)
         . Atto.parseOnly ((Atto.decimal <|> Atto.hexadecimal) <* Atto.endOfInput)
 
-
 renderMetaDataJsonConversionError :: MetaDataJsonConversionError -> Text
 renderMetaDataJsonConversionError err =
   case err of
@@ -182,7 +191,7 @@ renderMetaDataJsonConversionError err =
     ConversionErrBoolNotAllowed -> "JSON Bool value is not allowed in MetaData"
     ConversionErrNullNotAllowed -> "JSON Null value is not allowed in MetaData"
     ConversionErrNumberNotInteger _ -> "Only integers are allowed in MetaData"
-    ConversionErrLongerThan64Bytes -> "JSON string is longer than 64 bytes"
+    ConversionErrLongerThan64Bytes -> "JSON string or bytestring is longer than 64 bytes"
     ConversionErrBadBytes bs -> "JSON failure to decode as hex bytestring: " <> show bs
     ConversionErrExpected expected actual ->
       mconcat [ "JSON decode error. Expected ", expected, " but got '", actual, "'"]
@@ -199,49 +208,38 @@ jsonToMetadataValue  av =
         case Scientific.floatingOrInteger sci :: Either Double Integer of
           Left  n -> Left (ConversionErrNumberNotInteger n)
           Right n -> Right (Api.TxMetaNumber n)
-      Aeson.String txt -> jsonToMetadataString txt
+      Aeson.String txt ->
+        case Text.stripPrefix bytesPrefix txt of
+          Nothing  -> jsonToMetadataString txt
+          Just hex -> case Base16.decode (Text.encodeUtf8 hex) of
+            (bytes, "") -> jsonToMetadataBytes bytes
+            (_, err)    -> Left $ ConversionErrBadBytes err
       Aeson.Array vs ->
-        let xs = Vector.toList vs in
-        case convertAsMap [] xs of
-          Nothing -> Api.TxMetaList <$> traverse jsonToMetadataValue xs
-          Just ys -> Right (Api.TxMetaMap ys)
+        Api.TxMetaList <$> traverse jsonToMetadataValue (Vector.toList vs)
       Aeson.Object kvs ->
-        if HashMap.keys kvs /= ["hex"]
-          then Api.TxMetaMap . List.sortOn fst <$> traverse convertPair (HashMap.toList kvs)
-          else
-            case HashMap.elems kvs of
-              [Aeson.String bs] ->
-                case Base16.decode (Text.encodeUtf8 bs) of
-                  (bs2, "") -> Right $ TxMetaBytes bs2
-                  (_, bsf) -> Left $ ConversionErrBadBytes bsf
-              _otherwise -> Left $ ConversionErrExpected "[Aeson.String x]" (show kvs)
+        Api.TxMetaMap . List.sortOn fst <$> traverse convertPair (HashMap.toList kvs)
   where
     convertPair :: (Text, Aeson.Value)
                 -> Either MetaDataJsonConversionError (TxMetadataValue, TxMetadataValue)
     convertPair (k, v) =
       (,) <$> jsonToMetadataValue (Aeson.String k) <*> jsonToMetadataValue v
 
-    -- If the list of values is a list of pairs, then return it as such, otherwise
-    -- return Nothing.
-    convertAsMap :: [(TxMetadataValue, TxMetadataValue)] -> [Aeson.Value]
-                    -> Maybe [(TxMetadataValue, TxMetadataValue)]
-    convertAsMap accum xs =
-      case xs of
-        [] -> Just $ List.sortOn fst accum
-        (Aeson.Array ys:zs) ->
-          case Vector.toList ys of
-            [a, b] -> case (jsonToMetadataValue a, jsonToMetadataValue b) of
-                        (Right am, Right bm) -> convertAsMap ((am, bm):accum) zs
-                        _otherwise -> Nothing
-            _otherwise -> Nothing
-        _otherwise -> Nothing
-
-
 jsonToMetadataString :: Text -> Either MetaDataJsonConversionError TxMetadataValue
 jsonToMetadataString txt =
-    if BS.length utf8 > 64
+    if BS.length utf8 > txMetadataTextStringMaxByteLength
       then Left ConversionErrLongerThan64Bytes
       else Right (Api.TxMetaText txt)
   where
     utf8 :: ByteString
     utf8 = Text.encodeUtf8 txt
+
+jsonToMetadataBytes :: ByteString -> Either MetaDataJsonConversionError TxMetadataValue
+jsonToMetadataBytes bytes =
+    if BS.length bytes > txMetadataByteStringMaxLength
+      then Left ConversionErrLongerThan64Bytes
+      else Right (Api.TxMetaBytes bytes)
+
+-- | JSON strings that are base16 encoded and prefixed with 'bytesPrefix' will
+-- be encoded as CBOR bytestrings.
+bytesPrefix :: Text
+bytesPrefix = "0x"
