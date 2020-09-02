@@ -183,7 +183,7 @@ This protocol version number gets used by block producing nodes as part of the s
 
 The node can run in either the `SimpleView` or `LiveView`. The `SimpleView` just uses standard output, optionally with log output. The `LiveView` is a text console with a live view of various node metrics.
 
-`TurnOnLogging`: Enbles or disables logging overall.
+`TurnOnLogging`: Enables or disables logging overall.
 
 `TurnOnLogMetrics`: Enable the collection of various OS metrics such as memory and CPU use. These metrics can be directed to the logs or monitoring backends.
 

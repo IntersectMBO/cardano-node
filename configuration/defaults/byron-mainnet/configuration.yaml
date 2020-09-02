@@ -55,7 +55,7 @@ ApplicationVersion: 1
 ViewMode: SimpleView
 #ViewMode: LiveView
 
-# Enble or disable logging overall
+# Enable or disable logging overall
 TurnOnLogging: True
 
 # Enable the collection of various OS metrics such as memory and CPU use.
