@@ -92,7 +92,7 @@ toplevelExceptionHandler prog = do
       throwIO (ExitFailure 1)
 
     -- Print the human-readable output of 'displayException' if it differs
-    -- from the default output (of 'show'), so that the the user/sysadmin
+    -- from the default output (of 'show'), so that the user/sysadmin
     -- sees something readable in the log.
     renderSomeException :: String -> SomeException -> String
     renderSomeException progname e

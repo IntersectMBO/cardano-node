@@ -15,7 +15,7 @@ We can disable logging completely by setting `TurnOnLoggin` to `False`:
 #### Minimal severity
 
 Log messages come with different severities (`Debug`, `Info`, `Notice` and `Warning` and `Error`), and we can specify the _minimal_ severity
-of messages that will be passed on (the the console, a file or another logging backend). Messages with a lower severity will be suppressed. By changing this minimal severity to `Debug`, we will therefore see messages of all severities; by changing it to `Error`, we will only see the most severe messages:
+of messages that will be passed on (the console, a file or another logging backend). Messages with a lower severity will be suppressed. By changing this minimal severity to `Debug`, we will therefore see messages of all severities; by changing it to `Error`, we will only see the most severe messages:
 
     minSeverity: Debug
 

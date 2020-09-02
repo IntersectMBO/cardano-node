@@ -72,7 +72,7 @@ minSeverity: Info
 TracingVerbosity: NormalVerbosity
 
 # The system supports a number of backends for logging and monitoring.
-# This setting lists the the backends that will be available to use in the
+# This setting lists the backends that will be available to use in the
 # configuration below. The logging backend is called Katip.
 setupBackends:
   - KatipBK
