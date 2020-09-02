@@ -123,7 +123,7 @@ To submit the `pool registration certificate` and the `delegation certificates` 
     --certificate-file pool-registration.cert \
     --certificate-file delegation.cert
 
-#### Calculate the the fees
+#### Calculate the fees
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-body-file tx.raw \

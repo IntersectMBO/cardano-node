@@ -187,7 +187,7 @@ The node can run in either the `SimpleView` or `LiveView`. The `SimpleView` just
 
 `TurnOnLogMetrics`: Enable the collection of various OS metrics such as memory and CPU use. These metrics can be directed to the logs or monitoring backends.
 
-`setupBackends`, `defaultBackends`, `hasEKG`and `hasPrometheus`: The system supports a number of backends for logging and monitoring. This settings list the the backends available to use in the configuration. The logging backend is called `Katip`.
+`setupBackends`, `defaultBackends`, `hasEKG`and `hasPrometheus`: The system supports a number of backends for logging and monitoring. This settings list the backends available to use in the configuration. The logging backend is called `Katip`.
 Also enable the EKG backend if you want to use the EKG or Prometheus monitoring interfaces.
 
 `setupScribes` and `defaultScribes`: For the Katip logging backend we must set up outputs (called scribes) The available types of scribe are:

@@ -715,7 +715,7 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 - Improve bulk sync performance by adjusting default RTS options (#506)
 - Adjust the default set of enabled tracers (#494)
 - Allow logging output to journald on Linux (#502)
-- Show network status information in the the node console "live view" (#493)
+- Show network status information in the node console "live view" (#493)
 - Set PBFT signature threshold to the default value in the config files (#452)
 - Blank fields in config files use default values (#453)
 - Add tracers for the benchmarking of block forging (#464)

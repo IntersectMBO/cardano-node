@@ -18,7 +18,7 @@ We need the following packages and tools on our Linux system to download the sou
 * the version control system `git`,
 * the `gcc` C-compiler,
 * C++ support for `gcc`,
-* developer libraries for the the arbitrary precision library `gmp`,
+* developer libraries for the arbitrary precision library `gmp`,
 * developer libraries for the compression library `zlib`,
 * developer libraries for `systemd`,
 * developer libraries for `ncurses`,
