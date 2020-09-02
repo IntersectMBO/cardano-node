@@ -62,8 +62,8 @@ rewriteConfiguration "minSeverity: Info" = "minSeverity: Debug"
 rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
-rewriteGenesisSpec :: Int -> Value -> Either String Value
-rewriteGenesisSpec supply v = Right $ v
+rewriteGenesisSpec :: Int -> Value -> Value
+rewriteGenesisSpec supply v = v
   & key "slotLength" .~ toJSON @Double 0.2
   & key "activeSlotsCoeff" .~ toJSON @Double 0.1
   & key "securityParam" .~ toJSON @Int 10

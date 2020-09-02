@@ -208,14 +208,12 @@ lbsReadFile filePath = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Reading file: " <> filePath
   H.evalIO $ LBS.readFile filePath
 
-rewriteJson :: (MonadIO m, HasCallStack) => FilePath -> (Value -> Either String Value) -> H.PropertyT m ()
+rewriteJson :: (MonadIO m, HasCallStack) => FilePath -> (Value -> Value) -> H.PropertyT m ()
 rewriteJson filePath f = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Rewriting JSON file: " <> filePath
   lbs <- forceM $ lbsReadFile filePath
   case eitherDecode lbs of
-    Right iv -> case f iv of
-      Right ov -> lbsWriteFile filePath (encode ov)
-      Left msg -> failWithCustom GHC.callStack Nothing msg
+    Right iv -> lbsWriteFile filePath (encode (f iv))
     Left msg -> failWithCustom GHC.callStack Nothing msg
 
 assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()

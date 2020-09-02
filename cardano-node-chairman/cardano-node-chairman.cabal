@@ -28,6 +28,7 @@ library
                       , text
                       , time
                       , unliftio
+                      , unordered-containers
                       , Win32-network
   exposed-modules:      Chairman.Base
                         Chairman.IO.File
@@ -68,6 +69,7 @@ test-suite tests
                       , random
                       , resourcet
                       , temporary
+                      , text
                       , time
                       , unliftio
                       , unordered-containers
