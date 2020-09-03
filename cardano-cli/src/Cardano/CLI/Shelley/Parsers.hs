@@ -169,7 +169,7 @@ pScript :: Parser ScriptFile
 pScript = ScriptFile <$> Opt.strOption
   (  Opt.long "script-file"
   <> Opt.metavar "FILE"
-  <> Opt.help "Filepath of the multisig script."
+  <> Opt.help "Filepath of the script."
   <> Opt.completer (Opt.bashCompleter "file")
   )
 
