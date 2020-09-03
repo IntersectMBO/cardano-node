@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 module Test.Cardano.Api.MetaData
@@ -7,8 +8,9 @@ module Test.Cardano.Api.MetaData
 import           Cardano.Prelude hiding (MetaData)
 
 import           Cardano.Api.MetaData
-import           Cardano.Api.Typed
 
+import           Data.Aeson (ToJSON (..))
+import qualified Data.Aeson as Json
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.List as List
@@ -16,7 +18,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
-import           Hedgehog (Gen, Property, discover)
+import           Hedgehog (Gen, Property, assert, discover, (===))
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Gen as Gen
@@ -26,8 +28,10 @@ import qualified Hedgehog.Range as Range
 prop_round_trip_json_metadatum :: Property
 prop_round_trip_json_metadatum = do
   Hedgehog.withTests 1000 . Hedgehog.property $ do
-    json <- jsonFromMetadata <$> Hedgehog.forAll genMetaData
-    Hedgehog.tripping json identity (fmap jsonFromMetadata . jsonToMetadata)
+    json <- Hedgehog.forAll genMetaData
+    case jsonToMetadata json of
+      Left _   -> assert $ not $ isValidMetadata json
+      Right md -> jsonFromMetadata md === json
 
 --- Generate 'TxMetadata' that will round trip correctly.
 --
@@ -37,33 +41,46 @@ prop_round_trip_json_metadatum = do
 --
 -- - No boolean values
 -- - No null values
-genMetaData :: Gen TxMetadata
+genMetaData :: Gen Json.Value
 genMetaData = do
   idxs <- List.nub <$> Gen.list (Range.linear 1 5) (Gen.word64 Range.constantBounded)
-  makeTransactionMetadata . Map.fromList <$> mapM (\i -> (i,) <$> genTxMetadataValue) idxs
+  toJSON . Map.fromList <$> mapM (\i -> (i,) <$> genTxMetadataValue) idxs
 
-genTxMetadataValue :: Gen TxMetadataValue
+genTxMetadataValue :: Gen Json.Value
 genTxMetadataValue =
   -- This shinks towards the head of the list, so have TxMetaMap at the end.
   Gen.choice
-    [ TxMetaNumber <$> Gen.integral (Range.linear 0 10000)
-    , TxMetaText <$> genText
-    , TxMetaList <$> Gen.list (Range.linear 1 2) genTxMetadataValue
-    , TxMetaMap . Map.toList <$> Gen.map (Range.linear 1 4) ((,) <$> genValidJSONKey <*> genTxMetadataValue)
+    [ toJSON <$> Gen.integral (Range.linear (0 :: Integer) 10000)
+    , toJSON <$> genText
+    , toJSON <$> Gen.list (Range.linear 1 3) genTxMetadataValue
+    , toJSON . Map.toList <$> Gen.map (Range.linear 1 3) ((,) <$> genText <*> genTxMetadataValue)
+    , toJSON <$> Gen.bool
+    , pure Json.Null
     ]
-
-genValidJSONKey :: Gen TxMetadataValue
-genValidJSONKey = TxMetaText <$> genText
 
 genText :: Gen Text
 genText = Gen.choice
   [ Gen.ensure (not . Text.isPrefixOf bytesPrefix)
-      (Text.pack <$> Gen.list (Range.linear 0 64) Gen.alphaNum)
+      (Text.pack <$> Gen.list (Range.linear 0 100) Gen.alphaNum)
   , (bytesPrefix<>) . Text.decodeUtf8 . Base16.encode <$> genByteString
   ]
 
 genByteString :: Gen ByteString
 genByteString = BS.pack <$> Gen.list (Range.linear 0 64) Gen.latin1
+
+isValidMetadata :: Json.Value -> Bool
+isValidMetadata json = case json of
+  Json.Bool _   -> False
+  Json.Null     -> False
+  Json.Number _ -> True
+  Json.Object o -> all isValidMetadata o
+  Json.Array xs -> all isValidMetadata xs
+  Json.String t -> or
+    [ BS.length (Text.encodeUtf8 t) <= txMetadataTextStringMaxByteLength
+    , case Base16.decode . Text.encodeUtf8 <$> Text.stripPrefix bytesPrefix t of
+        Just (bytes, "") -> BS.length bytes <= txMetadataByteStringMaxLength
+        _ -> False
+    ]
 
 tests :: IO Bool
 tests =
