@@ -46,6 +46,47 @@ library
                         -Wpartial-fields
                         -Wcompat
 
+
+executable cardano-node-chairman
+  hs-source-dirs:      app
+  main-is:             cardano-node-chairman.hs
+  other-modules:       Cardano.Chairman
+                       Paths_cardano_node_chairman
+  default-language:    Haskell2010
+  ghc-options:         -threaded
+                       -Wall
+                       -rtsopts
+                       "-with-rtsopts=-T"
+                       -Wno-unticked-promoted-constructors
+  build-depends:       base >=4.12 && <5
+                     , async
+                     , bytestring
+                     , cardano-api
+                     , cardano-config
+                     , cardano-ledger
+                     , cardano-node
+                     , cardano-prelude
+                     , cardano-prelude
+                     , containers
+                     , contra-tracer
+                     , io-sim-classes
+                     , network-mux
+                     , optparse-applicative
+                     , ouroboros-consensus
+                     , ouroboros-consensus-cardano
+                     , ouroboros-network
+                     , ouroboros-network-framework
+                     , text
+                     , transformers-except
+                     , typed-protocols
+
+  default-extensions:  NoImplicitPrelude
+
+  if os(windows)
+     build-depends:    Win32
+  else
+     build-depends:    unix
+
 test-suite tests
   hs-source-dirs:       test
   main-is:              Main.hs
