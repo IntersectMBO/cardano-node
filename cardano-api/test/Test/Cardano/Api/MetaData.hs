@@ -6,12 +6,12 @@ module Test.Cardano.Api.MetaData
 
 import           Cardano.Prelude hiding (MetaData)
 
-import           Cardano.Api.Typed
 import           Cardano.Api.MetaData
+import           Cardano.Api.Typed
 
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Map.Strict as Map
 import qualified Data.List as List
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import           Hedgehog (Gen, Property, discover)
@@ -31,7 +31,7 @@ prop_round_trip_json_metadatum = do
 
 -- Generate 'TxMetadata' that will round trip correctly.
 -- The only valid value that is known to not round trip correctly is a list of
--- lists where all the sublists are of length 2.
+-- lists where all the sub-lists are of length 2.
 -- The reason this does not round trip is because when decoding the JSON, a list
 -- of pairs is assumed to be a map.
 genMetaData :: Gen TxMetadata
@@ -41,7 +41,7 @@ genMetaData = do
 
 genTxMetadataValue :: Gen TxMetadataValue
 genTxMetadataValue =
-  -- This shinks towards the head of the list, so have TxMetaMap at the end.
+  -- This shrinks towards the head of the list, so have TxMetaMap at the end.
   Gen.choice
     [ TxMetaNumber <$> Gen.integral (Range.linear 0 10000)
     , TxMetaBytes <$> genByteString
@@ -69,7 +69,7 @@ genPairList len = do
               , (1, genFlatTxMetadataValue)
               ]
   -- Keys need to be unique and sorted.
-  -- They need to be unque because they are inserted into a HashMap and they
+  -- They need to be unique because they are inserted into a HashMap and they
   -- need to be sorted so they round trip correctly.
   mapM (\k -> (k,) <$> genTxMetadataValue) (List.sort $ List.nub keys)
 

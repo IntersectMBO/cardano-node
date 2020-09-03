@@ -74,7 +74,7 @@ toplevelExceptionHandler prog = do
       ]
   where
     -- Let async exceptions rise to the top for the default GHC top-handler.
-    -- This includes things like ctl-c.
+    -- This includes things like CTRL-C.
     rethrowAsyncExceptions :: SomeAsyncException -> IO a
     rethrowAsyncExceptions = throwIO
 

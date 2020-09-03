@@ -121,7 +121,7 @@ tracePeers tr peers = do
   meta <- mkLOMeta Notice Public
   traceNamedObject tr'' (meta, LogStructured $ toObject MaximalVerbosity peers)
 
--- | Instances for convertin [Peer blk] to Object.
+-- | Instances for converting [Peer blk] to Object.
 
 instance ToObject [Peer blk] where
   toObject MinimalVerbosity _ = emptyObject

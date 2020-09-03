@@ -138,7 +138,7 @@ module Cardano.Api.Typed (
 
     -- * Registering stake pools
     -- | Certificates that are embedded in transactions for registering and
-    -- retiring stake pools. This incldes updating the stake pool parameters.
+    -- retiring stake pools. This includes updating the stake pool parameters.
     makeStakePoolRegistrationCertificate,
     makeStakePoolRetirementCertificate,
     StakePoolParameters(..),
@@ -1420,7 +1420,7 @@ makeShelleySignature tosign (ShelleyNormalSigningKey sk) =
 makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
     fromXSignature $
       Crypto.HD.sign
-        BS.empty  -- passphrase for (unused) in-mem encryption
+        BS.empty  -- passphrase for (unused) in-memory encryption
         sk
         (Crypto.getSignableRepresentation tosign)
   where
@@ -1478,7 +1478,7 @@ transactionFee txFeeFixed txFeePerByte (ShelleyTx tx) =
     b = toInteger txFeeFixed
 
 --TODO: in the Byron case the per-byte is non-integral, would need different
--- parameters. e.g. a new data type for fee params, byron vs shelley
+-- parameters. e.g. a new data type for fee params, Byron vs Shelley
 
 -- | This can estimate what the transaction fee will be, based on a starting
 -- base transaction, plus the numbers of the additional components of the

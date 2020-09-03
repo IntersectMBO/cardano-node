@@ -140,7 +140,7 @@ The key `protocolMagic` defines the protocol magic number. When the protocol mag
 
 - `pm` - is the protocol magic number, is included in serialized blocks and headers, and is part of signed data. It is used for differentiating between different clusters.
 
-- `requiresNetworkMagic` - can be `NMMustBeNothing`,`NMMustBeJust`, `RequiresNoMagic`, or `RequiresMagic`. It is essentially a boolean like flag to indicate whether we are on mainnet/staging (`NMMustBeJust`
+- `requiresNetworkMagic` - can be `NMMustBeNothing`,`NMMustBeJust`, `RequiresNoMagic`, or `RequiresMagic`. It is essentially a Boolean like flag to indicate whether we are on mainnet/staging (`NMMustBeJust`
 /`RequiresMagic`) or a testnet (`NMMustBeNothing`/`RequiresNoMagic`).
 
 The `protocolMagic` value can either be an object with the two fields described above, or just a plain integer. In the latter case, `requiresNetworkMagic` will take the default value of `RequiresMagic`.

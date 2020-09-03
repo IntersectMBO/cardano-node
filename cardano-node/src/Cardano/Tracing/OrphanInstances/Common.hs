@@ -65,7 +65,7 @@ import           Ouroboros.Network.Block (HeaderHash, Tip (..))
 
 
 -- | A bit of a weird one, but needed because some of the very general
--- consensus interfaces are sometimes instantaited to 'Void', when there are
+-- consensus interfaces are sometimes instantiated to 'Void', when there are
 -- no cases needed.
 --
 instance ToObject Void where
