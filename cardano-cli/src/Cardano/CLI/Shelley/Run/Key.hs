@@ -3,6 +3,7 @@
 
 module Cardano.CLI.Shelley.Run.Key
   ( ShelleyKeyCmdError
+  , SomeSigningKey(..)
   , renderShelleyKeyCmdError
   , runKeyCmd
 

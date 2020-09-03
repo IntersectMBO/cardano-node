@@ -485,8 +485,19 @@ runTxBuildMultiSig msso mOutputFile = do
  where
   readPaymentVerificationKeys :: [VerificationKeyFile] -> ExceptT ShelleyTxCmdError IO [VerificationKey PaymentKey]
   readPaymentVerificationKeys fps = do
-    eVerKeys <- liftIO $ mapM (readFileTextEnvelope (AsVerificationKey AsPaymentKey) . unVerificationKeyFile) fps
-    sequence $ map (firstExceptT ShelleyTxReadFileError . hoistEither) eVerKeys
+    eVerKeys <- liftIO $ mapM (readFileTextEnvelopeAnyOf fileTypes . unVerificationKeyFile) fps
+    someKeys <- sequence $ map (firstExceptT ShelleyTxReadFileError . hoistEither ) eVerKeys
+    right $ map convertToVerificationKey someKeys
+
+  fileTypes = [ FromSomeType (AsVerificationKey AsPaymentKey) SomePaymentVerificationKey
+              , FromSomeType (AsVerificationKey AsGenesisUTxOKey) SomeGenesisUTxOVerificationKey
+              ]
+
+  convertToVerificationKey :: SomeVerificationKey -> VerificationKey PaymentKey
+  convertToVerificationKey sVkey =
+    case sVkey of
+      SomePaymentVerificationKey vK -> vK
+      SomeGenesisUTxOVerificationKey utxoKey -> castVerificationKey utxoKey
 
   convertToMultiSig :: MultiSigScriptObject -> ExceptT ShelleyTxCmdError IO MultiSigScript
   convertToMultiSig so =
@@ -497,6 +508,12 @@ runTxBuildMultiSig msso mOutputFile = do
                           right . RequireAnyOf $ map (RequireSignature . verificationKeyHash) payKeys
       AtLeast req payKeyFps -> do payKeys <- readPaymentVerificationKeys payKeyFps
                                   right . RequireMOf req $ map (RequireSignature . verificationKeyHash) payKeys
+
+
+data SomeVerificationKey
+  = SomePaymentVerificationKey (VerificationKey PaymentKey)
+  | SomeGenesisUTxOVerificationKey (VerificationKey GenesisUTxOKey)
+
 -- ----------------------------------------------------------------------------
 -- Transaction metadata
 --
