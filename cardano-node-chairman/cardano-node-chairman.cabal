@@ -16,6 +16,7 @@ library
                       , aeson
                       , async
                       , bytestring
+                      , deepseq
                       , directory
                       , hedgehog
                       , mmorph
@@ -27,8 +28,10 @@ library
                       , text
                       , time
                       , unliftio
+                      , unordered-containers
                       , Win32-network
-  exposed-modules:      Chairman.Base
+  exposed-modules:      Chairman.Aeson
+                        Chairman.Base
                         Chairman.IO.File
                         Chairman.IO.Network.NamedPipe
                         Chairman.IO.Network.Socket
@@ -37,6 +40,7 @@ library
                         Chairman.OS
                         Chairman.Plan
                         Chairman.Process
+                        Chairman.String
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -95,6 +99,7 @@ test-suite tests
                       , aeson
                       , async
                       , cardano-node-chairman
+                      , containers
                       , directory
                       , filepath
                       , hedgehog
@@ -104,9 +109,12 @@ test-suite tests
                       , random
                       , resourcet
                       , temporary
+                      , text
                       , time
                       , unliftio
+                      , unordered-containers
   other-modules:        Test.Cardano.Node.Chairman.Byron
+                        Test.Cardano.Node.Chairman.Shelley
                         Test.Common.NetworkSpec
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
