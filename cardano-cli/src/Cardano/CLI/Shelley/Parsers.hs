@@ -637,6 +637,9 @@ pGovernanceCmd =
       [ Opt.command "create-mir-certificate"
           (Opt.info pMIRCertificate $
             Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
+      , Opt.command "create-genesis-key-delegation-certificate"
+          (Opt.info pGovernanceGenesisKeyDelegationCertificate $
+            Opt.progDesc "Create a genesis key delegation certificate")
       , Opt.command "create-update-proposal"
           (Opt.info pUpdateProposal $
             Opt.progDesc "Create an update proposal")
@@ -648,6 +651,14 @@ pGovernanceCmd =
                         <*> some pStakeVerificationKeyFile
                         <*> some pRewardAmt
                         <*> pOutputFile
+
+    pGovernanceGenesisKeyDelegationCertificate :: Parser GovernanceCmd
+    pGovernanceGenesisKeyDelegationCertificate =
+      GovernanceGenesisKeyDelegationCertificate
+        <$> pGenesisVerificationKeyOrHashOrFile
+        <*> pGenesisDelegateVerificationKeyOrHashOrFile
+        <*> pVrfVerificationKeyOrHashOrFile
+        <*> pOutputFile
 
     pMIRPot :: Parser Shelley.MIRPot
     pMIRPot =
@@ -1106,6 +1117,90 @@ pGenesisVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
+pGenesisVerificationKeyHash :: Parser (Hash GenesisKey)
+pGenesisVerificationKeyHash =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-verification-key-hash"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis verification key hash (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (Hash GenesisKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis verification key hash.") Right
+        . deserialiseFromRawBytesHex (AsHash AsGenesisKey)
+        . BSC.pack
+
+pGenesisVerificationKey :: Parser (VerificationKey GenesisKey)
+pGenesisVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis verification key (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (VerificationKey GenesisKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis verification key.") Right
+        . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisKey)
+        . BSC.pack
+
+pGenesisVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile GenesisKey)
+pGenesisVerificationKeyOrHashOrFile =
+  VerificationKeyValue <$> pGenesisVerificationKey
+    <|> VerificationKeyHash <$> pGenesisVerificationKeyHash
+    <|> VerificationKeyFilePath <$> pGenesisVerificationKeyFile
+
+pGenesisDelegateVerificationKeyFile :: Parser VerificationKeyFile
+pGenesisDelegateVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "genesis-delegate-verification-key-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Filepath of the genesis delegate verification key."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
+pGenesisDelegateVerificationKeyHash :: Parser (Hash GenesisDelegateKey)
+pGenesisDelegateVerificationKeyHash =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-delegate-verification-key-hash"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis delegate verification key hash (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (Hash GenesisDelegateKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis delegate verification key hash.") Right
+        . deserialiseFromRawBytesHex (AsHash AsGenesisDelegateKey)
+        . BSC.pack
+
+pGenesisDelegateVerificationKey :: Parser (VerificationKey GenesisDelegateKey)
+pGenesisDelegateVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-delegate-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis delegate verification key (hex-encoded)."
+        )
+  where
+    deserialiseFromHex
+      :: String
+      -> Either String (VerificationKey GenesisDelegateKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis delegate verification key.") Right
+        . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisDelegateKey)
+        . BSC.pack
+
+pGenesisDelegateVerificationKeyOrHashOrFile
+  :: Parser (VerificationKeyOrHashOrFile GenesisDelegateKey)
+pGenesisDelegateVerificationKeyOrHashOrFile =
+  VerificationKeyValue <$> pGenesisDelegateVerificationKey
+    <|> VerificationKeyHash <$> pGenesisDelegateVerificationKeyHash
+    <|> VerificationKeyFilePath <$> pGenesisDelegateVerificationKeyFile
 
 pKESVerificationKeyFile :: Parser VerificationKeyFile
 pKESVerificationKeyFile =
@@ -1399,8 +1494,8 @@ pStakePoolVerificationKeyHashOrFile =
   StakePoolVerificationKeyFile <$> pPoolStakeVerificationKeyFile
     <|> StakePoolVerificationKeyHash <$> pStakePoolVerificationKeyHash
 
-pVRFVerificationKeyFile :: Parser VerificationKeyFile
-pVRFVerificationKeyFile =
+pVrfVerificationKeyFile :: Parser VerificationKeyFile
+pVrfVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "vrf-verification-key-file"
@@ -1408,6 +1503,58 @@ pVRFVerificationKeyFile =
       <> Opt.help "Filepath of the VRF verification key."
       <> Opt.completer (Opt.bashCompleter "file")
       )
+
+pVrfVerificationKeyHash :: Parser (Hash VrfKey)
+pVrfVerificationKeyHash =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "vrf-verification-key-hash"
+        <> Opt.metavar "STRING"
+        <> Opt.help "VRF verification key hash (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (Hash VrfKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid VRF verification key hash.") Right
+        . deserialiseFromRawBytesHex (AsHash AsVrfKey)
+        . BSC.pack
+
+pVrfVerificationKey :: Parser (VerificationKey VrfKey)
+pVrfVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromBech32OrHex)
+        (  Opt.long "vrf-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "VRF verification key (Bech32 or hex-encoded)."
+        )
+  where
+    asType :: AsType (VerificationKey VrfKey)
+    asType = AsVerificationKey AsVrfKey
+
+    deserialiseFromBech32OrHex
+      :: String
+      -> Either String (VerificationKey VrfKey)
+    deserialiseFromBech32OrHex str =
+      case deserialiseFromBech32 asType (Text.pack str) of
+        Right res -> Right res
+
+        -- The input was valid Bech32, but some other error occurred.
+        Left err@(Bech32UnexpectedPrefix _ _) -> Left (displayError err)
+        Left err@(Bech32DataPartToBytesError _) -> Left (displayError err)
+        Left err@(Bech32DeserialiseFromBytesError _) -> Left (displayError err)
+        Left err@(Bech32WrongPrefix _ _) -> Left (displayError err)
+
+        -- The input was not valid Bech32. Attempt to deserialize it as hex.
+        Left (Bech32DecodingError _) ->
+          case deserialiseFromRawBytesHex asType (BSC.pack str) of
+            Just res' -> Right res'
+            Nothing -> Left "Invalid VRF verification key."
+
+pVrfVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile VrfKey)
+pVrfVerificationKeyOrHashOrFile =
+  VerificationKeyValue <$> pVrfVerificationKey
+    <|> VerificationKeyHash <$> pVrfVerificationKeyHash
+    <|> VerificationKeyFilePath <$> pVrfVerificationKeyFile
 
 pRewardAcctVerificationKeyFile :: Parser VerificationKeyFile
 pRewardAcctVerificationKeyFile =
@@ -1577,7 +1724,7 @@ pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
  PoolRegistrationCert
   <$> pPoolStakeVerificationKeyFile
-  <*> pVRFVerificationKeyFile
+  <*> pVrfVerificationKeyFile
   <*> pPoolPledge
   <*> pPoolCost
   <*> pPoolMargin
