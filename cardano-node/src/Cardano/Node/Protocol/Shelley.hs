@@ -139,7 +139,7 @@ readLeaderCredentials :: Maybe ProtocolFilepaths
                       -> ExceptT ShelleyProtocolInstantiationError IO
                                  (Maybe (TPraosLeaderCredentials TPraosStandardCrypto))
 
--- It's ok to supply none of the files
+-- It's OK to supply none of the files
 readLeaderCredentials Nothing = return Nothing
 readLeaderCredentials (Just ProtocolFilepaths {
                               shelleyCertFile = Nothing,
@@ -171,7 +171,7 @@ readLeaderCredentials (Just ProtocolFilepaths {
                tpraosLeaderCredentialsInitSignKey = kesKey
              }
 
--- But not ok to supply some of the files without the others.
+-- But not OK to supply some of the files without the others.
 readLeaderCredentials (Just ProtocolFilepaths {shelleyCertFile = Nothing}) =
     throwError OCertNotSpecified
 readLeaderCredentials (Just ProtocolFilepaths {shelleyVRFFile = Nothing}) =

@@ -3,7 +3,7 @@ module Cardano.Api.TxSubmit.ErrorRender
   ( renderApplyMempoolPayloadErr
   ) where
 
--- This file contains error renders. The should hve defined at a lower level, with the error
+-- This file contains error renders. The should have defined at a lower level, with the error
 -- type definitions, but for some reason have not been.
 -- They will be defined here for now and then moved where they are supposed to be once they
 -- are working.

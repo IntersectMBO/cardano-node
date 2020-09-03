@@ -192,7 +192,7 @@ withSnd f a = (a, f a)
 formatIso8601 :: DT.UTCTime -> String
 formatIso8601 = DT.formatTime DT.defaultTimeLocale (DT.iso8601DateFormat (Just "%H:%M:%SZ"))
 
--- | Assert the file contains the given number of occurences of the given string
+-- | Assert the file contains the given number of occurrences of the given string
 readFile :: HasCallStack => FilePath -> H.PropertyT IO String
 readFile filename = withFrozenCallStack $ H.evalM . liftIO $ E.evaluate . CSD.force =<< IO.readFile filename
 
@@ -205,14 +205,14 @@ assertFilesExist (file:rest) = do
     then withFrozenCallStack $ assertFilesExist rest
     else failWithCustom callStack Nothing (file <> " has not been successfully created.")
 
--- | Assert the file contains the given number of occurences of the given string
+-- | Assert the file contains the given number of occurrences of the given string
 assertFileOccurences :: HasCallStack => Int -> String -> FilePath -> H.PropertyT IO ()
 assertFileOccurences n s fp = withFrozenCallStack $ do
   contents <- H.evalM . liftIO $ IO.readFile fp
 
   length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
 
--- | Assert the file contains the given number of occurences of the given string
+-- | Assert the file contains the given number of occurrences of the given string
 assertFileLines :: HasCallStack => (Int -> Bool) -> FilePath -> H.PropertyT IO ()
 assertFileLines p fp = withFrozenCallStack $ do
   contents <- H.evalM . liftIO $ IO.readFile fp
@@ -226,7 +226,7 @@ assertFileLines p fp = withFrozenCallStack $ do
   when (not (p len)) $ do
     failWithCustom callStack Nothing (fp <> " has an unexpected number of lines")
 
--- | Assert the file contains the given number of occurences of the given string
+-- | Assert the file contains the given number of occurrences of the given string
 assertEndsWithSingleNewline :: HasCallStack => FilePath -> H.PropertyT IO ()
 assertEndsWithSingleNewline fp = withFrozenCallStack $ do
   contents <- H.evalM . liftIO $ IO.readFile fp

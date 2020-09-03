@@ -123,7 +123,7 @@ exampleShelleyGenesis =
   -- hash of the genesis verification key
   genesisVerKeyHash :: KeyHash Genesis TPraosStandardCrypto
   genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb194"
-  -- hash of the delegators verififation key
+  -- hash of the delegators verification key
   delegVerKeyHash :: KeyHash GenesisDelegate TPraosStandardCrypto
   delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae6273827"
   delegVrfKeyHash :: Hash TPraosStandardCrypto (VerKeyVRF TPraosStandardCrypto)

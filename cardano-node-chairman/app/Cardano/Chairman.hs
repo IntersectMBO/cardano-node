@@ -145,7 +145,7 @@ data ConsensusFailure blk = ConsensusFailure
     -- Tip of two peer's chains that do not intersect within K blocks
     (PeerId, Tip (Header blk))
     (PeerId, Tip (Header blk))
-    -- The tntersection point of two chains
+    -- The intersection point of two chains
     (Anchor (Header blk))
     SecurityParam
   deriving Show
@@ -224,7 +224,7 @@ consensusCondition (SecurityParam securityParam) chains =
       -> Bool
     forkTooLong (intersection, tip1, tip2) =
         -- If only one of len1, len2 is longer than the securityParam then it is
-        -- still ok. That node can still recover by receiving a valid rollback
+        -- still OK. That node can still recover by receiving a valid rollback
         -- instruction, but if both are longer, then we have a failure.
         forkLen tip1 > securityParam &&
         forkLen tip2 > securityParam
@@ -270,12 +270,12 @@ runChairman
   -> CodecConfig blk
   -> NetworkMagic
   -> SecurityParam
-  -- ^ security parameter, if a fork is deeper than it 'runChairman'
+  -- ^ Security parameter, if a fork is deeper than it 'runChairman'
   -- will throw an exception.
   -> DiffTime
   -- ^ Run for this much time.
   -> [SocketPath]
-  -- ^ local socket dir
+  -- ^ Local socket directory
   -> IO (ChainsSnapshot blk)
 runChairman tracer cfg networkMagic securityParam runningTime socketPaths = do
     let initialChains = Map.fromList

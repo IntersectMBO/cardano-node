@@ -437,7 +437,7 @@ instance ToObject (PredicateFailure (POOL c)) where
              ]
 
 
--- Apparently this should never happen accoring to the shelley exec spec
+-- Apparently this should never happen according to the Shelley exec spec
   toObject _verb (WrongCertificateTypePOOL index) =
     case index of
       0 -> mkObject [ "kind" .= String "WrongCertificateTypePOOL"

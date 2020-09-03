@@ -45,15 +45,15 @@ nodeAddressToSockAddr (NodeAddress addr port) =
 --
 data RemoteAddress = RemoteAddress
   { raAddress :: !String
-  -- ^ either a dns address or ip address
+  -- ^ Either a DNS address or IP address
   , raPort :: !PortNumber
-  -- ^ port number of the destination
+  -- ^ Port number of the destination
   , raValency :: !Int
-  -- ^ if a dns address is given valency governs
-  -- to how many resolved ip addresses
-  -- should we maintain acctive (hot) connection;
-  -- if an ip address is given valency is used as
-  -- a boolean value, @0@ means to ignore the address;
+  -- ^ If a DNS address is given valency governs
+  -- to how many resolved IP addresses
+  -- should we maintain active (hot) connection;
+  -- if an IP address is given valency is used as
+  -- a Boolean value, @0@ means to ignore the address;
   } deriving (Eq, Ord, Show)
 
 

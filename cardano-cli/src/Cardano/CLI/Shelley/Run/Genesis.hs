@@ -570,10 +570,7 @@ readInitialFundAddresses utxodir nw = do
            ]
 
 
---
--- Hash a geness file
---
-
+-- | Hash a genesis file
 runGenesisHashFile :: GenesisFile -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisHashFile (GenesisFile fpath) = do
    content <- handleIOExceptT (ShelleyGenesisCmdReadGenesisIOError fpath) $

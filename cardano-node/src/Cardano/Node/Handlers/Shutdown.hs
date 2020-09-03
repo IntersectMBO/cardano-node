@@ -57,9 +57,9 @@ import           Cardano.Node.Types
 data ShutdownFDs
   = NoShutdownFDs
   | ExternalShutdown !ShutdownListener
-  -- ^ Extra-processually signalled shutdown.
+  -- ^ Shutdown to be provided by external process.
   | InternalShutdown !ShutdownListener !ShutdownDoorbell
-  -- ^ Intra-processually signalled shutdown.
+  -- ^ Shutdown to be provided from within the process.
 
 -- | FD used to send an EOF-based request for shutdown.
 newtype ShutdownDoorbell = ShutdownDoorbell { _doorbellFd :: Fd }

@@ -39,7 +39,7 @@ newtype TextViewDescription
   = TextViewDescription { unTextViewDescription :: ByteString }
   deriving (Eq, IsString, Show, Semigroup)
 
--- | A 'TextView' is a structured envalope for serialised binary values
+-- | A 'TextView' is a structured envelope for serialised binary values
 -- with an external format with a semi-readable textual format.
 --
 -- It contains a \"type\" field, e.g. \"PublicKeyByron\" or \"TxSignedShelley\"

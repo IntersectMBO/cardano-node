@@ -36,12 +36,12 @@ shelleyGenesisDefaults :: ShelleyGenesis crypto
 shelleyGenesisDefaults =
   ShelleyGenesis
     {
-      -- params for this specific chain
+      -- parameters for this specific chain
       sgSystemStart           = zeroTime
     , sgNetworkMagic          = 42
     , sgNetworkId             = Ledger.Testnet
 
-      -- consensus protocol params
+      -- consensus protocol parameters
     , sgSlotLength            = 1.0 :: Time.NominalDiffTime -- 1s slots
     , sgActiveSlotsCoeff      = 1/20                -- 20s block times on average
     , sgSecurityParam         = k
@@ -50,7 +50,7 @@ shelleyGenesisDefaults =
     , sgMaxKESEvolutions      = 60                  -- 90 days
     , sgUpdateQuorum          = 5                   -- assuming 7 genesis keys
 
-    -- ledger protocol params
+    -- ledger protocol parameters
     , sgProtocolParams        =
         Ledger.emptyPParams
         { Ledger._d =
