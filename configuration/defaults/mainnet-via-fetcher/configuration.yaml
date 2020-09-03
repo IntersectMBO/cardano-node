@@ -25,8 +25,8 @@ RequiresNetworkMagic: RequiresNoMagic
 
 ##### Update system parameters #####
 
-# This protocol version number gets used by by block producing nodes as part
-# part of the system for agreeing on and synchronising protocol updates.
+# This protocol version number gets used by block producing nodes as part
+# of the system for agreeing on and synchronising protocol updates.
 LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
@@ -149,7 +149,7 @@ TraceChainSyncClient: False
 # Trace ChainSync server (blocks).
 TraceChainSyncBlockServer: False
 
-# Trace ChainSync server (headers)
+# Trace ChainSync server (headers).
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
@@ -191,7 +191,7 @@ TraceLocalTxSubmissionServer: False
 # Trace mempool.
 TraceMempool: True
 
-# Trace Mux Events
+# Trace Mux Events.
 TraceMux: False
 
 # Trace TxSubmission server (inbound transactions).
@@ -215,7 +215,7 @@ options:
 
   # This routes metrics matching specific names to particular backends.
   # This overrides the defaultBackends listed above. And note that it is
-  # and override and not an extension so anything matched here will not
+  # an override and not an extension so anything matched here will not
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
     cardano.node.ChainDB.metrics:

@@ -143,7 +143,7 @@ TraceBlockFetchServer: True
 # Trace BlockchainTime.
 TraceBlockchainTime: False
 
-# Verbose tracer of ChainDB
+# Verbose tracer of ChainDB.
 TraceChainDb: True
 
 # Trace ChainSync client.
@@ -152,7 +152,7 @@ TraceChainSyncClient: False
 # Trace ChainSync server (blocks).
 TraceChainSyncBlockServer: False
 
-# Trace ChainSync server (headers)
+# Trace ChainSync server (headers).
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
@@ -194,7 +194,7 @@ TraceLocalTxSubmissionServer: True
 # Trace mempool.
 TraceMempool: True
 
-# Trace Mux Events
+# Trace Mux Events.
 TraceMux: False
 
 # Trace TxSubmission server (inbound transactions).
