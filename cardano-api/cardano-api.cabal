@@ -99,6 +99,7 @@ test-suite cardano-api-test
   build-depends:
                         base >=4.12 && <5
                       , aeson
+                      , aeson-qq
                       , base16-bytestring
                       , bytestring
                       , cardano-api
