@@ -80,7 +80,7 @@ parseRunningTime =
   option ((fromIntegral :: Int -> DiffTime) <$> auto)
     (  long "timeout"
     <> short 't'
-    <> metavar "Time"
+    <> metavar "SECONDS"
     <> help "Run the chairman for this length of time in seconds."
     )
 
@@ -115,7 +115,7 @@ parseProgress =
   option ((fromIntegral :: Int -> BlockNo) <$> auto)
     (  long "require-progress"
     <> short 'p'
-    <> metavar "Blocks"
+    <> metavar "INT"
     <> help "Require this much chain-growth progress, in blocks."
   )
 
