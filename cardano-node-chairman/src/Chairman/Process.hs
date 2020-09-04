@@ -6,13 +6,16 @@ module Chairman.Process
   ( createProcess
   , execFlex
   , getProjectBase
+  , procChairman
   , procCli
   , procNode
   , execCli
   , waitForProcess
+  , waitSecondsForProcess
   ) where
 
 import           Chairman.Base (Integration)
+import           Chairman.IO.Process (TimedOut (..))
 import           Chairman.Plan
 import           Control.Concurrent.Async
 import           Control.Exception
@@ -39,6 +42,7 @@ import           System.IO (Handle)
 import           System.Process (CmdSpec (..), CreateProcess (..), ProcessHandle)
 import           Text.Show
 
+import qualified Chairman.IO.Process as IO
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
 import qualified Data.Text as T
@@ -128,6 +132,22 @@ waitForProcess :: HasCallStack
 waitForProcess hProcess = GHC.withFrozenCallStack $ do
   H.evalM . liftIO $ catch (fmap Just (IO.waitForProcess hProcess)) $ \(_ :: AsyncCancelled) -> return Nothing
 
+waitSecondsForProcess :: HasCallStack
+  => Int
+  -> ProcessHandle
+  -> Integration (Either TimedOut (Maybe ExitCode))
+waitSecondsForProcess seconds hProcess = GHC.withFrozenCallStack $ do
+  result <- H.evalIO $ IO.waitSecondsForProcess seconds hProcess
+  case result of
+    Left TimedOut -> do
+      H.annotate "Timed out waiting for process to exit"
+      return (Left TimedOut)
+    Right maybeExitCode -> do
+      case maybeExitCode of
+        Nothing -> H.annotate "No exit code for process"
+        Just exitCode -> H.annotate $ "Process exited " <> show exitCode
+      return (Right maybeExitCode)
+
 procDist
   :: String
   -- ^ Package name
@@ -181,6 +201,14 @@ procNode
   -> Integration CreateProcess
   -- ^ Captured stdout
 procNode = procFlex "cardano-node" "CARDANO_NODE"
+
+procChairman
+  :: HasCallStack
+  => [String]
+  -- ^ Arguments to the CLI command
+  -> Integration CreateProcess
+  -- ^ Captured stdout
+procChairman = procFlex "cardano-node-chairman" "CARDANO_NODE_CHAIRMAN"
 
 getProjectBase :: Integration String
 getProjectBase = do

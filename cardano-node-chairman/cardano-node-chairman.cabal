@@ -36,6 +36,7 @@ library
                         Chairman.IO.Network.NamedPipe
                         Chairman.IO.Network.Socket
                         Chairman.IO.Network.Sprocket
+                        Chairman.IO.Process
                         Chairman.Network
                         Chairman.OS
                         Chairman.Plan
@@ -55,6 +56,7 @@ executable cardano-node-chairman
   hs-source-dirs:      app
   main-is:             cardano-node-chairman.hs
   other-modules:       Cardano.Chairman
+                       Cardano.Chairman.Options
                        Paths_cardano_node_chairman
   default-language:    Haskell2010
   ghc-options:         -threaded
