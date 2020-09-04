@@ -1,4 +1,4 @@
-# Overview
+# Benchmarking Scripts Overview
 
  This document describes development scripts in this directory.
 
@@ -52,18 +52,16 @@
 
 ### Index
 
-- <span><b>chairman.sh</b></span> <br/>  Run the Chairman consensus checker against a cluster started
-                     by `shelley-testnet*.sh` family of scripts
 - <span><b>genesis.sh</b></span> <br/> Generate a new genesis in the `configuration/` folder
 - <span><b>issue-genesis-utxo-expenditure.sh</b></span> <br/> Write a file with a transaction
          spending a genesis UTxO entry, given a key owning it
 - <span><b>issue-utxo-expenditure.sh</b></span> <br/> Write a file with a transaction spending a
          normal UTxO entry, given a key owning it
-- <span><b>mainnet.sh</b></span> <br/> Run a node against Cardano Mainnet (the [configuration file](https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml) contains documentation how to change options 
+- <span><b>mainnet.sh</b></span> <br/> Run a node against Cardano Mainnet (the [configuration file](https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml) contains documentation how to change options
 	 and turn on/off features like "LiveView")
-- <span><b>mainnet-via-fetcher.sh</b></span> <br/> Works in two phases, 1) prefetch - preload the prefetcher's 
-	 ChainDB, up to desired limit and 2) benchmark - run the second node as the benchmark, up to desired 
-	 slot limit 
+- <span><b>mainnet-via-fetcher.sh</b></span> <br/> Works in two phases, 1) prefetch - preload the prefetcher's
+	 ChainDB, up to desired limit and 2) benchmark - run the second node as the benchmark, up to desired
+	 slot limit
 - <span><b>shelley-testnet-live.sh</b></span> <br/> Start a dev cluster with 3 nodes,
          with neat curses-based UI (run from tmux)
 - <span><b>shelley-testnet-dns.sh</b></span> <br/> Start a dev cluster with 3 nodes (run from tmux)
