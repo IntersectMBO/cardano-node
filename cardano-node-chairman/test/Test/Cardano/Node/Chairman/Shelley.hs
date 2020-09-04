@@ -59,8 +59,6 @@ import qualified System.Process as IO
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Reduce duplication" -}
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: Text) #-}
-
 rewriteGenesisSpec :: Int -> Value -> Value
 rewriteGenesisSpec supply =
   rewriteObject
