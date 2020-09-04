@@ -27,7 +27,7 @@ MaxConcurrencyDeadline: 2
 Protocol: Shelley
 
 # The mainnet does not include the network magic into addresses. Testnets do.
-RequiresNetworkMagic: RequiresNoMagic
+RequiresNetworkMagic: RequiresMagic
 
 
 ##### Update system parameters #####
@@ -63,7 +63,7 @@ TurnOnLogMetrics: False
 
 # Global logging severity filter. Messages must have at least this severity to
 # pass. Typical values would be Warning, Notice, Info or Debug.
-minSeverity: Info
+minSeverity: Debug
 
 # Log items can be rendered with more or less verbose detail.
 # Verbosity ranges from MinimalVerbosity, NormalVerbosity to MaximalVerbosity

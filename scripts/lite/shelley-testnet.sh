@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# This script is intended to be as simple as possible i.e execute and have a
+# cluster of 3 shelley nodes up and running.
+
 ROOT="$(realpath "$(dirname "$0")/../..")"
 
 configuration="${ROOT}/scripts/lite/configuration"
@@ -7,13 +10,40 @@ configuration="${ROOT}/scripts/lite/configuration"
 data_dir="$(mktemp).d"
 mkdir -p "${data_dir}"
 
-# Generate shelley genesis
+# Generate shelley genesis spec
+ARGSSPEC=(
+  --genesis-dir           "${data_dir}/genesis"
+  --testnet-magic 42
+)
+
+cabal run exe:cardano-cli -- shelley genesis create "${ARGSSPEC[@]}"
+
+OS=$(uname -s)
+
+case $OS in
+  Darwin )       DATE="gdate"; SED='gsed';;
+  * )            DATE="date";  SED='sed' ;;
+esac
+
+
+# We're going to use really quick epochs (300 seconds), by using short slots 1s
+# and K=10, but we'll keep long KES periods so we don't have to bother
+# cycling KES keys
+$SED -i ${data_dir}/genesis/genesis.spec.json \
+    -e 's/"slotLength": 1/"slotLength": 1/' \
+    -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
+    -e 's/"securityParam": 2160/"securityParam": 10/' \
+    -e 's/"epochLength": 432000/"epochLength": 1500/' \
+    -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 9000/' \
+    -e 's/"decentralisationParam": 1/"decentralisationParam": 0.7/'
+
+# Generate shelley genesis "for real"
+
 ARGS=(
   --genesis-dir           "${data_dir}/genesis"
   --gen-genesis-keys      3
   --gen-utxo-keys         3
-  --supply                9000
-  --mainnet
+  --testnet-magic 42
 )
 
 cabal run exe:cardano-cli -- shelley genesis create "${ARGS[@]}"
@@ -40,28 +70,36 @@ for i in 1 2 3; do
   # - KES signing key
   # - VRF signing key
   # - Operational certificate
+  # VRF keys have already been generated in the shelley genesis create command
 
-  # Generate VRF keys
-  mkdir -p "${data_dir}/genesis/vrf-keys"
-  cardano-cli shelley node key-gen-VRF \
-      --verification-key-file "${data_dir}/genesis/vrf-keys/vrf-$i.vkey" \
-      --signing-key-file      "${data_dir}/genesis/vrf-keys/vrf-$i.skey"
 
   # Generate a KES keys
-  mkdir -p "${data_dir}/genesis/kes-keys"
+  mkdir -p "${data_dir}/node-$i"
   cardano-cli shelley node key-gen-KES \
-    --verification-key-file "${data_dir}/genesis/kes-keys/kes-$i.vkey" \
-    --signing-key-file      "${data_dir}/genesis/kes-keys/kes-$i.skey"
+    --verification-key-file "${data_dir}/node-$i/kes.vkey" \
+    --signing-key-file      "${data_dir}/node-$i/kes.skey"
+
+  # Move genesis delegate keys generated in shelley genesis create command to its
+  # respective node folder.
+
+  mv "${data_dir}/genesis/delegate-keys/delegate$i.skey"      "${data_dir}/node-$i/hotkey.skey"
+  mv "${data_dir}/genesis/delegate-keys/delegate$i.vkey"      "${data_dir}/node-$i/hotkey.vkey"
+  mv "${data_dir}/genesis/delegate-keys/delegate$i.counter"   "${data_dir}/node-$i/counterFile.counter"
+  mv "${data_dir}/genesis/delegate-keys/delegate$i.vrf.skey"  "${data_dir}/node-$i/vrf.skey"
+  mv "${data_dir}/genesis/delegate-keys/delegate$i.vrf.vkey"  "${data_dir}/node-$i/vrf.vkey"
 
   # Issue an operational certificate:
-  mkdir -p "${data_dir}/genesis/delegate-opcerts"
   cardano-cli shelley node issue-op-cert \
       --kes-period 0 \
-      --kes-verification-key-file                  "${data_dir}/genesis/kes-keys/kes-$i.vkey"  \
-      --cold-signing-key-file                      "${data_dir}/genesis/delegate-keys/delegate$i.skey" \
-      --operational-certificate-issue-counter-file "${data_dir}/genesis/delegate-keys/delegate$i.counter" \
-      --out-file                                   "${data_dir}/genesis/delegate-opcerts/delegate$i.opcert"
+      --kes-verification-key-file                  "${data_dir}/node-$i/kes.vkey"  \
+      --cold-signing-key-file                      "${data_dir}/node-$i/hotkey.skey" \
+      --operational-certificate-issue-counter-file "${data_dir}/node-$i/counterFile.counter" \
+      --out-file                                   "${data_dir}/node-$i/opcert"
+done
 
+rmdir "${data_dir}/genesis/delegate-keys"
+
+for i in 1 2 3; do
   # Launch a node
   cabal run exe:cardano-node -- run \
     --database-path "${db_dir}" \
@@ -69,13 +107,13 @@ for i in 1 2 3; do
     --port "300$i" \
     --config "${data_dir}/shelley-$i.yaml" \
     --topology "${data_dir}/topology-node-$i.json" \
-    --signing-key "${data_dir}/genesis/delegate-keys.00$i.key" \
-    --delegation-certificate "${data_dir}/genesis/delegation-cert.00$i.json" \
-    --shelley-vrf-key "${data_dir}/genesis/vrf-keys/vrf-$i.skey" \
-    --shelley-kes-key "${data_dir}/genesis/kes-keys/kes-$i.skey" \
-    --shelley-operational-certificate "${data_dir}/genesis/delegate-opcerts/delegate$i.opcert" \
+    --shelley-vrf-key "${data_dir}/node-$i/vrf.skey" \
+    --shelley-kes-key "${data_dir}/node-$i/kes.skey" \
+    --shelley-operational-certificate "${data_dir}/node-$i/opcert" \
     | sed "s|^|${esc}[$((31+$i))m[node-$i]${esc}[0m |g" &
 done
+
+
 
 function cleanup()
 {
