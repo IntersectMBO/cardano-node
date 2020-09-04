@@ -231,7 +231,7 @@ assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()
 assertM = (>>= H.assert)
 
 assertIO :: (MonadIO m, HasCallStack) => IO Bool -> H.PropertyT m ()
-assertIO f = H.evalIO f >>= H.assert
+assertIO f = H.evalIO (forceM f) >>= H.assert
 
 forceM :: (Monad m, NFData a) => m a -> m a
 forceM = (force <$!>)
