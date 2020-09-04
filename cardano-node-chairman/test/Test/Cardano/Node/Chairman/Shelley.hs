@@ -55,6 +55,7 @@ import qualified System.FilePath.Posix as FP
 import qualified System.IO as IO
 import qualified System.Process as IO
 
+{- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
@@ -411,20 +412,14 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
 
   -- Run chairman
   forM_ (L.take 1 allNodes) $ \node -> do
-    dbDir <- H.noteShow $ tempAbsPath <> "/db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/" <> node)
 
-    H.createDirectoryIfMissing dbDir
     H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
 
     hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
-
-    H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
-
-    portString <- H.readFile $ tempAbsPath <> "/" <> node <> "/port"
 
     (_, _, _, hProcess, _) <- H.createProcess =<<
       ( H.procChairman
