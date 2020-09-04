@@ -50,7 +50,7 @@ import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (Either (DegenQueryResult),
                      Query (DegenQuery))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
 import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 
 
@@ -234,7 +234,7 @@ writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _ _delegsAndRwds) =
       handleIOExceptT (ShelleyQueryWriteStakeAddressInfoError fpath)
         $ LBS.writeFile fpath (encodePretty dr)
 
-writeLedgerState :: Maybe OutputFile -> EpochState TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
+writeLedgerState :: Maybe OutputFile -> EpochState StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile lstate =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty lstate)
@@ -242,14 +242,14 @@ writeLedgerState mOutFile lstate =
       handleIOExceptT (ShelleyQueryWriteLedgerStateError fpath)
         $ LBS.writeFile fpath (encodePretty lstate)
 
-writeFilteredUTxOs :: Maybe OutputFile -> Ledger.UTxO TPraosStandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
+writeFilteredUTxOs :: Maybe OutputFile -> Ledger.UTxO StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
 writeFilteredUTxOs mOutFile utxo =
     case mOutFile of
       Nothing -> liftIO $ printFilteredUTxOs utxo
       Just (OutputFile fpath) ->
         handleIOExceptT (ShelleyQueryWriteFilteredUTxOsError fpath) $ LBS.writeFile fpath (encodePretty utxo)
 
-printFilteredUTxOs :: Ledger.UTxO TPraosStandardCrypto -> IO ()
+printFilteredUTxOs :: Ledger.UTxO StandardShelley -> IO ()
 printFilteredUTxOs (Ledger.UTxO utxo) = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
@@ -259,7 +259,7 @@ printFilteredUTxOs (Ledger.UTxO utxo) = do
     title =
       "                           TxHash                                 TxIx        Lovelace"
 
-    printUtxo :: (Ledger.TxIn TPraosStandardCrypto, Ledger.TxOut TPraosStandardCrypto) -> IO ()
+    printUtxo :: (Ledger.TxIn StandardShelley, Ledger.TxOut StandardShelley) -> IO ()
     printUtxo (Ledger.TxIn (Ledger.TxId txhash) txin , Ledger.TxOut _ (Coin coin)) =
       Text.putStrLn $
         mconcat
@@ -290,7 +290,7 @@ runQueryStakeDistribution protocol network mOutFile = do
   writeStakeDistribution mOutFile stakeDist
 
 writeStakeDistribution :: Maybe OutputFile
-                       -> PoolDistr TPraosStandardCrypto
+                       -> PoolDistr StandardShelley
                        -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDist) =
     handleIOExceptT (ShelleyQueryWriteStakeDistributionError outFile) $
@@ -299,7 +299,7 @@ writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDist) =
 writeStakeDistribution Nothing stakeDist =
    liftIO $ printStakeDistribution stakeDist
 
-printStakeDistribution :: PoolDistr TPraosStandardCrypto -> IO ()
+printStakeDistribution :: PoolDistr StandardShelley -> IO ()
 printStakeDistribution (PoolDistr stakeDist) = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
@@ -335,7 +335,7 @@ printStakeDistribution (PoolDistr stakeDist) = do
 queryUTxOFromLocalState
   :: QueryFilter
   -> LocalNodeConnectInfo mode block
-  -> ExceptT LocalStateQueryError IO (Ledger.UTxO TPraosStandardCrypto)
+  -> ExceptT LocalStateQueryError IO (Ledger.UTxO StandardShelley)
 queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
@@ -366,10 +366,10 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
     -- But alternatively, the API can also be extended to cover the queries
     -- properly using the API types.
 
-    toShelleyAddrs :: Set (Address Shelley) -> Set (Ledger.Addr TPraosStandardCrypto)
+    toShelleyAddrs :: Set (Address Shelley) -> Set (Ledger.Addr StandardShelley)
     toShelleyAddrs = Set.map toShelleyAddr
 
-    toShelleyAddr :: Address era -> Ledger.Addr TPraosStandardCrypto
+    toShelleyAddr :: Address era -> Ledger.Addr StandardShelley
     toShelleyAddr (ByronAddress addr)        = Ledger.AddrBootstrap
                                                  (Ledger.BootstrapAddress addr)
     toShelleyAddr (ShelleyAddress nw pc scr) = Ledger.Addr nw pc scr
@@ -380,7 +380,7 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
 data DelegationsAndRewards
   = DelegationsAndRewards
       !NetworkId
-      !(Map (Ledger.Credential Ledger.Staking TPraosStandardCrypto)
+      !(Map (Ledger.Credential Ledger.Staking StandardShelley)
             (Maybe (Hash StakePoolKey), Coin))
 
 instance ToJSON DelegationsAndRewards where
@@ -389,7 +389,7 @@ instance ToJSON DelegationsAndRewards where
         . map delegAndRwdToJson $ Map.toList delegsAndRwds
     where
       delegAndRwdToJson
-        :: (Ledger.Credential 'Ledger.Staking TPraosStandardCrypto, (Maybe (Hash StakePoolKey), Coin))
+        :: (Ledger.Credential 'Ledger.Staking StandardShelley, (Maybe (Hash StakePoolKey), Coin))
         -> Aeson.Value
       delegAndRwdToJson (k, (d, r)) =
         Aeson.object
@@ -398,7 +398,7 @@ instance ToJSON DelegationsAndRewards where
           , "rewardAccountBalance" .= r
           ]
 
-      renderAddress :: Ledger.Credential Ledger.Staking TPraosStandardCrypto -> Text
+      renderAddress :: Ledger.Credential Ledger.Staking StandardShelley -> Text
       renderAddress = serialiseAddress . StakeAddress (toShelleyNetwork nw)
 
 
@@ -445,7 +445,7 @@ queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
 --
 queryStakeDistributionFromLocalState
   :: LocalNodeConnectInfo mode block
-  -> ExceptT LocalStateQueryError IO (PoolDistr TPraosStandardCrypto)
+  -> ExceptT LocalStateQueryError IO (PoolDistr StandardShelley)
 queryStakeDistributionFromLocalState LocalNodeConnectInfo{
                                        localNodeConsensusMode = ByronMode{}
                                      } =
@@ -476,7 +476,7 @@ queryStakeDistributionFromLocalState connectInfo@LocalNodeConnectInfo{
 queryLocalLedgerState
   :: LocalNodeConnectInfo mode blk
   -> ExceptT LocalStateQueryError IO
-             (Either LByteString (Ledger.EpochState TPraosStandardCrypto))
+             (Either LByteString (Ledger.EpochState StandardShelley))
 queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
@@ -553,9 +553,9 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
         QueryResultSuccess drs -> return $ uncurry toDelegsAndRwds drs
   where
     toDelegsAndRwds
-      :: Map (Ledger.Credential Ledger.Staking TPraosStandardCrypto)
-             (Ledger.KeyHash Ledger.StakePool TPraosStandardCrypto)
-      -> Ledger.RewardAccounts TPraosStandardCrypto
+      :: Map (Ledger.Credential Ledger.Staking StandardShelley)
+             (Ledger.KeyHash Ledger.StakePool StandardShelley)
+      -> Ledger.RewardAccounts StandardShelley
       -> DelegationsAndRewards
     toDelegsAndRwds delegs rwdAcnts =
       DelegationsAndRewards localNodeNetworkId $
@@ -564,5 +564,5 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
           rwdAcnts
 
     toShelleyStakeCredentials :: Set StakeAddress
-                              -> Set (Ledger.StakeCredential TPraosStandardCrypto)
+                              -> Set (Ledger.StakeCredential StandardShelley)
     toShelleyStakeCredentials = Set.map (\(StakeAddress _ cred) -> cred)

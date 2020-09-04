@@ -32,7 +32,7 @@ class LedgerQueries blk where
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
 
-instance LedgerQueries (Shelley.ShelleyBlock c) where
+instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
     (\(Shelley.UTxO xs)-> Map.size xs) . Shelley._utxo . Shelley._utxoState . Shelley.esLState . Shelley.nesEs . Shelley.shelleyState
 

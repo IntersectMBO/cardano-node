@@ -39,7 +39,7 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ShelleyGenesis,
                      TPraosLeaderCredentials (..))
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..), TPraosStandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..), StandardShelley)
 
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -86,7 +86,7 @@ mkConsensusProtocolShelley
   :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
-             (Consensus.Protocol IO (ShelleyBlockHFC TPraosStandardCrypto)
+             (Consensus.Protocol IO (ShelleyBlockHFC StandardShelley)
                                  Consensus.ProtocolShelley)
 mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyGenesisFile,
@@ -116,7 +116,7 @@ genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
 readGenesis :: GenesisFile
             -> Maybe GenesisHash
             -> ExceptT ShelleyProtocolInstantiationError IO
-                       (ShelleyGenesis TPraosStandardCrypto, GenesisHash)
+                       (ShelleyGenesis StandardShelley, GenesisHash)
 readGenesis (GenesisFile file) mbExpectedGenesisHash = do
     content <- handleIOExceptT (GenesisReadError file) $
                  BS.readFile file
@@ -137,7 +137,7 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash = do
 
 readLeaderCredentials :: Maybe ProtocolFilepaths
                       -> ExceptT ShelleyProtocolInstantiationError IO
-                                 (Maybe (TPraosLeaderCredentials TPraosStandardCrypto))
+                                 (Maybe (TPraosLeaderCredentials StandardShelley))
 
 -- It's OK to supply none of the files
 readLeaderCredentials Nothing = return Nothing
