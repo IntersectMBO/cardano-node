@@ -89,6 +89,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   let userAddrs = ["user1"]
   let poolAddrs = ["pool-owner1"]
   let addrs = userAddrs <> poolAddrs
+  let testnetMagic = "42"
 
   H.copyFile
     (base <> "/configuration/chairman/shelly-only/configuration.yaml")
@@ -97,7 +98,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   -- Set up our template
   void $ H.execCli
     [ "shelley", "genesis", "create"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", testnetMagic
     , "--genesis-dir", tempAbsPath
     ]
 
@@ -114,7 +115,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   -- Now generate for real
   void $ H.execCli
     [ "shelley", "genesis", "create"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", testnetMagic
     , "--genesis-dir", tempAbsPath
     , "--gen-genesis-keys", show numPraosNodes
     , "--gen-utxo-keys", "1"
@@ -238,7 +239,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
       [ "shelley", "address", "build"
       , "--payment-verification-key-file", tempAbsPath <> "/addresses/" <> addr <> ".vkey"
       , "--stake-verification-key-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", testnetMagic
       , "--out-file", tempAbsPath <> "/addresses/" <> addr <> ".addr"
       ]
 
@@ -246,7 +247,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
     void $ H.execCli
       [ "shelley", "stake-address", "build"
       , "--stake-verification-key-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", testnetMagic
       , "--out-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.addr"
       ]
 
@@ -280,7 +281,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   forM_ poolNodes $ \node -> do
     void $ H.execCli
       [ "shelley", "stake-pool", "registration-certificate"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", testnetMagic
       , "--pool-pledge", "0"
       , "--pool-cost", "0"
       , "--pool-margin", "0"
@@ -305,7 +306,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   --  4. delegate from the user1 stake address to the stake pool
   genesisTxinResult <- H.noteShowM $ S.strip <$> H.execCli
     [ "shelley", "genesis", "initial-txin"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", testnetMagic
     , "--verification-key-file", tempAbsPath <> "/utxo-keys/utxo1.vkey"
     ]
 
@@ -336,7 +337,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
     , "--signing-key-file", tempAbsPath <> "/addresses/user1-stake.skey"
     , "--signing-key-file", tempAbsPath <> "/node-pool1/owner.skey"
     , "--signing-key-file", tempAbsPath <> "/node-pool1/operator.skey"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", testnetMagic
     , "--tx-body-file", tempAbsPath <> "/tx1.txbody"
     , "--out-file", tempAbsPath <> "/tx1.tx"
     ]
@@ -407,6 +408,46 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
     H.assertByDeadlineIO deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
+
+  -- Run chairman
+  forM_ (L.take 1 allNodes) $ \node -> do
+    dbDir <- H.noteShow $ tempAbsPath <> "/db/" <> node
+    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
+    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/" <> node)
+
+    H.createDirectoryIfMissing dbDir
+    H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
+
+    hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
+    hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
+
+    H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
+
+    portString <- H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+
+    (_, _, _, hProcess, _) <- H.createProcess =<<
+      ( H.procChairman
+        [ "--timeout", "100"
+        , "--socket-path", IO.sprocketArgumentName sprocket
+        , "--config", tempAbsPath <> "/configuration.yaml"
+        , "--security-parameter", "2160"
+        , "--testnet-magic", testnetMagic
+        , "--slot-length", "20"
+        ] <&>
+        ( \cp -> cp
+          { IO.std_in = IO.CreatePipe
+          , IO.std_out = IO.UseHandle hNodeStdout
+          , IO.std_err = IO.UseHandle hNodeStderr
+          , IO.cwd = Just tempBaseAbsPath
+          }
+        )
+      )
+
+    void $ H.waitSecondsForProcess 110 hProcess
+
+    H.cat nodeStdoutFile
+    H.cat nodeStderrFile
 
 tests :: IO Bool
 tests = H.checkParallel $$discover

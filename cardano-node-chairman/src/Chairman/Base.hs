@@ -24,6 +24,7 @@ module Chairman.Base
   , writeFile
   , lbsReadFile
   , lbsWriteFile
+  , cat
   , rewriteJson
   , assertM
   , assertIO
@@ -61,6 +62,7 @@ import           Text.Show
 import qualified Control.Concurrent as IO
 import qualified Control.Monad.Trans.Resource as IO
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Data.Time.Clock.POSIX as DTC
 import qualified GHC.Stack as GHC
@@ -215,6 +217,15 @@ rewriteJson filePath f = GHC.withFrozenCallStack $ do
   case eitherDecode lbs of
     Right iv -> lbsWriteFile filePath (encode (f iv))
     Left msg -> failWithCustom GHC.callStack Nothing msg
+
+cat :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+cat filePath = GHC.withFrozenCallStack $ do
+  contents <- readFile filePath
+  void . H.annotate $ L.unlines
+    [ "━━━━ File: " <> filePath <> " ━━━━"
+    , contents
+    ]
+  return ()
 
 assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()
 assertM = (>>= H.assert)
