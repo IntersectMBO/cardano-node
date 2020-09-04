@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-|
 Module      : Chairman.IO.Network.Socket
@@ -13,6 +14,7 @@ module Chairman.IO.Network.Socket
   , listenOn
   ) where
 
+import           Control.Exception (IOException, handle)
 import           Control.Monad
 import           Data.Bool
 import           Data.Either
@@ -34,7 +36,7 @@ import qualified UnliftIO.Exception as IO
 
 -- | Check if a TCP port is open
 isPortOpen :: Int -> IO Bool
-isPortOpen port = do
+isPortOpen port = handle (\(_ :: IOException) -> return False) $ do
   socketAddressInfo:_ <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
   canConnect (IO.addrAddress socketAddressInfo)
 
