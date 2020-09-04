@@ -2,8 +2,12 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Tracing.Render
-  ( renderHeaderHash
+  ( renderBlockOrEBB
+  , renderChunkNo
+  , renderHeaderHash
   , renderHeaderHashForVerbosity
+  , renderTipInfoBlockNo
+  , renderTipInfoHash
   , renderPoint
   , renderPointAsPhrase
   , renderPointForVerbosity
@@ -25,12 +29,30 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.BM.Tracing (TracingVerbosity (..))
-import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Cardano.Tracing.ConvertTxId (ConvertTxId (..))
-import           Ouroboros.Consensus.Block (ConvertRawHash (..), RealPoint (..))
+import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId)
+import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..))
+import           Ouroboros.Consensus.Storage.ImmutableDB.Types (BlockOrEBB (..), TipInfo (..))
 import           Ouroboros.Network.Block (HeaderHash, Tip, getTipPoint)
+
+renderBlockOrEBB :: BlockOrEBB -> Text
+renderBlockOrEBB (Block slotNo) = "Block at " <> renderSlotNo slotNo
+renderBlockOrEBB (EBB epochNo) = "Epoch boundary block at " <> renderEpochNo epochNo
+
+renderChunkNo :: ChunkNo -> Text
+renderChunkNo = Text.pack . show . unChunkNo
+
+renderEpochNo :: EpochNo -> Text
+renderEpochNo = Text.pack . show . unEpochNo
+
+renderTipInfoBlockNo :: TipInfo hash a -> Text
+renderTipInfoBlockNo = Text.pack . show . unBlockNo . tipInfoBlockNo
+
+renderTipInfoHash :: Show hash => TipInfo hash a -> Text
+renderTipInfoHash tInfo = Text.pack . show $ tipInfoHash tInfo
 
 renderTxIdForVerbosity
   :: ConvertTxId blk
