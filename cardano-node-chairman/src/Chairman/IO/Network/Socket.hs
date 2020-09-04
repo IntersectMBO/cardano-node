@@ -37,8 +37,10 @@ import qualified UnliftIO.Exception as IO
 -- | Check if a TCP port is open
 isPortOpen :: Int -> IO Bool
 isPortOpen port = handle (\(_ :: IOException) -> return False) $ do
-  socketAddressInfo:_ <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
-  canConnect (IO.addrAddress socketAddressInfo)
+  socketAddressInfos <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
+  case socketAddressInfos of
+    socketAddressInfo:_ -> canConnect (IO.addrAddress socketAddressInfo)
+    [] -> return False
 
 -- | Check if it is possible to connect to a socket address
 canConnect :: SockAddr -> IO Bool
