@@ -179,7 +179,7 @@ All amounts in Lovelace
 
 Get Pool ID
 
-    cardano-cli shelley stake-pool id --verification-key-file cold.vkey
+    cardano-cli shelley stake-pool id --verification-key-file cold.vkey --output-format "hex"
 
 Check for the presence of your poolID in the network ledger state, with:
 
