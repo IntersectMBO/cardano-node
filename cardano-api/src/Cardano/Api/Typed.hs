@@ -428,7 +428,7 @@ import qualified Cardano.Chain.UTxO as Byron
 --
 -- Shelley imports
 --
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley, StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto, StandardShelley)
 
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN, KES, VRF)
 
@@ -1567,15 +1567,18 @@ data MultiSigScript = RequireSignature (Hash PaymentKey)
   deriving (Eq, Show)
 
 instance ToJSON MultiSigScript where
-  toJSON (RequireSignature payKeyHash) = String . Text.decodeUtf8 . serialiseToRawBytesHex $ payKeyHash
-  toJSON (RequireAnyOf reqSigs) = object [ "any" .= map toJSON reqSigs ]
-  toJSON (RequireAllOf reqSigs) = object [ "all" .= map toJSON reqSigs ]
+  toJSON (RequireSignature pKeyHash) =
+    object [ "paymentKeyHash" .= String (Text.decodeUtf8 . serialiseToRawBytesHex $ pKeyHash)
+           , "type" .= String "requireSignature"
+           ]
+  toJSON (RequireAnyOf reqSigs) = object [ "type" .= String "any", "scripts" .= map toJSON reqSigs ]
+  toJSON (RequireAllOf reqSigs) = object [ "type" .= String "all", "scripts" .= map toJSON reqSigs ]
   toJSON (RequireMOf reqNum reqSigs) = toJSONmOfnChecks reqSigs reqNum (length reqSigs)
 
 toJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> Value
 toJSONmOfnChecks keys required total
   | total <= 0 = error $ "Please include at least one payment \
-                         \key hash in the multisig script: " <> show keys
+                         \key hash in the multi-signature script: " <> show keys
   | length keys /= total = error $ "The number of payment key hashes submitted \
                                 \does not equal total. " ++ " total: " ++ show total
                                 ++ "Number of key hashes: " ++ show (length keys)
@@ -1587,11 +1590,11 @@ toJSONmOfnChecks keys required total
   | required <= 0 = error "The required number of payment key \
                           \hashes cannot be less than or equal to 0."
   | required == 1 = error "required is equal to one, you should use \
-                          \the \"any\" multisig script"
+                          \the \"any\" multi-signature script"
 
-  | length keys == total = object [ "atLeast" .= object [ "required" .= required
-                                                        , "list" .= map toJSON keys
-                                                        ]
+  | length keys == total = object [ "type" .= String "atLeast"
+                                  , "required" .= required
+                                  , "scripts" .= map toJSON keys
                                   ]
 
 
@@ -1606,78 +1609,70 @@ instance FromJSON MultiSigScript where
 parseMultiSigScript :: HMS.HashMap Text Value -> MultiSigScript
 parseMultiSigScript hms = case  all' hms <|> any' hms <|> atLeast hms of
                             Just mss -> mss
-                            Nothing -> error "No multisig script found"
+                            Nothing -> error "No multi-signature script found"
  where
   convertValueToMultiSigScript :: Value -> Maybe MultiSigScript
-  convertValueToMultiSigScript (String pkH) = Just . RequireSignature $ convertToHash pkH
   convertValueToMultiSigScript (Object valueHm) =
-    any' valueHm  <|> all' valueHm <|> atLeast valueHm
+     payKeyHash' valueHm <|> any' valueHm  <|> all' valueHm <|> atLeast valueHm
   convertValueToMultiSigScript _ = Nothing
+
+  payKeyHash' :: HMS.HashMap Text Value -> Maybe MultiSigScript
+  payKeyHash' hm = case HMS.lookup "type" hm of
+                    Just (String "requireSignature") ->
+                      case HMS.lookup "paymentKeyHash" hm of
+                        Just (String pkh) -> Just . RequireSignature $ convertToHash pkh
+                        Just val -> error $ "\"paymentKeyHash\" value is not a payment key hash. Value: " <> show val
+                        Nothing -> error "\"paymentKeyHash\" field is empty in your multi-signature script."
+                    _ -> Nothing
 
   gatherMultiSigScripts :: Vector Value -> [MultiSigScript]
   gatherMultiSigScripts = catMaybes . Vector.toList . Vector.map convertValueToMultiSigScript
 
   any' :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  any' hm = case HMS.lookup "any" hm of
-             Just (Array anyValue) ->
-               Just . RequireAnyOf $ gatherMultiSigScripts anyValue
-             _ -> Nothing
+  any' hm = case HMS.lookup "type" hm of
+              Just (String "any") -> case HMS.lookup "scripts" hm of
+                                       Just (Array anyValue) ->
+                                         Just . RequireAnyOf $ gatherMultiSigScripts anyValue
+                                       _ -> Nothing
+              _ -> Nothing
 
   all' :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  all' hm = case HMS.lookup "all" hm of
-             Just (Array allVectorValue) ->
-               Just . RequireAllOf $ gatherMultiSigScripts allVectorValue
+  all' hm = case HMS.lookup "type" hm of
+             Just (String "all") -> case HMS.lookup "scripts" hm of
+                                      Just (Array allVectorValue) ->
+                                        Just . RequireAllOf $ gatherMultiSigScripts allVectorValue
+                                      _ -> Nothing
              _ -> Nothing
 
   atLeast :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  atLeast hm = case HMS.lookup "atLeast" hm of
-                 Just (Object atLeastHm) ->
-                   case previousScriptSyntax atLeastHm of
-                     Nothing ->  case (HMS.lookup "required" atLeastHm, HMS.lookup "list" atLeastHm) of
-                                   (Nothing, Nothing) ->
-                                     error "atLeast multisig missing \"required\" and \"list\" keys"
-                                   (Just _, Nothing) ->
-                                     error "atLeast multisig missing \"list\" key"
-                                   (Nothing, Just _) ->
-                                     error "atLeast multisig missing \"required\" key"
-                                   (Just (Number sci), Just (Array listVectorValue)) ->
-                                      case toBoundedInteger sci of
-                                        Just reqInt ->
-                                          Just $ fromJSONmOfnChecks
-                                                   (gatherMultiSigScripts listVectorValue)
-                                                   reqInt
-                                                   (Vector.length listVectorValue)
-                                        Nothing -> error $ "Error in multisig \"required\" key: "
-                                                         <> show sci <> " is not a valid Int"
-                                   (_, _) -> Nothing
-                     Just mss -> Just mss
-                 _ -> Nothing
+  atLeast hm =
+    case HMS.lookup "type" hm of
+      Just (String "atLeast") ->
+        case (HMS.lookup "required" hm, HMS.lookup "scripts" hm) of
+          (Nothing, Nothing) ->
+            error "atLeast multi-signature missing \"required\" and \"scripts\" keys"
+          (Just _, Nothing) ->
+            error "atLeast multi-signature missing \"required\" key"
+          (Nothing, Just _) ->
+            error "atLeast multi-signature missing \"scripts\" key"
+          (Just (Number sci), Just (Array listVectorValue)) ->
+             case toBoundedInteger sci of
+               Just reqInt ->
+                 Just $ fromJSONmOfnChecks
+                          (gatherMultiSigScripts listVectorValue)
+                          reqInt
+                          (Vector.length listVectorValue)
+               Nothing -> error $ "Error in multi-signature \"required\" key: "
+                                <> show sci <> " is not a valid Int"
+          (_, _) -> Nothing
+      _ -> Nothing
 
-  -- To account for backwards compatibility
-  previousScriptSyntax :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  previousScriptSyntax hm =
-        case HMS.lookup "paymentKeyHashes" hm of
-          Just (Array pkhListVectorValue) ->
-            case HMS.lookup "required" hm of
-              Nothing ->
-                error "atLeast multisig missing \"required\" key"
-              Just (Number sci) ->
-                case toBoundedInteger sci of
-                  Just reqInt ->
-                    Just $ fromJSONmOfnChecks
-                             (gatherMultiSigScripts pkhListVectorValue)
-                             reqInt
-                             (Vector.length pkhListVectorValue)
-                  Nothing -> error $ "Error in multisig \"required\" key: "
-                                   <> show sci <> " is not a valid Int"
-              _ -> Nothing
-          _ -> Nothing
 
   fromJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> MultiSigScript
   fromJSONmOfnChecks keys required total
     | total <= 0 = error $ "No payment key hashes were parsed from multiscript object: " <> show keys
     | required <= 0 = error "The required number of payment key hashes cannot be less than or equal to 0."
-    | required == 1 = error "required is equal to one, you should use the \"any\" multisig script"
+    | required == 1 = error "required is equal to one, you should use the \"any\" multi-signature script"
     | length keys < required = error $ "required exceeds the number of payment key hashes. \
                                        \Number of keys: " ++ show (length keys)
                                      ++ " required: " ++ show required
