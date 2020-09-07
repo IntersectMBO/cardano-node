@@ -52,7 +52,7 @@ renderClientCommandError :: ClientCommandErrors -> Text
 renderClientCommandError (ByronClientError err) =
   renderByronClientCmdError err
 renderClientCommandError (ShelleyClientError cmd err) =
-  runIdentity $ renderShelleyClientCmdError cmd err
+  renderShelleyClientCmdError cmd err
 
 runDisplayVersion :: ExceptT ClientCommandErrors IO ()
 runDisplayVersion = do

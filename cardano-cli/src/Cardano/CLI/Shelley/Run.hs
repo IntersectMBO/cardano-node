@@ -36,35 +36,37 @@ data ShelleyClientCmdError
   | ShelleyCmdKeyError !ShelleyKeyCmdError
   deriving Show
 
--- Identity monad is used to avoid boilerplate
-renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Identity Text
-renderShelleyClientCmdError cmd err = do
-  cmdError <- case err of
-                ShelleyCmdAddressError addrCmdErr ->
-                  return $ renderShelleyAddressCmdError addrCmdErr
-                ShelleyCmdGenesisError genesisCmdErr ->
-                  return $ renderShelleyGenesisCmdError genesisCmdErr
-                ShelleyCmdGovernanceError govCmdErr ->
-                  return $ renderShelleyGovernanceError govCmdErr
-                ShelleyCmdNodeError nodeCmdErr ->
-                  return $ renderShelleyNodeCmdError nodeCmdErr
-                ShelleyCmdPoolError poolCmdErr ->
-                  return $ renderShelleyPoolCmdError poolCmdErr
-                ShelleyCmdStakeAddressError stakeAddrCmdErr ->
-                  return $ renderShelleyStakeAddressCmdError stakeAddrCmdErr
-                ShelleyCmdTextViewError txtViewErr ->
-                  return $ renderShelleyTextViewFileError txtViewErr
-                ShelleyCmdTransactionError txErr ->
-                  return $ renderShelleyTxCmdError txErr
-                ShelleyCmdQueryError queryErr ->
-                  return $ renderShelleyQueryCmdError queryErr
-                ShelleyCmdKeyError keyErr ->
-                  return $ renderShelleyKeyCmdError keyErr
-
-  return $ "Shelley command failed: "
-         <> renderShelleyCommand cmd
-         <> "  Error: "
-         <> cmdError
+renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Text
+renderShelleyClientCmdError cmd err =
+  case err of
+    ShelleyCmdAddressError addrCmdErr ->
+       renderError cmd renderShelleyAddressCmdError addrCmdErr
+    ShelleyCmdGenesisError genesisCmdErr ->
+       renderError cmd renderShelleyGenesisCmdError genesisCmdErr
+    ShelleyCmdGovernanceError govCmdErr ->
+       renderError cmd renderShelleyGovernanceError govCmdErr
+    ShelleyCmdNodeError nodeCmdErr ->
+       renderError cmd renderShelleyNodeCmdError nodeCmdErr
+    ShelleyCmdPoolError poolCmdErr ->
+       renderError cmd renderShelleyPoolCmdError poolCmdErr
+    ShelleyCmdStakeAddressError stakeAddrCmdErr ->
+       renderError cmd renderShelleyStakeAddressCmdError stakeAddrCmdErr
+    ShelleyCmdTextViewError txtViewErr ->
+       renderError cmd renderShelleyTextViewFileError txtViewErr
+    ShelleyCmdTransactionError txErr ->
+       renderError cmd renderShelleyTxCmdError txErr
+    ShelleyCmdQueryError queryErr ->
+       renderError cmd renderShelleyQueryCmdError queryErr
+    ShelleyCmdKeyError keyErr ->
+       renderError cmd renderShelleyKeyCmdError keyErr
+ where
+   renderError :: ShelleyCommand -> (a -> Text) -> a -> Text
+   renderError shelleyCmd renderer shelCliCmdErr =
+      mconcat [ "Shelley command failed: "
+              , renderShelleyCommand shelleyCmd
+              , "  Error: "
+              , renderer shelCliCmdErr
+              ]
 
 
 --
