@@ -26,7 +26,7 @@ import           Cardano.CLI.Shelley.Run.TextView
 data ShelleyClientCmdError
   = ShelleyCmdAddressError !ShelleyAddressCmdError
   | ShelleyCmdGenesisError !ShelleyGenesisCmdError
-  | ShelleyCmdGovernanceError !ShelleyGovernanceError
+  | ShelleyCmdGovernanceError !ShelleyGovernanceCmdError
   | ShelleyCmdNodeError !ShelleyNodeCmdError
   | ShelleyCmdPoolError !ShelleyPoolCmdError
   | ShelleyCmdStakeAddressError !ShelleyStakeAddressCmdError
@@ -36,19 +36,38 @@ data ShelleyClientCmdError
   | ShelleyCmdKeyError !ShelleyKeyCmdError
   deriving Show
 
-renderShelleyClientCmdError :: ShelleyClientCmdError -> Text
-renderShelleyClientCmdError err =
+renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Text
+renderShelleyClientCmdError cmd err =
   case err of
-    ShelleyCmdAddressError addrCmdErr -> renderShelleyAddressCmdError addrCmdErr
-    ShelleyCmdGenesisError genesisCmdErr -> renderShelleyGenesisCmdError genesisCmdErr
-    ShelleyCmdGovernanceError govCmdErr -> renderShelleyGovernanceError govCmdErr
-    ShelleyCmdNodeError nodeCmdErr -> renderShelleyNodeCmdError nodeCmdErr
-    ShelleyCmdPoolError poolCmdErr -> renderShelleyPoolCmdError poolCmdErr
-    ShelleyCmdStakeAddressError stakeAddrCmdErr -> renderShelleyStakeAddressCmdError stakeAddrCmdErr
-    ShelleyCmdTextViewError txtViewErr -> renderShelleyTextViewFileError txtViewErr
-    ShelleyCmdTransactionError txErr -> renderShelleyTxCmdError txErr
-    ShelleyCmdQueryError queryErr -> renderShelleyQueryCmdError queryErr
-    ShelleyCmdKeyError keyErr -> renderShelleyKeyCmdError keyErr
+    ShelleyCmdAddressError addrCmdErr ->
+       renderError cmd renderShelleyAddressCmdError addrCmdErr
+    ShelleyCmdGenesisError genesisCmdErr ->
+       renderError cmd renderShelleyGenesisCmdError genesisCmdErr
+    ShelleyCmdGovernanceError govCmdErr ->
+       renderError cmd renderShelleyGovernanceError govCmdErr
+    ShelleyCmdNodeError nodeCmdErr ->
+       renderError cmd renderShelleyNodeCmdError nodeCmdErr
+    ShelleyCmdPoolError poolCmdErr ->
+       renderError cmd renderShelleyPoolCmdError poolCmdErr
+    ShelleyCmdStakeAddressError stakeAddrCmdErr ->
+       renderError cmd renderShelleyStakeAddressCmdError stakeAddrCmdErr
+    ShelleyCmdTextViewError txtViewErr ->
+       renderError cmd renderShelleyTextViewFileError txtViewErr
+    ShelleyCmdTransactionError txErr ->
+       renderError cmd renderShelleyTxCmdError txErr
+    ShelleyCmdQueryError queryErr ->
+       renderError cmd renderShelleyQueryCmdError queryErr
+    ShelleyCmdKeyError keyErr ->
+       renderError cmd renderShelleyKeyCmdError keyErr
+ where
+   renderError :: ShelleyCommand -> (a -> Text) -> a -> Text
+   renderError shelleyCmd renderer shelCliCmdErr =
+      mconcat [ "Shelley command failed: "
+              , renderShelleyCommand shelleyCmd
+              , "  Error: "
+              , renderer shelCliCmdErr
+              ]
+
 
 --
 -- CLI shelley command dispatch

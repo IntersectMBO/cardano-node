@@ -43,70 +43,49 @@ import           Cardano.Api.Protocol
 import           Cardano.Api.TxSubmit as Api
 import           Cardano.Api.Typed as Api
 
-
 data ShelleyTxCmdError
-  = ShelleyTxAesonDecodeProtocolParamsError !FilePath !Text
-  | ShelleyTxMetaDataFileError !FilePath !IOException
-  | ShelleyTxMetaDataConversionError !FilePath !MetaDataJsonConversionError
-  | ShelleyTxMetaDecodeError !FilePath !CBOR.DecoderError
+  = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
+  | ShelleyTxCmdReadFileError !(FileError ())
+  | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
+  | ShelleyTxCmdWriteFileError !(FileError ())
+  | ShelleyTxCmdMetaDataConversionError !FilePath !MetaDataJsonConversionError
   | ShelleyTxMetaValidationError !FilePath !TxMetadataValidationError
-  | ShelleyTxMissingNetworkId
-  | ShelleyTxSocketEnvError !EnvSocketError
-  | ShelleyTxReadProtocolParamsError !FilePath !IOException
-  | ShelleyTxReadUpdateError !(Api.FileError Api.TextEnvelopeError)
-  | ShelleyTxReadUnsignedTxError !(Api.FileError Api.TextEnvelopeError)
-  | ShelleyTxCertReadError !(Api.FileError Api.TextEnvelopeError)
-  | ShelleyTxWriteSignedTxError !(Api.FileError ())
-  | ShelleyTxWriteUnsignedTxError !(Api.FileError ())
-  | ShelleyTxSubmitErrorByron   !(ApplyTxErr ByronBlock)
-  | ShelleyTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
-  | ShelleyTxSubmitErrorEraMismatch !EraMismatch
-  | ShelleyTxReadFileError !(Api.FileError Api.TextEnvelopeError)
-  | ShelleyTxWriteFileError !(Api.FileError ())
+  | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
+  | ShelleyTxCmdMissingNetworkId
+  | ShelleyTxCmdSocketEnvError !EnvSocketError
+  | ShelleyTxCmdTxSubmitErrorByron !(ApplyTxErr ByronBlock)
+  | ShelleyTxCmdTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
+  | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   deriving Show
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
   case err of
-    ShelleyTxReadProtocolParamsError fp ioException ->
-      "Error while reading protocol parameters at: " <> show fp
-                                       <> " Error: " <> show ioException
-    ShelleyTxMetaDataFileError fp ioException ->
-       "Error reading metadata at: " <> show fp <> " Error: " <> show ioException
-    ShelleyTxMetaDataConversionError fp metaDataErr ->
+    ShelleyTxCmdReadFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdReadTextViewFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdMetaDataConversionError fp metaDataErr ->
        "Error reading metadata at: " <> show fp
                        <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
-    ShelleyTxMetaDecodeError fp metaDataErr ->
+    ShelleyTxCmdMetaDecodeError fp metaDataErr ->
        "Error decoding CBOR metadata at: " <> show fp
                              <> " Error: " <> show metaDataErr
     ShelleyTxMetaValidationError fp valErr ->
       "Error validating transaction metadata at: " <> show fp
                                      <> " Error: " <> renderTxMetadataValidationError valErr
-    ShelleyTxReadUnsignedTxError err' ->
-      "Error while reading unsigned shelley tx: " <> Text.pack (Api.displayError err')
-    ShelleyTxReadUpdateError apiError ->
-      "Error while reading shelley update proposal: " <> Text.pack (Api.displayError apiError)
-    ShelleyTxSocketEnvError envSockErr -> renderEnvSocketError envSockErr
-    ShelleyTxAesonDecodeProtocolParamsError fp decErr ->
+    ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
+    ShelleyTxCmdAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> show fp
                                             <> " Error: " <> show decErr
-    ShelleyTxCertReadError err' ->
-      "Error reading shelley certificate at: " <> Text.pack (Api.displayError err')
-    ShelleyTxWriteSignedTxError err' ->
-      "Error while writing signed shelley tx: " <> Text.pack (Api.displayError err')
-    ShelleyTxWriteUnsignedTxError err' ->
-      "Error while writing unsigned shelley tx: " <> Text.pack (Api.displayError err')
-    ShelleyTxSubmitErrorByron res ->
+    ShelleyTxCmdTxSubmitErrorByron res ->
       "Error while submitting tx: " <> Text.pack (show res)
-    ShelleyTxSubmitErrorShelley res ->
+    ShelleyTxCmdTxSubmitErrorShelley res ->
       "Error while submitting tx: " <> Text.pack (show res)
-    ShelleyTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
+    ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
       "The era of the node and the tx do not match. " <>
       "The node is running in the " <> ledgerEraName <>
       " era, but the transaction is for the " <> otherEraName <> " era."
-    ShelleyTxReadFileError fileErr -> Text.pack (Api.displayError fileErr)
-    ShelleyTxWriteFileError fileErr -> Text.pack (Api.displayError fileErr)
-    ShelleyTxMissingNetworkId -> "Please enter network id with your byron transaction"
+    ShelleyTxCmdMissingNetworkId -> "Please enter network id with your byron transaction"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -144,7 +123,7 @@ runTxBuildRaw txins txouts ttl fee
               (TxBodyFile fpath) = do
 
     certs <- sequence
-               [ firstExceptT ShelleyTxCertReadError . newExceptT $
+               [ firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
                    Api.readFileTextEnvelope Api.AsCertificate certFile
                | CertificateFile certFile <- certFiles ]
 
@@ -159,7 +138,7 @@ runTxBuildRaw txins txouts ttl fee
       case mUpdatePropFile of
         Nothing                        -> return Nothing
         Just (UpdateProposalFile file) ->
-          fmap Just <$> firstExceptT ShelleyTxReadUpdateError $ newExceptT $
+          fmap Just <$> firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT $
             Api.readFileTextEnvelope Api.AsUpdateProposal file
 
     let txBody = Api.makeShelleyTransaction
@@ -174,7 +153,7 @@ runTxBuildRaw txins txouts ttl fee
                    txins
                    txouts
 
-    firstExceptT ShelleyTxWriteUnsignedTxError
+    firstExceptT ShelleyTxCmdWriteFileError
       . newExceptT
       $ Api.writeFileTextEnvelope fpath Nothing txBody
 
@@ -185,9 +164,9 @@ runTxSign :: TxBodyFile
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
 runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
-    txbody <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
+    txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
                 Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
-    sks    <- firstExceptT ShelleyTxReadFileError $
+    sks    <- firstExceptT ShelleyTxCmdReadTextViewFileError $
                 mapM readSigningKeyFile skFiles
 
     -- We have to handle Byron and Shelley key witnesses slightly differently
@@ -197,7 +176,7 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
     witnessesByron <-
       case (sksByron, mnw) of
         ([], Nothing) -> return []
-        (_,  Nothing) -> throwError ShelleyTxMissingNetworkId
+        (_,  Nothing) -> throwError ShelleyTxCmdMissingNetworkId
         (_,  Just nw) ->
           return $ map (Api.makeShelleyBootstrapWitness nw txbody) sksByron
 
@@ -208,14 +187,14 @@ runTxSign (TxBodyFile txbodyFile) skFiles mnw (TxFile txFile) = do
         tx        :: Api.Tx Api.Shelley
         tx        = Api.makeSignedTransaction witnesses txbody
 
-    firstExceptT ShelleyTxWriteSignedTxError . newExceptT $
+    firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       Api.writeFileTextEnvelope txFile Nothing tx
 
 runTxSubmit :: Protocol -> NetworkId -> FilePath
             -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit protocol network txFile = do
-    SocketPath sockPath <- firstExceptT ShelleyTxSocketEnvError readEnvSocketPath
-    tx <- firstExceptT ShelleyTxReadFileError
+    SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
+    tx <- firstExceptT ShelleyTxCmdReadTextViewFileError
       . newExceptT
       $ Api.readFileTextEnvelopeAnyOf
           [ Api.FromSomeType Api.AsByronTx   Left
@@ -229,10 +208,10 @@ runTxSubmit protocol network txFile = do
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureByronMode err ->
-              left (ShelleyTxSubmitErrorByron err)
+              left (ShelleyTxCmdTxSubmitErrorByron err)
 
         (ByronMode{}, Right{}) ->
-          left $ ShelleyTxSubmitErrorEraMismatch EraMismatch {
+          left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
                    ledgerEraName = "Byron",
                    otherEraName  = "Shelley"
                  }
@@ -242,10 +221,10 @@ runTxSubmit protocol network txFile = do
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureShelleyMode err ->
-              left (ShelleyTxSubmitErrorShelley err)
+              left (ShelleyTxCmdTxSubmitErrorShelley err)
 
         (ShelleyMode{}, Left{}) ->
-          left $ ShelleyTxSubmitErrorEraMismatch EraMismatch {
+          left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
                    ledgerEraName = "Shelley",
                    otherEraName  = "Byron"
                  }
@@ -255,11 +234,11 @@ runTxSubmit protocol network txFile = do
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureCardanoMode (ApplyTxErrByron err) ->
-              left (ShelleyTxSubmitErrorByron err)
+              left (ShelleyTxCmdTxSubmitErrorByron err)
             TxSubmitFailureCardanoMode (ApplyTxErrShelley err) ->
-              left (ShelleyTxSubmitErrorShelley err)
+              left (ShelleyTxCmdTxSubmitErrorShelley err)
             TxSubmitFailureCardanoMode (ApplyTxErrWrongEra mismatch) ->
-              left (ShelleyTxSubmitErrorEraMismatch mismatch)
+              left (ShelleyTxCmdTxSubmitErrorEraMismatch mismatch)
 
 
 runTxCalculateMinFee
@@ -276,7 +255,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
 
-    txbody <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
+    txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
                 Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
 
     pparams <- readProtocolParameters pParamsFile
@@ -297,8 +276,8 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
 readProtocolParameters :: ProtocolParamsFile
                        -> ExceptT ShelleyTxCmdError IO Shelley.PParams
 readProtocolParameters (ProtocolParamsFile fpath) = do
-  pparams <- handleIOExceptT (ShelleyTxReadProtocolParamsError fpath) $ LBS.readFile fpath
-  firstExceptT (ShelleyTxAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
+  pparams <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fpath) $ LBS.readFile fpath
+  firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
     Aeson.eitherDecode' pparams
 
 data SomeWitnessSigningKey
@@ -367,7 +346,7 @@ categoriseWitnessSigningKey swsk =
 
 runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId (TxBodyFile txbodyFile) = do
-  txbody <- firstExceptT ShelleyTxReadUnsignedTxError . newExceptT $
+  txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
               Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
   liftIO $ BS.putStrLn $ Api.serialiseToRawBytesHex (Api.getTxId txbody)
 
@@ -378,30 +357,30 @@ runTxWitness
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxWitness (TxBodyFile txbodyFile) witSignKeyFile mbNw (OutputFile oFile) = do
-  txbody <- firstExceptT ShelleyTxReadFileError . newExceptT $
+  txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
               Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
-  someWitSignKey <- firstExceptT ShelleyTxReadFileError $ readSigningKeyFile witSignKeyFile
+  someWitSignKey <- firstExceptT ShelleyTxCmdReadTextViewFileError $ readSigningKeyFile witSignKeyFile
 
   witness <-
     case (categoriseWitnessSigningKey someWitSignKey, mbNw) of
       -- Byron witnesses require the network ID.
-      (Left _, Nothing) -> throwError ShelleyTxMissingNetworkId
+      (Left _, Nothing) -> throwError ShelleyTxCmdMissingNetworkId
       (Left byronSk, Just nw) -> pure $ makeShelleyBootstrapWitness nw txbody byronSk
       (Right shelleySk, _) -> pure $ makeShelleyKeyWitness txbody shelleySk
 
-  firstExceptT ShelleyTxWriteFileError
+  firstExceptT ShelleyTxCmdWriteFileError
     . newExceptT
     $ Api.writeFileTextEnvelope oFile Nothing witness
 
 runTxSignWitness :: TxBodyFile -> [WitnessFile] -> OutputFile -> ExceptT ShelleyTxCmdError IO ()
 runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
-    txBody <- firstExceptT ShelleyTxReadFileError
+    txBody <- firstExceptT ShelleyTxCmdReadTextViewFileError
       . newExceptT
       $ Api.readFileTextEnvelope Api.AsShelleyTxBody txBodyFile
-    witnesses <- firstExceptT ShelleyTxReadFileError
+    witnesses <- firstExceptT ShelleyTxCmdReadTextViewFileError
       $ mapM readWitnessFile witnessFiles
     let tx = Api.makeSignedTransaction witnesses txBody
-    firstExceptT ShelleyTxWriteFileError
+    firstExceptT ShelleyTxCmdWriteFileError
       . newExceptT
       $ Api.writeFileTextEnvelope oFp Nothing tx
   where
@@ -418,17 +397,17 @@ runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
 readFileTxMetaData :: MetaDataFile
                    -> ExceptT ShelleyTxCmdError IO Api.TxMetadata
 readFileTxMetaData (MetaDataFileJSON fp) = do
-    bs <- handleIOExceptT (ShelleyTxMetaDataFileError fp) $
+    bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           LBS.readFile fp
-    v  <- firstExceptT (ShelleyTxMetaDataConversionError fp . ConversionErrDecodeJSON) $
+    v  <- firstExceptT (ShelleyTxCmdMetaDataConversionError fp . ConversionErrDecodeJSON) $
           hoistEither $
             Aeson.eitherDecode' bs
-    firstExceptT (ShelleyTxMetaDataConversionError fp) $ hoistEither $
+    firstExceptT (ShelleyTxCmdMetaDataConversionError fp) $ hoistEither $
       jsonToMetadata v
 readFileTxMetaData (MetaDataFileCBOR fp) = do
-    bs <- handleIOExceptT (ShelleyTxMetaDataFileError fp) $
+    bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           BS.readFile fp
-    txMetadata <- firstExceptT (ShelleyTxMetaDecodeError fp) $ hoistEither $
+    txMetadata <- firstExceptT (ShelleyTxCmdMetaDecodeError fp) $ hoistEither $
       Api.deserialiseFromCBOR Api.AsTxMetadata bs
     firstExceptT (ShelleyTxMetaValidationError fp . NE.head) $ hoistEither $
       validateTxMetadata txMetadata

@@ -16,6 +16,7 @@ module Cardano.CLI.Shelley.Commands
   , GovernanceCmd (..)
   , GenesisCmd (..)
   , TextViewCmd (..)
+  , renderShelleyCommand
 
     -- * CLI flag types
   , AddressKeyType (..)
@@ -74,6 +75,19 @@ data ShelleyCommand
   | TextViewCmd     TextViewCmd
   deriving (Eq, Show)
 
+renderShelleyCommand :: ShelleyCommand -> Text
+renderShelleyCommand sc =
+  case sc of
+    AddressCmd cmd -> renderAddressCmd cmd
+    StakeAddressCmd cmd -> renderStakeAddressCmd cmd
+    KeyCmd cmd -> renderKeyCmd cmd
+    TransactionCmd cmd -> renderTransactionCmd cmd
+    NodeCmd cmd -> renderNodeCmd cmd
+    PoolCmd cmd -> renderPoolCmd cmd
+    QueryCmd cmd -> renderQueryCmd cmd
+    GovernanceCmd cmd -> renderGovernanceCmd cmd
+    GenesisCmd cmd -> renderGenesisCmd cmd
+    TextViewCmd cmd -> renderTextViewCmd cmd
 
 data AddressCmd
   = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
@@ -84,6 +98,17 @@ data AddressCmd
   | AddressInfo Text (Maybe OutputFile)
   deriving (Eq, Show)
 
+
+renderAddressCmd :: AddressCmd -> Text
+renderAddressCmd cmd =
+  case cmd of
+    AddressKeyGen {} -> "address key-gen"
+    AddressKeyHash {} -> "address key-hash"
+    AddressBuild {} -> "address build"
+    AddressBuildMultiSig {} -> "address build-multisig"
+    AddressInfo {} -> "address info"
+    AddressBuildScript {} -> "address build-script"
+
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
   | StakeAddressKeyHash VerificationKeyFile (Maybe OutputFile)
@@ -92,6 +117,16 @@ data StakeAddressCmd
   | StakeKeyDelegationCert VerificationKeyFile StakePoolVerificationKeyHashOrFile OutputFile
   | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
   deriving (Eq, Show)
+
+renderStakeAddressCmd :: StakeAddressCmd -> Text
+renderStakeAddressCmd cmd =
+  case cmd of
+    StakeAddressKeyGen {} -> "stake-address key-gen"
+    StakeAddressKeyHash {} -> "stake-address key-hash"
+    StakeAddressBuild {} -> "stake-address build"
+    StakeKeyRegistrationCert {} -> "stake-address registration-certificate"
+    StakeKeyDelegationCert {} -> "stake-address delegation-certificate"
+    StakeKeyDeRegistrationCert {} -> "stake-address deregistration-certificate"
 
 data KeyCmd
   = KeyGetVerificationKey SigningKeyFile VerificationKeyFile
@@ -102,6 +137,17 @@ data KeyCmd
   | KeyConvertITNExtendedToStakeKey SomeKeyFile OutputFile
   | KeyConvertITNBip32ToStakeKey SomeKeyFile OutputFile
   deriving (Eq, Show)
+
+renderKeyCmd :: KeyCmd -> Text
+renderKeyCmd cmd =
+  case cmd of
+    KeyGetVerificationKey {} -> "key verification-key"
+    KeyNonExtendedKey {} -> "key non-extended-key"
+    KeyConvertByronKey {} -> "key convert-byron-key"
+    KeyConvertByronGenesisVKey {} -> "key convert-byron-genesis-key"
+    KeyConvertITNStakeKey {} -> "key convert-itn-key"
+    KeyConvertITNExtendedToStakeKey {} -> "key convert-itn-extended-key"
+    KeyConvertITNBip32ToStakeKey {} -> "key convert-itn-bip32-key"
 
 data TransactionCmd
   = TxBuildRaw
@@ -129,6 +175,16 @@ data TransactionCmd
   | TxGetTxId TxBodyFile
   deriving (Eq, Show)
 
+renderTransactionCmd :: TransactionCmd -> Text
+renderTransactionCmd cmd =
+  case cmd of
+    TxBuildRaw {} -> "transaction build-raw"
+    TxSign {} -> "transaction sign"
+    TxWitness {} -> "transaction witness"
+    TxSignWitness {} -> "transaction sign-witness"
+    TxSubmit {} -> "transaction submit"
+    TxCalculateMinFee {} -> "transaction calculate-min-fee"
+    TxGetTxId {} -> "transaction txid"
 
 data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
@@ -139,6 +195,17 @@ data NodeCmd
   | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
   deriving (Eq, Show)
+
+renderNodeCmd :: NodeCmd -> Text
+renderNodeCmd cmd = do
+  case cmd of
+    NodeKeyGenCold {} -> "node key-gen"
+    NodeKeyGenKES {} -> "node key-gen-KES"
+    NodeKeyGenVRF {} -> "node key-gen-VRF"
+    NodeKeyHashVRF {} -> "node key-hash-VRF"
+    NodeNewCounter {} -> "node new-counter"
+    NodeIssueOpCert{} -> "node issue-op-cert"
+
 
 data PoolCmd
   = PoolRegistrationCert
@@ -166,12 +233,19 @@ data PoolCmd
       VerificationKeyFile
       -- ^ Stake pool verification key.
       EpochNo
-      -- ^ Epoch in which to retire the stake pool. --TODO: Double check this
+      -- ^ Epoch in which to retire the stake pool.
       OutputFile
   | PoolGetId VerificationKeyFile OutputFormat
   | PoolMetaDataHash PoolMetaDataFile (Maybe OutputFile)
   deriving (Eq, Show)
 
+renderPoolCmd :: PoolCmd -> Text
+renderPoolCmd cmd =
+  case cmd of
+    PoolRegistrationCert {} -> "stake-pool registration-certificate"
+    PoolRetirementCert {} -> "stake-pool deregistration-certificate"
+    PoolGetId {} -> "stake-pool id"
+    PoolMetaDataHash {} -> "stake-pool metadata-hash"
 
 data QueryCmd =
     QueryProtocolParameters Protocol NetworkId (Maybe OutputFile)
@@ -181,6 +255,16 @@ data QueryCmd =
   | QueryUTxO Protocol QueryFilter NetworkId (Maybe OutputFile)
   | QueryLedgerState Protocol NetworkId (Maybe OutputFile)
   deriving (Eq, Show)
+
+renderQueryCmd :: QueryCmd -> Text
+renderQueryCmd cmd =
+  case cmd of
+    QueryProtocolParameters {} -> "query protocol-parameters "
+    QueryTip {} -> "query tip"
+    QueryStakeDistribution {} -> "query stake-distribution"
+    QueryStakeAddressInfo {} -> "query stake-address-info"
+    QueryUTxO {} -> "query utxo"
+    QueryLedgerState {} -> "query ledger-state"
 
 data GovernanceCmd
   = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Lovelace] OutputFile
@@ -194,10 +278,20 @@ data GovernanceCmd
                              ProtocolParametersUpdate
   deriving (Eq, Show)
 
+renderGovernanceCmd :: GovernanceCmd -> Text
+renderGovernanceCmd cmd =
+  case cmd of
+    GovernanceGenesisKeyDelegationCertificate {} -> "governance create-genesis-key-delegation-certificate"
+    GovernanceMIRCertificate {} -> "governance create-mir-certificate"
+    GovernanceUpdateProposal {} -> "governance create-update-proposal"
 
 data TextViewCmd
   = TextViewInfo !FilePath (Maybe OutputFile)
   deriving (Eq, Show)
+
+
+renderTextViewCmd :: TextViewCmd -> Text
+renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
@@ -210,6 +304,19 @@ data GenesisCmd
   | GenesisAddr VerificationKeyFile NetworkId (Maybe OutputFile)
   | GenesisHashFile GenesisFile
   deriving (Eq, Show)
+
+renderGenesisCmd :: GenesisCmd -> Text
+renderGenesisCmd cmd =
+  case cmd of
+    GenesisCreate {} -> "genesis create"
+    GenesisKeyGenGenesis {} -> "genesis key-gen-genesis"
+    GenesisKeyGenDelegate {} -> "genesis key-gen-delegate"
+    GenesisKeyGenUTxO {} -> "genesis key-gen-utxo"
+    GenesisCmdKeyHash {} -> "genesis key-hash"
+    GenesisVerKey {} -> "genesis get-ver-key"
+    GenesisTxIn {} -> "genesis initial-txin"
+    GenesisAddr {} -> "genesis initial-addr"
+    GenesisHashFile {} -> "genesis hash"
 
 --
 -- Shelley CLI flag/option data types

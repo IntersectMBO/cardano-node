@@ -73,32 +73,19 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQu
 
 
 data ShelleyQueryCmdError
-  = ShelleyQueryEnvVarSocketErr !EnvSocketError
-  | ShelleyQueryNodeLocalStateQueryError !LocalStateQueryError
-  | ShelleyQueryWriteProtocolParamsError !FilePath !IOException
-  | ShelleyQueryWriteFilteredUTxOsError !FilePath !IOException
-  | ShelleyQueryWriteStakeDistributionError !FilePath !IOException
-  | ShelleyQueryWriteLedgerStateError !FilePath !IOException
-  | ShelleyQueryWriteStakeAddressInfoError !FilePath !IOException
-  | ShelleyHelpersError !HelpersError
+  = ShelleyQueryCmdEnvVarSocketErr !EnvSocketError
+  | ShelleyQueryCmdLocalStateQueryError !ShelleyQueryCmdLocalStateQueryError
+  | ShelleyQueryCmdWriteFileError !(FileError ())
+  | ShelleyQueryCmdHelpersError !HelpersError
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
 renderShelleyQueryCmdError err =
   case err of
-    ShelleyQueryEnvVarSocketErr envSockErr -> renderEnvSocketError envSockErr
-    ShelleyQueryNodeLocalStateQueryError lsqErr -> renderLocalStateQueryError lsqErr
-    ShelleyQueryWriteProtocolParamsError fp ioException ->
-      "Error writing protocol parameters at: " <> show fp <> " Error: " <> show ioException
-    ShelleyQueryWriteFilteredUTxOsError fp ioException ->
-      "Error writing filtered UTxOs at: " <> show fp <> " Error: " <> show ioException
-    ShelleyQueryWriteStakeDistributionError fp ioException ->
-      "Error writing stake distribution at: " <> show fp <> " Error: " <> show ioException
-    ShelleyQueryWriteLedgerStateError fp ioException ->
-      "Error writing ledger state at: " <> show fp <> " Error: " <> show ioException
-    ShelleyQueryWriteStakeAddressInfoError fp ioException ->
-      "Error writing stake address info at: " <> show fp <> " Error: " <> show ioException
-    ShelleyHelpersError helpersErr -> renderHelpersError helpersErr
+    ShelleyQueryCmdEnvVarSocketErr envSockErr -> renderEnvSocketError envSockErr
+    ShelleyQueryCmdLocalStateQueryError lsqErr -> renderLocalStateQueryError lsqErr
+    ShelleyQueryCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -123,9 +110,9 @@ runQueryProtocolParameters
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolParameters protocol network mOutFile = do
-    SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
                            readEnvSocketPath
-    pparams <- firstExceptT ShelleyQueryNodeLocalStateQueryError $
+    pparams <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
                withlocalNodeConnectInfo protocol network sockPath
                  queryPParamsFromLocalState
     writeProtocolParameters mOutFile pparams
@@ -135,7 +122,7 @@ writeProtocolParameters mOutFile pparams =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
     Just (OutputFile fpath) ->
-      handleIOExceptT (ShelleyQueryWriteProtocolParamsError fpath) $
+      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
         LBS.writeFile fpath (encodePretty pparams)
 
 runQueryTip
@@ -144,9 +131,9 @@ runQueryTip
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryTip protocol network mOutFile = do
-    SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
     output <-
-      firstExceptT ShelleyQueryNodeLocalStateQueryError $
+      firstExceptT ShelleyQueryCmdLocalStateQueryError $
       withlocalNodeConnectInfo protocol network sockPath $ \connectInfo -> do
         tip <- liftIO $ getLocalTip connectInfo
         let output = case localNodeConsensusMode connectInfo of
@@ -166,8 +153,8 @@ runQueryUTxO
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryUTxO protocol qfilter network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  filteredUtxo <- firstExceptT ShelleyQueryNodeLocalStateQueryError $
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  filteredUtxo <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
     withlocalNodeConnectInfo protocol network sockPath (queryUTxOFromLocalState qfilter)
   writeFilteredUTxOs mOutFile filteredUtxo
 
@@ -177,14 +164,14 @@ runQueryLedgerState
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLedgerState protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  els <- firstExceptT ShelleyQueryNodeLocalStateQueryError $
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
     withlocalNodeConnectInfo protocol network sockPath queryLocalLedgerState
   case els of
     Right lstate -> writeLedgerState mOutFile lstate
     Left lbs -> do
       liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
-      firstExceptT ShelleyHelpersError $ pPrintCBOR lbs
+      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR lbs
 
 runQueryStakeAddressInfo
   :: Protocol
@@ -193,8 +180,8 @@ runQueryStakeAddressInfo
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeAddressInfo protocol addr network mOutFile = do
-    SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-    delegsAndRwds <- firstExceptT ShelleyQueryNodeLocalStateQueryError $
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    delegsAndRwds <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
       withlocalNodeConnectInfo
         protocol
         network
@@ -205,7 +192,7 @@ runQueryStakeAddressInfo protocol addr network mOutFile = do
 -- -------------------------------------------------------------------------------------------------
 
 -- | An error that can occur while querying a node's local state.
-data LocalStateQueryError
+data ShelleyQueryCmdLocalStateQueryError
   = AcquireFailureError !LocalStateQuery.AcquireFailure
   | EraMismatchError !EraMismatch
   -- ^ A query from a certain era was applied to a ledger from a different
@@ -214,7 +201,7 @@ data LocalStateQueryError
   -- ^ The query does not support the Byron protocol.
   deriving (Eq, Show)
 
-renderLocalStateQueryError :: LocalStateQueryError -> Text
+renderLocalStateQueryError :: ShelleyQueryCmdLocalStateQueryError -> Text
 renderLocalStateQueryError lsqErr =
   case lsqErr of
     AcquireFailureError err -> "Local state query acquire failure: " <> show err
@@ -231,7 +218,7 @@ writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _ _delegsAndRwds) =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty dr)
     Just (OutputFile fpath) ->
-      handleIOExceptT (ShelleyQueryWriteStakeAddressInfoError fpath)
+      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty dr)
 
 writeLedgerState :: Maybe OutputFile -> EpochState StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
@@ -239,7 +226,7 @@ writeLedgerState mOutFile lstate =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty lstate)
     Just (OutputFile fpath) ->
-      handleIOExceptT (ShelleyQueryWriteLedgerStateError fpath)
+      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty lstate)
 
 writeFilteredUTxOs :: Maybe OutputFile -> Ledger.UTxO StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
@@ -247,7 +234,7 @@ writeFilteredUTxOs mOutFile utxo =
     case mOutFile of
       Nothing -> liftIO $ printFilteredUTxOs utxo
       Just (OutputFile fpath) ->
-        handleIOExceptT (ShelleyQueryWriteFilteredUTxOsError fpath) $ LBS.writeFile fpath (encodePretty utxo)
+        handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $ LBS.writeFile fpath (encodePretty utxo)
 
 printFilteredUTxOs :: Ledger.UTxO StandardShelley -> IO ()
 printFilteredUTxOs (Ledger.UTxO utxo) = do
@@ -280,8 +267,8 @@ runQueryStakeDistribution
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeDistribution protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryEnvVarSocketErr readEnvSocketPath
-  stakeDist <- firstExceptT ShelleyQueryNodeLocalStateQueryError $
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  stakeDist <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
       withlocalNodeConnectInfo
         protocol
         network
@@ -293,7 +280,7 @@ writeStakeDistribution :: Maybe OutputFile
                        -> PoolDistr StandardShelley
                        -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDist) =
-    handleIOExceptT (ShelleyQueryWriteStakeDistributionError outFile) $
+    handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
       LBS.writeFile outFile (encodePretty stakeDist)
 
 writeStakeDistribution Nothing stakeDist =
@@ -335,7 +322,7 @@ printStakeDistribution (PoolDistr stakeDist) = do
 queryUTxOFromLocalState
   :: QueryFilter
   -> LocalNodeConnectInfo mode block
-  -> ExceptT LocalStateQueryError IO (Ledger.UTxO StandardShelley)
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (Ledger.UTxO StandardShelley)
 queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
@@ -409,7 +396,7 @@ instance ToJSON DelegationsAndRewards where
 --
 queryPParamsFromLocalState
   :: LocalNodeConnectInfo mode block
-  -> ExceptT LocalStateQueryError IO PParams
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO PParams
 queryPParamsFromLocalState LocalNodeConnectInfo{
                              localNodeConsensusMode = ByronMode{}
                            } =
@@ -445,7 +432,7 @@ queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
 --
 queryStakeDistributionFromLocalState
   :: LocalNodeConnectInfo mode block
-  -> ExceptT LocalStateQueryError IO (PoolDistr StandardShelley)
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (PoolDistr StandardShelley)
 queryStakeDistributionFromLocalState LocalNodeConnectInfo{
                                        localNodeConsensusMode = ByronMode{}
                                      } =
@@ -475,7 +462,7 @@ queryStakeDistributionFromLocalState connectInfo@LocalNodeConnectInfo{
 
 queryLocalLedgerState
   :: LocalNodeConnectInfo mode blk
-  -> ExceptT LocalStateQueryError IO
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
              (Either LByteString (Ledger.EpochState StandardShelley))
 queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
   case localNodeConsensusMode of
@@ -516,7 +503,7 @@ queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
 queryDelegationsAndRewardsFromLocalState
   :: Set StakeAddress
   -> LocalNodeConnectInfo mode block
-  -> ExceptT LocalStateQueryError IO DelegationsAndRewards
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO DelegationsAndRewards
 queryDelegationsAndRewardsFromLocalState stakeaddrs
                                          connectInfo@LocalNodeConnectInfo{
                                            localNodeNetworkId,

@@ -19,19 +19,19 @@ import qualified Data.Text as Text
 {- HLINT ignore "Reduce duplication" -}
 
 data ShelleyNodeCmdError
-  = ShelleyNodeReadFileError !(FileError TextEnvelopeError)
-  | ShelleyNodeWriteFileError !(FileError ())
-  | ShelleyNodeOperationalCertificateIssueError !OperationalCertIssueError
+  = ShelleyNodeCmdReadFileError !(FileError TextEnvelopeError)
+  | ShelleyNodeCmdWriteFileError !(FileError ())
+  | ShelleyNodeCmdOperationalCertificateIssueError !OperationalCertIssueError
   deriving Show
 
 renderShelleyNodeCmdError :: ShelleyNodeCmdError -> Text
 renderShelleyNodeCmdError err =
   case err of
-    ShelleyNodeReadFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyNodeCmdReadFileError fileErr -> Text.pack (displayError fileErr)
 
-    ShelleyNodeWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyNodeCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
 
-    ShelleyNodeOperationalCertificateIssueError issueErr ->
+    ShelleyNodeCmdOperationalCertificateIssueError issueErr ->
       Text.pack (displayError issueErr)
 
 
@@ -58,13 +58,13 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
                   (OpCertCounterFile ocertCtrPath) = do
     skey <- liftIO $ generateSigningKey AsStakePoolKey
     let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter initialCounter vkey
@@ -84,10 +84,10 @@ runNodeKeyGenKES :: VerificationKeyFile
 runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     skey <- liftIO $ generateSigningKey AsKesKey
     let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
   where
@@ -101,10 +101,10 @@ runNodeKeyGenVRF :: VerificationKeyFile -> SigningKeyFile
 runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     skey <- liftIO $ generateSigningKey AsVrfKey
     let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
   where
@@ -115,7 +115,7 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
 runNodeKeyHashVRF :: VerificationKeyFile -> Maybe OutputFile
                   -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyHashVRF (VerificationKeyFile vkeyPath) mOutputFp = do
-  vkey <- firstExceptT ShelleyNodeReadFileError
+  vkey <- firstExceptT ShelleyNodeCmdReadFileError
     . newExceptT
     $ readFileTextEnvelope (AsVerificationKey AsVrfKey) vkeyPath
 
@@ -133,7 +133,7 @@ runNodeNewCounter :: VerificationKeyFile
 runNodeNewCounter (VerificationKeyFile vkeyPath) counter
                   (OpCertCounterFile ocertCtrPath) = do
 
-    vkey <- firstExceptT ShelleyNodeReadFileError . newExceptT $
+    vkey <- firstExceptT ShelleyNodeCmdReadFileError . newExceptT $
               readFileTextEnvelopeAnyOf
                 [ FromSomeType (AsVerificationKey AsStakePoolKey) id
                 , FromSomeType (AsVerificationKey AsGenesisDelegateKey)
@@ -144,7 +144,7 @@ runNodeNewCounter (VerificationKeyFile vkeyPath) counter
     let ocertIssueCounter =
           OperationalCertificateIssueCounter (fromIntegral counter) vkey
 
-    firstExceptT ShelleyNodeWriteFileError . newExceptT $
+    firstExceptT ShelleyNodeCmdWriteFileError . newExceptT $
       writeFileTextEnvelope ocertCtrPath Nothing ocertIssueCounter
 
 
@@ -165,20 +165,20 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
                    kesPeriod
                    (OutputFile certFile) = do
 
-    ocertIssueCounter <- firstExceptT ShelleyNodeReadFileError
+    ocertIssueCounter <- firstExceptT ShelleyNodeCmdReadFileError
       . newExceptT
       $ readFileTextEnvelope AsOperationalCertificateIssueCounter ocertCtrPath
 
-    verKeyKes <- firstExceptT ShelleyNodeReadFileError
+    verKeyKes <- firstExceptT ShelleyNodeCmdReadFileError
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsKesKey) vkeyKesPath
 
-    signKey <- firstExceptT ShelleyNodeReadFileError
+    signKey <- firstExceptT ShelleyNodeCmdReadFileError
       . newExceptT
       $ readFileTextEnvelopeAnyOf possibleBlockIssuers skeyStakePoolPath
 
     (ocert, nextOcertCtr) <-
-      firstExceptT ShelleyNodeOperationalCertificateIssueError
+      firstExceptT ShelleyNodeCmdOperationalCertificateIssueError
         . hoistEither
         $ issueOperationalCertificate
             verKeyKes
@@ -188,14 +188,14 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
 
     -- Write the counter first, to reduce the chance of ending up with
     -- a new cert but without updating the counter.
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope
         ocertCtrPath
         (Just $ ocertCtrDesc $ getCounter nextOcertCtr)
         nextOcertCtr
 
-    firstExceptT ShelleyNodeWriteFileError
+    firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope certFile Nothing ocert
   where
