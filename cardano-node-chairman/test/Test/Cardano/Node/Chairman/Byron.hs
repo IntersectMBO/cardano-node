@@ -7,8 +7,8 @@ module Test.Cardano.Node.Chairman.Byron
   ) where
 
 import           Chairman.IO.Network.Sprocket (Sprocket (..))
+import           Chairman.Time
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
 import           Data.Bool
 import           Data.Function
 import           Data.Functor
@@ -22,11 +22,13 @@ import           Hedgehog (Property, discover)
 import           System.IO (IO)
 import           Text.Show
 
-import qualified Chairman.Base as H
+import qualified Chairman.Hedgehog.Base as H
+import qualified Chairman.Hedgehog.File as H
+import qualified Chairman.Hedgehog.Process as H
 import qualified Chairman.IO.File as IO
 import qualified Chairman.IO.Network.Socket as IO
 import qualified Chairman.IO.Network.Sprocket as IO
-import qualified Chairman.Process as H
+import qualified Chairman.String as S
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
@@ -41,8 +43,8 @@ rewriteConfiguration :: String -> String
 rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
-prop_spawnByronCluster :: Property
-prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+prop_chairman :: Property
+prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   let nodeCount = 3
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
@@ -56,7 +58,7 @@ prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath 
   void $ H.execCli
     [ "genesis"
     , "--genesis-output-dir", tempAbsPath <> "/genesis"
-    , "--start-time", H.showUTCTimeSeconds startTime
+    , "--start-time", showUTCTimeSeconds startTime
     , "--protocol-parameters-file", base <> "/scripts/protocol-params.json"
     , "--k", "2160"
     , "--protocol-magic", "459045235"
@@ -70,7 +72,7 @@ prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath 
     , "--secret-seed", "2718281828"
     ]
 
-  H.writeFile (tempAbsPath <> "/genesis/GENHASH") . L.unlines . L.reverse . L.take 1 . L.reverse . L.lines =<< H.execCli
+  H.writeFile (tempAbsPath <> "/genesis/GENHASH") . S.lastLine =<< H.execCli
     [ "print-genesis-hash"
     , "--genesis-json"
     , tempAbsPath <> "/genesis/genesis.json"
@@ -96,11 +98,10 @@ prop_spawnByronCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath 
 
     H.copyFile (baseConfig <> "/topology-node-" <> si <> ".json") (tempAbsPath <> "/topology-node-" <> si <> ".json")
     H.writeFile (tempAbsPath <> "/config-" <> si <> ".yaml") . L.unlines . fmap rewriteConfiguration . L.lines =<<
-      H.evalIO (IO.readFile (baseConfig <> "/config-" <> si <> ".yaml"))
+      H.readFile (baseConfig <> "/config-" <> si <> ".yaml")
 
-
-    hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
+    hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
+    hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
 
     H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 

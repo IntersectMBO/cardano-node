@@ -31,17 +31,20 @@ library
                       , unordered-containers
                       , Win32-network
   exposed-modules:      Chairman.Aeson
-                        Chairman.Base
+                        Chairman.Hedgehog.Base
+                        Chairman.Hedgehog.File
+                        Chairman.Hedgehog.Network
+                        Chairman.Hedgehog.Process
                         Chairman.IO.File
                         Chairman.IO.Network.NamedPipe
                         Chairman.IO.Network.Socket
                         Chairman.IO.Network.Sprocket
                         Chairman.IO.Process
-                        Chairman.Network
+                        Chairman.Monad
                         Chairman.OS
                         Chairman.Plan
-                        Chairman.Process
                         Chairman.String
+                        Chairman.Time
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall

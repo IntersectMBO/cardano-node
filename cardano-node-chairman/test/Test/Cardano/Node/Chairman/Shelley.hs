@@ -3,54 +3,40 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-
 module Test.Cardano.Node.Chairman.Shelley
   ( tests
   ) where
 
 import           Chairman.Aeson
 import           Chairman.IO.Network.Sprocket (Sprocket (..))
-import           Control.Concurrent.Async
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
 import           Data.Aeson
 import           Data.Bool
-import           Data.Char
-import           Data.Either
 import           Data.Function
 import           Data.Functor
-import           Data.HashMap.Lazy (HashMap)
 import           Data.Int
-import           Data.Map (Map)
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
-import           Data.Text (Text)
 import           GHC.Float
-import           GHC.Num
-import           Hedgehog (Property, discover, (===))
-import           System.Exit (ExitCode (..))
+import           Hedgehog (Property, discover)
 import           System.IO (IO)
 import           Text.Read
 import           Text.Show
 
-import qualified Chairman.Base as H
+import qualified Chairman.Hedgehog.Base as H
+import qualified Chairman.Hedgehog.File as H
+import qualified Chairman.Hedgehog.Process as H
 import qualified Chairman.IO.File as IO
 import qualified Chairman.IO.Network.Socket as IO
 import qualified Chairman.IO.Network.Sprocket as IO
-import qualified Chairman.Process as H
 import qualified Chairman.String as S
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
-import qualified Data.Map.Lazy as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified System.Directory as IO
-import qualified System.Environment as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.IO as IO
 import qualified System.Process as IO
@@ -70,16 +56,12 @@ rewriteGenesisSpec supply =
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
-prop_spawnShelleyCluster :: Property
-prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+prop_chairman :: Property
+prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
-  baseConfig <- H.noteShow $ base <> "/configuration/chairman/defaults/simpleview"
-  currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
   socketDir <- H.noteShow $ tempRelPath <> "/socket"
-  env <- H.evalIO IO.getEnvironment
 
   let praosNodes = ["node-praos1", "node-praos2"] :: [String]
   let praosNodesN = ["1", "2"] :: [String]
@@ -111,7 +93,7 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
   -- cycling KES keys
   H.rewriteJson (tempAbsPath <> "/genesis.spec.json") (rewriteGenesisSpec supply)
 
-  _ <- H.noteShowM . H.evalM $ eitherDecode @Value <$> H.lbsReadFile (tempAbsPath <> "/genesis.spec.json")
+  H.assertIsJsonFile $ tempAbsPath <> "/genesis.spec.json"
 
   -- Now generate for real
   void $ H.execCli
@@ -164,7 +146,6 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
       , "--operational-certificate-issue-counter-file", tempAbsPath <> "/" <> node <> "/operator.counter"
       , "--out-file", tempAbsPath <> "/" <> node <> "/node.cert"
       ]
-
 
   -- Make topology files
   -- TODO generalise this over the N BFT nodes and pool nodes
@@ -362,8 +343,8 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
     H.createDirectoryIfMissing dbDir
     H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
 
-    hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
+    hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
+    hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
 
     H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
@@ -418,8 +399,8 @@ prop_spawnShelleyCluster = H.propertyOnce . H.workspace "chairman" $ \tempAbsPat
 
     H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
 
-    hNodeStdout <- H.evalM . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.evalM . liftIO $ IO.openFile nodeStderrFile IO.WriteMode
+    hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
+    hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
 
     (_, _, _, hProcess, _) <- H.createProcess =<<
       ( H.procChairman

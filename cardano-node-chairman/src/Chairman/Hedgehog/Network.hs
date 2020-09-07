@@ -1,4 +1,4 @@
-module Chairman.Network
+module Chairman.Hedgehog.Network
   ( doesFileExists
   , isPortOpen
   , doesSocketExist
@@ -14,7 +14,7 @@ import           Data.Int
 import           GHC.Stack (HasCallStack)
 import           System.IO (FilePath)
 
-import qualified Chairman.Base as H
+import qualified Chairman.Hedgehog.Base as H
 import qualified Chairman.IO.Network.Socket as IO
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
