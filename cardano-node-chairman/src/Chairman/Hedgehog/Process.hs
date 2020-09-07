@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Chairman.Process
+module Chairman.Hedgehog.Process
   ( createProcess
   , execFlex
   , getProjectBase
@@ -14,7 +14,7 @@ module Chairman.Process
   , waitSecondsForProcess
   ) where
 
-import           Chairman.Base (Integration)
+import           Chairman.Hedgehog.Base (Integration)
 import           Chairman.IO.Process (TimedOut (..))
 import           Chairman.Plan
 import           Control.Concurrent.Async
@@ -29,26 +29,22 @@ import           Data.Eq
 import           Data.Function
 import           Data.Int
 import           Data.Maybe (Maybe (..))
-import           Data.Monoid
 import           Data.Semigroup ((<>))
 import           Data.String (String)
-import           GHC.Stack (CallStack, HasCallStack)
-import           Hedgehog (MonadTest)
-import           Hedgehog.Internal.Property (Diff, liftTest, mkTest)
-import           Hedgehog.Internal.Source (getCaller)
+import           GHC.Stack (HasCallStack)
 import           Prelude (error)
 import           System.Exit (ExitCode)
 import           System.IO (Handle)
 import           System.Process (CmdSpec (..), CreateProcess (..), ProcessHandle)
 import           Text.Show
 
+import qualified Chairman.Hedgehog.Base as H
 import qualified Chairman.IO.Process as IO
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
-import qualified Hedgehog.Internal.Property as H
 import qualified System.Environment as IO
 import qualified System.Exit as IO
 import qualified System.Process as IO
@@ -109,7 +105,7 @@ execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
   H.annotate $ "Command: " <> actualBin <> " " <> L.unwords actualArguments
   (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readProcessWithExitCode actualBin actualArguments ""
   case exitResult of
-    IO.ExitFailure exitCode -> failWithCustom GHC.callStack Nothing . L.unlines $
+    IO.ExitFailure exitCode -> H.failMessage GHC.callStack . L.unlines $
       [ "Process exited with non-zero exit-code"
       , "━━━━ command ━━━━"
       , pkgBin <> " " <> L.unwords (fmap argQuote arguments)
@@ -216,8 +212,3 @@ getProjectBase = do
   case maybeNodeSrc of
     Just path -> return path
     Nothing -> return ".."
-
--- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
-failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a
-failWithCustom cs mdiff msg =
-  liftTest $ mkTest (Left $ H.Failure (getCaller cs) msg mdiff, mempty)

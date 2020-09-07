@@ -19,9 +19,9 @@ import           Network.Socket (Socket)
 import           Prelude (error)
 import           System.IO (IO)
 
-import qualified Chairman.Base as H
+import qualified Chairman.Hedgehog.Base as H
+import qualified Chairman.Hedgehog.Network as H
 import qualified Chairman.IO.Network.Socket as IO
-import qualified Chairman.Network as H
 import qualified Control.Monad.Trans.Resource as IO
 import qualified Data.List as L
 import qualified Hedgehog as H
