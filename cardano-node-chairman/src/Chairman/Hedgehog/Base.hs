@@ -8,18 +8,34 @@ module Chairman.Hedgehog.Base
   , workspace
   , moduleWorkspace
 
+  , note
+  , note_
+  , noteM
+  , noteM_
+  , noteIO
+  , noteIO_
+
   , noteShow
   , noteShow_
   , noteShowM
   , noteShowM_
   , noteShowIO
   , noteShowIO_
+
+  , noteEach
+  , noteEach_
+  , noteEachM
+  , noteEachM_
+  , noteEachIO
+  , noteEachIO_
+
   , noteTempFile
 
   , failWithCustom
   , failMessage
 
   , assertByDeadlineIO
+  , assertByDeadlineIOFinally
   , assertM
   , assertIO
 
@@ -36,6 +52,7 @@ import           Control.Monad.Trans.Resource (ReleaseKey, ResourceT, runResourc
 import           Data.Bool
 import           Data.Either (Either (..))
 import           Data.Eq
+import           Data.Foldable
 import           Data.Function (($), (.))
 import           Data.Int
 import           Data.Maybe (Maybe (..), listToMaybe, maybe)
@@ -44,6 +61,7 @@ import           Data.Ord
 import           Data.Semigroup (Semigroup (..))
 import           Data.String (String)
 import           Data.Time.Clock (UTCTime)
+import           Data.Traversable
 import           Data.Tuple
 import           GHC.Stack (CallStack, HasCallStack)
 import           Hedgehog (MonadTest)
@@ -69,7 +87,7 @@ propertyOnce :: HasCallStack => Integration () -> H.Property
 propertyOnce = H.withTests 1 . H.property . hoist runResourceT
 
 threadDelay :: Int -> Integration ()
-threadDelay n = GHC.withFrozenCallStack . H.evalM . liftIO $ IO.threadDelay n
+threadDelay n = GHC.withFrozenCallStack . H.evalIO $ IO.threadDelay n
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
 failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a
@@ -91,12 +109,12 @@ workspace :: HasCallStack => FilePath -> (FilePath -> Integration ()) -> Integra
 workspace prefixPath f = GHC.withFrozenCallStack $ do
   systemTemp <- H.evalIO IO.getCanonicalTemporaryDirectory
   let systemPrefixPath = systemTemp <> "/" <> prefixPath
-  H.evalM . liftIO $ IO.createDirectoryIfMissing True systemPrefixPath
-  ws <- H.evalM . liftIO $ IO.createTempDirectory systemPrefixPath "test"
+  H.evalIO $ IO.createDirectoryIfMissing True systemPrefixPath
+  ws <- H.evalIO $ IO.createTempDirectory systemPrefixPath "test"
   H.annotate $ "Workspace: " <> ws
   liftIO $ IO.writeFile (ws <> "/module") callerModuleName
   f ws
-  when (IO.os /= "mingw32") . H.evalM . liftIO $ IO.removeDirectoryRecursive ws
+  when (IO.os /= "mingw32") . H.evalIO $ IO.removeDirectoryRecursive ws
 
 -- | Create a workspace directory which will exist for at least the duration of
 -- the supplied block.
@@ -113,6 +131,39 @@ moduleWorkspace prefixPath f = GHC.withFrozenCallStack $ do
 
 noteWithCallstack :: MonadTest m => CallStack -> String -> m ()
 noteWithCallstack cs a = H.writeLog $ H.Annotation (getCaller cs) a
+
+note :: HasCallStack => String -> Integration String
+note a = GHC.withFrozenCallStack $ do
+  !b <- H.eval a
+  noteWithCallstack GHC.callStack b
+  return b
+
+note_ :: HasCallStack => String -> Integration ()
+note_ a = GHC.withFrozenCallStack $ noteWithCallstack GHC.callStack a
+
+noteM :: HasCallStack => Integration String -> Integration String
+noteM a = GHC.withFrozenCallStack $ do
+  !b <- H.evalM a
+  noteWithCallstack GHC.callStack b
+  return b
+
+noteM_ :: HasCallStack => Integration String -> Integration ()
+noteM_ a = GHC.withFrozenCallStack $ do
+  !b <- H.evalM a
+  noteWithCallstack GHC.callStack b
+  return ()
+
+noteIO :: HasCallStack => IO String -> Integration String
+noteIO f = GHC.withFrozenCallStack $ do
+  !a <- H.evalIO f
+  noteWithCallstack GHC.callStack a
+  return a
+
+noteIO_ :: HasCallStack => IO String -> Integration ()
+noteIO_ f = GHC.withFrozenCallStack $ do
+  !a <- H.evalIO f
+  noteWithCallstack GHC.callStack a
+  return ()
 
 noteShow :: (HasCallStack, Show a) => a -> Integration a
 noteShow a = GHC.withFrozenCallStack $ do
@@ -137,15 +188,45 @@ noteShowM_ a = GHC.withFrozenCallStack $ do
 
 noteShowIO :: (HasCallStack, Show a) => IO a -> Integration a
 noteShowIO f = GHC.withFrozenCallStack $ do
-  !a <- H.evalM . liftIO $ f
+  !a <- H.evalIO f
   noteWithCallstack GHC.callStack (show a)
   return a
 
 noteShowIO_ :: (HasCallStack, Show a) => IO a -> Integration ()
 noteShowIO_ f = GHC.withFrozenCallStack $ do
-  !a <- H.evalM . liftIO $ f
+  !a <- H.evalIO f
   noteWithCallstack GHC.callStack (show a)
   return ()
+
+noteEach :: (HasCallStack, Show a, Traversable f) => f a -> Integration (f a)
+noteEach as = GHC.withFrozenCallStack $ do
+  for_ as $ noteWithCallstack GHC.callStack . show
+  return as
+
+noteEach_ :: (HasCallStack, Show a, Traversable f) => f a -> Integration ()
+noteEach_ as = GHC.withFrozenCallStack $ for_ as $ noteWithCallstack GHC.callStack . show
+
+noteEachM :: (HasCallStack, Show a, Traversable f) => Integration (f a) -> Integration (f a)
+noteEachM f = GHC.withFrozenCallStack $ do
+  !as <- f
+  for_ as $ noteWithCallstack GHC.callStack . show
+  return as
+
+noteEachM_ :: (HasCallStack, Show a, Traversable f) => Integration (f a) -> Integration ()
+noteEachM_ f = GHC.withFrozenCallStack $ do
+  !as <- f
+  for_ as $ noteWithCallstack GHC.callStack . show
+
+noteEachIO :: (HasCallStack, Show a, Traversable f) => IO (f a) -> Integration (f a)
+noteEachIO f = GHC.withFrozenCallStack $ do
+  !as <- H.evalIO f
+  for_ as $ noteWithCallstack GHC.callStack . show
+  return as
+
+noteEachIO_ :: (HasCallStack, Show a, Traversable f) => IO (f a) -> Integration ()
+noteEachIO_ f = GHC.withFrozenCallStack $ do
+  !as <- H.evalIO f
+  for_ as $ noteWithCallstack GHC.callStack . show
 
 -- | Return the test file path after annotating it relative to the project root directory
 noteTempFile :: (Monad m, HasCallStack) => FilePath -> FilePath -> H.PropertyT m FilePath
@@ -168,6 +249,23 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
         assertByDeadlineIO deadline f
       else do
         H.annotateShow currentTime
+        failMessage GHC.callStack "Condition not met by deadline"
+
+-- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
+--
+-- Expiration of the deadline results in an assertion failure
+assertByDeadlineIOFinally :: (MonadIO m, HasCallStack) => UTCTime -> IO Bool -> H.PropertyT m () -> H.PropertyT m ()
+assertByDeadlineIOFinally deadline f g = GHC.withFrozenCallStack $ do
+  success <- liftIO f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        assertByDeadlineIO deadline f
+      else do
+        H.annotateShow currentTime
+        g
         failMessage GHC.callStack "Condition not met by deadline"
 
 assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()

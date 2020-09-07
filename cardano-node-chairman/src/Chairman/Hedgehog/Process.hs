@@ -11,6 +11,7 @@ module Chairman.Hedgehog.Process
   , procNode
   , execCli
   , waitForProcess
+  , getPid
   , waitSecondsForProcess
   ) where
 
@@ -35,7 +36,7 @@ import           GHC.Stack (HasCallStack)
 import           Prelude (error)
 import           System.Exit (ExitCode)
 import           System.IO (Handle)
-import           System.Process (CmdSpec (..), CreateProcess (..), ProcessHandle)
+import           System.Process (CmdSpec (..), CreateProcess (..), Pid, ProcessHandle)
 import           Text.Show
 
 import qualified Chairman.Hedgehog.Base as H
@@ -79,9 +80,14 @@ createProcess cp = GHC.withFrozenCallStack $ do
     ShellCommand cmd -> H.annotate $ "Command line: " <> cmd
   (mhStdin, mhStdout, mhStderr, hProcess) <- H.evalM . liftIO $ IO.createProcess cp
   releaseKey <- register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)
+
   return (mhStdin, mhStdout, mhStderr, hProcess, releaseKey)
 
-
+-- | Get the process ID.
+getPid :: HasCallStack
+  => ProcessHandle
+  -> Integration (Maybe Pid)
+getPid hProcess = GHC.withFrozenCallStack . H.evalIO $ IO.getPid hProcess
 
 -- | Create a process returning its stdout.
 --
@@ -98,12 +104,11 @@ execFlex :: HasCallStack
   -> [String]
   -> Integration String
 execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
-  maybeEnvBin <- liftIO $ IO.lookupEnv envBin
-  (actualBin, actualArguments) <- case maybeEnvBin of
-    Just envBin' -> return (envBin', arguments)
-    Nothing -> return ("cabal", "exec":"--":pkgBin:arguments)
-  H.annotate $ "Command: " <> actualBin <> " " <> L.unwords actualArguments
-  (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readProcessWithExitCode actualBin actualArguments ""
+  cp <- procFlex pkgBin envBin arguments
+  H.annotate . ("Command: " <>) $ case IO.cmdspec cp of
+    IO.ShellCommand cmd -> cmd
+    IO.RawCommand cmd args -> cmd <> " " <> L.unwords args
+  (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readCreateProcessWithExitCode cp ""
   case exitResult of
     IO.ExitFailure exitCode -> H.failMessage GHC.callStack . L.unlines $
       [ "Process exited with non-zero exit-code"
