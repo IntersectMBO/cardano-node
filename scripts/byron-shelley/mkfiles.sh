@@ -56,12 +56,16 @@ FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
 FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
 # We need to allow for a fee to transfer the funds out of the genesis.
 
-
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
 
-START_TIME=$(ghc -e 'fmap ((+30) . floor) Data.Time.Clock.POSIX.getPOSIXTime')
+OS=$(uname -s) DATE=
+case $OS in
+  Darwin )       DATE="gdate";;
+  * )            DATE="date";;
+esac
 
+START_TIME="$(${DATE} -d "now + 30 seconds" +%s)"
 
 if ! mkdir "${ROOT}"; then
   echo "The ${ROOT} directory already exists, please move or remove it"
