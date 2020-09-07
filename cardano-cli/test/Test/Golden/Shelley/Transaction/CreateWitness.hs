@@ -13,6 +13,8 @@ import           Prelude (String)
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -23,7 +25,7 @@ txOut :: String
 txOut = "addr1q94cxl99qvtwunsqqv6g9mgj3zrawtpt4edsgwxkjtwpy5dsezcht90tmwfur7t5hc9fk8hjd3r5vjwec2h8vmk3xh8s7er7t3+100"
 
 golden_shelleyTransactionAllMultiSigWitness :: Property
-golden_shelleyTransactionAllMultiSigWitness = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTransactionAllMultiSigWitness = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
   -- Create tx body file
@@ -36,8 +38,8 @@ golden_shelleyTransactionAllMultiSigWitness = propertyOnce $ moduleWorkspace "tm
     , "--tx-body-file", txBodyOutFile
     ]
 
-  assertFileOccurences 1 "TxUnsignedShelley" txBodyOutFile
-  assertEndsWithSingleNewline txBodyOutFile
+  H.assertFileOccurences 1 "TxUnsignedShelley" txBodyOutFile
+  H.assertEndsWithSingleNewline txBodyOutFile
 
 
   -- Create all multisig witness
@@ -51,12 +53,12 @@ golden_shelleyTransactionAllMultiSigWitness = propertyOnce $ moduleWorkspace "tm
     , "--out-file", allMultiSigWitnessOutFile
     ]
 
-  assertFileOccurences 1 "TxWitnessShelley" allMultiSigWitnessOutFile
-  assertEndsWithSingleNewline txBodyOutFile
+  H.assertFileOccurences 1 "TxWitnessShelley" allMultiSigWitnessOutFile
+  H.assertEndsWithSingleNewline txBodyOutFile
 
 
 golden_shelleyTransactionAnyMultiSigWitness :: Property
-golden_shelleyTransactionAnyMultiSigWitness = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTransactionAnyMultiSigWitness = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
   -- Create tx body file
@@ -80,11 +82,11 @@ golden_shelleyTransactionAnyMultiSigWitness = propertyOnce $ moduleWorkspace "tm
     , "--out-file", allMultiSigWitnessOutFile
     ]
 
-  assertFileOccurences 1 "TxWitnessShelley" allMultiSigWitnessOutFile
-  assertEndsWithSingleNewline txBodyOutFile
+  H.assertFileOccurences 1 "TxWitnessShelley" allMultiSigWitnessOutFile
+  H.assertEndsWithSingleNewline txBodyOutFile
 
 golden_shelleyTransactionAtLeastMultiSigWitness :: Property
-golden_shelleyTransactionAtLeastMultiSigWitness = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTransactionAtLeastMultiSigWitness = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
   -- Create tx body file
@@ -108,11 +110,11 @@ golden_shelleyTransactionAtLeastMultiSigWitness = propertyOnce $ moduleWorkspace
     , "--out-file", atLeastMultiSigWitnessOutFile
     ]
 
-  assertFileOccurences 1 "TxWitnessShelley" atLeastMultiSigWitnessOutFile
-  assertEndsWithSingleNewline txBodyOutFile
+  H.assertFileOccurences 1 "TxWitnessShelley" atLeastMultiSigWitnessOutFile
+  H.assertEndsWithSingleNewline txBodyOutFile
 
 golden_shelleyTransactionSigningKeyWitness :: Property
-golden_shelleyTransactionSigningKeyWitness = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTransactionSigningKeyWitness = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
   -- Create tx body file
@@ -136,5 +138,5 @@ golden_shelleyTransactionSigningKeyWitness = propertyOnce $ moduleWorkspace "tmp
     , "--out-file", witnessOutFile
     ]
 
-  assertFileOccurences 1 "TxWitnessShelley" witnessOutFile
-  assertEndsWithSingleNewline txBodyOutFile
+  H.assertFileOccurences 1 "TxWitnessShelley" witnessOutFile
+  H.assertEndsWithSingleNewline txBodyOutFile
