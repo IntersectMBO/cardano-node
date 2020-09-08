@@ -7,7 +7,7 @@ module Cardano.CLI.Shelley.Run.Key
   , runKeyCmd
 
     -- * Exports for testing
-  , decodeBech32Key
+  , decodeBech32
   ) where
 
 import           Cardano.Prelude
@@ -51,7 +51,7 @@ data ShelleyKeyCmdError
       !Text
       -- ^ Text representation of the parse error. Unfortunately, the actual
       -- error type isn't exported.
-  | ShelleyKeyCmdItnKeyConvError !ConversionError
+  | ShelleyKeyCmdItnKeyConvError !ItnKeyConversionError
   | ShelleyKeyCmdWrongKeyTypeError
   | ShelleyKeyCmdCardanoAddressSigningKeyFileError
       !(FileError CardanoAddressSigningKeyConversionError)
@@ -444,88 +444,72 @@ runConvertITNBip32ToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile o
   firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
     $ writeFileTextEnvelope outFile Nothing skey
 
-data ConversionError
-  = Bech32KeyDecodingError
-      -- ^ Bech32 key
-      !Text
-      !Bech32.DecodingError
-  | Bech32ErrorExtractingByes !Bech32.DataPart
-  | Bech32ReadError !FilePath !IOException
-  | ITNError !Bech32.HumanReadablePart !Bech32.DataPart
-  | SigningKeyDeserializationError !ByteString
-  | VerificationKeyDeserializationError !ByteString
+-- | An error that can occur while converting an Incentivized Testnet (ITN)
+-- key.
+data ItnKeyConversionError
+  = ItnKeyBech32DecodeError !Bech32DecodeError
+  | ItnReadBech32FileError !FilePath !IOException
+  | ItnSigningKeyDeserialisationError !ByteString
+  | ItnVerificationKeyDeserialisationError !ByteString
   deriving Show
 
-renderConversionError :: ConversionError -> Text
+-- | Render an error message for an 'ItnKeyConversionError'.
+renderConversionError :: ItnKeyConversionError -> Text
 renderConversionError err =
   case err of
-    Bech32KeyDecodingError key decErr ->
-      "Error decoding Bech32 key: " <> key <> " Error: " <> textShow decErr
-    Bech32ErrorExtractingByes dp ->
-      "Unable to extract bytes from: " <> Bech32.dataPartToText dp
-    Bech32ReadError fp readErr ->
-      "Error reading bech32 key at: " <> textShow fp
+    ItnKeyBech32DecodeError decErr ->
+      "Error decoding Bech32 key: " <> Text.pack (displayError decErr)
+    ItnReadBech32FileError fp readErr ->
+      "Error reading Bech32 key at: " <> textShow fp
                         <> " Error: " <> Text.pack (displayException readErr)
-    ITNError hRpart dp ->
-      "Error extracting a ByteString from DataPart: " <> Bech32.dataPartToText dp <>
-      " With human readable part: " <> Bech32.humanReadablePartToText hRpart
-    SigningKeyDeserializationError sKey ->
-      "Error deserialising signing key: " <> textShow (BSC.unpack sKey)
-    VerificationKeyDeserializationError vKey ->
+    ItnSigningKeyDeserialisationError _sKey ->
+      -- Sensitive data, such as the signing key, is purposely not included in
+      -- the error message.
+      "Error deserialising signing key."
+    ItnVerificationKeyDeserialisationError vKey ->
       "Error deserialising verification key: " <> textShow (BSC.unpack vKey)
 
 -- | Convert public ed25519 key to a Shelley stake verification key
-convertITNVerificationKey :: Text -> Either ConversionError (VerificationKey StakeKey)
+convertITNVerificationKey :: Text -> Either ItnKeyConversionError (VerificationKey StakeKey)
 convertITNVerificationKey pubKey = do
-  (_, _, keyBS) <- decodeBech32Key pubKey
+  (_, _, keyBS) <- first ItnKeyBech32DecodeError (decodeBech32 pubKey)
   case DSIGN.rawDeserialiseVerKeyDSIGN keyBS of
     Just verKey -> Right . StakeVerificationKey $ Shelley.VKey verKey
-    Nothing -> Left $ VerificationKeyDeserializationError keyBS
+    Nothing -> Left $ ItnVerificationKeyDeserialisationError keyBS
 
 -- | Convert private ed22519 key to a Shelley signing key.
-convertITNSigningKey :: Text -> Either ConversionError (SigningKey StakeKey)
+convertITNSigningKey :: Text -> Either ItnKeyConversionError (SigningKey StakeKey)
 convertITNSigningKey privKey = do
-  (_, _, keyBS) <- decodeBech32Key privKey
+  (_, _, keyBS) <- first ItnKeyBech32DecodeError (decodeBech32 privKey)
   case DSIGN.rawDeserialiseSignKeyDSIGN keyBS of
     Just signKey -> Right $ StakeSigningKey signKey
-    Nothing -> Left $ SigningKeyDeserializationError keyBS
+    Nothing -> Left $ ItnSigningKeyDeserialisationError keyBS
 
 -- | Convert extended private ed22519 key to a Shelley signing key
 -- Extended private key = 64 bytes,
 -- Public key = 32 bytes.
-convertITNExtendedSigningKey :: Text -> Either ConversionError (SigningKey StakeExtendedKey)
+convertITNExtendedSigningKey :: Text -> Either ItnKeyConversionError (SigningKey StakeExtendedKey)
 convertITNExtendedSigningKey privKey = do
-  (_, _, privkeyBS) <- decodeBech32Key privKey
+  (_, _, privkeyBS) <- first ItnKeyBech32DecodeError (decodeBech32 privKey)
   let dummyChainCode = BS.replicate 32 0
   case xprvFromBytes $ BS.concat [privkeyBS, dummyChainCode] of
     Just xprv -> Right $ StakeExtendedSigningKey xprv
-    Nothing -> Left $ SigningKeyDeserializationError privkeyBS
+    Nothing -> Left $ ItnSigningKeyDeserialisationError privkeyBS
 
 -- BIP32 Private key = 96 bytes (64 bytes extended private key + 32 bytes chaincode)
 -- BIP32 Public Key = 64 Bytes
-convertITNBIP32SigningKey :: Text -> Either ConversionError (SigningKey StakeExtendedKey)
+convertITNBIP32SigningKey :: Text -> Either ItnKeyConversionError (SigningKey StakeExtendedKey)
 convertITNBIP32SigningKey privKey = do
-  (_, _, privkeyBS) <- decodeBech32Key privKey
+  (_, _, privkeyBS) <- first ItnKeyBech32DecodeError (decodeBech32 privKey)
   case xprvFromBytes privkeyBS of
     Just xprv -> Right $ StakeExtendedSigningKey xprv
-    Nothing -> Left $ SigningKeyDeserializationError privkeyBS
+    Nothing -> Left $ ItnSigningKeyDeserialisationError privkeyBS
 
--- | Convert ITN Bech32 public or private keys to 'ByteString's
-decodeBech32Key :: Text
-                -> Either ConversionError
-                          (Bech32.HumanReadablePart, Bech32.DataPart, ByteString)
-decodeBech32Key key =
-  case Bech32.decodeLenient key of
-    Left err -> Left $ Bech32KeyDecodingError key err
-    Right (hRpart, dataPart) -> case Bech32.dataPartToBytes dataPart of
-                                  Nothing -> Left $ ITNError hRpart dataPart
-                                  Just bs -> Right (hRpart, dataPart, bs)
-
-readFileITNKey :: FilePath -> IO (Either ConversionError Text)
+readFileITNKey :: FilePath -> IO (Either ItnKeyConversionError Text)
 readFileITNKey fp = do
   eStr <- Exception.try $ readFile fp
   case eStr of
-    Left e -> return . Left $ Bech32ReadError fp e
+    Left e -> return . Left $ ItnReadBech32FileError fp e
     Right str -> return . Right . Text.concat $ Text.words str
 
 --------------------------------------------------------------------------------
