@@ -50,6 +50,7 @@ import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import qualified Ouroboros.Consensus.Storage.VolatileDB.Types as VolDb
 
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -835,8 +836,27 @@ instance ( ConvertRawHash blk
                    , "chunkNos" .= String (Text.pack . show $ map renderChunkNo chunkNos)
                    , "noPastChunks" .= String (Text.pack $ show nbPastChunksInCache)
                    ]
-  toObject _verb (ChainDB.TraceVolDBEvent _ev) =
-    mkObject [ "kind" .= String "TraceVolDBEvent" ]
+  toObject _verb (ChainDB.TraceVolDBEvent ev) = case ev of
+    VolDb.DBAlreadyClosed -> mkObject [ "kind" .= String "TraceVolDbEvent.DBAlreadyClosed"]
+    VolDb.DBAlreadyOpen -> mkObject [ "kind" .= String "TraceVolDbEvent.DBAlreadyOpen"]
+    VolDb.BlockAlreadyHere blockId ->
+      mkObject [ "kind" .= String "TraceVolDbEvent.BlockAlreadyHere"
+               , "blockId" .= String (Text.pack $ show blockId)
+               ]
+    VolDb.TruncateCurrentFile fsPath ->
+      mkObject [ "kind" .= String "TraceVolDbEvent.TruncateCurrentFile"
+               , "file" .= String (Text.pack $ show fsPath)
+               ]
+    VolDb.Truncate pErr fsPath blockOffset ->
+      mkObject [ "kind" .= String "TraceVolDbEvent.Truncate"
+               , "parserError" .= String (Text.pack $ show pErr)
+               , "file" .= String (Text.pack $ show fsPath)
+               , "blockOffset" .= String (Text.pack $ show blockOffset)
+               ]
+    VolDb.InvalidFileNames fsPaths ->
+      mkObject [ "kind" .= String "TraceVolDBEvent.InvalidFileNames"
+               , "files" .= String (Text.pack . show $ map show fsPaths)
+               ]
 
 instance ToObject (TraceBlockFetchServerEvent blk) where
   toObject _verb _ =
