@@ -184,6 +184,7 @@ module Cardano.Api.Typed (
     SerialiseAsBech32,
     serialiseToBech32,
     deserialiseFromBech32,
+    deserialiseAnyOfFromBech32,
     Bech32DecodeError(..),
 
     -- ** Addresses
@@ -2863,6 +2864,47 @@ deserialiseFromBech32 asType bech32Str = do
 
     return value
 
+deserialiseAnyOfFromBech32
+  :: forall b.
+     [FromSomeType SerialiseAsBech32 b]
+  -> Text
+  -> Either Bech32DecodeError b
+deserialiseAnyOfFromBech32 types bech32Str = do
+    (prefix, dataPart) <- Bech32.decodeLenient bech32Str
+                            ?!. Bech32DecodingError
+
+    let actualPrefix = Bech32.humanReadablePartToText prefix
+
+    FromSomeType actualType fromType <-
+      findForPrefix actualPrefix
+        ?! Bech32UnexpectedPrefix actualPrefix permittedPrefixes
+
+    payload <- Bech32.dataPartToBytes dataPart
+                 ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
+
+    value <- deserialiseFromRawBytes actualType payload
+               ?! Bech32DeserialiseFromBytesError payload
+
+    let expectedPrefix = bech32PrefixFor value
+    guard (actualPrefix == expectedPrefix)
+      ?! Bech32WrongPrefix actualPrefix expectedPrefix
+
+    return (fromType value)
+  where
+    findForPrefix
+      :: Text
+      -> Maybe (FromSomeType SerialiseAsBech32 b)
+    findForPrefix prefix =
+      find
+        (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)
+        types
+
+    permittedPrefixes :: [Text]
+    permittedPrefixes =
+      concat
+        [ bech32PrefixesPermitted ttoken
+        | FromSomeType ttoken _f <- types
+        ]
 
 -- | Bech32 decoding error.
 data Bech32DecodeError =

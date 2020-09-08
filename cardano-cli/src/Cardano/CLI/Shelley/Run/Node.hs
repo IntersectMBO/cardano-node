@@ -7,6 +7,7 @@ module Cardano.CLI.Shelley.Run.Node
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Key (SigningKeyDecodeError (..), readSigningKeyFileAnyOf)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 import           Cardano.Prelude
 import           Control.Monad.Trans.Except (ExceptT)
@@ -20,6 +21,7 @@ import qualified Data.Text as Text
 
 data ShelleyNodeCmdError
   = ShelleyNodeCmdReadFileError !(FileError TextEnvelopeError)
+  | ShelleyNodeCmdReadSigningKeyFileError !(FileError SigningKeyDecodeError)
   | ShelleyNodeCmdWriteFileError !(FileError ())
   | ShelleyNodeCmdOperationalCertificateIssueError !OperationalCertIssueError
   deriving Show
@@ -28,6 +30,9 @@ renderShelleyNodeCmdError :: ShelleyNodeCmdError -> Text
 renderShelleyNodeCmdError err =
   case err of
     ShelleyNodeCmdReadFileError fileErr -> Text.pack (displayError fileErr)
+
+    ShelleyNodeCmdReadSigningKeyFileError fileErr ->
+      Text.pack (displayError fileErr)
 
     ShelleyNodeCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
 
@@ -160,7 +165,7 @@ runNodeIssueOpCert :: VerificationKeyFile
                    -> OutputFile
                    -> ExceptT ShelleyNodeCmdError IO ()
 runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
-                   (SigningKeyFile skeyStakePoolPath)
+                   stakePoolSKeyFile
                    (OpCertCounterFile ocertCtrPath)
                    kesPeriod
                    (OutputFile certFile) = do
@@ -173,9 +178,12 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
       . newExceptT
       $ readFileTextEnvelope (AsVerificationKey AsKesKey) vkeyKesPath
 
-    signKey <- firstExceptT ShelleyNodeCmdReadFileError
+    signKey <- firstExceptT ShelleyNodeCmdReadSigningKeyFileError
       . newExceptT
-      $ readFileTextEnvelopeAnyOf possibleBlockIssuers skeyStakePoolPath
+      $ readSigningKeyFileAnyOf
+          textEnvPossibleBlockIssuers
+          bech32PossibleBlockIssuers
+          stakePoolSKeyFile
 
     (ocert, nextOcertCtr) <-
       firstExceptT ShelleyNodeCmdOperationalCertificateIssueError
@@ -205,12 +213,19 @@ runNodeIssueOpCert (VerificationKeyFile vkeyKesPath)
     ocertCtrDesc :: Word64 -> TextViewDescription
     ocertCtrDesc n = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show n)
 
-    possibleBlockIssuers
+    textEnvPossibleBlockIssuers
       :: [FromSomeType HasTextEnvelope
                        (Either (SigningKey StakePoolKey)
                                (SigningKey GenesisDelegateExtendedKey))]
-    possibleBlockIssuers =
+    textEnvPossibleBlockIssuers =
       [ FromSomeType (AsSigningKey AsStakePoolKey)        Left
       , FromSomeType (AsSigningKey AsGenesisDelegateKey) (Left . castSigningKey)
       , FromSomeType (AsSigningKey AsGenesisDelegateExtendedKey) Right
       ]
+
+    bech32PossibleBlockIssuers
+      :: [FromSomeType SerialiseAsBech32
+                       (Either (SigningKey StakePoolKey)
+                               (SigningKey GenesisDelegateExtendedKey))]
+    bech32PossibleBlockIssuers =
+      [FromSomeType (AsSigningKey AsStakePoolKey) Left]
