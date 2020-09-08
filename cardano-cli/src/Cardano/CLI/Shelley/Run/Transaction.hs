@@ -51,7 +51,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdReadSigningKeyFileError !(FileError SigningKeyDecodeError)
   | ShelleyTxCmdWriteFileError !(FileError ())
   | ShelleyTxCmdMetaDataConversionError !FilePath !MetaDataJsonConversionError
-  | ShelleyTxMetaValidationError !FilePath !TxMetadataValidationError
+  | ShelleyTxCmdMetaValidationError !FilePath !TxMetadataValidationError
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdMissingNetworkId
   | ShelleyTxCmdSocketEnvError !EnvSocketError
@@ -73,7 +73,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdMetaDecodeError fp metaDataErr ->
        "Error decoding CBOR metadata at: " <> show fp
                              <> " Error: " <> show metaDataErr
-    ShelleyTxMetaValidationError fp valErr ->
+    ShelleyTxCmdMetaValidationError fp valErr ->
       "Error validating transaction metadata at: " <> show fp
                                      <> " Error: " <> renderTxMetadataValidationError valErr
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
@@ -421,12 +421,19 @@ readFileTxMetaData (MetaDataFileJSON fp) = do
     v  <- firstExceptT (ShelleyTxCmdMetaDataConversionError fp . ConversionErrDecodeJSON) $
           hoistEither $
             Aeson.eitherDecode' bs
-    firstExceptT (ShelleyTxCmdMetaDataConversionError fp) $ hoistEither $
+    txMetadata <- firstExceptT (ShelleyTxCmdMetaDataConversionError fp) $ hoistEither $
       jsonToMetadata v
+    -- At this time, 'jsonToMetadata' already performs the appropriate
+    -- validation on the transaction metadata during its JSON parsing.
+    -- However, it still might make sense to call 'validateTxMetadata' just in
+    -- case more validation rules that aren't covered by 'jsonToMetadata' are
+    -- added in the future
+    firstExceptT (ShelleyTxCmdMetaValidationError fp . NE.head) $ hoistEither $
+      validateTxMetadata txMetadata
 readFileTxMetaData (MetaDataFileCBOR fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           BS.readFile fp
     txMetadata <- firstExceptT (ShelleyTxCmdMetaDecodeError fp) $ hoistEither $
       Api.deserialiseFromCBOR Api.AsTxMetadata bs
-    firstExceptT (ShelleyTxMetaValidationError fp . NE.head) $ hoistEither $
+    firstExceptT (ShelleyTxCmdMetaValidationError fp . NE.head) $ hoistEither $
       validateTxMetadata txMetadata
