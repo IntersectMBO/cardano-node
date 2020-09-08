@@ -86,7 +86,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       H.cat $ logDir <> "/mkfiles.stdout.log"
       H.cat $ logDir <> "/mkfiles.stderr.log"
 
-    H.noteShowM_ . liftIO $ IO.readProcess "find" [tempAbsPath] ""
+    H.noteM_ . liftIO $ IO.readProcess "find" [tempAbsPath] ""
 
     H.assertIsJsonFile $ tempAbsPath <> "/byron/genesis.spec.json"
 
