@@ -354,7 +354,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  deadline <- H.noteShowIO $ DTC.addUTCTime 60 <$> DTC.getCurrentTime -- 60 seconds from now
+  deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime -- 90 seconds from now
 
   forM_ allNodes $ \node -> do
     portString <- H.noteShowM . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
