@@ -32,7 +32,7 @@ import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
 import           Cardano.Api.Shelley.ITN (xprvFromBytes)
-import           Cardano.Api.Typed hiding (Bech32DecodeError (..))
+import           Cardano.Api.Typed
 
 import           Cardano.CLI.Byron.Key (CardanoEra (..))
 import qualified Cardano.CLI.Byron.Key as Byron
@@ -53,6 +53,8 @@ data ShelleyKeyCmdError
       -- error type isn't exported.
   | ShelleyKeyCmdItnKeyConvError !ConversionError
   | ShelleyKeyCmdWrongKeyTypeError
+  | ShelleyKeyCmdCardanoAddressSigningKeyFileError
+      !(FileError CardanoAddressSigningKeyConversionError)
   deriving Show
 
 renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
@@ -66,6 +68,8 @@ renderShelleyKeyCmdError err =
     ShelleyKeyCmdItnKeyConvError convErr -> renderConversionError convErr
     ShelleyKeyCmdWrongKeyTypeError -> Text.pack "Please use a signing key file \
                                    \when converting ITN BIP32 or Extended keys"
+    ShelleyKeyCmdCardanoAddressSigningKeyFileError fileErr ->
+      Text.pack (displayError fileErr)
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =
@@ -89,6 +93,8 @@ runKeyCmd cmd =
     KeyConvertITNBip32ToStakeKey itnPrivKeyFile outFile ->
       runConvertITNBip32ToStakeKey itnPrivKeyFile outFile
 
+    KeyConvertCardanoAddressSigningKey keyType skfOld skfNew ->
+      runConvertCardanoAddressSigningKey keyType skfOld skfNew
 
 runGetVerificationKey :: SigningKeyFile
                       -> VerificationKeyFile
@@ -439,7 +445,7 @@ runConvertITNBip32ToStakeKey (ASigningKeyFile (SigningKeyFile sk)) (OutputFile o
     $ writeFileTextEnvelope outFile Nothing skey
 
 data ConversionError
-  = Bech32DecodingError
+  = Bech32KeyDecodingError
       -- ^ Bech32 key
       !Text
       !Bech32.DecodingError
@@ -453,7 +459,7 @@ data ConversionError
 renderConversionError :: ConversionError -> Text
 renderConversionError err =
   case err of
-    Bech32DecodingError key decErr ->
+    Bech32KeyDecodingError key decErr ->
       "Error decoding Bech32 key: " <> key <> " Error: " <> textShow decErr
     Bech32ErrorExtractingByes dp ->
       "Unable to extract bytes from: " <> Bech32.dataPartToText dp
@@ -510,7 +516,7 @@ decodeBech32Key :: Text
                           (Bech32.HumanReadablePart, Bech32.DataPart, ByteString)
 decodeBech32Key key =
   case Bech32.decodeLenient key of
-    Left err -> Left $ Bech32DecodingError key err
+    Left err -> Left $ Bech32KeyDecodingError key err
     Right (hRpart, dataPart) -> case Bech32.dataPartToBytes dataPart of
                                   Nothing -> Left $ ITNError hRpart dataPart
                                   Just bs -> Right (hRpart, dataPart, bs)
@@ -521,3 +527,135 @@ readFileITNKey fp = do
   case eStr of
     Left e -> return . Left $ Bech32ReadError fp e
     Right str -> return . Right . Text.concat $ Text.words str
+
+--------------------------------------------------------------------------------
+-- `cardano-address` extended signing key conversions
+--------------------------------------------------------------------------------
+
+runConvertCardanoAddressSigningKey
+  :: CardanoAddressKeyType
+  -> SigningKeyFile
+  -> OutputFile
+  -> ExceptT ShelleyKeyCmdError IO ()
+runConvertCardanoAddressSigningKey keyType skFile (OutputFile outFile) = do
+  sKey <- firstExceptT ShelleyKeyCmdCardanoAddressSigningKeyFileError
+    . newExceptT
+    $ readSomeCardanoAddressSigningKeyFile keyType skFile
+  firstExceptT ShelleyKeyCmdWriteFileError . newExceptT
+    $ writeSomeCardanoAddressSigningKeyFile outFile sKey
+
+-- | Some kind of signing key that was converted from a @cardano-address@
+-- signing key.
+data SomeCardanoAddressSigningKey
+  = ACardanoAddrShelleyPaymentSigningKey !(SigningKey PaymentExtendedKey)
+  | ACardanoAddrShelleyStakeSigningKey !(SigningKey StakeExtendedKey)
+  | ACardanoAddrByronSigningKey !(SigningKey ByronKey)
+
+-- | An error that can occur while converting a @cardano-address@ extended
+-- signing key.
+data CardanoAddressSigningKeyConversionError
+  = CardanoAddressSigningKeyBech32DecodeError !Bech32DecodeError
+  -- ^ There was an error in decoding the string as Bech32.
+  | CardanoAddressSigningKeyDeserialisationError !ByteString
+  -- ^ There was an error in converting the @cardano-address@ extended signing
+  -- key.
+  deriving (Show, Eq)
+
+instance Error CardanoAddressSigningKeyConversionError where
+  displayError = Text.unpack . renderCardanoAddressSigningKeyConversionError
+
+-- | Render an error message for a 'CardanoAddressSigningKeyConversionError'.
+renderCardanoAddressSigningKeyConversionError
+  :: CardanoAddressSigningKeyConversionError
+  -> Text
+renderCardanoAddressSigningKeyConversionError err =
+  case err of
+    CardanoAddressSigningKeyBech32DecodeError decErr ->
+      Text.pack (displayError decErr)
+    CardanoAddressSigningKeyDeserialisationError _bs ->
+      -- Sensitive data, such as the signing key, is purposely not included in
+      -- the error message.
+      "Error deserialising cardano-address signing key."
+
+-- | Decode a Bech32-encoded string.
+decodeBech32
+  :: Text
+  -> Either Bech32DecodeError (Bech32.HumanReadablePart, Bech32.DataPart, ByteString)
+decodeBech32 bech32Str =
+  case Bech32.decodeLenient bech32Str of
+    Left err -> Left (Bech32DecodingError err)
+    Right (hrPart, dataPart) ->
+      case Bech32.dataPartToBytes dataPart of
+        Nothing ->
+          Left $ Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
+        Just bs -> Right (hrPart, dataPart, bs)
+
+-- | Convert a Ed25519 BIP32 extended signing key (96 bytes) to a @cardano-crypto@
+-- style extended signing key.
+--
+-- Note that both the ITN and @cardano-address@ use this key format.
+convertBip32SigningKey
+  :: ByteString
+  -> Either CardanoAddressSigningKeyConversionError Crypto.XPrv
+convertBip32SigningKey signingKeyBs =
+  case xprvFromBytes signingKeyBs of
+    Just xPrv -> Right xPrv
+    Nothing ->
+      Left $ CardanoAddressSigningKeyDeserialisationError signingKeyBs
+
+-- | Read a file containing a Bech32-encoded Ed25519 BIP32 extended signing
+-- key.
+readBech32Bip32SigningKeyFile
+  :: SigningKeyFile
+  -> IO (Either (FileError CardanoAddressSigningKeyConversionError) Crypto.XPrv)
+readBech32Bip32SigningKeyFile (SigningKeyFile fp) = do
+  eStr <- Exception.try $ readFile fp
+  case eStr of
+    Left e -> pure . Left $ FileIOError fp e
+    Right str ->
+      case decodeBech32 (Text.concat $ Text.words str) of
+        Left err ->
+          pure $ Left $
+            FileError fp (CardanoAddressSigningKeyBech32DecodeError err)
+        Right (_hrPart, _dataPart, bs) ->
+          pure $ first (FileError fp) (convertBip32SigningKey bs)
+
+-- | Read a file containing a Bech32-encoded @cardano-address@ extended
+-- signing key.
+readSomeCardanoAddressSigningKeyFile
+  :: CardanoAddressKeyType
+  -> SigningKeyFile
+  -> IO (Either (FileError CardanoAddressSigningKeyConversionError) SomeCardanoAddressSigningKey)
+readSomeCardanoAddressSigningKeyFile keyType skFile = do
+    xPrv <- readBech32Bip32SigningKeyFile skFile
+    pure (toSomeCardanoAddressSigningKey <$> xPrv)
+  where
+    toSomeCardanoAddressSigningKey :: Crypto.XPrv -> SomeCardanoAddressSigningKey
+    toSomeCardanoAddressSigningKey xPrv =
+      case keyType of
+        CardanoAddressShelleyPaymentKey ->
+          ACardanoAddrShelleyPaymentSigningKey
+            (PaymentExtendedSigningKey xPrv)
+        CardanoAddressShelleyStakeKey ->
+          ACardanoAddrShelleyStakeSigningKey (StakeExtendedSigningKey xPrv)
+        CardanoAddressIcarusPaymentKey ->
+          ACardanoAddrByronSigningKey $
+            ByronSigningKey (Byron.SigningKey xPrv)
+        CardanoAddressByronPaymentKey ->
+          ACardanoAddrByronSigningKey $
+            ByronSigningKey (Byron.SigningKey xPrv)
+
+-- | Write a text envelope formatted file containing a @cardano-address@
+-- extended signing key, but converted to a format supported by @cardano-cli@.
+writeSomeCardanoAddressSigningKeyFile
+  :: FilePath
+  -> SomeCardanoAddressSigningKey
+  -> IO (Either (FileError ()) ())
+writeSomeCardanoAddressSigningKeyFile outFile skey =
+  case skey of
+    ACardanoAddrShelleyPaymentSigningKey sk ->
+      writeFileTextEnvelope outFile Nothing sk
+    ACardanoAddrShelleyStakeSigningKey sk ->
+      writeFileTextEnvelope outFile Nothing sk
+    ACardanoAddrByronSigningKey sk ->
+      writeFileTextEnvelope outFile Nothing sk
