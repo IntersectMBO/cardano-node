@@ -15,11 +15,13 @@ import           Data.Bool
 import           Data.Function
 import           Data.Functor
 import           Data.Int
+import           Data.List ((\\))
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
 import           GHC.Float
+import           GHC.Num
 import           Hedgehog (Property, discover)
 import           System.IO (IO)
 import           Text.Read
@@ -32,14 +34,17 @@ import qualified Chairman.IO.File as IO
 import qualified Chairman.IO.Network.Socket as IO
 import qualified Chairman.IO.Network.Sprocket as IO
 import qualified Chairman.String as S
+import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
+import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified System.Directory as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified System.Random as IO
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -67,7 +72,11 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   let praosNodesN = ["1", "2"] :: [String]
   let poolNodes = ["node-pool1"] :: [String]
   let allNodes = praosNodes <> poolNodes :: [String]
-  let numPraosNodes = 3 :: Int
+  let numPraosNodes = L.length allNodes :: Int
+
+  portBase <- H.noteShowIO $ IO.randomRIO (3000, 50000)
+  allPorts <- H.noteShow ((+ portBase) <$> [1..numPraosNodes])
+  nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
 
   let userAddrs = ["user1"]
   let poolAddrs = ["pool-owner1"]
@@ -148,48 +157,20 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
       ]
 
   -- Make topology files
-  -- TODO generalise this over the N BFT nodes and pool nodes
-  H.writeFile (tempAbsPath <> "/node-praos1/topology.json") "\
-    \{ \"Producers\":\
-    \  [ { \"addr\": \"127.0.0.1\"\
-    \    , \"port\": 3002\
-    \    , \"valency\": 1\
-    \    }\
-    \  , { \"addr\": \"127.0.0.1\"\
-    \    , \"port\": 3003\
-    \    , \"valency\": 1\
-    \    }\
-    \  ]\
-    \}"
-  H.writeFile (tempAbsPath <> "/node-praos1/port") "3001"
-
-  H.writeFile (tempAbsPath <> "/node-praos2/topology.json") "\
-    \{ \"Producers\":\
-    \  [ { \"addr\": \"127.0.0.1\"\
-    \    , \"port\": 3001\
-    \    , \"valency\": 1\
-    \    }\
-    \  , { \"addr\": \"127.0.0.1\"\
-    \    , \"port\": 3003\
-    \    , \"valency\": 1\
-    \    }\
-    \  ]\
-    \}"
-  H.writeFile (tempAbsPath <> "/node-praos2/port") "3002"
-
-  H.writeFile (tempAbsPath <> "/node-pool1/topology.json") "\
-    \{ \"Producers\":\
-    \  [ { \"addr\": \"127.0.0.1\"\
-    \    , \"port\": 3001\
-    \    , \"valency\": 1\
-    \    }\
-    \  , { \"addr\": \"127.0.0.1\"\
-    \    , \"port\": 3002\
-    \    , \"valency\": 1\
-    \    }\
-    \  ]\
-    \}"
-  H.writeFile (tempAbsPath <> "/node-pool1/port") "3003"
+  forM_ allNodes $ \node -> do
+    let port = fromJust $ M.lookup node nodeToPort
+    H.lbsWriteFile (tempAbsPath <> "/" <> node <> "/topology.json") $ J.encode $
+      J.object
+      [ "Producers" .= J.toJSON
+        [ J.object
+          [ "addr" .= J.toJSON @String "127.0.0.1"
+          , "port" .= J.toJSON @Int peerPort
+          , "valency" .= J.toJSON @Int 1
+          ]
+        | peerPort <- allPorts \\ [port]
+        ]
+      ]
+    H.writeFile (tempAbsPath <> "/" <> node <> "/port") (show port)
 
   -- Generated node operator keys (cold, hot) and operational certs
   forM_ allNodes $ \n -> H.noteShowM_ . H.listDirectory $ tempAbsPath <> "/" <> n
