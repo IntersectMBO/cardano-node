@@ -10,6 +10,7 @@ module Test.Cardano.Node.Chairman.ByronShelley
   ) where
 
 import           Chairman.IO.Network.Sprocket (Sprocket (..))
+import           Chairman.Time
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Bool
@@ -54,6 +55,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   base <- H.noteShowM H.getProjectBase
   logDir <- H.noteShow $ tempAbsPath <> "/logs"
   env <- H.evalIO IO.getEnvironment
+  currentTime <- H.noteShowIO DTC.getCurrentTime
+  startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
   socketDir <- H.noteShow $ tempRelPath <> "/socket"
 
   let testnetMagic = "42" :: String
@@ -75,7 +78,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       { IO.std_in = IO.CreatePipe
       , IO.std_out = IO.UseHandle hNodeStdout
       , IO.std_err = IO.UseHandle hNodeStderr
-      , IO.env = Just (("ROOT", tempAbsPath):env)
+      , IO.env = Just
+          $ ("ROOT", tempAbsPath)
+          : ("START_TIME", showUTCTimeSeconds startTime)
+          : env
       }
 
     exitCode <- H.waitForProcess hProcess

@@ -71,7 +71,7 @@ esac
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
 
-START_TIME="$(${DATE} -d "now + 30 seconds" +%s)"
+START_TIME=${START_TIME:-$(${DATE} -d "now + 30 seconds" +%s)}
 
 # If neither of those are used, we have to
 # - post an update proposal + votes to go to protocol version 1
