@@ -73,12 +73,6 @@ START_TIME="$(${DATE} -d "now + 30 seconds" +%s)"
 #   'LastKnownBlockVersion-Major: 2', and restart the nodes
 # - post another proposal + vote to go to protocol version 2
 
-#uncomment this for an automatic transition after the first epoch
-echo "TestShelleyHardForkAtEpoch: 1" >> ${ROOT}/configuration.yaml
-#uncomment this to trigger the hardfork with protocol version 1
-#echo "TestShelleyHardForkAtVersion: 1"  >> ${ROOT}/configuration.yaml
-
-
 pushd ${ROOT}
 
 # create the node directories

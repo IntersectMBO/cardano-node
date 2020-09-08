@@ -11,7 +11,9 @@ module Test.Cardano.Node.Chairman.ByronShelley
 
 import           Chairman.IO.Network.Sprocket (Sprocket (..))
 import           Control.Monad
+import           Control.Monad.IO.Class
 import           Data.Bool
+import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Maybe
@@ -19,6 +21,7 @@ import           Data.Ord
 import           Data.Semigroup
 import           Data.String
 import           Hedgehog (Property, discover)
+import           System.Exit (ExitCode (..))
 import           System.IO (IO)
 import           Text.Read
 import           Text.Show
@@ -58,9 +61,9 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   H.createDirectoryIfMissing logDir
 
   do
-    H.copyFile
-      (base <> "/configuration/chairman/byron-shelley/configuration.yaml")
-      (tempAbsPath <> "/configuration.yaml")
+    H.readFile (base <> "/configuration/chairman/byron-shelley/configuration.yaml")
+      <&> L.unlines . (<> ["TestShelleyHardForkAtVersion: 1"]) . L.lines
+      >>= H.writeFile (tempAbsPath <> "/configuration.yaml")
 
     nodeStdoutFile <- H.noteTempFile logDir "mkfiles.stdout.log"
     nodeStderrFile <- H.noteTempFile logDir "mkfiles.stderr.log"
@@ -68,7 +71,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
 
-    (_, _, _, hProcess, _) <- H.createProcess $ (IO.proc "bash" [base <> "/cardano-node-chairman/mkfiles.sh"])
+    (_, _, _, hProcess, _) <- H.createProcess $ (IO.proc "bash" ["-x", base <> "/cardano-node-chairman/mkfiles.sh"])
       { IO.std_in = IO.CreatePipe
       , IO.std_out = IO.UseHandle hNodeStdout
       , IO.std_err = IO.UseHandle hNodeStderr
@@ -78,6 +81,12 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     exitCode <- H.waitForProcess hProcess
 
     void $ H.noteShow exitCode
+
+    unless (exitCode == Just ExitSuccess) $ do
+      H.cat $ logDir <> "/mkfiles.stdout.log"
+      H.cat $ logDir <> "/mkfiles.stderr.log"
+
+    H.noteShowM_ . liftIO $ IO.readProcess "find" [tempAbsPath] ""
 
     H.assertIsJsonFile $ tempAbsPath <> "/byron/genesis.spec.json"
 

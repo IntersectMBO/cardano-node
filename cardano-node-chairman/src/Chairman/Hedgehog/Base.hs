@@ -8,12 +8,20 @@ module Chairman.Hedgehog.Base
   , workspace
   , moduleWorkspace
 
+  , note
+  , note_
+  , noteM
+  , noteM_
+  , noteIO
+  , noteIO_
+
   , noteShow
   , noteShow_
   , noteShowM
   , noteShowM_
   , noteShowIO
   , noteShowIO_
+
   , noteTempFile
 
   , failWithCustom
@@ -113,6 +121,39 @@ moduleWorkspace prefixPath f = GHC.withFrozenCallStack $ do
 
 noteWithCallstack :: MonadTest m => CallStack -> String -> m ()
 noteWithCallstack cs a = H.writeLog $ H.Annotation (getCaller cs) a
+
+note :: HasCallStack => String -> Integration String
+note a = GHC.withFrozenCallStack $ do
+  !b <- H.eval a
+  noteWithCallstack GHC.callStack b
+  return b
+
+note_ :: HasCallStack => String -> Integration ()
+note_ a = GHC.withFrozenCallStack $ noteWithCallstack GHC.callStack a
+
+noteM :: HasCallStack => Integration String -> Integration String
+noteM a = GHC.withFrozenCallStack $ do
+  !b <- H.evalM a
+  noteWithCallstack GHC.callStack b
+  return b
+
+noteM_ :: HasCallStack => Integration String -> Integration ()
+noteM_ a = GHC.withFrozenCallStack $ do
+  !b <- H.evalM a
+  noteWithCallstack GHC.callStack b
+  return ()
+
+noteIO :: HasCallStack => IO String -> Integration String
+noteIO f = GHC.withFrozenCallStack $ do
+  !a <- H.evalM . liftIO $ f
+  noteWithCallstack GHC.callStack a
+  return a
+
+noteIO_ :: HasCallStack => IO String -> Integration ()
+noteIO_ f = GHC.withFrozenCallStack $ do
+  !a <- H.evalM . liftIO $ f
+  noteWithCallstack GHC.callStack a
+  return ()
 
 noteShow :: (HasCallStack, Show a) => a -> Integration a
 noteShow a = GHC.withFrozenCallStack $ do
