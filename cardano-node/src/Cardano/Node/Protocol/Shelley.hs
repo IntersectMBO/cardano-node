@@ -39,8 +39,10 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ShelleyGenesis,
                      TPraosLeaderCredentials (..))
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..), StandardShelley)
+import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley, TPraosCanBeLeader (..))
 
+import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
+                     validateGenesis)
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 
@@ -98,7 +100,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                           files = do
     (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
                                           npcShelleyGenesisFileHash
-
+    firstExceptT GenesisValidationFailure . hoistEither $ validateGenesis genesis
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
@@ -188,7 +190,8 @@ data ShelleyProtocolInstantiationError =
        GenesisReadError !FilePath !IOException
      | GenesisHashMismatch !GenesisHash !GenesisHash -- actual, expected
      | GenesisDecodeError !FilePath !String
-     | FileError (Api.FileError TextEnvelopeError)
+     | GenesisValidationFailure ![ValidationErr]
+     | FileError !(Api.FileError TextEnvelopeError)
 --TODO: pick a less generic constructor than FileError
 
      | OCertNotSpecified
@@ -213,6 +216,8 @@ renderShelleyProtocolInstantiationError pie =
     GenesisDecodeError fp err ->
         "There was an error parsing the genesis file: "
      <> toS fp <> " Error: " <> T.pack (show err)
+
+    GenesisValidationFailure vErrs -> T.unlines $ map describeValidationErr vErrs
 
     FileError fileErr -> T.pack $ displayError fileErr
 
