@@ -21,6 +21,7 @@ import           Prelude (fromIntegral)
 import           System.IO (FilePath, IO)
 import           Text.Show (show)
 
+import qualified Data.List as L
 import qualified Network.Socket as IO
 import qualified System.Directory as IO
 import qualified UnliftIO.Exception as IO
@@ -55,7 +56,7 @@ doesSocketExist = IO.doesFileExist
 {-# INLINE doesSocketExist #-}
 
 -- | Allocate the specified number of random ports
-allocateRandomPorts :: Int -> IO [Int]
+allocateRandomPorts :: Int -> IO [(Int, Socket)]
 allocateRandomPorts n = do
   let hints = IO.defaultHints
         { IO.addrFlags = [IO.AI_PASSIVE]
@@ -65,8 +66,11 @@ allocateRandomPorts n = do
   -- Create n sockets with randomly bound ports, grab the port numbers and close those ports
   addr:_ <- IO.getAddrInfo (Just hints) (Just "127.0.0.1") (Just "0")
   socks <- forM [1..n] $ \_ -> IO.socket (IO.addrFamily addr) (IO.addrSocketType addr) (IO.addrProtocol addr)
-  forM_ socks $ \sock -> IO.bind sock (IO.addrAddress addr)
+  forM_ socks $ \sock -> do
+    IO.setSocketOption sock IO.ReuseAddr 1
+    IO.setSocketOption sock IO.NoDelay 1
+    IO.bind sock (IO.addrAddress addr)
   ports <- forM socks IO.socketPort
-  forM_ socks IO.close
+  -- forM_ socks IO.close
 
-  return $ fmap fromIntegral ports
+  return $ L.zip (fmap fromIntegral ports) socks

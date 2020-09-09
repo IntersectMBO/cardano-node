@@ -20,6 +20,7 @@ import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
+import           Data.Tuple
 import           GHC.Float
 import           Hedgehog (Property, discover)
 import           System.IO (IO)
@@ -39,6 +40,7 @@ import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
+import qualified Network.Socket as IO
 import qualified System.Directory as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.IO as IO
@@ -73,6 +75,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   let numPraosNodes = L.length allNodes :: Int
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts numPraosNodes
+
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
 
   let userAddrs = ["user1"]
@@ -155,7 +158,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   -- Make topology files
   forM_ allNodes $ \node -> do
-    let port = fromJust $ M.lookup node nodeToPort
+    let (port, _) = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath <> "/" <> node <> "/topology.json") $ J.encode $
       J.object
       [ "Producers" .= J.toJSON
@@ -164,10 +167,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
           , "port" .= J.toJSON @Int peerPort
           , "valency" .= J.toJSON @Int 1
           ]
-        | peerPort <- allPorts \\ [port]
+        | peerPort <- fmap fst allPorts \\ [port]
         ]
       ]
-    H.writeFile (tempAbsPath <> "/" <> node <> "/port") (show port)
+    H.writeFile (tempAbsPath <> "/" <> node <> "/port") (show @Int port)
 
   -- Generated node operator keys (cold, hot) and operational certs
   forM_ allNodes $ \n -> H.noteShowM_ . H.listDirectory $ tempAbsPath <> "/" <> n
@@ -352,6 +355,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   H.noteShowIO_ DTC.getCurrentTime
 
   deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime -- 90 seconds from now
+
+  forM_ allPorts $ \(_, sock) -> H.evalIO $ IO.close sock
 
   forM_ allNodes $ \node -> do
     portString <- H.noteShowM . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
