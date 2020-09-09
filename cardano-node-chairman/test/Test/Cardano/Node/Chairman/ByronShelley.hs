@@ -22,6 +22,8 @@ import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String
+import           GHC.Num
+import           GHC.Real
 import           Hedgehog (Property, discover)
 import           System.Exit (ExitCode (..))
 import           System.IO (IO)
@@ -67,6 +69,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   let numUtxoKeys = 1
   let initSupply = 1000000000
   let maxSupply = 1000000000
+  let fundsPerGenesisAddress = initSupply `div` numBftNodes
+  let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
 
   let networkMagic = 42
   let securityParam = 10
@@ -101,6 +105,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
           : ("SECURITY_PARAM", show @Int securityParam)
           : ("START_TIME", showUTCTimeSeconds startTime)
           : ("ALL_NODES", L.unwords (bftNodes <> poolNodes))
+          : ("FUNDS_PER_GENESIS_ADDRESS", show @Int fundsPerGenesisAddress)
+          : ("FUNDS_PER_BYRON_ADDRESS", show @Int fundsPerGenesisAddress)
           : env
       }
 

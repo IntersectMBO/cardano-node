@@ -43,8 +43,6 @@ ROOT=${ROOT:-example}
 CARDANO_NODE=${CARDANO_NODE:-cardano-node}
 CARDANO_CLI=${CARDANO_CLI:-cardano-cli}
 
-FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
-FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
 # We need to allow for a fee to transfer the funds out of the genesis.
 
 OS=$(uname -s)
