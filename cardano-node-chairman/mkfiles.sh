@@ -43,17 +43,6 @@ ROOT=${ROOT:-example}
 CARDANO_NODE=${CARDANO_NODE:-cardano-node}
 CARDANO_CLI=${CARDANO_CLI:-cardano-cli}
 
-BFT_NODES="node-bft1 node-bft2"
-BFT_NODES_N="1 2"
-NUM_BFT_NODES=2
-
-POOL_NODES="node-pool1"
-
-ALL_NODES="${BFT_NODES} ${POOL_NODES}"
-
-NUM_UTXO_KEYS=1
-MAX_SUPPLY=1000000000
-INIT_SUPPLY=1000000000
 FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
 FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
 # We need to allow for a fee to transfer the funds out of the genesis.
@@ -67,11 +56,6 @@ case $OS in
   Darwin )       DATE="gdate"; SED='gsed';;
   * )            DATE="date";  SED='sed' ;;
 esac
-
-NETWORK_MAGIC=42
-SECURITY_PARAM=10
-
-START_TIME=${START_TIME:-$(${DATE} -d "now + 30 seconds" +%s)}
 
 # If neither of those are used, we have to
 # - post an update proposal + votes to go to protocol version 1

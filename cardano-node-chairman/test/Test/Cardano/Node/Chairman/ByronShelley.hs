@@ -17,6 +17,7 @@ import           Data.Bool
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
+import           Data.Int
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
@@ -58,8 +59,17 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
   socketDir <- H.noteShow $ tempRelPath <> "/socket"
+  let bftNodes = ["node-bft1", "node-bft2"]
+  let poolNodes = ["node-pool1"]
+  let allNodes = bftNodes <> poolNodes
+  let bftNodesN = [1, 2]
+  let numBftNodes = 2
+  let numUtxoKeys = 1
+  let initSupply = 1000000000
+  let maxSupply = 1000000000
 
-  let testnetMagic = "42" :: String
+  let networkMagic = 42
+  let securityParam = 10
 
   H.createDirectoryIfMissing logDir
 
@@ -79,8 +89,18 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       , IO.std_out = IO.UseHandle hNodeStdout
       , IO.std_err = IO.UseHandle hNodeStderr
       , IO.env = Just
-          $ ("ROOT", tempAbsPath)
+          $ ("BFT_NODES_N", L.unwords (fmap (show @Int) bftNodesN))
+          : ("BFT_NODES", L.unwords bftNodes)
+          : ("INIT_SUPPLY", show @Int initSupply)
+          : ("MAX_SUPPLY", show @Int maxSupply)
+          : ("NETWORK_MAGIC", show @Int networkMagic)
+          : ("NUM_BFT_NODES", show @Int numBftNodes)
+          : ("NUM_UTXO_KEYS", show @Int numUtxoKeys)
+          : ("POOL_NODES", L.unwords poolNodes)
+          : ("ROOT", tempAbsPath)
+          : ("SECURITY_PARAM", show @Int securityParam)
           : ("START_TIME", showUTCTimeSeconds startTime)
+          : ("ALL_NODES", L.unwords (bftNodes <> poolNodes))
           : env
       }
 
@@ -99,10 +119,6 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   --------------------------------
   -- Launch cluster of three nodes
 
-  let bftNodes = ["node-bft1", "node-bft2"]
-  let poolNodes = ["node-pool1"]
-  let allNodes = bftNodes <> poolNodes
-
   forM_ bftNodes $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath <> "/db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
@@ -117,7 +133,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
     H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
-    portString <- fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+    portString <- fmap S.strip . fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
 
     void $ H.createProcess =<<
       ( H.procNode
@@ -156,7 +172,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
     H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
-    portString <- fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+    portString <- fmap S.strip . fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
 
     void $ H.createProcess =<<
       ( H.procNode
@@ -184,7 +200,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   deadline <- H.noteShowIO $ DTC.addUTCTime 60 <$> DTC.getCurrentTime -- 60 seconds from now
 
   forM_ allNodes $ \node -> do
-    portString <- H.noteShowM . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+    portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
     H.assertByDeadlineIO deadline $ IO.isPortOpen (read portString)
 
   forM_ allNodes $ \node -> do
@@ -216,7 +232,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
         , "--socket-path", IO.sprocketArgumentName sprocket
         , "--config", tempAbsPath <> "/configuration.yaml"
         , "--security-parameter", "2160"
-        , "--testnet-magic", testnetMagic
+        , "--testnet-magic", show @Int networkMagic
         , "--slot-length", "20"
         ] <&>
         ( \cp -> cp
