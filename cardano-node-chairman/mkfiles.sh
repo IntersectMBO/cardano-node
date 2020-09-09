@@ -63,13 +63,6 @@ esac
 
 pushd ${ROOT}
 
-# create the node directories
-for NODE in ${ALL_NODES}; do
-
-  mkdir ${NODE} ${NODE}/byron ${NODE}/shelley
-
-done
-
 # Make topology files
 #TODO generalise this over the N BFT nodes and pool nodes
 cat > node-bft1/topology.json <<EOF

@@ -77,6 +77,11 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
   H.createDirectoryIfMissing logDir
 
+  forM_ allNodes $ \node -> do
+    H.createDirectoryIfMissing node
+    H.createDirectoryIfMissing $ node <> "/byron"
+    H.createDirectoryIfMissing $ node <> "/shelley"
+
   do
     H.readFile (base <> "/configuration/chairman/byron-shelley/configuration.yaml")
       <&> L.unlines . (<> ["TestShelleyHardForkAtVersion: 1"]) . L.lines
