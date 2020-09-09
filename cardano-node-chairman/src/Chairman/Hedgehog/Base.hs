@@ -27,6 +27,7 @@ module Chairman.Hedgehog.Base
   , release
   ) where
 
+import           Chairman.CallStack
 import           Chairman.Monad
 import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -59,6 +60,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Info as IO
+import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 
 type Integration a = H.PropertyT (ResourceT IO) a
@@ -92,6 +94,7 @@ workspace prefixPath f = GHC.withFrozenCallStack $ do
   H.evalM . liftIO $ IO.createDirectoryIfMissing True systemPrefixPath
   ws <- H.evalM . liftIO $ IO.createTempDirectory systemPrefixPath "test"
   H.annotate $ "Workspace: " <> ws
+  liftIO $ IO.writeFile (ws <> "/module") callerModuleName
   f ws
   when (IO.os /= "mingw32") . H.evalM . liftIO $ IO.removeDirectoryRecursive ws
 
