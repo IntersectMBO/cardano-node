@@ -78,7 +78,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
 
   portBase <- H.noteShowIO $ IO.randomRIO (3000, 50000)
-  allPorts <- H.noteShow ((+ portBase) <$> [1..numPraosNodes])
+  allPorts <- H.noteShow ((+ portBase) <$> [1 .. L.length allNodes])
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
 
   let networkMagic = 42
@@ -87,9 +87,9 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   H.createDirectoryIfMissing logDir
 
   forM_ allNodes $ \node -> do
-    H.createDirectoryIfMissing node
-    H.createDirectoryIfMissing $ node <> "/byron"
-    H.createDirectoryIfMissing $ node <> "/shelley"
+    H.createDirectoryIfMissing $ tempAbsPath <> "/" <> node
+    H.createDirectoryIfMissing $ tempAbsPath <> "/" <> node <> "/byron"
+    H.createDirectoryIfMissing $ tempAbsPath <> "/" <> node <> "/shelley"
 
   -- Make topology files
   forM_ allNodes $ \node -> do
