@@ -21,7 +21,6 @@ import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
 import           GHC.Float
-import           GHC.Num
 import           Hedgehog (Property, discover)
 import           System.IO (IO)
 import           Text.Read
@@ -44,7 +43,6 @@ import qualified System.Directory as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified System.Random as IO
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -74,8 +72,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   let allNodes = praosNodes <> poolNodes :: [String]
   let numPraosNodes = L.length allNodes :: Int
 
-  portBase <- H.noteShowIO $ IO.randomRIO (3000, 50000)
-  allPorts <- H.noteShow ((+ portBase) <$> [1..numPraosNodes])
+  allPorts <- H.noteShowIO $ IO.allocateRandomPorts numPraosNodes
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
 
   let userAddrs = ["user1"]

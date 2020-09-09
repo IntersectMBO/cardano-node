@@ -67,7 +67,7 @@ propertyOnce :: HasCallStack => Integration () -> H.Property
 propertyOnce = H.withTests 1 . H.property . hoist runResourceT
 
 threadDelay :: Int -> Integration ()
-threadDelay = H.evalM . liftIO . IO.threadDelay
+threadDelay n = GHC.withFrozenCallStack . H.evalM . liftIO $ IO.threadDelay n
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
 failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a
@@ -168,10 +168,10 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
         failMessage GHC.callStack "Condition not met by deadline"
 
 assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()
-assertM = (>>= H.assert)
+assertM f = GHC.withFrozenCallStack $ f >>= H.assert
 
 assertIO :: (MonadIO m, HasCallStack) => IO Bool -> H.PropertyT m ()
-assertIO f = H.evalIO (forceM f) >>= H.assert
+assertIO f = GHC.withFrozenCallStack $ H.evalIO (forceM f) >>= H.assert
 
 release :: MonadIO m => ReleaseKey -> H.PropertyT m ()
-release = H.evalIO . IO.release
+release k = GHC.withFrozenCallStack . H.evalIO $ IO.release k

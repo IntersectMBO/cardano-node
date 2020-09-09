@@ -6,6 +6,7 @@ module Chairman.IO.Network.Socket
   , isPortOpen
   , canConnect
   , listenOn
+  , allocateRandomPorts
   ) where
 
 import           Control.Exception (IOException, handle)
@@ -16,6 +17,7 @@ import           Data.Functor
 import           Data.Int
 import           Data.Maybe
 import           Network.Socket (Family (AF_INET), SockAddr (..), Socket, SocketType (Stream))
+import           Prelude (fromIntegral)
 import           System.IO (FilePath, IO)
 import           Text.Show (show)
 
@@ -51,3 +53,20 @@ listenOn n = do
 doesSocketExist :: FilePath -> IO Bool
 doesSocketExist = IO.doesFileExist
 {-# INLINE doesSocketExist #-}
+
+-- | Allocate the specified number of random ports
+allocateRandomPorts :: Int -> IO [Int]
+allocateRandomPorts n = do
+  let hints = IO.defaultHints
+        { IO.addrFlags = [IO.AI_PASSIVE]
+        , IO.addrSocketType = IO.Stream
+        }
+
+  -- Create n sockets with randomly bound ports, grab the port numbers and close those ports
+  addr:_ <- IO.getAddrInfo (Just hints) (Just "127.0.0.1") (Just "0")
+  socks <- forM [1..n] $ \_ -> IO.socket (IO.addrFamily addr) (IO.addrSocketType addr) (IO.addrProtocol addr)
+  forM_ socks $ \sock -> IO.bind sock (IO.addrAddress addr)
+  ports <- forM socks IO.socketPort
+  forM_ socks IO.close
+
+  return $ fmap fromIntegral ports
