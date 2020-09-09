@@ -1932,16 +1932,16 @@ pProtocol =
         (SecurityParam defaultSecurityParam))
   where
     pByron :: Parser Protocol
-    pByron = ByronProtocol <$> pEpochSlots <*> pSecurityParam
+    pByron = ByronProtocol <$> pEpochSlotsByron <*> pSecurityParam
 
     pShelley :: Parser Protocol
     pShelley = pure ShelleyProtocol
 
     pCardano :: Parser Protocol
-    pCardano = CardanoProtocol <$> pEpochSlots <*> pSecurityParam
+    pCardano = CardanoProtocol <$> pEpochSlotsCardano <*> pSecurityParam
 
-    pEpochSlots :: Parser EpochSlots
-    pEpochSlots =
+    pEpochSlotsByron :: Parser EpochSlots
+    pEpochSlotsByron =
       EpochSlots <$>
         Opt.option Opt.auto
           (  Opt.long "epoch-slots"
@@ -1949,6 +1949,15 @@ pProtocol =
           <> Opt.help "The number of slots per epoch for the Byron era."
           <> Opt.value defaultByronEpochSlots -- Default to the mainnet value.
           <> Opt.showDefault
+          )
+
+    pEpochSlotsCardano :: Parser EpochSlots
+    pEpochSlotsCardano =
+      EpochSlots <$>
+        Opt.option Opt.auto
+          (  Opt.long "epoch-slots"
+          <> Opt.metavar "NATURAL"
+          <> Opt.help "The number of slots per epoch for the Cardano era."
           )
 
     pSecurityParam :: Parser SecurityParam
