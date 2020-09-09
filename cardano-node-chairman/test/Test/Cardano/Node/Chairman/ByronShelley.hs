@@ -107,6 +107,30 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       ]
     H.writeFile (tempAbsPath <> "/" <> node <> "/port") (show port)
 
+  H.lbsWriteFile (tempAbsPath <> "/byron.genesis.spec.json") . J.encode $ J.object
+    [ "heavyDelThd" .= J.toJSON @String "300000000000"
+    , "maxBlockSize" .= J.toJSON @String "2000000"
+    , "maxTxSize" .= J.toJSON @String "4096"
+    , "maxHeaderSize" .= J.toJSON @String "2000000"
+    , "maxProposalSize" .= J.toJSON @String "700"
+    , "mpcThd" .= J.toJSON @String "20000000000000"
+    , "scriptVersion" .= J.toJSON @Int 0
+    , "slotDuration" .= J.toJSON @String "2000"
+    , "softforkRule" .= J.object
+      [ "initThd" .= J.toJSON @String "900000000000000"
+      , "minThd" .= J.toJSON @String "600000000000000"
+      , "thdDecrement" .= J.toJSON @String "50000000000000"
+      ]
+    , "txFeePolicy" .= J.object
+      [ "multiplier" .= J.toJSON @String "43946000000"
+      , "summand" .= J.toJSON @String "155381000000000"
+      ]
+    , "unlockStakeEpoch" .= J.toJSON @String "18446744073709551615"
+    , "updateImplicit" .= J.toJSON @String "10000"
+    , "updateProposalThd" .= J.toJSON @String "100000000000000"
+    , "updateVoteThd" .= J.toJSON @String "1000000000000"
+    ]
+
   ------------
 
   do
