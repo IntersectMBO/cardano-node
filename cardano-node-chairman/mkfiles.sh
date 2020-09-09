@@ -63,63 +63,6 @@ esac
 
 pushd ${ROOT}
 
-# Make topology files
-#TODO generalise this over the N BFT nodes and pool nodes
-cat > node-bft1/topology.json <<EOF
-{
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3002,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3003,
-       "valency": 1
-     }
-   ]
- }
-EOF
-echo 3001 > node-bft1/port
-
-cat > node-bft2/topology.json <<EOF
-{
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3001,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3003,
-       "valency": 1
-     }
-   ]
- }
-EOF
-echo 3002 > node-bft2/port
-
-cat > node-pool1/topology.json <<EOF
-{
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3001,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3002,
-       "valency": 1
-     }
-   ]
- }
-EOF
-echo 3003 > node-pool1/port
-
-
 cat > byron.genesis.spec.json <<EOF
 {
   "heavyDelThd":     "300000000000",

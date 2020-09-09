@@ -13,11 +13,13 @@ import           Chairman.IO.Network.Sprocket (Sprocket (..))
 import           Chairman.Time
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Data.Aeson ((.=))
 import           Data.Bool
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Int
+import           Data.List ((\\))
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
@@ -38,7 +40,9 @@ import qualified Chairman.IO.Network.Socket as IO
 import qualified Chairman.IO.Network.Sprocket as IO
 import qualified Chairman.OS as OS
 import qualified Chairman.String as S
+import qualified Data.Aeson as J
 import qualified Data.List as L
+import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified System.Directory as IO
@@ -46,6 +50,7 @@ import qualified System.Environment as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified System.Random as IO
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -72,6 +77,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
   let fundsPerGenesisAddress = initSupply `div` numBftNodes
   let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
 
+  portBase <- H.noteShowIO $ IO.randomRIO (3000, 50000)
+  allPorts <- H.noteShow ((+ portBase) <$> [1..numPraosNodes])
+  nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
+
   let networkMagic = 42
   let securityParam = 10
 
@@ -81,6 +90,24 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     H.createDirectoryIfMissing node
     H.createDirectoryIfMissing $ node <> "/byron"
     H.createDirectoryIfMissing $ node <> "/shelley"
+
+  -- Make topology files
+  forM_ allNodes $ \node -> do
+    let port = fromJust $ M.lookup node nodeToPort
+    H.lbsWriteFile (tempAbsPath <> "/" <> node <> "/topology.json") $ J.encode $
+      J.object
+      [ "Producers" .= J.toJSON
+        [ J.object
+          [ "addr" .= J.toJSON @String "127.0.0.1"
+          , "port" .= J.toJSON @Int peerPort
+          , "valency" .= J.toJSON @Int 1
+          ]
+        | peerPort <- allPorts \\ [port]
+        ]
+      ]
+    H.writeFile (tempAbsPath <> "/" <> node <> "/port") (show port)
+
+  ------------
 
   do
     H.readFile (base <> "/configuration/chairman/byron-shelley/configuration.yaml")
@@ -144,7 +171,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
     H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
-    portString <- fmap S.strip . fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+    portString <- fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
 
     void $ H.createProcess =<<
       ( H.procNode
