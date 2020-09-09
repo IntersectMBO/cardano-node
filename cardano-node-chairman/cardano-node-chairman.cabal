@@ -31,6 +31,7 @@ library
                       , unordered-containers
                       , Win32-network
   exposed-modules:      Chairman.Aeson
+                        Chairman.CallStack
                         Chairman.Hedgehog.Base
                         Chairman.Hedgehog.File
                         Chairman.Hedgehog.Network
