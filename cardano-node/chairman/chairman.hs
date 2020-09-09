@@ -57,14 +57,14 @@ mkNodeClientProtocol protocol =
     case protocol of
       ByronProtocol ->
         mkSomeNodeClientProtocolByron
-          (EpochSlots 21600) (SecurityParam 2160)
+          (EpochSlots 21600)
 
       ShelleyProtocol ->
         mkSomeNodeClientProtocolShelley
 
       CardanoProtocol ->
         mkSomeNodeClientProtocolCardano
-          (EpochSlots 21600) (SecurityParam 2160)
+          (EpochSlots 21600)
 
 data ChairmanArgs = ChairmanArgs {
       -- | Stop the test after given number of seconds. The chairman will

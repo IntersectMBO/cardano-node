@@ -166,19 +166,22 @@ instance HasSeverityAnnotation () where
 
 instance HasPrivacyAnnotation (TraceForgeEvent blk)
 instance HasSeverityAnnotation (TraceForgeEvent blk) where
-  getSeverityAnnotation TraceForgedBlock {}            = Info
   getSeverityAnnotation TraceStartLeadershipCheck {}   = Info
-  getSeverityAnnotation TraceNodeNotLeader {}          = Info
-  getSeverityAnnotation TraceNodeCannotForge {}        = Error
-  getSeverityAnnotation TraceNodeIsLeader {}           = Info
-  getSeverityAnnotation TraceForgeStateUpdateError {}  = Error
-  getSeverityAnnotation TraceNoLedgerState {}          = Error
-  getSeverityAnnotation TraceNoLedgerView {}           = Error
-  getSeverityAnnotation TraceBlockFromFuture {}        = Error
   getSeverityAnnotation TraceSlotIsImmutable {}        = Error
-  getSeverityAnnotation TraceAdoptedBlock {}           = Info
+  getSeverityAnnotation TraceBlockFromFuture {}        = Error
+  getSeverityAnnotation TraceBlockContext {}           = Debug
+  getSeverityAnnotation TraceNoLedgerState {}          = Error
+  getSeverityAnnotation TraceLedgerState {}            = Debug
+  getSeverityAnnotation TraceNoLedgerView {}           = Error
+  getSeverityAnnotation TraceLedgerView {}             = Debug
+  getSeverityAnnotation TraceForgeStateUpdateError {}  = Error
+  getSeverityAnnotation TraceNodeCannotForge {}        = Error
+  getSeverityAnnotation TraceNodeNotLeader {}          = Info
+  getSeverityAnnotation TraceNodeIsLeader {}           = Info
+  getSeverityAnnotation TraceForgedBlock {}            = Info
   getSeverityAnnotation TraceDidntAdoptBlock {}        = Error
   getSeverityAnnotation TraceForgedInvalidBlock {}     = Error
+  getSeverityAnnotation TraceAdoptedBlock {}           = Info
 
 
 instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
@@ -255,32 +258,36 @@ instance ( tx ~ GenTx blk
          , Show (CannotForge blk))
       => HasTextFormatter (TraceForgeEvent blk) where
   formatText = \case
-    TraceAdoptedBlock slotNo blk txs -> const $
-      "Adopted block forged in slot "
-        <> showT (unSlotNo slotNo)
-        <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
-        <> ", TxIds: " <> showT (map txId txs)
-    TraceBlockFromFuture currentSlot tipSlot -> const $
-      "Couldn't forge block because current tip is in the future: "
-        <> "current tip slot: " <> showT (unSlotNo tipSlot)
-        <> ", current slot: " <> showT (unSlotNo currentSlot)
+    TraceStartLeadershipCheck slotNo -> const $
+      "Checking for leadership in slot " <> showT (unSlotNo slotNo)
     TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo -> const $
       "Couldn't forge block because current slot is immutable: "
         <> "immutable tip: " <> renderPointAsPhrase immutableTipPoint
         <> ", immutable tip block no: " <> showT (unBlockNo immutableTipBlkNo)
         <> ", current slot: " <> showT (unSlotNo slotNo)
-    TraceDidntAdoptBlock slotNo _ -> const $
-      "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
-    TraceForgedBlock slotNo _ _ _ -> const $
-      "Forged block in slot " <> showT (unSlotNo slotNo)
-    TraceForgedInvalidBlock slotNo _ reason -> const $
-      "Forged invalid block in slot "
+    TraceBlockFromFuture currentSlot tipSlot -> const $
+      "Couldn't forge block because current tip is in the future: "
+        <> "current tip slot: " <> showT (unSlotNo tipSlot)
+        <> ", current slot: " <> showT (unSlotNo currentSlot)
+    TraceBlockContext currentSlot tipBlockNo tipPoint -> const $
+      "New block will fit onto: "
+        <> "tip: " <> renderPointAsPhrase tipPoint
+        <> ", tip block no: " <> showT (unBlockNo tipBlockNo)
+        <> ", current slot: " <> showT (unSlotNo currentSlot)
+    TraceNoLedgerState slotNo pt -> const $
+      "Could not obtain ledger state for point "
+        <> renderPointAsPhrase pt
+        <> ", current slot: "
         <> showT (unSlotNo slotNo)
-        <> ", reason: " <> showT reason
-    TraceNodeIsLeader slotNo -> const $
-      "Leading slot " <> showT (unSlotNo slotNo)
-    TraceNodeNotLeader slotNo -> const $
-      "Not leading slot " <> showT (unSlotNo slotNo)
+    TraceLedgerState slotNo pt -> const $
+      "Obtained a ledger state for point "
+        <> renderPointAsPhrase pt
+        <> ", current slot: "
+        <> showT (unSlotNo slotNo)
+    TraceNoLedgerView slotNo _ -> const $
+      "Could not obtain ledger view for slot " <> showT (unSlotNo slotNo)
+    TraceLedgerView slotNo -> const $
+      "Obtained a ledger view for slot " <> showT (unSlotNo slotNo)
     TraceForgeStateUpdateError slotNo reason -> const $
       "Updating the forge state in slot "
         <> showT (unSlotNo slotNo)
@@ -291,15 +298,23 @@ instance ( tx ~ GenTx blk
         <> showT (unSlotNo slotNo)
         <> ", but we cannot forge because: "
         <> showT reason
-    TraceNoLedgerState slotNo pt -> const $
-      "Could not obtain ledger state for point "
-        <> renderPointAsPhrase pt
-        <> ", current slot: "
+    TraceNodeNotLeader slotNo -> const $
+      "Not leading slot " <> showT (unSlotNo slotNo)
+    TraceNodeIsLeader slotNo -> const $
+      "Leading slot " <> showT (unSlotNo slotNo)
+    TraceForgedBlock slotNo _ _ _ -> const $
+      "Forged block in slot " <> showT (unSlotNo slotNo)
+    TraceDidntAdoptBlock slotNo _ -> const $
+      "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
+    TraceForgedInvalidBlock slotNo _ reason -> const $
+      "Forged invalid block in slot "
         <> showT (unSlotNo slotNo)
-    TraceNoLedgerView slotNo _ -> const $
-      "Could not obtain ledger view for slot " <> showT (unSlotNo slotNo)
-    TraceStartLeadershipCheck slotNo -> const $
-      "Checking for leadership in slot " <> showT (unSlotNo slotNo)
+        <> ", reason: " <> showT reason
+    TraceAdoptedBlock slotNo blk txs -> const $
+      "Adopted block forged in slot "
+        <> showT (unSlotNo slotNo)
+        <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
+        <> ", TxIds: " <> showT (map txId txs)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
@@ -837,6 +852,89 @@ instance ( tx ~ GenTx blk
          , ToObject (CannotForge blk)
          , ToObject (ForgeStateUpdateError blk))
       => ToObject (TraceForgeEvent blk) where
+  toObject _verb (TraceStartLeadershipCheck slotNo) =
+    mkObject
+      [ "kind" .= String "TraceStartLeadershipCheck"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject verb (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
+    mkObject
+      [ "kind" .= String "TraceSlotIsImmutable"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "tip" .= renderPointForVerbosity verb tipPoint
+      , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
+      ]
+  toObject _verb (TraceBlockFromFuture currentSlot tip) =
+    mkObject
+      [ "kind" .= String "TraceBlockFromFuture"
+      , "current slot" .= toJSON (unSlotNo currentSlot)
+      , "tip" .= toJSON (unSlotNo tip)
+      ]
+  toObject verb (TraceBlockContext currentSlot tipBlkNo tipPoint) =
+    mkObject
+      [ "kind" .= String "TraceBlockContext"
+      , "current slot" .= toJSON (unSlotNo currentSlot)
+      , "tip" .= renderPointForVerbosity verb tipPoint
+      , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
+      ]
+  toObject _verb (TraceNoLedgerState slotNo _pt) =
+    mkObject
+      [ "kind" .= String "TraceNoLedgerState"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (TraceLedgerState slotNo _pt) =
+    mkObject
+      [ "kind" .= String "TraceLedgerState"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (TraceNoLedgerView slotNo _) =
+    mkObject
+      [ "kind" .= String "TraceNoLedgerView"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (TraceLedgerView slotNo) =
+    mkObject
+      [ "kind" .= String "TraceLedgerView"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject verb (TraceForgeStateUpdateError slotNo reason) =
+    mkObject
+      [ "kind" .= String "TraceForgeStateUpdateError"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= toObject verb reason
+      ]
+  toObject verb (TraceNodeCannotForge slotNo reason) =
+    mkObject
+      [ "kind" .= String "TraceNodeCannotForge"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= toObject verb reason
+      ]
+  toObject _verb (TraceNodeNotLeader slotNo) =
+    mkObject
+      [ "kind" .= String "TraceNodeNotLeader"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (TraceNodeIsLeader slotNo) =
+    mkObject
+      [ "kind" .= String "TraceNodeIsLeader"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (TraceForgedBlock slotNo _ _ _) =
+    mkObject
+      [ "kind" .= String "TraceForgedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (TraceDidntAdoptBlock slotNo _) =
+    mkObject
+      [ "kind" .= String "TraceDidntAdoptBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject verb (TraceForgedInvalidBlock slotNo _ reason) =
+    mkObject
+      [ "kind" .= String "TraceForgedInvalidBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= toObject verb reason
+      ]
   toObject MaximalVerbosity (TraceAdoptedBlock slotNo blk txs) =
     mkObject
       [ "kind" .= String "TraceAdoptedBlock"
@@ -857,72 +955,6 @@ instance ( tx ~ GenTx blk
           verb
           (blockHash blk)
       , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
-      ]
-  toObject _verb (TraceBlockFromFuture currentSlot tip) =
-    mkObject
-      [ "kind" .= String "TraceBlockFromFuture"
-      , "current slot" .= toJSON (unSlotNo currentSlot)
-      , "tip" .= toJSON (unSlotNo tip)
-      ]
-  toObject verb (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
-    mkObject
-      [ "kind" .= String "TraceSlotIsImmutable"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      , "tip" .= renderPointForVerbosity verb tipPoint
-      , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
-      ]
-  toObject _verb (TraceDidntAdoptBlock slotNo _) =
-    mkObject
-      [ "kind" .= String "TraceDidntAdoptBlock"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      ]
-  toObject _verb (TraceForgedBlock slotNo _ _ _) =
-    mkObject
-      [ "kind" .= String "TraceForgedBlock"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      ]
-  toObject verb (TraceForgedInvalidBlock slotNo _ reason) =
-    mkObject
-      [ "kind" .= String "TraceForgedInvalidBlock"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      , "reason" .= toObject verb reason
-      ]
-  toObject _verb (TraceNodeIsLeader slotNo) =
-    mkObject
-      [ "kind" .= String "TraceNodeIsLeader"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      ]
-  toObject _verb (TraceNodeNotLeader slotNo) =
-    mkObject
-      [ "kind" .= String "TraceNodeNotLeader"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      ]
-  toObject verb (TraceForgeStateUpdateError slotNo reason) =
-    mkObject
-      [ "kind" .= String "TraceForgeStateUpdateError"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      , "reason" .= toObject verb reason
-      ]
-  toObject verb (TraceNodeCannotForge slotNo reason) =
-    mkObject
-      [ "kind" .= String "TraceNodeCannotForge"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      , "reason" .= toObject verb reason
-      ]
-  toObject _verb (TraceNoLedgerState slotNo _blk) =
-    mkObject
-      [ "kind" .= String "TraceNoLedgerState"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      ]
-  toObject _verb (TraceNoLedgerView slotNo _) =
-    mkObject
-      [ "kind" .= String "TraceNoLedgerView"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      ]
-  toObject _verb (TraceStartLeadershipCheck slotNo) =
-    mkObject
-      [ "kind" .= String "TraceStartLeadershipCheck"
-      , "slot" .= toJSON (unSlotNo slotNo)
       ]
 
 

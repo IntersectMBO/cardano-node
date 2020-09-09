@@ -37,8 +37,8 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ShelleyGenesis,
-                     TPraosLeaderCredentials (..))
+import           Ouroboros.Consensus.Shelley.Node (MaxMajorProtVer (..), Nonce (..),
+                     ShelleyGenesis, TPraosLeaderCredentials (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley, TPraosCanBeLeader (..))
 
 import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
@@ -109,7 +109,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
         (genesisHashToPraosNonce genesisHash)
         (ProtVer npcShelleySupportedProtocolVersionMajor
                  npcShelleySupportedProtocolVersionMinor)
-        npcShelleyMaxSupportedProtocolVersion
+        (MaxMajorProtVer npcShelleyMaxSupportedProtocolVersion)
         optionalLeaderCredentials
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce

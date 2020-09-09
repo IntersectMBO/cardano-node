@@ -385,7 +385,7 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
 import           Ouroboros.Consensus.Block (BlockProtocol)
-import           Ouroboros.Consensus.Cardano (ProtocolClient, SecurityParam, protocolClientInfo)
+import           Ouroboros.Consensus.Cardano (ProtocolClient, protocolClientInfo)
 import           Ouroboros.Consensus.Ledger.Abstract (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient (Codecs' (..), clientCodecs)
@@ -2514,7 +2514,6 @@ data NodeConsensusMode mode block where
 
      ByronMode
        :: Byron.EpochSlots
-       -> SecurityParam
        -> NodeConsensusMode ByronMode ByronBlockHFC
 
      ShelleyMode
@@ -2522,7 +2521,6 @@ data NodeConsensusMode mode block where
 
      CardanoMode
        :: Byron.EpochSlots
-       -> SecurityParam
        -> NodeConsensusMode CardanoMode (CardanoBlock StandardCrypto)
 
 
@@ -2532,13 +2530,13 @@ withNodeProtocolClient
           SupportedNetworkProtocolVersion block)
       => ProtocolClient block (BlockProtocol block) -> a)
   -> a
-withNodeProtocolClient (ByronMode epochSlots securityParam) f =
-    f (mkNodeClientProtocolByron epochSlots securityParam)
+withNodeProtocolClient (ByronMode epochSlots) f =
+    f (mkNodeClientProtocolByron epochSlots)
 
 withNodeProtocolClient ShelleyMode f = f mkNodeClientProtocolShelley
 
-withNodeProtocolClient (CardanoMode epochSlots securityParam) f =
-    f (mkNodeClientProtocolCardano epochSlots securityParam)
+withNodeProtocolClient (CardanoMode epochSlots) f =
+    f (mkNodeClientProtocolCardano epochSlots)
 
 data LocalNodeClientProtocols block =
      LocalNodeClientProtocols {

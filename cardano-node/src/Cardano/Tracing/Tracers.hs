@@ -502,19 +502,22 @@ teeForge ::
 teeForge ft nodeKern tverb tr = Tracer $ \ev@(WithSeverity sev event) -> do
   flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
     case e of
-      Consensus.TraceNodeCannotForge {} -> teeForge' (ftTraceNodeCannotForge ft)
-      Consensus.TraceForgeStateUpdateError{} -> teeForge' (ftTraceForgeStateUpdateError ft)
-      Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftForgeAboutToLead ft)
+      Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
+      Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
+      Consensus.TraceBlockContext{} -> nullTracer
       Consensus.TraceNoLedgerState{} -> teeForge' (ftCouldNotForge ft)
+      Consensus.TraceLedgerState{} -> nullTracer
       Consensus.TraceNoLedgerView{} -> teeForge' (ftCouldNotForge ft)
-      Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
+      Consensus.TraceLedgerView{} -> nullTracer
+      Consensus.TraceForgeStateUpdateError{} -> teeForge' (ftTraceForgeStateUpdateError ft)
+      Consensus.TraceNodeCannotForge {} -> teeForge' (ftTraceNodeCannotForge ft)
+      Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
+      Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
+      Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
-      Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
-      Consensus.TraceBlockFromFuture{} -> teeForge' (ftTraceBlockFromFuture ft)
-      Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
-      Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
+      Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
   case event of
     Consensus.TraceStartLeadershipCheck slot -> do
       !utxoSize <- mapNodeKernelDataIO nkUtxoSize nodeKern
@@ -541,33 +544,38 @@ teeForge' tr =
     meta <- mkLOMeta Critical Confidential
     traceNamedObject (appendName "metrics" tr) . (meta,) $
       case ev of
-        Consensus.TraceNodeCannotForge slot _reason ->
-          LogValue "nodeCannotForge" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceForgeStateUpdateError slot _reason ->
-          LogValue "forgeStateUpdateError" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceForgedBlock slot _ _ _ ->
-          LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceStartLeadershipCheck slot ->
           LogValue "aboutToLeadSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceSlotIsImmutable slot _tipPoint _tipBlkNo ->
+          LogValue "slotIsImmutable" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceBlockFromFuture slot _slotNo ->
+          LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceBlockContext slot _tipBlkNo _tipPoint ->
+          LogValue "blockContext" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceNoLedgerState slot _ ->
           LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceLedgerState slot _ ->
+          LogValue "ledgerState" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceNoLedgerView slot _ ->
           LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceAdoptedBlock slot _ _ ->
-          LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceLedgerView slot ->
+          LogValue "ledgerView" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgeStateUpdateError slot _reason ->
+          LogValue "forgeStateUpdateError" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceNodeCannotForge slot _reason ->
+          LogValue "nodeCannotForge" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceNodeNotLeader slot ->
+          LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceNodeIsLeader slot ->
+          LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgedBlock slot _ _ _ ->
+          LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceDidntAdoptBlock slot _ ->
           LogValue "notAdoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgedInvalidBlock slot _ _ ->
           LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceNodeNotLeader slot ->
-          LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceBlockFromFuture slot _slotNo ->
-          LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceSlotIsImmutable slot _tipPoint _tipBlkNo ->
-          LogValue "slotIsImmutable" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceNodeIsLeader slot ->
-          LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
-
+        Consensus.TraceAdoptedBlock slot _ _ ->
+          LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
 
 forgeTracer
   :: ( Consensus.RunNode blk
