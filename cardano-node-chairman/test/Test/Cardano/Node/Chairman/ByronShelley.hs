@@ -187,8 +187,6 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
           : env
       }
 
-    H.noteShowM_ $ H.getPid hProcess
-
     exitCode <- H.waitForProcess hProcess
 
     void $ H.noteShow exitCode
@@ -220,7 +218,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
     portString <- fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
 
-    void $ H.createProcess =<<
+    (_, _, _, hProcess, _) <- H.createProcess =<<
       ( H.procNode
         [ "run"
         , "--config",  tempAbsPath <> "/configuration.yaml"
@@ -242,6 +240,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
           }
         )
       )
+
+    H.noteShowM_ $ H.getPid hProcess
 
   forM_ poolNodes $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath <> "/db/" <> node
