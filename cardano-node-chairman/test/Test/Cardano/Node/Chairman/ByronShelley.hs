@@ -198,6 +198,22 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       , "--txout", show @(String, Int) (txAddr, fundsPerGenesisAddress)
       ]
 
+  -- Update Proposal and votes
+  void $ H.execCli
+    [ "byron", "governance", "create-update-proposal"
+    , "--filepath", tempAbsPath <> "/update-proposal"
+    , "--testnet-magic", "42"
+    , "--signing-key", tempAbsPath <> "/byron/delegate-keys.000.key"
+    , "--protocol-version-major", "1"
+    , "--protocol-version-minor", "0"
+    , "--protocol-version-alt", "0"
+    , "--application-name", "cardano-sl"
+    , "--software-version-num", "1"
+    , "--system-tag", "linux"
+    , "--installer-hash", "0"
+    ]
+
+
   ------------------------------------------------------------------------------------------------------------------------------------
 
   do

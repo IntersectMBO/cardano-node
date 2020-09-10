@@ -63,19 +63,6 @@ esac
 
 pushd ${ROOT}
 
-# Update Proposal and votes
-$CARDANO_CLI byron governance create-update-proposal \
-            --filepath update-proposal \
-            --testnet-magic 42 \
-            --signing-key byron/delegate-keys.000.key \
-            --protocol-version-major 1 \
-            --protocol-version-minor 0 \
-            --protocol-version-alt 0 \
-            --application-name "cardano-sl" \
-            --software-version-num 1 \
-            --system-tag "linux" \
-            --installer-hash 0
-
 for N in ${BFT_NODES_N}; do
     $CARDANO_CLI byron governance create-proposal-vote \
                 --proposal-filepath update-proposal \
