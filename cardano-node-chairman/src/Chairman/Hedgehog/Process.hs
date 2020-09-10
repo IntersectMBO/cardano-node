@@ -80,6 +80,7 @@ createProcess cp = GHC.withFrozenCallStack $ do
     ShellCommand cmd -> H.annotate $ "Command line: " <> cmd
   (mhStdin, mhStdout, mhStderr, hProcess) <- H.evalM . liftIO $ IO.createProcess cp
   releaseKey <- register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)
+
   return (mhStdin, mhStdout, mhStderr, hProcess, releaseKey)
 
 -- | Get the process ID.

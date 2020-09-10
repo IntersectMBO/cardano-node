@@ -194,6 +194,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     unless (exitCode == Just ExitSuccess) $ do
       H.cat $ logDir <> "/mkfiles.stdout.log"
       H.cat $ logDir <> "/mkfiles.stderr.log"
+      H.failure
 
     H.noteM_ . liftIO $ IO.readProcess "find" [tempAbsPath] ""
 
@@ -242,6 +243,9 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       )
 
     H.noteShowM_ $ H.getPid hProcess
+
+  H.threadDelay 100000
+
 
   forM_ poolNodes $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath <> "/db/" <> node
