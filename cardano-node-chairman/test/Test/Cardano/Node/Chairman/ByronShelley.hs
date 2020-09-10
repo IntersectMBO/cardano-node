@@ -157,6 +157,29 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     H.createFileLink (tempAbsPath <> "/byron/delegate-keys.00" <> show (n - 1) <> ".key") (tempAbsPath <> "/node-bft" <> show n <> "/byron/delegate.key")
     H.createFileLink (tempAbsPath <> "/byron/delegation-cert.00" <> show (n - 1) <> ".json") (tempAbsPath <> "/node-bft" <> show n <> "/byron/delegate.cert")
 
+  -- Create keys and addresses to withdraw the initial UTxO into
+  forM_ bftNodesN $ \n -> do
+    void $ H.execCli
+      [ "keygen"
+      , "--byron-formats"
+      , "--secret", tempAbsPath <> "/byron/payment-keys.00" <> show (n - 1) <> ".key"
+      , "--no-password"
+      ]
+
+    -- H.execCli
+    --   [ "signing-key-address"
+    --   , "--byron-formats"
+    --   , "--testnet-magic", "42"
+    --   , "--secret", tempAbsPath <> "/byron/payment-keys.00" <> show (n - 1) <> ".key"
+    --   ] >>= H.writeFile (tempAbsPath <> "/byron/address-00")
+
+    -- -- Write Genesis addresses to files
+    -- H.execCli
+    --   [ "signing-key-address"
+    --   , "--byron-formats"
+    --   , "--testnet-magic", "42"
+    --   , "--secret", tempAbsPath <> "/byron/genesis-keys.00" <> show (n - 1) <> ".key"
+    --   ] >>= H.writeFile (tempAbsPath <> "/byron/genesis-address-00")
 
   ------------------------------------------------------------------------------------------------------------------------------------
 
