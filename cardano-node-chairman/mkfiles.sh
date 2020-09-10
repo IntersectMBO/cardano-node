@@ -63,14 +63,6 @@ esac
 
 pushd ${ROOT}
 
-# Symlink the BFT operator keys from the genesis delegates, for uniformity
-for N in ${BFT_NODES_N}; do
-
-  ln -s ../../byron/delegate-keys.00$((${N} - 1)).key     node-bft${N}/byron/delegate.key
-  ln -s ../../byron/delegation-cert.00$((${N} - 1)).json  node-bft${N}/byron/delegate.cert
-
-done
-
 # Create keys and addresses to withdraw the initial UTxO into
 for N in ${BFT_NODES_N}; do
 

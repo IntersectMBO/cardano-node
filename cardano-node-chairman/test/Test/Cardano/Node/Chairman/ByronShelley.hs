@@ -152,7 +152,13 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     (tempAbsPath <> "/byron.genesis.spec.json")
     (tempAbsPath <> "/byron/genesis.spec.json")
 
-  ------------
+  -- Symlink the BFT operator keys from the genesis delegates, for uniformity
+  forM_ bftNodesN $ \n -> do
+    H.createFileLink (tempAbsPath <> "/byron/delegate-keys.00" <> show (n - 1) <> ".key") (tempAbsPath <> "/node-bft" <> show n <> "/byron/delegate.key")
+    H.createFileLink (tempAbsPath <> "/byron/delegation-cert.00" <> show (n - 1) <> ".json") (tempAbsPath <> "/node-bft" <> show n <> "/byron/delegate.cert")
+
+
+  ------------------------------------------------------------------------------------------------------------------------------------
 
   do
     H.readFile (base <> "/configuration/chairman/byron-shelley/configuration.yaml")
