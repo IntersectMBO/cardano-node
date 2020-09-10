@@ -11,6 +11,7 @@ module Chairman.Hedgehog.Process
   , procNode
   , execCli
   , waitForProcess
+  , getPid
   , waitSecondsForProcess
   ) where
 
@@ -35,7 +36,7 @@ import           GHC.Stack (HasCallStack)
 import           Prelude (error)
 import           System.Exit (ExitCode)
 import           System.IO (Handle)
-import           System.Process (CmdSpec (..), CreateProcess (..), ProcessHandle)
+import           System.Process (CmdSpec (..), CreateProcess (..), Pid, ProcessHandle)
 import           Text.Show
 
 import qualified Chairman.Hedgehog.Base as H
@@ -81,7 +82,11 @@ createProcess cp = GHC.withFrozenCallStack $ do
   releaseKey <- register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)
   return (mhStdin, mhStdout, mhStderr, hProcess, releaseKey)
 
-
+-- | Get the process ID.
+getPid :: HasCallStack
+  => ProcessHandle
+  -> Integration (Maybe Pid)
+getPid hProcess = GHC.withFrozenCallStack . H.evalIO $ IO.getPid hProcess
 
 -- | Create a process returning its stdout.
 --

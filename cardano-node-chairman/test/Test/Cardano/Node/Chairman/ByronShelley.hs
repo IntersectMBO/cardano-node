@@ -187,6 +187,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
           : env
       }
 
+    H.noteShowM_ $ H.getPid hProcess
+
     exitCode <- H.waitForProcess hProcess
 
     void $ H.noteShow exitCode
