@@ -65,11 +65,11 @@ pushd ${ROOT}
 
 for N in ${BFT_NODES_N}; do
     $CARDANO_CLI byron governance create-proposal-vote \
-                --proposal-filepath update-proposal \
+                --proposal-filepath $ROOT/update-proposal \
                 --testnet-magic 42 \
-                --signing-key byron/delegate-keys.00$((${N} - 1)).key \
+                --signing-key $ROOT/byron/delegate-keys.00$((${N} - 1)).key \
                 --vote-yes \
-                --output-filepath update-vote.00$((${N} - 1))
+                --output-filepath $ROOT/update-vote.00$((${N} - 1))
 done
 
 $CARDANO_CLI byron governance create-update-proposal \
