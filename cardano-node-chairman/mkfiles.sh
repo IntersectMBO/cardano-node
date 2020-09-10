@@ -63,18 +63,6 @@ esac
 
 pushd ${ROOT}
 
-# Create Byron address that moves funds out of the genesis UTxO into a regular
-# address.
-
-$CARDANO_CLI issue-genesis-utxo-expenditure \
-            --genesis-json byron/genesis.json \
-            --testnet-magic 42 \
-            --byron-formats \
-            --tx tx0.tx \
-            --wallet-key byron/delegate-keys.000.key \
-            --rich-addr-from $(head -n 1 $ROOT/byron/genesis-address-000) \
-            --txout "(\"$(head -n 1 $ROOT/byron/address-000)\", $FUNDS_PER_BYRON_ADDRESS)"
-
 # Update Proposal and votes
 $CARDANO_CLI byron governance create-update-proposal \
             --filepath update-proposal \

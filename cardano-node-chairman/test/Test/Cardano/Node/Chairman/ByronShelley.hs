@@ -181,6 +181,23 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       , "--secret", tempAbsPath <> "/byron/genesis-keys.00" <> show (n - 1) <> ".key"
       ] >>= H.writeFile (tempAbsPath <> "/byron/genesis-address-00" <> show (n - 1))
 
+  do
+    richAddrFrom <- S.strip . L.unlines . L.take 1 . L.lines <$> H.readFile (tempAbsPath <> "/byron/genesis-address-000")
+    txAddr <- S.strip . L.unlines . L.take 1 . L.lines <$> H.readFile (tempAbsPath <> "/byron/address-000")
+
+    -- Create Byron address that moves funds out of the genesis UTxO into a regular
+    -- address.
+    void $ H.execCli
+      [ "issue-genesis-utxo-expenditure"
+      , "--genesis-json", tempAbsPath <> "/byron/genesis.json"
+      , "--testnet-magic", "42"
+      , "--byron-formats"
+      , "--tx", tempAbsPath <> "/tx0.tx"
+      , "--wallet-key", tempAbsPath <> "/byron/delegate-keys.000.key"
+      , "--rich-addr-from", richAddrFrom
+      , "--txout", show @(String, Int) (txAddr, fundsPerGenesisAddress)
+      ]
+
   ------------------------------------------------------------------------------------------------------------------------------------
 
   do
