@@ -213,6 +213,16 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     , "--installer-hash", "0"
     ]
 
+  forM_ bftNodesN $ \n -> do
+    void $ H.execCli
+      [ "byron", "governance", "create-proposal-vote"
+      , "--proposal-filepath", tempAbsPath <> "/update-proposal"
+      , "--testnet-magic", "42"
+      , "--signing-key", tempAbsPath <> "/byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
+      , "--vote-yes"
+      , "--output-filepath", tempAbsPath <> "/update-vote.00" <> show @Int (n - 1)
+      ]
+
   ------------------------------------------------------------------------------------------------------------------------------------
 
   do
