@@ -104,12 +104,10 @@ execFlex :: HasCallStack
   -> [String]
   -> Integration String
 execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
-  maybeEnvBin <- liftIO $ IO.lookupEnv envBin
-  (actualBin, actualArguments) <- case maybeEnvBin of
-    Just envBin' -> return (envBin', arguments)
-    Nothing -> return ("cabal", "exec":"--":pkgBin:arguments)
-  H.annotate $ "Command: " <> actualBin <> " " <> L.unwords actualArguments
-  let cp = IO.proc actualBin actualArguments
+  cp <- procFlex pkgBin envBin arguments
+  H.annotate . ("Command: " <>) $ case IO.cmdspec cp of
+    IO.ShellCommand cmd -> cmd
+    IO.RawCommand cmd args -> cmd <> " " <> L.unwords args
   (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readCreateProcessWithExitCode cp ""
   case exitResult of
     IO.ExitFailure exitCode -> H.failMessage GHC.callStack . L.unlines $
