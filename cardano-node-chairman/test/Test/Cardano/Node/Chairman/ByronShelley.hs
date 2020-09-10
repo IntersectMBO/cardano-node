@@ -166,20 +166,20 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
       , "--no-password"
       ]
 
-    -- H.execCli
-    --   [ "signing-key-address"
-    --   , "--byron-formats"
-    --   , "--testnet-magic", "42"
-    --   , "--secret", tempAbsPath <> "/byron/payment-keys.00" <> show (n - 1) <> ".key"
-    --   ] >>= H.writeFile (tempAbsPath <> "/byron/address-00")
+    H.execCli
+      [ "signing-key-address"
+      , "--byron-formats"
+      , "--testnet-magic", "42"
+      , "--secret", tempAbsPath <> "/byron/payment-keys.00" <> show (n - 1) <> ".key"
+      ] >>= H.writeFile (tempAbsPath <> "/byron/address-00" <> show (n - 1))
 
-    -- -- Write Genesis addresses to files
-    -- H.execCli
-    --   [ "signing-key-address"
-    --   , "--byron-formats"
-    --   , "--testnet-magic", "42"
-    --   , "--secret", tempAbsPath <> "/byron/genesis-keys.00" <> show (n - 1) <> ".key"
-    --   ] >>= H.writeFile (tempAbsPath <> "/byron/genesis-address-00")
+    -- Write Genesis addresses to files
+    H.execCli
+      [ "signing-key-address"
+      , "--byron-formats"
+      , "--testnet-magic", "42"
+      , "--secret", tempAbsPath <> "/byron/genesis-keys.00" <> show (n - 1) <> ".key"
+      ] >>= H.writeFile (tempAbsPath <> "/byron/genesis-address-00" <> show (n - 1))
 
   ------------------------------------------------------------------------------------------------------------------------------------
 

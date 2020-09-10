@@ -63,25 +63,6 @@ esac
 
 pushd ${ROOT}
 
-# Create keys and addresses to withdraw the initial UTxO into
-for N in ${BFT_NODES_N}; do
-
-  $CARDANO_CLI signing-key-address \
-    --byron-formats \
-    --testnet-magic 42 \
-    --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
-
-  # Write Genesis addresses to files
-
-  $CARDANO_CLI signing-key-address \
-    --byron-formats  \
-    --testnet-magic 42 \
-    --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
-
-done
-
-ls $ROOT/byron
-
 # Create Byron address that moves funds out of the genesis UTxO into a regular
 # address.
 
