@@ -28,6 +28,7 @@ module Chairman.Hedgehog.Base
   , failMessage
 
   , assertByDeadlineIO
+  , assertByDeadlineIOFinally
   , assertM
   , assertIO
 
@@ -209,6 +210,23 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
         assertByDeadlineIO deadline f
       else do
         H.annotateShow currentTime
+        failMessage GHC.callStack "Condition not met by deadline"
+
+-- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
+--
+-- Expiration of the deadline results in an assertion failure
+assertByDeadlineIOFinally :: (MonadIO m, HasCallStack) => UTCTime -> IO Bool -> H.PropertyT m () -> H.PropertyT m ()
+assertByDeadlineIOFinally deadline f g = GHC.withFrozenCallStack $ do
+  success <- liftIO f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        assertByDeadlineIO deadline f
+      else do
+        H.annotateShow currentTime
+        g
         failMessage GHC.callStack "Condition not met by deadline"
 
 assertM :: (MonadIO m, HasCallStack) => H.PropertyT m Bool -> H.PropertyT m ()

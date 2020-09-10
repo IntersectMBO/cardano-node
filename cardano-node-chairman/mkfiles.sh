@@ -63,9 +63,6 @@ esac
 
 pushd ${ROOT}
 
-mv byron.genesis.spec.json byron/genesis.spec.json
-
-
 # Symlink the BFT operator keys from the genesis delegates, for uniformity
 for N in ${BFT_NODES_N}; do
 

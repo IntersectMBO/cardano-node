@@ -148,6 +148,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     , "--genesis-output-dir", tempAbsPath <> "/byron"
     ]
 
+  H.renameFile
+    (tempAbsPath <> "/byron.genesis.spec.json")
+    (tempAbsPath <> "/byron/genesis.spec.json")
+
   ------------
 
   do
@@ -280,7 +284,11 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
   forM_ allNodes $ \node -> do
     portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
-    H.assertByDeadlineIO deadline $ IO.isPortOpen (read portString)
+    H.assertByDeadlineIOFinally deadline (IO.isPortOpen (read portString)) $ do
+      nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
+      nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
+      H.cat nodeStdoutFile
+      H.cat nodeStderrFile
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/" <> node)
