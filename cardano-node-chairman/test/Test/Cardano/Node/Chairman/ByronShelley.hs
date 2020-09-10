@@ -234,7 +234,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
     H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
-    portString <- fmap S.strip . fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+    portString <- fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
 
     void $ H.createProcess =<<
       ( H.procNode
