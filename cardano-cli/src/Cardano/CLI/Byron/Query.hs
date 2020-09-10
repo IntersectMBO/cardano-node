@@ -18,7 +18,6 @@ import qualified Data.Text as Text
 import           Cardano.Api.Typed
 import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Ouroboros.Consensus.Block (ConvertRawHash (..))
-import           Ouroboros.Consensus.Cardano (SecurityParam (..))
 import           Ouroboros.Network.Block
 
 import           Cardano.Api.LocalChainSync (getLocalTip)
@@ -48,9 +47,7 @@ runGetLocalNodeTip networkId = do
           LocalNodeConnectInfo {
             localNodeSocketPath    = sockPath,
             localNodeNetworkId     = networkId,
-            localNodeConsensusMode = ByronMode
-                                       (EpochSlots 21600)
-                                       (SecurityParam 2160)
+            localNodeConsensusMode = ByronMode (EpochSlots 21600)
           }
     liftIO $ do
       tip <- getLocalTip connctInfo

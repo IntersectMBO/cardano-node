@@ -151,7 +151,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         (Shelley.genesisHashToPraosNonce shelleyGenesisHash)
         (Shelley.ProtVer npcShelleySupportedProtocolVersionMajor
                          npcShelleySupportedProtocolVersionMinor)
-        npcShelleyMaxSupportedProtocolVersion
+        (MaxMajorProtVer npcShelleyMaxSupportedProtocolVersion)
         shelleyLeaderCredentials
 
         -- Hard fork parameters

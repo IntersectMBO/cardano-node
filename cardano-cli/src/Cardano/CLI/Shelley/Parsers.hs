@@ -35,7 +35,6 @@ import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-import           Ouroboros.Consensus.Cardano (SecurityParam (..))
 
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
@@ -1928,17 +1927,16 @@ pProtocol =
     -- Default to the Cardano protocol.
     pure
       (CardanoProtocol
-        (EpochSlots defaultByronEpochSlots)
-        (SecurityParam defaultSecurityParam))
+        (EpochSlots defaultByronEpochSlots))
   where
     pByron :: Parser Protocol
-    pByron = ByronProtocol <$> pEpochSlots <*> pSecurityParam
+    pByron = ByronProtocol <$> pEpochSlots
 
     pShelley :: Parser Protocol
     pShelley = pure ShelleyProtocol
 
     pCardano :: Parser Protocol
-    pCardano = CardanoProtocol <$> pEpochSlots <*> pSecurityParam
+    pCardano = CardanoProtocol <$> pEpochSlots
 
     pEpochSlots :: Parser EpochSlots
     pEpochSlots =
@@ -1951,22 +1949,8 @@ pProtocol =
           <> Opt.showDefault
           )
 
-    pSecurityParam :: Parser SecurityParam
-    pSecurityParam =
-      SecurityParam <$>
-        Opt.option Opt.auto
-          (  Opt.long "security-param"
-          <> Opt.metavar "NATURAL"
-          <> Opt.help "The security parameter."
-          <> Opt.value defaultSecurityParam -- Default to the mainnet value.
-          <> Opt.showDefault
-          )
-
     defaultByronEpochSlots :: Word64
     defaultByronEpochSlots = 21600
-
-    defaultSecurityParam :: Word64
-    defaultSecurityParam = 2160
 
 pProtocolVersion :: Parser (Natural, Natural)
 pProtocolVersion =
