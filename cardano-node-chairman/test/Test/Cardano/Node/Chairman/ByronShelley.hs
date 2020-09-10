@@ -131,6 +131,23 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
     , "updateVoteThd" .= J.toJSON @String "1000000000000"
     ]
 
+  -- stuff
+  void . H.execCli $
+    [ "genesis"
+    , "--protocol-magic", show @Int networkMagic
+    , "--start-time", showUTCTimeSeconds startTime
+    , "--k", show @Int securityParam
+    , "--n-poor-addresses", "0"
+    , "--n-delegate-addresses", show @Int numBftNodes
+    , "--total-balance", show @Int initSupply
+    , "--byron-formats"
+    , "--delegate-share", "1"
+    , "--avvm-entry-count", "0"
+    , "--avvm-entry-balance", "0"
+    , "--protocol-parameters-file", tempAbsPath <> "/byron.genesis.spec.json"
+    , "--genesis-output-dir", tempAbsPath <> "/byron"
+    ]
+
   ------------
 
   do

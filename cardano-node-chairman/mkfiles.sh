@@ -63,19 +63,6 @@ esac
 
 pushd ${ROOT}
 
-$CARDANO_CLI genesis \
-  --protocol-magic ${NETWORK_MAGIC} \
-  --start-time ${START_TIME} \
-  --k ${SECURITY_PARAM} \
-  --n-poor-addresses 0 \
-  --n-delegate-addresses ${NUM_BFT_NODES} \
-  --total-balance ${INIT_SUPPLY} \
-  --byron-formats \
-  --delegate-share 1 \
-  --avvm-entry-count 0 \
-  --avvm-entry-balance 0 \
-  --protocol-parameters-file byron.genesis.spec.json \
-  --genesis-output-dir byron
 mv byron.genesis.spec.json byron/genesis.spec.json
 
 
