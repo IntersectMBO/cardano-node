@@ -259,7 +259,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  deadline <- H.noteShowIO $ DTC.addUTCTime 60 <$> DTC.getCurrentTime -- 60 seconds from now
+  deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime
 
   forM_ allNodes $ \node -> do
     portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
