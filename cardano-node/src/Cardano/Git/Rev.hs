@@ -30,6 +30,7 @@ gitRev | gitRevEmbed /= zeroRev = gitRevEmbed
         -- git could not be run, then this will be empty.
 #if defined(arm_HOST_ARCH)
         -- cross compiling to arm fails; due to a linker bug
+        -- TODO: @angerman remove this after toolchain is fixed.
         fromGit = ""
 #else
         fromGit = T.strip (T.pack $(gitRevFromGit))
