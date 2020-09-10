@@ -22,21 +22,13 @@ import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
 data ShelleyStakeAddressCmdError
-  = ShelleyStakeAddressCmdStakeAddressKeyPairError
-      !Text
-      -- ^ bech32 private key
-      !Text
-      -- ^ bech32 public key
-  | ShelleyStakeAddressCmdReadKeyFileError !(FileError InputDecodeError)
+  = ShelleyStakeAddressCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyStakeAddressCmdWriteFileError !(FileError ())
   deriving Show
 
 renderShelleyStakeAddressCmdError :: ShelleyStakeAddressCmdError -> Text
 renderShelleyStakeAddressCmdError err =
   case err of
-    ShelleyStakeAddressCmdStakeAddressKeyPairError bech32PrivKey bech32PubKey ->
-      "Error while deriving the shelley verification key from bech32 private Key: " <> bech32PrivKey <>
-      " Corresponding bech32 public key: " <> bech32PubKey
     ShelleyStakeAddressCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyStakeAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
 
