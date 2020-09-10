@@ -109,7 +109,8 @@ execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
     Just envBin' -> return (envBin', arguments)
     Nothing -> return ("cabal", "exec":"--":pkgBin:arguments)
   H.annotate $ "Command: " <> actualBin <> " " <> L.unwords actualArguments
-  (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readProcessWithExitCode actualBin actualArguments ""
+  let cp = IO.proc actualBin actualArguments
+  (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readCreateProcessWithExitCode cp ""
   case exitResult of
     IO.ExitFailure exitCode -> H.failMessage GHC.callStack . L.unlines $
       [ "Process exited with non-zero exit-code"
