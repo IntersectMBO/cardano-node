@@ -18,12 +18,15 @@ import           Prelude (show)
 
 import           Data.Text (pack)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+
 
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Network ()
-import           Cardano.Tracing.Render (renderHeaderHash, renderHeaderHashForVerbosity,
-                     renderPoint, renderPointAsPhrase, renderPointForVerbosity,
-                     renderRealPointAsPhrase, renderTipForVerbosity, renderWithOrigin)
+import           Cardano.Tracing.Render (renderBlockOrEBB, renderChunkNo, renderHeaderHash,
+                     renderHeaderHashForVerbosity, renderPoint, renderPointAsPhrase,
+                     renderPointForVerbosity, renderRealPointAsPhrase, renderTipForVerbosity,
+                     renderTipInfoBlockNo, renderTipInfoHash, renderWithOrigin)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash (..),
                      ForgeStateUpdateError, Header, RealPoint, getHeader, headerPoint,
@@ -47,6 +50,7 @@ import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import qualified Ouroboros.Consensus.Storage.VolatileDB.Types as VolDb
 
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -57,7 +61,10 @@ import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo
 import           Ouroboros.Network.Point (withOrigin)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
+import qualified Ouroboros.Consensus.Storage.ImmutableDB.Parser as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
+
 
 {- HLINT ignore "Use const" -}
 {- HLINT ignore "Use record patterns" -}
@@ -745,11 +752,126 @@ instance ( ConvertRawHash blk
     ChainDB.StreamFromVolDB _ _ _ ->
       mkObject [ "kind" .= String "StreamFromVolDB" ]
     _ -> emptyObject  -- TODO add more iterator events
-  toObject _verb (ChainDB.TraceImmDBEvent _ev) =
-    mkObject [ "kind" .= String "TraceImmDBEvent" ]
-  toObject _verb (ChainDB.TraceVolDBEvent _ev) =
-    mkObject [ "kind" .= String "TraceVolDBEvent" ]
-
+  toObject _verb (ChainDB.TraceImmDBEvent ev) = case ev of
+    ImmDB.NoValidLastLocation -> mkObject [ "kind" .= String "TraceImmDBEvent.NoValidLastLocation" ]
+    ImmDB.ValidatedLastLocation chunkNo immTip ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.ValidatedLastLocation"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "immTip" .= String (renderWithOrigin renderBlockOrEBB immTip)
+               ]
+    ImmDB.ValidatingChunk chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.ValidatingChunk"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.MissingChunkFile chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.MissingChunkFile"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.InvalidChunkFile chunkNo (ImmDB.ChunkErrRead readIncErr) ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.InvalidChunkFile.ChunkErrRead"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "error" .= String (Text.pack $ show readIncErr)
+               ]
+    ImmDB.InvalidChunkFile chunkNo (ImmDB.ChunkErrHashMismatch hashPrevBlock prevHashOfBlock) ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.InvalidChunkFile.ChunkErrHashMismatch"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "hashPrevBlock" .= String (renderWithOrigin (Text.decodeLatin1 . toRawHash (Proxy @blk)) hashPrevBlock)
+               , "prevHashOfBlock" .= String (renderWithOrigin (Text.decodeLatin1 . toRawHash (Proxy @blk)) prevHashOfBlock)
+               ]
+    ImmDB.InvalidChunkFile chunkNo (ImmDB.ChunkErrCorrupt hash blkOrEbb) ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.InvalidChunkFile.ChunkErrCorrupt"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "blockOrEbb" .= String (renderBlockOrEBB blkOrEbb)
+               , "hash" .= String (Text.pack $ show hash)
+               ]
+    ImmDB.ChunkFileDoesntFit expectPrevHash actualPrevHash ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.ChunkFileDoesntFit"
+               , "expectedPrevHash" .= String (renderWithOrigin (Text.decodeLatin1 . toRawHash (Proxy @blk)) expectPrevHash)
+               , "actualPrevHash" .= String (renderWithOrigin (Text.decodeLatin1 . toRawHash (Proxy @blk)) actualPrevHash)
+               ]
+    ImmDB.MissingPrimaryIndex chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.MissingPrimaryIndex"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.MissingSecondaryIndex chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.MissingSecondaryIndex"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.InvalidPrimaryIndex chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.InvalidPrimaryIndex"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.InvalidSecondaryIndex chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.InvalidSecondaryIndex"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.RewritePrimaryIndex chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.RewritePrimaryIndex"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.RewriteSecondaryIndex chunkNo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.RewriteSecondaryIndex"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    ImmDB.Migrating txt ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.Migrating"
+               , "info" .= String txt
+               ]
+    ImmDB.DeletingAfter immTipWithInfo ->
+      mkObject [ "kind" .= String "TraceImmDBEvent.DeletingAfter"
+               , "immTipHash" .= String (renderWithOrigin renderTipInfoHash immTipWithInfo)
+               , "immTipBlockNo" .= String (renderWithOrigin renderTipInfoBlockNo immTipWithInfo)
+               ]
+    ImmDB.DBAlreadyClosed -> mkObject [ "kind" .= String "TraceImmDBEvent.DBAlreadyClosed" ]
+    ImmDB.DBClosed -> mkObject [ "kind" .= String "TraceImmDBEvent.DBClosed" ]
+    ImmDB.TraceCacheEvent cacheEv ->
+      case cacheEv of
+        ImmDB.TraceCurrentChunkHit chunkNo nbPastChunksInCache ->
+          mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TraceCurrentChunkHit"
+                   , "chunkNo" .= String (renderChunkNo chunkNo)
+                   , "noPastChunks" .= String (Text.pack $ show nbPastChunksInCache)
+                   ]
+        ImmDB.TracePastChunkHit chunkNo nbPastChunksInCache ->
+          mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunkHit"
+                   , "chunkNo" .= String (renderChunkNo chunkNo)
+                   , "noPastChunks" .= String (Text.pack $ show nbPastChunksInCache)
+                   ]
+        ImmDB.TracePastChunkMiss chunkNo nbPastChunksInCache ->
+          mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunkMiss"
+                   , "chunkNo" .= String (renderChunkNo chunkNo)
+                   , "noPastChunks" .= String (Text.pack $ show nbPastChunksInCache)
+                   ]
+        ImmDB.TracePastChunkEvict chunkNo nbPastChunksInCache ->
+          mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunkEvict"
+                   , "chunkNo" .= String (renderChunkNo chunkNo)
+                   , "noPastChunks" .= String (Text.pack $ show nbPastChunksInCache)
+                   ]
+        ImmDB.TracePastChunksExpired chunkNos nbPastChunksInCache ->
+          mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunksExpired"
+                   , "chunkNos" .= String (Text.pack . show $ map renderChunkNo chunkNos)
+                   , "noPastChunks" .= String (Text.pack $ show nbPastChunksInCache)
+                   ]
+  toObject _verb (ChainDB.TraceVolDBEvent ev) = case ev of
+    VolDb.DBAlreadyClosed -> mkObject [ "kind" .= String "TraceVolDbEvent.DBAlreadyClosed"]
+    VolDb.DBAlreadyOpen -> mkObject [ "kind" .= String "TraceVolDbEvent.DBAlreadyOpen"]
+    VolDb.BlockAlreadyHere blockId ->
+      mkObject [ "kind" .= String "TraceVolDbEvent.BlockAlreadyHere"
+               , "blockId" .= String (Text.pack $ show blockId)
+               ]
+    VolDb.TruncateCurrentFile fsPath ->
+      mkObject [ "kind" .= String "TraceVolDbEvent.TruncateCurrentFile"
+               , "file" .= String (Text.pack $ show fsPath)
+               ]
+    VolDb.Truncate pErr fsPath blockOffset ->
+      mkObject [ "kind" .= String "TraceVolDbEvent.Truncate"
+               , "parserError" .= String (Text.pack $ show pErr)
+               , "file" .= String (Text.pack $ show fsPath)
+               , "blockOffset" .= String (Text.pack $ show blockOffset)
+               ]
+    VolDb.InvalidFileNames fsPaths ->
+      mkObject [ "kind" .= String "TraceVolDBEvent.InvalidFileNames"
+               , "files" .= String (Text.pack . show $ map show fsPaths)
+               ]
 
 instance ToObject (TraceBlockFetchServerEvent blk) where
   toObject _verb _ =
