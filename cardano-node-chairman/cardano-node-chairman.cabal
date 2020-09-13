@@ -120,6 +120,7 @@ test-suite tests
                       , unliftio
                       , unordered-containers
   other-modules:        Test.Cardano.Node.Chairman.Byron
+                        Test.Cardano.Node.Chairman.ByronShelley
                         Test.Cardano.Node.Chairman.Shelley
                         Test.Common.NetworkSpec
   default-language:     Haskell2010

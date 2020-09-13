@@ -3,6 +3,7 @@
 module Chairman.Hedgehog.File
   ( createDirectoryIfMissing
   , copyFile
+  , renameFile
   , createFileLink
   , listDirectory
 
@@ -53,6 +54,11 @@ copyFile :: HasCallStack => FilePath -> FilePath -> Integration ()
 copyFile src dst = GHC.withFrozenCallStack $ do
   H.annotate $ "Copying from " <> show src <> " to " <> show dst
   H.evalM . liftIO $ IO.copyFile src dst
+
+renameFile :: HasCallStack => FilePath -> FilePath -> Integration ()
+renameFile src dst = GHC.withFrozenCallStack $ do
+  H.annotate $ "Copying from " <> show src <> " to " <> show dst
+  H.evalM . liftIO $ IO.renameFile src dst
 
 createFileLink :: HasCallStack => FilePath -> FilePath -> Integration ()
 createFileLink src dst = GHC.withFrozenCallStack $ do
