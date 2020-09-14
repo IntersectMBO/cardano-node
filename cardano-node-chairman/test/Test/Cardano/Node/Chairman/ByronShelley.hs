@@ -15,6 +15,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Aeson ((.=))
 import           Data.Bool
+import           Data.Either
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -27,7 +28,7 @@ import           Data.String
 import           GHC.Float
 import           GHC.Num
 import           GHC.Real
-import           Hedgehog (Property, discover)
+import           Hedgehog (Property, discover, (===))
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (IO)
@@ -648,10 +649,13 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
         )
       )
 
-    void $ H.waitSecondsForProcess 110 hProcess
+    chairmanResult <- H.waitSecondsForProcess 110 hProcess
 
     H.cat nodeStdoutFile
     H.cat nodeStderrFile
+
+
+    chairmanResult === Right ExitSuccess
 
 tests :: IO Bool
 tests = H.checkParallel $$discover
