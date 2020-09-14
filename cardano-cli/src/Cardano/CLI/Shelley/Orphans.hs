@@ -44,7 +44,7 @@ import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import           Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
 import qualified Shelley.Spec.Ledger.Rewards as Ledger
-import           Shelley.Spec.Ledger.TxData (TxId (..), TxIn (..), TxOut (..))
+import           Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 instance Era era => ToJSONKey (TxIn era) where
@@ -124,7 +124,7 @@ deriving instance ToJSON (Ledger.SnapShots StandardShelley)
 deriving instance ToJSON (Ledger.NonMyopic StandardShelley)
 deriving instance ToJSON (Ledger.LedgerState StandardShelley)
 deriving instance ToJSON (Ledger.EpochState StandardShelley)
-deriving instance ToJSON (Ledger.PParams' StrictMaybe)
+deriving instance ToJSON (Ledger.PParams' StrictMaybe StandardShelley)
 deriving instance ToJSON (Ledger.PState StandardShelley)
 deriving instance ToJSON (Ledger.StakeReference StandardShelley)
 deriving instance ToJSON (Ledger.UTxOState StandardShelley)

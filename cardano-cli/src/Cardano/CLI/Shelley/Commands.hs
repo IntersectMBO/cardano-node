@@ -54,7 +54,7 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.CLI.Types
 
-import           Shelley.Spec.Ledger.TxData (MIRPot)
+import           Shelley.Spec.Ledger.TxBody (MIRPot)
 
 --
 -- Shelley CLI command data types

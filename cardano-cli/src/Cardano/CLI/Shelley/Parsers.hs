@@ -37,7 +37,7 @@ import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-import qualified Shelley.Spec.Ledger.TxData as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)

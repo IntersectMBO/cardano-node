@@ -63,7 +63,7 @@ import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Shelley.Spec.Ledger.LedgerState (EpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.PParams (PParams)
-import qualified Shelley.Spec.Ledger.TxData as Ledger (TxId (..), TxIn (..), TxOut (..))
+import qualified Shelley.Spec.Ledger.TxBody as Ledger (TxId (..), TxIn (..), TxOut (..))
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO (..))
 
 import           Ouroboros.Consensus.Shelley.Ledger
@@ -117,7 +117,10 @@ runQueryProtocolParameters protocol network mOutFile = do
                  queryPParamsFromLocalState
     writeProtocolParameters mOutFile pparams
 
-writeProtocolParameters :: Maybe OutputFile -> PParams -> ExceptT ShelleyQueryCmdError IO ()
+writeProtocolParameters
+  :: Maybe OutputFile
+  -> PParams StandardShelley
+  -> ExceptT ShelleyQueryCmdError IO ()
 writeProtocolParameters mOutFile pparams =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty pparams)
@@ -396,7 +399,7 @@ instance ToJSON DelegationsAndRewards where
 --
 queryPParamsFromLocalState
   :: LocalNodeConnectInfo mode block
-  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO PParams
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (PParams StandardShelley)
 queryPParamsFromLocalState LocalNodeConnectInfo{
                              localNodeConsensusMode = ByronMode{}
                            } =
