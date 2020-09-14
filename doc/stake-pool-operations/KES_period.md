@@ -13,11 +13,10 @@ To find out how long one period is and for how long a key can evolve, we can loo
 we can type
 
     cat mainnet-shelley-genesis.json | grep KES
+    "slotsPerKESPeriod": 129600,
+    "maxKESEvolutions": 62,
 
-    > "slotsPerKESPeriod": 3600,
-    > "maxKESEvolutions": 120,
-
-in this example, the key will evolve after each period of 3600 slots and that it can evolve 120 times before it needs to be renewed.
+in this example, the key will evolve after each period of 129600 slots and that it can evolve 62 times before it needs to be renewed.
 
 Before we can create an operational certificate for our node, we need to figure out the start of the KES validity period, i.e. which KES evolution period we are in.
 
@@ -27,14 +26,14 @@ We check the current tip of the blockchain:
 
     {
     "blockNo": 36914,
-    "headerHash": "a76d1ff31c1a63edffc38fda5c59e7908238e285e4ff9223cea2d7519ae3ad73",
-    "slotNo": 906185
+    "headerHash": "58df595137e71c0fa65edc99add11704b00e5f163475bd804e4bd59c126bfc9b",
+    "slotNo": 8520857
     }
 
 In this example, we are currently in slot 906185, and we know from the genesis file that one period lasts for 3600 slots. So we calculate the current period by
 
-    expr 906185 / 3600
-    > 251
+    expr 8520857 / 129600
+    > 65
 
 With this we are able to generate an operational certificate for our stake pool:
 
@@ -42,5 +41,5 @@ With this we are able to generate an operational certificate for our stake pool:
     --kes-verification-key-file kes.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter cold.counter \
-    --kes-period 251 \
+    --kes-period 65 \
     --out-file node.cert
