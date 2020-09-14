@@ -61,7 +61,7 @@ import qualified System.Random as IO
 {- HLINT ignore "Redundant flip" -}
 
 prop_chairman :: Property
-prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> unless OS.isWin32 $ do
+prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
