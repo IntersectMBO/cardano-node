@@ -14,7 +14,22 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
+import           Cardano.Api.Protocol (Protocol (..))
+import           Cardano.Api.Typed hiding (PoolId)
+import           Cardano.Chain.Slotting (EpochSlots (..))
+import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Types
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import           Control.Monad.Fail (fail)
+import           Data.Attoparsec.Combinator ((<?>))
+import           Data.Time.Clock (UTCTime)
+import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
+import           Network.Socket (PortNumber)
+import           Network.URI (URI, parseURI)
+import           Options.Applicative hiding (str)
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+
+import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, Hash (..), hashFromBytesAsHex)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
@@ -23,30 +38,9 @@ import qualified Data.IP as IP
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Time.Clock (UTCTime)
-import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
-import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
-
-import           Network.Socket (PortNumber)
-import           Network.URI (URI, parseURI)
-
-import           Cardano.Chain.Slotting (EpochSlots (..))
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxData as Shelley
-
-import           Cardano.Api.Protocol (Protocol (..))
-import           Cardano.Api.Typed hiding (PoolId)
-
-
-import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Types
-
-import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, Hash (..), hashFromBytesAsHex)
 
 --
 -- Shelley CLI command parsers
@@ -1266,7 +1260,7 @@ renderTxIn (TxIn txid (TxIx txix)) =
     ]
 
 parseTxId :: Atto.Parser TxId
-parseTxId = do
+parseTxId = (<?> "Tansaction ID (hexadecimal)") $ do
   bstr <- Atto.takeWhile1 Char.isHexDigit
   case deserialiseFromRawBytesHex AsTxId bstr of
     Just addr -> return addr
