@@ -12,6 +12,7 @@ import           Data.Bool
 import           Data.Function
 import           Data.Int
 import           GHC.Stack (HasCallStack)
+import           Hedgehog (MonadTest)
 import           System.IO (FilePath)
 
 import qualified Chairman.Hedgehog.Base as H
@@ -20,20 +21,26 @@ import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified System.Directory as IO
 
-doesFileExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m Bool
+-- | Test if a file exists
+doesFileExists :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m Bool
 doesFileExists = GHC.withFrozenCallStack . H.evalIO . IO.doesFileExist
 
-isPortOpen :: (MonadIO m, HasCallStack) => Int -> H.PropertyT m Bool
+-- | Test if a port is open
+isPortOpen :: (MonadTest m, MonadIO m, HasCallStack) => Int -> m Bool
 isPortOpen = GHC.withFrozenCallStack . H.evalIO . IO.isPortOpen
 
-doesSocketExist :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m Bool
+-- | Test if a socket file exists
+doesSocketExist :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m Bool
 doesSocketExist = GHC.withFrozenCallStack . H.evalIO . IO.doesSocketExist
 
-assertFileExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+-- | Assert that a file exists
+assertFileExists :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m ()
 assertFileExists = H.assertM . doesFileExists
 
-assertPortOpen :: (MonadIO m, HasCallStack) => Int -> H.PropertyT m ()
+-- | Assert that a port is open
+assertPortOpen :: (MonadTest m, MonadIO m, HasCallStack) => Int -> m ()
 assertPortOpen = H.assertM . isPortOpen
 
-assertSocketExists :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+-- | Assert that a socket file exists is open
+assertSocketExists :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m ()
 assertSocketExists = H.assertM . doesSocketExist

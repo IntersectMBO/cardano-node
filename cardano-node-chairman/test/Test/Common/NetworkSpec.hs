@@ -34,7 +34,7 @@ prop_isPortOpen_False = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   -- Check multiple random ports and assert that one is closed.
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program
-  ports <- H.evalM . liftIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
+  ports <- H.evalIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
   results <- forM ports H.isPortOpen
   H.assert (False `L.elem` results)
 
@@ -43,7 +43,7 @@ prop_isPortOpen_True = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   -- Check first random port from multiple possible ports to be successfully bound is open
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program
-  ports <- H.evalM . liftIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
+  ports <- H.evalIO $ fmap (L.take 10 . IO.randomRs @Int (5000, 9000)) IO.getStdGen
   (socket, port) <- liftIO $ openOnePortFrom ports
   void $ IO.register $ IO.close socket
   result <- H.isPortOpen port
