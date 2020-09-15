@@ -1,52 +1,92 @@
 module Cardano.Api.MetaData
-  ( MetaDataJsonConversionError (..)
-  , TxMetadataValidationError (..)
-  , jsonFromMetadata
-  , jsonFromMetadataValue
-  , jsonToMetadata
-  , jsonToMetadataValue
-  , renderMetaDataJsonConversionError
-  , renderTxMetadataValidationError
+  (
+    -- * Transaction metadata type
+    TxMetadata(..)
+
+    -- * Constructing metadata
+  , makeTransactionMetadata
+  , TxMetadataValue(..)
+
+    -- * Validating metadata
   , validateTxMetadata
+  , TxMetadataRangeError (..)
+
+    -- * Converstion to\/from JSON
+  , TxMetadataJsonSchema (..)
+  , metadataFromJson
+  , metadataToJson
+  , TxMetadataJsonError (..)
+  , TxMetadataJsonSchemaError (..)
   ) where
 
-import           Cardano.Prelude hiding (MetaData)
-import           Prelude (String)
+import           Prelude
 
-import           Cardano.Api.Typed as Api
-
-import           Data.Aeson ((.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Attoparsec.Text as Atto
+import           Data.Maybe (fromMaybe)
+import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString       as BS
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List
-import qualified Data.Map.Strict as Map
 import qualified Data.Scientific as Scientific
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.Lazy as Text.Lazy
+import           Data.Word (Word64)
+
+import qualified Data.List as List
+import           Data.List.NonEmpty (NonEmpty, nonEmpty)
+import qualified Data.Map.Strict as Map
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 
-import           Shelley.Spec.Ledger.MetaData (MetaData (..), MetaDatum (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Text as Aeson.Text
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
+
+import           Control.Monad (guard)
+import           Control.Applicative (Alternative(..))
+
+import           Cardano.Api.Typed
 
 
+-- | Validate transaction metadata. This is for use with existing constructed
+-- metadata values, e.g. constructed manually or decoded from CBOR directly.
+--
+validateTxMetadata :: TxMetadata
+                   -> Either (NonEmpty TxMetadataRangeError) TxMetadata
+validateTxMetadata txMd@(TxMetadata mdMap) =
+    -- Collect all errors and do a top-level check to see if there are any.
+    maybe (Right txMd) Left
+  . nonEmpty
+  . foldMap validateTxMetadataValue
+  $ mdMap
 
--- | A transaction metadata validation error.
-data TxMetadataValidationError
-  = TxMetadataTextStringInvalidLengthError
-    -- ^ The length of a text string metadatum value exceeds the maximum.
-      !Int
-      -- ^ Maximum byte length.
-      !Int
-      -- ^ Actual byte length.
-  | TxMetadataByteStringInvalidLengthError
-    -- ^ The length of a byte string metadatum value exceeds the maximum.
-      !Int
-      -- ^ Maximum byte length.
-      !Int
-      -- ^ Actual byte length.
-  deriving (Eq, Show)
+-- collect all errors in a monoidal fold style
+validateTxMetadataValue :: TxMetadataValue -> [TxMetadataRangeError]
+validateTxMetadataValue (TxMetaNumber n) =
+    [ TxMetadataNumberOutOfRange n
+    |    n >         fromIntegral (maxBound :: Word64)
+      || n < negate (fromIntegral (maxBound :: Word64))
+    ]
+validateTxMetadataValue (TxMetaBytes bs) =
+    [ TxMetadataBytesTooLong len
+    | let len = BS.length bs
+    , len > txMetadataByteStringMaxLength
+    ]
+validateTxMetadataValue (TxMetaText txt) =
+    [ TxMetadataTextTooLong len
+    | let len = BS.length (Text.encodeUtf8 txt)
+    , len > txMetadataTextStringMaxByteLength
+    ]
+validateTxMetadataValue (TxMetaList xs) =
+    foldMap validateTxMetadataValue xs
+
+validateTxMetadataValue (TxMetaMap kvs) =
+    foldMap (\(k, v) -> validateTxMetadataValue k
+                     <> validateTxMetadataValue v)
+            kvs
 
 -- | The maximum byte length of a transaction metadata text string value.
 txMetadataTextStringMaxByteLength :: Int
@@ -56,192 +96,432 @@ txMetadataTextStringMaxByteLength = 64
 txMetadataByteStringMaxLength :: Int
 txMetadataByteStringMaxLength = 64
 
--- | Render a transaction metadata validation error as text.
-renderTxMetadataValidationError :: TxMetadataValidationError -> Text
-renderTxMetadataValidationError err =
-  case err of
-    TxMetadataTextStringInvalidLengthError maxLen actualLen ->
-      "Text string metadatum value must consist of at most "
-        <> show maxLen
+
+-- | An error in transaction metadata due to an out-of-range value.
+--
+data TxMetadataRangeError =
+
+    -- | The number is outside the maximum range of @-2^64-1 .. 2^64-1@.
+    --
+    TxMetadataNumberOutOfRange !Integer
+
+    -- | The length of a text string metadatum value exceeds the maximum of
+    -- 64 bytes as UTF8.
+    --
+  | TxMetadataTextTooLong !Int
+
+    -- | The length of a byte string metadatum value exceeds the maximum of
+    -- 64 bytes.
+    --
+  | TxMetadataBytesTooLong !Int
+  deriving (Eq, Show)
+
+instance Error TxMetadataRangeError where
+  displayError (TxMetadataNumberOutOfRange n) =
+      "Numeric metadata value "
+        <> show n
+        <> " is outside the range -(2^64-1) .. 2^64-1."
+  displayError (TxMetadataTextTooLong actualLen) =
+      "Text string metadata value must consist of at most "
+        <> show txMetadataTextStringMaxByteLength
+        <> " UTF8 bytes, but it consists of "
+        <> show actualLen
+        <> " bytes."
+  displayError (TxMetadataBytesTooLong actualLen) =
+      "Byte string metadata value must consist of at most "
+        <> show txMetadataByteStringMaxLength
         <> " bytes, but it consists of "
         <> show actualLen
         <> " bytes."
-    TxMetadataByteStringInvalidLengthError maxLen actualLen ->
-      "Byte string metadatum value must consist of at most "
-        <> show maxLen
-        <> " bytes, but it consists of "
-        <> show actualLen
-        <> " bytes."
 
--- | Validate the provided transaction metadata.
-validateTxMetadata
-  :: TxMetadata
-  -> Either (NonEmpty TxMetadataValidationError) TxMetadata
-validateTxMetadata txMd@(TxMetadata (MetaData mdMap)) =
-    maybe (Right txMd) Left . nonEmpty $ foldMap validate mdMap
+
+-- ----------------------------------------------------------------------------
+-- JSON conversion
+--
+
+-- | Tx metadata is similar to JSON but not exactly the same. It has some
+-- deliberate limitations such as no support for floating point numbers or
+-- special forms for null or boolean values. It also has limitations on the
+-- length of strings. On the other hand, unlike JSON, it distinguishes between
+-- byte strings and text strings. It also supports any value as map keys rather
+-- than just string.
+--
+-- We provide two different mappings between tx metadata and JSON, useful
+-- for different purposes:
+--
+-- 1. A mapping that allows almost any JSON value to be converted into
+--    tx metadata. This does not require a specific JSON schema for the
+--    input. It does not expose the full representation capability of tx
+--    metadata.
+--
+-- 2. A mapping that exposes the full representation capability of tx
+--    metadata, but relies on a specific JSON schema for the input JSON.
+--
+-- In the \"no schema"\ mapping, the idea is that (almost) any JSON can be
+-- turned into tx metadata and then converted back, without loss. That is, we
+-- can round-trip the JSON.
+--
+-- The subset of JSON supported is all JSON except:
+-- * No null or bool values
+-- * No floating point, only integers in the range of a 64bit signed integer
+-- * A limitation on string lengths
+--
+-- The approach for this mapping is to use whichever representation as tx
+-- metadata is most compact. In particular:
+--
+-- * JSON lists and maps represented as CBOR lists and maps
+-- * JSON strings represented as CBOR strings
+-- * JSON hex strings with \"0x\" prefix represented as CBOR byte strings
+-- * JSON integer numbers represented as CBOR signed or unsigned numbers
+-- * JSON maps with string keys that parse as numbers or hex byte strings,
+--   represented as CBOR map keys that are actually numbers or byte strings.
+--
+-- The string length limit depends on whether the hex string representation
+-- is used or not. For text strings the limit is 64 bytes for the UTF8
+-- representation of the text string. For byte strings the limit is 64 bytes
+-- for the raw byte form (ie not the input hex, but after hex decoding).
+--
+-- In the \"detailed schema\" mapping, the idea is that we expose the full
+-- representation capability of the tx metadata in the form of a JSON schema.
+-- This means the full representation is available and can be controlled
+-- precisely. It also means any tx metadata can be converted into the JSON and
+-- back without loss. That is we can round-trip the tx metadata via the JSON and
+-- also round-trip schema-compliant JSON via tx metadata.
+--
+data TxMetadataJsonSchema =
+
+       -- | Use the \"no schema\" mapping between JSON and tx metadata as
+       -- described above.
+       TxMetadataJsonNoSchema
+
+       -- | Use the \"detailed schema\" mapping between JSON and tx metadata as
+       -- described above.
+     | TxMetadataJsonDetailedSchema
+  deriving (Eq, Show)
+
+
+-- | Convert a value from JSON into tx metadata, using the given choice of
+-- mapping between JSON and tx metadata.
+--
+-- This may fail with a conversion error if the JSON is outside the supported
+-- subset for the chosen mapping. See 'TxMetadataJsonSchema' for the details.
+--
+metadataFromJson :: TxMetadataJsonSchema
+                 -> Aeson.Value
+                 -> Either TxMetadataJsonError TxMetadata
+metadataFromJson schema =
+    \vtop -> case vtop of
+      -- The top level has to be an object
+      -- with unsigned integer (decimal or hex) keys
+      Aeson.Object m ->
+          fmap (TxMetadata . Map.fromList)
+        . mapM (uncurry metadataKeyPairFromJson)
+        $ HashMap.toList m
+
+      _ -> Left TxMetadataJsonToplevelNotMap
   where
-    validate :: MetaDatum -> [TxMetadataValidationError]
-    validate metaDatum =
-      case metaDatum of
-        Map mdPairs -> foldMap (\(k, v) -> validate k <> validate v) mdPairs
-        List mds -> foldMap validate mds
+    metadataKeyPairFromJson :: Text
+                            -> Aeson.Value
+                            -> Either TxMetadataJsonError
+                                      (Word64, TxMetadataValue)
+    metadataKeyPairFromJson k v = do
+      k' <- convTopLevelKey k
+      v' <- first (TxMetadataJsonSchemaError k' v)
+                  (metadataValueFromJson v)
+      first (TxMetadataRangeError k' v)
+            (validateMetadataValue v')
+      return (k', v')
 
-        I _ -> mempty
+    convTopLevelKey :: Text -> Either TxMetadataJsonError Word64
+    convTopLevelKey k =
+      case parseAll (pUnsigned <* Atto.endOfInput) k of
+        Just n | n <= fromIntegral (maxBound :: Word64)
+          -> Right (fromIntegral n)
+        _ -> Left (TxMetadataJsonToplevelBadKey k)
 
-        B bs
-          | BS.length bs <= txMetadataByteStringMaxLength -> mempty
-          | otherwise ->
-              [ TxMetadataByteStringInvalidLengthError
-                  txMetadataByteStringMaxLength
-                  (BS.length bs)
-              ]
+    validateMetadataValue :: TxMetadataValue -> Either TxMetadataRangeError ()
+    validateMetadataValue v =
+      case validateTxMetadataValue v of
+        []      -> Right ()
+        err : _ -> Left err
 
-        S txt
-          | BS.length (Text.encodeUtf8 txt) <= txMetadataTextStringMaxByteLength -> mempty
-          | otherwise ->
-              [ TxMetadataTextStringInvalidLengthError
-                  txMetadataTextStringMaxByteLength
-                  (BS.length (Text.encodeUtf8 txt))
-              ]
+    metadataValueFromJson :: Aeson.Value
+                          -> Either TxMetadataJsonSchemaError TxMetadataValue
+    metadataValueFromJson =
+      case schema of
+        TxMetadataJsonNoSchema       -> metadataValueFromJsonNoSchema
+        TxMetadataJsonDetailedSchema -> metadataValueFromJsonDetailedSchema
 
--- -------------------------------------------------------------------------------------------------
 
-data MetaDataJsonConversionError
-  = ConversionErrDecodeJSON !String
-  | ConversionErrToplevelNotMap
-  | ConversionErrToplevelBadKey
-  | ConversionErrBoolNotAllowed
-  | ConversionErrNullNotAllowed
-  | ConversionErrNumberNotInteger !Double
-  | ConversionErrLongerThan64Bytes
-  | ConversionErrBadBytes !ByteString
-  | ConversionErrExpected !Text !Text
-  deriving (Eq, Ord, Show)
-
-jsonFromMetadata :: Api.TxMetadata -> Aeson.Value
-jsonFromMetadata (Api.TxMetadata (MetaData meta)) =
-    Aeson.Object $ HashMap.fromList (map convertPair $ Map.toList meta)
+-- | Convert a tx metadata value into JSON , using the given choice of mapping
+-- between JSON and tx metadata.
+--
+-- This conversion is total but is not necessarily invertible.
+-- See 'TxMetadataJsonSchema' for the details.
+--
+metadataToJson :: TxMetadataJsonSchema
+               -> TxMetadata
+               -> Aeson.Value
+metadataToJson schema =
+    \(TxMetadata mdMap) ->
+    Aeson.object
+      [ (Text.pack (show k), metadataValueToJson v)
+      | (k, v) <- Map.toList mdMap ]
   where
-    convertPair :: (Word64, MetaDatum) -> (Text, Aeson.Value)
-    convertPair (w, d) = (Text.pack (show w), jsonFromMetadataValue d)
+    metadataValueToJson :: TxMetadataValue -> Aeson.Value
+    metadataValueToJson =
+      case schema of
+        TxMetadataJsonNoSchema       -> metadataValueToJsonNoSchema
+        TxMetadataJsonDetailedSchema -> metadataValueToJsonDetailedSchema
 
-jsonFromMetadataValue :: MetaDatum -> Aeson.Value
-jsonFromMetadataValue md =
-    case md of
-      S txt -> Aeson.String txt
-      B bs -> jsonFromByteString bs
-      I i -> Aeson.Number (fromInteger i)
-      List xs -> Aeson.toJSON $ map jsonFromMetadataValue xs
-      Map xs -> jsonFromPairList xs
+
+-- ----------------------------------------------------------------------------
+-- JSON conversion using the the "no schema" style
+--
+
+metadataValueToJsonNoSchema :: TxMetadataValue -> Aeson.Value
+metadataValueToJsonNoSchema = conv
   where
-    jsonFromByteString :: ByteString -> Aeson.Value
-    jsonFromByteString bs =
-      Aeson.object [ "hex" .= Aeson.String (Text.decodeUtf8 $ Base16.encode bs) ]
+    conv :: TxMetadataValue -> Aeson.Value
+    conv (TxMetaNumber n) = Aeson.Number (fromInteger n)
+    conv (TxMetaBytes bs) = Aeson.String (bytesPrefix
+                                       <> Text.decodeLatin1 (Base16.encode bs))
 
--- Try to convert it to an Aeson Object and if that fails, use an Array.
--- Object is basically a 'HashMap Text Value' but if the first element of
--- the tuple is not Text, convert it to an Array instead.
-jsonFromPairList :: [(MetaDatum, MetaDatum)] -> Aeson.Value
-jsonFromPairList xs =
-    -- If all the left hand elements of 'xs' are 'S' ('collapseLeft' returns 'Just' for every
-    -- element), then convert this into a JSON object.
-    -- If one of more of the elements return 'Nothing' then represent it as a JSON list.
-    case traverse collapseLeft xs of
-      Nothing -> Aeson.toJSON $ map (bimap jsonFromMetadataValue jsonFromMetadataValue) xs
-      Just zs -> Aeson.Object $ HashMap.fromList zs
+    conv (TxMetaText txt) = Aeson.String txt
+    conv (TxMetaList  vs) = Aeson.Array (Vector.fromList (map conv vs))
+    conv (TxMetaMap  kvs) = Aeson.object
+                              [ (convKey k, conv v)
+                              | (k, v) <- kvs ]
+
+    -- Metadata allows any value as a key, not just string as JSON does.
+    -- For simple types we just convert them to string dirctly.
+    -- For structured keys we render them as JSON and use that as the string.
+    convKey :: TxMetadataValue -> Text
+    convKey (TxMetaNumber n) = Text.pack (show n)
+    convKey (TxMetaBytes bs) = bytesPrefix
+                            <> Text.decodeLatin1 (Base16.encode bs)
+    convKey (TxMetaText txt) = txt
+    convKey v                = Text.Lazy.toStrict
+                             . Aeson.Text.encodeToLazyText
+                             . conv
+                             $ v
+
+metadataValueFromJsonNoSchema :: Aeson.Value
+                              -> Either TxMetadataJsonSchemaError
+                                        TxMetadataValue
+metadataValueFromJsonNoSchema = conv
   where
-    collapseLeft :: (MetaDatum, MetaDatum) -> Maybe (Text, Aeson.Value)
-    collapseLeft (a, b) =
-      case a of
-        S txt -> Just (txt, jsonFromMetadataValue b)
-        _otherwise -> Nothing
+    conv :: Aeson.Value
+         -> Either TxMetadataJsonSchemaError TxMetadataValue
+    conv Aeson.Null   = Left TxMetadataJsonNullNotAllowed
+    conv Aeson.Bool{} = Left TxMetadataJsonBoolNotAllowed
+
+    conv (Aeson.Number d) =
+      case Scientific.floatingOrInteger d :: Either Double Integer of
+        Left  n -> Left (TxMetadataJsonNumberNotInteger n)
+        Right n -> Right (TxMetaNumber n)
+
+    conv (Aeson.String s)
+      | Just s' <- Text.stripPrefix bytesPrefix s
+      , let bs' = Text.encodeUtf8 s'
+      , (bs, trailing) <- Base16.decode bs'
+      , BS.null trailing
+      , not (BSC.any (\c -> c >= 'A' && c <= 'F') bs')
+      = Right (TxMetaBytes bs)
+
+    conv (Aeson.String s) = Right (TxMetaText s)
+
+    conv (Aeson.Array vs) =
+        fmap TxMetaList
+      . traverse conv
+      $ Vector.toList vs
+
+    conv (Aeson.Object kvs) =
+        fmap TxMetaMap
+      . traverse (\(k,v) -> (,) (convKey k) <$> conv v)
+      . List.sortOn fst
+      $ HashMap.toList kvs
+
+    convKey :: Text -> TxMetadataValue
+    convKey s =
+      fromMaybe (TxMetaText s) $
+      parseAll ((fmap TxMetaNumber pSigned <* Atto.endOfInput)
+            <|> (fmap TxMetaBytes  pBytes  <* Atto.endOfInput)) s
+
+-- | JSON strings that are base16 encoded and prefixed with 'bytesPrefix' will
+-- be encoded as CBOR bytestrings.
+bytesPrefix :: Text
+bytesPrefix = "0x"
 
 
-jsonToMetadata :: Aeson.Value
-               -> Either MetaDataJsonConversionError Api.TxMetadata
-jsonToMetadata av =
-    case av of
-      Aeson.Object kvs ->
-        fmap (Api.makeTransactionMetadata . Map.fromList)
-          . mapM (\(k,v) -> (,) <$> expectWord64 k <*> jsonToMetadataValue v)
-          $ HashMap.toList kvs
-      _otherwise -> Left ConversionErrToplevelNotMap
+-- ----------------------------------------------------------------------------
+-- JSON conversion using the "detailed schema" style
+--
+
+metadataValueToJsonDetailedSchema :: TxMetadataValue -> Aeson.Value
+metadataValueToJsonDetailedSchema  = conv
   where
-    expectWord64 :: Text -> Either MetaDataJsonConversionError Word64
-    expectWord64 =
-      first (const ConversionErrToplevelBadKey)
-        . Atto.parseOnly ((Atto.decimal <|> Atto.hexadecimal) <* Atto.endOfInput)
+    conv :: TxMetadataValue -> Aeson.Value
+    conv (TxMetaNumber n) = singleFieldObject "int"
+                          . Aeson.Number
+                          $ fromInteger n
+    conv (TxMetaBytes bs) = singleFieldObject "bytes"
+                          . Aeson.String
+                          $ Text.decodeLatin1 (Base16.encode bs)
+    conv (TxMetaText txt) = singleFieldObject "string"
+                          . Aeson.String
+                          $ txt
+    conv (TxMetaList  vs) = singleFieldObject "list"
+                          . Aeson.Array
+                          $ Vector.fromList (map conv vs)
+    conv (TxMetaMap  kvs) = singleFieldObject "map"
+                          . Aeson.Array
+                          $ Vector.fromList
+                              [ Aeson.object [ ("k", conv k), ("v", conv v) ]
+                              | (k, v) <- kvs ]
 
+    singleFieldObject name v = Aeson.object [(name, v)]
 
-renderMetaDataJsonConversionError :: MetaDataJsonConversionError -> Text
-renderMetaDataJsonConversionError err =
-  case err of
-    ConversionErrDecodeJSON decErr -> "Error decoding JSON: " <> show decErr
-    ConversionErrToplevelNotMap -> "The JSON metadata top level must be a map (object) from word to value"
-    ConversionErrToplevelBadKey -> "The JSON metadata top level must be a map with unsigned integer keys"
-    ConversionErrBoolNotAllowed -> "JSON Bool value is not allowed in MetaData"
-    ConversionErrNullNotAllowed -> "JSON Null value is not allowed in MetaData"
-    ConversionErrNumberNotInteger _ -> "Only integers are allowed in MetaData"
-    ConversionErrLongerThan64Bytes -> "JSON string is longer than 64 bytes"
-    ConversionErrBadBytes bs -> "JSON failure to decode as hex bytestring: " <> show bs
-    ConversionErrExpected expected actual ->
-      mconcat [ "JSON decode error. Expected ", expected, " but got '", actual, "'"]
-
--- -------------------------------------------------------------------------------------------------
-
-jsonToMetadataValue :: Aeson.Value
-                    -> Either MetaDataJsonConversionError Api.TxMetadataValue
-jsonToMetadataValue  av =
-    case av of
-      Aeson.Null -> Left ConversionErrNullNotAllowed
-      Aeson.Bool _ -> Left ConversionErrBoolNotAllowed
-      Aeson.Number sci ->
-        case Scientific.floatingOrInteger sci :: Either Double Integer of
-          Left  n -> Left (ConversionErrNumberNotInteger n)
-          Right n -> Right (Api.TxMetaNumber n)
-      Aeson.String txt -> jsonToMetadataString txt
-      Aeson.Array vs ->
-        let xs = Vector.toList vs in
-        case convertAsMap [] xs of
-          Nothing -> Api.TxMetaList <$> traverse jsonToMetadataValue xs
-          Just ys -> Right (Api.TxMetaMap ys)
-      Aeson.Object kvs ->
-        if HashMap.keys kvs /= ["hex"]
-          then Api.TxMetaMap . List.sortOn fst <$> traverse convertPair (HashMap.toList kvs)
-          else
-            case HashMap.elems kvs of
-              [Aeson.String bs] ->
-                case Base16.decode (Text.encodeUtf8 bs) of
-                  (bs2, "") -> Right $ TxMetaBytes bs2
-                  (_, bsf) -> Left $ ConversionErrBadBytes bsf
-              _otherwise -> Left $ ConversionErrExpected "[Aeson.String x]" (show kvs)
+metadataValueFromJsonDetailedSchema :: Aeson.Value
+                                    -> Either TxMetadataJsonSchemaError
+                                              TxMetadataValue
+metadataValueFromJsonDetailedSchema = conv
   where
-    convertPair :: (Text, Aeson.Value)
-                -> Either MetaDataJsonConversionError (TxMetadataValue, TxMetadataValue)
-    convertPair (k, v) =
-      (,) <$> jsonToMetadataValue (Aeson.String k) <*> jsonToMetadataValue v
+    conv :: Aeson.Value
+         -> Either TxMetadataJsonSchemaError TxMetadataValue
+    conv (Aeson.Object m) =
+      case HashMap.toList m of
+        [("int", Aeson.Number d)] ->
+          case Scientific.floatingOrInteger d :: Either Double Integer of
+            Left  n -> Left (TxMetadataJsonNumberNotInteger n)
+            Right n -> Right (TxMetaNumber n)
 
-    -- If the list of values is a list of pairs, then return it as such, otherwise
-    -- return Nothing.
-    convertAsMap :: [(TxMetadataValue, TxMetadataValue)] -> [Aeson.Value]
-                    -> Maybe [(TxMetadataValue, TxMetadataValue)]
-    convertAsMap accum xs =
-      case xs of
-        [] -> Just $ List.sortOn fst accum
-        (Aeson.Array ys:zs) ->
-          case Vector.toList ys of
-            [a, b] -> case (jsonToMetadataValue a, jsonToMetadataValue b) of
-                        (Right am, Right bm) -> convertAsMap ((am, bm):accum) zs
-                        _otherwise -> Nothing
-            _otherwise -> Nothing
-        _otherwise -> Nothing
+        [("bytes", Aeson.String s)]
+          | (bs, trailing) <- Base16.decode (Text.encodeUtf8 s)
+          , BS.null trailing -> Right (TxMetaBytes bs)
+
+        [("string", Aeson.String s)] -> Right (TxMetaText s)
+
+        [("list", Aeson.Array vs)] ->
+            fmap TxMetaList
+          . traverse conv
+          $ Vector.toList vs
+
+        [("map", Aeson.Array kvs)] ->
+            fmap TxMetaMap
+          . traverse convKeyValuePair
+          $ Vector.toList kvs
+
+        [(key, v)] | key `elem` ["int", "bytes", "string", "list", "map"] ->
+            Left (TxMetadataJsonTypeMismatch key v)
+
+        kvs -> Left (TxMetadataJsonBadObject kvs)
+
+    conv v = Left (TxMetadataJsonNotObject v)
+
+    convKeyValuePair :: Aeson.Value
+                     -> Either TxMetadataJsonSchemaError
+                               (TxMetadataValue, TxMetadataValue)
+    convKeyValuePair (Aeson.Object m)
+      | HashMap.size m == 2
+      , Just k <- m HashMap.!? "k"
+      , Just v <- m HashMap.!? "v"
+      = (,) <$> conv k <*> conv v
+
+    convKeyValuePair v = Left (TxMetadataJsonBadMapPair v)
 
 
-jsonToMetadataString :: Text -> Either MetaDataJsonConversionError TxMetadataValue
-jsonToMetadataString txt =
-    if BS.length utf8 > 64
-      then Left ConversionErrLongerThan64Bytes
-      else Right (Api.TxMetaText txt)
+-- ----------------------------------------------------------------------------
+-- Shared JSON conversion error types
+--
+
+data TxMetadataJsonError =
+       TxMetadataJsonToplevelNotMap
+     | TxMetadataJsonToplevelBadKey !Text
+     | TxMetadataJsonSchemaError !Word64 !Aeson.Value !TxMetadataJsonSchemaError
+     | TxMetadataRangeError      !Word64 !Aeson.Value !TxMetadataRangeError
+  deriving (Eq, Show)
+
+data TxMetadataJsonSchemaError =
+       -- Only used for 'TxMetadataJsonNoSchema'
+       TxMetadataJsonNullNotAllowed
+     | TxMetadataJsonBoolNotAllowed
+
+       -- Used by both mappings
+     | TxMetadataJsonNumberNotInteger !Double
+
+       -- Only used for 'TxMetadataJsonDetailedSchema'
+     | TxMetadataJsonNotObject !Aeson.Value
+     | TxMetadataJsonBadObject ![(Text, Aeson.Value)]
+     | TxMetadataJsonBadMapPair !Aeson.Value
+     | TxMetadataJsonTypeMismatch !Text !Aeson.Value
+  deriving (Eq, Show)
+
+instance Error TxMetadataJsonError where
+    displayError TxMetadataJsonToplevelNotMap =
+        "The JSON metadata top level must be a map (JSON object) from word to "
+     ++ "value."
+    displayError (TxMetadataJsonToplevelBadKey k) =
+        "The JSON metadata top level must be a map (JSON object) with unsigned "
+     ++ "integer keys.\nInvalid key: " ++ show k
+    displayError (TxMetadataJsonSchemaError k v detail) =
+        "JSON schema error within the metadata item " ++ show k ++ ": "
+     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
+    displayError (TxMetadataRangeError k v detail) =
+        "Value out of range within the metadata item " ++ show k ++ ": "
+     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
+
+instance Error TxMetadataJsonSchemaError where
+    displayError TxMetadataJsonNullNotAllowed =
+        "JSON null values are not supported."
+    displayError TxMetadataJsonBoolNotAllowed =
+        "JSON bool values are not supported."
+    displayError (TxMetadataJsonNumberNotInteger d) =
+        "JSON numbers must be integers. Unexpected value: " ++ show d
+    displayError (TxMetadataJsonNotObject v) =
+        "JSON object expected. Unexpected value: "
+     ++ LBS.unpack (Aeson.encode v)
+    displayError (TxMetadataJsonBadObject v) =
+        "JSON object does not match the schema.\nExpected a single field named "
+     ++ "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
+     ++ "Unexpected object field(s): "
+     ++ LBS.unpack (Aeson.encode (Aeson.object v))
+    displayError (TxMetadataJsonBadMapPair v) =
+        "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
+     ++ "\nUnexpected value: " ++ LBS.unpack (Aeson.encode v)
+    displayError (TxMetadataJsonTypeMismatch k v) =
+        "The value in the field " ++ show k ++ " does not have the type "
+     ++ "required by the schema.\nUnexpected value: "
+     ++ LBS.unpack (Aeson.encode v)
+
+
+-- ----------------------------------------------------------------------------
+-- Shared parsing utils
+--
+
+parseAll :: Atto.Parser a -> Text -> Maybe a
+parseAll p = either (const Nothing) Just
+           . Atto.parseOnly p
+           . Text.encodeUtf8
+
+pUnsigned :: Atto.Parser Integer
+pUnsigned = do
+    bs <- Atto.takeWhile1 Atto.isDigit
+    -- no redundant leading 0s allowed, or we cannot round-trip properly
+    guard (not (BS.length bs > 1 && BSC.head bs == '0'))
+    return $! BS.foldl' step 0 bs
   where
-    utf8 :: ByteString
-    utf8 = Text.encodeUtf8 txt
+    step a w = a * 10 + fromIntegral (w - 48)
+
+pSigned :: Atto.Parser Integer
+pSigned = Atto.signed pUnsigned
+
+pBytes :: Atto.Parser ByteString
+pBytes = do
+  _ <- Atto.string "0x"
+  remaining <- Atto.takeByteString
+  let (bs, trailing) = Base16.decode remaining
+      hexUpper c = c >= 'A' && c <= 'F'
+  guard (BS.null trailing && not (BSC.any hexUpper remaining))
+  return bs
+
