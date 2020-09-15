@@ -19,6 +19,7 @@ stack.yaml.lock
 /db
 /db-[0-9]
 /logs
+/mainnet
 /profile
 /launch_*
 /state-*

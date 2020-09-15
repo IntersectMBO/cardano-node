@@ -95,11 +95,7 @@ for i in 1 2 3; do
       --cold-signing-key-file                      "${data_dir}/node-$i/hotkey.skey" \
       --operational-certificate-issue-counter-file "${data_dir}/node-$i/counterFile.counter" \
       --out-file                                   "${data_dir}/node-$i/opcert"
-done
 
-rmdir "${data_dir}/genesis/delegate-keys"
-
-for i in 1 2 3; do
   # Launch a node
   cabal run exe:cardano-node -- run \
     --database-path "${db_dir}" \
@@ -113,7 +109,7 @@ for i in 1 2 3; do
     | sed "s|^|${esc}[$((31+$i))m[node-$i]${esc}[0m |g" &
 done
 
-
+rmdir "${data_dir}/genesis/delegate-keys"
 
 function cleanup()
 {
