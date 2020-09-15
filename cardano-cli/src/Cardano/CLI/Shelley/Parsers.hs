@@ -1260,7 +1260,7 @@ renderTxIn (TxIn txid (TxIx txix)) =
     ]
 
 parseTxId :: Atto.Parser TxId
-parseTxId = (<?> "Tansaction ID (hexadecimal)") $ do
+parseTxId = (<?> "Transaction ID (hexadecimal)") $ do
   bstr <- Atto.takeWhile1 Char.isHexDigit
   case deserialiseFromRawBytesHex AsTxId bstr of
     Just addr -> return addr
