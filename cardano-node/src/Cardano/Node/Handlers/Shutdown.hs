@@ -39,7 +39,7 @@ import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 import           Ouroboros.Consensus.Util.STM (onEachChange)
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo, pointSlot)
 
-import           Cardano.Node.Types
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 
 -- | 'ShutdownFDs' mediate the graceful shutdown requests,
 -- either external or internal to the process.
@@ -131,18 +131,18 @@ triggerShutdown (ShutdownDoorbell (Fd shutFd)) trace reason = do
 -- external or internal, as requested by configuration in 'NodeCLI',
 -- while allocating corresponding 'ShutdownFDs', and providing them to the 'action'.
 withShutdownHandling
-  :: NodeCLI
+  :: NodeConfiguration
   -> Trace IO Text
   -> (ShutdownFDs -> IO ())
   -> IO ()
-withShutdownHandling cli trace action = do
-  sfds <- decideShutdownFds cli
+withShutdownHandling nc trace action = do
+  sfds <- decideShutdownFds nc
   withShutdownHandler (sfdsListener sfds) trace (action sfds)
  where
-   decideShutdownFds :: NodeCLI -> IO ShutdownFDs
-   decideShutdownFds NodeCLI{shutdownIPC = Just fd} =
+   decideShutdownFds :: NodeConfiguration -> IO ShutdownFDs
+   decideShutdownFds NodeConfiguration{ncShutdownIPC = Just fd} =
      pure $ ExternalShutdown (ShutdownListener fd)
-   decideShutdownFds NodeCLI{shutdownOnSlotSynced = MaxSlotNo{}} =
+   decideShutdownFds NodeConfiguration{ncShutdownOnSlotSynced = MaxSlotNo{}} =
      mkInternalShutdown
    decideShutdownFds _ = pure NoShutdownFDs
 
@@ -155,14 +155,14 @@ withShutdownHandling cli trace action = do
 -- spawn a thread that would cause node to shutdown upon ChainDB reaching the
 -- configuration-defined slot.
 maybeSpawnOnSlotSyncedShutdownHandler
-  :: NodeCLI
+  :: NodeConfiguration
   -> ShutdownFDs
   -> Trace IO Text
   -> ResourceRegistry IO
   -> ChainDB.ChainDB IO blk
   -> IO ()
-maybeSpawnOnSlotSyncedShutdownHandler cli sfds trace registry chaindb =
-  case (shutdownOnSlotSynced cli, sfds) of
+maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry chaindb =
+  case (ncShutdownOnSlotSynced nc, sfds) of
     (MaxSlotNo maxSlot, InternalShutdown _sl sd) -> do
       traceWith (trTransformer MaximalVerbosity $ severityNotice trace)
         ("will terminate upon reaching " <> pack (show maxSlot))

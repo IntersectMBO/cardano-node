@@ -34,11 +34,12 @@ import           Cardano.Node.TUI.Drawing (LiveViewState (..), LiveViewThread (.
 import           Cardano.Node.TUI.EventHandler (LiveViewBackend (..))
 import           Cardano.Tracing.Peer (Peer (..))
 
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Types
 
 -- | Change a few fields in the LiveViewState after it has been initialized above.
-liveViewPostSetup :: NFData a => LiveViewBackend blk a -> NodeCLI -> NodeConfiguration-> IO ()
-liveViewPostSetup lvbe ncli nc = do
+liveViewPostSetup :: NFData a => LiveViewBackend blk a -> NodeConfiguration-> IO ()
+liveViewPostSetup lvbe nc = do
     modifyMVar_ (getbe lvbe) $ \lvs ->
       pure lvs
             { lvsNodeId = nodeId
@@ -50,7 +51,7 @@ liveViewPostSetup lvbe ncli nc = do
     -- an ID. We don't even have a port number that we know if we're given our
     -- listening socket via systemd socket activation.
     nodeId :: Text
-    nodeId = Text.pack $ "Port: " <> maybe "-" show (naPort <$> nodeAddr ncli)
+    nodeId = Text.pack $ "Port: " <> maybe "-" show (naPort <$> ncNodeAddr nc)
 
 setNodeThread :: NFData a => LiveViewBackend blk a -> Async.Async () -> IO ()
 setNodeThread lvbe nodeThr =

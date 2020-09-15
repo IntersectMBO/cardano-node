@@ -32,8 +32,9 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Node.Configuration.Topology
-                       Cardano.Node.Configuration.Logging
+  exposed-modules:     Cardano.Node.Configuration.Logging
+                       Cardano.Node.Configuration.POM
+                       Cardano.Node.Configuration.Topology
                        Cardano.Node.Handlers.Shutdown
                        Cardano.Node.Handlers.TopLevel
                        Cardano.Node.Orphans
@@ -86,6 +87,7 @@ library
                      , containers
                      , directory
                      , filepath
+                     , generic-data
                      , hedgehog-extras
                      , hostname
                      , iproute
@@ -145,7 +147,8 @@ library cardano-node-config
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Node.Orphans
+  exposed-modules:     Cardano.Node.Configuration.POM
+                       Cardano.Node.Orphans
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Types
                        Cardano.Tracing.Config
@@ -168,9 +171,11 @@ library cardano-node-config
                      , cardano-slotting
                      , containers
                      , filepath
+                     , generic-data
                      , iohk-monitoring
                      , iproute
                      , network
+                     , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-byron
