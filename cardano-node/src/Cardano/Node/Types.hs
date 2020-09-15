@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
@@ -463,6 +464,24 @@ parseNodeConfigurationFP (ConfigYamlFilePath fp) = do
     nc <- decodeFileThrow fp
     -- Make all the files be relative to the location of the config file.
     pure $ adjustFilePaths (takeDirectory fp </>) nc
+
+instance AdjustFilePaths (Last NodeProtocolConfiguration) where
+
+  adjustFilePaths f (Last (Just (NodeProtocolConfigurationByron pc))) =
+    Last . Just $ NodeProtocolConfigurationByron (adjustFilePaths f pc)
+
+  adjustFilePaths f (Last (Just (NodeProtocolConfigurationShelley pc))) =
+    Last . Just $ NodeProtocolConfigurationShelley (adjustFilePaths f pc)
+
+  adjustFilePaths f (Last (Just (NodeProtocolConfigurationCardano pcb pcs pch))) =
+    Last . Just $ NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
+                                                   (adjustFilePaths f pcs)
+                                                   pch
+  adjustFilePaths _ (Last Nothing) = Last Nothing
+
+instance AdjustFilePaths (Last SocketPath) where
+  adjustFilePaths f (Last (Just (SocketPath p))) = Last . Just $ SocketPath (f p)
+  adjustFilePaths _ (Last Nothing) = Last Nothing
 
 -- | A human readable name for the protocol
 --
