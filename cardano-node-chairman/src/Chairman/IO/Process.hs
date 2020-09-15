@@ -10,6 +10,7 @@ import           Control.Concurrent.Async
 import           Control.Exception
 import           Control.Monad
 import           Data.Either
+import           Data.Eq
 import           Data.Function
 import           Data.Int
 import           Data.Maybe
@@ -17,13 +18,13 @@ import           GHC.Num
 import           System.Exit
 import           System.IO
 import           System.Process
+import           Text.Show
 
 import qualified Control.Concurrent as IO
 import qualified Control.Concurrent.Async as IO
 import qualified System.Process as IO
 
-
-data TimedOut = TimedOut
+data TimedOut = TimedOut deriving (Eq, Show)
 
 maybeWaitForProcess
   :: ProcessHandle

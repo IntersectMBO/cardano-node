@@ -10,6 +10,7 @@ import           Data.String
 import qualified Data.List as L
 import qualified Data.Text as T
 
+-- | Strip whitepsace from the beginning and end of the string.
 strip :: String -> String
 strip = T.unpack . T.strip . T.pack
 

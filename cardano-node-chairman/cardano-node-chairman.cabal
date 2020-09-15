@@ -18,6 +18,7 @@ library
                       , bytestring
                       , deepseq
                       , directory
+                      , exceptions
                       , hedgehog
                       , mmorph
                       , network
@@ -32,7 +33,9 @@ library
                       , Win32-network
   exposed-modules:      Chairman.Aeson
                         Chairman.CallStack
+                        Chairman.Cli
                         Chairman.Hedgehog.Base
+                        Chairman.Hedgehog.Concurrent
                         Chairman.Hedgehog.File
                         Chairman.Hedgehog.Network
                         Chairman.Hedgehog.Process

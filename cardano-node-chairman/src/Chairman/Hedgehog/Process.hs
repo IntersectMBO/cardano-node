@@ -11,18 +11,18 @@ module Chairman.Hedgehog.Process
   , procNode
   , execCli
   , waitForProcess
+  , maybeWaitForProcess
   , getPid
   , waitSecondsForProcess
   ) where
 
-import           Chairman.Hedgehog.Base (Integration)
+import           Chairman.Cli (argQuote)
 import           Chairman.IO.Process (TimedOut (..))
 import           Chairman.Plan
-import           Control.Concurrent.Async
-import           Control.Exception
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
-import           Control.Monad.Trans.Resource (ReleaseKey, register)
+import           Control.Monad.Catch hiding (catch)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.Trans.Resource (MonadResource, ReleaseKey, register)
 import           Data.Aeson (eitherDecode)
 import           Data.Bool
 import           Data.Either
@@ -33,6 +33,7 @@ import           Data.Maybe (Maybe (..))
 import           Data.Semigroup ((<>))
 import           Data.String (String)
 import           GHC.Stack (HasCallStack)
+import           Hedgehog (MonadTest)
 import           Prelude (error)
 import           System.Exit (ExitCode)
 import           System.IO (Handle)
@@ -50,43 +51,26 @@ import qualified System.Environment as IO
 import qualified System.Exit as IO
 import qualified System.Process as IO
 
--- | Format argument for a shell CLI command.
---
--- This includes automatically embedding string in double quotes if necessary, including any necessary escaping.
---
--- Note, this function does not cover all the edge cases for shell processing, so avoid use in production code.
-argQuote :: String -> String
-argQuote arg = if ' ' `L.elem` arg || '"' `L.elem` arg || '$' `L.elem` arg
-  then "\"" <> escape arg <> "\""
-  else arg
-  where escape :: String -> String
-        escape ('"':xs) = '\\':'"':escape xs
-        escape ('\\':xs) = '\\':'\\':escape xs
-        escape ('\n':xs) = '\\':'n':escape xs
-        escape ('\r':xs) = '\\':'r':escape xs
-        escape ('\t':xs) = '\\':'t':escape xs
-        escape ('$':xs) = '\\':'$':escape xs
-        escape (x:xs) = x:escape xs
-        escape "" = ""
-
 -- | Create a process returning handles to stdin, stdout, and stderr as well as the process handle.
-createProcess :: HasCallStack
+createProcess
+  :: (MonadTest m, MonadResource m, HasCallStack)
   => CreateProcess
-  -> Integration (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
+  -> m (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
 createProcess cp = GHC.withFrozenCallStack $ do
   H.annotate $ "CWD: " <> show (IO.cwd cp)
   case IO.cmdspec cp of
     RawCommand cmd args -> H.annotate $ "Command line: " <> cmd <> " " <> L.unwords args
     ShellCommand cmd -> H.annotate $ "Command line: " <> cmd
-  (mhStdin, mhStdout, mhStderr, hProcess) <- H.evalM . liftIO $ IO.createProcess cp
+  (mhStdin, mhStdout, mhStderr, hProcess) <- H.evalIO $ IO.createProcess cp
   releaseKey <- register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)
 
   return (mhStdin, mhStdout, mhStderr, hProcess, releaseKey)
 
 -- | Get the process ID.
-getPid :: HasCallStack
+getPid
+  :: (MonadTest m, MonadIO m, HasCallStack)
   => ProcessHandle
-  -> Integration (Maybe Pid)
+  -> m (Maybe Pid)
 getPid hProcess = GHC.withFrozenCallStack . H.evalIO $ IO.getPid hProcess
 
 -- | Create a process returning its stdout.
@@ -98,17 +82,18 @@ getPid hProcess = GHC.withFrozenCallStack . H.evalIO $ IO.getPid hProcess
 --
 -- When running outside a nix environment, the `pkgBin` describes the name of the binary
 -- to launch via cabal exec.
-execFlex :: HasCallStack
+execFlex
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => String
   -> String
   -> [String]
-  -> Integration String
+  -> m String
 execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
   cp <- procFlex pkgBin envBin arguments
   H.annotate . ("Command: " <>) $ case IO.cmdspec cp of
     IO.ShellCommand cmd -> cmd
     IO.RawCommand cmd args -> cmd <> " " <> L.unwords args
-  (exitResult, stdout, stderr) <- H.evalM . liftIO $ IO.readCreateProcessWithExitCode cp ""
+  (exitResult, stdout, stderr) <- H.evalIO $ IO.readCreateProcessWithExitCode cp ""
   case exitResult of
     IO.ExitFailure exitCode -> H.failMessage GHC.callStack . L.unlines $
       [ "Process exited with non-zero exit-code"
@@ -124,19 +109,34 @@ execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
     IO.ExitSuccess -> return stdout
 
 -- | Run cardano-cli, returning the stdout
-execCli :: HasCallStack => [String] -> Integration String
+execCli
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -> m String
 execCli = GHC.withFrozenCallStack $ execFlex "cardano-cli" "CARDANO_CLI"
 
-waitForProcess :: HasCallStack
+-- | Wait for process to exit.
+waitForProcess
+  :: (MonadTest m, MonadIO m, HasCallStack)
   => ProcessHandle
-  -> Integration (Maybe ExitCode)
-waitForProcess hProcess = GHC.withFrozenCallStack $ do
-  H.evalM . liftIO $ catch (fmap Just (IO.waitForProcess hProcess)) $ \(_ :: AsyncCancelled) -> return Nothing
+  -> m ExitCode
+waitForProcess hProcess = GHC.withFrozenCallStack $
+  H.evalIO $ IO.waitForProcess hProcess
 
-waitSecondsForProcess :: HasCallStack
+-- | Wait for process to exit or return 'Nothing' if interrupted by an asynchronous exception.
+maybeWaitForProcess
+  :: (MonadTest m, MonadIO m, HasCallStack)
+  => ProcessHandle
+  -> m (Maybe ExitCode)
+maybeWaitForProcess hProcess = GHC.withFrozenCallStack $
+  H.evalIO $ IO.maybeWaitForProcess hProcess
+
+-- | Wait a maximum of 'seconds' secons for process to exit.
+waitSecondsForProcess
+  :: (MonadTest m, MonadIO m, HasCallStack)
   => Int
   -> ProcessHandle
-  -> Integration (Either TimedOut (Maybe ExitCode))
+  -> m (Either TimedOut ExitCode)
 waitSecondsForProcess seconds hProcess = GHC.withFrozenCallStack $ do
   result <- H.evalIO $ IO.waitSecondsForProcess seconds hProcess
   case result of
@@ -145,16 +145,24 @@ waitSecondsForProcess seconds hProcess = GHC.withFrozenCallStack $ do
       return (Left TimedOut)
     Right maybeExitCode -> do
       case maybeExitCode of
-        Nothing -> H.annotate "No exit code for process"
-        Just exitCode -> H.annotate $ "Process exited " <> show exitCode
-      return (Right maybeExitCode)
+        Nothing -> H.failMessage GHC.callStack "No exit code for process"
+        Just exitCode -> do
+          H.annotate $ "Process exited " <> show exitCode
+          return (Right exitCode)
 
+-- | Create a 'CreateProcess' describing how to start a process given the Cabal package name
+-- corresponding to the executable and an argument list.
+--
+-- The actual executable will be found by consulting the "plan.json" generated by cabal.  It
+-- is assumed that the proused ject has already been configured and the executable has been
+-- built.
 procDist
-  :: String
+  :: (MonadTest m, MonadIO m)
+  => String
   -- ^ Package name
   -> [String]
   -- ^ Arguments to the CLI command
-  -> Integration CreateProcess
+  -> m CreateProcess
   -- ^ Captured stdout
 procDist pkg arguments = do
   contents <- liftIO $ LBS.readFile "../dist-newstyle/cache/plan.json"
@@ -171,15 +179,23 @@ procDist pkg arguments = do
           Just name -> name == "exe:" <> T.pack pkg
           Nothing -> False
 
+-- | Create a 'CreateProcess' describing how to start a process given the Cabal package name
+-- corresponding to the executable, an environment variable pointing to the executable,
+-- and an argument list.
+--
+-- The actual executable used will the one specified by the environment variable, but if
+-- the environment variable is not defined, it will be found instead by consulting the
+-- "plan.json" generated by cabal.  It is assumed that the project has already been
+-- configured and the executable has been built.
 procFlex
-  :: HasCallStack
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => String
   -- ^ Cabal package name corresponding to the executable
   -> String
   -- ^ Environment variable pointing to the binary to run
   -> [String]
   -- ^ Arguments to the CLI command
-  -> Integration CreateProcess
+  -> m CreateProcess
   -- ^ Captured stdout
 procFlex pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
   maybeEnvBin <- liftIO $ IO.lookupEnv binaryEnv
@@ -187,31 +203,42 @@ procFlex pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
     Just envBin -> return $ IO.proc envBin arguments
     Nothing -> procDist pkg arguments
 
+-- | Create a 'CreateProcess' describing how to start the cardano-cli process
+-- and an argument list.
 procCli
-  :: HasCallStack
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => [String]
   -- ^ Arguments to the CLI command
-  -> Integration CreateProcess
+  -> m CreateProcess
   -- ^ Captured stdout
 procCli = procFlex "cardano-cli" "CARDANO_CLI"
 
+-- | Create a 'CreateProcess' describing how to start the cardano-node process
+-- and an argument list.
 procNode
-  :: HasCallStack
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => [String]
   -- ^ Arguments to the CLI command
-  -> Integration CreateProcess
+  -> m CreateProcess
   -- ^ Captured stdout
 procNode = procFlex "cardano-node" "CARDANO_NODE"
 
+-- | Create a 'CreateProcess' describing how to start the cardano-node-chairman process
+-- and an argument list.
 procChairman
-  :: HasCallStack
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => [String]
   -- ^ Arguments to the CLI command
-  -> Integration CreateProcess
+  -> m CreateProcess
   -- ^ Captured stdout
 procChairman = procFlex "cardano-node-chairman" "CARDANO_NODE_CHAIRMAN"
 
-getProjectBase :: Integration String
+-- | Compute the project base.  This will be based on either the "CARDANO_NODE_SRC"
+-- environment variable or the parent directory.  Both should point to the
+-- root directory of the Github project checkout.
+getProjectBase
+  :: (MonadTest m, MonadIO m)
+  => m String
 getProjectBase = do
   maybeNodeSrc <- liftIO $ IO.lookupEnv "CARDANO_NODE_SRC"
   case maybeNodeSrc of

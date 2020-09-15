@@ -15,6 +15,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Aeson ((.=))
 import           Data.Bool
+import           Data.Either
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -27,7 +28,7 @@ import           Data.String
 import           GHC.Float
 import           GHC.Num
 import           GHC.Real
-import           Hedgehog (Property, discover)
+import           Hedgehog (Property, discover, (===))
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (IO)
@@ -36,6 +37,7 @@ import           Text.Show
 
 import qualified Chairman.Aeson as J
 import qualified Chairman.Hedgehog.Base as H
+import qualified Chairman.Hedgehog.Concurrent as H
 import qualified Chairman.Hedgehog.File as H
 import qualified Chairman.Hedgehog.Process as H
 import qualified Chairman.IO.File as IO
@@ -52,6 +54,7 @@ import qualified Hedgehog as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.FilePath.Posix as FP
+import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified System.Random as IO
@@ -62,6 +65,7 @@ import qualified System.Random as IO
 
 prop_chairman :: Property
 prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+  void $ H.note OS.os
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
@@ -647,10 +651,13 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
         )
       )
 
-    void $ H.waitSecondsForProcess 110 hProcess
+    chairmanResult <- H.waitSecondsForProcess 110 hProcess
 
     H.cat nodeStdoutFile
     H.cat nodeStderrFile
+
+
+    chairmanResult === Right ExitSuccess
 
 tests :: IO Bool
 tests = H.checkParallel $$discover
