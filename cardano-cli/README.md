@@ -23,31 +23,7 @@ Available options:
   -h,--help                Show this help text
 
 Byron specific commands
-  byron                    Byron node operation commands
-  genesis                  Create genesis.
-  print-genesis-hash       Compute hash of a genesis file.
-  keygen                   Generate a signing key.
-  to-verification          Extract a verification key in its base64 form.
-  signing-key-public       Pretty-print a signing key's verification key (not a
-                           secret).
-  signing-key-address      Print address of a signing key.
-  migrate-delegate-key-from
-                           Migrate a delegate key from an older version.
-  issue-delegation-certificate
-                           Create a delegation certificate allowing the
-                           delegator to sign blocks on behalf of the issuer
-  check-delegation         Verify that a given certificate constitutes a valid
-                           delegation relationship between keys.
-  submit-tx                Submit a raw, signed transaction, in its on-wire
-                           representation.
-  issue-genesis-utxo-expenditure
-                           Write a file with a signed transaction, spending
-                           genesis UTxO.
-  issue-utxo-expenditure   Write a file with a signed transaction, spending
-                           normal UTxO.
-  get-tip                  Get the tip of your local node's blockchain
-  validate-cbor            Validate a CBOR blockchain object.
-  pretty-print-cbor        Pretty print a CBOR file.
+  byron                    Byron specific commands
 
 Shelley specific commands
   shelley                  Shelley specific commands
@@ -56,7 +32,57 @@ Miscellaneous commands
   version                  Show the cardano-cli version
 ```
 
-See [`../README.md`](../README.md) for full usage instructions and examples of use.
+Shelley-specific commands
+
+```
+cardano-cli shelley --help
+Up to date
+Usage: cardano-cli shelley COMMAND
+  Shelley specific commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  address                  Shelley payment address commands
+  stake-address            Shelley stake address commands
+  key                      Shelley key utility commands
+  transaction              Shelley transaction commands
+  node                     Shelley node operaton commands
+  stake-pool               Shelley stake pool commands
+  query                    Shelley node query commands. Will query the local
+                           node whose Unix domain socket is obtained from the
+                           CARDANO_NODE_SOCKET_PATH enviromnent variable.
+  genesis                  Shelley genesis block commands
+  governance               Shelley governance commands
+  text-view                Commands for dealing with Shelley TextView files.
+                           Transactions, addresses etc are stored on disk as
+                           TextView files.
+
+
+```
+
+Byron-specific commands
+
+```
+cardano-cli byron --help
+Up to date
+Usage: cardano-cli byron (COMMAND | COMMAND | COMMAND | COMMAND | COMMAND | 
+                           COMMAND | COMMAND)
+  Byron specific commands
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  key                      Byron key utility commands
+  transaction              Byron transaction commands
+  query                    Byron node query commands.
+  genesis                  Byron genesis block commands
+  governance               Byron governance commands
+  delegation               Byron delegation commands
+  miscellaneous            Byron miscellaneous commands
+```
 
 ## How to build
 
