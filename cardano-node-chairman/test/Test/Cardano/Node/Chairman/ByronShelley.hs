@@ -54,6 +54,7 @@ import qualified Hedgehog as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.FilePath.Posix as FP
+import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified System.Random as IO
@@ -64,6 +65,7 @@ import qualified System.Random as IO
 
 prop_chairman :: Property
 prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+  void $ H.note OS.os
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
