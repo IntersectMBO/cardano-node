@@ -21,6 +21,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
+import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
+                     VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..),
+                     readVerificationKeyOrFile, readVerificationKeyTextOrFileAnyOf,
+                     renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 import           Cardano.CLI.Types
@@ -28,8 +32,9 @@ import           Cardano.CLI.Types
 data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
   | ShelleyAddressCmdAesonDecodeError !FilePath !Text
-  | ShelleyAddressCmdReadFileError !(FileError TextEnvelopeError)
+  | ShelleyAddressCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyAddressCmdReadFileException !(FileError ())
+  | ShelleyAddressCmdVerificationKeyTextOrFileError !VerificationKeyTextOrFileError
   | ShelleyAddressCmdWriteFileError !(FileError ())
   deriving Show
 
@@ -38,7 +43,10 @@ renderShelleyAddressCmdError err =
   case err of
     ShelleyAddressCmdAddressInfoError addrInfoErr ->
       Text.pack (displayError addrInfoErr)
-    ShelleyAddressCmdReadFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyAddressCmdReadKeyFileError fileErr ->
+      Text.pack (displayError fileErr)
+    ShelleyAddressCmdVerificationKeyTextOrFileError vkTextOrFileErr ->
+      renderVerificationKeyTextOrFileError vkTextOrFileErr
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyAddressCmdAesonDecodeError fp decErr -> "Error decoding multisignature JSON object at: "
                                                    <> Text.pack fp <> " Error: " <> decErr
@@ -78,12 +86,12 @@ runAddressKeyGen kt (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     vkeyDesc = TextViewDescription "Payment Verification Key"
 
 
-runAddressKeyHash :: VerificationKeyFile
+runAddressKeyHash :: VerificationKeyTextOrFile
                   -> Maybe OutputFile
                   -> ExceptT ShelleyAddressCmdError IO ()
-runAddressKeyHash vkeyPath mOutputFp = do
-  vkey <- firstExceptT ShelleyAddressCmdReadFileError $
-            readAddressVerificationKeyFile vkeyPath
+runAddressKeyHash vkeyTextOrFile mOutputFp = do
+  vkey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
+            readAddressVerificationKeyTextOrFile vkeyTextOrFile
 
   let hexKeyHash = foldSomeAddressVerificationKey
                      (serialiseToRawBytesHex . verificationKeyHash) vkey
@@ -93,14 +101,14 @@ runAddressKeyHash vkeyPath mOutputFp = do
     Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 
-runAddressBuild :: VerificationKeyFile
-                -> Maybe VerificationKeyFile
+runAddressBuild :: VerificationKeyTextOrFile
+                -> Maybe (VerificationKeyOrFile StakeKey)
                 -> NetworkId
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuild payVkeyFp mstkVkeyFp nw mOutFp = do
-    payVKey <- firstExceptT ShelleyAddressCmdReadFileError $
-                 readAddressVerificationKeyFile payVkeyFp
+runAddressBuild payVkeyTextOrFile mbStkVkeyOrFile nw mOutFp = do
+    payVKey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
+                 readAddressVerificationKeyTextOrFile payVkeyTextOrFile
 
     addr <- case payVKey of
               AByronVerificationKey vk ->
@@ -124,12 +132,12 @@ runAddressBuild payVkeyFp mstkVkeyFp nw mOutFp = do
   where
     buildShelleyAddress vkey = do
       mstakeVKey <-
-        case mstkVkeyFp of
+        case mbStkVkeyOrFile of
           Nothing -> pure Nothing
-          Just (VerificationKeyFile stkVkeyFp) ->
-            firstExceptT ShelleyAddressCmdReadFileError $
+          Just stkVkeyOrFile ->
+            firstExceptT ShelleyAddressCmdReadKeyFileError $
               fmap Just $ newExceptT $
-                readFileTextEnvelope (AsVerificationKey AsStakeKey) stkVkeyFp
+                readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
 
       let paymentCred  = PaymentCredentialByKey (verificationKeyHash vkey)
           stakeAddrRef = maybe NoStakeAddress
@@ -161,14 +169,23 @@ foldSomeAddressVerificationKey f (APaymentVerificationKey         vk) = f vk
 foldSomeAddressVerificationKey f (APaymentExtendedVerificationKey vk) = f vk
 foldSomeAddressVerificationKey f (AGenesisUTxOVerificationKey     vk) = f vk
 
-readAddressVerificationKeyFile
-  :: VerificationKeyFile
-  -> ExceptT (FileError TextEnvelopeError) IO SomeAddressVerificationKey
-readAddressVerificationKeyFile (VerificationKeyFile vkfile) =
+readAddressVerificationKeyTextOrFile
+  :: VerificationKeyTextOrFile
+  -> ExceptT VerificationKeyTextOrFileError IO SomeAddressVerificationKey
+readAddressVerificationKeyTextOrFile vkTextOrFile =
     newExceptT $
-      readFileTextEnvelopeAnyOf fileTypes vkfile
+      readVerificationKeyTextOrFileAnyOf bech32Types textEnvTypes vkTextOrFile
   where
-    fileTypes =
+    bech32Types =
+      [ FromSomeType (AsVerificationKey AsByronKey)
+                     AByronVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentKey)
+                     APaymentVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
+                     APaymentExtendedVerificationKey
+      ]
+
+    textEnvTypes =
       [ FromSomeType (AsVerificationKey AsByronKey)
                      AByronVerificationKey
       , FromSomeType (AsVerificationKey AsPaymentKey)

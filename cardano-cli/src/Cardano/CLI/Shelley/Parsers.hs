@@ -22,7 +22,8 @@ import           Cardano.Api.Typed hiding (PoolId)
 import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
-                     VerificationKeyOrHashOrFile (..), deserialiseInput, renderInputDecodeError)
+                     VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
+                     deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import           Control.Monad.Fail (fail)
@@ -135,13 +136,16 @@ pAddressCmd =
                                    <*> pSigningKeyFile Output
 
     pAddressKeyHash :: Parser AddressCmd
-    pAddressKeyHash = AddressKeyHash <$> pPaymentVerificationKeyFile <*> pMaybeOutputFile
+    pAddressKeyHash =
+      AddressKeyHash
+        <$> pPaymentVerificationKeyTextOrFile
+        <*> pMaybeOutputFile
 
     pAddressBuild :: Parser AddressCmd
     pAddressBuild =
       AddressBuild
-        <$> pPaymentVerificationKeyFile
-        <*> Opt.optional pStakeVerificationKeyFile
+        <$> pPaymentVerificationKeyTextOrFile
+        <*> Opt.optional pStakeVerificationKeyOrFile
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -153,6 +157,20 @@ pAddressCmd =
 
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
+
+pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
+pPaymentVerificationKeyTextOrFile =
+  VktofVerificationKeyText <$> pPaymentVerificationKeyText
+    <|> VktofVerificationKeyFile <$> pPaymentVerificationKeyFile
+
+pPaymentVerificationKeyText :: Parser Text
+pPaymentVerificationKeyText =
+  Text.pack <$>
+    Opt.strOption
+      (  Opt.long "payment-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Payment verification key (Bech32-encoded)"
+      )
 
 pPaymentVerificationKeyFile :: Parser VerificationKeyFile
 pPaymentVerificationKeyFile =
