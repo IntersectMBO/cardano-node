@@ -3,6 +3,7 @@
 module Test.Golden.Shelley
   ( keyTests
   , certificateTests
+  , keyConversionTests
   , metaDatatests
   , multiSigTests
   , txTests
@@ -19,6 +20,11 @@ import           Test.Golden.Shelley.Genesis.KeyGenDelegate (golden_shelleyGenes
 import           Test.Golden.Shelley.Genesis.KeyGenGenesis (golden_shelleyGenesisKeyGenGenesis)
 import           Test.Golden.Shelley.Genesis.KeyGenUtxo (golden_shelleyGenesisKeyGenUtxo)
 import           Test.Golden.Shelley.Genesis.KeyHash (golden_shelleyGenesisKeyHash)
+import           Test.Golden.Shelley.Key.ConvertCardanoAddressKey
+                     (golden_convertCardanoAddressByronSigningKey,
+                     golden_convertCardanoAddressIcarusSigningKey,
+                     golden_convertCardanoAddressShelleyPaymentSigningKey,
+                     golden_convertCardanoAddressShelleyStakeSigningKey)
 import           Test.Golden.Shelley.Node.IssueOpCert (golden_shelleyNodeIssueOpCert)
 import           Test.Golden.Shelley.Node.KeyGen (golden_shelleyNodeKeyGen)
 import           Test.Golden.Shelley.Node.KeyGenKes (golden_shelleyNodeKeyGenKes)
@@ -124,6 +130,16 @@ certificateTests =
         , ("golden_shelleyStakePoolCertificates", golden_shelleyStakePoolCertificates)
         , ("golden_shelleyMIRCertificate", golden_shelleyMIRCertificate)
         , ("golden_shelleyGenesisKeyDelegationCertificate", golden_shelleyGenesisKeyDelegationCertificate)
+        ]
+
+keyConversionTests :: IO Bool
+keyConversionTests =
+  H.checkSequential
+    $ H.Group "Key Conversion Goldens"
+        [ ("golden_convertCardanoAddressByronSigningKey", golden_convertCardanoAddressByronSigningKey)
+        , ("golden_convertCardanoAddressIcarusSigningKey", golden_convertCardanoAddressIcarusSigningKey)
+        , ("golden_convertCardanoAddressShelleyPaymentSigningKey", golden_convertCardanoAddressShelleyPaymentSigningKey)
+        , ("golden_convertCardanoAddressShelleyStakeSigningKey", golden_convertCardanoAddressShelleyStakeSigningKey)
         ]
 
 metaDatatests :: IO Bool

@@ -22,6 +22,7 @@ module Cardano.CLI.Shelley.Commands
   , AddressKeyType (..)
   , ByronKeyType (..)
   , ByronKeyFormat (..)
+  , CardanoAddressKeyType (..)
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
@@ -136,6 +137,7 @@ data KeyCmd
   | KeyConvertITNStakeKey SomeKeyFile OutputFile
   | KeyConvertITNExtendedToStakeKey SomeKeyFile OutputFile
   | KeyConvertITNBip32ToStakeKey SomeKeyFile OutputFile
+  | KeyConvertCardanoAddressSigningKey CardanoAddressKeyType SigningKeyFile OutputFile
   deriving (Eq, Show)
 
 renderKeyCmd :: KeyCmd -> Text
@@ -148,6 +150,7 @@ renderKeyCmd cmd =
     KeyConvertITNStakeKey {} -> "key convert-itn-key"
     KeyConvertITNExtendedToStakeKey {} -> "key convert-itn-extended-key"
     KeyConvertITNBip32ToStakeKey {} -> "key convert-itn-bip32-key"
+    KeyConvertCardanoAddressSigningKey {} -> "key convert-cardano-address-signing-key"
 
 data TransactionCmd
   = TxBuildRaw
@@ -393,6 +396,14 @@ data ByronKeyType
 
 data ByronKeyFormat = NonLegacyByronKeyFormat
                     | LegacyByronKeyFormat
+  deriving (Eq, Show)
+
+-- | The type of @cardano-address@ key.
+data CardanoAddressKeyType
+  = CardanoAddressShelleyPaymentKey
+  | CardanoAddressShelleyStakeKey
+  | CardanoAddressIcarusPaymentKey
+  | CardanoAddressByronPaymentKey
   deriving (Eq, Show)
 
 newtype OpCertCounterFile

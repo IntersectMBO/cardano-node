@@ -4,7 +4,7 @@ module Test.Cli.ITN
   ( tests
   ) where
 
-import           Cardano.CLI.Shelley.Run.Key (decodeBech32Key)
+import           Cardano.CLI.Shelley.Run.Key (decodeBech32)
 import           Cardano.Prelude
 import           Hedgehog (Property, (===))
 import           Test.OptParse
@@ -112,14 +112,14 @@ prop_convertITNBIP32SigningKey = propertyOnce . moduleWorkspace "tmp" $ \tempDir
   -- Check for existence of the converted ITN keys
   assertFilesExist [outputHaskellSignKeyFp]
 
--- | We check our 'decodeBech32Key' outputs against https://slowli.github.io/bech32-buffer/
+-- | We check our 'decodeBech32' outputs against https://slowli.github.io/bech32-buffer/
 -- using 'itnVerKey' & 'itnSignKey' as inputs.
 golden_bech32Decode :: Property
 golden_bech32Decode = propertyOnce $ do
-  (vHumReadPart, vDataPart , _) <- H.evalEither $ decodeBech32Key itnVerKey
+  (vHumReadPart, vDataPart , _) <- H.evalEither $ decodeBech32 itnVerKey
   Just vDataPartBase16 <- pure (dataPartToBase16 vDataPart)
 
-  (sHumReadPart, sDataPart , _) <- H.evalEither $ decodeBech32Key itnSignKey
+  (sHumReadPart, sDataPart , _) <- H.evalEither $ decodeBech32 itnSignKey
   Just sDataPartBase16 <- pure (dataPartToBase16 sDataPart)
 
   -- Based on https://slowli.github.io/bech32-buffer/ which are in Base16

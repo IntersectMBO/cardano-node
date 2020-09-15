@@ -273,6 +273,11 @@ pKeyCmd =
             Opt.progDesc $ "Convert an Incentivized Testnet (ITN) BIP32 "
                         ++ "(Ed25519Bip32) signing key to a corresponding "
                         ++ "Shelley stake signing key"
+
+      , Opt.command "convert-cardano-address-key" $
+          Opt.info pKeyConvertCardanoAddressSigningKey $
+            Opt.progDesc $ "Convert a cardano-address extended signing key "
+                        ++ "to a corresponding Shelley-format key."
       ]
   where
     pKeyGetVerificationKey :: Parser KeyCmd
@@ -410,6 +415,32 @@ pKeyCmd =
           <> Opt.help "Filepath of the ITN verification key."
           <> Opt.completer (Opt.bashCompleter "file")
           )
+
+    pKeyConvertCardanoAddressSigningKey :: Parser KeyCmd
+    pKeyConvertCardanoAddressSigningKey =
+      KeyConvertCardanoAddressSigningKey
+        <$> pCardanoAddressKeyType
+        <*> pSigningKeyFile Input
+        <*> pOutputFile
+
+    pCardanoAddressKeyType :: Parser CardanoAddressKeyType
+    pCardanoAddressKeyType =
+          Opt.flag' CardanoAddressShelleyPaymentKey
+            (  Opt.long "shelley-payment-key"
+            <> Opt.help "Use a Shelley-era extended payment key."
+            )
+      <|> Opt.flag' CardanoAddressShelleyStakeKey
+            (  Opt.long "shelley-stake-key"
+            <> Opt.help "Use a Shelley-era extended stake key."
+            )
+      <|> Opt.flag' CardanoAddressIcarusPaymentKey
+            (  Opt.long "icarus-payment-key"
+            <> Opt.help "Use a Byron-era extended payment key formatted in the Icarus style."
+            )
+      <|> Opt.flag' CardanoAddressByronPaymentKey
+            (  Opt.long "byron-payment-key"
+            <> Opt.help "Use a Byron-era extended payment key formatted in the deprecated Byron style."
+            )
 
 pTransaction :: Parser TransactionCmd
 pTransaction =
