@@ -443,11 +443,11 @@ import qualified Shelley.Spec.Ledger.OCert as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
-import qualified Shelley.Spec.Ledger.TxData as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 -- Types we will re-export as-is
-import           Shelley.Spec.Ledger.TxData (MIRPot (..))
+import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -1810,7 +1810,7 @@ makeMIRCertificate mirpot amounts =
   . Shelley.DCertMir
   $ Shelley.MIRCert
       mirpot
-      (Map.fromListWith (+)
+      (Map.fromListWith (<>)
          [ (toShelleyStakeCredential sc, toShelleyLovelace v)
          | (sc, v) <- amounts ])
 
@@ -2323,7 +2323,7 @@ makeShelleyUpdateProposal params genesisKeyHashes epochno =
         epochno
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
-                       -> Shelley.PParamsUpdate
+                       -> Shelley.PParamsUpdate StandardShelley
 toShelleyPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion

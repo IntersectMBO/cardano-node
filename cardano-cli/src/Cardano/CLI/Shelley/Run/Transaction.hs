@@ -277,7 +277,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
 readProtocolParameters :: ProtocolParamsFile
-                       -> ExceptT ShelleyTxCmdError IO Shelley.PParams
+                       -> ExceptT ShelleyTxCmdError IO (Shelley.PParams StandardShelley)
 readProtocolParameters (ProtocolParamsFile fpath) = do
   pparams <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $

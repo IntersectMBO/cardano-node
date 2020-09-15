@@ -21,7 +21,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
-import qualified Shelley.Spec.Ledger.TxData as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 -- | Convert a transaction ID to raw bytes.
 class ConvertTxId blk where

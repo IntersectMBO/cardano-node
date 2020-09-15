@@ -6,8 +6,9 @@ module Cardano.Tracing.Render
   , renderChunkNo
   , renderHeaderHash
   , renderHeaderHashForVerbosity
-  , renderTipInfoBlockNo
-  , renderTipInfoHash
+  , renderChainHash
+  , renderTipBlockNo
+  , renderTipHash
   , renderPoint
   , renderPointAsPhrase
   , renderPointForVerbosity
@@ -35,8 +36,9 @@ import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), R
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId)
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..))
-import           Ouroboros.Consensus.Storage.ImmutableDB.Types (BlockOrEBB (..), TipInfo (..))
-import           Ouroboros.Network.Block (HeaderHash, Tip, getTipPoint)
+import           Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types (BlockOrEBB (..))
+import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
+import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHash, Tip, getTipPoint)
 
 renderBlockOrEBB :: BlockOrEBB -> Text
 renderBlockOrEBB (Block slotNo) = "Block at " <> renderSlotNo slotNo
@@ -48,11 +50,11 @@ renderChunkNo = Text.pack . show . unChunkNo
 renderEpochNo :: EpochNo -> Text
 renderEpochNo = Text.pack . show . unEpochNo
 
-renderTipInfoBlockNo :: TipInfo hash a -> Text
-renderTipInfoBlockNo = Text.pack . show . unBlockNo . tipInfoBlockNo
+renderTipBlockNo :: ImmDB.Tip blk -> Text
+renderTipBlockNo = Text.pack . show . unBlockNo . ImmDB.tipBlockNo
 
-renderTipInfoHash :: Show hash => TipInfo hash a -> Text
-renderTipInfoHash tInfo = Text.pack . show $ tipInfoHash tInfo
+renderTipHash :: StandardHash blk => ImmDB.Tip blk -> Text
+renderTipHash tInfo = Text.pack . show $ ImmDB.tipHash tInfo
 
 renderTxIdForVerbosity
   :: ConvertTxId blk
@@ -145,6 +147,10 @@ renderHeaderHashForVerbosity p verb =
 -- | Hex encode and render a 'HeaderHash' as text.
 renderHeaderHash :: ConvertRawHash blk => proxy blk -> HeaderHash blk -> Text
 renderHeaderHash p = Text.decodeLatin1 . B16.encode . toRawHash p
+
+renderChainHash :: (HeaderHash blk -> Text) -> ChainHash blk -> Text
+renderChainHash _ GenesisHash = "GenesisHash"
+renderChainHash p (BlockHash hash) = p hash
 
 trimHashTextForVerbosity :: TracingVerbosity -> Text -> Text
 trimHashTextForVerbosity verb =

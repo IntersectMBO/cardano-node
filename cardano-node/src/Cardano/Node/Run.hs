@@ -311,13 +311,13 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       }
 
   customiseChainDbArgs :: Bool
-                       -> ChainDB.ChainDbArgs IO blk
-                       -> ChainDB.ChainDbArgs IO blk
+                       -> ChainDB.ChainDbArgs Identity IO blk
+                       -> ChainDB.ChainDbArgs Identity IO blk
   customiseChainDbArgs runValid args
     | runValid
     = args
-      { ChainDB.cdbImmValidation = ValidateAllChunks
-      , ChainDB.cdbVolValidation = ValidateAll
+      { ChainDB.cdbImmutableDbValidation = ValidateAllChunks
+      , ChainDB.cdbVolatileDbValidation = ValidateAll
       }
     | otherwise
     = args

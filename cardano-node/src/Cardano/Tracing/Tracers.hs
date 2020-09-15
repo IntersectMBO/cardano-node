@@ -45,7 +45,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName,
                      PrivacyAnnotation (Confidential), mkLOMeta)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
-import           Cardano.BM.ElidingTracer
+import           Cardano.BM.Internal.ElidingTracer
 import           Cardano.BM.Trace (appendName, traceNamedObject)
 import           Cardano.BM.Tracing
 
@@ -179,15 +179,15 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
                (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceGCEvent _ev1))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
-  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True
-  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceAddBlockEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
-  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   isEquivalent _ _ = False
   -- the types to be elided
   doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
@@ -203,7 +203,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
-  doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent ChainDB.AddedToCurrentChain{})) (_old, oldt) = do
@@ -216,7 +216,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
         else return (Just ev, oldt)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) (_old, count) =
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) (_old, count) =
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
       return (Just ev, count)

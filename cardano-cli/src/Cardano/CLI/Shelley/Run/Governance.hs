@@ -18,7 +18,7 @@ import           Cardano.CLI.Shelley.Commands (VerificationKeyOrHashOrFile (..))
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
-import qualified Shelley.Spec.Ledger.TxData as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 
 data ShelleyGovernanceCmdError
