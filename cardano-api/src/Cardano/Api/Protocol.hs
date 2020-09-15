@@ -24,13 +24,12 @@ import           Cardano.Chain.Slotting (EpochSlots (..))
 
 import           Cardano.Api.Typed
 
-import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Node.Run (RunNode)
 
 
-data Protocol = ByronProtocol !EpochSlots !Consensus.SecurityParam
+data Protocol = ByronProtocol !EpochSlots
               | ShelleyProtocol
-              | CardanoProtocol !EpochSlots !Consensus.SecurityParam
+              | CardanoProtocol !EpochSlots
   deriving (Eq, Show)
 
 data LocalNodeConnectInfoForSomeMode where
@@ -59,11 +58,11 @@ localNodeConnectInfo :: Protocol
 localNodeConnectInfo protocol network socketPath =
     case protocol of
 
-      ByronProtocol epSlots secParam ->
+      ByronProtocol epSlots ->
         LocalNodeConnectInfoForSomeMode $
           LocalNodeConnectInfo
             socketPath network
-            (ByronMode epSlots secParam)
+            (ByronMode epSlots)
 
       ShelleyProtocol ->
         LocalNodeConnectInfoForSomeMode $
@@ -71,9 +70,8 @@ localNodeConnectInfo protocol network socketPath =
             socketPath network
             ShelleyMode
 
-      CardanoProtocol epSlots secParam ->
+      CardanoProtocol epSlots ->
         LocalNodeConnectInfoForSomeMode $
           LocalNodeConnectInfo
             socketPath network
-            (CardanoMode epSlots secParam)
-
+            (CardanoMode epSlots)

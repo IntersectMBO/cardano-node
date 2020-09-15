@@ -194,7 +194,7 @@ formatIso8601 = DT.formatTime DT.defaultTimeLocale (DT.iso8601DateFormat (Just "
 
 -- | Assert the file contains the given number of occurrences of the given string
 readFile :: HasCallStack => FilePath -> H.PropertyT IO String
-readFile filename = withFrozenCallStack $ H.evalM . liftIO $ E.evaluate . CSD.force =<< IO.readFile filename
+readFile filename = withFrozenCallStack $ H.evalIO $ E.evaluate . CSD.force =<< IO.readFile filename
 
 -- | Checks if all files gives exists. If this fails, all files are deleted.
 assertFilesExist :: HasCallStack => [FilePath] -> H.PropertyT IO ()
@@ -208,14 +208,14 @@ assertFilesExist (file:rest) = do
 -- | Assert the file contains the given number of occurrences of the given string
 assertFileOccurences :: HasCallStack => Int -> String -> FilePath -> H.PropertyT IO ()
 assertFileOccurences n s fp = withFrozenCallStack $ do
-  contents <- H.evalM . liftIO $ IO.readFile fp
+  contents <- H.evalIO $ IO.readFile fp
 
   length (filter (s `L.isInfixOf`) (L.lines contents)) H.=== n
 
 -- | Assert the file contains the given number of occurrences of the given string
 assertFileLines :: HasCallStack => (Int -> Bool) -> FilePath -> H.PropertyT IO ()
 assertFileLines p fp = withFrozenCallStack $ do
-  contents <- H.evalM . liftIO $ IO.readFile fp
+  contents <- H.evalIO $ IO.readFile fp
 
   let lines = L.lines contents
 
@@ -229,7 +229,7 @@ assertFileLines p fp = withFrozenCallStack $ do
 -- | Assert the file contains the given number of occurrences of the given string
 assertEndsWithSingleNewline :: HasCallStack => FilePath -> H.PropertyT IO ()
 assertEndsWithSingleNewline fp = withFrozenCallStack $ do
-  contents <- H.evalM . liftIO $ IO.readFile fp
+  contents <- H.evalIO $ IO.readFile fp
 
   case reverse contents of
     '\n':'\n':_ -> failWithCustom callStack Nothing (fp <> " ends with too many newlines.")

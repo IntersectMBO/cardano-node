@@ -3,6 +3,7 @@
 module Chairman.Hedgehog.File
   ( createDirectoryIfMissing
   , copyFile
+  , renameFile
   , createFileLink
   , listDirectory
 
@@ -20,8 +21,8 @@ module Chairman.Hedgehog.File
   , assertIsJsonFile
   ) where
 
-import           Chairman.Hedgehog.Base (Integration)
 import           Chairman.Monad
+import           Chairman.OS
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Aeson
@@ -32,6 +33,7 @@ import           Data.Functor
 import           Data.Semigroup
 import           Data.String
 import           GHC.Stack (HasCallStack)
+import           Hedgehog (MonadTest)
 import           System.IO (FilePath, Handle, IOMode)
 import           Text.Show
 
@@ -43,58 +45,76 @@ import qualified Hedgehog as H
 import qualified System.Directory as IO
 import qualified System.IO as IO
 
-
-createDirectoryIfMissing :: HasCallStack => FilePath -> Integration ()
+-- | Create the 'filePath' directory if it is missing.
+createDirectoryIfMissing :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m ()
 createDirectoryIfMissing filePath = GHC.withFrozenCallStack $ do
   H.annotate $ "Creating directory if missing: " <> filePath
   H.evalIO $ IO.createDirectoryIfMissing True filePath
 
-copyFile :: HasCallStack => FilePath -> FilePath -> Integration ()
+-- | Copy the contents of the 'src' file to the 'dst' file.
+copyFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> FilePath -> m ()
 copyFile src dst = GHC.withFrozenCallStack $ do
   H.annotate $ "Copying from " <> show src <> " to " <> show dst
-  H.evalM . liftIO $ IO.copyFile src dst
+  H.evalIO $ IO.copyFile src dst
 
-createFileLink :: HasCallStack => FilePath -> FilePath -> Integration ()
+-- | Rename the 'src' file to 'dst'.
+renameFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> FilePath -> m ()
+renameFile src dst = GHC.withFrozenCallStack $ do
+  H.annotate $ "Copying from " <> show src <> " to " <> show dst
+  H.evalIO $ IO.renameFile src dst
+
+-- | Create a symbolic link from 'dst' to 'src'.
+createFileLink :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> FilePath -> m ()
 createFileLink src dst = GHC.withFrozenCallStack $ do
   H.annotate $ "Creating link from " <> show dst <> " to " <> show src
-  H.evalM . liftIO $ IO.copyFile src dst
+  if isWin32
+    then H.evalIO $ IO.copyFile src dst
+    else H.evalIO $ IO.createFileLink src dst
 
-listDirectory :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m [FilePath]
+-- | List 'p' directory.
+listDirectory :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m [FilePath]
 listDirectory p = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Listing directory: " <> p
   H.evalIO $ IO.listDirectory p
 
-writeFile :: (MonadIO m, HasCallStack) => FilePath -> String -> H.PropertyT m ()
+-- | Write 'contents' to the 'filePath' file.
+writeFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> String -> m ()
 writeFile filePath contents = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Writing file: " <> filePath
   H.evalIO $ IO.writeFile filePath contents
 
-openFile :: (MonadIO m, HasCallStack) => FilePath -> IOMode -> H.PropertyT m Handle
+-- | Open a handle to the 'filePath' file.
+openFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> IOMode -> m Handle
 openFile filePath mode = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Opening file: " <> filePath
   H.evalIO $ IO.openFile filePath mode
 
-readFile :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m String
+-- | Read the contents of the 'filePath' file.
+readFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m String
 readFile filePath = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Reading file: " <> filePath
   H.evalIO $ IO.readFile filePath
 
-lbsWriteFile :: (MonadIO m, HasCallStack) => FilePath -> LBS.ByteString -> H.PropertyT m ()
+-- | Write 'contents' to the 'filePath' file.
+lbsWriteFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> LBS.ByteString -> m ()
 lbsWriteFile filePath contents = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Writing file: " <> filePath
   H.evalIO $ LBS.writeFile filePath contents
 
-lbsReadFile :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m LBS.ByteString
+-- | Read the contents of the 'filePath' file.
+lbsReadFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m LBS.ByteString
 lbsReadFile filePath = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Reading file: " <> filePath
   H.evalIO $ LBS.readFile filePath
 
-readJsonFile :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m (Either String Value)
+-- | Read the 'filePath' file as JSON.
+readJsonFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m (Either String Value)
 readJsonFile filePath = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Reading JSON file: " <> filePath
   H.evalIO $ eitherDecode @Value <$> LBS.readFile filePath
 
-rewriteJson :: (MonadIO m, HasCallStack) => FilePath -> (Value -> Value) -> H.PropertyT m ()
+-- | Rewrite the 'filePath' JSON file using the function 'f'.
+rewriteJson :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> (Value -> Value) -> m ()
 rewriteJson filePath f = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Rewriting JSON file: " <> filePath
   lbs <- forceM $ lbsReadFile filePath
@@ -102,7 +122,8 @@ rewriteJson filePath f = GHC.withFrozenCallStack $ do
     Right iv -> lbsWriteFile filePath (encode (f iv))
     Left msg -> H.failMessage GHC.callStack msg
 
-cat :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+-- | Annotate the contents of the 'filePath' file.
+cat :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m ()
 cat filePath = GHC.withFrozenCallStack $ do
   contents <- readFile filePath
   void . H.annotate $ L.unlines
@@ -111,7 +132,8 @@ cat filePath = GHC.withFrozenCallStack $ do
     ]
   return ()
 
-assertIsJsonFile :: (MonadIO m, HasCallStack) => FilePath -> H.PropertyT m ()
+-- | Assert the 'filePath' can be parsed as JSON.
+assertIsJsonFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m ()
 assertIsJsonFile fp = GHC.withFrozenCallStack $ do
   jsonResult <- readJsonFile fp
   case jsonResult of
