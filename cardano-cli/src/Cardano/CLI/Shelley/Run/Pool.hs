@@ -21,11 +21,14 @@ import           Cardano.Api.Typed
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Types (OutputFormat (..), VerificationKeyFile (..))
+import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
+                     readVerificationKeyOrFile)
+import           Cardano.CLI.Types (OutputFormat (..))
 
 
 data ShelleyPoolCmdError
   = ShelleyPoolCmdReadFileError !(FileError TextEnvelopeError)
+  | ShelleyPoolCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyPoolCmdWriteFileError !(FileError ())
   | ShelleyPoolCmdMetaDataValidationError !StakePoolMetadataValidationError
   deriving Show
@@ -34,6 +37,7 @@ renderShelleyPoolCmdError :: ShelleyPoolCmdError -> Text
 renderShelleyPoolCmdError err =
   case err of
     ShelleyPoolCmdReadFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyPoolCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyPoolCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyPoolCmdMetaDataValidationError validationErr ->
       "Error validating stake pool metadata: " <> Text.pack (displayError validationErr)
@@ -57,9 +61,9 @@ runPoolCmd (PoolMetaDataHash poolMdFile mOutFile) = runPoolMetaDataHash poolMdFi
 -- TODO: Metadata and more stake pool relay support to be
 -- added in the future.
 runStakePoolRegistrationCert
-  :: VerificationKeyFile
+  :: VerificationKeyOrFile StakePoolKey
   -- ^ Stake pool verification key.
-  -> VerificationKeyFile
+  -> VerificationKeyOrFile VrfKey
   -- ^ VRF Verification key.
   -> Lovelace
   -- ^ Pool pledge.
@@ -67,9 +71,9 @@ runStakePoolRegistrationCert
   -- ^ Pool cost.
   -> Rational
   -- ^ Pool margin.
-  -> VerificationKeyFile
+  -> VerificationKeyOrFile StakeKey
   -- ^ Stake verification key for reward account.
-  -> [VerificationKeyFile]
+  -> [VerificationKeyOrFile StakeKey]
   -- ^ Pool owner stake verification key(s).
   -> [StakePoolRelay]
   -- ^ Stake pool relays.
@@ -79,45 +83,44 @@ runStakePoolRegistrationCert
   -> OutputFile
   -> ExceptT ShelleyPoolCmdError IO ()
 runStakePoolRegistrationCert
-  (VerificationKeyFile sPvkeyFp)
-  (VerificationKeyFile vrfVkeyFp)
+  stakePoolVerKeyOrFile
+  vrfVerKeyOrFile
   pldg
   pCost
   pMrgn
-  (VerificationKeyFile rwdVerFp)
-  ownerVerFps
+  rwdStakeVerKeyOrFile
+  ownerStakeVerKeyOrFiles
   relays
   mbMetadata
   network
   (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadFileError
+    stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) sPvkeyFp
+      $ readVerificationKeyOrFile AsStakePoolKey stakePoolVerKeyOrFile
     let stakePoolId' = verificationKeyHash stakePoolVerKey
 
     -- VRF verification key
-    vrfVerKey <- firstExceptT ShelleyPoolCmdReadFileError
+    vrfVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsVrfKey) vrfVkeyFp
+      $ readVerificationKeyOrFile AsVrfKey vrfVerKeyOrFile
     let vrfKeyHash' = verificationKeyHash vrfVerKey
 
     -- Pool reward account
-    stakeVerKey <- firstExceptT ShelleyPoolCmdReadFileError
+    rwdStakeVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) rwdVerFp
-    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
+      $ readVerificationKeyOrFile AsStakeKey rwdStakeVerKeyOrFile
+    let stakeCred = StakeCredentialByKey (verificationKeyHash rwdStakeVerKey)
         rewardAccountAddr = makeStakeAddress network stakeCred
 
     -- Pool owner(s)
     sPoolOwnerVkeys <-
       mapM
-        (\(VerificationKeyFile fp) ->
-          firstExceptT ShelleyPoolCmdReadFileError
-            . newExceptT
-            $ readFileTextEnvelope (AsVerificationKey AsStakeKey) fp
+        (firstExceptT ShelleyPoolCmdReadKeyFileError
+          . newExceptT
+          . readVerificationKeyOrFile AsStakeKey
         )
-        ownerVerFps
+        ownerStakeVerKeyOrFiles
     let stakePoolOwners' = map verificationKeyHash sPoolOwnerVkeys
 
     let stakePoolParams =
@@ -143,15 +146,15 @@ runStakePoolRegistrationCert
     registrationCertDesc = TextViewDescription "Stake Pool Registration Certificate"
 
 runStakePoolRetirementCert
-  :: VerificationKeyFile
+  :: VerificationKeyOrFile StakePoolKey
   -> Shelley.EpochNo
   -> OutputFile
   -> ExceptT ShelleyPoolCmdError IO ()
-runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFile outfp) = do
+runStakePoolRetirementCert stakePoolVerKeyOrFile retireEpoch (OutputFile outfp) = do
     -- Pool verification key
-    stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadFileError
+    stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) sPvkeyFp
+      $ readVerificationKeyOrFile AsStakePoolKey stakePoolVerKeyOrFile
 
     let stakePoolId' = verificationKeyHash stakePoolVerKey
         retireCert = makeStakePoolRetirementCertificate stakePoolId' retireEpoch
@@ -163,11 +166,14 @@ runStakePoolRetirementCert (VerificationKeyFile sPvkeyFp) retireEpoch (OutputFil
     retireCertDesc :: TextViewDescription
     retireCertDesc = TextViewDescription "Stake Pool Retirement Certificate"
 
-runPoolId :: VerificationKeyFile -> OutputFormat -> ExceptT ShelleyPoolCmdError IO ()
-runPoolId (VerificationKeyFile vkeyPath) outputFormat = do
-    stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadFileError
+runPoolId
+  :: VerificationKeyOrFile StakePoolKey
+  -> OutputFormat
+  -> ExceptT ShelleyPoolCmdError IO ()
+runPoolId verKeyOrFile outputFormat = do
+    stakePoolVerKey <- firstExceptT ShelleyPoolCmdReadKeyFileError
       . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) vkeyPath
+      $ readVerificationKeyOrFile AsStakePoolKey verKeyOrFile
     liftIO $
       case outputFormat of
         OutputFormatHex ->

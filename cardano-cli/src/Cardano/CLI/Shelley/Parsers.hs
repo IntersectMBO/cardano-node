@@ -626,7 +626,7 @@ pPoolCmd =
       ]
   where
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pVerificationKeyFile Output <*> pOutputFormat
+    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
 
     pPoolMetaDataHashSubCmd :: Parser PoolCmd
     pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile <*> pMaybeOutputFile
@@ -1715,24 +1715,15 @@ pStakePoolVerificationKey =
     asType :: AsType (VerificationKey StakePoolKey)
     asType = AsVerificationKey AsStakePoolKey
 
+    keyFormats :: NonEmpty (InputFormat (VerificationKey StakePoolKey))
+    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
+
     deserialiseFromBech32OrHex
       :: String
       -> Either String (VerificationKey StakePoolKey)
     deserialiseFromBech32OrHex str =
-      case deserialiseFromBech32 asType (Text.pack str) of
-        Right res -> Right res
-
-        -- The input was valid Bech32, but some other error occurred.
-        Left err@(Bech32UnexpectedPrefix _ _) -> Left (displayError err)
-        Left err@(Bech32DataPartToBytesError _) -> Left (displayError err)
-        Left err@(Bech32DeserialiseFromBytesError _) -> Left (displayError err)
-        Left err@(Bech32WrongPrefix _ _) -> Left (displayError err)
-
-        -- The input was not valid Bech32. Attempt to deserialize it as hex.
-        Left (Bech32DecodingError _) ->
-          case deserialiseFromRawBytesHex asType (BSC.pack str) of
-            Just res' -> Right res'
-            Nothing -> Left "Invalid stake pool verification key."
+      first (Text.unpack . renderInputDecodeError) $
+        deserialiseInput asType keyFormats (BSC.pack str)
 
 pStakePoolVerificationKeyOrFile
   :: Parser (VerificationKeyOrFile StakePoolKey)
@@ -1809,7 +1800,7 @@ pRewardAcctVerificationKeyFile =
     ( Opt.strOption
         (  Opt.long "pool-reward-account-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help "Filepath of the reward account staking verification key."
+        <> Opt.help "Filepath of the reward account stake verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1819,14 +1810,40 @@ pRewardAcctVerificationKeyFile =
         )
     )
 
+pRewardAcctVerificationKey :: Parser (VerificationKey StakeKey)
+pRewardAcctVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromBech32OrHex)
+        (  Opt.long "pool-reward-account-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Reward account stake verification key (Bech32 or hex-encoded)."
+        )
+  where
+    asType :: AsType (VerificationKey StakeKey)
+    asType = AsVerificationKey AsStakeKey
 
-pPoolOwner :: Parser VerificationKeyFile
-pPoolOwner =
+    keyFormats :: NonEmpty (InputFormat (VerificationKey StakeKey))
+    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
+
+    deserialiseFromBech32OrHex
+      :: String
+      -> Either String (VerificationKey StakeKey)
+    deserialiseFromBech32OrHex str =
+      first (Text.unpack . renderInputDecodeError) $
+        deserialiseInput asType keyFormats (BSC.pack str)
+
+pRewardAcctVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pRewardAcctVerificationKeyOrFile =
+  VerificationKeyValue <$> pRewardAcctVerificationKey
+    <|> VerificationKeyFilePath <$> pRewardAcctVerificationKeyFile
+
+pPoolOwnerVerificationKeyFile :: Parser VerificationKeyFile
+pPoolOwnerVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
         (  Opt.long "pool-owner-stake-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help "Filepath of the pool owner staking verification key."
+        <> Opt.help "Filepath of the pool owner stake verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1836,6 +1853,32 @@ pPoolOwner =
           )
     )
 
+pPoolOwnerVerificationKey :: Parser (VerificationKey StakeKey)
+pPoolOwnerVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromBech32OrHex)
+        (  Opt.long "pool-owner-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Pool owner stake verification key (Bech32 or hex-encoded)."
+        )
+  where
+    asType :: AsType (VerificationKey StakeKey)
+    asType = AsVerificationKey AsStakeKey
+
+    keyFormats :: NonEmpty (InputFormat (VerificationKey StakeKey))
+    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
+
+    deserialiseFromBech32OrHex
+      :: String
+      -> Either String (VerificationKey StakeKey)
+    deserialiseFromBech32OrHex str =
+      first (Text.unpack . renderInputDecodeError) $
+        deserialiseInput asType keyFormats (BSC.pack str)
+
+pPoolOwnerVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pPoolOwnerVerificationKeyOrFile =
+  VerificationKeyValue <$> pPoolOwnerVerificationKey
+    <|> VerificationKeyFilePath <$> pPoolOwnerVerificationKeyFile
 
 pPoolPledge :: Parser Lovelace
 pPoolPledge =
@@ -1969,23 +2012,23 @@ pStakePoolMetadataHash =
 
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
- PoolRegistrationCert
-  <$> pStakePoolVerificationKeyFile
-  <*> pVrfVerificationKeyFile
-  <*> pPoolPledge
-  <*> pPoolCost
-  <*> pPoolMargin
-  <*> pRewardAcctVerificationKeyFile
-  <*> some pPoolOwner
-  <*> many pPoolRelay
-  <*> pStakePoolMetadataReference
-  <*> pNetworkId
-  <*> pOutputFile
+  PoolRegistrationCert
+    <$> pStakePoolVerificationKeyOrFile
+    <*> pVrfVerificationKeyOrFile
+    <*> pPoolPledge
+    <*> pPoolCost
+    <*> pPoolMargin
+    <*> pRewardAcctVerificationKeyOrFile
+    <*> some pPoolOwnerVerificationKeyOrFile
+    <*> many pPoolRelay
+    <*> pStakePoolMetadataReference
+    <*> pNetworkId
+    <*> pOutputFile
 
 pStakePoolRetirementCert :: Parser PoolCmd
 pStakePoolRetirementCert =
   PoolRetirementCert
-    <$> pStakePoolVerificationKeyFile
+    <$> pStakePoolVerificationKeyOrFile
     <*> pEpochNo
     <*> pOutputFile
 
