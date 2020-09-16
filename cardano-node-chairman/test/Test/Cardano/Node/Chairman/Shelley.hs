@@ -20,10 +20,11 @@ import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
 import           GHC.Float
-import           Hedgehog (Property, discover, (===))
+import           Hedgehog (Property, discover)
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.Exit (ExitCode (..))
+import           System.FilePath.Posix ((</>))
 import           System.IO (IO)
 import           Text.Read
 import           Text.Show
@@ -69,7 +70,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
-  socketDir <- H.noteShow $ tempRelPath <> "/socket"
+  socketDir <- H.noteShow $ tempRelPath </> "socket"
 
   let praosNodes = ["node-praos1", "node-praos2"] :: [String]
   let praosNodesN = ["1", "2"] :: [String]
@@ -86,8 +87,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   let testnetMagic = "42"
 
   H.copyFile
-    (base <> "/configuration/chairman/shelly-only/configuration.yaml")
-    (tempAbsPath <> "/configuration.yaml")
+    (base </> "configuration/chairman/shelly-only/configuration.yaml")
+    (tempAbsPath </> "configuration.yaml")
 
   -- Set up our template
   void $ H.execCli
@@ -102,9 +103,9 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteJson (tempAbsPath <> "/genesis.spec.json") (rewriteGenesisSpec supply)
+  H.rewriteJson (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec supply)
 
-  H.assertIsJsonFile $ tempAbsPath <> "/genesis.spec.json"
+  H.assertIsJsonFile $ tempAbsPath </> "genesis.spec.json"
 
   -- Now generate for real
   void $ H.execCli
@@ -115,53 +116,53 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
     , "--gen-utxo-keys", "1"
     ]
 
-  forM_ allNodes $ \p -> H.createDirectoryIfMissing $ tempAbsPath <> "/" <> p
+  forM_ allNodes $ \p -> H.createDirectoryIfMissing $ tempAbsPath </> p
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
   forM_ poolNodes $ \n -> do
     void $ H.execCli
       [ "shelley", "node", "key-gen"
-      , "--cold-verification-key-file", tempAbsPath <> "/" <> n <> "/operator.vkey"
-      , "--cold-signing-key-file", tempAbsPath <> "/" <> n <> "/operator.skey"
-      , "--operational-certificate-issue-counter-file", tempAbsPath <> "/" <> n <> "/operator.counter"
+      , "--cold-verification-key-file", tempAbsPath </> n </> "operator.vkey"
+      , "--cold-signing-key-file", tempAbsPath </> n </> "operator.skey"
+      , "--operational-certificate-issue-counter-file", tempAbsPath </> n </> "operator.counter"
       ]
 
     void $ H.execCli
       [ "shelley", "node", "key-gen-VRF"
-      , "--verification-key-file", tempAbsPath <> "/" <> n <> "/vrf.vkey"
-      , "--signing-key-file", tempAbsPath <> "/" <> n <> "/vrf.skey"
+      , "--verification-key-file", tempAbsPath </> n </> "vrf.vkey"
+      , "--signing-key-file", tempAbsPath </> n </> "vrf.skey"
       ]
 
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ praosNodesN $ \n -> do
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".skey") (tempAbsPath <> "/node-praos" <> n <> "/operator.skey")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vkey") (tempAbsPath <> "/node-praos" <> n <> "/operator.vkey")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".counter") (tempAbsPath <> "/node-praos" <> n <> "/operator.counter")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vrf.vkey") (tempAbsPath <> "/node-praos" <> n <> "/vrf.vkey")
-    H.createFileLink (tempAbsPath <> "/delegate-keys/delegate" <> n <> ".vrf.skey") (tempAbsPath <> "/node-praos" <> n <> "/vrf.skey")
+    H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".skey") (tempAbsPath </> "node-praos" <> n </> "operator.skey")
+    H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".vkey") (tempAbsPath </> "node-praos" <> n </> "operator.vkey")
+    H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".counter") (tempAbsPath </> "node-praos" <> n </> "operator.counter")
+    H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".vrf.vkey") (tempAbsPath </> "node-praos" <> n </> "vrf.vkey")
+    H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".vrf.skey") (tempAbsPath </> "node-praos" <> n </> "vrf.skey")
 
   --  Make hot keys and for all nodes
   forM_ allNodes $ \node -> do
     void $ H.execCli
       [ "shelley", "node", "key-gen-KES"
-      , "--verification-key-file", tempAbsPath <> "/" <> node <> "/kes.vkey"
-      , "--signing-key-file", tempAbsPath <> "/" <> node <> "/kes.skey"
+      , "--verification-key-file", tempAbsPath </> node </> "kes.vkey"
+      , "--signing-key-file", tempAbsPath </> node </> "kes.skey"
       ]
 
     void $ H.execCli
       [ "shelley", "node", "issue-op-cert"
       , "--kes-period", "0"
-      , "--kes-verification-key-file", tempAbsPath <> "/" <> node <> "/kes.vkey"
-      , "--cold-signing-key-file", tempAbsPath <> "/" <> node <> "/operator.skey"
-      , "--operational-certificate-issue-counter-file", tempAbsPath <> "/" <> node <> "/operator.counter"
-      , "--out-file", tempAbsPath <> "/" <> node <> "/node.cert"
+      , "--kes-verification-key-file", tempAbsPath </> node </> "kes.vkey"
+      , "--cold-signing-key-file", tempAbsPath </> node </> "operator.skey"
+      , "--operational-certificate-issue-counter-file", tempAbsPath </> node </> "operator.counter"
+      , "--out-file", tempAbsPath </> node </> "node.cert"
       ]
 
   -- Make topology files
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath <> "/" <> node <> "/topology.json") $ J.encode $
+    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
       J.object
       [ "Producers" .= J.toJSON
         [ J.object
@@ -172,55 +173,55 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
         | peerPort <- allPorts \\ [port]
         ]
       ]
-    H.writeFile (tempAbsPath <> "/" <> node <> "/port") (show port)
+    H.writeFile (tempAbsPath </> node </> "port") (show port)
 
   -- Generated node operator keys (cold, hot) and operational certs
-  forM_ allNodes $ \n -> H.noteShowM_ . H.listDirectory $ tempAbsPath <> "/" <> n
+  forM_ allNodes $ \n -> H.noteShowM_ . H.listDirectory $ tempAbsPath </> n
 
   -- Make some payment and stake addresses
   -- user1..n:       will own all the funds in the system, we'll set this up from
   --                 initial utxo the
   -- pool-owner1..n: will be the owner of the pools and we'll use their reward
   --                 account for pool rewards
-  H.createDirectoryIfMissing $ tempAbsPath <> "/addresses"
+  H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
 
   forM_ addrs $ \addr -> do
     -- Payment address keys
     void $ H.execCli
       [ "shelley", "address", "key-gen"
-      , "--verification-key-file", tempAbsPath <> "/addresses/" <> addr <> ".vkey"
-      , "--signing-key-file", tempAbsPath <> "/addresses/" <> addr <> ".skey"
+      , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
+      , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> ".skey"
       ]
 
     -- Stake address keys
     void $ H.execCli
       [ "shelley", "stake-address", "key-gen"
-      , "--verification-key-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.vkey"
-      , "--signing-key-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.skey"
+      , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
+      , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.skey"
       ]
 
     -- Payment addresses
     void $ H.execCli
       [ "shelley", "address", "build"
-      , "--payment-verification-key-file", tempAbsPath <> "/addresses/" <> addr <> ".vkey"
-      , "--stake-verification-key-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.vkey"
+      , "--payment-verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
+      , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--testnet-magic", testnetMagic
-      , "--out-file", tempAbsPath <> "/addresses/" <> addr <> ".addr"
+      , "--out-file", tempAbsPath </> "addresses/" <> addr <> ".addr"
       ]
 
     -- Stake addresses
     void $ H.execCli
       [ "shelley", "stake-address", "build"
-      , "--stake-verification-key-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.vkey"
+      , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--testnet-magic", testnetMagic
-      , "--out-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.addr"
+      , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.addr"
       ]
 
     -- Stake addresses registration certs
     void $ H.execCli
       [ "shelley", "stake-address", "registration-certificate"
-      , "--stake-verification-key-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.vkey"
-      , "--out-file", tempAbsPath <> "/addresses/" <> addr <> "-stake.reg.cert"
+      , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
+      , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
 
   -- User N will delegate to pool N
@@ -230,17 +231,17 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
     -- Stake address delegation certs
     void $ H.execCli
       [ "shelley", "stake-address", "delegation-certificate"
-      , "--stake-verification-key-file", tempAbsPath <> "/addresses/user" <> n <> "-stake.vkey"
-      , "--cold-verification-key-file", tempAbsPath <> "/node-pool" <> n <> "/operator.vkey"
-      , "--out-file", tempAbsPath <> "/addresses/user" <> n <> "-stake.deleg.cert"
+      , "--stake-verification-key-file", tempAbsPath </> "addresses/user" <> n <> "-stake.vkey"
+      , "--cold-verification-key-file", tempAbsPath </> "node-pool" <> n </> "operator.vkey"
+      , "--out-file", tempAbsPath </> "addresses/user" <> n <> "-stake.deleg.cert"
       ]
 
-    H.createFileLink (tempAbsPath <> "/addresses/pool-owner" <> n <> "-stake.vkey") (tempAbsPath <> "/node-pool" <> n <> "/owner.vkey")
-    H.createFileLink (tempAbsPath <> "/addresses/pool-owner" <> n <> "-stake.skey") (tempAbsPath <> "/node-pool" <> n <> "/owner.skey")
+    H.createFileLink (tempAbsPath </> "addresses/pool-owner" <> n <> "-stake.vkey") (tempAbsPath </> "node-pool" <> n </> "owner.vkey")
+    H.createFileLink (tempAbsPath </> "addresses/pool-owner" <> n <> "-stake.skey") (tempAbsPath </> "node-pool" <> n </> "owner.skey")
 
   -- Generated payment address keys, stake address keys,
   -- stake address regitration certs, and stake address delegatation certs
-  H.noteShowM_ . H.listDirectory $ tempAbsPath <> "/addresses"
+  H.noteShowM_ . H.listDirectory $ tempAbsPath </> "addresses"
 
   -- Next is to make the stake pool registration cert
   forM_ poolNodes $ \node -> do
@@ -250,15 +251,15 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
       , "--pool-pledge", "0"
       , "--pool-cost", "0"
       , "--pool-margin", "0"
-      , "--cold-verification-key-file", tempAbsPath <> "/" <> node <> "/operator.vkey"
-      , "--vrf-verification-key-file", tempAbsPath <> "/" <> node <> "/vrf.vkey"
-      , "--reward-account-verification-key-file", tempAbsPath <> "/" <> node <> "/owner.vkey"
-      , "--pool-owner-stake-verification-key-file", tempAbsPath <> "/" <> node <> "/owner.vkey"
-      , "--out-file", tempAbsPath <> "/" <> node <> "/registration.cert"
+      , "--cold-verification-key-file", tempAbsPath </> node </> "operator.vkey"
+      , "--vrf-verification-key-file", tempAbsPath </> node </> "vrf.vkey"
+      , "--reward-account-verification-key-file", tempAbsPath </> node </> "owner.vkey"
+      , "--pool-owner-stake-verification-key-file", tempAbsPath </> node </> "owner.vkey"
+      , "--out-file", tempAbsPath </> node </> "registration.cert"
       ]
 
   -- Generated stake pool registration certs:
-  forM_ poolNodes $ \node -> H.assertIO . IO.doesFileExist $ tempAbsPath <> "/" <> node <> "/registration.cert"
+  forM_ poolNodes $ \node -> H.assertIO . IO.doesFileExist $ tempAbsPath </> node </> "registration.cert"
 
   -- Now we'll construct one whopper of a transaction that does everything
   -- just to show off that we can, and to make the script shorter
@@ -272,10 +273,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   genesisTxinResult <- H.noteShowM $ S.strip <$> H.execCli
     [ "shelley", "genesis", "initial-txin"
     , "--testnet-magic", testnetMagic
-    , "--verification-key-file", tempAbsPath <> "/utxo-keys/utxo1.vkey"
+    , "--verification-key-file", tempAbsPath </> "utxo-keys/utxo1.vkey"
     ]
 
-  user1Addr <- H.readFile $ tempAbsPath <> "/addresses/user1.addr"
+  user1Addr <- H.readFile $ tempAbsPath </> "addresses/user1.addr"
 
   void $ H.execCli
     [ "shelley", "transaction", "build-raw"
@@ -283,11 +284,11 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
     , "--fee", "0"
     , "--tx-in", genesisTxinResult
     , "--tx-out", user1Addr <> "+" <> show supply
-    , "--certificate-file", tempAbsPath <> "/addresses/pool-owner1-stake.reg.cert"
-    , "--certificate-file", tempAbsPath <> "/node-pool1/registration.cert"
-    , "--certificate-file", tempAbsPath <> "/addresses/user1-stake.reg.cert"
-    , "--certificate-file", tempAbsPath <> "/addresses/user1-stake.deleg.cert"
-    , "--out-file", tempAbsPath <> "/tx1.txbody"
+    , "--certificate-file", tempAbsPath </> "addresses/pool-owner1-stake.reg.cert"
+    , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
+    , "--certificate-file", tempAbsPath </> "addresses/user1-stake.reg.cert"
+    , "--certificate-file", tempAbsPath </> "addresses/user1-stake.deleg.cert"
+    , "--out-file", tempAbsPath </> "tx1.txbody"
     ]
 
   -- So we'll need to sign this with a bunch of keys:
@@ -298,17 +299,17 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   void $ H.execCli
     [ "shelley", "transaction", "sign"
-    , "--signing-key-file", tempAbsPath <> "/utxo-keys/utxo1.skey"
-    , "--signing-key-file", tempAbsPath <> "/addresses/user1-stake.skey"
-    , "--signing-key-file", tempAbsPath <> "/node-pool1/owner.skey"
-    , "--signing-key-file", tempAbsPath <> "/node-pool1/operator.skey"
+    , "--signing-key-file", tempAbsPath </> "utxo-keys/utxo1.skey"
+    , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
+    , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
+    , "--signing-key-file", tempAbsPath </> "node-pool1/operator.skey"
     , "--testnet-magic", testnetMagic
-    , "--tx-body-file", tempAbsPath <> "/tx1.txbody"
-    , "--out-file", tempAbsPath <> "/tx1.tx"
+    , "--tx-body-file", tempAbsPath </> "tx1.txbody"
+    , "--out-file", tempAbsPath </> "tx1.tx"
     ]
 
   -- Generated a signed 'do it all' transaction:
-  H.assertIO . IO.doesFileExist $ tempAbsPath <> "/tx1.tx"
+  H.assertIO . IO.doesFileExist $ tempAbsPath </> "tx1.tx"
 
   --------------------------------
   -- Launch cluster of three nodes
@@ -318,30 +319,30 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   H.createDirectoryIfMissing logDir
 
   forM_ allNodes $ \node -> do
-    dbDir <- H.noteShow $ tempAbsPath <> "/db/" <> node
+    dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/" <> node)
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
 
     H.createDirectoryIfMissing dbDir
-    H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
+    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 
     hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
 
     H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
-    portString <- H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+    portString <- H.readFile $ tempAbsPath </> node </> "port"
 
     void $ H.createProcess =<<
       ( H.procNode
         [ "run"
-        , "--config", tempAbsPath <> "/configuration.yaml"
-        , "--topology", tempAbsPath <> "/" <> node <> "/topology.json"
-        , "--database-path", tempAbsPath <> "/" <> node <> "/db"
-        , "--shelley-kes-key", tempAbsPath <> "/" <> node <> "/kes.skey"
-        , "--shelley-vrf-key", tempAbsPath <> "/" <> node <> "/vrf.skey"
-        , "--shelley-operational-certificate" , tempAbsPath <> "/" <> node <> "/node.cert"
+        , "--config", tempAbsPath </> "configuration.yaml"
+        , "--topology", tempAbsPath </> node </> "topology.json"
+        , "--database-path", tempAbsPath </> node </> "db"
+        , "--shelley-kes-key", tempAbsPath </> node </> "kes.skey"
+        , "--shelley-vrf-key", tempAbsPath </> node </> "vrf.skey"
+        , "--shelley-operational-certificate" , tempAbsPath </> node </> "node.cert"
         , "--port", portString
         , "--socket-path", IO.sprocketArgumentName sprocket
         ] <&>
@@ -359,11 +360,11 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime -- 90 seconds from now
 
   forM_ allNodes $ \node -> do
-    portString <- H.noteShowM . H.readFile $ tempAbsPath <> "/" <> node <> "/port"
+    portString <- H.noteShowM . H.readFile $ tempAbsPath </> node </> "port"
     H.assertByDeadlineIO deadline $ IO.isPortOpen (read portString)
 
   forM_ allNodes $ \node -> do
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/" <> node)
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.assertByDeadlineIO deadline $ IO.doesSprocketExist sprocket
 
@@ -375,12 +376,12 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   H.noteShowIO_ DTC.getCurrentTime
 
   -- Run chairman
-  forM_ (L.take 1 allNodes) $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/" <> node)
+  forM_ (L.take 1 allNodes) $ \node1 -> do
+    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stdout.log"
+    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stderr.log"
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node1)
 
-    H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
+    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 
     hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
@@ -389,7 +390,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
       ( H.procChairman
         [ "--timeout", "100"
         , "--socket-path", IO.sprocketArgumentName sprocket
-        , "--config", tempAbsPath <> "/configuration.yaml"
+        , "--config", tempAbsPath </> "configuration.yaml"
         , "--security-parameter", "2160"
         , "--testnet-magic", testnetMagic
         , "--slot-length", "20"
@@ -408,7 +409,14 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
     H.cat nodeStdoutFile
     H.cat nodeStderrFile
 
-    chairmanResult === Right ExitSuccess
+    case chairmanResult of
+      Right ExitSuccess -> return ()
+      _ -> do
+        H.note_ $ "Failed with: " <> show chairmanResult
+        forM_ allNodes $ \node -> do
+          H.cat $ logDir </> node <> ".stdout.log"
+          H.cat $ logDir </> node <> ".stderr.log"
+        H.failure
 
 tests :: IO Bool
 tests = H.checkParallel $$discover
