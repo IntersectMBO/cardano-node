@@ -63,7 +63,7 @@ import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
 
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Node.GitRev (gitRev)
 import           Cardano.Node.Types
 
 --------------------------------

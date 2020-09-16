@@ -34,6 +34,7 @@ library
 
   exposed-modules:     Cardano.Node.Configuration.Topology
                        Cardano.Node.Configuration.Logging
+                       Cardano.Node.GitRev
                        Cardano.Node.Handlers.Shutdown
                        Cardano.Node.Handlers.TopLevel
                        Cardano.Node.Orphans
@@ -86,6 +87,7 @@ library
                      , containers
                      , directory
                      , filepath
+                     , gitrev
                      , hedgehog-extras
                      , hostname
                      , iproute

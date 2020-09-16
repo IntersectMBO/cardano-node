@@ -41,7 +41,7 @@ library
                        Cardano.CLI.Byron.Query
                        Cardano.CLI.Byron.UpdateProposal
                        Cardano.CLI.Byron.Vote
-
+                       Cardano.CLI.GitRev
                        Cardano.CLI.Shelley.Commands
                        Cardano.CLI.Shelley.Key
                        Cardano.CLI.Shelley.Orphans
@@ -89,6 +89,7 @@ library
                      , directory
                      , filepath
                      , formatting
+                     , gitrev
                      , io-sim-classes
                      , iproute
                      , memory

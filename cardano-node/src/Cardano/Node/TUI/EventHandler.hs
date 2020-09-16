@@ -26,7 +26,7 @@ import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend (BackendKind (..), IsBackend (..), IsEffectuator (..))
 import           Cardano.BM.Data.Counter (Platform (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LogObject (..), utc2ns)
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Node.GitRev (gitRev)
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.TUI.Drawing (ColorTheme (..), LiveViewState (..), LiveViewThread (..),
                      Screen (..), darkTheme, drawUI, lightTheme)
