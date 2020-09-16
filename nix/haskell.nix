@@ -122,7 +122,6 @@ let
       }
       (lib.optionalAttrs stdenv.hostPlatform.isLinux {
         # systemd can't be statically linked
-        packages.cardano-config.flags.systemd = !stdenv.hostPlatform.isMusl;
         packages.cardano-node.flags.systemd = !stdenv.hostPlatform.isMusl;
       })
       # Musl libc fully static build

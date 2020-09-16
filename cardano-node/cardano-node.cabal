@@ -76,7 +76,6 @@ library
                      , bytestring
                      , deepseq
                      , cardano-api
-                     , cardano-config
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
@@ -165,7 +164,6 @@ library cardano-node-config
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
-                     , cardano-config
                      , cardano-prelude
                      , cardano-slotting
                      , containers
@@ -211,7 +209,6 @@ executable cardano-node
   other-modules:       Paths_cardano_node
 
   build-depends:       base >=4.12 && <5
-                     , cardano-config
                      , cardano-node
                      , cardano-prelude
                      , optparse-applicative
@@ -238,7 +235,6 @@ executable chairman
                      , bytestring
                      , containers
                      , cardano-api
-                     , cardano-config
                      , cardano-ledger
                      , cardano-prelude
                      , contra-tracer
@@ -271,7 +267,6 @@ test-suite cardano-node-test
                       , aeson
                       , async
                       , bytestring
-                      , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-crypto-wrapper

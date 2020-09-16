@@ -3,7 +3,6 @@ index-state: 2020-07-15T00:00:00Z
 packages:
     cardano-api
     cardano-cli
-    cardano-config
     cardano-node
     cardano-node-chairman
     hedgehog-extras
@@ -12,9 +11,6 @@ package cardano-api
   ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
 package cardano-cli
-  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
-
-package cardano-config
   ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
 
 package cardano-node

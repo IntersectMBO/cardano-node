@@ -74,7 +74,6 @@ library
                      , canonical-json >= 0.6 && < 0.7
                      , cardano-api
                      , cardano-binary
-                     , cardano-config
                      , cardano-crypto
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
@@ -143,7 +142,6 @@ executable cardano-cli
                        "-with-rtsopts=-T"
   build-depends:       base >=4.12 && <5
                      , cardano-cli
-                     , cardano-config
                      , cardano-prelude
                      , optparse-applicative
                      , text

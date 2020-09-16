@@ -26,7 +26,6 @@ executable cardano-node-chairman
                      , async
                      , bytestring
                      , cardano-api
-                     , cardano-config
                      , cardano-ledger
                      , cardano-node
                      , cardano-prelude

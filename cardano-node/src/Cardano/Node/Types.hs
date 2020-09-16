@@ -51,7 +51,6 @@ import           Ouroboros.Network.Block (MaxSlotNo (..))
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
 -- use records with named fields in the CLI code.
 
--- | Errors for the cardano-config module.
 newtype ConfigError = ConfigErrorFileNotFound FilePath
     deriving Show
 

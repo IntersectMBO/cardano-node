@@ -4,12 +4,10 @@ compiler: ghc-8.6.5
 packages:
   - cardano-api
   - cardano-cli
-  - cardano-config
   - cardano-node
   - cardano-node-chairman
 
 ghc-options:
-  cardano-config:       -Wall -fwarn-redundant-constraints
   cardano-node:         -Wall -fwarn-redundant-constraints
 
 allow-newer: true
