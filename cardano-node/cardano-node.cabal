@@ -32,7 +32,9 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Node.Configuration.Topology
+  exposed-modules:     Cardano.Git.Rev
+                       Cardano.Git.RevFromGit
+                       Cardano.Node.Configuration.Topology
                        Cardano.Node.Configuration.Logging
                        Cardano.Node.Handlers.Shutdown
                        Cardano.Node.Handlers.TopLevel
@@ -75,7 +77,6 @@ library
                      , bytestring
                      , deepseq
                      , cardano-api
-                     , cardano-config
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
@@ -85,6 +86,7 @@ library
                      , cborg >= 0.2.4 && < 0.3
                      , containers
                      , directory
+                     , file-embed
                      , filepath
                      , hostname
                      , iproute
@@ -96,7 +98,6 @@ library
                      , lobemo-backend-trace-forwarder
                      , network
                      , network-mux
-                     , cardano-node-config
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
@@ -109,6 +110,7 @@ library
                      , scientific
                      , shelley-spec-ledger
                      , strict-concurrency
+                     , template-haskell
                      , text
                      , time
                      , tracer-transformers
@@ -139,59 +141,6 @@ library
                      , Cardano.Node.TUI.EventHandler
                      , Cardano.Node.TUI.Run
 
-
-library cardano-node-config
-
-  hs-source-dirs:      src
-
-  exposed-modules:     Cardano.Node.Orphans
-                       Cardano.Node.Protocol.Types
-                       Cardano.Node.Types
-                       Cardano.Tracing.Config
-                       Cardano.Tracing.Constraints
-                       Cardano.Tracing.ConvertTxId
-                       Cardano.Tracing.Metrics
-                       Cardano.Tracing.OrphanInstances.Common
-                       Cardano.Tracing.Queries
-
-  build-depends:       aeson
-                     , base >=4.12 && <5
-                     , base16-bytestring
-                     , bytestring
-                     , cardano-api
-                     , cardano-crypto-class
-                     , cardano-crypto-wrapper
-                     , cardano-ledger
-                     , cardano-config
-                     , cardano-prelude
-                     , cardano-slotting
-                     , containers
-                     , filepath
-                     , iohk-monitoring
-                     , iproute
-                     , network
-                     , ouroboros-consensus
-                     , ouroboros-consensus-cardano
-                     , ouroboros-consensus-byron
-                     , ouroboros-consensus-shelley
-                     , ouroboros-network
-                     , scientific
-                     , shelley-spec-ledger
-                     , text
-                     , yaml
-
-
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                       OverloadedStrings
-
-  ghc-options:         -Wall
-                       -Wincomplete-record-updates
-                       -Wincomplete-uni-patterns
-                       -Wredundant-constraints
-                       -Wpartial-fields
-                       -Wcompat
-
 executable cardano-node
   hs-source-dirs:      app
   main-is:             cardano-node.hs
@@ -208,7 +157,6 @@ executable cardano-node
   other-modules:       Paths_cardano_node
 
   build-depends:       base >=4.12 && <5
-                     , cardano-config
                      , cardano-node
                      , cardano-prelude
                      , optparse-applicative
@@ -235,13 +183,13 @@ executable chairman
                      , bytestring
                      , containers
                      , cardano-api
-                     , cardano-config
                      , cardano-ledger
+                     , cardano-node
                      , cardano-prelude
                      , contra-tracer
                      , cardano-prelude
                      , io-sim-classes
-                     , network-mux                    , cardano-node-config
+                     , network-mux
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-cardano
@@ -268,7 +216,6 @@ test-suite cardano-node-test
                       , aeson
                       , async
                       , bytestring
-                      , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-crypto-wrapper

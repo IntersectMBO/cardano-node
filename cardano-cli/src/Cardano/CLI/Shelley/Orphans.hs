@@ -77,8 +77,6 @@ instance ToJSON (OneEraHash xs) where
 
 deriving newtype instance ToJSON ByronHash
 
--- This instance is temporarily duplicated in cardano-config
-
 instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
   toJSON TipGenesis = object [ "genesis" .= True ]
   toJSON (Tip slotNo headerHash blockNo) =
@@ -88,7 +86,6 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
       , "blockNo"    .= blockNo
       ]
 
--- This instance is temporarily duplicated in cardano-config
 deriving newtype instance ToJSON BlockNo
 
 --

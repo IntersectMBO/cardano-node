@@ -16,11 +16,11 @@ import qualified Data.Text as Text
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
                      runByronClientCommand)
+import           Cardano.CLI.Git.Rev (gitRev)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
                      runShelleyClientCommand)
 
-import           Cardano.Config.Git.Rev (gitRev)
 import           Data.Version (showVersion)
 import           Paths_cardano_cli (version)
 import           System.Info (arch, compilerName, compilerVersion, os)

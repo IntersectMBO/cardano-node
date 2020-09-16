@@ -60,6 +60,8 @@ library
                        Cardano.CLI.Shelley.Run.Transaction
 
                        Cardano.CLI.TopHandler
+                       Cardano.CLI.Git.Rev
+                       Cardano.CLI.Git.RevFromGit
 
   other-modules:       Paths_cardano_cli
 
@@ -74,7 +76,6 @@ library
                      , canonical-json >= 0.6 && < 0.7
                      , cardano-api
                      , cardano-binary
-                     , cardano-config
                      , cardano-crypto
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
@@ -87,6 +88,7 @@ library
                      , cborg >= 0.2.4 && < 0.3
                      , containers
                      , directory
+                     , file-embed
                      , filepath
                      , formatting
                      , io-sim-classes
@@ -106,6 +108,7 @@ library
                      , scientific
                      , shelley-spec-ledger
                      , small-steps
+                     , template-haskell
                      , text
                      , time
                      , transformers
@@ -142,7 +145,6 @@ executable cardano-cli
                        "-with-rtsopts=-T"
   build-depends:       base >=4.12 && <5
                      , cardano-cli
-                     , cardano-config
                      , cardano-prelude
                      , optparse-applicative
                      , text
