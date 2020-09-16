@@ -34,7 +34,12 @@ instance LedgerQueries Byron.ByronBlock where
 
 instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
-    (\(Shelley.UTxO xs)-> Map.size xs) . Shelley._utxo . Shelley._utxoState . Shelley.esLState . Shelley.nesEs . Shelley.shelleyState
+      (\(Shelley.UTxO xs)-> Map.size xs)
+    . Shelley._utxo
+    . Shelley._utxoState
+    . Shelley.esLState
+    . Shelley.nesEs
+    . Shelley.shelleyLedgerState
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
