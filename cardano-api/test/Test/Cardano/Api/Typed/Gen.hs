@@ -228,10 +228,17 @@ genByronKeyWitness = do
   txinWitness <- genVKWitness pmId
   return $ ByronKeyWitness txinWitness
 
+genWitnessNetworkIdOrByronAddress :: Gen WitnessNetworkIdOrByronAddress
+genWitnessNetworkIdOrByronAddress =
+  Gen.choice
+    [ WitnessNetworkId <$> genNetworkId
+    , WitnessByronAddress <$> genAddressByron
+    ]
+
 genShelleyBootstrapWitness :: Gen (Witness Shelley)
 genShelleyBootstrapWitness =
  makeShelleyBootstrapWitness
-   <$> genNetworkId
+   <$> genWitnessNetworkIdOrByronAddress
    <*> genTxBodyShelley
    <*> genSigningKey AsByronKey
 

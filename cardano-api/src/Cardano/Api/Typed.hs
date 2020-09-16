@@ -117,6 +117,7 @@ module Cardano.Api.Typed (
     makeByronKeyWitness,
     ShelleyWitnessSigningKey(..),
     makeShelleyKeyWitness,
+    WitnessNetworkIdOrByronAddress (..),
     makeShelleyBootstrapWitness,
     makeShelleyScriptWitness,
 
@@ -1281,11 +1282,27 @@ makeByronKeyWitness nw (ByronTxBody txbody) =
             (Byron.toVerification sk)
             (Byron.sign pm Byron.SignTx sk (Byron.TxSigData txhash))
 
-makeShelleyBootstrapWitness :: NetworkId
+-- | Either a network ID or a Byron address to be used in constructing a
+-- Shelley bootstrap witness.
+data WitnessNetworkIdOrByronAddress
+  = WitnessNetworkId !NetworkId
+  -- ^ Network ID.
+  --
+  -- If this value is used in the construction of a Shelley bootstrap witness,
+  -- the result will not consist of a derivation path. If that is required,
+  -- specify a 'WitnessByronAddress' value instead.
+  | WitnessByronAddress !(Address Byron)
+  -- ^ Byron address.
+  --
+  -- If this value is used in the construction of a Shelley bootstrap witness,
+  -- both the network ID and derivation path will be extracted from the
+  -- address and used in the construction of the witness.
+
+makeShelleyBootstrapWitness :: WitnessNetworkIdOrByronAddress
                             -> TxBody Shelley
                             -> SigningKey ByronKey
                             -> Witness Shelley
-makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
+makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     ShelleyBootstrapWitness $
       -- Byron era witnesses were weird. This reveals all that weirdness.
       Shelley.BootstrapWitness {
@@ -1324,9 +1341,36 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     attributes =
       CBOR.serialize' $
         Byron.mkAttributes Byron.AddrAttributes {
-          Byron.aaVKDerivationPath = Nothing,
-          Byron.aaNetworkMagic     = toByronNetworkMagic nw
+          Byron.aaVKDerivationPath = derivationPath,
+          Byron.aaNetworkMagic     = networkMagic
         }
+
+    -- The 'WitnessNetworkIdOrByronAddress' value converted to an 'Either'.
+    eitherNwOrAddr :: Either NetworkId (Address Byron)
+    eitherNwOrAddr =
+      case nwOrAddr of
+        WitnessNetworkId nw -> Left nw
+        WitnessByronAddress addr -> Right addr
+
+    unByronAddr :: Address Byron -> Byron.Address
+    unByronAddr (ByronAddress addr) = addr
+
+    unAddrAttrs :: Address Byron -> Byron.AddrAttributes
+    unAddrAttrs = Byron.attrData . Byron.addrAttributes . unByronAddr
+
+    derivationPath :: Maybe Byron.HDAddressPayload
+    derivationPath =
+      either
+        (const Nothing)
+        (Byron.aaVKDerivationPath . unAddrAttrs)
+        eitherNwOrAddr
+
+    networkMagic :: Byron.NetworkMagic
+    networkMagic =
+      either
+        toByronNetworkMagic
+        (Byron.aaNetworkMagic . unAddrAttrs)
+        eitherNwOrAddr
 
 data ShelleyWitnessSigningKey =
        WitnessPaymentKey         (SigningKey PaymentKey)
