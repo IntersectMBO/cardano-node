@@ -122,6 +122,7 @@ let
       }
       (lib.optionalAttrs stdenv.hostPlatform.isLinux {
         # systemd can't be statically linked
+        packages.hedghog-extras.flags.systemd = !stdenv.hostPlatform.isMusl;
         packages.cardano-config.flags.systemd = !stdenv.hostPlatform.isMusl;
         packages.cardano-node.flags.systemd = !stdenv.hostPlatform.isMusl;
       })
