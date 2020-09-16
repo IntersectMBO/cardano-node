@@ -120,43 +120,40 @@ Please see ``scripts/README.md`` for information on the various scripts.
 ===============
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
+Usage documentation can be found at ``cardano-cli/README.md``.
 
 The general synopsis is as follows:
 
 .. code-block:: console
 
-   Usage: cardano-cli (Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs)
-
+Usage: cardano-cli (Byron specific commands | Shelley specific commands |  Miscellaneous commands)
+                     
 > NOTE: the exact invocation command depends on the environment.  If you have only built ``cardano-cli``, without installing it, then you have to prepend ``cabal run -- ``
 before ``cardano-cli``.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention ``cardano-cli``.
 
 The subcommands are subdivided in groups, and their full list can be seen in the output of ``cardano-cli --help``.
 
-All subcommands have help available:
+All subcommands have help available.  For example:
 
 .. code-block:: console
 
-   $ cabal v2-run -- cardano-cli migrate-delegate-key-from --help
-   Usage: cardano-cli migrate-delegate-key-from (--byron-legacy | --bft | --praos |
-                                                 --real-pbft)
-                                                 --from FILEPATH
-                                                (--byron-legacy | --bft | --praos |
-                                                 --real-pbft)
-                                                 --to FILEPATH
-   Migrate a delegate key from an older version.
+ cabal v2-run -- cardano-cli migrate-delegate-key-from --help
+Up to date
+Usage: cardano-cli migrate-delegate-key-from (--byron-legacy-formats | 
+                                               --byron-formats) --from FILEPATH 
+                                             (--byron-legacy-formats | 
+                                               --byron-formats) --to FILEPATH
+  Migrate a delegate key from an older version.
 
-   Available options:
-     --byron-legacy           Byron/Ouroboros Classic suite of algorithms
-     --bft                    BFT consensus
-     --praos                  Praos consensus
-     --real-pbft              Permissive BFT consensus
-     --from FILEPATH          Signing key file to migrate.
-     --byron-legacy           Byron/Ouroboros Classic suite of algorithms
-     --bft                    BFT consensus
-     --praos                  Praos consensus
-     --real-pbft              Permissive BFT consensus
-     --to FILEPATH            Non-existent file to write the signing key to.
-     -h,--help                Show this help text
+Available options:
+  --byron-legacy-formats   Byron/cardano-sl formats and compatibility
+  --byron-formats          Byron era formats and compatibility
+  --from FILEPATH          Signing key file to migrate.
+  --byron-legacy-formats   Byron/cardano-sl formats and compatibility
+  --byron-formats          Byron era formats and compatibility
+  --to FILEPATH            Non-existent file to write the signing key to.
+  -h,--help                Show this help text
+
 
 Genesis operations
 ==================
@@ -217,7 +214,7 @@ it needs to be migrated over, which is done by the ``migrate-delegate-key-from``
 .. code-block:: console
 
   $ cabal v2-run -- cardano-cli migrate-delegate-key-from
-          --byron-legacy --from key0.sk  --real-pbft --to key0.pbft
+          --byron-legacy-formats --from key0.sk  --real-pbft --to key0.pbft
 
 Signing key queries
 -------------------
