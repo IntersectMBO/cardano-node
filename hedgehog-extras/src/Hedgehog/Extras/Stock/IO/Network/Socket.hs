@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Chairman.IO.Network.Socket
+module Hedgehog.Extras.Stock.IO.Network.Socket
   ( doesSocketExist
   , isPortOpen
   , canConnect

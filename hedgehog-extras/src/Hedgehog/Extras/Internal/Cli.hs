@@ -1,4 +1,4 @@
-module Chairman.Cli
+module Hedgehog.Extras.Internal.Cli
   ( argQuote
   ) where
 

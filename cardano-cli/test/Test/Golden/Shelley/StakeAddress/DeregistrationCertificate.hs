@@ -8,10 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyStakeAddressDeregistrationCertificate :: Property
-golden_shelleyStakeAddressDeregistrationCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyStakeAddressDeregistrationCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   verificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
   deregistrationCertFile <- noteTempFile tempDir "deregistrationCertFile"
 
@@ -21,6 +24,6 @@ golden_shelleyStakeAddressDeregistrationCertificate = propertyOnce . moduleWorks
     , "--out-file", deregistrationCertFile
     ]
 
-  assertFileOccurences 1 "Stake Address Deregistration Certificate" deregistrationCertFile
+  H.assertFileOccurences 1 "Stake Address Deregistration Certificate" deregistrationCertFile
 
-  assertEndsWithSingleNewline deregistrationCertFile
+  H.assertEndsWithSingleNewline deregistrationCertFile

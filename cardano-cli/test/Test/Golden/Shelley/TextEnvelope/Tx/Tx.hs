@@ -9,6 +9,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+
 {- HLINT ignore "Use camelCase" -}
 
 -- | 1. Generate a key pair
@@ -16,7 +18,7 @@ import           Test.OptParse
 --   3. Sign tx body
 --   4. Check the TextEnvelope serialization format has not changed.
 golden_shelleyTx :: Property
-golden_shelleyTx = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTx = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
   let referenceTx = "test/data/golden/shelley/tx/tx"
 

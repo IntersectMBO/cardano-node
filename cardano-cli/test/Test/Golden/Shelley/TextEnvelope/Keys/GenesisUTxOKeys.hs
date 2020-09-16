@@ -9,13 +9,15 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+
 {- HLINT ignore "Use camelCase" -}
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyGenesisUTxOKeys :: Property
-golden_shelleyGenesisUTxOKeys = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyGenesisUTxOKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
   referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/genesis_utxo_keys/verification_key"
   referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/genesis_utxo_keys/signing_key"

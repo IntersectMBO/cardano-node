@@ -1,4 +1,4 @@
-module Chairman.IO.File
+module Hedgehog.Extras.Stock.IO.File
   ( fileContains
   ) where
 

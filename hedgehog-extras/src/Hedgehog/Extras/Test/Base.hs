@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 
-module Chairman.Hedgehog.Base
+module Hedgehog.Extras.Test.Base
   ( propertyOnce
 
   , workspace
@@ -41,8 +41,6 @@ module Chairman.Hedgehog.Base
   , release
   ) where
 
-import           Chairman.CallStack
-import           Chairman.Monad
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -63,6 +61,8 @@ import           Data.Traversable
 import           Data.Tuple
 import           GHC.Stack (CallStack, HasCallStack)
 import           Hedgehog (MonadTest)
+import           Hedgehog.Extras.Stock.CallStack
+import           Hedgehog.Extras.Stock.Monad
 import           Hedgehog.Internal.Property (Diff, liftTest, mkTest)
 import           Hedgehog.Internal.Source (getCaller)
 import           System.IO (FilePath, IO)

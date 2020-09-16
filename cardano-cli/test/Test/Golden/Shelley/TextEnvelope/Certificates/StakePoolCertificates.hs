@@ -9,6 +9,9 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 -- | 1. Create cold key pair.
@@ -18,7 +21,7 @@ import           Test.OptParse
 --   5. Create stake pool deregistration/retirement certificate.
 --   6. Check the TextEnvelope serialization format has not changed.
 golden_shelleyStakePoolCertificates :: Property
-golden_shelleyStakePoolCertificates = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference files
   referenceRegistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_pool_registration_certificate"
   referenceDeregistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_pool_deregistration_certificate"
@@ -42,7 +45,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . moduleWorkspace "tmp" $ \te
     , "--operational-certificate-issue-counter", operationalCertCounter
     ]
 
-  assertFilesExist [coldSignKey, coldVerKey, operationalCertCounter]
+  H.assertFilesExist [coldSignKey, coldVerKey, operationalCertCounter]
 
   -- Generate stake key pair
   void $ execCardanoCLI
@@ -51,7 +54,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . moduleWorkspace "tmp" $ \te
     , "--signing-key-file", poolRewardAccountSignKey
     ]
 
-  assertFilesExist [poolRewardAccountAndOwnerVerKey, poolRewardAccountSignKey]
+  H.assertFilesExist [poolRewardAccountAndOwnerVerKey, poolRewardAccountSignKey]
 
   -- Generate vrf verification key
   void $ execCardanoCLI
@@ -61,7 +64,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . moduleWorkspace "tmp" $ \te
     ]
 
 
-  assertFilesExist [vrfSignKey, vrfVerKey]
+  H.assertFilesExist [vrfSignKey, vrfVerKey]
 
   -- Create stake pool registration certificate
   void $ execCardanoCLI
@@ -77,7 +80,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . moduleWorkspace "tmp" $ \te
     , "--out-file", registrationCertificate
     ]
 
-  assertFilesExist [registrationCertificate]
+  H.assertFilesExist [registrationCertificate]
 
   let registrationCertificateType = textEnvelopeType AsCertificate
 
@@ -93,7 +96,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . moduleWorkspace "tmp" $ \te
     , "--out-file", deregistrationCertificate
     ]
 
-  assertFilesExist [deregistrationCertificate]
+  H.assertFilesExist [deregistrationCertificate]
 
   -- Check the newly created files have not deviated from the
   -- golden files

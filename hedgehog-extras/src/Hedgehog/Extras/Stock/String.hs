@@ -1,4 +1,4 @@
-module Chairman.String
+module Hedgehog.Extras.Stock.String
   ( strip
   , lastLine
   , firstLine

@@ -1,4 +1,4 @@
-module Chairman.IO.Network.Sprocket
+module Hedgehog.Extras.Stock.IO.Network.Sprocket
   ( Sprocket(..)
   , doesSprocketExist
   , sprocketArgumentName
@@ -6,7 +6,6 @@ module Chairman.IO.Network.Sprocket
   , maxSprocketArgumentNameLength
   ) where
 
-import           Chairman.OS
 import           Data.Bool
 import           Data.Char
 import           Data.Eq
@@ -14,11 +13,12 @@ import           Data.Functor
 import           Data.Int
 import           Data.Semigroup
 import           Data.String (String)
+import           Hedgehog.Extras.Stock.OS
 import           System.IO (FilePath, IO)
 import           Text.Show
 
-import qualified Chairman.IO.Network.NamedPipe as IO
-import qualified Chairman.IO.Network.Socket as IO
+import qualified Hedgehog.Extras.Stock.IO.Network.NamedPipe as IO
+import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 
 -- | Socket emulation.  On Posix it represents a socket.  On Windows it represents a named pipe.
 data Sprocket = Sprocket

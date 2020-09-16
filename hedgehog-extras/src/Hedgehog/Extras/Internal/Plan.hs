@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Chairman.Plan
+module Hedgehog.Extras.Internal.Plan
   ( Plan(..)
   , Component(..)
   ) where

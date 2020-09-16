@@ -1,4 +1,4 @@
-module Chairman.Aeson
+module Hedgehog.Extras.Stock.Aeson
   ( rewriteObject
   ) where
 

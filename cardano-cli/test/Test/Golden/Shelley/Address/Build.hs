@@ -8,12 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse as OP
 
-import qualified System.IO as IO
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyAddressBuild :: Property
-golden_shelleyAddressBuild = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   addressVKeyFile <- noteInputFile "test/data/golden/shelley/keys/payment_keys/verification_key"
   addressSKeyFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
   goldenStakingAddressHexFile <- noteInputFile "test/data/golden/shelley/addresses/staking-address.hex"
@@ -21,7 +22,7 @@ golden_shelleyAddressBuild = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> 
   stakingAddressHexFile <- noteTempFile tempDir "staking-address.hex"
   enterpriseAddressHexFile <- noteTempFile tempDir "enterprise-address.hex"
 
-  void $ OP.readFile addressVKeyFile
+  void $ H.readFile addressVKeyFile
 
   stakingAddressText <- execCardanoCLI
     [ "shelley","address","build"
@@ -30,13 +31,13 @@ golden_shelleyAddressBuild = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> 
     , "--staking-verification-key-file", addressSKeyFile
     ]
 
-  goldenStakingAddressHex <- OP.readFile goldenStakingAddressHexFile
+  goldenStakingAddressHex <- H.readFile goldenStakingAddressHexFile
 
-  liftIO $ IO.writeFile stakingAddressHexFile stakingAddressText
+  H.writeFile stakingAddressHexFile stakingAddressText
 
   equivalence stakingAddressText goldenStakingAddressHex
 
-  void $ OP.readFile addressSKeyFile
+  void $ H.readFile addressSKeyFile
 
   enterpriseAddressText <- execCardanoCLI
     [ "shelley","address","build"
@@ -45,8 +46,8 @@ golden_shelleyAddressBuild = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> 
     , "--staking-verification-key-file", addressSKeyFile
     ]
 
-  goldenEnterpriseAddressHex <- OP.readFile goldenEnterpriseAddressHexFile
+  goldenEnterpriseAddressHex <- H.readFile goldenEnterpriseAddressHexFile
 
-  liftIO $ IO.writeFile enterpriseAddressHexFile enterpriseAddressText
+  H.writeFile enterpriseAddressHexFile enterpriseAddressText
 
   equivalence enterpriseAddressText goldenEnterpriseAddressHex

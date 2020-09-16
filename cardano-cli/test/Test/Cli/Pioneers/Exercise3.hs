@@ -9,13 +9,15 @@ import           Hedgehog (Property)
 import           Test.OptParse
 
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 -- | 1. Create KES key pair.
 --   2. Create cold keys.
 --   3. Create operational certificate.
 --   4. Create VRF key pair.
 prop_createOperationalCertificate :: Property
-prop_createOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+prop_createOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Key filepaths
   kesVerKey <- noteTempFile tempDir "KES-verification-key-file"
   kesSignKey <- noteTempFile tempDir "KES-signing-key-file"
@@ -31,7 +33,7 @@ prop_createOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \temp
     , "--signing-key-file", kesSignKey
     ]
 
-  assertFilesExist [kesSignKey, kesVerKey]
+  H.assertFilesExist [kesSignKey, kesVerKey]
 
   -- Create cold key pair
   void $ execCardanoCLI
@@ -41,7 +43,7 @@ prop_createOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \temp
     , "--operational-certificate-issue-counter", operationalCertCounter
     ]
 
-  assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
+  H.assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
 
   -- Create operational certificate
   void $ execCardanoCLI
@@ -53,7 +55,7 @@ prop_createOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \temp
     , "--out-file", operationalCert
     ]
 
-  assertFilesExist [kesVerKey, kesSignKey, coldVerKey, coldSignKey, operationalCertCounter, operationalCert]
+  H.assertFilesExist [kesVerKey, kesSignKey, coldVerKey, coldSignKey, operationalCertCounter, operationalCert]
 
 -- -----------------------------------------------------------------------------
 

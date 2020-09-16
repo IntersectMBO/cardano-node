@@ -1,4 +1,4 @@
-module Chairman.Monad
+module Hedgehog.Extras.Stock.Monad
   ( forceM
   ) where
 
