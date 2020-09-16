@@ -1,4 +1,4 @@
-module Chairman.OS
+module Hedgehog.Extras.Stock.OS
   ( isWin32
   ) where
 

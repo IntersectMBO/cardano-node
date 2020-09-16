@@ -1,0 +1,59 @@
+cabal-version: 2.4
+
+name:                   hedgehog-extras
+version:                1.19.1
+description:            The cardano full node
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+
+library
+  hs-source-dirs:       src
+  build-depends:        base >= 4.12 && < 5
+                      , aeson
+                      , async
+                      , bytestring
+                      , deepseq
+                      , directory
+                      , exceptions
+                      , hedgehog
+                      , mmorph
+                      , network
+                      , process
+                      , random
+                      , resourcet
+                      , temporary
+                      , text
+                      , time
+                      , unliftio
+                      , unordered-containers
+                      , Win32-network
+  exposed-modules:      Hedgehog.Extras.Internal.Cli
+                        Hedgehog.Extras.Internal.Plan
+                        Hedgehog.Extras.Stock.Aeson
+                        Hedgehog.Extras.Stock.CallStack
+                        Hedgehog.Extras.Stock.IO.File
+                        Hedgehog.Extras.Stock.IO.Network.NamedPipe
+                        Hedgehog.Extras.Stock.IO.Network.Socket
+                        Hedgehog.Extras.Stock.IO.Network.Sprocket
+                        Hedgehog.Extras.Stock.IO.Process
+                        Hedgehog.Extras.Stock.Monad
+                        Hedgehog.Extras.Stock.OS
+                        Hedgehog.Extras.Stock.String
+                        Hedgehog.Extras.Stock.Time
+                        Hedgehog.Extras.Test.Base
+                        Hedgehog.Extras.Test.Concurrent
+                        Hedgehog.Extras.Test.File
+                        Hedgehog.Extras.Test.Network
+                        Hedgehog.Extras.Test.Process
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat

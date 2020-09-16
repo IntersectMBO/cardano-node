@@ -165,7 +165,9 @@ test-suite cardano-cli-test
                       , containers
                       , deepseq
                       , directory
+                      , exceptions
                       , hedgehog
+                      , hedgehog-extras
                       , lifted-base
                       , optparse-applicative
                       , process
@@ -193,8 +195,6 @@ test-suite cardano-cli-test
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
-  build-tool-depends:   cardano-cli:cardano-cli
-
 test-suite cardano-cli-golden
   hs-source-dirs:       test
   main-is:              cardano-cli-golden.hs
@@ -211,7 +211,9 @@ test-suite cardano-cli-golden
                       , containers
                       , deepseq
                       , directory
+                      , exceptions
                       , hedgehog
+                      , hedgehog-extras
                       , lifted-base
                       , optparse-applicative
                       , process
@@ -280,5 +282,3 @@ test-suite cardano-cli-golden
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
-  build-tool-depends:   cardano-cli:cardano-cli

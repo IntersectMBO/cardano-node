@@ -8,12 +8,14 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 import qualified System.Directory as IO
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyNodeIssueOpCert :: Property
-golden_shelleyNodeIssueOpCert = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyNodeIssueOpCert = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   hotKesVerificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/kes_keys/verification_key"
   coldSigningKeyFile <- noteInputFile "test/data/golden/shelley/keys/genesis_delegate_keys/signing_key"
   originalOperationalCertificateIssueCounterFile <- noteInputFile "test/data/golden/shelley/keys/genesis_delegate_keys/operational_certificate_counter"
@@ -37,8 +39,8 @@ golden_shelleyNodeIssueOpCert = propertyOnce . moduleWorkspace "tmp" $ \tempDir 
     , "--out-file", operationalCertFile
     ]
 
-  assertFileOccurences 1 "NodeOperationalCertificate" operationalCertFile
-  assertFileOccurences 1 "Next certificate issue number: 1" operationalCertificateIssueCounterFile
+  H.assertFileOccurences 1 "NodeOperationalCertificate" operationalCertFile
+  H.assertFileOccurences 1 "Next certificate issue number: 1" operationalCertificateIssueCounterFile
 
-  assertEndsWithSingleNewline operationalCertFile
-  assertEndsWithSingleNewline operationalCertificateIssueCounterFile
+  H.assertEndsWithSingleNewline operationalCertFile
+  H.assertEndsWithSingleNewline operationalCertificateIssueCounterFile

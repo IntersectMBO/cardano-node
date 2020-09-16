@@ -8,10 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyGenesisKeyGenUtxo :: Property
-golden_shelleyGenesisKeyGenUtxo = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyGenesisKeyGenUtxo = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   utxoVerificationKeyFile <- noteTempFile tempDir "utxo.vkey"
   utxoSigningKeyFile <- noteTempFile tempDir "utxo.skey"
 
@@ -21,8 +24,8 @@ golden_shelleyGenesisKeyGenUtxo = propertyOnce . moduleWorkspace "tmp" $ \tempDi
     , "--signing-key-file", utxoSigningKeyFile
     ]
 
-  assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" utxoVerificationKeyFile
-  assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" utxoSigningKeyFile
+  H.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519" utxoVerificationKeyFile
+  H.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" utxoSigningKeyFile
 
-  assertEndsWithSingleNewline utxoVerificationKeyFile
-  assertEndsWithSingleNewline utxoSigningKeyFile
+  H.assertEndsWithSingleNewline utxoVerificationKeyFile
+  H.assertEndsWithSingleNewline utxoSigningKeyFile

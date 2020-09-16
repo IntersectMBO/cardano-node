@@ -3,7 +3,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
-module Chairman.IO.Network.NamedPipe
+module Hedgehog.Extras.Stock.IO.Network.NamedPipe
   ( doesNamedPipeExist
   ) where
 

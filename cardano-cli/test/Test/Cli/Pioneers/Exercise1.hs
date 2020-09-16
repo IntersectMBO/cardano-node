@@ -9,12 +9,14 @@ import           Hedgehog (Property)
 import           Test.OptParse
 
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 -- | 1. Generate a key pair
 --   2. Check for the existence of the key pair
 --   3. We use the generated verification key to build a shelley payment address.
 prop_buildShelleyPaymentAddress :: Property
-prop_buildShelleyPaymentAddress = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+prop_buildShelleyPaymentAddress = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Key filepaths
   verKey <- noteTempFile tempDir "payment-verification-key-file"
   signKey <- noteTempFile tempDir "payment-signing-key-file"
@@ -26,7 +28,7 @@ prop_buildShelleyPaymentAddress = propertyOnce . moduleWorkspace "tmp" $ \tempDi
     , "--signing-key-file", signKey
     ]
 
-  assertFilesExist [verKey, signKey]
+  H.assertFilesExist [verKey, signKey]
 
   -- Build shelley payment address
   void $ execCardanoCLI
@@ -41,7 +43,7 @@ prop_buildShelleyPaymentAddress = propertyOnce . moduleWorkspace "tmp" $ \tempDi
 --   3. We use the payment verification key & staking verification key
 --      to build a shelley stake address.
 prop_buildShelleyStakeAddress :: Property
-prop_buildShelleyStakeAddress = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+prop_buildShelleyStakeAddress = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Key filepaths
   stakeVerKey <- noteTempFile tempDir "stake-verification-key-file"
   stakeSignKey <- noteTempFile tempDir "stake-signing-key-file"
@@ -62,7 +64,7 @@ prop_buildShelleyStakeAddress = propertyOnce . moduleWorkspace "tmp" $ \tempDir 
     , "--signing-key-file", stakeSignKey
     ]
 
-  assertFilesExist [stakeVerKey, stakeSignKey, paymentVerKey, paymentSignKey]
+  H.assertFilesExist [stakeVerKey, stakeSignKey, paymentVerKey, paymentSignKey]
 
   -- Build shelley stake address
   void $ execCardanoCLI

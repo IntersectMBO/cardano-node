@@ -2,23 +2,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Chairman.Hedgehog.Process
+module Hedgehog.Extras.Test.Process
   ( createProcess
   , execFlex
+  , procFlex
   , getProjectBase
-  , procChairman
-  , procCli
-  , procNode
-  , execCli
   , waitForProcess
   , maybeWaitForProcess
   , getPid
   , waitSecondsForProcess
   ) where
 
-import           Chairman.Cli (argQuote)
-import           Chairman.IO.Process (TimedOut (..))
-import           Chairman.Plan
 import           Control.Monad
 import           Control.Monad.Catch hiding (catch)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -34,19 +28,22 @@ import           Data.Semigroup ((<>))
 import           Data.String (String)
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
+import           Hedgehog.Extras.Internal.Cli (argQuote)
+import           Hedgehog.Extras.Internal.Plan
+import           Hedgehog.Extras.Stock.IO.Process (TimedOut (..))
 import           Prelude (error)
 import           System.Exit (ExitCode)
 import           System.IO (Handle)
 import           System.Process (CmdSpec (..), CreateProcess (..), Pid, ProcessHandle)
 import           Text.Show
 
-import qualified Chairman.Hedgehog.Base as H
-import qualified Chairman.IO.Process as IO
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.IO.Process as IO
+import qualified Hedgehog.Extras.Test.Base as H
 import qualified System.Environment as IO
 import qualified System.Exit as IO
 import qualified System.Process as IO
@@ -107,13 +104,6 @@ execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
       , show @Int exitCode
       ]
     IO.ExitSuccess -> return stdout
-
--- | Run cardano-cli, returning the stdout
-execCli
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => [String]
-  -> m String
-execCli = GHC.withFrozenCallStack $ execFlex "cardano-cli" "CARDANO_CLI"
 
 -- | Wait for process to exit.
 waitForProcess
@@ -202,36 +192,6 @@ procFlex pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
   case maybeEnvBin of
     Just envBin -> return $ IO.proc envBin arguments
     Nothing -> procDist pkg arguments
-
--- | Create a 'CreateProcess' describing how to start the cardano-cli process
--- and an argument list.
-procCli
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => [String]
-  -- ^ Arguments to the CLI command
-  -> m CreateProcess
-  -- ^ Captured stdout
-procCli = procFlex "cardano-cli" "CARDANO_CLI"
-
--- | Create a 'CreateProcess' describing how to start the cardano-node process
--- and an argument list.
-procNode
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => [String]
-  -- ^ Arguments to the CLI command
-  -> m CreateProcess
-  -- ^ Captured stdout
-procNode = procFlex "cardano-node" "CARDANO_NODE"
-
--- | Create a 'CreateProcess' describing how to start the cardano-node-chairman process
--- and an argument list.
-procChairman
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => [String]
-  -- ^ Arguments to the CLI command
-  -> m CreateProcess
-  -- ^ Captured stdout
-procChairman = procFlex "cardano-node-chairman" "CARDANO_NODE_CHAIRMAN"
 
 -- | Compute the project base.  This will be based on either the "CARDANO_NODE_SRC"
 -- environment variable or the parent directory.  Both should point to the

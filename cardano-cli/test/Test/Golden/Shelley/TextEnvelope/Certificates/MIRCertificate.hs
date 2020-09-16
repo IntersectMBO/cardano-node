@@ -9,13 +9,16 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 -- | 1. Generate stake key pair
 --   2. Create MIR certificate
 --   s. Check the TextEnvelope serialization format has not changed.
 golden_shelleyMIRCertificate :: Property
-golden_shelleyMIRCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
   referenceMIRCertificate <- noteInputFile "test/data/golden/shelley/certificates/mir_certificate"
 
@@ -31,7 +34,7 @@ golden_shelleyMIRCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -
     , "--signing-key-file", signKey
     ]
 
-  assertFilesExist [verKey, signKey]
+  H.assertFilesExist [verKey, signKey]
 
   -- Create MIR certificate
   void $ execCardanoCLI
@@ -42,7 +45,7 @@ golden_shelleyMIRCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -
     , "--out-file", mirCertificate
     ]
 
-  assertFilesExist [mirCertificate]
+  H.assertFilesExist [mirCertificate]
 
   let registrationCertificateType = textEnvelopeType AsCertificate
 

@@ -8,10 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionSign :: Property
-golden_shelleyTransactionSign = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   txBodyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/tx-body-file"
   initialUtxo1SigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/initial-utxo1.skey"
   initialUtxo2SigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/initial-utxo2.skey"
@@ -31,8 +34,8 @@ golden_shelleyTransactionSign = propertyOnce $ moduleWorkspace "tmp" $ \tempDir 
     , "--tx-file", signedTransactionFile
     ]
 
-  assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
-  assertEndsWithSingleNewline signedTransactionFile
+  H.assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
+  H.assertEndsWithSingleNewline signedTransactionFile
 
   -- Sign for a testnet with a testnet network magic of 11, but use two signing keys
 
@@ -45,8 +48,8 @@ golden_shelleyTransactionSign = propertyOnce $ moduleWorkspace "tmp" $ \tempDir 
     , "--tx-file", signedTransactionFile
     ]
 
-  assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
-  assertEndsWithSingleNewline signedTransactionFile
+  H.assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
+  H.assertEndsWithSingleNewline signedTransactionFile
 
   -- Sign a pool registration transaction.
   -- TODO: This needs to use an unsigned tx with a registration certificate
@@ -61,5 +64,5 @@ golden_shelleyTransactionSign = propertyOnce $ moduleWorkspace "tmp" $ \tempDir 
     , "--tx-file", transactionPoolRegSignedFile
     ]
 
-  assertFileOccurences 1 "TxSignedShelley" transactionPoolRegSignedFile
-  assertEndsWithSingleNewline transactionPoolRegSignedFile
+  H.assertFileOccurences 1 "TxSignedShelley" transactionPoolRegSignedFile
+  H.assertEndsWithSingleNewline transactionPoolRegSignedFile

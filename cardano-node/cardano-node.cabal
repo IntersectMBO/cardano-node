@@ -86,6 +86,7 @@ library
                      , containers
                      , directory
                      , filepath
+                     , hedgehog-extras
                      , hostname
                      , iproute
                      , io-sim-classes

@@ -7,8 +7,6 @@ module Test.Cardano.Node.Chairman.Shelley
   ( tests
   ) where
 
-import           Chairman.Aeson
-import           Chairman.IO.Network.Sprocket (Sprocket (..))
 import           Control.Monad
 import           Data.Aeson
 import           Data.Bool
@@ -23,29 +21,32 @@ import           Data.Semigroup
 import           Data.String (String)
 import           GHC.Float
 import           Hedgehog (Property, discover, (===))
+import           Hedgehog.Extras.Stock.Aeson
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.Exit (ExitCode (..))
 import           System.IO (IO)
 import           Text.Read
 import           Text.Show
 
-import qualified Chairman.Hedgehog.Base as H
-import qualified Chairman.Hedgehog.File as H
-import qualified Chairman.Hedgehog.Process as H
-import qualified Chairman.IO.File as IO
-import qualified Chairman.IO.Network.Socket as IO
-import qualified Chairman.IO.Network.Sprocket as IO
-import qualified Chairman.String as S
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.IO.File as IO
+import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import qualified Hedgehog.Extras.Stock.String as S
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified Test.Cardano.Process as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -364,7 +365,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/" <> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertIO $ IO.doesSprocketExist sprocket
+    H.assertByDeadlineIO deadline $ IO.doesSprocketExist sprocket
 
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"

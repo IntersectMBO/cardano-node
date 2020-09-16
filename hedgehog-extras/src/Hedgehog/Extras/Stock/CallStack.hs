@@ -1,4 +1,4 @@
-module Chairman.CallStack
+module Hedgehog.Extras.Stock.CallStack
   ( callerModuleName
   ) where
 

@@ -8,10 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse as OP
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 golden_stakePoolMetadataHash :: Property
-golden_stakePoolMetadataHash = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_stakePoolMetadataHash = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   referenceStakePoolMetaData <- noteInputFile "test/data/golden/shelley/metadata/stake_pool_metadata_hash"
 
   stakePoolMetadataFile <- noteTempFile tempDir "stake-pool-metadata.json"
@@ -28,8 +31,8 @@ golden_stakePoolMetadataHash = propertyOnce . moduleWorkspace "tmp" $ \tempDir -
     ]
 
   -- Check that the stake pool metadata hash file content is correct.
-  expectedStakePoolMetadataHash <- OP.readFile referenceStakePoolMetaData
-  actualStakePoolMetadataHash <- OP.readFile outputStakePoolMetadataHashFp
+  expectedStakePoolMetadataHash <- H.readFile referenceStakePoolMetaData
+  actualStakePoolMetadataHash <- H.readFile outputStakePoolMetadataHashFp
 
   equivalence expectedStakePoolMetadataHash actualStakePoolMetadataHash
   where

@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Chairman.IO.Process
+module Hedgehog.Extras.Stock.IO.Process
   ( maybeWaitForProcess
   , waitSecondsForProcess
   , TimedOut(..)

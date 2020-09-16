@@ -8,12 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
-import qualified Test.OptParse as OP
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyAddressKeyGen :: Property
-golden_shelleyAddressKeyGen = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyAddressKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   addressVKeyFile <- noteTempFile tempDir "address.vkey"
   addressSKeyFile <- noteTempFile tempDir "address.skey"
 
@@ -23,11 +24,11 @@ golden_shelleyAddressKeyGen = propertyOnce . moduleWorkspace "tmp" $ \tempDir ->
     , "--signing-key-file", addressSKeyFile
     ]
 
-  void $ OP.readFile addressVKeyFile
-  void $ OP.readFile addressSKeyFile
+  void $ H.readFile addressVKeyFile
+  void $ H.readFile addressSKeyFile
 
-  assertFileOccurences 1 "PaymentVerificationKeyShelley" addressVKeyFile
-  assertFileOccurences 1 "PaymentSigningKeyShelley_ed25519" addressSKeyFile
+  H.assertFileOccurences 1 "PaymentVerificationKeyShelley" addressVKeyFile
+  H.assertFileOccurences 1 "PaymentSigningKeyShelley_ed25519" addressSKeyFile
 
-  assertEndsWithSingleNewline addressVKeyFile
-  assertEndsWithSingleNewline addressSKeyFile
+  H.assertEndsWithSingleNewline addressVKeyFile
+  H.assertEndsWithSingleNewline addressSKeyFile

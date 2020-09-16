@@ -8,12 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
-import qualified System.IO as IO
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTextViewDecodeCbor :: Property
-golden_shelleyTextViewDecodeCbor = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTextViewDecodeCbor = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   unsignedTxFile <- noteInputFile "test/data/golden/shelley/tx/unsigned.tx"
   decodedTxtFile <- noteTempFile tempDir "decoded.txt"
 
@@ -24,11 +25,11 @@ golden_shelleyTextViewDecodeCbor = propertyOnce $ moduleWorkspace "tmp" $ \tempD
     , "--file", unsignedTxFile
     ]
 
-  liftIO $ IO.writeFile decodedTxtFile decodedTxt
+  H.writeFile decodedTxtFile decodedTxt
 
-  assertFileOccurences 1 "# int(4999998000)" decodedTxtFile
-  assertFileOccurences 1 "# int(2000)" decodedTxtFile
-  assertFileOccurences 1 "# int(1000)" decodedTxtFile
+  H.assertFileOccurences 1 "# int(4999998000)" decodedTxtFile
+  H.assertFileOccurences 1 "# int(2000)" decodedTxtFile
+  H.assertFileOccurences 1 "# int(1000)" decodedTxtFile
 
-  assertEndsWithSingleNewline decodedTxtFile
-  assertFileLines (>= 10) decodedTxtFile
+  H.assertEndsWithSingleNewline decodedTxtFile
+  H.assertFileLines (>= 10) decodedTxtFile

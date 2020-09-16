@@ -19,12 +19,12 @@ import           Network.Socket (Socket)
 import           Prelude (error)
 import           System.IO (IO)
 
-import qualified Chairman.Hedgehog.Base as H
-import qualified Chairman.Hedgehog.Network as H
-import qualified Chairman.IO.Network.Socket as IO
 import qualified Control.Monad.Trans.Resource as IO
 import qualified Data.List as L
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Network as H
 import qualified Network.Socket as IO
 import qualified System.Random as IO
 import qualified UnliftIO.Exception as IO

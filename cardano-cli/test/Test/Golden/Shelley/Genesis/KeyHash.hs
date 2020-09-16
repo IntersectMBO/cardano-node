@@ -8,12 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property, (===))
 import           Test.OptParse as OP
 
-import qualified System.IO as IO
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyGenesisKeyHash :: Property
-golden_shelleyGenesisKeyHash = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyGenesisKeyHash = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   referenceVerificationKey <- noteInputFile "test/data/golden/shelley/keys/genesis_keys/verification_key"
   goldenGenesisVerificationKeyHashFile <- noteInputFile "test/data/golden/shelley/keys/genesis_keys/verification_key.key-hash"
   genesisVerificationKeyHashFile <- noteTempFile tempDir "key-hash.hex"
@@ -23,8 +24,8 @@ golden_shelleyGenesisKeyHash = propertyOnce . moduleWorkspace "tmp" $ \tempDir -
     , "--verification-key-file", referenceVerificationKey
     ]
 
-  liftIO $ IO.writeFile genesisVerificationKeyHashFile genesisVerificationKeyHash
+  H.writeFile genesisVerificationKeyHashFile genesisVerificationKeyHash
 
-  goldenGenesisVerificationKeyHash <- OP.readFile goldenGenesisVerificationKeyHashFile
+  goldenGenesisVerificationKeyHash <- H.readFile goldenGenesisVerificationKeyHashFile
 
   genesisVerificationKeyHash === goldenGenesisVerificationKeyHash

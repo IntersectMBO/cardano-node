@@ -1,4 +1,4 @@
-module Chairman.Hedgehog.Concurrent
+module Hedgehog.Extras.Test.Concurrent
   ( threadDelay
   ) where
 

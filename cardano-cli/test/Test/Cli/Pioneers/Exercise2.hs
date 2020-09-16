@@ -9,12 +9,14 @@ import           Hedgehog (Property)
 import           Test.OptParse
 
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 -- | 1. We generate a payment signing key
 --   2. We create a tx body
 --   3. We sign the tx body with the generated payment signing key
 prop_createTransaction :: Property
-prop_createTransaction = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+prop_createTransaction = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Key filepaths
   paymentVerKey <- noteTempFile tempDir "payment-verification-key-file"
   paymentSignKey <- noteTempFile tempDir "payment-signing-key-file"
@@ -28,7 +30,7 @@ prop_createTransaction = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
     , "--signing-key-file", paymentSignKey
     ]
 
-  assertFilesExist [paymentVerKey, paymentSignKey]
+  H.assertFilesExist [paymentVerKey, paymentSignKey]
 
   -- Create transaction body
   void $ execCardanoCLI
@@ -40,7 +42,7 @@ prop_createTransaction = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
     , "--out-file", transactionBodyFile
     ]
 
-  assertFilesExist [transactionBodyFile]
+  H.assertFilesExist [transactionBodyFile]
 
   -- Sign transaction
   void $ execCardanoCLI
@@ -51,7 +53,7 @@ prop_createTransaction = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
     , "--out-file", transactionFile
     ]
 
-  assertFilesExist [paymentVerKey, paymentSignKey, transactionBodyFile, transactionFile]
+  H.assertFilesExist [paymentVerKey, paymentSignKey, transactionBodyFile, transactionFile]
 
 -- -----------------------------------------------------------------------------
 
