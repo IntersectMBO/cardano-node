@@ -19,6 +19,7 @@ import           GHC.Num
 import           Hedgehog (Property, discover)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
+import           System.FilePath.Posix ((</>))
 import           System.IO (IO)
 import           Text.Show
 
@@ -52,17 +53,17 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
-  baseConfig <- H.noteShow $ base <> "/configuration/chairman/defaults/simpleview"
+  baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
-  socketDir <- H.noteShow $ tempRelPath <> "/socket"
+  socketDir <- H.noteShow $ tempRelPath </> "socket"
 
   -- Generate keys
   void $ H.execCli
     [ "genesis"
-    , "--genesis-output-dir", tempAbsPath <> "/genesis"
+    , "--genesis-output-dir", tempAbsPath </> "genesis"
     , "--start-time", showUTCTimeSeconds startTime
-    , "--protocol-parameters-file", base <> "/scripts/protocol-params.json"
+    , "--protocol-parameters-file", base </> "scripts/protocol-params.json"
     , "--k", "2160"
     , "--protocol-magic", "459045235"
     , "--n-poor-addresses", "128"
@@ -75,10 +76,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
     , "--secret-seed", "2718281828"
     ]
 
-  H.writeFile (tempAbsPath <> "/genesis/GENHASH") . S.lastLine =<< H.execCli
+  H.writeFile (tempAbsPath </> "genesis/GENHASH") . S.lastLine =<< H.execCli
     [ "print-genesis-hash"
     , "--genesis-json"
-    , tempAbsPath <> "/genesis/genesis.json"
+    , tempAbsPath </> "genesis/genesis.json"
     ]
 
   let nodeIndexes = [0..nodeCount - 1]
@@ -86,22 +87,22 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   -- Launch cluster of three nodes
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    dbDir <- H.noteShow $ tempAbsPath <> "/db/node-" <> si
+    dbDir <- H.noteShow $ tempAbsPath </> "db/node-" <> si
     nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/node-" <> si)
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
     portString <- H.noteShow $ "300" <> si <> ""
-    topologyFile <- H.noteShow $ tempAbsPath <> "/topology-node-" <> si <> ".json"
-    configFile <- H.noteShow $ tempAbsPath <> "/config-" <> si <> ".yaml"
-    signingKeyFile <- H.noteShow $ tempAbsPath <> "/genesis/delegate-keys.00" <> si <> ".key"
-    delegationCertificateFile <- H.noteShow $ tempAbsPath <> "/genesis/delegation-cert.00" <> si <> ".json"
+    topologyFile <- H.noteShow $ tempAbsPath </> "topology-node-" <> si <> ".json"
+    configFile <- H.noteShow $ tempAbsPath </> "config-" <> si <> ".yaml"
+    signingKeyFile <- H.noteShow $ tempAbsPath </> "genesis/delegate-keys.00" <> si <> ".key"
+    delegationCertificateFile <- H.noteShow $ tempAbsPath </> "genesis/delegation-cert.00" <> si <> ".json"
 
     H.createDirectoryIfMissing dbDir
-    H.createDirectoryIfMissing $ tempBaseAbsPath <> "/" <> socketDir
+    H.createDirectoryIfMissing $ tempBaseAbsPath </> "" <> socketDir
 
-    H.copyFile (baseConfig <> "/topology-node-" <> si <> ".json") (tempAbsPath <> "/topology-node-" <> si <> ".json")
-    H.writeFile (tempAbsPath <> "/config-" <> si <> ".yaml") . L.unlines . fmap rewriteConfiguration . L.lines =<<
-      H.readFile (baseConfig <> "/config-" <> si <> ".yaml")
+    H.copyFile (baseConfig </> "topology-node-" <> si <> ".json") (tempAbsPath </> "topology-node-" <> si <> ".json")
+    H.writeFile (tempAbsPath </> "config-" <> si <> ".yaml") . L.unlines . fmap rewriteConfiguration . L.lines =<<
+      H.readFile (baseConfig </> "config-" <> si <> ".yaml")
 
     hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
@@ -135,7 +136,7 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir <> "/node-" <> si)
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.assertByDeadlineIO deadline $ IO.doesSprocketExist sprocket
 

@@ -624,10 +624,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   H.noteShowIO_ DTC.getCurrentTime
 
   -- Run chairman
-  forM_ (L.take 1 bftNodes) $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+  forM_ (L.take 1 bftNodes) $ \node1 -> do
+    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stdout.log"
+    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stderr.log"
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node1)
 
     H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 
@@ -657,8 +657,14 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
     H.cat nodeStdoutFile
     H.cat nodeStderrFile
 
-
-    chairmanResult === Right ExitSuccess
+    case chairmanResult of
+      Right ExitSuccess -> return ()
+      _ -> do
+        H.note_ $ "Failed with: " <> show chairmanResult
+        forM_ allNodes $ \node -> do
+          H.cat $ logDir </> node <> ".stdout.log"
+          H.cat $ logDir </> node <> ".stderr.log"
+        H.failure
 
 tests :: IO Bool
 tests = H.checkParallel $$discover
