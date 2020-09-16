@@ -50,8 +50,9 @@ data ShelleyTxCmdError
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
   | ShelleyTxCmdReadSigningKeyFileError !(FileError SigningKeyDecodeError)
   | ShelleyTxCmdWriteFileError !(FileError ())
-  | ShelleyTxCmdMetaDataConversionError !FilePath !MetaDataJsonConversionError
-  | ShelleyTxCmdMetaValidationError !FilePath !TxMetadataValidationError
+  | ShelleyTxCmdMetaDataJsonParseError !FilePath !String
+  | ShelleyTxCmdMetaDataConversionError !FilePath !TxMetadataJsonError
+  | ShelleyTxCmdMetaValidationError !FilePath !TxMetadataRangeError
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdMissingNetworkId
   | ShelleyTxCmdSocketEnvError !EnvSocketError
@@ -67,15 +68,18 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdReadTextViewFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadSigningKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdMetaDataJsonParseError fp jsonErr ->
+       "Invalid JSON format in file: " <> show fp
+                <> "\nJSON parse error: " <> Text.pack jsonErr
     ShelleyTxCmdMetaDataConversionError fp metaDataErr ->
        "Error reading metadata at: " <> show fp
-                       <> " Error: " <> renderMetaDataJsonConversionError metaDataErr
+                             <> "\n" <> Text.pack (displayError metaDataErr)
     ShelleyTxCmdMetaDecodeError fp metaDataErr ->
        "Error decoding CBOR metadata at: " <> show fp
                              <> " Error: " <> show metaDataErr
     ShelleyTxCmdMetaValidationError fp valErr ->
       "Error validating transaction metadata at: " <> show fp
-                                     <> " Error: " <> renderTxMetadataValidationError valErr
+                                           <> "\n" <> Text.pack (displayError valErr)
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxCmdAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> show fp
@@ -93,8 +97,10 @@ renderShelleyTxCmdError err =
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw txins txouts ttl fee certs wdrls mMetaData mUpProp out ->
-      runTxBuildRaw txins txouts ttl fee certs wdrls mMetaData mUpProp out
+    TxBuildRaw txins txouts ttl fee certs wdrls
+               metadataSchema metadataFiles mUpProp out ->
+      runTxBuildRaw txins txouts ttl fee certs wdrls
+                    metadataSchema metadataFiles mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit protocol network txFp ->
@@ -117,12 +123,15 @@ runTxBuildRaw
   -> Api.Lovelace
   -> [CertificateFile]
   -> [(Api.StakeAddress, Api.Lovelace)]
+  -> TxMetadataJsonSchema
   -> [MetaDataFile]
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw txins txouts ttl fee
-              certFiles withdrawals metaDataFiles mUpdatePropFile
+              certFiles withdrawals
+              metadataSchema metadataFiles
+              mUpdatePropFile
               (TxBodyFile fpath) = do
 
     certs <- sequence
@@ -131,9 +140,9 @@ runTxBuildRaw txins txouts ttl fee
                | CertificateFile certFile <- certFiles ]
 
 
-    mMetaData <- case metaDataFiles of
+    mMetaData <- case metadataFiles of
       []    -> return Nothing
-      files -> Just . mconcat <$> mapM readFileTxMetaData files
+      files -> Just . mconcat <$> mapM (readFileTxMetaData metadataSchema) files
                -- read all the files and merge their metadata maps
                -- in case of clashes earlier entries take precedence
 
@@ -413,24 +422,17 @@ runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
 -- Transaction metadata
 --
 
-readFileTxMetaData :: MetaDataFile
+readFileTxMetaData :: TxMetadataJsonSchema -> MetaDataFile
                    -> ExceptT ShelleyTxCmdError IO Api.TxMetadata
-readFileTxMetaData (MetaDataFileJSON fp) = do
+readFileTxMetaData mapping (MetaDataFileJSON fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           LBS.readFile fp
-    v  <- firstExceptT (ShelleyTxCmdMetaDataConversionError fp . ConversionErrDecodeJSON) $
+    v  <- firstExceptT (ShelleyTxCmdMetaDataJsonParseError fp) $
           hoistEither $
             Aeson.eitherDecode' bs
-    txMetadata <- firstExceptT (ShelleyTxCmdMetaDataConversionError fp) $ hoistEither $
-      jsonToMetadata v
-    -- At this time, 'jsonToMetadata' already performs the appropriate
-    -- validation on the transaction metadata during its JSON parsing.
-    -- However, it still might make sense to call 'validateTxMetadata' just in
-    -- case more validation rules that aren't covered by 'jsonToMetadata' are
-    -- added in the future
-    firstExceptT (ShelleyTxCmdMetaValidationError fp . NE.head) $ hoistEither $
-      validateTxMetadata txMetadata
-readFileTxMetaData (MetaDataFileCBOR fp) = do
+    firstExceptT (ShelleyTxCmdMetaDataConversionError fp) $ hoistEither $
+      metadataFromJson mapping v
+readFileTxMetaData _ (MetaDataFileCBOR fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           BS.readFile fp
     txMetadata <- firstExceptT (ShelleyTxCmdMetaDecodeError fp) $ hoistEither $

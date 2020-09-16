@@ -53,7 +53,7 @@
 # Ignore some builtin hints
 # - ignore: {name: Use let}
 # - ignore: {name: Use const, within: SpecialModule} # Only within certain modules
-
+- ignore: {name: "Use lambda-case"}
 
 # Define some custom infix operators
 # - fixity: infixr 3 ~^#^~
