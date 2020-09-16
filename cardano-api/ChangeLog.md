@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 1.20.0 -- September 2020
+
+- Improved support for JSON to Tx metadata conversions, with two supported
+  JSON schemas, suitable for different use cases (#1797)
+
 ## 1.19.1 -- September 2020
 
 - Adjust the tx metadata JSON schema to be fully recursive (#1735)
