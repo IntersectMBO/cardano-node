@@ -15,7 +15,7 @@ import           Hedgehog.Internal.Property (failWith)
 
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Prelude (goldenTestJSONDec, goldenTestJSONPretty)
+import           Test.Cardano.Prelude (goldenTestJSONPretty)
 
 prop_generateMofNcorrectly :: Property
 prop_generateMofNcorrectly = H.property $ do
@@ -41,13 +41,6 @@ prop_roundtrip_MultiSigScript_JSON =
   H.property $ do
     mss <- H.forAll genMultiSigScript
     H.tripping mss encode eitherDecode
-
-
--- Previous script syntax tests
-
--- Decode only golden test
-prop_golden_Previous_MofNMultiSig :: Property
-prop_golden_Previous_MofNMultiSig = goldenTestJSONDec exampleMofN "test/Golden/MultiSig/PreviousScriptSyntax/atleast"
 
 tests :: IO Bool
 tests =

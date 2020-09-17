@@ -266,8 +266,10 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.TextEnvelope.Tx.TxBody
                         Test.Golden.Shelley.TextEnvelope.Tx.Witness
                         Test.Golden.Shelley.TextView.DecodeCbor
+                        Test.Golden.Shelley.Transaction.Assemble
                         Test.Golden.Shelley.Transaction.Build
                         Test.Golden.Shelley.Transaction.CalculateMinFee
+                        Test.Golden.Shelley.Transaction.CreateWitness
                         Test.Golden.Shelley.Transaction.Sign
                         Test.Golden.Version
                         Test.OptParse

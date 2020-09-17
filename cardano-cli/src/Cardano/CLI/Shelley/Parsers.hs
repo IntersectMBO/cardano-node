@@ -11,7 +11,7 @@ module Cardano.CLI.Shelley.Parsers
   , renderTxIn
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
 import           Cardano.Api.MetaData
@@ -118,8 +118,6 @@ pAddressCmd =
           (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key.")
       , Opt.command "build"
           (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
-      , Opt.command "build-multisig"
-          (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a Shelley payment multi-sig address.")
       , Opt.command "build-script"
           (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address.")
       , Opt.command "info"
@@ -142,12 +140,8 @@ pAddressCmd =
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-
-    pAddressBuildMultiSig :: Parser AddressCmd
-    pAddressBuildMultiSig = pure AddressBuildMultiSig
-
     pAddressBuildScript :: Parser AddressCmd
-    pAddressBuildScript = AddressBuildScript
+    pAddressBuildScript = AddressBuildMultiSig
                             <$> pScript
                             <*> pNetworkId
                             <*> pMaybeOutputFile
@@ -178,6 +172,20 @@ pScript = ScriptFile <$> Opt.strOption
   <> Opt.help "Filepath of the script."
   <> Opt.completer (Opt.bashCompleter "file")
   )
+
+pScriptOrSigningKey :: Parser SigningKeyOrScriptFile
+pScriptOrSigningKey = pScript' <|> pWitnessSigningKeyFile
+
+pScript' :: Parser SigningKeyOrScriptFile
+pScript' =
+  ScriptFileForWitness <$>
+    Opt.strOption
+      (  Opt.long "script-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Filepath of the multisig script to be used in witness construction."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
@@ -443,12 +451,15 @@ pTransaction =
     mconcat
       [ Opt.command "build-raw"
           (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
+      , Opt.command "build-multisig"
+          (Opt.info pMultiSigBuild $ Opt.progDesc "Build a multisig script.")
       , Opt.command "sign"
           (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
       , Opt.command "witness"
-          (Opt.info pTransactionWitness $ Opt.progDesc "Witness a transaction")
+          (Opt.info pTransactionCreateWitness $ Opt.progDesc "Create a transaction witness")
       , Opt.command "sign-witness"
-          (Opt.info pTransactionSignWit $ Opt.progDesc "Sign and witness a transaction")
+          (Opt.info pTransactionAssembleTxBodyWit
+            $ Opt.progDesc "Assemble a tx body and witness(es) to form a transaction")
       , Opt.command "submit"
           (Opt.info pTransactionSubmit . Opt.progDesc $
              mconcat
@@ -474,22 +485,26 @@ pTransaction =
                                    <*> optional pUpdateProposalFile
                                    <*> pTxBodyFile Output
 
+    pMultiSigBuild :: Parser TransactionCmd
+    pMultiSigBuild =  TxBuildMultiSig <$> pMultiSigScriptObject <*> pMaybeOutputFile
+
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
                               <*> pSomeSigningKeyFiles
                               <*> optional pNetworkId
                               <*> pTxFile Output
+    pTransactionCreateWitness :: Parser TransactionCmd
+    pTransactionCreateWitness = TxCreateWitness
+                                  <$> pTxBodyFile Input
+                                  <*> pScriptOrSigningKey
+                                  <*> optional pNetworkId
+                                  <*> pOutputFile
 
-    pTransactionWitness :: Parser TransactionCmd
-    pTransactionWitness = TxWitness <$> pTxBodyFile Input
-                                    <*> pWitnessSigningKeyFile
-                                    <*> optional pNetworkId
-                                    <*> pOutputFile
-
-    pTransactionSignWit :: Parser TransactionCmd
-    pTransactionSignWit = TxSignWitness <$> pTxBodyFile Input
-                                        <*> some pWitnessFile
-                                        <*> pOutputFile
+    pTransactionAssembleTxBodyWit :: Parser TransactionCmd
+    pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
+                                      <$> pTxBodyFile Input
+                                      <*> some pWitnessFile
+                                      <*> pOutputFile
 
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pProtocol
@@ -952,6 +967,32 @@ pMetaDataFile =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
+
+pMultiSigScriptObject :: Parser MultiSigScriptObject
+pMultiSigScriptObject = pAny <|> pAll <|> pAtLeast
+ where
+   pAny :: Parser MultiSigScriptObject
+   pAny = Opt.flag' () (  Opt.long "any"
+                       <> Opt.help "Build an \"any\" multi-signature script.")
+          *> (Any <$> some pPaymentVerificationKeyFile)
+
+   pAll :: Parser MultiSigScriptObject
+   pAll = Opt.flag' () (  Opt.long "all"
+                       <> Opt.help "Build an \"all\" multi-signature script.")
+          *> (All <$> some pPaymentVerificationKeyFile)
+
+   pAtLeast :: Parser MultiSigScriptObject
+   pAtLeast = Opt.flag' () (  Opt.long "at-least"
+                           <> Opt.help "Build an \"atLeast\" multi-signature script.")
+              *> (AtLeast <$> pRequired <*> some pPaymentVerificationKeyFile)
+
+   pRequired :: Parser Int
+   pRequired = Opt.option Opt.auto
+                 (  Opt.long "required"
+                 <> Opt.metavar "INT"
+                 <> Opt.help "The minimum number of signatures required."
+                 )
+
 pWithdrawal :: Parser (StakeAddress, Lovelace)
 pWithdrawal =
     Opt.option (readerFromAttoParser parseWithdrawal)
@@ -1021,11 +1062,11 @@ pSigningKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pWitnessSigningKeyFile :: Parser SigningKeyFile
-pWitnessSigningKeyFile = SigningKeyFile <$> Opt.strOption
-  (  Opt.long "witness-signing-key-file"
+pWitnessSigningKeyFile :: Parser SigningKeyOrScriptFile
+pWitnessSigningKeyFile = SigningKeyFileForWitness <$> Opt.strOption
+  (  Opt.long "signing-key-file"
   <> Opt.metavar "FILE"
-  <> Opt.help "Filepath of the witness signing key."
+  <> Opt.help "Filepath of the signing key to be used in witness construction."
   <> Opt.completer (Opt.bashCompleter "file")
   )
 
@@ -1360,7 +1401,7 @@ pWitnessFile =
     Opt.strOption
       (  Opt.long "witness-file"
       <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the witness."
+      <> Opt.help "Filepath of the witness"
       <> Opt.completer (Opt.bashCompleter "file")
       )
 

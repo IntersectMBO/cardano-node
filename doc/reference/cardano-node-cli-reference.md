@@ -11,7 +11,7 @@ The set of `cardano-cli shelley` commands include:
 * `transaction`: Shelley transaction commands
 * `node`: Shelley node operation commands
 * `stake-pool`: Shelley stake pool commands
-* `query`: Shelley node query commands. This queries the local node whose Unix domain socket is obtained from the CARDNAO_NODE_SOCKET-PATH environment variable. 
+* `query`: Shelley node query commands. This queries the local node whose Unix domain socket is obtained from the CARDANO_NODE_SOCKET_PATH environment variable.
 * `block`: Shelley block commands
 * `system`: Shelley system commands
 * `genesis`: Shelley genesis block commands
@@ -23,14 +23,14 @@ The `address` command contains the following sub commands:
 * `key-gen`: creates a single address key pair
 * `key-hash`: prints the hash of an address to stdout
 * `build`: builds a Shelley payment address, with optional delegation to a stake address
-* `build-multisig`: builds a Shelley payment multi-sig address.
+* `build-script`: builds a Shelley script address.
 * `info`: prints details about the address
 
 *cardano-cli shelley stake-address*
 The `stake-address` command contains the following sub commands:
 * `key-gen`: creates a single address key pair
 * `build`: builds a stake address
-* `register`: registers a stake address 
+* `register`: registers a stake address
 * `delegate`: delegates from a stake address to a stake pool
 * `de-register`: de-registers a stake address
 * `registration-certificate`: creates a registration certificate
@@ -100,9 +100,9 @@ The `genesis` command contains the following sub commands:
 * `key-hash`: prints the identifier, or hash, of a public key
 * `get-ver-key`: derives verification key from a signing key
 * `initial-addr`: gets the address for an initial UTxO based on the verification key
-* `initial-txin`: gets the transaction ID for an initial UTxO based on the verification key. 
-* `create`: creates a Shelley genesis file from a genesis template, as well as genesis keys, delegation keys, and spending keys. 
+* `initial-txin`: gets the transaction ID for an initial UTxO based on the verification key.
+* `create`: creates a Shelley genesis file from a genesis template, as well as genesis keys, delegation keys, and spending keys.
 
 *cardano-cli shelley text-view*
 The `text-view` command contains the following sub command:
-* `decode-cbor`: prints a text view file, as decoded CBOR. 
+* `decode-cbor`: prints a text view file, as decoded CBOR.

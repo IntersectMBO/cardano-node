@@ -64,9 +64,19 @@ import           Test.Golden.Shelley.TextEnvelope.Keys.PaymentKeys (golden_shell
 import           Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys (golden_shelleyStakeKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys (golden_shelleyVRFKeys)
 import           Test.Golden.Shelley.TextView.DecodeCbor (golden_shelleyTextViewDecodeCbor)
+import           Test.Golden.Shelley.Transaction.Assemble
+                     (golden_shelleyTransactionAssembleWitness_AllMultiSig,
+                     golden_shelleyTransactionAssembleWitness_AnyMultiSig,
+                     golden_shelleyTransactionAssembleWitness_AtLeastMultiSig,
+                     golden_shelleyTransactionAssembleWitness_SigningKey)
 import           Test.Golden.Shelley.Transaction.Build (golden_shelleyTransactionBuild)
 import           Test.Golden.Shelley.Transaction.CalculateMinFee
                      (golden_shelleyTransactionCalculateMinFee)
+import           Test.Golden.Shelley.Transaction.CreateWitness
+                     (golden_shelleyTransactionAllMultiSigWitness,
+                     golden_shelleyTransactionAnyMultiSigWitness,
+                     golden_shelleyTransactionAtLeastMultiSigWitness,
+                     golden_shelleyTransactionSigningKeyWitness)
 import           Test.Golden.Shelley.Transaction.Sign (golden_shelleyTransactionSign)
 
 import           Test.Golden.Shelley.TextEnvelope.Tx.Tx (golden_shelleyTx)
@@ -156,4 +166,12 @@ multiSigTests =
         [ ("golden_shelleyAllMultiSigAddressBuild", golden_shelleyAllMultiSigAddressBuild)
         , ("golden_shelleyAnyMultiSigAddressBuild", golden_shelleyAnyMultiSigAddressBuild)
         , ("golden_shelleyAtLeastMultiSigAddressBuild", golden_shelleyAtLeastMultiSigAddressBuild)
+        , ("golden_shelleyTransactionAssembleWitness_AllMultiSig", golden_shelleyTransactionAssembleWitness_AllMultiSig)
+        , ("golden_shelleyTransactionAssembleWitness_AnyMultiSig", golden_shelleyTransactionAssembleWitness_AnyMultiSig)
+        , ("golden_shelleyTransactionAssembleWitness_AtLeastMultiSig", golden_shelleyTransactionAssembleWitness_AtLeastMultiSig)
+        , ("golden_shelleyTransactionAssembleWitness_SigningKey", golden_shelleyTransactionAssembleWitness_SigningKey)
+        , ("golden_shelleyTransactionAllMultiSigWitness", golden_shelleyTransactionAllMultiSigWitness)
+        , ("golden_shelleyTransactionAnyMultiSigWitness", golden_shelleyTransactionAnyMultiSigWitness)
+        , ("golden_shelleyTransactionAtLeastMultiSigWitness", golden_shelleyTransactionAtLeastMultiSigWitness)
+        , ("golden_shelleyTransactionSigningKeyWitness", golden_shelleyTransactionSigningKeyWitness)
         ]

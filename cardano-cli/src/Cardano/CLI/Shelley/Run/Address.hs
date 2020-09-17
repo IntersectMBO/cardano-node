@@ -7,7 +7,7 @@ module Cardano.CLI.Shelley.Run.Address
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
-import           Prelude (String, putStrLn)
+import           Prelude (String)
 
 import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -50,8 +50,7 @@ runAddressCmd cmd =
     AddressKeyGen kt vkf skf -> runAddressKeyGen kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
-    AddressBuildMultiSig {} -> runAddressBuildMultiSig
-    AddressBuildScript sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
+    AddressBuildMultiSig sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
 runAddressKeyGen :: AddressKeyType
@@ -180,16 +179,8 @@ readAddressVerificationKeyFile (VerificationKeyFile vkfile) =
                      AGenesisUTxOVerificationKey
       ]
 
-
 --
 -- Multisig addresses
---
-
-runAddressBuildMultiSig :: ExceptT ShelleyAddressCmdError IO ()
-runAddressBuildMultiSig = liftIO $ putStrLn "runAddressBuildMultiSig: TODO"
-
---
--- Script addresses
 --
 
 runAddressBuildScript

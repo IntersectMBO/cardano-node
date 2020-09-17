@@ -95,8 +95,7 @@ data AddressCmd
   = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
   | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
-  | AddressBuildMultiSig  --TODO
-  | AddressBuildScript ScriptFile NetworkId (Maybe OutputFile)
+  | AddressBuildMultiSig ScriptFile NetworkId (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
   deriving (Eq, Show)
 
@@ -107,9 +106,8 @@ renderAddressCmd cmd =
     AddressKeyGen {} -> "address key-gen"
     AddressKeyHash {} -> "address key-hash"
     AddressBuild {} -> "address build"
-    AddressBuildMultiSig {} -> "address build-multisig"
+    AddressBuildMultiSig {} -> "address build-script"
     AddressInfo {} -> "address info"
-    AddressBuildScript {} -> "address build-script"
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
@@ -165,9 +163,10 @@ data TransactionCmd
       [MetaDataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
+  | TxBuildMultiSig MultiSigScriptObject (Maybe OutputFile)
   | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
-  | TxWitness TxBodyFile SigningKeyFile (Maybe NetworkId) OutputFile
-  | TxSignWitness TxBodyFile [WitnessFile] OutputFile
+  | TxCreateWitness TxBodyFile SigningKeyOrScriptFile (Maybe NetworkId) OutputFile
+  | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
       TxBodyFile
@@ -183,10 +182,11 @@ data TransactionCmd
 renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =
   case cmd of
+    TxBuildMultiSig {} -> "transaction build-multisig"
     TxBuildRaw {} -> "transaction build-raw"
     TxSign {} -> "transaction sign"
-    TxWitness {} -> "transaction witness"
-    TxSignWitness {} -> "transaction sign-witness"
+    TxCreateWitness {} -> "transaction witness"
+    TxAssembleTxBodyWitness {} -> "transaction sign-witness"
     TxSubmit {} -> "transaction submit"
     TxCalculateMinFee {} -> "transaction calculate-min-fee"
     TxGetTxId {} -> "transaction txid"
