@@ -173,20 +173,6 @@ pScript = ScriptFile <$> Opt.strOption
   <> Opt.completer (Opt.bashCompleter "file")
   )
 
-pScriptOrSigningKey :: Parser SigningKeyOrScriptFile
-pScriptOrSigningKey = pScript' <|> pWitnessSigningKeyFile
-
-pScript' :: Parser SigningKeyOrScriptFile
-pScript' =
-  ScriptFileForWitness <$>
-    Opt.strOption
-      (  Opt.long "script-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Filepath of the multisig script to be used in witness construction."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
-
-
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
   Opt.subparser $
@@ -490,21 +476,24 @@ pTransaction =
 
     pTransactionSign  :: Parser TransactionCmd
     pTransactionSign = TxSign <$> pTxBodyFile Input
-                              <*> pSomeSigningKeyFiles
+                              <*> pSomeWitnessSigningData
                               <*> optional pNetworkId
                               <*> pTxFile Output
+
     pTransactionCreateWitness :: Parser TransactionCmd
-    pTransactionCreateWitness = TxCreateWitness
-                                  <$> pTxBodyFile Input
-                                  <*> pScriptOrSigningKey
-                                  <*> optional pNetworkId
-                                  <*> pOutputFile
+    pTransactionCreateWitness =
+      TxCreateWitness
+        <$> pTxBodyFile Input
+        <*> pWitnessSigningData
+        <*> optional pNetworkId
+        <*> pOutputFile
 
     pTransactionAssembleTxBodyWit :: Parser TransactionCmd
-    pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
-                                      <$> pTxBodyFile Input
-                                      <*> some pWitnessFile
-                                      <*> pOutputFile
+    pTransactionAssembleTxBodyWit =
+      TxAssembleTxBodyWitness
+        <$> pTxBodyFile Input
+        <*> some pWitnessFile
+        <*> pOutputFile
 
     pTransactionSubmit  :: Parser TransactionCmd
     pTransactionSubmit = TxSubmit <$> pProtocol
@@ -1041,16 +1030,23 @@ pColdSigningKeyFile =
       )
     )
 
-pSomeSigningKeyFiles :: Parser [SigningKeyFile]
-pSomeSigningKeyFiles =
+pSomeWitnessSigningData :: Parser [WitnessSigningData]
+pSomeWitnessSigningData =
   some $
-    SigningKeyFile <$>
-      Opt.strOption
-      (  Opt.long "signing-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help "Input filepath of the signing key (one or more)."
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+      KeyWitnessSigningData
+        <$>
+          ( SigningKeyFile <$>
+              Opt.strOption
+                (  Opt.long "signing-key-file"
+                <> Opt.metavar "FILE"
+                <> Opt.help "Input filepath of the signing key (one or more)."
+                <> Opt.completer (Opt.bashCompleter "file")
+                )
+          )
+        <*>
+          optional pByronAddress
+    <|>
+      ScriptWitnessSigningData <$> pScript
 
 pSigningKeyFile :: FileDirection -> Parser SigningKeyFile
 pSigningKeyFile fdir =
@@ -1062,13 +1058,22 @@ pSigningKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pWitnessSigningKeyFile :: Parser SigningKeyOrScriptFile
-pWitnessSigningKeyFile = SigningKeyFileForWitness <$> Opt.strOption
-  (  Opt.long "signing-key-file"
-  <> Opt.metavar "FILE"
-  <> Opt.help "Filepath of the signing key to be used in witness construction."
-  <> Opt.completer (Opt.bashCompleter "file")
-  )
+pWitnessSigningData :: Parser WitnessSigningData
+pWitnessSigningData =
+    KeyWitnessSigningData
+      <$>
+        ( SigningKeyFile <$>
+            Opt.strOption
+              (  Opt.long "signing-key-file"
+              <> Opt.metavar "FILE"
+              <> Opt.help "Filepath of the signing key to be used in witness construction."
+              <> Opt.completer (Opt.bashCompleter "file")
+              )
+        )
+      <*>
+        optional pByronAddress
+  <|>
+    ScriptWitnessSigningData <$> pScript
 
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =
@@ -1507,6 +1512,21 @@ pFilterByStakeAddress =
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
       )
+
+pByronAddress :: Parser (Address Byron)
+pByronAddress =
+    Opt.option
+      (Opt.eitherReader deserialise)
+        (  Opt.long "address"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Byron address (Base58-encoded)."
+        )
+  where
+    deserialise :: String -> Either String (Address Byron)
+    deserialise =
+      maybe (Left "Invalid Byron address.") Right
+        . deserialiseAddress AsByronAddress
+        . Text.pack
 
 pAddress :: Parser Text
 pAddress =
