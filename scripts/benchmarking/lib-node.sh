@@ -33,6 +33,7 @@ USAGE="
 
 default_node_config='byron-mainnet'
 default_node_port=7776
+default_node_id=${NODE_ID:-""}
 
 ## Running node setups
 #
@@ -121,8 +122,8 @@ _run_node() {
 
         local topo_id="${topo_id:-$config_id}"
         local state_id="${state_id:-$config_id}"
-        local db_root="${__COMMON_SRCROOT}/db"
-        local sock_root="${__COMMON_SRCROOT}/socket"
+        local db_root="${__COMMON_SRCROOT}/db${default_node_id}"
+        local sock_root="${__COMMON_SRCROOT}/socket${default_node_id}"
 
         local NODE_ARGS=(
           --database-path    "${db_root}/${state_id}/"
