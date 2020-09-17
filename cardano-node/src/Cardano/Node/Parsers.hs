@@ -20,9 +20,10 @@ import           System.Posix.Types (Fd (..))
 
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Types
 
-nodeCLIParser  :: Parser NodeCLI
+nodeCLIParser  :: Parser PartialNodeConfiguration
 nodeCLIParser = subparser
                 (  commandGroup "Run the node"
                 <> metavar "run"
@@ -31,12 +32,12 @@ nodeCLIParser = subparser
                            (progDesc "Run the node." ))
                 )
 
-nodeRunParser :: Parser NodeCLI
+nodeRunParser :: Parser PartialNodeConfiguration
 nodeRunParser = do
   -- Filepaths
-  topFp <- parseTopologyFile
-  dbFp <- parseDbPath
-  socketFp <-   optional $ parseSocketPath "Path to a cardano-node socket"
+  topFp <- lastOption parseTopologyFile
+  dbFp <- lastOption parseDbPath
+  socketFp <-   lastOption $ parseSocketPath "Path to a cardano-node socket"
 
   -- Protocol files
   byronCertFile   <- optional parseDelegationCert
@@ -46,33 +47,40 @@ nodeRunParser = do
   shelleyCertFile <- optional parseOperationalCertFilePath
 
   -- Node Address
-  nAddress <- optional parseNodeAddress
+  nAddress <- lastOption parseNodeAddress
 
   -- NodeConfiguration filepath
-  nodeConfigFp <- parseConfigFile
+  nodeConfigFp <- lastOption parseConfigFile
 
-  validate <- parseValidateDB
-  shutdownIPC <- parseShutdownIPC
+  validate <- lastOption parseValidateDB
+  shutdownIPC <- lastOption parseShutdownIPC
 
-  shutdownOnSlotSynced <- parseShutdownOnSlotSynced
+  shutdownOnSlotSynced <- lastOption parseShutdownOnSlotSynced
 
-  pure NodeCLI
-    { nodeAddr = nAddress
-    , configFile   = ConfigYamlFilePath nodeConfigFp
-    , topologyFile = TopologyFile topFp
-    , databaseFile = DbFile dbFp
-    , socketFile   = socketFp
-    , protocolFiles = ProtocolFilepaths
-      { byronCertFile
-      , byronKeyFile
-      , shelleyKESFile
-      , shelleyVRFFile
-      , shelleyCertFile
-      }
-    , validateDB = validate
-    , shutdownIPC
-    , shutdownOnSlotSynced
-    }
+  pure $ PartialNodeConfiguration
+           { pncNodeAddr = nAddress
+           , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
+           , pncTopologyFile = TopologyFile <$> topFp
+           , pncDatabaseFile = DbFile <$> dbFp
+           , pncSocketPath   = socketFp
+           , pncProtocolFiles = Last $ Just ProtocolFilepaths
+             { byronCertFile
+             , byronKeyFile
+             , shelleyKESFile
+             , shelleyVRFFile
+             , shelleyCertFile
+             }
+           , pncValidateDB = validate
+           , pncShutdownIPC = shutdownIPC
+           , pncShutdownOnSlotSynced = shutdownOnSlotSynced
+           , pncProtocolConfig = mempty
+           , pncMaxConcurrencyBulkSync = mempty
+           , pncMaxConcurrencyDeadline = mempty
+           , pncViewMode = mempty
+           , pncLoggingSwitch = mempty
+           , pncLogMetrics = mempty
+           , pncTraceConfig = mempty
+           }
 
 parseSocketPath :: Text -> Parser SocketPath
 parseSocketPath helpMessage =

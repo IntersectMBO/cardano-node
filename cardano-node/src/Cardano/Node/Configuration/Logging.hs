@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -64,6 +63,7 @@ import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
 
 import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
 --------------------------------
@@ -124,21 +124,18 @@ loggingCLIConfiguration = maybe emptyConfig readConfig
 -- | Create logging feature for `cardano-node`
 createLoggingLayer
   :: Text
-  -> NodeCLI
+  -> NodeConfiguration
   -> ExceptT ConfigError IO LoggingLayer
-createLoggingLayer ver nodecli@NodeCLI{configFile} = do
-
-  -- TODO:  we shouldn't be parsing configuration multiple times!
-  nodeConfig <- liftIO $ parseNodeConfiguration nodecli
+createLoggingLayer ver nodeConfig' = do
 
   logConfig <- loggingCLIConfiguration $
-    if ncLoggingSwitch nodeConfig
+    if ncLoggingSwitch nodeConfig'
     -- Re-interpret node config again, as logging 'Configuration':
-    then Just $ unConfigPath configFile
+    then Just . unConfigPath $ ncConfigFile nodeConfig'
     else Nothing
 
   -- adapt logging configuration before setup
-  liftIO $ adaptLogConfig nodeConfig logConfig
+  liftIO $ adaptLogConfig nodeConfig' logConfig
 
   -- These have to be set before the switchboard is set up.
   liftIO $ do
@@ -148,14 +145,14 @@ createLoggingLayer ver nodecli@NodeCLI{configFile} = do
   (baseTrace, switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
 
   let loggingEnabled :: Bool
-      loggingEnabled = ncLoggingSwitch nodeConfig
+      loggingEnabled = ncLoggingSwitch nodeConfig'
       trace :: Trace IO Text
       trace = if loggingEnabled
               then baseTrace
               else Trace.nullTracer
 
   when loggingEnabled $ liftIO $
-    loggingPreInit nodeConfig logConfig switchBoard trace
+    loggingPreInit nodeConfig' logConfig switchBoard trace
 
   pure $ mkLogLayer logConfig switchBoard trace
  where

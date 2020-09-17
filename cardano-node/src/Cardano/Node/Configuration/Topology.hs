@@ -25,6 +25,7 @@ import qualified Data.Text as Text
 import           Network.Socket (PortNumber, SockAddr (..))
 import           Text.Read (readMaybe)
 
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
@@ -128,9 +129,9 @@ instance ToJSON NetworkTopology where
 -- | Read the `NetworkTopology` configuration from the specified file.
 -- While running a real protocol, this gives your node its own address and
 -- other remote peers it will attempt to connect to.
-readTopologyFile :: NodeCLI -> IO (Either Text NetworkTopology)
-readTopologyFile ncli = do
-  eBs <- Exception.try $ BS.readFile (unTopology $ topologyFile ncli)
+readTopologyFile :: NodeConfiguration -> IO (Either Text NetworkTopology)
+readTopologyFile nc = do
+  eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e

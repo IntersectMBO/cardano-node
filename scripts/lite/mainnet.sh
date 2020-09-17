@@ -5,7 +5,7 @@
 ROOT="$(realpath "$(dirname "$0")/../..")"
 configuration="${ROOT}/configuration/cardano"
 
-data_dir=mainnet
+data_dir=mainnetsingle
 mkdir -p "${data_dir}"
 db_dir="${data_dir}/db/node"
 mkdir -p "${db_dir}"
