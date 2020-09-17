@@ -65,7 +65,7 @@ data NodeConfiguration
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
-       } deriving Show
+       } deriving (Eq, Show)
 
 
 data PartialNodeConfiguration

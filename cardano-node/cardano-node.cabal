@@ -304,6 +304,7 @@ test-suite cardano-node-test
 
   other-modules:        Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
+                        Test.Cardano.Node.POM
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
