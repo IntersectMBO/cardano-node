@@ -71,6 +71,12 @@ package small-steps
 package small-steps-test
   tests: False
 
+package goblins
+  tests: False
+
+package io-sim-classes
+  tests: False
+
 -- ---------------------------------------------------------
 
 

@@ -1,0 +1,92 @@
+name: Haskell CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Debugging
+      env:
+        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
+        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
+        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
+      run: |
+        echo "BINARY_CACHE_REGION: $BINARY_CACHE_REGION"
+        echo "BINARY_CACHE_THREADS: $BINARY_CACHE_THREADS"
+        echo "BINARY_CACHE_URI: $BINARY_CACHE_URI"
+
+    - uses: actions/setup-haskell@v1.1
+      with:
+        ghc-version: '8.6.5'
+        cabal-version: '3.4.0.0'
+
+    - name: Install build environment
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install libsodium23 libsodium-dev
+        sudo apt-get -y install libsystemd0 libsystemd-dev
+        sudo apt-get -y remove --purge software-properties-common
+        sudo apt-get -y autoremove
+
+        cat >> cabal.project <<EOF
+        package cardano-crypto-praos
+          flags: -external-libsodium-vrf
+        EOF
+
+    - name: Install cabal-cache tool
+      run: |
+        CACHE_TOOL_TAG=$(curl -s -X GET https://api.github.com/repos/haskell-works/cabal-cache/releases/latest | jq -rc .tag_name)
+        echo "Downloading: https://github.com/haskell-works/cabal-cache/releases/download/${CACHE_TOOL_TAG}/cabal-cache_x86_64_linux.tar.gz"
+        curl -Ls https://github.com/haskell-works/cabal-cache/releases/download/${CACHE_TOOL_TAG}/cabal-cache_x86_64_linux.tar.gz | tar -xvz -C /tmp/
+        sudo cp /tmp/cabal-cache /usr/local/bin/cabal-cache
+        cabal-cache version
+
+    - name: Cabal update
+      run: cabal update
+
+    - name: Cabal Configure
+      run: cabal configure
+
+    - name: Restore cabal cache
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
+        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
+        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
+      run: |
+        cabal-cache sync-from-archive \
+          --threads       "$BINARY_CACHE_THREADS" \
+          --archive-uri   "$BINARY_CACHE_URI" \
+          --region        "$BINARY_CACHE_REGION"
+
+    - name: Install dependencies
+      run: cabal build all --enable-tests --enable-benchmarks --write-ghc-environment-files=always --only-dependencies
+
+    - name: Build
+      run: cabal build all --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+
+    - name: Git clone
+      run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
+
+    - name: Run tests
+      run: cabal test cardano-cli cardano-node cardano-node-chairman --enable-tests --enable-benchmarks --write-ghc-environment-files=always --test-show-details=direct --test-options='+RTS -g1'
+
+    - name: Save cabal cache
+      if: ${{ always() }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
+        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
+        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
+        CARDANO_MAINNET_MIRROR: cardano-mainnet-mirror/epoch
+      run: |
+        cabal-cache sync-to-archive \
+          --threads       "$BINARY_CACHE_THREADS" \
+          --archive-uri   "$BINARY_CACHE_URI" \
+          --region        "$BINARY_CACHE_REGION"
