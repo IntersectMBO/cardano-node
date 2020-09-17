@@ -191,6 +191,7 @@ runTxSign (TxBodyFile txbodyFile) skFiles mNw (TxFile txFile) = do
   let (sksByron, sksShelley, scsShelley) = partitionSomeWitnesses $ map categoriseSomeWitness sks
 
   byronWitnesses <- case (sksByron, mNw) of
+                      -- Byron witnesses require the network ID.
                       ([], Nothing) -> return []
                       (_, Nothing) -> left ShelleyTxCmdMissingNetworkId
                       (_, Just nw) -> return $ map (Api.makeShelleyBootstrapWitness nw txbody) sksByron
@@ -427,31 +428,21 @@ runTxCreateWitness
   -> Maybe NetworkId
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCreateWitness (TxBodyFile txbodyFile) sKeyOrScript (Just nw) (OutputFile oFile) = do
+runTxCreateWitness (TxBodyFile txbodyFile) sKeyOrScript mbNw (OutputFile oFile) = do
   txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
               Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
   someWit <- readSomeWitness sKeyOrScript
 
-  witness <- case categoriseSomeWitness someWit of
-               AShelleyKeyWitness skShelley -> return $ makeShelleyKeyWitness txbody skShelley
-               AShelleyScriptWitness scShelley ->
-                 return $ makeShelleyScriptWitness (makeMultiSigScript scShelley)
-               AByronWitness skByron -> return $ makeShelleyBootstrapWitness nw txbody skByron
-
-  firstExceptT ShelleyTxCmdWriteFileError
-    . newExceptT
-    $ Api.writeFileTextEnvelope oFile Nothing witness
-
-runTxCreateWitness (TxBodyFile txbodyFile) sKeyOrScript Nothing (OutputFile oFile) = do
-  txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
-              Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
-  someWit <- readSomeWitness sKeyOrScript
-
-  witness <- case categoriseSomeWitness someWit of
-               AShelleyKeyWitness skShelley -> return $ makeShelleyKeyWitness txbody skShelley
-               AShelleyScriptWitness scShelley ->
-                 return $ makeShelleyScriptWitness (makeMultiSigScript scShelley)
-               AByronWitness _ -> throwError ShelleyTxCmdMissingNetworkId
+  witness <-
+    case (categoriseSomeWitness someWit, mbNw) of
+      -- Byron witnesses require the network ID.
+      (AByronWitness _, Nothing) -> throwError ShelleyTxCmdMissingNetworkId
+      (AByronWitness skByron, Just nw) ->
+        return $ makeShelleyBootstrapWitness nw txbody skByron
+      (AShelleyKeyWitness skShelley, _) ->
+        return $ makeShelleyKeyWitness txbody skShelley
+      (AShelleyScriptWitness scShelley, _) ->
+        return $ makeShelleyScriptWitness (makeMultiSigScript scShelley)
 
   firstExceptT ShelleyTxCmdWriteFileError
     . newExceptT
