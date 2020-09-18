@@ -5,6 +5,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TupleSections #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -21,13 +23,15 @@ import           Prelude (String)
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
 import           Control.Tracer
+import qualified Data.IP as IP
+import qualified Data.Map.Strict as Map
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
-import           Network.Socket (AddrInfo, Socket)
+import           Network.Socket (AddrInfo, SockAddr, Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
 #ifdef UNIX
@@ -57,15 +61,18 @@ import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESMetricsData (..), HasKESInfo (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
-import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                   DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
-                   StdRunNodeArgs (..))
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..), getNetworkMagic)
+import           Ouroboros.Consensus.Node (DiffusionArguments (..),
+                   RunNode, RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   DomainAddress, PeerSelectionTargets (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..),
+                   RelayAddress (..))
 
 import qualified Cardano.Api.Protocol.Types as Protocol
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
@@ -232,26 +239,23 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
   eitherTopology <- readTopologyFile nc
   nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
 
-  let diffusionTracers :: DiffusionTracers
-      diffusionTracers = createDiffusionTracers nodeTracers
+  let dnsLocalRoots :: [(NodeDnsAddress, PeerAdvertise)]
+      ipLocalRoots  :: [(NodeIPAddress,  PeerAdvertise)]
+      (ipLocalRoots, dnsLocalRoots) = producerAddresses nt
 
-      (ipProducerAddrs, dnsProducerAddrs) = producerAddresses nt
-
-      dnsProducers :: [DnsSubscriptionTarget]
-      dnsProducers = uncurry dnsSubscriptionTarget `map` dnsProducerAddrs
-
-      ipProducers :: IPSubscriptionTarget
-      ipProducers = ipSubscriptionTargets ipProducerAddrs
-
-      diffusionArguments :: DiffusionArguments
+      diffusionArguments :: DiffusionArguments IO
       diffusionArguments =
         createDiffusionArguments
+          nc
           publicIPv4SocketOrAddr
           publicIPv6SocketOrAddr
           localSocketOrPath
-          (ncDiffusionMode nc)
-          ipProducers
-          dnsProducers
+          ((\(a, b) -> (nodeHostIPAddressToSockAddr a, b))
+            `map` ipLocalRoots)
+          ((\(a,b) -> (nodeDnsAddressToDomainAddress a, b))
+            `map` dnsLocalRoots)
+          []
+          (useLedgerAfterSlot nt)
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
@@ -263,53 +267,46 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
     (appendName "diffusion-mode" trace)
     (meta, LogMessage . Text.pack . show . ncDiffusionMode $ nc)
   traceNamedObject
-    (appendName "dns-producers" trace)
-    (meta, LogMessage . Text.pack . show $ dnsProducers)
+    (appendName "local-roots" trace)
+    (meta, LogMessage . Text.pack . show $ dnsLocalRoots)
   traceNamedObject
-    (appendName "ip-producers" trace)
-    (meta, LogMessage . Text.pack . show $ ipProducers)
+    (appendName "local-roots" trace)
+    (meta, LogMessage . Text.pack . show $ ipLocalRoots)
+  traceNamedObject
+    (appendName "local-socket" trace)
+    (meta, LogMessage . Text.pack . show $ localSocketOrPath)
+  traceNamedObject
+    (appendName "node-to-node-versions" trace)
+    (meta, LogMessage . Text.pack . show . supportedNodeToNodeVersions $ Proxy @blk)
+  traceNamedObject
+    (appendName "node-to-client-versions" trace)
+    (meta, LogMessage . Text.pack . show . supportedNodeToClientVersions $ Proxy @blk)
 
   withShutdownHandling nc trace $ \sfds ->
-   Node.run
-     RunNodeArgs
-       { rnTraceConsensus = consensusTracers nodeTracers
-       , rnTraceNTN       = nodeToNodeTracers nodeTracers
-       , rnTraceNTC       = nodeToClientTracers nodeTracers
-       , rnProtocolInfo   = pInfo
-       , rnNodeKernelHook = \registry nodeKernel -> do
-           maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
-             (Node.getChainDB nodeKernel)
-           onKernel nodeKernel
-       }
-     StdRunNodeArgs
-       { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-       , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-       , srnChainDbValidateOverride     = ncValidateDB nc
-       , srnSnapshotInterval            = ncSnapshotInterval nc
-       , srnDatabasePath                = dbPath
-       , srnDiffusionArguments          = diffusionArguments
-       , srnDiffusionTracers            = diffusionTracers
-       , srnEnableInDevelopmentVersions = False -- TODO get this value from the node configuration
-       , srnTraceChainDB                = chainDBTracer nodeTracers
-       }
+    void $
+      Node.run
+        RunNodeArgs
+          { rnTraceConsensus = consensusTracers nodeTracers
+          , rnTraceNTN       = nodeToNodeTracers nodeTracers
+          , rnTraceNTC       = nodeToClientTracers nodeTracers
+          , rnProtocolInfo   = pInfo
+          , rnNodeKernelHook = \registry nodeKernel -> do
+              maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
+                (Node.getChainDB nodeKernel)
+              onKernel nodeKernel
+          }
+        StdRunNodeArgs
+          { srnBfcMaxConcurrencyBulkSync = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+          , srnBfcMaxConcurrencyDeadline = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+          , srnChainDbValidateOverride     = ncValidateDB nc
+          , srnSnapshotInterval            = ncSnapshotInterval nc
+          , srnDatabasePath              = dbPath
+          , srnDiffusionArguments        = diffusionArguments
+          , srnDiffusionTracers          = diffusionTracers nodeTracers
+          , srnEnableInDevelopmentVersions = False -- TODO get this value from the node configuration
+          , srnTraceChainDB              = chainDBTracer nodeTracers
+          }
  where
-  createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk
-                         -> DiffusionTracers
-  createDiffusionTracers nodeTracers' = DiffusionTracers
-    { dtIpSubscriptionTracer = ipSubscriptionTracer nodeTracers'
-    , dtDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers'
-    , dtDnsResolverTracer = dnsResolverTracer nodeTracers'
-    , dtErrorPolicyTracer = errorPolicyTracer nodeTracers'
-    , dtLocalErrorPolicyTracer = localErrorPolicyTracer nodeTracers'
-    , dtAcceptPolicyTracer = acceptPolicyTracer nodeTracers'
-    , dtMuxTracer = muxTracer nodeTracers'
-    , dtMuxLocalTracer = muxLocalTracer nodeTracers'
-    , dtHandshakeTracer = handshakeTracer nodeTracers'
-    , dtHandshakeLocalTracer = localHandshakeTracer nodeTracers'
-    , dtDiffusionInitializationTracer = diffusionInitializationTracer nodeTracers'
-    , dtLedgerPeersTracer = nullTracer -- TODO network team
-    }
-
   createTracers
     :: NodeConfiguration
     -> Trace IO Text
@@ -383,7 +380,8 @@ checkVRFFilePermissions vrfPrivKey = do
 #endif
 
 createDiffusionArguments
-  :: Maybe (SocketOrSocketInfo Socket AddrInfo)
+  :: NodeConfiguration
+  -> Maybe (SocketOrSocketInfo Socket AddrInfo)
    -- ^ Either a socket bound to IPv4 address provided by systemd or IPv4
    -- address to bind to for NodeToNode communication.
   -> Maybe (SocketOrSocketInfo Socket AddrInfo)
@@ -392,25 +390,54 @@ createDiffusionArguments
   -> Maybe (SocketOrSocketInfo Socket SocketPath)
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
   -- NodeToClient communication.
-  -> DiffusionMode
-  -> IPSubscriptionTarget
-  -> [DnsSubscriptionTarget]
-  -> DiffusionArguments
-createDiffusionArguments publicIPv4SocketsOrAddrs
+  -> [(SockAddr, PeerAdvertise)]
+  -> [(DomainAddress, PeerAdvertise)]
+  -> [DomainAddress]
+  -> UseLedgerAfter
+  -> DiffusionArguments IO
+createDiffusionArguments NodeConfiguration {
+                           ncTargetNumberOfRootPeers,
+                           ncTargetNumberOfKnownPeers,
+                           ncTargetNumberOfEstablishedPeers,
+                           ncTargetNumberOfActivePeers,
+                           ncDiffusionMode,
+                           ncProtocolIdleTimeout,
+                           ncTimeWaitTimeout
+                         }
+                         publicIPv4SocketsOrAddrs
                          publicIPv6SocketsOrAddrs
-                         mLocalSocketOrPath
-                         diffusionMode
-                         ipProducers dnsProducers
+                         localSocketOrPath
+                         daStaticLocalRootPeers
+                         daLocalRootPeers
+                         daPublicRootPeers
+                         daUseLedgerAfter
                          =
   DiffusionArguments
-    -- This is not elegant, but it will change once `coot/connection-manager` is
-    -- merged into `ouroboros-networ`.
-    { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPv4SocketsOrAddrs
-    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPv6SocketsOrAddrs
-    , daLocalAddress = mLocalSocketOrPath >>= return . fmap unSocketPath
-                                                     . eitherSocketOrSocketInfo
-    , daIpProducers  = ipProducers
-    , daDnsProducers = dnsProducers
+    { daIPv4Address = case publicIPv4SocketsOrAddrs of
+                        Just (ActualSocket socket) -> Just (Left socket)
+                        Just (SocketInfo addr)     -> Just (Right addr)
+                        Nothing                    -> Nothing
+    , daIPv6Address = case publicIPv6SocketsOrAddrs of
+                        Just (ActualSocket socket) -> Just (Left socket)
+                        Just (SocketInfo addr)     -> Just (Right addr)
+                        Nothing                    -> Nothing
+    , daLocalAddress = case localSocketOrPath of
+                        Just (ActualSocket socket)          -> Just (Left socket)
+                        Just (SocketInfo (SocketPath path)) -> Just (Right path)
+                        Nothing                             -> Nothing
+    , daReadLocalRootPeers  =
+        let a = Map.fromList
+                $  [ (RelayDomain addr, advertise)
+                   | (addr, advertise) <- daLocalRootPeers
+                   ]
+                ++ [ (RelayAddress addr port, advertise)
+                   | (Just (addr, port), advertise)
+                      <- (\(x, y) -> (IP.fromSockAddr x, y))
+                         `map` daStaticLocalRootPeers
+                   ]
+        in return [(Map.size a, a)]
+    , daReadPublicRootPeers = return (RelayDomain `map` daPublicRootPeers)
+    , daReadUseLedgerAfter  = return daUseLedgerAfter
     -- TODO: these limits are arbitrary at the moment;
     -- issue: https://github.com/input-output-hk/ouroboros-network/issues/1836
     , daAcceptedConnectionsLimit = AcceptedConnectionsLimit {
@@ -418,40 +445,38 @@ createDiffusionArguments publicIPv4SocketsOrAddrs
       , acceptedConnectionsSoftLimit = 384
       , acceptedConnectionsDelay     = 5
       }
-    , daDiffusionMode = diffusionMode
+    , daDiffusionMode = ncDiffusionMode
+    -- TODO: this should be configurable; the following gives something similar
+    -- to the current node setup for pool operators.  It's rather conservative,
+    -- just for start.
+    , daPeerSelectionTargets = PeerSelectionTargets {
+        targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
+        targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
+        targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
+        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers
+      }
+    , daProtocolIdleTimeout   = ncProtocolIdleTimeout
+    , daTimeWaitTimeout       = ncTimeWaitTimeout
     }
-  where
-    eitherSocketOrSocketInfo :: SocketOrSocketInfo a b -> Either a b
-    eitherSocketOrSocketInfo (ActualSocket a) = Left a
-    eitherSocketOrSocketInfo (SocketInfo b)   = Right b
-
-dnsSubscriptionTarget :: NodeDnsAddress -> Int -> DnsSubscriptionTarget
-dnsSubscriptionTarget na valency =
-  DnsSubscriptionTarget { dstDomain  = nodeHostDnsAddressToDomain (naHostAddress na)
-                        , dstPort    = naPort na
-                        , dstValency = valency
-                        }
-
-ipSubscriptionTargets :: [NodeIPAddress] -> IPSubscriptionTarget
-ipSubscriptionTargets ipProdAddrs =
-  let ips = nodeAddressToSockAddr <$> ipProdAddrs
-  in IPSubscriptionTarget { ispIps = ips
-                          , ispValency = length ips
-                          }
 
 
 producerAddresses
   :: NetworkTopology
-  -> ( [NodeIPAddress]
-     , [(NodeDnsAddress, Int)])
+  -> ( [(NodeIPAddress,  PeerAdvertise)]
+     , [(NodeDnsAddress, PeerAdvertise)])
 producerAddresses nt =
   case nt of
-    RealNodeTopology producers' ->
-        partitionEithers
-      . mapMaybe remoteAddressToNodeAddress
-      $ producers'
+    RealNodeTopology producers' _ -> partitionEithers $ map remoteAddressToNodeAddress producers'
     MockNodeTopology nodeSetup ->
-        partitionEithers
-      . mapMaybe remoteAddressToNodeAddress
-      . concatMap producers
-      $ nodeSetup
+      partitionEithers . map remoteAddressToNodeAddress $ concatMap producers nodeSetup
+
+useLedgerAfterSlot
+  :: NetworkTopology
+  -> UseLedgerAfter
+useLedgerAfterSlot nt =
+  case nt of
+       RealNodeTopology _ (UseLedger ul) -> ul
+       MockNodeTopology (nodeSetup:_)    ->
+           let (UseLedger ul) = useLedger nodeSetup in
+           ul
+       MockNodeTopology [] -> DontUseLedger

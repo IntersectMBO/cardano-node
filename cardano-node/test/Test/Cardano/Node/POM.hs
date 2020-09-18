@@ -64,6 +64,12 @@ testPartialYamlConfig =
     , pncValidateDB = mempty
     , pncShutdownIPC = mempty
     , pncShutdownOnSlotSynced = mempty
+    , pncProtocolIdleTimeout = mempty
+    , pncTimeWaitTimeout = mempty
+    , pncTargetNumberOfRootPeers = mempty
+    , pncTargetNumberOfKnownPeers = mempty
+    , pncTargetNumberOfEstablishedPeers = mempty
+    , pncTargetNumberOfActivePeers = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -90,6 +96,12 @@ testPartialCliConfig =
     , pncLoggingSwitch = mempty
     , pncLogMetrics = mempty
     , pncTraceConfig = mempty
+    , pncProtocolIdleTimeout = mempty
+    , pncTimeWaitTimeout = mempty
+    , pncTargetNumberOfRootPeers = mempty
+    , pncTargetNumberOfKnownPeers = mempty
+    , pncTargetNumberOfEstablishedPeers = mempty
+    , pncTargetNumberOfActivePeers = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -117,6 +129,12 @@ expectedConfig =
     , ncLoggingSwitch = True
     , ncLogMetrics = True
     , ncTraceConfig = TracingOff
+    , ncProtocolIdleTimeout = 5
+    , ncTimeWaitTimeout = 60
+    , ncTargetNumberOfRootPeers = 5
+    , ncTargetNumberOfKnownPeers = 5
+    , ncTargetNumberOfEstablishedPeers = 2
+    , ncTargetNumberOfActivePeers = 1
     }
 
 -- -----------------------------------------------------------------------------
