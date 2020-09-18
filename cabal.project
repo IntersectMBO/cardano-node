@@ -196,8 +196,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: e338f2cf8e1078fbda9555dd2b169c6737ef6774
-  --sha256: 12x81hpjyw2cpkazfalz6bw2wgr6ax7bnmlxl2rlfakkvsjfgaqd
+  tag: aaea85c346903b1c4a40bf56a77f126ef4b1ff23
+  --sha256: 1qd0vfsq6l9lqmvwpd3rq7xysc07223f47fgnzy5nlv8v5hkajlf
   subdir:
     io-sim
     io-classes
@@ -211,6 +211,7 @@ source-repository-package
     ouroboros-network-framework
     ouroboros-network-testing
     typed-protocols
+    typed-protocols-cborg
     typed-protocols-examples
 
 source-repository-package

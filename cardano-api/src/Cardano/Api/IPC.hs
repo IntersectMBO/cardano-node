@@ -199,7 +199,7 @@ connectToLocalNodeWithVersion LocalNodeConnectInfo {
                    } clients =
     Net.withIOManager $ \iomgr ->
       Net.connectTo
-        (Net.localSnocket iomgr localNodeSocketPath)
+        (Net.localSnocket iomgr)
         Net.NetworkConnectTracers {
           Net.nctMuxTracer       = nullTracer,
           Net.nctHandshakeTracer = nullTracer
