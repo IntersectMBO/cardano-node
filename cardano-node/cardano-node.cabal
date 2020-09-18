@@ -144,6 +144,7 @@ library
                       , tracer-transformers
                       , transformers
                       , transformers-except
+                      , typed-protocols
                       , unordered-containers
                       , yaml
 
