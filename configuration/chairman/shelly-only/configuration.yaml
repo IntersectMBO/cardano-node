@@ -76,11 +76,13 @@ TracingVerbosity: NormalVerbosity
 # configuration below. The logging backend is called Katip.
 setupBackends:
   - KatipBK
+# - TraceForwarderBK
 
 # This specifies the default backends that trace output is sent to if it
 # is not specifically configured to be sent to other backends.
 defaultBackends:
   - KatipBK
+# - TraceForwarderBK
 
 # EKG is a simple metrics monitoring system. Uncomment the following to enable
 # this backend and listen on the given local port and point your web browser to
@@ -251,30 +253,31 @@ options:
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
     cardano.node.BlockFetchDecision.peers:
-      - TraceForwarderBK
+      # - TraceForwarderBK
       - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
     cardano.node.ChainDB.metrics:
-      - TraceForwarderBK
+      # - TraceForwarderBK
       - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
     cardano.node.metrics:
-      - TraceForwarderBK
+      # - TraceForwarderBK
       - EKGViewBK  
       - kind: UserDefinedBK
         name: LiveViewBackend
     cardano.node.Forge.metrics:
+      # - TraceForwarderBK
       - EKGViewBK
     cardano.node.release:
-      - TraceForwarderBK
+      # - TraceForwarderBK
       - KatipBK
     cardano.node.version:
-      - TraceForwarderBK
+      # - TraceForwarderBK
       - KatipBK
     cardano.node.commit:
-      - TraceForwarderBK
+      # - TraceForwarderBK
       - KatipBK
 
   # redirects traced values to a specific scribe which is identified by its

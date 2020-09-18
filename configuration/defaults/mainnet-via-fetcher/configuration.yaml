@@ -66,11 +66,13 @@ TracingVerbosity: NormalVerbosity
 setupBackends:
   - KatipBK
 # - EKGViewBK
+# - TraceForwarderBK
 
 # This specifies the default backends that trace output is sent to if it
 # is not specifically configured to be sent to other backends.
 defaultBackends:
   - KatipBK
+# - TraceForwarderBK
 
 # EKG is a simple metrics monitoring system. Uncomment the following to listen
 # on the given local port and point your web browser to http://localhost:12788/
@@ -220,10 +222,13 @@ options:
   mapBackends:
     cardano.node.ChainDB.metrics:
       - EKGViewBK
+    # - TraceForwarderBK
     cardano.node.metrics:
       - EKGViewBK
+    # - TraceForwarderBK
     cardano.node-metrics:
       - EKGViewBK
+    # - TraceForwarderBK
 
   # This section is more expressive still, and needs to be properly documented.
   mapSubtrace:
@@ -251,3 +256,23 @@ options:
       # Change the `subtrace` value to `Neutral` in order to log
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
+
+# To enable the 'TraceForwarder' backend, uncomment the following setting. Log
+# items are then forwarded based on an entry in 'mapBackends' to a separate
+# process running a 'TraceAcceptor'.
+# Example using UNIX pipes:
+# traceForwardTo:
+#   tag: RemotePipe
+#   contents: "logs/pipe"
+# 
+# Example using Windows named pipes:
+# traceForwardTo:
+#   tag: RemotePipe
+#   contents: "\\\\.\\pipe\\acceptor"
+#
+# Example using network socket:
+# traceForwardTo:
+#   tag: RemoteSocket
+#   contents:
+#     - "127.0.0.1"
+#     - "2997"

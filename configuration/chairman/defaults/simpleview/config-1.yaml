@@ -17,6 +17,7 @@ setupBackends:
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
+# - TraceForwarderBK
 
 # if wanted, the EKG interface is listening on this port:
 #hasEKG: 12782
@@ -69,10 +70,16 @@ options:
       - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
+# Uncomment it to send 'cardano.node.ChainDB.metrics' to 'TraceForwarderBK' as well.
+#     - TraceForwarderBK
     cardano.node.metrics.Forge:
       - EKGViewBK
+# Uncomment it to send 'cardano.node.metrics.Forge' to 'TraceForwarderBK' as well.
+#     - TraceForwarderBK
     cardano.node.metrics.Mempool:
       - EKGViewBK
+# Uncomment it to send 'cardano.node.metrics.Mempool' to 'TraceForwarderBK' as well.
+#     - TraceForwarderBK
     cardano.node.metrics:
       - EKGViewBK
       - kind: UserDefinedBK
@@ -81,10 +88,14 @@ options:
 #     - TraceForwarderBK
     cardano.node.peers:
       - EKGViewBK
+# Uncomment it to send 'cardano.node.peers' to 'TraceForwarderBK' as well.
+#     - TraceForwarderBK
     cardano.node.BlockFetchDecision.peers:
       - EKGViewBK
       - kind: UserDefinedBK
         name: LiveViewBackend
+# Uncomment it to send 'cardano.node.BlockFetchDecision.peers' to 'TraceForwarderBK' as well.
+#     - TraceForwarderBK
 # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
 #    cardano.node.release:
 #      - TraceForwarderBK
@@ -93,7 +104,20 @@ options:
 #    cardano.node.commit:
 #      - TraceForwarderBK
 
-# Uncomment it to forward node's metrics to remote socket '127.0.0.1:2998'.
+# To enable the 'TraceForwarder' backend, uncomment the following setting. Log
+# items are then forwarded based on an entry in 'mapBackends' to a separate
+# process running a 'TraceAcceptor'.
+# Example using UNIX pipes:
+# traceForwardTo:
+#   tag: RemotePipe
+#   contents: "logs/pipe"
+# 
+# Example using Windows named pipes:
+# traceForwardTo:
+#   tag: RemotePipe
+#   contents: "\\\\.\\pipe\\acceptor"
+#
+# Example using network socket:
 # traceForwardTo:
 #   tag: RemoteSocket
 #   contents:
