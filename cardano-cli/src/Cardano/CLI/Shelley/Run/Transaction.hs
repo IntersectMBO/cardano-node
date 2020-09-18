@@ -404,20 +404,20 @@ partitionSomeWitnesses
      , [Api.ShelleyWitnessSigningKey]
      , [Api.MultiSigScript]
      )
-partitionSomeWitnesses [] = ([], [], [])
-partitionSomeWitnesses (wt' : rest') =
-    go wt' rest' ([], [], [])
+partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
   where
-    go wt [] (bwl, skwl, sswl) =
-      case wt of
-        AByronWitness bw -> (bwl ++ [bw], skwl, sswl)
-        AShelleyKeyWitness skw -> (bwl, skwl ++ [skw], sswl)
-        AShelleyScriptWitness ssw -> (bwl, skwl, sswl ++ [ssw])
-    go wt (next : rest) (bwl, skwl, sswl) =
-      case wt of
-        AByronWitness bw -> go next rest (bwl ++ [bw], skwl, sswl)
-        AShelleyKeyWitness skw -> go next rest (bwl, skwl ++ [skw], sswl)
-        AShelleyScriptWitness ssw -> go next rest (bwl, skwl, sswl ++ [ssw])
+    reversePartitionedWits (bw, skw, ssw) =
+      (reverse bw, reverse skw, reverse ssw)
+
+    go (byronAcc, shelleyKeyAcc, shelleyScriptAcc) byronOrShelleyWit =
+      case byronOrShelleyWit of
+        AByronWitness byronWit ->
+          (byronWit:byronAcc, shelleyKeyAcc, shelleyScriptAcc)
+        AShelleyKeyWitness shelleyKeyWit ->
+          (byronAcc, shelleyKeyWit:shelleyKeyAcc, shelleyScriptAcc)
+        AShelleyScriptWitness shelleyScriptWit ->
+          (byronAcc, shelleyKeyAcc, shelleyScriptWit:shelleyScriptAcc)
+
 
 -- | Some kind of Byron or Shelley witness.
 data ByronOrShelleyWitness
