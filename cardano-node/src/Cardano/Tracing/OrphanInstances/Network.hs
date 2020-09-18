@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -28,8 +29,9 @@ import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
+import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState,
                      TraceLabelPeer (..))
+import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
@@ -84,7 +86,13 @@ instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
 
 instance HasPrivacyAnnotation (TraceFetchClientState header)
 instance HasSeverityAnnotation (TraceFetchClientState header) where
-  getSeverityAnnotation _ = Info
+  getSeverityAnnotation BlockFetch.AddedFetchRequest {} = Info
+  getSeverityAnnotation BlockFetch.AcknowledgedFetchRequest {} = Info
+  getSeverityAnnotation BlockFetch.StartedFetchBatch {} = Info
+  getSeverityAnnotation BlockFetch.CompletedBlockFetch {} = Info
+  getSeverityAnnotation BlockFetch.CompletedFetchBatch {} = Info
+  getSeverityAnnotation BlockFetch.RejectedFetchBatch {} = Info
+  getSeverityAnnotation BlockFetch.ClientTerminating {} = Notice
 
 
 instance HasPrivacyAnnotation (TraceSendRecv a)
@@ -394,14 +402,16 @@ instance ( ConvertTxId blk
          , HasTxs blk
          )
       => ToObject (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
-  toObject MinimalVerbosity (AnyMessageAndAgency _ (MsgBlock blk)) =
+  toObject MinimalVerbosity (AnyMessageAndAgency stok (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
+             , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
              ]
 
-  toObject verb (AnyMessageAndAgency _ (MsgBlock blk)) =
+  toObject verb (AnyMessageAndAgency stok (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
+             , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
              , "txIds" .= toJSON (presentTx <$> extractTxs blk)
@@ -409,63 +419,113 @@ instance ( ConvertTxId blk
       where
         presentTx :: GenTx blk -> Value
         presentTx =  String . renderTxIdForVerbosity verb . txId
+  toObject _v (AnyMessageAndAgency stok MsgRequestRange{}) =
+    mkObject [ "kind" .= String "MsgRequestRange"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _v (AnyMessageAndAgency stok MsgStartBatch{}) =
+    mkObject [ "kind" .= String "MsgStartBatch"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
+    mkObject [ "kind" .= String "MsgNoBlocks"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _v (AnyMessageAndAgency stok MsgBatchDone{}) =
+    mkObject [ "kind" .= String "MsgBatchDone"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _v (AnyMessageAndAgency stok MsgClientDone{}) =
+    mkObject [ "kind" .= String "MsgClientDone"
+             , "agency" .= String (pack $ show stok)
+             ]
 
-  toObject _v (AnyMessageAndAgency _ MsgRequestRange{}) =
-    mkObject [ "kind" .= String "MsgRequestRange" ]
-  toObject _v (AnyMessageAndAgency _ MsgStartBatch{}) =
-    mkObject [ "kind" .= String "MsgStartBatch" ]
-  toObject _v (AnyMessageAndAgency _ MsgNoBlocks{}) =
-    mkObject [ "kind" .= String "MsgNoBlocks" ]
-  toObject _v (AnyMessageAndAgency _ MsgBatchDone{}) =
-    mkObject [ "kind" .= String "MsgBatchDone" ]
-  toObject _v (AnyMessageAndAgency _ MsgClientDone{}) =
-    mkObject [ "kind" .= String "MsgClientDone" ]
-
-instance ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgAcquire{}) =
-    mkObject [ "kind" .= String "MsgAcquire" ]
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgAcquired{}) =
-    mkObject [ "kind" .= String "MsgAcquired" ]
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgFailure{}) =
-    mkObject [ "kind" .= String "MsgFailure" ]
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgQuery{}) =
-    mkObject [ "kind" .= String "MsgQuery" ]
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgResult{}) =
-    mkObject [ "kind" .= String "MsgResult" ]
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgRelease{}) =
-    mkObject [ "kind" .= String "MsgRelease" ]
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgReAcquire{}) =
-    mkObject [ "kind" .= String "MsgReAcquire" ]
-  toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgDone{}) =
-    mkObject [ "kind" .= String "MsgDone" ]
+instance (forall result. Show (query result))
+      => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquire{}) =
+    mkObject [ "kind" .= String "MsgAcquire"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquired{}) =
+    mkObject [ "kind" .= String "MsgAcquired"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgFailure{}) =
+    mkObject [ "kind" .= String "MsgFailure"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgQuery{}) =
+    mkObject [ "kind" .= String "MsgQuery"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgResult{}) =
+    mkObject [ "kind" .= String "MsgResult"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgRelease{}) =
+    mkObject [ "kind" .= String "MsgRelease"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgReAcquire{}) =
+    mkObject [ "kind" .= String "MsgReAcquire"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgDone{}) =
+    mkObject [ "kind" .= String "MsgDone"
+             , "agency" .= String (pack $ show stok)
+             ]
 
 instance ToObject (AnyMessageAndAgency (LocalTxSubmission tx err)) where
-  toObject _verb (AnyMessageAndAgency _ LocalTxSub.MsgSubmitTx{}) =
-    mkObject [ "kind" .= String "MsgSubmitTx" ]
-  toObject _verb (AnyMessageAndAgency _ LocalTxSub.MsgAcceptTx{}) =
-    mkObject [ "kind" .= String "MsgAcceptTx" ]
-  toObject _verb (AnyMessageAndAgency _ LocalTxSub.MsgRejectTx{}) =
-    mkObject [ "kind" .= String "MsgRejectTx" ]
-  toObject _verb (AnyMessageAndAgency _ LocalTxSub.MsgDone{}) =
-    mkObject [ "kind" .= String "MsgDone" ]
+  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgSubmitTx{}) =
+    mkObject [ "kind" .= String "MsgSubmitTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgAcceptTx{}) =
+    mkObject [ "kind" .= String "MsgAcceptTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgRejectTx{}) =
+    mkObject [ "kind" .= String "MsgRejectTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgDone{}) =
+    mkObject [ "kind" .= String "MsgDone"
+             , "agency" .= String (pack $ show stok)
+             ]
 
 instance ToObject (AnyMessageAndAgency (ChainSync blk pt tip)) where
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgRequestNext{}) =
-     mkObject [ "kind" .= String "MsgRequestNext" ]
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgAwaitReply{}) =
-     mkObject [ "kind" .= String "MsgAwaitReply" ]
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgRollForward{}) =
-     mkObject [ "kind" .= String "MsgRollForward" ]
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgRollBackward{}) =
-     mkObject [ "kind" .= String "MsgRollBackward" ]
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgFindIntersect{}) =
-     mkObject [ "kind" .= String "MsgFindIntersect" ]
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgIntersectFound{}) =
-     mkObject [ "kind" .= String "MsgIntersectFound" ]
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgIntersectNotFound{}) =
-     mkObject [ "kind" .= String "MsgIntersectNotFound" ]
-   toObject _verb (AnyMessageAndAgency _ ChainSync.MsgDone{}) =
-     mkObject [ "kind" .= String "MsgDone" ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgRequestNext{}) =
+     mkObject [ "kind" .= String "MsgRequestNext"
+              , "agency" .= String (pack $ show stok)
+              ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgAwaitReply{}) =
+     mkObject [ "kind" .= String "MsgAwaitReply"
+              , "agency" .= String (pack $ show stok)
+              ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgRollForward{}) =
+     mkObject [ "kind" .= String "MsgRollForward"
+              , "agency" .= String (pack $ show stok)
+              ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgRollBackward{}) =
+     mkObject [ "kind" .= String "MsgRollBackward"
+              , "agency" .= String (pack $ show stok)
+              ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgFindIntersect{}) =
+     mkObject [ "kind" .= String "MsgFindIntersect"
+              , "agency" .= String (pack $ show stok)
+              ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgIntersectFound{}) =
+     mkObject [ "kind" .= String "MsgIntersectFound"
+              , "agency" .= String (pack $ show stok)
+              ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgIntersectNotFound{}) =
+     mkObject [ "kind" .= String "MsgIntersectNotFound"
+              , "agency" .= String (pack $ show stok)
+              ]
+   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgDone{}) =
+     mkObject [ "kind" .= String "MsgDone"
+              , "agency" .= String (pack $ show stok)
+              ]
 
 instance ToObject (FetchDecision [Point header]) where
   toObject _verb (Left decline) =
@@ -571,32 +631,39 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
 
 instance (Show txid, Show tx)
       => ToObject (AnyMessageAndAgency (TxSubmission txid tx)) where
-  toObject _verb (AnyMessageAndAgency _ (MsgRequestTxs txids)) =
+  toObject _verb (AnyMessageAndAgency stok (MsgRequestTxs txids)) =
     mkObject
       [ "kind" .= String "MsgRequestTxs"
+      , "agency" .= String (pack $ show stok)
       , "txIds" .= String (pack $ show txids)
       ]
-  toObject _verb (AnyMessageAndAgency _ (MsgReplyTxs txs)) =
+  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxs txs)) =
     mkObject
       [ "kind" .= String "MsgReplyTxs"
+      , "agency" .= String (pack $ show stok)
       , "txs" .= String (pack $ show txs)
       ]
-  toObject _verb (AnyMessageAndAgency _ (MsgRequestTxIds _ _ _)) =
+  toObject _verb (AnyMessageAndAgency stok (MsgRequestTxIds _ _ _)) =
     mkObject
       [ "kind" .= String "MsgRequestTxIds"
+      , "agency" .= String (pack $ show stok)
       ]
-  toObject _verb (AnyMessageAndAgency _ (MsgReplyTxIds _)) =
+  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxIds _)) =
     mkObject
       [ "kind" .= String "MsgReplyTxIds"
+      , "agency" .= String (pack $ show stok)
       ]
-  toObject _verb (AnyMessageAndAgency _ MsgDone) =
+  toObject _verb (AnyMessageAndAgency stok MsgDone) =
     mkObject
       [ "kind" .= String "MsgDone"
+      , "agency" .= String (pack $ show stok)
       ]
   --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
-  toObject _verb (AnyMessageAndAgency _ _) =
+  toObject _verb (AnyMessageAndAgency stok _) =
     mkObject
-      [ "kind" .= String "MsgKThxBye" ]
+      [ "kind" .= String "MsgKThxBye"
+      , "agency" .= String (pack $ show stok)
+      ]
 
 
 instance ConvertRawHash blk
@@ -619,19 +686,19 @@ instance ToObject SlotNo where
 
 
 instance ToObject (TraceFetchClientState header) where
-  toObject _verb AddedFetchRequest {} =
+  toObject _verb BlockFetch.AddedFetchRequest {} =
     mkObject [ "kind" .= String "AddedFetchRequest" ]
-  toObject _verb AcknowledgedFetchRequest {} =
+  toObject _verb BlockFetch.AcknowledgedFetchRequest {} =
     mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb CompletedBlockFetch {} =
+  toObject _verb BlockFetch.CompletedBlockFetch {} =
     mkObject [ "kind" .= String "CompletedBlockFetch" ]
-  toObject _verb CompletedFetchBatch {} =
+  toObject _verb BlockFetch.CompletedFetchBatch {} =
     mkObject [ "kind" .= String "CompletedFetchBatch" ]
-  toObject _verb StartedFetchBatch {} =
+  toObject _verb BlockFetch.StartedFetchBatch {} =
     mkObject [ "kind" .= String "StartedFetchBatch" ]
-  toObject _verb RejectedFetchBatch {} =
+  toObject _verb BlockFetch.RejectedFetchBatch {} =
     mkObject [ "kind" .= String "RejectedFetchBatch" ]
-  toObject _verb ClientTerminating {} =
+  toObject _verb BlockFetch.ClientTerminating {} =
     mkObject [ "kind" .= String "ClientTerminating" ]
 
 
