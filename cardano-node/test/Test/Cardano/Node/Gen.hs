@@ -19,7 +19,7 @@ module Test.Cardano.Node.Gen
 import           Cardano.Prelude
 
 import           Cardano.Node.Configuration.Topology (NetworkTopology (..), NodeSetup (..),
-                     RemoteAddress (..))
+                     PeerAdvertise (..), RemoteAddress (..))
 import           Cardano.Node.Types (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..),
                    NodeIPAddress, NodeIPv4Address, NodeIPv6Address)
@@ -90,5 +90,5 @@ genRemoteAddress =
   RemoteAddress
     <$> Gen.element cooking
     <*> fmap fromIntegral (Gen.word16 $ Range.linear 100 20000)
-    <*> Gen.int (Range.linear 0 100)
+    <*> Gen.element [DoAdvertisePeer, DoNotAdvertisePeer] 
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.Configuration.Topology
@@ -8,6 +9,7 @@ module Cardano.Node.Configuration.Topology
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
   , RemoteAddress(..)
+  , PeerAdvertise(..)
   , nodeAddressToSockAddr
   , readTopologyFile
   , remoteAddressToNodeAddress
@@ -26,6 +28,7 @@ import qualified Data.Text as Text
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
+import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
@@ -40,13 +43,10 @@ data RemoteAddress = RemoteAddress
   -- ^ Either a dns address or an ip address.
   , raPort      :: !PortNumber
   -- ^ Port number of the destination.
-  , raValency :: !Int
+  , raAdvertise :: !PeerAdvertise
+  -- ^ Advertise the peer through gossip protocol.
   -- ^ If a DNS address is given valency governs
-  -- to how many resolved IP addresses
-  -- should we maintain active (hot) connection;
-  -- if an IP address is given valency is used as
-  -- a Boolean value, @0@ means to ignore the address;
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Show)
 
 
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
@@ -54,15 +54,14 @@ data RemoteAddress = RemoteAddress
 --
 remoteAddressToNodeAddress
   :: RemoteAddress
-  -> Maybe (Either NodeIPAddress
-                   (NodeDnsAddress, Int))
-remoteAddressToNodeAddress (RemoteAddress _addrText _port 0) =
-    Nothing
-remoteAddressToNodeAddress (RemoteAddress addrText port valency) =
-    case readMaybe (Text.unpack addrText) of
-      Nothing   -> Just $ Right (NodeAddress (NodeHostDnsAddress addrText) port
-                                , valency)
-      Just addr -> Just $ Left  (NodeAddress (NodeHostIPAddress addr) port)
+  -> Either (NodeIPAddress,  PeerAdvertise)
+            (NodeDnsAddress, PeerAdvertise)
+remoteAddressToNodeAddress RemoteAddress { raAddress, raPort, raAdvertise } =
+    case readMaybe (Text.unpack raAddress) of
+      Nothing   -> Right ( NodeAddress (NodeHostDnsAddress raAddress) raPort
+                         , raAdvertise )
+      Just addr -> Left  ( NodeAddress (NodeHostIPAddress addr) raPort
+                         , raAdvertise )
 
 
 instance Condense RemoteAddress where
@@ -74,14 +73,16 @@ instance FromJSON RemoteAddress where
     RemoteAddress
       <$> v .: "addr"
       <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
-      <*> v .: "valency"
+      <*> (bool DoNotAdvertisePeer DoAdvertisePeer <$> v .: "advertise")
 
 instance ToJSON RemoteAddress where
   toJSON ra =
     object
       [ "addr" .= raAddress ra
       , "port" .= (fromIntegral (raPort ra) :: Int)
-      , "valency" .= raValency ra
+      , "advertise" .= case raAdvertise ra of
+                          DoNotAdvertisePeer -> False
+                          DoAdvertisePeer    -> True
       ]
 
 data NodeSetup = NodeSetup

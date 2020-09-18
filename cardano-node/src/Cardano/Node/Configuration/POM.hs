@@ -21,6 +21,7 @@ import           Prelude (String)
 
 import           Control.Monad (fail)
 import           Data.Aeson
+import           Data.Time.Clock (DiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -67,6 +68,26 @@ data NodeConfiguration
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
+
+         -- Connection Manager Timeouts
+         -- | Idleness timeout for responder protocols.  See
+         -- 'Ouroboros.Network.Diffusion.daRespondersIdleTimeout'
+         --
+       , ncRespondersIdleTimeout :: DiffTime
+         -- | Protocol idleness timeout, see
+         -- 'Ouroboros.Network.Diffusion.daProtocolIdleTimeout'.
+         --
+       , ncProtocolIdleTimeout   :: DiffTime
+         -- | Wait time timeout, see
+         -- 'Ouroboros.Netowrk.Diffusion.daWaitTimeTimeout'.
+         --
+       , ncWaitTimeTimeout       :: DiffTime
+
+         -- P2P governor targets
+       , ncTargetNumberOfRootPeers        :: Int
+       , ncTargetNumberOfKnownPeers       :: Int
+       , ncTargetNumberOfEstablishedPeers :: Int
+       , ncTargetNumberOfActivePeers      :: Int
        } deriving (Eq, Show)
 
 
@@ -101,6 +122,17 @@ data PartialNodeConfiguration
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
        , pncTraceConfig    :: !(Last TraceOptions)
+
+         -- Network timeouts
+       , pncRespondersIdleTimeout :: !(Last DiffTime)
+       , pncProtocolIdleTimeout   :: !(Last DiffTime)
+       , pncWaitTimeTimeout       :: !(Last DiffTime)
+
+         -- P2P governor targets
+       , pncTargetNumberOfRootPeers        :: !(Last Int)
+       , pncTargetNumberOfKnownPeers       :: !(Last Int)
+       , pncTargetNumberOfEstablishedPeers :: !(Last Int)
+       , pncTargetNumberOfActivePeers      :: !(Last Int)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -146,6 +178,18 @@ instance FromJSON PartialNodeConfiguration where
             Last . Just  <$> (NodeProtocolConfigurationCardano <$> parseByronProtocol v
                                                                <*> parseShelleyProtocol v
                                                                <*> parseHardForkProtocol v)
+      -- Network timeouts
+      pncRespondersIdleTimeout <- Last <$> v .:? "RespondersIdleTimeout"
+      pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
+      pncWaitTimeTimeout       <- Last <$> v .:? "WaitTimeTimeout"
+
+      -- P2P Governor parameters, with conservative defaults.
+      pncTargetNumberOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
+      pncTargetNumberOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
+      pncTargetNumberOfEstablishedPeers <- Last <$> v .:? "TargetNumberOfEstablishedPeers"
+      pncTargetNumberOfActivePeers      <- Last <$> v .:? "TargetNumberOfActivePeers"
+
+
       pure PartialNodeConfiguration {
              pncProtocolConfig = pncProtocolConfig'
            , pncSocketPath = pncSocketPath'
@@ -165,6 +209,13 @@ instance FromJSON PartialNodeConfiguration where
            , pncValidateDB = mempty
            , pncShutdownIPC = mempty
            , pncShutdownOnSlotSynced = mempty
+           , pncRespondersIdleTimeout
+           , pncProtocolIdleTimeout
+           , pncWaitTimeTimeout
+           , pncTargetNumberOfRootPeers
+           , pncTargetNumberOfKnownPeers
+           , pncTargetNumberOfEstablishedPeers
+           , pncTargetNumberOfActivePeers
            }
     where
       parseByronProtocol v = do
@@ -263,6 +314,13 @@ defaultPartialNodeConfiguration =
     , pncMaxConcurrencyDeadline = mempty
     , pncLogMetrics = mempty
     , pncTraceConfig = mempty
+    , pncRespondersIdleTimeout = Last (Just 5)
+    , pncProtocolIdleTimeout   = Last (Just 5)
+    , pncWaitTimeTimeout       = Last (Just 60)
+    , pncTargetNumberOfRootPeers        = Last (Just 5)
+    , pncTargetNumberOfKnownPeers       = Last (Just 5)
+    , pncTargetNumberOfEstablishedPeers = Last (Just 2)
+    , pncTargetNumberOfActivePeers      = Last (Just 1)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -285,6 +343,28 @@ makeNodeConfiguration pnc = do
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
+  ncTargetNumberOfRootPeers <-
+    lastToEither "Missing TargetNumberOfRootPeers"
+    $ pncTargetNumberOfRootPeers pnc
+  ncTargetNumberOfKnownPeers <-
+    lastToEither "Missing TargetNumberOfKnownPeers"
+    $ pncTargetNumberOfKnownPeers pnc
+  ncTargetNumberOfEstablishedPeers <-
+    lastToEither "Missing TargetNumberOfEstablishedPeers"
+    $ pncTargetNumberOfEstablishedPeers pnc
+  ncTargetNumberOfActivePeers <-
+    lastToEither "Missing TargetNumberOfActivePeers"
+    $ pncTargetNumberOfActivePeers pnc
+  ncRespondersIdleTimeout <-
+    lastToEither "Missing RespondersIdleTimeout"
+    $ pncRespondersIdleTimeout pnc
+  ncProtocolIdleTimeout <-
+    lastToEither "Missing ProtocolIdleTimeout"
+    $ pncProtocolIdleTimeout pnc
+  ncWaitTimeTimeout <-
+    lastToEither "Missing WaitTimeTimeout"
+    $ pncWaitTimeTimeout pnc
+
   return $ NodeConfiguration
              { ncNodeIPv4Addr = getLast $ pncNodeIPv4Addr pnc
              , ncNodeIPv6Addr = getLast $ pncNodeIPv6Addr pnc
@@ -304,6 +384,13 @@ makeNodeConfiguration pnc = do
              , ncLoggingSwitch = loggingSwitch
              , ncLogMetrics = logMetrics
              , ncTraceConfig = traceConfig
+             , ncRespondersIdleTimeout
+             , ncProtocolIdleTimeout
+             , ncWaitTimeTimeout
+             , ncTargetNumberOfRootPeers
+             , ncTargetNumberOfKnownPeers
+             , ncTargetNumberOfEstablishedPeers
+             , ncTargetNumberOfActivePeers
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
