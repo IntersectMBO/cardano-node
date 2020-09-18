@@ -25,7 +25,6 @@ module Cardano.Node.Configuration.Logging
 import           Cardano.Prelude hiding (trace)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Exception (IOException)
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 

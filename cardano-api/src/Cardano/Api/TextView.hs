@@ -25,7 +25,6 @@ import           Prelude (String)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import           Data.Aeson.Encode.Pretty (Config (..), defConfig, keyOrder)
 import qualified Data.ByteString.Base16 as Base16
-import           Data.ByteString.Char8 (ByteString)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 

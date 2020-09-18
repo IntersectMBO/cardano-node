@@ -24,8 +24,6 @@ module Cardano.CLI.Byron.Parsers
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
-import           Control.Applicative ((<|>))
-import           Data.Bifunctor (first, second)
 import qualified Data.ByteString.Lazy.Char8 as C8
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text

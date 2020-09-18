@@ -13,8 +13,7 @@ import           Control.Concurrent.STM
 import           Ouroboros.Consensus.Ledger.Abstract (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Network.Block (Tip)
-import           Ouroboros.Network.Protocol.ChainSync.Client (ChainSyncClient (..),
-                     ClientStIdle (..), ClientStNext (..))
+import           Ouroboros.Network.Protocol.ChainSync.Client (ClientStIdle (..), ClientStNext (..))
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 

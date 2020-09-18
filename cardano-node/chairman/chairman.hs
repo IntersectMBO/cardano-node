@@ -5,7 +5,6 @@
 
 import           Cardano.Prelude hiding (option)
 
-import           Control.Applicative (some)
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (stdoutTracer)
 

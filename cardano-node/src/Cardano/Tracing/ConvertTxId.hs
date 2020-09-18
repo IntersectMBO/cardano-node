@@ -17,7 +17,6 @@ import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers

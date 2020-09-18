@@ -28,18 +28,16 @@ import           Prelude (String, show)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Write (toLazyByteString)
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.UTF8 as UTF8
-import           Data.String (IsString, fromString)
-import           Data.Text (Text)
+import           Data.String (fromString)
 import qualified Data.Text as T
 import           Formatting (build, sformat, (%))
 
-import           System.IO (hFlush, hSetEcho, stdin, stdout)
+import           System.IO (hFlush, hSetEcho)
 
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis

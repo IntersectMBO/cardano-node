@@ -41,7 +41,6 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
-import           Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
 import qualified Shelley.Spec.Ledger.Rewards as Ledger
 import           Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..), TxOut (..))

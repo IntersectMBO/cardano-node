@@ -7,7 +7,6 @@ module Cardano.CLI.Shelley.Run.Address.Info
 import           Cardano.Api.Typed
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..))
 import           Cardano.Prelude
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
 import           Data.Aeson (ToJSON (..), object, (.=))
 import           Data.Aeson.Encode.Pretty (encodePretty)

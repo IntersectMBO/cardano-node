@@ -22,16 +22,13 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, newExceptT)
 
 import           Cardano.Api.LocalChainSync (getLocalTip)

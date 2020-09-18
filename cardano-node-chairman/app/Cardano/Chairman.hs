@@ -15,7 +15,6 @@ import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 import           Cardano.Node.Types (SocketPath (..))
 import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show)
 import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM.Strict
@@ -25,10 +24,6 @@ import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Coerce (coerce)
-import           Data.Map.Strict (Map)
-import           Data.Proxy (Proxy (..))
-import           Data.Void (Void)
-import           Network.Mux (MuxError, MuxMode (..))
 import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig, GetHeader (..), Header)
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
 import           Ouroboros.Consensus.Cardano

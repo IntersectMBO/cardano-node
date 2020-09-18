@@ -11,7 +11,6 @@ module Cardano.Node.Parsers
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
-import           Data.Maybe (fromMaybe)
 import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt

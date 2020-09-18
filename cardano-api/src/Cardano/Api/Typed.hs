@@ -329,7 +329,7 @@ import           Prelude
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
 import           Data.Kind (Constraint)
-import           Data.List as List
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
 import           Data.Proxy (Proxy (..))
@@ -378,6 +378,8 @@ import           Control.Tracer (nullTracer)
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+
+import           Data.Kind (Type)
 
 --
 -- Common types, consensus, network
@@ -542,10 +544,10 @@ class (Eq (VerificationKey keyrole),
     => Key keyrole where
 
     -- | The type of cryptographic verification key, for each key role.
-    data VerificationKey keyrole :: *
+    data VerificationKey keyrole :: Type
 
     -- | The type of cryptographic signing key, for each key role.
-    data SigningKey keyrole :: *
+    data SigningKey keyrole :: Type
 
     -- | Get the corresponding verification key from a signing key.
     getVerificationKey :: SigningKey keyrole -> VerificationKey keyrole
@@ -583,7 +585,7 @@ class CastSigningKeyRole keyroleA keyroleB where
     castSigningKey :: SigningKey keyroleA -> SigningKey keyroleB
 
 
-data family Hash keyrole :: *
+data family Hash keyrole :: Type
 
 class CastHash keyroleA keyroleB where
 
@@ -2938,7 +2940,7 @@ deserialiseAnyOfFromBech32 types bech32Str = do
       :: Text
       -> Maybe (FromSomeType SerialiseAsBech32 b)
     findForPrefix prefix =
-      find
+      List.find
         (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)
         types
 
@@ -2980,7 +2982,7 @@ instance Error Bech32DecodeError where
     Bech32UnexpectedPrefix actual permitted ->
         "Unexpected Bech32 prefix: the actual prefix is " <> show actual
      <> ", but it was expected to be "
-     <> intercalate " or " (map show (Set.toList permitted))
+     <> List.intercalate " or " (map show (Set.toList permitted))
 
     Bech32DataPartToBytesError _dataPart ->
         "There was an error in extracting the bytes from the data part of the \
@@ -3065,7 +3067,7 @@ deserialiseFromTextEnvelope ttoken te = do
     first TextView.TextViewDecodeError $
       deserialiseFromCBOR ttoken (TextView.tvRawCBOR te) --TODO: You have switched from CBOR to JSON
 
-data FromSomeType (c :: * -> Constraint) b where
+data FromSomeType (c :: Type -> Constraint) b where
      FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
 
 
@@ -3187,7 +3189,7 @@ instance HasTypeProxy a => HasTypeProxy (Hash a) where
 -- | Map the various Shelley key role types into corresponding 'Shelley.KeyRole'
 -- types.
 --
-type family ShelleyKeyRole (keyrole :: *) :: Shelley.KeyRole
+type family ShelleyKeyRole (keyrole :: Type) :: Shelley.KeyRole
 
 type instance ShelleyKeyRole PaymentKey         = Shelley.Payment
 type instance ShelleyKeyRole GenesisKey         = Shelley.Genesis

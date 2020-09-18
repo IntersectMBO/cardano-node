@@ -9,7 +9,6 @@ module Cardano.CLI.Run
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
 

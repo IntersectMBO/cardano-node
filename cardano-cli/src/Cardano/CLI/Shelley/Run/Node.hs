@@ -10,7 +10,6 @@ import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (SigningKeyDecodeError (..), readSigningKeyFileAnyOf)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 import           Cardano.Prelude
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 import           Prelude (id)
 

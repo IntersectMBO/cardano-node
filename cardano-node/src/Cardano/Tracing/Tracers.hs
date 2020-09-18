@@ -41,12 +41,11 @@ import           Control.Tracer.Transformers
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
-import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName,
-                     PrivacyAnnotation (Confidential), mkLOMeta)
+import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
 import           Cardano.BM.Internal.ElidingTracer
-import           Cardano.BM.Trace (appendName, traceNamedObject)
+import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash,

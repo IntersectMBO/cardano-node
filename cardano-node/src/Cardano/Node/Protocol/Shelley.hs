@@ -28,7 +28,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                      newExceptT)
 
@@ -37,8 +36,8 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Node (MaxMajorProtVer (..), Nonce (..),
-                     ShelleyGenesis, TPraosLeaderCredentials (..))
+import           Ouroboros.Consensus.Shelley.Node (MaxMajorProtVer (..), Nonce (..), ShelleyGenesis,
+                     TPraosLeaderCredentials (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley, TPraosCanBeLeader (..))
 
 import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
