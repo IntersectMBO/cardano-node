@@ -121,11 +121,11 @@ Copy the executables files to the `.local/bin` directory. Replace the place hold
 
     cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
 
-    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
+    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
 
 Check the version installed:
 
-    cardano-cli --version
+    cardano-cli version
 
 If you need to update to a newer version repeat this process.
 
