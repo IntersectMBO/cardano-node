@@ -43,6 +43,7 @@ module Cardano.CLI.Shelley.Commands
   , PrivKeyFile (..)
   , BlockId (..)
   , VerificationKeyOrHashOrFile (..)
+  , WitnessSigningData (..)
   ) where
 
 import           Data.Text (Text)
@@ -164,8 +165,16 @@ data TransactionCmd
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxBuildMultiSig MultiSigScriptObject (Maybe OutputFile)
-  | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
-  | TxCreateWitness TxBodyFile SigningKeyOrScriptFile (Maybe NetworkId) OutputFile
+  | TxSign
+      TxBodyFile
+      [WitnessSigningData]
+      (Maybe NetworkId)
+      TxFile
+  | TxCreateWitness
+      TxBodyFile
+      WitnessSigningData
+      (Maybe NetworkId)
+      OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
@@ -450,3 +459,16 @@ deriving instance (Show (VerificationKey keyrole), Show (Hash keyrole))
 
 deriving instance (Eq (VerificationKey keyrole), Eq (Hash keyrole))
   => Eq (VerificationKeyOrHashOrFile keyrole)
+
+-- | Data required to construct a witness.
+data WitnessSigningData
+  = KeyWitnessSigningData
+      !SigningKeyFile
+      -- ^ Path to a file that should contain a signing key.
+      !(Maybe (Address Byron))
+      -- ^ An optionally specified Byron address.
+      --
+      -- If specified, both the network ID and derivation path are extracted
+      -- from the address and used in the construction of the Byron witness.
+  | ScriptWitnessSigningData !ScriptFile
+  deriving (Eq, Show)
