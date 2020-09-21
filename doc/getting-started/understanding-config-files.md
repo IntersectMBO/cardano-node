@@ -29,87 +29,86 @@ But it is important because it is used to set:
 
 * `genDelegs`, a mapping from genesis keys to genesis delegates.
 * `initialFunds`, a mapping from the initial addresses to the initial values at those address.
-* `MaxLovelaceSupply`, the total amount of lovelaces in the blockchain.  
-* `startTime`, the time of slot zero.
+* `maxLovelaceSupply`, the total amount of lovelaces in the blockchain.  
+* `systemStart`, the time of slot zero.
 
 The `genesis.json` file looks like the one below.
 
-{
-  "activeSlotsCoeff": 0.05,
-  "protocolParams": {
-    "protocolVersion": {
-      "minor": 0,
-      "major": 2
-    },
-    "decentralisationParam": 1,
-    "eMax": 18,
-    "extraEntropy": {
-      "tag": "NeutralNonce"
-    },
-    "maxTxSize": 16384,
-    "maxBlockBodySize": 65536,
-    "maxBlockHeaderSize": 1100,
-    "minFeeA": 44,
-    "minFeeB": 155381,
-    "minUTxOValue": 1000000,
-    "poolDeposit": 500000000,
-    "minPoolCost": 340000000,
-    "keyDeposit": 2000000,
-    "nOpt": 150,
-    "rho": 0.003,
-    "tau": 0.20,
-    "a0": 0.3
-  },
-  "genDelegs": {
-    "ad5463153dc3d24b9ff133e46136028bdc1edbb897f5a7cf1b37950c": {
-      "delegate": "d9e5c76ad5ee778960804094a389f0b546b5c2b140a62f8ec43ea54d",
-      "vrf": "64fa87e8b29a5b7bfbd6795677e3e878c505bc4a3649485d366b50abadec92d7"
-    },
-    "b9547b8a57656539a8d9bc42c008e38d9c8bd9c8adbb1e73ad529497": {
-      "delegate": "855d6fc1e54274e331e34478eeac8d060b0b90c1f9e8a2b01167c048",
-      "vrf": "66d5167a1f426bd1adcc8bbf4b88c280d38c148d135cb41e3f5a39f948ad7fcc"
-    },
-    "60baee25cbc90047e83fd01e1e57dc0b06d3d0cb150d0ab40bbfead1": {
-      "delegate": "7f72a1826ae3b279782ab2bc582d0d2958de65bd86b2c4f82d8ba956",
-      "vrf": "c0546d9aa5740afd569d3c2d9c412595cd60822bb6d9a4e8ce6c43d12bd0f674"
-    },
-    "f7b341c14cd58fca4195a9b278cce1ef402dc0e06deb77e543cd1757": {
-      "delegate": "69ae12f9e45c0c9122356c8e624b1fbbed6c22a2e3b4358cf0cb5011",
-      "vrf": "6394a632af51a32768a6f12dac3485d9c0712d0b54e3f389f355385762a478f2"
-    },
-    "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
-      "delegate": "4485708022839a7b9b8b639a939c85ec0ed6999b5b6dc651b03c43f6",
-      "vrf": "aba81e764b71006c515986bf7b37a72fbb5554f78e6775f08e384dbd572a4b32"
-    },
-    "2075a095b3c844a29c24317a94a643ab8e22d54a3a3a72a420260af6": {
-      "delegate": "6535db26347283990a252313a7903a45e3526ec25ddba381c071b25b",
-      "vrf": "fcaca997b8105bd860876348fc2c6e68b13607f9bbd23515cd2193b555d267af"
-    },
-    "268cfc0b89e910ead22e0ade91493d8212f53f3e2164b2e4bef0819b": {
-      "delegate": "1d4f2e1fda43070d71bb22a5522f86943c7c18aeb4fa47a362c27e23",
-      "vrf": "63ef48bc5355f3e7973100c371d6a095251c80ceb40559f4750aa7014a6fb6db"
-    }
-  },
-  "updateQuorum": 5,
-  "networkId": "Mainnet",
-  "initialFunds": {},
-  "maxLovelaceSupply": 45000000000000000,
-  "networkMagic": 764824073,
-  "epochLength": 432000,
-  "systemStart": "2017-09-23T21:44:51Z",
-  "slotsPerKESPeriod": 129600,
-  "slotLength": 1,
-  "maxKESEvolutions": 62,
-  "securityParam": 2160
-}
+	{
+	  "activeSlotsCoeff": 0.05,
+	  "protocolParams": {
+	    "protocolVersion": {
+	      "minor": 0,
+	      "major": 2
+	    },
+	    "decentralisationParam": 1,
+	    "eMax": 18,
+	    "extraEntropy": {
+	      "tag": "NeutralNonce"
+	    },
+	    "maxTxSize": 16384,
+	    "maxBlockBodySize": 65536,
+	    "maxBlockHeaderSize": 1100,
+	    "minFeeA": 44,
+	    "minFeeB": 155381,
+	    "minUTxOValue": 1000000,
+	    "poolDeposit": 500000000,
+	    "minPoolCost": 340000000,
+	    "keyDeposit": 2000000,
+	    "nOpt": 150,
+	    "rho": 0.003,
+	    "tau": 0.20,
+	    "a0": 0.3
+	  },
+	  "genDelegs": {
+	    "ad5463153dc3d24b9ff133e46136028bdc1edbb897f5a7cf1b37950c": {
+	      "delegate": "d9e5c76ad5ee778960804094a389f0b546b5c2b140a62f8ec43ea54d",
+	      "vrf": "64fa87e8b29a5b7bfbd6795677e3e878c505bc4a3649485d366b50abadec92d7"
+	    },
+	    "b9547b8a57656539a8d9bc42c008e38d9c8bd9c8adbb1e73ad529497": {
+	      "delegate": "855d6fc1e54274e331e34478eeac8d060b0b90c1f9e8a2b01167c048",
+	      "vrf": "66d5167a1f426bd1adcc8bbf4b88c280d38c148d135cb41e3f5a39f948ad7fcc"
+	    },
+	    "60baee25cbc90047e83fd01e1e57dc0b06d3d0cb150d0ab40bbfead1": {
+	      "delegate": "7f72a1826ae3b279782ab2bc582d0d2958de65bd86b2c4f82d8ba956",
+	      "vrf": "c0546d9aa5740afd569d3c2d9c412595cd60822bb6d9a4e8ce6c43d12bd0f674"
+	    },
+	    "f7b341c14cd58fca4195a9b278cce1ef402dc0e06deb77e543cd1757": {
+	      "delegate": "69ae12f9e45c0c9122356c8e624b1fbbed6c22a2e3b4358cf0cb5011",
+	      "vrf": "6394a632af51a32768a6f12dac3485d9c0712d0b54e3f389f355385762a478f2"
+	    },
+	    "162f94554ac8c225383a2248c245659eda870eaa82d0ef25fc7dcd82": {
+	      "delegate": "4485708022839a7b9b8b639a939c85ec0ed6999b5b6dc651b03c43f6",
+	      "vrf": "aba81e764b71006c515986bf7b37a72fbb5554f78e6775f08e384dbd572a4b32"
+	    },
+	    "2075a095b3c844a29c24317a94a643ab8e22d54a3a3a72a420260af6": {
+	      "delegate": "6535db26347283990a252313a7903a45e3526ec25ddba381c071b25b",
+	      "vrf": "fcaca997b8105bd860876348fc2c6e68b13607f9bbd23515cd2193b555d267af"
+	    },
+	    "268cfc0b89e910ead22e0ade91493d8212f53f3e2164b2e4bef0819b": {
+	      "delegate": "1d4f2e1fda43070d71bb22a5522f86943c7c18aeb4fa47a362c27e23",
+	      "vrf": "63ef48bc5355f3e7973100c371d6a095251c80ceb40559f4750aa7014a6fb6db"
+	    }
+	  },
+	  "updateQuorum": 5,
+	  "networkId": "Mainnet",
+	  "initialFunds": {},
+	  "maxLovelaceSupply": 45000000000000000,
+	  "networkMagic": 764824073,
+	  "epochLength": 432000,
+	  "systemStart": "2017-09-23T21:44:51Z",
+	  "slotsPerKESPeriod": 129600,
+	  "slotLength": 1,
+	  "maxKESEvolutions": 62,
+	  "securityParam": 2160
+	}
 
-Here is a brief description of each parameter. You can learn more in the [spec](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec)
+Here is a brief description of each parameter. You can learn more in the [spec](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec).
 
 
 | PARAMETER | MEANING |
 |----------| --------- |
 | activeSlotsCoeff | The proportion of slots in which blocks should be issued. |
-| poolDecayRate | Decay rate for pool deposits |
 | poolDeposit | The amount of a pool registration deposit |
 | protocolVersion| Accepted protocol versions |
 | decentralisationParam | Percentage of blocks produced by federated nodes |
@@ -117,26 +116,19 @@ Here is a brief description of each parameter. You can learn more in the [spec](
 | minPoolCost | Stake pools cannot register/re-register their stake cost below this value |
 | minFeeA | The linear factor for the minimum fee calculation |
 | maxBlockBodySize | Maximal block body size |
-| keyMinRefund | The minimum percent refund guarantee |
-| minFeeB | The constant factor for the minimum fee calculation |
-| maxBlockBodySize | Maximal block body size |
-| keyMinRefund | The minimum percent refund guarantee |
 | minFeeB | The constant factor for the minimum fee calculation |
 | eMax | Epoch bound on pool retirement |
 | extraEntropy | Well, extra entropy =) |
-| maxBlockHeaderSize | |
+| maxBlockHeaderSize | Maximal block header size |
 | keyDeposit | The amount of a key registration deposit |
-| keyDecayRate | The deposit decay rate |
 | nOpt | Desired number of pools |
 | rho | Monetary expansion |
-|	poolMinRefund | The minimum percent pool refund |
-|	tau | Treasury expansion |
-|	a0 | Pool's pledge influence |
-| protocolMagicId | To identify the testnets |
+| tau | Treasury expansion |
+| a0 | Pool's pledge influence |
+| networkMagic | To identify the testnets |
 | systemStart | Time of slot 0 |
 | genDelegs | Mapping from genesis keys to genesis delegate |                
 | updateQuorum | Determines the quorum needed for votes on the protocol parameter updates |
-| maxMajorPV | Provides a mechanism for halting outdated nodes |
 | initialFunds | Mapping address to values |
 | maxLovelaceSupply | The total number of lovelace in the system, used in the reward calculation. |
 | networkMagic | To identify the testnet |
@@ -158,22 +150,21 @@ __NOTE Due to how the config.json file is generated, fields on the real file are
 
 #### Basic Node Configuration.
 
-First section relates the basic node configuration parameters. Make sure you have to `TPraos`as the protocol, the correct path to the `mainnet-shelley-genesis.json` file, `RequiresMagic`for its use in a testnet.
+First section relates the basic node configuration parameters. Make sure you have `TPraos` as the protocol, the correct path to the `mainnet-shelley-genesis.json` file, and `RequiresMagic`for its use in a testnet.
 Note that in this example we are using the SimpleView. This will send the output to `stdout`. Other option is `LiveView` which uses a terminal multiplexer to generate a fancy view. We will cover this topic later.
 
-	{
 	  "Protocol": "TPraos",
 	  "GenesisFile": "mainnet-shelley-genesis.json",
 	  "RequiresNetworkMagic": "RequiresMagic",
 
-#### Update parameteres
+#### Update parameters
 
-This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates.You just need to be aware of the latest version supported by the network. You dont need to change anything here.
+This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates. You just need to be aware of the latest version supported by the network. You dont need to change anything here.
 
 	  "ApplicationName": "cardano-sl",
 	  "ApplicationVersion": 0,
 	  "LastKnownBlockVersion-Alt": 0,
-	  "LastKnownBlockVersion-Major": 0,
+	  "LastKnownBlockVersion-Major": 2,
 	  "LastKnownBlockVersion-Minor": 0,
 
 
