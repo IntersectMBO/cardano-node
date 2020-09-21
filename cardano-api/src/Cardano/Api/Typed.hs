@@ -1620,34 +1620,10 @@ instance ToJSON MultiSigScript where
   toJSON (RequireAllOf reqScripts) =
     object [ "type" .= String "all", "scripts" .= map toJSON reqScripts ]
   toJSON (RequireMOf reqNum reqScripts) =
-    toJSONmOfnChecks reqScripts reqNum (length reqScripts)
-
-toJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> Value
-toJSONmOfnChecks keys required total
-  | total <= 0 = error $ "Please include at least one payment \
-                         \key hash in the multi-signature script: " <> show keys
-  | length keys /= total = error $ "The number of payment key hashes submitted \
-                                \does not equal total. " ++ " total: " ++ show total
-                                ++ "Number of key hashes: " ++ show (length keys)
-
-  | length keys < required = error $ "required exceeds the number of payment key \
-                                  \hashes. Number of keys: " ++ show (length keys)
-                                  ++ " required: " ++ show required
-
-  | required <= 0 = error "The required number of payment key \
-                          \hashes cannot be less than or equal to 0."
-  | required == 1 = error "required is equal to one, you should use \
-                          \the \"any\" multi-signature script"
-
-  | length keys == total = object [ "type" .= String "atLeast"
-                                  , "required" .= required
-                                  , "scripts" .= map toJSON keys
-                                  ]
-
-
-  | otherwise = error $ "Cardano.Api.Typed.toJSONmofnChecks failure occured: " ++ " required: "
-                      ++ show required ++ " total: " ++  show total
-                      ++ " number of key hashes: " ++ show (length keys)
+    object [ "type" .= String "atLeast"
+           , "required" .= reqNum
+           , "scripts" .= map toJSON reqScripts
+           ]
 
 instance FromJSON MultiSigScript where
   parseJSON = Aeson.withObject "MultiSigScript" $ \obj -> parseMultiSigScript obj
@@ -1715,26 +1691,12 @@ parseMultiSigScript hms = do anyM <- any' hms
              case toBoundedInteger sci of
                Just reqInt ->
                  do msigscripts <- gatherMultiSigScripts listVectorValue
-                    Just <$> fromJSONmOfnChecks msigscripts reqInt (Vector.length listVectorValue)
+                    return . Just $ RequireMOf reqInt msigscripts
 
                Nothing -> fail $ "Error in multi-signature \"required\" key: "
                                <> show sci <> " is not a valid Int"
           (_, _) -> return Nothing
       _ -> return Nothing
-
-
-  fromJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> Aeson.Parser MultiSigScript
-  fromJSONmOfnChecks keys required total
-    | total <= 0 = fail $ "No payment key hashes were parsed from multiscript object: " <> show keys
-    | required <= 0 = fail "The required number of payment key hashes cannot be less than or equal to 0."
-    | required == 1 = fail "required is equal to one, you should use the \"any\" multi-signature script"
-    | length keys < required = fail $ "required exceeds the number of payment key hashes. \
-                                       \Number of keys: " ++ show (length keys)
-                                     ++ " required: " ++ show required
-    | length keys == total = return $ RequireMOf required keys
-    | otherwise = fail $ "Cardano.Api.Typed.fromJSONmOfnChecks failure occured. required: "
-                        ++ show required ++ " total: " ++ show total
-                        ++ " keys: " ++ show keys
 
   convertToHash :: Text -> Aeson.Parser (Hash PaymentKey)
   convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
