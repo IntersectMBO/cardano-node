@@ -1612,8 +1612,8 @@ data MultiSigScript = RequireSignature (Hash PaymentKey)
 
 instance ToJSON MultiSigScript where
   toJSON (RequireSignature pKeyHash) =
-    object [ "paymentKeyHash" .= String (Text.decodeUtf8 . serialiseToRawBytesHex $ pKeyHash)
-           , "type" .= String "requireSignature"
+    object [ "keyHash" .= String (Text.decodeUtf8 . serialiseToRawBytesHex $ pKeyHash)
+           , "type" .= String "sig"
            ]
   toJSON (RequireAnyOf reqScripts) =
     object [ "type" .= String "any", "scripts" .= map toJSON reqScripts ]
@@ -1645,13 +1645,13 @@ parseMultiSigScript hms = do anyM <- any' hms
   payKeyHash' :: HMS.HashMap Text Value -> Aeson.Parser (Maybe MultiSigScript)
   payKeyHash' hm =
     case HMS.lookup "type" hm of
-      Just (String "requireSignature") ->
-        case HMS.lookup "paymentKeyHash" hm of
+      Just (String "sig") ->
+        case HMS.lookup "keyHash" hm of
           Just (String pkh) -> Just . RequireSignature <$> convertToHash pkh
           Just val ->
-            fail $ "\"paymentKeyHash\" value is not a payment key hash. Value: " <> show val
+            fail $ "\"keyHash\" value is not a payment key hash. Value: " <> show val
           Nothing ->
-            fail "\"paymentKeyHash\" field is empty in your multi-signature script."
+            fail "\"keyHash\" field is empty in your multi-signature script."
       _ -> return Nothing
 
   gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript]
