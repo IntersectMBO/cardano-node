@@ -436,8 +436,6 @@ pTransaction =
   asum
     [ subParser "build-raw"
         (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
-    , subParser "build-multisig"
-        (Opt.info pMultiSigBuild $ Opt.progDesc "Build a multisig script.")
     , subParser "sign"
         (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
     , subParser "witness"
@@ -483,9 +481,6 @@ pTransaction =
                                  <*> many pMetaDataFile
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
-
-  pMultiSigBuild :: Parser TransactionCmd
-  pMultiSigBuild =  TxBuildMultiSig <$> pMultiSigScriptObject <*> pMaybeOutputFile
 
   pTransactionSign  :: Parser TransactionCmd
   pTransactionSign = TxSign <$> pTxBodyFile Input
@@ -966,32 +961,6 @@ pMetaDataFile =
           <> Opt.help "Filepath of the metadata, in raw CBOR format."
           <> Opt.completer (Opt.bashCompleter "file")
           )
-
-
-pMultiSigScriptObject :: Parser MultiSigScriptObject
-pMultiSigScriptObject = pAny <|> pAll <|> pAtLeast
- where
-   pAny :: Parser MultiSigScriptObject
-   pAny = Opt.flag' () (  Opt.long "any"
-                       <> Opt.help "Build an \"any\" multi-signature script.")
-          *> (Any <$> some pPaymentVerificationKeyFile)
-
-   pAll :: Parser MultiSigScriptObject
-   pAll = Opt.flag' () (  Opt.long "all"
-                       <> Opt.help "Build an \"all\" multi-signature script.")
-          *> (All <$> some pPaymentVerificationKeyFile)
-
-   pAtLeast :: Parser MultiSigScriptObject
-   pAtLeast = Opt.flag' () (  Opt.long "at-least"
-                           <> Opt.help "Build an \"atLeast\" multi-signature script.")
-              *> (AtLeast <$> pRequired <*> some pPaymentVerificationKeyFile)
-
-   pRequired :: Parser Int
-   pRequired = Opt.option Opt.auto
-                 (  Opt.long "required"
-                 <> Opt.metavar "INT"
-                 <> Opt.help "The minimum number of signatures required."
-                 )
 
 pWithdrawal :: Parser (StakeAddress, Lovelace)
 pWithdrawal =

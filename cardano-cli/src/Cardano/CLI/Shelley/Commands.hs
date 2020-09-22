@@ -182,7 +182,6 @@ data TransactionCmd
 renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =
   case cmd of
-    TxBuildMultiSig {} -> "transaction build-multisig"
     TxBuildRaw {} -> "transaction build-raw"
     TxSign {} -> "transaction sign"
     TxCreateWitness {} -> "transaction witness"
