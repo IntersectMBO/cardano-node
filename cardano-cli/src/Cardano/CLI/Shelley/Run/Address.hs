@@ -1,9 +1,13 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Cardano.CLI.Shelley.Run.Address
-  ( ShelleyAddressCmdError
+  ( ShelleyAddressCmdError(..)
+  , SomeAddressVerificationKey(..)
+  , buildShelleyAddress
   , renderShelleyAddressCmdError
   , runAddressCmd
+  , runAddressKeyGen
+  , readAddressVerificationKeyTextOrFile
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
@@ -115,13 +119,13 @@ runAddressBuild payVkeyTextOrFile mbStkVkeyOrFile nw mOutFp = do
                 return (makeByronAddress nw vk)
 
               APaymentVerificationKey vk ->
-                buildShelleyAddress vk
+                buildShelleyAddress vk mbStkVkeyOrFile nw
 
               APaymentExtendedVerificationKey vk ->
-                buildShelleyAddress (castVerificationKey vk)
+                buildShelleyAddress (castVerificationKey vk) mbStkVkeyOrFile nw
 
               AGenesisUTxOVerificationKey vk ->
-                buildShelleyAddress (castVerificationKey vk)
+                buildShelleyAddress (castVerificationKey vk) mbStkVkeyOrFile nw
 
     let addrText = serialiseAddress addr
 
@@ -129,24 +133,28 @@ runAddressBuild payVkeyTextOrFile mbStkVkeyOrFile nw mOutFp = do
       Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath addrText
       Nothing                 -> liftIO $ Text.putStrLn        addrText
 
-  where
-    buildShelleyAddress vkey = do
-      mstakeVKey <-
-        case mbStkVkeyOrFile of
-          Nothing -> pure Nothing
-          Just stkVkeyOrFile ->
-            firstExceptT ShelleyAddressCmdReadKeyFileError $
-              fmap Just $ newExceptT $
-                readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
+buildShelleyAddress ::
+     VerificationKey PaymentKey
+  -> Maybe (VerificationKeyOrFile StakeKey)
+  -> NetworkId
+  -> ExceptT ShelleyAddressCmdError IO (Address Shelley)
+buildShelleyAddress vkey mbStkVkeyOrFile nw = do
+  mstakeVKey <-
+    case mbStkVkeyOrFile of
+      Nothing -> pure Nothing
+      Just stkVkeyOrFile ->
+        firstExceptT ShelleyAddressCmdReadKeyFileError $
+          fmap Just $ newExceptT $
+            readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
 
-      let paymentCred  = PaymentCredentialByKey (verificationKeyHash vkey)
-          stakeAddrRef = maybe NoStakeAddress
-                               (StakeAddressByValue . StakeCredentialByKey
-                                                    . verificationKeyHash)
-                               mstakeVKey
-          address      = makeShelleyAddress nw paymentCred stakeAddrRef
+  let paymentCred  = PaymentCredentialByKey (verificationKeyHash vkey)
+      stakeAddrRef = maybe NoStakeAddress
+                           (StakeAddressByValue . StakeCredentialByKey
+                                                . verificationKeyHash)
+                           mstakeVKey
+      address      = makeShelleyAddress nw paymentCred stakeAddrRef
 
-      return address
+  return address
 
 
 --
@@ -160,6 +168,7 @@ data SomeAddressVerificationKey
   | APaymentVerificationKey         (VerificationKey PaymentKey)
   | APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
   | AGenesisUTxOVerificationKey     (VerificationKey GenesisUTxOKey)
+  deriving (Show)
 
 foldSomeAddressVerificationKey :: (forall keyrole. Key keyrole =>
                                    VerificationKey keyrole -> a)

@@ -1,7 +1,11 @@
 module Cardano.CLI.Shelley.Run.Node
-  ( ShelleyNodeCmdError
+  ( ShelleyNodeCmdError(ShelleyNodeCmdReadFileError)
   , renderShelleyNodeCmdError
   , runNodeCmd
+  , runNodeIssueOpCert
+  , runNodeKeyGenCold
+  , runNodeKeyGenKES
+  , runNodeKeyGenVRF
   ) where
 
 import           Cardano.Api.TextView (TextViewDescription (..))
