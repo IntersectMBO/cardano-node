@@ -14,6 +14,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
@@ -634,6 +635,29 @@ deriving instance Show (Address Byron)
 deriving instance Eq (Address Shelley)
 deriving instance Ord (Address Shelley)
 deriving instance Show (Address Shelley)
+
+instance SerialiseAddress (Address era) => ToJSON (Address era) where
+  toJSON = Aeson.String . serialiseAddress
+
+instance FromJSON (Address Byron) where
+  parseJSON = Aeson.withText "Address" parseAddress
+    where
+      parseAddress :: Text -> Aeson.Parser (Address Byron)
+      parseAddress txt =
+        maybe
+          (fail "Invalid Byron address.")
+          pure
+          (deserialiseAddress AsByronAddress txt)
+
+instance FromJSON (Address Shelley) where
+  parseJSON = Aeson.withText "Address" parseAddress
+    where
+      parseAddress :: Text -> Aeson.Parser (Address Shelley)
+      parseAddress txt =
+        maybe
+          (fail "Invalid Shelley address.")
+          pure
+          (deserialiseAddress AsShelleyAddress txt)
 
 data StakeAddress where
 
