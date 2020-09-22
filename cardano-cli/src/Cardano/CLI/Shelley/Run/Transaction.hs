@@ -22,7 +22,7 @@ import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                     newExceptT, right)
+                     newExceptT)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR

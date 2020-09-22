@@ -433,86 +433,97 @@ pKeyCmd =
 
 pTransaction :: Parser TransactionCmd
 pTransaction =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "build-raw"
-          (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
-      , Opt.command "build-multisig"
-          (Opt.info pMultiSigBuild $ Opt.progDesc "Build a multisig script.")
-      , Opt.command "sign"
-          (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
-      , Opt.command "witness"
-          (Opt.info pTransactionCreateWitness $ Opt.progDesc "Create a transaction witness")
-      , Opt.command "sign-witness"
-          (Opt.info pTransactionAssembleTxBodyWit
-            $ Opt.progDesc "Assemble a tx body and witness(es) to form a transaction")
-      , Opt.command "submit"
-          (Opt.info pTransactionSubmit . Opt.progDesc $
-             mconcat
-               [ "Submit a transaction to the local node whose Unix domain socket "
-               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
-               ]
-            )
-      , Opt.command "calculate-min-fee"
-          (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calulate the min fee for a transaction")
-      , Opt.command "txid"
-          (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
-      ]
-  where
-    pTransactionBuild :: Parser TransactionCmd
-    pTransactionBuild = TxBuildRaw <$> some pTxIn
-                                   <*> some pTxOut
-                                   <*> pTxTTL
-                                   <*> pTxFee
-                                   <*> many pCertificateFile
-                                   <*> many pWithdrawal
-                                   <*> pTxMetadataJsonSchema
-                                   <*> many pMetaDataFile
-                                   <*> optional pUpdateProposalFile
-                                   <*> pTxBodyFile Output
+  asum
+    [ subParser "build-raw"
+        (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
+    , subParser "build-multisig"
+        (Opt.info pMultiSigBuild $ Opt.progDesc "Build a multisig script.")
+    , subParser "sign"
+        (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
+    , subParser "witness"
+        (Opt.info pTransactionCreateWitness $ Opt.progDesc "Create a transaction witness")
+    , subParser "assemble"
+        (Opt.info pTransactionAssembleTxBodyWit
+          $ Opt.progDesc "Assemble a tx body and witness(es) to form a transaction")
+    , pSignWitnessBackwardCompatible
+    , subParser "submit"
+        (Opt.info pTransactionSubmit . Opt.progDesc $
+           mconcat
+             [ "Submit a transaction to the local node whose Unix domain socket "
+             , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+             ]
+          )
+    , subParser "calculate-min-fee"
+        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calulate the min fee for a transaction")
+    , subParser "txid"
+        (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
+    ]
+ where
+  subParser :: String -> ParserInfo TransactionCmd -> Parser TransactionCmd
+  subParser name pInfo = Opt.subparser $ Opt.command name pInfo
 
-    pMultiSigBuild :: Parser TransactionCmd
-    pMultiSigBuild =  TxBuildMultiSig <$> pMultiSigScriptObject <*> pMaybeOutputFile
+  assembleInfo :: ParserInfo TransactionCmd
+  assembleInfo =
+    Opt.info pTransactionAssembleTxBodyWit
+      $ Opt.progDesc "Assemble a tx body and witness(es) to form a transaction"
 
-    pTransactionSign  :: Parser TransactionCmd
-    pTransactionSign = TxSign <$> pTxBodyFile Input
-                              <*> pSomeWitnessSigningData
-                              <*> optional pNetworkId
-                              <*> pTxFile Output
+  pSignWitnessBackwardCompatible :: Parser TransactionCmd
+  pSignWitnessBackwardCompatible =
+    Opt.subparser
+      $ Opt.command "sign-witness" assembleInfo <> Opt.internal
 
-    pTransactionCreateWitness :: Parser TransactionCmd
-    pTransactionCreateWitness =
-      TxCreateWitness
-        <$> pTxBodyFile Input
-        <*> pWitnessSigningData
-        <*> optional pNetworkId
-        <*> pOutputFile
+  pTransactionBuild :: Parser TransactionCmd
+  pTransactionBuild = TxBuildRaw <$> some pTxIn
+                                 <*> some pTxOut
+                                 <*> pTxTTL
+                                 <*> pTxFee
+                                 <*> many pCertificateFile
+                                 <*> many pWithdrawal
+                                 <*> pTxMetadataJsonSchema
+                                 <*> many pMetaDataFile
+                                 <*> optional pUpdateProposalFile
+                                 <*> pTxBodyFile Output
 
-    pTransactionAssembleTxBodyWit :: Parser TransactionCmd
-    pTransactionAssembleTxBodyWit =
-      TxAssembleTxBodyWitness
-        <$> pTxBodyFile Input
-        <*> some pWitnessFile
-        <*> pOutputFile
+  pMultiSigBuild :: Parser TransactionCmd
+  pMultiSigBuild =  TxBuildMultiSig <$> pMultiSigScriptObject <*> pMaybeOutputFile
 
-    pTransactionSubmit  :: Parser TransactionCmd
-    pTransactionSubmit = TxSubmit <$> pProtocol
-                                  <*> pNetworkId
-                                  <*> pTxSubmitFile
+  pTransactionSign  :: Parser TransactionCmd
+  pTransactionSign = TxSign <$> pTxBodyFile Input
+                            <*> pSomeWitnessSigningData
+                            <*> optional pNetworkId
+                            <*> pTxFile Output
 
-    pTransactionCalculateMinFee :: Parser TransactionCmd
-    pTransactionCalculateMinFee =
-      TxCalculateMinFee
-        <$> pTxBodyFile Input
-        <*> optional pNetworkId
-        <*> pProtocolParamsFile
-        <*> pTxInCount
-        <*> pTxOutCount
-        <*> pTxShelleyWitnessCount
-        <*> pTxByronWitnessCount
+  pTransactionCreateWitness :: Parser TransactionCmd
+  pTransactionCreateWitness = TxCreateWitness
+                                <$> pTxBodyFile Input
+                                <*> pWitnessSigningData
+                                <*> optional pNetworkId
+                                <*> pOutputFile
 
-    pTransactionId  :: Parser TransactionCmd
-    pTransactionId = TxGetTxId <$> pTxBodyFile Input
+  pTransactionAssembleTxBodyWit :: Parser TransactionCmd
+  pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
+                                    <$> pTxBodyFile Input
+                                    <*> some pWitnessFile
+                                    <*> pOutputFile
+
+  pTransactionSubmit  :: Parser TransactionCmd
+  pTransactionSubmit = TxSubmit <$> pProtocol
+                                <*> pNetworkId
+                                <*> pTxSubmitFile
+
+  pTransactionCalculateMinFee :: Parser TransactionCmd
+  pTransactionCalculateMinFee =
+    TxCalculateMinFee
+      <$> pTxBodyFile Input
+      <*> optional pNetworkId
+      <*> pProtocolParamsFile
+      <*> pTxInCount
+      <*> pTxOutCount
+      <*> pTxShelleyWitnessCount
+      <*> pTxByronWitnessCount
+
+  pTransactionId  :: Parser TransactionCmd
+  pTransactionId = TxGetTxId <$> pTxBodyFile Input
 
 
 pNodeCmd :: Parser NodeCmd

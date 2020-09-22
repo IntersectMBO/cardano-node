@@ -164,17 +164,8 @@ data TransactionCmd
       [MetaDataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
-  | TxBuildMultiSig MultiSigScriptObject (Maybe OutputFile)
-  | TxSign
-      TxBodyFile
-      [WitnessSigningData]
-      (Maybe NetworkId)
-      TxFile
-  | TxCreateWitness
-      TxBodyFile
-      WitnessSigningData
-      (Maybe NetworkId)
-      OutputFile
+  | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
+  | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
