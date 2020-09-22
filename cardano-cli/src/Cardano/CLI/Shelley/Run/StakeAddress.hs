@@ -1,7 +1,8 @@
 module Cardano.CLI.Shelley.Run.StakeAddress
-  ( ShelleyStakeAddressCmdError
+  ( ShelleyStakeAddressCmdError(ShelleyStakeAddressCmdReadFileError)
   , renderShelleyStakeAddressCmdError
   , runStakeAddressCmd
+  , runStakeAddressKeyGen
   ) where
 
 import           Cardano.Prelude

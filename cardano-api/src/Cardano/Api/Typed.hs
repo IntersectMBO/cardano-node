@@ -306,6 +306,7 @@ module Cardano.Api.Typed (
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
     toShelleyNetwork,
+    toShelleyStakeAddr,
     toNetworkMagic,
 
     Shelley.Addr(..),

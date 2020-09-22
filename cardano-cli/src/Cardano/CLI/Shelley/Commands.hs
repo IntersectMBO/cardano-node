@@ -309,6 +309,7 @@ renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
+  | GenesisCreateStaked GenesisDir Word Word Word Word (Maybe SystemStart) (Maybe Lovelace) Lovelace NetworkId
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile
@@ -323,6 +324,7 @@ renderGenesisCmd :: GenesisCmd -> Text
 renderGenesisCmd cmd =
   case cmd of
     GenesisCreate {} -> "genesis create"
+    GenesisCreateStaked {} -> "genesis create-staked"
     GenesisKeyGenGenesis {} -> "genesis key-gen-genesis"
     GenesisKeyGenDelegate {} -> "genesis key-gen-delegate"
     GenesisKeyGenUTxO {} -> "genesis key-gen-utxo"

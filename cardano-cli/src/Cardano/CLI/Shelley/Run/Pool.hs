@@ -1,5 +1,5 @@
 module Cardano.CLI.Shelley.Run.Pool
-  ( ShelleyPoolCmdError
+  ( ShelleyPoolCmdError(ShelleyPoolCmdReadFileError)
   , renderShelleyPoolCmdError
   , runPoolCmd
   ) where
