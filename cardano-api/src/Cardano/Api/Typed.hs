@@ -895,7 +895,7 @@ toShelleyStakeReference  NoStakeAddress =
 
 newtype TxId = TxId (Shelley.Hash StandardShelley ())
   deriving stock (Eq, Ord, Show)
-  deriving newtype (IsString)
+  deriving newtype (IsString, ToJSON, FromJSON)
                -- We use the Shelley representation and convert the Byron one
 
 instance HasTypeProxy TxId where
@@ -941,9 +941,23 @@ data TxIn = TxIn TxId TxIx
 deriving instance Eq TxIn
 deriving instance Show TxIn
 
+instance ToJSON TxIn where
+  toJSON (TxIn txId txIx) =
+    Aeson.object
+      [ "txId" .= toJSON txId
+      , "txIx" .= toJSON txIx
+      ]
+
+instance FromJSON TxIn where
+  parseJSON =
+    Aeson.withObject "TxIn" $ \v ->
+      TxIn
+        <$> v .: "txId"
+        <*> v .: "txIx"
+
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
-  deriving newtype (Enum)
+  deriving newtype (Enum, ToJSON, FromJSON)
 
 data TxOut era = TxOut (Address era) Lovelace
 
