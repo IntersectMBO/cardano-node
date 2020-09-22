@@ -952,8 +952,23 @@ deriving instance Eq (TxOut Shelley)
 deriving instance Show (TxOut Byron)
 deriving instance Show (TxOut Shelley)
 
+instance SerialiseAddress (Address era) => ToJSON (TxOut era) where
+  toJSON (TxOut addr amount) =
+    Aeson.object
+      [ "address" .= toJSON addr
+      , "amount" .= toJSON amount
+      ]
+
+instance FromJSON (Address era) => FromJSON (TxOut era) where
+  parseJSON =
+    Aeson.withObject "TxOut" $ \v ->
+      TxOut
+        <$> v .: "address"
+        <*> v .: "amount"
+
 newtype Lovelace = Lovelace Integer
   deriving (Eq, Ord, Enum, Show)
+  deriving newtype (ToJSON, FromJSON)
 
 
 toByronTxIn  :: TxIn -> Byron.TxIn
