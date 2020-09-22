@@ -9,11 +9,11 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
@@ -96,10 +96,10 @@ module Cardano.Api.Typed (
     Lovelace(..),
     makeByronTransaction,
     makeShelleyTransaction,
-    SlotNo,
+    SlotNo(..),
     TxExtraContent(..),
     txExtraContentEmpty,
-    Certificate,
+    Certificate(..),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -126,7 +126,7 @@ module Cardano.Api.Typed (
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
-    TxMetadata (TxMetadata),
+    TxMetadata (TxMetadata, TxMetadataShelley),
     TxMetadataValue(..),
     makeTransactionMetadata,
 
@@ -155,7 +155,7 @@ module Cardano.Api.Typed (
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
-    Script,
+    Script(..),
 
     -- ** Script addresses
     -- | Making addresses from scripts.
@@ -293,9 +293,9 @@ module Cardano.Api.Typed (
     makeGenesisKeyDelegationCertificate,
 
     -- ** Protocol parameter updates
-    UpdateProposal,
+    UpdateProposal(..),
     ProtocolParametersUpdate(..),
-    EpochNo,
+    EpochNo(..),
     NetworkMagic(..),
     makeShelleyUpdateProposal,
 
@@ -306,6 +306,21 @@ module Cardano.Api.Typed (
     toByronRequiresNetworkMagic,
     toShelleyNetwork,
     toNetworkMagic,
+
+    Shelley.Addr(..),
+    Shelley.Coin(..),
+    EpochSize(..),
+    Shelley.GenDelegPair(..),
+    Shelley.KeyRole (..),
+    Shelley.KeyHash(..),
+    Shelley.PParams'(..),
+    Shelley.PParamsUpdate,
+    Shelley.VerKeyVRF,
+    StandardShelley,
+    Shelley.emptyPParams,
+    Shelley.truncateUnitInterval,
+    emptyGenesisStaking,
+    secondsToNominalDiffTime
   ) where
 
 import           Prelude
@@ -340,9 +355,9 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 
+import qualified Data.Map.Lazy as Map.Lazy
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Map.Lazy as Map.Lazy
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.Vector (Vector)
@@ -373,7 +388,7 @@ import qualified Cardano.Prelude as CBOR (cborError)
 import qualified Shelley.Spec.Ledger.Serialization as CBOR (CBORGroup (..), decodeNullMaybe,
                      encodeNullMaybe)
 
-import           Cardano.Slotting.Slot (EpochNo, SlotNo)
+import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
 import           Ouroboros.Network.Block (Point, Tip)
@@ -396,6 +411,8 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToCli
                      SupportedNetworkProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..))
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
+import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
+import           Ouroboros.Consensus.Util.Time (secondsToNominalDiffTime)
 
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
