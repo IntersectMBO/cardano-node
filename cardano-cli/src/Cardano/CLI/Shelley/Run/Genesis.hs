@@ -420,14 +420,28 @@ runGenesisCreateStaked (GenesisDir rootdir)
 createDelegateKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
 createDelegateKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
-  let strIndex = show index
   runGenesisKeyGenDelegate
         (VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".vkey")
-        (SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".skey")
-        (OpCertCounterFile $ dir </> "delegate" ++ strIndex ++ ".counter")
+        coldSK
+        opCertCtr
   runGenesisKeyGenDelegateVRF
         (VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".vrf.vkey")
         (SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
+  firstExceptT ShelleyGenesisCmdNodeCmdError $ do
+    runNodeKeyGenKES
+        kesVK
+        (SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
+    runNodeIssueOpCert
+        kesVK
+        coldSK
+        opCertCtr
+        (KESPeriod 0)
+        (OutputFile $ dir </> "opcert" ++ strIndex ++ ".cert")
+ where
+   strIndex = show index
+   kesVK = VerificationKeyFile $ dir </> "delegate" ++ strIndex ++ ".kes.vkey"
+   coldSK = SigningKeyFile $ dir </> "delegate" ++ strIndex ++ ".skey"
+   opCertCtr = OpCertCounterFile $ dir </> "delegate" ++ strIndex ++ ".counter"
 
 createGenesisKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
 createGenesisKeys dir index = do
