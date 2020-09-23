@@ -2,11 +2,13 @@ module Test.Cardano.Api.Typed.Gen
   ( genAddressByron
   , genAddressShelley
   , genByronKeyWitness
+  , genByronTxOut
   , genRequiredSig
   , genMofNRequiredSig
   , genMultiSigScript
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
+  , genShelleyTxOut
   , genShelleyWitness
   , genSigningKey
   , genStakeAddress
@@ -14,6 +16,9 @@ module Test.Cardano.Api.Typed.Gen
   , genTxShelley
   , genTxBodyByron
   , genTxBodyShelley
+  , genTxId
+  , genTxIn
+  , genTxIndex
   , genVerificationKey
   ) where
 
