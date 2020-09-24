@@ -40,6 +40,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
@@ -417,6 +418,8 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
           H.cat $ logDir </> node <> ".stdout.log"
           H.cat $ logDir </> node <> ".stderr.log"
         H.failure
+
+  forever $ H.threadDelay 1000000000
 
 tests :: IO Bool
 tests = H.checkParallel $$discover
