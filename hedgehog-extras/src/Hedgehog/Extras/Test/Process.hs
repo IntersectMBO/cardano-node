@@ -48,7 +48,16 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.Exit as IO
+import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
+
+planJsonFile :: String
+planJsonFile = IO.unsafePerformIO $ do
+  maybeBuildDir <- liftIO $ IO.lookupEnv "CABAL_BUILDDIR"
+  case maybeBuildDir of
+    Just buildDir -> return buildDir
+    Nothing -> return "../dist-newstyle/cache/plan.json"
+{-# NOINLINE planJsonFile #-}
 
 -- | Create a process returning handles to stdin, stdout, and stderr as well as the process handle.
 createProcess
@@ -157,8 +166,7 @@ procDist
   -> m CreateProcess
   -- ^ Captured stdout
 procDist pkg arguments = do
-  base <- getProjectBase
-  contents <- H.evalIO . LBS.readFile $ base </> "dist-newstyle/cache/plan.json"
+  contents <- H.evalIO . LBS.readFile $ planJsonFile
 
   case eitherDecode contents of
     Right plan -> case L.filter matching (plan & installPlan) of
