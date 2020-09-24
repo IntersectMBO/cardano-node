@@ -3,11 +3,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module Test.Cardano.Node.Chairman.Shelley
-  ( tests
+  ( prepropChairman
+  , tests
   ) where
 
 import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Resource (liftResourceT, resourceForkIO)
 import           Data.Aeson
 import           Data.Bool
 import           Data.Either
@@ -29,6 +34,7 @@ import           System.IO (IO)
 import           Text.Read
 import           Text.Show
 
+import qualified Control.Concurrent.STM as STM
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -40,13 +46,13 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
+import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
 import qualified Test.Cardano.Process as H
 
@@ -65,8 +71,25 @@ rewriteGenesisSpec supply =
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
+alreadyDone :: STM.TVar Bool
+alreadyDone = IO.unsafePerformIO $ STM.newTVarIO True
+{-# NOINLINE alreadyDone #-}
+
 prop_chairman :: Property
-prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+prop_chairman = prepropChairman alreadyDone
+
+prepropChairman :: STM.TVar Bool -> Property
+prepropChairman tvDone = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+  void . liftResourceT . resourceForkIO $ do
+    liftIO $ IO.appendFile "logs.txt" "Forked"
+
+    liftIO . STM.atomically $ do
+      done <- STM.readTVar tvDone
+      unless done STM.retry
+
+    liftIO $ IO.appendFile "logs.txt" "Done"
+    return ()
+
   void $ H.note OS.os
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
@@ -376,50 +399,51 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  -- Run chairman
-  forM_ (L.take 1 allNodes) $ \node1 -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node1)
+  -- -- Run chairman
+  -- forM_ (L.take 1 allNodes) $ \node1 -> do
+  --   nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stdout.log"
+  --   nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stderr.log"
+  --   sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node1)
 
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
+  --   H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 
-    hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
+  --   hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
+  --   hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
 
-    (_, _, _, hProcess, _) <- H.createProcess =<<
-      ( H.procChairman
-        [ "--timeout", "100"
-        , "--socket-path", IO.sprocketArgumentName sprocket
-        , "--config", tempAbsPath </> "configuration.yaml"
-        , "--security-parameter", "2160"
-        , "--testnet-magic", testnetMagic
-        , "--slot-length", "20"
-        ] <&>
-        ( \cp -> cp
-          { IO.std_in = IO.CreatePipe
-          , IO.std_out = IO.UseHandle hNodeStdout
-          , IO.std_err = IO.UseHandle hNodeStderr
-          , IO.cwd = Just tempBaseAbsPath
-          }
-        )
-      )
+  --   (_, _, _, hProcess, _) <- H.createProcess =<<
+  --     ( H.procChairman
+  --       [ "--timeout", "100"
+  --       , "--socket-path", IO.sprocketArgumentName sprocket
+  --       , "--config", tempAbsPath </> "configuration.yaml"
+  --       , "--security-parameter", "2160"
+  --       , "--testnet-magic", testnetMagic
+  --       , "--slot-length", "20"
+  --       ] <&>
+  --       ( \cp -> cp
+  --         { IO.std_in = IO.CreatePipe
+  --         , IO.std_out = IO.UseHandle hNodeStdout
+  --         , IO.std_err = IO.UseHandle hNodeStderr
+  --         , IO.cwd = Just tempBaseAbsPath
+  --         }
+  --       )
+  --     )
 
-    chairmanResult <- H.waitSecondsForProcess 110 hProcess
+  --   chairmanResult <- H.waitSecondsForProcess 110 hProcess
 
-    H.cat nodeStdoutFile
-    H.cat nodeStderrFile
+  --   H.cat nodeStdoutFile
+  --   H.cat nodeStderrFile
 
-    case chairmanResult of
-      Right ExitSuccess -> return ()
-      _ -> do
-        H.note_ $ "Failed with: " <> show chairmanResult
-        forM_ allNodes $ \node -> do
-          H.cat $ logDir </> node <> ".stdout.log"
-          H.cat $ logDir </> node <> ".stderr.log"
-        H.failure
+  --   case chairmanResult of
+  --     Right ExitSuccess -> return ()
+  --     _ -> do
+  --       H.note_ $ "Failed with: " <> show chairmanResult
+  --       forM_ allNodes $ \node -> do
+  --         H.cat $ logDir </> node <> ".stdout.log"
+  --         H.cat $ logDir </> node <> ".stderr.log"
+  --       H.failure
 
-  forever $ H.threadDelay 1000000000
+
+  H.success
 
 tests :: IO Bool
 tests = H.checkParallel $$discover

@@ -63,7 +63,6 @@ library
                        Cardano.Tracing.OrphanInstances.Network
                        Cardano.Tracing.OrphanInstances.Shelley
 
-
   other-modules:       Paths_cardano_node
                        Cardano.Node.Configuration.Socket
                        Cardano.Tracing.MicroBenchmarking

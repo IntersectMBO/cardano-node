@@ -69,6 +69,7 @@ test-suite tests
                       , process
                       , random
                       , resourcet
+                      , stm
                       , temporary
                       , text
                       , time
