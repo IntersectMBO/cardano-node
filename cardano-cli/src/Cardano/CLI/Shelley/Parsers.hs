@@ -1192,22 +1192,12 @@ pVerificationKey
   => AsType keyrole
   -> Parser (VerificationKey keyrole)
 pVerificationKey asType =
-    Opt.option
-      (Opt.eitherReader deserialiseFromBech32OrHex)
-        (  Opt.long "verification-key"
-        <> Opt.metavar "STRING"
-        <> Opt.help "Verification key (Bech32 or hex-encoded)."
-        )
-  where
-    keyFormats :: NonEmpty (InputFormat (VerificationKey keyrole))
-    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
-
-    deserialiseFromBech32OrHex
-      :: String
-      -> Either String (VerificationKey keyrole)
-    deserialiseFromBech32OrHex str =
-      first (Text.unpack . renderInputDecodeError) $
-        deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
+  Opt.option
+    (readVerificationKey asType)
+      (  Opt.long "verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Verification key (Bech32 or hex-encoded)."
+      )
 
 pVerificationKeyOrFile
   :: SerialiseAsBech32 (VerificationKey keyrole)
@@ -1626,25 +1616,12 @@ pStakeVerificationKeyOrFile =
 
 pStakeVerificationKey :: Parser (VerificationKey StakeKey)
 pStakeVerificationKey =
-    Opt.option
-      (Opt.eitherReader deserialiseFromBech32OrHex)
-        (  Opt.long "stake-verification-key"
-        <> Opt.metavar "STRING"
-        <> Opt.help "Stake verification key (Bech32 or hex-encoded)."
-        )
-  where
-    asType :: AsType (VerificationKey StakeKey)
-    asType = AsVerificationKey AsStakeKey
-
-    keyFormats :: NonEmpty (InputFormat (VerificationKey StakeKey))
-    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
-
-    deserialiseFromBech32OrHex
-      :: String
-      -> Either String (VerificationKey StakeKey)
-    deserialiseFromBech32OrHex str =
-      first (Text.unpack . renderInputDecodeError) $
-        deserialiseInput asType keyFormats (BSC.pack str)
+  Opt.option
+    (readVerificationKey AsStakeKey)
+      (  Opt.long "stake-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Stake verification key (Bech32 or hex-encoded)."
+      )
 
 pStakeVerificationKeyFile :: Parser VerificationKeyFile
 pStakeVerificationKeyFile =
@@ -1705,25 +1682,12 @@ pStakePoolVerificationKeyHash =
 
 pStakePoolVerificationKey :: Parser (VerificationKey StakePoolKey)
 pStakePoolVerificationKey =
-    Opt.option
-      (Opt.eitherReader deserialiseFromBech32OrHex)
-        (  Opt.long "stake-pool-verification-key"
-        <> Opt.metavar "STRING"
-        <> Opt.help "Stake pool verification key (Bech32 or hex-encoded)."
-        )
-  where
-    asType :: AsType (VerificationKey StakePoolKey)
-    asType = AsVerificationKey AsStakePoolKey
-
-    keyFormats :: NonEmpty (InputFormat (VerificationKey StakePoolKey))
-    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
-
-    deserialiseFromBech32OrHex
-      :: String
-      -> Either String (VerificationKey StakePoolKey)
-    deserialiseFromBech32OrHex str =
-      first (Text.unpack . renderInputDecodeError) $
-        deserialiseInput asType keyFormats (BSC.pack str)
+  Opt.option
+    (readVerificationKey AsStakePoolKey)
+      (  Opt.long "stake-pool-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Stake pool verification key (Bech32 or hex-encoded)."
+      )
 
 pStakePoolVerificationKeyOrFile
   :: Parser (VerificationKeyOrFile StakePoolKey)
@@ -1764,25 +1728,12 @@ pVrfVerificationKeyHash =
 
 pVrfVerificationKey :: Parser (VerificationKey VrfKey)
 pVrfVerificationKey =
-    Opt.option
-      (Opt.eitherReader deserialiseFromBech32OrHex)
-        (  Opt.long "vrf-verification-key"
-        <> Opt.metavar "STRING"
-        <> Opt.help "VRF verification key (Bech32 or hex-encoded)."
-        )
-  where
-    asType :: AsType (VerificationKey VrfKey)
-    asType = AsVerificationKey AsVrfKey
-
-    keyFormats :: NonEmpty (InputFormat (VerificationKey VrfKey))
-    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
-
-    deserialiseFromBech32OrHex
-      :: String
-      -> Either String (VerificationKey VrfKey)
-    deserialiseFromBech32OrHex str =
-      first (Text.unpack . renderInputDecodeError) $
-        deserialiseInput asType keyFormats (BSC.pack str)
+  Opt.option
+    (readVerificationKey AsVrfKey)
+      (  Opt.long "vrf-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "VRF verification key (Bech32 or hex-encoded)."
+      )
 
 pVrfVerificationKeyOrFile :: Parser (VerificationKeyOrFile VrfKey)
 pVrfVerificationKeyOrFile =
@@ -1812,25 +1763,12 @@ pRewardAcctVerificationKeyFile =
 
 pRewardAcctVerificationKey :: Parser (VerificationKey StakeKey)
 pRewardAcctVerificationKey =
-    Opt.option
-      (Opt.eitherReader deserialiseFromBech32OrHex)
-        (  Opt.long "pool-reward-account-verification-key"
-        <> Opt.metavar "STRING"
-        <> Opt.help "Reward account stake verification key (Bech32 or hex-encoded)."
-        )
-  where
-    asType :: AsType (VerificationKey StakeKey)
-    asType = AsVerificationKey AsStakeKey
-
-    keyFormats :: NonEmpty (InputFormat (VerificationKey StakeKey))
-    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
-
-    deserialiseFromBech32OrHex
-      :: String
-      -> Either String (VerificationKey StakeKey)
-    deserialiseFromBech32OrHex str =
-      first (Text.unpack . renderInputDecodeError) $
-        deserialiseInput asType keyFormats (BSC.pack str)
+  Opt.option
+    (readVerificationKey AsStakeKey)
+      (  Opt.long "pool-reward-account-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Reward account stake verification key (Bech32 or hex-encoded)."
+      )
 
 pRewardAcctVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
 pRewardAcctVerificationKeyOrFile =
@@ -1855,25 +1793,12 @@ pPoolOwnerVerificationKeyFile =
 
 pPoolOwnerVerificationKey :: Parser (VerificationKey StakeKey)
 pPoolOwnerVerificationKey =
-    Opt.option
-      (Opt.eitherReader deserialiseFromBech32OrHex)
-        (  Opt.long "pool-owner-verification-key"
-        <> Opt.metavar "STRING"
-        <> Opt.help "Pool owner stake verification key (Bech32 or hex-encoded)."
-        )
-  where
-    asType :: AsType (VerificationKey StakeKey)
-    asType = AsVerificationKey AsStakeKey
-
-    keyFormats :: NonEmpty (InputFormat (VerificationKey StakeKey))
-    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
-
-    deserialiseFromBech32OrHex
-      :: String
-      -> Either String (VerificationKey StakeKey)
-    deserialiseFromBech32OrHex str =
-      first (Text.unpack . renderInputDecodeError) $
-        deserialiseInput asType keyFormats (BSC.pack str)
+  Opt.option
+    (readVerificationKey AsStakeKey)
+      (  Opt.long "pool-owner-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Pool owner stake verification key (Bech32 or hex-encoded)."
+      )
 
 pPoolOwnerVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
 pPoolOwnerVerificationKeyOrFile =
@@ -2297,6 +2222,24 @@ lexPlausibleAddressString =
 --------------------------------------------------------------------------------
 -- Helpers
 --------------------------------------------------------------------------------
+
+-- | Read a Bech32 or hex-encoded verification key.
+readVerificationKey
+  :: forall keyrole. SerialiseAsBech32 (VerificationKey keyrole)
+  => AsType keyrole
+  -> Opt.ReadM (VerificationKey keyrole)
+readVerificationKey asType =
+    Opt.eitherReader deserialiseFromBech32OrHex
+  where
+    keyFormats :: NonEmpty (InputFormat (VerificationKey keyrole))
+    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
+
+    deserialiseFromBech32OrHex
+      :: String
+      -> Either String (VerificationKey keyrole)
+    deserialiseFromBech32OrHex str =
+      first (Text.unpack . renderInputDecodeError) $
+        deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
 
 readOutputFormat :: Opt.ReadM OutputFormat
 readOutputFormat = do
