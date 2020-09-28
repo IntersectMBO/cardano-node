@@ -1,13 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Node.Chairman.Byron
-  ( tests
+module Spec.Chairman.Byron
+  ( hprop_chairman
   ) where
 
 import           Control.Monad
-import           Data.Bool
 import           Data.Function
 import           Data.Functor
 import           Data.Int
@@ -16,28 +14,19 @@ import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
 import           GHC.Num
-import           Hedgehog (Property, discover)
+import           Hedgehog (Property)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
-import           System.IO (IO)
 import           Text.Show
 
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.IO.File as IO
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.String as S
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Network as H
-import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified Test.Cardano.Process as H
 
 {- HLINT ignore "Redundant <&>" -}
 
@@ -46,8 +35,8 @@ rewriteConfiguration :: String -> String
 rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
-prop_chairman :: Property
-prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+hprop_chairman :: Property
+hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   void $ H.note OS.os
   let nodeCount = 3
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
@@ -132,18 +121,15 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   deadline <- H.noteShowIO $ DTC.addUTCTime 30 <$> DTC.getCurrentTime
 
-  forM_ nodeIndexes $ \i -> H.assertByDeadlineM deadline $ H.isPortOpen (3000 + i)
+  forM_ nodeIndexes $ \i -> H.assertByDeadlineIO deadline $ IO.isPortOpen (3000 + i)
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
+    H.assertByDeadlineIO deadline $ IO.doesSprocketExist sprocket
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
     nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
     H.assertByDeadlineIO deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
-
-tests :: IO Bool
-tests = H.checkParallel $$discover

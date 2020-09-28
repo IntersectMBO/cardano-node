@@ -41,6 +41,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.FilePath.Posix as FP
@@ -361,12 +362,12 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   forM_ allNodes $ \node -> do
     portString <- H.noteShowM . H.readFile $ tempAbsPath </> node </> "port"
-    H.assertByDeadlineIO deadline $ IO.isPortOpen (read portString)
+    H.assertByDeadlineM deadline $ H.isPortOpen (read portString)
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineIO deadline $ IO.doesSprocketExist sprocket
+    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
@@ -376,10 +377,10 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   H.noteShowIO_ DTC.getCurrentTime
 
   -- Run chairman
-  forM_ (L.take 1 allNodes) $ \node1 -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node1)
+  hChairmanProcesses <- forM allNodes $ \node -> do
+    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
+    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
+    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
 
     H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 
@@ -404,6 +405,13 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
         )
       )
 
+    return hProcess
+
+  -- Check for chairman success
+  forM_ (L.zip allNodes hChairmanProcesses) $ \(node, hProcess) -> do
+    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
+    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
+
     chairmanResult <- H.waitSecondsForProcess 110 hProcess
 
     H.cat nodeStdoutFile
@@ -413,9 +421,6 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
       Right ExitSuccess -> return ()
       _ -> do
         H.note_ $ "Failed with: " <> show chairmanResult
-        forM_ allNodes $ \node -> do
-          H.cat $ logDir </> node <> ".stdout.log"
-          H.cat $ logDir </> node <> ".stderr.log"
         H.failure
 
 tests :: IO Bool

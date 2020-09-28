@@ -86,7 +86,7 @@ withSnd f a = (a, f a)
 -- These were lifted from hedgehog and slightly modified
 
 propertyOnce :: H.PropertyT IO () -> H.Property
-propertyOnce =  H.withTests 1 . H.property
+propertyOnce =  H.withTests 1 . H.withShrinks 0 . H.property
 
 -- | Check for equivalence between two types and perform a file cleanup on failure.
 equivalence
