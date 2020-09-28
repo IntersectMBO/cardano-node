@@ -25,12 +25,6 @@ jobs:
         echo "BINARY_CACHE_THREADS: $BINARY_CACHE_THREADS"
         echo "BINARY_CACHE_URI: $BINARY_CACHE_URI"
 
-    - uses: msys2/setup-msys2@v2
-      if: matrix.os == 'windows-latest'
-      with:
-        update: true
-        install: autoconf
-
     - uses: actions/setup-haskell@v1
       id: setup-haskell
       with:
@@ -73,26 +67,13 @@ jobs:
             --region        "$BINARY_CACHE_REGION"
 
     - name: Select build directory
-      run: echo "::set-output name=CABAL_BUILDDIR::dist"
+      run: echo "::set-env name=CABAL_BUILDDIR::dist"
 
-    - name: Install dependencies (Posix)
-      if: matrix.os != 'windows-latest'
-      run: cabal build all --builddir dist --enable-tests --enable-benchmarks --write-ghc-environment-files=always --only-dependencies
+    - name: Install dependencies
+      run: cabal build all --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always --only-dependencies
 
-    - name: Install dependencies (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        echo "Path bash: $PATH"
-        msys2 -c 'echo "Path msys2: $PATH"'
-        msys2 -c "cabal build all --builddir dist --enable-tests --enable-benchmarks --write-ghc-environment-files=always --only-dependencies"
-
-    - name: Build (Posix)
-      if: matrix.os != 'windows-latest'
-      run: cabal build all --builddir dist --enable-tests --enable-benchmarks --write-ghc-environment-files=always
-
-    - name: Build (Windows)
-      if: matrix.os == 'windows-latest'
-      run: msys2 -c "cabal build all --builddir dist --enable-tests --enable-benchmarks --write-ghc-environment-files=always"
+    - name: Build
+      run: cabal build all --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - name: Save cabal cache
       uses: haskell-works/cabal-cache-action@v1
@@ -114,14 +95,7 @@ jobs:
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
 
     - name: Run tests
-      run: |
-        cabal test cardano-cli cardano-node cardano-node-chairman \
-          --builddir dist \
-          --enable-tests \
-          --enable-benchmarks \
-          --write-ghc-environment-files=always \
-          --test-show-details=direct \
-          --test-options='+RTS -g1'
+      run: cabal test cardano-cli cardano-node cardano-node-chairman --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always --test-show-details=direct --test-options='+RTS -g1'
 
     - name: Save cabal cache
       uses: haskell-works/cabal-cache-action@v1
