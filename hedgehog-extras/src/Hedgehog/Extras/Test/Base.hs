@@ -32,7 +32,9 @@ module Hedgehog.Extras.Test.Base
   , failWithCustom
   , failMessage
 
+  , assertByDeadlineM
   , assertByDeadlineIO
+  , assertByDeadlineMFinally
   , assertByDeadlineIOFinally
   , assertM
   , assertIO
@@ -80,6 +82,8 @@ import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 
 type Integration a = H.PropertyT (ResourceT IO) a
+
+{- HLINT ignore "Reduce duplication" -}
 
 -- | Run a property with only one test.  This is intended for allowing hedgehog
 -- to run unit tests.
@@ -269,6 +273,22 @@ assertByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
 
 -- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
 --
+-- Expiration of the deadline results in an assertion failure
+assertByDeadlineM :: (MonadTest m, MonadIO m, HasCallStack) => UTCTime -> m Bool -> m ()
+assertByDeadlineM deadline f = GHC.withFrozenCallStack $ do
+  success <- f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        assertByDeadlineM deadline f
+      else do
+        H.annotateShow currentTime
+        failMessage GHC.callStack "Condition not met by deadline"
+
+-- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
+--
 -- The action 'g' is run after expiration of the deadline, but before failure allowing for
 -- additional annotations to be presented.
 --
@@ -281,7 +301,27 @@ assertByDeadlineIOFinally deadline f g = GHC.withFrozenCallStack $ do
     if currentTime < deadline
       then do
         liftIO $ IO.threadDelay 1000000
-        assertByDeadlineIO deadline f
+        assertByDeadlineIOFinally deadline f g
+      else do
+        H.annotateShow currentTime
+        g
+        failMessage GHC.callStack "Condition not met by deadline"
+
+-- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
+--
+-- The action 'g' is run after expiration of the deadline, but before failure allowing for
+-- additional annotations to be presented.
+--
+-- Expiration of the deadline results in an assertion failure
+assertByDeadlineMFinally :: (MonadTest m, MonadIO m, HasCallStack) => UTCTime -> m Bool -> m () -> m ()
+assertByDeadlineMFinally deadline f g = GHC.withFrozenCallStack $ do
+  success <- f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        assertByDeadlineMFinally deadline f g
       else do
         H.annotateShow currentTime
         g
