@@ -2991,23 +2991,23 @@ deserialiseAnyOfFromBech32 types bech32Str = do
 data Bech32DecodeError =
 
        -- | There was an error decoding the string as Bech32.
-       Bech32DecodingError Bech32.DecodingError
+       Bech32DecodingError !Bech32.DecodingError
 
        -- | The human-readable prefix in the Bech32-encoded string is not one
        -- of the ones expected.
-     | Bech32UnexpectedPrefix Text [Text]
+     | Bech32UnexpectedPrefix !Text ![Text]
 
        -- | There was an error in extracting a 'ByteString' from the data part of
        -- the Bech32-encoded string.
-     | Bech32DataPartToBytesError Text
+     | Bech32DataPartToBytesError !Text
 
        -- | There was an error in deserialising the bytes into a value of the
        -- expected type.
-     | Bech32DeserialiseFromBytesError ByteString
+     | Bech32DeserialiseFromBytesError !ByteString
 
        -- | The human-readable prefix in the Bech32-encoded string does not
        -- correspond to the prefix that should be used for the payload value.
-     | Bech32WrongPrefix Text Text
+     | Bech32WrongPrefix !Text !Text
 
   deriving (Eq, Show)
 
