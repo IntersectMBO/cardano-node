@@ -24,7 +24,6 @@ import           Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import           Data.Maybe (maybeToList)
 import qualified Data.Text as T
 
 import qualified Cardano.Chain.Update as Byron
@@ -145,7 +144,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                                npcByronSupportedProtocolVersionAlt)
         (Byron.SoftwareVersion npcByronApplicationName
                                npcByronApplicationVersion)
-        (maybeToList byronLeaderCredentials)
+        byronLeaderCredentials
 
         -- Shelley parameters
         shelleyGenesis
@@ -153,7 +152,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         (Shelley.ProtVer npcShelleySupportedProtocolVersionMajor
                          npcShelleySupportedProtocolVersionMinor)
         (MaxMajorProtVer npcShelleyMaxSupportedProtocolVersion)
-        (maybeToList shelleyLeaderCredentials)
+        shelleyLeaderCredentials
 
         -- Hard fork parameters
         npcShelleyHardForkNotBeforeEpoch

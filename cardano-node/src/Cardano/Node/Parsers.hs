@@ -45,6 +45,7 @@ nodeRunParser = do
   shelleyKESFile  <- optional parseKesKeyFilePath
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
+  shelleyBulkCredsFile <- optional parseBulkCredsFilePath
 
   -- Node Address
   nIPv4Address <- lastOption parseHostIPv4Addr
@@ -74,6 +75,7 @@ nodeRunParser = do
              , shelleyKESFile
              , shelleyVRFFile
              , shelleyCertFile
+             , shelleyBulkCredsFile
              }
            , pncValidateDB = validate
            , pncShutdownIPC = shutdownIPC
@@ -206,6 +208,15 @@ parseOperationalCertFilePath =
     ( long "shelley-operational-certificate"
         <> metavar "FILEPATH"
         <> help "Path to the delegation certificate."
+        <> completer (bashCompleter "file")
+    )
+
+parseBulkCredsFilePath :: Parser FilePath
+parseBulkCredsFilePath =
+  strOption
+    ( long "bulk-credentials-file"
+        <> metavar "FILEPATH"
+        <> help "Path to the bulk pool credentials file."
         <> completer (bashCompleter "file")
     )
 
