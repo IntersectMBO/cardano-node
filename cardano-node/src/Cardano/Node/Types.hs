@@ -140,11 +140,12 @@ class AdjustFilePaths a where
 
 data ProtocolFilepaths =
      ProtocolFilepaths {
-       byronCertFile   :: !(Maybe FilePath)
-     , byronKeyFile    :: !(Maybe FilePath)
-     , shelleyKESFile  :: !(Maybe FilePath)
-     , shelleyVRFFile  :: !(Maybe FilePath)
-     , shelleyCertFile :: !(Maybe FilePath)
+       byronCertFile        :: !(Maybe FilePath)
+     , byronKeyFile         :: !(Maybe FilePath)
+     , shelleyKESFile       :: !(Maybe FilePath)
+     , shelleyVRFFile       :: !(Maybe FilePath)
+     , shelleyCertFile      :: !(Maybe FilePath)
+     , shelleyBulkCredsFile :: !(Maybe FilePath)
      } deriving (Eq, Show)
 
 newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)

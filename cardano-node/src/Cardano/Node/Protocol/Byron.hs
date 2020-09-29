@@ -97,7 +97,7 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
                                  npcByronGenesisFileHash
                                  npcByronReqNetworkMagic
 
-    optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
+    leaderCredentials <- readLeaderCredentials genesisConfig files
 
     return $
       Consensus.ProtocolByron
@@ -108,7 +108,7 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
                                 npcByronSupportedProtocolVersionAlt)
         (Update.SoftwareVersion npcByronApplicationName
                                 npcByronApplicationVersion)
-        optionalLeaderCredentials
+        leaderCredentials
 
 
 readGenesis :: GenesisFile
@@ -155,15 +155,15 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash ncReqNetworkMagic = do
 readLeaderCredentials :: Genesis.Config
                       -> Maybe ProtocolFilepaths
                       -> ExceptT ByronProtocolInstantiationError IO
-                                 (Maybe ByronLeaderCredentials)
-readLeaderCredentials _ Nothing = return Nothing
+                                 [ByronLeaderCredentials]
+readLeaderCredentials _ Nothing = return []
 readLeaderCredentials genesisConfig
                       (Just ProtocolFilepaths {
                         byronCertFile,
                         byronKeyFile
                       }) =
   case (byronCertFile, byronKeyFile) of
-    (Nothing, Nothing) -> pure Nothing
+    (Nothing, Nothing) -> pure []
     (Just _, Nothing) -> left SigningKeyFilepathNotSpecified
     (Nothing, Just _) -> left DelegationCertificateFilepathNotSpecified
     (Just delegCertFile, Just signingKeyFile) -> do
@@ -177,7 +177,7 @@ readLeaderCredentials genesisConfig
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 
-         bimapExceptT CredentialsError Just
+         bimapExceptT CredentialsError (:[])
            . hoistEither
            $ mkByronLeaderCredentials genesisConfig signingKey delegCert
 

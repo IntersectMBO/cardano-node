@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -137,25 +139,76 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash = do
         _ -> return ()
 
 
+data ShelleyCredentialsFiles =
+  ShelleyCredentialsFiles
+  { certFile :: !FilePath
+  , vrfFile  :: !FilePath
+  , kesFile  :: !FilePath
+  } deriving (Generic)
+
+instance FromJSON ShelleyCredentialsFiles
+
 readLeaderCredentials :: Maybe ProtocolFilepaths
                       -> ExceptT ShelleyProtocolInstantiationError IO
-                                 (Maybe (TPraosLeaderCredentials StandardShelley))
+                                 [TPraosLeaderCredentials StandardShelley]
 
--- It's OK to supply none of the files
-readLeaderCredentials Nothing = return Nothing
-readLeaderCredentials (Just ProtocolFilepaths {
-                              shelleyCertFile = Nothing,
-                              shelleyVRFFile  = Nothing,
-                              shelleyKESFile  = Nothing
-                            }) = return Nothing
+readLeaderCredentials Nothing = return []
+readLeaderCredentials (Just pfp) =
+  interpretProtocolFilepaths pfp
+  >>= mapM readShelleyCredentials
 
--- Or to supply all of the files
-readLeaderCredentials (Just ProtocolFilepaths {
-                              shelleyCertFile = Just certFile,
-                              shelleyVRFFile  = Just vrfFile,
-                              shelleyKESFile  = Just kesFile
-                            }) = do
+interpretProtocolFilepaths ::
+     ProtocolFilepaths
+  -> ExceptT ShelleyProtocolInstantiationError IO
+             [ShelleyCredentialsFiles]
+interpretProtocolFilepaths pfp =
+  -- The set of credentials files is a sum total of what comes from the CLI,
+  -- as well as what is referred to by the bulk credentials file.
+  (<>) <$> interpCLI pfp <*> interpBulkFile pfp
+ where
+   -- It's OK to supply none of the files on the CLI
+   interpCLI ProtocolFilepaths
+     { shelleyCertFile      = Nothing,
+       shelleyVRFFile       = Nothing,
+       shelleyKESFile       = Nothing
+     } = pure []
+   -- Or to supply all of the files
+   interpCLI ProtocolFilepaths
+     { shelleyCertFile      = Just certFile,
+       shelleyVRFFile       = Just vrfFile,
+       shelleyKESFile       = Just kesFile
+     } = pure [ShelleyCredentialsFiles certFile vrfFile kesFile]
+   -- But not OK to supply some of the files without the others.
+   interpCLI ProtocolFilepaths {shelleyCertFile = Nothing} =
+     throwError OCertNotSpecified
+   interpCLI ProtocolFilepaths {shelleyVRFFile = Nothing} =
+     throwError VRFKeyNotSpecified
+   interpCLI ProtocolFilepaths {shelleyKESFile = Nothing} =
+     throwError KESKeyNotSpecified
 
+   interpBulkFile ProtocolFilepaths
+     { shelleyBulkCredsFile = Nothing
+     } = pure []
+   interpBulkFile ProtocolFilepaths
+     { shelleyBulkCredsFile = Just bulkFile
+     } = readBulkFile bulkFile
+
+   readBulkFile :: FilePath
+                -> ExceptT ShelleyProtocolInstantiationError IO
+                           [ShelleyCredentialsFiles]
+   readBulkFile fp = do
+     content <- handleIOExceptT (GenesisReadError fp) $
+                  BS.readFile fp
+     firstExceptT (GenesisDecodeError fp) $ hoistEither $
+       Aeson.eitherDecodeStrict' content
+
+readShelleyCredentials ::
+     ShelleyCredentialsFiles
+  -> ExceptT ShelleyProtocolInstantiationError IO
+             (TPraosLeaderCredentials StandardShelley)
+readShelleyCredentials ShelleyCredentialsFiles
+                       { certFile, vrfFile, kesFile
+                       } = do
     OperationalCertificate opcert (StakePoolVerificationKey vkey) <-
       firstExceptT FileError . newExceptT $ readFileTextEnvelope AsOperationalCertificate certFile
     VrfSigningKey vrfKey <-
@@ -163,7 +216,7 @@ readLeaderCredentials (Just ProtocolFilepaths {
     KesSigningKey kesKey <-
       firstExceptT FileError . newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile
 
-    return $ Just TPraosLeaderCredentials {
+    return $ TPraosLeaderCredentials {
                tpraosLeaderCredentialsCanBeLeader =
                  TPraosCanBeLeader {
                    tpraosCanBeLeaderOpCert     = opcert,
@@ -172,14 +225,6 @@ readLeaderCredentials (Just ProtocolFilepaths {
                  },
                tpraosLeaderCredentialsInitSignKey = kesKey
              }
-
--- But not OK to supply some of the files without the others.
-readLeaderCredentials (Just ProtocolFilepaths {shelleyCertFile = Nothing}) =
-    throwError OCertNotSpecified
-readLeaderCredentials (Just ProtocolFilepaths {shelleyVRFFile = Nothing}) =
-    throwError VRFKeyNotSpecified
-readLeaderCredentials (Just ProtocolFilepaths {shelleyKESFile = Nothing}) =
-    throwError KESKeyNotSpecified
 
 
 ------------------------------------------------------------------------------
