@@ -360,6 +360,7 @@ import qualified Data.Map.Lazy as Map.Lazy
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -2931,7 +2932,7 @@ deserialiseFromBech32 asType bech32Str = do
     let actualPrefix      = Bech32.humanReadablePartToText prefix
         permittedPrefixes = bech32PrefixesPermitted asType
     guard (actualPrefix `elem` permittedPrefixes)
-      ?! Bech32UnexpectedPrefix actualPrefix permittedPrefixes
+      ?! Bech32UnexpectedPrefix actualPrefix (Set.fromList permittedPrefixes)
 
     payload <- Bech32.dataPartToBytes dataPart
                  ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
@@ -2980,9 +2981,9 @@ deserialiseAnyOfFromBech32 types bech32Str = do
         (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)
         types
 
-    permittedPrefixes :: [Text]
+    permittedPrefixes :: Set Text
     permittedPrefixes =
-      concat
+      Set.fromList $ concat
         [ bech32PrefixesPermitted ttoken
         | FromSomeType ttoken _f <- types
         ]
@@ -2995,7 +2996,7 @@ data Bech32DecodeError =
 
        -- | The human-readable prefix in the Bech32-encoded string is not one
        -- of the ones expected.
-     | Bech32UnexpectedPrefix !Text ![Text]
+     | Bech32UnexpectedPrefix !Text !(Set Text)
 
        -- | There was an error in extracting a 'ByteString' from the data part of
        -- the Bech32-encoded string.
@@ -3018,7 +3019,7 @@ instance Error Bech32DecodeError where
     Bech32UnexpectedPrefix actual permitted ->
         "Unexpected Bech32 prefix: the actual prefix is " <> show actual
      <> ", but it was expected to be "
-     <> intercalate " or " (map show permitted)
+     <> intercalate " or " (map show (Set.toList permitted))
 
     Bech32DataPartToBytesError _dataPart ->
         "There was an error in extracting the bytes from the data part of the \
