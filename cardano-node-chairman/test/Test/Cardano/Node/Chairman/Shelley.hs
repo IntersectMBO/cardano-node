@@ -26,7 +26,6 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (IO)
-import           Text.Read
 import           Text.Show
 
 import qualified Data.Aeson as J
@@ -360,9 +359,9 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime -- 90 seconds from now
 
-  forM_ allNodes $ \node -> do
-    portString <- H.noteShowM . H.readFile $ tempAbsPath </> node </> "port"
-    H.assertByDeadlineM deadline $ H.isPortOpen (read portString)
+  -- forM_ allNodes $ \node -> do
+  --   portString <- H.noteShowM . H.readFile $ tempAbsPath </> node </> "port"
+  --   H.assertByDeadlineM deadline $ H.isPortOpen (read portString)
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)

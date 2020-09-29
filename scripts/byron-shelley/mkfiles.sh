@@ -23,7 +23,7 @@ set -e
 # 2. Trigger transition at protocol version 2.0.0
 #    For testing purposes, we can also modify the system to do the transition to
 #    Shelley at protocol version 1.0.0, by uncommenting the line containing
-#    'TestShelleyHardForkAtEpoch' below. Then, we just need to execute step a)
+#    'TestShelleyHardForkAtVersion' below. Then, we just need to execute step a)
 #    above in order to trigger the transition.
 #    This is still close to the procedure on the mainnet, and requires less
 #    manual steps.
@@ -37,7 +37,7 @@ set -e
 # TODO: The script allows transitioning to Shelley, but not yet to register a
 # pool and delegate, so all blocks will still be produced by the BFT nodes.
 # We will need CLI support for Byron witnesses in Shelley transactions to do
-#that.
+# that.
 
 ROOT=example
 

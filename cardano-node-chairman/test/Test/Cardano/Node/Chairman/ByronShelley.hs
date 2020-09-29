@@ -604,13 +604,13 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime
 
-  forM_ allNodes $ \node -> do
-    portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
-    H.assertByDeadlineMFinally deadline (H.isPortOpen (read portString)) $ do
-      nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-      nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
-      H.cat nodeStdoutFile
-      H.cat nodeStderrFile
+  -- forM_ allNodes $ \node -> do
+  --   portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
+  --   H.assertByDeadlineMFinally deadline (H.isPortOpen (read portString)) $ do
+  --     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
+  --     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
+  --     H.cat nodeStdoutFile
+  --     H.cat nodeStderrFile
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
