@@ -64,7 +64,8 @@ jobs:
           sync-from-archive \
             --threads       "$BINARY_CACHE_THREADS" \
             --archive-uri   "$BINARY_CACHE_URI" \
-            --region        "$BINARY_CACHE_REGION"
+            --region        "$BINARY_CACHE_REGION" \
+            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
 
     - name: Select build directory
       run: echo "::set-env name=CABAL_BUILDDIR::dist"
