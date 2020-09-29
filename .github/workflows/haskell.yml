@@ -49,7 +49,7 @@ jobs:
       run: cabal update
 
     - name: Cabal Configure
-      run: cabal configure
+      run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - name: Restore cabal cache
       uses: haskell-works/cabal-cache-action@v1
