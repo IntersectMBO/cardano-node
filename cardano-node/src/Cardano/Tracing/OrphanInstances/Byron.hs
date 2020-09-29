@@ -100,10 +100,11 @@ instance ToObject UpdateState where
           [ "kind"         .= String "UpdateStablyConfirmed"
           , "endorsements" .= map (Text.pack . show) (Set.toList endorsements)
           ]
-      UpdateCandidate slot ->
+      UpdateCandidate slot epoch ->
         mkObject
-          [ "kind" .= String "UpdateCandidate"
-          , "slot" .= slot
+          [ "kind"  .= String "UpdateCandidate"
+          , "slot"  .= slot
+          , "epoch" .= epoch
           ]
       UpdateStableCandidate transitionEpoch ->
         mkObject

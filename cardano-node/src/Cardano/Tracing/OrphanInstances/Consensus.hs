@@ -393,12 +393,16 @@ instance ( ConvertRawHash blk
           "Replaying ledger from genesis"
         LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> \_o ->
           "Replaying ledger from snapshot " <> showT snap <> " at " <>
-            renderWithOrigin renderRealPointAsPhrase tip'
-        LedgerDB.ReplayedBlock pt replayTo -> \_o ->
-          "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
+            renderPoint tip'
+        LedgerDB.ReplayedBlock pt events replayTo -> \_o ->
+          mconcat
+          [ "Replayed block: slot ", showT (realPointSlot pt)
+          , " of ", showT (pointSlot replayTo)
+          , ", events: ", showT events
+          ]
       ChainDB.TraceLedgerEvent ev -> case ev of
         LedgerDB.TookSnapshot snap pt -> \_o ->
-          "Took ledger snapshot " <> showT snap <> " at " <> renderWithOrigin renderRealPointAsPhrase pt
+          "Took ledger snapshot " <> showT snap <> " at " <> renderPoint pt
         LedgerDB.DeletedSnapshot snap -> \_o ->
           "Deleted old snapshot " <> showT snap
         LedgerDB.InvalidSnapshot snap failure -> \_o ->
@@ -591,6 +595,7 @@ instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
 
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
+         , InspectLedger blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk))
       => ToObject (ChainDB.TraceEvent blk) where
@@ -684,9 +689,10 @@ instance ( ConvertRawHash blk
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show tip' ]
-    LedgerDB.ReplayedBlock pt replayTo ->
+    LedgerDB.ReplayedBlock pt events replayTo ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayedBlock"
                , "slot" .= unSlotNo (realPointSlot pt)
+               , "events" .= toJSON (show <$> events)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
   toObject MinimalVerbosity (ChainDB.TraceLedgerEvent _ev) = emptyObject -- no output
