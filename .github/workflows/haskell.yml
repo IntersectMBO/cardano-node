@@ -48,6 +48,9 @@ jobs:
     - name: Cabal update
       run: cabal update
 
+    - name: Select build directory
+      run: echo "::set-env name=CABAL_BUILDDIR::dist"
+
     - name: Cabal Configure
       run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
@@ -66,9 +69,6 @@ jobs:
             --archive-uri   "$BINARY_CACHE_URI" \
             --region        "$BINARY_CACHE_REGION" \
             --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
-
-    - name: Select build directory
-      run: echo "::set-env name=CABAL_BUILDDIR::dist"
 
     - name: Install dependencies
       run: cabal build all --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always --only-dependencies
