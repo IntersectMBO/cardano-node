@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                  cardano-node-chairman
-version:               1.19.1
+version:               1.20.0
 description:           The cardano full node
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -9,6 +9,46 @@ license:               Apache-2.0
 license-files:         LICENSE
                        NOTICE
 build-type:            Simple
+
+library
+  hs-source-dirs:       src
+  build-depends:        base >= 4.12 && < 5
+                      , aeson
+                      , async
+                      , call-stack
+                      , containers
+                      , directory
+                      , exceptions
+                      , filepath
+                      , hedgehog
+                      , hedgehog-extras
+                      , hspec
+                      , HUnit
+                      , mmorph
+                      , network
+                      , process
+                      , random
+                      , resourcet
+                      , tasty
+                      , tasty-hedgehog
+                      , temporary
+                      , text
+                      , time
+                      , unliftio
+                      , unordered-containers
+  exposed-modules:      Test.Process
+                        Test.Base
+                        Testnet.ByronShelley
+                        Testnet.Conf
+                        Testnet.Shelley
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
 
 executable cardano-node-chairman
   hs-source-dirs:      app
@@ -51,7 +91,7 @@ executable cardano-node-chairman
   else
      build-depends:    unix
 
-test-suite tests
+test-suite chairman-tests
   hs-source-dirs:       test
   main-is:              Spec.hs
   type:                 exitcode-stdio-1.0
@@ -59,6 +99,7 @@ test-suite tests
                       , aeson
                       , async
                       , call-stack
+                      , cardano-node-chairman
                       , containers
                       , directory
                       , exceptions
@@ -79,12 +120,11 @@ test-suite tests
                       , time
                       , unliftio
                       , unordered-containers
-  other-modules:        Spec.Cardano.Node.Chairman.Byron
-                        Spec.Cardano.Node.Chairman.ByronShelley
-                        Spec.Cardano.Node.Chairman.Shelley
+  other-modules:        Spec.Chairman.Chairman
+                        Spec.Chairman.Byron
+                        Spec.Chairman.ByronShelley
+                        Spec.Chairman.Shelley
                         Spec.Network
-                        Test.Process
-                        Test.Base
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -95,3 +135,47 @@ test-suite tests
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
   build-tool-depends:   tasty-discover:tasty-discover
+                      , cardano-node:cardano-node
+                      , cardano-cli:cardano-cli
+                      , cardano-node-chairman:cardano-node-chairman
+
+executable cardano-testnet
+  hs-source-dirs:       testnet
+  main-is:              Main.hs
+  build-depends:        base >= 4.12 && < 5
+                      , aeson
+                      , ansi-terminal
+                      , async
+                      , call-stack
+                      , cardano-node-chairman
+                      , containers
+                      , directory
+                      , exceptions
+                      , filepath
+                      , hedgehog
+                      , hedgehog-extras
+                      , hspec
+                      , HUnit
+                      , mmorph
+                      , network
+                      , optparse-applicative
+                      , process
+                      , random
+                      , resourcet
+                      , stm
+                      , tasty
+                      , tasty-hedgehog
+                      , temporary
+                      , text
+                      , time
+                      , unliftio
+                      , unordered-containers
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

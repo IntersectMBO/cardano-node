@@ -22,6 +22,7 @@ library
                       , hedgehog
                       , mmorph
                       , network
+                      , filepath
                       , process
                       , random
                       , resourcet

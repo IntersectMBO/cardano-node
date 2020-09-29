@@ -33,6 +33,7 @@ import           Hedgehog.Extras.Internal.Plan
 import           Hedgehog.Extras.Stock.IO.Process (TimedOut (..))
 import           Prelude (error)
 import           System.Exit (ExitCode)
+import           System.FilePath.Posix ((</>))
 import           System.IO (Handle)
 import           System.Process (CmdSpec (..), CreateProcess (..), Pid, ProcessHandle)
 import           Text.Show
@@ -44,6 +45,7 @@ import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Process as IO
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.Exit as IO
 import qualified System.Process as IO
@@ -155,7 +157,8 @@ procDist
   -> m CreateProcess
   -- ^ Captured stdout
 procDist pkg arguments = do
-  contents <- liftIO $ LBS.readFile "../dist-newstyle/cache/plan.json"
+  base <- getProjectBase
+  contents <- H.evalIO . LBS.readFile $ base </> "dist-newstyle/cache/plan.json"
 
   case eitherDecode contents of
     Right plan -> case L.filter matching (plan & installPlan) of
@@ -203,4 +206,8 @@ getProjectBase = do
   maybeNodeSrc <- liftIO $ IO.lookupEnv "CARDANO_NODE_SRC"
   case maybeNodeSrc of
     Just path -> return path
-    Nothing -> return ".."
+    Nothing -> do
+      atBase <- liftIO $ IO.doesFileExist "cabal.project"
+      if atBase
+        then return "."
+        else return ".."

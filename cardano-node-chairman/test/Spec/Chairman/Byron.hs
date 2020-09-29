@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Cardano.Node.Chairman.Byron
+module Spec.Chairman.Byron
   ( hprop_chairman
   ) where
 

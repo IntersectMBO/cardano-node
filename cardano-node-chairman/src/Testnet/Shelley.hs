@@ -1,13 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Cardano.Node.Chairman.Shelley
-  ( hprop_chairman
+module Testnet.Shelley
+  ( testnet
+  , hprop_testnet
+  , hprop_testnet_pause
   ) where
 
 import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Resource
 import           Data.Aeson
-import           Data.Either
 import           Data.Function
 import           Data.Functor
 import           Data.Int
@@ -19,10 +23,10 @@ import           Data.String (String)
 import           GHC.Float
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
 import           Text.Show
 
+import qualified Control.Concurrent as IO
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -38,12 +42,12 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
-import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Test.Base as H
 import qualified Test.Process as H
+import qualified Testnet.Conf as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -60,13 +64,9 @@ rewriteGenesisSpec supply =
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
-hprop_chairman :: H.Property
-hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
+testnet :: H.Conf -> H.Integration [String]
+testnet H.Conf {..} = do
   void $ H.note OS.os
-  tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
-  tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
-  base <- H.noteShowM H.getProjectBase
-  socketDir <- H.noteShow $ tempRelPath </> "socket"
 
   let praosNodes = ["node-praos1", "node-praos2"] :: [String]
   let praosNodesN = ["1", "2"] :: [String]
@@ -80,7 +80,6 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
   let userAddrs = ["user1"]
   let poolAddrs = ["pool-owner1"]
   let addrs = userAddrs <> poolAddrs
-  let testnetMagic = "42"
 
   H.copyFile
     (base </> "configuration/chairman/shelly-only/configuration.yaml")
@@ -89,7 +88,7 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
   -- Set up our template
   void $ H.execCli
     [ "shelley", "genesis", "create"
-    , "--testnet-magic", testnetMagic
+    , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath
     ]
 
@@ -106,7 +105,7 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
   -- Now generate for real
   void $ H.execCli
     [ "shelley", "genesis", "create"
-    , "--testnet-magic", testnetMagic
+    , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath
     , "--gen-genesis-keys", show numPraosNodes
     , "--gen-utxo-keys", "1"
@@ -201,7 +200,7 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
       [ "shelley", "address", "build"
       , "--payment-verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", testnetMagic
+      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> ".addr"
       ]
 
@@ -209,7 +208,7 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
     void $ H.execCli
       [ "shelley", "stake-address", "build"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", testnetMagic
+      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.addr"
       ]
 
@@ -243,7 +242,7 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
   forM_ poolNodes $ \node -> do
     void $ H.execCli
       [ "shelley", "stake-pool", "registration-certificate"
-      , "--testnet-magic", testnetMagic
+      , "--testnet-magic", show @Int testnetMagic
       , "--pool-pledge", "0"
       , "--pool-cost", "0"
       , "--pool-margin", "0"
@@ -268,7 +267,7 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
   --  4. delegate from the user1 stake address to the stake pool
   genesisTxinResult <- H.noteShowM $ S.strip <$> H.execCli
     [ "shelley", "genesis", "initial-txin"
-    , "--testnet-magic", testnetMagic
+    , "--testnet-magic", show @Int testnetMagic
     , "--verification-key-file", tempAbsPath </> "utxo-keys/utxo1.vkey"
     ]
 
@@ -299,7 +298,7 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
     , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
     , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
     , "--signing-key-file", tempAbsPath </> "node-pool1/operator.skey"
-    , "--testnet-magic", testnetMagic
+    , "--testnet-magic", show @Int testnetMagic
     , "--tx-body-file", tempAbsPath </> "tx1.txbody"
     , "--out-file", tempAbsPath </> "tx1.tx"
     ]
@@ -309,8 +308,6 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
 
   --------------------------------
   -- Launch cluster of three nodes
-
-  logDir <- H.noteTempFile tempAbsPath "/logs"
 
   H.createDirectoryIfMissing logDir
 
@@ -371,49 +368,18 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  -- Run chairman
-  hChairmanProcesses <- forM allNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+  return allNodes
 
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
+hprop_testnet :: H.Property
+hprop_testnet = H.integration . H.workspace "chairman" $ \tempAbsPath' -> do
+  conf@H.Conf {..} <- H.mkConf tempAbsPath' 42
 
-    hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
+  void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
-    (_, _, _, hProcess, _) <- H.createProcess =<<
-      ( H.procChairman
-        [ "--timeout", "100"
-        , "--socket-path", IO.sprocketArgumentName sprocket
-        , "--config", tempAbsPath </> "configuration.yaml"
-        , "--security-parameter", "2160"
-        , "--testnet-magic", testnetMagic
-        , "--slot-length", "20"
-        ] <&>
-        ( \cp -> cp
-          { IO.std_in = IO.CreatePipe
-          , IO.std_out = IO.UseHandle hNodeStdout
-          , IO.std_err = IO.UseHandle hNodeStderr
-          , IO.cwd = Just tempBaseAbsPath
-          }
-        )
-      )
+  void $ testnet conf
 
-    return hProcess
+  H.failure -- Intentional failure to force failure report
 
-  -- Check for chairman success
-  forM_ (L.zip allNodes hChairmanProcesses) $ \(node, hProcess) -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
-
-    chairmanResult <- H.waitSecondsForProcess 110 hProcess
-
-    H.cat nodeStdoutFile
-    H.cat nodeStderrFile
-
-    case chairmanResult of
-      Right ExitSuccess -> return ()
-      _ -> do
-        H.note_ $ "Failed with: " <> show chairmanResult
-        H.failure
+hprop_testnet_pause :: H.Property
+hprop_testnet_pause = H.integration $ do
+  void . forever . liftIO $ IO.threadDelay 10000000

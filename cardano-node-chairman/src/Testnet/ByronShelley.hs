@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds -Wno-unused-matches #-}
 
-module Spec.Cardano.Node.Chairman.ByronShelley
-  ( hprop_chairman
+module Testnet.ByronShelley
+  ( testnet
   ) where
 
 import           Control.Monad
@@ -58,22 +59,54 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified System.Random as IO
 import qualified Test.Process as H
+import qualified Testnet.Conf as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
-hprop_chairman :: Property
-hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+testnet :: H.Conf -> H.Integration [String]
+testnet H.Conf {..} = do
+  -- This script sets up a cluster that starts out in Byron, and can transition to Shelley.
+  --
+  -- The script generates all the files needed for the setup, and prints commands
+  -- to be run manually (to start the nodes, post transactions, etc.).
+  --
+  -- There are three ways of triggering the transition to Shelley:
+  -- 1. Trigger transition at protocol version 2.0.0 (as on mainnet)
+  --    The system starts at 0.0.0, and we can only increase it by 1 in the major
+  --    version, so this does require to
+  --    a) post an update proposal and votes to transition to 1.0.0
+  --    b) wait for the protocol to change (end of the epoch, or end of the last
+  --      epoch if it's posted near the end of the epoch)
+  --    c) change configuration.yaml to have 'LastKnownBlockVersion-Major: 2',
+  --      and restart the nodes
+  --    d) post an update proposal and votes to transition to 2.0.0
+  --    This is what will happen on the mainnet, so it's vital to test this, but
+  --    it does contain some manual steps.
+  -- 2. Trigger transition at protocol version 2.0.0
+  --    For testing purposes, we can also modify the system to do the transition to
+  --    Shelley at protocol version 1.0.0, by uncommenting the line containing
+  --    'TestShelleyHardForkAtVersion' below. Then, we just need to execute step a)
+  --    above in order to trigger the transition.
+  --    This is still close to the procedure on the mainnet, and requires less
+  --    manual steps.
+  -- 3. Schedule transition in the configuration
+  --    To do this, uncomment the line containing 'TestShelleyHardForkAtEpoch'
+  --    below. It's good for a quick test, and does not rely on posting update
+  --    proposals to the chain.
+  --    This is quite convenient, but it does not test that we can do the
+  --    transition by posting update proposals to the network.
+  --
+  -- TODO: The script allows transitioning to Shelley, but not yet to register a
+  -- pool and delegate, so all blocks will still be produced by the BFT nodes.
+  -- We will need CLI support for Byron witnesses in Shelley transactions to do
+  -- that.
+
   void $ H.note OS.os
-  tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
-  tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
-  base <- H.noteShowM H.getProjectBase
-  logDir <- H.noteShow $ tempAbsPath </> "logs"
   env <- H.evalIO IO.getEnvironment
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
-  socketDir <- H.noteShow $ tempRelPath </> "socket"
   let bftNodes = ["node-bft1", "node-bft2"]
   let poolNodes = ["node-pool1"]
   let allNodes = bftNodes <> poolNodes
@@ -88,13 +121,17 @@ hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   allPorts <- H.noteShow ((+ portBase) <$> [1 .. L.length allNodes])
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
 
-  let networkMagic = 42
   let securityParam = 10
 
   H.createDirectoryIfMissing logDir
 
+  -- Choose one of the following fork methods:
+  forkMethod <- H.noteShow
+    ["TestShelleyHardForkAtVersion: 1"]
+    -- ["TestShelleyHardForkAtEpoch: 1"]
+
   H.readFile (base </> "configuration/chairman/byron-shelley/configuration.yaml")
-    <&> L.unlines . (<> ["TestShelleyHardForkAtVersion: 1"]) . L.lines
+    <&> L.unlines . (<> forkMethod) . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   forM_ allNodes $ \node -> do
@@ -145,7 +182,7 @@ hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   -- stuff
   void . H.execCli $
     [ "genesis"
-    , "--protocol-magic", show @Int networkMagic
+    , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
     , "--k", show @Int securityParam
     , "--n-poor-addresses", "0"
@@ -265,7 +302,10 @@ hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
   H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
 
   void $ H.execCli
-    [ "shelley", "genesis", "create", "--testnet-magic", "42", "--genesis-dir", tempAbsPath </> "shelley"
+    [ "shelley", "genesis", "create"
+    , "--testnet-magic", "42"
+    , "--genesis-dir", tempAbsPath </> "shelley"
+    , "--start-time", formatIso8601 startTime
     ]
 
   -- Then edit the genesis.spec.json ...
@@ -289,6 +329,7 @@ hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
     , "--testnet-magic", "42"
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--gen-genesis-keys", show @Int numBftNodes
+    , "--start-time", formatIso8601 startTime
     , "--gen-utxo-keys", "1"
     ]
 
@@ -622,49 +663,4 @@ hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  -- Run chairman
-  hChairmanProcesses <- forM allNodes $ \node1 -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node1 <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node1)
-
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
-
-    hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
-
-    (_, _, _, hProcess, _) <- H.createProcess =<<
-      ( H.procChairman
-        [ "--timeout", "100"
-        , "--socket-path", IO.sprocketArgumentName sprocket
-        , "--config", tempAbsPath </> "configuration.yaml"
-        , "--security-parameter", "2160"
-        , "--testnet-magic", show @Int networkMagic
-        , "--slot-length", "20"
-        ] <&>
-        ( \cp -> cp
-          { IO.std_in = IO.CreatePipe
-          , IO.std_out = IO.UseHandle hNodeStdout
-          , IO.std_err = IO.UseHandle hNodeStderr
-          , IO.cwd = Just tempBaseAbsPath
-          }
-        )
-      )
-
-    return hProcess
-
-  -- Check for chairman success
-  forM_ (L.zip allNodes hChairmanProcesses) $ \(node, hProcess) -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
-
-    chairmanResult <- H.waitSecondsForProcess 110 hProcess
-
-    H.cat nodeStdoutFile
-    H.cat nodeStderrFile
-
-    case chairmanResult of
-      Right ExitSuccess -> return ()
-      _ -> do
-        H.note_ $ "Failed with: " <> show chairmanResult
-        H.failure
+  return allNodes
