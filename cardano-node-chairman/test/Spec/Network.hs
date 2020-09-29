@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Common.NetworkSpec
-  ( tests
+module Spec.Network
+  ( hprop_isPortOpen_False
+  , hprop_isPortOpen_True
   ) where
 
 import           Control.Exception (IOException)
@@ -29,8 +29,8 @@ import qualified Network.Socket as IO
 import qualified System.Random as IO
 import qualified UnliftIO.Exception as IO
 
-prop_isPortOpen_False :: Property
-prop_isPortOpen_False = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
+hprop_isPortOpen_False :: Property
+hprop_isPortOpen_False = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   -- Check multiple random ports and assert that one is closed.
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program
@@ -38,8 +38,8 @@ prop_isPortOpen_False = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   results <- forM ports H.isPortOpen
   H.assert (False `L.elem` results)
 
-prop_isPortOpen_True :: Property
-prop_isPortOpen_True = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
+hprop_isPortOpen_True :: Property
+hprop_isPortOpen_True = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
   -- Check first random port from multiple possible ports to be successfully bound is open
   -- Multiple random ports are checked because there is a remote possibility a random
   -- port is actually open by another program
@@ -56,6 +56,3 @@ prop_isPortOpen_True = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
             case socketResult of
               Right socket -> return (socket, n)
               Left (_ :: IOException) -> openOnePortFrom ns
-
-tests :: IO Bool
-tests = H.checkParallel $$(H.discover)

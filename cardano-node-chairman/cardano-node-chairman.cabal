@@ -1,14 +1,14 @@
 cabal-version: 2.4
 
-name:                   cardano-node-chairman
-version:                1.19.1
-description:            The cardano full node
-author:                 IOHK
-maintainer:             operations@iohk.io
-license:                Apache-2.0
-license-files:          LICENSE
-                        NOTICE
-build-type:             Simple
+name:                  cardano-node-chairman
+version:               1.19.1
+description:           The cardano full node
+author:                IOHK
+maintainer:            operations@iohk.io
+license:               Apache-2.0
+license-files:         LICENSE
+                       NOTICE
+build-type:            Simple
 
 executable cardano-node-chairman
   hs-source-dirs:      app
@@ -53,32 +53,38 @@ executable cardano-node-chairman
 
 test-suite tests
   hs-source-dirs:       test
-  main-is:              Main.hs
+  main-is:              Spec.hs
   type:                 exitcode-stdio-1.0
   build-depends:        base >= 4.12 && < 5
                       , aeson
                       , async
+                      , call-stack
                       , containers
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , hspec
+                      , HUnit
                       , mmorph
                       , network
                       , process
                       , random
                       , resourcet
+                      , tasty
+                      , tasty-hedgehog
                       , temporary
                       , text
                       , time
                       , unliftio
                       , unordered-containers
-  other-modules:        Test.Cardano.Node.Chairman.Byron
-                        Test.Cardano.Node.Chairman.ByronShelley
-                        Test.Cardano.Node.Chairman.Shelley
-                        Test.Cardano.Process
-                        Test.Common.NetworkSpec
+  other-modules:        Spec.Cardano.Node.Chairman.Byron
+                        Spec.Cardano.Node.Chairman.ByronShelley
+                        Spec.Cardano.Node.Chairman.Shelley
+                        Spec.Network
+                        Test.Process
+                        Test.Base
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -88,3 +94,4 @@ test-suite tests
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  build-tool-depends:   tasty-discover:tasty-discover

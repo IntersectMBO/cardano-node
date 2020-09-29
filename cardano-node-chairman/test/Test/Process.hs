@@ -1,4 +1,4 @@
-module Test.Cardano.Process
+module Test.Process
   ( execCli
   , procCli
   , procNode

@@ -1,15 +1,12 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Node.Chairman.Shelley
-  ( tests
+module Spec.Cardano.Node.Chairman.Shelley
+  ( hprop_chairman
   ) where
 
 import           Control.Monad
 import           Data.Aeson
-import           Data.Bool
 import           Data.Either
 import           Data.Function
 import           Data.Functor
@@ -20,12 +17,10 @@ import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
 import           GHC.Float
-import           Hedgehog (Property, discover)
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
-import           System.IO (IO)
 import           Text.Show
 
 import qualified Data.Aeson as J
@@ -47,7 +42,8 @@ import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified Test.Cardano.Process as H
+import qualified Test.Base as H
+import qualified Test.Process as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -64,8 +60,8 @@ rewriteGenesisSpec supply =
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
-prop_chairman :: Property
-prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+hprop_chairman :: H.Property
+hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath -> do
   void $ H.note OS.os
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
@@ -421,6 +417,3 @@ prop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
       _ -> do
         H.note_ $ "Failed with: " <> show chairmanResult
         H.failure
-
-tests :: IO Bool
-tests = H.checkParallel $$discover
