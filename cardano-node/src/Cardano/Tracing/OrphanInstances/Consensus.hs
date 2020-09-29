@@ -393,12 +393,13 @@ instance ( ConvertRawHash blk
           "Replaying ledger from genesis"
         LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> \_o ->
           "Replaying ledger from snapshot " <> showT snap <> " at " <>
-            renderWithOrigin renderRealPointAsPhrase tip'
-        LedgerDB.ReplayedBlock pt replayTo -> \_o ->
+            renderPointAsPhrase tip'
+        LedgerDB.ReplayedBlock pt _ledgerEvents replayTo -> \_o ->
           "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
       ChainDB.TraceLedgerEvent ev -> case ev of
         LedgerDB.TookSnapshot snap pt -> \_o ->
-          "Took ledger snapshot " <> showT snap <> " at " <> renderWithOrigin renderRealPointAsPhrase pt
+          "Took ledger snapshot " <> showT snap <>
+          " at " <> renderPointAsPhrase pt
         LedgerDB.DeletedSnapshot snap -> \_o ->
           "Deleted old snapshot " <> showT snap
         LedgerDB.InvalidSnapshot snap failure -> \_o ->
@@ -684,7 +685,7 @@ instance ( ConvertRawHash blk
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show tip' ]
-    LedgerDB.ReplayedBlock pt replayTo ->
+    LedgerDB.ReplayedBlock pt _ledgerEvents replayTo ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayedBlock"
                , "slot" .= unSlotNo (realPointSlot pt)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
