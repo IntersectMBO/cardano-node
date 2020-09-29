@@ -92,7 +92,8 @@ jobs:
           sync-to-archive \
             --threads       "$BINARY_CACHE_THREADS" \
             --archive-uri   "$BINARY_CACHE_URI" \
-            --region        "$BINARY_CACHE_REGION"
+            --region        "$BINARY_CACHE_REGION" \
+            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
 
     - name: Git clone
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
@@ -115,4 +116,5 @@ jobs:
           sync-to-archive \
             --threads       "$BINARY_CACHE_THREADS" \
             --archive-uri   "$BINARY_CACHE_URI" \
-            --region        "$BINARY_CACHE_REGION"
+            --region        "$BINARY_CACHE_REGION" \
+            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
