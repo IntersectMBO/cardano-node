@@ -37,6 +37,9 @@ jobs:
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
         ls -al "$PKG_CONFIG_PATH"
         # cp "libsodium-win64/lib/pkgconfig/libsodium.pc" "$pkg_config_dir"
+        echo "==="
+        cat libsodium-win64/lib/pkgconfig/libsodium.pc
+        echo "==="
         echo "::set-env name=PKG_CONFIG_PATH::$PKG_CONFIG_PATH"
 
     - name: Debugging
