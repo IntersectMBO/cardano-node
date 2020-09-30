@@ -32,7 +32,7 @@ jobs:
     - uses: msys2/setup-msys2@v2
       with:
         update: true
-        install: 'base-devel'
+        install: 'base-devel mingw-w64-libsodium'
 
     - uses: actions/setup-haskell@v1
       id: setup-haskell
