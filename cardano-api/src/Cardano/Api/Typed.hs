@@ -313,7 +313,6 @@ import           Prelude
 
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
-import qualified Data.HashMap.Strict as HMS
 import           Data.Kind (Constraint)
 import           Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
@@ -1626,83 +1625,69 @@ instance ToJSON MultiSigScript where
            ]
 
 instance FromJSON MultiSigScript where
-  parseJSON = Aeson.withObject "MultiSigScript" $ \obj -> parseMultiSigScript obj
+  parseJSON = parseScript
 
+parseScript :: Value -> Aeson.Parser MultiSigScript
+parseScript v = parseScriptSig v
+                  <|> parseScriptAny v
+                  <|> parseScriptAll v
+                  <|> parseScriptAtLeast v
 
-parseMultiSigScript :: HMS.HashMap Text Value -> Aeson.Parser MultiSigScript
-parseMultiSigScript hms = do anyM <- any' hms
-                             allM <- all' hms
-                             atLeastM <- atLeast hms
-                             case anyM <|> allM <|> atLeastM of
-                               Just mss -> return mss
-                               Nothing -> fail "No multi-signature script found"
- where
-  convertValueToMultiSigScript :: Value -> Aeson.Parser (Maybe MultiSigScript)
-  convertValueToMultiSigScript (Object valueHm) =
-     payKeyHash' valueHm <|> any' valueHm  <|> all' valueHm <|> atLeast valueHm
-  convertValueToMultiSigScript _ = return Nothing
+parseScriptAny :: Value -> Aeson.Parser MultiSigScript
+parseScriptAny = Aeson.withObject "any" $ \obj -> do
+  t <- obj .: "type"
+  case t :: Text of
+    "any" -> do s <- obj .: "scripts"
+                RequireAnyOf <$> gatherMultiSigScripts s
+    _ -> fail "\"any\" multi-signature script value not found"
 
-  payKeyHash' :: HMS.HashMap Text Value -> Aeson.Parser (Maybe MultiSigScript)
-  payKeyHash' hm =
-    case HMS.lookup "type" hm of
-      Just (String "sig") ->
-        case HMS.lookup "keyHash" hm of
-          Just (String pkh) -> Just . RequireSignature <$> convertToHash pkh
-          Just val ->
-            fail $ "\"keyHash\" value is not a payment key hash. Value: " <> show val
-          Nothing ->
-            fail "\"keyHash\" field is empty in your multi-signature script."
-      _ -> return Nothing
+parseScriptAll :: Value -> Aeson.Parser MultiSigScript
+parseScriptAll = Aeson.withObject "all" $ \obj -> do
+  t <- obj .: "type"
+  case t :: Text of
+    "all" -> do s <- obj .: "scripts"
+                RequireAllOf <$> gatherMultiSigScripts s
+    _ -> fail "\"all\" multi-signature script value not found"
 
-  gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript]
-  gatherMultiSigScripts vs =
-    catMaybes <$> (sequence . Vector.toList $ Vector.map convertValueToMultiSigScript vs)
+parseScriptAtLeast :: Value -> Aeson.Parser MultiSigScript
+parseScriptAtLeast = Aeson.withObject "atLeast" $ \obj -> do
+  v <- obj .: "type"
+  case v :: Text of
+    "atLeast" -> do
+      r <- obj .: "required"
+      s <- obj .: "scripts"
+      case r of
+        Number sci ->
+          case toBoundedInteger sci of
+            Just reqInt ->
+              do msigscripts <- gatherMultiSigScripts s
+                 let numScripts = length msigscripts
+                 when
+                   (reqInt > numScripts)
+                   (fail $ "Required number of script signatures exceeds the number of scripts."
+                         <> " Required number: " <> show reqInt
+                         <> " Number of scripts: " <> show numScripts)
+                 return $ RequireMOf reqInt msigscripts
+            Nothing -> fail $ "Error in multi-signature \"required\" key: "
+                            <> show sci <> " is not a valid Int"
+        _ -> fail "\"required\" value should be an integer"
+    _        -> fail "\"atLeast\" multi-signature script value not found"
 
-  any' :: HMS.HashMap Text Value -> Aeson.Parser (Maybe MultiSigScript)
-  any' hm =
-    case HMS.lookup "type" hm of
-      Just (String "any") -> case HMS.lookup "scripts" hm of
-                               Just (Array anyValue) ->
-                                 Just . RequireAnyOf <$> gatherMultiSigScripts anyValue
-                               _ -> return Nothing
-      _ -> return Nothing
+parseScriptSig :: Value -> Aeson.Parser MultiSigScript
+parseScriptSig = Aeson.withObject "sig" $ \obj -> do
+  v <- obj .: "type"
+  case v :: Text of
+    "sig" -> do k <- obj .: "keyHash"
+                RequireSignature <$> convertToHash k
+    _     -> fail "\"sig\" multi-signature script value not found"
 
-  all' :: HMS.HashMap Text Value -> Aeson.Parser (Maybe MultiSigScript)
-  all' hm =
-    case HMS.lookup "type" hm of
-      Just (String "all") -> case HMS.lookup "scripts" hm of
-                               Just (Array allVectorValue) ->
-                                 Just . RequireAllOf <$> gatherMultiSigScripts allVectorValue
-                               _ -> return Nothing
-      _ -> return Nothing
+convertToHash :: Text -> Aeson.Parser (Hash PaymentKey)
+convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
+                      Just payKeyHash -> return payKeyHash
+                      Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
 
-  atLeast :: HMS.HashMap Text Value -> Aeson.Parser (Maybe MultiSigScript)
-  atLeast hm =
-    case HMS.lookup "type" hm of
-      Just (String "atLeast") ->
-        case (HMS.lookup "required" hm, HMS.lookup "scripts" hm) of
-          (Nothing, Nothing) ->
-            fail "atLeast multi-signature missing \"required\" and \"scripts\" keys"
-          (Just _, Nothing) ->
-            fail "atLeast multi-signature missing \"required\" key"
-          (Nothing, Just _) ->
-            fail "atLeast multi-signature missing \"scripts\" key"
-          (Just (Number sci), Just (Array listVectorValue)) ->
-             case toBoundedInteger sci of
-               Just reqInt ->
-                 do msigscripts <- gatherMultiSigScripts listVectorValue
-                    return . Just $ RequireMOf reqInt msigscripts
-
-               Nothing -> fail $ "Error in multi-signature \"required\" key: "
-                               <> show sci <> " is not a valid Int"
-          (_, _) -> return Nothing
-      _ -> return Nothing
-
-  convertToHash :: Text -> Aeson.Parser (Hash PaymentKey)
-  convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
-                        Just payKeyHash -> return payKeyHash
-                        Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
-
+gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript]
+gatherMultiSigScripts vs = sequence . Vector.toList $ Vector.map parseScript vs
 
 instance HasTypeProxy Script where
     data AsType Script = AsScript

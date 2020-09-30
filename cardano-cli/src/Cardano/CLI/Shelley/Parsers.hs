@@ -452,7 +452,7 @@ pTransaction =
              ]
           )
     , subParser "calculate-min-fee"
-        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calulate the min fee for a transaction")
+        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
     , subParser "txid"
         (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
     ]
