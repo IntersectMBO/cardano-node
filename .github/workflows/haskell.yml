@@ -51,6 +51,9 @@ jobs:
     - name: Select build directory
       run: echo "::set-env name=CABAL_BUILDDIR::dist"
 
+    - name: Peak
+      run: ls -al
+
     - name: Cabal Configure
       run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
