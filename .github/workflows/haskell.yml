@@ -46,6 +46,8 @@ jobs:
         pkg-config --libs libsodium
         echo "==="
         pwd
+        echo "==="
+        ls -al
 
     - name: Debugging
       env:
