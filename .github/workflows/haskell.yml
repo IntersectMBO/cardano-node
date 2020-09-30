@@ -23,7 +23,13 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Debugging
+    - uses: msys2/setup-msys2@v2
+      if: matrix.os == 'windows-latest'
+      with:
+        update: true
+        install: 'base-devel mingw-w64-x86_64-libsodium'
+
+        - name: Debugging
       env:
         BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
         BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
@@ -32,12 +38,6 @@ jobs:
         echo "BINARY_CACHE_REGION: $BINARY_CACHE_REGION"
         echo "BINARY_CACHE_THREADS: $BINARY_CACHE_THREADS"
         echo "BINARY_CACHE_URI: $BINARY_CACHE_URI"
-
-    - uses: msys2/setup-msys2@v2
-      if: matrix.os == 'windows-latest'
-      with:
-        update: true
-        install: 'base-devel mingw-w64-x86_64-libsodium'
 
     - uses: actions/setup-haskell@v1
       id: setup-haskell
