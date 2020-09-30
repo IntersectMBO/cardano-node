@@ -33,7 +33,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       with:
         update: true
-        install: 'base-devel mingw-w64-libsodium'
+        install: 'base-devel libsodium'
 
     - uses: actions/setup-haskell@v1
       id: setup-haskell
