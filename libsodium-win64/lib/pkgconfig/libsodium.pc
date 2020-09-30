@@ -1,0 +1,12 @@
+prefix=/d/a/1/s/libsodium-win64
+exec_prefix=/d/a/1/s/libsodium-win64
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libsodium
+Version: 1.0.18
+Description: A modern and easy-to-use crypto library
+
+Libs: -L${libdir} -lsodium
+Libs.private:  -pthread 
+Cflags: -I${includedir}
