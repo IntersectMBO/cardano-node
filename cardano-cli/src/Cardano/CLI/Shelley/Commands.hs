@@ -164,17 +164,8 @@ data TransactionCmd
       [MetaDataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
-  | TxBuildMultiSig MultiSigScriptObject (Maybe OutputFile)
-  | TxSign
-      TxBodyFile
-      [WitnessSigningData]
-      (Maybe NetworkId)
-      TxFile
-  | TxCreateWitness
-      TxBodyFile
-      WitnessSigningData
-      (Maybe NetworkId)
-      OutputFile
+  | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
+  | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
@@ -191,7 +182,6 @@ data TransactionCmd
 renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =
   case cmd of
-    TxBuildMultiSig {} -> "transaction build-multisig"
     TxBuildRaw {} -> "transaction build-raw"
     TxSign {} -> "transaction sign"
     TxCreateWitness {} -> "transaction witness"

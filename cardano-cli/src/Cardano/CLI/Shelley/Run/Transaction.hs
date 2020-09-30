@@ -13,16 +13,14 @@ import           Cardano.Prelude hiding (All, Any)
 import           Prelude (String)
 
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Lazy.Char8 as C8
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                     newExceptT, right)
+                     newExceptT)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
@@ -105,9 +103,8 @@ runTransactionCmd cmd =
                metadataSchema metadataFiles mUpProp out ->
       runTxBuildRaw txins txouts ttl fee certs wdrls
                     metadataSchema metadataFiles mUpProp out
-    TxBuildMultiSig mScriptObj mOutputFile -> runTxBuildMultiSig mScriptObj mOutputFile
-    TxSign txinfile witSigningData network txoutfile ->
-      runTxSign txinfile witSigningData network txoutfile
+    TxSign txinfile skfiles network txoutfile ->
+      runTxSign txinfile skfiles network txoutfile
     TxSubmit protocol network txFp ->
       runTxSubmit protocol network txFp
     TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
@@ -548,44 +545,6 @@ runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
 readWitnessFile :: WitnessFile -> ExceptT ShelleyTxCmdError IO (Witness Shelley)
 readWitnessFile (WitnessFile fp) =
   firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT (Api.readFileTextEnvelope AsShelleyWitness fp)
-
-runTxBuildMultiSig :: MultiSigScriptObject -> Maybe OutputFile -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildMultiSig msso mOutputFile = do
-  ms <- convertToMultiSig msso
-  case mOutputFile of
-    Just (OutputFile outFp) -> liftIO $ LBS.writeFile outFp $ encodePretty ms
-    Nothing -> liftIO . C8.putStrLn $ encodePretty ms
- where
-  readPaymentVerificationKeys :: [VerificationKeyFile] -> ExceptT ShelleyTxCmdError IO [VerificationKey PaymentKey]
-  readPaymentVerificationKeys fps = do
-    eVerKeys <- liftIO $ mapM (readFileTextEnvelopeAnyOf fileTypes . unVerificationKeyFile) fps
-    someKeys <- sequence $ map (firstExceptT ShelleyTxCmdReadTextViewFileError . hoistEither) eVerKeys
-    right $ map convertToVerificationKey someKeys
-
-  fileTypes = [ FromSomeType (AsVerificationKey AsPaymentKey) SomePaymentVerificationKey
-              , FromSomeType (AsVerificationKey AsGenesisUTxOKey) SomeGenesisUTxOVerificationKey
-              ]
-
-  convertToVerificationKey :: SomeVerificationKey -> VerificationKey PaymentKey
-  convertToVerificationKey sVkey =
-    case sVkey of
-      SomePaymentVerificationKey vK -> vK
-      SomeGenesisUTxOVerificationKey utxoKey -> castVerificationKey utxoKey
-
-  convertToMultiSig :: MultiSigScriptObject -> ExceptT ShelleyTxCmdError IO MultiSigScript
-  convertToMultiSig so =
-    case so of
-      All payKeyfps -> do payKeys <- readPaymentVerificationKeys payKeyfps
-                          right . RequireAllOf $ map (RequireSignature . verificationKeyHash) payKeys
-      Any payKeyfps -> do payKeys <- readPaymentVerificationKeys payKeyfps
-                          right . RequireAnyOf $ map (RequireSignature . verificationKeyHash) payKeys
-      AtLeast req payKeyFps -> do payKeys <- readPaymentVerificationKeys payKeyFps
-                                  right . RequireMOf req $ map (RequireSignature . verificationKeyHash) payKeys
-
-
-data SomeVerificationKey
-  = SomePaymentVerificationKey (VerificationKey PaymentKey)
-  | SomeGenesisUTxOVerificationKey (VerificationKey GenesisUTxOKey)
 
 -- ----------------------------------------------------------------------------
 -- Transaction metadata
