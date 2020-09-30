@@ -41,6 +41,8 @@ jobs:
         cat libsodium-win64/lib/pkgconfig/libsodium.pc
         echo "==="
         echo "::set-env name=PKG_CONFIG_PATH::$PKG_CONFIG_PATH"
+        echo "==="
+        pkg-config --libs libsodium
 
     - name: Debugging
       env:
