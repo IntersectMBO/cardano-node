@@ -29,7 +29,7 @@ jobs:
         update: true
         install: 'base-devel mingw-w64-x86_64-libsodium'
 
-        - name: Debugging
+    - name: Debugging
       env:
         BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
         BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
