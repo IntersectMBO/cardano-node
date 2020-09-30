@@ -26,6 +26,11 @@ jobs:
     - name: Peek
       run: pkg-config --variable pc_path pkg-config
 
+    - name: Install libsodium
+      run: |
+        wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.18-mingw.tar.gz
+        tar zxvf libsodium-1.0.18-mingw.tar.gz
+
     - name: Debugging
       env:
         BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
