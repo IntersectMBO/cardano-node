@@ -68,6 +68,7 @@ jobs:
             --threads       "$BINARY_CACHE_THREADS" \
             --archive-uri   "$BINARY_CACHE_URI" \
             --region        "$BINARY_CACHE_REGION" \
+            --build-path    "$CABAL_BUILDDIR" \
             --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
 
     - name: Install dependencies
@@ -94,6 +95,7 @@ jobs:
             --threads       "$BINARY_CACHE_THREADS" \
             --archive-uri   "$BINARY_CACHE_URI" \
             --region        "$BINARY_CACHE_REGION" \
+            --build-path    "$CABAL_BUILDDIR" \
             --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
 
     - name: Git clone
@@ -118,4 +120,5 @@ jobs:
             --threads       "$BINARY_CACHE_THREADS" \
             --archive-uri   "$BINARY_CACHE_URI" \
             --region        "$BINARY_CACHE_REGION" \
+            --build-path    "$CABAL_BUILDDIR" \
             --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
