@@ -157,7 +157,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         -- Hard fork parameters
         npcShelleyHardForkNotBeforeEpoch
 
-        -- What will trigger the hard fork?
+        -- What will trigger the Byron->Shelley hard fork?
         (case npcTestShelleyHardForkAtEpoch of
 
            -- This specifies the major protocol version number update that will
@@ -176,6 +176,10 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
            -- Alternatively, for testing we can transition at a specific epoch.
            --
            Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo)
+
+        -- What will trigger the Shelley->Next hard fork?
+        --TODO: extended the config to allow specifying this too
+        (Consensus.TriggerHardForkAtVersion 3)
 
 
 ------------------------------------------------------------------------------

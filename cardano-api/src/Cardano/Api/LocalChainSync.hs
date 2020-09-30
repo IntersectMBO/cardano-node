@@ -10,7 +10,7 @@ import           Cardano.Prelude hiding (atomically, catch)
 import           Cardano.Api.Typed
 import           Control.Concurrent.STM
 
-import           Ouroboros.Consensus.Ledger.Abstract (Query)
+import           Ouroboros.Consensus.Ledger.Abstract (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.Protocol.ChainSync.Client (ChainSyncClient (..),
@@ -20,7 +20,8 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 -- | Get the node's tip using the local chain sync protocol.
 getLocalTip :: (ShowProxy block, ShowProxy (ApplyTxErr block),
-                ShowProxy (Query block), ShowProxy (GenTx block))
+                ShowProxy (Query block), ShowProxy (GenTx block),
+                ShowQuery (Query block))
             => LocalNodeConnectInfo mode block -> IO (Tip block)
 getLocalTip connctInfo = do
     resultVar <- newEmptyTMVarIO

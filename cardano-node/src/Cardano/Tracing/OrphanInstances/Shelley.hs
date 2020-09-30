@@ -25,6 +25,7 @@ import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.HashMap.Strict as HMS
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Scientific (Scientific)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -34,7 +35,6 @@ import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
-import           Cardano.Crypto.Hash.Class (Hash)
 import           Cardano.Crypto.Hash.Class as Crypto
 
 import           Ouroboros.Consensus.Block (Header)
@@ -45,6 +45,7 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
+import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
@@ -53,7 +54,7 @@ import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Keys (KeyHash (..))
 import           Shelley.Spec.Ledger.LedgerState (WitHashes (..))
-import           Shelley.Spec.Ledger.OCert
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate, PParams'(..))
 
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import           Shelley.Spec.Ledger.STS.Bbody
@@ -72,11 +73,9 @@ import           Shelley.Spec.Ledger.STS.Overlay
 import           Shelley.Spec.Ledger.STS.Pool
 import           Shelley.Spec.Ledger.STS.PoolReap
 import           Shelley.Spec.Ledger.STS.Ppup
-import           Shelley.Spec.Ledger.STS.Prtcl
 import           Shelley.Spec.Ledger.STS.Rupd
 import           Shelley.Spec.Ledger.STS.Snap
 import           Shelley.Spec.Ledger.STS.Tick
-import           Shelley.Spec.Ledger.STS.Tickn
 import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
@@ -158,6 +157,56 @@ instance Era era =>  ToObject (ShelleyLedgerError era) where
     mkObject [ "kind" .= String "TickError"
              , "failures" .= map (toObject verb) fs
              ]
+
+instance Era era =>  ToObject (ShelleyLedgerUpdate era) where
+  toObject verb (ShelleyUpdatedProtocolUpdates updates) =
+    mkObject [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
+             , "updates" .= map (toObject verb) updates
+             ]
+
+instance Era era =>  ToObject (ProtocolUpdate era) where
+  toObject verb ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
+    mkObject [ "proposal" .= toObject verb protocolUpdateProposal
+             , "state"    .= toObject verb protocolUpdateState
+             ]
+
+instance Era era =>  ToObject (UpdateProposal era) where
+  toObject _verb UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
+    mkObject [ "params"  .= proposalParams
+             , "version" .= proposalVersion
+             , "epoch"   .= proposalEpoch
+             ]
+
+instance Era era =>  ToObject (UpdateState era) where
+  toObject _verb UpdateState{proposalVotes, proposalReachedQuorum} =
+    mkObject [ "proposal"      .= proposalVotes
+             , "reachedQuorum" .= proposalReachedQuorum
+             ]
+
+instance ToJSON (PParamsUpdate era) where
+  toJSON pp =
+    Aeson.object $
+        [ "minFeeA"               .= x | x <- mbfield (_minfeeA pp) ]
+     ++ [ "minFeeB"               .= x | x <- mbfield (_minfeeB pp) ]
+     ++ [ "maxBlockBodySize"      .= x | x <- mbfield (_maxBBSize pp) ]
+     ++ [ "maxTxSize"             .= x | x <- mbfield (_maxTxSize pp) ]
+     ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (_maxBHSize pp) ]
+     ++ [ "keyDeposit"            .= x | x <- mbfield (_keyDeposit pp) ]
+     ++ [ "poolDeposit"           .= x | x <- mbfield (_poolDeposit pp) ]
+     ++ [ "eMax"                  .= x | x <- mbfield (_eMax pp) ]
+     ++ [ "nOpt"                  .= x | x <- mbfield (_nOpt pp) ]
+     ++ [ "a0" .= (fromRational x :: Scientific)
+                                       | x <- mbfield (_a0 pp) ]
+     ++ [ "rho"                   .= x | x <- mbfield (_rho pp) ]
+     ++ [ "tau"                   .= x | x <- mbfield (_tau pp) ]
+     ++ [ "decentralisationParam" .= x | x <- mbfield (_d pp) ]
+     ++ [ "extraEntropy"          .= x | x <- mbfield (_extraEntropy pp) ]
+     ++ [ "protocolVersion"       .= x | x <- mbfield (_protocolVersion pp) ]
+     ++ [ "minUTxOValue"          .= x | x <- mbfield (_minUTxOValue pp) ]
+     ++ [ "minPoolCost"           .= x | x <- mbfield (_minPoolCost pp) ]
+    where
+      mbfield SNothing  = []
+      mbfield (SJust x) = [x]
 
 instance Era era => ToObject (ChainTransitionError era) where
   toObject verb (ChainTransitionError fs) =
@@ -638,5 +687,5 @@ instance Era era => ToJSON (TxOut era) where
       , "amount" .= amount
       ]
 
-hashToText :: Hash crypto a -> Text
+hashToText :: Crypto.Hash crypto a -> Text
 hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex

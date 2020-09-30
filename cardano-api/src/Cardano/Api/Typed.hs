@@ -405,7 +405,7 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Cardano (ProtocolClient, protocolClientInfo)
-import           Ouroboros.Consensus.Ledger.Abstract (Query)
+import           Ouroboros.Consensus.Ledger.Abstract (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient (Codecs' (..), clientCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
@@ -2656,7 +2656,8 @@ nullLocalNodeClientProtocols =
 --
 connectToLocalNode :: forall mode block.
                       (ShowProxy block, ShowProxy (ApplyTxErr block),
-                       ShowProxy (Query block), ShowProxy (GenTx block))
+                       ShowProxy (Query block), ShowProxy (GenTx block),
+                       ShowQuery (Query block))
                        --TODO: too many constraints! we should pass
                        -- a single protocol to run, not all of them, until we
                        -- have the more flexible interface to run any combo
@@ -2747,7 +2748,8 @@ connectToLocalNode LocalNodeConnectInfo {
 --
 queryNodeLocalState :: forall mode block result.
                        (ShowProxy block, ShowProxy (ApplyTxErr block),
-                        ShowProxy (Query block), ShowProxy (GenTx block))
+                        ShowProxy (Query block), ShowProxy (GenTx block),
+                        ShowQuery (Query block))
                     => LocalNodeConnectInfo mode block
                     -> (Point block, Query block result)
                     -> IO (Either AcquireFailure result)
@@ -2788,7 +2790,8 @@ queryNodeLocalState connctInfo pointAndQuery = do
 
 submitTxToNodeLocal :: forall mode block.
                        (ShowProxy block, ShowProxy (ApplyTxErr block),
-                        ShowProxy (Query block), ShowProxy (GenTx block))
+                        ShowProxy (Query block), ShowProxy (GenTx block),
+                        ShowQuery (Query block))
                     => LocalNodeConnectInfo mode block
                     -> GenTx block
                     -> IO (SubmitResult (ApplyTxErr block))
