@@ -34,6 +34,7 @@ jobs:
         tar zxvf libsodium-1.0.18-mingw.tar.gz
         pkg_config_dir="$(pkg-config --variable pc_path pkg-config | cut -d ';' -f 1)"
         export PKG_CONFIG_PATH="$(readlink -f libsodium-win64/lib/pkgconfig)"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
         ls -al "$PKG_CONFIG_PATH"
         # cp "libsodium-win64/lib/pkgconfig/libsodium.pc" "$pkg_config_dir"
         echo "::set-env name=PKG_CONFIG_PATH::$PKG_CONFIG_PATH"
