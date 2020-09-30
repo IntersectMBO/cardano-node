@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Install pacman
+    - name: Install pkgconfiglite
       run: choco install pkgconfiglite
 
     - name: Debugging
