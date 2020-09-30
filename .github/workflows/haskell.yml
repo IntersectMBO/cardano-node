@@ -29,6 +29,11 @@ jobs:
         echo "BINARY_CACHE_THREADS: $BINARY_CACHE_THREADS"
         echo "BINARY_CACHE_URI: $BINARY_CACHE_URI"
 
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: 'base-devel'
+
     - uses: actions/setup-haskell@v1
       id: setup-haskell
       with:
