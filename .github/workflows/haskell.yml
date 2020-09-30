@@ -30,6 +30,7 @@ jobs:
         echo "BINARY_CACHE_URI: $BINARY_CACHE_URI"
 
     - uses: msys2/setup-msys2@v2
+      if: matrix.os == 'windows-latest'
       with:
         update: true
         install: 'base-devel mingw-w64-libsodium'
