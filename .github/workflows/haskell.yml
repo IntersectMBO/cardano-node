@@ -16,18 +16,11 @@ jobs:
         ghc: ["8.6.5"]
         os: [ubuntu-latest, windows-latest]
 
-    defaults:
-      run:
-        shell: msys2 {0}
-
     steps:
     - uses: actions/checkout@v1
 
-    - uses: msys2/setup-msys2@v2
-      if: matrix.os == 'windows-latest'
-      with:
-        update: true
-        install: 'base-devel mingw-w64-x86_64-libsodium'
+    - name: Install pacman
+      run: choco install pkgconfiglite
 
     - name: Debugging
       env:
