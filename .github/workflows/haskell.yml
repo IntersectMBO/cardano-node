@@ -44,7 +44,7 @@ jobs:
         echo "==="
         pkg-config --libs libsodium
         echo "==="
-        ls -al /d/a/1/s
+        pwd
 
     - name: Debugging
       env:
