@@ -89,9 +89,9 @@ jobs:
 
     - name: Build
       run: |
-        cabal build all --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always || \
-        echo "=============================================================================================================" || \
-        cabal build all --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+        ./ci-shell cabal build all --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always || \
+        ./ci-shell echo "=============================================================================================================" || \
+        ./ci-shell cabal build all --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - name: Save cabal cache
       uses: haskell-works/cabal-cache-action@v1
