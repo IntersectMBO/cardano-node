@@ -16,6 +16,10 @@ jobs:
         ghc: ["8.6.5"]
         os: [ubuntu-latest, windows-latest]
 
+    defaults:
+      run:
+        shell: msys2 {0}
+
     steps:
     - uses: actions/checkout@v1
 
