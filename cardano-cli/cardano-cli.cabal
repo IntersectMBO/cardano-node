@@ -106,6 +106,7 @@ library
                      , scientific
                      , shelley-spec-ledger
                      , small-steps
+                     , split
                      , text
                      , time
                      , transformers

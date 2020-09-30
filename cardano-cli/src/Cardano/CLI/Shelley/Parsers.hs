@@ -836,6 +836,8 @@ pGenesisCmd =
         <*> pInitialSupplyNonDelegated
         <*> pInitialSupplyDelegated
         <*> pNetworkId
+        <*> pBulkPoolCredFiles
+        <*> pBulkPoolsPerFile
 
     pGenesisHash :: Parser GenesisCmd
     pGenesisHash =
@@ -918,6 +920,24 @@ pGenesisCmd =
           <> Opt.metavar "LOVELACE"
           <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial, delegating stake holders."
           <> Opt.value (fromIntegral (0 :: Integer))
+          )
+
+    pBulkPoolCredFiles :: Parser Word
+    pBulkPoolCredFiles =
+        Opt.option Opt.auto
+          (  Opt.long "bulk-pool-cred-files"
+          <> Opt.metavar "INT"
+          <> Opt.help "Generate bulk pool credential files [default is 0]."
+          <> Opt.value 0
+          )
+
+    pBulkPoolsPerFile :: Parser Word
+    pBulkPoolsPerFile =
+        Opt.option Opt.auto
+          (  Opt.long "bulk-pools-per-file"
+          <> Opt.metavar "INT"
+          <> Opt.help "Each bulk pool to contain this many pool credential sets [default is 0]."
+          <> Opt.value 0
           )
 
 

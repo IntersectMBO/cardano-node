@@ -20,6 +20,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char (isDigit)
 import qualified Data.List as List
+import qualified Data.List.Split as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
@@ -69,11 +70,13 @@ import           Cardano.CLI.Types
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdAesonDecodeError !FilePath !Text
   | ShelleyGenesisCmdGenesisFileError !(FileError ())
+  | ShelleyGenesisCmdFileError !(FileError ())
   | ShelleyGenesisCmdMismatchedGenesisKeyFiles [Int] [Int] [Int]
   | ShelleyGenesisCmdFilesNoIndex [FilePath]
   | ShelleyGenesisCmdFilesDupIndex [FilePath]
   | ShelleyGenesisCmdTextEnvReadFileError !(FileError TextEnvelopeError)
   | ShelleyGenesisCmdUnexpectedAddressVerificationKey !VerificationKeyFile !Text !SomeAddressVerificationKey
+  | ShelleyGenesisCmdTooFewPoolsForBulkCreds !Word !Word !Word
   | ShelleyGenesisCmdAddressCmdError !ShelleyAddressCmdError
   | ShelleyGenesisCmdNodeCmdError !ShelleyNodeCmdError
   | ShelleyGenesisCmdPoolCmdError !ShelleyPoolCmdError
@@ -86,6 +89,7 @@ renderShelleyGenesisCmdError err =
     ShelleyGenesisCmdAesonDecodeError fp decErr ->
       "Error while decoding Shelley genesis at: " <> textShow fp <> " Error: " <> textShow decErr
     ShelleyGenesisCmdGenesisFileError fe -> Text.pack $ displayError fe
+    ShelleyGenesisCmdFileError fe -> Text.pack $ displayError fe
     ShelleyGenesisCmdMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
       "Mismatch between the files found:\n"
         <> "Genesis key file indexes:      " <> textShow gfiles
@@ -102,6 +106,11 @@ renderShelleyGenesisCmdError err =
       [ "Unexpected address verification key type in file ", Text.pack file
       , ", expected: ", expect, ", got: ", textShow got
       ]
+    ShelleyGenesisCmdTooFewPoolsForBulkCreds pools files perPool -> mconcat
+      [ "Number of pools requested for generation (", textShow pools
+      , ") is insufficient to fill ", textShow files
+      , " bulk files, with ", textShow perPool, " pools per file."
+      ]
     ShelleyGenesisCmdAddressCmdError e -> renderShelleyAddressCmdError e
     ShelleyGenesisCmdNodeCmdError e -> renderShelleyNodeCmdError e
     ShelleyGenesisCmdPoolCmdError e -> renderShelleyPoolCmdError e
@@ -117,7 +126,7 @@ runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
 runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
 runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
 runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
-runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw) = runGenesisCreateStaked gd gn gp gl un ms am ds nw
+runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw bf bp) = runGenesisCreateStaked gd gn gp gl un ms am ds nw bf bp
 runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
 
 --
@@ -341,10 +350,13 @@ runGenesisCreateStaked ::
   -> Maybe Lovelace -- ^ supply going to non-delegators
   -> Lovelace       -- ^ supply going to delegators
   -> NetworkId
+  -> Word           -- ^ bulk credential files to write
+  -> Word           -- ^ pool credentials per bulk file
   -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreateStaked (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys genNumPools genNumStDelegs
-                 mStart mNonDlgAmount stDlgAmount network = do
+                 mStart mNonDlgAmount stDlgAmount network
+                 bulkPoolCredFiles bulkPoolsPerFile = do
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
@@ -365,6 +377,16 @@ runGenesisCreateStaked (GenesisDir rootdir)
   pools <- forM [ 1 .. genNumPools ] $ \index -> do
     createPoolCredentials pooldir index
     buildPool network pooldir index
+
+  when (bulkPoolCredFiles * bulkPoolsPerFile > genNumPools) $
+    left $ ShelleyGenesisCmdTooFewPoolsForBulkCreds  genNumPools bulkPoolCredFiles bulkPoolsPerFile
+  -- We generate the bulk files for the last pool indices,
+  -- so that all the non-bulk pools have stable indices at beginning:
+  let bulkOffset = fromIntegral $ genNumPools - bulkPoolCredFiles * bulkPoolsPerFile
+  forM_ (zip [ 1 .. bulkPoolCredFiles ]
+             (List.chunksOf (fromIntegral bulkPoolsPerFile)
+                            [ 1 + bulkOffset .. genNumPools - bulkOffset ])) $
+    uncurry (writeBulkPoolCredentials pooldir)
 
   forM_ [ 1 .. genNumStDelegs ] $ \index ->
     createDelegatorCredentials stdeldir index
@@ -390,7 +412,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
       finalGenesis = updateTemplate start genDlgs mNonDlgAmount nonDelegAddrs poolMap stDlgAmount delegAddrs template
 
   writeShelleyGenesis (rootdir </> "genesis.json") finalGenesis
-  liftIO $ Text.putStrLn $ mconcat
+  liftIO $ Text.putStrLn $ mconcat $
     [ "generated genesis with: "
     , textShow genNumGenesisKeys, " genesis keys, "
     , textShow genNumUTxOKeys, " non-delegating UTxO keys, "
@@ -399,7 +421,13 @@ runGenesisCreateStaked (GenesisDir rootdir)
     , textShow (length delegations), " delegation relationships, "
     , textShow (Map.size poolMap), " delegation map entries, "
     , textShow (length delegAddrs), " delegating addresses"
-    ]
+    ] ++
+    [ mconcat
+      [ ", "
+      , textShow bulkPoolCredFiles, " bulk pool credential files, "
+      , textShow bulkPoolsPerFile, " pools per bulk credential file"
+      ]
+    | bulkPoolCredFiles * bulkPoolsPerFile > 0 ]
 
   where
     (,) delegsPerPool delegsRemaining = divMod genNumStDelegs genNumPools
@@ -541,6 +569,32 @@ buildPool nw dir index = do
    poolColdVKF = dir </> "cold" ++ strIndex ++ ".vkey"
    poolVrfVKF = dir </> "vrf" ++ strIndex ++ ".vkey"
    poolRewardVKF = dir </> "staking-reward" ++ strIndex ++ ".vkey"
+
+writeBulkPoolCredentials :: FilePath -> Word -> [Word] -> ExceptT ShelleyGenesisCmdError IO ()
+writeBulkPoolCredentials dir bulkIx poolIxs = do
+  creds <- mapM readPoolCreds poolIxs
+  handleIOExceptT (ShelleyGenesisCmdFileError . FileIOError bulkFile) $
+    LBS.writeFile bulkFile $ Aeson.encode creds
+ where
+   bulkFile = dir </> "bulk" ++ show bulkIx ++ ".creds"
+
+   readPoolCreds :: Word -> ExceptT ShelleyGenesisCmdError IO
+                                   (TextEnvelope, TextEnvelope, TextEnvelope)
+   readPoolCreds ix = do
+     (,,) <$> readEnvelope poolCert
+          <*> readEnvelope poolVrfSKF
+          <*> readEnvelope poolKesSKF
+    where
+      strIndex = show ix
+      poolCert = dir </> "opcert" ++ strIndex ++ ".cert"
+      poolVrfSKF = dir </> "vrf" ++ strIndex ++ ".skey"
+      poolKesSKF = dir </> "kes" ++ strIndex ++ ".skey"
+   readEnvelope :: FilePath -> ExceptT ShelleyGenesisCmdError IO TextEnvelope
+   readEnvelope fp = do
+     content <- handleIOExceptT (ShelleyGenesisCmdFileError . FileIOError fp) $
+                  BS.readFile fp
+     firstExceptT (ShelleyGenesisCmdAesonDecodeError fp . Text.pack) . hoistEither $
+       Aeson.eitherDecodeStrict' content
 
 computeDelegation :: NetworkId -> FilePath -> Ledger.PoolParams StandardShelley -> Word -> ExceptT ShelleyGenesisCmdError IO Delegation
 computeDelegation nw delegDir pool delegIx = do
