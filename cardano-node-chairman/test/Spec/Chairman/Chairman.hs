@@ -21,9 +21,9 @@ import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
+import           System.IO (FilePath)
 import           Text.Show
 
-import qualified Data.List as L
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
@@ -38,47 +38,46 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
+mkSprocket :: FilePath -> FilePath -> String -> Sprocket
+mkSprocket tempBaseAbsPath socketDir node = Sprocket tempBaseAbsPath (socketDir </> node)
+
 chairmanOver :: (MonadTest m,  MonadResource m, MonadCatch m, HasCallStack) => H.Conf -> [String] -> m ()
 chairmanOver H.Conf {..} allNodes = do
-  -- Run chairman
-  hChairmanProcesses <- forM allNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
-    nodeStderrFile <- H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
-    sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+  nodeStdoutFile <- H.noteTempFile logDir $ "chairman" <> ".stdout.log"
+  nodeStderrFile <- H.noteTempFile logDir $ "chairman" <> ".stderr.log"
 
-    H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
+  sprockets <- H.noteEach $ fmap (mkSprocket tempBaseAbsPath socketDir) allNodes
 
-    hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
-    hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
+  H.createDirectoryIfMissing $ tempBaseAbsPath </> socketDir
 
-    (_, _, _, hProcess, _) <- H.createProcess =<<
-      ( H.procChairman
-        [ "--timeout", "100"
-        , "--socket-path", IO.sprocketArgumentName sprocket
+  hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
+  hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
+
+  (_, _, _, hProcess, _) <- H.createProcess =<<
+    ( H.procChairman
+      ( [ "--timeout", "100"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--security-parameter", "2160"
         , "--testnet-magic", show @Int testnetMagic
         , "--slot-length", "20"
-        ] <&>
-        ( \cp -> cp
-          { IO.std_in = IO.CreatePipe
-          , IO.std_out = IO.UseHandle hNodeStdout
-          , IO.std_err = IO.UseHandle hNodeStderr
-          , IO.cwd = Just tempBaseAbsPath
-          }
-        )
+        ]
+      <> (sprockets >>= (\sprocket -> ["--socket-path", IO.sprocketArgumentName sprocket]))
+      ) <&>
+      ( \cp -> cp
+        { IO.std_in = IO.CreatePipe
+        , IO.std_out = IO.UseHandle hNodeStdout
+        , IO.std_err = IO.UseHandle hNodeStderr
+        , IO.cwd = Just tempBaseAbsPath
+        }
       )
+    )
 
-    return hProcess
+  chairmanResult <- H.waitSecondsForProcess 110 hProcess
 
-  -- Check for chairman success
-  forM_ (L.zip allNodes hChairmanProcesses) $ \(node, hProcess) -> do
-    chairmanResult <- H.waitSecondsForProcess 110 hProcess
-
-    case chairmanResult of
-      Right ExitSuccess -> return ()
-      _ -> do
-        H.note_ $ "Failed with: " <> show chairmanResult
-        H.noteM_ $ H.noteTempFile logDir $ "chairman-" <> node <> ".stdout.log"
-        H.noteM_ $ H.noteTempFile logDir $ "chairman-" <> node <> ".stderr.log"
-        H.failure
+  case chairmanResult of
+    Right ExitSuccess -> return ()
+    _ -> do
+      H.note_ $ "Failed with: " <> show chairmanResult
+      H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stdout.log"
+      H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stderr.log"
+      H.failure
