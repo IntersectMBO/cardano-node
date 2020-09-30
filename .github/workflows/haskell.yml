@@ -48,6 +48,10 @@ jobs:
         pwd
         echo "==="
         ls -al
+        echo "=== lib ==="
+        ls /d/a/cardano-node/cardano-node/libsodium-win64/lib
+        echo "=== include ==="
+        ls /d/a/cardano-node/cardano-node/libsodium-win64/include
 
     - name: Debugging
       env:
