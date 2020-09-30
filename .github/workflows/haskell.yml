@@ -33,7 +33,9 @@ jobs:
         curl -Ls https://download.libsodium.org/libsodium/releases/libsodium-1.0.18-mingw.tar.gz -o libsodium-1.0.18-mingw.tar.gz
         tar zxvf libsodium-1.0.18-mingw.tar.gz
         pkg_config_dir="$(pkg-config --variable pc_path pkg-config | cut -d ';' -f 1)"
-        cp "libsodium-win64/lib/pkgconfig/libsodium.pc" "$pkg_config_dir"
+        export PKG_CONFIG_PATH="libsodium-win64/lib/pkgconfig"
+        # cp "libsodium-win64/lib/pkgconfig/libsodium.pc" "$pkg_config_dir"
+        echo "::set-env name=PKG_CONFIG_PATH::$PKG_CONFIG_PATH"
 
     - name: Debugging
       env:
