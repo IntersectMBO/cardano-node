@@ -1,5 +1,9 @@
 name: Haskell CI
 
+defaults:
+  run:
+    shell: bash
+
 on: [push]
 
 jobs:
