@@ -35,13 +35,13 @@ jobs:
         pkg_config_dir="$(pkg-config --variable pc_path pkg-config | cut -d ';' -f 1)"
         export PKG_CONFIG_PATH="$(readlink -f libsodium-win64/lib/pkgconfig)"
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        echo "::set-env name=PKG_CONFIG_PATH::$PKG_CONFIG_PATH"
         ls -al "$PKG_CONFIG_PATH"
         # cp "libsodium-win64/lib/pkgconfig/libsodium.pc" "$pkg_config_dir"
         echo "==="
         sed -i "s|/d/a/1/s/|$(pwd)/|g" libsodium-win64/lib/pkgconfig/libsodium.pc
         cat libsodium-win64/lib/pkgconfig/libsodium.pc
         echo "==="
-        echo "::set-env name=PKG_CONFIG_PATH::$PKG_CONFIG_PATH"
         echo "==="
         pkg-config --libs libsodium
         echo "==="
@@ -52,6 +52,13 @@ jobs:
         ls /d/a/cardano-node/cardano-node/libsodium-win64/lib
         echo "=== include ==="
         ls /d/a/cardano-node/cardano-node/libsodium-win64/include
+
+    - name: Configure to use libsodium
+      run: |
+        cat >> cabal.project.local <<EOF
+        package cardano-crypto-praos
+        flags: -external-libsodium-vrf
+        EOF
 
     - name: Debugging
       env:
