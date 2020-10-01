@@ -236,7 +236,7 @@ let
       POOL_IP="127.0.0.1"
       POOL_PORT=$(("${toString basePort}" + "${toString numBft}" + $i))
       echo "$POOL_PORT" > "${stateDir}/nodes/node-pool$i/port"
-      POOL_PLEDGE=$(( $RANDOM % 1000000000 + 1000000000000))
+      POOL_PLEDGE=${toString delegatePoolAmount}
       echo $POOL_PLEDGE > "${stateDir}/nodes/node-pool$i/pledge"
       POOL_MARGIN_NUM=$(( $RANDOM % 10 + 1))
 
@@ -336,7 +336,7 @@ let
     ${pkgs.python3Packages.supervisor}/bin/supervisord --config ${supervisorConfig} $@
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
     echo "Transfering genesis funds to pool owners, register pools and delegations"
-    cardano-cli shelley transaction submit \
+    cardano-cli shelley transaction submit --shelley-mode \
       --tx-file ${stateDir}/shelley/transfer-register-delegate-tx.tx \
       --testnet-magic ${toString genesisSpecMergedJSON.networkMagic}
     sleep 5
