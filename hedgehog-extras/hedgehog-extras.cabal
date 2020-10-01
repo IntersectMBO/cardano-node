@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                   hedgehog-extras
-version:                1.19.1
+version:                0.1.0.0
 description:            The cardano full node
 author:                 IOHK
 maintainer:             operations@iohk.io

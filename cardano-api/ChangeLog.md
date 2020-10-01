@@ -1,5 +1,13 @@
 # Changelog for cardano-api
 
+## 1.21.0 -- September 2020
+- Support for multi-signature scripts (#1788)
+- Support for Byron witnesses for addresses that use attributes, which includes
+  all addresses in legacy Daedalus Byron wallets (#1851, #1871)
+- Introduce a Cardano.API top level module exporting only the public parts
+  and modules Cardano.API.{Byron,Shelley} that expose the underlying library
+  types for applications that need it (#1881)
+
 ## 1.20.0 -- September 2020
 
 - Improved support for JSON to Tx metadata conversions, with two supported
