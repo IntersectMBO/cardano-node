@@ -1,5 +1,52 @@
 # Changelog for cardano-node
 
+## 1.21.0 -- September 2020
+
+### node changes
+- Mention the RTView component (replacement for LiveView) in node docs (#1866)
+- Extensions and improvements to the new node+cli integration tests (#1865,
+  #1894, #1897)
+- New internal infrastructure for more consistent handling of configuration
+  from config files and the command line, using the partial options monoid
+  pattern (#1850)
+- Remove last appearance of stack build support to avoid confusion (#1896)
+
+### consensus changes
+- Avoid the expensive reward calculations while checking if the node is the
+  slot leader, which should significantly reduce the CPU spike at the 4k/f
+  (2day) point within each epoch (#2642)
+- Fix a unlikely-but-possible bug in crossing the hard fork from Byron to
+  Shelley (#2455, #2626)
+- Initial support for hard forks after Shelley (#2452, #2471)
+- Trace interesting ledger events during db replay (#2508, #2621, #2627)
+- Preparation for unifying two parts of the ledger db (#2621)
+- Remove last appearance of stack build support to avoid confusion (#2638)
+- Improvements to the automated tests (#2581, #2643)
+
+### ledger changes
+- Support for a low-impact soft fork with stricter metadata validation (#1874)
+- Further improvements to the performance of reward calculations and some other
+  ledger calculations (#1857, #1881, #1884)
+- Fix a bug in the calculation of the pool stake fraction reported in the stake
+  pool query used by wallets (#1880)
+- Fix a bug for the corner case for testnets where all value is in the reserves
+  with no value in circulation (#1876)
+- Improved transaction generator (used in tests) (#1865)
+- Improved automatic tests for stake pool register/de-register (#1882)
+- Minor corrections to the formal spec arising from internal review and internal
+  audit (#1776, #1808, #1811, #1820, #1861)
+- Update the formal spec with the change in how we calculate the overlay
+  schedule (#1862)
+- Document in the CDDL chain spec the meaning of the MIR pot field (#1864)
+- Updates to the document on the details of pool ranking (#1852)
+- Internal technical debt improvements (#1859, #1867, #1871, #1872, #1879)
+
+### network changes
+- Improved protocol logging (#2609, #2610, #2618, #2611)
+- Fixes to the mux protocol description in the network tech report, and other
+  documentation typos (#2625, #2639)
+- Adjust the outstanding data limit for the block fetch protocol (#2624)
+
 ## 1.20.0 -- September 2020
 
 Note that this release will automatically perform a chain DB migration on

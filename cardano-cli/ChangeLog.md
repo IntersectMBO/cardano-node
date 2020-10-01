@@ -1,5 +1,8 @@
 # Changelog for cardano-cli
 
+## 1.21.0 -- September 2020
+- Support for multi-signature scripts (#1788, #1880)
+
 ## 1.20.0 -- September 2020
 
 - New command for creating genesis key delegation certificates (#1784)
