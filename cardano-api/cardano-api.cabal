@@ -17,6 +17,7 @@ library
 
   exposed-modules:      Cardano.API
                         Cardano.Api.Byron
+                        Cardano.Api.Crypto.Bip32Ed25519
                         Cardano.Api.LocalChainSync
                         Cardano.Api.MetaData
                         Cardano.Api.Protocol
