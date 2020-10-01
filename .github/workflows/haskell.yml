@@ -76,6 +76,11 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: '3.2.0.0'
 
+    - name: Check haskell
+      run: |
+        which cabal
+        which ghc
+
     - name: Install build environment
       if: matrix.os == 'ubuntu-latest'
       run: |
