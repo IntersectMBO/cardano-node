@@ -317,6 +317,9 @@ instance Era era => ToObject (UtxowPredicateFailure era) where
              , "txBodyMetaDataHash" .= txBodyMetaDataHash
              , "fullMetaDataHash" .= fullMetaDataHash
              ]
+  toObject _verb InvalidMetaData =
+    mkObject [ "kind" .= String "InvalidMetaData"
+             ]
 
 instance Era era => ToObject (UtxoPredicateFailure era) where
   toObject _verb (BadInputsUTxO badInputs) =
