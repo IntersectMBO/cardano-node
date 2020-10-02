@@ -87,7 +87,8 @@ instance HasSeverityAnnotation (TraceSendRecv a) where
 
 
 instance HasPrivacyAnnotation a => HasPrivacyAnnotation (TraceLabelPeer peer a)
-instance HasSeverityAnnotation a => HasSeverityAnnotation (TraceLabelPeer peer a)
+instance HasSeverityAnnotation a => HasSeverityAnnotation (TraceLabelPeer peer a) where
+  getSeverityAnnotation (TraceLabelPeer _p a) = getSeverityAnnotation a
 
 
 instance HasPrivacyAnnotation [TraceLabelPeer peer (FetchDecision [Point header])]
