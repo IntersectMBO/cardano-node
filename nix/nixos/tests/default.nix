@@ -9,15 +9,15 @@ with pkgs.commonLib;
   forAllSystems = genAttrs supportedSystems;
   importTest = fn: args: system: let
     imported = import fn;
-    test = import (pkgs.path + "/nixos/tests/make-test.nix") imported;
+    test = import (pkgs.path + "/nixos/tests/make-test-python.nix") imported;
   in test ({
     inherit pkgs system config;
   } // args);
   callTest = fn: args: forAllSystems (system: hydraJob (importTest fn args system));
 in rec {
   # only tests that port is open since the test can't access network to actually sync
-  # cardanoNodeEdge  = callTest ./cardano-node-edge.nix {};
+  cardanoNodeEdge  = callTest ./cardano-node-edge.nix {};
 
   # Subsumes what cardanoNodeEdge does
-  chairmansCluster = callTest ./chairmans-cluster.nix {};
+  #chairmansCluster = callTest ./chairmans-cluster.nix {};
 }

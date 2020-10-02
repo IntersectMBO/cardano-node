@@ -82,26 +82,26 @@ in {
     };
   };
   testScript = ''
-    startAll
-    $machine->succeed("mkdir -p /var/lib/cardano-node");
-    $machine->succeed("chown -R cardano-node.cardano-node /var/lib/cardano-node");
-    $machine->succeed("lscpu | systemd-cat --identifier=lscpu --priority=crit");
-    $machine->succeed("date +%s | systemd-cat --identifier=timekeeper --priority=crit");
-    $machine->succeed("{ now=\$(date +%s); if test 1000000000 -gt \$now; then echo 'Waiting until 1000000000'; sleep \$((1000000000 - now)); fi; } | systemd-cat --identifier=wait-until-1000000000");
-    $machine->succeed("systemctl start cardano-cluster || true");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.1 3001");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.2 3002");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.3 3003");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.4 3004");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.5 3005");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.6 3006");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.7 3007");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.9 5555");
-    $machine->waitUntilSucceeds("nc -z 127.1.0.9 7777");
-    $machine->succeed("netstat -pltn | grep LISTEN | systemd-cat --identifier=netstat");
-    $machine->succeed("bash -c 'set -o pipefail; { ${chairman-runner} 2>&1; status=\$?; echo END-OF-CHAIRMAN-OUTPUT-MARKER; sleep 1; exit \$status; } | systemd-cat --identifier=chairman --priority=crit'");
+    start_All()
+    machine.succeed("mkdir -p /var/lib/cardano-node")
+    machine.succeed("chown -R cardano-node.cardano-node /var/lib/cardano-node")
+    machine.succeed("lscpu | systemd-cat --identifier=lscpu --priority=crit")
+    machine.succeed("date +%s | systemd-cat --identifier=timekeeper --priority=crit")
+    machine.succeed("{ now=\$(date +%s); if test 1000000000 -gt \$now; then echo 'Waiting until 1000000000'; sleep \$((1000000000 - now)); fi; } | systemd-cat --identifier=wait-until-1000000000")
+    machine.succeed("systemctl start cardano-cluster || true")
+    machine.wait_until_succeeds("nc -z 127.1.0.1 3001")
+    machine.wait_until_succeeds("nc -z 127.1.0.2 3002")
+    machine.wait_until_succeeds("nc -z 127.1.0.3 3003")
+    machine.wait_until_succeeds("nc -z 127.1.0.4 3004")
+    machine.wait_until_succeeds("nc -z 127.1.0.5 3005")
+    machine.wait_until_succeeds("nc -z 127.1.0.6 3006")
+    machine.wait_until_succeeds("nc -z 127.1.0.7 3007")
+    machine.wait_until_succeeds("nc -z 127.1.0.9 5555")
+    machine.wait_until_succeeds("nc -z 127.1.0.9 7777")
+    machine.succeed("netstat -pltn | grep LISTEN | systemd-cat --identifier=netstat")
+    machine.succeed("bash -c 'set -o pipefail; { ${chairman-runner} 2>&1; status=\$?; echo END-OF-CHAIRMAN-OUTPUT-MARKER; sleep 1; exit \$status; } | systemd-cat --identifier=chairman --priority=crit'")
   '' + optionalString interactive
   ''
-    $machine->waitUntilSucceeds("netstat -ptn | grep ESTABLISHED | systemd-cat --identifier=netstat --priority=crit; sleep 9s; false");
+    machine.wait_until_succeeds("netstat -ptn | grep ESTABLISHED | systemd-cat --identifier=netstat --priority=crit; sleep 9s; false")
   '';
 }

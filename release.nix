@@ -77,8 +77,6 @@ let
     };
   };
   extraBuilds = {
-    # only build nixos tests on first supported system (linux)
-    inherit (pkgsFor (builtins.head  supportedSystems));
     # Environments listed in Network Configuration page
     cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet; };
   } // (builtins.listToAttrs (map makeRelease [
@@ -103,7 +101,7 @@ let
   nonDefaultBuildSystems = tail supportedSystems;
 
   # Paths or prefixes of paths of derivations to build only on the default system (ie. linux on hydra):
-  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ["dockerImage"] ["clusterTests"] ];
+  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ["dockerImage"] ["clusterTests"] ["nixosTests"] ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [ ["shell"]
     ["checks" "tests" "cardano-node-chairman"] [ "haskellPackages" "cardano-node-chairman" "checks" ]
@@ -153,6 +151,7 @@ let
     };
   }) // extraBuilds // (mkRequiredJob (concatLists [
       (collectJobs jobs.native.checks)
+      (collectJobs jobs.native.nixosTests)
       (collectJobs jobs.native.benchmarks)
       (collectJobs jobs.native.exes)
       (optional windowsBuild jobs.cardano-node-win64)
