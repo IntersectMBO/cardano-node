@@ -25,3 +25,5 @@ hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath' -> do
   allNodes <- H.testnet conf
 
   chairmanOver conf allNodes
+
+  H.failure
