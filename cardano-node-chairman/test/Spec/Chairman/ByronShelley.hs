@@ -19,7 +19,7 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant flip" -}
 
 hprop_chairman :: H.Property
-hprop_chairman = H.integration . H.workspace "chairman" $ \tempAbsPath' -> do
+hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
   conf@H.Conf {..} <- H.mkConf tempAbsPath' 42
 
   allNodes <- H.testnet conf

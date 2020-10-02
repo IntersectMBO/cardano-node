@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Hedgehog.Extras.Test.Base
   ( propertyOnce
@@ -39,15 +40,21 @@ module Hedgehog.Extras.Test.Base
   , assertM
   , assertIO
 
+  , onFailure
+
   , Integration
   , release
+
+  , runFinallies
   ) where
 
+import           Control.Concurrent.STM as STM
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Morph (hoist)
-import           Control.Monad.Trans.Resource (ReleaseKey, ResourceT, runResourceT)
+import           Control.Monad.Reader
+import           Control.Monad.Trans.Resource (ReleaseKey, runResourceT)
 import           Data.Bool
 import           Data.Either (Either (..))
 import           Data.Eq
@@ -63,6 +70,7 @@ import           Data.Traversable
 import           Data.Tuple
 import           GHC.Stack (CallStack, HasCallStack)
 import           Hedgehog (MonadTest)
+import           Hedgehog.Extras.Internal.Test.Integration
 import           Hedgehog.Extras.Stock.CallStack
 import           Hedgehog.Extras.Stock.Monad
 import           Hedgehog.Internal.Property (Diff, liftTest, mkTest)
@@ -75,20 +83,19 @@ import qualified Control.Monad.Trans.Resource as IO
 import qualified Data.Time.Clock as DTC
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.MonadAssertion as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Info as IO
 import qualified System.IO as IO
 import qualified System.IO.Temp as IO
 
-type Integration a = H.PropertyT (ResourceT IO) a
-
 {- HLINT ignore "Reduce duplication" -}
 
 -- | Run a property with only one test.  This is intended for allowing hedgehog
 -- to run unit tests.
 propertyOnce :: HasCallStack => Integration () -> H.Property
-propertyOnce = H.withTests 1 . H.property . hoist runResourceT
+propertyOnce = H.withTests 1 . H.property . hoist runResourceT . hoist runIntegrationReaderT
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
 failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a
@@ -338,3 +345,28 @@ assertIO f = GHC.withFrozenCallStack $ H.evalIO (forceM f) >>= H.assert
 -- | Release the given release key.
 release :: (MonadTest m, MonadIO m) => ReleaseKey -> m ()
 release k = GHC.withFrozenCallStack . H.evalIO $ IO.release k
+
+onFailure :: Integration () -> Integration ()
+onFailure f = do
+  s <- ask
+  liftIO . STM.atomically $ STM.modifyTVar (integrationStateFinals s) (f:)
+
+reportFinally :: Integration () -> Integration ()
+reportFinally f = do
+  result <- H.catchAssertion (fmap Right f) (return . Left)
+
+  case result of
+    Right () -> return ()
+    Left a -> note_ $ "Unable to run finally: " <> show a
+
+runFinallies :: Integration a -> Integration a
+runFinallies f = do
+  result <- H.catchAssertion (fmap Right f) (return . Left)
+
+  case result of
+    Right a -> return a
+    Left assertion -> do
+      s <- ask
+      finals <- liftIO . STM.atomically $ STM.swapTVar (integrationStateFinals s) []
+      mapM_ reportFinally finals
+      H.throwAssertion assertion

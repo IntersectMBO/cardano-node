@@ -44,7 +44,7 @@ rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
 hprop_chairman :: Property
-hprop_chairman = H.propertyOnce . H.workspace "chairman" $ \tempAbsPath -> do
+hprop_chairman = H.propertyOnce . H.runFinallies . H.workspace "chairman" $ \tempAbsPath -> do
   void $ H.note OS.os
   let nodeCount = 3
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
