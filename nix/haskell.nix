@@ -97,6 +97,9 @@ let
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
 
+        # Hedgehog needs access to the source code to properly renders its test reports
+        packages.cardano-node-chairman.components.tests.chairman-tests.keepSource = true;
+
         # cardano-cli-test depends on cardano-cli
         packages.cardano-cli.preCheck = "export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli";
 
