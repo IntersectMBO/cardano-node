@@ -14,6 +14,7 @@ module Cardano.Tracing.OrphanInstances.Network () where
 import           Cardano.Prelude hiding (show)
 import           Prelude (String, show)
 
+import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Text (pack)
 
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
@@ -31,7 +32,8 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                      TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
-import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient)
+import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
                      WithAddr (..))
@@ -604,12 +606,21 @@ instance (Show txid, Show tx)
 
 
 instance Show remotePeer => ToObject (TraceKeepAliveClient remotePeer) where
-  toObject _verb ev =
+  toObject _verb (AddSample peer rtt pgsv) =
     mkObject
-      [ "kind" .= String "TraceKeepAliveClient"
-      , "event" .= show ev
+      [ "kind" .= String "TraceKeepAliveClient AddSample"
+      , "address" .= show peer
+      , "rtt" .= rtt
+      , "sampleTime" .= show (dTime $ sampleTime pgsv)
+      , "outboundG" .= (realToFrac $ gGSV (outboundGSV pgsv) :: Double)
+      , "inboundG" .= (realToFrac $ gGSV (inboundGSV pgsv) :: Double)
       ]
+    where
+      gGSV :: GSV -> DiffTime
+      gGSV (GSV g _ _) = g
 
+      dTime :: Time -> Double
+      dTime (Time d) = realToFrac d
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
   toObject _verb (WithAddr addr ev) =
