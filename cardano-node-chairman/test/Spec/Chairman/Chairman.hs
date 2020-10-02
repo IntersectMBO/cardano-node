@@ -81,3 +81,5 @@ chairmanOver H.Conf {..} allNodes = do
       H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stdout.log"
       H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stderr.log"
       H.failure
+
+  H.failure
