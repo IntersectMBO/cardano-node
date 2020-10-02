@@ -51,6 +51,7 @@ executable cardano-node-chairman
                       , HUnit
                       , io-sim-classes
                       , mmorph
+                      , mtl
                       , network
                       , network-mux
                       , optparse-applicative
@@ -66,6 +67,7 @@ executable cardano-node-chairman
                       , temporary
                       , text
                       , time
+                      , transformers
                       , transformers-except
                       , typed-protocols
                       , unliftio
@@ -96,6 +98,7 @@ test-suite chairman-tests
                       , hspec
                       , HUnit
                       , mmorph
+                      , mtl
                       , network
                       , process
                       , random
@@ -105,6 +108,7 @@ test-suite chairman-tests
                       , temporary
                       , text
                       , time
+                      , transformers
                       , unliftio
                       , unordered-containers
   other-modules:        Spec.Chairman.Chairman

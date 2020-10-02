@@ -1,10 +1,18 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Spec.Network
   ( hprop_isPortOpen_False
   , hprop_isPortOpen_True
+  , hprop_moo
+  , hprop_foo
   ) where
 
 import           Control.Exception (IOException)
@@ -24,6 +32,8 @@ import qualified Data.List as L
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.MonadAssertion as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Network.Socket as IO
 import qualified System.Random as IO
@@ -56,3 +66,17 @@ hprop_isPortOpen_True = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
             case socketResult of
               Right socket -> return (socket, n)
               Left (_ :: IOException) -> openOnePortFrom ns
+
+hprop_moo :: Property
+hprop_moo = H.propertyOnce . H.workspace "temp/network" $ \_ -> do
+  e <- H.catchAssertion H.failure return
+  H.noteShow_ e
+  H.throwAssertion e
+
+hprop_foo :: Property
+hprop_foo = H.propertyOnce . H.runFinallies $ do
+  H.onFailure $ H.noteM_ $ H.readFile "moo.txt"
+
+  H.writeFile "moo.txt" "hello world"
+
+  H.failure
