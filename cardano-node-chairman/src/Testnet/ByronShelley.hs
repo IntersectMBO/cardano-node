@@ -355,7 +355,6 @@ testnet H.Conf {..} = do
       , "--signing-key-file", tempAbsPath </> node </> "shelley/vrf.skey"
       ]
 
-
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
     H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".skey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/operator.skey")
@@ -598,6 +597,9 @@ testnet H.Conf {..} = do
         )
       )
 
+    H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
+    H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
+
     H.noteShowM_ $ H.getPid hProcess
 
   H.threadDelay 100000
@@ -639,17 +641,16 @@ testnet H.Conf {..} = do
         )
       )
 
+    H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
+    H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
+
   H.noteShowIO_ DTC.getCurrentTime
 
   deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime
 
-  -- forM_ allNodes $ \node -> do
-  --   portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
-  --   H.assertByDeadlineMFinally deadline (H.isPortOpen (read portString)) $ do
-  --     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-  --     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
-  --     H.cat nodeStdoutFile
-  --     H.cat nodeStderrFile
+  forM_ allNodes $ \node -> do
+    portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
+    H.assertByDeadlineM deadline (H.isPortOpen (read portString))
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)

@@ -7,8 +7,6 @@ module Spec.Chairman.Chairman
   ) where
 
 import           Control.Monad
-import           Control.Monad.Catch
-import           Control.Monad.Trans.Resource
 import           Data.Either
 import           Data.Function
 import           Data.Functor
@@ -16,9 +14,8 @@ import           Data.Int
 import           Data.Maybe
 import           Data.Semigroup
 import           Data.String
-import           GHC.Stack (HasCallStack)
-import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
+import           Hedgehog.Extras.Test.Base (Integration)
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
@@ -41,7 +38,7 @@ import qualified Testnet.Conf as H
 mkSprocket :: FilePath -> FilePath -> String -> Sprocket
 mkSprocket tempBaseAbsPath socketDir node = Sprocket tempBaseAbsPath (socketDir </> node)
 
-chairmanOver :: (MonadTest m,  MonadResource m, MonadCatch m, HasCallStack) => H.Conf -> [String] -> m ()
+chairmanOver :: H.Conf -> [String] -> Integration ()
 chairmanOver H.Conf {..} allNodes = do
   nodeStdoutFile <- H.noteTempFile logDir $ "chairman" <> ".stdout.log"
   nodeStderrFile <- H.noteTempFile logDir $ "chairman" <> ".stderr.log"
@@ -71,6 +68,9 @@ chairmanOver H.Conf {..} allNodes = do
         }
       )
     )
+
+  H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
+  H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
 
   chairmanResult <- H.waitSecondsForProcess 110 hProcess
 
