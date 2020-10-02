@@ -10,13 +10,38 @@ license-files:         LICENSE
                        NOTICE
 build-type:            Simple
 
-library
+common common-modules
   hs-source-dirs:       src
-  build-depends:        base >= 4.12 && < 5
+  other-modules:        Test.Process
+                        Test.Base
+                        Testnet.ByronShelley
+                        Testnet.Conf
+                        Testnet.Shelley
+
+executable cardano-node-chairman
+  hs-source-dirs:       app
+  main-is:              cardano-node-chairman.hs
+  other-modules:        Cardano.Chairman
+                        Cardano.Chairman.Options
+                        Paths_cardano_node_chairman
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
+                        -Wno-unticked-promoted-constructors
+  build-depends:        base >=4.12 && <5
                       , aeson
                       , async
+                      , bytestring
                       , call-stack
+                      , cardano-api
+                      , cardano-config
+                      , cardano-ledger
+                      , cardano-node
+                      , cardano-prelude
                       , containers
+                      , contra-tracer
                       , directory
                       , exceptions
                       , filepath
@@ -24,8 +49,15 @@ library
                       , hedgehog-extras
                       , hspec
                       , HUnit
+                      , io-sim-classes
                       , mmorph
                       , network
+                      , network-mux
+                      , optparse-applicative
+                      , ouroboros-consensus
+                      , ouroboros-consensus-cardano
+                      , ouroboros-network
+                      , ouroboros-network-framework
                       , process
                       , random
                       , resourcet
@@ -34,64 +66,20 @@ library
                       , temporary
                       , text
                       , time
+                      , transformers-except
+                      , typed-protocols
                       , unliftio
                       , unordered-containers
-  exposed-modules:      Test.Process
-                        Test.Base
-                        Testnet.ByronShelley
-                        Testnet.Conf
-                        Testnet.Shelley
-  default-language:     Haskell2010
+
   default-extensions:   NoImplicitPrelude
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-
-executable cardano-node-chairman
-  hs-source-dirs:      app
-  main-is:             cardano-node-chairman.hs
-  other-modules:       Cardano.Chairman
-                       Cardano.Chairman.Options
-                       Paths_cardano_node_chairman
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
-                       -Wno-unticked-promoted-constructors
-  build-depends:       base >=4.12 && <5
-                     , async
-                     , bytestring
-                     , cardano-api
-                     , cardano-config
-                     , cardano-ledger
-                     , cardano-node
-                     , cardano-prelude
-                     , cardano-prelude
-                     , containers
-                     , contra-tracer
-                     , io-sim-classes
-                     , network-mux
-                     , optparse-applicative
-                     , ouroboros-consensus
-                     , ouroboros-consensus-cardano
-                     , ouroboros-network
-                     , ouroboros-network-framework
-                     , text
-                     , transformers-except
-                     , typed-protocols
-
-  default-extensions:  NoImplicitPrelude
 
   if os(windows)
-     build-depends:    Win32
+     build-depends:     Win32
   else
-     build-depends:    unix
+     build-depends:     unix
 
 test-suite chairman-tests
+  import:               common-modules
   hs-source-dirs:       test
   main-is:              Spec.hs
   type:                 exitcode-stdio-1.0
@@ -99,7 +87,6 @@ test-suite chairman-tests
                       , aeson
                       , async
                       , call-stack
-                      , cardano-node-chairman
                       , containers
                       , directory
                       , exceptions
@@ -125,6 +112,7 @@ test-suite chairman-tests
                         Spec.Chairman.ByronShelley
                         Spec.Chairman.Shelley
                         Spec.Network
+                        
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -140,6 +128,7 @@ test-suite chairman-tests
                       , cardano-node-chairman:cardano-node-chairman
 
 executable cardano-testnet
+  import:               common-modules
   hs-source-dirs:       testnet
   main-is:              Main.hs
   build-depends:        base >= 4.12 && < 5
@@ -147,7 +136,6 @@ executable cardano-testnet
                       , ansi-terminal
                       , async
                       , call-stack
-                      , cardano-node-chairman
                       , containers
                       , directory
                       , exceptions
