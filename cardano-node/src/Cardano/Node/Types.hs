@@ -36,6 +36,7 @@ module Cardano.Node.Types
   , PortNumber
   , SocketPath(..)
   , TopologyFile(..)
+  , NodeDiffusionMode (..)
     -- * Consensus protocol configuration
   , NodeByronProtocolConfiguration(..)
   , NodeHardForkProtocolConfiguration(..)
@@ -66,6 +67,7 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAddress (..
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
 -- use records with named fields in the CLI code.
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 -- | Errors for the cardano-config module.
 newtype ConfigError = ConfigErrorFileNotFound FilePath
@@ -234,6 +236,22 @@ newtype NodeHostDnsAddress
 nodeHostDnsAddressToDomain :: NodeHostDnsAddress -> DNS.Domain
 nodeHostDnsAddressToDomain = Text.encodeUtf8 . unNodeHostDnsAddress
 
+
+-- | Newtype wrapper which provides 'FromJSON' instance for 'DiffusionMode'.
+--
+newtype NodeDiffusionMode
+  = NodeDiffusionMode { getDiffusionMode :: DiffusionMode }
+  deriving newtype Show
+
+instance FromJSON NodeDiffusionMode where
+    parseJSON (String str) =
+      case str of
+        "InitiatorOnly"
+          -> pure $ NodeDiffusionMode InitiatorOnlyDiffusionMode
+        "InitiatorAndResponder"
+          -> pure $ NodeDiffusionMode InitiatorAndResponderDiffusionMode
+        _ -> panic "Parsing NodeDiffusionMode failed: can be either 'InitiatorOnly' or 'InitiatorAndResponder'"
+    parseJSON _ = panic "Parsing NodeDiffusionMode failed"
 
 class AdjustFilePaths a where
   adjustFilePaths :: (FilePath -> FilePath) -> a -> a

@@ -11,6 +11,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
 
 import           Hedgehog (Property, discover, (===))
 import qualified Hedgehog
@@ -42,6 +43,7 @@ testPartialYamlConfig =
                                           $ NodeShelleyProtocolConfiguration
                                           (GenesisFile "dummmy-genesis-file") Nothing 1 2 3
     , pncSocketPath = Last Nothing
+    , pncDiffusionMode = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
     , pncViewMode = Last $ Just LiveView
@@ -72,6 +74,7 @@ testPartialCliConfig =
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncSocketPath   = mempty
+    , pncDiffusionMode = mempty
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
     , pncShutdownIPC = Last $ Just Nothing
@@ -103,6 +106,7 @@ expectedConfig =
                            $ NodeShelleyProtocolConfiguration
                              (GenesisFile "dummmy-genesis-file") Nothing 1 2 3
     , ncSocketPath = Nothing
+    , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
     , ncViewMode = SimpleView
