@@ -69,7 +69,8 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), RemoteConnectionId)
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   DiffusionMode, RemoteConnectionId)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
@@ -293,6 +294,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
           publicIPv4SocketOrAddr
           publicIPv6SocketOrAddr
           localSocketOrPath
+          (ncDiffusionMode nc)
           ipProducers
           dnsProducers
 
@@ -425,12 +427,14 @@ createDiffusionArguments
   -> SocketOrSocketInfo Socket SocketPath
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
   -- NodeToClient communication.
+  -> DiffusionMode
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments
 createDiffusionArguments publicIPv4SocketsOrAddrs
                          publicIPv6SocketsOrAddrs
                          localSocketOrPath
+                         diffusionMode
                          ipProducers dnsProducers
                          =
   DiffusionArguments
@@ -450,6 +454,7 @@ createDiffusionArguments publicIPv4SocketsOrAddrs
       , acceptedConnectionsSoftLimit = 384
       , acceptedConnectionsDelay     = 5
       }
+    , daDiffusionMode = diffusionMode
     }
   where
     eitherSocketOrSocketInfo :: SocketOrSocketInfo a b -> Either a b

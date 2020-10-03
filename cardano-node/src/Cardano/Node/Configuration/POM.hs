@@ -35,6 +35,7 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Ouroboros.Network.Block (MaxSlotNo (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 data NodeConfiguration
   = NodeConfiguration
@@ -57,6 +58,7 @@ data NodeConfiguration
 
          -- Node parameters, not protocol-specific:
        , ncSocketPath     :: !(Maybe SocketPath)
+       , ncDiffusionMode  :: !DiffusionMode
 
          -- BlockFetch configuration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
@@ -91,6 +93,7 @@ data PartialNodeConfiguration
 
          -- Node parameters, not protocol-specific:
        , pncSocketPath     :: !(Last SocketPath)
+       , pncDiffusionMode  :: !(Last DiffusionMode)
 
          -- BlockFetch configuration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
@@ -118,6 +121,8 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Node parameters, not protocol-specific
       pncSocketPath' <- Last <$> v .:? "SocketPath"
+      pncDiffusionMode'
+        <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
 
       -- Blockfetch parameters
       pncMaxConcurrencyBulkSync' <- Last <$> v .:? "MaxConcurrencyBulkSync"
@@ -148,6 +153,7 @@ instance FromJSON PartialNodeConfiguration where
       pure PartialNodeConfiguration {
              pncProtocolConfig = pncProtocolConfig'
            , pncSocketPath = pncSocketPath'
+           , pncDiffusionMode = pncDiffusionMode'
            , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
            , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
            , pncViewMode = pncViewMode'
@@ -245,6 +251,7 @@ defaultPartialNodeConfiguration =
     , pncDatabaseFile = Last . Just $ DbFile "mainnet/db/"
     , pncLoggingSwitch = Last $ Just True
     , pncSocketPath = mempty
+    , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncViewMode = Last $ Just SimpleView
     , pncNodeIPv4Addr = mempty
@@ -281,6 +288,7 @@ makeNodeConfiguration pnc = do
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
+  diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   return $ NodeConfiguration
              { ncNodeIPv4Addr = getLast $ pncNodeIPv4Addr pnc
              , ncNodeIPv6Addr = getLast $ pncNodeIPv6Addr pnc
@@ -294,6 +302,7 @@ makeNodeConfiguration pnc = do
              , ncShutdownOnSlotSynced = shutdownOnSlotSynced
              , ncProtocolConfig = protocolConfig
              , ncSocketPath = getLast $ pncSocketPath pnc
+             , ncDiffusionMode = diffusionMode
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
              , ncViewMode = viewMode
