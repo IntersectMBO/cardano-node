@@ -1,5 +1,24 @@
 # Changelog for cardano-node
 
+## 1.21.1 -- September 2020
+
+### node changes
+- Fix configuration defaults that was interfering with using systemd socket
+  activation (#1927)
+- Workaround for building on Linux systems without systemd (#1775)
+- Fix the severity level for some protocol tracers (#1910)
+- Add more detail to the logging of the keep-alive protocol (#1873)
+- Improve the reporting of failures in the "chairman" CI test (#1916, #1923)
+
+### consensus changes
+- None.
+
+### ledger changes
+- None.
+
+### network changes
+- None.
+
 ## 1.21.0 -- September 2020
 
 ### node changes
@@ -651,9 +670,9 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 ## 1.9.0 -- March 2020
 
 ### node changes
-- Remove CLI override for genesis file. It must be in the confg file. (#683)
-- Genesis file path in confg relative to the config file location (#648)
-- For security adjust default confg to not listen on local ports (#707)
+- Remove CLI override for genesis file. It must be in the config file. (#683)
+- Genesis file path in config relative to the config file location (#648)
+- For security adjust default config to not listen on local ports (#707)
 - Use new DNS relay pool in default mainnet configuration (#708, )
 - CLI support for creating Byron era update proposals (#696)
 - Improved Windows CI (#669, #685)
@@ -903,7 +922,7 @@ No changes in the node. There were changes in the cardano-api and cardano-cli.
 ### node changes
 - Update to latest dependencies (consensus, ledger, logging etc)
 - More monitoring counters/statistics, including Prometheus output (#366)
-- Remove unused legacy and wallet configuration fields (code and confg files)
+- Remove unused legacy and wallet configuration fields (code and config files)
 - Improve README files
 - Hide tracing options from default `--help` command
 - Fix flakeyness in logging setup & shutdown
