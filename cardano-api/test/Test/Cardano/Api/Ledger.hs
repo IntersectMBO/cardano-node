@@ -8,14 +8,11 @@ module Test.Cardano.Api.Ledger
 
 import           Cardano.Prelude
 
-import           Data.Aeson (encode)
-
-import qualified Data.ByteString.Lazy.Char8 as LBS
-
 import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
 
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
+import           Test.Tasty (TestTree)
 
 import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
 
@@ -23,6 +20,7 @@ import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genA
 
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Prelude
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 
 prop_golden_ShelleyGenesis :: Property
@@ -40,11 +38,5 @@ prop_roundtrip_Address_CBOR =
 
 -- -----------------------------------------------------------------------------
 
-tests :: IO Bool
-tests = do
-  -- Set to True when the struct or the JSON encoding changes and you need the new
-  -- version.
-  if False
-    then LBS.writeFile "test/Golden/ShelleyGenesis" (encode exampleShelleyGenesis)
-    else pure ()
-  Hedgehog.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

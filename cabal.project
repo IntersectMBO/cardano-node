@@ -105,6 +105,13 @@ source-repository-package
   location: https://github.com/input-output-hk/cardano-base
   tag: 13f44ad35d2762dbf98b3d3be56b7ba2adf515f4
   --sha256: 0sl7adyrjf3w6025gvljxyr222s53avin0sv0gzhdypmj9wg5ml6
+  subdir: cardano-crypto-tests
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: 13f44ad35d2762dbf98b3d3be56b7ba2adf515f4
+  --sha256: 0sl7adyrjf3w6025gvljxyr222s53avin0sv0gzhdypmj9wg5ml6
   subdir: slotting
 
 source-repository-package

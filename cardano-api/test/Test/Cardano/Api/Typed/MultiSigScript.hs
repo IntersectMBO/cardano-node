@@ -12,6 +12,8 @@ import           Data.Aeson
 import           Hedgehog (Property, discover)
 import qualified Hedgehog as H
 import           Hedgehog.Internal.Property (failWith)
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Api.Typed.Gen
@@ -42,6 +44,5 @@ prop_roundtrip_MultiSigScript_JSON =
     mss <- H.forAll genMultiSigScript
     H.tripping mss encode eitherDecode
 
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover
