@@ -1,46 +1,46 @@
-# Installing the node from source
+# ノードをソースからインストールする
 
-**Latest version:** [https://github.com/input-output-hk/cardano-node/releases](https://github.com/input-output-hk/cardano-node/releases)
+**最新版：** [https://github.com/input-output-hk/cardano-node/releases](https://github.com/input-output-hk/cardano-node/releases)
 
-#### Prerequisites
+#### 準備
 
-Set up your platform:
+プラットフォームのセットアップ：
 
-You will need:
+要件：
 
-* An x86 host \(AMD or Intel\), Virtual Machine or AWS instance with at least 2 cores, 4GB of RAM and at least 10GB of free disk space;
-* A recent version of Linux.
+* x86ホスト（AMDまたはIntel）、仮想マシンまたは2コア以上のAWSインスタンス、4GBのRAM、10GB以上のディスク空き容量
+* 最新版Linux
 
-#### Install dependencies
+#### ディペンデンシーをインストールする
 
 We need the following packages and tools on our Linux system to download the source code and build it:
 
-* the version control system `git`,
-* the `gcc` C-compiler,
-* C++ support for `gcc`,
-* developer libraries for the arbitrary precision library `gmp`,
-* developer libraries for the compression library `zlib`,
-* developer libraries for `systemd`,
-* developer libraries for `ncurses`,
-* `ncurses` compatibility libraries,
-* the Haskell build tool `cabal`,
-* the GHC Haskell compiler.
+* バージョン管理システム`git`
+* `gcc`Cコンパイラ
+* `gcc`のC++サポート
+* 任意精度ライブラリ`gmp`用開発者ライブラリ
+* 圧縮ライブラリ`zlib`用開発者ライブラリ
+* `systemd`用開発者ライブラリ
+* `ncurses`用開発者ライブラリ
+* `ncurses`対応ライブラリ
+* Haskell構築ツール`cabal`
+* GHC Haskellコンパイラ
 
-In Redhat, Fedora and Centos
+Redhat、Fedora、Centosで
 
     sudo yum update -y
     sudo yum install git gcc gcc-c++ tmux gmp-devel make tar wget zlib-devel libtool autoconf -y
     sudo yum install systemd-devel ncurses-devel ncurses-compat-libs -y
 
-For Debian/Ubuntu use the following instead:
+Debian/Ubuntuでは、代わりに以下を使用します
 
 
     sudo apt-get update -y
     sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf -y
 
-If you are using a different flavor of Linux, you will need to use the package manager suitable for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.
+Linuxで別のフレーバーを使用している場合は、`yum`または`apt-get`の代わりに、プラットフォームに適したパッケージマネージャーを使用する必要があります。
 
-#### Download, unpack, install and update Cabal:
+#### Cabalをダウンロード、解凍、インストール、更新する
 
     wget https://downloads.haskell.org/~cabal/cabal-install-3.2.0.0/cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
     tar -xf cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
@@ -48,27 +48,27 @@ If you are using a different flavor of Linux, you will need to use the package m
     mkdir -p ~/.local/bin
     mv cabal ~/.local/bin/
 
-Verify that .local/bin is in your PATH
+PATHに.local/binがあることを確認します
 
     echo $PATH
 
-If `.local/bin` is not in the PATH, you need to add the following line to  your `.bashrc` file
+`.local/bin`PATHがない場合、`.bashrc`ファイルに以下を追加します
 
     export PATH="~/.local/bin:$PATH"
 
-and source the file
+このファイルをソースにします
 
     source .bashrc
 
-Update cabal
+cabalを更新します
 
     cabal update
 
-Confirm that you installed cabal version `3.2.0.0`.
+Cabalバージョン`3.2.0.0`がインストールされたことを確認します
 
     cabal --version
 
-#### Download and install GHC:
+#### GHCをダウンロード、インストールする
 
     wget https://downloads.haskell.org/~ghc/8.6.5/ghc-8.6.5-x86_64-deb9-linux.tar.xz
     tar -xf ghc-8.6.5-x86_64-deb9-linux.tar.xz
@@ -77,9 +77,9 @@ Confirm that you installed cabal version `3.2.0.0`.
     ./configure
     sudo make install
 
-Back in your home directory:
+ホームディレクトリーへ戻ります
 
-#### Install Libsodium
+#### Libsodiumをダウンロードする
 
     git clone https://github.com/input-output-hk/libsodium
     cd libsodium
@@ -89,45 +89,45 @@ Back in your home directory:
     make
     sudo make install
 
-Add the following to your .bashrc file and source it.
+.bashrcファイルに以下を追加し、ソースにします
 
     export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
     export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-#### Download the source code for cardano-node
+#### cardano-nodeのソースコードをダウンロードする
 
-Back in the home directory: 
+ホームディレクトリーへ戻ります 
 
     git clone https://github.com/input-output-hk/cardano-node.git
 
-Change the working directory to the downloaded source code folder:
+作業ディレクトリーをダウンロードしたソースコードフォルダーに変更します
 
     cd cardano-node
 
 
-Checkout the latest version of cardano-node
+cardano-nodeの最新版をチェックアウトします
 
     git fetch --all --tags
     git tag
     git checkout tags/<TAGGED VERSION>
 
-#### Build and install the node
+#### ノードを構築、インストールする
 
-Build and install the node with `cabal`,
+ノードを`cabal`で構築し、インストールします
 
     cabal build all
 
-Copy the executables files to the `.local/bin` directory. Replace the place holder <TAGGED VERSION> with your targeted version:
+実行ファイルを`.local/bin`ディレクトリーへコピーし、プレースホルダーを対象バージョンに置き換えます
 
     cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
 
     cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
 
-Check the version installed:
+インストールしたバージョンを確認します
 
     cardano-cli --version
 
-If you need to update to a newer version repeat this process.
+最新版に更新する必要場ある場合は、このプロセスを繰り返します
 
 
-**Note:** It might be necessary to delete the `db`-folder \(the database-folder\) before running an updated version of the node.
+**注：** ノードの更新バージョンを実行する前に、`db`フォルダー（データベースフォルダー）を削除する必要がある場合があります
