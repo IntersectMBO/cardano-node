@@ -14,7 +14,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExcept
 import           Cardano.Api.TextView (TextViewDescription (..), textShow)
 import           Cardano.Api.Typed
 
-import           Cardano.CLI.Shelley.Commands (VerificationKeyOrHashOrFile (..))
+import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHashOrFile,
+                     readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
@@ -23,6 +24,7 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 data ShelleyGovernanceCmdError
   = ShelleyGovernanceCmdTextEnvReadError !(FileError TextEnvelopeError)
+  | ShelleyGovernanceCmdKeyReadError !(FileError InputDecodeError)
   | ShelleyGovernanceCmdTextEnvWriteError !(FileError ())
   | ShelleyGovernanceCmdEmptyUpdateProposalError
   | ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
@@ -37,6 +39,7 @@ renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Text
 renderShelleyGovernanceError err =
   case err of
     ShelleyGovernanceCmdTextEnvReadError fileErr -> Text.pack (displayError fileErr)
+    ShelleyGovernanceCmdKeyReadError fileErr -> Text.pack (displayError fileErr)
     ShelleyGovernanceCmdTextEnvWriteError fileErr -> Text.pack (displayError fileErr)
     -- TODO: The equality check is still not working for empty update proposals.
     ShelleyGovernanceCmdEmptyUpdateProposalError ->
@@ -103,13 +106,13 @@ runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
                                              genDelVkOrHashOrFp
                                              vrfVkOrHashOrFp
                                              (OutputFile oFp) = do
-    genesisVkHash <- firstExceptT ShelleyGovernanceCmdTextEnvReadError
+    genesisVkHash <- firstExceptT ShelleyGovernanceCmdKeyReadError
       . newExceptT
-      $ readVerificationKeyOrHashOrFile AsGenesisKey genVkOrHashOrFp
-    genesisDelVkHash <-firstExceptT ShelleyGovernanceCmdTextEnvReadError
+      $ readVerificationKeyOrHashOrTextEnvFile AsGenesisKey genVkOrHashOrFp
+    genesisDelVkHash <-firstExceptT ShelleyGovernanceCmdKeyReadError
       . newExceptT
-      $ readVerificationKeyOrHashOrFile AsGenesisDelegateKey genDelVkOrHashOrFp
-    vrfVkHash <- firstExceptT ShelleyGovernanceCmdTextEnvReadError
+      $ readVerificationKeyOrHashOrTextEnvFile AsGenesisDelegateKey genDelVkOrHashOrFp
+    vrfVkHash <- firstExceptT ShelleyGovernanceCmdKeyReadError
       . newExceptT
       $ readVerificationKeyOrHashOrFile AsVrfKey vrfVkOrHashOrFp
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError
@@ -139,21 +142,3 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
         upProp = makeShelleyUpdateProposal upPprams genKeyHashes eNo
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $
       writeFileTextEnvelope upFile Nothing upProp
-
--- | Read a verification key or verification key hash or verification key file
--- and return a verification key hash.
---
--- If a filepath is provided, it will be interpreted as a text envelope
--- formatted file.
-readVerificationKeyOrHashOrFile
-  :: Key keyrole
-  => AsType keyrole
-  -> VerificationKeyOrHashOrFile keyrole
-  -> IO (Either (FileError TextEnvelopeError) (Hash keyrole))
-readVerificationKeyOrHashOrFile asType verKeyOrHashOrFile =
-  case verKeyOrHashOrFile of
-    VerificationKeyHash vkHash -> pure (Right vkHash)
-    VerificationKeyValue vk -> pure (Right $ verificationKeyHash vk)
-    VerificationKeyFilePath (VerificationKeyFile fp) -> do
-      eitherVk <- readFileTextEnvelope (AsVerificationKey asType) fp
-      pure (verificationKeyHash <$> eitherVk)

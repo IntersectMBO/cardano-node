@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Shelley CLI command types
@@ -42,8 +41,8 @@ module Cardano.CLI.Shelley.Commands
   , PoolMetaDataFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
-  , VerificationKeyOrHashOrFile (..)
   , WitnessSigningData (..)
+  , ColdVerificationKeyOrFile (..)
   ) where
 
 import           Data.Text (Text)
@@ -55,6 +54,8 @@ import           Cardano.Api.Typed hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, VerificationKeyOrHashOrFile,
+                     VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
 import           Shelley.Spec.Ledger.TxBody (MIRPot)
@@ -94,8 +95,12 @@ renderShelleyCommand sc =
 
 data AddressCmd
   = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
-  | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
-  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
+  | AddressKeyHash VerificationKeyTextOrFile (Maybe OutputFile)
+  | AddressBuild
+      VerificationKeyTextOrFile
+      (Maybe (VerificationKeyOrFile StakeKey))
+      NetworkId
+      (Maybe OutputFile)
   | AddressBuildMultiSig ScriptFile NetworkId (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
   deriving (Eq, Show)
@@ -112,11 +117,14 @@ renderAddressCmd cmd =
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
-  | StakeAddressKeyHash VerificationKeyFile (Maybe OutputFile)
-  | StakeAddressBuild VerificationKeyFile NetworkId (Maybe OutputFile)
-  | StakeKeyRegistrationCert VerificationKeyFile OutputFile
-  | StakeKeyDelegationCert VerificationKeyFile StakePoolVerificationKeyHashOrFile OutputFile
-  | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
+  | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
+  | StakeAddressBuild (VerificationKeyOrFile StakeKey) NetworkId (Maybe OutputFile)
+  | StakeKeyRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
+  | StakeKeyDelegationCert
+      (VerificationKeyOrFile StakeKey)
+      (VerificationKeyOrHashOrFile StakePoolKey)
+      OutputFile
+  | StakeKeyDeRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
   deriving (Eq, Show)
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text
@@ -194,9 +202,9 @@ data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
   | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
-  | NodeKeyHashVRF  VerificationKeyFile (Maybe OutputFile)
-  | NodeNewCounter  VerificationKeyFile Word OpCertCounterFile
-  | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
+  | NodeKeyHashVRF  (VerificationKeyOrFile VrfKey) (Maybe OutputFile)
+  | NodeNewCounter ColdVerificationKeyOrFile Word OpCertCounterFile
+  | NodeIssueOpCert (VerificationKeyOrFile KesKey) SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
   deriving (Eq, Show)
 
@@ -213,9 +221,9 @@ renderNodeCmd cmd = do
 
 data PoolCmd
   = PoolRegistrationCert
-      VerificationKeyFile
+      (VerificationKeyOrFile StakePoolKey)
       -- ^ Stake pool verification key.
-      VerificationKeyFile
+      (VerificationKeyOrFile VrfKey)
       -- ^ VRF Verification key.
       Lovelace
       -- ^ Pool pledge.
@@ -223,9 +231,9 @@ data PoolCmd
       -- ^ Pool cost.
       Rational
       -- ^ Pool margin.
-      VerificationKeyFile
+      (VerificationKeyOrFile StakeKey)
       -- ^ Reward account verification staking key.
-      [VerificationKeyFile]
+      [VerificationKeyOrFile StakeKey]
       -- ^ Pool owner verification staking key(s).
       [StakePoolRelay]
       -- ^ Stake pool relays.
@@ -234,12 +242,12 @@ data PoolCmd
       NetworkId
       OutputFile
   | PoolRetirementCert
-      VerificationKeyFile
+      (VerificationKeyOrFile StakePoolKey)
       -- ^ Stake pool verification key.
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
       OutputFile
-  | PoolGetId VerificationKeyFile OutputFormat
+  | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
   | PoolMetaDataHash PoolMetaDataFile (Maybe OutputFile)
   deriving (Eq, Show)
 
@@ -432,24 +440,6 @@ newtype VerificationKeyBase64
   = VerificationKeyBase64 String
   deriving (Eq, Show)
 
--- | Either a verification key, verification key hash, or path to a
--- verification key file.
-data VerificationKeyOrHashOrFile keyrole
-  = VerificationKeyValue !(VerificationKey keyrole)
-  -- ^ A verification key.
-  | VerificationKeyHash !(Hash keyrole)
-  -- ^ A verification key hash.
-  | VerificationKeyFilePath !VerificationKeyFile
-  -- ^ A path to a verification key file.
-  -- Note that this file hasn't been validated at all (whether it exists,
-  -- contains a key of the correct type, etc.)
-
-deriving instance (Show (VerificationKey keyrole), Show (Hash keyrole))
-  => Show (VerificationKeyOrHashOrFile keyrole)
-
-deriving instance (Eq (VerificationKey keyrole), Eq (Hash keyrole))
-  => Eq (VerificationKeyOrHashOrFile keyrole)
-
 -- | Data required to construct a witness.
 data WitnessSigningData
   = KeyWitnessSigningData
@@ -461,4 +451,17 @@ data WitnessSigningData
       -- If specified, both the network ID and derivation path are extracted
       -- from the address and used in the construction of the Byron witness.
   | ScriptWitnessSigningData !ScriptFile
+  deriving (Eq, Show)
+
+-- | Either a stake pool verification key, genesis delegate verification key,
+-- or a path to a cold verification key file.
+--
+-- Note that a "cold verification key" refers to either a stake pool or
+-- genesis delegate verification key.
+--
+-- TODO: A genesis delegate extended key should also be valid here.
+data ColdVerificationKeyOrFile
+  = ColdStakePoolVerificationKey !(VerificationKey StakePoolKey)
+  | ColdGenesisDelegateVerificationKey !(VerificationKey GenesisDelegateKey)
+  | ColdVerificationKeyFile !VerificationKeyFile
   deriving (Eq, Show)
