@@ -37,7 +37,10 @@ module Cardano.API (
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
     Address,
-    NetworkId(Mainnet,Testnet),
+    NetworkId
+      ( Mainnet
+      , Testnet
+      ),
     -- * Byron addresses
     makeByronAddress,
     ByronKey,

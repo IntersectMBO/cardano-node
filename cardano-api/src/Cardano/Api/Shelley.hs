@@ -3,91 +3,179 @@
 --
 
 module Cardano.Api.Shelley
-  ( module Cardano.Api.Crypto.Ed25519Bip32
-  , module Cardano.Api.LocalChainSync
-  , module Cardano.Api.MetaData
-  , module Cardano.Api.Protocol
-  , module Cardano.Api.Shelley.Genesis
-  , module Cardano.Api.TextView
-  , module Cardano.Api.TxSubmit
-  , module Cardano.Api.Typed
-  , module Cardano.Api.Protocol.Cardano
-  , module Cardano.Api.Protocol.Shelley
-  , module Cardano.Api.Protocol.Types
-  , module Cardano.Slotting.Slot
-  , module Ouroboros.Consensus.Block
-  , module Ouroboros.Consensus.BlockchainTime
-  , module Ouroboros.Consensus.Cardano
-  , module Ouroboros.Consensus.Ledger.SupportsMempool
-  , module Ouroboros.Consensus.Network.NodeToClient
-  , module Ouroboros.Consensus.Node.NetworkProtocolVersion
-  , module Ouroboros.Consensus.Node.ProtocolInfo
-  , module Ouroboros.Consensus.Node.Run
-  , module Ouroboros.Network.AnchoredFragment
-  , module Ouroboros.Network.Block
-  , module Ouroboros.Network.Magic
-  , module Ouroboros.Network.Mux
-  , module Ouroboros.Network.NodeToClient
-  , module Ouroboros.Network.Point
-  , module Ouroboros.Network.Protocol.ChainSync.Client
-  , module Ouroboros.Network.Protocol.ChainSync.Type
-  , module Ouroboros.Network.Protocol.LocalTxSubmission.Type
-  , module Shelley.Spec.Ledger.Genesis
-  , module Shelley.Spec.Ledger.OCert
+  ( module Cardano.API,
+    -- * Era
+    Shelley,
+    HasTypeProxy(..),
+    AsType(AsShelleyAddress,
+           AsShelleyTxBody,
+           AsShelleyTx,
+           AsShelleyWitness),
+
+    -- * Cryptographic key interface
+    -- $keys
+    VerificationKey(..),
+
+    -- * Payment addresses
+    -- | Constructing and inspecting Shelley payment addresses
+    Address(ShelleyAddress),
+    NetworkId(Mainnet, Testnet),
+
+    -- * Building transactions
+    -- | Constructing and inspecting transactions
+    TxBody(ShelleyTxBody),
+    TxId(TxId),
+    TxIn(TxIn),
+    TxOut(TxOut),
+    TxIx(TxIx),
+    Lovelace(Lovelace),
+    SlotNo(SlotNo),
+
+    -- * Signing transactions
+    -- | Creating transaction witnesses one by one, or all in one go.
+    Tx(ShelleyTx),
+
+    -- ** Incremental signing and separate witnesses
+    Witness
+      ( ShelleyBootstrapWitness
+      , ShelleyKeyWitness
+      , ShelleyScriptWitness
+      ),
+    ShelleyWitnessSigningKey
+      ( WitnessPaymentKey
+      , WitnessPaymentExtendedKey
+      , WitnessStakeKey
+      , WitnessStakeExtendedKey
+      , WitnessStakePoolKey
+      , WitnessGenesisKey
+      , WitnessGenesisExtendedKey
+      , WitnessGenesisDelegateKey
+      , WitnessGenesisDelegateExtendedKey
+      ),
+    ShelleySigningKey,
+    getShelleyKeyWitnessVerificationKey,
+    makeShelleySignature,
+    toShelleySigningKey,
+
+    -- *** Reading one of several key types
+    FromSomeType(..),
+
+    -- * Transaction metadata
+    -- | Embedding additional structured data within transactions.
+    TxMetadata
+      ( TxMetadata
+      , TxMetadataShelley
+      ),
+    TxMetadataValue
+      (TxMetaNumber
+      , TxMetaBytes
+      , TxMetaText
+      , TxMetaList
+      , TxMetaMap
+      ),
+    toShelleyMetaData,
+    fromShelleyMetaData,
+
+    -- * Protocol parameter updates
+    UpdateProposal(UpdateProposal),
+    ProtocolParametersUpdate(ProtocolParametersUpdate),
+    protocolUpdateProtocolVersion,
+    protocolUpdateDecentralization,
+    protocolUpdateExtraPraosEntropy,
+    protocolUpdateMaxBlockHeaderSize,
+    protocolUpdateMaxBlockBodySize,
+    protocolUpdateMaxTxSize,
+    protocolUpdateTxFeeFixed,
+    protocolUpdateTxFeePerByte,
+    protocolUpdateMinUTxOValue,
+    protocolUpdateStakeAddressDeposit,
+    protocolUpdateStakePoolDeposit,
+    protocolUpdateMinPoolCost,
+    protocolUpdatePoolRetireMaxEpoch,
+    protocolUpdateStakePoolTargetNum,
+    protocolUpdatePoolPledgeInfluence,
+    protocolUpdateMonetaryExpansion,
+    protocolUpdateTreasuryCut,
+    EpochNo(..),
+    NetworkMagic(..),
+    toShelleyPParamsUpdate,
+
+    -- * Scripts
+    -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
+    -- Shelley supports multi-signatures via scripts.
+    Script(Script),
+    MultiSigScript
+      ( RequireSignature
+      , RequireAllOf
+      , RequireAnyOf
+      , RequireMOf
+      ),
+    parseScript,
+    parseScriptAny,
+    parseScriptAll,
+    parseScriptAtLeast,
+    parseScriptSig,
+
+    -- * Certificates
+    Certificate (Certificate),
+
+    -- ** Operational certificates
+    OperationalCertificate(OperationalCertificate),
+    OperationalCertificateIssueCounter(OperationalCertificateIssueCounter),
+    OperationalCertIssueError(..),
+
+    -- * Stake Pool
+    StakePoolMetadata(StakePoolMetadata),
+    stakePoolName,
+    stakePoolDescription,
+    stakePoolTicker,
+    stakePoolHomepage,
+    StakePoolMetadataReference(StakePoolMetadataReference),
+    stakePoolMetadataURL,
+    stakePoolMetadataHash,
+    StakePoolParameters(StakePoolParameters),
+    stakePoolId,
+    stakePoolVRF,
+    stakePoolCost,
+    stakePoolMargin,
+    stakePoolRewardAccount,
+    stakePoolPledge,
+    stakePoolOwners,
+    stakePoolRelays,
+    stakePoolMetadata,
+    StakePoolRelay
+      ( StakePoolRelayIp
+      , StakePoolRelayDnsARecord
+      , StakePoolRelayDnsSrvRecord
+      ),
+    toShelleyPoolParams,
+
+    -- ** Stake pool operator's keys
+    StakePoolKey,
+    PoolId,
+
+    -- ** KES keys
+    KesKey,
+
+    -- ** VRF keys
+    VrfKey,
+
+    -- ** Low level protocol interaction with a Cardano node
+    LocalNodeConnectInfo(LocalNodeConnectInfo),
+    ShelleyMode,
+    CardanoMode,
+    NodeConsensusMode
+      ( ShelleyMode
+      , CardanoMode
+      ),
+    LocalNodeClientProtocols(LocalNodeClientProtocols),
+    withNodeProtocolClient,
+
   ) where
 
-import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
-import           Cardano.Api.LocalChainSync (getLocalTip)
-import           Cardano.Api.MetaData (TxMetadata (..), TxMetadataJsonError (..),
-                     TxMetadataJsonSchema (TxMetadataJsonDetailedSchema, TxMetadataJsonNoSchema),
-                     TxMetadataRangeError (..), metadataFromJson, metadataToJson,
-                     validateTxMetadata)
-import           Cardano.Api.Protocol (Protocol (ByronProtocol, CardanoProtocol, ShelleyProtocol),
-                     withlocalNodeConnectInfo)
-import           Cardano.Api.Protocol.Cardano (mkSomeNodeClientProtocolCardano)
-import           Cardano.Api.Protocol.Shelley (mkSomeNodeClientProtocolShelley)
-import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
-import           Cardano.Api.Shelley.Genesis (shelleyGenesisDefaults)
-import           Cardano.Api.TextView (TextView (..), TextViewDescription (..), TextViewError (..),
-                     TextViewType (..), textShow)
-import           Cardano.Api.TxSubmit (TxForMode (..), TxSubmitResultForMode (..), submitTx)
+-- | This module provides a library interface that is intended to be the complete API
+-- for Shelley covering everything, including exposing constructors for the lower level types.
+--
+
+import           Cardano.API
 import           Cardano.Api.Typed
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig, GetHeader (..), Header)
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
-import           Ouroboros.Consensus.Cardano (ProtocolClient (..), SecurityParam (..),
-                     protocolClientInfo)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
-import           Ouroboros.Consensus.Network.NodeToClient
-                     (Codecs' (Codecs, cChainSyncCodec, cStateQueryCodec, cTxSubmissionCodec),
-                     clientCodecs)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..),
-                     supportedNodeToClientVersions)
-import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
-import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Network.AnchoredFragment (Anchor (AnchorGenesis),
-                     AnchoredFragment (Empty))
-                     --headAnchor, intersect, rollback)
-import           Ouroboros.Network.Block (BlockNo (..), HasHeader, Point, Tip, genesisPoint,
-                     getTipBlockNo)
-import           Ouroboros.Network.Magic (NetworkMagic)
-import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..),
-                     RunMiniProtocol (InitiatorProtocolOnly))
-import           Ouroboros.Network.NodeToClient (DictVersion, IOManager, LocalAddress,
-                     NetworkConnectTracers (nctHandshakeTracer, nctMuxTracer),
-                     NetworkConnectTracers (NetworkConnectTracers),
-                     NodeToClientProtocols (NodeToClientProtocols, localChainSyncProtocol, localStateQueryProtocol, localTxSubmissionProtocol),
-                     NodeToClientVersion, NodeToClientVersionData (NodeToClientVersionData),
-                     TraceSendRecv, Versions, connectTo, foldMapVersions, localSnocket,
-                     localStateQueryPeerNull, localTxSubmissionPeerNull,
-                     versionedNodeToClientProtocols, withIOManager)
-import           Ouroboros.Network.Point (WithOrigin (..), fromWithOrigin)
-import           Ouroboros.Network.Protocol.ChainSync.Client (ChainSyncClient (ChainSyncClient),
-                     ClientStIdle (SendMsgFindIntersect, SendMsgRequestNext),
-                     ClientStIntersect (ClientStIntersect, recvMsgIntersectFound, recvMsgIntersectNotFound),
-                     ClientStNext (ClientStNext, recvMsgRollBackward, recvMsgRollForward),
-                     chainSyncClientPeer)
-import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
-import           Shelley.Spec.Ledger.Genesis (ShelleyGenesis (..))
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))

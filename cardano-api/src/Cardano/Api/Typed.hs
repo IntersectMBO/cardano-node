@@ -108,9 +108,10 @@ module Cardano.Api.Typed (
     getTxWitnesses,
 
     -- ** Signing in one go
+    ShelleySigningKey,
+    toShelleySigningKey,
     signByronTransaction,
     signShelleyTransaction,
-
     -- ** Incremental signing and separate witnesses
     makeSignedTransaction,
     Witness(..),
@@ -120,6 +121,8 @@ module Cardano.Api.Typed (
     WitnessNetworkIdOrByronAddress (..),
     makeShelleyBootstrapWitness,
     makeShelleyScriptWitness,
+    makeShelleySignature,
+    getShelleyKeyWitnessVerificationKey,
 
     -- * Fee calculation
     transactionFee,
@@ -129,6 +132,8 @@ module Cardano.Api.Typed (
     -- | Embedding additional structured data within transactions.
     TxMetadata (TxMetadata, TxMetadataShelley),
     TxMetadataValue(..),
+    toShelleyMetaData,
+    fromShelleyMetaData,
     makeTransactionMetadata,
 
     -- * Registering stake address and delegating
@@ -157,6 +162,11 @@ module Cardano.Api.Typed (
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
     Script(..),
+    parseScript,
+    parseScriptAny,
+    parseScriptAll,
+    parseScriptAtLeast,
+    parseScriptSig,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
@@ -243,6 +253,7 @@ module Cardano.Api.Typed (
     NodeConsensusMode(..),
     LocalNodeClientProtocols(..),
     nullLocalNodeClientProtocols,
+    withNodeProtocolClient,
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
@@ -299,13 +310,19 @@ module Cardano.Api.Typed (
     EpochNo(..),
     NetworkMagic(..),
     makeShelleyUpdateProposal,
+    toShelleyPParamsUpdate,
 
     -- ** Conversions
     --TODO: arrange not to export these
     toByronNetworkMagic,
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
+    toByronLovelace,
+    toByronTxIn,
+    toByronTxId,
+    toByronTxOut,
     toShelleyNetwork,
+    toShelleyPoolParams,
     toNetworkMagic,
 
     Shelley.Addr(..),
@@ -1973,14 +1990,14 @@ toShelleyPoolParams StakePoolParameters {
 data StakePoolMetadata =
      StakePoolMetadata {
 
-        -- | A name of up to 50 characters.
-        stakePoolName :: !Text
+       -- | A name of up to 50 characters.
+       stakePoolName :: !Text
 
-        -- | A description of up to 255 characters.
+       -- | A description of up to 255 characters.
      , stakePoolDescription :: !Text
 
-        -- | A ticker of 3-5 characters, for a compact display of stake pools in
-        -- a wallet.
+       -- | A ticker of 3-5 characters, for a compact display of stake pools in
+       -- a wallet.
      , stakePoolTicker :: !Text
 
        -- | A URL to a homepage with additional information about the pool.
