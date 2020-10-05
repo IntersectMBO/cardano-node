@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 1.21.1 -- September 2020
+
+None
+
 ## 1.21.0 -- September 2020
 - Support for multi-signature scripts (#1788)
 - Support for Byron witnesses for addresses that use attributes, which includes
