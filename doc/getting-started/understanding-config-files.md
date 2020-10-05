@@ -1,8 +1,8 @@
-# Understanding your configuration files and how to use them
+# コンフィグファイルとその使い方を理解する
 
-#### The topology.json file
+#### topology.jsonファイル
 
-Tells your node to which nodes in the network it should talk to. A minimal version of this file looks like this:
+ネットワーク内のどのノードとやり取りするかを自分のノードに指示するためのものです。最小バージョンはこのように見えます
 
 
 	{
@@ -15,24 +15,23 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 	  ]
 	}
 
-* This means that your node will contact node at ip `x.x.x.x` on `port 3001`.
+* これは、自分のノードが`port 3001`上のIP`x.x.x.x`と通信することを意味します
 
-* `valency` tells the node how many connections your node should have. It only has an effect for dns addresses. If a dns address is given, valency governs to how many resolved ip addresses should we maintain active (hot) connection; for ip addresses, valency is used as a Boolean value, where `0` means to ignore the address.
+* `valency`はノードが持つべき接続数をノードに伝えます。これはDNSアドレスにのみ作用します。DNSアドレスが与えられた場合、valencyはアクティブ（ホット）接続で維持する解決したIPアドレス数を管理し、IPアドレスはvalencyをブール値として使用し、`0`の場合に対象アドレスを無視します
 
-Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
+__ブロックを生成する__ ノードは必ず自分の __リレーノード__ と __のみ__ 交信し、そのリレーノードはネットワークの他のリレーノードと通信する必要があります。IPアドレスとピアのポートはTelegramチャネルにあります。
 
 
-#### The genesis.json file
+#### genesis.jsonファイル
 
-The genesis file is generated with the `cardano-cli` by reading a `genesis.spec.json` file, which is out of scope for this document.
-But it is important because it is used to set:
+ジェネシスファイルは`cardano-cli`が`genesis.spec.json`ファイルを読み込んで生成します。これは、本ドキュメントの範囲外となりますが、これは以下の設定に使用するため重要です
 
-* `genDelegs`, a mapping from genesis keys to genesis delegates.
-* `initialFunds`, a mapping from the initial addresses to the initial values at those address.
-* `MaxLovelaceSupply`, the total amount of lovelaces in the blockchain.  
-* `startTime`, the time of slot zero.
+* `genDelegs`：委任を生成するためのジェネシスキーからのマッピング
+* `initialFunds`：初期アドレスからそのアドレスにおける初期値をマッピング
+* `MaxLovelaceSupply`：ブロックチェーンのLovelace総量  
+* `startTime`：スロットゼロの時刻
 
-The `genesis.json` file looks like the one below.
+`genesis.json`ファイルは以下のように見えます
 
 {
   "activeSlotsCoeff": 0.05,
@@ -103,72 +102,72 @@ The `genesis.json` file looks like the one below.
   "securityParam": 2160
 }
 
-Here is a brief description of each parameter. You can learn more in the [spec](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec)
+各パラメーターの簡単な説明です。詳細は [spec](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec)を参照してください
 
 
-| PARAMETER | MEANING |
+| パラメーター | 意味 |
 |----------| --------- |
-| activeSlotsCoeff | The proportion of slots in which blocks should be issued. |
-| poolDecayRate | Decay rate for pool deposits |
-| poolDeposit | The amount of a pool registration deposit |
-| protocolVersion| Accepted protocol versions |
-| decentralisationParam | Percentage of blocks produced by federated nodes |
-| maxTxSize | Maximal transaction size |
-| minPoolCost | Stake pools cannot register/re-register their stake cost below this value |
-| minFeeA | The linear factor for the minimum fee calculation |
-| maxBlockBodySize | Maximal block body size |
-| keyMinRefund | The minimum percent refund guarantee |
-| minFeeB | The constant factor for the minimum fee calculation |
-| maxBlockBodySize | Maximal block body size |
-| keyMinRefund | The minimum percent refund guarantee |
-| minFeeB | The constant factor for the minimum fee calculation |
-| eMax | Epoch bound on pool retirement |
-| extraEntropy | Well, extra entropy =) |
+| activeSlotsCoeff | ブロックを生成するスロットの比率 |
+| poolDecayRate | プールデポジットの減衰率 |
+| poolDeposit | プール登録デポジットの額 |
+| protocolVersion| 承認されたプロトコルバージョン |
+| decentralisationParam | 連合型ノードが生成したブロックの割合 |
+| maxTxSize | 最大トランザクションサイズ |
+| minPoolCost | ステークコストがこの値未満のステークプールは登録/再登録不可 |
+| minFeeA | 最低手数料計算の一次因子 |
+| maxBlockBodySize | 最大ブロックボディサイズ |
+| keyMinRefund | 最低リファンド保証率
+| minFeeB | 最低手数料計算の定数係数 |
+| maxBlockBodySize | 最大ブロックボディサイズ |
+| keyMinRefund | 最低リファンド保証率 |
+| minFeeB | 最低手数料計算の定数係数 |
+| eMax | プール終了のエポック境界 |
+| extraEntropy | エクストラエントロピー |
 | maxBlockHeaderSize | |
-| keyDeposit | The amount of a key registration deposit |
-| keyDecayRate | The deposit decay rate |
-| nOpt | Desired number of pools |
-| rho | Monetary expansion |
-|	poolMinRefund | The minimum percent pool refund |
-|	tau | Treasury expansion |
-|	a0 | Pool's pledge influence |
-| protocolMagicId | To identify the testnets |
-| systemStart | Time of slot 0 |
-| genDelegs | Mapping from genesis keys to genesis delegate |                
-| updateQuorum | Determines the quorum needed for votes on the protocol parameter updates |
-| maxMajorPV | Provides a mechanism for halting outdated nodes |
-| initialFunds | Mapping address to values |
-| maxLovelaceSupply | The total number of lovelace in the system, used in the reward calculation. |
-| networkMagic | To identify the testnet |
-| epochLength | Number of slots in an epoch. |
-| staking | Initial delegation |
-| slotsPerKESPeriod | Number of slots in an KES period |
-| slotLength | in seconds |
-| maxKESEvolutions | The maximum number of time a KES key can be evolved before a pool operator must create a new operational certificate |
-| securityParam | Security parameter k |
+| keyDeposit | 鍵登録デポジットの額 |
+| keyDecayRate | 鍵デポジットの減衰率 |
+| nOpt | 望ましいプール数 |
+| rho | 通貨量拡大 |
+|	poolMinRefund | 最低プールリファンド率 |
+|	tau | トレジャリー拡大 |
+|	a0 | プールの出資影響力 |
+| protocolMagicId | テストネットの特定 |
+| systemStart | スロット0の時刻 |
+| genDelegs | 委任を生成するためのジェネシスキーからのマッピング |                
+| updateQuorum | プロトコルのパラメーター更新に関する投票に必要なクォーラムを決定 |
+| maxMajorPV | 期限切れのノードを停止するメカニズムを提供 |
+| initialFunds | アドレスを値にマッピング |
+| maxLovelaceSupply | システム内のLovelace総量、報酬計算に使用 |
+| networkMagic | テストネットの特定 |
+| epochLength | 1エポック内のスロット数 |
+| staking | 初期委任 |
+| slotsPerKESPeriod | KES期間内のスロット数 |
+| slotLength | 秒単位のスロットの長さ |
+| maxKESEvolutions | プールオペレーターが新たな運営証明書を作成する必要が生じるまでにKESキーが変化できる最大回数 |
+| securityParam | セキュリティパラメーターk |
 
 
-#### The config.json file
+#### config.jsonファイル
 
-The default `config.json` file that we downloaded is shown below.
+下に示されているのは、ダウンロードしたデフォルトの`config.json`ファイルです。
 
-This file has __4__ sections that allow you to have full control on what your node does and how the informtion is presented.
+このファイルには __4__ つのセクションがあり、これにより、ノードが実行することや情報をどのように表示するかを完全にコントロールできます。
 
-__NOTE Due to how the config.json file is generated, fields on the real file are shown in a different (less coherent) order. Here we present them in a more structured way__
+__注意：config.jsonファイルの作成方法により、実際のファイルに表示されるフィールドの順序は異なります（一貫性がない）が、ここではより構造的に表示しています__
 
-#### Basic Node Configuration.
+#### 基本のノード設定
 
-First section relates the basic node configuration parameters. Make sure you have to `TPraos`as the protocol, the correct path to the `mainnet-shelley-genesis.json` file, `RequiresMagic`for its use in a testnet.
-Note that in this example we are using the SimpleView. This will send the output to `stdout`. Other option is `LiveView` which uses a terminal multiplexer to generate a fancy view. We will cover this topic later.
+最初のセクションは、基本のノード設定パラメーターに関連します。必ず`TPraos`をプロトコルとし、正しいパスを`mainnet-shelley-genesis.json`ファイル、テストネットでの使用を`RequiresMagic`にしてください。
+この例ではSimpleViewを使用しています。これは、アウトプットを`stdout`に送信します。他に、装飾的な表示を生成するためにターミナルマルチプレクサを使用する`LiveView`のオプションもあります。このトピックは後でカバーします
 
 	{
 	  "Protocol": "TPraos",
 	  "GenesisFile": "mainnet-shelley-genesis.json",
 	  "RequiresNetworkMagic": "RequiresMagic",
 
-#### Update parameteres
+#### パラメーターの更新
 
-This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates.You just need to be aware of the latest version supported by the network. You dont need to change anything here.
+このプロトコルバージョン番号は、ブロック生成ノードにより、プロトコル更新への同意および同期を行うシステムの一部として使用されます。ここでは何も変更する必要はありません
 
 	  "ApplicationName": "cardano-sl",
 	  "ApplicationVersion": 0,
@@ -177,28 +176,28 @@ This protocol version number gets used by block producing nodes as part of the s
 	  "LastKnownBlockVersion-Minor": 0,
 
 
-#### Tracing
+#### 追跡
 
-`Tracers` tell your node what information you are interested in when logging. Like switches that you can turn ON or OFF according the type and quantity of information that you are interesetd in. This provides fairly coarse grained control, but it is relatively efficient at filtering out unwanted trace output.
+`Tracers`は、ロギングの際にどの情報を収集するかをノードに指示するものです。必要な情報のタイプと量に応じてスイッチのようにON/OFFできます。ここで提供されるのはかなり大まかなコントロールですが、望まない追跡アウトプットをフィルタリングするには比較的効率的です。
 
-The node can run in either the `SimpleView` or `LiveView`. The `SimpleView` just uses standard output, optionally with log output. The `LiveView` is a text console with a live view of various node metrics.
+ノードは`SimpleView`または`LiveView`のいずれかで実行できます。`SimpleView`は単に標準アウトプットを使用し、オプションとしてログアウトプットを使用します。`LiveView`はさまざまなノードメトリクスのライブビュー付きテキストコンソールです。
 
-`TurnOnLogging`: Enables or disables logging overall.
+`TurnOnLogging`：ロギング全般を有効化または無効化します
 
-`TurnOnLogMetrics`: Enable the collection of various OS metrics such as memory and CPU use. These metrics can be directed to the logs or monitoring backends.
+`TurnOnLogMetrics`：メモリやCPU使用量などさまざまなOSメトリクスを有効化します。こうしたメトリクスはログや監視バックエンドに送信できます
 
-`setupBackends`, `defaultBackends`, `hasEKG`and `hasPrometheus`: The system supports a number of backends for logging and monitoring. This settings list the backends available to use in the configuration. The logging backend is called `Katip`.
-Also enable the EKG backend if you want to use the EKG or Prometheus monitoring interfaces.
+`setupBackends`、`defaultBackends`、`hasEKG`、`hasPrometheus：システムはロギングや監視用にさまざまなバックエンドをサポートします。このセッティングは、設定に使用可能なバックエンドをリストアップしています。ロギングバックエンドの名称は`Katip`です。
+EKGまたはPrometheus（プロメテウス）監視インターフェイスを使用したい場合は、EKGバックエンドも可能です
 
-`setupScribes` and `defaultScribes`: For the Katip logging backend we must set up outputs (called scribes) The available types of scribe are:
+`setupScribes`および`defaultScribes`：Katipロギングバックエンドの場合、アウトプット（スクライブ）をセットアップする必要があります。以下のタイプのスクライブが使用できます
 
-* FileSK: for files
-* StdoutSK/StderrSK: for stdout/stderr
-* JournalSK: for systemd's journal system
+* FileSK：ファイル用
+* StdoutSK/StderrSK：stdout/stderr用
+* JournalSK：systemdのジャーナルシステム
 * DevNullSK
-* The scribe output format can be ScText or ScJson.
+* スクライブアウトプットのフォーマットはScTextまたはScJsonです
 
-`rotation` The default file rotation settings for katip scribes, unless overridden in the setupScribes above for specific scribes.
+`rotation`：katipスクライブのファイルローテーション初期設定です（特定のスクライブ用に上記setupScribesで上書きされていない場合）
 
 
 	  "TurnOnLogging": true,
@@ -264,13 +263,13 @@ Also enable the EKG backend if you want to use the EKG or Prometheus monitoring 
 	    "rpMaxAgeHours": 24
 	    },	  
 
-#### Fine grained logging control
+#### 詳細なロギングコントロール
 
-It is also possible to have more fine grained control over filtering of trace output, and to match and route trace output to particular backends. This is less efficient than the coarse trace filters above but provides much more precise control. `options`:
+`options`：追跡アウトプットのフィルタリングに関して、より詳細なコントロールも可能です。また、追跡アウトプットを特定のバックエンドにマッチさせたりルートさせたりすることもできます。これは上記の大まかなコントロールに比べて効率は下がりますが、コントロールの精度は高まります。
 
-`mapBackends`This routes metrics matching specific names to particular backends. This overrides the defaultBackends listed above. And note that it is an **override** and not an extension so anything matched here will not go to the default backend, only to the explicitly listed backends.
+`mapBackends`：特定の名称に一致するメトリクスを指定のバックエンドに転送し、上記defaultBackendsを上書きします。これは**上書き**であり拡張ではないため、ここで一致するものはデフォルトのバックエンドへは行かず、明確にリストに上がっているバックエンドに送信されることに注意してください
 
-`mapSubtrace` This section is more expressive, we are working on its documentation.
+`mapSubtrace`： このセクションはより表現的です。現在これに関するドキュメンテーションに取り組んでいます
 
 
 	  "options": {
