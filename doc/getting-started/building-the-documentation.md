@@ -1,12 +1,12 @@
-# Building the documentation
+# ドキュメンテーションを構築する
 
-## Pre-requisites
+## 準備
 
 ```bash
 brew install sphinx-doc
 ```
 
-Ensure any post install steps are executed.
+インストール後の手順がすべて実行されていることを確認します
 
 ```bash
 sphinx-build -b html . builddir
@@ -16,10 +16,10 @@ pip3 install sphinx_markdown_tables --user
 pip3 install sphinxemoji --user
 ```
 
-## Building documentation
+## ドキュメンテーションを構築する
 
 ```bash
 sphinx-build doc html
 ```
 
-Open the documentation at `html/index.html`
+`html/index.html`でドキュメンテーションを開きます
