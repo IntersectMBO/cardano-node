@@ -96,7 +96,7 @@ expectedConfig =
     , ncProtocolConfig = NodeProtocolConfigurationShelley
                            $ NodeShelleyProtocolConfiguration
                              (GenesisFile "dummmy-genesis-file") Nothing 1 2 3
-    , ncSocketPath = Just "mainnet/socket/nodesocket"
+    , ncSocketPath = Nothing
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
     , ncViewMode = SimpleView
