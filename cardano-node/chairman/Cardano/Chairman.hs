@@ -14,7 +14,6 @@ module Cardano.Chairman (chairmanTest) where
 import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show)
 import           Prelude (String, error, show)
 
-import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Monad (void)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Coerce (coerce)

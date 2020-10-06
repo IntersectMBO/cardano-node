@@ -35,7 +35,7 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
                      OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraLedgerError (..),
                      OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
-                     PerEraForgeStateInfo (..), PerEraForgeStateUpdateError (..), mkEraMismatch)
+                     OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeBeforeEpoch,
                      SafeZone)
@@ -46,7 +46,6 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, 
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import qualified Ouroboros.Consensus.Util.OptNP as OptNP
 
 
 --
@@ -320,23 +319,21 @@ instance ToObject (CannotForge blk) => ToObject (WrapCannotForge blk) where
 --
 
 -- It's a type alias:
--- type HardForkForgeStateInfo xs = PerEraForgeStateInfo xs
+-- type HardForkForgeStateInfo xs = OneEraForgeStateInfo xs
 
-instance All (ToObject `Compose` WrapForgeStateInfo) xs => ToObject (PerEraForgeStateInfo xs) where
+instance All (ToObject `Compose` WrapForgeStateInfo) xs => ToObject (OneEraForgeStateInfo xs) where
     toObject verb forgeStateInfo =
         mkObject
           [ "kind" .= String "HardForkForgeStateInfo"
-          , "forgeStateInfos" .= toJSON forgeStateInfos
+          , "forgeStateInfo" .= toJSON forgeStateInfo'
           ]
       where
-        forgeStateInfos :: [Object]
-        forgeStateInfos =
-              catMaybes
-            . hcollapse
+        forgeStateInfo' :: Object
+        forgeStateInfo' =
+              hcollapse
             . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateInfo))
-                    (K . fmap (toObject verb) . unComp)
-            . OptNP.toNP
-            . getPerEraForgeStateInfo
+                    (K . toObject verb)
+            . getOneEraForgeStateInfo
             $ forgeStateInfo
 
 instance ToObject (ForgeStateInfo blk) => ToObject (WrapForgeStateInfo blk) where
@@ -348,23 +345,21 @@ instance ToObject (ForgeStateInfo blk) => ToObject (WrapForgeStateInfo blk) wher
 --
 
 -- It's a type alias:
--- type HardForkForgeStateUpdateError xs = PerEraForgeStateUpdateError xs
+-- type HardForkForgeStateUpdateError xs = OneEraForgeStateUpdateError xs
 
-instance All (ToObject `Compose` WrapForgeStateUpdateError) xs => ToObject (PerEraForgeStateUpdateError xs) where
+instance All (ToObject `Compose` WrapForgeStateUpdateError) xs => ToObject (OneEraForgeStateUpdateError xs) where
     toObject verb forgeStateUpdateError =
         mkObject
           [ "kind" .= String "HardForkForgeStateUpdateError"
-          , "forgeStateUpdateErrors" .= toJSON forgeStateUpdateErrors
+          , "forgeStateUpdateError" .= toJSON forgeStateUpdateError'
           ]
       where
-        forgeStateUpdateErrors :: [Object]
-        forgeStateUpdateErrors =
-              catMaybes
-            . hcollapse
+        forgeStateUpdateError' :: Object
+        forgeStateUpdateError' =
+              hcollapse
             . hcmap (Proxy @ (ToObject `Compose` WrapForgeStateUpdateError))
-                    (K . fmap (toObject verb) . unComp)
-            . OptNP.toNP
-            . getPerEraForgeStateUpdateError
+                    (K . toObject verb)
+            . getOneEraForgeStateUpdateError
             $ forgeStateUpdateError
 
 instance ToObject (ForgeStateUpdateError blk) => ToObject (WrapForgeStateUpdateError blk) where
