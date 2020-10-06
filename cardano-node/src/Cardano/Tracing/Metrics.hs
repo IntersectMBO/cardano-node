@@ -19,16 +19,15 @@ module Cardano.Tracing.Metrics
 import           Cardano.Prelude hiding (All, (:.:))
 
 import           Cardano.Crypto.KES.Class (Period)
-import           Data.SOP.Strict (All, (:.:)(..), hcmap, K (..), hcollapse)
+import           Data.SOP.Strict (All, hcmap, K (..), hcollapse)
 import           Ouroboros.Consensus.Block (ForgeStateInfo)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapForgeStateInfo (..))
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (PerEraForgeStateInfo (..))
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Node ()
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
-import qualified Ouroboros.Consensus.Util.OptNP as OptNP
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
 
@@ -79,29 +78,12 @@ instance HasKESMetricsData ByronBlock where
 
 instance All HasKESMetricsData xs => HasKESMetricsData (HardForkBlock xs) where
   getKESMetricsData _ forgeStateInfo =
-        combineKESMetrics
-      . hcollapse
-      . hcmap (Proxy @ HasKESMetricsData) getOne
-      . OptNP.toNP
-      . getPerEraForgeStateInfo
+        hcollapse
+      . hcmap (Proxy @HasKESMetricsData) getOne
+      . getOneEraForgeStateInfo
       $ forgeStateInfo
     where
       getOne :: forall blk. HasKESMetricsData blk
-             => (Maybe :.: WrapForgeStateInfo) blk
+             => WrapForgeStateInfo blk
              -> K KESMetricsData blk
-      getOne (Comp mbWrapForgeStateInfo) = K $
-          case unwrapForgeStateInfo <$> mbWrapForgeStateInfo of
-            Nothing -> NoKESMetricsData
-            Just oneForgeStateInfo ->
-              getKESMetricsData (Proxy @ blk) oneForgeStateInfo
-
-      -- Multiple eras can have 'KESMetricsData', e.g., Shelley and Shelley +
-      -- native assets. We don't know which era we're in, so we have to make a
-      -- choice: we choose the last era's 'KESMetricsData'.
-      --
-      -- TODO this might need revision when we have updated everything for the
-      -- first hard fork after Shelley, but before it actually happened. At
-      -- that moment, we'll trace the KESMetricsData of the upcoming era,
-      -- instead of the KESMetricsData of the current Shelley era.
-      combineKESMetrics :: [KESMetricsData] -> KESMetricsData
-      combineKESMetrics = lastDef NoKESMetricsData
+      getOne = K . getKESMetricsData (Proxy @blk) . unwrapForgeStateInfo

@@ -108,7 +108,7 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
                                 npcByronSupportedProtocolVersionAlt)
         (Update.SoftwareVersion npcByronApplicationName
                                 npcByronApplicationVersion)
-        optionalLeaderCredentials
+        (maybeToList optionalLeaderCredentials)
 
 
 readGenesis :: GenesisFile
@@ -177,9 +177,14 @@ readLeaderCredentials genesisConfig
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 
+          -- The label is used to distinguish multiple sets of credentials
+          -- during tracing. We use the public signing key as the label. TODO
+          -- @deepfire works for you? Or should we hash it first?
+         let label = Text.pack $ show $ Byron.Crypto.toVerification signingKey
+
          bimapExceptT CredentialsError Just
            . hoistEither
-           $ mkByronLeaderCredentials genesisConfig signingKey delegCert
+           $ mkByronLeaderCredentials genesisConfig signingKey delegCert label
 
   where
     deserialiseSigningKey :: LB.ByteString
