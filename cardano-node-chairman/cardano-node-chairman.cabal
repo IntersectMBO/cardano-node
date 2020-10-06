@@ -85,6 +85,9 @@ test-suite chairman-tests
   hs-source-dirs:       test
   main-is:              Spec.hs
   type:                 exitcode-stdio-1.0
+  if !os(windows)
+      build-depends:    unix
+
   build-depends:        base >= 4.12 && < 5
                       , aeson
                       , async
@@ -116,7 +119,7 @@ test-suite chairman-tests
                         Spec.Chairman.ByronShelley
                         Spec.Chairman.Shelley
                         Spec.Network
-                        
+
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
@@ -135,6 +138,9 @@ executable cardano-testnet
   import:               common-modules
   hs-source-dirs:       testnet
   main-is:              Main.hs
+  if !os(windows)
+      build-depends:    unix
+
   build-depends:        base >= 4.12 && < 5
                       , aeson
                       , ansi-terminal

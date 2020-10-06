@@ -133,7 +133,7 @@ library
                        -Wcompat
 
   if os(windows)
-     build-depends:    Win32
+    build-depends:    Win32
   else
     build-depends:     unix
                      , brick
@@ -213,6 +213,10 @@ test-suite cardano-node-test
   hs-source-dirs:       test
   main-is:              cardano-node-test.hs
   type:                 exitcode-stdio-1.0
+
+  if !os(windows)
+      build-depends:     unix
+      other-modules:     Test.Cardano.Node.FilePermissions
 
   build-depends:
                         base >= 4.12 && < 5

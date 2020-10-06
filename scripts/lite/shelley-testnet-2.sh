@@ -82,6 +82,10 @@ for NODE in ${POOL_NODES}; do
   $cardano_cli shelley node key-gen-VRF \
     --verification-key-file ${NODE}/vrf.vkey \
     --signing-key-file      ${NODE}/vrf.skey
+
+  # Set permissions for the vrf private key file: read for owner only
+  chmod gou-rwx "${NODE}/vrf.skey"
+  chmod u+r "${NODE}/vrf.skey"
 done
 
 # Symlink the BFT operator keys from the genesis delegates, for uniformity

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -90,3 +91,4 @@ genRemoteAddress =
     <$> Gen.element cooking
     <*> fmap fromIntegral (Gen.word16 $ Range.linear 100 20000)
     <*> Gen.int (Range.linear 0 100)
+
