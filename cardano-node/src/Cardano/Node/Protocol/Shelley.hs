@@ -33,6 +33,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
                      newExceptT)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Crypto.KES (deriveVerKeyKES)
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
@@ -110,7 +111,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
         (ProtVer npcShelleySupportedProtocolVersionMajor
                  npcShelleySupportedProtocolVersionMinor)
         (MaxMajorProtVer npcShelleyMaxSupportedProtocolVersion)
-        optionalLeaderCredentials
+        (maybeToList optionalLeaderCredentials)
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce
 genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
@@ -163,6 +164,10 @@ readLeaderCredentials (Just ProtocolFilepaths {
     KesSigningKey kesKey <-
       firstExceptT FileError . newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile
 
+    -- The label is used to distinguish multiple sets of credentials during
+    -- tracing. We use the public KES key as the label.
+    let label = T.pack (show (deriveVerKeyKES kesKey))
+
     return $ Just TPraosLeaderCredentials {
                tpraosLeaderCredentialsCanBeLeader =
                  TPraosCanBeLeader {
@@ -170,7 +175,8 @@ readLeaderCredentials (Just ProtocolFilepaths {
                    tpraosCanBeLeaderColdVerKey = coerceKeyRole vkey,
                    tpraosCanBeLeaderSignKeyVRF = vrfKey
                  },
-               tpraosLeaderCredentialsInitSignKey = kesKey
+               tpraosLeaderCredentialsInitSignKey = kesKey,
+               tpraosLeaderCredentialsLabel = label
              }
 
 -- But not OK to supply some of the files without the others.
