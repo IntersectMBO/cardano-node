@@ -162,6 +162,10 @@ executable cardano-testnet
                       , time
                       , unliftio
                       , unordered-containers
+  other-modules:        Testnet.Commands
+                        Testnet.Commands.ByronShelley
+                        Testnet.Commands.Shelley
+                        Testnet.Run
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
   ghc-options:          -Wall
