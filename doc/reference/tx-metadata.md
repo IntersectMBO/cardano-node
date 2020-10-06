@@ -1,6 +1,6 @@
 # Transaction Metadata
 
-Transaction metadata (tx metadata) contains details about a specific transaction, including sender and receiver IDs, transaction comments, and tags. Adding metadata to transactions  provides transaction information by adding arbitrarily structured data onto the chain and is a useful feature in Cardano Shelley. Tx metadata is stored on-chain and is carried along with each transaction. A factor in its design is that the on-chain metadata is not stored in the ledger state and does not influence transaction validation, thereby not compromising ledger performance.
+Transaction metadata (tx metadata) can contain details about a specific transaction, including sender and receiver IDs, transaction comments, and tags. Adding metadata to transactions  provides transaction information by adding arbitrarily structured data onto the chain and is a useful feature in Cardano Shelley. Tx metadata is stored on-chain and is carried along with each transaction. A factor in its design is that the on-chain metadata is not stored in the ledger state and does not influence transaction validation, thereby not compromising ledger performance.
 
 Tx metadata is a valuable feature for developers who build applications and process transactions, and for application end users. Developers embed metadata directly and submit a valid transaction with accompanying details. End users don’t interact with the tx metadata directly, but can view transaction-specific metadata using the Cardano Explorer.
 
@@ -9,7 +9,7 @@ For example, tx metadata can be used to:
 + certify ownership and exchange of assets specifying asset owners in different time periods, transfer details, or asset value at the time of transfer
 + certify documents and signatures, by using a public hash that proves the document’s existence 
 
-Transactions can contain metadata whose hash is part of the body of the transaction. This hash is read by all transaction signatures. The metadata value is kept outside the transaction to allow checking its integrity and authentication.
+Transactions can contain metadata whose hash is part of the body of the transaction. Because the metadata hash is in the tx body, this allows for integrity checking and authentication of the metadata.
 
 ## Metadata structure
 
@@ -69,7 +69,7 @@ Shelley transactions can be created with the following options:
 
 ## Metadata schemas - mappings and formats
 
-On-chain metadata that is carried along with transactions is encoded according to CBOR. To create a transaction, you can add the metadata with pre-encoded CBOR. Alternatively, you can add metadata in JSON format, which will be converted into the internal format. In this section, we provide examples of the two different mappings: tx metadata and JSON, which are useful for different purposes. In both schemas, the top-level JSON is an object indexed by integers, which are mapped to JSON values.
+On-chain metadata that is carried along with transactions is encoded according to CBOR. To create a transaction, you can add the metadata with pre-encoded CBOR. Alternatively, you can add metadata in JSON format, which will be converted into the internal format.  In this section, we provide examples of the two different mappings between tx metadata and JSON, which are useful for different purposes. In both schemas, the top-level JSON is an object indexed by integers, which are mapped to JSON values.
 
 ### No schema
 
