@@ -447,13 +447,15 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision $ appendName "BlockFetchDecision" tr
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
-    , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $ forgeStateInfoTracer (Proxy @ blk) trSel tr
+    , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
+        contramap (\(Consensus.TraceLabelCreds _ ev) -> ev) $
+        forgeStateInfoTracer (Proxy @ blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff (traceTxInbound trSel) verb "TxInbound" tr
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr bcCounters
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
-        Tracer $ \ev -> do
+        Tracer $ \(Consensus.TraceLabelCreds _ ev) -> do
           traceWith (forgeTracer verb tr forgeTracers nodeKern bcCounters) ev
           traceWith (blockForgeOutcomeExtractor
                     $ toLogObject' verb
