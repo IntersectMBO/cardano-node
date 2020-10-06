@@ -21,6 +21,8 @@ import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 
 -- ----------------------------------------------------------------------------
@@ -289,5 +291,5 @@ genTxMetadataValue =
 -- Automagically collecting all the tests
 --
 
-tests :: IO Bool
-tests = Hedgehog.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

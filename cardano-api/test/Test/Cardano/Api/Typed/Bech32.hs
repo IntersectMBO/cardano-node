@@ -9,6 +9,8 @@ import           Cardano.Api.Typed
 
 import           Hedgehog (Gen, Property, discover)
 import qualified Hedgehog as H
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import           Test.Cardano.Api.Typed.Gen
 
@@ -30,6 +32,5 @@ roundtrip_Bech32 typeProxy gen =
 
 -- -----------------------------------------------------------------------------
 
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

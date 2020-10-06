@@ -10,6 +10,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property, discover)
 import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import qualified Hedgehog as H
 
@@ -88,7 +90,5 @@ roundtrip_verification_key_hash_raw roletoken =
 
 -- -----------------------------------------------------------------------------
 
-
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover
