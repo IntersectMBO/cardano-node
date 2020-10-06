@@ -13,7 +13,7 @@ module Cardano.Chairman (chairmanTest) where
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 import           Cardano.Node.Types (SocketPath (..))
-import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show)
+import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show, throwIO)
 import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
@@ -280,7 +280,7 @@ runChairman tracer cfg networkMagic securityParam runningTime socketPaths = do
     let initialChains = Map.fromList
           [ (socketPath, AF.Empty AF.AnchorGenesis)
           | socketPath <- socketPaths]
-    chainsVar <- newTVarM initialChains
+    chainsVar <- newTVarIO initialChains
 
     void $ timeout runningTime $
       withIOManager $ \iomgr ->
@@ -447,7 +447,7 @@ checkConsensus
   -> STM m (ConsensusSuccess blk)
 checkConsensus chainsVar securityParam = do
   chainsSnapshot <- readTVar chainsVar
-  either throwM return $ consensusCondition securityParam chainsSnapshot
+  either throwIO return $ consensusCondition securityParam chainsSnapshot
 
 -- | Client Application
 localInitiatorNetworkApplication
