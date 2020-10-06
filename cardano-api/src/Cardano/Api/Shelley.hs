@@ -1,3 +1,7 @@
+-- | This module provides a library interface that is intended to be the complete API
+-- for Shelley covering everything, including exposing constructors for the lower level types.
+--
+
 module Cardano.Api.Shelley
   ( module Cardano.Api.LocalChainSync
   , module Cardano.Api.MetaData
@@ -31,10 +35,6 @@ module Cardano.Api.Shelley
   , module Shelley.Spec.Ledger.Genesis
   , module Shelley.Spec.Ledger.OCert
   ) where
-
--- | This module provides a library interface that is intended to be the complete API
--- for Shelley covering everything, including exposing constructors for the lower level types.
---
 
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.Api.MetaData (TxMetadata (..), TxMetadataJsonError (..),
@@ -91,5 +91,3 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import           Shelley.Spec.Ledger.Genesis (ShelleyGenesis (..))
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
-
-
