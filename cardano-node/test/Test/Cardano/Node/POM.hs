@@ -13,7 +13,7 @@ import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
 
-import           Hedgehog (Property, discover, (===))
+import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
 import           Hedgehog.Internal.Property (failWith)
 
@@ -25,7 +25,7 @@ import           Hedgehog.Internal.Property (failWith)
 
 prop_sanityCheck_POM :: Property
 prop_sanityCheck_POM =
-  Hedgehog.property $ do
+   withTests 1 . Hedgehog.property $ do
     let combinedPartials = defaultPartialNodeConfiguration
                              <> testPartialYamlConfig
                              <> testPartialCliConfig

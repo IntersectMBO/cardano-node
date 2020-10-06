@@ -88,6 +88,10 @@ for i in 1 2 3; do
   mv "${data_dir}/genesis/delegate-keys/delegate$i.vrf.skey"  "${data_dir}/node-$i/vrf.skey"
   mv "${data_dir}/genesis/delegate-keys/delegate$i.vrf.vkey"  "${data_dir}/node-$i/vrf.vkey"
 
+  # Set permissions for the vrf private key file: read for owner only
+  chmod gou-rwx "${data_dir}/node-$i/vrf.skey"
+  chmod u+r "${data_dir}/node-$i/vrf.skey"
+
   # Issue an operational certificate:
   cardano-cli shelley node issue-op-cert \
       --kes-period 0 \
