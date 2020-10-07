@@ -100,16 +100,16 @@ parseHostIPv4Addr :: Parser NodeHostIPv4Address
 parseHostIPv4Addr =
     option (eitherReader parseNodeHostIPv4Address) (
           long "host-addr"
-       <> metavar "HOST-NAME"
-       <> help "Optionally limit node to one ipv6 or ipv4 address"
+       <> metavar "IPV4"
+       <> help "An optional ipv4 address"
     )
 
 parseHostIPv6Addr :: Parser NodeHostIPv6Address
 parseHostIPv6Addr =
     option (eitherReader parseNodeHostIPv6Address) (
-          long "host-addr"
-       <> metavar "HOST-NAME"
-       <> help "Optionally limit node to one ipv6 or ipv4 address"
+          long "host-ipv6-addr"
+       <> metavar "IPV6"
+       <> help "An optional ipv6 address"
     )
 
 parseNodeHostIPv4Address :: String -> Either String NodeHostIPv4Address
