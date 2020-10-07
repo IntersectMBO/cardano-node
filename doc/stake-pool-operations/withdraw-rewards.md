@@ -26,6 +26,15 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
     ----------------------------------------------------------------------------------------
     a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527     1         194054070
 
+### Draft the withdraw transaction to transfer the rewards to a payment.addr
+
+    cardano-cli shelley transaction build raw \
+    --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1
+    --tx-out $(cat payment.addr)+743882981
+    --withdrawal $(cat stake.addr)+550000000
+    --ttl 0
+    --fee 0
+    --out-file withdraw_rewards.raw
 
 ### Calculate transaction fees
 
