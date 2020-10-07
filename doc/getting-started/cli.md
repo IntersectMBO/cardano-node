@@ -1,32 +1,30 @@
-# Command Line Interface
+# コマンドラインインターフェイス
 
-In previous tutorials, we have always worked with command `cardano-node`,
-but when we built the software from source as described [here](000_install.md),
-we actually installed other executables as well, including the command line interface `cardano-cli`.
+前述のチュートリアルでは常に`cardano-node`コマンドを使用していましたが、
+ [ここ](000_install.md)で説明しているようにソースからソフトウェアを構築する場合、実際にはコマンドラインインターフェイス
+`cardano-cli`など、他の実行ファイルもインストールします。
 
-This command line interface provides a collection of tools for key generation, transaction construction, certificate creation
-and other important tasks.
+このコマンドラインインターフェイスは、鍵生成、トランザクション構築、証明書作成、その他重要なタスクのためのツールセットを提供します。
 
-It is organized in a hierarchy of subcommands, and each level comes with its own built-in documentation of command syntax and options.
+これはサブコマンドの階層順に整理され、各レベルには、コマンドシンタックスやオプションのビルトインドキュメンテーションが付されています。
 
-We can get the top level help by simply typing the command without arguments:
+トップレベルのヘルプを得るには単にコマンドを引数なしで入力します
 
         cardano-cli
 
-We will be told that one available subcommand is `shelley`, and typing
+使用可能なサブコマンドが`shelley`であることが示されたら、次を入力します
 
         cardano-cli shelley
 
-will display available sub-subcommands, one of which is `node`. We can continue drilling down the hierarchy:
+`node`を含む使用可能なサブ-サブコマンド候補が示されるので、階層の掘り下げを進めます
 
         cardano-cli shelley node
 
-and learn about the sub-sub-subcommand `key-gen`. Typing
+サブ-サブ-サブコマンド`key-gen`が見つかったら、以下を入力します
 
         cardano-cli shelley node key-gen
 
-will inform us about the parameters this command takes, so we can for example generate a key-pair of offline keys and a file for the issue counter
-by typing
+このコマンドに関連するパラメーターが示されるので、入力することで、例えばオフラインキーの鍵ペアや発行番号用ファイルを生成することができます。
 
         cardano-cli shelley node key-gen \
             --cold-verification-key-file cold.vkey \
