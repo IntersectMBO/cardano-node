@@ -432,15 +432,15 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
-        contramap (\(Consensus.TraceLabelCreds _ ev) -> ev) $
         forgeStateInfoTracer (Proxy @ blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff (traceTxInbound trSel) verb "TxInbound" tr
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr fStats
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
-        Tracer $ \(Consensus.TraceLabelCreds _ ev) -> do
-          traceWith (forgeTracer verb tr forgeTracers nodeKern fStats) ev
+        Tracer $ \tlcev@(Consensus.TraceLabelCreds _ ev) -> do
+          traceWith (forgeTracer verb tr forgeTracers nodeKern fStats) tlcev
+          -- Don't track credentials in ForgeTime.
           traceWith (blockForgeOutcomeExtractor
                     $ toLogObject' verb
                     $ appendName "ForgeTime" tr) ev
@@ -484,9 +484,10 @@ teeForge ::
   -> NodeKernelData blk
   -> TracingVerbosity
   -> Trace IO Text
-  -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk))
-teeForge ft nodeKern tverb tr = Tracer $ \ev@(WithSeverity sev event) -> do
-  flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
+  -> Tracer IO (WithSeverity (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk)))
+teeForge ft nodeKern tverb tr = Tracer $
+ \ev@(WithSeverity sev (Consensus.TraceLabelCreds creds event)) -> do
+  flip traceWith (WithSeverity sev event) $ fanning $ \(WithSeverity _ e) ->
     case e of
       Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftForgeAboutToLead ft)
       Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
@@ -512,6 +513,7 @@ teeForge ft nodeKern tverb tr = Tracer $ \ev@(WithSeverity sev event) -> do
         ( meta
         , LogStructured $ Map.fromList $
           [("kind", String "TraceStartLeadershipCheck")
+          ,("credentials", String creds)
           ,("slot", toJSON $ unSlotNo slot)]
           ++ fromSMaybe [] ((:[]) . ("utxoSize",) . toJSON <$> utxoSize))
     _ -> traceWith (toLogObject' tverb tr) ev
@@ -577,15 +579,16 @@ forgeTracer
   -> ForgeTracers
   -> NodeKernelData blk
   -> ForgingStats
-  -> Tracer IO (Consensus.TraceForgeEvent blk)
+  -> Tracer IO (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk))
 forgeTracer verb tr forgeTracers nodeKern fStats =
-  Tracer $ \ev -> do
+  Tracer $ \tlcev@(Consensus.TraceLabelCreds _ ev) -> do
+    -- Ignoring the credentials label for measurement and counters:
     traceWith (measureTxsEnd tr) ev
     traceWith (notifyBlockForging fStats tr) ev
-    -- Consensus tracer
+    -- Consensus tracer -- here we track the label:
     traceWith (annotateSeverity
                  $ teeForge forgeTracers nodeKern verb
-                 $ appendName "Forge" tr) ev
+                 $ appendName "Forge" tr) tlcev
 
 notifyBlockForging
   :: ForgingStats
@@ -725,8 +728,9 @@ forgeStateInfoMetricsTraceTransformer
   :: forall a blk. HasKESMetricsData blk
   => Proxy blk
   -> Trace IO a
-  -> Tracer IO (ForgeStateInfo blk)
-forgeStateInfoMetricsTraceTransformer p tr = Tracer $ \forgeStateInfo -> do
+  -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
+forgeStateInfoMetricsTraceTransformer p tr = Tracer $
+  \(Consensus.TraceLabelCreds _ forgeStateInfo) -> do
     case getKESMetricsData p forgeStateInfo of
       NoKESMetricsData -> pure ()
       TPraosKESMetricsData kesPeriodOfKey
@@ -789,13 +793,13 @@ forgeStateInfoTracer
   => Proxy blk
   -> TraceSelection
   -> Trace IO Text
-  -> Tracer IO (ForgeStateInfo blk)
+  -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
 forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
     let tr = appendName "Forge" tracer
     traceWith (forgeStateInfoMetricsTraceTransformer p tr) ev
     traceWith (fsTracer tr) ev
   where
-    fsTracer :: Trace IO Text -> Tracer IO (ForgeStateInfo blk)
+    fsTracer :: Trace IO Text -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
     fsTracer tr = showTracing $ contramap Text.pack $ toLogObject tr
 
 --------------------------------------------------------------------------------
