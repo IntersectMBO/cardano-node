@@ -48,6 +48,7 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Node.Run (RunNode (..))
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
@@ -328,6 +329,19 @@ instance ( tx ~ GenTx blk
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
   trTransformer = trStructured
 
+instance HasPrivacyAnnotation a => HasPrivacyAnnotation (Consensus.TraceLabelCreds a)
+instance HasSeverityAnnotation a => HasSeverityAnnotation (Consensus.TraceLabelCreds a) where
+  getSeverityAnnotation (Consensus.TraceLabelCreds _ a) = getSeverityAnnotation a
+
+instance ToObject a => ToObject (Consensus.TraceLabelCreds a) where
+  toObject verb (Consensus.TraceLabelCreds creds val) =
+    mkObject [ "credentials" .= toJSON creds
+             , "val"         .= toObject verb val
+             ]
+
+instance (HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
+      => Transformable Text IO (Consensus.TraceLabelCreds a) where
+  trTransformer = trStructured
 
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
