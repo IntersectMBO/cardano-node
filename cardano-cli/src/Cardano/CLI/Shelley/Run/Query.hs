@@ -22,16 +22,13 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, newExceptT)
 
 import           Cardano.Api.LocalChainSync (getLocalTip)
@@ -50,12 +47,10 @@ import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (Either (DegenQueryResult),
                      Query (DegenQuery))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
 import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
-import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..),
                      PoolDistr (..))

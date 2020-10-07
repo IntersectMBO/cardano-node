@@ -6,7 +6,7 @@ module Cardano.Tracing.Queries
   (LedgerQueries(..))
 where
 
-import           Prelude (Int, error, (.))
+import           Prelude (Int, (.))
 
 import qualified Data.Map.Strict as Map
 
@@ -49,4 +49,3 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
     Cardano.LedgerStateByron   ledgerByron   -> ledgerUtxoSize ledgerByron
     Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
-    _ -> error "ledgerUtxoSize:  unhandled CardanoBlock case"

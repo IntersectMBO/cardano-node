@@ -6,14 +6,11 @@ module Cardano.Config.Git.Rev (
       gitRev
     ) where
 
-import           Cardano.Prelude
-
-import           Data.FileEmbed (dummySpaceWith)
-import           Data.Text (Text)
-import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8)
-
 import           Cardano.Config.Git.RevFromGit (gitRevFromGit)
+import           Cardano.Prelude
+import           Data.FileEmbed (dummySpaceWith)
+
+import qualified Data.Text as T
 
 gitRev :: Text
 gitRev | gitRevEmbed /= zeroRev = gitRevEmbed

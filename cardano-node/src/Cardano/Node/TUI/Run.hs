@@ -13,12 +13,9 @@ module Cardano.Node.TUI.Run
 import           Cardano.Prelude hiding (modifyMVar_, newMVar, on, readMVar, show)
 import           Prelude (show)
 
-import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.MVar.Strict (modifyMVar_)
 
-import           Control.Monad (forever)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.BM.Counters (readCounters)

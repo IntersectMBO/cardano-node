@@ -9,7 +9,6 @@ module Cardano.CLI.Environment
 import           Cardano.Prelude
 import           Prelude (String)
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.Text as Text
 import           System.Environment (lookupEnv)

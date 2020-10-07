@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Spec.Chairman.Shelley
   ( hprop_chairman
@@ -20,7 +19,7 @@ import qualified Testnet.Shelley as H
 
 hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  conf@H.Conf {..} <- H.mkConf tempAbsPath' 42
+  conf <- H.mkConf tempAbsPath' 42
 
   allNodes <- H.testnet conf
 

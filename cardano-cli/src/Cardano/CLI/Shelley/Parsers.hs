@@ -25,7 +25,6 @@ import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFil
                      VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
                      deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import           Control.Monad.Fail (fail)
 import           Data.Attoparsec.Combinator ((<?>))
 import           Data.Time.Clock (UTCTime)

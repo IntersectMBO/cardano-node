@@ -15,7 +15,6 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
 
 import           Cardano.Api.TextView (TextViewDescription (..))

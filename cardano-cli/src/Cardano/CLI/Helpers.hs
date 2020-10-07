@@ -17,7 +17,6 @@ import           Cardano.Prelude
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
-import           Control.Exception (IOException)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text

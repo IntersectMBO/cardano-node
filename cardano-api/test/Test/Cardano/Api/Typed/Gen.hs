@@ -26,8 +26,6 @@ import           Control.Monad.Fail (fail)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen

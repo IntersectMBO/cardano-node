@@ -11,7 +11,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, newExceptT)
 
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
