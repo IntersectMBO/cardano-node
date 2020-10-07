@@ -1,26 +1,26 @@
-# Creating keys and addresses
+# 鍵とアドレスを生成する
 
-In the Shelley era of Cardano, every stakeholder can have two sets of keys and addresses:
+Cardano Shelley期には、すべてのステークホルダーは2セットの鍵とアドレスを持ちます
 
-* Payment Keys and addresses: To send and receive transactions
-* Stake Keys and addresses: To control protocol participation, create a stake pool, delegate and receive rewards.
+* 支払い鍵とアドレス：トランザクションの送受信を行う
+* ステーク鍵とアドレス：プロトコルへの参加、ステークプールの作成、委任、報酬の受け取りをコントロールする
 
-#### Payment key pair
+#### 支払い鍵ペア
 
-To generate a _payment key pair_:
+支払い鍵ペアを生成します
 
 ```
 cardano-cli shelley address key-gen \
 --verification-key-file payment.vkey \
 --signing-key-file payment.skey
 ```
-This creates two files (`payment.vkey` and `payment.skey`), one containing the _public verification key_, one the _private signing key_.
+2つのファイル（`payment.vkey`および`payment.skey`）が作成されます。1つには公開検証鍵もう1つには秘密署名鍵が入っています。
 
-#### Legacy key
+#### レガシーキー
 
-To generate Byron-era _payment key:
+Byron期の支払い鍵を生成します
 
-Payment key files use the following format:
+支払い鍵ファイルは以下のフォーマットを使用します
 ```json
 {
     "type": "PaymentSigningKeyByron_ed25519_bip32",
@@ -29,18 +29,18 @@ Payment key files use the following format:
 }
 ```
 
-Where the `hex-here` is generated as `0x5880 | xprv | pub | chaincode`
+`hex-here`が`0x5880 | xprv | pub | chaincode`として生成されます
 
-#### Stake key pair
-To generate a _stake key pair_ :
+#### ステーク鍵ペア
+ステーク鍵ペアを生成します
 
 ```
 cardano-cli shelley stake-address key-gen \
 --verification-key-file stake.vkey \
 --signing-key-file stake.skey
 ```
-#### Payment address
-When including both verification keys `payment.vkey` and `stake.vkey` to build the address, the resulting `payment address` is associated with this stake keys and address.
+#### 支払いアドレス
+`payment.vkey`と`stake.vkey`の両検証鍵を含んでアドレスを構築する際、生成された`payment address`はこのステーク鍵とアドレスに関連付けられています
 
 ```
 cardano-cli shelley address build \
@@ -49,9 +49,9 @@ cardano-cli shelley address build \
 --out-file payment.addr \
 --mainnet
 ```
-#### Stake address
+#### ステークアドレス
 
-To generate a `stake address`:
+`stake address`を生成します
 
 ```
 cardano-cli shelley stake-address build \
@@ -59,14 +59,14 @@ cardano-cli shelley stake-address build \
 --out-file stake.addr \
 --mainnet
 ```
-This address __CAN'T__ receive payments but will receive the rewards from participating in the protocol.
+このアドレスは、支払いを受信することは __できません__ が、プロトコルに参加することによって得られる報酬を受け取ることができます。
 
 
-#### Query the balance of an address
+#### アドレスの残高照会
 
-> NOTE: Ensure that your node has synced to the current block height which can be checked at [explorer.cardano.org](https://explorer.cardano.org). If it is not, you may see an error referring to the Byron Era.
+> 注：自分のノードが現在のBlock Height（ブロックの高さ）と同期していることを確認してください。これは、 [explorer.cardano.org](https://explorer.cardano.org)で確認できます。同期していない場合、Byron期を参照するエラーが生じる場合があります。
 
-To query the balance of an address we need a running node and the environment variable `CARDANO_NODE_SOCKET_PATH` set to the path to the node.socket:
+任意のアドレスの残高を照会するためには、ノードを実行し、環境変数`CARDANO_NODE_SOCKET_PATH`をnode.socketへのパスに設定します
 
 ```
 cardano-cli shelley query utxo \
@@ -78,4 +78,4 @@ cardano-cli shelley query utxo \
 --------------------------------------------------------------------------------------------
 ```
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead. 
+**注意：**`--mainnet`はCardanoメインネットを特定するものです。テストネットの場合は`--testnet-magic 1097911063`を使用してください。 
