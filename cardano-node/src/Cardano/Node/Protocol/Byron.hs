@@ -177,13 +177,9 @@ readLeaderCredentials genesisConfig
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
 
-          -- The label is used to distinguish multiple sets of credentials
-          -- during tracing. We use the public signing key as the label.
-         let label = Text.pack $ show $ Byron.Crypto.toVerification signingKey
-
          bimapExceptT CredentialsError Just
            . hoistEither
-           $ mkByronLeaderCredentials genesisConfig signingKey delegCert label
+           $ mkByronLeaderCredentials genesisConfig signingKey delegCert "Byron"
 
   where
     deserialiseSigningKey :: LB.ByteString
