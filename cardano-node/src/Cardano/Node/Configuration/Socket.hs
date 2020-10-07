@@ -26,8 +26,7 @@ import           Network.Socket (SockAddr (..), getSocketName)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
-#if defined(mingw32_HOST_OS)
-#else
+#if !defined(mingw32_HOST_OS)
 import           System.Directory (removeFile)
 import           System.IO.Error (isDoesNotExistError)
 #endif
