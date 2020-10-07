@@ -1,6 +1,6 @@
-# Get configuration files
+# 設定ファイルを取得する
 
-Starting the node and connecting it to the network requires 3 configuration files:
+ノードを開始し、ネットワークに接続するためには、3つの設定ファイルが必要です
 
 * topology.json
 * genesis.json
