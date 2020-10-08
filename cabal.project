@@ -282,85 +282,85 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: ouroboros-network
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: io-sim
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: ouroboros-consensus
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: ouroboros-consensus-byron
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: ouroboros-consensus-shelley
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: ouroboros-consensus-cardano
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: typed-protocols
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: typed-protocols-examples
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: ouroboros-network-framework
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: network-mux
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: io-sim-classes
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d2353dd1d90451f3e7782878edfcfb31435b144a
-  --sha256: 1d2j4bqdrq6j85xkj8z8dcaglhhsb2hln30d6jac34p7gnvbgxsw
+  tag: 54f8f19af0c513c28bf46ad342ab0d821ac80e50
+  --sha256: 19hmxm7gfhnpfxvxwl24npmarpx100fy5lr0xylwxkbl5kvhmdnv
   subdir: Win32-network
 
 constraints:
