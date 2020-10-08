@@ -32,7 +32,7 @@ import qualified Cardano.Crypto.Wallet as Crypto
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
-import           Cardano.Api.Shelley.ITN (xprvFromBytes)
+import           Cardano.Api.Crypto.Bip32Ed25519 (xPrvFromBytes)
 import           Cardano.Api.Typed
 
 import           Cardano.CLI.Byron.Key (CardanoEra (..))
@@ -493,7 +493,7 @@ convertITNExtendedSigningKey :: Text -> Either ItnKeyConversionError (SigningKey
 convertITNExtendedSigningKey privKey = do
   (_, _, privkeyBS) <- first ItnKeyBech32DecodeError (decodeBech32 privKey)
   let dummyChainCode = BS.replicate 32 0
-  case xprvFromBytes $ BS.concat [privkeyBS, dummyChainCode] of
+  case xPrvFromBytes $ BS.concat [privkeyBS, dummyChainCode] of
     Just xprv -> Right $ StakeExtendedSigningKey xprv
     Nothing -> Left $ ItnSigningKeyDeserialisationError privkeyBS
 
@@ -502,7 +502,7 @@ convertITNExtendedSigningKey privKey = do
 convertITNBIP32SigningKey :: Text -> Either ItnKeyConversionError (SigningKey StakeExtendedKey)
 convertITNBIP32SigningKey privKey = do
   (_, _, privkeyBS) <- first ItnKeyBech32DecodeError (decodeBech32 privKey)
-  case xprvFromBytes privkeyBS of
+  case xPrvFromBytes privkeyBS of
     Just xprv -> Right $ StakeExtendedSigningKey xprv
     Nothing -> Left $ ItnSigningKeyDeserialisationError privkeyBS
 
@@ -583,7 +583,7 @@ convertBip32SigningKey
   :: ByteString
   -> Either CardanoAddressSigningKeyConversionError Crypto.XPrv
 convertBip32SigningKey signingKeyBs =
-  case xprvFromBytes signingKeyBs of
+  case xPrvFromBytes signingKeyBs of
     Just xPrv -> Right xPrv
     Nothing ->
       Left $ CardanoAddressSigningKeyDeserialisationError signingKeyBs

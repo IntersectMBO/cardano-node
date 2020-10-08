@@ -27,7 +27,6 @@ library
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Shelley
                         Cardano.Api.Shelley.Genesis
-                        Cardano.Api.Shelley.ITN
                         Cardano.Api.TextView
                         Cardano.Api.TxSubmit
                         Cardano.Api.Typed
