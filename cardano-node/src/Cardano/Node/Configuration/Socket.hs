@@ -5,6 +5,7 @@
 module Cardano.Node.Configuration.Socket
   ( gatherConfiguredSockets
   , SocketOrSocketInfo(..)
+  , getSocketOrSocketInfoAddr
   , SocketConfigError(..)
   , renderSocketConfigError
   )
@@ -17,11 +18,9 @@ import qualified Data.List as List
 import           Data.Functor (($>))
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Network.Socket (Family (AF_INET), AddrInfo (..), AddrInfoFlag (..), Socket, SocketType (..),
-                     defaultHints, getAddrInfo)
-#ifdef SYSTEMD
-import           Network.Socket (SockAddr (..), getSocketName)
-#endif
+import           Network.Socket (Family (AF_INET), AddrInfo (..),
+                     AddrInfoFlag (..), Socket, SocketType (..))
+import qualified Network.Socket as Socket
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
@@ -46,6 +45,15 @@ data SocketOrSocketInfo socket info =
        ActualSocket socket
      | SocketInfo   info
   deriving Show
+
+
+getSocketOrSocketInfoAddr :: SocketOrSocketInfo Socket AddrInfo
+                          -> IO (SocketOrSocketInfo Socket.SockAddr Socket.SockAddr)
+getSocketOrSocketInfoAddr (ActualSocket sock) =
+    ActualSocket <$> Socket.getSocketName sock
+getSocketOrSocketInfoAddr (SocketInfo info)   =
+    return $ SocketInfo (Socket.addrAddress info)
+
 
 -- | Errors for the current module.
 data SocketConfigError
@@ -220,14 +228,15 @@ nodeAddressInfo :: Maybe NodeHostIPAddress
                 -> ExceptT SocketConfigError IO [AddrInfo]
 nodeAddressInfo mbHostAddr mbPort =
     handleIOExceptT (GetAddrInfoError mbHostAddr mbPort) $
-      getAddrInfo (Just hints)
-                  (Prelude.show <$> mbHostAddr)
-                  (Prelude.show <$> mbPort)
+      Socket.getAddrInfo
+        (Just hints)
+        (Prelude.show <$> mbHostAddr)
+        (Prelude.show <$> mbPort)
   where
-    hints = defaultHints {
-              addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
-            , addrSocketType = Stream
-            }
+    hints = Socket.defaultHints {
+                addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
+              , addrSocketType = Stream
+              }
 
 
 -- | Possibly return systemd-activated sockets.  Splits the sockets into three
@@ -242,11 +251,11 @@ getSystemdSockets = do
        Just socks ->
          Just <$>
           foldM (\(ipv4s, ipv6s, unixs) sock -> do
-                  addr <- getSocketName sock
+                  addr <- Socket.getSocketName sock
                   case addr of
-                    SockAddrInet {}  -> return (sock : ipv4s,        ipv6s,        unixs)
-                    SockAddrInet6 {} -> return (       ipv4s, sock : ipv6s,        unixs)
-                    SockAddrUnix {}  -> return (       ipv4s,        ipv6s, sock : unixs))
+                    Socket.SockAddrInet {}  -> return (sock : ipv4s,        ipv6s,        unixs)
+                    Socket.SockAddrInet6 {} -> return (       ipv4s, sock : ipv6s,        unixs)
+                    Socket.SockAddrUnix {}  -> return (       ipv4s,        ipv6s, sock : unixs))
                 ([], [], [])
                 socks
 #else

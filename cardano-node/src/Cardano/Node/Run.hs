@@ -77,7 +77,7 @@ import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                     gatherConfiguredSockets)
+                     gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..), mkConsensusProtocol,
@@ -274,7 +274,6 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   dbPath <- canonDbPath nc
 
   eitherTopology <- readTopologyFile nc
-
   nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
 
   let diffusionTracers :: DiffusionTracers
@@ -297,6 +296,18 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
           (ncDiffusionMode nc)
           ipProducers
           dnsProducers
+
+  ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
+  ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
+  traceWith tracer $ unlines
+    [ ""
+    , "**************************************"
+    , "Addresses: "     <> show (catMaybes [ ipv4, ipv6 ])
+    , "DiffusionMode: " <> show (ncDiffusionMode nc)
+    , "DNS producers: " <> show dnsProducers
+    , "IP producers: "  <> show ipProducers
+    , "**************************************"
+    ]
 
   withShutdownHandling nc trace $ \sfds ->
    Node.run
@@ -368,32 +379,11 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
     -> Tracer IO Text
     -> Consensus.TopLevelConfig blk
     -> IO ()
-  createTracers ncf@NodeConfiguration{ncNodeIPv4Addr, ncNodeIPv6Addr, ncNodePortNumber, ncValidateDB}
+  createTracers NodeConfiguration { ncValidateDB }
                 tr tracer cfg = do
-         eitherTopology <- readTopologyFile ncf
-         nt <- either
-                 (\err -> panic $ "Cardano.Node.Run.createTracers.readTopologyFile: " <> err)
-                 pure
-                 eitherTopology
-
-         let (ipProducerAddrs, dnsProducerAddrs) = producerAddresses nt
 
          traceWith tracer $
            "System started at " <> show (getSystemStart $ Consensus.configBlock cfg)
-
-         traceWith tracer $ unlines
-           [ ""
-           , "**************************************"
-           , "Host node addresses: " <> show (catMaybes [ nodeHostIPv4AddressToIPAddress
-                                                          <$> ncNodeIPv4Addr
-                                                        , nodeHostIPv6AddressToIPAddress
-                                                          <$> ncNodeIPv6Addr
-                                                        ])
-           , "Node port number: " <> show ncNodePortNumber
-           , "My DNS producers are " <> show (fst `map` dnsProducerAddrs)
-           , "My IP producers are "  <> show ipProducerAddrs
-           , "**************************************"
-           ]
 
          meta <- mkLOMeta Notice Public
          let rTr = appendName "release" tr
