@@ -23,9 +23,9 @@ import           Data.Aeson (ToJSON (..), ToJSONKey (..), ToJSONKeyFunction (..)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.HashMap.Strict as HMS
+import           Data.Scientific (Scientific)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Scientific (Scientific)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -54,7 +54,7 @@ import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Keys (KeyHash (..))
 import           Shelley.Spec.Ledger.LedgerState (WitHashes (..))
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate, PParams'(..))
+import           Shelley.Spec.Ledger.PParams (PParams' (..), PParamsUpdate)
 
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import           Shelley.Spec.Ledger.STS.Bbody
@@ -316,9 +316,6 @@ instance Era era => ToObject (UtxowPredicateFailure era) where
     mkObject [ "kind" .= String "ConflictingMetaDataHash"
              , "txBodyMetaDataHash" .= txBodyMetaDataHash
              , "fullMetaDataHash" .= fullMetaDataHash
-             ]
-  toObject _verb InvalidMetaData =
-    mkObject [ "kind" .= String "InvalidMetaData"
              ]
 
 instance Era era => ToObject (UtxoPredicateFailure era) where
