@@ -30,7 +30,7 @@ We check the current tip of the blockchain:
     "slotNo": 8520857
     }
 
-In this example, we are currently in slot 906185, and we know from the genesis file that one period lasts for 129600 slots. So we calculate the current period by
+In this example, we are currently in slot 8520857, and we know from the genesis file that one period lasts for 129600 slots. So we calculate the current period by
 
     expr 8520857 / 129600
     > 65
