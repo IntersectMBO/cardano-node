@@ -270,6 +270,8 @@ readKeyFileTextEnvelope asType fp =
         FileIOError path ex -> FileIOError path ex
         FileError path textEnvErr ->
           FileError path (InputTextEnvelopeError textEnvErr)
+        FileErrorTempFile targetP tempP h ->
+          FileErrorTempFile targetP tempP h
 
 -- | Read a cryptographic key from a file given that it is one of the provided
 -- types.

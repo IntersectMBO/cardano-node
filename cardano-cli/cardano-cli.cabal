@@ -139,11 +139,15 @@ executable cardano-cli
                        -Wall
                        -rtsopts
                        "-with-rtsopts=-T"
+  if !os(windows)
+     build-depends:    unix
+
   build-depends:       base >=4.12 && <5
                      , cardano-cli
                      , cardano-config
                      , cardano-crypto-class
                      , cardano-prelude
+                     , directory
                      , optparse-applicative
                      , text
                      , transformers-except
@@ -161,6 +165,7 @@ test-suite cardano-cli-test
                       , base16-bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-node
                       , cardano-prelude
                       , containers
                       , deepseq
@@ -177,7 +182,8 @@ test-suite cardano-cli-test
                       , transformers-except
                       , unordered-containers
 
-  other-modules:        Test.Cli.ITN
+  other-modules:        Test.Cli.FilePermissions
+                        Test.Cli.ITN
                         Test.Cli.Pioneers.Exercise1
                         Test.Cli.Pioneers.Exercise2
                         Test.Cli.Pioneers.Exercise3

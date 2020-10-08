@@ -59,6 +59,8 @@ library
                       , contra-tracer
                       , containers
                       , cryptonite
+                      , directory
+                      , filepath
                       , formatting
                       , io-sim-classes
                       , iohk-monitoring

@@ -451,6 +451,7 @@ protocolName CardanoProtocol = "Byron; Shelley"
 data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath
   | GroupPermissionsExist FilePath
+  | GenericPermissionsExist FilePath
   deriving Show
 
 renderVRFPrivateKeyFilePermissionError :: VRFPrivateKeyFilePermissionError -> Text
@@ -463,3 +464,6 @@ renderVRFPrivateKeyFilePermissionError err =
     GroupPermissionsExist fp ->
       "VRF private key file at: " <> Text.pack fp
       <> "has \"group\" file permissions. Please remove all \"group\" file permissions."
+    GenericPermissionsExist fp ->
+      "VRF private key file at: " <> Text.pack fp
+      <> "has \"generic\" file permissions. Please remove all \"generic\" file permissions."

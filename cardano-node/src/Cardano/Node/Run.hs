@@ -12,18 +12,14 @@
 
 module Cardano.Node.Run
   ( runNode
-#ifdef UNIX
   , checkVRFFilePermissions
-#endif
   ) where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (String)
 
 import qualified Control.Concurrent.Async as Async
-#ifdef UNIX
 import           Control.Monad.Trans.Except.Extra (left)
-#endif
 import           Control.Tracer
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
@@ -36,14 +32,16 @@ import           System.Environment (lookupEnv)
 #ifdef UNIX
 import           System.Posix.Files
 import           System.Posix.Types (FileMode)
+#else
+import           System.Win32.File
 #endif
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
-import           Paths_cardano_node (version)
 import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
+import           Paths_cardano_node (version)
 
 import qualified Cardano.Crypto.Libsodium as Crypto
 
@@ -101,7 +99,6 @@ runNode cmdPc = do
             Left err -> panic $ "Error in creating the NodeConfiguration: " <> Text.pack err
             Right nc' -> return nc'
 
-#ifdef UNIX
     case shelleyVRFFile $ ncProtocolFiles nc of
       Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions vrfFp
                        case vrf of
@@ -110,7 +107,6 @@ runNode cmdPc = do
                          Right () ->
                            pure ()
       Nothing -> pure ()
-#endif
 
     eLoggingLayer <- runExceptT $ createLoggingLayer
                      (Text.pack (showVersion version))
@@ -366,10 +362,11 @@ canonDbPath NodeConfiguration{ncDatabaseFile = DbFile dbFp} = do
   createDirectoryIfMissing True fp
   return fp
 
-#ifdef UNIX
+
 -- | Make sure the VRF private key file is readable only
 -- by the current process owner the node is running under.
-checkVRFFilePermissions ::FilePath -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+checkVRFFilePermissions :: FilePath -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+#ifdef UNIX
 checkVRFFilePermissions vrfPrivKey = do
   fs <- liftIO $ getFileStatus vrfPrivKey
   let fm = fileMode fs
@@ -388,8 +385,20 @@ checkVRFFilePermissions vrfPrivKey = do
 
   hasGroupPermissions :: FileMode -> Bool
   hasGroupPermissions fm' = fm' `hasPermission` groupModes
+#else
+checkVRFFilePermissions vrfPrivKey = do
+  attribs <- liftIO $ getFileAttributes vrfPrivKey
+  -- https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea
+  -- https://docs.microsoft.com/en-us/windows/win32/fileio/file-access-rights-constants
+  -- https://docs.microsoft.com/en-us/windows/win32/secauthz/standard-access-rights
+  -- https://docs.microsoft.com/en-us/windows/win32/secauthz/generic-access-rights
+  -- https://docs.microsoft.com/en-us/windows/win32/secauthz/access-mask
+  when (attribs `hasPermission` genericPermissions)
+       (left $ GenericPermissionsExist vrfPrivKey)
+ where
+  genericPermissions = gENERIC_ALL .|. gENERIC_READ .|. gENERIC_WRITE .|. gENERIC_EXECUTE
+  hasPermission fModeA fModeB = fModeA .&. fModeB /= gENERIC_NONE
 #endif
-
 
 createDiffusionArguments
   :: Maybe (SocketOrSocketInfo Socket AddrInfo)

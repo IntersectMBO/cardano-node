@@ -182,13 +182,13 @@ test-suite cardano-node-test
 
   if !os(windows)
       build-depends:     unix
-      other-modules:     Test.Cardano.Node.FilePermissions
 
   build-depends:
                         base >= 4.12 && < 5
                       , aeson
                       , async
                       , bytestring
+                      , cardano-api
                       , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-test
@@ -217,7 +217,8 @@ test-suite cardano-node-test
                       , time
                       , unliftio
 
-  other-modules:        Test.Cardano.Node.Gen
+  other-modules:        Test.Cardano.Node.FilePermissions
+                        Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
 
