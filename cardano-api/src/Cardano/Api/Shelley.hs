@@ -3,7 +3,7 @@
 --
 
 module Cardano.Api.Shelley
-  ( module Cardano.Api.Crypto.Bip32Ed25519
+  ( module Cardano.Api.Crypto.Ed25519Bip32
   , module Cardano.Api.LocalChainSync
   , module Cardano.Api.MetaData
   , module Cardano.Api.Protocol
@@ -36,7 +36,7 @@ module Cardano.Api.Shelley
   , module Shelley.Spec.Ledger.OCert
   ) where
 
-import           Cardano.Api.Crypto.Bip32Ed25519 (xPrvFromBytes)
+import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.Api.MetaData (TxMetadata (..), TxMetadataJsonError (..),
                      TxMetadataJsonSchema (TxMetadataJsonDetailedSchema, TxMetadataJsonNoSchema),

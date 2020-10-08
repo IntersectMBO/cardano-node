@@ -32,7 +32,7 @@ import qualified Cardano.Crypto.Wallet as Crypto
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
-import           Cardano.Api.Crypto.Bip32Ed25519 (xPrvFromBytes)
+import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.Typed
 
 import           Cardano.CLI.Byron.Key (CardanoEra (..))

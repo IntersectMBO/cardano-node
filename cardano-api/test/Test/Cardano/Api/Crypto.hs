@@ -17,7 +17,7 @@ import           Prelude (String)
 
 import           Data.Proxy (Proxy (..))
 
-import           Cardano.Api.Crypto.Bip32Ed25519 (Bip32Ed25519DSIGN, SignKeyDSIGN (..))
+import           Cardano.Api.Crypto.Ed25519Bip32 (Ed25519Bip32DSIGN, SignKeyDSIGN (..))
 
 import           Cardano.Crypto.DSIGN
 import           Cardano.Crypto.Util (SignableRepresentation (..))
@@ -35,7 +35,7 @@ import qualified Cardano.Crypto.Wallet as CC
 tests :: TestTree
 tests =
   testGroup "Cardano.Api.Crypto"
-    [ testDSIGNAlgorithm (Proxy :: Proxy Bip32Ed25519DSIGN) "Bip32Ed25519DSIGN"
+    [ testDSIGNAlgorithm (Proxy :: Proxy Ed25519Bip32DSIGN) "Ed25519Bip32DSIGN"
     ]
 
 testDSIGNAlgorithm
@@ -205,9 +205,9 @@ instance (DSIGNAlgorithm v,
 -- Signing key Eq instances for testing
 --
 
-instance Eq (SignKeyDSIGN Bip32Ed25519DSIGN) where
-  (SignKeyBip32Ed25519DSIGN x) == (SignKeyBip32Ed25519DSIGN y) =
+instance Eq (SignKeyDSIGN Ed25519Bip32DSIGN) where
+  (SignKeyEd25519Bip32DSIGN x) == (SignKeyEd25519Bip32DSIGN y) =
     CC.unXPrv x == CC.unXPrv y
 
-  (SignKeyBip32Ed25519DSIGN x) /= (SignKeyBip32Ed25519DSIGN y) =
+  (SignKeyEd25519Bip32DSIGN x) /= (SignKeyEd25519Bip32DSIGN y) =
     CC.unXPrv x /= CC.unXPrv y
