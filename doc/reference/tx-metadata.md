@@ -157,7 +157,7 @@ Detailed Schema:
 * "bytes": hexadecimal
 * "string": any valid JSON string
 * "list": list of objects
-* "map": List of objects with key "k" and value "v" which both contain objects.
+* "map": list of objects with key "k" and value "v" which both contain objects.
 
 ## References and other available material
 
