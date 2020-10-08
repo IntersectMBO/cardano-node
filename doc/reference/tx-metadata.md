@@ -1,16 +1,75 @@
 # Transaction Metadata
 
-Transaction metadata gives us the ability to put arbitrarily structured data onto the chain. The metadata is not involved in transaction validation and is intended to be consumed by applications (i.e is application specific). It is only metadata from the point of view that it is carried along with transactions. The metadata value is kept outside the transaction body but the metadata hash is in the transaction body allowing for integrity checking and authentication of the metadata.
+Transaction metadata (tx metadata) can contain details about a specific transaction, including sender and receiver IDs, transaction comments, and tags. Adding metadata to transactions  provides transaction information by adding arbitrarily structured data onto the chain and is a useful feature in Cardano Shelley. Tx metadata is stored on-chain and is carried along with each transaction. A factor in its design is that the on-chain metadata is not stored in the ledger state and does not influence transaction validation, thereby not compromising ledger performance.
 
-## Metadata Schemas/Mappings/Formats
+Tx metadata is a valuable feature for developers who build applications and process transactions, and for application end users. Developers embed metadata directly and submit a valid transaction with accompanying details. End users don’t interact with the tx metadata directly, but can view transaction-specific metadata using the Cardano Explorer.
 
-On the chain, within transactions, the metadata is encoded as CBOR. When
-building transactions the metadata can be supplied as pre-encoded CBOR.
-Alternatively, metadata can be supplied as JSON which will be converted
-into the internal format. We provide two different mappings between tx
-metadata and JSON, useful for different purposes.
-In both schemes, the top level JSON is an object indexed by integers which
-are mapped to JSON values.
+For example, tx metadata can be used to:
+
++ certify ownership and exchange of assets specifying asset owners in different time periods, transfer details, or asset value at the time of transfer
++ certify documents and signatures, by using a public hash that proves the document’s existence 
+
+Transactions can contain metadata whose hash is part of the body of the transaction. Because the metadata hash is in the tx body, this allows for integrity checking and authentication of the metadata.
+
+## Metadata structure
+
+In the Cardano environment, the structure of the metadata is defined by a mapping from keys to values (key-value pairs) that combine details for multiple purposes into the same transaction. 
+
+*Metadata keys* act as a schema identifier that show what the metadata value is. Keys are unsigned integers limited in size up to 64 bits.
+
+The *metadata values* are simple terms, consisting of integers, text strings, byte strings, lists, and maps. Values are required to be structured, which makes it easier to be inspected and managed, particularly by scripts. 
+
+There is no limit on the number of key-value pairs (except the overall transaction size limit) or on individual structured values. However, there *is* a limit on the size of text strings and byte strings within the structured values, which is implemented to mitigate the problem of unpleasant or illegal content being posted to the blockchain.
+
+Metadata *does not require* any additional fees. It simply contributes to the size of the transaction with a one-time processing fee based on transaction size.
+
+**Binary schema**
+
+The binary schema is based on the Concise Binary Object Representation ([CBOR)](https://tools.ietf.org/html/rfc7049) and Concise Data Definition Language ([CDDL)](https://tools.ietf.org/html/rfc8610) notations, and is presented as follows:
+
+```
+transaction_metadatum =
+    { * transaction_metadatum => transaction_metadatum }
+  / [ * transaction_metadatum ]
+  / int
+  / bytes .size (0..64)
+  / text .size (0..64)
+
+transaction_metadatum_label = uint
+
+transaction_metadata =
+  { * transaction_metadatum_label => transaction_metadatum }
+```
+
+## How to create a transaction with metadata using the cardano-cli
+
+To create a transaction with metadata, first ensure that you have installed the [cardano-node](https://github.com/input-output-hk/cardano-node#cardano-node-overview) and follow instructions on how to launch [cardano-CLI](https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli#cardano-cli).
+
+To create a transaction with specified metadata, run this command:
+
+`cabal exec cardano-cli -- shelley transaction build-raw`
+
+Shelley transactions can be created with the following options:
+
++ according to a chosen schema: *no schema* or *detailed schema*
++ according to a chosen metadata format: CBOR or JSON
+
+```
+  --json-metadata-no-schema
+                       	Use the "no schema" conversion from JSON to tx
+                       	metadata.
+  --json-metadata-detailed-schema
+                       	Use the "detailed schema" conversion from JSON to tx
+                       	metadata.
+  --metadata-json-file FILE
+                       	Filepath of the metadata file, in JSON format.
+  --metadata-cbor-file FILE
+                       	Filepath of the metadata, in raw CBOR format.
+  ```                      
+
+## Metadata schemas - mappings and formats
+
+On-chain metadata that is carried along with transactions is encoded according to CBOR. To create a transaction, you can add the metadata with pre-encoded CBOR. Alternatively, you can add metadata in JSON format, which will be converted into the internal format. In this section, we provide examples of the two different mappings between tx metadata and JSON, which are useful for different purposes. In both schemas, the top-level JSON is an object indexed by integers, which are mapped to JSON values.
 
 ### No schema
 
@@ -27,21 +86,17 @@ are mapped to JSON values.
     "1302243434517352162": ["UJB3",-1.6236436627090480302e19]
 }
 ```
-This mapping allows almost any JSON value to be converted into
-tx metadata. This does not require a specific JSON schema for the
-input but it does not expose the full representation capability of tx
-metadata. In the "no schema" mapping, the idea is that (almost) any JSON can be
-turned into tx metadata and then converted back, without loss. The approach for this mapping is to use the most compact tx metadata representation.
-In particular:
-* JSON lists and maps represented as CBOR lists and maps
-* JSON strings represented as CBOR strings
-* JSON hex strings with \"0x\" prefix represented as CBOR byte strings
-* JSON integer numbers represented as CBOR signed or unsigned numbers
+The no schema mapping allows almost any JSON value to be converted into tx metadata. This does not require a specific JSON schema for the input, however, it does not expose the full representation capability of tx metadata. In the "no schema" mapping, the idea is that almost any JSON value can be turned into tx metadata and then converted back without any loss. The approach for this mapping is to use the most compact tx metadata representation, as follows:
+
+* JSON lists and maps are represented as CBOR lists and maps
+* JSON strings are represented as CBOR strings
+* JSON hex strings with \"0x\" prefix are represented as CBOR byte strings
+* JSON integer numbers are represented as CBOR signed or unsigned numbers
 * JSON maps with string keys that parse as numbers or hex byte strings, represented as CBOR map keys that are actually numbers or byte strings.
 * JSON `Null` or `Bool` are not allowed
 
-The string length limit depends on whether the hex string representation
-is used or not.
+The string length limit depends on whether the hex string representation is used or not.
+
 * Text string limit: 64 bytes for the UTF8
 representation of the text string.
 * Byte string limit: 64 bytes
@@ -93,12 +148,20 @@ for the raw byte form (**i.e. not the input hex, but after hex decoding**).
 }
 ```
 
-The "detailed schema" is a mapping that exposes the full representation capability of tx metadata, but relies on a specific JSON schema for the input JSON.
-In the "detailed schema" mapping, the idea is that we expose the representation capability of the tx metadata in the form of a JSON schema. This means the full representation is available and can be controlled precisely. This also means any tx metadata can be converted into the JSON and back without loss. That is we can round-trip the tx metadata via the JSON and round-trip schema-compliant JSON via tx metadata. NB: `Null` and `Bool` JSON values are still not allowed.
+The *detailed schema* is a mapping that exposes the full representation capability of tx metadata but relies on a specific JSON schema for the input JSON.
+In the *detailed schema* mapping, the representation capability of the tx metadata is exposed in the form of a JSON schema. This means that the full representation is available and can be controlled precisely. This also means that any tx metadata can be converted into JSON and back without any loss. That is, we can round-trip the tx metadata via the JSON and round-trip schema-compliant JSON via tx metadata. Note: `Null` and `Bool` JSON values are still not allowed.
 
 Detailed Schema:
-* "int": Any integer
-* "bytes": Hexidecimal
-* "string": Any valid JSON string
-* "list": List of objects
-* "map": List of objects with key "k" and value "v" which both contain objects.
+
+* "int": any integer
+* "bytes": hexadecimal
+* "string": any valid JSON string
+* "list": list of objects
+* "map": list of objects with key "k" and value "v" which both contain objects.
+
+## References and other available material
+
+Here are some materials for further reading:
+
++ Tx metadata motivation and use: [Design Specification for Delegation and Incentives in Cardano](https://hydra.iohk.io/build/3744897/download/1/delegation_design_spec.pdf), p 53.
++ [Tx metadata in wallet-CLI](https://github.com/input-output-hk/cardano-wallet/wiki/TxMetadata).
