@@ -1,4 +1,4 @@
-# mainnet genesis data format
+# Byron genesis data format
 
 Please see [the byron ledger spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec) which will describe the changes and deviations of these values in more detail while moving from the Byron era to the OBFT era.
 
