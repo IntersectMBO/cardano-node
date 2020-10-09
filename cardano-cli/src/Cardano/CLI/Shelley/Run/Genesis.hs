@@ -37,7 +37,7 @@ import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import qualified Shelley.Spec.Ledger.Coin as Ledger

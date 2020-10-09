@@ -25,6 +25,7 @@ import           Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           GHC.Generics (Generic)
+import           NoThunks.Class (NoThunks, InspectHeap (..))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Wallet as CC
@@ -41,6 +42,17 @@ data Ed25519Bip32DSIGN
 
 instance DSIGNAlgorithm Ed25519Bip32DSIGN where
 
+    type SeedSizeDSIGN    Ed25519Bip32DSIGN = 32
+
+    -- | BIP32-Ed25519 extended verification key size is 64 octets.
+    type SizeVerKeyDSIGN  Ed25519Bip32DSIGN = 64
+
+    -- | BIP32-Ed25519 extended signing key size is 96 octets.
+    type SizeSignKeyDSIGN Ed25519Bip32DSIGN = 96
+
+    -- | BIP32-Ed25519 extended signature size is 64 octets.
+    type SizeSigDSIGN     Ed25519Bip32DSIGN = 64
+
     --
     -- Key and signature types
     --
@@ -48,16 +60,16 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
     newtype VerKeyDSIGN Ed25519Bip32DSIGN = VerKeyEd25519Bip32DSIGN CC.XPub
         deriving (Show, Eq, Generic)
         deriving newtype NFData
-        deriving NoUnexpectedThunks via UseIsNormalForm CC.XPub
+        deriving NoThunks via InspectHeap CC.XPub
 
     newtype SignKeyDSIGN Ed25519Bip32DSIGN = SignKeyEd25519Bip32DSIGN CC.XPrv
         deriving (Generic, ByteArrayAccess)
         deriving newtype NFData
-        deriving NoUnexpectedThunks via UseIsNormalForm CC.XPrv
+        deriving NoThunks via InspectHeap CC.XPrv
 
     newtype SigDSIGN Ed25519Bip32DSIGN = SigEd25519Bip32DSIGN CC.XSignature
         deriving (Show, Eq, Generic, ByteArrayAccess)
-        deriving NoUnexpectedThunks via UseIsNormalForm CC.XSignature
+        deriving NoThunks via InspectHeap CC.XSignature
 
     --
     -- Metadata and basic key operations
@@ -87,8 +99,6 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
     -- Key generation
     --
 
-    seedSizeDSIGN _  = 32
-
     genKeyDSIGN seed =
       SignKeyEd25519Bip32DSIGN $
         CC.generateNew
@@ -99,15 +109,6 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
     --
     -- raw serialise/deserialise
     --
-
-    -- | BIP32-Ed25519 extended verification key size is 64 octets.
-    sizeVerKeyDSIGN  _ = 64
-
-    -- | BIP32-Ed25519 extended signing key size is 96 octets.
-    sizeSignKeyDSIGN _ = 96
-
-    -- | BIP32-Ed25519 extended signature size is 64 octets.
-    sizeSigDSIGN     _ = 64
 
     rawSerialiseVerKeyDSIGN (VerKeyEd25519Bip32DSIGN vk) = CC.unXPub vk
     rawSerialiseSignKeyDSIGN (SignKeyEd25519Bip32DSIGN sk) = xPrvToBytes sk

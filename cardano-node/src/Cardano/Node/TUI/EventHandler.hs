@@ -21,6 +21,7 @@ import qualified Data.Text as Text
 import           Data.Time.Clock (diffUTCTime, getCurrentTime)
 import           Data.Version (showVersion)
 import qualified Graphics.Vty as Vty
+import           NoThunks.Class (NoThunks (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend (BackendKind (..), IsBackend (..), IsEffectuator (..))
@@ -309,12 +310,12 @@ instance IsBackend (LiveViewBackend blk) Text where
     unrealize be = putStrLn $ "unrealize " ++ show (bekind be)
 
 
-instance NoUnexpectedThunks a => NoUnexpectedThunks (LiveViewBackend blk a) where
+instance NoThunks a => NoThunks (LiveViewBackend blk a) where
   showTypeOf _ = "LiveViewBackend"
-  whnfNoUnexpectedThunks ctxt liveViewBackend = do
+  wNoThunks ctxt liveViewBackend = do
     let liveViewMVar = getbe liveViewBackend
     a <- takeMVar liveViewMVar
-    result <- noUnexpectedThunks ctxt a
+    result <- noThunks ctxt a
     putMVar liveViewMVar a
     return result
 
@@ -480,11 +481,11 @@ calcNetRate currentTimeInNs lastTimeInNs lastUsageBytes bytes =
 
 -- | Check for unexpected thunks.
 -- Should NOT be used in PRODUCTION!
-checkForUnexpectedThunks :: NoUnexpectedThunks a => [String] -> a -> IO ()
+checkForUnexpectedThunks :: NoThunks a => [String] -> a -> IO ()
 #ifdef UNEXPECTED_THUNKS
 checkForUnexpectedThunks context unexpectedThunks = do
 
-    noUnexpectedThunks' <- noUnexpectedThunks context unexpectedThunks
+    noUnexpectedThunks' <- noThunks context unexpectedThunks
 
     unless (thunkInfoToIsNF noUnexpectedThunks') $ do
         let showedUnexpectedThunks = show noUnexpectedThunks'

@@ -11,7 +11,7 @@ import           Ouroboros.Consensus.Cardano (ProtocolClient (ProtocolClientShel
                      ProtocolShelley)
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 

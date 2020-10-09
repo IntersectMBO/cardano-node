@@ -49,4 +49,6 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
     Cardano.LedgerStateByron   ledgerByron   -> ledgerUtxoSize ledgerByron
     Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
+    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
+    Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
     _ -> error "ledgerUtxoSize:  unhandled CardanoBlock case"

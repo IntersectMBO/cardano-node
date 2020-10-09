@@ -143,6 +143,7 @@ executable cardano-cli
   build-depends:       base >=4.12 && <5
                      , cardano-cli
                      , cardano-config
+                     , cardano-crypto-class
                      , cardano-prelude
                      , optparse-applicative
                      , text

@@ -55,6 +55,8 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..)
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
+import qualified Cardano.Crypto.Libsodium as Crypto
+
 import           Cardano.Config.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
                      createLoggingLayer, shutdownLoggingLayer)
@@ -106,6 +108,8 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
+    -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
+    Crypto.sodiumInit
 
     configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
 

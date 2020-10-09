@@ -14,7 +14,7 @@ import           Hedgehog (Property, discover)
 import qualified Hedgehog
 import           Test.Tasty (TestTree)
 
-import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
 

@@ -12,6 +12,7 @@ import           Cardano.Prelude
 import           Cardano.Api.Typed
 import           Cardano.Crypto.Hash hiding (Hash)
 import           Cardano.Crypto.KES
+import           Cardano.Crypto.Libsodium (SodiumHashAlgorithm)
 
 import           Test.Cardano.Crypto.Orphans ()
 
@@ -28,5 +29,8 @@ deriving instance Eq (SigningKey KesKey)
 deriving instance Eq (SigningKey VrfKey)
 
 
-instance (HashAlgorithm h, KESAlgorithm d) => Eq (SignKeyKES (SumKES h d)) where
+instance ( KESAlgorithm d
+         , SodiumHashAlgorithm h
+         , SizeHash h ~ SeedSizeKES d
+         ) => Eq (SignKeyKES (SumKES h d)) where
   k1 == k2 = rawSerialiseSignKeyKES k1 == rawSerialiseSignKeyKES k2

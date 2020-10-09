@@ -50,7 +50,7 @@ import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (Either (DegenQueryResult),
                      Query (DegenQuery))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 
 
