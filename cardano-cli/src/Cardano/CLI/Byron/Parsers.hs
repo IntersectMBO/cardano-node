@@ -325,7 +325,7 @@ parseTxOut =
       <$> auto
     )
     $ long "txout"
-      <> metavar "ADDR:LOVELACE"
+      <> metavar "'(\"ADDR\", LOVELACE)'"
       <> help "Specify a transaction output, as a pair of an address and lovelace."
 
 parseTxRelatedValues :: Mod CommandFields ByronCommand
