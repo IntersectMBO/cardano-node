@@ -6,8 +6,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | BIP32-Ed25519 digital signatures.
-module Cardano.Api.Crypto.Bip32Ed25519
-  ( Bip32Ed25519DSIGN
+module Cardano.Api.Crypto.Ed25519Bip32
+  ( Ed25519Bip32DSIGN
   , SigDSIGN (..)
   , SignKeyDSIGN (..)
   , VerKeyDSIGN (..)
@@ -37,25 +37,25 @@ import qualified Crypto.ECC.Edwards25519 as Ed25519
 import           Crypto.Error (eitherCryptoError)
 
 
-data Bip32Ed25519DSIGN
+data Ed25519Bip32DSIGN
 
-instance DSIGNAlgorithm Bip32Ed25519DSIGN where
+instance DSIGNAlgorithm Ed25519Bip32DSIGN where
 
     --
     -- Key and signature types
     --
 
-    newtype VerKeyDSIGN Bip32Ed25519DSIGN = VerKeyBip32Ed25519DSIGN CC.XPub
+    newtype VerKeyDSIGN Ed25519Bip32DSIGN = VerKeyEd25519Bip32DSIGN CC.XPub
         deriving (Show, Eq, Generic)
         deriving newtype NFData
         deriving NoUnexpectedThunks via UseIsNormalForm CC.XPub
 
-    newtype SignKeyDSIGN Bip32Ed25519DSIGN = SignKeyBip32Ed25519DSIGN CC.XPrv
+    newtype SignKeyDSIGN Ed25519Bip32DSIGN = SignKeyEd25519Bip32DSIGN CC.XPrv
         deriving (Generic, ByteArrayAccess)
         deriving newtype NFData
         deriving NoUnexpectedThunks via UseIsNormalForm CC.XPrv
 
-    newtype SigDSIGN Bip32Ed25519DSIGN = SigBip32Ed25519DSIGN CC.XSignature
+    newtype SigDSIGN Ed25519Bip32DSIGN = SigEd25519Bip32DSIGN CC.XSignature
         deriving (Show, Eq, Generic, ByteArrayAccess)
         deriving NoUnexpectedThunks via UseIsNormalForm CC.XSignature
 
@@ -63,22 +63,22 @@ instance DSIGNAlgorithm Bip32Ed25519DSIGN where
     -- Metadata and basic key operations
     --
 
-    algorithmNameDSIGN _ = "bip32_ed25519"
+    algorithmNameDSIGN _ = "ed25519_bip32"
 
-    deriveVerKeyDSIGN (SignKeyBip32Ed25519DSIGN sk) =
-      VerKeyBip32Ed25519DSIGN $ CC.toXPub sk
+    deriveVerKeyDSIGN (SignKeyEd25519Bip32DSIGN sk) =
+      VerKeyEd25519Bip32DSIGN $ CC.toXPub sk
 
     --
     -- Core algorithm operations
     --
 
-    type Signable Bip32Ed25519DSIGN = SignableRepresentation
+    type Signable Ed25519Bip32DSIGN = SignableRepresentation
 
-    signDSIGN () a (SignKeyBip32Ed25519DSIGN sk) =
-      SigBip32Ed25519DSIGN $
+    signDSIGN () a (SignKeyEd25519Bip32DSIGN sk) =
+      SigEd25519Bip32DSIGN $
         CC.sign (mempty :: ScrubbedBytes) sk (getSignableRepresentation a)
 
-    verifyDSIGN () (VerKeyBip32Ed25519DSIGN vk) a (SigBip32Ed25519DSIGN sig) =
+    verifyDSIGN () (VerKeyEd25519Bip32DSIGN vk) a (SigEd25519Bip32DSIGN sig) =
       if CC.verify vk (getSignableRepresentation a) sig
         then Right ()
         else Left "Verification failed"
@@ -90,7 +90,7 @@ instance DSIGNAlgorithm Bip32Ed25519DSIGN where
     seedSizeDSIGN _  = 32
 
     genKeyDSIGN seed =
-      SignKeyBip32Ed25519DSIGN $
+      SignKeyEd25519Bip32DSIGN $
         CC.generateNew
           (getSeedBytes seed)
           (mempty :: ScrubbedBytes)
@@ -109,40 +109,40 @@ instance DSIGNAlgorithm Bip32Ed25519DSIGN where
     -- | BIP32-Ed25519 extended signature size is 64 octets.
     sizeSigDSIGN     _ = 64
 
-    rawSerialiseVerKeyDSIGN (VerKeyBip32Ed25519DSIGN vk) = CC.unXPub vk
-    rawSerialiseSignKeyDSIGN (SignKeyBip32Ed25519DSIGN sk) = xPrvToBytes sk
+    rawSerialiseVerKeyDSIGN (VerKeyEd25519Bip32DSIGN vk) = CC.unXPub vk
+    rawSerialiseSignKeyDSIGN (SignKeyEd25519Bip32DSIGN sk) = xPrvToBytes sk
     rawSerialiseSigDSIGN = BA.convert
 
     rawDeserialiseVerKeyDSIGN =
-      either (const Nothing) (Just . VerKeyBip32Ed25519DSIGN) . CC.xpub
+      either (const Nothing) (Just . VerKeyEd25519Bip32DSIGN) . CC.xpub
     rawDeserialiseSignKeyDSIGN =
-      fmap SignKeyBip32Ed25519DSIGN . xPrvFromBytes
+      fmap SignKeyEd25519Bip32DSIGN . xPrvFromBytes
     rawDeserialiseSigDSIGN =
-      either (const Nothing) (Just . SigBip32Ed25519DSIGN) . CC.xsignature
+      either (const Nothing) (Just . SigEd25519Bip32DSIGN) . CC.xsignature
 
 
-instance Show (SignKeyDSIGN Bip32Ed25519DSIGN) where
-  show (SignKeyBip32Ed25519DSIGN sk) = show $ xPrvToBytes sk
+instance Show (SignKeyDSIGN Ed25519Bip32DSIGN) where
+  show (SignKeyEd25519Bip32DSIGN sk) = show $ xPrvToBytes sk
 
-instance ToCBOR (VerKeyDSIGN Bip32Ed25519DSIGN) where
+instance ToCBOR (VerKeyDSIGN Ed25519Bip32DSIGN) where
   toCBOR = encodeVerKeyDSIGN
   encodedSizeExpr _ = encodedVerKeyDSIGNSizeExpr
 
-instance FromCBOR (VerKeyDSIGN Bip32Ed25519DSIGN) where
+instance FromCBOR (VerKeyDSIGN Ed25519Bip32DSIGN) where
   fromCBOR = decodeVerKeyDSIGN
 
-instance ToCBOR (SignKeyDSIGN Bip32Ed25519DSIGN) where
+instance ToCBOR (SignKeyDSIGN Ed25519Bip32DSIGN) where
   toCBOR = encodeSignKeyDSIGN
   encodedSizeExpr _ = encodedSignKeyDESIGNSizeExpr
 
-instance FromCBOR (SignKeyDSIGN Bip32Ed25519DSIGN) where
+instance FromCBOR (SignKeyDSIGN Ed25519Bip32DSIGN) where
   fromCBOR = decodeSignKeyDSIGN
 
-instance ToCBOR (SigDSIGN Bip32Ed25519DSIGN) where
+instance ToCBOR (SigDSIGN Ed25519Bip32DSIGN) where
   toCBOR = encodeSigDSIGN
   encodedSizeExpr _ = encodedSigDSIGNSizeExpr
 
-instance FromCBOR (SigDSIGN Bip32Ed25519DSIGN) where
+instance FromCBOR (SigDSIGN Ed25519Bip32DSIGN) where
   fromCBOR = decodeSigDSIGN
 
 

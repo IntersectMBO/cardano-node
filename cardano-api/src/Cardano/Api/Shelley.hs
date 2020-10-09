@@ -3,11 +3,11 @@
 --
 
 module Cardano.Api.Shelley
-  ( module Cardano.Api.LocalChainSync
+  ( module Cardano.Api.Crypto.Ed25519Bip32
+  , module Cardano.Api.LocalChainSync
   , module Cardano.Api.MetaData
   , module Cardano.Api.Protocol
   , module Cardano.Api.Shelley.Genesis
-  , module Cardano.Api.Shelley.ITN
   , module Cardano.Api.TextView
   , module Cardano.Api.TxSubmit
   , module Cardano.Api.Typed
@@ -36,6 +36,7 @@ module Cardano.Api.Shelley
   , module Shelley.Spec.Ledger.OCert
   ) where
 
+import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.Api.MetaData (TxMetadata (..), TxMetadataJsonError (..),
                      TxMetadataJsonSchema (TxMetadataJsonDetailedSchema, TxMetadataJsonNoSchema),
@@ -47,7 +48,6 @@ import           Cardano.Api.Protocol.Cardano (mkSomeNodeClientProtocolCardano)
 import           Cardano.Api.Protocol.Shelley (mkSomeNodeClientProtocolShelley)
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 import           Cardano.Api.Shelley.Genesis (shelleyGenesisDefaults)
-import           Cardano.Api.Shelley.ITN (xprvFromBytes)
 import           Cardano.Api.TextView (TextView (..), TextViewDescription (..), TextViewError (..),
                      TextViewType (..), textShow)
 import           Cardano.Api.TxSubmit (TxForMode (..), TxSubmitResultForMode (..), submitTx)

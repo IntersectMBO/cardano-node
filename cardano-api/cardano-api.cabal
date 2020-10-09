@@ -17,7 +17,7 @@ library
 
   exposed-modules:      Cardano.API
                         Cardano.Api.Byron
-                        Cardano.Api.Crypto.Bip32Ed25519
+                        Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.LocalChainSync
                         Cardano.Api.MetaData
                         Cardano.Api.Protocol
@@ -27,7 +27,6 @@ library
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Shelley
                         Cardano.Api.Shelley.Genesis
-                        Cardano.Api.Shelley.ITN
                         Cardano.Api.TextView
                         Cardano.Api.TxSubmit
                         Cardano.Api.Typed
