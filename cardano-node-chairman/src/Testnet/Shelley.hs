@@ -54,6 +54,11 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
+
+ifaceAddress :: String
+ifaceAddress = "127.0.0.1"
+
+
 rewriteGenesisSpec :: Int -> Value -> Value
 rewriteGenesisSpec supply =
   rewriteObject
@@ -162,7 +167,7 @@ testnet H.Conf {..} = do
       J.object
       [ "Producers" .= J.toJSON
         [ J.object
-          [ "addr" .= J.toJSON @String "127.0.0.1"
+          [ "addr" .= J.toJSON @String ifaceAddress
           , "port" .= J.toJSON @Int peerPort
           , "valency" .= J.toJSON @Int 1
           ]
@@ -337,6 +342,7 @@ testnet H.Conf {..} = do
         , "--shelley-kes-key", tempAbsPath </> node </> "kes.skey"
         , "--shelley-vrf-key", tempAbsPath </> node </> "vrf.skey"
         , "--shelley-operational-certificate" , tempAbsPath </> node </> "node.cert"
+        , "--host-addr", ifaceAddress
         , "--port", portString
         , "--socket-path", IO.sprocketArgumentName sprocket
         ] <&>
