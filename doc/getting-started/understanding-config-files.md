@@ -4,17 +4,17 @@
 
 Tells your node to which nodes in the network it should talk to. A minimal version of this file looks like this:
 
-
-	{
-	  "Producers": [
-	    {
-	      "addr": "x.x.x.x",
-	      "port": 3001,
-	      "valency": 1
-	    }
-	  ]
-	}
-
+```json
+{
+  "Producers": [
+    {
+      "addr": "x.x.x.x",
+      "port": 3001,
+      "valency": 1
+    }
+  ]
+}
+```
 * This means that your node will contact node at ip `x.x.x.x` on `port 3001`.
 
 * `valency` tells the node how many connections your node should have. It only has an effect for dns addresses. If a dns address is given, valency governs to how many resolved ip addresses should we maintain active (hot) connection; for ip addresses, valency is used as a Boolean value, where `0` means to ignore the address.
@@ -29,11 +29,11 @@ But it is important because it is used to set:
 
 * `genDelegs`, a mapping from genesis keys to genesis delegates.
 * `initialFunds`, a mapping from the initial addresses to the initial values at those address.
-* `MaxLovelaceSupply`, the total amount of lovelaces in the blockchain.  
-* `startTime`, the time of slot zero.
+* `maxLovelaceSupply`, the total amount of lovelaces in the blockchain.
+* `systemStart`, the time of slot zero.
 
 The `genesis.json` file looks like the one below.
-
+```json
 {
   "activeSlotsCoeff": 0.05,
   "protocolParams": {
@@ -102,41 +102,33 @@ The `genesis.json` file looks like the one below.
   "maxKESEvolutions": 62,
   "securityParam": 2160
 }
-
-Here is a brief description of each parameter. You can learn more in the [spec](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec)
+```
+Here is a brief description of each parameter. You can learn more in the [spec](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec).
 
 
 | PARAMETER | MEANING |
 |----------| --------- |
 | activeSlotsCoeff | The proportion of slots in which blocks should be issued. |
-| poolDecayRate | Decay rate for pool deposits |
 | poolDeposit | The amount of a pool registration deposit |
 | protocolVersion| Accepted protocol versions |
 | decentralisationParam | Percentage of blocks produced by federated nodes |
-| maxTxSize | Maximal transaction size |
+| maxTxSize | Maximum transaction size |
 | minPoolCost | Stake pools cannot register/re-register their stake cost below this value |
 | minFeeA | The linear factor for the minimum fee calculation |
-| maxBlockBodySize | Maximal block body size |
-| keyMinRefund | The minimum percent refund guarantee |
-| minFeeB | The constant factor for the minimum fee calculation |
-| maxBlockBodySize | Maximal block body size |
-| keyMinRefund | The minimum percent refund guarantee |
+| maxBlockBodySize | Maximum block body size |
 | minFeeB | The constant factor for the minimum fee calculation |
 | eMax | Epoch bound on pool retirement |
 | extraEntropy | Well, extra entropy =) |
-| maxBlockHeaderSize | |
+| maxBlockHeaderSize | Maximum block header size |
 | keyDeposit | The amount of a key registration deposit |
-| keyDecayRate | The deposit decay rate |
 | nOpt | Desired number of pools |
 | rho | Monetary expansion |
-|	poolMinRefund | The minimum percent pool refund |
-|	tau | Treasury expansion |
-|	a0 | Pool's pledge influence |
-| protocolMagicId | To identify the testnets |
+| tau | Treasury expansion |
+| a0 | Pool's pledge influence |
+| networkMagic | To identify the testnets |
 | systemStart | Time of slot 0 |
-| genDelegs | Mapping from genesis keys to genesis delegate |                
+| genDelegs | Mapping from genesis keys to genesis delegate |
 | updateQuorum | Determines the quorum needed for votes on the protocol parameter updates |
-| maxMajorPV | Provides a mechanism for halting outdated nodes |
 | initialFunds | Mapping address to values |
 | maxLovelaceSupply | The total number of lovelace in the system, used in the reward calculation. |
 | networkMagic | To identify the testnet |
@@ -160,19 +152,18 @@ __NOTE Due to how the config.json file is generated, fields on the real file are
 
 First section relates the basic node configuration parameters. Make sure you have to `TPraos`as the protocol, the correct path to the `mainnet-shelley-genesis.json` file, `RequiresMagic`for its use in a testnet.
 
-	{
 	  "Protocol": "TPraos",
 	  "GenesisFile": "mainnet-shelley-genesis.json",
 	  "RequiresNetworkMagic": "RequiresMagic",
 
-#### Update parameteres
+#### Update parameters
 
-This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates.You just need to be aware of the latest version supported by the network. You dont need to change anything here.
+This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates. You just need to be aware of the latest version supported by the network. You don't need to change anything here.
 
 	  "ApplicationName": "cardano-sl",
 	  "ApplicationVersion": 0,
 	  "LastKnownBlockVersion-Alt": 0,
-	  "LastKnownBlockVersion-Major": 0,
+	  "LastKnownBlockVersion-Major": 2,
 	  "LastKnownBlockVersion-Minor": 0,
 
 
@@ -197,68 +188,69 @@ Also enable the EKG backend if you want to use the EKG or Prometheus monitoring 
 
 `rotation` The default file rotation settings for katip scribes, unless overridden in the setupScribes above for specific scribes.
 
-
-	  "TurnOnLogging": true,
-	  "TurnOnLogMetrics": true,
-	  "TracingVerbosity": "NormalVerbosity",
-	  "minSeverity": "Debug",
-	  "TraceBlockFetchClient": false,
-	  "TraceBlockFetchDecisions": false,
-	  "TraceBlockFetchProtocol": false,
-	  "TraceBlockFetchProtocolSerialised": false,
-	  "TraceBlockFetchServer": false,
-	  "TraceBlockchainTime": false,
-	  "TraceChainDb": true,
-	  "TraceChainSyncBlockServer": false,
-	  "TraceChainSyncClient": false,
-	  "TraceChainSyncHeaderServer": false,
-	  "TraceChainSyncProtocol": false,
-	  "TraceDNSResolver": true,
-	  "TraceDNSSubscription": true,
-	  "TraceErrorPolicy": true,
-	  "TraceForge": true,
-	  "TraceHandshake": false,
-	  "TraceIpSubscription": true,
-	  "TraceLocalChainSyncProtocol": false,
-	  "TraceLocalErrorPolicy": true,
-	  "TraceLocalHandshake": false,
-	  "TraceLocalTxSubmissionProtocol": false,
-	  "TraceLocalTxSubmissionServer": false,
-	  "TraceMempool": true,
-	  "TraceMux": false,
-	  "TraceTxInbound": false,
-	  "TraceTxOutbound": false,
-	  "TraceTxSubmissionProtocol": false,
-	  "setupBackends": [
-	    "KatipBK"
-	  ],
-	  "defaultBackends": [
-	    "KatipBK"
-	  ],
-	  "hasEKG": 12788,
-	  "hasPrometheus": [
-	    "127.0.0.1",
-	    12798
-	  ],
-	  "setupScribes": [
-	    {
-	      "scFormat": "ScText",
-	      "scKind": "StdoutSK",
-	      "scName": "stdout",
-	      "scRotation": null
-	    }
-	  ],
-	  "defaultScribes": [
-	    [
-	      "StdoutSK",
-	      "stdout"
-	    ]
-	  ],
-	  "rotation": {
-	    "rpKeepFilesNum": 10,
-	    "rpLogLimitBytes": 5000000,
-	    "rpMaxAgeHours": 24
-	    },	  
+```json
+"TurnOnLogging": true,
+"TurnOnLogMetrics": true,
+"TracingVerbosity": "NormalVerbosity",
+"minSeverity": "Debug",
+"TraceBlockFetchClient": false,
+"TraceBlockFetchDecisions": false,
+"TraceBlockFetchProtocol": false,
+"TraceBlockFetchProtocolSerialised": false,
+"TraceBlockFetchServer": false,
+"TraceBlockchainTime": false,
+"TraceChainDb": true,
+"TraceChainSyncBlockServer": false,
+"TraceChainSyncClient": false,
+"TraceChainSyncHeaderServer": false,
+"TraceChainSyncProtocol": false,
+"TraceDNSResolver": true,
+"TraceDNSSubscription": true,
+"TraceErrorPolicy": true,
+"TraceForge": true,
+"TraceHandshake": false,
+"TraceIpSubscription": true,
+"TraceLocalChainSyncProtocol": false,
+"TraceLocalErrorPolicy": true,
+"TraceLocalHandshake": false,
+"TraceLocalTxSubmissionProtocol": false,
+"TraceLocalTxSubmissionServer": false,
+"TraceMempool": true,
+"TraceMux": false,
+"TraceTxInbound": false,
+"TraceTxOutbound": false,
+"TraceTxSubmissionProtocol": false,
+"setupBackends": [
+  "KatipBK"
+],
+"defaultBackends": [
+  "KatipBK"
+],
+"hasEKG": 12788,
+"hasPrometheus": [
+  "127.0.0.1",
+  12798
+],
+"setupScribes": [
+  {
+    "scFormat": "ScText",
+    "scKind": "StdoutSK",
+    "scName": "stdout",
+    "scRotation": null
+  }
+],
+"defaultScribes": [
+  [
+    "StdoutSK",
+    "stdout"
+  ]
+],
+"rotation": {
+  "rpKeepFilesNum": 10,
+  "rpLogLimitBytes": 5000000,
+  "rpMaxAgeHours": 24
+  },
+```
 
 #### Fine grained logging control
 
@@ -268,7 +260,7 @@ It is also possible to have more fine grained control over filtering of trace ou
 
 `mapSubtrace` This section is more expressive, we are working on its documentation.
 
-
+```json
 	  "options": {
 	    "mapBackends": {
 	      "cardano.node-metrics": [
@@ -346,3 +338,4 @@ It is also possible to have more fine grained control over filtering of trace ou
 	    }
 	  }
 	}
+```

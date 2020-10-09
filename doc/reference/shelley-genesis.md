@@ -321,7 +321,7 @@ $ cardano-cli shelley genesis create --genesis-dir example/
 
 and then look at it and understand what the command has done
 
-```
+```json
 $ cat example/genesis.json
 {
     "activeSlotsCoeff": 5.0e-2,
@@ -634,7 +634,7 @@ We're going for more zeros on our money supply this time, after all
 
 Let's have a look at the result
 
-```
+```json
 $ cat example/genesis.json
 {
     "decentralisationParam": 1,
