@@ -182,11 +182,6 @@ in {
   ### Configure cluster's constituent services:
   ###
   config = mkIf ccfg.enable {
-    services.chairman = {
-      node-ids              = shelley-node-ids;
-      inherit (ccfg) slot-length;
-      nodeConfigFile        = builtins.elemAt shelley-configs 0;
-    };
     services.cardano-node = {
       enable                = shelley-enabled;
       instanced             = true;
