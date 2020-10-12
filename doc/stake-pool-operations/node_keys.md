@@ -1,71 +1,71 @@
-# Generate your stake pool keys
+# ステークプール鍵を生成する
 
-A stake pool needs at least 2 running nodes: A __block-producing__ node and a __relay__ node.
+ステークプールには稼働中の2つのノード、 __ブロック生成__ ノードと __リレー__ ノードが必要です。
 
-We need to setup our __block-producing__ node. You can build the node from source or maintain a single build on your local machine and only upload the binaries to your __block-producing__ and __relay__ servers. Just make sure you have consistent versions across them.
+まず、 __ブロック生成__ ノードをセットアップする必要があります。ノードはソースから構築することもできますが、自分のローカルマシンにシングルビルドを維持して、バイナリのみを __ブロック生成__ サーバーおよび __リレー__ サーバーにアップロードすることもできます。ただし、双方のバージョンが一貫していることを確認してください。
 
 
 
 ![network diagram](images/basic-network-with-relays-producers-passivenodes-walletnodes.png)
 
-The __block-producing__ node will only connect with it's __relay__, while the __relay__ will establish connections with other relays in the network.  Each node must run in an independent server.
+__ブロック生成__ ノードは __リレー__ ノードにのみ接続します。この __リレー__ ノードはネットワークの他のリレーに接続します。各ノードは独立したサーバーで稼働させる必要があります。
 
-#### Basic block-producing node firewall configuration:
+#### ブロック生成ノードファイアウォールの基本設定
 
-* Make sure you can only login with SSH Keys, not password.
-* Make sure to setup SSH connections in a port different than the default 22
-* Make sure to configure the firewall to only allow connections from your relay nodes by setting up their ip addresses.
+* ログインはSSH鍵のみを用い、パスワードは使用しない
+* デフォルトのポート22以外のポートでSSH接続をセットアップする
+* IPアドレスのセットアップによりファイアウォールが自分のリレーノードからの接続のみ許可するように設定する
 
-#### Basic relay node firewall configuration:
+#### リレーノードファイアウォールの基本設定
 
- * Make sure you can only login with SSH Keys, not password.
- * Make sure to setup SSH connections in a port different than the default 22.
- * Make sure you only have the strictly necessary ports opened.
+ * ログインはSSH鍵のみを用い、パスワードは使用しない
+ * デフォルトのポート22以外のポートでSSH接続をセットアップする
+ * 絶対に必要なポートのみをオープンにする
 
-#### Creating keys for our block-producing node
+#### ブロック生成ノードの鍵を作成する
 
-**WARNING:**
-You may want to use your __local machine__ for this process (assuming you have cardano-node and cardano-cli on it). Make sure you are not online until you have put your __cold keys__ in a secure storage and deleted the files from you local machine.
+**警告：**
+このプロセスで、cardano-nodeとcardano-cliがインストールされた自分の __ローカルマシン__ を使用する場合は、 __コールドキー__ を安全な場所に保管し、ファイルをローカルマシンから削除するまで、絶対にオンラインにしないように注意してください。
 
-The __block-producing node__ or __pool node__ needs:
+__ブロック生成ノード__ または __プールノード__ には以下が必要です
 
-* __Cold__ key pair,
-* __VRF__ Key pair,
-* __KES__ Key pair,
-* __Operational Certificate__
+* __コールド__ キーペア
+* __VRF__ キーペア
+* __KES__ キーペア
+* __運営証明書__
 
-Create a directory on your local machine to store your keys:
+ローカルマシンに鍵を保管するディレクトリーを作成します
 
     mkdir pool-keys
     cd pool-keys
 
-#### Generate __Cold__ Keys and a __Cold_counter__:
+#### __Cold__ キーと __Cold_counter__ を作成する
 
     cardano-cli shelley node key-gen \
     --cold-verification-key-file cold.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter-file cold.counter
 
-#### Generate VRF Key pair
+#### VRFキーペアを生成する
 
     cardano-cli shelley node key-gen-VRF \
     --verification-key-file vrf.vkey \
     --signing-key-file vrf.skey
 
-#### Generate the KES Key pair
+#### KESキーペアを生成する
 
     cardano-cli shelley node key-gen-KES \
     --verification-key-file kes.vkey \
     --signing-key-file kes.skey
 
-#### Generate the Operational Certificate
+#### 運営証明書を生成する
 
-We need to know the slots per KES period, we get it from the genesis file:
+KES期間内のスロット数を知る必要があります。これはジェネシスファイルから取得できます
 
     cat mainnet-shelley-genesis.json | grep KESPeriod
     > "slotsPerKESPeriod": 3600,
 
-Then we need the current tip of the blockchain:
+次に、ブロックチェーンの現在のチップが必要です
 
     cardano-cli shelley query tip --mainnet
     {
@@ -74,12 +74,12 @@ Then we need the current tip of the blockchain:
     "slotNo": 906528
     }
 
-Look for Tip `slotNo` value. In this example we are on slot 906528. So we have KES period is 120:
+チップの `slotNo` 値を探します。この例では、現在スロット906528です。KES期間は120です
 
     expr 432571 / 3600
     > 251
 
-To generate the certificate:
+証明書を生成します
 
     cardano-cli shelley node issue-op-cert \
     --kes-verification-key-file kes.vkey \
@@ -88,13 +88,13 @@ To generate the certificate:
     --kes-period 120 \
     --out-file node.cert
 
-#### Move the cold keys to secure storage and remove them from your local machine.
+#### コールドキーを安全な保管場所に移し、ローカルマシンから削除する
 
-The best place for your cold keys is a __SECURE USB__ or other __SECURE EXTERNAL DEVICE__, not a computer with internet access.
+コールドキーの保管場所として最適なのは __セキュアなUSB__ など、 __安全な外部デバイス__ であり、インターネットにアクセスするコンピューターではありません。
 
-#### Copy the files to the server:
+#### ファイルをサーバーにコピーする
 
-Copy your VRF keys, KES Keys, and Operational Certificate to your __block-producing__ server. For example:
+VRFキー、KESキー、運営証明書を、 __ブロック生成__ サーバーにコピーします。例：
 
     scp -rv -P<SSH PORT> -i ~/.ssh/<SSH_PRIVATE_KEY> ~/pool-keys USER@<PUBLIC_IP>:~/
 
@@ -103,10 +103,10 @@ Copy your VRF keys, KES Keys, and Operational Certificate to your __block-produc
     debug1: Exit status 0
 
 
-Log in to your server and verify that the files are there:
+サーバーにログインし、ファイルがあることを確認します
 
     ls pool-keys
 
     > kes.skey  kes.vkey  node.cert  vrf.skey  vrf.vkey  
 
-Later on we will learn how to register our pool in the blockchain.
+ブロックチェーンにプールを登録する方法は後述します。
