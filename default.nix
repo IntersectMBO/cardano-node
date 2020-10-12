@@ -24,9 +24,9 @@ let
 
   scripts = callPackage ./nix/scripts.nix { inherit customConfig; };
   # NixOS tests run a proxy and validate it listens
-  nixosTests = recRecurseIntoAttrs (import ./nix/nixos/tests {
+  nixosTests = import ./nix/nixos/tests {
     inherit pkgs;
-  });
+  };
 
   dockerImage = let
     defaultConfig = rec {
