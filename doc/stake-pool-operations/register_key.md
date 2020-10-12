@@ -1,19 +1,19 @@
-# Register stake address on the blockchain
+# ステークアドレスをブロックチェーンに登録する
 
-Stake address needs to be registered on the blockchain to be useful. Registering keys requires:
+ステークアドレスを使用可能にするためにはブロックチェーンに登録する必要があります。鍵の登録には以下が必要です
 
-* Create a registration certificate.
-* Submit the certificate to the blockchain with a transaction.
+* 登録証明書を作成する
+* ブロックチェーンに証明書をトランザクションで送信する
 
-#### Create a _registration certificate_:
+#### 登録証明書を作成する
 
     cardano-cli shelley stake-address registration-certificate \
     --stake-verification-key-file stake.vkey \
     --out-file stake.cert
 
-#### Draft transaction
+#### トランザクションのドラフトを作成する
 
-For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
+トランザクションドラフトでは、–tx.out、–ttl、–feeはゼロに設定できます。
 
     cardano-cli shelley transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
@@ -23,7 +23,7 @@ For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
     --out-file tx.raw \
     --certificate-file stake.cert
 
-#### Calculate fees
+#### 手数料を計算する
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-body-file tx.raw \
@@ -34,19 +34,19 @@ For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
     --mainnet \
     --protocol-params-file protocol.json
 
-The output is the transaction fee in lovelace:
+アウトプットはLavelace単位のトランザクション手数料です
 
     > 171485
 
-Registering the stake address, not only pay transaction fees, but also includes a _deposit_ (which you get back when deregister the key) as stated in the protocol parameters:
+ステークアドレスの登録には、トランザクション手数料の支払いだけでなく、プロトコルパラメーターの章で触れたデポジット（鍵の登録解除時に返金）が発生します。
 
-The deposit amount can be found in the `protocol.json` under `keyDeposit`, for example in Shelley Tesntet:
+デポジット額は`keyDeposit`の`protocol.json`にあります。以下はShelleyテストネットの場合です
 
     ...
     "keyDeposit": 2000000,
     ...
 
-Query the UTXO of the address that pays for the transaction and deposit:
+トランザクション手数料とデポジットを支払うのUTXOのアドレスを問い合わせます
 
     cardano-cli shelley query utxo \
         --address $(cat payment.addr) \
@@ -56,15 +56,15 @@ Query the UTXO of the address that pays for the transaction and deposit:
     > ----------------------------------------------------------------------------------------
     > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1      1000000000
 
-#### Calculate the change to send back to payment address after including the deposit
+#### デポジットを含めたうえで支払いアドレスに返金するつり銭を計算する
 
     expr 1000000000 - 171485 - 2000000
 
     > 999428515
 
-#### Submit the certificate with a transaction:
+#### 証明書をトランザクションで送信する
 
-Build the transaction, this time include  --ttl and --fee  
+トランザクションを構築します。今回は–ttlと–feeを含めます  
 
     cardano-cli shelley transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
@@ -74,7 +74,7 @@ Build the transaction, this time include  --ttl and --fee
     --out-file tx.raw \
     --certificate-file stake.cert
 
-Sign it:
+署名します
 
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
@@ -83,12 +83,12 @@ Sign it:
     --mainnet \
     --out-file tx.signed
 
-And submit it:
+送信します
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
     --mainnet
 
-Your stake key is now registered on the blockchain.
+ステーク鍵がブロックチェーンに登録されました。
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.
+**注意：**`--mainnet`はCardanoメインネットを特定するものです。テストネットの場合は`--testnet-magic 1097911063`を使用してください。
