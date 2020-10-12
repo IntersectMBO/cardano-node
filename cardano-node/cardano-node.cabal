@@ -112,6 +112,7 @@ library
                      , safe-exceptions
                      , scientific
                      , shelley-spec-ledger
+                     , stm
                      , strict-concurrency
                      , text
                      , time
@@ -185,6 +186,7 @@ library cardano-node-config
                      , ouroboros-network
                      , scientific
                      , shelley-spec-ledger
+                     , stm
                      , text
                      , yaml
 

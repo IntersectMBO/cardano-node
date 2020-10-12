@@ -7,12 +7,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -Wno-orphans -Wwarn #-}
 
 module Cardano.Tracing.Tracers
   ( Tracers (..)
@@ -21,7 +22,7 @@ module Cardano.Tracing.Tracers
   , nullTracers
   ) where
 
-import           Cardano.Prelude hiding (show)
+import           Cardano.Prelude hiding (show, traceM)
 import           Prelude (String, show)
 
 import           GHC.Clock (getMonotonicTimeNSec)
@@ -88,6 +89,8 @@ import           Cardano.Tracing.Queries
 -- For tracing instances
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
+
+import Debug.Trace (traceM)
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
@@ -583,12 +586,12 @@ forgeTracer
 forgeTracer verb tr forgeTracers nodeKern fStats =
   Tracer $ \tlcev@(Consensus.TraceLabelCreds _ ev) -> do
     -- Ignoring the credentials label for measurement and counters:
-    traceWith (measureTxsEnd tr) ev
+    -- traceWith (measureTxsEnd tr) ev
     traceWith (notifyBlockForging fStats tr) ev
     -- Consensus tracer -- here we track the label:
-    traceWith (annotateSeverity
-                 $ teeForge forgeTracers nodeKern verb
-                 $ appendName "Forge" tr) tlcev
+    -- traceWith (annotateSeverity
+    --              $ teeForge forgeTracers nodeKern verb
+    --              $ appendName "Forge" tr) tlcev
 
 notifyBlockForging
   :: ForgingStats
@@ -596,71 +599,55 @@ notifyBlockForging
   -> Tracer IO (Consensus.TraceForgeEvent blk)
 notifyBlockForging fStats tr = Tracer $ \case
   Consensus.TraceStartLeadershipCheck slot -> do
-    mapForgingCurrentThreadStats_ slot fStats $
-      \fts -> fts { ftsLeadershipChecksInitiated = ftsLeadershipChecksInitiated fts + 1 }
-  Consensus.TraceNodeCannotForge slot _ -> do
-    -- It means that node have tried to forge new block, but because of misconfiguration
-    -- (for example, invalid key) it's impossible.
-    mapForgingCurrentThreadStats_ slot fStats $
-      \fts -> fts { ftsNodeCannotForgeNum = ftsNodeCannotForgeNum fts + 1 }
-    x <- sum <$> threadStatsProjection fStats ftsNodeCannotForgeNum
-    traceCounter "nodeCannotForge" tr x
-  Consensus.TraceNodeIsLeader slot -> do
-    mapForgingCurrentThreadStats_ slot fStats $
-      \fts -> fts { ftsNodeIsLeaderNum = ftsNodeIsLeaderNum fts + 1 }
-    x <- sum <$> threadStatsProjection fStats ftsNodeIsLeaderNum
-    traceCounter "nodeIsLeaderNum" tr x
-  Consensus.TraceForgedBlock slot _ _ _ -> do
-    mapForgingCurrentThreadStats_ slot fStats $
-      \fts -> fts { ftsBlocksForgedNum = ftsBlocksForgedNum fts + 1 }
-    x <- sum <$> threadStatsProjection fStats ftsBlocksForgedNum
-    traceCounter "blocksForgedNum" tr x
-  Consensus.TraceForgedInvalidBlock slot _ _ -> do
-    mapForgingCurrentThreadStats_ slot fStats $
-      \fts -> fts { ftsBlocksForgedInvalidNum = ftsBlocksForgedInvalidNum fts + 1 }
-    x <- sum <$> threadStatsProjection fStats ftsBlocksForgedInvalidNum
-    traceCounter "blocksForgedInvalidNum" tr x
-  Consensus.TraceNodeNotLeader slot -> do
-    missed <- mapForgingCurrentThreadStats slot fStats
-                 (updateMissedSlotsWhileNotLeader slot)
+    tid <- myThreadId
+    traceM ("CHECK," <> show tid <> "," <> show (unSlotNo slot))
+    hasMissed <-
+      mapForgingCurrentThreadStats slot fStats $ \fts ->
+        if ftsLastSlot fts == 0 || succ (ftsLastSlot fts) == slot then
+          (fts { ftsLastSlot = slot }, False)
+        else
+          let missed = ftsSlotsMissedNum fts
+                     + fromIntegral (unSlotNo slot - unSlotNo (ftsLastSlot fts))
+          in (fts { ftsLastSlot = slot, ftsSlotsMissedNum = missed }, True)
+    pure ()
     -- Did we have any fresh misses?
-    when missed $ do
-      x <- sum <$> threadStatsProjection fStats ftsSlotsMissedNum
-      traceCounter "slotsMissedNum" tr x
+    -- when hasMissed $ do
+    --   x <- sum <$> threadStatsProjection fStats ftsSlotsMissedNum
+    --   traceCounter "slotsMissedNum" tr x
+  -- Consensus.TraceForgedBlock slot _ _ _ -> do
+  --   mapForgingCurrentThreadStats_ slot fStats $
+  --     \fts -> fts { ftsBlocksForgedNum = ftsBlocksForgedNum fts + 1 }
+  --   x <- sum <$> threadStatsProjection fStats ftsBlocksForgedNum
+  --   traceCounter "blocksForgedNum" tr x
+  -- Consensus.TraceNodeIsLeader slot -> do
+  --   mapForgingCurrentThreadStats_ slot fStats $
+  --     \fts -> fts { ftsNodeIsLeaderNum = ftsNodeIsLeaderNum fts + 1 }
+  --   x <- sum <$> threadStatsProjection fStats ftsNodeIsLeaderNum
+  --   traceCounter "nodeIsLeaderNum" tr x
   _ -> pure ()
- where
-   -- | Detect potentially missed slots, under the assumption
-   --   that we've just determined not to be a leader for the current slot.
-   updateMissedSlotsWhileNotLeader ::
-        SlotNo
-     -> ForgeThreadStats
-     -> (ForgeThreadStats, Bool)
-   updateMissedSlotsWhileNotLeader curSlot fts =
-     (fts { ftsNodeNotLeaderNum = notLeader
-          , ftsSlotsMissedNum = missed },
-      missed /= ftsSlotsMissedNum fts) -- Did we have any fresh misses?
-    where
-      slotsPassed, notLeader, leader, forged, leaderChecksIncomplete, ledButDidntForge, forgedInvalid, missed :: Int
-      -- The 1 is because we're completing this slot's check for leadership,
-      -- by contract of this function, so the notLeader will have +1 as well
-      -- at this point.
-      slotsPassed            = fromIntegral $ 1 + (unSlotNo $ curSlot - ftsFirstSlot fts)
-      leader                 = ftsNodeIsLeaderNum fts
-      notLeader              = ftsNodeNotLeaderNum fts + 1
-      leaderChecksIncomplete = slotsPassed - leader - notLeader
-      forged                 = ftsBlocksForgedNum fts
-      ledButDidntForge       = leader - forged
-      forgedInvalid          = ftsBlocksForgedInvalidNum fts
-      -- Missed slots fall in four categories:
-      --   1. Leadership check didn't even initiate for a given slot,
-      --   2. Leadership check was initiated, but didn't
-      --      lead (pun intended) to a conclusion (leader/not leader),
-      --   3. Leadership was detected, but we didn't forge a block,
-      --   4. Block forged, but was found to be invalid.
-      --
-      -- Forging without adoption, however, is usually normal protocol operation.
-      missed  = leaderChecksIncomplete + ledButDidntForge + forgedInvalid
+  --   mapForgingCurrentThreadStats_ slot fStats $
+  --     \fts -> fts { ftsLeadershipChecksInitiated = ftsLeadershipChecksInitiated fts + 1 }
+  -- Consensus.TraceNodeCannotForge slot _ -> do
+  --   -- It means that node have tried to forge new block, but because of misconfiguration
+  --   -- (for example, invalid key) it's impossible.
+  --   mapForgingCurrentThreadStats_ slot fStats $
+  --     \fts -> fts { ftsNodeCannotForgeNum = ftsNodeCannotForgeNum fts + 1 }
+  --   x <- sum <$> threadStatsProjection fStats ftsNodeCannotForgeNum
+  --   traceCounter "nodeCannotForge" tr x
 
+  -- Consensus.TraceForgedInvalidBlock slot _ _ -> do
+  --   mapForgingCurrentThreadStats_ slot fStats $
+  --     \fts -> fts { ftsBlocksForgedInvalidNum = ftsBlocksForgedInvalidNum fts + 1 }
+  --   x <- sum <$> threadStatsProjection fStats ftsBlocksForgedInvalidNum
+  --   traceCounter "blocksForgedInvalidNum" tr x
+  -- Consensus.TraceNodeNotLeader slot -> do
+  --   missed <- mapForgingCurrentThreadStats slot fStats
+  --                (updateMissedSlotsWhileNotLeader slot)
+  --   -- Did we have any fresh misses?
+  --   when missed $ do
+  --     x <- sum <$> threadStatsProjection fStats ftsSlotsMissedNum
+  --     traceCounter "slotsMissedNum" tr x
+  -- _ -> pure ()
 
 --------------------------------------------------------------------------------
 -- Mempool Tracers
