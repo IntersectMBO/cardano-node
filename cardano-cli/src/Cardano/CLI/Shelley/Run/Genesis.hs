@@ -67,9 +67,9 @@ renderShelleyGenesisCmdError err =
     ShelleyGenesisCmdGenesisFileError fe -> Text.pack $ displayError fe
     ShelleyGenesisCmdMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
       "Mismatch between the files found:\n"
-        <> "Genesis key file indexes:      " <> textShow gfiles
-        <> "delegate key file indexes:     " <> textShow dfiles
-        <> "delegate VRF key file indexes: " <> textShow vfiles
+        <> "Genesis key file indexes:      " <> textShow gfiles <> "\n"
+        <> "Delegate key file indexes:     " <> textShow dfiles <> "\n"
+        <> "Delegate VRF key file indexes: " <> textShow vfiles
     ShelleyGenesisCmdFilesNoIndex files ->
       "The genesis keys files are expected to have a numeric index but these do not:\n"
         <> Text.unlines (map Text.pack files)
