@@ -16,5 +16,8 @@ with pkgs.commonLib;
   callTest = fn: args: forAllSystems (system: hydraJob (importTest fn args system));
 in rec {
   # only tests that port is open since the test can't access network to actually sync
-  cardanoNodeEdge  = callTest ./cardano-node-edge.nix {};
+  # cardanoNodeEdge  = callTest ./cardano-node-edge.nix {};
+
+  # Subsumes what cardanoNodeEdge does
+  # chairmansCluster = callTest ./chairmans-cluster.nix {};
 }
