@@ -13,7 +13,7 @@
 
 #### トランザクションのドラフトを作成する
 
-トランザクションドラフトでは、–tx.out、–ttl、–feeはゼロに設定できます。
+トランザクションドラフトでは、–tx.out、–ttl、–feeはゼロに設定できます
 
     cardano-cli shelley transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
