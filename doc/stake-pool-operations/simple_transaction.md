@@ -1,17 +1,17 @@
-# Create a simple transaction
+# シンプルなトランザクションを作成する
 
-Creating a transaction requires various steps:
+トランザクションを作成するにはさまざまなステップを踏む必要があります
 
-* Get the protocol parameters
-* Calculate the fee
-* Define the time-to-live (TTL) for the transaction
-* Build the transaction
-* Sign the transaction
-* Submit the transaction
+* プロトコルパラメーターを入手する
+* 手数料を計算する
+* トランザクションのTTL（time-to-live）を定義する
+* トランザクションを構築する
+* トランザクションに署名する
+* トランザクションを送信する
 
-#### Get protocol parameters
+#### プロトコルパラメーター入手する
 
-Get the protocol parameters and save them to `protocol.json` with:
+プロトコルパラメーターを入手して`protocol.json`に保存します
 
 ```
 cardano-cli shelley query protocol-parameters \
@@ -19,7 +19,7 @@ cardano-cli shelley query protocol-parameters \
   --out-file protocol.json
 ```
 
-#### Get the transaction hash and index of the **UTXO** to spend:
+#### トランザクションハッシュと使用する**UTXO**のインデックスを入手する
 
 ```
 cardano-cli shelley query utxo \
@@ -33,11 +33,11 @@ cardano-cli shelley query utxo \
 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99     4         20000000
 ```
 
-#### Draft the transaction
+#### トランザクションのドラフトを作成する
 
-Create a draft for the transaction and save it in tx.draft
+トランザクションのドラフトを作成してtx.draftに保存します
 
-Note that for `--tx-in` we use the following syntax: `TxId#TxIx` where `TxId` is the transaction hash and `TxIx` is the index; for `--tx-out` we use: `TxOut+Lovelace` where `TxOut` is the hex encoded address followed by the amount in `Lovelace`. For the transaction draft --tx-out, --ttl and --fee can be set to zero.
+`--tx-in`には`TxId#TxIx`のシンタックスを使用します。`TxId`がトランザクションハッシュで`TxIx`がインデックスです。`--tx-out`には`TxOut+Lovelace`を使用します。`TxOut`はHEXエンコードアドレスで、`Lovelace`単位の額が続きます。トランザクションドラフトでは–tx-out、–ttl、–feeはゼロに設定できます。
 
     cardano-cli shelley transaction build-raw \
     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
@@ -47,14 +47,14 @@ Note that for `--tx-in` we use the following syntax: `TxId#TxIx` where `TxId` is
     --fee 0 \
     --out-file tx.draft
 
-#### Calculate the fee
+#### 手数料を計算する
 
-A simple transaction needs one input, a valid UTXO from `payment.addr`, and two outputs:
+シンプルなトランザクションには、`payment.addr`から有効なUTXOアウトプットが1つ、さらに次の2つのアウトプットが必要です
 
-* Output1: The address that receives the transaction.
-* Output2: The address that receives the change of the transaction.
+* Output1：トランザクションを入金するアドレス
+* Output2：トランザクションのつり銭を入金するアドレス（新しいUTXO）
 
-Note that to calculate the fee you need to include the draft transaction
+手数料を計算するには、ドラフトトランザクションに含める必要があります
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-body-file tx.draft \
@@ -67,26 +67,26 @@ Note that to calculate the fee you need to include the draft transaction
 
     > 167965
 
-#### Calculate the change to send back to payment.addr,
-all amounts must be in Lovelace:
+#### payment.addrに返金するつり銭を計算する
+全額Lovelace単位にする必要があります
 
     expr <UTXO BALANCE> - <AMOUNT TO SEND> - <TRANSACTION FEE>
 
-For example, if we send 10 ADA from a UTxO containing 20 ADA, the change to send back to `payment.addr` after paying the fee is: 9.832035 ADA  
+例えば、20ADAを含んでいるUTXOから10ADAを送金した場合、手数料を支払った後で`payment.addr`に返金されるのは9.832035 ADAになります  
 
     expr 20000000 - 10000000 - 167965
 
     > 9832035
 
-#### Determine the TTL (time to Live) for the transaction
+#### トランザクションのTTL（time to Live）を設定する
 
-To build the transaction we need to specify the **TTL (Time to live)**, this is the slot height limit for our transaction to be included in a block, if it is not in a block by that slot the transaction will be cancelled. So TTL = slotNo + N slots. Where N is the amount of slots you want to add to give the transaction a window to be included in a block.
+トランザクションを構築するためには、**TTL（Time to live）**を特定する必要があります。これは、トランザクションがブロックに含まれるためのスロットの高さの上限です。そのスロットでブロックに含まれない場合、トランザクションはキャンセルされます。従って、TTL = slotNo + N slotsとなります。Nはトランザクションをブロックに含められるよう幅を持たせるために追加するスロットの量です。
 
-Query the tip of the blockchain:
+ブロックチェーンのチップを問い合わせます
 
     cardano-cli shelley query tip --mainnet
 
-Look for the value of `unSlotNo`
+`unSlotNo`の値を探します
 
     {
         "blockNo": 16829,
@@ -94,11 +94,11 @@ Look for the value of `unSlotNo`
         "slotNo": 369200
     }
 
-Calculate your TTL, for example:  369215 + 200 slots = 369400
+TTLの計算例：369215 + 200スロット = 369400
 
-#### Build the transaction
+#### トランザクションを構築する
 
-We write the transaction in a file, we will name it `tx.raw`.
+トランザクションをファイルに書き込みます。ファイル名を`tx.raw`とします。
 
     cardano-cli shelley transaction build-raw \
     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
@@ -108,9 +108,9 @@ We write the transaction in a file, we will name it `tx.raw`.
     --fee 167965 \
     --out-file tx.raw
 
-#### Sign the transaction
+#### トランザクションに署名する
 
-Sign the transaction with the signing key **payment.skey** and save the signed transaction in **tx.signed**
+トランザクションに署名鍵**payment.skey**で署名し、署名したトランザクションを**tx.signed**に保存します
 
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
@@ -118,15 +118,15 @@ Sign the transaction with the signing key **payment.skey** and save the signed t
     --mainnet \
     --out-file tx.signed
 
-#### Submit the transaction
+#### トランザクションを送信する
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
     --mainnet
 
-#### Check the balances
+#### 残高を確認する
 
-We must give it some time to get incorporated into the blockchain, but eventually, we will see the effect:
+ブロックチェーンに統合されるまでしばらくかかりますが、やがて結果が現れます
 
     cardano-cli shelley query utxo \
         --address $(cat payment.addr) \
@@ -145,4 +145,4 @@ We must give it some time to get incorporated into the blockchain, but eventuall
     > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     0         10000000
 
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead. 
+**注意：**`--mainnet`はCardanoメインネットを特定するものです。テストネットの場合は`--testnet-magic 1097911063`を使用してください。 
