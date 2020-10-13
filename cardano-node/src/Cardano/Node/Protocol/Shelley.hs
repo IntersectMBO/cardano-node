@@ -110,7 +110,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
         (ProtVer npcShelleySupportedProtocolVersionMajor
                  npcShelleySupportedProtocolVersionMinor)
         (MaxMajorProtVer npcShelleyMaxSupportedProtocolVersion)
-        optionalLeaderCredentials
+        (maybeToList optionalLeaderCredentials)
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce
 genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
@@ -170,7 +170,8 @@ readLeaderCredentials (Just ProtocolFilepaths {
                    tpraosCanBeLeaderColdVerKey = coerceKeyRole vkey,
                    tpraosCanBeLeaderSignKeyVRF = vrfKey
                  },
-               tpraosLeaderCredentialsInitSignKey = kesKey
+               tpraosLeaderCredentialsInitSignKey = kesKey,
+               tpraosLeaderCredentialsLabel = "Shelley"
              }
 
 -- But not OK to supply some of the files without the others.

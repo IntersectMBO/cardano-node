@@ -65,6 +65,11 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
+
+ifaceAddress :: String
+ifaceAddress = "127.0.0.1"
+
+
 testnet :: H.Conf -> H.Integration [String]
 testnet H.Conf {..} = do
   -- This script sets up a cluster that starts out in Byron, and can transition to Shelley.
@@ -146,7 +151,7 @@ testnet H.Conf {..} = do
       J.object
       [ "Producers" .= J.toJSON
         [ J.object
-          [ "addr" .= J.toJSON @String "127.0.0.1"
+          [ "addr" .= J.toJSON @String ifaceAddress
           , "port" .= J.toJSON @Int peerPort
           , "valency" .= J.toJSON @Int 1
           ]
@@ -630,6 +635,7 @@ testnet H.Conf {..} = do
         , "--shelley-kes-key", tempAbsPath </> node </> "shelley/kes.skey"
         , "--shelley-vrf-key", tempAbsPath </> node </> "shelley/vrf.skey"
         , "--shelley-operational-certificate", tempAbsPath </> node </> "shelley/node.cert"
+        , "--host-addr", ifaceAddress
         , "--port",  portString
         ] <&>
         ( \cp -> cp

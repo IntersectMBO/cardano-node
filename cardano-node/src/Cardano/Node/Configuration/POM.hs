@@ -35,10 +35,13 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Ouroboros.Network.Block (MaxSlotNo (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 data NodeConfiguration
   = NodeConfiguration
-      {  ncNodeAddr        :: !(Maybe NodeAddress)
+      {  ncNodeIPv4Addr    :: !(Maybe NodeHostIPv4Address)
+      ,  ncNodeIPv6Addr    :: !(Maybe NodeHostIPv6Address)
+      ,  ncNodePortNumber  :: !(Maybe PortNumber)
           -- | Filepath of the configuration yaml file. This file determines
           -- all the configuration settings required for the cardano node
           -- (logging, tracing, protocol, slot length etc)
@@ -55,6 +58,7 @@ data NodeConfiguration
 
          -- Node parameters, not protocol-specific:
        , ncSocketPath     :: !(Maybe SocketPath)
+       , ncDiffusionMode  :: !DiffusionMode
 
          -- BlockFetch configuration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
@@ -70,7 +74,9 @@ data NodeConfiguration
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
-      {  pncNodeAddr        :: !(Last NodeAddress)
+      {  pncNodeIPv4Addr    :: !(Last NodeHostIPv4Address)
+      ,  pncNodeIPv6Addr    :: !(Last NodeHostIPv6Address)
+      ,  pncNodePortNumber  :: !(Last PortNumber)
          -- | Filepath of the configuration yaml file. This file determines
          -- all the configuration settings required for the cardano node
          -- (logging, tracing, protocol, slot length etc)
@@ -87,6 +93,7 @@ data PartialNodeConfiguration
 
          -- Node parameters, not protocol-specific:
        , pncSocketPath     :: !(Last SocketPath)
+       , pncDiffusionMode  :: !(Last DiffusionMode)
 
          -- BlockFetch configuration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
@@ -114,6 +121,8 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Node parameters, not protocol-specific
       pncSocketPath' <- Last <$> v .:? "SocketPath"
+      pncDiffusionMode'
+        <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
 
       -- Blockfetch parameters
       pncMaxConcurrencyBulkSync' <- Last <$> v .:? "MaxConcurrencyBulkSync"
@@ -144,13 +153,16 @@ instance FromJSON PartialNodeConfiguration where
       pure PartialNodeConfiguration {
              pncProtocolConfig = pncProtocolConfig'
            , pncSocketPath = pncSocketPath'
+           , pncDiffusionMode = pncDiffusionMode'
            , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
            , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
            , pncViewMode = pncViewMode'
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
            , pncLogMetrics = pncLogMetrics'
            , pncTraceConfig = pncTraceConfig'
-           , pncNodeAddr = mempty
+           , pncNodeIPv4Addr = mempty
+           , pncNodeIPv6Addr = mempty
+           , pncNodePortNumber = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
            , pncDatabaseFile = mempty
@@ -239,9 +251,12 @@ defaultPartialNodeConfiguration =
     , pncDatabaseFile = Last . Just $ DbFile "mainnet/db/"
     , pncLoggingSwitch = Last $ Just True
     , pncSocketPath = mempty
+    , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncViewMode = Last $ Just SimpleView
-    , pncNodeAddr = mempty
+    , pncNodeIPv4Addr = mempty
+    , pncNodeIPv6Addr = mempty
+    , pncNodePortNumber = mempty
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
     , pncShutdownIPC = mempty
@@ -273,8 +288,11 @@ makeNodeConfiguration pnc = do
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
+  diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   return $ NodeConfiguration
-             { ncNodeAddr = getLast $ pncNodeAddr pnc
+             { ncNodeIPv4Addr = getLast $ pncNodeIPv4Addr pnc
+             , ncNodeIPv6Addr = getLast $ pncNodeIPv6Addr pnc
+             , ncNodePortNumber = getLast $ pncNodePortNumber pnc
              , ncConfigFile = configFile
              , ncTopologyFile = topologyFile
              , ncDatabaseFile = databaseFile
@@ -284,6 +302,7 @@ makeNodeConfiguration pnc = do
              , ncShutdownOnSlotSynced = shutdownOnSlotSynced
              , ncProtocolConfig = protocolConfig
              , ncSocketPath = getLast $ pncSocketPath pnc
+             , ncDiffusionMode = diffusionMode
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
              , ncViewMode = viewMode

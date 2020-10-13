@@ -86,6 +86,7 @@ library
                      , cborg >= 0.2.4 && < 0.3
                      , containers
                      , directory
+                     , dns
                      , filepath
                      , generic-data
                      , hedgehog-extras
@@ -170,6 +171,7 @@ library cardano-node-config
                      , cardano-prelude
                      , cardano-slotting
                      , containers
+                     , dns
                      , filepath
                      , generic-data
                      , iohk-monitoring

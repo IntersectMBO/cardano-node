@@ -108,7 +108,7 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
                                 npcByronSupportedProtocolVersionAlt)
         (Update.SoftwareVersion npcByronApplicationName
                                 npcByronApplicationVersion)
-        optionalLeaderCredentials
+        (maybeToList optionalLeaderCredentials)
 
 
 readGenesis :: GenesisFile
@@ -179,7 +179,7 @@ readLeaderCredentials genesisConfig
 
          bimapExceptT CredentialsError Just
            . hoistEither
-           $ mkByronLeaderCredentials genesisConfig signingKey delegCert
+           $ mkByronLeaderCredentials genesisConfig signingKey delegCert "Byron"
 
   where
     deserialiseSigningKey :: LB.ByteString

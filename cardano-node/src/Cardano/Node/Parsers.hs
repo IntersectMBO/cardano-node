@@ -47,7 +47,9 @@ nodeRunParser = do
   shelleyCertFile <- optional parseOperationalCertFilePath
 
   -- Node Address
-  nAddress <- lastOption parseNodeAddress
+  nIPv4Address <- lastOption parseHostIPv4Addr
+  nIPv6Address <- lastOption parseHostIPv6Addr
+  nPortNumber  <- lastOption parsePort
 
   -- NodeConfiguration filepath
   nodeConfigFp <- lastOption parseConfigFile
@@ -58,11 +60,14 @@ nodeRunParser = do
   shutdownOnSlotSynced <- lastOption parseShutdownOnSlotSynced
 
   pure $ PartialNodeConfiguration
-           { pncNodeAddr = nAddress
+           { pncNodeIPv4Addr = nIPv4Address
+           , pncNodeIPv6Addr = nIPv6Address
+           , pncNodePortNumber = nPortNumber
            , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = DbFile <$> dbFp
            , pncSocketPath   = socketFp
+           , pncDiffusionMode = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
              , byronKeyFile
@@ -91,21 +96,29 @@ parseSocketPath helpMessage =
         <> metavar "FILEPATH"
     )
 
-parseNodeAddress :: Parser NodeAddress
-parseNodeAddress = NodeAddress <$> parseHostAddr <*> parsePort
-
-parseHostAddr :: Parser NodeHostAddress
-parseHostAddr =
-    option (eitherReader parseNodeHostAddress) (
+parseHostIPv4Addr :: Parser NodeHostIPv4Address
+parseHostIPv4Addr =
+    option (eitherReader parseNodeHostIPv4Address) (
           long "host-addr"
-       <> metavar "HOST-NAME"
-       <> help "Optionally limit node to one ipv6 or ipv4 address"
-       <> value (NodeHostAddress Nothing)
+       <> metavar "IPV4"
+       <> help "An optional ipv4 address"
     )
 
-parseNodeHostAddress :: String -> Either String NodeHostAddress
-parseNodeHostAddress str =
-   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostAddress . Just) $ readMaybe str
+parseHostIPv6Addr :: Parser NodeHostIPv6Address
+parseHostIPv6Addr =
+    option (eitherReader parseNodeHostIPv6Address) (
+          long "host-ipv6-addr"
+       <> metavar "IPV6"
+       <> help "An optional ipv6 address"
+    )
+
+parseNodeHostIPv4Address :: String -> Either String NodeHostIPv4Address
+parseNodeHostIPv4Address str =
+   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostIPv4Address) $ readMaybe str
+
+parseNodeHostIPv6Address :: String -> Either String NodeHostIPv6Address
+parseNodeHostIPv6Address str =
+   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostIPv6Address) $ readMaybe str
 
 parsePort :: Parser PortNumber
 parsePort =

@@ -11,6 +11,7 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
 
 import           Hedgehog (Property, discover, (===))
 import qualified Hedgehog
@@ -42,13 +43,16 @@ testPartialYamlConfig =
                                           $ NodeShelleyProtocolConfiguration
                                           (GenesisFile "dummmy-genesis-file") Nothing 1 2 3
     , pncSocketPath = Last Nothing
+    , pncDiffusionMode = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
     , pncViewMode = Last $ Just LiveView
     , pncLoggingSwitch = Last $ Just True
     , pncLogMetrics = Last $ Just True
     , pncTraceConfig = Last $ Just TracingOff
-    , pncNodeAddr = mempty
+    , pncNodeIPv4Addr = mempty
+    , pncNodeIPv6Addr = mempty
+    , pncNodePortNumber = mempty
     , pncConfigFile = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
@@ -63,11 +67,14 @@ testPartialYamlConfig =
 testPartialCliConfig :: PartialNodeConfiguration
 testPartialCliConfig =
   PartialNodeConfiguration
-    { pncNodeAddr     = mempty
+    { pncNodeIPv4Addr = mempty
+    , pncNodeIPv6Addr = mempty
+    , pncNodePortNumber = mempty
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncSocketPath   = mempty
+    , pncDiffusionMode = mempty
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
     , pncShutdownIPC = Last $ Just Nothing
@@ -85,7 +92,9 @@ testPartialCliConfig =
 expectedConfig :: NodeConfiguration
 expectedConfig =
   NodeConfiguration
-    { ncNodeAddr = Nothing
+    { ncNodeIPv4Addr = Nothing
+    , ncNodeIPv6Addr = Nothing
+    , ncNodePortNumber = Nothing
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = DbFile "mainnet/db/"
@@ -97,6 +106,7 @@ expectedConfig =
                            $ NodeShelleyProtocolConfiguration
                              (GenesisFile "dummmy-genesis-file") Nothing 1 2 3
     , ncSocketPath = Nothing
+    , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
     , ncViewMode = SimpleView
