@@ -868,17 +868,25 @@ pNodeCmd =
   where
     pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
-      NodeKeyGenCold <$> pColdVerificationKeyFile
-                     <*> pColdSigningKeyFile
-                     <*> pOperatorCertIssueCounterFile
+      NodeKeyGenCold
+        <$> pKeyOutputFormat
+        <*> pColdVerificationKeyFile
+        <*> pColdSigningKeyFile
+        <*> pOperatorCertIssueCounterFile
 
     pKeyGenKES :: Parser NodeCmd
     pKeyGenKES =
-      NodeKeyGenKES <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
+      NodeKeyGenKES
+        <$> pKeyOutputFormat
+        <*> pVerificationKeyFile Output
+        <*> pSigningKeyFile Output
 
     pKeyGenVRF :: Parser NodeCmd
     pKeyGenVRF =
-      NodeKeyGenVRF <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
+      NodeKeyGenVRF
+        <$> pKeyOutputFormat
+        <*> pVerificationKeyFile Output
+        <*> pSigningKeyFile Output
 
     pKeyHashVRF :: Parser NodeCmd
     pKeyHashVRF =
@@ -1265,17 +1273,20 @@ pGenesisCmd =
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
-      GenesisCreate <$> pGenesisDir
-                    <*> pGenesisNumGenesisKeys
-                    <*> pGenesisNumUTxOKeys
-                    <*> pMaybeSystemStart
-                    <*> pInitialSupplyNonDelegated
-                    <*> pNetworkId
+      GenesisCreate
+        <$> pKeyOutputFormat
+        <*> pGenesisDir
+        <*> pGenesisNumGenesisKeys
+        <*> pGenesisNumUTxOKeys
+        <*> pMaybeSystemStart
+        <*> pInitialSupplyNonDelegated
+        <*> pNetworkId
 
     pGenesisCreateStaked :: Parser GenesisCmd
     pGenesisCreateStaked =
       GenesisCreateStaked
-        <$> pGenesisDir
+        <$> pKeyOutputFormat
+        <*> pGenesisDir
         <*> pGenesisNumGenesisKeys
         <*> pGenesisNumUTxOKeys
         <*> pGenesisNumPools
@@ -1800,6 +1811,18 @@ pOperationalCertificateFile =
     <> Opt.help "Filepath of the node's operational certificate."
     <> Opt.completer (Opt.bashCompleter "file")
     )
+
+pKeyOutputFormat :: Parser KeyOutputFormat
+pKeyOutputFormat =
+  Opt.option readKeyOutputFormat $ mconcat
+    [ Opt.long "key-output-format"
+    , Opt.metavar "STRING"
+    , Opt.help $ mconcat
+      [ "Optional key output format. Accepted output formats are \"text-envelope\" "
+      , "and \"bech32\" (default is \"bech32\")."
+      ]
+    , Opt.value KeyOutputFormatTextEnvelope
+    ]
 
 pPoolIdOutputFormat :: Parser PoolIdOutputFormat
 pPoolIdOutputFormat =
@@ -3351,6 +3374,18 @@ readPoolIdOutputFormat = do
       fail $ mconcat
         [ "Invalid output format: " <> show s
         , ". Accepted output formats are \"hex\" and \"bech32\"."
+        ]
+
+readKeyOutputFormat :: Opt.ReadM KeyOutputFormat
+readKeyOutputFormat = do
+  s <- Opt.str @String
+  case s of
+    "text-envelope" -> pure KeyOutputFormatTextEnvelope
+    "bech32" -> pure KeyOutputFormatBech32
+    _ ->
+      fail $ mconcat
+        [ "Invalid key output format: " <> show s
+        , ". Accepted output formats are \"text-envelope\" and \"bech32\"."
         ]
 
 readURIOfMaxLength :: Int -> Opt.ReadM Text

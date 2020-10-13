@@ -11,6 +11,7 @@ module Cardano.CLI.Types
   , CurrentKesPeriod (..)
   , EpochLeadershipSchedule (..)
   , GenesisFile (..)
+  , KeyOutputFormat(..)
   , OpCertEndingKesPeriod (..)
   , OpCertIntervalInformation (..)
   , OpCertOnDiskCounter (..)
@@ -193,6 +194,11 @@ instance FromJSON GenesisFile where
 data PoolIdOutputFormat
   = PoolIdOutputFormatHex
   | PoolIdOutputFormatBech32
+  deriving (Eq, Show)
+
+data KeyOutputFormat
+  = KeyOutputFormatTextEnvelope
+  | KeyOutputFormatBech32
   deriving (Eq, Show)
 
 data AllOrOnly a = All | Only a deriving (Eq, Show)
