@@ -1,35 +1,35 @@
-# Register a Stake Pool with Metadata
+# メタデータ付きステークプールを登録する
 
-Make sure you have access to:
+次にアクセスできることを確認してください
 
-| File | Content |
+| ファイル | コンテンツ |
 | :--- | :--- |
-| `payment.vkey` | payment verification key |
-| `payment.skey` | payment signing key |
-| `stake.vkey` | staking verification key |
-| `stake.skey` | staking signing key |
-| `stake.addr` | registered stake address |
-| `payment.addr` | funded address linked to `stake` |
-| `cold.vkey` | cold verification key |
-| `cold.skey` | cold signing key |
-| `cold.counter` | issue counter |
-| `node.cert` | operational certificate |
-| `kes.vkey` | KES verification key |
-| `kes.skey` | KES signing key |
-| `vrf.vkey` | VRF verification key |
-| `vrf.skey` | VRF signing key |
+| `payment.vkey` | 支払い検証鍵 |
+| `payment.skey` | 支払い署名鍵 |
+| `stake.vkey` | ステーキング検証鍵 |
+| `stake.skey` | ステーキング署名鍵 |
+| `stake.addr` | 登録済みステークアドレス |
+| `payment.addr` | `stake`にリンクされた資金入りアドレス |
+| `cold.vkey` | コールド検証鍵 |
+| `cold.skey` | コールド署名鍵 |
+| `cold.counter` | 発行番号 |
+| `node.cert` | 運営証明書 |
+| `kes.vkey` | KES検証鍵 |
+| `kes.skey` | KES署名鍵 |
+| `vrf.vkey` | VRF検証鍵 |
+| `vrf.skey` | VRF署名鍵 |
 
-Registering your stake pool requires:
+ステークプールの登録には以下が必要です
 
-* Create JSON file with your metadata and store it in the node and in a url you maintain.
-* Get the hash of your JSON file
-* Generate the stake pool registration certificate
-* Create a delegation certificate pledge
-* Submit the certificates to the blockchain
+* メタデータのJSONファイルを作成し、自分の管理するノードとURLに保存する
+* JSONファイルのハッシュを取得する
+* ステークプール登録証明書を生成する
+* 出資の委任証明書を作成する
+* 証明書をブロックチェーンに送信する
 
-**WARNING:** Generating the **stake pool registration certificate** and the **delegation certificate** requires the **cold keys** So, when doing this on mainnet you may want to generate these certificates in your local machine taking the proper security measures to avoid exposing your cold keys to the internet.
+**警告：** **ステークプール登録証明書** と **委任証明書** を生成するには **コールドキー** が必要です。したがって、これをメインネットで行う場合、インターネットにコールドキーを晒すリスクを避けるための適切な安全策として、これらの証明書はローカルマシンで作成するといいでしょう。
 
-#### Create a JSON file with your pool's metadata
+#### プールのメタデータが入ったJSONファイルを作成する
 
       {
       "name": "TestPool",
@@ -39,18 +39,18 @@ Registering your stake pool requires:
       }
 
 
-Store the file in a url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ) You can use a GIST in github, make sure that the URL is less than 65 characters long.
+自分が管理するURLにファイルを保存します。例： [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ) githubではGISTを使用できます。URLは65文字以下に設定してください。
 
-#### Get the hash of your metadata JSON file:
+#### メタデータJSONファイルのハッシュを取得する
 
-This validates that the JSON fits the required schema, if it does, you will get the hash of your file.
+JSONがスキーマ要件を満たしているか検証し、満たしている場合はファイルのハッシュを取得します
 
     cardano-cli shelley stake-pool metadata-hash --pool-metadata-file pool_Metadata.json
 
     >6bf124f217d0e5a0a8adb1dbd8540e1334280d49ab861127868339f43b3948af
 
 
-#### Generate Stake pool registration certificate
+#### ステークプール登録証明書を生成する
 
     cardano-cli shelley stake-pool registration-certificate \
     --cold-verification-key-file cold.vkey \
@@ -68,24 +68,24 @@ This validates that the JSON fits the required schema, if it does, you will get 
     --out-file pool-registration.cert
 
 
-| Parameter | Explanation |
+| パラメーター | 説明 |
 | :--- | :--- |
-| stake-pool-verification-key-file | verification _cold_ key |
-| vrf-verification-key-file | verification _VRS_ key |
-| pool-pledge | pledge lovelace |
-| pool-cost | operational costs per epoch lovelace |
-| pool-margin | operator margin |
-| pool-reward-account-verification-key-file | verification staking key for the rewards |
-| pool-owner-staking-verification-key-file | verification staking keys for the pool owners |
-| out-file | output file to write the certificate to |
-| pool-relay-port | port |
-| pool-relay-ipv4 | relay node ip address |
-| metadata-url | url of your json file |
-| metadata-hash | the hash of pools json metadata file |
+| stake-pool-verification-key-file | コールドキー検証 |
+| vrf-verification-key-file | VRSキー検証 |
+| pool-pledge | 出資額（Lovelace） |
+| pool-cost | エポックごとの運営コスト（Lovelace） |
+| pool-margin | オペレーターマージン |
+| pool-reward-account-verification-key-file | 報酬用ステーク鍵検証 |
+| pool-owner-staking-verification-key-file | プールオーナー用ステーク鍵検証 |
+| out-file | 証明書を書く出力ファイル |
+| pool-relay-port | ポート |
+| pool-relay-ipv4 | リレーノードIPアドレス |
+| metadata-url | 自分のJSONファイルのURL |
+| metadata-hash | プールのJSONメタデータファイルのハッシュ |
 
-**You can use a different key for the rewards, and can provide more than one owner key if there were multiple owners who share the pledge.**
+**報酬用に別の鍵を使用すること、出資を共有する複数のオーナーがいる場合には複数のオーナー鍵を提供することができます。**
 
-The **pool-registration.cert** file should look like this:
+**pool-registration.cert** 例
 
 
     type: StakePoolCertificateShelley
@@ -97,22 +97,22 @@ The **pool-registration.cert** file should look like this:
     46f1a68bdf8113f50e779d8158203a4e813b6340dc790f772b3d433ce1c371d5c5f5de46f1a68bdf
     8113f50e779d80f6   
 
-#### Generate delegation certificate pledge
+#### 出資の委任証明書を生成する
 
-To honor your pledge, create a _delegation certificate_:
+出資を証明するために、委任証明書を作成します
 
     cardano-cli shelley stake-address delegation-certificate \
     --stake-verification-key-file stake.vkey \
     --cold-verification-key-file cold.vkey \
     --out-file delegation.cert
 
-This creates a delegation certificate which delegates funds from all stake addresses associated with key `stake.vkey` to the pool belonging to cold key `cold.vkey`. If we there are many staking keys as pool owners in the first step, we need delegation certificates for all of them.
+これで、`stake.vkey`に関するすべてのステークアドレスからの資金をコールドキー`cold.vkey`に紐づくプールに委任する委任証明書が作成されます。最初のステップで複数のプールオーナー用に複数のステーク鍵が生成された場合は、各自の委任証明書が必要となります。
 
-#### Submit the pool certificate and delegation certificate to the blockchain
+#### プール証明書と委任証明書をブロックチェーンに送信する
 
-To submit the `pool registration certificate` and the `delegation certificates` to the blockchain by including them in one or more transactions. We can use one transaction for multiple certificates, the certificates will be applied in order.
+`pool registration certificate`と`delegation certificates`を1つないしは複数のトランザクションに含んでブロックチェーンに送信します。複数の証明書を１つのトランザクションに入れることができます。証明書は順番に適用されます。
 
-#### Draft the transaction
+#### トランザクションのドラフトを作成する
 
     cardano-cli shelley transaction build-raw \
     --tx-in <UTXO>#<TxIx> \
@@ -123,7 +123,7 @@ To submit the `pool registration certificate` and the `delegation certificates` 
     --certificate-file pool-registration.cert \
     --certificate-file delegation.cert
 
-#### Calculate the fees
+#### 手数料を計算する
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-body-file tx.raw \
@@ -134,20 +134,20 @@ To submit the `pool registration certificate` and the `delegation certificates` 
     --byron-witness-count 0 \
     --protocol-params-file protocol.json
 
-For example:
+例：
 
     > 184685
 
-Registering a stake pool requires a deposit. This amount is specified in `protocol.json` . For example, for Shelley Testnet we have:
+ステークプールの登録にはデポジットが必要です。額は`protocol.json`特定されています。Shelleyテストネットの例を挙げます
 
 "poolDeposit": 500000000
 
-#### Calculate the change for --tx-out
-All amounts in Lovelace
+#### .–tx-outの釣銭を計算する
+すべてLovelace単位です
 
     expr <UTxO BALANCE> - <poolDeposit> - <FEE>
 
-#### Build the transaction:
+#### トランザクションを構築する
 
     cardano-cli shelley transaction build-raw \
     --tx-in <UTXO>#<TxIx> \
@@ -158,7 +158,7 @@ All amounts in Lovelace
     --certificate-file pool-registration.cert \
     --certificate-file delegation.cert
 
-#### Sign the transaction:
+#### トランザクションに署名する
 
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
@@ -168,19 +168,19 @@ All amounts in Lovelace
     --mainnet \
     --out-file tx.signed
 
-#### Submit the transaction:
+#### トランザクションを送信する
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
     --mainnet
 
 
-#### Verify that your stake pool registration was successful.
+#### ステークプールが登録されているか確認する
 
-Get Pool ID
+プールIDを取得します
 
     cardano-cli shelley stake-pool id --verification-key-file cold.vkey
 
-Check for the presence of your poolID in the network ledger state, with:
+ネットワーク台帳ステータスに自分のプールIDがあるか確認します
 
     cardano-cli shelley query ledger-state --mainnet | grep publicKey | grep <poolId>
