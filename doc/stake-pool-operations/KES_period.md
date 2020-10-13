@@ -1,15 +1,13 @@
-# Key Evolving Signature and KES period
+# 鍵変化型署名とKES期間
 
-To create an operational certificate for a block-producing node, you need a _KES key pair_.
+ブロック生成ノード用の運営証明書を作成するには、KESキーペアが必要です。
 
-Here "KES" stands for _**K**ey **E**volving **S**ignature_, which means that after a certain _period_, the key will _evolve_ to a new key
-and discard its old version. This is useful, because it means that even if an attacker compromises the key and gets access to the signing key,
-he can only use that to sign blocks _from now on_, but not blocks dating from _earlier periods_, making it impossible for the attacker to rewrite history.
+「KES」とは鍵変化型署名（ _**K**ey **E**volving **S**ignature_ ）の略称ですが、これは、一定期間後に鍵が新しい鍵に変
+し、旧バージョンが破棄されるというものです。これは有効です。なぜなら、仮に攻撃者が鍵を侵害して署名鍵にアクセスできたとしても、これはそれ以降のブロックに署名することしかできず、以前のブロックにさかのぼって署名することはできないため、攻撃者が履歴を改ざんすることは不可能となるためです。
 
-A KES key can only evolve for a certain number of periods and becomes useless afterwards.
-This means that before that number of periods has passed, the node operator has to generate a new KES key pair, issue a new operational node certificate with that new key pair and restart the node with the new certificate.
+KESキーが変化する回数は限られており、その後は使用不能になります。したがって、その変化の限界数に達する前に、ノードオペレーターは新たなKESキーを生成する必要があります。その鍵ペアで新しいノード運営証明書を発行し、ノードをその新証明書で再起動します。
 
-To find out how long one period is and for how long a key can evolve, we can look into the _genesis file_. If that file is called `mainnet-shelley-genesis.json`,
+1期間の長さおよび鍵が変化する期間に関しては、ジェネシスファイルを参照します。ファイル名が`mainnet-shelley-genesis.json`の場合、以下を入力します
 we can type
 
     cat mainnet-shelley-genesis.json | grep KES
@@ -17,11 +15,11 @@ we can type
     > "slotsPerKESPeriod": 3600,
     > "maxKESEvolutions": 120,
 
-in this example, the key will evolve after each period of 3600 slots and that it can evolve 120 times before it needs to be renewed.
+この例では、鍵は3600スロットの期間ごとに、新たな鍵が必要になるまで120回変化することができます。
 
-Before we can create an operational certificate for our node, we need to figure out the start of the KES validity period, i.e. which KES evolution period we are in.
+ノード用の運営証明書を作成する前に、KES有効期間の開始、すなわち現在どのKES変化期間にいるのかを特定する必要があります。
 
-We check the current tip of the blockchain:
+ブロックチェーンの現在のチップを確認します
 
     cardano-cli shelley query tip --mainnet
 
@@ -31,12 +29,12 @@ We check the current tip of the blockchain:
     "slotNo": 906185
     }
 
-In this example, we are currently in slot 906185, and we know from the genesis file that one period lasts for 3600 slots. So we calculate the current period by
+この例では、現在スロット906185であり、ジェネシスファイルから1期間が3600スロット続くことがわかります。従って現在の期間を次のように計算します
 
     expr 906185 / 3600
     > 251
 
-With this we are able to generate an operational certificate for our stake pool:
+これにより、ステークプールの運営証明書を生成することができます
 
     cardano-cli shelley node issue-op-cert \
     --kes-verification-key-file kes.vkey \
