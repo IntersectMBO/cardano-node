@@ -1,10 +1,10 @@
-# Configure topology files for block-producing and relay nodes.
+# ブロック生成ノードおよびリレーノードのトポロジーファイルを設定する
 
-Before you start your nodes, you need to prepare the topology files.
+ノードを起動する前に、トポロジーファイルを準備する必要があります。
 
-#### Configure the block-producing node
+#### ブロック生成ノードを設定する
 
-Make the __block-producing__ node to "talk" only to __YOUR__ relay node. Do not forget to configure your firewall also:
+__ブロック生成__ ノードが __自分の__ リレーノードとのみ「talk」するように設定します。ファイアウォールの設定も忘れないでください
 
     nano mainnet-topology.json
 
@@ -18,9 +18,10 @@ Make the __block-producing__ node to "talk" only to __YOUR__ relay node. Do not 
   	  ]
   	}
 
-#### Configure the relay node:
+#### リレーノードを設定する
 
-Make your __relay node__ `talk` to your __block-producing__ node and __other relays__ in the network by editing the `topology.json` file:
+自分の __リレーノード__ が自分の __ブロック生成__ ノードおよびネットワーク内の __他のリレー__ ノードと`talk`するように`topology.json`ファイルを編集します
+
 
 
     nano mainnet-topology.json
