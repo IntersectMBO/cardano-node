@@ -277,9 +277,9 @@ renderTransactionCmd cmd =
     TxView {} -> "transaction view"
 
 data NodeCmd
-  = NodeKeyGenCold (VerificationKeyFile Out) (SigningKeyFile Out) (OpCertCounterFile Out)
-  | NodeKeyGenKES  (VerificationKeyFile Out) (SigningKeyFile Out)
-  | NodeKeyGenVRF  (VerificationKeyFile Out) (SigningKeyFile Out)
+  = NodeKeyGenCold KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out) (OpCertCounterFile Out)
+  | NodeKeyGenKES  KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out)
+  | NodeKeyGenVRF  KeyOutputFormat (VerificationKeyFile Out) (SigningKeyFile Out)
   | NodeKeyHashVRF  (VerificationKeyOrFile VrfKey) (Maybe (File () Out))
   | NodeNewCounter ColdVerificationKeyOrFile Word (OpCertCounterFile InOut)
   | NodeIssueOpCert (VerificationKeyOrFile KesKey) (SigningKeyFile In) (OpCertCounterFile InOut)
@@ -450,9 +450,17 @@ renderTextViewCmd :: TextViewCmd -> Text
 renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
-  = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
+  = GenesisCreate
+      KeyOutputFormat
+      GenesisDir
+      Word
+      Word
+      (Maybe SystemStart)
+      (Maybe Lovelace)
+      NetworkId
   | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath FilePath (Maybe FilePath)
   | GenesisCreateStaked
+      KeyOutputFormat
       GenesisDir
       Word
       Word
