@@ -1,6 +1,6 @@
 ### ノードを起動する
 
-__リレーノード__ を起動します
+__リレー__ ノードを起動します
 
     cardano-node run \
     --topology mainnet-topology.json \
