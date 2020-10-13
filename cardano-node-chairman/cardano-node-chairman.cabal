@@ -14,6 +14,7 @@ common common-modules
   hs-source-dirs:       src
   other-modules:        Test.Process
                         Test.Base
+                        Testnet.Byron
                         Testnet.ByronShelley
                         Testnet.Conf
                         Testnet.Shelley
@@ -163,6 +164,7 @@ executable cardano-testnet
                       , unliftio
                       , unordered-containers
   other-modules:        Testnet.Commands
+                        Testnet.Commands.Byron
                         Testnet.Commands.ByronShelley
                         Testnet.Commands.Shelley
                         Testnet.Run
