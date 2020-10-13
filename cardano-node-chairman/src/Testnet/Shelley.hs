@@ -358,6 +358,9 @@ testnet H.Conf {..} = do
     H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
     H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
 
+    when (OS.os `L.elem` ["darwin", "linux"]) $ do
+      H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+
   H.noteShowIO_ DTC.getCurrentTime
 
   deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime -- 90 seconds from now

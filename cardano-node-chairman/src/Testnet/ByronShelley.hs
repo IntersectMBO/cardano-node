@@ -607,6 +607,9 @@ testnet H.Conf {..} = do
 
     H.noteShowM_ $ H.getPid hProcess
 
+    when (OS.os `L.elem` ["darwin", "linux"]) $ do
+      H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+
   H.threadDelay 100000
 
   forM_ poolNodes $ \node -> do
@@ -650,7 +653,7 @@ testnet H.Conf {..} = do
     H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
     H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
 
-    when (OS.os == "darwin") $ do
+    when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
   H.noteShowIO_ DTC.getCurrentTime
