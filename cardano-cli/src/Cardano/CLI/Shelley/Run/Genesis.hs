@@ -218,10 +218,10 @@ runGenesisCmd (GenesisCmdKeyHash vk) = runGenesisKeyHash vk
 runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
 runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
 runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
-runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
+runGenesisCmd (GenesisCreate fmt gd gn un ms am nw) = runGenesisCreate fmt gd gn un ms am nw
 runGenesisCmd (GenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag cg mNodeCfg) = runGenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag cg mNodeCfg
-runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp) =
-  runGenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp
+runGenesisCmd (GenesisCreateStaked fmt gd gn gp gl un ms am ds nw bf bp su relayJsonFp) =
+  runGenesisCreateStaked fmt gd gn gp gl un ms am ds nw bf bp su relayJsonFp
 runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
 
 --
@@ -417,16 +417,20 @@ writeOutput Nothing                   = Text.putStrLn
 -- Create Genesis command implementation
 --
 
-runGenesisCreate :: GenesisDir
-                 -> Word  -- ^ num genesis & delegate keys to make
-                 -> Word  -- ^ num utxo keys to make
-                 -> Maybe SystemStart
-                 -> Maybe Lovelace
-                 -> NetworkId
-                 -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisCreate (GenesisDir rootdir)
-                 genNumGenesisKeys genNumUTxOKeys
-                 mStart mAmount network = do
+runGenesisCreate
+  :: KeyOutputFormat
+  -> GenesisDir
+  -> Word  -- ^ num genesis & delegate keys to make
+  -> Word  -- ^ num utxo keys to make
+  -> Maybe SystemStart
+  -> Maybe Lovelace
+  -> NetworkId
+  -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisCreate
+    fmt (GenesisDir rootdir)
+    genNumGenesisKeys genNumUTxOKeys
+    mStart mAmount network = do
+
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
@@ -439,7 +443,7 @@ runGenesisCreate (GenesisDir rootdir)
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys  gendir  index
-    createDelegateKeys deldir index
+    createDelegateKeys fmt deldir index
 
   forM_ [ 1 .. genNumUTxOKeys ] $ \index ->
     createUtxoKeys utxodir index
@@ -690,25 +694,27 @@ runGenesisCreateCardano (GenesisDir rootdir)
     dlgCertMap byronGenesis = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation byronGenesis
 
 runGenesisCreateStaked
-  :: GenesisDir
-  -> Word           -- ^ num genesis & delegate keys to make
-  -> Word           -- ^ num utxo keys to make
-  -> Word           -- ^ num pools to make
-  -> Word           -- ^ num delegators to make
+  :: KeyOutputFormat    -- ^ key output format
+  -> GenesisDir
+  -> Word               -- ^ num genesis & delegate keys to make
+  -> Word               -- ^ num utxo keys to make
+  -> Word               -- ^ num pools to make
+  -> Word               -- ^ num delegators to make
   -> Maybe SystemStart
-  -> Maybe Lovelace -- ^ supply going to non-delegators
-  -> Lovelace       -- ^ supply going to delegators
+  -> Maybe Lovelace     -- ^ supply going to non-delegators
+  -> Lovelace           -- ^ supply going to delegators
   -> NetworkId
-  -> Word           -- ^ bulk credential files to write
-  -> Word           -- ^ pool credentials per bulk file
-  -> Word           -- ^ num stuffed UTxO entries
-  -> Maybe FilePath -- ^ Specified stake pool relays
+  -> Word               -- ^ bulk credential files to write
+  -> Word               -- ^ pool credentials per bulk file
+  -> Word               -- ^ num stuffed UTxO entries
+  -> Maybe FilePath     -- ^ Specified stake pool relays
   -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisCreateStaked (GenesisDir rootdir)
-                 genNumGenesisKeys genNumUTxOKeys genNumPools genNumStDelegs
-                 mStart mNonDlgAmount stDlgAmount network
-                 numBulkPoolCredFiles bulkPoolsPerFile numStuffedUtxo
-                 sPoolRelayFp = do
+runGenesisCreateStaked
+    fmt (GenesisDir rootdir)
+    genNumGenesisKeys genNumUTxOKeys genNumPools genNumStDelegs
+    mStart mNonDlgAmount stDlgAmount network
+    numBulkPoolCredFiles bulkPoolsPerFile numStuffedUtxo
+    sPoolRelayFp = do
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
@@ -723,7 +729,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys gendir index
-    createDelegateKeys deldir index
+    createDelegateKeys fmt deldir index
 
   forM_ [ 1 .. genNumUTxOKeys ] $ \index ->
     createUtxoKeys utxodir index
@@ -737,7 +743,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
            . hoistEither $ Aeson.eitherDecode relaySpecJsonBs
 
   poolParams <- forM [ 1 .. genNumPools ] $ \index -> do
-    createPoolCredentials pooldir index
+    createPoolCredentials fmt pooldir index
     buildPoolParams network pooldir index (fromMaybe mempty mayStakePoolRelays)
 
   when (numBulkPoolCredFiles * bulkPoolsPerFile > genNumPools) $
@@ -834,8 +840,8 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
 -- -------------------------------------------------------------------------------------------------
 
-createDelegateKeys :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
-createDelegateKeys dir index = do
+createDelegateKeys :: KeyOutputFormat -> FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
+createDelegateKeys fmt dir index = do
   liftIO $ createDirectoryIfMissing False dir
   runGenesisKeyGenDelegate
         (File @(VerificationKey ()) $ dir </> "delegate" ++ strIndex ++ ".vkey")
@@ -846,6 +852,7 @@ createDelegateKeys dir index = do
         (File @(SigningKey ()) $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
+        fmt
         (onlyOut kesVK)
         (File @(SigningKey ()) $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
     runNodeIssueOpCert
@@ -877,17 +884,20 @@ createUtxoKeys dir index = do
         (File @(VerificationKey ()) $ dir </> "utxo" ++ strIndex ++ ".vkey")
         (File @(SigningKey ()) $ dir </> "utxo" ++ strIndex ++ ".skey")
 
-createPoolCredentials :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
-createPoolCredentials dir index = do
+createPoolCredentials :: KeyOutputFormat -> FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
+createPoolCredentials fmt dir index = do
   liftIO $ createDirectoryIfMissing False dir
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
+        fmt
         (onlyOut kesVK)
         (File @(SigningKey ()) $ dir </> "kes" ++ strIndex ++ ".skey")
     runNodeKeyGenVRF
+        fmt
         (File @(VerificationKey ()) $ dir </> "vrf" ++ strIndex ++ ".vkey")
         (File @(SigningKey ()) $ dir </> "vrf" ++ strIndex ++ ".skey")
     runNodeKeyGenCold
+        fmt
         (File @(VerificationKey ()) $ dir </> "cold" ++ strIndex ++ ".vkey")
         (onlyOut coldSK)
         (onlyOut opCertCtr)

@@ -25,7 +25,7 @@ import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
-import           Cardano.CLI.Types (SigningKeyFile, VerificationKeyFile)
+import           Cardano.CLI.Types (KeyOutputFormat (..), SigningKeyFile, VerificationKeyFile)
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -59,9 +59,9 @@ renderShelleyNodeCmdError err =
 
 
 runNodeCmd :: NodeCmd -> ExceptT ShelleyNodeCmdError IO ()
-runNodeCmd (NodeKeyGenCold vk sk ctr) = runNodeKeyGenCold vk sk ctr
-runNodeCmd (NodeKeyGenKES  vk sk)     = runNodeKeyGenKES  vk sk
-runNodeCmd (NodeKeyGenVRF  vk sk)     = runNodeKeyGenVRF  vk sk
+runNodeCmd (NodeKeyGenCold fmt vk sk ctr) = runNodeKeyGenCold fmt vk sk ctr
+runNodeCmd (NodeKeyGenKES  fmt vk sk)     = runNodeKeyGenKES fmt vk sk
+runNodeCmd (NodeKeyGenVRF  fmt vk sk)     = runNodeKeyGenVRF fmt vk sk
 runNodeCmd (NodeKeyHashVRF vk mOutFp) = runNodeKeyHashVRF vk mOutFp
 runNodeCmd (NodeNewCounter vk ctr out) = runNodeNewCounter vk ctr out
 runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
@@ -73,30 +73,53 @@ runNodeCmd (NodeIssueOpCert vk sk ctr p out) =
 -- Node command implementations
 --
 
-runNodeKeyGenCold :: VerificationKeyFile Out
-                  -> SigningKeyFile Out
-                  -> OpCertCounterFile Out
-                  -> ExceptT ShelleyNodeCmdError IO ()
-runNodeKeyGenCold vkeyPath skeyPath ocertCtrPath = do
+runNodeKeyGenCold
+  :: KeyOutputFormat
+  -> VerificationKeyFile Out
+  -> SigningKeyFile Out
+  -> OpCertCounterFile Out
+  -> ExceptT ShelleyNodeCmdError IO ()
+runNodeKeyGenCold fmt vkeyPath skeyPath ocertCtrPath = do
     skey <- liftIO $ generateSigningKey AsStakePoolKey
     let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeLazyByteStringFile skeyPath
-      $ textEnvelopeToJSON (Just skeyDesc) skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeLazyByteStringFile vkeyPath
-      $ textEnvelopeToJSON (Just vkeyDesc) vkey
+
+    case fmt of
+      KeyOutputFormatTextEnvelope ->
+        firstExceptT ShelleyNodeCmdWriteFileError
+          . newExceptT
+          $ writeLazyByteStringFile skeyPath
+          $ textEnvelopeToJSON (Just skeyDesc) skey
+      KeyOutputFormatBech32 ->
+        firstExceptT ShelleyNodeCmdWriteFileError
+          . newExceptT
+          $ writeTextFile skeyPath
+          $ serialiseToBech32 skey
+
+    case fmt of
+      KeyOutputFormatTextEnvelope ->
+        firstExceptT ShelleyNodeCmdWriteFileError
+          . newExceptT
+          $ writeLazyByteStringFile vkeyPath
+          $ textEnvelopeToJSON (Just vkeyDesc) vkey
+      KeyOutputFormatBech32 ->
+        firstExceptT ShelleyNodeCmdWriteFileError
+          . newExceptT
+          $ writeTextFile vkeyPath
+          $ serialiseToBech32 vkey
+
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeLazyByteStringFile ocertCtrPath
       $ textEnvelopeToJSON (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter initialCounter vkey
   where
-    skeyDesc, vkeyDesc, ocertCtrDesc :: TextEnvelopeDescr
+    skeyDesc :: TextEnvelopeDescr
     skeyDesc = "Stake Pool Operator Signing Key"
+
+    vkeyDesc :: TextEnvelopeDescr
     vkeyDesc = "Stake Pool Operator Verification Key"
+
+    ocertCtrDesc :: TextEnvelopeDescr
     ocertCtrDesc = "Next certificate issue number: "
                 <> fromString (show initialCounter)
 
@@ -104,40 +127,80 @@ runNodeKeyGenCold vkeyPath skeyPath ocertCtrPath = do
     initialCounter = 0
 
 
-runNodeKeyGenKES :: VerificationKeyFile Out
-                 -> SigningKeyFile Out
-                 -> ExceptT ShelleyNodeCmdError IO ()
-runNodeKeyGenKES vkeyPath skeyPath = do
-    skey <- liftIO $ generateSigningKey AsKesKey
-    let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeLazyByteStringFile skeyPath
-      $ textEnvelopeToJSON (Just skeyDesc) skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeLazyByteStringFile vkeyPath
-      $ textEnvelopeToJSON (Just vkeyDesc) vkey
-  where
-    skeyDesc, vkeyDesc :: TextEnvelopeDescr
-    skeyDesc = "KES Signing Key"
-    vkeyDesc = "KES Verification Key"
-
-runNodeKeyGenVRF ::
-     VerificationKeyFile Out
+runNodeKeyGenKES
+  :: KeyOutputFormat
+  -> VerificationKeyFile Out
   -> SigningKeyFile Out
   -> ExceptT ShelleyNodeCmdError IO ()
-runNodeKeyGenVRF vkeyPath skeyPath = do
-    skey <- liftIO $ generateSigningKey AsVrfKey
-    let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeLazyByteStringFileWithOwnerPermissions skeyPath
-      $ textEnvelopeToJSON (Just skeyDesc) skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeLazyByteStringFile vkeyPath
-      $ textEnvelopeToJSON (Just vkeyDesc) vkey
+runNodeKeyGenKES fmt vkeyPath skeyPath = do
+  skey <- liftIO $ generateSigningKey AsKesKey
+
+  let vkey = getVerificationKey skey
+
+  case fmt of
+    KeyOutputFormatTextEnvelope ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeLazyByteStringFileWithOwnerPermissions skeyPath
+        $ textEnvelopeToJSON (Just skeyDesc) skey
+    KeyOutputFormatBech32 ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeTextFile skeyPath
+        $ serialiseToBech32 skey
+
+  case fmt of
+    KeyOutputFormatTextEnvelope ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeLazyByteStringFile vkeyPath
+        $ textEnvelopeToJSON (Just vkeyDesc) vkey
+    KeyOutputFormatBech32 ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeTextFile vkeyPath
+        $ serialiseToBech32 vkey
+
+  where
+    skeyDesc :: TextEnvelopeDescr
+    skeyDesc = "KES Signing Key"
+
+    vkeyDesc :: TextEnvelopeDescr
+    vkeyDesc = "KES Verification Key"
+
+runNodeKeyGenVRF
+  :: KeyOutputFormat
+  -> VerificationKeyFile Out
+  -> SigningKeyFile Out
+  -> ExceptT ShelleyNodeCmdError IO ()
+runNodeKeyGenVRF fmt vkeyPath skeyPath = do
+  skey <- liftIO $ generateSigningKey AsVrfKey
+
+  let vkey = getVerificationKey skey
+
+  case fmt of
+    KeyOutputFormatTextEnvelope ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeLazyByteStringFileWithOwnerPermissions skeyPath
+        $ textEnvelopeToJSON (Just skeyDesc) skey
+    KeyOutputFormatBech32 ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeTextFile skeyPath
+        $ serialiseToBech32 skey
+
+  case fmt of
+    KeyOutputFormatTextEnvelope ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeLazyByteStringFile vkeyPath
+        $ textEnvelopeToJSON (Just vkeyDesc) vkey
+    KeyOutputFormatBech32 ->
+      firstExceptT ShelleyNodeCmdWriteFileError
+        . newExceptT
+        $ writeTextFile vkeyPath
+        $ serialiseToBech32 vkey
   where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "VRF Signing Key"
@@ -265,4 +328,3 @@ readColdVerificationKeyOrFile coldVerKeyOrFile =
         , FromSomeType (AsVerificationKey AsGenesisDelegateKey) castVerificationKey
         ]
         fp
-
