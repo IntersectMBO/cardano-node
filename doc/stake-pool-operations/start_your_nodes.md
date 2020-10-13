@@ -1,6 +1,6 @@
-### Start your nodes
+### ノードを起動する
 
-Start a __relay node__ with:
+__リレーノード__ を起動します
 
     cardano-node run \
     --topology mainnet-topology.json \
@@ -10,7 +10,7 @@ Start a __relay node__ with:
     --port <PORT> \
     --config mainnet-config.json
 
-Start a __block producing__ node with:
+__ブロック生成__ ノードを起動します
 
     cardano-node run \
     --topology mainnet-topology.json \
