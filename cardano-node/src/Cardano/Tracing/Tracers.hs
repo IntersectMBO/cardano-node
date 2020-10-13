@@ -34,6 +34,7 @@ import           Control.Concurrent (MVar, modifyMVar_)
 import           Control.Concurrent.STM (STM, atomically)
 import           Control.Monad (forM_, when)
 import           Data.Aeson (ToJSON (..), Value (..))
+import qualified Data.ByteString.Base16 as B16
 import           Data.Functor ((<&>))
 import           Data.Int (Int64)
 import           Data.IntPSQ (IntPSQ)
@@ -42,6 +43,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Data.Time (NominalDiffTime, UTCTime)
 import           Data.Word (Word64)
 import           GHC.TypeLits (KnownNat, Nat, natVal)
@@ -62,8 +64,9 @@ import           Cardano.BM.Internal.ElidingTracer
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge, ConvertRawHash,
-                   ForgeStateInfo, ForgeStateUpdateError, Header, realPointSlot)
+import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge,
+                   ConvertRawHash (..), ForgeStateInfo, ForgeStateUpdateError, Header, HeaderHash,
+                   realPointHash, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                    TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -85,8 +88,8 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
-                   StandardHash, blockNo, pointSlot, unBlockNo)
+import           Ouroboros.Network.Block (BlockNo (..), ChainHash (..), ChainUpdate (..),
+                   HasHeader (..), Point, StandardHash, blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
@@ -111,6 +114,7 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.Metrics
+import           Cardano.Tracing.Render (renderChainHash, renderHeaderHash)
 import           Cardano.Tracing.Shutdown ()
 import           Cardano.Tracing.Startup ()
 
@@ -539,6 +543,7 @@ ignoringSeverity tr = Tracer $ \(WithSeverity _ ev) -> traceWith tr ev
 traceChainMetrics
   :: forall blk. ()
   => HasHeader (Header blk)
+  => ConvertRawHash blk
   => Maybe EKGDirect
   -> STM.TVar Word64
   -> BlockConfig blk
@@ -550,21 +555,21 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
   Tracer $ \ev ->
     maybe (pure ()) doTrace (chainTipInformation ev)
   where
-    chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
+    chainTipInformation :: ChainDB.TraceEvent blk -> Maybe (ChainInformation blk)
     chainTipInformation = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.SwitchedToAFork _warnings newTipInfo oldChain newChain ->
           let fork = not $ AF.withinFragmentBounds (AF.headPoint oldChain)
                               newChain in
-          Just $ chainInformation newTipInfo fork newChain 0
-        ChainDB.AddedToCurrentChain _warnings newTipInfo _oldChain newChain ->
-          Just $ chainInformation newTipInfo False newChain 0
+          Just $ chainInformation newTipInfo fork oldChain newChain 0
+        ChainDB.AddedToCurrentChain _warnings newTipInfo oldChain newChain ->
+          Just $ chainInformation newTipInfo False oldChain newChain 0
         _ -> Nothing
       _ -> Nothing
-    doTrace :: ChainInformation -> IO ()
 
+    doTrace :: ChainInformation blk -> IO ()
     doTrace
-        ChainInformation { slots, blocks, density, epoch, slotInEpoch, fork } = do
+        ChainInformation { slots, blocks, density, epoch, slotInEpoch, fork, tipBlockHash, tipBlockParentHash } = do
       -- TODO this is executed each time the newFhain changes. How cheap is it?
       meta <- mkLOMeta Critical Public
 
@@ -576,6 +581,23 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
       when fork $
         traceI tr meta "forks" =<< STM.modifyReadTVarIO tForks succ
 
+
+      let tipBlockHashText :: Text
+          tipBlockHashText = renderHeaderHash (Proxy @blk) tipBlockHash
+
+          tipBlockParentHashText :: Text
+          tipBlockParentHashText =
+            renderChainHash
+              (Text.decodeLatin1 . B16.encode . toRawHash (Proxy @blk))
+              tipBlockParentHash
+
+      traceNamedObject
+        (appendName "tipBlockHash" tr)
+        (meta, LogMessage tipBlockHashText)
+
+      traceNamedObject
+        (appendName "tipBlockParentHash" tr)
+        (meta, LogMessage tipBlockParentHashText)
 
 traceD :: Trace IO a -> LOMeta -> Text -> Double -> IO ()
 traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
@@ -1466,7 +1488,7 @@ traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
 
 -- | get information about a chain fragment
 
-data ChainInformation = ChainInformation
+data ChainInformation blk = ChainInformation
   { slots :: Word64
   , blocks :: Word64
   , density :: Rational
@@ -1482,6 +1504,10 @@ data ChainInformation = ChainInformation
     -- current chain.
   , fork :: Bool
     -- ^ Was this a fork.
+  , tipBlockHash :: HeaderHash blk
+    -- ^ Hash of the last adopted block.
+  , tipBlockParentHash :: ChainHash (Header blk)
+    -- ^ Hash of the parent block of the last adopted block.
   }
 
 chainInformation
@@ -1489,9 +1515,10 @@ chainInformation
   => ChainDB.NewTipInfo blk
   -> Bool
   -> AF.AnchoredFragment (Header blk)
+  -> AF.AnchoredFragment (Header blk)
   -> Int64
-  -> ChainInformation
-chainInformation newTipInfo fork frag blocksUncoupledDelta = ChainInformation
+  -> ChainInformation blk
+chainInformation newTipInfo fork oldFrag frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
@@ -1499,6 +1526,8 @@ chainInformation newTipInfo fork frag blocksUncoupledDelta = ChainInformation
     , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
     , fork = fork
+    , tipBlockHash = realPointHash (ChainDB.newTipPoint newTipInfo)
+    , tipBlockParentHash = AF.headHash oldFrag
     }
 
 fragmentChainDensity ::
