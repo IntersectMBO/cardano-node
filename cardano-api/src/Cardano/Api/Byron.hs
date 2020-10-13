@@ -3,25 +3,92 @@
 --
 
 module Cardano.Api.Byron
-  ( module Cardano.Api.Protocol.Byron
-  , module Cardano.Api.Protocol.Cardano
-  , module Cardano.Api.TextView
-  , module Cardano.Api.Typed
-  , module Ouroboros.Consensus.Block
-  , module Ouroboros.Consensus.Byron.Ledger
-  , module Ouroboros.Consensus.HardFork.Combinator.Degenerate
-  , module Ouroboros.Network.Block
+  ( module Cardano.API,
+    -- * Era
+    Byron,
+    HasTypeProxy(..),
+    AsType
+      ( AsByronAddress
+      , AsByronKey
+      , AsByronTx
+      , AsByronTxBody
+      , AsByronWitness
+      ),
+
+    -- * Cryptographic key interface
+    -- $keys
+    VerificationKey(..),
+
+    -- * Payment addresses
+    -- | Constructing and inspecting Byron payment addresses
+    Address(ByronAddress),
+    NetworkId(Mainnet, Testnet),
+
+    -- * Building transactions
+    -- | Constructing and inspecting transactions
+    TxBody(ByronTxBody),
+    TxId(TxId),
+    TxIn(TxIn),
+    TxOut(TxOut),
+    TxIx(TxIx),
+    Lovelace(Lovelace),
+    SlotNo(SlotNo),
+    toByronLovelace,
+    toByronTxId,
+    toByronTxIn,
+    toByronTxOut,
+
+    -- * Signing transactions
+    -- | Creating transaction witnesses one by one, or all in one go.
+    Tx(ByronTx),
+
+    -- ** Incremental signing and separate witnesses
+    Witness (ByronKeyWitness),
+    WitnessNetworkIdOrByronAddress
+      ( WitnessNetworkId
+      , WitnessByronAddress
+      ),
+
+    -- *** Reading one of several key types
+    FromSomeType(..),
+
+    -- * Errors
+    Error(..),
+    FileError(..),
+
+    -- ** Low level protocol interaction with a Cardano node
+    LocalNodeConnectInfo(LocalNodeConnectInfo),
+    ByronMode,
+    CardanoMode,
+    NodeConsensusMode
+      ( ByronMode
+      , CardanoMode
+      ),
+    LocalNodeClientProtocols(LocalNodeClientProtocols),
+    withNodeProtocolClient,
+
+    -- *** Chain sync protocol
+    ChainSyncClient(..),
+
+    -- *** Local tx submission
+    LocalTxSubmissionClient(LocalTxSubmissionClient),
+
+    -- *** Local state query
+    LocalStateQueryClient(..),
+
+    -- * Address
+    NetworkMagic(..),
+
+    -- ** Conversions
+    toByronNetworkMagic,
+    toByronProtocolMagicId,
+    toByronRequiresNetworkMagic,
+    toNetworkMagic,
   ) where
 
-import           Cardano.Api.Protocol.Byron (mkSomeNodeClientProtocolByron)
-import           Cardano.Api.Protocol.Cardano (mkSomeNodeClientProtocolCardano)
-import           Cardano.Api.TextView (textShow)
-import           Cardano.Api.Typed (AsType (AsByronAddress, AsByronTxBody, AsByronWitness), Byron,
-                     LocalNodeConnectInfo (..), NetworkId (..), NetworkMagic (..),
-                     NodeConsensusMode (..), Witness (ByronKeyWitness), makeByronTransaction,
-                     submitTxToNodeLocal, toByronNetworkMagic, toByronProtocolMagicId,
-                     toByronRequiresNetworkMagic)
-import           Ouroboros.Consensus.Block (ConvertRawHash (..))
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (ByronTx), byronIdTx)
-import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (DegenGenTx))
-import           Ouroboros.Network.Block (BlockNo (BlockNo), Tip (Tip, TipGenesis))
+-- | This module provides a library interface that is intended to be the complete API
+-- for Byron covering everything, including exposing constructors for the lower level types.
+--
+
+import           Cardano.API
+import           Cardano.Api.Typed
