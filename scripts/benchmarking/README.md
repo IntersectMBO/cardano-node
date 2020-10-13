@@ -73,7 +73,7 @@
 
 # Shelley Testnet
 
-The `./scripts/shelley-testnet.sh` script starts up three nodes that are
+The `./scripts/benchmarking/shelley-testnet.sh` script starts up three nodes that are
 connected via TCP sockets to each other and produce blocks according to the
 algorithm selected (e.g. "BFT").  The blocks are shared among the nodes and
 after verification integrated into a nodes ledger.  The user can submit
@@ -110,7 +110,7 @@ set -g default-terminal "tmux-256color"
 
 Run the demo script:
 
-`./scripts/shelley-testnet-live.sh`
+`./scripts/benchmarking/shelley-testnet-live.sh`
 
 NB: This will automatically start a tmux session and create the necessary genesis file in `configuration/defaults/liveview/genesis`
 
@@ -123,14 +123,14 @@ Connect with all the core nodes and store the forks from a common prefix.  If an
 
 #### Usage:
 
-1) Run `./scripts/shelley-testnet-live.sh`.
+1) Run `./scripts/benchmarking/shelley-testnet-live.sh`.
 
-2) Run `./scripts/chairman.sh ./socket/node-0-socket ./socket/node-1-socket ./socket/node-2-socket` in a separate terminal.
+2) Run `./scripts/benchmarking/chairman.sh ./socket/node-0-socket ./socket/node-1-socket ./socket/node-2-socket` in a separate terminal.
 
 
 ## Connect to mainnet
 
-Run `./scripts/mainnet.sh`
+Run `./scripts/benchmarking/mainnet.sh`
 
 This script connects to several IOHK nodes on mainnet.
 
@@ -142,12 +142,12 @@ Three of the panes showing the nodes running and a shell to enter commands for t
 Create a tx:
 
 ```
-./scripts/issue-genesis-utxo-expenditure.sh transaction-file
+./scripts/benchmarking/issue-genesis-utxo-expenditure.sh transaction-file
 ```
 Submit the tx:
 
 ```
-./scripts/submit-tx.sh transaction-file
+./scripts/benchmarking/submit-tx.sh transaction-file
 ```
 The `submit-tx.sh` script by default sends the transaction to node with node id 0.
 
@@ -159,7 +159,7 @@ See cardano-cli's [Transactions](../cardano-node/README.md#transactions) section
 
 You can run:
 
-`./scripts/shelley-testnet-dns.sh`
+`./scripts/benchmarking/shelley-testnet-dns.sh`
 
 instead of `shelley-testnet.sh`.
 It requires that the addresses `local.iohk.io` and `local6.iohk.io` resolve to `127.0.0.1` and `::1` respectively.

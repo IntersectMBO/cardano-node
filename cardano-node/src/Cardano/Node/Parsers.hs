@@ -40,8 +40,8 @@ nodeRunParser = do
   socketFp <-   lastOption $ parseSocketPath "Path to a cardano-node socket"
 
   -- Protocol files
-  byronCertFile   <- optional parseDelegationCert
-  byronKeyFile    <- optional parseSigningKey
+  byronCertFile   <- optional parseByronDelegationCert
+  byronKeyFile    <- optional parseByronSigningKey
   shelleyKESFile  <- optional parseKesKeyFilePath
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
@@ -169,23 +169,30 @@ parseTopologyFile =
          <> completer (bashCompleter "file")
     )
 
-parseDelegationCert :: Parser FilePath
-parseDelegationCert =
+parseByronDelegationCert :: Parser FilePath
+parseByronDelegationCert =
+  strOption ( long "byron-delegation-certificate"
+    <> metavar "FILEPATH"
+    <> help "Path to the delegation certificate."
+    <> completer (bashCompleter "file")
+    )
+  <|>
   strOption
     ( long "delegation-certificate"
-        <> metavar "FILEPATH"
-        <> help "Path to the delegation certificate."
-        <> completer (bashCompleter "file")
+    <> Opt.internal
     )
 
-parseSigningKey :: Parser FilePath
-parseSigningKey =
-  strOption
-    ( long "signing-key"
-        <> metavar "FILEPATH"
-        <> help "Path to the signing key."
-        <> completer (bashCompleter "file")
-    )
+parseByronSigningKey :: Parser FilePath
+parseByronSigningKey =
+  strOption ( long "byron-signing-key"
+            <> metavar "FILEPATH"
+            <> help "Path to the Byron signing key."
+            <> completer (bashCompleter "file")
+            )
+  <|>
+  strOption ( long "signing-key"
+            <> Opt.internal
+            )
 
 parseOperationalCertFilePath :: Parser FilePath
 parseOperationalCertFilePath =
