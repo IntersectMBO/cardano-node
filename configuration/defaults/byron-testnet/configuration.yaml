@@ -41,11 +41,6 @@ ApplicationVersion: 0
 
 ##### Logging configuration #####
 
-# The node can run in either the SimpleView or LiveView. The SimpleView just
-# uses standard output, optionally with log output. The LiveView is a text
-# console with a live view of various node metrics.
-ViewMode: SimpleView
-
 # Enable or disable logging overall
 TurnOnLogging: True
 

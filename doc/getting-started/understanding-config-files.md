@@ -159,7 +159,6 @@ __NOTE Due to how the config.json file is generated, fields on the real file are
 #### Basic Node Configuration.
 
 First section relates the basic node configuration parameters. Make sure you have to `TPraos`as the protocol, the correct path to the `mainnet-shelley-genesis.json` file, `RequiresMagic`for its use in a testnet.
-Note that in this example we are using the SimpleView. This will send the output to `stdout`. Other option is `LiveView` which uses a terminal multiplexer to generate a fancy view. We will cover this topic later.
 
 	{
 	  "Protocol": "TPraos",
@@ -181,8 +180,6 @@ This protocol version number gets used by block producing nodes as part of the s
 
 `Tracers` tell your node what information you are interested in when logging. Like switches that you can turn ON or OFF according the type and quantity of information that you are interesetd in. This provides fairly coarse grained control, but it is relatively efficient at filtering out unwanted trace output.
 
-The node can run in either the `SimpleView` or `LiveView`. The `SimpleView` just uses standard output, optionally with log output. The `LiveView` is a text console with a live view of various node metrics.
-
 `TurnOnLogging`: Enables or disables logging overall.
 
 `TurnOnLogMetrics`: Enable the collection of various OS metrics such as memory and CPU use. These metrics can be directed to the logs or monitoring backends.
@@ -203,7 +200,6 @@ Also enable the EKG backend if you want to use the EKG or Prometheus monitoring 
 
 	  "TurnOnLogging": true,
 	  "TurnOnLogMetrics": true,
-	  "ViewMode": "SimpleView",
 	  "TracingVerbosity": "NormalVerbosity",
 	  "minSeverity": "Debug",
 	  "TraceBlockFetchClient": false,
@@ -276,32 +272,16 @@ It is also possible to have more fine grained control over filtering of trace ou
 	  "options": {
 	    "mapBackends": {
 	      "cardano.node-metrics": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ],
 	      "cardano.node.BlockFetchDecision.peers": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ],
 	      "cardano.node.ChainDB.metrics": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ],
 	      "cardano.node.metrics": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ]
 	    },
 	    "mapSubtrace": {

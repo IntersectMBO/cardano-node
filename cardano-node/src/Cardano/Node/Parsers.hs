@@ -60,7 +60,8 @@ nodeRunParser = do
   shutdownOnSlotSynced <- lastOption parseShutdownOnSlotSynced
 
   pure $ PartialNodeConfiguration
-           { pncNodeIPv4Addr = nIPv4Address
+           { pncViewMode = mempty
+           , pncNodeIPv4Addr = nIPv4Address
            , pncNodeIPv6Addr = nIPv6Address
            , pncNodePortNumber = nPortNumber
            , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
@@ -81,7 +82,6 @@ nodeRunParser = do
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty
-           , pncViewMode = mempty
            , pncLoggingSwitch = mempty
            , pncLogMetrics = mempty
            , pncTraceConfig = mempty

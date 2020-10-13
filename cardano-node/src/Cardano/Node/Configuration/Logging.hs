@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -36,9 +35,6 @@ import           Cardano.BM.Backend.Switchboard (Switchboard)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Configuration (Configuration)
-#ifdef UNIX
-import qualified Cardano.BM.Configuration.Model as CM
-#endif
 import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Counters (readCounters)
@@ -47,9 +43,6 @@ import           Cardano.BM.Data.Counter
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName,
                      PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Observable
-#ifdef UNIX
-import           Cardano.BM.Data.Output
-#endif
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.SubTrace
 import qualified Cardano.BM.Observer.Monadic as Monadic
@@ -134,9 +127,6 @@ createLoggingLayer ver nodeConfig' = do
     then Just . unConfigPath $ ncConfigFile nodeConfig'
     else Nothing
 
-  -- adapt logging configuration before setup
-  liftIO $ adaptLogConfig nodeConfig' logConfig
-
   -- These have to be set before the switchboard is set up.
   liftIO $ do
     Config.setTextOption logConfig "appversion" ver
@@ -186,22 +176,6 @@ createLoggingLayer ver nodeConfig' = do
      when (ncLogMetrics nodeConfig) $
        -- Record node metrics, if configured
        startCapturingMetrics trace
-
-   adaptLogConfig :: NodeConfiguration -> Configuration -> IO ()
-   adaptLogConfig nodeConfig =
-     liveViewdisablesStdout (ncViewMode nodeConfig)
-   liveViewdisablesStdout SimpleView _ = pure ()
-#ifdef UNIX
-   liveViewdisablesStdout LiveView logConfig = do -- filter out console scribes
-     scribes <- CM.getSetupScribes logConfig
-     let newscribes = flip filter scribes $ \case
-                        (ScribeDefinition StdoutSK _ _ _ _ _ _) -> False
-                        (ScribeDefinition StderrSK _ _ _ _ _ _) -> False
-                        _ -> True
-     CM.setSetupScribes logConfig newscribes
-#else
-   liveViewdisablesStdout LiveView _ = pure ()
-#endif
 
    mkLogLayer :: Configuration -> Switchboard Text -> Trace IO Text -> LoggingLayer
    mkLogLayer logConfig switchBoard trace =

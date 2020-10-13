@@ -65,7 +65,6 @@ data NodeConfiguration
        , ncMaxConcurrencyDeadline :: !(Maybe MaxConcurrencyDeadline)
 
          -- Logging parameters:
-       , ncViewMode       :: !ViewMode
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
@@ -299,7 +298,7 @@ makeNodeConfiguration pnc = do
   shutdownIPC <- lastToEither "Missing ShutdownIPC" $ pncShutdownIPC pnc
   shutdownOnSlotSynced <- lastToEither "Missing ShutdownOnSlotSynced" $ pncShutdownOnSlotSynced pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
-  viewMode <- lastToEither "Missing ViewMode" $ pncViewMode pnc
+  _viewMode <- lastToEither "Missing ViewMode" $ pncViewMode pnc
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
@@ -320,7 +319,6 @@ makeNodeConfiguration pnc = do
              , ncDiffusionMode = diffusionMode
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
-             , ncViewMode = viewMode
              , ncLoggingSwitch = loggingSwitch
              , ncLogMetrics = logMetrics
              , ncTraceConfig = traceConfig
