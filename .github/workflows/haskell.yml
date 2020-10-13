@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         ghc: ["8.6.5"]
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
     - uses: actions/checkout@v1
@@ -40,6 +40,10 @@ jobs:
         export LIBSODIUM_PATH="$(readlink -f libsodium-win64/bin | sed 's|^/d|D:|g' | tr / '\\')"
         echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
         echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
+
+    - name: Install libsodium
+      if: matrix.os == 'macos-latest'
+      run: brew install libsodium
 
     - name: Configure to use libsodium
       run: |
@@ -75,9 +79,8 @@ jobs:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist
-        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
-        restore-keys: |
-          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal-cache.cabal') }}-
+        key: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
+        restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
 
     - name: Install dependencies
       run: cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
