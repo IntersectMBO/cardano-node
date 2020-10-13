@@ -19,6 +19,7 @@ library
                       , deepseq
                       , directory
                       , exceptions
+                      , filepath
                       , hedgehog
                       , mmorph
                       , mtl

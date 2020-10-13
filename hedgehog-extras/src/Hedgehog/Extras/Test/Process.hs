@@ -44,11 +44,24 @@ import qualified Data.Text as T
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Process as IO
+import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.Exit as IO
+import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
+
+planJsonFile :: String
+planJsonFile = IO.unsafePerformIO $ do
+  maybeBuildDir <- liftIO $ IO.lookupEnv "CABAL_BUILDDIR"
+  case maybeBuildDir of
+    Just buildDir -> return $ ".." </> buildDir </> "cache/plan.json"
+    Nothing -> return "../dist-newstyle/cache/plan.json"
+{-# NOINLINE planJsonFile #-}
+
+exeSuffix :: String
+exeSuffix = if OS.isWin32 then ".exe" else ""
 
 -- | Create a process returning handles to stdin, stdout, and stderr as well as the process handle.
 createProcess
@@ -157,13 +170,12 @@ procDist
   -> m CreateProcess
   -- ^ Captured stdout
 procDist pkg arguments = do
-  base <- getProjectBase
-  contents <- H.evalIO . LBS.readFile $ base </> "dist-newstyle/cache/plan.json"
+  contents <- H.evalIO . LBS.readFile $ planJsonFile
 
   case eitherDecode contents of
     Right plan -> case L.filter matching (plan & installPlan) of
       (component:_) -> case component & binFile of
-        Just bin -> return $ IO.proc (T.unpack bin) arguments
+        Just bin -> return $ IO.proc (T.unpack bin <> exeSuffix) arguments
         Nothing -> error $ "missing bin-file in: " <> show component
       [] -> error $ "Cannot find exe:" <> pkg <> " in plan"
     Left message -> error $ "Cannot decode plan: " <> message
