@@ -1,14 +1,32 @@
-# Multi-Signature Scripts
+# Multi signatures
 
-A multi-signature scheme allows an unspent transaction output to be used as an input to
-a new transaction if a pre-defined combination of signatures is provided, e.g., two persons
-have to sign simultaneously, two out of three keys have to be provided, etc.
+Multi signature (multisig) is a Cardano Shelley feature that consists of a set of schemes and a simple scripting language. Multisig schemes are used for payment and delegation purposes, specifying one or more combinations of cryptographic signatures needed to authorize a transaction. Multisig allows value addresses and stake addresses to use either keypairs or scripts to authorize and process a transaction.
 
-The multi-signature scripts are written as JSON objects. We have three types of scripts:
+In Shelley, an address must provide information on how to spend ada and how to control the associated stake. For these reasons, there are two types of addresses: *payment addresses* and *stake addresses*.
+
+Addresses are objects that have a user-facing binary representation, which means that they appear in the UTxO, and users can track them using a wallet or the Cardano Explorer. Addresses also contain credentials that govern access rights. This means that when using a payment address for spending purposes, or a stake address for delegation purposes a witness is required for the credential, that should be specific to the particular transaction. There are two types of such credentials:
+
++ **Key credential** - a credential can be constructed from a pair of a *signing key (sk)* and a corresponding *verification key (vk)*. The credential is a cryptographic hash of the verification key *H(vk)*. A witness for a key credential consists of the *vk* and a transaction signature of the *sk*.
++ **Script credential** - tokens and stake can also be controlled by a validator script, which can either succeed or fail to validate on a given input. In this case, the credential is the hash of the script. A witness for a script credential is the script itself, as well as a script input that makes it valid.
+
+## Multi signature scripts
+
+In Shelley, multisig script credentials are used to require signatures from multiple parties to validate a transaction. Examples include M of N schemes, where a transaction can be authorized if at least *M* distinct keys, from a set of *N* keys, sign the transaction. With multisig script credentials, it is possible to require single or multiple signatures both for funds spending and stake delegation purposes. Using multisig scripts, a witness should include the validator script matching the hash in the script credential, and a set of witnesses for individual key credentials. The validator script will determine whether those witnesses are sufficient for the funds to be spent.
+
+Multisig script terms form a tree-like structure and are evaluated with the [`evalNativeMultiSigScript` function](https://github.com/input-output-hk/cardano-ledger-specs/blob/5398d8783559c60f2d819e80f84fe430834f2399/shelley/chain-and-ledger/executable-spec/src/Shelley/Spec/Ledger/Tx.hs#L337).
+
+These functions return `true` when supplied key hashes are a valid combination for the script, otherwise, they return `false`. The following are the four constructors that make up the multisig script scheme:
+
++ RequireSignature - the signature of a key with a specific hash is required
++ RequireAllOf - signatures of all of the keys that hash to the values specified in the given list are required
++ RequireAnyOf - a single signature is required, by a key hashing to one of the given values in the list (this constructor is redundant and can be expressed using RequireMOf)
++ RequireMOf - m of the keys with the hashes specified in the list are required to sign
+
+Multi-signature scripts can be written as JSON objects. There are three types of scripts:
 
 ## all
 
-The `"type"` key's value, `"all"`, indicates that in order to spend this tx output, we require the corresponding signatures of all the payment key hashes listed.
+The `type` key's value `all` indicates that in order to spend this tx output, corresponding signatures of all the listed payment key hashes are required.
 
 ```json
 {
@@ -50,11 +68,9 @@ The `"type"` key's value, `"all"`, indicates that in order to spend this tx outp
 }
 ```
 
-
-
 ## any
 
-The `"type"` key's value, `"any"`, indicates that in order to spend this tx output, we require one corresponding signature from the listed payment key hashes.
+The `type` key's value `any` indicates that in order to spend this tx output, one corresponding signature from the listed payment key hashes is required.
 
 ```json
 {
@@ -90,7 +106,7 @@ The `"type"` key's value, `"any"`, indicates that in order to spend this tx outp
 
 ## atLeast
 
-The `"type"` key's value, `"atLeast"`, indicates that in order to spend this tx output, we require `"atLeast"` 2 corresponding signatures from the list of payment key hashes. The `"required"` key indicates the minimum number of signatures we need to spend the tx output.
+The `type` key's value `atLeast` indicates that in order to spend this tx output, at least 2 corresponding signatures from the list of payment key hashes are required. The `required` key indicates the minimum number of signatures needed in order to spend the tx output.
 
 ```json
 {
@@ -116,30 +132,46 @@ The `"type"` key's value, `"atLeast"`, indicates that in order to spend this tx 
     "type": "atLeast"
 }
 ```
-### Example of using multi-signature scripts
 
-Let's walk through how one would use a multi-signature script. This is a multistep process, involving the creation of a multi-signature address, sending ADA to that address followed by gathering the required witnesses in order to spend the ADA from the multi-signature address. We will demonstrate this with an `all` script.
+### Example of using multi signature scripts
+
+Below is an example that specifies how to use a multi signature script. This is a step-by-step process involving:
+
++ the creation of a multi signature address
++ sending ada to that address
++ gathering required witnesses in order to spend ada from the multi signature address.
+
+The process is an example based on using the `all` script.
 
 #### Sending ada to a script address
 
-#### Step 1 - Create multi-signature script
+#### Step 1 - create a multi signature script
 
-You will first need to generate the keys that you require witnessing from via the `cardano-cli shelley address key-gen` command. Then you construct the multi-signature script as follows:
+First, generate the keys that you require witnessing from using the `cardano-cli shelley address key-gen` command. Then, construct a multi signature script as described above. For this example, we will describe the process using an `all` multisig script (`allMultiSigScript`) as follows:
 
+```json
+{
+    "scripts": [
+        {
+            "keyHash": "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a",
+            "type": "sig"
+        },
+        {
+            "keyHash": "a687dcc24e00dd3caafbeb5e68f97ca8ef269cb6fe971345eb951756",
+            "type": "sig"
+        },
+        {
+            "keyHash": "0bd1d702b2e6188fe0857a6dc7ffb0675229bab58c86638ffa87ed6d",
+            "type": "sig"
+        }
+    ],
+    "type": "all"
+}
 ```
-cardano-cli -- shelley transaction build-multisig
-  --all
-  --payment-verification-key-file payVerKey1
-  --payment-verification-key-file payVerKey2
-  --payment-verification-key-file payVerKey3
-  --out-file allMultiSigScript
-```
 
-This will output a JSON file with the `all` format described above.
+#### Step 2 - create a multi signature address
 
-
-#### Step 2 - Create multi-signature address
-We need a special multi-signature address to use with our multi-signature script. Please note the network magic must match with your network's magic (or if its mainnet use the `--mainnet` flag instead). This can be constructed as follows:
+A multi signature address is required in order to use a multi signature script. Please note that network parameters must match with your personal network’s parameters (if you are on mainnet, use the `--mainnet flag`). Construct this as follows:
 
 ```
 cardano-cli shelley address build-script
@@ -148,10 +180,10 @@ cardano-cli shelley address build-script
   --out-file script.addr
 ```
 
-#### Step 3 - Construct and submit a tx to the multi-signature address
-We then need to construct and submit a tx to send ADA to the multi-signature address.
+#### Step 3 - construct and submit a transaction (tx) to the multi signature address
 
-Construct the tx body:
+To construct and submit a tx to send ada to the multi signature address, construct the tx body:
+
 ```bash
 cardano-cli shelley transaction build-raw
     --ttl 1000
@@ -161,7 +193,7 @@ cardano-cli shelley transaction build-raw
     --out-file txbody
 ```
 
-Create the utxo witness:
+Create the UTxO witness:
 
 ```bash
 cardano-cli shelley transaction witness
@@ -171,20 +203,20 @@ cardano-cli shelley transaction witness
   --out-file utxoWitness
 ```
 
-Assemble the utxo witness and tx body to create the transaction:
+Assemble the UTxO witness and the tx body to create the transaction:
 
 ```bash
-cardano-cli shelley transaction sign-witness
+cardano-cli shelley transaction assemble
   --tx-body-file txbody
   --witness-file utxoWitness
   --out-file allWitnessesTx
 ```
 
-After submiting the above tx, the inputs associated with the multi-signature address are now "guarded" by the multi-signature script.
+After submitting the above tx, the inputs associated with the multi signature address will be "guarded" by the multi signature script.
 
-### Sending ADA from a script address
+### Sending ada from a script address
 
-#### Step 1 - Construct the tx body
+#### Step 1 - construct the tx body
 
 ```bash
 cardano-cli shelley transaction build-raw \
@@ -195,9 +227,9 @@ cardano-cli shelley transaction build-raw \
     --out-file spendScriptTxBody
 ```
 
-#### Step 2 - Construct the required witnesses
+#### Step 2 - construct required witnesses
 
-We need to construct the script witness and the three required witnesses set out by the script. We do this as follows:
+To construct the script witness and three witnesses required by the example `all` script, run the following commands:
 
 ```bash
 cardano-cli shelley transaction witness \
@@ -226,11 +258,11 @@ cardano-cli shelley transaction witness \
 
 ```
 
-#### Step 3 - Construct & submit the transaction
-You must assemble the transaction with the script witness and all the required witnesses.
+#### Step 3 - construct and submit the transaction
+To construct and submit a transaction, you must assemble it with the script witness and all the required witnesses.
 
 ```bash
-cardano-cli shelley transaction sign-witness \
+cardano-cli shelley transaction assemble \
   --tx-body-file spendScriptTxBody \
   --witness-file scriptWitness \
   --witness-file key1witness \
@@ -238,4 +270,4 @@ cardano-cli shelley transaction sign-witness \
   --witness-file key3witness \
   --out-file spendMultiSig
 ```
-You can now submit this tx!
+You can now submit this tx via `cardano-cli shelley transaction submit`!
