@@ -69,22 +69,15 @@ jobs:
     - name: Cabal Configure
       run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
-    - name: Restore cabal cache
-      uses: haskell-works/cabal-cache-action@v1
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
-        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
-        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
+    - uses: actions/cache@v2
+      name: Cache cabal store
       with:
-        args: |
-          sync-from-archive \
-            --threads       "$BINARY_CACHE_THREADS" \
-            --archive-uri   "$BINARY_CACHE_URI" \
-            --region        "$BINARY_CACHE_REGION" \
-            --build-path    "$CABAL_BUILDDIR" \
-            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+          dist
+        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
+        restore-keys: |
+          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal-cache.cabal') }}-
 
     - name: Install dependencies
       run: cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
@@ -92,45 +85,8 @@ jobs:
     - name: Build
       run: cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR"
 
-    - name: Save cabal cache
-      uses: haskell-works/cabal-cache-action@v1
-      if: ${{ always() }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
-        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
-        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
-      with:
-        args: |
-          sync-to-archive \
-            --threads       "$BINARY_CACHE_THREADS" \
-            --archive-uri   "$BINARY_CACHE_URI" \
-            --region        "$BINARY_CACHE_REGION" \
-            --build-path    "$CABAL_BUILDDIR" \
-            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
-
     - name: Git clone
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
 
     - name: Run tests
       run: cabal test --builddir="$CABAL_BUILDDIR" cardano-node-chairman
-
-    - name: Save cabal cache
-      uses: haskell-works/cabal-cache-action@v1
-      if: ${{ always() }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
-        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
-        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
-        CARDANO_MAINNET_MIRROR: cardano-mainnet-mirror/epoch
-      with:
-        args: |
-          sync-to-archive \
-            --threads       "$BINARY_CACHE_THREADS" \
-            --archive-uri   "$BINARY_CACHE_URI" \
-            --region        "$BINARY_CACHE_REGION" \
-            --build-path    "$CABAL_BUILDDIR" \
-            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
