@@ -134,11 +134,11 @@ JSONがスキーマ要件を満たしているか検証し、満たしている�
     --byron-witness-count 0 \
     --protocol-params-file protocol.json
 
-例：
+例
 
     > 184685
 
-ステークプールの登録にはデポジットが必要です。額は`protocol.json`特定されています。Shelleyテストネットの例を挙げます
+ステークプールの登録にはデポジットが必要です。額は`protocol.json`特定されています。Shelleyテストネット例
 
 "poolDeposit": 500000000
 
