@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 1.21.2 -- September 2020
+
+- Add a Ed25519-BIP32 instance of the new crypto classes (#1933, #1952)
+- Adjust what is exposed via Cardano.API.{Byron,Shelley} (#1932)
+
 ## 1.21.1 -- September 2020
 
 None
