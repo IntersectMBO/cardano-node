@@ -77,6 +77,7 @@ testnet H.Conf {..} = do
   baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
+  allPorts <- H.noteShowIO $ IO.allocateRandomPorts nodeCount
 
   -- Generate keys
   void $ H.execCli
@@ -153,9 +154,14 @@ testnet H.Conf {..} = do
         )
       )
 
-  deadline <- H.noteShowIO $ DTC.addUTCTime 30 <$> DTC.getCurrentTime
+    H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
+    H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
 
-  forM_ nodeIndexes $ \i -> H.assertByDeadlineM deadline $ H.isPortOpen (3000 + i)
+    when (OS.os `L.elem` ["darwin", "linux"]) $ do
+      H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+
+  now <- H.noteShowIO DTC.getCurrentTime
+  deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
