@@ -1,5 +1,34 @@
 # Changelog for cardano-node
 
+## 1.21.2 -- October 2020
+
+### node changes
+- Check VRF signing key files have the correct file permissions (#1936, #1938)
+- Improve IPv6 support and related internal refactoring (#1928)
+- Extend the "chairman" testing tool to support different testnets (#1915)
+- Miscellaneous "chairman" integration test improvements (#1951, #1961, #1939,
+  #1966, #1970, #1973, #1981)
+
+### consensus changes
+- Fix a failure that occurs on starting a node when there are certain kinds of
+  DB corruption (specifically a ledger snapshot that is newer than the tip of
+  the immutable DB, which would typically occur when chain DB files are manually
+  moved or removed) (#2651)
+- Fix a long-standing (highly unlikely) bug in evaluating alternative chains
+  that cross a hard fork boundary (#2314, #2318, #2657, #2661)
+- Internal support for using multiple leader credentials for the purpose of
+  running large scale benchmarks. It is not exposed in the node (#2640).
+
+### ledger changes
+- None.
+
+### network changes
+- Preparations for publishing io-sim as a public library (#2580, #2649)
+- Improved IPv6 support (#2662)
+- Preparation for the p2p governor: add a new node-to-node protocol version (4)
+  with a new negotiated handshake parameter to determine if the connection will
+  be uni-directional or bi-directional (#2658)
+
 ## 1.21.1 -- September 2020
 
 ### node changes
