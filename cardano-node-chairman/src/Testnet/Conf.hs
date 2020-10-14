@@ -9,6 +9,7 @@ import           Control.Monad
 import           Data.Eq
 import           Data.Function
 import           Data.Int
+import           Data.Maybe
 import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
 import           Text.Show
@@ -16,6 +17,7 @@ import           Text.Show
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.FilePath.Posix as FP
+import qualified System.Random as IO
 
 data Conf = Conf
   { tempAbsPath :: FilePath
@@ -27,8 +29,9 @@ data Conf = Conf
   , testnetMagic :: Int
   } deriving (Eq, Show)
 
-mkConf :: FilePath -> Int -> H.Integration Conf
-mkConf tempAbsPath testnetMagic = do
+mkConf :: FilePath -> Maybe Int -> H.Integration Conf
+mkConf tempAbsPath maybeMagic = do
+  testnetMagic <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase

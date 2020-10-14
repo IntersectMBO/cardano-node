@@ -24,7 +24,6 @@ import           GHC.Float
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.FilePath.Posix ((</>))
-import           Text.Read
 import           Text.Show
 
 import qualified Control.Concurrent as IO
@@ -361,13 +360,8 @@ testnet H.Conf {..} = do
     when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
-  H.noteShowIO_ DTC.getCurrentTime
-
-  deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime -- 90 seconds from now
-
-  forM_ allNodes $ \node -> do
-    portString <- H.noteShowM . H.readFile $ tempAbsPath </> node </> "port"
-    H.assertByDeadlineM deadline $ H.isPortOpen (read portString)
+  now <- H.noteShowIO DTC.getCurrentTime
+  deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
@@ -385,7 +379,7 @@ testnet H.Conf {..} = do
 
 hprop_testnet :: H.Property
 hprop_testnet = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  conf@H.Conf {..} <- H.mkConf tempAbsPath' 42
+  conf@H.Conf {..} <- H.mkConf tempAbsPath' Nothing
 
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 

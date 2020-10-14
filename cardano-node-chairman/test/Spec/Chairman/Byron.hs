@@ -24,6 +24,7 @@ import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
+import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
@@ -54,6 +55,7 @@ hprop_chairman = H.propertyOnce . H.runFinallies . H.workspace "chairman" $ \tem
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
   socketDir <- H.noteShow $ tempRelPath </> "socket"
+  allPorts <- H.noteShowIO $ IO.allocateRandomPorts nodeCount
 
   -- Generate keys
   void $ H.execCli
@@ -82,13 +84,12 @@ hprop_chairman = H.propertyOnce . H.runFinallies . H.workspace "chairman" $ \tem
   let nodeIndexes = [0..nodeCount - 1]
 
   -- Launch cluster of three nodes
-  forM_ nodeIndexes $ \i -> do
+  forM_ (L.zip nodeIndexes allPorts) $ \(i, port) -> do
     si <- H.noteShow $ show @Int i
     dbDir <- H.noteShow $ tempAbsPath </> "db/node-" <> si
     nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stderr.log"
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
-    portString <- H.noteShow $ "300" <> si <> ""
     topologyFile <- H.noteShow $ tempAbsPath </> "topology-node-" <> si <> ".json"
     configFile <- H.noteShow $ tempAbsPath </> "config-" <> si <> ".yaml"
     signingKeyFile <- H.noteShow $ tempAbsPath </> "genesis/delegate-keys.00" <> si <> ".key"
@@ -111,7 +112,7 @@ hprop_chairman = H.propertyOnce . H.runFinallies . H.workspace "chairman" $ \tem
         [ "run"
         , "--database-path", dbDir
         , "--socket-path", IO.sprocketArgumentName sprocket
-        , "--port", portString
+        , "--port", show @Int port
         , "--topology", topologyFile
         , "--config", configFile
         , "--signing-key", signingKeyFile
@@ -127,9 +128,14 @@ hprop_chairman = H.propertyOnce . H.runFinallies . H.workspace "chairman" $ \tem
         )
       )
 
-  deadline <- H.noteShowIO $ DTC.addUTCTime 30 <$> DTC.getCurrentTime
+    H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
+    H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
 
-  forM_ nodeIndexes $ \i -> H.assertByDeadlineM deadline $ H.isPortOpen (3000 + i)
+    when (OS.os `L.elem` ["darwin", "linux"]) $ do
+      H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> show @Int port, "-sTCP:LISTEN", "-n", "-P"] ""
+
+  now <- H.noteShowIO DTC.getCurrentTime
+  deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i

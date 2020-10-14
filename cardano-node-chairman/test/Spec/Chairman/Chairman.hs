@@ -80,4 +80,3 @@ chairmanOver H.Conf {..} allNodes = do
       H.note_ $ "Failed with: " <> show chairmanResult
       H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stdout.log"
       H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stderr.log"
-      H.failure
