@@ -1,5 +1,12 @@
 # Changelog for cardano-cli
 
+## 1.21.2 -- October 2020
+
+- Support bech32 and hex formats for reading verification keys (#1852)
+- Minor help text improvements (#1661, #1956)
+- Fix typo in KES docs (#1917, #1953)
+- Improved documentation for CLI multi-signature support (#1976)
+
 ## 1.21.1 -- September 2020
 
 None
