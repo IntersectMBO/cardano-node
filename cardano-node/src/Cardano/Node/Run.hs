@@ -12,12 +12,18 @@
 
 module Cardano.Node.Run
   ( runNode
+#ifdef UNIX
+  , checkVRFFilePermissions
+#endif
   ) where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (String)
 
 import qualified Control.Concurrent.Async as Async
+#ifdef UNIX
+import           Control.Monad.Trans.Except.Extra (left)
+#endif
 import           Control.Tracer
 import           Data.Either (partitionEithers)
 import           Data.Functor.Contravariant (contramap)
@@ -32,6 +38,10 @@ import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+#ifdef UNIX
+import           System.Posix.Files
+import           System.Posix.Types (FileMode)
+#endif
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Paths_cardano_node (version)
@@ -60,8 +70,8 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..),
-                     NodeArgs (..), NodeKernel, RunNode (..), RunNodeArgs (..))
+                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
+                     NodeKernel, RunNode (..), RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -69,8 +79,8 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
-                   DiffusionMode, RemoteConnectionId)
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode,
+                     RemoteConnectionId)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
@@ -102,6 +112,17 @@ runNode cmdPc = do
     nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
             Left err -> panic $ "Error in creating the NodeConfiguration: " <> Text.pack err
             Right nc' -> return nc'
+
+#ifdef UNIX
+    case shelleyVRFFile $ ncProtocolFiles nc of
+      Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions vrfFp
+                       case vrf of
+                         Left err ->
+                           putTextLn (renderVRFPrivateKeyFilePermissionError err) >> exitFailure
+                         Right () ->
+                           pure ()
+      Nothing -> pure ()
+#endif
 
     eLoggingLayer <- runExceptT $ createLoggingLayer
                      (Text.pack (showVersion version))
@@ -406,6 +427,31 @@ canonDbPath NodeConfiguration{ncDatabaseFile = DbFile dbFp} = do
   fp <- canonicalizePath =<< makeAbsolute dbFp
   createDirectoryIfMissing True fp
   return fp
+
+#ifdef UNIX
+-- | Make sure the VRF private key file is readable only
+-- by the current process owner the node is running under.
+checkVRFFilePermissions ::FilePath -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+checkVRFFilePermissions vrfPrivKey = do
+  fs <- liftIO $ getFileStatus vrfPrivKey
+  let fm = fileMode fs
+  -- Check the the VRF private key file does not give read/write/exec permissions to others.
+  when (hasOtherPermissions fm)
+       (left $ OtherPermissionsExist vrfPrivKey)
+  -- Check the the VRF private key file does not give read/write/exec permissions to any group.
+  when (hasGroupPermissions fm)
+       (left $ GroupPermissionsExist vrfPrivKey)
+ where
+  hasPermission :: FileMode -> FileMode -> Bool
+  hasPermission fModeA fModeB = fModeA `intersectFileModes` fModeB /= nullFileMode
+
+  hasOtherPermissions :: FileMode -> Bool
+  hasOtherPermissions fm' = fm' `hasPermission` otherModes
+
+  hasGroupPermissions :: FileMode -> Bool
+  hasGroupPermissions fm' = fm' `hasPermission` groupModes
+#endif
+
 
 createDiffusionArguments
   :: Maybe (SocketOrSocketInfo Socket AddrInfo)

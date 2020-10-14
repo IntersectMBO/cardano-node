@@ -1,12 +1,21 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds -Wno-unused-matches #-}
 
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
+
 module Testnet.ByronShelley
   ( testnet
   ) where
+
+#ifdef UNIX
+import           Prelude (map)
+#endif
 
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -56,6 +65,9 @@ import qualified System.Environment as IO
 import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
+#ifdef UNIX
+import           System.Posix.Files
+#endif
 import qualified System.Process as IO
 import qualified System.Random as IO
 import qualified Test.Process as H
@@ -336,7 +348,12 @@ testnet H.Conf {..} = do
     , "--start-time", formatIso8601 startTime
     , "--gen-utxo-keys", "1"
     ]
-
+#ifdef UNIX
+  --TODO: Remove me after #1948 is merged.
+  let numNodesStr = map show [1..numBftNodes]
+      vrfPath n = tempAbsPath </> "shelley" </> "delegate-keys" </> "delegate" <> n <> ".vrf.skey"
+  H.evalIO $ mapM_ (\n -> setFileMode (vrfPath n) ownerModes) numNodesStr
+#endif
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "shelley"
 
@@ -358,7 +375,10 @@ testnet H.Conf {..} = do
       , "--verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
       , "--signing-key-file", tempAbsPath </> node </> "shelley/vrf.skey"
       ]
-
+#ifdef UNIX
+    --TODO: Remove me after #1948 is merged.
+    H.evalIO $ setFileMode (tempAbsPath </> node </> "shelley/vrf.skey") ownerModes
+#endif
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
     H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".skey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/operator.skey")
