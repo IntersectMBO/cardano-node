@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Hedgehog.Extras.Test.Network
   ( doesFileExists
   , isPortOpen
@@ -8,8 +10,11 @@ module Hedgehog.Extras.Test.Network
   , doesSprocketExist
   ) where
 
+import           Control.Exception (IOException, try)
+import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.Bool
+import           Data.Either
 import           Data.Function
 import           Data.Int
 import           Data.Semigroup
@@ -55,7 +60,12 @@ assertSocketExists = GHC.withFrozenCallStack . H.assertM . doesSocketExist
 
 -- | Test if the sprocket exists
 doesSprocketExist :: (MonadTest m, MonadIO m, HasCallStack) => Sprocket -> m Bool
-doesSprocketExist socket = GHC.withFrozenCallStack $
-  if OS.isWin32
-    then H.evalIO $ IO.doesNamedPipeExist (sprocketSystemName socket)
-    else H.evalIO $ IO.doesSocketExist (sprocketSystemName socket)
+doesSprocketExist socket = GHC.withFrozenCallStack $ do
+  waitResult <- H.evalIO . try $ if OS.isWin32
+    then IO.doesNamedPipeExist (sprocketSystemName socket)
+    else IO.doesSocketExist (sprocketSystemName socket)
+  case waitResult of
+    Right result -> return result
+    Left (e :: IOException) -> do
+      H.annotate $ "Error: " <> show e
+      return False

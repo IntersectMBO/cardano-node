@@ -6,6 +6,7 @@ module Spec.Chairman.Shelley
   ) where
 
 import           Data.Function
+import           Data.Maybe
 import           Spec.Chairman.Chairman (chairmanOver)
 
 import qualified Hedgehog as H
@@ -20,7 +21,7 @@ import qualified Testnet.Shelley as H
 
 hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  conf@H.Conf {..} <- H.mkConf tempAbsPath' 42
+  conf@H.Conf {..} <- H.mkConf tempAbsPath' Nothing
 
   allNodes <- H.testnet conf
 

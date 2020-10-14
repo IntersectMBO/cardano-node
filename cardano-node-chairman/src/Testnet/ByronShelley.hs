@@ -122,8 +122,7 @@ testnet H.Conf {..} = do
   let fundsPerGenesisAddress = initSupply `div` numBftNodes
   let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
 
-  portBase <- H.noteShowIO $ IO.randomRIO (3000, 50000)
-  allPorts <- H.noteShow ((+ portBase) <$> [1 .. L.length allNodes])
+  allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodes)
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
 
   let securityParam = 10
@@ -607,6 +606,9 @@ testnet H.Conf {..} = do
 
     H.noteShowM_ $ H.getPid hProcess
 
+    when (OS.os `L.elem` ["darwin", "linux"]) $ do
+      H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+
   H.threadDelay 100000
 
   forM_ poolNodes $ \node -> do
@@ -650,21 +652,16 @@ testnet H.Conf {..} = do
     H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
     H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
 
-    when (OS.os == "darwin") $ do
+    when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
-  H.noteShowIO_ DTC.getCurrentTime
-
-  deadline <- H.noteShowIO $ DTC.addUTCTime 90 <$> DTC.getCurrentTime
-
-  forM_ allNodes $ \node -> do
-    portString <- H.noteShowM . fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
-    H.assertByDeadlineM deadline (H.isPortOpen (read portString))
+  now <- H.noteShowIO DTC.getCurrentTime
+  deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineIO deadline $ IO.doesSprocketExist sprocket
+    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
