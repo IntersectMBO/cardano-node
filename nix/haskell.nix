@@ -58,10 +58,6 @@ let
 
 
         # Tell hydra to skip this test on windows (it does not build)
-        # 1. Set them to all ...
-        packages.cardano-cli.components.all.platforms =
-          with stdenv.lib.platforms; lib.mkForce [ linux darwin windows ];
-        # 2. then drop windows for the test
         packages.cardano-cli.components.tests.cardano-cli-test.platforms =
           with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
         packages.cardano-cli.components.tests.cardano-cli-golden.platforms =
@@ -153,9 +149,10 @@ let
         # Disable cabal-doctest tests by turning off custom setups
         packages.comonad.package.buildType = lib.mkForce "Simple";
         packages.distributive.package.buildType = lib.mkForce "Simple";
-        packages.lens.package.buildType = lib.mkForce "Simple";
+        packages.generic-data.package.buildType = lib.mkForce "Simple";
         packages.nonempty-vector.package.buildType = lib.mkForce "Simple";
         packages.semigroupoids.package.buildType = lib.mkForce "Simple";
+        packages.system-filepath.package.buildType = lib.mkForce "Simple";
       })
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
