@@ -4,6 +4,7 @@
 { pkgs
 , lib
 , stdenv
+, src
 , haskell-nix
 , buildPackages
 # GHC attribute name
@@ -19,11 +20,6 @@
 , libsodium ? pkgs.libsodium
 }:
 let
-
-  src = haskell-nix.haskellLib.cleanGit {
-      name = "cardano-node-src";
-      src = ../.;
-  };
 
   # It is important this matches in both calls to cabalProject or `cabal configure`
   # will run twice.

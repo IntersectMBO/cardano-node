@@ -2,12 +2,20 @@
 pkgs: _: with pkgs;
   let
     compiler = config.haskellNix.compiler or "ghc8104";
+
   in {
+
+  src = haskell-nix.haskellLib.cleanGit {
+    name = "cardano-node-src";
+    src = ../.;
+  };
+
   cardanoNodeHaskellPackages = import ./haskell.nix {
     inherit compiler
       pkgs
       lib
       stdenv
+      src
       haskell-nix
       buildPackages
       gitrev
@@ -18,6 +26,7 @@ pkgs: _: with pkgs;
       pkgs
       lib
       stdenv
+      src
       haskell-nix
       buildPackages
       gitrev
@@ -29,6 +38,7 @@ pkgs: _: with pkgs;
       pkgs
       lib
       stdenv
+      src
       haskell-nix
       buildPackages
       gitrev
@@ -40,6 +50,7 @@ pkgs: _: with pkgs;
       pkgs
       lib
       stdenv
+      src
       haskell-nix
       buildPackages
       gitrev
@@ -80,4 +91,38 @@ pkgs: _: with pkgs;
     compiler-nix-name = compiler;
     inherit (cardanoNodeHaskellPackages) index-state;
   }).components.exes) hlint;
+
+  cardano-node-tests = (import (commonLib.sources.cardano-node-tests + "/shell.nix") {
+    cardanoNodePkgs = pkgs;
+  }).overrideAttrs (attrs: rec {
+    buildInputs = attrs.buildInputs ++ [ pkgs.zip ];
+    src = commonLib.sources.cardano-node-tests;
+    setupEnvVariablesFile = pkgs.writeScript "cardano-node-tests-setup-env-variable" attrs.setupEnvVariables;
+    buildCommand = ''
+      shopt -s dotglob
+      ln -s $src/* ./
+      source ${setupEnvVariablesFile}
+      set +e
+
+      ${lib.optionalString (commonLib.sources.cardano-node-tests ? rev)
+        "GIT_REVISION=${commonLib.sources.cardano-node-tests.rev}"
+      } make tests \
+      TEST_THREADS=auto \
+      ARTIFACTS_DIR=$out/share/artifacts/ \
+      COVERAGE_DIR=$out/share/cli_coverage/ \
+      ALLURE_DIR=$out/share/reports/
+
+      EXIT_CODE=$?
+      set -e
+
+      mkdir -p $out/nix-support
+      cd $out/share
+      for d in artifacts cli_coverage reports; do
+        zip -r $d.zip $d
+        echo "file zip $out/share/$d.zip" >> $out/nix-support/hydra-build-products
+      done
+
+      exit $EXIT_CODE
+    '';
+  });
 }

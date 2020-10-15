@@ -1,6 +1,7 @@
 { system ? builtins.currentSystem
 , crossSystem ? null
 , config ? {}
+, customConfig ? {}
   # use our own nixpkgs if it exists in our sources,
   # otherwise use iohkNix default nixpkgs.
 , nixpkgs ? if (sources ? nixpkgs)
@@ -33,6 +34,11 @@ let
           // import ./util.nix { inherit haskell-nix; }
           # also expose our sources, nixpkgs and overlays
           // { inherit overlays sources nixpkgs; };
+
+        cardanoNodeShell = import ../shell.nix {
+          inherit pkgs sourcesOverride config customConfig;
+          withHoogle = true;
+        };
       })
       # And, of course, our haskell-nix-ified cabal project:
       (import ./pkgs.nix)
