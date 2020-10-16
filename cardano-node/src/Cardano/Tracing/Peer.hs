@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -19,6 +20,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Text.Printf (printf)
+import           NoThunks.Class (NoThunks, AllowThunk (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
@@ -47,9 +49,7 @@ data Peer blk =
   !(PeerFetchStatus (Header blk))
   !(PeerFetchInFlight (Header blk))
   deriving (Generic)
-
-instance NoUnexpectedThunks (Peer blk) where
-    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
+  deriving NoThunks via AllowThunk (Peer blk)
 
 instance NFData (Peer blk) where
     rnf _ = ()

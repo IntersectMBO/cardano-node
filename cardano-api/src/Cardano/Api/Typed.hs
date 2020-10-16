@@ -442,6 +442,7 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.KES.Class as Crypto
+import qualified Cardano.Crypto.Libsodium as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Util as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
@@ -463,7 +464,8 @@ import qualified Cardano.Chain.UTxO as Byron
 --
 -- Shelley imports
 --
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN, KES, VRF)
 
@@ -575,7 +577,8 @@ class (Eq (VerificationKey keyrole),
 
     verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
 
-
+-- TODO: We should move this into the Key type class, with the existing impl as the default impl.
+-- For KES we can then override it to keep the seed and key in mlocked memory at all times.
 -- | Generate a 'SigningKey' using a seed from operating system entropy.
 --
 generateSigningKey :: Key keyrole => AsType keyrole -> IO (SigningKey keyrole)
@@ -4496,9 +4499,13 @@ instance Key KesKey where
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR
 
+    --This loses the mlock safety of the seed, since it starts from a normal in-memory seed.
     deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
-    deterministicSigningKey AsKesKey seed =
-        KesSigningKey (Crypto.genKeyKES seed)
+    deterministicSigningKey AsKesKey =
+        KesSigningKey
+          . Crypto.genKeyKES
+          . Crypto.mlsbFromByteString
+          . Crypto.getSeedBytes
 
     deterministicSigningKeySeedSize :: AsType KesKey -> Word
     deterministicSigningKeySeedSize AsKesKey =

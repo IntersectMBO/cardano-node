@@ -28,11 +28,10 @@ import qualified Cardano.Binary as CBOR
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
-import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..),
-                     HardForkApplyTxErr (ApplyTxErrByron, ApplyTxErrShelley, ApplyTxErrWrongEra))
+import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..), HardForkApplyTxErr (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
@@ -245,6 +244,10 @@ runTxSubmit protocol network txFile = do
             TxSubmitFailureCardanoMode (ApplyTxErrByron err) ->
               left (ShelleyTxCmdTxSubmitErrorByron err)
             TxSubmitFailureCardanoMode (ApplyTxErrShelley err) ->
+              left (ShelleyTxCmdTxSubmitErrorShelley err)
+            TxSubmitFailureCardanoMode (ApplyTxErrAllegra err) ->
+              left (ShelleyTxCmdTxSubmitErrorShelley err)
+            TxSubmitFailureCardanoMode (ApplyTxErrMary err) ->
               left (ShelleyTxCmdTxSubmitErrorShelley err)
             TxSubmitFailureCardanoMode (ApplyTxErrWrongEra mismatch) ->
               left (ShelleyTxCmdTxSubmitErrorEraMismatch mismatch)

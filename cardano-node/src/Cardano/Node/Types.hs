@@ -57,8 +57,8 @@ import qualified Data.IP as IP
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Network.Socket (PortNumber, SockAddr (..))
 import qualified Network.DNS as DNS (Domain)
+import           Network.Socket (PortNumber, SockAddr (..))
 
 import           Cardano.Api.Typed (EpochNo)
 import qualified Cardano.Chain.Update as Byron
@@ -293,11 +293,6 @@ data NodeShelleyProtocolConfiguration =
        --
      , npcShelleySupportedProtocolVersionMajor :: !Natural
      , npcShelleySupportedProtocolVersionMinor :: !Natural
-
-       -- | The maximum major version of the protocol this node supports.
-       -- If the actual version ever goes higher than this then the node
-       -- will stop with an appropriate error message.
-     , npcShelleyMaxSupportedProtocolVersion :: !Natural
      }
   deriving (Eq, Show)
 
@@ -355,6 +350,48 @@ data NodeHardForkProtocolConfiguration =
        -- configured the same, or they will disagree.
        --
      , npcTestShelleyHardForkAtVersion :: Maybe Word
+
+       -- | If we have knowledge about when the Allegra hard fork is then we
+       -- have an opportunity to optimise the bulk sync slightly.
+       --
+     , npcAllegraHardForkNotBeforeEpoch :: Maybe EpochNo
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at an exact epoch number (ie the first epoch of the new era).
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestAllegraHardForkAtEpoch :: Maybe EpochNo
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestAllegraHardForkAtVersion :: Maybe Word
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at an exact epoch number (ie the first epoch of the new era).
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestMaryHardForkAtEpoch :: Maybe EpochNo
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at an exact epoch number (ie the first epoch of the new era).
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestMaryHardForkAtVersion :: Maybe Word
+
+       -- | If we have knowledge about when the Shelley hard fork is then we
+       -- have an opportunity to optimise the bulk sync slightly.
+       --
+     , npcMaryHardForkNotBeforeEpoch :: Maybe EpochNo
      }
   deriving (Eq, Show)
 
@@ -443,4 +480,3 @@ renderVRFPrivateKeyFilePermissionError err =
     GroupPermissionsExist fp ->
       "VRF private key file at: " <> Text.pack fp
       <> "has \"group\" file permissions. Please remove all \"group\" file permissions."
-

@@ -1,4 +1,5 @@
 
+import           Cardano.Crypto.Libsodium (sodiumInit)
 import           Cardano.Prelude
 
 import           Test.Tasty (TestTree, defaultMain, testGroup)
@@ -13,7 +14,9 @@ import qualified Test.Cardano.Api.Typed.MultiSigScript
 import qualified Test.Cardano.Api.Typed.RawBytes
 
 main :: IO ()
-main =
+main = do
+  -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
+  sodiumInit
   defaultMain tests
 
 tests :: TestTree

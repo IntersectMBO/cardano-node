@@ -41,7 +41,7 @@ testPartialYamlConfig =
   PartialNodeConfiguration
     { pncProtocolConfig = Last . Just . NodeProtocolConfigurationShelley
                                           $ NodeShelleyProtocolConfiguration
-                                          (GenesisFile "dummmy-genesis-file") Nothing 1 2 3
+                                          (GenesisFile "dummmy-genesis-file") Nothing 1 2
     , pncSocketPath = Last Nothing
     , pncDiffusionMode = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
@@ -104,7 +104,7 @@ expectedConfig =
     , ncShutdownOnSlotSynced = MaxSlotNo $ SlotNo 42
     , ncProtocolConfig = NodeProtocolConfigurationShelley
                            $ NodeShelleyProtocolConfiguration
-                             (GenesisFile "dummmy-genesis-file") Nothing 1 2 3
+                             (GenesisFile "dummmy-genesis-file") Nothing 1 2
     , ncSocketPath = Nothing
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncMaxConcurrencyBulkSync = Nothing

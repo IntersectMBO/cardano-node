@@ -442,8 +442,8 @@ instance ToObject (DelegPredicateFailure era) where
              ]
   toObject _verb WrongCertificateTypeDELEG =
     mkObject [ "kind" .= String "WrongCertificateTypeDELEG" ]
-  toObject _verb (GenesisKeyNotInpMappingDELEG (KeyHash genesisKeyHash)) =
-    mkObject [ "kind" .= String "GenesisKeyNotInpMappingDELEG"
+  toObject _verb (GenesisKeyNotInMappingDELEG (KeyHash genesisKeyHash)) =
+    mkObject [ "kind" .= String "GenesisKeyNotInMappingDELEG"
              , "unknownKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key is not in the delegation mapping"
              ]

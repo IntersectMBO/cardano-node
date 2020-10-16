@@ -100,16 +100,22 @@ mkConsensusProtocolByron NodeByronProtocolConfiguration {
     optionalLeaderCredentials <- readLeaderCredentials genesisConfig files
 
     return $
-      Consensus.ProtocolByron
-        genesisConfig
-        (PBftSignatureThreshold <$> npcByronPbftSignatureThresh)
-        (Update.ProtocolVersion npcByronSupportedProtocolVersionMajor
-                                npcByronSupportedProtocolVersionMinor
-                                npcByronSupportedProtocolVersionAlt)
-        (Update.SoftwareVersion npcByronApplicationName
-                                npcByronApplicationVersion)
-        (maybeToList optionalLeaderCredentials)
-
+      Consensus.ProtocolByron $ Consensus.ProtocolParamsByron {
+        byronGenesis = genesisConfig,
+        byronPbftSignatureThreshold =
+          PBftSignatureThreshold <$> npcByronPbftSignatureThresh,
+        byronProtocolVersion =
+          Update.ProtocolVersion
+            npcByronSupportedProtocolVersionMajor
+            npcByronSupportedProtocolVersionMinor
+            npcByronSupportedProtocolVersionAlt,
+        byronSoftwareVersion =
+          Update.SoftwareVersion
+            npcByronApplicationName
+            npcByronApplicationVersion,
+        byronLeaderCredentials =
+          optionalLeaderCredentials
+        }
 
 readGenesis :: GenesisFile
             -> Maybe GenesisHash

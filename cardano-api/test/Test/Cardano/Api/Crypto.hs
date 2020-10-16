@@ -121,9 +121,9 @@ testDSIGNAlgorithm _ n =
       ]
 
     , testGroup "NoUnexpectedThunks"
-      [ testProperty "VerKey"  $ prop_no_unexpected_thunks @(VerKeyDSIGN v)
-      , testProperty "SignKey" $ prop_no_unexpected_thunks @(SignKeyDSIGN v)
-      , testProperty "Sig"     $ prop_no_unexpected_thunks @(SigDSIGN v)
+      [ testProperty "VerKey"  $ prop_no_thunks @(VerKeyDSIGN v)
+      , testProperty "SignKey" $ prop_no_thunks @(SignKeyDSIGN v)
+      , testProperty "Sig"     $ prop_no_thunks @(SigDSIGN v)
       ]
     ]
 

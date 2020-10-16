@@ -223,24 +223,39 @@ instance FromJSON PartialNodeConfiguration where
         --TODO: these are silly names, allow better aliases:
         protVerMajor    <- v .:  "LastKnownBlockVersion-Major"
         protVerMinor    <- v .:  "LastKnownBlockVersion-Minor"
-        protVerMajroMax <- v .:? "MaxKnownMajorProtocolVersion" .!= 1
 
         pure NodeShelleyProtocolConfiguration {
                npcShelleyGenesisFile
              , npcShelleyGenesisFileHash
              , npcShelleySupportedProtocolVersionMajor = protVerMajor
              , npcShelleySupportedProtocolVersionMinor = protVerMinor
-             , npcShelleyMaxSupportedProtocolVersion   = protVerMajroMax
              }
 
       parseHardForkProtocol v = do
         npcTestShelleyHardForkAtEpoch   <- v .:? "TestShelleyHardForkAtEpoch"
         npcTestShelleyHardForkAtVersion <- v .:? "TestShelleyHardForkAtVersion"
         npcShelleyHardForkNotBeforeEpoch <- v .:? "ShelleyHardForkNotBeforeEpoch"
+
+        npcTestAllegraHardForkAtEpoch   <- v .:? "TestAllegraHardForkAtEpoch"
+        npcTestAllegraHardForkAtVersion <- v .:? "TestAllegraHardForkAtVersion"
+        npcAllegraHardForkNotBeforeEpoch <- v .:? "AllegraHardForkNotBeforeEpoch"
+
+        npcTestMaryHardForkAtEpoch   <- v .:? "TestMaryHardForkAtEpoch"
+        npcTestMaryHardForkAtVersion <- v .:? "TestMaryHardForkAtVersion"
+        npcMaryHardForkNotBeforeEpoch <- v .:? "MaryHardForkNotBeforeEpoch"
+
         pure NodeHardForkProtocolConfiguration {
                npcTestShelleyHardForkAtEpoch,
                npcTestShelleyHardForkAtVersion,
-               npcShelleyHardForkNotBeforeEpoch
+               npcShelleyHardForkNotBeforeEpoch,
+
+               npcTestAllegraHardForkAtEpoch,
+               npcTestAllegraHardForkAtVersion,
+               npcAllegraHardForkNotBeforeEpoch,
+
+               npcTestMaryHardForkAtEpoch,
+               npcTestMaryHardForkAtVersion,
+               npcMaryHardForkNotBeforeEpoch
              }
 
 -- | Default configuration is mainnet

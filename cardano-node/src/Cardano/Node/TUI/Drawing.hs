@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Cardano.Node.TUI.Drawing
@@ -36,6 +37,7 @@ import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Graphics.Vty as Vty
+import           NoThunks.Class (NoThunks, AllowThunk (..))
 import           Numeric (showFFloat)
 import           Text.Printf (printf)
 
@@ -45,7 +47,7 @@ import           Cardano.Tracing.Peer (Peer (..), ppPeer)
 data ColorTheme
   = DarkTheme
   | LightTheme
-  deriving (Eq, Generic, NoUnexpectedThunks, NFData)
+  deriving (Eq, Generic, NoThunks, NFData)
 
 data LiveViewState blk a = LiveViewState
   { lvsScreen               :: !Screen
@@ -109,15 +111,13 @@ data LiveViewState blk a = LiveViewState
   , lvsNodeThread           :: !LiveViewThread
   , lvsPeers                :: [Peer blk]
   , lvsColorTheme           :: !ColorTheme
-  } deriving (Generic, NFData, NoUnexpectedThunks)
+  } deriving (Generic, NFData, NoThunks)
 
 -- | Type wrapper to simplify derivations.
 newtype LiveViewThread = LiveViewThread
     { getLVThread :: Maybe (Async.Async ())
     } deriving (Eq, Generic)
-
-instance NoUnexpectedThunks LiveViewThread where
-    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
+  deriving NoThunks via AllowThunk LiveViewThread
 
 instance NFData LiveViewThread where
     rnf = rwhnf
@@ -125,7 +125,7 @@ instance NFData LiveViewThread where
 data Screen
   = MainView
   | Peers
-  deriving (Generic, NoUnexpectedThunks, NFData)
+  deriving (Generic, NoThunks, NFData)
 
 -------------------------------------------------------------------------------
 -- UI drawing

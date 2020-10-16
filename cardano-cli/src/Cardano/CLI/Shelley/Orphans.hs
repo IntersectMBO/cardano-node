@@ -28,7 +28,7 @@ import           Cardano.Crypto.Hash.Class as Crypto
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
 import           Cardano.Ledger.Era (Era)
