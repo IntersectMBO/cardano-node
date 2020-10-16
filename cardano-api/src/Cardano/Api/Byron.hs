@@ -1,5 +1,6 @@
--- | This module provides a library interface that is intended to be the complete API
--- for Byron covering everything, including exposing constructors for the lower level types.
+-- | This module provides a library interface that is intended to be
+-- the complete API for Byron covering everything, including exposing
+-- constructors for the lower level types.
 --
 
 module Cardano.Api.Byron
@@ -85,10 +86,6 @@ module Cardano.Api.Byron
     toByronRequiresNetworkMagic,
     toNetworkMagic,
   ) where
-
--- | This module provides a library interface that is intended to be the complete API
--- for Byron covering everything, including exposing constructors for the lower level types.
---
 
 import           Cardano.API
 import           Cardano.Api.Typed
