@@ -49,7 +49,6 @@ testPartialYamlConfig =
     , pncLoggingSwitch = Last $ Just True
     , pncLogMetrics = Last $ Just True
     , pncTraceConfig = Last $ Just TracingOff
-    , pncViewMode = mempty
     , pncNodeIPv4Addr = mempty
     , pncNodeIPv6Addr = mempty
     , pncNodePortNumber = mempty
@@ -67,8 +66,7 @@ testPartialYamlConfig =
 testPartialCliConfig :: PartialNodeConfiguration
 testPartialCliConfig =
   PartialNodeConfiguration
-    { pncViewMode = mempty
-    , pncNodeIPv4Addr = mempty
+    { pncNodeIPv4Addr = mempty
     , pncNodeIPv6Addr = mempty
     , pncNodePortNumber = mempty
     , pncConfigFile   = mempty

@@ -42,14 +42,13 @@ module Cardano.Node.Types
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
-  , ViewMode(..)
   , VRFPrivateKeyFilePermissionError(..)
   , protocolName
   , renderVRFPrivateKeyFilePermissionError
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String, fail)
+import           Prelude (String)
 
 import           Data.Aeson
 import           Data.IP (IP (..), IPv4, IPv6)
@@ -95,16 +94,6 @@ instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> Text.pack (show invalid)
-
--- Node can be run in two modes.
--- This type is not used in the code anymore,
--- we keep it only for the message about deprecation.
-data ViewMode = LiveView    -- Live mode with TUI
-              | SimpleView  -- Simple mode, just output text.
-              deriving (Eq, Show)
-
-instance FromJSON ViewMode where
-  parseJSON _ = fail "ViewMode is deprecated, please remove it from your configuration file."
 
 newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
   { unMaxConcurrencyBulkSync :: Word }

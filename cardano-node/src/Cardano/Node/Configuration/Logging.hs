@@ -3,10 +3,6 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
-
 module Cardano.Node.Configuration.Logging
   ( LoggingLayer (..)
   , createLoggingLayer
