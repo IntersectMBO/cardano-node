@@ -183,7 +183,7 @@ TraceChainSyncProtocol: False
 TraceDNSResolver: True
 
 # Trace DNS Subscription messages.
-TraceDNSSubscription: True
+TraceDNSSubscription: False
 
 # Trace error policy resolution.
 TraceErrorPolicy: True
@@ -195,7 +195,7 @@ TraceLocalErrorPolicy: True
 TraceForge: True
 
 # Trace Handshake protocol messages.
-TraceHandshake: False
+TraceHandshake: True
 
 # Trace IP Subscription messages.
 TraceIpSubscription: True
@@ -216,7 +216,7 @@ TraceLocalTxSubmissionServer: False
 TraceMempool: True
 
 # Trace Mux Events
-TraceMux: False
+TraceMux: True
 
 # Trace TxSubmission server (inbound transactions).
 TraceTxInbound: False
@@ -275,4 +275,7 @@ options:
   mapSeverity:
     cardano.node.ChainDB: Notice
     cardano.node.DnsSubscription: Debug
+    cardano.node.TraceIpSubscription: Info
+    cardano.node.TraceMux: Info
+    cardano.node.Handshake: Debug
 
