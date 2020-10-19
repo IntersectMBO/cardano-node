@@ -247,14 +247,19 @@ module Cardano.Api.Typed (
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
-    LocalNodeConnectInfo(..),
     ByronMode,
     ShelleyMode,
     CardanoMode,
-    NodeConsensusMode(..),
+    EraInMode(..),
+    NodeConsensusModeParams(..),
     LocalNodeClientProtocols(..),
     nullLocalNodeClientProtocols,
-    withNodeProtocolClient,
+    LocalNodeClientProtocolsInMode,
+    Block(..),
+    BlockInMode(..),
+    TxInMode(..),
+    TxValidationError,
+    TxValidationErrorInMode(..),
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
@@ -346,7 +351,7 @@ import           Prelude
 
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
-import           Data.Kind (Constraint, Type)
+import           Data.Kind (Constraint)
 import           Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
@@ -381,6 +386,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
+import           Data.SOP.Strict (NS(Z, S))
 
 import qualified Codec.Binary.Bech32 as Bech32
 
@@ -427,17 +433,21 @@ import           Ouroboros.Consensus.Cardano.Node ()
 import           Ouroboros.Consensus.Ledger.Abstract (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient
-                   (Codecs' (..), ClientCodecs, clientCodecs)
+                   (Codecs' (..), clientCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                      SupportedNetworkProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..))
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Consensus.Util.Time (secondsToNominalDiffTime)
+import           Ouroboros.Consensus.HardFork.Combinator
+                   (GenTx(HardForkGenTx), OneEraGenTx(OneEraGenTx))
+import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
+                   (HardForkApplyTxErr(DegenApplyTxErr))
 
-import qualified Ouroboros.Consensus.Byron.Ledger       as Consensus (ByronBlock)
-import qualified Ouroboros.Consensus.Shelley.Ledger     as Consensus (ShelleyBlock)
-import qualified Ouroboros.Consensus.Cardano.Block      as Consensus (CardanoBlock)
+import qualified Ouroboros.Consensus.Byron.Ledger       as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger     as Consensus
+import qualified Ouroboros.Consensus.Cardano.Block      as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC   as Consensus (ByronBlockHFC)
 import qualified Ouroboros.Consensus.Cardano.ShelleyHFC as Consensus (ShelleyBlockHFC)
 
@@ -500,13 +510,9 @@ import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 --
 -- Other config and common types
 --
-import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
-import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
-import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 import qualified Cardano.Api.TextView as TextView
 
 import           Ouroboros.Network.Mux
-import           Ouroboros.Network.Protocol.Handshake.Version
 import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client as StateQuery
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
@@ -2570,14 +2576,10 @@ data ByronMode
 data ShelleyMode
 data CardanoMode
 
-{-
-data LocalNodeConnectInfo mode block =
-     LocalNodeConnectInfo {
-       localNodeSocketPath    :: FilePath,
-       localNodeNetworkId     :: NetworkId,
-       localNodeConsensusMode :: NodeConsensusModeParams mode block
-     }
--}
+data NodeConsensusMode mode where
+     ByronMode   :: NodeConsensusMode ByronMode
+     ShelleyMode :: NodeConsensusMode ShelleyMode
+     CardanoMode :: NodeConsensusMode CardanoMode
 
 data NodeConsensusModeParams mode where
 
@@ -2634,34 +2636,48 @@ data ChainTip
 
 data StateQueryInMode mode :: * -> *
 
-data LocalNodeClientProtocols mode = LocalNodeClientProtocols {
-       localChainSyncClient    :: ChainSyncClient
-                                    (BlockInMode mode)
-                                    ChainTip
-                                    IO ()
-
-     , localTxSubmissionClient :: LocalTxSubmissionClient
-                                    (TxInMode mode)
-                                    (TxValidationErrorInMode mode)
-                                    IO ()
-
-     , localStateQueryClient   :: LocalStateQueryClient
-                                    (BlockInMode mode)
-                                    (StateQueryInMode mode)
-                                    IO ()
+data LocalNodeClientProtocols block tip tx txerr query m =
+     LocalNodeClientProtocols {
+       localChainSyncClient    :: ChainSyncClient         block tip   m ()
+     , localTxSubmissionClient :: LocalTxSubmissionClient tx txerr    m ()
+     , localStateQueryClient   :: LocalStateQueryClient   block query m ()
      }
 
+nullLocalNodeClientProtocols :: LocalNodeClientProtocols block tip
+                                                         tx txerr query IO
+nullLocalNodeClientProtocols =
+    LocalNodeClientProtocols {
+      localChainSyncClient    = chainSyncClientNull,
+      localTxSubmissionClient = localTxSubmissionClientNull,
+      localStateQueryClient   = localStateQueryClientNull
+    }
+
+type LocalNodeClientProtocolsInMode mode =
+       LocalNodeClientProtocols
+         (BlockInMode mode)
+         ChainTip
+         (TxInMode mode)
+         (TxValidationErrorInMode mode)
+         (StateQueryInMode mode)
+         IO
+
+type LocalNodeClientProtocolsForBlock block =
+       LocalNodeClientProtocols
+         block
+         (Tip block)
+         (GenTx block)
+         (ApplyTxErr block)
+         (Query block)
+         IO
 
 -- | Establish a connection to a node and execute the given set of protocol
 -- handlers.
 --
 
-connectToLocalNode :: forall mode block.
-                      ConsensusBlockForMode mode ~ block
-                   => FilePath
+connectToLocalNode :: FilePath
                    -> NetworkId
                    -> NodeConsensusModeParams mode
-                   -> LocalNodeClientProtocols mode
+                   -> LocalNodeClientProtocolsInMode mode
                    -> IO ()
 connectToLocalNode socketPath networkid modeparams clients =
     withIOManager $ \iomgr ->
@@ -2671,104 +2687,256 @@ connectToLocalNode socketPath networkid modeparams clients =
           nctMuxTracer       = nullTracer,
           nctHandshakeTracer = nullTracer
         }
-        versionedProtocols
+        versionedProtocls
         socketPath
   where
-    versionedProtocols :: Versions
-                            NodeToClientVersion
-                            DictVersion
-                            (OuroborosApplication
-                               InitiatorMode
-                               LocalAddress
-                               LBS.ByteString IO () Void)
-    versionedProtocols =
-        foldMapVersions
-          (\(ptclVersion, ptclBlockVersion) ->
-              versionedNodeToClientProtocols
-                ptclVersion
-                NodeToClientVersionData {
-                  networkMagic = toNetworkMagic networkid
-                }
-                (\_connid _ctl -> protocols' modeparams ptclBlockVersion clients))
-          (mkConsensusNodeToClientVersions modeparams)
+    versionedProtocls =
+      -- First convert from the mode-parametrised view of things to the
+      -- block-parametrised view and then do the final setup for the versioned
+      -- bundles of mini-protocols.
+      case mkLocalNodeClientParams modeparams clients of
+        LocalNodeClientParams ptcl clients' ->
+          mkVersionedProtocols networkid ptcl clients'
 
 
-protocols' :: forall mode block a.
-              ConsensusBlockForMode mode ~ block
-           => NodeConsensusModeParams mode
-           -> BlockNodeToClientVersion block
-           -> LocalNodeClientProtocols mode
-           -> NodeToClientProtocols InitiatorMode LBS.ByteString IO () Void
-protocols' parms blockVersion clients =
-    case parms of
-      ByronModeParams epochSlots -> protocols codecs clients
-        where
-          codecs = clientCodecs codecConfig blockVersion
-
-          codecConfig :: CodecConfig block
-          codecConfig = pClientInfoCodecConfig
-                      . protocolClientInfo
-                      $ ProtocolClientByron epochSlots
-
-      ShelleyModeParams -> protocols codecs clients
-        where
-          codecs = clientCodecs codecConfig blockVersion
-
-          codecConfig :: CodecConfig block
-          codecConfig = pClientInfoCodecConfig
-                      . protocolClientInfo
-                      $ ProtocolClientShelley
-
-      CardanoModeParams epochSlots -> protocols codecs clients
-        where
-          codecs = clientCodecs codecConfig blockVersion
-
-          codecConfig :: CodecConfig block
-          codecConfig = pClientInfoCodecConfig
-                      . protocolClientInfo
-                      $ ProtocolClientCardano epochSlots
-
-
-mkConsensusNodeToClientVersions :: forall mode block.
-                                   ConsensusBlockForMode mode ~ block
-                                => NodeConsensusModeParams mode
-                                -> [(NodeToClientVersion,
-                                     BlockNodeToClientVersion block)]
-mkConsensusNodeToClientVersions parms =
-    Map.toList $
-    case parms of
-      ByronModeParams epochSlots   -> supportedNodeToClientVersions proxy
-      ShelleyModeParams            -> supportedNodeToClientVersions proxy
-      CardanoModeParams epochSlots -> supportedNodeToClientVersions proxy
+mkVersionedProtocols :: forall block.
+                        (SerialiseNodeToClientConstraints block,
+                         SupportedNetworkProtocolVersion block,
+                         ShowProxy block, ShowProxy (ApplyTxErr block),
+                         ShowProxy (GenTx block), ShowProxy (Query block),
+                         ShowQuery (Query block))
+                     => NetworkId
+                     -> ProtocolClient block (BlockProtocol block)
+                     -> LocalNodeClientProtocolsForBlock block
+                     -> Versions
+                          NodeToClientVersion
+                          (DictVersion NodeToClientVersion AgreedOptions)
+                          (OuroborosApplication
+                             InitiatorMode
+                             LocalAddress
+                             LBS.ByteString IO () Void)
+mkVersionedProtocols networkid ptcl
+                     LocalNodeClientProtocols {
+                       localChainSyncClient,
+                       localTxSubmissionClient,
+                       localStateQueryClient
+                     } =
+     --TODO: really we should construct specific combinations of
+     -- protocols for the versions we know about, with different protocol
+     -- versions taking different sets of typed client protocols.
+    foldMapVersions
+      (\(ptclVersion, ptclBlockVersion) ->
+          versionedNodeToClientProtocols
+            ptclVersion
+            NodeToClientVersionData {
+              networkMagic = toNetworkMagic networkid
+            }
+            (\_connid _ctl -> protocols ptclBlockVersion))
+      (Map.toList (supportedNodeToClientVersions proxy))
   where
     proxy :: Proxy block
     proxy = Proxy
 
+    protocols :: BlockNodeToClientVersion block
+              -> NodeToClientProtocols InitiatorMode LBS.ByteString IO () Void
+    protocols ptclBlockVersion =
+        NodeToClientProtocols {
+          localChainSyncProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cChainSyncCodec
+                (chainSyncClientPeer localChainSyncClient)
+
+        , localTxSubmissionProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cTxSubmissionCodec
+                (localTxSubmissionClientPeer localTxSubmissionClient)
+
+        , localStateQueryProtocol =
+            InitiatorProtocolOnly $
+              MuxPeer
+                nullTracer
+                cStateQueryCodec
+                (localStateQueryClientPeer localStateQueryClient)
+        }
+      where
+        Codecs {
+          cChainSyncCodec,
+          cTxSubmissionCodec,
+          cStateQueryCodec
+        } = clientCodecs codecConfig ptclBlockVersion
+
+    codecConfig :: CodecConfig block
+    codecConfig = pClientInfoCodecConfig (protocolClientInfo ptcl)
+
+
+-- | This type defines the boundary between the mode-parametrised style used in
+-- this API and the block-parametrised style used by the underlying network
+-- and consensus libraries.
+--
+-- This interface itself is in the block-parametrised style, with the block
+-- type itself being an hidden\/existential type.
+--
+-- It bundles together all the necessary class instances, the consensus
+-- protocol client identifier, and the set of client side mini-protocol
+-- handlers for the node-to-client protocol.
+--
+data LocalNodeClientParams where
+     LocalNodeClientParams
+       :: (SerialiseNodeToClientConstraints block,
+           SupportedNetworkProtocolVersion block,
+           ShowProxy block, ShowProxy (ApplyTxErr block),
+           ShowProxy (GenTx block), ShowProxy (Query block),
+           ShowQuery (Query block))
+       => ProtocolClient block (BlockProtocol block)
+       -> LocalNodeClientProtocolsForBlock block
+       -> LocalNodeClientParams
+
+-- | A closed type family that maps between the consensus mode (from this API)
+-- and the block type used by the consensus libraries.
+--
+type family ConsensusBlockForMode mode where
+  ConsensusBlockForMode ByronMode   = Consensus.ByronBlockHFC
+  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC StandardShelley
+  ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
+
+
+-- | Convert from the mode-parametrised style to the block-parametrised style.
+--
+mkLocalNodeClientParams :: forall mode block.
+                           ConsensusBlockForMode mode ~ block
+                        => NodeConsensusModeParams mode
+                        -> LocalNodeClientProtocolsInMode mode
+                        -> LocalNodeClientParams
+mkLocalNodeClientParams modeparams clients =
+    -- For each of the possible consensus modes we pick the concrete block type
+    -- (by picking the appropriate 'ProtocolClient' value).
+    --
+    -- Though it is not immediately visible, this point where we use
+    -- 'LocalNodeClientParams' is also where we pick up the necessary class
+    -- instances. This works because in each case we have a monomorphic block
+    -- type and the instances are all in scope. This is why the use of
+    -- LocalNodeClientParams is repeated within each branch of the case:
+    -- because it is only within each branch that the GADT match makes the
+    -- block type monomorphic.
+    --
+    case modeparams of
+      ByronModeParams epochSlots ->
+        LocalNodeClientParams
+          (ProtocolClientByron epochSlots)
+          (convLocalNodeClientProtocols ByronMode clients)
+
+      ShelleyModeParams ->
+        LocalNodeClientParams
+          ProtocolClientShelley
+          (convLocalNodeClientProtocols ShelleyMode clients)
+
+      CardanoModeParams epochSlots ->
+        LocalNodeClientParams
+          (ProtocolClientCardano epochSlots)
+          (convLocalNodeClientProtocols CardanoMode clients)
+
+
+convLocalNodeClientProtocols :: forall mode block.
+                                ConsensusBlockForMode mode ~ block
+                             => NodeConsensusMode mode
+                             -> LocalNodeClientProtocolsInMode mode
+                             -> LocalNodeClientProtocolsForBlock block
+convLocalNodeClientProtocols
+    mode
+    LocalNodeClientProtocols {
+      localChainSyncClient,
+      localTxSubmissionClient,
+      localStateQueryClient
+    } =
+    LocalNodeClientProtocols {
+      localChainSyncClient    = convLocalChainSyncClient
+                                  mode localChainSyncClient,
+
+      localTxSubmissionClient = convLocalTxSubmissionClient
+                                  mode localTxSubmissionClient,
+
+      localStateQueryClient   = convLocalStateQueryClient
+                                  mode localStateQueryClient
+    }
 
 
 convLocalTxSubmissionClient
   :: forall mode block m a.
      (ConsensusBlockForMode mode ~ block, Functor m)
-  => LocalTxSubmissionClient (TxInMode mode) (TxValidationErrorInMode mode) m a
+  => NodeConsensusMode mode
+  -> LocalTxSubmissionClient (TxInMode mode) (TxValidationErrorInMode mode) m a
   -> LocalTxSubmissionClient (GenTx block) (ApplyTxErr block) m a
-convLocalTxSubmissionClient =
+convLocalTxSubmissionClient ByronMode =
     mapLocalTxSubmissionClient convTx convErr
   where
-    convTx  :: TxInMode mode -> GenTx block
-    convTx (TxInMode (ByronTx tx) ByronEraInByronMode) = undefined
+    convTx :: TxInMode ByronMode -> GenTx (ConsensusBlockForMode ByronMode)
+    convTx (TxInMode (ByronTx tx) ByronEraInByronMode) =
+        HardForkGenTx (OneEraGenTx (Z tx'))
+      where
+        tx' = Consensus.ByronTx (Consensus.byronIdTx tx) tx
 
-    convErr :: ApplyTxErr block -> TxValidationErrorInMode mode
-    convErr = undefined
+    convErr :: ApplyTxErr block -> TxValidationErrorInMode ByronMode
+    convErr (DegenApplyTxErr err) =
+        TxValidationErrorInMode
+          (ByronTxValidationError err)
+          ByronEraInByronMode
+
+convLocalTxSubmissionClient ShelleyMode =
+    mapLocalTxSubmissionClient convTx convErr
+  where
+    convTx :: TxInMode ShelleyMode -> GenTx block
+    convTx (TxInMode (ShelleyTx tx) ShelleyEraInShelleyMode) =
+        HardForkGenTx (OneEraGenTx (Z tx'))
+      where
+        tx' = Consensus.mkShelleyTx tx
+
+    convErr :: ApplyTxErr block -> TxValidationErrorInMode ShelleyMode
+    convErr (DegenApplyTxErr err) =
+        TxValidationErrorInMode
+          (ShelleyTxValidationError err)
+          ShelleyEraInShelleyMode
+
+convLocalTxSubmissionClient CardanoMode =
+    mapLocalTxSubmissionClient convTx convErr
+  where
+    convTx :: TxInMode CardanoMode -> GenTx block
+    convTx (TxInMode (ByronTx tx) ByronEraInCardanoMode) =
+        HardForkGenTx (OneEraGenTx (Z tx'))
+      where
+        tx' = Consensus.ByronTx (Consensus.byronIdTx tx) tx
+        --TODO: add the above as mkByronTx to the consensus code,
+        -- matching mkShelleyTx below
+
+    convTx (TxInMode (ShelleyTx tx) ShelleyEraInCardanoMode) =
+        HardForkGenTx (OneEraGenTx (S (Z tx')))
+      where
+        tx' = Consensus.mkShelleyTx tx
+
+    convErr :: ApplyTxErr block -> TxValidationErrorInMode CardanoMode
+    convErr (Consensus.ApplyTxErrByron err) =
+        TxValidationErrorInMode
+          (ByronTxValidationError err)
+          ByronEraInCardanoMode
+    convErr (Consensus.ApplyTxErrShelley err) =
+        TxValidationErrorInMode
+          (ShelleyTxValidationError err)
+          ShelleyEraInCardanoMode
+
 
 convLocalChainSyncClient
   :: forall mode block m a.
      (ConsensusBlockForMode mode ~ block, Functor m)
-  => ChainSyncClient (BlockInMode mode) ChainTip m a
+  => NodeConsensusMode mode
+  -> ChainSyncClient (BlockInMode mode) ChainTip m a
   -> ChainSyncClient block (Tip block) m a
-convLocalChainSyncClient =
+convLocalChainSyncClient mode =
     mapChainSyncClient convPoint convPoint' convBlock convTip
   where
-    convPoint  :: Point (BlockInMode mode) -> Point block
+    convPoint :: Point (BlockInMode mode) -> Point block
     convPoint = undefined
 
     convPoint' :: Point block -> Point (BlockInMode mode)
@@ -2780,12 +2948,14 @@ convLocalChainSyncClient =
     convTip :: Tip block -> ChainTip
     convTip = undefined
 
+
 convLocalStateQueryClient
-  :: forall mode block (query :: Type -> Type) m a.
+  :: forall mode block m a.
      (ConsensusBlockForMode mode ~ block, Functor m)
-  => LocalStateQueryClient (BlockInMode mode) (StateQueryInMode mode) m a
+  => NodeConsensusMode mode
+  -> LocalStateQueryClient (BlockInMode mode) (StateQueryInMode mode) m a
   -> LocalStateQueryClient block (Query block) m a
-convLocalStateQueryClient =
+convLocalStateQueryClient mode =
     mapLocalStateQueryClient convPoint convQuery convResult
   where
     convPoint :: Point (BlockInMode mode) -> Point block
@@ -2804,106 +2974,6 @@ convLocalStateQueryClient =
     convResult = undefined
 
 
-protocols :: forall mode block query a.
-             (ConsensusBlockForMode mode ~ block,
-              ShowProxy block, ShowProxy (ApplyTxErr block),
-              ShowProxy (GenTx block), ShowProxy (Query block),
-              (forall result. Show (Query block result)) {- This is hairy -})
-          => ClientCodecs block IO
-          -> LocalNodeClientProtocols mode
-          -> NodeToClientProtocols InitiatorMode LBS.ByteString IO () Void
-protocols Codecs {
-            cChainSyncCodec,
-            cTxSubmissionCodec,
-            cStateQueryCodec
-          }
-          LocalNodeClientProtocols {
-            localChainSyncClient,
-            localTxSubmissionClient,
-            localStateQueryClient
-          } =
-
-    NodeToClientProtocols {
-      localChainSyncProtocol =
-        InitiatorProtocolOnly $
-          MuxPeer
-            nullTracer
-            cChainSyncCodec
-            (chainSyncClientPeer
-              (convLocalChainSyncClient localChainSyncClient))
-
-    , localTxSubmissionProtocol =
-        InitiatorProtocolOnly $
-          MuxPeer
-            nullTracer
-            cTxSubmissionCodec
-            (localTxSubmissionClientPeer
-              (convLocalTxSubmissionClient localTxSubmissionClient))
-
-    , localStateQueryProtocol =
-        InitiatorProtocolOnly $
-          MuxPeer
-            nullTracer
-            cStateQueryCodec
-            (localStateQueryClientPeer
-              (convLocalStateQueryClient localStateQueryClient))
-    }
-
-{-
-   in NodeToClientProtocols {
-        localChainSyncProtocol =
-          InitiatorProtocolOnly $
-            MuxPeer
-              nullTracer
-              cChainSyncCodec
-              (maybe chainSyncPeerNull
-                     chainSyncClientPeer
-                     localChainSyncClient)
-
-      , localTxSubmissionProtocol =
-          InitiatorProtocolOnly $
-            MuxPeer
-              nullTracer
-              cTxSubmissionCodec
-              (maybe localTxSubmissionPeerNull
-                     localTxSubmissionClientPeer
-                     localTxSubmissionClient)
-
-      , localStateQueryProtocol =
-          InitiatorProtocolOnly $
-            MuxPeer
-              nullTracer
-              cStateQueryCodec
-              (maybe localStateQueryPeerNull
-                     localStateQueryClientPeer
-                     localStateQueryClient)
-      }
--}
-
-type family ConsensusBlockForMode mode where
-  ConsensusBlockForMode ByronMode   = Consensus.ByronBlockHFC
-  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC StandardShelley
-  ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
-
-{-
-withNodeProtocolClient
-  :: NodeConsensusModeParams mode
-  -> (   (SerialiseNodeToClientConstraints (ConsensusBlockForMode mode),
-          SupportedNetworkProtocolVersion (ConsensusBlockForMode mode))
-      => ProtocolClient (ConsensusBlockForMode mode)
-                        (BlockProtocol (ConsensusBlockForMode mode)) -> a)
-  -> a
-withNodeProtocolClient (ByronModeParams epochSlots) f =
-    f (mkNodeClientProtocolByron epochSlots)
-
-withNodeProtocolClient ShelleyModeParams f =
-    f (mkNodeClientProtocolShelley)
-
-withNodeProtocolClient (CardanoModeParams epochSlots) f =
-    f (mkNodeClientProtocolCardano epochSlots)
--}
-
-{-
 --TODO: change this query to be just a protocol client handler to be used with
 -- connectToLocalNode. This would involve changing connectToLocalNode to be
 -- able to return protocol handler results properly.
@@ -2911,27 +2981,25 @@ withNodeProtocolClient (CardanoModeParams epochSlots) f =
 -- | Establish a connection to a node and execute a single query using the
 -- local state query protocol.
 --
-queryNodeLocalState :: forall mode block result.
-                       (ShowProxy block, ShowProxy (ApplyTxErr block),
-                        ShowProxy (Query block), ShowProxy (GenTx block),
-                        ShowQuery (Query block))
-                    => LocalNodeConnectInfo mode block
-                    -> (Point block, Query block result)
+queryNodeLocalState :: forall mode result.
+                       FilePath
+                    -> NetworkId
+                    -> NodeConsensusModeParams mode
+                    -> (Point (BlockInMode mode), StateQueryInMode mode result)
                     -> IO (Either AcquireFailure result)
-queryNodeLocalState connctInfo pointAndQuery = do
+queryNodeLocalState socketPath networkid modeparams pointAndQuery = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
-      connctInfo
+      socketPath networkid modeparams
       nullLocalNodeClientProtocols {
-        localStateQueryClient =
-          Just (localStateQuerySingle resultVar pointAndQuery)
+        localStateQueryClient = localStateQuerySingle resultVar pointAndQuery
       }
     atomically (takeTMVar resultVar)
   where
     localStateQuerySingle
       :: TMVar (Either AcquireFailure result)
-      -> (Point block, Query block result)
-      -> LocalStateQueryClient block (Query block) IO ()
+      -> (Point (BlockInMode mode), StateQueryInMode mode result)
+      -> LocalStateQueryClient (BlockInMode mode) (StateQueryInMode mode) IO ()
     localStateQuerySingle resultVar (point, query) =
       LocalStateQueryClient $ pure $
         SendMsgAcquire point $
@@ -2953,32 +3021,32 @@ queryNodeLocalState connctInfo pointAndQuery = do
             pure $ StateQuery.SendMsgDone ()
         }
 
-submitTxToNodeLocal :: forall mode block.
-                       (ShowProxy block, ShowProxy (ApplyTxErr block),
-                        ShowProxy (Query block), ShowProxy (GenTx block),
-                        ShowQuery (Query block))
-                    => LocalNodeConnectInfo mode block
-                    -> GenTx block
-                    -> IO (SubmitResult (ApplyTxErr block))
-submitTxToNodeLocal connctInfo tx = do
+submitTxToNodeLocal :: forall mode.
+                       FilePath
+                    -> NetworkId
+                    -> NodeConsensusModeParams mode
+                    -> TxInMode mode
+                    -> IO (SubmitResult (TxValidationErrorInMode mode))
+submitTxToNodeLocal socketPath networkid modeparams tx = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
-      connctInfo
+      socketPath networkid modeparams
       nullLocalNodeClientProtocols {
-        localTxSubmissionClient =
-          Just (localTxSubmissionClientSingle resultVar)
+        localTxSubmissionClient = localTxSubmissionClientSingle resultVar
       }
     atomically (takeTMVar resultVar)
   where
     localTxSubmissionClientSingle
-      :: TMVar (SubmitResult (ApplyTxErr block))
-      -> LocalTxSubmissionClient (GenTx block) (ApplyTxErr block) IO ()
+      :: TMVar (SubmitResult (TxValidationErrorInMode mode))
+      -> LocalTxSubmissionClient (TxInMode mode)
+                                 (TxValidationErrorInMode mode)
+                                 IO ()
     localTxSubmissionClientSingle resultVar =
-        LocalTxSubmissionClient $
+      LocalTxSubmissionClient $
         pure $ SendMsgSubmitTx tx $ \result -> do
         atomically $ putTMVar resultVar result
         pure (TxSubmission.SendMsgDone ())
--}
+
 
 -- ----------------------------------------------------------------------------
 -- CBOR serialisation
