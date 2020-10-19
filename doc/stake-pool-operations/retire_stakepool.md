@@ -104,8 +104,7 @@ rawトランザクションを構築します
     --out-file tx.raw \
     --certificate-file pool.deregistration
 
-**支払い署名鍵とコールド署名鍵の両方で署名します（支払い署名鍵は`paymant.addr`
-の資金を使用するため、コールド署名鍵は証明書にプールオーナーの署名が必要なため）**
+**支払い署名鍵とコールド署名鍵の両方で署名します（支払い署名鍵は`paymant.addr`の資金を使用するため、コールド署名鍵は証明書にプールオーナーの署名が必要なため）**
 
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
