@@ -81,7 +81,6 @@ nodeRunParser = do
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty
-           , pncViewMode = mempty
            , pncLoggingSwitch = mempty
            , pncLogMetrics = mempty
            , pncTraceConfig = mempty

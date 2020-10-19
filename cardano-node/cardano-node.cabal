@@ -45,7 +45,6 @@ library
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Parsers
                        Cardano.Node.Run
-                       Cardano.Node.Run.Trace
                        Cardano.Node.Types
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
@@ -137,11 +136,6 @@ library
     build-depends:    Win32
   else
     build-depends:     unix
-                     , brick
-                     , vty
-    exposed-modules:   Cardano.Node.TUI.Drawing
-                     , Cardano.Node.TUI.EventHandler
-                     , Cardano.Node.TUI.Run
 
 executable cardano-node
   hs-source-dirs:      app

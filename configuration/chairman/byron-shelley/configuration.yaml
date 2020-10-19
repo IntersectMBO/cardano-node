@@ -51,13 +51,6 @@ ApplicationVersion: 1
 
 ##### Logging configuration #####
 
-# The node can run in either the SimpleView or LiveView. The SimpleView just
-# uses standard output, optionally with log output. The LiveView is a text
-# console on Linux and Mac OSX with a live view of various node metrics.
-# When LiveView is used logging output to 'stdout' is automatically disabled.
-ViewMode: SimpleView
-#ViewMode: LiveView
-
 # Enable or disable logging overall
 TurnOnLogging: True
 
@@ -160,7 +153,6 @@ rotation:
 TraceBlockFetchClient: False
 
 # Trace BlockFetch decisions made by the BlockFetch client.
-# needed to display "peers" and their block height in LiveView
 TraceBlockFetchDecisions: False
 
 # Trace BlockFetch protocol messages.
@@ -262,18 +254,12 @@ options:
     cardano.node.BlockFetchDecision.peers:
       - TraceForwarderBK
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.ChainDB.metrics:
       - TraceForwarderBK
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.metrics:
       - TraceForwarderBK
       - EKGViewBK  
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.Forge.metrics:
       - EKGViewBK
     cardano.node.release:

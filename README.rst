@@ -107,8 +107,6 @@ Some of the more important settings are as follows:
 
 * ``RequiresNetworkMagic``: RequiresNoMagic -- Used to distinguish between mainnet (``RequiresNoMagic``) and testnets (``RequiresMagic``)
 
-* ``ViewMode: SimpleView`` -- Choose between ``SimpleView`` or ``LiveView``
-
 
 Logging
 ========

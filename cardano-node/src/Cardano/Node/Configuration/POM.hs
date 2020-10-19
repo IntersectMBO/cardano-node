@@ -65,7 +65,6 @@ data NodeConfiguration
        , ncMaxConcurrencyDeadline :: !(Maybe MaxConcurrencyDeadline)
 
          -- Logging parameters:
-       , ncViewMode       :: !ViewMode
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
@@ -100,7 +99,6 @@ data PartialNodeConfiguration
        , pncMaxConcurrencyDeadline :: !(Last MaxConcurrencyDeadline)
 
          -- Logging parameters:
-       , pncViewMode       :: !(Last ViewMode)
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
        , pncTraceConfig    :: !(Last TraceOptions)
@@ -129,7 +127,6 @@ instance FromJSON PartialNodeConfiguration where
       pncMaxConcurrencyDeadline' <- Last <$> v .:? "MaxConcurrencyDeadline"
 
       -- Logging parameters
-      pncViewMode'      <- Last <$> v .:? "ViewMode"
       pncLoggingSwitch' <- v .:? "TurnOnLogging" .!= True
       pncLogMetrics'    <- Last <$> v .:? "TurnOnLogMetrics"
       pncTraceConfig'   <- if pncLoggingSwitch'
@@ -156,7 +153,6 @@ instance FromJSON PartialNodeConfiguration where
            , pncDiffusionMode = pncDiffusionMode'
            , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
            , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
-           , pncViewMode = pncViewMode'
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
            , pncLogMetrics = pncLogMetrics'
            , pncTraceConfig = pncTraceConfig'
@@ -268,7 +264,6 @@ defaultPartialNodeConfiguration =
     , pncSocketPath = mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
-    , pncViewMode = Last $ Just SimpleView
     , pncNodeIPv4Addr = mempty
     , pncNodeIPv6Addr = mempty
     , pncNodePortNumber = mempty
@@ -299,7 +294,6 @@ makeNodeConfiguration pnc = do
   shutdownIPC <- lastToEither "Missing ShutdownIPC" $ pncShutdownIPC pnc
   shutdownOnSlotSynced <- lastToEither "Missing ShutdownOnSlotSynced" $ pncShutdownOnSlotSynced pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
-  viewMode <- lastToEither "Missing ViewMode" $ pncViewMode pnc
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
@@ -320,7 +314,6 @@ makeNodeConfiguration pnc = do
              , ncDiffusionMode = diffusionMode
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
-             , ncViewMode = viewMode
              , ncLoggingSwitch = loggingSwitch
              , ncLogMetrics = logMetrics
              , ncTraceConfig = traceConfig

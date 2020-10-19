@@ -42,7 +42,6 @@ module Cardano.Node.Types
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
-  , ViewMode(..)
   , VRFPrivateKeyFilePermissionError(..)
   , protocolName
   , renderVRFPrivateKeyFilePermissionError
@@ -95,21 +94,6 @@ instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> Text.pack (show invalid)
-
--- Node can be run in two modes.
-data ViewMode = LiveView    -- Live mode with TUI
-              | SimpleView  -- Simple mode, just output text.
-              deriving (Eq, Show)
-
-instance FromJSON ViewMode where
-  parseJSON (String str) = case str of
-                            "LiveView" -> pure LiveView
-                            "SimpleView" -> pure SimpleView
-                            view -> panic $ "Parsing of ViewMode: "
-                                          <> view <> " failed. "
-                                          <> view <> " is not a valid view mode"
-  parseJSON invalid = panic $ "Parsing of ViewMode failed due to type mismatch. "
-                            <> "Encountered: " <> Text.pack (show invalid)
 
 newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
   { unMaxConcurrencyBulkSync :: Word }
