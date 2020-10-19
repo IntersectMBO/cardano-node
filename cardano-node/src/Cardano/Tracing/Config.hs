@@ -6,8 +6,7 @@ module Cardano.Tracing.Config
   , traceConfigParser
   ) where
 
-import           Cardano.Prelude hiding (show)
-import           Prelude (Show (..))
+import           Cardano.Prelude
 
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)

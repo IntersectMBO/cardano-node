@@ -6,7 +6,6 @@ module Cardano.CLI.Shelley.Run
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.CLI.Shelley.Parsers

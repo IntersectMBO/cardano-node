@@ -21,7 +21,6 @@ import           Prelude (String)
 
 import           Control.Monad (fail)
 import           Data.Aeson
-import           Data.Semigroup (Semigroup (..))
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()

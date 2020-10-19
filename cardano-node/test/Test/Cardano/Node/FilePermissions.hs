@@ -7,7 +7,6 @@ module Test.Cardano.Node.FilePermissions
 
 import           Cardano.Prelude
 
-import           Control.Exception (bracket)
 import           System.Directory (removeFile)
 import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)

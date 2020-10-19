@@ -25,12 +25,7 @@ import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
 #endif
 import           Control.Tracer
-import           Data.Either (partitionEithers)
-import           Data.Functor.Contravariant (contramap)
-import           Data.Maybe (catMaybes)
-import           Data.Proxy (Proxy (..))
-import           Data.Semigroup ((<>))
-import           Data.Text (Text, breakOn, pack, take)
+import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import           Data.Version (showVersion)
 import           GHC.Clock (getMonotonicTimeNSec)
@@ -68,16 +63,14 @@ import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..
 import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
-                     NodeKernel, RunNode (..), RunNodeArgs (..))
+                     RunNode, RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode,
-                     RemoteConnectionId)
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
