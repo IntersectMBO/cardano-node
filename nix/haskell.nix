@@ -26,7 +26,7 @@ let
   projectPackages = lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
     (haskell-nix.cabalProject {
       inherit src;
-      compiler-nix-name = "ghc865";
+      compiler-nix-name = "ghc8102";
     }));
 
   # This creates the Haskell package set.
