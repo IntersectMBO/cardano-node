@@ -16,10 +16,8 @@ import           Cardano.Prelude
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8)
 
 import qualified Control.Exception as Exception
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left, newExceptT)
 
 import qualified Codec.Binary.Bech32 as Bech32

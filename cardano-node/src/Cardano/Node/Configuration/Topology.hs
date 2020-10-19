@@ -17,14 +17,11 @@ where
 import           Cardano.Prelude
 import           Prelude (String)
 
-import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
-import           Network.Socket (PortNumber)
-import           Text.Read (readMaybe)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types

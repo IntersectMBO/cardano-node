@@ -22,7 +22,6 @@ module Cardano.Node.Protocol.Byron
 import           Cardano.Prelude
 
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text

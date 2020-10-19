@@ -51,7 +51,6 @@ module Hedgehog.Extras.Test.Base
 import           Control.Concurrent.STM as STM
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Morph (hoist)
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Resource (ReleaseKey, runResourceT)

@@ -25,7 +25,6 @@ import           Ouroboros.Consensus.Cardano.Block (CardanoApplyTxErr,
                      GenTx (GenTxByron, GenTxShelley),
                      HardForkApplyTxErr (ApplyTxErrAllegra, ApplyTxErrByron, ApplyTxErrMary, ApplyTxErrShelley, ApplyTxErrWrongEra))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, mkShelleyTx)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 

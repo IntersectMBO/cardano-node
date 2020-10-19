@@ -22,9 +22,7 @@ import           Cardano.Prelude hiding (show)
 import           Prelude (show)
 
 import           Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
-import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import           GHC.Generics (Generic)
 import           NoThunks.Class (NoThunks, InspectHeap (..))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
