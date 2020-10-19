@@ -98,6 +98,7 @@ let
         nodeConf
         pkgsModule
       ];
+      check = false;
     }).config.services.cardano-node.script;
   in pkgs.writeScript "cardano-node-${envConfig.name}" ''
     #!${pkgs.runtimeShell}

@@ -34,7 +34,7 @@ let
       ghc-prof-flamegraph
       sqlite-interactive
       tmux
-      git
+      pkgs.git
     ];
 
     # Prevents cabal from choosing alternate plans, so that
