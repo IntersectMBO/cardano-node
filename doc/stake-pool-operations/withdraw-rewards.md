@@ -1,7 +1,7 @@
-## Withdrawing rewards
+## 報酬を引き落とす
 
 
-### Check the balance of the rewards address:
+### 報酬アドレスの残高を確認する
 
     cardano-cli shelley query stake-address-info \
     --mainnet \
@@ -16,9 +16,9 @@
     ]
 
 
-### Query the payment address balance
+### 支払いアドレスの残高を問い合わせる
 
-You'll withdraw rewards into a payment.addr wich will pay for the transaction fees.
+トランザクション手数料を支払うpayment.addrに報酬を引き落とします
 
     cardano-cli shelley query utxo --mainnet --address $(cat payment.addr)
 
@@ -28,7 +28,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
 
 
 
-### Draft the withdraw transaction to transfer the rewards to a payment.addr
+### 報酬をpayment.addrに移すための引き落としトランザクションのドラフトを作成する
 
     cardano-cli shelley transaction build raw \
     --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1
@@ -38,7 +38,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
     --fee 0
     --out-file withdraw_rewards.raw
 
-### Calculate transaction fees
+### トランザクション手数料を計算する
 
     cardano-cli shelley transaction calculate-min-fee \
     --mainnet \
@@ -51,7 +51,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
 
    > 171089
 
-### Build the raw transaction.
+### rawトランザクションを構築する
 
     expr 194054070 - 171089
     193882981
@@ -64,7 +64,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
     --fee 171089
     --out-file withdraw_rewards.raw    
 
-### Sign and submit the transactions
+### トランザクションに署名して送信する
 
     cardano-cli shelley transaction sign \
     --mainnet \
