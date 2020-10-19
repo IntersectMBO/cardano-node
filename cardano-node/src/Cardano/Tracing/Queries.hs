@@ -51,4 +51,3 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
     Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
     Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
-    _ -> error "ledgerUtxoSize:  unhandled CardanoBlock case"
