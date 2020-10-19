@@ -149,8 +149,13 @@ executable cardano-node
   default-language:    Haskell2010
   ghc-options:         -threaded
                        -Wall
-                       -rtsopts
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -Wpartial-fields
+                       -Wcompat
                        -Wno-unticked-promoted-constructors
+                       -rtsopts
   if arch(arm)
     ghc-options:         "-with-rtsopts=-T -I0 -N1 -A16m"
   else
@@ -178,6 +183,11 @@ executable chairman
   default-language:    Haskell2010
   ghc-options:         -threaded
                        -Wall
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -Wpartial-fields
+                       -Wcompat
                        -rtsopts
                        "-with-rtsopts=-T"
                        -Wno-unticked-promoted-constructors
