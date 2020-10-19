@@ -232,7 +232,6 @@ instance Era era => ToObject (ChainPredicateFailure era) where
                       \protocol version."
   toObject verb (BbodyFailure f) = toObject verb f
   toObject verb (TickFailure  f) = toObject verb f
-  toObject verb (TicknFailure f) = toObject verb f
   toObject verb (PrtclFailure f) = toObject verb f
   toObject verb (PrtclSeqFailure f) = toObject verb f
 
