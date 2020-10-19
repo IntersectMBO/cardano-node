@@ -132,6 +132,12 @@ library
                        -Wpartial-fields
                        -Wcompat
 
+  -- Pattern match checking has improved since 8.6.5. GHC now considers more
+  -- pattern matches as redundant than before, so disable this warning for older
+  -- versions of GHC that still consider them incomplete.
+  if impl(ghc < 8.10)
+    ghc-options:       -Wno-incomplete-patterns
+
   if os(windows)
     build-depends:    Win32
   else
