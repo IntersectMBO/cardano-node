@@ -239,6 +239,14 @@ module Cardano.Api.Typed (
     throwErrorAsException,
     FileError(..),
 
+    -- * The Block chain
+    -- | The types needed to interact with the block chain itself, including
+    -- via the chain sync protocol.
+    Block(..),
+    BlockNo(..),
+    ChainTip(..),
+    Header,
+
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
 
@@ -255,7 +263,6 @@ module Cardano.Api.Typed (
     LocalNodeClientProtocols(..),
     nullLocalNodeClientProtocols,
     LocalNodeClientProtocolsInMode,
-    Block(..),
     BlockInMode(..),
     TxInMode(..),
     TxValidationError,
@@ -529,6 +536,12 @@ data Byron
 
 -- | A type used as a tag to distinguish the Shelley era.
 data Shelley
+
+-- | A type used as a tag to distinguish the Allegra era.
+data Allegra
+
+-- | A type used as a tag to distinguish the Mary era.
+data Mary
 
 
 class HasTypeProxy t where
@@ -935,12 +948,30 @@ newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
 
-data TxOut era = TxOut (Address era) Lovelace
+data TxOut era = TxOut (Address era) (Value era) -- Lovelace
 
 deriving instance Eq (TxOut Byron)
 deriving instance Eq (TxOut Shelley)
 deriving instance Show (TxOut Byron)
 deriving instance Show (TxOut Shelley)
+
+data Value era where
+
+  ValueByron   :: Byron.Coin   -> Value Byron
+  ValueShelley :: Shelley.Coin -> Value Shelley
+  ValueAllegra :: Shelley.Coin -> Value Allegra
+  ValueMary    :: Mary.Value   -> Value Shelley
+
+
+pattern LovelaceValue   :: Lovelace -> Value era
+
+pattern MultiAssetValue :: ... -> MultiAssetsInEra era -> Value era
+
+
+data MultiAssetsInEra era where
+     MultiAssetsInMaryEra :: MultiAssetsInEra Mary
+
+
 
 newtype Lovelace = Lovelace Integer
   deriving (Eq, Ord, Enum, Show)
@@ -987,6 +1018,8 @@ data TxBody era where
        :: Shelley.TxBody StandardShelley
        -> Maybe Shelley.MetaData
        -> TxBody Shelley
+
+
 
 deriving instance Eq (TxBody Byron)
 deriving instance Show (TxBody Byron)
@@ -1645,18 +1678,59 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
 -- Scripts
 --
 
-newtype Script = Script (Shelley.Script StandardShelley)
+newtype Script era {- ?!?! -} = Script (Shelley.Script StandardShelley)
   deriving stock (Eq, Ord, Show)
   deriving newtype (ToCBOR)
 
 newtype instance Hash Script = ScriptHash (Shelley.ScriptHash StandardShelley)
   deriving (Eq, Ord, Show)
 
-data MultiSigScript = RequireSignature (Hash PaymentKey)
-                    | RequireAllOf [MultiSigScript]
-                    | RequireAnyOf [MultiSigScript]
-                    | RequireMOf Int [MultiSigScript]
+data MultiSigScript era where 
+  RequireSignature  :: Hash PaymentKey
+                    -> ScripFeatureInEra SignatureFeature era
+                    -> MultiSigScript era
+
+  RequireTimeBefore :: SlotNo
+                    -> ScripFeatureInEra TimeLocksFeature era
+                    -> MultiSigScript era
+
+  RequireTimeAfter  :: SlotNo
+                    -> ScripFeatureInEra TimeLocksFeature era
+                    -> MultiSigScript era
+
+  RequireAllOf      ::        [MultiSigScript era] -> MultiSigScript era
+  RequireAnyOf      ::        [MultiSigScript era] -> MultiSigScript era
+  RequireMOf        :: Int -> [MultiSigScript era] -> MultiSigScript era
   deriving (Eq, Show)
+
+data SignatureFeature
+data TimeLocksFeature
+
+data ScriptFeatureInEra sfeat era where
+     SignaturesInShelleyEra  :: ScriptFeatureInEra SignatureFeature Shelley
+     SignaturesInAllegraEra  :: ScriptFeatureInEra SignatureFeature Allegra
+     SignaturesInMaryEra     :: ScriptFeatureInEra SignatureFeature Mary
+
+     TimeLocksInAllegraEra   :: ScriptFeatureInEra TimeLocksFeature Allegra
+     TimeLocksInMaryEra      :: ScriptFeatureInEra TimeLocksFeature Mary
+
+{-
+class TimeLocksInEra era where
+  timelocksSupportedInEra :: ScriptFeatureInEra TimeLocksFeature era
+
+instance TimeLocksInEra Allegra where
+  timelocksSupportedInEra = TimeLocksInAllegraEra
+
+exampleScript :: TimeLocksInEra era => MultiSigScript era
+exampleScript = RequireTimeBefore 3 timelocksSupportedInEra
+-}
+
+{-
+data TimeLocksInEra era where
+
+     TimeLocksInAllegraEra   :: TimeLocksInEra Allegra
+     TimeLocksInMaryEra      :: TimeLocksInEra Mary
+-}
 
 instance ToJSON MultiSigScript where
   toJSON (RequireSignature pKeyHash) =
@@ -1767,12 +1841,14 @@ instance HasTextEnvelope Script where
 scriptHash :: Script -> Hash Script
 scriptHash (Script s) = ScriptHash (Shelley.hashAnyScript s)
 
-makeMultiSigScript :: MultiSigScript -> Script
+makeMultiSigScript :: MultiSigScript era -> Script era
 makeMultiSigScript = Script . Shelley.MultiSigScript . go
   where
-    go :: MultiSigScript -> Shelley.MultiSig StandardShelley
-    go (RequireSignature (PaymentKeyHash kh))
+    go :: MultiSigScript era -> Shelley.MultiSig StandardShelley
+    go (RequireSignature (PaymentKeyHash kh) _)
                         = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
+    go (RequireTimeBefore _ _) = error "time locks not yet supported"
+    go (RequireTimeAfter  _ _) = error "time locks not yet supported"
     go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
     go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
     go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
@@ -2597,8 +2673,11 @@ data NodeConsensusModeParams mode where
 data EraInMode era mode where
      ByronEraInByronMode     :: EraInMode Byron   ByronMode
      ShelleyEraInShelleyMode :: EraInMode Shelley ShelleyMode
+
      ByronEraInCardanoMode   :: EraInMode Byron   CardanoMode
      ShelleyEraInCardanoMode :: EraInMode Shelley CardanoMode
+     AllegraEraInCardanoMode :: EraInMode Allegra CardanoMode
+     MaryEraInCardanoMode    :: EraInMode Mary    CardanoMode
 
 
 data Block era where
@@ -2632,7 +2711,8 @@ data TxValidationErrorInMode mode where
                              -> EraInMode era mode
                              -> TxValidationErrorInMode mode
 
-data ChainTip
+data ChainTip = ChainTipAtGenesis
+              | ChainTip !SlotNo !(Hash BlockHeader) !BlockNo
 
 data StateQueryInMode mode :: * -> *
 
@@ -2652,6 +2732,7 @@ nullLocalNodeClientProtocols =
       localStateQueryClient   = localStateQueryClientNull
     }
 
+-- public, exported
 type LocalNodeClientProtocolsInMode mode =
        LocalNodeClientProtocols
          (BlockInMode mode)
@@ -2661,6 +2742,7 @@ type LocalNodeClientProtocolsInMode mode =
          (StateQueryInMode mode)
          IO
 
+-- internal, consensus
 type LocalNodeClientProtocolsForBlock block =
        LocalNodeClientProtocols
          block
@@ -2839,7 +2921,6 @@ mkLocalNodeClientParams modeparams clients =
           (ProtocolClientCardano epochSlots)
           (convLocalNodeClientProtocols CardanoMode clients)
 
-
 convLocalNodeClientProtocols :: forall mode block.
                                 ConsensusBlockForMode mode ~ block
                              => NodeConsensusMode mode
@@ -2873,7 +2954,7 @@ convLocalTxSubmissionClient
 convLocalTxSubmissionClient ByronMode =
     mapLocalTxSubmissionClient convTx convErr
   where
-    convTx :: TxInMode ByronMode -> GenTx (ConsensusBlockForMode ByronMode)
+    convTx :: TxInMode ByronMode -> GenTx block
     convTx (TxInMode (ByronTx tx) ByronEraInByronMode) =
         HardForkGenTx (OneEraGenTx (Z tx'))
       where
@@ -2933,6 +3014,23 @@ convLocalChainSyncClient
   => NodeConsensusMode mode
   -> ChainSyncClient (BlockInMode mode) ChainTip m a
   -> ChainSyncClient block (Tip block) m a
+
+convLocalChainSyncClient ByronMode =
+    mapChainSyncClient convPoint convPoint' convBlock convTip
+  where
+    convPoint :: Point (BlockInMode mode) -> Point block
+    convPoint = undefined
+
+    convPoint' :: Point block -> Point (BlockInMode mode)
+    convPoint' = undefined
+
+    convBlock :: block -> BlockInMode mode
+    convBlock = undefined
+
+    convTip :: Tip block -> ChainTip
+    convTip = undefined
+
+
 convLocalChainSyncClient mode =
     mapChainSyncClient convPoint convPoint' convBlock convTip
   where
