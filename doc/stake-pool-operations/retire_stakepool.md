@@ -1,32 +1,32 @@
-# Retiring a Stake Pool
+# ステークプールを終了する
 
-To retire a pool we need to:
+ステークプールを終了するには以下が必要です
 
-* Create a **deregistration certificate** and
-* Submit the certificate to the blockchain with a **transaction**
+* **登録抹消証明書** を作成する
+* ブロックチェーンに証明書を **トランザクション** で送信する
 
-The deregistration certificate contains the _epoch_ in which we want to retire the pool. This epoch must be _after_ the current epoch and _not later than_ `eMax` epochs in the future, where `eMax` is a protocol parameter.
+登録抹消証明書にはプールを終了するエポックが含まれます。このエポックは現行のエポックの後であり、`eMax`エポックよりも前である必要があります。`eMax`はプロトコルパラメーターです。
 
-So we first need to figure out the current epoch. The number of _slots per epoch_ is recorded in the genesis file, and we can get it with
+まず、現行のエポックを確認します。ジェネシスファイルに記録されているエポックごとのスロット数を確認します
 
     cat mainnet-shelley-genesis.json | grep epoch
     > "epochLength": 21600,
 
-So one epoch lasts for 21600 slots. We get the current slot by querying the tip:
+エポックのスロット数は21600です。チップを問い合わせることで現行のスロットを割り出します
 
     export CARDANO_NODE_SOCKET_PATH=relay-db/node-socket
     cardano-cli shelley query tip --mainnet
 
     > Tip (SlotNo {unSlotNo = 856232}) ...
 
-This gives us
+これで以下が得られます
 
     expr 856232 / 21600
     > 39
 
-So we are currently in epoch 39.
+現在エポック39であることがわかりました。
 
-We can look up `eMax` by querying the current protocol parameters:
+現在のプロトコルパラメーターを問い合わせることにより`eMax`をルックアップできます
 
     cardano-cli shelley query protocol-parameters \
     --mainnet \
@@ -35,22 +35,22 @@ We can look up `eMax` by querying the current protocol parameters:
     cat protocol.json | grep eMax
     > "eMax": 100,
 
-This means the earliest epoch for retirement is 40 (one in the future), and the latest is 139 (current epoch plus `eMax`).  
+ここから、終了可能なエポックは最速で40（次）から遅くとも139まで（現行のエポック+`eMax`）となります。 
 
-So for example, we can decide to retire in epoch 41.
+したがって、例えば、エポック41で終了すると決定することができます。
 
-#### Create deregistration certificate
+#### 登録抹消証明書を作成する
 
-**WARNING** This involves the __cold keys__. Take the necessary precautions to not to expose your cold keys to the internet.
+**警告：** これには __コールドキー__ が必要です。コールドキーをインターネットに晒さないように十分に注意してください。
 
-Create the deregistration certificate and save it as `pool.deregistration`:
+登録抹消証明書を作成して、`pool.deregistration`として保存します
 
     cardano-cli shelley stake-pool deregistration-certificate \
     --cold-verification-key-file cold.vkey \
     --epoch 41 \
     --out-file pool.deregistration
 
-#### Draft the transaction
+#### トランザクションのドラフトを作成する
 
     cardano-cli shelley transaction build-raw \
     --tx-in <UTXO>#<TxIx> \
@@ -60,7 +60,7 @@ Create the deregistration certificate and save it as `pool.deregistration`:
     --out-file tx.draft \
     --certificate-file pool.deregistration
 
-#### Calculate the fees:
+#### 手数料を計算する
 
     cardano-cli shelley transaction calculate-min-fee \
     --tx-body-file tx.draft \
@@ -71,11 +71,11 @@ Create the deregistration certificate and save it as `pool.deregistration`:
     --mainnet \
     --protocol-params-file protocol.json
 
-For example:
+例
 
     > 171309
 
-We query our address for a suitable UTxO to use as input:
+インプット用に適切なUTXOのアドレスを問い合わせます
 
     cardano-cli shelley query utxo \
     --address $(cat payment.addr) \
@@ -87,14 +87,14 @@ We query our address for a suitable UTxO to use as input:
     ------------------------------------------------
     9db6cf...                    0      999999267766
 
-We calculate our change:
+つり銭を計算します
 
     expr 999999267766 - 171309
     > 999999096457
 
-#### Build, sign and submit the transaction:
+#### トランザクションを構築し、署名して送信する
 
-Build the raw transaction:
+rawトランザクションを構築します
 
     cardano-cli shelley transaction build-raw \
     --tx-in 9db6cf...#0 \
@@ -104,9 +104,8 @@ Build the raw transaction:
     --out-file tx.raw \
     --certificate-file pool.deregistration
 
-**Sign it with both the payment signing key and the cold signing key
-(the first signature is necessary because we are spending funds from `paymant.addr`,
-the second because the certificate needs to be signed by the pool owner):**
+**支払い署名鍵とコールド署名鍵の両方で署名します（支払い署名鍵は`paymant.addr`,
+の資金を使用するため、コールド署名鍵は証明書にプールオーナーの署名が必要なため）**
 
     cardano-cli shelley transaction sign \
     --tx-body-file tx.raw \
@@ -115,12 +114,12 @@ the second because the certificate needs to be signed by the pool owner):**
     --mainnet \
     --out-file tx.signed
 
-And submit to the blockchain:
+ブロックチェーンに送信します
 
     cardano-cli shelley transaction submit \
     --tx-file tx.signed \
     --mainnet
 
-The pool will retire at the end of epoch 40.
+プールはエポック40の終わりに終了します。
 
-If we change our mind, we can create and submit a new registration certificate before epoch 41, which will then overrule the deregistration certificate.
+変更する場合は、エポック41の前に新しい登録証明書を送信すると、登録抹消証明書に優先されます。
