@@ -401,7 +401,7 @@ testnet H.Conf {..} = do
 
 hprop_testnet :: H.Property
 hprop_testnet = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  conf@H.Conf {..} <- H.mkConf tempAbsPath' Nothing
+  conf <- H.mkConf tempAbsPath' Nothing
 
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
