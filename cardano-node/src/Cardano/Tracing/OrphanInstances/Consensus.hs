@@ -46,7 +46,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.Node.Run (RunNode (..))
+import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
@@ -1067,7 +1067,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           MaximalVerbosity
           (blockHash blk)
-      , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
+      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
       , "txIds" .= toJSON (map (show . txId) txs)
       ]
   toObject verb (TraceAdoptedBlock slotNo blk _txs) =
@@ -1078,7 +1078,7 @@ instance ( tx ~ GenTx blk
           (Proxy @blk)
           verb
           (blockHash blk)
-      , "blockSize" .= toJSON (nodeBlockFetchSize (getHeader blk))
+      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
       ]
 
 
