@@ -174,7 +174,6 @@ source-repository-package
 constraints:
     hedgehog >= 1.0
   , bimap >= 0.4.0
-  , brick >= 0.47
   , libsystemd-journal >= 1.4.4
   , systemd >= 2.3.0
     -- systemd-2.3.0 requires at least network 3.1.1.0 but it doesn't declare
