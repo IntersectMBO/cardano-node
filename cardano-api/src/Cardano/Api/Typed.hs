@@ -347,7 +347,7 @@ import           Cardano.Prelude (decodeEitherBase16)
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
 import           Data.Kind (Constraint, Type)
-import           Data.List as List
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
 import           Data.Proxy (Proxy (..))
@@ -2953,7 +2953,7 @@ deserialiseAnyOfFromBech32 types bech32Str = do
       :: Text
       -> Maybe (FromSomeType SerialiseAsBech32 b)
     findForPrefix prefix =
-      find
+      List.find
         (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)
         types
 
@@ -2995,7 +2995,7 @@ instance Error Bech32DecodeError where
     Bech32UnexpectedPrefix actual permitted ->
         "Unexpected Bech32 prefix: the actual prefix is " <> show actual
      <> ", but it was expected to be "
-     <> intercalate " or " (map show (Set.toList permitted))
+     <> List.intercalate " or " (map show (Set.toList permitted))
 
     Bech32DataPartToBytesError _dataPart ->
         "There was an error in extracting the bytes from the data part of the \
