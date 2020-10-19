@@ -19,12 +19,9 @@ where
 import           Cardano.Prelude hiding (option, show, trace)
 import           Prelude (String, show)
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString)
-import           Data.Text.Encoding (encodeUtf8)
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time (UTCTime)
 import           Formatting.Buildable

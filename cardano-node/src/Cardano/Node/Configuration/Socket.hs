@@ -14,7 +14,6 @@ where
 import           Cardano.Prelude hiding (local)
 import           Prelude (String)
 import qualified Prelude
-import           Data.Functor (($>))
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           Network.Socket (Family (AF_INET, AF_INET6), AddrInfo (..),

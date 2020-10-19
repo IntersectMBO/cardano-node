@@ -18,7 +18,6 @@ import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Prelude hiding (option)
-import           Control.Applicative (some)
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Options.Applicative
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)

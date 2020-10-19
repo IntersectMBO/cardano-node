@@ -27,7 +27,6 @@ import           Control.Monad (fail)
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value, object, withObject, (.:), (.=))
 import           Data.Aeson.Encode.Pretty (Config (..), defConfig, keyOrder)
 import           Data.Aeson.Types (Parser)
-import           Data.ByteString.Char8 (ByteString)
 
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Text as Text

@@ -17,7 +17,6 @@ import           Cardano.Prelude hiding ((%))
 
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Formatting (build, sformat, (%))

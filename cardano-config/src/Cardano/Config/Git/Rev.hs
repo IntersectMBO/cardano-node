@@ -9,9 +9,7 @@ module Cardano.Config.Git.Rev (
 import           Cardano.Prelude
 
 import           Data.FileEmbed (dummySpaceWith)
-import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8)
 
 import           Cardano.Config.Git.RevFromGit (gitRevFromGit)
 

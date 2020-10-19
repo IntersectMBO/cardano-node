@@ -6,7 +6,6 @@ import           Cardano.Prelude hiding (option)
 import qualified Data.Text as Text
 import           Prelude (String)
 
-import           Data.Semigroup ((<>))
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help ((<$$>))

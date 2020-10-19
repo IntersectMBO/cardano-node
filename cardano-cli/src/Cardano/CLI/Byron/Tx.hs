@@ -26,8 +26,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString)
-import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import           Formatting (sformat, (%))
