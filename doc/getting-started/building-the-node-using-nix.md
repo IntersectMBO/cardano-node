@@ -34,7 +34,7 @@ nix-build -A scripts.mainnet.node -o mainnet-node-local
 ```
 
 ### Building under Debian/Ubuntu or CentOS
-The required versions are [GHC 8.6.5][ghc865] and [Cabal-3.0][cabal30].
+The required versions are [GHC 8.10.2][ghc8102] and [Cabal-3.0][cabal30].
 You best get them with the Haskell installer tool [ghcup][ghcup].
 
 ```
@@ -50,8 +50,8 @@ to use the ghcup command for the next steps
 
 Now install and activate the required GHC version
 ```
-ghcup install ghc 8.6.5
-ghcup set ghc 8.6.5
+ghcup install ghc 8.10.2
+ghcup set ghc 8.10.2
 ghc --version
 ```
 or use the interactive TUI to do so:
@@ -91,7 +91,7 @@ into your ~/.local/bin folder (when part of the PATH variable)
 you can see the build location path from the last 3 output lines. 
 for cardano-node 1.9.3 it is 
 ```
-~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
+~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
 ```
 
 
@@ -101,5 +101,5 @@ for cardano-node 1.9.3 it is
 
 [ghcup]: https://www.haskell.org/ghcup/
 [cabal30]: https://www.haskell.org/cabal/download.html
-[ghc865]: https://www.haskell.org/ghc/blog/20190423-ghc-8.6.5-released.html
+[ghc865]: https://www.haskell.org/ghc/blog/20200808-ghc-8.10.2-released.html
 [nix]: https://nixos.org/nix/
