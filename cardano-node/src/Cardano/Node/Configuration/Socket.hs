@@ -14,11 +14,10 @@ where
 import           Cardano.Prelude hiding (local)
 import           Prelude (String)
 import qualified Prelude
-import qualified Data.List as List
 import           Data.Functor (($>))
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Network.Socket (Family (AF_INET), AddrInfo (..),
+import           Network.Socket (Family (AF_INET, AF_INET6), AddrInfo (..),
                      AddrInfoFlag (..), Socket, SocketType (..))
 import qualified Network.Socket as Socket
 
@@ -167,17 +166,8 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
             (Nothing, Nothing) -> do
       
               info <- nodeAddressInfo Nothing ncNodePortNumber
-              let (ipv4Addrs, ipv6Addrs) = List.span ((== AF_INET) . addrFamily)
-                                                     info
-
-                  ipv4' = case ipv4Addrs of
-                    []         -> Nothing
-                    (addr : _) -> Just (SocketInfo addr)
-
-                  ipv6' = case ipv6Addrs of
-                    []         -> Nothing
-                    (addr : _) -> Just (SocketInfo addr)
-
+              let ipv4' = SocketInfo <$> find ((== AF_INET)  . addrFamily) info
+                  ipv6' = SocketInfo <$> find ((== AF_INET6) . addrFamily) info
               when (isNothing $ ipv4' <|> ipv6') $
                 throwError NoPublicSocketGiven
 
