@@ -1450,7 +1450,10 @@ pTxOut =
   where
     parseTxOut :: Atto.Parser (TxOut Shelley)
     parseTxOut =
-      TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
+      TxOut
+        <$> parseAddress
+        <* Atto.char '+'
+        <*> parseSimpleTxOutValue SimpleTxOutValueSupportedInShelleyEra
 
 pTxTTL :: Parser SlotNo
 pTxTTL =
@@ -2185,6 +2188,11 @@ pProtocolVersion =
 --
 -- Shelley CLI flag field parsers
 --
+
+parseSimpleTxOutValue :: SimpleTxOutValueSupportedInEra era -> Atto.Parser (TxOutValue era)
+parseSimpleTxOutValue e = do
+  mbTxOutValue <- makeSimpleTxOutValue e <$> parseLovelace
+  maybe (fail "Invalid lovelace value.") pure mbTxOutValue
 
 parseLovelace :: Atto.Parser Lovelace
 parseLovelace = Lovelace <$> Atto.decimal

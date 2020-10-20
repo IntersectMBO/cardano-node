@@ -358,6 +358,8 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
     toShelleyAddr (ByronAddress addr)        = Ledger.AddrBootstrap
                                                  (Ledger.BootstrapAddress addr)
     toShelleyAddr (ShelleyAddress nw pc scr) = Ledger.Addr nw pc scr
+    toShelleyAddr (AllegraAddress nw pc scr) = Ledger.Addr nw pc scr
+    toShelleyAddr (MaryAddress    nw pc scr) = Ledger.Addr nw pc scr
 
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they

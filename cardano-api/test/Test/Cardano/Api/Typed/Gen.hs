@@ -24,6 +24,7 @@ import           Cardano.Api.Typed
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
+import           Data.Maybe (fromJust)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -168,11 +169,25 @@ genTxBodyShelley =
 
 genByronTxOut :: Gen (TxOut Byron)
 genByronTxOut =
-  TxOut <$> genAddressByron <*> genLovelace
+  TxOut <$> genAddressByron <*> genByronTxOutValue
+
+genByronTxOutValue :: Gen (TxOutValue Byron)
+genByronTxOutValue =
+  genSimpleTxOutValue SimpleTxOutValueSupportedInByronEra
 
 genShelleyTxOut :: Gen (TxOut Shelley)
 genShelleyTxOut =
-  TxOut <$> genAddressShelley <*> genLovelace
+  TxOut <$> genAddressShelley <*> genShelleyTxOutValue
+
+genShelleyTxOutValue :: Gen (TxOutValue Shelley)
+genShelleyTxOutValue =
+  genSimpleTxOutValue SimpleTxOutValueSupportedInShelleyEra
+
+genSimpleTxOutValue
+  :: SimpleTxOutValueSupportedInEra era
+  -> Gen (TxOutValue era)
+genSimpleTxOutValue e =
+  fromJust . makeSimpleTxOutValue e <$> genLovelace
 
 genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 ())
 genShelleyHash = return $ Crypto.hashWith CBOR.serialize' ()

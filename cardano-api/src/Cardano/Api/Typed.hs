@@ -7,6 +7,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -95,6 +96,10 @@ module Cardano.Api.Typed (
     TTL,
     TxFee,
     Lovelace(..),
+    TxOutValue (SimpleTxOutValue, MultiAssetTxOutValue),
+    SimpleTxOutValueSupportedInEra (..),
+    MultiAssetSupportedInEra (..),
+    makeSimpleTxOutValue,
     makeByronTransaction,
     makeShelleyTransaction,
     SlotNo(..),
@@ -473,11 +478,13 @@ import qualified Cardano.Chain.UTxO as Byron
 --
 -- Shelley imports
 --
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Core as Shelley (Script)
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN, KES, VRF)
+
+import qualified Cardano.Ledger.Mary.Value as Shelley (Value (..), PolicyID (..), AssetID (..))
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
@@ -528,6 +535,12 @@ data Byron
 
 -- | A type used as a tag to distinguish the Shelley era.
 data Shelley
+
+-- | A type used as a tag to distinguish the Allegra era.
+data Allegra
+
+-- | A type used as a tag to distinguish the Mary era.
+data Mary
 
 
 class HasTypeProxy t where
@@ -641,6 +654,22 @@ data Address era where
        -> Shelley.StakeReference    StandardShelley
        -> Address Shelley
 
+     -- | Allegra addresses are only valid in the Allegra era.
+     --
+     AllegraAddress
+       :: Shelley.Network
+       -> Shelley.PaymentCredential StandardAllegra
+       -> Shelley.StakeReference StandardAllegra
+       -> Address Allegra
+
+     -- | Mary addresses are only valid in the Mary era.
+     --
+     MaryAddress
+       :: Shelley.Network
+       -> Shelley.PaymentCredential StandardMary
+       -> Shelley.StakeReference StandardMary
+       -> Address Mary
+
 deriving instance Eq (Address Byron)
 deriving instance Ord (Address Byron)
 deriving instance Show (Address Byron)
@@ -648,6 +677,14 @@ deriving instance Show (Address Byron)
 deriving instance Eq (Address Shelley)
 deriving instance Ord (Address Shelley)
 deriving instance Show (Address Shelley)
+
+deriving instance Eq (Address Allegra)
+deriving instance Ord (Address Allegra)
+deriving instance Show (Address Allegra)
+
+deriving instance Eq (Address Mary)
+deriving instance Ord (Address Mary)
+deriving instance Show (Address Mary)
 
 data StakeAddress where
 
@@ -847,6 +884,8 @@ toShelleyAddr :: Address era -> Shelley.Addr StandardShelley
 toShelleyAddr (ByronAddress addr)        = Shelley.AddrBootstrap
                                              (Shelley.BootstrapAddress addr)
 toShelleyAddr (ShelleyAddress nw pc scr) = Shelley.Addr nw pc scr
+toShelleyAddr (AllegraAddress nw pc scr) = Shelley.Addr nw pc scr
+toShelleyAddr (MaryAddress    nw pc scr) = Shelley.Addr nw pc scr
 
 toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAcnt StandardShelley
 toShelleyStakeAddr (StakeAddress nw sc) =
@@ -935,7 +974,7 @@ newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
 
-data TxOut era = TxOut (Address era) Lovelace
+data TxOut era = TxOut (Address era) (TxOutValue era)
 
 deriving instance Eq (TxOut Byron)
 deriving instance Eq (TxOut Shelley)
@@ -946,13 +985,130 @@ newtype Lovelace = Lovelace Integer
   deriving (Eq, Ord, Enum, Show)
 
 
+-- | Representation of a transaction output amount.
+data TxOutValue era where
+  -- | Transaction output amount value for a 'Byron'-era transaction.
+  ByronTxOutValue :: Byron.Lovelace -> TxOutValue Byron
+
+  -- | Transaction output amount value for a 'Shelley'-era transaction.
+  ShelleyTxOutValue :: Shelley.Coin -> TxOutValue Shelley
+
+  -- | Transaction output amount value for an 'Allegra'-era transaction.
+  AllegraTxOutValue :: Shelley.Coin -> TxOutValue Allegra
+
+  -- | Transaction output amount value for a 'Mary'-era transaction.
+  MaryTxOutValue
+    :: MultiAssetSupportedInEra Mary
+    -> Shelley.Value StandardMary
+    -> TxOutValue Mary
+
+deriving instance Eq (TxOutValue Byron)
+deriving instance Eq (TxOutValue Shelley)
+deriving instance Eq (TxOutValue Allegra)
+deriving instance Eq (TxOutValue Mary)
+deriving instance Show (TxOutValue Byron)
+deriving instance Show (TxOutValue Shelley)
+deriving instance Show (TxOutValue Allegra)
+deriving instance Show (TxOutValue Mary)
+
+
+-- | Representation of whether simple lovelace-only transactions are supported
+-- in a particular era.
+data SimpleTxOutValueSupportedInEra era where
+  -- | Simple lovelace-only transactions are supported in the 'Byron' era.
+  SimpleTxOutValueSupportedInByronEra
+    :: SimpleTxOutValueSupportedInEra Byron
+
+  -- | Simple lovelace-only transactions are supported in the 'Shelley' era.
+  SimpleTxOutValueSupportedInShelleyEra
+    :: SimpleTxOutValueSupportedInEra Shelley
+
+  -- | Simple lovelace-only transactions are supported in the 'Allegra' era.
+  SimpleTxOutValueSupportedInAllegraEra
+    :: SimpleTxOutValueSupportedInEra Allegra
+
+deriving instance Eq (SimpleTxOutValueSupportedInEra Byron)
+deriving instance Eq (SimpleTxOutValueSupportedInEra Shelley)
+deriving instance Eq (SimpleTxOutValueSupportedInEra Allegra)
+deriving instance Show (SimpleTxOutValueSupportedInEra Byron)
+deriving instance Show (SimpleTxOutValueSupportedInEra Shelley)
+deriving instance Show (SimpleTxOutValueSupportedInEra Allegra)
+
+
+-- | Representation of whether multi-asset transactions are supported in a
+-- particular era.
+data MultiAssetSupportedInEra era where
+  -- | Multi-asset transactions are supported in the 'Mary' era.
+  MultiAssetSupportedInMaryEra :: MultiAssetSupportedInEra Mary
+
+deriving instance Eq (MultiAssetSupportedInEra Mary)
+deriving instance Show (MultiAssetSupportedInEra Mary)
+
+
+-- | Policy identifier.
+newtype PolicyId = PolicyId (Hash Script)
+  deriving newtype (Eq, Ord)
+
+
+-- | Asset identifier.
+newtype AssetId = AssetId ByteString
+  deriving newtype (Eq, Ord)
+
+
+pattern SimpleTxOutValue
+  :: Lovelace
+  -> TxOutValue era
+pattern SimpleTxOutValue l <-
+  ( (\txOut ->
+      case txOut of
+        ByronTxOutValue l -> Just (Lovelace $ Byron.lovelaceToInteger l)
+        ShelleyTxOutValue (Shelley.Coin l) -> Just (Lovelace l)
+        AllegraTxOutValue (Shelley.Coin l) -> Just (Lovelace l)
+        _ -> Nothing
+    ) -> Just l
+  )
+
+pattern MultiAssetTxOutValue
+  :: MultiAssetSupportedInEra era
+  -> Lovelace
+  -> Map PolicyId (Map AssetId Integer)
+  -> TxOutValue era
+pattern MultiAssetTxOutValue e l v <-
+    MaryTxOutValue e (fromMaryValue -> (l, v))
+  where
+    MultiAssetTxOutValue MultiAssetSupportedInMaryEra l v =
+      makeMultiAssetTxOutValue MultiAssetSupportedInMaryEra l v
+
+makeSimpleTxOutValue
+  :: SimpleTxOutValueSupportedInEra era
+  -> Lovelace
+  -> Maybe (TxOutValue era)
+makeSimpleTxOutValue supportedEra =
+  case supportedEra of
+    SimpleTxOutValueSupportedInByronEra ->
+      fmap ByronTxOutValue . toByronLovelace
+    SimpleTxOutValueSupportedInShelleyEra ->
+      Just . ShelleyTxOutValue . toShelleyLovelace
+    SimpleTxOutValueSupportedInAllegraEra ->
+      Just . AllegraTxOutValue . toShelleyLovelace
+
+makeMultiAssetTxOutValue
+  :: MultiAssetSupportedInEra era
+  -> Lovelace
+  -> Map PolicyId (Map AssetId Integer)
+  -> TxOutValue era
+makeMultiAssetTxOutValue MultiAssetSupportedInMaryEra l assets =
+  MaryTxOutValue
+    MultiAssetSupportedInMaryEra
+    (toMaryValue l assets)
+
 toByronTxIn  :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
     Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
-toByronTxOut :: TxOut Byron -> Maybe Byron.TxOut
-toByronTxOut (TxOut (ByronAddress addr) value) =
-    Byron.TxOut addr <$> toByronLovelace value
+toByronTxOut :: TxOut Byron -> Byron.TxOut
+toByronTxOut (TxOut (ByronAddress addr) (ByronTxOutValue value)) =
+  Byron.TxOut addr value
 
 toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
 toByronLovelace (Lovelace x) =
@@ -966,11 +1122,78 @@ toShelleyTxIn (TxIn txid (TxIx txix)) =
 
 toShelleyTxOut :: TxOut era -> Shelley.TxOut StandardShelley
 toShelleyTxOut (TxOut addr value) =
-    Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
+    Shelley.TxOut (toShelleyAddr addr) $ case value of
+      ByronTxOutValue v -> Shelley.Coin (Byron.lovelaceToInteger v)
+      ShelleyTxOutValue v -> v
+      AllegraTxOutValue v -> v
+      MaryTxOutValue _ _v ->
+        error
+          "Cardano.Api.Typed.toShelleyTxOut: MaryTxOutValue not implemented."
 
 toShelleyLovelace :: Lovelace -> Shelley.Coin
 toShelleyLovelace (Lovelace l) = Shelley.Coin l
 --TODO: validate bounds
+
+toMaryPolicyId :: PolicyId -> Shelley.PolicyID StandardMary
+toMaryPolicyId (PolicyId (ScriptHash hash)) = Shelley.PolicyID hash
+
+fromMaryPolicyId :: Shelley.PolicyID StandardMary -> PolicyId
+fromMaryPolicyId (Shelley.PolicyID hash) = PolicyId (ScriptHash hash)
+
+toMaryAssetId :: AssetId -> Shelley.AssetID
+toMaryAssetId (AssetId bs) = Shelley.AssetID bs
+
+fromMaryAssetId :: Shelley.AssetID -> AssetId
+fromMaryAssetId (Shelley.AssetID bs) = AssetId bs
+
+toMaryValue
+  :: Lovelace
+  -> Map PolicyId (Map AssetId Integer)
+  -> Shelley.Value StandardMary
+toMaryValue (Lovelace l) m =
+    Shelley.Value l (Map.foldlWithKey' foldPolicyMap Map.empty m)
+  where
+    foldPolicyMap
+      :: Map (Shelley.PolicyID StandardMary) (Map Shelley.AssetID Integer)
+      -> PolicyId
+      -> Map AssetId Integer
+      -> Map (Shelley.PolicyID StandardMary) (Map Shelley.AssetID Integer)
+    foldPolicyMap acc k v =
+        Map.insert
+          (toMaryPolicyId k)
+          (Map.foldlWithKey' foldAssetMap Map.empty v)
+          acc
+
+    foldAssetMap
+      :: Map Shelley.AssetID Integer
+      -> AssetId
+      -> Integer
+      -> Map Shelley.AssetID Integer
+    foldAssetMap acc k v = Map.insert (toMaryAssetId k) v acc
+
+fromMaryValue
+  :: Shelley.Value StandardMary
+  -> (Lovelace, Map PolicyId (Map AssetId Integer))
+fromMaryValue (Shelley.Value c m) =
+    (Lovelace c, (Map.foldlWithKey' foldPolicyMap Map.empty m))
+  where
+    foldPolicyMap
+      :: Map PolicyId (Map AssetId Integer)
+      -> Shelley.PolicyID StandardMary
+      -> Map Shelley.AssetID Integer
+      -> Map PolicyId (Map AssetId Integer)
+    foldPolicyMap acc k v =
+        Map.insert
+          (fromMaryPolicyId k)
+          (Map.foldlWithKey' foldAssetMap Map.empty v)
+          acc
+
+    foldAssetMap
+      :: Map AssetId Integer
+      -> Shelley.AssetID
+      -> Integer
+      -> Map AssetId Integer
+    foldAssetMap acc k v = Map.insert (fromMaryAssetId k) v acc
 
 
 -- ----------------------------------------------------------------------------
@@ -1048,7 +1271,6 @@ instance HasTextEnvelope (TxBody Shelley) where
 data ByronTxBodyConversionError =
        ByronTxBodyEmptyTxIns
      | ByronTxBodyEmptyTxOuts
-     | ByronTxBodyLovelaceOverflow (TxOut Byron)
      deriving Show
 
 makeByronTransaction :: [TxIn]
@@ -1059,10 +1281,8 @@ makeByronTransaction ins outs = do
     ins'  <- NonEmpty.nonEmpty ins        ?! ByronTxBodyEmptyTxIns
     let ins'' = NonEmpty.map toByronTxIn ins'
 
-    outs'  <- NonEmpty.nonEmpty outs      ?! ByronTxBodyEmptyTxOuts
-    outs'' <- traverse
-                (\out -> toByronTxOut out ?! ByronTxBodyLovelaceOverflow out)
-                outs'
+    outs' <- NonEmpty.nonEmpty outs ?! ByronTxBodyEmptyTxOuts
+    let outs'' = NonEmpty.map toByronTxOut outs'
     return $
       ByronTxBody $
         reAnnotate $

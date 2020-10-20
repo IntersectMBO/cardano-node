@@ -53,6 +53,7 @@ library
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
+                      , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-slotting
                       , cborg
