@@ -1388,7 +1388,8 @@ teeTraceBlockFetchDecision'
 teeTraceBlockFetchDecision' tr =
     Tracer $ \(WithSeverity _ peers) -> do
       meta <- mkLOMeta Info Confidential
-      traceNamedObject tr (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
+      let tr' = appendName "peers" tr
+      traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer
