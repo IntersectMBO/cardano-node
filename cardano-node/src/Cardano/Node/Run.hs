@@ -30,7 +30,7 @@ import           Data.Functor.Contravariant (contramap)
 import           Data.Maybe (catMaybes)
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup ((<>))
-import           Data.Text (Text, breakOn, pack, take, unlines)
+import           Data.Text (Text, breakOn, pack, take)
 import qualified Data.Text as Text
 import           Data.Version (showVersion)
 import           GHC.Clock (getMonotonicTimeNSec)
@@ -320,15 +320,20 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
-  traceWith tracer $ unlines
-    [ ""
-    , "**************************************"
-    , "Addresses: "     <> show (catMaybes [ ipv4, ipv6 ])
-    , "DiffusionMode: " <> show (ncDiffusionMode nc)
-    , "DNS producers: " <> show dnsProducers
-    , "IP producers: "  <> show ipProducers
-    , "**************************************"
-    ]
+
+  meta <- mkLOMeta Notice Public
+  traceNamedObject
+    (appendName "addresses" trace)
+    (meta, LogMessage . Text.pack . show $ catMaybes [ipv4, ipv6])
+  traceNamedObject
+    (appendName "diffusion-mode" trace)
+    (meta, LogMessage . Text.pack . show . ncDiffusionMode $ nc)
+  traceNamedObject
+    (appendName "dns-producers" trace)
+    (meta, LogMessage . Text.pack . show $ dnsProducers)
+  traceNamedObject
+    (appendName "ip-producers" trace)
+    (meta, LogMessage . Text.pack . show $ ipProducers)
 
   withShutdownHandling nc trace $ \sfds ->
    Node.run
