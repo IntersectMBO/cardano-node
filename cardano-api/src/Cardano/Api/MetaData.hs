@@ -20,15 +20,16 @@ module Cardano.Api.MetaData
   , TxMetadataJsonSchemaError (..)
   ) where
 
+import           Cardano.Prelude (decodeEitherBase16)
 import           Prelude
 
-import           Data.Maybe (fromMaybe)
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString       as BS
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.ByteString.Base16 as Base16
+import           Data.Maybe (fromMaybe)
 import qualified Data.Scientific as Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -36,18 +37,18 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import           Data.Word (Word64)
 
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
 import           Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Text as Aeson.Text
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 
-import           Control.Monad (guard)
-import           Control.Applicative (Alternative(..))
+import           Control.Applicative (Alternative (..))
+import           Control.Monad (guard, when)
 
 import           Cardano.Api.Typed
 
@@ -325,8 +326,7 @@ metadataValueFromJsonNoSchema = conv
     conv (Aeson.String s)
       | Just s' <- Text.stripPrefix bytesPrefix s
       , let bs' = Text.encodeUtf8 s'
-      , (bs, trailing) <- Base16.decode bs'
-      , BS.null trailing
+      , Right bs <- decodeEitherBase16 bs'
       , not (BSC.any (\c -> c >= 'A' && c <= 'F') bs')
       = Right (TxMetaBytes bs)
 
@@ -398,8 +398,8 @@ metadataValueFromJsonDetailedSchema = conv
             Right n -> Right (TxMetaNumber n)
 
         [("bytes", Aeson.String s)]
-          | (bs, trailing) <- Base16.decode (Text.encodeUtf8 s)
-          , BS.null trailing -> Right (TxMetaBytes bs)
+          | Right bs <- decodeEitherBase16 (Text.encodeUtf8 s)
+          -> Right (TxMetaBytes bs)
 
         [("string", Aeson.String s)] -> Right (TxMetaText s)
 
@@ -521,8 +521,9 @@ pBytes :: Atto.Parser ByteString
 pBytes = do
   _ <- Atto.string "0x"
   remaining <- Atto.takeByteString
-  let (bs, trailing) = Base16.decode remaining
-      hexUpper c = c >= 'A' && c <= 'F'
-  guard (BS.null trailing && not (BSC.any hexUpper remaining))
-  return bs
-
+  when (BSC.any hexUpper remaining) $ fail ("Unexpected uppercase hex characters in " <> show remaining)
+  case decodeEitherBase16 remaining of
+    Right bs -> return bs
+    _ -> fail ("Expecting base16 encoded string, found: " <> show remaining)
+  where
+    hexUpper c = c >= 'A' && c <= 'F'

@@ -37,7 +37,6 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, Hash (..), hashFromBytesAsHex)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import qualified Data.IP as IP
@@ -2113,9 +2112,7 @@ pExtraEntropy =
         )
   where
     parseEntropyBytes :: Atto.Parser ByteString
-    parseEntropyBytes =
-      fst . Base16.decode <$> Atto.takeWhile1 Char.isHexDigit
-
+    parseEntropyBytes = Atto.takeWhile1 Char.isHexDigit <&> decodeEitherBase16 >>= either fail return
 
 pProtocol :: Parser Protocol
 pProtocol =
