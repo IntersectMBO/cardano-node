@@ -60,8 +60,6 @@ let
 
     inherit (haskellPackages.cardano-node.identifier) version;
 
-    clusterTests = recRecurseIntoAttrs (import ./nix/supervisord-cluster/tests { inherit pkgs; });
-
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
     # `tests` are the test suites which have been built.
