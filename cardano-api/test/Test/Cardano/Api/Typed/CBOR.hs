@@ -36,7 +36,6 @@ prop_roundtrip_tx_shelley_CBOR :: Property
 prop_roundtrip_tx_shelley_CBOR =
   roundtrip_CBOR AsShelleyTx genTxShelley
 
-
 prop_roundtrip_witness_shelley_CBOR :: Property
 prop_roundtrip_witness_shelley_CBOR =
   roundtrip_CBOR AsShelleyWitness genShelleyWitness
@@ -116,6 +115,10 @@ prop_roundtrip_verification_key_kes_CBOR =
 prop_roundtrip_signing_key_kes_CBOR :: Property
 prop_roundtrip_signing_key_kes_CBOR =
   roundtrip_CBOR (AsSigningKey AsKesKey) (genSigningKey AsKesKey)
+
+prop_roundtrip_script_CBOR :: Property
+prop_roundtrip_script_CBOR =
+  roundtrip_CBOR AsScript genScript
 
 -- -----------------------------------------------------------------------------
 
