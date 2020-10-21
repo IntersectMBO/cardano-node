@@ -343,6 +343,7 @@ module Cardano.Api.Typed (
 
 import           Prelude
 
+import           Cardano.Prelude (decodeEitherBase16)
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
 import           Data.Kind (Constraint)
@@ -2844,12 +2845,9 @@ serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
 
 deserialiseFromRawBytesHex :: SerialiseAsRawBytes a
                            => AsType a -> ByteString -> Maybe a
-deserialiseFromRawBytesHex proxy hex =
-  case Base16.decode hex of
-    (raw, trailing)
-      | BS.null trailing -> deserialiseFromRawBytes proxy raw
-      | otherwise        -> Nothing
-
+deserialiseFromRawBytesHex proxy hex = case decodeEitherBase16 hex of
+  Right raw -> deserialiseFromRawBytes proxy raw
+  Left _ -> Nothing
 
 -- | For use with @deriving via@, to provide 'Show' and\/or 'IsString' instances
 -- using a hex encoding, based on the 'SerialiseAsRawBytes' instance.
@@ -2863,14 +2861,11 @@ instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
 
 instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
     fromString str =
-      case Base16.decode (BSC.pack str) of
-        (raw, trailing)
-          | BS.null trailing ->
-              case deserialiseFromRawBytes ttoken raw of
-                Just x  -> UsingRawBytesHex x
-                Nothing -> error ("fromString: cannot deserialise " ++ show str)
-          | otherwise        ->
-              error ("fromString: invalid hex " ++ show str)
+      case decodeEitherBase16 (BSC.pack str) of
+        Right raw -> case deserialiseFromRawBytes ttoken raw of
+          Just x  -> UsingRawBytesHex x
+          Nothing -> error ("fromString: cannot deserialise " ++ show str)
+        Left msg -> error ("fromString: invalid hex " ++ show str ++ ", " ++ msg)
       where
         ttoken :: AsType a
         ttoken = proxyToAsType Proxy

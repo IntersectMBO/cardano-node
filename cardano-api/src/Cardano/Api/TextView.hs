@@ -22,14 +22,16 @@ module Cardano.Api.TextView
 import           Cardano.Prelude
 import           Prelude (String)
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import           Cardano.Binary
+import           Control.Monad (fail)
+import           Data.Aeson (FromJSON (..), ToJSON (..), Value, object, withObject, (.:), (.=))
 import           Data.Aeson.Encode.Pretty (Config (..), defConfig, keyOrder)
-import qualified Data.ByteString.Base16 as Base16
+import           Data.Aeson.Types (Parser)
 import           Data.ByteString.Char8 (ByteString)
+
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-
-import           Cardano.Binary
 
 newtype TextViewType
   = TextViewType { unTextViewType :: ByteString }
@@ -66,7 +68,12 @@ instance FromJSON TextView where
   parseJSON = withObject "TextView" $ \v -> TextView
                 <$> (TextViewType . Text.encodeUtf8 <$> v .: "type")
                 <*> (TextViewDescription . Text.encodeUtf8 <$> v .: "description")
-                <*> (fst . Base16.decode . Text.encodeUtf8 <$> v .: "cborHex")
+                <*> (parseJSONBase16 =<< v .: "cborHex")
+
+parseJSONBase16 :: Value -> Parser ByteString
+parseJSONBase16 v = do
+  t <- parseJSON v
+  either fail return (decodeEitherBase16 (Text.encodeUtf8 t))
 
 textViewJSONConfig :: Config
 textViewJSONConfig = defConfig { confCompare = textViewJSONKeyOrder }
