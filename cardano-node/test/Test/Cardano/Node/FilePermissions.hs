@@ -7,10 +7,10 @@ module Test.Cardano.Node.FilePermissions
 
 import           Cardano.Prelude
 
-import           Control.Exception (bracket_)
+import           Control.Exception (bracket)
 import           System.Directory (removeFile)
 import           System.Posix.Files
-import           System.Posix.IO (createFile)
+import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
 import           Cardano.Node.Run (checkVRFFilePermissions)
@@ -30,9 +30,9 @@ prop_sanityCheck_checkVRFFilePermissions =
     let correctPermission = ownerReadMode
         vrfPrivateKeyCorrect = "vrf-private-key-correct"
     correctResult <-
-      liftIO $ bracket_ (createFile vrfPrivateKeyCorrect correctPermission)
-                        (removeFile vrfPrivateKeyCorrect)
-                        (liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyCorrect)
+      liftIO $ bracket  (createFile vrfPrivateKeyCorrect correctPermission)
+                        (\h -> closeFd h >> removeFile vrfPrivateKeyCorrect)
+                        (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyCorrect)
     case correctResult of
       Left err ->
         failWith Nothing $ "checkVRFFilePermissions should not have failed with error: "
@@ -49,10 +49,11 @@ prop_sanityCheck_checkVRFFilePermissions =
       -- Creating a file with other permissions appears to not work
       -- it instead creates a file with owner permissions. Therefore we must
       -- create a file with no permissions and then set other permissions
-      liftIO $ bracket_ (do _ <- createFile vrfPrivateKeyOther nullFileMode
-                            setFileMode vrfPrivateKeyOther $ createPermissions oPermissions)
-                        (removeFile vrfPrivateKeyOther)
-                        (liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyOther)
+      liftIO $ bracket  (do h <- createFile vrfPrivateKeyOther nullFileMode
+                            setFileMode vrfPrivateKeyOther $ createPermissions oPermissions
+                            return h)
+                        (\h -> closeFd h >> removeFile vrfPrivateKeyOther)
+                        (const .liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyOther)
     case otherResult of
       Left (OtherPermissionsExist _) -> success
       Left err ->
@@ -71,10 +72,11 @@ prop_sanityCheck_checkVRFFilePermissions =
       -- Creating a file with group permissions appears to not work
       -- it instead creates a file with owner permissions. Therefore we must
       -- create a file with no permissions and then set group permissions.
-      liftIO $ bracket_ (do _ <- createFile vrfPrivateKeyGroup nullFileMode
-                            setFileMode vrfPrivateKeyGroup $ createPermissions gPermissions)
-                        (removeFile vrfPrivateKeyGroup)
-                        (liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyGroup)
+      liftIO $ bracket  (do h <- createFile vrfPrivateKeyGroup nullFileMode
+                            setFileMode vrfPrivateKeyGroup $ createPermissions gPermissions
+                            return h)
+                        (\h -> closeFd h >> removeFile vrfPrivateKeyGroup)
+                        (const . liftIO . runExceptT $ checkVRFFilePermissions vrfPrivateKeyGroup)
     case groupResult of
       Left (GroupPermissionsExist _) -> success
       Left err ->
