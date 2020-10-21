@@ -57,6 +57,8 @@ pkgs: _: with pkgs;
   hfcCluster = callPackage ./supervisord-cluster/hfc {};
   cardanolib-py = callPackage ./cardanolib-py {};
 
+  clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
+
   inherit ((haskell-nix.hackage-package {
     name = "hlint";
     version = "3.1.6";
