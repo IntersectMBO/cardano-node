@@ -50,6 +50,7 @@ library
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
                        Cardano.Tracing.ConvertTxId
+                       Cardano.Tracing.HasIssuer
                        Cardano.Tracing.Kernel
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
