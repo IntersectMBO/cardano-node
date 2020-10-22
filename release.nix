@@ -27,6 +27,9 @@
 # Cross compilation to Windows is currently only supported on linux.
 , windowsBuild ? builtins.elem "x86_64-linux" supportedCrossSystems
 
+# some jobs only work on linux
+, linuxBuild ? builtins.elem "x86_64-linux" supportedSystems
+
 # A Hydra option
 , scrubJobs ? true
 
