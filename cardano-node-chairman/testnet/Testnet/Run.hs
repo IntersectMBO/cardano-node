@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Testnet.Run
   ( runTestnet
   ) where
