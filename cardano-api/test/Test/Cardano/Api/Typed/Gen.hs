@@ -5,8 +5,10 @@ module Test.Cardano.Api.Typed.Gen
   , genRequiredSig
   , genMofNRequiredSig
   , genMultiSigScript
+  , genScriptHash
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
+  , genScript
   , genShelleyWitness
   , genSigningKey
   , genStakeAddress
@@ -79,6 +81,12 @@ genMofNRequiredSig = do
 genMultiSigScript :: Gen MultiSigScript
 genMultiSigScript =
   Gen.choice [genAllRequiredSig, genAnyRequiredSig, genMofNRequiredSig]
+
+genScript :: Gen Script
+genScript = makeMultiSigScript <$> genMultiSigScript
+
+genScriptHash :: Gen (Hash Script)
+genScriptHash = scriptHash <$> genScript
 
 genNetworkId :: Gen NetworkId
 genNetworkId =
