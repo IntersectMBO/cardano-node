@@ -239,6 +239,14 @@ module Cardano.Api.Typed (
     throwErrorAsException,
     FileError(..),
 
+    -- * The Block chain
+    -- | The types needed to interact with the block chain itself, including
+    -- via the chain sync protocol.
+    Block(..),
+    BlockNo(..),
+    ChainTip(..),
+    BlockHeader,
+
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
 
@@ -255,7 +263,6 @@ module Cardano.Api.Typed (
     LocalNodeClientProtocols(..),
     nullLocalNodeClientProtocols,
     LocalNodeClientProtocolsInMode,
-    Block(..),
     BlockInMode(..),
     TxInMode(..),
     TxValidationError,
@@ -413,10 +420,14 @@ import qualified Cardano.Prelude as CBOR (cborError)
 import qualified Shelley.Spec.Ledger.Serialization as CBOR (CBORGroup (..), decodeNullMaybe,
                      encodeNullMaybe)
 
-import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
+import           Cardano.Slotting.Slot
+                   (EpochNo (..), EpochSize (..), SlotNo (..))
+import           Cardano.Slotting.Block
+                   (BlockNo (..))
 
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
-import           Ouroboros.Network.Block (Point, Tip)
+import           Ouroboros.Network.Block as Consensus
+                   (Point, Tip(..), pattern GenesisPoint, pattern BlockPoint)
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.Mux (MuxMode (InitiatorMode), MuxPeer (..),
                      RunMiniProtocol (InitiatorProtocolOnly))
@@ -427,11 +438,13 @@ import           Ouroboros.Network.NodeToClient {-(NetworkConnectTracers (..),
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
-import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig)
+import           Ouroboros.Consensus.Block as Consensus
+                   (BlockProtocol, CodecConfig, HeaderHash)
 import           Ouroboros.Consensus.Cardano (ProtocolClient(..), protocolClientInfo)
 import           Ouroboros.Consensus.Cardano.Node ()
-import           Ouroboros.Consensus.Ledger.Abstract (Query, ShowQuery)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.Ledger.Abstract as Consensus (ShowQuery)
+import qualified Ouroboros.Consensus.Ledger.Abstract as Consensus (Query)
+import           Ouroboros.Consensus.Ledger.SupportsMempool as Consensus (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient
                    (Codecs' (..), clientCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
@@ -440,10 +453,15 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..))
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Consensus.Util.Time (secondsToNominalDiffTime)
-import           Ouroboros.Consensus.HardFork.Combinator
-                   (GenTx(HardForkGenTx), OneEraGenTx(OneEraGenTx))
+import           Ouroboros.Consensus.HardFork.Combinator as Consensus
+                   (GenTx(HardForkGenTx), OneEraGenTx(OneEraGenTx),
+                    OneEraHash(OneEraHash), HardForkQueryResult)
+import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
+                    (Query(..), QueryIfCurrent(..), QueryAnytime(..), QueryHardFork(..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
-                   (HardForkApplyTxErr(DegenApplyTxErr))
+                   (HardForkApplyTxErr(DegenApplyTxErr),
+                    HardForkBlock(DegenBlock), pattern DegenQuery)
+import           Ouroboros.Consensus.HardFork.History as Consensus (Bound(..))
 
 import qualified Ouroboros.Consensus.Byron.Ledger       as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger     as Consensus
@@ -486,7 +504,6 @@ import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-import qualified Shelley.Spec.Ledger.BlockChain as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
@@ -516,6 +533,7 @@ import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client as StateQuery
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
+import           Ouroboros.Network.Protocol.LocalStateQuery.Codec (Some(..))
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 
 {- HLINT ignore "Redundant flip" -}
@@ -2603,11 +2621,13 @@ data EraInMode era mode where
 
 data Block era where
 
-     ByronBlock :: Consensus.ByronBlock -- from consensus, not ledger
+     ByronBlock :: Consensus.ByronBlock
                 -> Block Byron
 
-     ShelleyBlock :: Shelley.Block StandardShelley
+     ShelleyBlock :: Consensus.ShelleyBlock StandardShelley
                   -> Block Shelley
+
+data BlockHeader
 
 data BlockInMode mode where
      BlockInMode :: Block era -> EraInMode era mode -> BlockInMode mode
@@ -2632,9 +2652,31 @@ data TxValidationErrorInMode mode where
                              -> EraInMode era mode
                              -> TxValidationErrorInMode mode
 
-data ChainTip
+data ChainTip = ChainTipAtGenesis
+              | ChainTip !SlotNo !(Hash BlockHeader) !BlockNo
 
-data StateQueryInMode mode :: * -> *
+
+-- | For now at least we use a fixed concrete hash type for all modes and era.
+-- The different eras do use different types, but it's all the same underlying
+-- representation.
+newtype instance Hash BlockHeader = HeaderHash SBS.ShortByteString
+
+type instance Consensus.HeaderHash (BlockInMode mode) = Hash BlockHeader
+
+data QueryInEra era result where
+     QueryByronUpdateState :: QueryInEra Byron ()  --TODO: UPI.State
+
+     QueryShelleyRaw :: Consensus.Query (Consensus.ShelleyBlock StandardShelley) result
+                     -> QueryInEra Shelley result
+
+     --TODO: provide wrappers for the Shelley queries
+
+
+data Query mode result where
+
+     QueryInEra    :: QueryInEra era result -> EraInMode era mode -> Query mode result
+     QueryEraStart :: EraInMode era mode -> Query mode (Maybe Consensus.Bound)
+--   QueryHistory :: Query era Consensus.History.Interpreter
 
 data LocalNodeClientProtocols block tip tx txerr query m =
      LocalNodeClientProtocols {
@@ -2652,22 +2694,24 @@ nullLocalNodeClientProtocols =
       localStateQueryClient   = localStateQueryClientNull
     }
 
+-- public, exported
 type LocalNodeClientProtocolsInMode mode =
        LocalNodeClientProtocols
          (BlockInMode mode)
          ChainTip
          (TxInMode mode)
          (TxValidationErrorInMode mode)
-         (StateQueryInMode mode)
+         (Query mode)
          IO
 
+-- internal, consensus
 type LocalNodeClientProtocolsForBlock block =
        LocalNodeClientProtocols
          block
-         (Tip block)
-         (GenTx block)
-         (ApplyTxErr block)
-         (Query block)
+         (Consensus.Tip block)
+         (Consensus.GenTx block)
+         (Consensus.ApplyTxErr block)
+         (Consensus.Query block)
          IO
 
 -- | Establish a connection to a node and execute the given set of protocol
@@ -2703,8 +2747,8 @@ mkVersionedProtocols :: forall block.
                         (SerialiseNodeToClientConstraints block,
                          SupportedNetworkProtocolVersion block,
                          ShowProxy block, ShowProxy (ApplyTxErr block),
-                         ShowProxy (GenTx block), ShowProxy (Query block),
-                         ShowQuery (Query block))
+                         ShowProxy (GenTx block), ShowProxy (Consensus.Query block),
+                         ShowQuery (Consensus.Query block))
                      => NetworkId
                      -> ProtocolClient block (BlockProtocol block)
                      -> LocalNodeClientProtocolsForBlock block
@@ -2788,9 +2832,9 @@ data LocalNodeClientParams where
      LocalNodeClientParams
        :: (SerialiseNodeToClientConstraints block,
            SupportedNetworkProtocolVersion block,
-           ShowProxy block, ShowProxy (ApplyTxErr block),
-           ShowProxy (GenTx block), ShowProxy (Query block),
-           ShowQuery (Query block))
+           ShowProxy block, ShowProxy (Consensus.ApplyTxErr block),
+           ShowProxy (Consensus.GenTx block), ShowProxy (Consensus.Query block),
+           ShowQuery (Consensus.Query block))
        => ProtocolClient block (BlockProtocol block)
        -> LocalNodeClientProtocolsForBlock block
        -> LocalNodeClientParams
@@ -2839,7 +2883,6 @@ mkLocalNodeClientParams modeparams clients =
           (ProtocolClientCardano epochSlots)
           (convLocalNodeClientProtocols CardanoMode clients)
 
-
 convLocalNodeClientProtocols :: forall mode block.
                                 ConsensusBlockForMode mode ~ block
                              => NodeConsensusMode mode
@@ -2873,7 +2916,7 @@ convLocalTxSubmissionClient
 convLocalTxSubmissionClient ByronMode =
     mapLocalTxSubmissionClient convTx convErr
   where
-    convTx :: TxInMode ByronMode -> GenTx (ConsensusBlockForMode ByronMode)
+    convTx :: TxInMode ByronMode -> GenTx block
     convTx (TxInMode (ByronTx tx) ByronEraInByronMode) =
         HardForkGenTx (OneEraGenTx (Z tx'))
       where
@@ -2933,42 +2976,125 @@ convLocalChainSyncClient
   => NodeConsensusMode mode
   -> ChainSyncClient (BlockInMode mode) ChainTip m a
   -> ChainSyncClient block (Tip block) m a
-convLocalChainSyncClient mode =
+
+convLocalChainSyncClient ByronMode =
     mapChainSyncClient convPoint convPoint' convBlock convTip
   where
     convPoint :: Point (BlockInMode mode) -> Point block
-    convPoint = undefined
+    convPoint GenesisPoint                     = GenesisPoint
+    convPoint (BlockPoint slot (HeaderHash h)) = BlockPoint slot (OneEraHash h)
 
     convPoint' :: Point block -> Point (BlockInMode mode)
-    convPoint' = undefined
-
-    convBlock :: block -> BlockInMode mode
-    convBlock = undefined
+    convPoint' GenesisPoint                     = GenesisPoint
+    convPoint' (BlockPoint slot (OneEraHash h)) = BlockPoint slot (HeaderHash h)
 
     convTip :: Tip block -> ChainTip
-    convTip = undefined
+    convTip TipGenesis                      = ChainTipAtGenesis
+    convTip (Tip slot (OneEraHash h) block) = ChainTip slot (HeaderHash h) block
 
+    convBlock :: block -> BlockInMode mode
+    convBlock (DegenBlock b) = BlockInMode (ByronBlock b) ByronEraInByronMode
+
+convLocalChainSyncClient ShelleyMode =
+    mapChainSyncClient convPoint convPoint' convBlock convTip
+  where
+    convPoint :: Point (BlockInMode mode) -> Point block
+    convPoint GenesisPoint                     = GenesisPoint
+    convPoint (BlockPoint slot (HeaderHash h)) = BlockPoint slot (OneEraHash h)
+
+    convPoint' :: Point block -> Point (BlockInMode mode)
+    convPoint' GenesisPoint                     = GenesisPoint
+    convPoint' (BlockPoint slot (OneEraHash h)) = BlockPoint slot (HeaderHash h)
+
+    convTip :: Tip block -> ChainTip
+    convTip TipGenesis                      = ChainTipAtGenesis
+    convTip (Tip slot (OneEraHash h) block) = ChainTip slot (HeaderHash h) block
+
+    convBlock :: block -> BlockInMode mode
+    convBlock (DegenBlock b) = BlockInMode (ShelleyBlock b) ShelleyEraInShelleyMode
+
+convLocalChainSyncClient CardanoMode =
+    mapChainSyncClient convPoint convPoint' convBlock convTip
+  where
+    convPoint :: Point (BlockInMode mode) -> Point block
+    convPoint GenesisPoint                     = GenesisPoint
+    convPoint (BlockPoint slot (HeaderHash h)) = BlockPoint slot (OneEraHash h)
+
+    convPoint' :: Point block -> Point (BlockInMode mode)
+    convPoint' GenesisPoint                     = GenesisPoint
+    convPoint' (BlockPoint slot (OneEraHash h)) = BlockPoint slot (HeaderHash h)
+
+    convTip :: Tip block -> ChainTip
+    convTip TipGenesis                      = ChainTipAtGenesis
+    convTip (Tip slot (OneEraHash h) block) = ChainTip slot (HeaderHash h) block
+
+    convBlock :: block -> BlockInMode mode
+    convBlock (Consensus.BlockByron b)   = BlockInMode (ByronBlock   b)
+                                                       ByronEraInCardanoMode
+    convBlock (Consensus.BlockShelley b) = BlockInMode (ShelleyBlock b)
+                                                       ShelleyEraInCardanoMode
 
 convLocalStateQueryClient
   :: forall mode block m a.
      (ConsensusBlockForMode mode ~ block, Functor m)
   => NodeConsensusMode mode
-  -> LocalStateQueryClient (BlockInMode mode) (StateQueryInMode mode) m a
-  -> LocalStateQueryClient block (Query block) m a
-convLocalStateQueryClient mode =
+  -> LocalStateQueryClient (BlockInMode mode) (Query mode) m a
+  -> LocalStateQueryClient block (Consensus.Query block) m a
+convLocalStateQueryClient ByronMode =
     mapLocalStateQueryClient convPoint convQuery convResult
   where
     convPoint :: Point (BlockInMode mode) -> Point block
-    convPoint = undefined
+    convPoint GenesisPoint                     = GenesisPoint
+    convPoint (BlockPoint slot (HeaderHash h)) = BlockPoint slot (OneEraHash h)
 
-    convQuery :: forall result result'.
-                 StateQueryInMode mode result
-              -> Query block result'
+    convQuery :: forall result.
+                 Query mode result
+              -> Some (Consensus.Query block)
+    convQuery (QueryInEra QueryByronUpdateState ByronEraInByronMode) =
+      Some (DegenQuery (Consensus.GetUpdateInterfaceState))
+
+    convResult :: forall result result'.
+                  Query mode result
+               -> Consensus.Query block result'
+               -> result'
+               -> result
+    convResult (QueryInEra QueryByronUpdateState ByronEraInByronMode)
+               (DegenQuery (Consensus.GetUpdateInterfaceState)) _ = ()
+
+convLocalStateQueryClient ShelleyMode =
+    mapLocalStateQueryClient convPoint convQuery convResult
+  where
+    convPoint :: Point (BlockInMode mode) -> Point block
+    convPoint GenesisPoint                     = GenesisPoint
+    convPoint (BlockPoint slot (HeaderHash h)) = BlockPoint slot (OneEraHash h)
+
+    convQuery :: forall result.
+                 Query mode result
+              -> Some (Consensus.Query block)
     convQuery = undefined
 
     convResult :: forall result result'.
-                  StateQueryInMode mode result
-               -> Query block result'
+                  Query mode result
+               -> Consensus.Query block result'
+               -> result'
+               -> result
+    convResult = undefined
+
+convLocalStateQueryClient CardanoMode =
+    mapLocalStateQueryClient convPoint convQuery convResult
+  where
+    convPoint :: Point (BlockInMode mode) -> Point block
+    convPoint GenesisPoint                     = GenesisPoint
+    convPoint (BlockPoint slot (HeaderHash h)) = BlockPoint slot (OneEraHash h)
+
+    convQuery :: forall result.
+                 Query mode result
+              -> Some (Consensus.Query block)
+    convQuery = undefined
+
+    convResult :: forall result result'.
+                  Query mode result
+               -> Consensus.Query block result'
                -> result'
                -> result
     convResult = undefined
@@ -2985,7 +3111,7 @@ queryNodeLocalState :: forall mode result.
                        FilePath
                     -> NetworkId
                     -> NodeConsensusModeParams mode
-                    -> (Point (BlockInMode mode), StateQueryInMode mode result)
+                    -> (Point (BlockInMode mode), Query mode result)
                     -> IO (Either AcquireFailure result)
 queryNodeLocalState socketPath networkid modeparams pointAndQuery = do
     resultVar <- newEmptyTMVarIO
@@ -2998,8 +3124,8 @@ queryNodeLocalState socketPath networkid modeparams pointAndQuery = do
   where
     localStateQuerySingle
       :: TMVar (Either AcquireFailure result)
-      -> (Point (BlockInMode mode), StateQueryInMode mode result)
-      -> LocalStateQueryClient (BlockInMode mode) (StateQueryInMode mode) IO ()
+      -> (Point (BlockInMode mode), Query mode result)
+      -> LocalStateQueryClient (BlockInMode mode) (Query mode) IO ()
     localStateQuerySingle resultVar (point, query) =
       LocalStateQueryClient $ pure $
         SendMsgAcquire point $
