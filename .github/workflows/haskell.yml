@@ -81,12 +81,10 @@ jobs:
       run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - uses: actions/cache@v2
-      if: matrix.os != 'macos-latest'
       name: Cache cabal store
       with:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist
         key: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
         restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
 
