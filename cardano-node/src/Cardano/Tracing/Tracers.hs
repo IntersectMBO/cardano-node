@@ -113,6 +113,7 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
 
 import           Cardano.Tracing.Config
+import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
 import           Cardano.Tracing.Metrics
 import           Cardano.Tracing.Render (renderChainHash, renderHeaderHash)
 import           Cardano.Tracing.Shutdown ()
@@ -501,6 +502,7 @@ mkTracers _ _ _ _ _ enableP2P =
 
 teeTraceChainTip
   :: ( ConvertRawHash blk
+     , HasIssuer blk
      , LedgerSupportsProtocol blk
      , InspectLedger blk
      , ToObject (Header blk)
@@ -544,6 +546,7 @@ traceChainMetrics
   :: forall blk. ()
   => HasHeader (Header blk)
   => ConvertRawHash blk
+  => HasIssuer blk
   => Maybe EKGDirect
   -> STM.TVar Word64
   -> BlockConfig blk
@@ -569,7 +572,7 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
 
     doTrace :: ChainInformation blk -> IO ()
     doTrace
-        ChainInformation { slots, blocks, density, epoch, slotInEpoch, fork, tipBlockHash, tipBlockParentHash } = do
+        ChainInformation { slots, blocks, density, epoch, slotInEpoch, fork, tipBlockHash, tipBlockParentHash, tipBlockIssuerVerificationKeyHash } = do
       -- TODO this is executed each time the newFhain changes. How cheap is it?
       meta <- mkLOMeta Critical Public
 
@@ -591,6 +594,12 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
               (Text.decodeLatin1 . B16.encode . toRawHash (Proxy @blk))
               tipBlockParentHash
 
+          tipBlockIssuerVkHashText :: Text
+          tipBlockIssuerVkHashText =
+            case tipBlockIssuerVerificationKeyHash of
+              NoBlockIssuer -> "NoBlockIssuer"
+              BlockIssuerVerificationKeyHash bs ->
+                Text.decodeLatin1 (B16.encode bs)
       traceNamedObject
         (appendName "tipBlockHash" tr)
         (meta, LogMessage tipBlockHashText)
@@ -598,6 +607,10 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
       traceNamedObject
         (appendName "tipBlockParentHash" tr)
         (meta, LogMessage tipBlockParentHashText)
+
+      traceNamedObject
+        (appendName "tipBlockIssuerVerificationKeyHash" tr)
+        (meta, LogMessage tipBlockIssuerVkHashText)
 
 traceD :: Trace IO a -> LOMeta -> Text -> Double -> IO ()
 traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
@@ -1509,14 +1522,16 @@ data ChainInformation blk = ChainInformation
     -- ^ Hash of the last adopted block.
   , tipBlockParentHash :: ChainHash (Header blk)
     -- ^ Hash of the parent block of the last adopted block.
+  , tipBlockIssuerVerificationKeyHash :: BlockIssuerVerificationKeyHash
+    -- ^ Hash of the last adopted block issuer's verification key.
   }
 
 chainInformation
-  :: forall blk. HasHeader (Header blk)
+  :: forall blk. (HasHeader (Header blk), HasIssuer blk)
   => ChainDB.NewTipInfo blk
   -> Bool
-  -> AF.AnchoredFragment (Header blk)
-  -> AF.AnchoredFragment (Header blk)
+  -> AF.AnchoredFragment (Header blk) -- ^ Old fragment.
+  -> AF.AnchoredFragment (Header blk) -- ^ New fragment.
   -> Int64
   -> ChainInformation blk
 chainInformation newTipInfo fork oldFrag frag blocksUncoupledDelta = ChainInformation
@@ -1529,7 +1544,17 @@ chainInformation newTipInfo fork oldFrag frag blocksUncoupledDelta = ChainInform
     , fork = fork
     , tipBlockHash = realPointHash (ChainDB.newTipPoint newTipInfo)
     , tipBlockParentHash = AF.headHash oldFrag
+    , tipBlockIssuerVerificationKeyHash = tipIssuerVkHash
     }
+  where
+    tipIssuerVkHash :: BlockIssuerVerificationKeyHash
+    tipIssuerVkHash =
+      case AF.head frag of
+        Left AF.AnchorGenesis ->
+          NoBlockIssuer
+        Left (AF.Anchor _s _h _b) ->
+          NoBlockIssuer
+        Right blk -> getIssuerVerificationKeyHash blk
 
 fragmentChainDensity ::
   HasHeader (Header blk)
