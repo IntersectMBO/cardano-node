@@ -12,15 +12,15 @@ import           Data.Aeson
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
+import           Cardano.Tracing.Metrics (HasKESMetricsData)
 import           Cardano.Tracing.Queries (LedgerQueries)
 
-import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
-                     ForgeStateUpdateError, Header)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
+                     Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,  HasTxId,
-                     HasTxs (..))
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 
@@ -29,6 +29,7 @@ import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 type TraceConstraints blk =
     ( ConvertTxId blk
     , HasIssuer blk
+    , HasKESMetricsData blk
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk

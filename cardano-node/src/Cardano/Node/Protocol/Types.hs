@@ -23,7 +23,6 @@ import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 
 import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.Metrics (HasKESMetricsData)
 
 data Protocol = ByronProtocol
               | ShelleyProtocol
@@ -50,8 +49,7 @@ instance FromJSON Protocol where
                 <> show str <> " is not a valid protocol"
 
 type SomeConsensusProtocolConstraints blk =
-     ( HasKESMetricsData blk
-     , RunNode blk
+     ( RunNode blk
      , TraceConstraints blk
      )
 
