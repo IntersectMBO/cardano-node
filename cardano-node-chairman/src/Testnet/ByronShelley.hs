@@ -690,4 +690,6 @@ testnet H.Conf {..} = do
 
   H.noteShowIO_ DTC.getCurrentTime
 
+  void H.failure
+
   return allNodes
