@@ -11,6 +11,7 @@ import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
+import           Cardano.Tracing.HasIssuer (HasIssuer)
 import           Cardano.Tracing.Queries (LedgerQueries)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
@@ -27,6 +28,7 @@ import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =
     ( ConvertTxId blk
+    , HasIssuer blk
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk
