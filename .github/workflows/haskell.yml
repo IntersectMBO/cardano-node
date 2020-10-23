@@ -92,6 +92,11 @@ jobs:
     - name: Run tests
       run: TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" cabal test --builddir="$CABAL_BUILDDIR" cardano-node-chairman
 
+    - name: Delete socket files in preparation for upload artifacts
+      if: ${{ always() }}
+      run: |
+        find "${{ runner.temp }}/chairman/" -type s -exec rm -f {} \;
+
     - uses: actions/upload-artifact@v2
       if: ${{ always() }}
       with:
