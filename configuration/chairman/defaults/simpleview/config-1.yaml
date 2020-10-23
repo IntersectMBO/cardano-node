@@ -67,24 +67,18 @@ options:
   mapBackends:
     cardano.node.ChainDB.metrics:
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.metrics.Forge:
       - EKGViewBK
     cardano.node.metrics.Mempool:
       - EKGViewBK
     cardano.node.metrics:
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
 # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
 #     - TraceForwarderBK
     cardano.node.peers:
       - EKGViewBK
     cardano.node.BlockFetchDecision.peers:
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
 # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
 #    cardano.node.release:
 #      - TraceForwarderBK
@@ -110,7 +104,6 @@ NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold:
 TurnOnLogging: True
-ViewMode: SimpleView
 TurnOnLogMetrics: True
 SocketPath:
 

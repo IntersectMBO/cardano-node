@@ -9,13 +9,16 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 -- | 1. Generate a stake verification key
 --   2. Create a stake address registration certificate
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyStakeAddressCertificates :: Property
-golden_shelleyStakeAddressCertificates = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyStakeAddressCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference files
   referenceRegistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_address_registration_certificate"
   referenceDeregistrationCertificate <- noteInputFile "test/data/golden/shelley/certificates/stake_address_deregistration_certificate"
@@ -33,7 +36,7 @@ golden_shelleyStakeAddressCertificates = propertyOnce . moduleWorkspace "tmp" $ 
     , "--signing-key-file", signKey
     ]
 
-  assertFilesExist [verKey, signKey]
+  H.assertFilesExist [verKey, signKey]
 
   -- Create stake address registration certificate
   void $ execCardanoCLI

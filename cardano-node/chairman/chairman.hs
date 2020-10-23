@@ -5,7 +5,6 @@
 
 import           Cardano.Prelude hiding (option)
 
-import           Control.Applicative (some)
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (stdoutTracer)
 
@@ -23,6 +22,7 @@ import           Cardano.Api.Protocol.Shelley
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Typed (NetworkMagic (..))
 import           Cardano.Chairman (chairmanTest)
+import           Cardano.Node.Configuration.POM (parseNodeConfigurationFP, pncProtocol)
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 
@@ -37,9 +37,13 @@ main = do
                  , caNetworkMagic
                  } <- execParser opts
 
-    nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
+    partialNc <- liftIO . parseNodeConfigurationFP $ Just caConfigYaml
 
-    let someNodeClientProtocol = mkNodeClientProtocol $ ncProtocol nc
+    ptcl <- case pncProtocol partialNc of
+              Left err -> panic $ "Chairman error: " <> err
+              Right protocol -> return protocol
+
+    let someNodeClientProtocol = mkNodeClientProtocol ptcl
 
     chairmanTest
       stdoutTracer

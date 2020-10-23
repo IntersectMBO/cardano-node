@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Shelley CLI command types
@@ -22,6 +21,7 @@ module Cardano.CLI.Shelley.Commands
   , AddressKeyType (..)
   , ByronKeyType (..)
   , ByronKeyFormat (..)
+  , CardanoAddressKeyType (..)
   , GenesisDir (..)
   , TxInCount (..)
   , TxOutCount (..)
@@ -41,20 +41,24 @@ module Cardano.CLI.Shelley.Commands
   , PoolMetaDataFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
-  , VerificationKeyOrHashOrFile (..)
+  , WitnessSigningData (..)
+  , ColdVerificationKeyOrFile (..)
   ) where
 
 import           Data.Text (Text)
 import           Prelude
 
+import           Cardano.Api.MetaData
 import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Typed hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
+import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, VerificationKeyOrHashOrFile,
+                     VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
-import           Shelley.Spec.Ledger.TxData (MIRPot)
+import           Shelley.Spec.Ledger.TxBody (MIRPot)
 
 --
 -- Shelley CLI command data types
@@ -91,10 +95,13 @@ renderShelleyCommand sc =
 
 data AddressCmd
   = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
-  | AddressKeyHash VerificationKeyFile (Maybe OutputFile)
-  | AddressBuild VerificationKeyFile (Maybe VerificationKeyFile) NetworkId (Maybe OutputFile)
-  | AddressBuildMultiSig  --TODO
-  | AddressBuildScript ScriptFile NetworkId (Maybe OutputFile)
+  | AddressKeyHash VerificationKeyTextOrFile (Maybe OutputFile)
+  | AddressBuild
+      VerificationKeyTextOrFile
+      (Maybe (VerificationKeyOrFile StakeKey))
+      NetworkId
+      (Maybe OutputFile)
+  | AddressBuildMultiSig ScriptFile NetworkId (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
   deriving (Eq, Show)
 
@@ -105,17 +112,19 @@ renderAddressCmd cmd =
     AddressKeyGen {} -> "address key-gen"
     AddressKeyHash {} -> "address key-hash"
     AddressBuild {} -> "address build"
-    AddressBuildMultiSig {} -> "address build-multisig"
+    AddressBuildMultiSig {} -> "address build-script"
     AddressInfo {} -> "address info"
-    AddressBuildScript {} -> "address build-script"
 
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
-  | StakeAddressKeyHash VerificationKeyFile (Maybe OutputFile)
-  | StakeAddressBuild VerificationKeyFile NetworkId (Maybe OutputFile)
-  | StakeKeyRegistrationCert VerificationKeyFile OutputFile
-  | StakeKeyDelegationCert VerificationKeyFile StakePoolVerificationKeyHashOrFile OutputFile
-  | StakeKeyDeRegistrationCert VerificationKeyFile OutputFile
+  | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
+  | StakeAddressBuild (VerificationKeyOrFile StakeKey) NetworkId (Maybe OutputFile)
+  | StakeKeyRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
+  | StakeKeyDelegationCert
+      (VerificationKeyOrFile StakeKey)
+      (VerificationKeyOrHashOrFile StakePoolKey)
+      OutputFile
+  | StakeKeyDeRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
   deriving (Eq, Show)
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text
@@ -136,6 +145,7 @@ data KeyCmd
   | KeyConvertITNStakeKey SomeKeyFile OutputFile
   | KeyConvertITNExtendedToStakeKey SomeKeyFile OutputFile
   | KeyConvertITNBip32ToStakeKey SomeKeyFile OutputFile
+  | KeyConvertCardanoAddressSigningKey CardanoAddressKeyType SigningKeyFile OutputFile
   deriving (Eq, Show)
 
 renderKeyCmd :: KeyCmd -> Text
@@ -148,6 +158,7 @@ renderKeyCmd cmd =
     KeyConvertITNStakeKey {} -> "key convert-itn-key"
     KeyConvertITNExtendedToStakeKey {} -> "key convert-itn-extended-key"
     KeyConvertITNBip32ToStakeKey {} -> "key convert-itn-bip32-key"
+    KeyConvertCardanoAddressSigningKey {} -> "key convert-cardano-address-signing-key"
 
 data TransactionCmd
   = TxBuildRaw
@@ -157,12 +168,13 @@ data TransactionCmd
       Lovelace
       [CertificateFile]
       [(StakeAddress, Lovelace)]
+      TxMetadataJsonSchema
       [MetaDataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
-  | TxSign TxBodyFile [SigningKeyFile] (Maybe NetworkId) TxFile
-  | TxWitness TxBodyFile SigningKeyFile (Maybe NetworkId) OutputFile
-  | TxSignWitness TxBodyFile [WitnessFile] OutputFile
+  | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
+  | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
+  | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit Protocol NetworkId FilePath
   | TxCalculateMinFee
       TxBodyFile
@@ -180,8 +192,8 @@ renderTransactionCmd cmd =
   case cmd of
     TxBuildRaw {} -> "transaction build-raw"
     TxSign {} -> "transaction sign"
-    TxWitness {} -> "transaction witness"
-    TxSignWitness {} -> "transaction sign-witness"
+    TxCreateWitness {} -> "transaction witness"
+    TxAssembleTxBodyWitness {} -> "transaction sign-witness"
     TxSubmit {} -> "transaction submit"
     TxCalculateMinFee {} -> "transaction calculate-min-fee"
     TxGetTxId {} -> "transaction txid"
@@ -190,9 +202,9 @@ data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
   | NodeKeyGenKES  VerificationKeyFile SigningKeyFile
   | NodeKeyGenVRF  VerificationKeyFile SigningKeyFile
-  | NodeKeyHashVRF  VerificationKeyFile (Maybe OutputFile)
-  | NodeNewCounter  VerificationKeyFile Word OpCertCounterFile
-  | NodeIssueOpCert VerificationKeyFile SigningKeyFile OpCertCounterFile
+  | NodeKeyHashVRF  (VerificationKeyOrFile VrfKey) (Maybe OutputFile)
+  | NodeNewCounter ColdVerificationKeyOrFile Word OpCertCounterFile
+  | NodeIssueOpCert (VerificationKeyOrFile KesKey) SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
   deriving (Eq, Show)
 
@@ -209,9 +221,9 @@ renderNodeCmd cmd = do
 
 data PoolCmd
   = PoolRegistrationCert
-      VerificationKeyFile
+      (VerificationKeyOrFile StakePoolKey)
       -- ^ Stake pool verification key.
-      VerificationKeyFile
+      (VerificationKeyOrFile VrfKey)
       -- ^ VRF Verification key.
       Lovelace
       -- ^ Pool pledge.
@@ -219,9 +231,9 @@ data PoolCmd
       -- ^ Pool cost.
       Rational
       -- ^ Pool margin.
-      VerificationKeyFile
+      (VerificationKeyOrFile StakeKey)
       -- ^ Reward account verification staking key.
-      [VerificationKeyFile]
+      [VerificationKeyOrFile StakeKey]
       -- ^ Pool owner verification staking key(s).
       [StakePoolRelay]
       -- ^ Stake pool relays.
@@ -230,12 +242,12 @@ data PoolCmd
       NetworkId
       OutputFile
   | PoolRetirementCert
-      VerificationKeyFile
+      (VerificationKeyOrFile StakePoolKey)
       -- ^ Stake pool verification key.
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
       OutputFile
-  | PoolGetId VerificationKeyFile OutputFormat
+  | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
   | PoolMetaDataHash PoolMetaDataFile (Maybe OutputFile)
   deriving (Eq, Show)
 
@@ -395,6 +407,14 @@ data ByronKeyFormat = NonLegacyByronKeyFormat
                     | LegacyByronKeyFormat
   deriving (Eq, Show)
 
+-- | The type of @cardano-address@ key.
+data CardanoAddressKeyType
+  = CardanoAddressShelleyPaymentKey
+  | CardanoAddressShelleyStakeKey
+  | CardanoAddressIcarusPaymentKey
+  | CardanoAddressByronPaymentKey
+  deriving (Eq, Show)
+
 newtype OpCertCounterFile
   = OpCertCounterFile FilePath
   deriving (Eq, Show)
@@ -420,20 +440,28 @@ newtype VerificationKeyBase64
   = VerificationKeyBase64 String
   deriving (Eq, Show)
 
--- | Either a verification key, verification key hash, or path to a
--- verification key file.
-data VerificationKeyOrHashOrFile keyrole
-  = VerificationKeyValue !(VerificationKey keyrole)
-  -- ^ A verification key.
-  | VerificationKeyHash !(Hash keyrole)
-  -- ^ A verification key hash.
-  | VerificationKeyFilePath !VerificationKeyFile
-  -- ^ A path to a verification key file.
-  -- Note that this file hasn't been validated at all (whether it exists,
-  -- contains a key of the correct type, etc.)
+-- | Data required to construct a witness.
+data WitnessSigningData
+  = KeyWitnessSigningData
+      !SigningKeyFile
+      -- ^ Path to a file that should contain a signing key.
+      !(Maybe (Address Byron))
+      -- ^ An optionally specified Byron address.
+      --
+      -- If specified, both the network ID and derivation path are extracted
+      -- from the address and used in the construction of the Byron witness.
+  | ScriptWitnessSigningData !ScriptFile
+  deriving (Eq, Show)
 
-deriving instance (Show (VerificationKey keyrole), Show (Hash keyrole))
-  => Show (VerificationKeyOrHashOrFile keyrole)
-
-deriving instance (Eq (VerificationKey keyrole), Eq (Hash keyrole))
-  => Eq (VerificationKeyOrHashOrFile keyrole)
+-- | Either a stake pool verification key, genesis delegate verification key,
+-- or a path to a cold verification key file.
+--
+-- Note that a "cold verification key" refers to either a stake pool or
+-- genesis delegate verification key.
+--
+-- TODO: A genesis delegate extended key should also be valid here.
+data ColdVerificationKeyOrFile
+  = ColdStakePoolVerificationKey !(VerificationKey StakePoolKey)
+  | ColdGenesisDelegateVerificationKey !(VerificationKey GenesisDelegateKey)
+  | ColdVerificationKeyFile !VerificationKeyFile
+  deriving (Eq, Show)

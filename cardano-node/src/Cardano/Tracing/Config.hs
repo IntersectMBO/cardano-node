@@ -6,8 +6,7 @@ module Cardano.Tracing.Config
   , traceConfigParser
   ) where
 
-import           Cardano.Prelude hiding (show)
-import           Prelude (Show (..))
+import           Cardano.Prelude
 
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
@@ -20,7 +19,7 @@ import           Cardano.Node.Orphans ()
 data TraceOptions
   = TracingOff
   | TracingOn TraceSelection
-  deriving Show
+  deriving (Eq, Show)
 
 data TraceSelection
   = TraceSelection

@@ -10,6 +10,8 @@ import           Cardano.Prelude
 import           Hedgehog (Gen, Property, discover)
 import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import qualified Hedgehog as H
 
@@ -33,7 +35,6 @@ prop_roundtrip_tx_byron_CBOR =
 prop_roundtrip_tx_shelley_CBOR :: Property
 prop_roundtrip_tx_shelley_CBOR =
   roundtrip_CBOR AsShelleyTx genTxShelley
-
 
 prop_roundtrip_witness_shelley_CBOR :: Property
 prop_roundtrip_witness_shelley_CBOR =
@@ -115,6 +116,10 @@ prop_roundtrip_signing_key_kes_CBOR :: Property
 prop_roundtrip_signing_key_kes_CBOR =
   roundtrip_CBOR (AsSigningKey AsKesKey) (genSigningKey AsKesKey)
 
+prop_roundtrip_script_CBOR :: Property
+prop_roundtrip_script_CBOR =
+  roundtrip_CBOR AsScript genScript
+
 -- -----------------------------------------------------------------------------
 
 roundtrip_CBOR
@@ -129,6 +134,5 @@ roundtrip_CBOR typeProxy gen =
 
 -- -----------------------------------------------------------------------------
 
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

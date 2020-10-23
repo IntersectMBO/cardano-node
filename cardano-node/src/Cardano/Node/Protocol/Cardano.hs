@@ -33,11 +33,9 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
-import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import           Ouroboros.Consensus.Cardano.Condense ()
 
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
-import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Node.Types
 
@@ -76,7 +74,8 @@ mkSomeConsensusProtocolCardano ncb ncs nch files =
     -- Applying the SomeConsensusProtocol here is a check that
     -- the type of mkConsensusProtocolCardano fits all the class
     -- constraints we need to run the protocol.
-    SomeConsensusProtocol <$> mkConsensusProtocolCardano ncb ncs nch files
+    SomeConsensusProtocol
+      <$> mkConsensusProtocolCardano ncb ncs nch files
 
 
 -- | Instantiate 'Consensus.Protocol' for Byron specifically.
@@ -106,13 +105,18 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcShelleyGenesisFile,
                              npcShelleyGenesisFileHash,
                              npcShelleySupportedProtocolVersionMajor,
-                             npcShelleySupportedProtocolVersionMinor,
-                             npcShelleyMaxSupportedProtocolVersion
+                             npcShelleySupportedProtocolVersionMinor
                            }
                            NodeHardForkProtocolConfiguration {
                              npcTestShelleyHardForkAtEpoch,
                              npcTestShelleyHardForkAtVersion,
-                             npcShelleyHardForkNotBeforeEpoch
+                             npcShelleyHardForkNotBeforeEpoch,
+                             npcTestAllegraHardForkAtEpoch,
+                             npcTestAllegraHardForkAtVersion,
+                             npcAllegraHardForkNotBeforeEpoch,
+                             npcTestMaryHardForkAtEpoch,
+                             npcTestMaryHardForkAtVersion,
+                             npcMaryHardForkNotBeforeEpoch
                            }
                            files = do
     byronGenesis <-
@@ -136,47 +140,95 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     return $!
       Consensus.ProtocolCardano
-        -- Byron parameters
-        byronGenesis
-        (PBftSignatureThreshold <$> npcByronPbftSignatureThresh)
-        (Byron.ProtocolVersion npcByronSupportedProtocolVersionMajor
-                               npcByronSupportedProtocolVersionMinor
-                               npcByronSupportedProtocolVersionAlt)
-        (Byron.SoftwareVersion npcByronApplicationName
-                               npcByronApplicationVersion)
-        byronLeaderCredentials
+        Consensus.ProtocolParamsByron {
+          byronGenesis = byronGenesis,
+          byronPbftSignatureThreshold =
+            PBftSignatureThreshold <$> npcByronPbftSignatureThresh,
+          byronProtocolVersion =
+            Byron.ProtocolVersion
+              npcByronSupportedProtocolVersionMajor
+              npcByronSupportedProtocolVersionMinor
+              npcByronSupportedProtocolVersionAlt,
+          byronSoftwareVersion =
+            Byron.SoftwareVersion
+              npcByronApplicationName
+              npcByronApplicationVersion,
+          byronLeaderCredentials =
+            byronLeaderCredentials
+        }
+        Consensus.ProtocolParamsShelley {
+          shelleyGenesis = shelleyGenesis,
+          shelleyInitialNonce =
+            Shelley.genesisHashToPraosNonce shelleyGenesisHash,
+          shelleyProtVer =
+            ProtVer
+              npcShelleySupportedProtocolVersionMajor
+              npcShelleySupportedProtocolVersionMinor,
+          shelleyLeaderCredentials =
+            shelleyLeaderCredentials
+        }
+        Consensus.ProtocolParamsAllegra {
+          allegraProtVer =
+            ProtVer
+              npcShelleySupportedProtocolVersionMajor
+              npcShelleySupportedProtocolVersionMinor,
+          allegraLeaderCredentials =
+            shelleyLeaderCredentials
+        }
+        Consensus.ProtocolParamsMary {
+          maryProtVer =
+            ProtVer
+              npcShelleySupportedProtocolVersionMajor
+              npcShelleySupportedProtocolVersionMinor,
+          maryLeaderCredentials =
+            shelleyLeaderCredentials
+        }
+        -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
+        -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
+        -- Byron to Shelley hard fork parameters
+        Consensus.ProtocolParamsTransition {
+          transitionLowerBound = npcShelleyHardForkNotBeforeEpoch,
+          transitionTrigger =
+            -- What will trigger the Byron -> Shelley hard fork?
+            case npcTestShelleyHardForkAtEpoch of
 
-        -- Shelley parameters
-        shelleyGenesis
-        (Shelley.genesisHashToPraosNonce shelleyGenesisHash)
-        (Shelley.ProtVer npcShelleySupportedProtocolVersionMajor
-                         npcShelleySupportedProtocolVersionMinor)
-        (MaxMajorProtVer npcShelleyMaxSupportedProtocolVersion)
-        shelleyLeaderCredentials
+               -- This specifies the major protocol version number update that will
+               -- trigger us moving to the Shelley protocol.
+               --
+               -- Version 0 is Byron with Ouroboros classic
+               -- Version 1 is Byron with Ouroboros Permissive BFT
+               -- Version 2 is Shelley
+               -- Version 3 is Allegra
+               -- Version 4 is Mary
+               --
+               -- But we also provide an override to allow for simpler test setups
+               -- such as triggering at the 0 -> 1 transition .
+               --
+               Nothing -> Consensus.TriggerHardForkAtVersion
+                            (maybe 2 fromIntegral npcTestShelleyHardForkAtVersion)
 
-        -- Hard fork parameters
-        npcShelleyHardForkNotBeforeEpoch
-
-        -- What will trigger the hard fork?
-        (case npcTestShelleyHardForkAtEpoch of
-
-           -- This specifies the major protocol version number update that will
-           -- trigger us moving to the Shelley protocol.
-           --
-           -- Version 0 is Byron with Ouroboros classic
-           -- Version 1 is Byron with Ouroboros Permissive BFT
-           -- Version 2 is Shelley
-           --
-           -- But we also provide an override to allow for simpler test setups
-           -- such as triggering at the 0 -> 1 transition .
-           --
-           Nothing -> Consensus.TriggerHardForkAtVersion
-                        (maybe 2 fromIntegral npcTestShelleyHardForkAtVersion)
-
-           -- Alternatively, for testing we can transition at a specific epoch.
-           --
-           Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo)
-
+               -- Alternatively, for testing we can transition at a specific epoch.
+               --
+               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+        }
+        -- Shelley to Allegra hard fork parameters
+        Consensus.ProtocolParamsTransition {
+          transitionLowerBound = npcAllegraHardForkNotBeforeEpoch,
+          transitionTrigger =
+            case npcTestAllegraHardForkAtEpoch of
+               Nothing -> Consensus.TriggerHardForkAtVersion
+                            (maybe 3 fromIntegral npcTestAllegraHardForkAtVersion)
+               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+        }
+        -- Allegra to Mary hard fork parameters
+        Consensus.ProtocolParamsTransition {
+          transitionLowerBound = npcMaryHardForkNotBeforeEpoch,
+          transitionTrigger =
+            case npcTestMaryHardForkAtEpoch of
+               Nothing -> Consensus.TriggerHardForkAtVersion
+                            (maybe 4 fromIntegral npcTestMaryHardForkAtVersion)
+               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+        }
 
 ------------------------------------------------------------------------------
 -- Errors

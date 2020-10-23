@@ -11,17 +11,12 @@
 
 module Cardano.Chairman (chairmanTest) where
 
-import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show)
+import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show, throwIO)
 import           Prelude (String, error, show)
 
-import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Monad (void)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Coerce (coerce)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Proxy (Proxy (..))
-import           Data.Void (Void)
 
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
@@ -30,8 +25,6 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
-
-import           Network.Mux (MuxError, MuxMode (..))
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig, GetHeader (..), Header)
@@ -285,7 +278,7 @@ runChairman tracer cfg networkMagic securityParam runningTime socketPaths = do
 
     let initialChains = Map.fromList [ (socketPath, AF.Empty AF.AnchorGenesis)
                                      | socketPath <- socketPaths]
-    chainsVar <- newTVarM initialChains
+    chainsVar <- newTVarIO initialChains
 
     void $ timeout runningTime $
       withIOManager $ \iomgr ->
@@ -471,7 +464,7 @@ checkConsensus
     -> STM m (ConsensusSuccess blk)
 checkConsensus chainsVar securityParam = do
     chainsSnapshot <- readTVar chainsVar
-    either throwM return $ consensusCondition securityParam chainsSnapshot
+    either throwIO return $ consensusCondition securityParam chainsSnapshot
 
 
 --
@@ -500,7 +493,7 @@ localInitiatorNetworkApplication
   -> SocketPath
   -> ChainsVar m blk
   -> SecurityParam
-  -> Versions NodeToClientVersion DictVersion
+  -> Versions NodeToClientVersion (DictVersion NodeToClientVersion AgreedOptions)
               (OuroborosApplication InitiatorMode LocalAddress ByteString m () Void)
 localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                                  localTxSubmissionTracer

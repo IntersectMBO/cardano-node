@@ -6,7 +6,6 @@ import           Cardano.Prelude hiding (option)
 import qualified Data.Text as Text
 import           Prelude (String)
 
-import           Data.Semigroup ((<>))
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help ((<$$>))
@@ -16,12 +15,11 @@ import           Data.Version (showVersion)
 import           Paths_cardano_node (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
 
-import           Cardano.Node.Configuration.Logging (createLoggingLayer)
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration)
 import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
                      renderHelpDoc)
 import           Cardano.Node.Run (runNode)
-import           Cardano.Node.Types (NodeCLI (..))
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
@@ -56,7 +54,7 @@ main = toplevelExceptionHandler $ do
         <$$> parserHelpOptions nodeCLIParser
 
 
-data Command = RunCmd NodeCLI
+data Command = RunCmd PartialNodeConfiguration
              | VersionCmd
 
 -- Yes! A --version flag or version command. Either guess is right!
@@ -91,18 +89,8 @@ runVersionCommand =
     renderVersion = Text.pack . showVersion
 
 
-runRunCommand :: NodeCLI -> IO ()
-runRunCommand npm = do
-
-  eLoggingLayer <- runExceptT $ createLoggingLayer
-                     (Text.pack (showVersion version))
-                     npm
-
-  loggingLayer <- case eLoggingLayer of
-                    Left err -> putTextLn (show err) >> exitFailure
-                    Right res -> return res
-
-  liftIO $ runNode loggingLayer npm
+runRunCommand :: PartialNodeConfiguration -> IO ()
+runRunCommand pnc = liftIO $ runNode pnc
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =

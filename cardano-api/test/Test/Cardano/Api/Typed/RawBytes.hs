@@ -10,6 +10,8 @@ import           Cardano.Prelude
 import           Hedgehog (Property, discover)
 import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import qualified Hedgehog as H
 
@@ -18,26 +20,21 @@ import qualified Hedgehog as H
 -- Address CBOR round trips
 
 prop_roundtrip_shelley_address_raw :: Property
-prop_roundtrip_shelley_address_raw = H.property $ do
-  addr <- H.forAll genAddressShelley
-  H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsShelleyAddress)
+prop_roundtrip_shelley_address_raw =
+  roundtrip_raw_bytes AsShelleyAddress genAddressShelley
+
 
 prop_roundtrip_byron_address_raw :: Property
-prop_roundtrip_byron_address_raw = H.property $ do
-  addr <- H.forAll genAddressByron
-  H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsByronAddress)
-
-{-
---TODO: Follow up
-This property will fail due to:
- Shelley.deserialiseRewardAcnt not being available
+prop_roundtrip_byron_address_raw =
+  roundtrip_raw_bytes AsByronAddress genAddressByron
 
 prop_roundtrip_stake_address_raw :: Property
-prop_roundtrip_stake_address_raw = H.property $ do
-  addr <- H.forAll genStakeAddress
-  H.tripping addr serialiseToRawBytes (deserialiseFromRawBytes AsStakeAddress)
--}
+prop_roundtrip_stake_address_raw =
+  roundtrip_raw_bytes AsStakeAddress genStakeAddress
 
+prop_roundtrip_script_hash_raw :: Property
+prop_roundtrip_script_hash_raw =
+  roundtrip_raw_bytes (AsHash AsScript) genScriptHash
 
 prop_roundtrip_verification_ByronKey_hash_raw :: Property
 prop_roundtrip_verification_ByronKey_hash_raw =
@@ -77,6 +74,15 @@ prop_roundtrip_verification_GenesisUTxOKey_hash_raw =
 
 -- -----------------------------------------------------------------------------
 
+roundtrip_raw_bytes
+  :: ( SerialiseAsRawBytes a
+     , Eq a
+     , Show a) => AsType a -> H.Gen a -> Property
+roundtrip_raw_bytes asType g =
+  H.property $ do
+    v <- H.forAll g
+    H.tripping v serialiseToRawBytes (deserialiseFromRawBytes asType)
+
 roundtrip_verification_key_hash_raw
   :: (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole))
   => AsType keyrole -> Property
@@ -88,7 +94,5 @@ roundtrip_verification_key_hash_raw roletoken =
 
 -- -----------------------------------------------------------------------------
 
-
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

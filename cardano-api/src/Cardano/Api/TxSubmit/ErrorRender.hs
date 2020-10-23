@@ -14,7 +14,6 @@ import           Cardano.Chain.UTxO.Validation (TxValidationError (..), UTxOVali
 
 import           Cardano.Prelude hiding ((%))
 
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Formatting (build, sformat, stext, (%))

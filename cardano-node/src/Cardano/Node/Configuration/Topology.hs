@@ -3,7 +3,9 @@
 module Cardano.Node.Configuration.Topology
   ( TopologyError(..)
   , NetworkTopology(..)
-  , NodeHostAddress(..)
+  , NodeHostIPAddress(..)
+  , NodeHostIPv4Address(..)
+  , NodeHostIPv6Address(..)
   , NodeSetup(..)
   , RemoteAddress(..)
   , nodeAddressToSockAddr
@@ -15,16 +17,13 @@ where
 import           Cardano.Prelude
 import           Prelude (String)
 
-import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.IP as IP
 import qualified Data.Text as Text
-import           Network.Socket (PortNumber, SockAddr (..))
-import           Text.Read (readMaybe)
 
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
@@ -34,20 +33,13 @@ newtype TopologyError
   = NodeIdNotFoundInToplogyFile FilePath
   deriving Show
 
-nodeAddressToSockAddr :: NodeAddress -> SockAddr
-nodeAddressToSockAddr (NodeAddress addr port) =
-  case unNodeHostAddress addr of
-    Just (IP.IPv4 ipv4) -> SockAddrInet port $ IP.toHostAddress ipv4
-    Just (IP.IPv6 ipv6) -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
-    Nothing             -> SockAddrInet port 0 -- Could also be any IPv6 addr
-
 -- | Domain name with port number
 --
 data RemoteAddress = RemoteAddress
-  { raAddress :: !String
-  -- ^ Either a DNS address or IP address
-  , raPort :: !PortNumber
-  -- ^ Port number of the destination
+  { raAddress   :: !Text
+  -- ^ Either a dns address or an ip address.
+  , raPort      :: !PortNumber
+  -- ^ Port number of the destination.
   , raValency :: !Int
   -- ^ If a DNS address is given valency governs
   -- to how many resolved IP addresses
@@ -60,18 +52,22 @@ data RemoteAddress = RemoteAddress
 -- | Parse 'raAddress' field as an IP address; if it parses and the valency is
 -- non zero return corresponding NodeAddress.
 --
-remoteAddressToNodeAddress :: RemoteAddress-> Maybe NodeAddress
-remoteAddressToNodeAddress (RemoteAddress addrStr port val) =
-  case readMaybe addrStr of
-    Nothing -> Nothing
-    Just addr -> if val /= 0
-                 then Just $ NodeAddress (NodeHostAddress $ Just addr) port
-                 else Nothing
+remoteAddressToNodeAddress
+  :: RemoteAddress
+  -> Maybe (Either NodeIPAddress
+                   (NodeDnsAddress, Int))
+remoteAddressToNodeAddress (RemoteAddress _addrText _port 0) =
+    Nothing
+remoteAddressToNodeAddress (RemoteAddress addrText port valency) =
+    case readMaybe (Text.unpack addrText) of
+      Nothing   -> Just $ Right (NodeAddress (NodeHostDnsAddress addrText) port
+                                , valency)
+      Just addr -> Just $ Left  (NodeAddress (NodeHostIPAddress addr) port)
 
 
 instance Condense RemoteAddress where
   condense (RemoteAddress addr port val) =
-    addr ++ ":" ++ show port ++ " (" ++ show val ++ ")"
+    Text.unpack addr ++ ":" ++ show port ++ " (" ++ show val ++ ")"
 
 instance FromJSON RemoteAddress where
   parseJSON = withObject "RemoteAddress" $ \v ->
@@ -90,7 +86,8 @@ instance ToJSON RemoteAddress where
 
 data NodeSetup = NodeSetup
   { nodeId :: !Word64
-  , nodeAddress :: !NodeAddress
+  , nodeIPv4Address :: !(Maybe NodeIPv4Address)
+  , nodeIPv6Address :: !(Maybe NodeIPv6Address)
   , producers :: ![RemoteAddress]
   } deriving (Eq, Show)
 
@@ -98,14 +95,16 @@ instance FromJSON NodeSetup where
   parseJSON = withObject "NodeSetup" $ \o ->
                 NodeSetup
                   <$> o .: "nodeId"
-                  <*> o .: "nodeAddress"
+                  <*> o .: "nodeIPv4Address"
+                  <*> o .: "nodeIPv6Address"
                   <*> o .: "producers"
 
 instance ToJSON NodeSetup where
   toJSON ns =
     object
       [ "nodeId" .= nodeId ns
-      , "nodeAddress" .= nodeAddress ns
+      , "nodeIPv4Address" .= nodeIPv4Address ns
+      , "nodeIPv6Address" .= nodeIPv6Address ns
       , "producers" .= producers ns
       ]
 
@@ -128,9 +127,9 @@ instance ToJSON NetworkTopology where
 -- | Read the `NetworkTopology` configuration from the specified file.
 -- While running a real protocol, this gives your node its own address and
 -- other remote peers it will attempt to connect to.
-readTopologyFile :: NodeCLI -> IO (Either Text NetworkTopology)
-readTopologyFile ncli = do
-  eBs <- Exception.try $ BS.readFile (unTopology $ topologyFile ncli)
+readTopologyFile :: NodeConfiguration -> IO (Either Text NetworkTopology)
+readTopologyFile nc = do
+  eBs <- Exception.try $ BS.readFile (unTopology $ ncTopologyFile nc)
 
   case eBs of
     Left e -> return . Left $ handler e

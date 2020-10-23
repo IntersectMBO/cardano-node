@@ -41,12 +41,11 @@ import           Control.Tracer.Transformers
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
-import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName,
-                     PrivacyAnnotation (Confidential), mkLOMeta)
+import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
-import           Cardano.BM.ElidingTracer
-import           Cardano.BM.Trace (appendName, traceNamedObject)
+import           Cardano.BM.Internal.ElidingTracer
+import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash,
@@ -179,15 +178,15 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
                (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceGCEvent _ev1))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
-  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceGCEvent _ev2)) = True
-  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceAddBlockEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceAddBlockEvent _))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
-  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmDBEvent _))
-               (WithSeverity _s2 (ChainDB.TraceCopyToImmDBEvent _)) = True
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
+               (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   isEquivalent _ _ = False
   -- the types to be elided
   doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
@@ -203,7 +202,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
-  doelide (WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent ChainDB.AddedToCurrentChain{})) (_old, oldt) = do
@@ -216,11 +215,11 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
         else return (Just ev, oldt)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceCopyToImmDBEvent _)) (_old, count) =
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) (_old, count) =
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt replayTo))) (_old, count) = do
+  conteliding _tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt [] replayTo))) (_old, count) = do
       let slotno = toInteger $ unSlotNo (realPointSlot pt)
           endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
           startslot = if count == 0 then slotno else toInteger count
@@ -447,13 +446,15 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision $ appendName "BlockFetchDecision" tr
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
-    , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $ forgeStateInfoTracer (Proxy @ blk) trSel tr
+    , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
+        contramap (\(Consensus.TraceLabelCreds _ ev) -> ev) $
+        forgeStateInfoTracer (Proxy @ blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff (traceTxInbound trSel) verb "TxInbound" tr
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr bcCounters
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
-        Tracer $ \ev -> do
+        Tracer $ \(Consensus.TraceLabelCreds _ ev) -> do
           traceWith (forgeTracer verb tr forgeTracers nodeKern bcCounters) ev
           traceWith (blockForgeOutcomeExtractor
                     $ toLogObject' verb

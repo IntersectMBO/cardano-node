@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -19,14 +20,15 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Text.Printf (printf)
+import           NoThunks.Class (NoThunks, AllowThunk (..))
 
-import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.LogItem (LOContent (..))
 import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
-import           Cardano.BM.Trace (appendName, traceNamedObject)
+import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Node (NodeKernel (..), remoteAddress)
+import           Ouroboros.Consensus.Node (remoteAddress)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as Net
@@ -35,8 +37,6 @@ import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
                      PeerFetchStatus (..), readFetchClientState)
-import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 
 import           Cardano.Tracing.Kernel
 
@@ -47,9 +47,7 @@ data Peer blk =
   !(PeerFetchStatus (Header blk))
   !(PeerFetchInFlight (Header blk))
   deriving (Generic)
-
-instance NoUnexpectedThunks (Peer blk) where
-    whnfNoUnexpectedThunks _ _ = pure NoUnexpectedThunks
+  deriving NoThunks via AllowThunk (Peer blk)
 
 instance NFData (Peer blk) where
     rnf _ = ()

@@ -16,6 +16,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
 import           Data.Aeson
+import           NoThunks.Class (NoThunks)
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
@@ -30,7 +31,7 @@ data Protocol = ByronProtocol
   deriving (Eq, Show, Generic)
 
 deriving instance NFData Protocol
-deriving instance NoUnexpectedThunks Protocol
+deriving instance NoThunks Protocol
 
 instance FromJSON Protocol where
   parseJSON =

@@ -4,19 +4,19 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.GenesisKeyDelegationCertifi
   ( golden_shelleyGenesisKeyDelegationCertificate
   ) where
 
-import           Cardano.Prelude
-
-import           Hedgehog (Property)
-
 import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
-
+import           Cardano.Prelude
+import           Hedgehog (Property)
 import           Test.OptParse
+
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyGenesisKeyDelegationCertificate :: Property
 golden_shelleyGenesisKeyDelegationCertificate =
-  propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+  propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
     -- Reference certificate
     referenceCertificateFilePath <-
       noteInputFile $
@@ -54,7 +54,7 @@ golden_shelleyGenesisKeyDelegationCertificate =
       , "--signing-key-file", "/dev/null"
       ]
 
-    assertFilesExist
+    H.assertFilesExist
       [ genesisVerKeyFilePath
       , genesisDelegVerKeyFilePath
       , vrfVerKeyFilePath
@@ -69,7 +69,7 @@ golden_shelleyGenesisKeyDelegationCertificate =
       , "--out-file", genesisKeyDelegCertFilePath
       ]
 
-    assertFilesExist [genesisKeyDelegCertFilePath]
+    H.assertFilesExist [genesisKeyDelegCertFilePath]
 
     let certificateType = textEnvelopeType AsCertificate
 

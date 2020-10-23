@@ -22,7 +22,7 @@ import           Cardano.Api.Typed (MultiSigScript (..))
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
-import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Util.Time
 
 import           Shelley.Spec.Ledger.Address (Addr (..))

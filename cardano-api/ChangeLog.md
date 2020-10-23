@@ -1,5 +1,27 @@
 # Changelog for cardano-api
 
+## 1.21.2 -- September 2020
+
+- Add a Ed25519-BIP32 instance of the new crypto classes (#1933, #1952)
+- Adjust what is exposed via Cardano.API.{Byron,Shelley} (#1932)
+
+## 1.21.1 -- September 2020
+
+None
+
+## 1.21.0 -- September 2020
+- Support for multi-signature scripts (#1788)
+- Support for Byron witnesses for addresses that use attributes, which includes
+  all addresses in legacy Daedalus Byron wallets (#1851, #1871)
+- Introduce a Cardano.API top level module exporting only the public parts
+  and modules Cardano.API.{Byron,Shelley} that expose the underlying library
+  types for applications that need it (#1881)
+
+## 1.20.0 -- September 2020
+
+- Improved support for JSON to Tx metadata conversions, with two supported
+  JSON schemas, suitable for different use cases (#1797)
+
 ## 1.19.1 -- September 2020
 
 - Adjust the tx metadata JSON schema to be fully recursive (#1735)

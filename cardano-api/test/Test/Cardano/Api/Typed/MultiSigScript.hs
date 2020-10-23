@@ -12,10 +12,12 @@ import           Data.Aeson
 import           Hedgehog (Property, discover)
 import qualified Hedgehog as H
 import           Hedgehog.Internal.Property (failWith)
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Prelude (goldenTestJSONDec, goldenTestJSONPretty)
+import           Test.Cardano.Prelude (goldenTestJSONPretty)
 
 prop_generateMofNcorrectly :: Property
 prop_generateMofNcorrectly = H.property $ do
@@ -42,13 +44,5 @@ prop_roundtrip_MultiSigScript_JSON =
     mss <- H.forAll genMultiSigScript
     H.tripping mss encode eitherDecode
 
-
--- Previous script syntax tests
-
--- Decode only golden test
-prop_golden_Previous_MofNMultiSig :: Property
-prop_golden_Previous_MofNMultiSig = goldenTestJSONDec exampleMofN "test/Golden/MultiSig/PreviousScriptSyntax/atleast"
-
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

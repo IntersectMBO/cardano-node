@@ -8,10 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionBuild :: Property
-golden_shelleyTransactionBuild = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTransactionBuild = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Use the same (faked) TxIn for both transactions.
   let txIn = "2392d2b1200b5139fe555c81261697b29a8ccf561c5c783d46e78a479d977053#0"
 
@@ -29,6 +32,6 @@ golden_shelleyTransactionBuild = propertyOnce $ moduleWorkspace "tmp" $ \tempDir
     , "--tx-body-file", txBodyOutFile
     ]
 
-  assertFileOccurences 1 "TxUnsignedShelley" txBodyOutFile
+  H.assertFileOccurences 1 "TxUnsignedShelley" txBodyOutFile
 
-  assertEndsWithSingleNewline txBodyOutFile
+  H.assertEndsWithSingleNewline txBodyOutFile

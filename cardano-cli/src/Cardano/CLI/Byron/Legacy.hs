@@ -15,8 +15,6 @@ import           Cardano.Prelude hiding (option)
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
 import           Data.Coerce (coerce)
-import           Data.Semigroup ((<>))
-import           Data.Text (Text)
 import qualified Data.Text as T
 import           Lens.Micro (LensLike, _Left)
 

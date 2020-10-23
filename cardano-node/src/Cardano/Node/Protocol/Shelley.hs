@@ -28,7 +28,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                      newExceptT)
 
@@ -37,9 +36,9 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Node (MaxMajorProtVer (..), Nonce (..),
-                     ShelleyGenesis, TPraosLeaderCredentials (..))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardShelley, TPraosCanBeLeader (..))
+import           Ouroboros.Consensus.Shelley.Node (Nonce (..),
+                     ProtocolParamsShelley (..), ShelleyGenesis, TPraosLeaderCredentials (..))
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..))
 
 import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
                      validateGenesis)
@@ -94,8 +93,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyGenesisFile,
                             npcShelleyGenesisFileHash,
                             npcShelleySupportedProtocolVersionMajor,
-                            npcShelleySupportedProtocolVersionMinor,
-                            npcShelleyMaxSupportedProtocolVersion
+                            npcShelleySupportedProtocolVersionMinor
                           }
                           files = do
     (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
@@ -104,13 +102,16 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     optionalLeaderCredentials <- readLeaderCredentials files
 
     return $
-      Consensus.ProtocolShelley
-        genesis
-        (genesisHashToPraosNonce genesisHash)
-        (ProtVer npcShelleySupportedProtocolVersionMajor
-                 npcShelleySupportedProtocolVersionMinor)
-        (MaxMajorProtVer npcShelleyMaxSupportedProtocolVersion)
-        optionalLeaderCredentials
+      Consensus.ProtocolShelley $ Consensus.ProtocolParamsShelley {
+        shelleyGenesis = genesis,
+        shelleyInitialNonce = genesisHashToPraosNonce genesisHash,
+        shelleyProtVer =
+          ProtVer
+            npcShelleySupportedProtocolVersionMajor
+            npcShelleySupportedProtocolVersionMinor,
+        shelleyLeaderCredentials =
+          maybeToList optionalLeaderCredentials
+      }
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce
 genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
@@ -170,7 +171,8 @@ readLeaderCredentials (Just ProtocolFilepaths {
                    tpraosCanBeLeaderColdVerKey = coerceKeyRole vkey,
                    tpraosCanBeLeaderSignKeyVRF = vrfKey
                  },
-               tpraosLeaderCredentialsInitSignKey = kesKey
+               tpraosLeaderCredentialsInitSignKey = kesKey,
+               tpraosLeaderCredentialsLabel = "Shelley"
              }
 
 -- But not OK to supply some of the files without the others.

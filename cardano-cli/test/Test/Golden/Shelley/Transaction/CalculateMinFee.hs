@@ -8,12 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
-import qualified System.IO as IO
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyTransactionCalculateMinFee :: Property
-golden_shelleyTransactionCalculateMinFee = propertyOnce $ moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTransactionCalculateMinFee = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
   protocolParamsJsonFile <- noteInputFile "test/data/golden/shelley/transaction-calculate-min-fee/protocol-params.json"
   txBodyFile <- noteInputFile "test/data/golden/shelley/transaction-calculate-min-fee/tx-body-file"
   minFeeTxtFile <- noteTempFile tempDir "min-fee.txt"
@@ -29,8 +30,8 @@ golden_shelleyTransactionCalculateMinFee = propertyOnce $ moduleWorkspace "tmp" 
     , "--tx-body-file", txBodyFile
     ]
 
-  liftIO $ IO.writeFile minFeeTxtFile minFeeTxt
+  H.writeFile minFeeTxtFile minFeeTxt
 
-  assertFileOccurences 1 "2541502" minFeeTxtFile
-  assertFileLines (== 1) minFeeTxtFile
-  assertEndsWithSingleNewline minFeeTxtFile
+  H.assertFileOccurences 1 "2541502" minFeeTxtFile
+  H.assertFileLines (== 1) minFeeTxtFile
+  H.assertEndsWithSingleNewline minFeeTxtFile

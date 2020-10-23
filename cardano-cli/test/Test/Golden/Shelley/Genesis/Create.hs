@@ -18,6 +18,9 @@ import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Time.Clock as DT
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.Time as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
 import qualified System.Directory as IO
@@ -60,7 +63,7 @@ parseTotalSupply = J.withObject "Object" $ \ o -> do
 
 golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = propertyOnce $ do
-  moduleWorkspace "tmp" $ \tempDir -> do
+  H.moduleWorkspace "tmp" $ \tempDir -> do
     sourceGenesisSpecFile <- noteInputFile "test/data/golden/shelley/genesis/genesis.spec.json"
     genesisSpecFile <- noteTempFile tempDir "genesis.spec.json"
 
@@ -68,7 +71,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     let genesisFile = tempDir <> "/genesis.json"
 
-    fmtStartTime <- fmap OP.formatIso8601 $ liftIO DT.getCurrentTime
+    fmtStartTime <- fmap H.formatIso8601 $ liftIO DT.getCurrentTime
 
     (supply, fmtSupply) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
     (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
@@ -85,7 +88,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
       , "--genesis-dir", tempDir
       ]
 
-    assertFilesExist [genesisFile]
+    H.assertFilesExist [genesisFile]
 
     genesisContents <- liftIO $ LBS.readFile genesisFile
 
@@ -113,32 +116,32 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     for_ [1 .. delegateCount] $ \i -> do
       -- Check Genesis keys
-      assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      H.assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      H.assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
-      assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
       -- Check delegate keys
-      assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      H.assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      H.assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      H.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
-      assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      H.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
       -- Check utxo keys
-      assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      H.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      H.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
-      assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
-  moduleWorkspace "tmp" $ \tempDir -> do
+  H.moduleWorkspace "tmp" $ \tempDir -> do
     let genesisFile = tempDir <> "/genesis.json"
 
-    fmtStartTime <- fmap OP.formatIso8601 $ liftIO DT.getCurrentTime
+    fmtStartTime <- fmap H.formatIso8601 $ liftIO DT.getCurrentTime
 
     (supply, fmtSupply) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
     (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
@@ -155,7 +158,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
         , "--genesis-dir", tempDir
         ]
 
-    assertFilesExist [genesisFile]
+    H.assertFilesExist [genesisFile]
 
     genesisContents <- liftIO $ LBS.readFile genesisFile
 
@@ -183,24 +186,24 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     for_ [1 .. delegateCount] $ \i -> do
       -- Check Genesis keys
-      assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      H.assertFileOccurences 1 "GenesisSigningKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      H.assertFileOccurences 1 "GenesisVerificationKey_ed25519" $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
-      assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
-      assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".skey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/genesis-keys/genesis" <> show i <> ".vkey"
 
       -- Check delegate keys
-      assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      H.assertFileOccurences 1 "GenesisDelegateSigningKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      H.assertFileOccurences 1 "GenesisDelegateVerificationKey_ed25519" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      H.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
-      assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
-      assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
-      assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
+      H.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".skey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".vkey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/delegate-keys/delegate" <> show i <> ".counter"
 
       -- Check utxo keys
-      assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      H.assertFileOccurences 1 "GenesisUTxOSigningKey_ed25519" $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      H.assertFileOccurences 1 "GenesisUTxOVerificationKey_ed25519"  $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
 
-      assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
-      assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".skey"
+      H.assertEndsWithSingleNewline $ tempDir <> "/utxo-keys/utxo" <> show i <> ".vkey"

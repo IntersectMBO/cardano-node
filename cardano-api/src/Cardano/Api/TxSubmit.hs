@@ -23,10 +23,10 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (CardanoApplyTxErr,
                      GenTx (GenTxByron, GenTxShelley),
-                     HardForkApplyTxErr (ApplyTxErrByron, ApplyTxErrShelley, ApplyTxErrWrongEra))
+                     HardForkApplyTxErr (ApplyTxErrAllegra, ApplyTxErrByron, ApplyTxErrMary, ApplyTxErrShelley, ApplyTxErrWrongEra))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, mkShelleyTx)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import           Cardano.Api.TxSubmit.ErrorRender
 import           Cardano.Api.Typed
@@ -120,6 +120,12 @@ renderTxSubmitResult res =
     TxSubmitFailureCardanoMode (ApplyTxErrShelley err) ->
       -- TODO: Write render function for Shelley tx submission errors.
       "Failed to submit Shelley transaction: " <> show err
+
+    TxSubmitFailureCardanoMode (ApplyTxErrMary err) ->
+      "Failed to submit Mary transaction: " <> show err
+
+    TxSubmitFailureCardanoMode (ApplyTxErrAllegra err) ->
+      "Failed to submit Allegra transaction: " <> show err
 
     TxSubmitFailureCardanoMode (ApplyTxErrWrongEra mismatch) ->
       "Failed to submit transaction due to era mismatch: " <> show mismatch

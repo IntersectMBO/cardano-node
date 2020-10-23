@@ -1,7 +1,7 @@
 # our packages overlay
 pkgs: _: with pkgs;
   let
-    compiler = config.haskellNix.compiler or "ghc865";
+    compiler = config.haskellNix.compiler or "ghc8102";
   in {
   cardanoNodeHaskellPackages = import ./haskell.nix {
     inherit compiler
@@ -56,6 +56,8 @@ pkgs: _: with pkgs;
   mkCluster = callPackage ./supervisord-cluster;
   hfcCluster = callPackage ./supervisord-cluster/hfc {};
   cardanolib-py = callPackage ./cardanolib-py {};
+
+  clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
 
   inherit ((haskell-nix.hackage-package {
     name = "hlint";

@@ -70,10 +70,10 @@ Cabalバージョン`3.2.0.0`がインストールされたことを確認しま
 
 #### GHCをダウンロード、インストールする
 
-    wget https://downloads.haskell.org/~ghc/8.6.5/ghc-8.6.5-x86_64-deb9-linux.tar.xz
-    tar -xf ghc-8.6.5-x86_64-deb9-linux.tar.xz
-    rm ghc-8.6.5-x86_64-deb9-linux.tar.xz
-    cd ghc-8.6.5
+    wget https://downloads.haskell.org/ghc/8.10.2/ghc-8.10.2-x86_64-deb9-linux.tar.xz
+    tar -xf ghc-8.10.2-x86_64-deb9-linux.tar.xz
+    rm ghc-8.10.2-x86_64-deb9-linux.tar.xz
+    cd ghc-8.10.2
     ./configure
     sudo make install
 
@@ -119,9 +119,9 @@ cardano-nodeの最新版をチェックアウトします
 
 実行ファイルを`.local/bin`ディレクトリーへコピーし、プレースホルダーを対象バージョンに置き換えます
 
-    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
+    cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
 
-    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
+    cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
 
 インストールしたバージョンを確認します
 

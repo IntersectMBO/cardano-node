@@ -1,9 +1,11 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Configuration.Socket
   ( gatherConfiguredSockets
   , SocketOrSocketInfo(..)
+  , getSocketOrSocketInfoAddr
   , SocketConfigError(..)
   , renderSocketConfigError
   )
@@ -14,13 +16,14 @@ import           Prelude (String)
 import qualified Prelude
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Socket, SocketType (..),
-                     defaultHints, getAddrInfo)
+import           Network.Socket (Family (AF_INET, AF_INET6), AddrInfo (..),
+                     AddrInfoFlag (..), Socket, SocketType (..))
+import qualified Network.Socket as Socket
 
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
-#if defined(mingw32_HOST_OS)
-#else
+#if !defined(mingw32_HOST_OS)
 import           System.Directory (removeFile)
 import           System.IO.Error (isDoesNotExistError)
 #endif
@@ -39,6 +42,16 @@ import           System.Systemd.Daemon (getActivatedSockets)
 data SocketOrSocketInfo socket info =
        ActualSocket socket
      | SocketInfo   info
+  deriving Show
+
+
+getSocketOrSocketInfoAddr :: SocketOrSocketInfo Socket AddrInfo
+                          -> IO (SocketOrSocketInfo Socket.SockAddr Socket.SockAddr)
+getSocketOrSocketInfoAddr (ActualSocket sock) =
+    ActualSocket <$> Socket.getSocketName sock
+getSocketOrSocketInfoAddr (SocketInfo info)   =
+    return $ SocketInfo (Socket.addrAddress info)
+
 
 -- | Errors for the current module.
 data SocketConfigError
@@ -47,7 +60,7 @@ data SocketConfigError
     | ClashingPublicSocketGiven
     | ClashingLocalSocketGiven
     | LocalSocketError FilePath IOException
-    | GetAddrInfoError NodeAddress IOException
+    | GetAddrInfoError (Maybe NodeHostIPAddress) (Maybe PortNumber) IOException
   deriving Show
 
 instance Exception SocketConfigError where
@@ -76,13 +89,14 @@ renderSocketConfigError (LocalSocketError fp ex) =
     "Failure while attempting to remove the stale local socket: "
  <> fp <> " : " <> displayException ex
 
-renderSocketConfigError (GetAddrInfoError addr ex) =
+renderSocketConfigError (GetAddrInfoError addr port ex) =
     "Failure while getting address information for the public listening "
- <> "address: " <> show addr <> " : " <> displayException ex
+ <> "address: " <> show addr <> " " <> show port <> " : " <> displayException ex
 
 
 -- | Gather from the various sources of configuration which sockets we will use
--- for the public node-to-node and the local node-to-client IPC.
+-- for the public node-to-node and the local node-to-client IPC.  It returns
+-- 'SocketOrSocketInfo' for @ipv4@, @ipv6@ and local socket.
 --
 -- We get such configuration from:
 --
@@ -91,45 +105,96 @@ renderSocketConfigError (GetAddrInfoError addr ex) =
 -- * systemd socket activation
 --
 gatherConfiguredSockets :: NodeConfiguration
-                        -> NodeCLI
                         -> ExceptT SocketConfigError IO
-                                   (SocketOrSocketInfo [Socket] [AddrInfo],
-                                    SocketOrSocketInfo Socket SocketPath)
-gatherConfiguredSockets config cli = do
+                                   (Maybe (SocketOrSocketInfo Socket AddrInfo),
+                                    Maybe (SocketOrSocketInfo Socket AddrInfo),
+                                           SocketOrSocketInfo Socket SocketPath)
+gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
+                                            ncNodeIPv6Addr,
+                                            ncNodePortNumber,
+                                            ncSocketPath } = do
 
-    mbAllSocketsFromSystemD          <- liftIO getSystemdSockets
+    systemDSockets <- liftIO getSystemdSockets
 
     -- Select the sockets or address for public node-to-node comms
     --
-    let mbPublicSocketsAddrFromConfigOrCLI :: Maybe NodeAddress
-        mbPublicSocketsAddrFromConfigOrCLI = nodeAddr cli
-                                             --TODO: add config file support
-        mbPublicSocketsFromSystemD         = snd <$> mbAllSocketsFromSystemD
+    let --TODO: add config file support
+        ipv4Sockets, ipv6Sockets :: Maybe [Socket]
+        ipv4Sockets = (\(a, _, _) -> a) <$> systemDSockets
+        ipv6Sockets = (\(_, a, _) -> a) <$> systemDSockets
 
-    public <- case (mbPublicSocketsAddrFromConfigOrCLI,
-                    mbPublicSocketsFromSystemD) of
-                (Nothing, Just [])    -> throwError NoPublicSocketGiven
-                (Nothing, Just socks) -> return (ActualSocket socks)
-                (Just addr, Nothing)  -> SocketInfo <$> nodeAddressInfo addr
-                (Just addr, Just [])  -> SocketInfo <$> nodeAddressInfo addr
-                (Nothing, Nothing)    -> throwError NoPublicSocketGiven
-                (Just{}, Just{})      -> throwError ClashingPublicSocketGiven
+    -- only when 'ncNodeIPv4Addr' is specified or an ipv4 socket is passed
+    -- through socket activation
+    ipv4 <-
+      case (ncNodeIPv4Addr, ipv4Sockets) of
+
+        (Nothing, Nothing)    -> pure Nothing
+        (Nothing, Just [])    -> pure Nothing
+        (Just{},  Just (_:_)) -> throwError ClashingPublicSocketGiven
+
+        (_, Just (sock : _)) ->
+          return (Just (ActualSocket sock))
+
+        (Just addr, _) ->
+              fmap SocketInfo . head
+          <$> nodeAddressInfo
+                (Just $ nodeHostIPv4AddressToIPAddress addr)
+                ncNodePortNumber
+
+    -- only when 'ncNodeIPv6Addr' is specified or an ipv6 socket is passed
+    -- through socket activation
+    ipv6 <-
+      case (ncNodeIPv6Addr, ipv6Sockets) of
+        (Nothing, Nothing)   -> pure Nothing
+        (Nothing, Just [])   -> pure Nothing
+        (Just{}, Just (_:_)) -> throwError ClashingPublicSocketGiven
+
+        (_, Just (sock : _)) ->
+          return (Just (ActualSocket sock))
+
+        (Just addr, _) ->
+                fmap SocketInfo . head
+            <$> nodeAddressInfo
+                  (Just $ nodeHostIPv6AddressToIPAddress addr)
+                  ncNodePortNumber
+
+    -- When none of the addresses was given. We try resolve address passing
+    -- only 'ncNodePortNumber'.
+    (ipv4', ipv6')
+      <- case (ipv4, ipv6) of
+            (Nothing, Nothing) -> do
+      
+              info <- nodeAddressInfo Nothing ncNodePortNumber
+              let ipv4' = SocketInfo <$> find ((== AF_INET)  . addrFamily) info
+                  ipv6' = SocketInfo <$> find ((== AF_INET6) . addrFamily) info
+              when (isNothing $ ipv4' <|> ipv6') $
+                throwError NoPublicSocketGiven
+
+              pure (ipv4', ipv6')
+
+            _ -> pure (ipv4, ipv6)
+
 
     -- Select the socket or path for local node-to-client comms
     --
-    let mbLocalSocketFileConfigOrCLI  = socketFile cli `mplus`
-                                        ncSocketPath config
-        mbLocalSocketFromSystemD      = fst <$> mbAllSocketsFromSystemD
+    let unixSockets :: Maybe [Socket]
+        unixSockets = (\(_, _, a) -> a) <$> systemDSockets
 
-    local  <- case (mbLocalSocketFileConfigOrCLI,
-                    mbLocalSocketFromSystemD) of
-                (Nothing, Just sock) -> return (ActualSocket sock)
-                (Just path, Nothing) -> do removeStaleLocalSocket path
-                                           return (SocketInfo path)
-                (Nothing, Nothing)   -> throwError NoLocalSocketGiven
-                (Just{}, Just{})     -> throwError ClashingLocalSocketGiven
+    -- only when 'ncSocketpath' is specified or a unix socket is passed through
+    -- socket activation
+    local <-
+      case (ncSocketPath, unixSockets) of
+        (Nothing, Nothing)   -> throwError NoLocalSocketGiven
+        (Nothing, Just [])   -> throwError NoLocalSocketGiven
+        (Just{}, Just{})     -> throwError ClashingLocalSocketGiven
 
-    return (public, local)
+        (_, Just (sock : _)) ->
+          return (ActualSocket sock)
+
+        (Just path, _) ->
+          removeStaleLocalSocket path $> SocketInfo path
+
+    return (ipv4', ipv6', local)
 
 
 -- | Binding a local unix domain socket always expects to create it, and fails
@@ -147,31 +212,41 @@ removeStaleLocalSocket (SocketPath path) =
                                  else throwIO e
 #endif
 
-nodeAddressInfo :: NodeAddress -> ExceptT SocketConfigError IO [AddrInfo]
-nodeAddressInfo addr@(NodeAddress hostAddr port) =
-    handleIOExceptT (GetAddrInfoError addr) $
-      getAddrInfo (Just hints)
-                  (fmap Prelude.show $ unNodeHostAddress hostAddr)
-                  (Just $ Prelude.show port)
+nodeAddressInfo :: Maybe NodeHostIPAddress
+                -> Maybe PortNumber
+                -> ExceptT SocketConfigError IO [AddrInfo]
+nodeAddressInfo mbHostAddr mbPort =
+    handleIOExceptT (GetAddrInfoError mbHostAddr mbPort) $
+      Socket.getAddrInfo
+        (Just hints)
+        (Prelude.show <$> mbHostAddr)
+        (Prelude.show <$> mbPort)
   where
-    hints = defaultHints {
-              addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
-            , addrSocketType = Stream
-            }
+    hints = Socket.defaultHints {
+                addrFlags = [AI_PASSIVE, AI_ADDRCONFIG]
+              , addrSocketType = Stream
+              }
 
 
--- | Possibly return a SOCKET_UNIX socket for NodeToClient communication
--- and a list of SOCKET_STREAM sockets for NodeToNode communication.
--- The SOCKET_UNIX socket should be defined first in the `.socket` systemd file.
+-- | Possibly return systemd-activated sockets.  Splits the sockets into three
+-- groups:'AF_INET' and 'AF_INET6', 'AF_UNIX'.
 --
-getSystemdSockets :: IO (Maybe (Socket, [Socket]))
+getSystemdSockets :: IO (Maybe ([Socket], [Socket], [Socket]))
 #ifdef SYSTEMD
 getSystemdSockets = do
   sds_m <- getActivatedSockets
   case sds_m of
-       Nothing       -> return Nothing
-       Just []       -> return Nothing
-       Just (sd:sds) -> return $ Just (sd, sds)
+       Nothing    -> return Nothing
+       Just socks ->
+         Just <$>
+          foldM (\(ipv4s, ipv6s, unixs) sock -> do
+                  addr <- Socket.getSocketName sock
+                  case addr of
+                    Socket.SockAddrInet {}  -> return (sock : ipv4s,        ipv6s,        unixs)
+                    Socket.SockAddrInet6 {} -> return (       ipv4s, sock : ipv6s,        unixs)
+                    Socket.SockAddrUnix {}  -> return (       ipv4s,        ipv6s, sock : unixs))
+                ([], [], [])
+                socks
 #else
 getSystemdSockets = return Nothing
 #endif

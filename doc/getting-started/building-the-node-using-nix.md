@@ -30,7 +30,7 @@ nix-build -A scripts.mainnet.node -o mainnet-node-local
 ```
 
 ### Debian/Ubuntu、CentOSで構築する
-必要なバージョンは [GHC 8.6.5][ghc865]および [Cabal-3.0][cabal30]です。
+必要なバージョンは [GHC 8.10.2][ghc8102]および [Cabal-3.0][cabal30]です。
 Haskellインストーラーツール [ghcup][ghcup]から入手できます
 
 ```
@@ -45,8 +45,8 @@ source ~/.ghcup/env
 
 必要なGHCバージョンをインストールして有効化します
 ```
-ghcup install ghc 8.6.5
-ghcup set ghc 8.6.5
+ghcup install ghc 8.10.2
+ghcup set ghc 8.10.2
 ghc --version
 ```
 またはインタラクティブTUIを使用します
@@ -83,7 +83,7 @@ chairman
 ```
 最後の3アウトプットラインでビルドロケーションパスを見ることができます。cardano-node 1.9.3の場合は以下となります 
 ```
-~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
+~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
 ```
 
 
@@ -93,5 +93,5 @@ chairman
 
 [ghcup]: https://www.haskell.org/ghcup/
 [cabal30]: https://www.haskell.org/cabal/download.html
-[ghc865]: https://www.haskell.org/ghc/blog/20190423-ghc-8.6.5-released.html
+[ghc865]: https://www.haskell.org/ghc/blog/20200808-ghc-8.10.2-released.html
 [nix]: https://nixos.org/nix/

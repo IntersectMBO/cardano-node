@@ -5,8 +5,10 @@ module Test.Cardano.Api.Typed.Gen
   , genRequiredSig
   , genMofNRequiredSig
   , genMultiSigScript
+  , genScriptHash
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
+  , genScript
   , genShelleyWitness
   , genSigningKey
   , genStakeAddress
@@ -26,8 +28,6 @@ import           Control.Monad.Fail (fail)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -79,6 +79,12 @@ genMofNRequiredSig = do
 genMultiSigScript :: Gen MultiSigScript
 genMultiSigScript =
   Gen.choice [genAllRequiredSig, genAnyRequiredSig, genMofNRequiredSig]
+
+genScript :: Gen Script
+genScript = makeMultiSigScript <$> genMultiSigScript
+
+genScriptHash :: Gen (Hash Script)
+genScriptHash = scriptHash <$> genScript
 
 genNetworkId :: Gen NetworkId
 genNetworkId =
@@ -228,10 +234,17 @@ genByronKeyWitness = do
   txinWitness <- genVKWitness pmId
   return $ ByronKeyWitness txinWitness
 
+genWitnessNetworkIdOrByronAddress :: Gen WitnessNetworkIdOrByronAddress
+genWitnessNetworkIdOrByronAddress =
+  Gen.choice
+    [ WitnessNetworkId <$> genNetworkId
+    , WitnessByronAddress <$> genAddressByron
+    ]
+
 genShelleyBootstrapWitness :: Gen (Witness Shelley)
 genShelleyBootstrapWitness =
  makeShelleyBootstrapWitness
-   <$> genNetworkId
+   <$> genWitnessNetworkIdOrByronAddress
    <*> genTxBodyShelley
    <*> genSigningKey AsByronKey
 

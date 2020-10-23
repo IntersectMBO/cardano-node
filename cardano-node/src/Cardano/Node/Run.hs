@@ -12,41 +12,47 @@
 
 module Cardano.Node.Run
   ( runNode
+#ifdef UNIX
+  , checkVRFFilePermissions
+#endif
   ) where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (String)
 
 import qualified Control.Concurrent.Async as Async
+#ifdef UNIX
+import           Control.Monad.Trans.Except.Extra (left)
+#endif
 import           Control.Tracer
-import qualified Data.ByteString.Char8 as BSC
-import           Data.Either (partitionEithers)
-import           Data.Functor.Contravariant (contramap)
-import           Data.Proxy (Proxy (..))
-import           Data.Semigroup ((<>))
-import           Data.Text (Text, breakOn, pack, take, unlines)
+import           Data.Text (breakOn, pack, take)
+import qualified Data.Text as Text
 import           Data.Version (showVersion)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
-import           System.Directory (canonicalizePath, makeAbsolute)
+import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+#ifdef UNIX
+import           System.Posix.Files
+import           System.Posix.Types (FileMode)
+#endif
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Paths_cardano_node (version)
-#ifdef UNIX
-import qualified Cardano.BM.Configuration.Model as CM
-import           Cardano.BM.Data.Backend
-import           Cardano.BM.Data.BackendKind (BackendKind (..))
-#endif
 import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 
+import qualified Cardano.Crypto.Libsodium as Crypto
+
 import           Cardano.Config.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
-                     shutdownLoggingLayer)
+                     createLoggingLayer, shutdownLoggingLayer)
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
+                     PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
+                     makeNodeConfiguration, ncProtocol, parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
@@ -57,22 +63,21 @@ import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..
 import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
-                     NodeKernel, RunNode (..), RunNodeArgs (..))
+                     RunNode, RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), RemoteConnectionId)
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
 import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                     gatherConfiguredSockets)
+                     gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..), mkConsensusProtocol,
@@ -80,37 +85,53 @@ import           Cardano.Node.Protocol (SomeConsensusProtocol (..), mkConsensusP
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
-#ifdef UNIX
-import           Cardano.Node.Run.Trace (checkLiveViewRequiredTracers)
-import           Cardano.Node.TUI.Run
-#endif
 
 {- HLINT ignore "Use fewer imports" -}
 
 runNode
-  :: LoggingLayer
-  -> NodeCLI
+  :: PartialNodeConfiguration
   -> IO ()
-runNode loggingLayer npm@NodeCLI{protocolFiles} = do
+runNode cmdPc = do
+    -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
+    Crypto.sodiumInit
+
+    configYamlPc <- parseNodeConfigurationFP . getLast $ pncConfigFile cmdPc
+
+    nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
+            Left err -> panic $ "Error in creating the NodeConfiguration: " <> Text.pack err
+            Right nc' -> return nc'
+
+#ifdef UNIX
+    case shelleyVRFFile $ ncProtocolFiles nc of
+      Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions vrfFp
+                       case vrf of
+                         Left err ->
+                           putTextLn (renderVRFPrivateKeyFilePermissionError err) >> exitFailure
+                         Right () ->
+                           pure ()
+      Nothing -> pure ()
+#endif
+
+    eLoggingLayer <- runExceptT $ createLoggingLayer
+                     (Text.pack (showVersion version))
+                     nc
+
+    loggingLayer <- case eLoggingLayer of
+                      Left err -> putTextLn (show err) >> exitFailure
+                      Right res -> return res
+
     !trace <- setupTrace loggingLayer
     let tracer = contramap pack $ toLogObject trace
 
-    nc <- parseNodeConfiguration npm
 
     logTracingVerbosity nc tracer
 
-    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc (Just protocolFiles)
+    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc
 
     SomeConsensusProtocol (p :: Consensus.Protocol IO blk (BlockProtocol blk)) <-
       case eitherSomeProtocol of
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
-
-#ifdef UNIX
-    let viewmode = ncViewMode nc
-#else
-    let viewmode = SimpleView
-#endif
 
     upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
 
@@ -120,44 +141,11 @@ runNode loggingLayer npm@NodeCLI{protocolFiles} = do
 
     tracers <- mkTracers (ncTraceConfig nc) trace nodeKernelData
 
-    case viewmode of
-      SimpleView -> do
-        peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
-        handleSimpleNode p trace tracers npm (setNodeKernel nodeKernelData)
-        Async.uninterruptibleCancel upTimeThread
-        Async.uninterruptibleCancel peersThread
+    peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
+    handleSimpleNode p trace tracers nc (setNodeKernel nodeKernelData)
+    Async.uninterruptibleCancel upTimeThread
+    Async.uninterruptibleCancel peersThread
 
-      LiveView -> do
-#ifdef UNIX
-        let c = llConfiguration loggingLayer
-
-        -- check required tracers are turned on
-        checkLiveViewRequiredTracers (ncTraceConfig nc)
-
-        -- We run 'handleSimpleNode' as usual and run TUI thread as well.
-        -- turn off logging to the console, only forward it through a pipe to a central logging process
-        CM.setDefaultBackends c [KatipBK, TraceForwarderBK, UserDefinedBK "LiveViewBackend"]
-
-        be :: LiveViewBackend blk Text <- realize c
-        let lvbe = MkBackend { bEffectuate = effectuate be, bUnrealize = unrealize be }
-        llAddBackend loggingLayer lvbe (UserDefinedBK "LiveViewBackend")
-        liveViewPostSetup be npm nc
-        captureCounters be trace
-
-        -- User will see a terminal graphics and will be able to interact with it.
-        nodeThread <- Async.async $ handleSimpleNode p trace tracers npm
-                       (setNodeKernel nodeKernelData)
-        setNodeThread be nodeThread
-
-        peersThread <- Async.async $ handlePeersList trace nodeKernelData be
-
-        void $ Async.waitAny [nodeThread, upTimeThread, peersThread]
-#else
-        peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
-        handleSimpleNode p trace tracers npm (const $ pure ())
-        Async.uninterruptibleCancel upTimeThread
-        Async.uninterruptibleCancel peersThread
-#endif
     shutdownLoggingLayer loggingLayer
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
@@ -202,22 +190,6 @@ traceNodeUpTime tr nodeLaunchTime = do
   threadDelay 1000000
   traceNodeUpTime tr nodeLaunchTime
 
-#ifdef UNIX
--- | Every 2 seconds get the current peers list and store it to LiveViewBackend
---   (if it's activated) and trace it (for example, for forwarding to an external process).
-handlePeersList
-  :: NFData a
-  => Trace IO Text
-  -> NodeKernelData blk
-  -> LiveViewBackend blk a
-  -> IO ()
-handlePeersList tr nodeKern lvbe = forever $ do
-  peers <- getCurrentPeers nodeKern
-  storePeersInLiveView peers lvbe
-  tracePeers tr peers
-  threadDelay 2000000 -- 2 seconds.
-#endif
-
 handlePeersListSimple
   :: Trace IO Text
   -> NodeKernelData blk
@@ -235,45 +207,68 @@ handleSimpleNode
   => Consensus.Protocol IO blk (BlockProtocol blk)
   -> Trace IO Text
   -> Tracers RemoteConnectionId LocalConnectionId blk
-  -> NodeCLI
+  -> NodeConfiguration
   -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode p trace nodeTracers npm onKernel = do
+handleSimpleNode p trace nodeTracers nc onKernel = do
 
   let pInfo@ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
       tracer = toLogObject trace
 
-  -- Node configuration
-  nc <- parseNodeConfiguration npm
+  createTracers nc trace tracer cfg
 
-  createTracers npm nc trace tracer cfg
+  (publicIPv4SocketOrAddr
+    , publicIPv6SocketOrAddr
+    , localSocketOrPath) <- either throwIO return =<<
+                           runExceptT (gatherConfiguredSockets nc)
 
-  (publicSocketsOrAddrs,
-   localSocketOrPath) <- either throwIO return =<<
-                           runExceptT (gatherConfiguredSockets nc npm)
+  dbPath <- canonDbPath nc
 
-  dbPath <- canonDbPath npm
-
-  eitherTopology <- readTopologyFile npm
-
+  eitherTopology <- readTopologyFile nc
   nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
 
-  let diffusionArguments :: DiffusionArguments
-      diffusionArguments = createDiffusionArguments publicSocketsOrAddrs
-                                                    localSocketOrPath
-                                                    ipProducers dnsProducers
-      diffusionTracers :: DiffusionTracers
+  let diffusionTracers :: DiffusionTracers
       diffusionTracers = createDiffusionTracers nodeTracers
+
+      (ipProducerAddrs, dnsProducerAddrs) = producerAddresses nt
+
       dnsProducers :: [DnsSubscriptionTarget]
-      dnsProducers = dnsSubscriptionTarget <$> dnsProducerAddrs
+      dnsProducers = uncurry dnsSubscriptionTarget `map` dnsProducerAddrs
+
       ipProducers :: IPSubscriptionTarget
       ipProducers = ipSubscriptionTargets ipProducerAddrs
-      (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
 
-  withShutdownHandling npm trace $ \sfds ->
+      diffusionArguments :: DiffusionArguments
+      diffusionArguments =
+        createDiffusionArguments
+          publicIPv4SocketOrAddr
+          publicIPv6SocketOrAddr
+          localSocketOrPath
+          (ncDiffusionMode nc)
+          ipProducers
+          dnsProducers
+
+  ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
+  ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
+
+  meta <- mkLOMeta Notice Public
+  traceNamedObject
+    (appendName "addresses" trace)
+    (meta, LogMessage . Text.pack . show $ catMaybes [ipv4, ipv6])
+  traceNamedObject
+    (appendName "diffusion-mode" trace)
+    (meta, LogMessage . Text.pack . show . ncDiffusionMode $ nc)
+  traceNamedObject
+    (appendName "dns-producers" trace)
+    (meta, LogMessage . Text.pack . show $ dnsProducers)
+  traceNamedObject
+    (appendName "ip-producers" trace)
+    (meta, LogMessage . Text.pack . show $ ipProducers)
+
+  withShutdownHandling nc trace $ \sfds ->
    Node.run
      RunNodeArgs {
        rnTraceConsensus       = consensusTracers nodeTracers,
@@ -285,13 +280,13 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
        rnNetworkMagic         = getNetworkMagic (Consensus.configBlock cfg),
        rnDatabasePath         = dbPath,
        rnProtocolInfo         = pInfo,
-       rnCustomiseChainDbArgs = customiseChainDbArgs $ validateDB npm,
+       rnCustomiseChainDbArgs = customiseChainDbArgs $ ncValidateDB nc,
        rnCustomiseNodeArgs    = customiseNodeArgs (ncMaxConcurrencyBulkSync nc)
                                   (ncMaxConcurrencyDeadline nc),
        rnNodeToNodeVersions   = supportedNodeToNodeVersions (Proxy @blk),
        rnNodeToClientVersions = supportedNodeToClientVersions (Proxy @blk),
        rnNodeKernelHook       = \registry nodeKernel -> do
-         maybeSpawnOnSlotSyncedShutdownHandler npm sfds trace registry
+         maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
            (Node.getChainDB nodeKernel)
          onKernel nodeKernel,
        rnMaxClockSkew         = defaultClockSkew
@@ -311,13 +306,13 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
       }
 
   customiseChainDbArgs :: Bool
-                       -> ChainDB.ChainDbArgs IO blk
-                       -> ChainDB.ChainDbArgs IO blk
+                       -> ChainDB.ChainDbArgs Identity IO blk
+                       -> ChainDB.ChainDbArgs Identity IO blk
   customiseChainDbArgs runValid args
     | runValid
     = args
-      { ChainDB.cdbImmValidation = ValidateAllChunks
-      , ChainDB.cdbVolValidation = ValidateAll
+      { ChainDB.cdbImmutableDbValidation = ValidateAllChunks
+      , ChainDB.cdbVolatileDbValidation = ValidateAll
       }
     | otherwise
     = args
@@ -338,73 +333,92 @@ handleSimpleNode p trace nodeTracers npm onKernel = do
     }
 
   createTracers
-    :: NodeCLI
-    -> NodeConfiguration
+    :: NodeConfiguration
     -> Trace IO Text
     -> Tracer IO Text
     -> Consensus.TopLevelConfig blk
     -> IO ()
-  createTracers npm'@NodeCLI{nodeAddr, validateDB}
-                nc tr tracer cfg = do
-         eitherTopology <- readTopologyFile npm'
-         nt <- either
-                 (\err -> panic $ "Cardano.Node.Run.createTracers.readTopologyFile: " <> err)
-                 pure
-                 eitherTopology
-
-         let (dnsProducerAddrs, ipProducerAddrs) = producerAddresses nt
+  createTracers NodeConfiguration { ncValidateDB }
+                tr tracer cfg = do
 
          traceWith tracer $
            "System started at " <> show (getSystemStart $ Consensus.configBlock cfg)
-
-         traceWith tracer $ unlines
-           [ ""
-           , "**************************************"
-           , "Host node address: " <> show nodeAddr
-           , "My DNS producers are " <> show dnsProducerAddrs
-           , "My IP producers are " <> show ipProducerAddrs
-           , "**************************************"
-           ]
 
          meta <- mkLOMeta Notice Public
          let rTr = appendName "release" tr
              nTr = appendName "networkMagic" tr
              vTr = appendName "version" tr
              cTr = appendName "commit"  tr
-         traceNamedObject rTr (meta, LogMessage (show (ncProtocol nc)))
+         traceNamedObject rTr (meta, LogMessage . Text.pack . protocolName $ ncProtocol nc)
          traceNamedObject nTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
          traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
          traceNamedObject cTr (meta, LogMessage gitRev)
 
-         when validateDB $ traceWith tracer "Performing DB validation"
+         when ncValidateDB $ traceWith tracer "Performing DB validation"
 
 --------------------------------------------------------------------------------
 -- Helper functions
 --------------------------------------------------------------------------------
 
-canonDbPath :: NodeCLI -> IO FilePath
-canonDbPath NodeCLI{databaseFile = DbFile dbFp} =
-  canonicalizePath =<< makeAbsolute dbFp
+canonDbPath :: NodeConfiguration -> IO FilePath
+canonDbPath NodeConfiguration{ncDatabaseFile = DbFile dbFp} = do
+  fp <- canonicalizePath =<< makeAbsolute dbFp
+  createDirectoryIfMissing True fp
+  return fp
+
+#ifdef UNIX
+-- | Make sure the VRF private key file is readable only
+-- by the current process owner the node is running under.
+checkVRFFilePermissions ::FilePath -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+checkVRFFilePermissions vrfPrivKey = do
+  fs <- liftIO $ getFileStatus vrfPrivKey
+  let fm = fileMode fs
+  -- Check the the VRF private key file does not give read/write/exec permissions to others.
+  when (hasOtherPermissions fm)
+       (left $ OtherPermissionsExist vrfPrivKey)
+  -- Check the the VRF private key file does not give read/write/exec permissions to any group.
+  when (hasGroupPermissions fm)
+       (left $ GroupPermissionsExist vrfPrivKey)
+ where
+  hasPermission :: FileMode -> FileMode -> Bool
+  hasPermission fModeA fModeB = fModeA `intersectFileModes` fModeB /= nullFileMode
+
+  hasOtherPermissions :: FileMode -> Bool
+  hasOtherPermissions fm' = fm' `hasPermission` otherModes
+
+  hasGroupPermissions :: FileMode -> Bool
+  hasGroupPermissions fm' = fm' `hasPermission` groupModes
+#endif
+
 
 createDiffusionArguments
-  :: SocketOrSocketInfo [Socket] [AddrInfo]
-   -- ^ Either a list of sockets provided by systemd or addresses to bind to
-   -- for NodeToNode communication.
+  :: Maybe (SocketOrSocketInfo Socket AddrInfo)
+   -- ^ Either a socket bound to IPv4 address provided by systemd or IPv4
+   -- address to bind to for NodeToNode communication.
+  -> Maybe (SocketOrSocketInfo Socket AddrInfo)
+   -- ^ Either a socket bound to IPv6 address provided by systemd or IPv6
+   -- address to bind to for NodeToNode communication.
   -> SocketOrSocketInfo Socket SocketPath
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
   -- NodeToClient communication.
+  -> DiffusionMode
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments
-createDiffusionArguments publicSocketsOrAddrs localSocketOrPath
-                         ipProducers dnsProducers =
+createDiffusionArguments publicIPv4SocketsOrAddrs
+                         publicIPv6SocketsOrAddrs
+                         localSocketOrPath
+                         diffusionMode
+                         ipProducers dnsProducers
+                         =
   DiffusionArguments
-    { daAddresses    = case publicSocketsOrAddrs of
-                         ActualSocket sockets -> Left sockets
-                         SocketInfo addrs     -> Right addrs
-    , daLocalAddress = case localSocketOrPath of
-                        ActualSocket socket          -> Left socket
-                        SocketInfo (SocketPath path) -> Right path
+    -- This is not elegant, but it will change once `coot/connection-manager` is
+    -- merged into `ouroboros-networ`.
+    { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPv4SocketsOrAddrs
+    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPv6SocketsOrAddrs
+    , daLocalAddress = fmap unSocketPath
+                     . eitherSocketOrSocketInfo
+                     $ localSocketOrPath
     , daIpProducers  = ipProducers
     , daDnsProducers = dnsProducers
     -- TODO: these limits are arbitrary at the moment;
@@ -414,30 +428,40 @@ createDiffusionArguments publicSocketsOrAddrs localSocketOrPath
       , acceptedConnectionsSoftLimit = 384
       , acceptedConnectionsDelay     = 5
       }
+    , daDiffusionMode = diffusionMode
     }
+  where
+    eitherSocketOrSocketInfo :: SocketOrSocketInfo a b -> Either a b
+    eitherSocketOrSocketInfo (ActualSocket a) = Left a
+    eitherSocketOrSocketInfo (SocketInfo b)   = Right b
 
-dnsSubscriptionTarget :: RemoteAddress -> DnsSubscriptionTarget
-dnsSubscriptionTarget ra =
-  DnsSubscriptionTarget { dstDomain  = BSC.pack (raAddress ra)
-                        , dstPort    = raPort ra
-                        , dstValency = raValency ra
+dnsSubscriptionTarget :: NodeDnsAddress -> Int -> DnsSubscriptionTarget
+dnsSubscriptionTarget na valency =
+  DnsSubscriptionTarget { dstDomain  = nodeHostDnsAddressToDomain (naHostAddress na)
+                        , dstPort    = naPort na
+                        , dstValency = valency
                         }
 
-ipSubscriptionTargets :: [NodeAddress] -> IPSubscriptionTarget
+ipSubscriptionTargets :: [NodeIPAddress] -> IPSubscriptionTarget
 ipSubscriptionTargets ipProdAddrs =
   let ips = nodeAddressToSockAddr <$> ipProdAddrs
   in IPSubscriptionTarget { ispIps = ips
                           , ispValency = length ips
                           }
 
-producerAddresses :: NetworkTopology -> ([RemoteAddress], [NodeAddress])
+
+producerAddresses
+  :: NetworkTopology
+  -> ( [NodeIPAddress]
+     , [(NodeDnsAddress, Int)])
 producerAddresses nt =
   case nt of
-    RealNodeTopology producers' -> partitionEithers $ map remoteOrNode producers'
+    RealNodeTopology producers' ->
+        partitionEithers
+      . mapMaybe remoteAddressToNodeAddress
+      $ producers'
     MockNodeTopology nodeSetup ->
-      partitionEithers . map remoteOrNode $ concatMap producers nodeSetup
- where
-   remoteOrNode :: RemoteAddress -> Either RemoteAddress NodeAddress
-   remoteOrNode ra = case remoteAddressToNodeAddress ra of
-                       Just na -> Right na
-                       Nothing -> Left ra
+        partitionEithers
+      . mapMaybe remoteAddressToNodeAddress
+      . concatMap producers
+      $ nodeSetup

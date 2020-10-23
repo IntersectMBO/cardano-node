@@ -8,10 +8,13 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyNodeKeyGen :: Property
-golden_shelleyNodeKeyGen = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyNodeKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   verificationKeyFile <- noteTempFile tempDir "key-gen.vkey"
   signingKeyFile <- noteTempFile tempDir "key-gen.skey"
   opCertCounterFile <- noteTempFile tempDir "op-cert.counter"
@@ -23,10 +26,10 @@ golden_shelleyNodeKeyGen = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
     , "--operational-certificate-issue-counter", opCertCounterFile
     ]
 
-  assertFileOccurences 1 "StakePoolVerificationKey_ed25519" verificationKeyFile
-  assertFileOccurences 1 "StakePoolSigningKey_ed25519" signingKeyFile
-  assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" opCertCounterFile
+  H.assertFileOccurences 1 "StakePoolVerificationKey_ed25519" verificationKeyFile
+  H.assertFileOccurences 1 "StakePoolSigningKey_ed25519" signingKeyFile
+  H.assertFileOccurences 1 "NodeOperationalCertificateIssueCounter" opCertCounterFile
 
-  assertEndsWithSingleNewline verificationKeyFile
-  assertEndsWithSingleNewline signingKeyFile
-  assertEndsWithSingleNewline opCertCounterFile
+  H.assertEndsWithSingleNewline verificationKeyFile
+  H.assertEndsWithSingleNewline signingKeyFile
+  H.assertEndsWithSingleNewline opCertCounterFile

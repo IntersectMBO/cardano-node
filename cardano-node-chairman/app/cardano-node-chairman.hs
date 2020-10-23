@@ -5,7 +5,7 @@
 
 import           Cardano.Chairman (chairmanTest)
 import           Cardano.Chairman.Options
-import           Cardano.Node.Types
+import           Cardano.Node.Configuration.POM (parseNodeConfigurationFP, pncProtocol)
 import           Cardano.Prelude hiding (option)
 import           Control.Tracer (stdoutTracer)
 import           Options.Applicative
@@ -22,9 +22,13 @@ main = do
     , caNetworkMagic
     } <- execParser opts
 
-  nc <- liftIO $ parseNodeConfigurationFP caConfigYaml
+  partialNc <- liftIO . parseNodeConfigurationFP $ Just caConfigYaml
 
-  let someNodeClientProtocol = mkNodeClientProtocol $ ncProtocol nc
+  ptcl <- case pncProtocol partialNc of
+            Left err -> panic $ "Chairman error: " <> err
+            Right protocol -> return protocol
+
+  let someNodeClientProtocol = mkNodeClientProtocol ptcl
 
   chairmanTest
     stdoutTracer

@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                  cardano-cli
-version:               1.19.1
+version:               1.21.2
 description:           The Cardano command-line interface.
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -125,7 +125,6 @@ library
                        -Wredundant-constraints
                        -Wpartial-fields
                        -Wcompat
-                       -Wno-all-missed-specialisations
 
   if os(windows)
      build-depends:    Win32
@@ -143,6 +142,7 @@ executable cardano-cli
   build-depends:       base >=4.12 && <5
                      , cardano-cli
                      , cardano-config
+                     , cardano-crypto-class
                      , cardano-prelude
                      , optparse-applicative
                      , text
@@ -165,7 +165,9 @@ test-suite cardano-cli-test
                       , containers
                       , deepseq
                       , directory
+                      , exceptions
                       , hedgehog
+                      , hedgehog-extras
                       , lifted-base
                       , optparse-applicative
                       , process
@@ -193,8 +195,6 @@ test-suite cardano-cli-test
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
-  build-tool-depends:   cardano-cli:cardano-cli
-
 test-suite cardano-cli-golden
   hs-source-dirs:       test
   main-is:              cardano-cli-golden.hs
@@ -211,7 +211,9 @@ test-suite cardano-cli-golden
                       , containers
                       , deepseq
                       , directory
+                      , exceptions
                       , hedgehog
+                      , hedgehog-extras
                       , lifted-base
                       , optparse-applicative
                       , process
@@ -235,6 +237,7 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.Genesis.KeyGenGenesis
                         Test.Golden.Shelley.Genesis.KeyGenUtxo
                         Test.Golden.Shelley.Genesis.KeyHash
+                        Test.Golden.Shelley.Key.ConvertCardanoAddressKey
                         Test.Golden.Shelley.Node.IssueOpCert
                         Test.Golden.Shelley.Node.KeyGen
                         Test.Golden.Shelley.Node.KeyGenKes
@@ -263,8 +266,10 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.TextEnvelope.Tx.TxBody
                         Test.Golden.Shelley.TextEnvelope.Tx.Witness
                         Test.Golden.Shelley.TextView.DecodeCbor
+                        Test.Golden.Shelley.Transaction.Assemble
                         Test.Golden.Shelley.Transaction.Build
                         Test.Golden.Shelley.Transaction.CalculateMinFee
+                        Test.Golden.Shelley.Transaction.CreateWitness
                         Test.Golden.Shelley.Transaction.Sign
                         Test.Golden.Version
                         Test.OptParse
@@ -279,5 +284,3 @@ test-suite cardano-cli-golden
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
-  build-tool-depends:   cardano-cli:cardano-cli

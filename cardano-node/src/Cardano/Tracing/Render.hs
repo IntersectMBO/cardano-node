@@ -2,8 +2,13 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Tracing.Render
-  ( renderHeaderHash
+  ( renderBlockOrEBB
+  , renderChunkNo
+  , renderHeaderHash
   , renderHeaderHashForVerbosity
+  , renderChainHash
+  , renderTipBlockNo
+  , renderTipHash
   , renderPoint
   , renderPointAsPhrase
   , renderPointForVerbosity
@@ -25,12 +30,31 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.BM.Tracing (TracingVerbosity (..))
-import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Cardano.Tracing.ConvertTxId (ConvertTxId (..))
-import           Ouroboros.Consensus.Block (ConvertRawHash (..), RealPoint (..))
+import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId)
-import           Ouroboros.Network.Block (HeaderHash, Tip, getTipPoint)
+import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..))
+import           Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types (BlockOrEBB (..))
+import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
+import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHash, Tip, getTipPoint)
+
+renderBlockOrEBB :: BlockOrEBB -> Text
+renderBlockOrEBB (Block slotNo) = "Block at " <> renderSlotNo slotNo
+renderBlockOrEBB (EBB epochNo) = "Epoch boundary block at " <> renderEpochNo epochNo
+
+renderChunkNo :: ChunkNo -> Text
+renderChunkNo = Text.pack . show . unChunkNo
+
+renderEpochNo :: EpochNo -> Text
+renderEpochNo = Text.pack . show . unEpochNo
+
+renderTipBlockNo :: ImmDB.Tip blk -> Text
+renderTipBlockNo = Text.pack . show . unBlockNo . ImmDB.tipBlockNo
+
+renderTipHash :: StandardHash blk => ImmDB.Tip blk -> Text
+renderTipHash tInfo = Text.pack . show $ ImmDB.tipHash tInfo
 
 renderTxIdForVerbosity
   :: ConvertTxId blk
@@ -123,6 +147,10 @@ renderHeaderHashForVerbosity p verb =
 -- | Hex encode and render a 'HeaderHash' as text.
 renderHeaderHash :: ConvertRawHash blk => proxy blk -> HeaderHash blk -> Text
 renderHeaderHash p = Text.decodeLatin1 . B16.encode . toRawHash p
+
+renderChainHash :: (HeaderHash blk -> Text) -> ChainHash blk -> Text
+renderChainHash _ GenesisHash = "GenesisHash"
+renderChainHash p (BlockHash hash) = p hash
 
 trimHashTextForVerbosity :: TracingVerbosity -> Text -> Text
 trimHashTextForVerbosity verb =

@@ -8,8 +8,8 @@ module Cardano.CLI.Types
   , OutputFormat (..)
   , QueryFilter (..)
   , SigningKeyFile (..)
+  , SigningKeyOrScriptFile (..)
   , SocketPath (..)
-  , StakePoolVerificationKeyHashOrFile (..)
   , ScriptFile (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
@@ -67,18 +67,16 @@ newtype SigningKeyFile = SigningKeyFile
 
 newtype SocketPath = SocketPath { unSocketPath :: FilePath }
 
--- | Either a stake pool verification key hash or verification key file.
-data StakePoolVerificationKeyHashOrFile
-  = StakePoolVerificationKeyHash !(Hash StakePoolKey)
-  | StakePoolVerificationKeyFile !VerificationKeyFile
-  deriving (Eq, Show)
-
 newtype UpdateProposalFile = UpdateProposalFile { unUpdateProposalFile :: FilePath }
                              deriving newtype (Eq, Show)
 
 newtype VerificationKeyFile
-  = VerificationKeyFile FilePath
+  = VerificationKeyFile { unVerificationKeyFile :: FilePath }
   deriving (Eq, Show)
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
+
+data SigningKeyOrScriptFile = ScriptFileForWitness FilePath
+                            | SigningKeyFileForWitness FilePath
+                            deriving (Eq, Show)

@@ -26,22 +26,21 @@ let
   projectPackages = lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
     (haskell-nix.cabalProject {
       inherit src;
-      compiler-nix-name = "ghc865";
+      compiler-nix-name = "ghc8102";
     }));
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
-  pkgSet = haskell-nix.cabalProject  (lib.optionalAttrs stdenv.hostPlatform.isWindows {
-    # FIXME: without this deprecated attribute, db-converter fails to compile directory with:
-    # Encountered missing dependencies: unix >=2.5.1 && <2.9
-    ghc = buildPackages.haskell-nix.compiler.${compiler};
-  } // {
+  pkgSet = haskell-nix.cabalProject ({
     inherit src;
     compiler-nix-name = compiler;
+    cabalProjectLocal = ''
+      allow-newer: terminfo:base
+    '';
     modules = [
-      { compiler.nix-name = compiler; }
       # Allow reinstallation of Win32
-      { nonReinstallablePkgs =
+      ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
+       nonReinstallablePkgs =
         [ "rts" "ghc-heap" "ghc-prim" "integer-gmp" "integer-simple" "base"
           "deepseq" "array" "ghc-boot-th" "pretty" "template-haskell"
           # ghcjs custom packages
@@ -55,18 +54,8 @@ let
           "xhtml"
           # "stm" "terminfo"
         ];
-
-
-        # Tell hydra to skip this test on windows (it does not build)
-        # 1. Set them to all ...
-        packages.cardano-cli.components.all.platforms =
-          with stdenv.lib.platforms; lib.mkForce [ linux darwin windows ];
-        # 2. then drop windows for the test
-        packages.cardano-cli.components.tests.cardano-cli-test.platforms =
-          with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
-        packages.cardano-cli.components.tests.cardano-cli-golden.platforms =
-          with stdenv.lib.platforms; lib.mkForce [ linux darwin ];
-
+      })
+      {
         # Needed for the CLI tests.
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
@@ -88,7 +77,7 @@ let
             '';
           });
       }
-      {
+      ({ pkgs, config, ... }: {
         # Packages we wish to ignore version bounds of.
         # This is similar to jailbreakCabal, however it
         # does not require any messing with cabal files.
@@ -98,16 +87,24 @@ let
         packages.ekg.components.library.enableSeparateDataOutput = true;
 
         # cardano-cli-test depends on cardano-cli
-        packages.cardano-cli.preCheck = "export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli";
+        packages.cardano-cli.preCheck = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
 
+        # build-tool-depends are used in cardano-node-chairman but only
+        # tasty-discover should be from the buildPackages.
+        packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
+          lib.mkForce [
+            config.hsPkgs.buildPackages.tasty-discover.components.exes.tasty-discover
+            config.hsPkgs.cardano-node.components.exes.cardano-node
+            config.hsPkgs.cardano-cli.components.exes.cardano-cli
+            config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman];
         # cardano-node-chairman depends on cardano-node and cardano-cli
         packages.cardano-node-chairman.preCheck = "
-          export CARDANO_CLI=${pkgSet.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli
-          export CARDANO_NODE=${pkgSet.cardano-node.components.exes.cardano-node}/bin/cardano-node
-          export CARDANO_NODE_CHAIRMAN=${pkgSet.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman
-          export CARDANO_NODE_SRC=${ ./.. }
+          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
+          export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
+          export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}
+          export CARDANO_NODE_SRC=${src}
         ";
-      }
+      })
       {
         packages = lib.genAttrs projectPackages
           (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
@@ -120,10 +117,10 @@ let
         packages = lib.genAttrs assertedPackages
           (name: { flags.asserts = true; });
       }
-      (lib.optionalAttrs stdenv.hostPlatform.isLinux {
+      ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         # systemd can't be statically linked
-        packages.cardano-config.flags.systemd = !stdenv.hostPlatform.isMusl;
-        packages.cardano-node.flags.systemd = !stdenv.hostPlatform.isMusl;
+        packages.cardano-config.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
+        packages.cardano-node.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
       })
       # Musl libc fully static build
       (lib.optionalAttrs stdenv.hostPlatform.isMusl (let
@@ -141,21 +138,11 @@ let
         }
       ))
 
-      (lib.optionalAttrs (stdenv.hostPlatform != stdenv.buildPlatform) {
-        # Make sure we use a buildPackages version of happy
-        packages.pretty-show.components.library.build-tools = [ buildPackages.haskell-nix.haskellPackages.happy ];
-
+      ({ pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
         # Remove hsc2hs build-tool dependencies (suitable version will be available as part of the ghc derivation)
         packages.Win32.components.library.build-tools = lib.mkForce [];
         packages.terminal-size.components.library.build-tools = lib.mkForce [];
         packages.network.components.library.build-tools = lib.mkForce [];
-
-        # Disable cabal-doctest tests by turning off custom setups
-        packages.comonad.package.buildType = lib.mkForce "Simple";
-        packages.distributive.package.buildType = lib.mkForce "Simple";
-        packages.lens.package.buildType = lib.mkForce "Simple";
-        packages.nonempty-vector.package.buildType = lib.mkForce "Simple";
-        packages.semigroupoids.package.buildType = lib.mkForce "Simple";
       })
     ];
     # TODO add flags to packages (like cs-ledger) so we can turn off tests that will

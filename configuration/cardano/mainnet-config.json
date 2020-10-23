@@ -11,6 +11,7 @@
   "RequiresNetworkMagic": "RequiresNoMagic",
   "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
   "ShelleyGenesisHash": "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81",
+  "ShelleyHardForkNotBeforeEpoch": 208,
   "TraceBlockFetchClient": false,
   "TraceBlockFetchDecisions": false,
   "TraceBlockFetchProtocol": false,
@@ -40,7 +41,6 @@
   "TracingVerbosity": "NormalVerbosity",
   "TurnOnLogMetrics": true,
   "TurnOnLogging": true,
-  "ViewMode": "SimpleView",
   "defaultBackends": [
     "KatipBK"
   ],
@@ -59,35 +59,19 @@
   "options": {
     "mapBackends": {
       "cardano.node-metrics": [
-        "EKGViewBK",
-        {
-          "kind": "UserDefinedBK",
-          "name": "LiveViewBackend"
-        }
+        "EKGViewBK"
       ],
       "cardano.node.BlockFetchDecision.peers": [
-        "EKGViewBK",
-        {
-          "kind": "UserDefinedBK",
-          "name": "LiveViewBackend"
-        }
+        "EKGViewBK"
       ],
       "cardano.node.ChainDB.metrics": [
-        "EKGViewBK",
-        {
-          "kind": "UserDefinedBK",
-          "name": "LiveViewBackend"
-        }
+        "EKGViewBK"
       ],
       "cardano.node.Forge.metrics": [
         "EKGViewBK"
       ],
       "cardano.node.metrics": [
-        "EKGViewBK",
-        {
-          "kind": "UserDefinedBK",
-          "name": "LiveViewBackend"
-        }
+        "EKGViewBK"
       ]
     },
     "mapSubtrace": {

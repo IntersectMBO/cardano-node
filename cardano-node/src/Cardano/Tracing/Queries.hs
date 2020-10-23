@@ -6,7 +6,7 @@ module Cardano.Tracing.Queries
   (LedgerQueries(..))
 where
 
-import           Prelude (Int, error, (.))
+import           Prelude (Int, (.))
 
 import qualified Data.Map.Strict as Map
 
@@ -34,7 +34,12 @@ instance LedgerQueries Byron.ByronBlock where
 
 instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
-    (\(Shelley.UTxO xs)-> Map.size xs) . Shelley._utxo . Shelley._utxoState . Shelley.esLState . Shelley.nesEs . Shelley.shelleyState
+      (\(Shelley.UTxO xs)-> Map.size xs)
+    . Shelley._utxo
+    . Shelley._utxoState
+    . Shelley.esLState
+    . Shelley.nesEs
+    . Shelley.shelleyLedgerState
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
@@ -44,4 +49,5 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
     Cardano.LedgerStateByron   ledgerByron   -> ledgerUtxoSize ledgerByron
     Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
-    _ -> error "ledgerUtxoSize:  unhandled CardanoBlock case"
+    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
+    Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary

@@ -9,10 +9,12 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
@@ -94,10 +96,10 @@ module Cardano.Api.Typed (
     Lovelace(..),
     makeByronTransaction,
     makeShelleyTransaction,
-    SlotNo,
+    SlotNo(..),
     TxExtraContent(..),
     txExtraContentEmpty,
-    Certificate,
+    Certificate(..),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -106,17 +108,21 @@ module Cardano.Api.Typed (
     getTxWitnesses,
 
     -- ** Signing in one go
+    ShelleySigningKey,
+    toShelleySigningKey,
     signByronTransaction,
     signShelleyTransaction,
-
     -- ** Incremental signing and separate witnesses
     makeSignedTransaction,
     Witness(..),
     makeByronKeyWitness,
     ShelleyWitnessSigningKey(..),
     makeShelleyKeyWitness,
+    WitnessNetworkIdOrByronAddress (..),
     makeShelleyBootstrapWitness,
     makeShelleyScriptWitness,
+    makeShelleySignature,
+    getShelleyKeyWitnessVerificationKey,
 
     -- * Fee calculation
     transactionFee,
@@ -124,8 +130,10 @@ module Cardano.Api.Typed (
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
-    TxMetadata (..),
+    TxMetadata (TxMetadata, TxMetadataShelley),
     TxMetadataValue(..),
+    toShelleyMetaData,
+    fromShelleyMetaData,
     makeTransactionMetadata,
 
     -- * Registering stake address and delegating
@@ -153,7 +161,12 @@ module Cardano.Api.Typed (
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
-    Script,
+    Script(..),
+    parseScript,
+    parseScriptAny,
+    parseScriptAll,
+    parseScriptAtLeast,
+    parseScriptSig,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
@@ -240,6 +253,7 @@ module Cardano.Api.Typed (
     NodeConsensusMode(..),
     LocalNodeClientProtocols(..),
     nullLocalNodeClientProtocols,
+    withNodeProtocolClient,
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
@@ -291,28 +305,49 @@ module Cardano.Api.Typed (
     makeGenesisKeyDelegationCertificate,
 
     -- ** Protocol parameter updates
-    UpdateProposal,
+    UpdateProposal(..),
     ProtocolParametersUpdate(..),
-    EpochNo,
+    EpochNo(..),
     NetworkMagic(..),
     makeShelleyUpdateProposal,
+    toShelleyPParamsUpdate,
 
     -- ** Conversions
     --TODO: arrange not to export these
     toByronNetworkMagic,
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
+    toByronLovelace,
+    toByronTxIn,
+    toByronTxId,
+    toByronTxOut,
     toShelleyNetwork,
+    toShelleyPoolParams,
     toNetworkMagic,
+
+    Shelley.Addr(..),
+    Shelley.Coin(..),
+    EpochSize(..),
+    Shelley.GenDelegPair(..),
+    Shelley.KeyRole (..),
+    Shelley.KeyHash(..),
+    Shelley.PParams'(..),
+    Shelley.PParamsUpdate,
+    Shelley.VerKeyVRF,
+    StandardShelley,
+    Shelley.emptyPParams,
+    Shelley.truncateUnitInterval,
+    emptyGenesisStaking,
+    secondsToNominalDiffTime
   ) where
 
 import           Prelude
 
+import           Cardano.Prelude (decodeEitherBase16)
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
-import qualified Data.HashMap.Strict as HMS
-import           Data.Kind (Constraint)
-import           Data.List as List
+import           Data.Kind (Constraint, Type)
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
 import           Data.Proxy (Proxy (..))
@@ -338,9 +373,11 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 
+import qualified Data.Map.Lazy as Map.Lazy
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -370,7 +407,7 @@ import qualified Cardano.Prelude as CBOR (cborError)
 import qualified Shelley.Spec.Ledger.Serialization as CBOR (CBORGroup (..), decodeNullMaybe,
                      encodeNullMaybe)
 
-import           Cardano.Slotting.Slot (EpochNo, SlotNo)
+import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
 import           Ouroboros.Network.Block (Point, Tip)
@@ -386,13 +423,15 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import           Ouroboros.Consensus.Cardano (ProtocolClient, protocolClientInfo)
-import           Ouroboros.Consensus.Ledger.Abstract (Query)
+import           Ouroboros.Consensus.Ledger.Abstract (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient (Codecs' (..), clientCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                      SupportedNetworkProtocolVersion, supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..))
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
+import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
+import           Ouroboros.Consensus.Util.Time (secondsToNominalDiffTime)
 
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
@@ -404,6 +443,7 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.KES.Class as Crypto
+import qualified Cardano.Crypto.Libsodium as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Util as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
@@ -425,7 +465,8 @@ import qualified Cardano.Chain.UTxO as Byron
 --
 -- Shelley imports
 --
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley, StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN, KES, VRF)
 
@@ -443,11 +484,11 @@ import qualified Shelley.Spec.Ledger.OCert as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
-import qualified Shelley.Spec.Ledger.TxData as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 -- Types we will re-export as-is
-import           Shelley.Spec.Ledger.TxData (MIRPot (..))
+import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
@@ -521,10 +562,10 @@ class (Eq (VerificationKey keyrole),
     => Key keyrole where
 
     -- | The type of cryptographic verification key, for each key role.
-    data VerificationKey keyrole :: *
+    data VerificationKey keyrole :: Type
 
     -- | The type of cryptographic signing key, for each key role.
-    data SigningKey keyrole :: *
+    data SigningKey keyrole :: Type
 
     -- | Get the corresponding verification key from a signing key.
     getVerificationKey :: SigningKey keyrole -> VerificationKey keyrole
@@ -537,7 +578,8 @@ class (Eq (VerificationKey keyrole),
 
     verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
 
-
+-- TODO: We should move this into the Key type class, with the existing impl as the default impl.
+-- For KES we can then override it to keep the seed and key in mlocked memory at all times.
 -- | Generate a 'SigningKey' using a seed from operating system entropy.
 --
 generateSigningKey :: Key keyrole => AsType keyrole -> IO (SigningKey keyrole)
@@ -562,7 +604,7 @@ class CastSigningKeyRole keyroleA keyroleB where
     castSigningKey :: SigningKey keyroleA -> SigningKey keyroleB
 
 
-data family Hash keyrole :: *
+data family Hash keyrole :: Type
 
 class CastHash keyroleA keyroleB where
 
@@ -1066,8 +1108,8 @@ makeShelleyTransaction TxExtraContent {
   where
     toShelleyUpdate (UpdateProposal p) = p
 
-    toShelleyMetadata     (TxMetadata m) = m
-    toShelleyMetadataHash (TxMetadata m) = Shelley.hashMetaData m
+    toShelleyMetadata     (TxMetadataShelley m) = m
+    toShelleyMetadataHash (TxMetadataShelley m) = Shelley.hashMetaData m
 
     toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl StandardShelley
     toShelleyWdrl wdrls =
@@ -1278,11 +1320,27 @@ makeByronKeyWitness nw (ByronTxBody txbody) =
             (Byron.toVerification sk)
             (Byron.sign pm Byron.SignTx sk (Byron.TxSigData txhash))
 
-makeShelleyBootstrapWitness :: NetworkId
+-- | Either a network ID or a Byron address to be used in constructing a
+-- Shelley bootstrap witness.
+data WitnessNetworkIdOrByronAddress
+  = WitnessNetworkId !NetworkId
+  -- ^ Network ID.
+  --
+  -- If this value is used in the construction of a Shelley bootstrap witness,
+  -- the result will not consist of a derivation path. If that is required,
+  -- specify a 'WitnessByronAddress' value instead.
+  | WitnessByronAddress !(Address Byron)
+  -- ^ Byron address.
+  --
+  -- If this value is used in the construction of a Shelley bootstrap witness,
+  -- both the network ID and derivation path will be extracted from the
+  -- address and used in the construction of the witness.
+
+makeShelleyBootstrapWitness :: WitnessNetworkIdOrByronAddress
                             -> TxBody Shelley
                             -> SigningKey ByronKey
                             -> Witness Shelley
-makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
+makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     ShelleyBootstrapWitness $
       -- Byron era witnesses were weird. This reveals all that weirdness.
       Shelley.BootstrapWitness {
@@ -1321,9 +1379,36 @@ makeShelleyBootstrapWitness nw (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     attributes =
       CBOR.serialize' $
         Byron.mkAttributes Byron.AddrAttributes {
-          Byron.aaVKDerivationPath = Nothing,
-          Byron.aaNetworkMagic     = toByronNetworkMagic nw
+          Byron.aaVKDerivationPath = derivationPath,
+          Byron.aaNetworkMagic     = networkMagic
         }
+
+    -- The 'WitnessNetworkIdOrByronAddress' value converted to an 'Either'.
+    eitherNwOrAddr :: Either NetworkId (Address Byron)
+    eitherNwOrAddr =
+      case nwOrAddr of
+        WitnessNetworkId nw -> Left nw
+        WitnessByronAddress addr -> Right addr
+
+    unByronAddr :: Address Byron -> Byron.Address
+    unByronAddr (ByronAddress addr) = addr
+
+    unAddrAttrs :: Address Byron -> Byron.AddrAttributes
+    unAddrAttrs = Byron.attrData . Byron.addrAttributes . unByronAddr
+
+    derivationPath :: Maybe Byron.HDAddressPayload
+    derivationPath =
+      either
+        (const Nothing)
+        (Byron.aaVKDerivationPath . unAddrAttrs)
+        eitherNwOrAddr
+
+    networkMagic :: Byron.NetworkMagic
+    networkMagic =
+      either
+        toByronNetworkMagic
+        (Byron.aaNetworkMagic . unAddrAttrs)
+        eitherNwOrAddr
 
 data ShelleyWitnessSigningKey =
        WitnessPaymentKey         (SigningKey PaymentKey)
@@ -1564,130 +1649,84 @@ data MultiSigScript = RequireSignature (Hash PaymentKey)
   deriving (Eq, Show)
 
 instance ToJSON MultiSigScript where
-  toJSON (RequireSignature payKeyHash) = String . Text.decodeUtf8 . serialiseToRawBytesHex $ payKeyHash
-  toJSON (RequireAnyOf reqSigs) = object [ "any" .= map toJSON reqSigs ]
-  toJSON (RequireAllOf reqSigs) = object [ "all" .= map toJSON reqSigs ]
-  toJSON (RequireMOf reqNum reqSigs) = toJSONmOfnChecks reqSigs reqNum (length reqSigs)
-
-toJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> Value
-toJSONmOfnChecks keys required total
-  | total <= 0 = error $ "Please include at least one payment \
-                         \key hash in the multisig script: " <> show keys
-  | length keys /= total = error $ "The number of payment key hashes submitted \
-                                \does not equal total. " ++ " total: " ++ show total
-                                ++ "Number of key hashes: " ++ show (length keys)
-
-  | length keys < required = error $ "required exceeds the number of payment key \
-                                  \hashes. Number of keys: " ++ show (length keys)
-                                  ++ " required: " ++ show required
-
-  | required <= 0 = error "The required number of payment key \
-                          \hashes cannot be less than or equal to 0."
-  | required == 1 = error "required is equal to one, you should use \
-                          \the \"any\" multisig script"
-
-  | length keys == total = object [ "atLeast" .= object [ "required" .= required
-                                                        , "list" .= map toJSON keys
-                                                        ]
-                                  ]
-
-
-  | otherwise = error $ "Cardano.Api.Typed.toJSONmofnChecks failure occured: " ++ " required: "
-                      ++ show required ++ " total: " ++  show total
-                      ++ " number of key hashes: " ++ show (length keys)
+  toJSON (RequireSignature pKeyHash) =
+    object [ "keyHash" .= String (Text.decodeUtf8 . serialiseToRawBytesHex $ pKeyHash)
+           , "type" .= String "sig"
+           ]
+  toJSON (RequireAnyOf reqScripts) =
+    object [ "type" .= String "any", "scripts" .= map toJSON reqScripts ]
+  toJSON (RequireAllOf reqScripts) =
+    object [ "type" .= String "all", "scripts" .= map toJSON reqScripts ]
+  toJSON (RequireMOf reqNum reqScripts) =
+    object [ "type" .= String "atLeast"
+           , "required" .= reqNum
+           , "scripts" .= map toJSON reqScripts
+           ]
 
 instance FromJSON MultiSigScript where
-  parseJSON = Aeson.withObject "MultiSigScript" $ \obj -> return (parseMultiSigScript obj)
+  parseJSON = parseScript
 
+parseScript :: Value -> Aeson.Parser MultiSigScript
+parseScript v = parseScriptSig v
+                  <|> parseScriptAny v
+                  <|> parseScriptAll v
+                  <|> parseScriptAtLeast v
 
-parseMultiSigScript :: HMS.HashMap Text Value -> MultiSigScript
-parseMultiSigScript hms = case  all' hms <|> any' hms <|> atLeast hms of
-                            Just mss -> mss
-                            Nothing -> error "No multisig script found"
- where
-  convertValueToMultiSigScript :: Value -> Maybe MultiSigScript
-  convertValueToMultiSigScript (String pkH) = Just . RequireSignature $ convertToHash pkH
-  convertValueToMultiSigScript (Object valueHm) =
-    any' valueHm  <|> all' valueHm <|> atLeast valueHm
-  convertValueToMultiSigScript _ = Nothing
+parseScriptAny :: Value -> Aeson.Parser MultiSigScript
+parseScriptAny = Aeson.withObject "any" $ \obj -> do
+  t <- obj .: "type"
+  case t :: Text of
+    "any" -> do s <- obj .: "scripts"
+                RequireAnyOf <$> gatherMultiSigScripts s
+    _ -> fail "\"any\" multi-signature script value not found"
 
-  gatherMultiSigScripts :: Vector Value -> [MultiSigScript]
-  gatherMultiSigScripts = catMaybes . Vector.toList . Vector.map convertValueToMultiSigScript
+parseScriptAll :: Value -> Aeson.Parser MultiSigScript
+parseScriptAll = Aeson.withObject "all" $ \obj -> do
+  t <- obj .: "type"
+  case t :: Text of
+    "all" -> do s <- obj .: "scripts"
+                RequireAllOf <$> gatherMultiSigScripts s
+    _ -> fail "\"all\" multi-signature script value not found"
 
-  any' :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  any' hm = case HMS.lookup "any" hm of
-             Just (Array anyValue) ->
-               Just . RequireAnyOf $ gatherMultiSigScripts anyValue
-             _ -> Nothing
+parseScriptAtLeast :: Value -> Aeson.Parser MultiSigScript
+parseScriptAtLeast = Aeson.withObject "atLeast" $ \obj -> do
+  v <- obj .: "type"
+  case v :: Text of
+    "atLeast" -> do
+      r <- obj .: "required"
+      s <- obj .: "scripts"
+      case r of
+        Number sci ->
+          case toBoundedInteger sci of
+            Just reqInt ->
+              do msigscripts <- gatherMultiSigScripts s
+                 let numScripts = length msigscripts
+                 when
+                   (reqInt > numScripts)
+                   (fail $ "Required number of script signatures exceeds the number of scripts."
+                         <> " Required number: " <> show reqInt
+                         <> " Number of scripts: " <> show numScripts)
+                 return $ RequireMOf reqInt msigscripts
+            Nothing -> fail $ "Error in multi-signature \"required\" key: "
+                            <> show sci <> " is not a valid Int"
+        _ -> fail "\"required\" value should be an integer"
+    _        -> fail "\"atLeast\" multi-signature script value not found"
 
-  all' :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  all' hm = case HMS.lookup "all" hm of
-             Just (Array allVectorValue) ->
-               Just . RequireAllOf $ gatherMultiSigScripts allVectorValue
-             _ -> Nothing
+parseScriptSig :: Value -> Aeson.Parser MultiSigScript
+parseScriptSig = Aeson.withObject "sig" $ \obj -> do
+  v <- obj .: "type"
+  case v :: Text of
+    "sig" -> do k <- obj .: "keyHash"
+                RequireSignature <$> convertToHash k
+    _     -> fail "\"sig\" multi-signature script value not found"
 
-  atLeast :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  atLeast hm = case HMS.lookup "atLeast" hm of
-                 Just (Object atLeastHm) ->
-                   case previousScriptSyntax atLeastHm of
-                     Nothing ->  case (HMS.lookup "required" atLeastHm, HMS.lookup "list" atLeastHm) of
-                                   (Nothing, Nothing) ->
-                                     error "atLeast multisig missing \"required\" and \"list\" keys"
-                                   (Just _, Nothing) ->
-                                     error "atLeast multisig missing \"list\" key"
-                                   (Nothing, Just _) ->
-                                     error "atLeast multisig missing \"required\" key"
-                                   (Just (Number sci), Just (Array listVectorValue)) ->
-                                      case toBoundedInteger sci of
-                                        Just reqInt ->
-                                          Just $ fromJSONmOfnChecks
-                                                   (gatherMultiSigScripts listVectorValue)
-                                                   reqInt
-                                                   (Vector.length listVectorValue)
-                                        Nothing -> error $ "Error in multisig \"required\" key: "
-                                                         <> show sci <> " is not a valid Int"
-                                   (_, _) -> Nothing
-                     Just mss -> Just mss
-                 _ -> Nothing
+convertToHash :: Text -> Aeson.Parser (Hash PaymentKey)
+convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
+                      Just payKeyHash -> return payKeyHash
+                      Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
 
-  -- To account for backwards compatibility
-  previousScriptSyntax :: HMS.HashMap Text Value -> Maybe MultiSigScript
-  previousScriptSyntax hm =
-        case HMS.lookup "paymentKeyHashes" hm of
-          Just (Array pkhListVectorValue) ->
-            case HMS.lookup "required" hm of
-              Nothing ->
-                error "atLeast multisig missing \"required\" key"
-              Just (Number sci) ->
-                case toBoundedInteger sci of
-                  Just reqInt ->
-                    Just $ fromJSONmOfnChecks
-                             (gatherMultiSigScripts pkhListVectorValue)
-                             reqInt
-                             (Vector.length pkhListVectorValue)
-                  Nothing -> error $ "Error in multisig \"required\" key: "
-                                   <> show sci <> " is not a valid Int"
-              _ -> Nothing
-          _ -> Nothing
-
-  fromJSONmOfnChecks :: [MultiSigScript] -> Int -> Int -> MultiSigScript
-  fromJSONmOfnChecks keys required total
-    | total <= 0 = error $ "No payment key hashes were parsed from multiscript object: " <> show keys
-    | required <= 0 = error "The required number of payment key hashes cannot be less than or equal to 0."
-    | required == 1 = error "required is equal to one, you should use the \"any\" multisig script"
-    | length keys < required = error $ "required exceeds the number of payment key hashes. \
-                                       \Number of keys: " ++ show (length keys)
-                                     ++ " required: " ++ show required
-    | length keys == total = RequireMOf required keys
-    | otherwise = error $ "Cardano.Api.Typed.fromJSONmOfnChecks failure occured. required: "
-                        ++ show required ++ " total: " ++ show total
-                        ++ " keys: " ++ show keys
-
-  convertToHash :: Text -> Hash PaymentKey
-  convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
-                        Just payKeyHash -> payKeyHash
-                        Nothing -> error $ "Error deserialising payment key hash: " <> Text.unpack txt
-
+gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript]
+gatherMultiSigScripts vs = sequence . Vector.toList $ Vector.map parseScript vs
 
 instance HasTypeProxy Script where
     data AsType Script = AsScript
@@ -1810,7 +1849,7 @@ makeMIRCertificate mirpot amounts =
   . Shelley.DCertMir
   $ Shelley.MIRCert
       mirpot
-      (Map.fromListWith (+)
+      (Map.fromListWith (<>)
          [ (toShelleyStakeCredential sc, toShelleyLovelace v)
          | (sc, v) <- amounts ])
 
@@ -1955,14 +1994,14 @@ toShelleyPoolParams StakePoolParameters {
 data StakePoolMetadata =
      StakePoolMetadata {
 
-        -- | A name of up to 50 characters.
-        stakePoolName :: !Text
+       -- | A name of up to 50 characters.
+       stakePoolName :: !Text
 
-        -- | A description of up to 255 characters.
+       -- | A description of up to 255 characters.
      , stakePoolDescription :: !Text
 
-        -- | A ticker of 3-5 characters, for a compact display of stake pools in
-        -- a wallet.
+       -- | A ticker of 3-5 characters, for a compact display of stake pools in
+       -- a wallet.
      , stakePoolTicker :: !Text
 
        -- | A URL to a homepage with additional information about the pool.
@@ -2079,8 +2118,13 @@ validateAndHashStakePoolMetadata bs
 -- Metadata embedded in transactions
 --
 
-newtype TxMetadata = TxMetadata Shelley.MetaData
+newtype TxMetadata = TxMetadataShelley Shelley.MetaData
     deriving stock (Eq, Show)
+
+{-# COMPLETE TxMetadata #-}
+pattern TxMetadata :: Map Word64 TxMetadataValue -> TxMetadata
+pattern TxMetadata m <- TxMetadataShelley (fromShelleyMetaData -> m) where
+    TxMetadata = TxMetadataShelley . toShelleyMetaData
 
 data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
                      | TxMetaBytes  ByteString
@@ -2093,29 +2137,33 @@ data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
 -- takes precedence.
 --
 instance Semigroup TxMetadata where
-    TxMetadata (Shelley.MetaData m1) <> TxMetadata (Shelley.MetaData m2) =
-      TxMetadata (Shelley.MetaData (m1 <> m2))
+    TxMetadataShelley (Shelley.MetaData m1)
+      <> TxMetadataShelley (Shelley.MetaData m2) =
+
+      TxMetadataShelley (Shelley.MetaData (m1 <> m2))
 
 instance Monoid TxMetadata where
-    mempty = TxMetadata (Shelley.MetaData mempty)
+    mempty = TxMetadataShelley (Shelley.MetaData mempty)
 
 instance HasTypeProxy TxMetadata where
     data AsType TxMetadata = AsTxMetadata
     proxyToAsType _ = AsTxMetadata
 
 instance SerialiseAsCBOR TxMetadata where
-    serialiseToCBOR (TxMetadata tx) =
+    serialiseToCBOR (TxMetadataShelley tx) =
       CBOR.serialize' tx
 
     deserialiseFromCBOR AsTxMetadata bs =
-      TxMetadata <$>
+      TxMetadataShelley <$>
         CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
 
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
-makeTransactionMetadata =
-    TxMetadata
-      . Shelley.MetaData
-      . Map.map toShelleyMetaDatum
+makeTransactionMetadata = TxMetadata
+
+toShelleyMetaData :: Map Word64 TxMetadataValue -> Shelley.MetaData
+toShelleyMetaData =
+    Shelley.MetaData
+  . Map.map toShelleyMetaDatum
   where
     toShelleyMetaDatum :: TxMetadataValue -> Shelley.MetaDatum
     toShelleyMetaDatum (TxMetaNumber x) = Shelley.I x
@@ -2127,6 +2175,21 @@ makeTransactionMetadata =
                                             [ (toShelleyMetaDatum k,
                                                toShelleyMetaDatum v)
                                             | (k,v) <- xs ]
+
+fromShelleyMetaData :: Shelley.MetaData -> Map Word64 TxMetadataValue
+fromShelleyMetaData (Shelley.MetaData mdMap) =
+    Map.Lazy.map fromShelleyMetaDatum mdMap
+  where
+    fromShelleyMetaDatum :: Shelley.MetaDatum -> TxMetadataValue
+    fromShelleyMetaDatum (Shelley.I     x) = TxMetaNumber x
+    fromShelleyMetaDatum (Shelley.B     x) = TxMetaBytes  x
+    fromShelleyMetaDatum (Shelley.S     x) = TxMetaText   x
+    fromShelleyMetaDatum (Shelley.List xs) = TxMetaList
+                                               [ fromShelleyMetaDatum x | x <- xs ]
+    fromShelleyMetaDatum (Shelley.Map  xs) = TxMetaMap
+                                               [ (fromShelleyMetaDatum k,
+                                                  fromShelleyMetaDatum v)
+                                               | (k,v) <- xs ]
 
 
 -- ----------------------------------------------------------------------------
@@ -2323,7 +2386,7 @@ makeShelleyUpdateProposal params genesisKeyHashes epochno =
         epochno
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
-                       -> Shelley.PParamsUpdate
+                       -> Shelley.PParamsUpdate StandardShelley
 toShelleyPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion
@@ -2573,7 +2636,8 @@ nullLocalNodeClientProtocols =
 --
 connectToLocalNode :: forall mode block.
                       (ShowProxy block, ShowProxy (ApplyTxErr block),
-                       ShowProxy (Query block), ShowProxy (GenTx block))
+                       ShowProxy (Query block), ShowProxy (GenTx block),
+                       ShowQuery (Query block))
                        --TODO: too many constraints! we should pass
                        -- a single protocol to run, not all of them, until we
                        -- have the more flexible interface to run any combo
@@ -2664,7 +2728,8 @@ connectToLocalNode LocalNodeConnectInfo {
 --
 queryNodeLocalState :: forall mode block result.
                        (ShowProxy block, ShowProxy (ApplyTxErr block),
-                        ShowProxy (Query block), ShowProxy (GenTx block))
+                        ShowProxy (Query block), ShowProxy (GenTx block),
+                        ShowQuery (Query block))
                     => LocalNodeConnectInfo mode block
                     -> (Point block, Query block result)
                     -> IO (Either AcquireFailure result)
@@ -2705,7 +2770,8 @@ queryNodeLocalState connctInfo pointAndQuery = do
 
 submitTxToNodeLocal :: forall mode block.
                        (ShowProxy block, ShowProxy (ApplyTxErr block),
-                        ShowProxy (Query block), ShowProxy (GenTx block))
+                        ShowProxy (Query block), ShowProxy (GenTx block),
+                        ShowQuery (Query block))
                     => LocalNodeConnectInfo mode block
                     -> GenTx block
                     -> IO (SubmitResult (ApplyTxErr block))
@@ -2779,12 +2845,9 @@ serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
 
 deserialiseFromRawBytesHex :: SerialiseAsRawBytes a
                            => AsType a -> ByteString -> Maybe a
-deserialiseFromRawBytesHex proxy hex =
-  case Base16.decode hex of
-    (raw, trailing)
-      | BS.null trailing -> deserialiseFromRawBytes proxy raw
-      | otherwise        -> Nothing
-
+deserialiseFromRawBytesHex proxy hex = case decodeEitherBase16 hex of
+  Right raw -> deserialiseFromRawBytes proxy raw
+  Left _ -> Nothing
 
 -- | For use with @deriving via@, to provide 'Show' and\/or 'IsString' instances
 -- using a hex encoding, based on the 'SerialiseAsRawBytes' instance.
@@ -2798,14 +2861,11 @@ instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
 
 instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
     fromString str =
-      case Base16.decode (BSC.pack str) of
-        (raw, trailing)
-          | BS.null trailing ->
-              case deserialiseFromRawBytes ttoken raw of
-                Just x  -> UsingRawBytesHex x
-                Nothing -> error ("fromString: cannot deserialise " ++ show str)
-          | otherwise        ->
-              error ("fromString: invalid hex " ++ show str)
+      case decodeEitherBase16 (BSC.pack str) of
+        Right raw -> case deserialiseFromRawBytes ttoken raw of
+          Just x  -> UsingRawBytesHex x
+          Nothing -> error ("fromString: cannot deserialise " ++ show str)
+        Left msg -> error ("fromString: invalid hex " ++ show str ++ ", " ++ msg)
       where
         ttoken :: AsType a
         ttoken = proxyToAsType Proxy
@@ -2848,7 +2908,7 @@ deserialiseFromBech32 asType bech32Str = do
     let actualPrefix      = Bech32.humanReadablePartToText prefix
         permittedPrefixes = bech32PrefixesPermitted asType
     guard (actualPrefix `elem` permittedPrefixes)
-      ?! Bech32UnexpectedPrefix actualPrefix permittedPrefixes
+      ?! Bech32UnexpectedPrefix actualPrefix (Set.fromList permittedPrefixes)
 
     payload <- Bech32.dataPartToBytes dataPart
                  ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
@@ -2893,13 +2953,13 @@ deserialiseAnyOfFromBech32 types bech32Str = do
       :: Text
       -> Maybe (FromSomeType SerialiseAsBech32 b)
     findForPrefix prefix =
-      find
+      List.find
         (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)
         types
 
-    permittedPrefixes :: [Text]
+    permittedPrefixes :: Set Text
     permittedPrefixes =
-      concat
+      Set.fromList $ concat
         [ bech32PrefixesPermitted ttoken
         | FromSomeType ttoken _f <- types
         ]
@@ -2908,23 +2968,23 @@ deserialiseAnyOfFromBech32 types bech32Str = do
 data Bech32DecodeError =
 
        -- | There was an error decoding the string as Bech32.
-       Bech32DecodingError Bech32.DecodingError
+       Bech32DecodingError !Bech32.DecodingError
 
        -- | The human-readable prefix in the Bech32-encoded string is not one
        -- of the ones expected.
-     | Bech32UnexpectedPrefix Text [Text]
+     | Bech32UnexpectedPrefix !Text !(Set Text)
 
        -- | There was an error in extracting a 'ByteString' from the data part of
        -- the Bech32-encoded string.
-     | Bech32DataPartToBytesError Text
+     | Bech32DataPartToBytesError !Text
 
        -- | There was an error in deserialising the bytes into a value of the
        -- expected type.
-     | Bech32DeserialiseFromBytesError ByteString
+     | Bech32DeserialiseFromBytesError !ByteString
 
        -- | The human-readable prefix in the Bech32-encoded string does not
        -- correspond to the prefix that should be used for the payload value.
-     | Bech32WrongPrefix Text Text
+     | Bech32WrongPrefix !Text !Text
 
   deriving (Eq, Show)
 
@@ -2935,7 +2995,7 @@ instance Error Bech32DecodeError where
     Bech32UnexpectedPrefix actual permitted ->
         "Unexpected Bech32 prefix: the actual prefix is " <> show actual
      <> ", but it was expected to be "
-     <> intercalate " or " (map show permitted)
+     <> List.intercalate " or " (map show (Set.toList permitted))
 
     Bech32DataPartToBytesError _dataPart ->
         "There was an error in extracting the bytes from the data part of the \
@@ -3020,7 +3080,7 @@ deserialiseFromTextEnvelope ttoken te = do
     first TextView.TextViewDecodeError $
       deserialiseFromCBOR ttoken (TextView.tvRawCBOR te) --TODO: You have switched from CBOR to JSON
 
-data FromSomeType (c :: * -> Constraint) b where
+data FromSomeType (c :: Type -> Constraint) b where
      FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
 
 
@@ -3142,7 +3202,7 @@ instance HasTypeProxy a => HasTypeProxy (Hash a) where
 -- | Map the various Shelley key role types into corresponding 'Shelley.KeyRole'
 -- types.
 --
-type family ShelleyKeyRole (keyrole :: *) :: Shelley.KeyRole
+type family ShelleyKeyRole (keyrole :: Type) :: Shelley.KeyRole
 
 type instance ShelleyKeyRole PaymentKey         = Shelley.Payment
 type instance ShelleyKeyRole GenesisKey         = Shelley.Genesis
@@ -4434,9 +4494,13 @@ instance Key KesKey where
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR
 
+    --This loses the mlock safety of the seed, since it starts from a normal in-memory seed.
     deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
-    deterministicSigningKey AsKesKey seed =
-        KesSigningKey (Crypto.genKeyKES seed)
+    deterministicSigningKey AsKesKey =
+        KesSigningKey
+          . Crypto.genKeyKES
+          . Crypto.mlsbFromByteString
+          . Crypto.getSeedBytes
 
     deterministicSigningKeySeedSize :: AsType KesKey -> Word
     deterministicSigningKeySeedSize AsKesKey =

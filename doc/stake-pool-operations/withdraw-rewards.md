@@ -30,12 +30,12 @@
 
 ### 報酬をpayment.addrに移すための引き落としトランザクションのドラフトを作成する
 
-    cardano-cli shelley transaction build raw \
-    --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1
-    --tx-out $(cat payment.addr)+0
-    --withdrawal $(cat stake.addr)+550000000
-    --ttl 0
-    --fee 0
+    cardano-cli shelley transaction build-raw \
+    --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1 \
+    --tx-out $(cat payment.addr)+743882981 \
+    --withdrawal $(cat stake.addr)+550000000 \
+    --ttl 0 \
+    --fee 0 \
     --out-file withdraw_rewards.raw
 
 ### トランザクション手数料を計算する
@@ -53,16 +53,16 @@
 
 ### rawトランザクションを構築する
 
-    expr 194054070 - 171089
-    193882981
+    expr 194054070 - 171089 + 550000000
+    743882981
 
-    cardano-cli shelley transaction build raw \
-    --tx-in $(cat payment.addr)#1
-    --tx-out $(cat payment.addr)+193882981
-    --withdrawal $(cat stake.addr)+550000000
-    --ttl 12345678
-    --fee 171089
-    --out-file withdraw_rewards.raw    
+    cardano-cli shelley transaction build-raw \
+    --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1 \
+    --tx-out $(cat payment.addr)+743882981 \
+    --withdrawal $(cat stake.addr)+550000000 \
+    --ttl 12345678 \
+    --fee 171089 \
+    --out-file withdraw_rewards.raw
 
 ### トランザクションに署名して送信する
 

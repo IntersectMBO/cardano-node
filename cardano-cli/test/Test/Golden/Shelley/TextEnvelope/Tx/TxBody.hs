@@ -9,12 +9,14 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+
 {- HLINT ignore "Use camelCase" -}
 
 -- | 1. We create a 'TxBody Shelley' file.
 --   2. Check the TextEnvelope serialization format has not changed.
 golden_shelleyTxBody :: Property
-golden_shelleyTxBody = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyTxBody = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
   referenceTxBody <- noteInputFile "test/data/golden/shelley/tx/txbody"
 

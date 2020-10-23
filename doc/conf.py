@@ -81,7 +81,7 @@ html_theme_options = {
     'display_version': False,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
-    'style_nav_header_background': '#0635a7',
+    'style_nav_header_background': '#f8f8f5',
     # Toc options
     'collapse_navigation': True,
     'sticky_navigation': True,
@@ -93,6 +93,11 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
+
+html_css_files = [
+    'https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;700&display=swap',
+    'css/custom.css',
+]
 
 html_logo = ".sphinx/cardano-logo.png"
 

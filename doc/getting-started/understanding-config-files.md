@@ -4,17 +4,17 @@
 
 ネットワーク内のどのノードとやり取りするかを自分のノードに指示するためのものです。最小バージョンはこのように見えます
 
-
-	{
-	  "Producers": [
-	    {
-	      "addr": "x.x.x.x",
-	      "port": 3001,
-	      "valency": 1
-	    }
-	  ]
-	}
-
+```json
+{
+  "Producers": [
+    {
+      "addr": "x.x.x.x",
+      "port": 3001,
+      "valency": 1
+    }
+  ]
+}
+```
 * これは、自分のノードが`port 3001`上のIP`x.x.x.x`と通信することを意味します
 
 * `valency`はノードが持つべき接続数をノードに伝えます。これはDNSアドレスにのみ作用します。DNSアドレスが与えられた場合、valencyはアクティブ（ホット）接続で維持する解決したIPアドレス数を管理し、IPアドレスはvalencyをブール値として使用し、`0`の場合に対象アドレスを無視します
@@ -26,13 +26,15 @@ __ブロックを生成する__ ノードは必ず自分の __リレーノード
 
 ジェネシスファイルは`cardano-cli`が`genesis.spec.json`ファイルを読み込んで生成します。これは、本ドキュメントの範囲外となりますが、これは以下の設定に使用するため重要です
 
+<<<<<<< HEAD
 * `genDelegs`：委任を生成するためのジェネシスキーからのマッピング
 * `initialFunds`：初期アドレスからそのアドレスにおける初期値をマッピング
-* `MaxLovelaceSupply`：ブロックチェーンのLovelace総量  
-* `startTime`：スロットゼロの時刻
+* `maxLovelaceSupply`：ブロックチェーンのLovelace総量  
+* `systemStart`：スロットゼロの時刻
 
 `genesis.json`ファイルは以下のように見えます
 
+```json
 {
   "activeSlotsCoeff": 0.05,
   "protocolParams": {
@@ -103,12 +105,13 @@ __ブロックを生成する__ ノードは必ず自分の __リレーノード
 }
 
 各パラメーターの簡単な説明です。詳細は [spec](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/executable-spec)を参照してください
+```
 
 
 | パラメーター | 意味 |
 |----------| --------- |
+<<<<<<< HEAD
 | activeSlotsCoeff | ブロックを生成するスロットの比率 |
-| poolDecayRate | プールデポジットの減衰率 |
 | poolDeposit | プール登録デポジットの額 |
 | protocolVersion| 承認されたプロトコルバージョン |
 | decentralisationParam | 連合型ノードが生成したブロックの割合 |
@@ -116,26 +119,19 @@ __ブロックを生成する__ ノードは必ず自分の __リレーノード
 | minPoolCost | ステークコストがこの値未満のステークプールは登録/再登録不可 |
 | minFeeA | 最低手数料計算の一次因子 |
 | maxBlockBodySize | 最大ブロックボディサイズ |
-| keyMinRefund | 最低リファンド保証率
-| minFeeB | 最低手数料計算の定数係数 |
-| maxBlockBodySize | 最大ブロックボディサイズ |
-| keyMinRefund | 最低リファンド保証率 |
 | minFeeB | 最低手数料計算の定数係数 |
 | eMax | プール終了のエポック境界 |
 | extraEntropy | エクストラエントロピー |
-| maxBlockHeaderSize | |
+| maxBlockHeaderSize | 最大ブロックヘッダーサイズ |
 | keyDeposit | 鍵登録デポジットの額 |
-| keyDecayRate | 鍵デポジットの減衰率 |
 | nOpt | 望ましいプール数 |
 | rho | 通貨量拡大 |
-|	poolMinRefund | 最低プールリファンド率 |
-|	tau | トレジャリー拡大 |
-|	a0 | プールの出資影響力 |
-| protocolMagicId | テストネットの特定 |
+| tau | トレジャリー拡大 |
+| a0 | プールの出資影響力 |
+| networkMagic | テストネットの特定 |
 | systemStart | スロット0の時刻 |
-| genDelegs | 委任を生成するためのジェネシスキーからのマッピング |                
+| genDelegs | 委任を生成するためのジェネシスキーからのマッピング |
 | updateQuorum | プロトコルのパラメーター更新に関する投票に必要なクォーラムを決定 |
-| maxMajorPV | 期限切れのノードを停止するメカニズムを提供 |
 | initialFunds | アドレスを値にマッピング |
 | maxLovelaceSupply | システム内のLovelace総量、報酬計算に使用 |
 | networkMagic | テストネットの特定 |
@@ -160,7 +156,6 @@ __注意：config.jsonファイルの作成方法により、実際のファイ�
 最初のセクションは、基本のノード設定パラメーターに関連します。必ず`TPraos`をプロトコルとし、正しいパスを`mainnet-shelley-genesis.json`ファイル、テストネットでの使用を`RequiresMagic`にしてください。
 この例ではSimpleViewを使用しています。これは、アウトプットを`stdout`に送信します。他に、装飾的な表示を生成するためにターミナルマルチプレクサを使用する`LiveView`のオプションもあります。このトピックは後でカバーします
 
-	{
 	  "Protocol": "TPraos",
 	  "GenesisFile": "mainnet-shelley-genesis.json",
 	  "RequiresNetworkMagic": "RequiresMagic",
@@ -172,7 +167,7 @@ __注意：config.jsonファイルの作成方法により、実際のファイ�
 	  "ApplicationName": "cardano-sl",
 	  "ApplicationVersion": 0,
 	  "LastKnownBlockVersion-Alt": 0,
-	  "LastKnownBlockVersion-Major": 0,
+	  "LastKnownBlockVersion-Major": 2,
 	  "LastKnownBlockVersion-Minor": 0,
 
 
@@ -199,69 +194,69 @@ EKGまたはPrometheus（プロメテウス）監視インターフェイスを�
 
 `rotation`：katipスクライブのファイルローテーション初期設定です（特定のスクライブ用に上記setupScribesで上書きされていない場合）
 
-
-	  "TurnOnLogging": true,
-	  "TurnOnLogMetrics": true,
-	  "ViewMode": "SimpleView",
-	  "TracingVerbosity": "NormalVerbosity",
-	  "minSeverity": "Debug",
-	  "TraceBlockFetchClient": false,
-	  "TraceBlockFetchDecisions": false,
-	  "TraceBlockFetchProtocol": false,
-	  "TraceBlockFetchProtocolSerialised": false,
-	  "TraceBlockFetchServer": false,
-	  "TraceBlockchainTime": false,
-	  "TraceChainDb": true,
-	  "TraceChainSyncBlockServer": false,
-	  "TraceChainSyncClient": false,
-	  "TraceChainSyncHeaderServer": false,
-	  "TraceChainSyncProtocol": false,
-	  "TraceDNSResolver": true,
-	  "TraceDNSSubscription": true,
-	  "TraceErrorPolicy": true,
-	  "TraceForge": true,
-	  "TraceHandshake": false,
-	  "TraceIpSubscription": true,
-	  "TraceLocalChainSyncProtocol": false,
-	  "TraceLocalErrorPolicy": true,
-	  "TraceLocalHandshake": false,
-	  "TraceLocalTxSubmissionProtocol": false,
-	  "TraceLocalTxSubmissionServer": false,
-	  "TraceMempool": true,
-	  "TraceMux": false,
-	  "TraceTxInbound": false,
-	  "TraceTxOutbound": false,
-	  "TraceTxSubmissionProtocol": false,
-	  "setupBackends": [
-	    "KatipBK"
-	  ],
-	  "defaultBackends": [
-	    "KatipBK"
-	  ],
-	  "hasEKG": 12788,
-	  "hasPrometheus": [
-	    "127.0.0.1",
-	    12798
-	  ],
-	  "setupScribes": [
-	    {
-	      "scFormat": "ScText",
-	      "scKind": "StdoutSK",
-	      "scName": "stdout",
-	      "scRotation": null
-	    }
-	  ],
-	  "defaultScribes": [
-	    [
-	      "StdoutSK",
-	      "stdout"
-	    ]
-	  ],
-	  "rotation": {
-	    "rpKeepFilesNum": 10,
-	    "rpLogLimitBytes": 5000000,
-	    "rpMaxAgeHours": 24
-	    },	  
+```json
+"TurnOnLogging": true,
+"TurnOnLogMetrics": true,
+"TracingVerbosity": "NormalVerbosity",
+"minSeverity": "Debug",
+"TraceBlockFetchClient": false,
+"TraceBlockFetchDecisions": false,
+"TraceBlockFetchProtocol": false,
+"TraceBlockFetchProtocolSerialised": false,
+"TraceBlockFetchServer": false,
+"TraceBlockchainTime": false,
+"TraceChainDb": true,
+"TraceChainSyncBlockServer": false,
+"TraceChainSyncClient": false,
+"TraceChainSyncHeaderServer": false,
+"TraceChainSyncProtocol": false,
+"TraceDNSResolver": true,
+"TraceDNSSubscription": true,
+"TraceErrorPolicy": true,
+"TraceForge": true,
+"TraceHandshake": false,
+"TraceIpSubscription": true,
+"TraceLocalChainSyncProtocol": false,
+"TraceLocalErrorPolicy": true,
+"TraceLocalHandshake": false,
+"TraceLocalTxSubmissionProtocol": false,
+"TraceLocalTxSubmissionServer": false,
+"TraceMempool": true,
+"TraceMux": false,
+"TraceTxInbound": false,
+"TraceTxOutbound": false,
+"TraceTxSubmissionProtocol": false,
+"setupBackends": [
+  "KatipBK"
+],
+"defaultBackends": [
+  "KatipBK"
+],
+"hasEKG": 12788,
+"hasPrometheus": [
+  "127.0.0.1",
+  12798
+],
+"setupScribes": [
+  {
+    "scFormat": "ScText",
+    "scKind": "StdoutSK",
+    "scName": "stdout",
+    "scRotation": null
+  }
+],
+"defaultScribes": [
+  [
+    "StdoutSK",
+    "stdout"
+  ]
+],
+"rotation": {
+  "rpKeepFilesNum": 10,
+  "rpLogLimitBytes": 5000000,
+  "rpMaxAgeHours": 24
+  },
+```
 
 #### 詳細なロギングコントロール
 
@@ -271,36 +266,20 @@ EKGまたはPrometheus（プロメテウス）監視インターフェイスを�
 
 `mapSubtrace`： このセクションはより表現的です。現在これに関するドキュメンテーションに取り組んでいます
 
-
+```json
 	  "options": {
 	    "mapBackends": {
 	      "cardano.node-metrics": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ],
 	      "cardano.node.BlockFetchDecision.peers": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ],
 	      "cardano.node.ChainDB.metrics": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ],
 	      "cardano.node.metrics": [
-	        "EKGViewBK",
-	        {
-	          "kind": "UserDefinedBK",
-	          "name": "LiveViewBackend"
-	        }
+	        "EKGViewBK"
 	      ]
 	    },
 	    "mapSubtrace": {
@@ -365,3 +344,4 @@ EKGまたはPrometheus（プロメテウス）監視インターフェイスを�
 	    }
 	  }
 	}
+```

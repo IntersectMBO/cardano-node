@@ -80,14 +80,13 @@ let
     # only build nixos tests on first supported system (linux)
     inherit (pkgsFor (builtins.head  supportedSystems));
     # Environments listed in Network Configuration page
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet mainnet_candidate_4; };
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet; };
   } // (builtins.listToAttrs (map makeRelease [
     # Environments we want to build scripts for on hydra
     "mainnet"
     "testnet"
     "staging"
     "shelley_qa"
-    "mainnet_candidate_4"
   ]));
 
   # restrict supported systems to a subset where tests (if exist) are required to pass:
@@ -104,10 +103,13 @@ let
   nonDefaultBuildSystems = tail supportedSystems;
 
   # Paths or prefixes of paths of derivations to build only on the default system (ie. linux on hydra):
-  onlyBuildOnDefaultSystem = [ ["checks" "hlint"] ["dockerImage"] ["clusterTests"] ];
+  onlyBuildOnDefaultSystem = [
+    ["checks" "hlint"] ["dockerImage"] ["clusterTests"] ["nixosTests"]
+  ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
-  noCrossBuild = [ ["shell"] ]
-    ++ onlyBuildOnDefaultSystem;
+  noCrossBuild = [
+    ["shell"]
+  ] ++ onlyBuildOnDefaultSystem;
   noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ]
     ++ noCrossBuild;
 

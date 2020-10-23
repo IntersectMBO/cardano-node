@@ -9,6 +9,9 @@ import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+
 {- HLINT ignore "Use camelCase" -}
 
 -- | 1. Create KES key pair.
@@ -16,7 +19,7 @@ import           Test.OptParse
 --   3. Create operational certificate.
 --   4. Check the TextEnvelope serialization format has not changed.
 golden_shelleyOperationalCertificate :: Property
-golden_shelleyOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \tempDir -> do
+golden_shelleyOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
   referenceOperationalCertificate <- noteInputFile "test/data/golden/shelley/certificates/operational_certificate"
 
@@ -35,7 +38,7 @@ golden_shelleyOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \t
     , "--signing-key-file", kesSignKey
     ]
 
-  assertFilesExist [kesSignKey, kesVerKey]
+  H.assertFilesExist [kesSignKey, kesVerKey]
 
   -- Create cold key pair
   void $ execCardanoCLI
@@ -45,7 +48,7 @@ golden_shelleyOperationalCertificate = propertyOnce . moduleWorkspace "tmp" $ \t
     , "--operational-certificate-issue-counter", operationalCertCounter
     ]
 
-  assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
+  H.assertFilesExist [coldVerKey, coldSignKey, operationalCertCounter]
 
   -- Create operational certificate
   void $ execCardanoCLI

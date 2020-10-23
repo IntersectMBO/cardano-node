@@ -1,5 +1,28 @@
 # Changelog for cardano-cli
 
+## 1.21.2 -- October 2020
+
+- Support bech32 and hex formats for reading verification keys (#1852)
+- Minor help text improvements (#1661, #1956)
+- Fix typo in KES docs (#1917, #1953)
+- Improved documentation for CLI multi-signature support (#1976)
+
+## 1.21.1 -- September 2020
+
+None
+
+## 1.21.0 -- September 2020
+- Support for multi-signature scripts (#1788, #1880)
+
+## 1.20.0 -- September 2020
+
+- New command for creating genesis key delegation certificates (#1784)
+- New command for converting more legacy signing key formats (#1756, #1822)
+- Improved support for JSON to Tx metadata conversions, with two supported
+  JSON schemas, suitable for different use cases (#1797)
+- Support bech32 and hex formats for reading signing keys (#1790)
+- Improved error messages for cli errors (#1801, #1839)
+
 ## 1.19.1 -- September 2020
 
 - Fix the testnet vs mainnet argument for the genesis create command (#1761)

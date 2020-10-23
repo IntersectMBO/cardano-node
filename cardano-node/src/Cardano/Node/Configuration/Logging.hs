@@ -1,13 +1,7 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
 
 module Cardano.Node.Configuration.Logging
   ( LoggingLayer (..)
@@ -26,7 +20,6 @@ module Cardano.Node.Configuration.Logging
 import           Cardano.Prelude hiding (trace)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Exception (IOException)
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 
@@ -37,9 +30,6 @@ import           Cardano.BM.Backend.Switchboard (Switchboard)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Configuration (Configuration)
-#ifdef UNIX
-import qualified Cardano.BM.Configuration.Model as CM
-#endif
 import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Counters (readCounters)
@@ -48,9 +38,6 @@ import           Cardano.BM.Data.Counter
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName,
                      PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Observable
-#ifdef UNIX
-import           Cardano.BM.Data.Output
-#endif
 import           Cardano.BM.Data.Severity (Severity (..))
 import           Cardano.BM.Data.SubTrace
 import qualified Cardano.BM.Observer.Monadic as Monadic
@@ -64,6 +51,7 @@ import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
 import qualified Cardano.BM.Trace as Trace
 
 import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
 --------------------------------
@@ -124,21 +112,15 @@ loggingCLIConfiguration = maybe emptyConfig readConfig
 -- | Create logging feature for `cardano-node`
 createLoggingLayer
   :: Text
-  -> NodeCLI
+  -> NodeConfiguration
   -> ExceptT ConfigError IO LoggingLayer
-createLoggingLayer ver nodecli@NodeCLI{configFile} = do
-
-  -- TODO:  we shouldn't be parsing configuration multiple times!
-  nodeConfig <- liftIO $ parseNodeConfiguration nodecli
+createLoggingLayer ver nodeConfig' = do
 
   logConfig <- loggingCLIConfiguration $
-    if ncLoggingSwitch nodeConfig
+    if ncLoggingSwitch nodeConfig'
     -- Re-interpret node config again, as logging 'Configuration':
-    then Just $ unConfigPath configFile
+    then Just . unConfigPath $ ncConfigFile nodeConfig'
     else Nothing
-
-  -- adapt logging configuration before setup
-  liftIO $ adaptLogConfig nodeConfig logConfig
 
   -- These have to be set before the switchboard is set up.
   liftIO $ do
@@ -148,14 +130,14 @@ createLoggingLayer ver nodecli@NodeCLI{configFile} = do
   (baseTrace, switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
 
   let loggingEnabled :: Bool
-      loggingEnabled = ncLoggingSwitch nodeConfig
+      loggingEnabled = ncLoggingSwitch nodeConfig'
       trace :: Trace IO Text
       trace = if loggingEnabled
               then baseTrace
               else Trace.nullTracer
 
   when loggingEnabled $ liftIO $
-    loggingPreInit nodeConfig logConfig switchBoard trace
+    loggingPreInit nodeConfig' logConfig switchBoard trace
 
   pure $ mkLogLayer logConfig switchBoard trace
  where
@@ -189,22 +171,6 @@ createLoggingLayer ver nodecli@NodeCLI{configFile} = do
      when (ncLogMetrics nodeConfig) $
        -- Record node metrics, if configured
        startCapturingMetrics trace
-
-   adaptLogConfig :: NodeConfiguration -> Configuration -> IO ()
-   adaptLogConfig nodeConfig =
-     liveViewdisablesStdout (ncViewMode nodeConfig)
-   liveViewdisablesStdout SimpleView _ = pure ()
-#ifdef UNIX
-   liveViewdisablesStdout LiveView logConfig = do -- filter out console scribes
-     scribes <- CM.getSetupScribes logConfig
-     let newscribes = flip filter scribes $ \case
-                        (ScribeDefinition StdoutSK _ _ _ _ _ _) -> False
-                        (ScribeDefinition StderrSK _ _ _ _ _ _) -> False
-                        _ -> True
-     CM.setSetupScribes logConfig newscribes
-#else
-   liveViewdisablesStdout LiveView _ = pure ()
-#endif
 
    mkLogLayer :: Configuration -> Switchboard Text -> Trace IO Text -> LoggingLayer
    mkLogLayer logConfig switchBoard trace =
