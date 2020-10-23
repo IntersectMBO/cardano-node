@@ -69,9 +69,6 @@ chairmanOver H.Conf {..} allNodes = do
       )
     )
 
-  H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
-  H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
-
   chairmanResult <- H.waitSecondsForProcess 110 hProcess
 
   case chairmanResult of
