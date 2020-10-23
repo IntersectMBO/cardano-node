@@ -6,7 +6,6 @@ import           Cardano.Prelude
 import           Prelude (String)
 
 import qualified Language.Haskell.TH as TH
-import           System.Exit (ExitCode (..))
 import           System.IO.Error (ioeGetErrorType, isDoesNotExistErrorType)
 import           System.Process (readProcessWithExitCode)
 

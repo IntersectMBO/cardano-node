@@ -53,7 +53,6 @@ import           Prelude (String)
 import           Data.Aeson
 import           Data.IP (IP (..), IPv4, IPv6)
 import qualified Data.IP as IP
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Network.DNS as DNS (Domain)

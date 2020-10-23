@@ -47,7 +47,6 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Scientific (coefficient)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Void (Void)
 import           Network.Socket (PortNumber)
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),

@@ -70,10 +70,10 @@ Confirm that you installed cabal version `3.2.0.0`.
 
 #### Download and install GHC:
 
-    wget https://downloads.haskell.org/~ghc/8.6.5/ghc-8.6.5-x86_64-deb9-linux.tar.xz
-    tar -xf ghc-8.6.5-x86_64-deb9-linux.tar.xz
-    rm ghc-8.6.5-x86_64-deb9-linux.tar.xz
-    cd ghc-8.6.5
+    wget https://downloads.haskell.org/ghc/8.10.2/ghc-8.10.2-x86_64-deb9-linux.tar.xz
+    tar -xf ghc-8.10.2-x86_64-deb9-linux.tar.xz
+    rm ghc-8.10.2-x86_64-deb9-linux.tar.xz
+    cd ghc-8.10.2
     ./configure
     sudo make install
 
@@ -119,9 +119,9 @@ Build and install the node with `cabal`,
 
 Copy the executables files to the `.local/bin` directory. Replace the place holder <TAGGED VERSION> with your targeted version:
 
-    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
+    cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
 
-    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
+    cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
 
 Check the version installed:
 

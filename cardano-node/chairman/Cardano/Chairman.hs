@@ -14,13 +14,9 @@ module Cardano.Chairman (chairmanTest) where
 import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show, throwIO)
 import           Prelude (String, error, show)
 
-import           Control.Monad (void)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Coerce (coerce)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Proxy (Proxy (..))
-import           Data.Void (Void)
 
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
@@ -29,8 +25,6 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
-
-import           Network.Mux (MuxError, MuxMode (..))
 
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig, GetHeader (..), Header)

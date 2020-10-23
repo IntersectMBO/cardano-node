@@ -13,11 +13,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.6.5"]
+        ghc: ["8.6.5", "8.10.2"]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
     - uses: actions/checkout@v1
+
+    - name: Patch GHC 8.10.2 linker
+      if: matrix.os == 'windows-latest'
+      run: |
+        sed -i \
+          's|C:/GitLabRunner/builds/2WeHDSFP/0/ghc/ghc/inplace/mingw/bin/ld.exe|C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/mingw/bin/ld.exe|g' \
+          C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings
 
     - name: Select build directory
       run: echo "CABAL_BUILDDIR=dist" >> $GITHUB_ENV

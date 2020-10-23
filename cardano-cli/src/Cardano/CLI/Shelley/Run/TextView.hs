@@ -15,7 +15,6 @@ import           Cardano.Api.TextView (TextView (..))
 import           Cardano.Api.Typed (Error (..), FileError, TextEnvelopeError,
                      readTextEnvelopeFromFile)
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS

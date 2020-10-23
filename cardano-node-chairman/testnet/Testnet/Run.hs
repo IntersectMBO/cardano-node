@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Testnet.Run
   ( runTestnet
   ) where
@@ -25,7 +23,7 @@ import qualified Testnet.Conf as H
 
 testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty tn = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  conf@H.Conf {..} <- H.mkConf tempAbsPath' Nothing
+  conf <- H.mkConf tempAbsPath' Nothing
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000

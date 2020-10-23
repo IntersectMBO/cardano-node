@@ -9,19 +9,22 @@ packages:
     hedgehog-extras
 
 package cardano-api
-  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+  ghc-options: -Werror
 
 package cardano-cli
-  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+  ghc-options: -Werror
 
 package cardano-config
-  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+  ghc-options: -Werror
 
 package cardano-node
-  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+  ghc-options: -Werror
 
 package cardano-node-chairman
-  ghc-options: -Werror -Wall -Wredundant-constraints -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields
+  ghc-options: -Werror
+
+package hedgehog-extras
+  ghc-options: -Werror
 
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
@@ -155,8 +158,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 6a2b8922856460cccdc7015d33a14ebd28696d14
-  --sha256: 01sxmgm65i8lspzh600vvyn5pfwhny4bx215ksxh9lpz8kjp1lc5
+  tag: 4827c387a84c5cbd279d9a348368747051607cc0
+  --sha256: 1gfc5kvpndal9i9c7cgxbfs4zgrfysrxqswcyj8ws9law8yd9fc7
   subdir:
     io-sim
     io-sim-classes
@@ -174,7 +177,6 @@ source-repository-package
 constraints:
     hedgehog >= 1.0
   , bimap >= 0.4.0
-  , brick >= 0.47
   , libsystemd-journal >= 1.4.4
   , systemd >= 2.3.0
     -- systemd-2.3.0 requires at least network 3.1.1.0 but it doesn't declare
