@@ -21,23 +21,25 @@ This declares the basic node configuration parameters (TPraos as the protocol, t
 
 The basic configuration section might look like this:
 
-```{
+```json
+{
   "Protocol": "TPraos",
   "GenesisFile": "ff-genesis.json",
   "RequiresNetworkMagic": "RequiresMagic",
-  ```
+```
 
 *Update parameters*
 
 Block-producing nodes use a protocol version number as part of the system for the agreement and synchronization of protocol updates. When configuring this section, you need to be aware of the latest version of the protocol supported by the network.
 
 The update parameters section might look like this:
-```"ApplicationName": "cardano-sl",
+```
+  "ApplicationName": "cardano-sl",
   "ApplicationVersion": 0,
   "LastKnownBlockVersion-Alt": 0,
-  "LastKnownBlockVersion-Major": 0,
+  "LastKnownBlockVersion-Major": 2,
   "LastKnownBlockVersion-Minor": 0,
-  ```
+```
 
 *Tracing*
 
@@ -51,10 +53,11 @@ It is possible to have more fine-grained control over filtering of trace output,
 
 **Topology.json**
 
-The information contained in this file tells the node which nodes in the network it should talk to. 
+The information contained in this file tells the node which nodes in the network it should talk to.
 
 A simple topology file might look like this:
-```{
+```json
+   {
   "Producers": [
     {
       "addr": "x.x.x.x",
