@@ -5,3 +5,18 @@
 nix/.stack.nix/*.nix linguist-generated=true
 .stack-to-nix.cache linguist-generated=true
 nix/.stack-pkgs.nix linguist-generated=true
+
+# genesis files
+configuration/cardano/mainnet-byron-genesis.json -text
+configuration/cardano/mainnet-shelley-genesis.json -text
+configuration/cardano/shelley_qa-byron-genesis.json -text
+configuration/cardano/shelley_qa-shelley-genesis.json -text
+configuration/defaults/byron-mainnet/genesis.json -text
+configuration/defaults/byron-staging/genesis.json -text
+configuration/defaults/byron-testnet/genesis.json -text
+configuration/defaults/mainnet-silent/genesis.json -text
+configuration/defaults/mainnet-via-fetcher/genesis.json -text
+configuration/mainnet-ci/genesis.json -text
+configuration/mainnet-ci/shelley-staging-genesis.json -text
+configuration/mainnet-ci/shelley-staging-short-genesis.json -text
+configuration/mainnet-ci/testnet-genesis.json -text
