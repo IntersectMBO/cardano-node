@@ -35,6 +35,7 @@ import qualified Cardano.Ledger.Core as Core
 
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import           Shelley.Spec.Ledger.BlockChain (HashHeader (..))
+import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger
 import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
@@ -105,11 +106,14 @@ deriving newtype instance ToJSON (MetaDataHash era)
 deriving newtype instance ToJSON Ledger.LogWeight
 deriving newtype instance ToJSON Ledger.Likelihood
 deriving newtype instance ToJSON (Ledger.Stake StandardShelley)
+deriving newtype instance ToJSON (Ledger.PoolDistr StandardCrypto)
+deriving newtype instance ToJSON DeltaCoin
 
 deriving anyclass instance ToJSON (Ledger.GenDelegs StandardCrypto)
 deriving anyclass instance ToJSON (Ledger.IndividualPoolStake StandardCrypto)
 deriving anyclass instance ToJSON (Ledger.ProposedPPUpdates StandardShelley)
 deriving anyclass instance ToJSON (Ledger.PPUPState StandardShelley)
+deriving anyclass instance ToJSON (Ledger.BlocksMade StandardShelley)
 
 deriving instance ToJSON Ledger.Ptr
 deriving instance ToJSON Ledger.AccountState
@@ -123,6 +127,8 @@ deriving instance ToJSON (Ledger.SnapShots StandardShelley)
 deriving instance ToJSON (Ledger.NonMyopic StandardShelley)
 deriving instance ToJSON (Ledger.LedgerState StandardShelley)
 deriving instance ToJSON (Ledger.EpochState StandardShelley)
+deriving instance ToJSON (Ledger.RewardUpdate StandardShelley)
+deriving instance ToJSON (Ledger.NewEpochState StandardShelley)
 deriving instance ToJSON (Ledger.PParams' StrictMaybe StandardShelley)
 deriving instance ToJSON (Ledger.PState StandardShelley)
 deriving instance ToJSON (Ledger.StakeReference StandardShelley)
