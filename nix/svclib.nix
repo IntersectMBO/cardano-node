@@ -260,6 +260,7 @@ let
     };
     systemdCompat.options = {
       systemd.services = mkOption {};
+      systemd.sockets = lib.mkOption {};
       assertions = [];
       users = mkOption {};
     };

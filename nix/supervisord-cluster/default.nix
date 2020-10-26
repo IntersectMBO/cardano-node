@@ -39,6 +39,7 @@ let
   mkStartScript = envConfig: let
     systemdCompat.options = {
       systemd.services = lib.mkOption {};
+      systemd.sockets = lib.mkOption {};
       users = lib.mkOption {};
       assertions = lib.mkOption {};
     };
