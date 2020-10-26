@@ -621,9 +621,6 @@ testnet H.Conf {..} = do
         )
       )
 
-    H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
-    H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
-
     H.noteShowM_ $ H.getPid hProcess
 
     when (OS.os `L.elem` ["darwin", "linux"]) $ do
@@ -668,9 +665,6 @@ testnet H.Conf {..} = do
           }
         )
       )
-
-    H.onFailure . H.noteM_ $ H.readFile nodeStdoutFile
-    H.onFailure . H.noteM_ $ H.readFile nodeStderrFile
 
     when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
