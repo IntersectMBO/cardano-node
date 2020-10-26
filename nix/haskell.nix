@@ -26,7 +26,7 @@ let
   projectPackages = lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
     (haskell-nix.cabalProject {
       inherit src;
-      compiler-nix-name = "ghc8102";
+      compiler-nix-name = compiler;
     }));
 
   # This creates the Haskell package set.
@@ -64,18 +64,23 @@ let
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
       }
       {
-        # Stamp executables with the git revision
-        # And make sure that libsodium DLLs are available for windows binaries:
+        # make sure that libsodium DLLs are available for windows binaries:
         packages = lib.genAttrs projectPackages (name: {
-            postInstall = ''
-              if [ -d $out/bin ]; then
-                ${setGitRev}
-                ${lib.optionalString stdenv.hostPlatform.isWindows
-                  "ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll"
-                }
-              fi
-            '';
-          });
+          postInstall = lib.optionalString stdenv.hostPlatform.isWindows ''
+            if [ -d $out/bin ]; then
+              ${setLibSodium}
+            fi
+          '';
+        });
+      }
+      {
+        # Stamp executables with the git revision
+        packages = lib.genAttrs ["cardano-node" "cardano-cli"] (name: {
+          components.exes.${name}.postInstall = ''
+            ${lib.optionalString stdenv.hostPlatform.isWindows setLibSodium}
+            ${setGitRev}
+          '';
+        });
       }
       ({ pkgs, config, ... }: {
         # Packages we wish to ignore version bounds of.
@@ -153,9 +158,9 @@ let
   # setGitRev is a postInstall script to stamp executables with
   # version info. It uses the "gitrev" argument, if set. Otherwise,
   # the revision is sourced from the local git work tree.
-  setGitRev = ''
-    ${haskellBuildUtils}/bin/set-git-rev "${gitrev'}" $out/bin/* || true
-  '';
+  setGitRev = ''${haskellBuildUtils}/bin/set-git-rev "${gitrev'}" $out/bin/*'';
+  # package with libsodium:
+  setLibSodium = "ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll";
   gitrev' = if (gitrev == null)
     then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
     else gitrev;
