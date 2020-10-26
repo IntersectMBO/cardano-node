@@ -14,7 +14,7 @@ module Cardano.CLI.Shelley.Orphans () where
 
 import           Cardano.Prelude
 
-import           Control.Iterate.SetAlgebra as SetAlgebra
+import           Control.SetAlgebra as SetAlgebra
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
@@ -28,10 +28,10 @@ import           Cardano.Crypto.Hash.Class as Crypto
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (ShelleyBasedEra, StandardCrypto, StandardShelley)
 import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
-import           Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Core as Core
 
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import           Shelley.Spec.Ledger.BlockChain (HashHeader (..))
@@ -46,10 +46,10 @@ import qualified Shelley.Spec.Ledger.Rewards as Ledger
 import           Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
-instance Era era => ToJSONKey (TxIn era) where
+instance ShelleyBasedEra era => ToJSONKey (TxIn era) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
-txInToText :: Era era => TxIn era -> Text
+txInToText :: ShelleyBasedEra era => TxIn era -> Text
 txInToText (TxIn (TxId txidHash) ix) =
   hashToText txidHash
     <> Text.pack "#"
@@ -58,9 +58,9 @@ txInToText (TxIn (TxId txidHash) ix) =
 hashToText :: Hash crypto a -> Text
 hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex
 
-deriving instance Era era => ToJSON (TxIn era)
+deriving instance ShelleyBasedEra era => ToJSON (TxIn era)
 
-instance Era era => ToJSON (TxOut era) where
+instance (ShelleyBasedEra era, ToJSON (Core.Value era)) => ToJSON (TxOut era) where
   toJSON (TxOut addr amount) =
     Aeson.object
       [ "address" .= addr
@@ -96,7 +96,7 @@ deriving newtype instance ToJSON BlockNo
 
 deriving newtype instance ToJSON (TxId era)
 
-deriving newtype instance Era era => ToJSON (UTxO era)
+deriving newtype instance (ShelleyBasedEra era, ToJSON (Core.Value era)) => ToJSON (UTxO era)
 
 deriving newtype instance ToJSON (ShelleyHash era)
 deriving newtype instance ToJSON (HashHeader era)
@@ -106,8 +106,8 @@ deriving newtype instance ToJSON Ledger.LogWeight
 deriving newtype instance ToJSON Ledger.Likelihood
 deriving newtype instance ToJSON (Ledger.Stake StandardShelley)
 
-deriving anyclass instance ToJSON (Ledger.GenDelegs StandardShelley)
-deriving anyclass instance ToJSON (Ledger.IndividualPoolStake StandardShelley)
+deriving anyclass instance ToJSON (Ledger.GenDelegs StandardCrypto)
+deriving anyclass instance ToJSON (Ledger.IndividualPoolStake StandardCrypto)
 deriving anyclass instance ToJSON (Ledger.ProposedPPUpdates StandardShelley)
 deriving anyclass instance ToJSON (Ledger.PPUPState StandardShelley)
 
@@ -116,7 +116,7 @@ deriving instance ToJSON Ledger.AccountState
 
 deriving instance ToJSON (Ledger.DPState StandardShelley)
 deriving instance ToJSON (Ledger.DState StandardShelley)
-deriving instance ToJSON (Ledger.FutureGenDeleg StandardShelley)
+deriving instance ToJSON (Ledger.FutureGenDeleg StandardCrypto)
 deriving instance ToJSON (Ledger.InstantaneousRewards StandardShelley)
 deriving instance ToJSON (Ledger.SnapShot StandardShelley)
 deriving instance ToJSON (Ledger.SnapShots StandardShelley)
@@ -129,7 +129,7 @@ deriving instance ToJSON (Ledger.StakeReference StandardShelley)
 deriving instance ToJSON (Ledger.UTxOState StandardShelley)
 
 deriving instance ToJSONKey Ledger.Ptr
-deriving instance ToJSONKey (Ledger.FutureGenDeleg StandardShelley)
+deriving instance ToJSONKey (Ledger.FutureGenDeleg StandardCrypto)
 
 instance (ToJSONKey k, ToJSON v) => ToJSON (SetAlgebra.BiMap v k v) where
   toJSON = toJSON . SetAlgebra.forwards -- to normal Map

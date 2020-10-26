@@ -46,6 +46,9 @@ import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
+import qualified Cardano.Ledger.Crypto as Core
+import qualified Cardano.Ledger.Core as Core
+
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
@@ -82,7 +85,7 @@ import           Shelley.Spec.Ledger.STS.Utxow
 --
 -- NOTE: this list is sorted in roughly topological order.
 
-instance Era era => ToObject (GenTx (ShelleyBlock era)) where
+instance ShelleyBasedEra era => ToObject (GenTx (ShelleyBlock era)) where
   toObject verb tx =
     mkObject $
         [ "txid" .= txId tx ]
@@ -91,7 +94,7 @@ instance Era era => ToObject (GenTx (ShelleyBlock era)) where
 instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
   toJSON i = toJSON (condense i)
 
-instance Era era => ToObject (Header (ShelleyBlock era)) where
+instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
   toObject _verb b = mkObject
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
@@ -99,7 +102,8 @@ instance Era era => ToObject (Header (ShelleyBlock era)) where
         , "blockNo" .= condense (blockNo b)
 --      , "delegate" .= condense (headerSignerVk h)
         ]
-instance Era era => ToObject (ApplyTxError era) where
+instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
+      => ToObject (ApplyTxError era) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
@@ -142,36 +146,33 @@ instance ToObject HotKey.KESEvolutionError where
       , "targetPeriod" .= targetPeriod
       ]
 
-instance Era era =>  ToObject (ShelleyLedgerError era) where
+instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
+      => ToObject (ShelleyLedgerError era) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mkObject [ "kind" .= String "BBodyError"
              , "failures" .= map (toObject verb) fs
              ]
-  toObject verb (TickError (TickTransitionError fs)) =
-    mkObject [ "kind" .= String "TickError"
-             , "failures" .= map (toObject verb) fs
-             ]
 
-instance Era era =>  ToObject (ShelleyLedgerUpdate era) where
+instance ShelleyBasedEra era => ToObject (ShelleyLedgerUpdate era) where
   toObject verb (ShelleyUpdatedProtocolUpdates updates) =
     mkObject [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
              , "updates" .= map (toObject verb) updates
              ]
 
-instance Era era =>  ToObject (ProtocolUpdate era) where
+instance ToObject (ProtocolUpdate crypto) where
   toObject verb ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
     mkObject [ "proposal" .= toObject verb protocolUpdateProposal
              , "state"    .= toObject verb protocolUpdateState
              ]
 
-instance Era era =>  ToObject (UpdateProposal era) where
+instance ToObject (UpdateProposal crypto) where
   toObject _verb UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
     mkObject [ "params"  .= proposalParams
              , "version" .= proposalVersion
              , "epoch"   .= proposalEpoch
              ]
 
-instance Era era =>  ToObject (UpdateState era) where
+instance ToObject (UpdateState crypto) where
   toObject _verb UpdateState{proposalVotes, proposalReachedQuorum} =
     mkObject [ "proposal"      .= proposalVotes
              , "reachedQuorum" .= proposalReachedQuorum
@@ -202,13 +203,14 @@ instance ToJSON (PParamsUpdate era) where
       mbfield SNothing  = []
       mbfield (SJust x) = [x]
 
-instance Era era => ToObject (ChainTransitionError era) where
+instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
   toObject verb (ChainTransitionError fs) =
     mkObject [ "kind" .= String "ChainTransitionError"
              , "failures" .= map (toObject verb) fs
              ]
 
-instance Era era => ToObject (ChainPredicateFailure era) where
+instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
+      => ToObject (ChainPredicateFailure era) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
              , "headerSize" .= hdrSz
@@ -235,7 +237,7 @@ instance Era era => ToObject (ChainPredicateFailure era) where
   toObject verb (PrtclFailure f) = toObject verb f
   toObject verb (PrtclSeqFailure f) = toObject verb f
 
-instance Era era => ToObject (PrtlSeqFailure era) where
+instance ToObject (PrtlSeqFailure crypto) where
   toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
     mkObject [ "kind" .= String "WrongSlotInterval"
              , "lastSlot" .= lastSlot
@@ -252,7 +254,8 @@ instance Era era => ToObject (PrtlSeqFailure era) where
              , "currentBlockHash" .= String (textShow currentHash)
              ]
 
-instance Era era =>  ToObject (BbodyPredicateFailure era) where
+instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
+      => ToObject (BbodyPredicateFailure era) where
   toObject _verb (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
@@ -266,16 +269,19 @@ instance Era era =>  ToObject (BbodyPredicateFailure era) where
   toObject verb (LedgersFailure f) = toObject verb f
 
 
-instance Era era =>  ToObject (LedgersPredicateFailure era) where
+instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
+      => ToObject (LedgersPredicateFailure era) where
   toObject verb (LedgerFailure f) = toObject verb f
 
 
-instance Era era =>  ToObject (LedgerPredicateFailure era) where
+instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
+      => ToObject (LedgerPredicateFailure era) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
 
-instance Era era => ToObject (UtxowPredicateFailure era) where
+instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
+      => ToObject (UtxowPredicateFailure era) where
   toObject _verb (InvalidWitnessesUTXOW wits) =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits
@@ -314,7 +320,11 @@ instance Era era => ToObject (UtxowPredicateFailure era) where
     mkObject [ "kind" .= String "InvalidMetaData"
              ]
 
-instance Era era => ToObject (UtxoPredicateFailure era) where
+-- TODO the equality will need to be removed when Mary is switched to the real
+-- Mary era instead of just a copy of Shelley. 'renderValueNotConservedErr' will
+-- need to be changed accordingly.
+instance (ShelleyBasedEra era, Core.Value era ~ Coin)
+      => ToObject (UtxoPredicateFailure era) where
   toObject _verb (BadInputsUTxO badInputs) =
     mkObject [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
@@ -392,7 +402,7 @@ instance ToObject (PpupPredicateFailure era) where
              ]
 
 
-instance Era era => ToObject (DelegsPredicateFailure era) where
+instance ShelleyBasedEra era => ToObject (DelegsPredicateFailure era) where
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
     mkObject [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool
@@ -506,7 +516,7 @@ instance ToObject (TickPredicateFailure era) where
   toObject verb (NewEpochFailure f) = toObject verb f
   toObject verb (RupdFailure f) = toObject verb f
 
-instance ToObject (TicknPredicateFailure era) where
+instance ToObject TicknPredicateFailure where
   toObject _verb x = case x of {} -- no constructors
 
 instance ToObject (NewEpochPredicateFailure era) where
@@ -547,12 +557,12 @@ instance ToObject (RupdPredicateFailure era) where
   toObject _verb x = case x of {} -- no constructors
 
 
-instance Era era => ToObject (PrtclPredicateFailure era) where
+instance Core.Crypto crypto => ToObject (PrtclPredicateFailure crypto) where
   toObject  verb (OverlayFailure f) = toObject verb f
   toObject  verb (UpdnFailure f) = toObject verb f
 
 
-instance Era era => ToObject (OverlayPredicateFailure era) where
+instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
   toObject _verb (UnknownGenesisKeyOVERLAY (KeyHash genKeyHash)) =
     mkObject [ "kind" .= String "UnknownGenesisKeyOVERLAY"
              , "unknownKeyHash" .= String (textShow genKeyHash)
@@ -605,7 +615,7 @@ instance Era era => ToObject (OverlayPredicateFailure era) where
   toObject verb (OcertFailure f) = toObject verb f
 
 
-instance ToObject (OcertPredicateFailure era) where
+instance ToObject (OcertPredicateFailure crypto) where
   toObject _verb (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
     mkObject [ "kind" .= String "KESBeforeStartOCERT"
              , "opCertKESStartPeriod" .= String (textShow oCertstart)
@@ -646,7 +656,7 @@ instance ToObject (OcertPredicateFailure era) where
              ]
 
 
-instance ToObject (UpdnPredicateFailure era) where
+instance ToObject (UpdnPredicateFailure crypto) where
   toObject _verb x = case x of {} -- no constructors
 
 --------------------------------------------------------------------------------
@@ -663,20 +673,20 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 -- Common to cardano-cli
 
-deriving newtype instance Era era => ToJSON (MetaDataHash era)
+deriving newtype instance ShelleyBasedEra era => ToJSON (MetaDataHash era)
 
-deriving instance Era era => ToJSON (TxIn era)
+deriving instance ShelleyBasedEra era => ToJSON (TxIn era)
 deriving newtype instance ToJSON (TxId era)
-instance Era era => ToJSONKey (TxIn era) where
+instance ShelleyBasedEra era => ToJSONKey (TxIn era) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
-txInToText :: Era era => TxIn era -> Text
+txInToText :: ShelleyBasedEra era => TxIn era -> Text
 txInToText (TxIn (TxId txidHash) ix) =
   hashToText txidHash
     <> Text.pack "#"
     <> Text.pack (show ix)
 
-instance Era era => ToJSON (TxOut era) where
+instance (ShelleyBasedEra era, ToJSON (Core.Value era)) => ToJSON (TxOut era) where
   toJSON (TxOut addr amount) =
     Aeson.object
       [ "address" .= addr
