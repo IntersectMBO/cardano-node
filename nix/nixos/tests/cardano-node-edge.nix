@@ -37,13 +37,12 @@ with pkgs;
   testScript = ''
     start_all()
     machine.wait_for_unit("cardano-node.service")
-    machine.sleep(3)
+    machine.sleep(5)
     machine.succeed("systemctl status cardano-node")
     machine.succeed("stat /run/cardano-node")
     machine.succeed("stat /run/cardano-node/node.socket")
-    machine.sleep(1)
+    machine.sleep(15)
     machine.succeed("nc -z 127.0.0.1 12798")
-    machine.sleep(1)
     machine.succeed("nc -z 127.0.0.1 3001")
   '';
 
