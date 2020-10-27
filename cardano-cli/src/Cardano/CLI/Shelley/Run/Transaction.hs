@@ -189,7 +189,7 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
     $ mkShelleyBootstrapWitnesses mnw txbody sksByron
 
   let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness txbody) sksShelley
-      shelleyScriptWitnesses = map (makeShelleyScriptWitness . makeMultiSigScript) scsShelley
+      shelleyScriptWitnesses = map (makeShelleyScriptWitness . makeMultiSigScriptShelley) scsShelley
       shelleyWitnesses = shelleyKeyWitnesses ++ shelleyScriptWitnesses
       tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
 
@@ -303,7 +303,7 @@ data SomeWitness
   | AGenesisDelegateExtendedSigningKey
                                (Api.SigningKey Api.GenesisDelegateExtendedKey)
   | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
-  | AShelleyMultiSigScript     Api.MultiSigScript
+  | AShelleyMultiSigScript     (Api.MultiSigScript Shelley)
 
 -- | Error deserialising a JSON-encoded script.
 newtype ScriptJsonDecodeError = ScriptJsonDecodeError String
@@ -399,7 +399,7 @@ partitionSomeWitnesses
   :: [ByronOrShelleyWitness]
   -> ( [ShelleyBootstrapWitnessSigningKeyData]
      , [Api.ShelleyWitnessSigningKey]
-     , [Api.MultiSigScript]
+     , [Api.MultiSigScript Shelley]
      )
 partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
   where
@@ -420,7 +420,7 @@ partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
 data ByronOrShelleyWitness
   = AByronWitness !ShelleyBootstrapWitnessSigningKeyData
   | AShelleyKeyWitness !Api.ShelleyWitnessSigningKey
-  | AShelleyScriptWitness !Api.MultiSigScript
+  | AShelleyScriptWitness !(Api.MultiSigScript Shelley)
 
 categoriseSomeWitness :: SomeWitness -> ByronOrShelleyWitness
 categoriseSomeWitness swsk =
@@ -521,7 +521,7 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
       AShelleyKeyWitness skShelley ->
         pure $ makeShelleyKeyWitness txbody skShelley
       AShelleyScriptWitness scShelley ->
-        pure $ makeShelleyScriptWitness (makeMultiSigScript scShelley)
+        pure $ makeShelleyScriptWitness (makeMultiSigScriptShelley scShelley)
 
   firstExceptT ShelleyTxCmdWriteFileError
     . newExceptT
