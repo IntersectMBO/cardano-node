@@ -501,6 +501,7 @@ import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
+import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 import qualified Cardano.Api.TextView as TextView
 
 import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
@@ -1218,7 +1219,15 @@ instance SerialiseAsCBOR (Witness Shelley) where
         encodeShelleyWitness (ShelleyBootstrapWitness wit) =
             CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
         encodeShelleyWitness (ShelleyScriptWitness wit) =
-            CBOR.encodeListLen 2 <> CBOR.encodeWord 2 <> toCBOR wit
+            CBOR.encodeListLen 2
+              <> CBOR.encodeWord 2
+              -- We use 'WrappedMultiSig' here to support the legacy
+              -- binary serialisation format for the @Script@ type from
+              -- @cardano-ledger-specs@.
+              --
+              -- See the documentation of 'WrappedMultiSig' for more
+              -- information.
+              <> toCBOR (Legacy.WrappedMultiSig wit)
 
     deserialiseFromCBOR AsShelleyWitness bs =
         CBOR.decodeAnnotator "Shelley Witness"
@@ -1231,7 +1240,13 @@ instance SerialiseAsCBOR (Witness Shelley) where
           case t of
             0 -> fmap (fmap ShelleyKeyWitness) fromCBOR
             1 -> fmap (fmap ShelleyBootstrapWitness) fromCBOR
-            2 -> fmap (fmap ShelleyScriptWitness) fromCBOR
+            -- We use 'WrappedMultiSig' here to support the legacy binary
+            -- serialisation format for the @Script@ type from
+            -- @cardano-ledger-specs@.
+            --
+            -- See the documentation of 'WrappedMultiSig' for more
+            -- information.
+            2 -> fmap (fmap (ShelleyScriptWitness . Legacy.unWrappedMultiSig)) fromCBOR
             _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
                                     "Shelley Witness" (fromIntegral t)
 
@@ -1741,10 +1756,20 @@ instance SerialiseAsRawBytes (Hash Script) where
 
 instance SerialiseAsCBOR Script where
     serialiseToCBOR (Script s) =
-      CBOR.serialize' s
+      -- We use 'WrappedMultiSig' here to support the legacy binary
+      -- serialisation format for the @Script@ type from
+      -- @cardano-ledger-specs@.
+      --
+      -- See the documentation of 'WrappedMultiSig' for more information.
+      CBOR.serialize' (Legacy.WrappedMultiSig s)
 
     deserialiseFromCBOR AsScript bs =
-      Script <$>
+      -- We use 'WrappedMultiSig' here to support the legacy binary
+      -- serialisation format for the @Script@ type from
+      -- @cardano-ledger-specs@.
+      --
+      -- See the documentation of 'WrappedMultiSig' for more information.
+      Script . Legacy.unWrappedMultiSig <$>
         CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
 instance HasTextEnvelope Script where
