@@ -3,12 +3,13 @@ module Test.Cardano.Api.Typed.Gen
   , genAddressShelley
   , genByronKeyWitness
   , genRequiredSig
-  , genMofNRequiredSig
-  , genMultiSigScript
+  , genMultiSigScriptAllegra
+  , genMultiSigScriptMary
+  , genMultiSigScriptShelley
   , genScriptHash
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
-  , genScript
+  , genScriptShelley
   , genShelleyWitness
   , genSigningKey
   , genStakeAddress
@@ -36,6 +37,8 @@ import qualified Hedgehog.Range as Range
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
+{- HLINT ignore "Reduce duplication" -}
+
 genAddressByron :: Gen (Address Byron)
 genAddressByron = makeByronAddress <$> genNetworkId
                                    <*> genVerificationKey AsByronKey
@@ -57,34 +60,104 @@ genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 genLovelace :: Gen Lovelace
 genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 
-genRequiredSig :: Gen MultiSigScript
-genRequiredSig = do
+-- Script Primitive Generators --
+
+genRequiredSig :: ScriptFeatureInEra SignatureFeature era -> Gen (MultiSigScript era)
+genRequiredSig sfeat = do
   verKey <- genVerificationKey AsPaymentKey
-  return . RequireSignature $ verificationKeyHash verKey
+  return $ RequireSignature (verificationKeyHash verKey) sfeat
 
-genAllRequiredSig :: Gen MultiSigScript
-genAllRequiredSig =
-  RequireAllOf <$> Gen.list (Range.constant 1 10) genRequiredSig
+genRequireTimeBefore :: ScriptFeatureInEra TimeLocksFeature era -> Gen (MultiSigScript era)
+genRequireTimeBefore sfeat = flip RequireTimeBefore sfeat <$> genSlotNo
 
-genAnyRequiredSig :: Gen MultiSigScript
-genAnyRequiredSig =
-  RequireAnyOf <$> Gen.list (Range.constant 1 10) genRequiredSig
+genRequireTimeAfter :: ScriptFeatureInEra TimeLocksFeature era -> Gen (MultiSigScript era)
+genRequireTimeAfter sfeat = flip RequireTimeAfter sfeat <$> genSlotNo
 
-genMofNRequiredSig :: Gen MultiSigScript
-genMofNRequiredSig = do
- required <- Gen.integral (Range.linear 2 15)
- total <- Gen.integral (Range.linear (required + 1) 15)
- RequireMOf required <$> Gen.list (Range.singleton total) genRequiredSig
+genAll :: [MultiSigScript era] -> Gen (MultiSigScript era)
+genAll s = pure $ RequireAllOf s
 
-genMultiSigScript :: Gen MultiSigScript
-genMultiSigScript =
-  Gen.choice [genAllRequiredSig, genAnyRequiredSig, genMofNRequiredSig]
+genAny :: [MultiSigScript era] -> Gen (MultiSigScript era)
+genAny s = pure $ RequireAnyOf s
 
-genScript :: Gen Script
-genScript = makeMultiSigScript <$> genMultiSigScript
+genMofN :: [MultiSigScript era] -> Gen (MultiSigScript era)
+genMofN s = do
+ let numKeys = length s
+ required <- Gen.integral (Range.linear 0 numKeys)
+ pure $ RequireMOf required s
 
-genScriptHash :: Gen (Hash Script)
-genScriptHash = scriptHash <$> genScript
+-- Shelley
+
+genMultiSigScriptShelley :: Gen (MultiSigScript Shelley)
+genMultiSigScriptShelley = genMultiSigScriptsShelley >>= Gen.element
+
+genMultiSigScriptsShelley :: Gen [MultiSigScript Shelley]
+genMultiSigScriptsShelley =
+  Gen.recursive Gen.choice
+    -- Non-recursive generators
+    [ Gen.list (Range.constant 1 10) $ genRequiredSig SignaturesInShelleyEra
+    ]
+    -- Recursive generators
+    [ Gen.subtermM
+        genMultiSigScriptsShelley
+        (\a -> sequence [genAll a, genAny a, genMofN a])
+
+    ]
+
+genScriptShelley :: Gen (Script Shelley)
+genScriptShelley = makeMultiSigScriptShelley <$> genMultiSigScriptShelley
+
+genScriptHash :: Gen (Hash (Script Shelley))
+genScriptHash = scriptHashShelley <$> genScriptShelley
+
+-- Allegra
+
+genMultiSigScriptAllegra :: Gen (MultiSigScript Allegra)
+genMultiSigScriptAllegra = genMultiSigScriptsAllegra >>= Gen.element
+
+genMultiSigScriptsAllegra :: Gen [MultiSigScript Allegra]
+genMultiSigScriptsAllegra =
+  Gen.recursive Gen.choice
+    -- Non-recursive generators
+    [ Gen.list (Range.constant 1 10) $ genRequireTimeAfter TimeLocksInAllegraEra
+    , Gen.list (Range.constant 1 10) $ genRequireTimeBefore TimeLocksInAllegraEra
+    , Gen.list (Range.constant 1 10) $ genRequiredSig SignaturesInAllegraEra
+    ]
+    -- Recursive generators
+    [ Gen.subtermM3
+        genMultiSigScriptsAllegra
+        genMultiSigScriptsAllegra
+        genMultiSigScriptsAllegra
+        (\a b c -> do shuffled <- Gen.shuffle $ a ++ b ++ c
+                      subSeq <- Gen.subsequence shuffled
+                      sequence [genAll subSeq, genAny subSeq, genMofN subSeq]
+                      )
+
+    ]
+
+-- Mary
+
+genMultiSigScriptMary :: Gen (MultiSigScript Mary)
+genMultiSigScriptMary = genMultiSigScriptsMary >>= Gen.element
+
+genMultiSigScriptsMary :: Gen [MultiSigScript Mary]
+genMultiSigScriptsMary =
+  Gen.recursive Gen.choice
+    -- Non-recursive generators
+    [ Gen.list (Range.constant 1 10) $ genRequireTimeAfter TimeLocksInMaryEra
+    , Gen.list (Range.constant 1 10) $ genRequireTimeBefore TimeLocksInMaryEra
+    , Gen.list (Range.constant 1 10) $ genRequiredSig SignaturesInMaryEra
+    ]
+    -- Recursive generators
+    [ Gen.subtermM3
+        genMultiSigScriptsMary
+        genMultiSigScriptsMary
+        genMultiSigScriptsMary
+        (\a b c -> do shuffled <- Gen.shuffle $ a ++ b ++ c
+                      subSeq <- Gen.subsequence shuffled
+                      sequence [genAll subSeq, genAny subSeq, genMofN subSeq]
+                      )
+
+    ]
 
 genNetworkId :: Gen NetworkId
 genNetworkId =

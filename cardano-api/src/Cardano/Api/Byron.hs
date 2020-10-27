@@ -5,8 +5,6 @@
 
 module Cardano.Api.Byron
   ( module Cardano.API,
-    -- * Era
-    Byron,
     HasTypeProxy(..),
     AsType
       ( AsByronAddress

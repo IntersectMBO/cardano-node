@@ -11,6 +11,12 @@
 --
 
 module Cardano.API (
+    -- * Eras
+    Byron,
+    Shelley,
+    Allegra,
+    Mary,
+
     HasTypeProxy(..),
     AsType(..),
     -- * Cryptographic key interface
@@ -135,12 +141,18 @@ module Cardano.API (
 
     -- ** Script addresses
     -- | Making addresses from scripts.
-    scriptHash,
+    scriptHashShelley,
+    scriptHashAllegra,
+    scriptHashMary,
 
-    -- ** Multi-signature scripts
+    -- ** Multi signature scripts
     -- | Making multi-signature scripts.
     MultiSigScript,
-    makeMultiSigScript,
+    ScriptFeatureInEra,
+    SignatureFeature,
+    TimeLocksFeature,
+    makeMultiSigScriptAllegra,
+    makeMultiSigScriptMary,
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.

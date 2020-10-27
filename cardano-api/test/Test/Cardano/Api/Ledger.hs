@@ -24,7 +24,8 @@ import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 
 prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSONPretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
+prop_golden_ShelleyGenesis =
+  goldenTestJSONPretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at

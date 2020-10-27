@@ -22,7 +22,7 @@ These functions return `true` when supplied key hashes are a valid combination f
 + RequireAnyOf - a single signature is required, by a key hashing to one of the given values in the list (this constructor is redundant and can be expressed using RequireMOf)
 + RequireMOf - m of the keys with the hashes specified in the list are required to sign
 
-Multi-signature scripts can be written as JSON objects. There are three types of scripts:
+Multi signature scripts can be written as JSON objects. There are three types of scripts:
 
 ## all
 

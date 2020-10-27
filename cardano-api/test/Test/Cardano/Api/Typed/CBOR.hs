@@ -118,7 +118,7 @@ prop_roundtrip_signing_key_kes_CBOR =
 
 prop_roundtrip_script_CBOR :: Property
 prop_roundtrip_script_CBOR =
-  roundtrip_CBOR AsScript genScript
+  roundtrip_CBOR AsShelleyScript genScriptShelley
 
 -- -----------------------------------------------------------------------------
 

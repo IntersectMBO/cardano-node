@@ -5,8 +5,6 @@
 
 module Cardano.Api.Shelley
   ( module Cardano.API,
-    -- * Era
-    Shelley,
     HasTypeProxy(..),
     AsType(AsShelleyAddress,
            AsShelleyTxBody,
@@ -104,14 +102,14 @@ module Cardano.Api.Shelley
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
-    Script(Script),
+    Script(ShelleyScript),
     MultiSigScript
       ( RequireSignature
       , RequireAllOf
       , RequireAnyOf
       , RequireMOf
       ),
-    parseScript,
+    parseScriptShelley,
     parseScriptAny,
     parseScriptAll,
     parseScriptAtLeast,

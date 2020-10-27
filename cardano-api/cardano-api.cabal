@@ -18,13 +18,18 @@ library
   exposed-modules:      Cardano.API
                         Cardano.Api.Byron
                         Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.Eras
+                        Cardano.Api.HasTypeProxy
+                        Cardano.Api.Key
                         Cardano.Api.LocalChainSync
                         Cardano.Api.MetaData
+                        Cardano.Api.MultiSig
                         Cardano.Api.Protocol
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
+                        Cardano.Api.Serialisation
                         Cardano.Api.Shelley
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.Shelley.Serialisation.Legacy
@@ -146,7 +151,9 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
-                        Test.Cardano.Api.Typed.MultiSigScript
+                        Test.Cardano.Api.Typed.MultiSig.Allegra
+                        Test.Cardano.Api.Typed.MultiSig.Mary
+                        Test.Cardano.Api.Typed.MultiSig.Shelley
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
                         Test.Tasty.Hedgehog.Group
