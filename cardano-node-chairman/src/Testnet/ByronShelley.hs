@@ -123,7 +123,7 @@ testnet H.Conf {..} = do
   void $ H.note OS.os
   env <- H.evalIO IO.getEnvironment
   currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
+  startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
   let bftNodes = ["node-bft1", "node-bft2"]
   let poolNodes = ["node-pool1"]
   let allNodes = bftNodes <> poolNodes

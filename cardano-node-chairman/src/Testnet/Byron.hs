@@ -76,7 +76,7 @@ testnet H.Conf {..} = do
   let nodeCount = 3
   baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime 10 currentTime -- 10 seconds into the future
+  startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts nodeCount
 
   -- Generate keys
