@@ -91,8 +91,8 @@ package io-sim-classes
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: af6675d6b6c618418c69c37d1307e3b0c97671cb
-  --sha256: 17bkgpdm39wcl8qfg41hs9xm6x6zmlxvfph1ysy6c4p7y9kkvix7
+  tag: 9e95b500486f59d6c34c97356e2a7b074b39d021
+  --sha256: 15k48xdqdclf9gipz7j58g3sxwn7888giwz2rpi6i60j265vix08
   subdir:
     binary
     binary/test
@@ -110,8 +110,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: d5eaac6c4b21a8e69dc3a5503a72e3c3bfde648e
-  --sha256: 1lzwfi6bc7z995s345ij6aachsrmhmrgm71060z6rvk1w97b3jqk
+  tag: 1a2d7717682f8191cf818362df28ac20fac19b83
+  --sha256: 136pp0653w8chk53wnz6mlkdhf0ldglrb74p1i93d1xnf6ssvjhs
   subdir:
     byron/chain/executable-spec
     byron/crypto
@@ -124,12 +124,13 @@ source-repository-package
     shelley/chain-and-ledger/dependencies/non-integer
     shelley/chain-and-ledger/executable-spec
     shelley/chain-and-ledger/shelley-spec-ledger-test
+    shelley-ma/impl
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: a5519e09958ad1605ed438d26dd7aad39167d0f9
-  --sha256: 03v46yn5bnkmwcm1zwihjhqvma4ssh3s1s1bfdizvq18y1janwf1
+  tag: bec71e48b027b2022e7be1fb7dd265bbbd80490b
+  --sha256: 0jnxa9m84ka799a3i863sqvlygzf18941pi00d88ar45qdmzkagm
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -158,8 +159,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 4827c387a84c5cbd279d9a348368747051607cc0
-  --sha256: 1gfc5kvpndal9i9c7cgxbfs4zgrfysrxqswcyj8ws9law8yd9fc7
+  tag: 43080299637c24254774cd59d634e55be4844d4c
+  --sha256: 1k77y77k58rfxhnb4smw2kyci3xsswlcbxk2zicvdhkrifx09kpd
   subdir:
     io-sim
     io-sim-classes

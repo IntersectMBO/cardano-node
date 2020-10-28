@@ -10,7 +10,7 @@ import           Cardano.Prelude hiding (atomically, catch)
 import           Cardano.Api.Typed
 import           Control.Concurrent.STM
 
-import           Ouroboros.Consensus.Ledger.Abstract (Query, ShowQuery)
+import           Ouroboros.Consensus.Ledger.Query (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Network.Block (Tip)
 import           Ouroboros.Network.Protocol.ChainSync.Client (ClientStIdle (..),

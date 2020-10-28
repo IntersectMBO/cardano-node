@@ -22,7 +22,7 @@ import           Cardano.Api.Typed (MultiSigScript (..))
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
 import           Ouroboros.Consensus.Util.Time
 
 import           Shelley.Spec.Ledger.Address (Addr (..))
@@ -121,12 +121,12 @@ exampleShelleyGenesis =
     }
  where
   -- hash of the genesis verification key
-  genesisVerKeyHash :: KeyHash Genesis StandardShelley
+  genesisVerKeyHash :: KeyHash Genesis StandardCrypto
   genesisVerKeyHash = KeyHash "23d51e91ae5adc7ae801e9de4cd54175fb7464ec2680b25686bbb194"
   -- hash of the delegators verification key
-  delegVerKeyHash :: KeyHash GenesisDelegate StandardShelley
+  delegVerKeyHash :: KeyHash GenesisDelegate StandardCrypto
   delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae6273827"
-  delegVrfKeyHash :: Hash StandardShelley (VerKeyVRF StandardShelley)
+  delegVrfKeyHash :: Hash StandardCrypto (VerKeyVRF StandardCrypto)
   delegVrfKeyHash = "231391e7ec1c450a8518134cf6fad1a8e0ed7ffd66d740f8e8271347a6de7bf2"
   initialFundedAddress :: Addr StandardShelley
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)

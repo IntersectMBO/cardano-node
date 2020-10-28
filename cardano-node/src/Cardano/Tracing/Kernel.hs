@@ -1,9 +1,3 @@
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Cardano.Tracing.Kernel
   ( NodeKernelData (..)
   , mkNodeKernelData
@@ -33,9 +27,6 @@ newtype NodeKernelData blk =
   NodeKernelData
   { unNodeKernelData :: IORef (StrictMaybe (NodeKernel IO RemoteConnectionId LocalConnectionId blk))
   }
-
-deriving instance Foldable    StrictMaybe
-deriving instance Traversable StrictMaybe
 
 mkNodeKernelData :: IO (NodeKernelData blk)
 mkNodeKernelData = NodeKernelData <$> newIORef SNothing

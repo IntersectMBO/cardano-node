@@ -54,13 +54,14 @@ import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..),
                      PoolDistr (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
-import           Shelley.Spec.Ledger.LedgerState (EpochState)
+import           Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.TxBody as Ledger (TxId (..), TxIn (..), TxOut (..))
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO (..))
 
 import           Ouroboros.Consensus.Shelley.Ledger
+import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                      (AcquireFailure (..))
@@ -218,7 +219,7 @@ writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _ _delegsAndRwds) =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty dr)
 
-writeLedgerState :: Maybe OutputFile -> EpochState StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
+writeLedgerState :: Maybe OutputFile -> NewEpochState StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile lstate =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty lstate)
@@ -274,7 +275,7 @@ runQueryStakeDistribution protocol network mOutFile = do
   writeStakeDistribution mOutFile stakeDist
 
 writeStakeDistribution :: Maybe OutputFile
-                       -> PoolDistr StandardShelley
+                       -> PoolDistr StandardCrypto
                        -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDist) =
     handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
@@ -283,7 +284,7 @@ writeStakeDistribution (Just (OutputFile outFile)) (PoolDistr stakeDist) =
 writeStakeDistribution Nothing stakeDist =
    liftIO $ printStakeDistribution stakeDist
 
-printStakeDistribution :: PoolDistr StandardShelley -> IO ()
+printStakeDistribution :: PoolDistr StandardCrypto -> IO ()
 printStakeDistribution (PoolDistr stakeDist) = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
@@ -373,7 +374,7 @@ instance ToJSON DelegationsAndRewards where
         . map delegAndRwdToJson $ Map.toList delegsAndRwds
     where
       delegAndRwdToJson
-        :: (Ledger.Credential 'Ledger.Staking StandardShelley, (Maybe (Hash StakePoolKey), Coin))
+        :: (Ledger.Credential Ledger.Staking StandardShelley, (Maybe (Hash StakePoolKey), Coin))
         -> Aeson.Value
       delegAndRwdToJson (k, (d, r)) =
         Aeson.object
@@ -429,7 +430,7 @@ queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
 --
 queryStakeDistributionFromLocalState
   :: LocalNodeConnectInfo mode block
-  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (PoolDistr StandardShelley)
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (PoolDistr StandardCrypto)
 queryStakeDistributionFromLocalState LocalNodeConnectInfo{
                                        localNodeConsensusMode = ByronMode{}
                                      } =
@@ -460,7 +461,7 @@ queryStakeDistributionFromLocalState connectInfo@LocalNodeConnectInfo{
 queryLocalLedgerState
   :: LocalNodeConnectInfo mode blk
   -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
-             (Either LByteString (Ledger.EpochState StandardShelley))
+             (Either LByteString (NewEpochState StandardShelley))
 queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
@@ -472,7 +473,7 @@ queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
             connectInfo
             ( getTipPoint tip
             , DegenQuery $
-                GetCBOR GetCurrentEpochState  -- Get CBOR-in-CBOR version
+                GetCBOR DebugNewEpochState  -- Get CBOR-in-CBOR version
             )
       return (decodeLedgerState result)
 
@@ -481,7 +482,7 @@ queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
       result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
-          (getTipPoint tip, QueryIfCurrentShelley (GetCBOR GetCurrentEpochState)) -- Get CBOR-in-CBOR version
+          (getTipPoint tip, QueryIfCurrentShelley (GetCBOR DebugNewEpochState)) -- Get CBOR-in-CBOR version
       case result of
         QueryResultEraMismatch err -> throwError (EraMismatchError err)
         QueryResultSuccess ls -> return (decodeLedgerState ls)
@@ -538,7 +539,7 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
   where
     toDelegsAndRwds
       :: Map (Ledger.Credential Ledger.Staking StandardShelley)
-             (Ledger.KeyHash Ledger.StakePool StandardShelley)
+             (Ledger.KeyHash Ledger.StakePool StandardCrypto)
       -> Ledger.RewardAccounts StandardShelley
       -> DelegationsAndRewards
     toDelegsAndRwds delegs rwdAcnts =

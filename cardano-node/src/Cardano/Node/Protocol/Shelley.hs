@@ -38,7 +38,7 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..),
                      ProtocolParamsShelley (..), ShelleyGenesis, TPraosLeaderCredentials (..))
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..))
+import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..), StandardCrypto)
 
 import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
                      validateGenesis)
@@ -140,7 +140,7 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash = do
 
 readLeaderCredentials :: Maybe ProtocolFilepaths
                       -> ExceptT ShelleyProtocolInstantiationError IO
-                                 (Maybe (TPraosLeaderCredentials StandardShelley))
+                                 (Maybe (TPraosLeaderCredentials StandardCrypto))
 
 -- It's OK to supply none of the files
 readLeaderCredentials Nothing = return Nothing
