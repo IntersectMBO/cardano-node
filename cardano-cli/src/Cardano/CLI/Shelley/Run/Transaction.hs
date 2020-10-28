@@ -27,11 +27,6 @@ import qualified Cardano.Binary as CBOR
 
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
-import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..),
-                     HardForkApplyTxErr (ApplyTxErrByron, ApplyTxErrShelley, ApplyTxErrWrongEra))
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardShelley)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
@@ -41,7 +36,6 @@ import           Cardano.CLI.Types
 
 import           Cardano.Api.MetaData
 import           Cardano.Api.Protocol
-import           Cardano.Api.TxSubmit as Api
 import           Cardano.Api.Typed as Api
 
 data ShelleyTxCmdError
@@ -56,8 +50,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
-  | ShelleyTxCmdTxSubmitErrorByron !(ApplyTxErr ByronBlock)
-  | ShelleyTxCmdTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
+  | ShelleyTxCmdTxSubmitErrorByron !(TxValidationError Byron)
+  | ShelleyTxCmdTxSubmitErrorShelley !(TxValidationError Shelley)
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   deriving Show
 
@@ -210,45 +204,53 @@ runTxSubmit protocol network txFile = do
           , Api.FromSomeType Api.AsShelleyTx Right ]
           txFile
 
-    withlocalNodeConnectInfo protocol network sockPath $ \connectInfo ->
+    withLocalNodeConnectInfo protocol network sockPath $ \connectInfo ->
       case (localNodeConsensusMode connectInfo, tx) of
-        (ByronMode{}, Left tx') -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForByronMode tx')
+        (ByronMode, Left tx') -> do
+          result <- liftIO $ Api.submitTxToNodeLocal connectInfo
+                               (TxInMode tx' ByronEraInByronMode)
           case result of
-            TxSubmitSuccess -> return ()
-            TxSubmitFailureByronMode err ->
+            SubmitSuccess -> return ()
+            SubmitFail (TxValidationErrorInMode err ByronEraInByronMode) ->
               left (ShelleyTxCmdTxSubmitErrorByron err)
+            SubmitFail (TxValidationEraMismatch err) ->
+              left (ShelleyTxCmdTxSubmitErrorEraMismatch err)
 
-        (ByronMode{}, Right{}) ->
+        (ByronMode, Right{}) ->
           left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
                    ledgerEraName = "Byron",
                    otherEraName  = "Shelley"
                  }
 
-        (ShelleyMode{}, Right tx') -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForShelleyMode tx')
+        (ShelleyMode, Right tx') -> do
+          result <- liftIO $ Api.submitTxToNodeLocal connectInfo
+                               (TxInMode tx' ShelleyEraInShelleyMode)
           case result of
-            TxSubmitSuccess -> return ()
-            TxSubmitFailureShelleyMode err ->
+            SubmitSuccess -> return ()
+            SubmitFail (TxValidationErrorInMode err ShelleyEraInShelleyMode) ->
               left (ShelleyTxCmdTxSubmitErrorShelley err)
+            SubmitFail (TxValidationEraMismatch err) ->
+              left (ShelleyTxCmdTxSubmitErrorEraMismatch err)
 
-        (ShelleyMode{}, Left{}) ->
+        (ShelleyMode, Left{}) ->
           left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
                    ledgerEraName = "Shelley",
                    otherEraName  = "Byron"
                  }
 
-        (CardanoMode{}, tx') -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForCardanoMode tx')
+        (CardanoMode, _) -> do
+          result <- liftIO $ Api.submitTxToNodeLocal connectInfo
+                               (case tx of
+                                  Left  tx' -> TxInMode tx' ByronEraInCardanoMode
+                                  Right tx' -> TxInMode tx' ShelleyEraInCardanoMode)
           case result of
-            TxSubmitSuccess -> return ()
-            TxSubmitFailureCardanoMode (ApplyTxErrByron err) ->
+            SubmitSuccess -> return ()
+            SubmitFail (TxValidationErrorInMode err ByronEraInCardanoMode) ->
               left (ShelleyTxCmdTxSubmitErrorByron err)
-            TxSubmitFailureCardanoMode (ApplyTxErrShelley err) ->
+            SubmitFail (TxValidationErrorInMode err ShelleyEraInCardanoMode) ->
               left (ShelleyTxCmdTxSubmitErrorShelley err)
-            TxSubmitFailureCardanoMode (ApplyTxErrWrongEra mismatch) ->
+            SubmitFail (TxValidationEraMismatch mismatch) ->
               left (ShelleyTxCmdTxSubmitErrorEraMismatch mismatch)
-
 
 runTxCalculateMinFee
   :: TxBodyFile

@@ -215,7 +215,6 @@ module Cardano.API (
     localNodeSocketPath,
     localNodeNetworkId,
     localNodeConsensusMode,
-    NodeConsensusMode,
     LocalNodeClientProtocols,
     localChainSyncClient,
     localTxSubmissionClient,

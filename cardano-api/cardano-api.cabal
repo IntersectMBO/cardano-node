@@ -28,14 +28,7 @@ library
                         Cardano.Api.Shelley
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.TextView
-                        Cardano.Api.TxSubmit
                         Cardano.Api.Typed
-
-
-  other-modules:        Cardano.Api.TxSubmit.ErrorRender
-                        Cardano.Api.TxSubmit.Types
-
-
 
   build-depends:        base >=4.12 && <5
                       , aeson

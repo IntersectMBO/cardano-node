@@ -164,12 +164,11 @@ module Cardano.Api.Shelley
     LocalNodeConnectInfo(LocalNodeConnectInfo),
     ShelleyMode,
     CardanoMode,
-    NodeConsensusMode
-      ( ShelleyMode
-      , CardanoMode
+    NodeConsensusModeParams
+      ( ShelleyModeParams
+      , CardanoModeParams
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
-    withNodeProtocolClient,
 
   ) where
 

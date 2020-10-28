@@ -13,9 +13,7 @@ module Cardano.Api.Protocol
     -- * Node client support
     -- | Support for the context needed to run a client of a node that is using
     -- a protocol.
-  , localNodeConnectInfo
-  , withlocalNodeConnectInfo
-  , LocalNodeConnectInfoForSomeMode(..)
+  , withLocalNodeConnectInfo
   ) where
 
 import           Cardano.Prelude
@@ -24,54 +22,36 @@ import           Cardano.Chain.Slotting (EpochSlots (..))
 
 import           Cardano.Api.Typed
 
-import           Ouroboros.Consensus.Node.Run (RunNode)
-
 
 data Protocol = ByronProtocol !EpochSlots
               | ShelleyProtocol
               | CardanoProtocol !EpochSlots
   deriving (Eq, Show)
 
-data LocalNodeConnectInfoForSomeMode where
-
-     LocalNodeConnectInfoForSomeMode
-       :: RunNode block
-       => LocalNodeConnectInfo mode block
-       -> LocalNodeConnectInfoForSomeMode
-
-withlocalNodeConnectInfo :: Protocol
+withLocalNodeConnectInfo :: Protocol
                          -> NetworkId
                          -> FilePath
-                         -> (forall mode block.
-                                RunNode block
-                             => LocalNodeConnectInfo mode block
-                             -> a)
+                         -> (forall mode. LocalNodeConnectInfo mode -> a)
                          -> a
-withlocalNodeConnectInfo protocol network socketPath f =
-    case localNodeConnectInfo protocol network socketPath of
-      LocalNodeConnectInfoForSomeMode connctInfo -> f connctInfo
-
-localNodeConnectInfo :: Protocol
-                     -> NetworkId
-                     -> FilePath
-                     -> LocalNodeConnectInfoForSomeMode
-localNodeConnectInfo protocol network socketPath =
+withLocalNodeConnectInfo protocol network socketPath f =
     case protocol of
-
-      ByronProtocol epSlots ->
-        LocalNodeConnectInfoForSomeMode $
-          LocalNodeConnectInfo
-            socketPath network
-            (ByronMode epSlots)
+      ByronProtocol epochSlots ->
+        f LocalNodeConnectInfo {
+            localNodeConsensusModeParams = ByronModeParams epochSlots,
+            localNodeNetworkId           = network,
+            localNodeSocketPath          = socketPath
+          }
 
       ShelleyProtocol ->
-        LocalNodeConnectInfoForSomeMode $
-          LocalNodeConnectInfo
-            socketPath network
-            ShelleyMode
+        f LocalNodeConnectInfo {
+            localNodeConsensusModeParams = ShelleyModeParams,
+            localNodeNetworkId           = network,
+            localNodeSocketPath          = socketPath
+          }
+      CardanoProtocol epochSlots ->
+        f LocalNodeConnectInfo {
+            localNodeConsensusModeParams = CardanoModeParams epochSlots,
+            localNodeNetworkId           = network,
+            localNodeSocketPath          = socketPath
+          }
 
-      CardanoProtocol epSlots ->
-        LocalNodeConnectInfoForSomeMode $
-          LocalNodeConnectInfo
-            socketPath network
-            (CardanoMode epSlots)

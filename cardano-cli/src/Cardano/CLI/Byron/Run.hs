@@ -22,8 +22,9 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Api.Typed (NetworkId (..), toByronProtocolMagicId)
-import qualified Cardano.Api.Typed as Typed
+--TODO: switch over to the new API entirely
+import           Cardano.Api.Typed as Typed
+                   hiding (TxIn, TxOut, Genesis, UpdateProposal)
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
@@ -201,7 +202,10 @@ runCheckDelegation nw cert issuerVF delegateVF = do
 runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
 runSubmitTx network fp = do
     tx <- firstExceptT ByronCmdTxError $ readByronTx fp
-    firstExceptT ByronCmdTxError $ nodeSubmitTx network tx
+    firstExceptT ByronCmdTxError $
+      nodeSubmitTx
+        network
+        (TxInMode tx ByronEraInByronMode)
 
 
 runSpendGenesisUTxO

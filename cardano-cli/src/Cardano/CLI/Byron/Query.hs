@@ -14,6 +14,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api.Typed
 import           Cardano.Chain.Slotting (EpochSlots (..))
@@ -45,21 +46,21 @@ runGetLocalNodeTip networkId = do
                            readEnvSocketPath
     let connctInfo =
           LocalNodeConnectInfo {
-            localNodeSocketPath    = sockPath,
-            localNodeNetworkId     = networkId,
-            localNodeConsensusMode = ByronMode (EpochSlots 21600)
+            localNodeConsensusModeParams = ByronModeParams (EpochSlots 21600),
+            localNodeNetworkId           = networkId,
+            localNodeSocketPath          = sockPath
           }
     liftIO $ do
       tip <- getLocalTip connctInfo
       putTextLn (getTipOutput tip)
   where
-    getTipOutput :: forall blk. ConvertRawHash blk => Tip blk -> Text
-    getTipOutput TipGenesis = "Current tip: genesis (origin)"
-    getTipOutput (Tip slotNo headerHash (BlockNo blkNo)) =
+    getTipOutput :: ChainTip -> Text
+    getTipOutput ChainTipAtGenesis = "Current tip: genesis (origin)"
+    getTipOutput (ChainTip slotNo headerHash (BlockNo blkNo)) =
       Text.unlines
         [ "\n"
         , "Current tip: "
-        , "Block hash: " <> renderHeaderHash (Proxy @blk) headerHash
+        , "Block hash: " <> Text.decodeLatin1 (serialiseToRawBytesHex headerHash)
         , "Slot: " <> renderSlotNo slotNo
         , "Block number: " <> show blkNo
         ]

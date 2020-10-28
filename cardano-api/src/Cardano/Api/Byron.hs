@@ -60,12 +60,11 @@ module Cardano.Api.Byron
     LocalNodeConnectInfo(LocalNodeConnectInfo),
     ByronMode,
     CardanoMode,
-    NodeConsensusMode
-      ( ByronMode
-      , CardanoMode
+    NodeConsensusModeParams
+      ( ByronModeParams
+      , CardanoModeParams
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
-    withNodeProtocolClient,
 
     -- *** Chain sync protocol
     ChainSyncClient(..),

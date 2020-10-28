@@ -32,7 +32,7 @@ import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api.Typed (NetworkId, toByronProtocolMagicId)
+import           Cardano.Api.Typed hiding (ProtocolParametersUpdate, SigningKey)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, CardanoEra (..), readEraSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
@@ -196,4 +196,7 @@ submitByronUpdateProposal network proposalFp = do
     let genTx = convertProposalToGenTx aProposal
     traceWith stdoutTracer $
       "Update proposal TxId: " ++ condense (txId genTx)
-    firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx network genTx
+    firstExceptT ByronUpdateProposalTxError $
+      nodeSubmitTx
+        network
+        (TxInByronSpecial genTx ByronEraInByronMode)
