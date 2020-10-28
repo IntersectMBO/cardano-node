@@ -1,5 +1,63 @@
 # Changelog for cardano-node
 
+## 1.22.0 -- October 2020
+
+### node changes
+- Remove the deprecated LiveView feature, now that RTView is released (#1977)
+- Switch the default compiler version to GHC 8.10.2 (#1990)
+- Preliminary support for the upcoming Allegra and Mary eras (#1958)
+- Documentation updates (#1613, #1968, #1960, #2015)
+
+### consensus changes
+- Preliminary support for the upcoming Allegra and Mary eras (#2666)
+- Fixes for building with the compiler version GHC 8.10.2 (#2540, #2652)
+- Several new local state queries in v4 of the node-to-client protocol (#2694)
+- Keep a compact form of the Shelley genesis content, to allow it to be
+  queried later (#2704)
+- Switch to the newly-published "nothunks" package (#2664)
+- Address technical debt in the db-analyser tool (#2667)
+- Internal code renaming for improved clarity of protocol names (#2683)
+- Refactoring (#2687)
+- Documentation for the hard fork transition (#1741)
+
+### ledger changes
+- Fix a corner case in the way the pool performance history is calculated as
+  part of the overall pool score calculation (#1897)
+- Preliminary support for the upcoming Allegra and Mary eras (#1899)
+- Preliminary support for the time-lock feature in the script language to be
+  included in the Allegra era (#1895)
+- Preparation for multi-asset support by allowing the representation of coin
+  values to be chosen differently for different eras (#1847, #1875)
+- Preparation for new eras by allowing the representation of tx bodies to be
+  chosen differently for different eras (#1908)
+- Allow most Shelley ledger rules to be reused in subsequent eras (#1922)
+- New internal infrastructure to improve how we handle the translation of
+  configuration and state between ledger eras (#1893, #1902, #1923)
+- Adjust how the ledger is parametrised to reflect the fact that some parts
+  change with the ledger era, while others change with the consensus protocol.
+  This makes it easier to handle ledger-only era changes that still use the
+  same Praos consensus protocol. (#1915)
+- Improved internal infrastructure for managing types, such as txs, that cache
+  their serialised representation (#1917)
+- Support serialisation for the Shelley genesis data structure to support a
+  new node query that can return the genesis parameters (#1927)
+- Minor corrections to the formal spec arising from internal and external review
+  and internal audit (#1878, #1896, #1918)
+- Test improvements (#1843, #1844, #1845, #1886, #1888, #1889, #1900, #1903, #1929)
+- Switch to the newly-published "nothunks" package (#1894)
+
+### network changes
+- Fix a bug in IPv6 support (introduced in the unreleased 1.21.2) that caused
+  the node to be unable to establish any network connections on Windows systems
+  that have IPv6 support enabled (#1991, #1994)
+- New cardano-ping demo and tool (#2701)
+- Make the node fail on startup if we cannot bind to the necessary ports (#2696)
+- Improvement to the calculation and collection of network connection
+  performance metrics (#2636)
+- Improvements to the handling of the initial connection handshake (#2691)
+- Preparations for publishing io-sim as a public library (#2631)
+- Improved tests for protocol shutdown and restart (#2628, #2629)
+
 ## 1.21.2 -- October 2020
 
 ### node changes
