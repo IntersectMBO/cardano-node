@@ -493,7 +493,7 @@ localInitiatorNetworkApplication
   -> SocketPath
   -> ChainsVar m blk
   -> SecurityParam
-  -> Versions NodeToClientVersion (DictVersion NodeToClientVersion AgreedOptions)
+  -> Versions NodeToClientVersion NodeToClientVersionData
               (OuroborosApplication InitiatorMode LocalAddress ByteString m () Void)
 localInitiatorNetworkApplication chairmanTracer chainSyncTracer
                                  localTxSubmissionTracer

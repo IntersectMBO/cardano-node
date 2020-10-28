@@ -469,7 +469,7 @@ localInitiatorNetworkApplication
   -> SecurityParam
   -> Versions
         NodeToClientVersion
-        (DictVersion NodeToClientVersion AgreedOptions)
+        NodeToClientVersionData
         (OuroborosApplication InitiatorMode LocalAddress ByteString m () Void)
 localInitiatorNetworkApplication
     chairmanTracer chainSyncTracer
