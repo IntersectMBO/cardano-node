@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 1.22.0 -- October 2020
+
+- Preliminary support for the upcoming Allegra and Mary eras (#1958, #2019)
+- Additional test coverage (#1999)
+
 ## 1.21.2 -- September 2020
 
 - Add a Ed25519-BIP32 instance of the new crypto classes (#1933, #1952)

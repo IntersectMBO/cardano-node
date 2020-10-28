@@ -1,5 +1,10 @@
 # Changelog for cardano-cli
 
+## 1.22.0 -- October 2020
+
+- Adjust the ledger state dump to return the "extended" ledger state (#2019)
+- Preliminary support for the upcoming Allegra and Mary eras (#1958, #2019)
+
 ## 1.21.2 -- October 2020
 
 - Support bech32 and hex formats for reading verification keys (#1852)
