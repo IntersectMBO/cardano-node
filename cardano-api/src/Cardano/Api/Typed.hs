@@ -469,6 +469,7 @@ import qualified Cardano.Chain.UTxO as Byron
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
+import qualified Cardano.Ledger.Core as Shelley (Script)
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN, KES, VRF)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
@@ -1277,11 +1278,10 @@ getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
 
 getTxWitnesses (ShelleyTx Shelley.Tx {
                        Shelley._witnessSet =
-                         Shelley.WitnessSet {
-                           Shelley.addrWits,
-                           Shelley.bootWits,
-                           Shelley.msigWits
-                         }
+                         Shelley.WitnessSet
+                           addrWits
+                           msigWits
+                           bootWits
                      }) =
     map ShelleyBootstrapWitness (Set.elems bootWits)
  ++ map ShelleyKeyWitness       (Set.elems addrWits)
@@ -1305,15 +1305,11 @@ makeSignedTransaction witnesses (ShelleyTxBody txbody txmetadata) =
     ShelleyTx $
       Shelley.Tx
         txbody
-        Shelley.WitnessSet {
-          Shelley.bootWits = Set.fromList
-                               [ w | ShelleyBootstrapWitness w <- witnesses ],
-          Shelley.addrWits = Set.fromList
-                               [ w | ShelleyKeyWitness w <- witnesses ],
-          Shelley.msigWits = Map.fromList
-                               [ (Shelley.hashMultiSigScript sw, sw)
-                               | ShelleyScriptWitness sw <- witnesses ]
-        }
+        (Shelley.WitnessSet
+          (Set.fromList [ w | ShelleyKeyWitness w <- witnesses ])
+          (Map.fromList [ (Shelley.hashMultiSigScript sw, sw)
+                        | ShelleyScriptWitness sw <- witnesses ])
+          (Set.fromList [ w | ShelleyBootstrapWitness w <- witnesses ]))
         (maybeToStrictMaybe txmetadata)
 
 makeByronKeyWitness :: NetworkId
@@ -1379,14 +1375,14 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody txbody _) (ByronSigningKey s
     -- reuse that here.
     --
     signature :: Shelley.SignedDSIGN StandardCrypto
-                  (Shelley.Hash StandardCrypto (Shelley.TxBody StandardShelley))
+                  (Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody)
     signature = makeShelleySignature
                   txhash
                   -- Make the signature with the extended key directly:
                   (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
 
-    txhash :: Shelley.Hash StandardCrypto (Shelley.TxBody StandardShelley)
-    txhash = Crypto.hashWith CBOR.serialize' txbody
+    txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
+    txhash = Shelley.eraIndTxBodyHash txbody
 
     -- And finally we need to provide the extra suffix bytes necessary to
     -- reconstruct the mini-Merkel tree that is a Byron address. The suffix
@@ -1778,7 +1774,7 @@ instance HasTextEnvelope Script where
 
 
 scriptHash :: Script -> Hash Script
-scriptHash (Script s) = ScriptHash (Shelley.hashAnyScript s)
+scriptHash (Script s) = ScriptHash (Shelley.hashMultiSigScript s)
 
 makeMultiSigScript :: MultiSigScript -> Script
 makeMultiSigScript = Script . go
@@ -1955,7 +1951,7 @@ toShelleyPoolParams StakePoolParameters {
                     } =
     --TODO: validate pool parameters
     Shelley.PoolParams {
-      Shelley._poolPubKey = poolkh
+      Shelley._poolId     = poolkh
     , Shelley._poolVrf    = vrfkh
     , Shelley._poolPledge = toShelleyLovelace stakePoolPledge
     , Shelley._poolCost   = toShelleyLovelace stakePoolCost
