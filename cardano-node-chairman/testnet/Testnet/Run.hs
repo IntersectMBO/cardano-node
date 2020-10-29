@@ -7,6 +7,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Data.Bool
 import           Data.Function
+import           Data.Int
 import           Data.Maybe
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
 import           System.IO (IO)
@@ -21,9 +22,9 @@ import qualified System.IO as IO
 import qualified Test.Base as H
 import qualified Testnet.Conf as H
 
-testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
-testnetProperty tn = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  conf <- H.mkConf tempAbsPath' Nothing
+testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
+testnetProperty maybeTestnetMagic tn = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
+  conf <- H.mkConf tempAbsPath' maybeTestnetMagic
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
@@ -32,11 +33,11 @@ testnetProperty tn = H.integration . H.runFinallies . H.workspace "chairman" $ \
 
   H.failure -- Intentional failure to force failure report
 
-runTestnet :: (H.Conf -> H.Integration a) -> IO ()
-runTestnet tn = do
+runTestnet :: Maybe Int -> (H.Conf -> H.Integration a) -> IO ()
+runTestnet maybeTestnetMagic tn = do
   tvRunning <- STM.newTVarIO False
 
-  void . H.check $ testnetProperty $ \c -> do
+  void . H.check $ testnetProperty maybeTestnetMagic $ \c -> do
     void $ tn c
     H.evalIO . STM.atomically $ STM.writeTVar tvRunning True
 
