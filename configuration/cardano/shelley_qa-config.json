@@ -42,6 +42,7 @@
   "TracingVerbosity": "NormalVerbosity",
   "TurnOnLogMetrics": true,
   "TurnOnLogging": true,
+  "ViewMode": "SimpleView",
   "defaultBackends": [
     "KatipBK"
   ],
@@ -60,19 +61,35 @@
   "options": {
     "mapBackends": {
       "cardano.node-metrics": [
-        "EKGViewBK"
+        "EKGViewBK",
+        {
+          "kind": "UserDefinedBK",
+          "name": "LiveViewBackend"
+        }
       ],
       "cardano.node.BlockFetchDecision.peers": [
-        "EKGViewBK"
+        "EKGViewBK",
+        {
+          "kind": "UserDefinedBK",
+          "name": "LiveViewBackend"
+        }
       ],
       "cardano.node.ChainDB.metrics": [
-        "EKGViewBK"
+        "EKGViewBK",
+        {
+          "kind": "UserDefinedBK",
+          "name": "LiveViewBackend"
+        }
       ],
       "cardano.node.Forge.metrics": [
         "EKGViewBK"
       ],
       "cardano.node.metrics": [
-        "EKGViewBK"
+        "EKGViewBK",
+        {
+          "kind": "UserDefinedBK",
+          "name": "LiveViewBackend"
+        }
       ]
     },
     "mapSubtrace": {
