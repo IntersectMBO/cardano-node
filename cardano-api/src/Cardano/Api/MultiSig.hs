@@ -52,6 +52,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.:
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Scientific (toBoundedInteger)
+import qualified Data.Sequence.Strict as Sequence
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Vector (Vector)
@@ -72,19 +73,23 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 --
 
 import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
+import           Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import qualified Cardano.Ledger.ShelleyMA.Timelocks as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Ledger
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
+
 
 -- ----------------------------------------------------------------------------
 -- Scripts
 --
 
 data Script era where
-  ShelleyScript :: Ledger.Script StandardShelley -> Script Shelley
-  AllegraScript :: Ledger.Script StandardAllegra -> Script Allegra
-  MaryScript :: Ledger.Script StandardMary -> Script Mary
+  ShelleyScript :: Ledger.MultiSig StandardShelley -> Script Shelley
+  AllegraScript :: Ledger.Timelock StandardAllegra -> Script Allegra
+  MaryScript :: Ledger.Timelock StandardMary -> Script Mary
 
 deriving instance Eq (Script Shelley)
 deriving instance Show (Script Shelley)
@@ -185,13 +190,13 @@ newtype instance Hash (Script Mary) = ScriptHashMary (Shelley.ScriptHash Standar
   deriving (Eq, Ord, Show)
 
 scriptHashShelley :: Script Shelley -> Hash (Script Shelley)
-scriptHashShelley (ShelleyScript s) = ScriptHashShelley (Shelley.hashAnyScript s)
+scriptHashShelley (ShelleyScript s) = ScriptHashShelley (Shelley.hashMultiSigScript s)
 
 scriptHashAllegra :: Script Allegra -> Hash (Script Allegra)
-scriptHashAllegra (AllegraScript s) = ScriptHashAllegra (Shelley.hashAnyScript s)
+scriptHashAllegra (AllegraScript s) = ScriptHashAllegra (Ledger.hashTimelockScript s)
 
 scriptHashMary :: Script Mary -> Hash (Script Mary)
-scriptHashMary (MaryScript s) = ScriptHashMary (Shelley.hashAnyScript s)
+scriptHashMary (MaryScript s) = ScriptHashMary (Ledger.hashTimelockScript s)
 
 data MultiSigScript era where
   RequireSignature  :: Hash PaymentKey
@@ -269,27 +274,38 @@ makeMultiSigScriptShelley = ShelleyScript . go
 makeMultiSigScriptAllegra :: MultiSigScript Allegra -> Script Allegra
 makeMultiSigScriptAllegra = AllegraScript . go
   where
-    go :: MultiSigScript Allegra -> Shelley.MultiSig StandardShelley
+    go :: MultiSigScript Allegra -> Ledger.Timelock StandardAllegra
     go (RequireSignature (PaymentKeyHash kh) SignaturesInAllegraEra)
-                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
-    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
-    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
-    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
-    go (RequireTimeBefore _ TimeLocksInAllegraEra) = error "Needs to be propagated from ledger-specs"
-    go (RequireTimeAfter _ TimeLocksInAllegraEra) = error "Needs to be propagated from ledger-specs"
+                        = Ledger.Multi (Ledger.RequireSignature (Shelley.coerceKeyRole kh))
+    go (RequireAllOf s) = Ledger.TimelockAnd  (fmap go $ Sequence.fromList s)
+    go (RequireAnyOf s) = Ledger.TimelockOr (fmap go $ Sequence.fromList s)
+    go (RequireMOf _m _s) = panic "fill in"
+    go (RequireTimeBefore sBefore TimeLocksInAllegraEra) =
+      Ledger.Interval $ Ledger.ValidityInterval { validFrom = SNothing
+                                                , validTo = SJust sBefore
+                                                }
+    go (RequireTimeAfter sAfter TimeLocksInAllegraEra) =
+      Ledger.Interval $ Ledger.ValidityInterval { validFrom = SJust sAfter
+                                                , validTo = SNothing
+                                                }
 
 makeMultiSigScriptMary :: MultiSigScript Mary -> Script Mary
 makeMultiSigScriptMary = MaryScript . go
   where
-    go :: MultiSigScript Mary -> Shelley.MultiSig StandardShelley
+    go :: MultiSigScript Mary -> Ledger.Timelock StandardMary
     go (RequireSignature (PaymentKeyHash kh) SignaturesInMaryEra)
-                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
-    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
-    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
-    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
-    go (RequireTimeBefore _ TimeLocksInMaryEra) = error "Needs to be propagated from ledger-specs"
-    go (RequireTimeAfter _ TimeLocksInMaryEra) = error "Needs to be propagated from ledger-specs"
-
+                        = Ledger.Multi (Ledger.RequireSignature (Shelley.coerceKeyRole kh))
+    go (RequireAllOf s) = Ledger.TimelockAnd  (fmap go $ Sequence.fromList s)
+    go (RequireAnyOf s) = Ledger.TimelockOr (fmap go $ Sequence.fromList s)
+    go (RequireMOf _m _s) = panic "fill in"
+    go (RequireTimeBefore sBefore TimeLocksInMaryEra) =
+      Ledger.Interval $ Ledger.ValidityInterval { validFrom = SNothing
+                                                , validTo = SJust sBefore
+                                                }
+    go (RequireTimeAfter sAfter TimeLocksInMaryEra) =
+      Ledger.Interval $ Ledger.ValidityInterval { validFrom = SJust sAfter
+                                                , validTo = SNothing
+                                                }
 
 signatureValue :: Hash PaymentKey -> Value
 signatureValue verKeyHash =
