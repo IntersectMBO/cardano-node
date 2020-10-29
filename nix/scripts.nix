@@ -110,6 +110,5 @@ let
   scripts = forEnvironments (environment:
   {
     node = mkNodeScript environment;
-    chairman = svcLib.mkChairmanScript;
   });
 in scripts

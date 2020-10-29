@@ -44,7 +44,7 @@ pkgs: _: with pkgs;
   };
 
   #Grab the executable component of our package.
-  inherit (cardanoNodeHaskellPackages.cardano-node.components.exes) cardano-node chairman;
+  inherit (cardanoNodeHaskellPackages.cardano-node.components.exes) cardano-node;
   inherit (cardanoNodeHaskellPackages.cardano-cli.components.exes) cardano-cli;
   inherit (cardanoNodeHaskellPackages.bech32.components.exes) bech32;
   cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
