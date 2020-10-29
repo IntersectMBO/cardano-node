@@ -175,51 +175,6 @@ executable cardano-node
   else
      build-depends:    unix
 
-executable chairman
-  hs-source-dirs:      chairman
-  main-is:             chairman.hs
-  other-modules:       Cardano.Chairman
-                       Paths_cardano_node
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -Wincomplete-record-updates
-                       -Wincomplete-uni-patterns
-                       -Wredundant-constraints
-                       -Wpartial-fields
-                       -Wcompat
-                       -rtsopts
-                       "-with-rtsopts=-T"
-                       -Wno-unticked-promoted-constructors
-  build-depends:       base >=4.12 && <5
-                     , async
-                     , bytestring
-                     , containers
-                     , cardano-api
-                     , cardano-config
-                     , cardano-ledger
-                     , cardano-node
-                     , cardano-prelude
-                     , contra-tracer
-                     , cardano-prelude
-                     , io-sim-classes
-                     , network-mux
-                     , optparse-applicative
-                     , ouroboros-consensus
-                     , ouroboros-consensus-cardano
-                     , ouroboros-network
-                     , text
-                     , transformers-except
-                     , typed-protocols
-                     , ouroboros-network-framework
-
-  default-extensions:  NoImplicitPrelude
-
-  if os(windows)
-     build-depends:    Win32
-  else
-     build-depends:    unix
-
 test-suite cardano-node-test
   hs-source-dirs:       test
   main-is:              cardano-node-test.hs
