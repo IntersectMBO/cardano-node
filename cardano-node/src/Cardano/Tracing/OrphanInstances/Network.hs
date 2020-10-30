@@ -382,7 +382,7 @@ instance ( ConvertTxId blk
          , RunNode blk
          , HasTxs blk
          )
-      => ToObject (AnyMessageAndAgency (BlockFetch blk)) where
+      => ToObject (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
   toObject MaximalVerbosity (AnyMessageAndAgency _ (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
@@ -409,7 +409,7 @@ instance ( ConvertTxId blk
   toObject _v (AnyMessageAndAgency _ MsgClientDone{}) =
     mkObject [ "kind" .= String "MsgClientDone" ]
 
-instance ToObject (AnyMessageAndAgency (LocalStateQuery blk query)) where
+instance ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
   toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgAcquire{}) =
     mkObject [ "kind" .= String "MsgAcquire" ]
   toObject _verb (AnyMessageAndAgency _ LocalStateQuery.MsgAcquired{}) =
@@ -437,7 +437,7 @@ instance ToObject (AnyMessageAndAgency (LocalTxSubmission tx err)) where
   toObject _verb (AnyMessageAndAgency _ LocalTxSub.MsgDone{}) =
     mkObject [ "kind" .= String "MsgDone" ]
 
-instance ToObject (AnyMessageAndAgency (ChainSync blk tip)) where
+instance ToObject (AnyMessageAndAgency (ChainSync blk pt tip)) where
    toObject _verb (AnyMessageAndAgency _ ChainSync.MsgRequestNext{}) =
      mkObject [ "kind" .= String "MsgRequestNext" ]
    toObject _verb (AnyMessageAndAgency _ ChainSync.MsgAwaitReply{}) =

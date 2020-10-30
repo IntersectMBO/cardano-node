@@ -2625,6 +2625,7 @@ data LocalNodeClientProtocols block =
        localChainSyncClient
          :: Maybe (ChainSyncClient
                     block
+                    (Point block)
                     (Tip block)
                     IO ())
 
@@ -2637,6 +2638,7 @@ data LocalNodeClientProtocols block =
      , localStateQueryClient
          :: Maybe (LocalStateQueryClient
                     block
+                    (Point block)
                     (Query block)
                     IO ())
      }
@@ -2765,7 +2767,7 @@ queryNodeLocalState connctInfo pointAndQuery = do
     localStateQuerySingle
       :: TMVar (Either AcquireFailure result)
       -> (Point block, Query block result)
-      -> LocalStateQueryClient block (Query block) IO ()
+      -> LocalStateQueryClient block (Point block) (Query block) IO ()
     localStateQuerySingle resultVar (point, query) =
       LocalStateQueryClient $ pure $
         SendMsgAcquire point $

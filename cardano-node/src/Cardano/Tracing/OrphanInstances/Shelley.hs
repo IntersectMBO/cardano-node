@@ -51,6 +51,7 @@ import qualified Cardano.Ledger.Core as Core
 
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
+import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
@@ -102,8 +103,11 @@ instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
         , "blockNo" .= condense (blockNo b)
 --      , "delegate" .= condense (headerSignerVk h)
         ]
-instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
-      => ToObject (ApplyTxError era) where
+
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (UTXO era))
+         , ToObject (PredicateFailure (UTXOW era))
+         ) => ToObject (ApplyTxError era) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
@@ -146,8 +150,10 @@ instance ToObject HotKey.KESEvolutionError where
       , "targetPeriod" .= targetPeriod
       ]
 
-instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
-      => ToObject (ShelleyLedgerError era) where
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (UTXO era))
+         , ToObject (PredicateFailure (UTXOW era))
+         ) => ToObject (ShelleyLedgerError era) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mkObject [ "kind" .= String "BBodyError"
              , "failures" .= map (toObject verb) fs
@@ -209,8 +215,10 @@ instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
              , "failures" .= map (toObject verb) fs
              ]
 
-instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
-      => ToObject (ChainPredicateFailure era) where
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (UTXO era))
+         , ToObject (PredicateFailure (UTXOW era))
+         ) => ToObject (ChainPredicateFailure era) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
              , "headerSize" .= hdrSz
@@ -254,8 +262,10 @@ instance ToObject (PrtlSeqFailure crypto) where
              , "currentBlockHash" .= String (textShow currentHash)
              ]
 
-instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
-      => ToObject (BbodyPredicateFailure era) where
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (UTXO era))
+         , ToObject (PredicateFailure (UTXOW era))
+         ) => ToObject (BbodyPredicateFailure era) where
   toObject _verb (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
@@ -269,13 +279,17 @@ instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
   toObject verb (LedgersFailure f) = toObject verb f
 
 
-instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
-      => ToObject (LedgersPredicateFailure era) where
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (UTXO era))
+         , ToObject (PredicateFailure (UTXOW era))
+         ) => ToObject (LedgersPredicateFailure era) where
   toObject verb (LedgerFailure f) = toObject verb f
 
 
-instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
-      => ToObject (LedgerPredicateFailure era) where
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (UTXO era))
+         , ToObject (PredicateFailure (UTXOW era))
+         ) => ToObject (LedgerPredicateFailure era) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
@@ -380,7 +394,7 @@ renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
 
-renderValueNotConservedErr :: Coin -> Coin -> Value
+renderValueNotConservedErr :: DeltaCoin -> DeltaCoin -> Value
 renderValueNotConservedErr consumed produced
   | consumed > produced = String "This transaction has consumed more Lovelace than it has produced."
   | consumed < produced = String "This transaction has produced more Lovelace than it has consumed."
@@ -677,6 +691,7 @@ deriving newtype instance ShelleyBasedEra era => ToJSON (MetaDataHash era)
 
 deriving instance ShelleyBasedEra era => ToJSON (TxIn era)
 deriving newtype instance ToJSON (TxId era)
+deriving newtype instance ToJSON DeltaCoin
 instance ShelleyBasedEra era => ToJSONKey (TxIn era) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
