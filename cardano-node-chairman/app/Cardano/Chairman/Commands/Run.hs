@@ -1,12 +1,10 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Chairman.Options
-  ( mkNodeClientProtocol
-  , ChairmanArgs(..)
-  , parseChairmanArgs
-  , opts
+module Cardano.Chairman.Commands.Run
+  ( cmdRun
   ) where
 
 import           Cardano.Api.Protocol.Byron
@@ -15,10 +13,13 @@ import           Cardano.Api.Protocol.Shelley
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Typed (NetworkMagic (..))
 import           Cardano.Chain.Slotting (EpochSlots (..))
+import           Cardano.Chairman (chairmanTest)
+import           Cardano.Node.Configuration.POM (parseNodeConfigurationFP, pncProtocol)
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Prelude hiding (option)
 import           Control.Monad.Class.MonadTime (DiffTime)
+import           Control.Tracer (stdoutTracer)
 import           Options.Applicative
 import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
@@ -41,7 +42,7 @@ mkNodeClientProtocol protocol =
       mkSomeNodeClientProtocolCardano
         (EpochSlots 21600)
 
-data ChairmanArgs = ChairmanArgs
+data RunOpts = RunOpts
     -- | Stop the test after given number of seconds. The chairman will
     -- observe only for the given period of time, and check the consensus
     -- and progress conditions at the end.
@@ -118,9 +119,9 @@ parseProgress =
     <> help "Require this much chain-growth progress, in blocks."
   )
 
-parseChairmanArgs :: Parser ChairmanArgs
-parseChairmanArgs =
-  ChairmanArgs
+parseRunOpts :: Parser RunOpts
+parseRunOpts =
+  RunOpts
   <$> parseRunningTime
   <*> optional parseProgress
   <*> some (parseSocketPath "Path to a cardano-node socket")
@@ -129,9 +130,34 @@ parseChairmanArgs =
   <*> parseSecurityParam
   <*> parseTestnetMagic
 
-opts :: ParserInfo ChairmanArgs
-opts = info (parseChairmanArgs <**> helper)
-  ( fullDesc
-  <> progDesc "Chairman checks Cardano clusters for progress and consensus."
-  <> header "Chairman sits in a room full of Shelley nodes, and checks \
-            \if they are all behaving ...")
+run :: RunOpts -> IO ()
+run RunOpts
+    { caRunningTime
+    , caMinProgress
+    , caSocketPaths
+    , caConfigYaml
+    , caSlotLength
+    , caSecurityParam
+    , caNetworkMagic
+    } = do
+
+  partialNc <- liftIO . parseNodeConfigurationFP $ Just caConfigYaml
+
+  ptcl <- case pncProtocol partialNc of
+            Left err -> panic $ "Chairman error: " <> err
+            Right protocol -> return protocol
+
+  let someNodeClientProtocol = mkNodeClientProtocol ptcl
+
+  chairmanTest
+    stdoutTracer
+    caSlotLength
+    caSecurityParam
+    caRunningTime
+    caMinProgress
+    caSocketPaths
+    someNodeClientProtocol
+    caNetworkMagic
+
+cmdRun :: Mod CommandFields (IO ())
+cmdRun = command "run"  $ flip info idm $ run <$> parseRunOpts

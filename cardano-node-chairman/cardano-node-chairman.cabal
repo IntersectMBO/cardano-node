@@ -12,8 +12,8 @@ build-type:            Simple
 
 common common-modules
   hs-source-dirs:       src
-  other-modules:        Test.Process
-                        Test.Base
+  other-modules:        Test.Base
+                        Test.Process
                         Testnet.Byron
                         Testnet.ByronShelley
                         Testnet.Conf
@@ -23,7 +23,9 @@ executable cardano-node-chairman
   hs-source-dirs:       app
   main-is:              cardano-node-chairman.hs
   other-modules:        Cardano.Chairman
-                        Cardano.Chairman.Options
+                        Cardano.Chairman.Commands
+                        Cardano.Chairman.Commands.Version
+                        Cardano.Chairman.Commands.Run
                         Paths_cardano_node_chairman
   default-language:     Haskell2010
   ghc-options:          -threaded

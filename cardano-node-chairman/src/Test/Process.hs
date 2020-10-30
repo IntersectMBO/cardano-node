@@ -51,4 +51,4 @@ procChairman
   -- ^ Arguments to the CLI command
   -> m CreateProcess
   -- ^ Captured stdout
-procChairman = GHC.withFrozenCallStack $ H.procFlex "cardano-node-chairman" "CARDANO_NODE_CHAIRMAN"
+procChairman = GHC.withFrozenCallStack $ H.procFlex "cardano-node-chairman" "CARDANO_NODE_CHAIRMAN" . ("run":)
