@@ -1,5 +1,27 @@
 # Changelog for cardano-node
 
+## 1.22.1 -- October 2020
+
+### node changes
+- Miscellaneous "chairman" integration test improvements (#2025, #2028, #2030
+  #2033, #2035, #2037)
+
+### ledger changes
+- Fix a bug in the serialisation of coin values that appear in tx validation
+  errors. Also added regression tests. This bug was introduced in the
+  unreleased 1.22.0 so has not been in any released version. (#1995)
+- Restore build compatibility with GHC 8.6.5, so this release builds with
+  both GHC 8.6.5 and 8.10.2. Future releases will support 8.10.x only. (#1956)
+- Further development of the multi-asset ledger rules (#1905, #1938, #1931)
+
+### consensus changes
+- Internal updates for ledger interface changes (#2716, #2719)
+
+### network changes
+- Internal API improvements that will subsequently allow the cardano-api
+  package to present a simpler API for applications that use the node's
+  client-side IPC protocols (#2713, #2714)
+
 ## 1.22.0 -- October 2020
 
 ### node changes
