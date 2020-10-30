@@ -394,7 +394,7 @@ chainSyncClient
   -> SocketPath
   -> ChainsVar m blk
   -> SecurityParam
-  -> ChainSyncClient blk (Tip blk) m ()
+  -> ChainSyncClient blk (Point blk) (Tip blk) m ()
 chainSyncClient tracer sockPath chainsVar securityParam = ChainSyncClient $ pure $
   -- Notify the core node about the our latest points at which we are
   -- synchronised.  This client is not persistent and thus it just
@@ -407,10 +407,10 @@ chainSyncClient tracer sockPath chainsVar securityParam = ChainSyncClient $ pure
     , recvMsgIntersectNotFound = \  _ -> ChainSyncClient (pure clientStIdle)
     }
   where
-    clientStIdle :: ClientStIdle blk (Tip blk) m ()
+    clientStIdle :: ClientStIdle blk (Point blk) (Tip blk) m ()
     clientStIdle = SendMsgRequestNext clientStNext (pure clientStNext)
 
-    clientStNext :: ClientStNext blk (Tip blk) m ()
+    clientStNext :: ClientStNext blk (Point blk) (Tip blk) m ()
     clientStNext = ClientStNext
       { recvMsgRollForward = \blk _tip -> ChainSyncClient $ do
           -- add block & check if there is consensus on immutable chain
@@ -454,7 +454,7 @@ localInitiatorNetworkApplication
      , MonadThrow (STM m)
      )
   => Tracer m (ChairmanTrace blk)
-  -> Tracer m (TraceSendRecv (ChainSync blk (Tip blk)))
+  -> Tracer m (TraceSendRecv (ChainSync blk (Point blk) (Tip blk)))
   -- ^ tracer which logs all chain-sync messages send and received by the client
   -- (see 'Ouroboros.Network.Protocol.ChainSync.Type' in 'ouroboros-network'
   -- package)
