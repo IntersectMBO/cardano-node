@@ -25,6 +25,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import qualified Cardano.Binary as CBOR
 
 import qualified Shelley.Spec.Ledger.PParams as Shelley
+--TODO: following import needed for orphan Eq Script instance
+import           Shelley.Spec.Ledger.Scripts ()
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..), HardForkApplyTxErr (..))
