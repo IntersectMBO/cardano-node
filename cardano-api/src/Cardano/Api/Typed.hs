@@ -518,18 +518,13 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client as StateQuery
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 
+import           Cardano.Api.Eras
+
 {- HLINT ignore "Redundant flip" -}
 
 -- ----------------------------------------------------------------------------
 -- Cardano eras, sometimes we have to distinguish them
 --
-
--- | A type used as a tag to distinguish the Byron era.
-data Byron
-
--- | A type used as a tag to distinguish the Shelley era.
-data Shelley
-
 
 class HasTypeProxy t where
   -- | A family of singleton types used in this API to indicate which type to

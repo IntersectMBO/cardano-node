@@ -36,6 +36,9 @@ library
   other-modules:        Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
 
+                        -- Splitting up the big Typed module:
+                        Cardano.Api.Eras
+
 
 
   build-depends:        base >=4.12 && <5
