@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 1.22.1 -- October 2020
+
+None
+
 ## 1.22.0 -- October 2020
 
 - Preliminary support for the upcoming Allegra and Mary eras (#1958, #2019)

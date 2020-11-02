@@ -1,5 +1,9 @@
 # Changelog for cardano-cli
 
+## 1.22.1 -- October 2020
+
+None
+
 ## 1.22.0 -- October 2020
 
 - Adjust the ledger state dump to return the "extended" ledger state (#2019)
