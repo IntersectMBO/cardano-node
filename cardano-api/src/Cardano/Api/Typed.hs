@@ -519,6 +519,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmis
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 
 {- HLINT ignore "Redundant flip" -}
 
@@ -593,13 +594,6 @@ class CastSigningKeyRole keyroleA keyroleB where
 
     -- | Change the role of a 'SigningKey', if the representation permits.
     castSigningKey :: SigningKey keyroleA -> SigningKey keyroleB
-
-
-data family Hash keyrole :: Type
-
-class CastHash keyroleA keyroleB where
-
-    castHash :: Hash keyroleA -> Hash keyroleB
 
 
 -- ----------------------------------------------------------------------------
@@ -3245,10 +3239,6 @@ instance HasTypeProxy a => HasTypeProxy (VerificationKey a) where
 instance HasTypeProxy a => HasTypeProxy (SigningKey a) where
     data AsType (SigningKey a) = AsSigningKey (AsType a)
     proxyToAsType _ = AsSigningKey (proxyToAsType (Proxy :: Proxy a))
-
-instance HasTypeProxy a => HasTypeProxy (Hash a) where
-    data AsType (Hash a) = AsHash (AsType a)
-    proxyToAsType _ = AsHash (proxyToAsType (Proxy :: Proxy a))
 
 -- | Map the various Shelley key role types into corresponding 'Shelley.KeyRole'
 -- types.
