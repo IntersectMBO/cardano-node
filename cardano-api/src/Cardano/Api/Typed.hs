@@ -353,7 +353,6 @@ import           Data.Kind (Constraint, Type)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
-import           Data.Proxy (Proxy (..))
 import           Data.Scientific (toBoundedInteger)
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
@@ -519,23 +518,9 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 
 import           Cardano.Api.Eras
+import           Cardano.Api.HasTypeProxy
 
 {- HLINT ignore "Redundant flip" -}
-
--- ----------------------------------------------------------------------------
--- Cardano eras, sometimes we have to distinguish them
---
-
-class HasTypeProxy t where
-  -- | A family of singleton types used in this API to indicate which type to
-  -- use where it would otherwise be ambiguous or merely unclear.
-  --
-  -- Values of this type are passed to
-  --
-  data AsType t
-
-  proxyToAsType :: Proxy t -> AsType t
-
 
 -- ----------------------------------------------------------------------------
 -- Keys key keys!
