@@ -21,7 +21,6 @@ import           Cardano.Prelude hiding (option)
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (stdoutTracer)
 import           Options.Applicative
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, slotLengthFromSec)
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
 import           Ouroboros.Network.Block (BlockNo)
 
@@ -49,10 +48,9 @@ data RunOpts = RunOpts
     --
   { caRunningTime :: !DiffTime
     -- | Expect this amount of progress (chain growth) by the end of the test.
-  , caMinProgress :: !(Maybe BlockNo)
+  , caMinProgress :: !BlockNo
   , caSocketPaths :: ![SocketPath]
   , caConfigYaml :: !ConfigYamlFilePath
-  , caSlotLength :: !SlotLength
   , caSecurityParam :: !SecurityParam
   , caNetworkMagic :: !NetworkMagic
   }
@@ -82,14 +80,6 @@ parseRunningTime =
     <> short 't'
     <> metavar "SECONDS"
     <> help "Run the chairman for this length of time in seconds."
-    )
-
-parseSlotLength :: Parser SlotLength
-parseSlotLength =
-  option (slotLengthFromSec <$> Opt.auto)
-    ( long "slot-length"
-    <> metavar "INT"
-    <> help "Slot length in seconds."
     )
 
 parseSecurityParam :: Parser SecurityParam
@@ -123,10 +113,9 @@ parseRunOpts :: Parser RunOpts
 parseRunOpts =
   RunOpts
   <$> parseRunningTime
-  <*> optional parseProgress
+  <*> parseProgress
   <*> some (parseSocketPath "Path to a cardano-node socket")
   <*> fmap ConfigYamlFilePath parseConfigFile
-  <*> parseSlotLength
   <*> parseSecurityParam
   <*> parseTestnetMagic
 
@@ -136,7 +125,6 @@ run RunOpts
     , caMinProgress
     , caSocketPaths
     , caConfigYaml
-    , caSlotLength
     , caSecurityParam
     , caNetworkMagic
     } = do
@@ -151,13 +139,14 @@ run RunOpts
 
   chairmanTest
     stdoutTracer
-    caSlotLength
+    someNodeClientProtocol
+    caNetworkMagic
     caSecurityParam
     caRunningTime
     caMinProgress
     caSocketPaths
-    someNodeClientProtocol
-    caNetworkMagic
+
+  return ()
 
 cmdRun :: Mod CommandFields (IO ())
 cmdRun = command "run"  $ flip info idm $ run <$> parseRunOpts

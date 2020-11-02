@@ -60,8 +60,8 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..),
-                     RunNode, RunNodeArgs (..))
+                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..), RunNode,
+                     RunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
