@@ -1,5 +1,9 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Test.Cardano.Node.FilePermissions
   ( tests
@@ -8,19 +12,48 @@ module Test.Cardano.Node.FilePermissions
 import           Cardano.Prelude
 
 import           System.Directory (removeFile)
+
+import           Cardano.API
+import           Cardano.Node.Run (checkVRFFilePermissions)
+import           Hedgehog (Property, PropertyT, property, success)
+import qualified Hedgehog
+import           Hedgehog.Internal.Property (Group (..), failWith)
+
+#ifdef UNIX
+import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
+
 import           System.Posix.Files
 import           System.Posix.IO (closeFd, createFile)
 import           System.Posix.Types (FileMode)
 
-import           Cardano.Node.Run (checkVRFFilePermissions)
-import           Cardano.Node.Types (VRFPrivateKeyFilePermissionError (..))
-import           Hedgehog (Gen, Property, classify, discover, forAll, property, success)
-import qualified Hedgehog
+import           Hedgehog (Gen, classify, forAll)
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Internal.Property (failWith)
+#endif
 
+{- HLINT ignore "Use fewer imports" -}
 
--- | This property ensures that 'checkVRFFilePermissions' sets the
+prop_createVRFFileWithOwnerPermissions :: Property
+prop_createVRFFileWithOwnerPermissions =
+  property $ do
+    let vrfSign = "vrf-signing-key"
+    vrfSkey <- liftIO $ generateSigningKey AsVrfKey
+    createFileWithOwnerPermissions vrfSign vrfSkey
+
+    fResult <- liftIO . runExceptT $ checkVRFFilePermissions vrfSign
+    case fResult of
+      Left err -> failWith Nothing $ show err
+      Right () -> liftIO (removeFile vrfSign) >> success
+
+createFileWithOwnerPermissions :: HasTextEnvelope a => FilePath -> a -> PropertyT IO ()
+createFileWithOwnerPermissions targetfp value = do
+  result <- liftIO $ writeFileTextEnvelopeWithOwnerPermissions targetfp Nothing value
+  case result of
+    Left err -> failWith Nothing $ displayError err
+    Right () -> return ()
+
+#ifdef UNIX
+
+-- | This property ensures that 'checkVRFFilePermissions' checks the
 -- file permissions & ownership correctly.
 prop_sanityCheck_checkVRFFilePermissions :: Property
 prop_sanityCheck_checkVRFFilePermissions =
@@ -84,11 +117,8 @@ prop_sanityCheck_checkVRFFilePermissions =
       Right () ->
         failWith Nothing "This should have failed as Group permissions exist"
 
-
 createPermissions :: [FileMode] -> FileMode
 createPermissions = foldl' unionFileModes (ownerReadMode `unionFileModes` ownerWriteMode)
-
-
 
 genGroupPermissions :: Gen [FileMode]
 genGroupPermissions =
@@ -101,10 +131,17 @@ genOtherPermissions =
   let oPermissions = [otherReadMode, otherWriteMode, otherExecuteMode]
   in do subSeq <- Gen.filter (not . null) $ Gen.subsequence oPermissions
         Gen.frequency [(3, return oPermissions), (12, return subSeq)]
-
+#endif
 
 -- -----------------------------------------------------------------------------
 
 tests :: IO Bool
 tests =
-  Hedgehog.checkParallel $$discover
+  Hedgehog.checkParallel $ Group "Test.Cardano.Node.FilePermissons"
+#ifdef UNIX
+    [ ("prop_createVRFFileWithOwnerPermissions", prop_createVRFFileWithOwnerPermissions)
+    , ("prop_sanityCheck_checkVRFFilePermissions", prop_sanityCheck_checkVRFFilePermissions)
+    ]
+#else
+    [("prop_createVRFFileWithOwnerPermissions", prop_createVRFFileWithOwnerPermissions)]
+#endif

@@ -75,7 +75,7 @@ for i in 1 2 3; do
 
   # Generate a KES keys
   mkdir -p "${data_dir}/node-$i"
-  cardano-cli shelley node key-gen-KES \
+  cabal run exe:cardano-cli -- shelley node key-gen-KES \
     --verification-key-file "${data_dir}/node-$i/kes.vkey" \
     --signing-key-file      "${data_dir}/node-$i/kes.skey"
 
@@ -93,7 +93,7 @@ for i in 1 2 3; do
   chmod u+r "${data_dir}/node-$i/vrf.skey"
 
   # Issue an operational certificate:
-  cardano-cli shelley node issue-op-cert \
+  cabal run exe:cardano-cli -- shelley node issue-op-cert \
       --kes-period 0 \
       --kes-verification-key-file                  "${data_dir}/node-$i/kes.vkey"  \
       --cold-signing-key-file                      "${data_dir}/node-$i/hotkey.skey" \

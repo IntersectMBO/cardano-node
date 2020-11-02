@@ -227,8 +227,10 @@ module Cardano.Api.Typed (
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
     writeFileTextEnvelope,
+    writeFileTextEnvelopeWithOwnerPermissions,
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
+
     -- *** Reading one of several key types
     FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
@@ -390,9 +392,14 @@ import           Control.Monad
 --import Control.Monad.IO.Class
 import           Control.Concurrent.STM
 import           Control.Exception (Exception (..), IOException, throwIO)
+import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except (ExceptT (..))
 import           Control.Monad.Trans.Except.Extra
 import           Control.Tracer (nullTracer)
+import           System.Directory (removeFile, renameFile)
+import           System.FilePath (splitFileName, (<.>))
+import           System.IO (Handle, hClose, openTempFile)
+
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -3019,12 +3026,12 @@ instance Error Bech32DecodeError where
      <> List.intercalate " or " (map show (Set.toList permitted))
 
     Bech32DataPartToBytesError _dataPart ->
-        "There was an error in extracting the bytes from the data part of the \
-        \Bech32-encoded string."
+        "There was an error in extracting the bytes from the data part of the"
+     <> " Bech32-encoded string."
 
     Bech32DeserialiseFromBytesError _bytes ->
-        "There was an error in deserialising the data part of the \
-        \Bech32-encoded string into a value of the expected type."
+        "There was an error in deserialising the data part of the "
+     <> "Bech32-encoded string into a value of the expected type."
 
     Bech32WrongPrefix actual expected ->
         "Mismatch in the Bech32 prefix: the actual prefix is " <> show actual
@@ -3067,10 +3074,20 @@ class SerialiseAsCBOR a => HasTextEnvelope a where
 type TextEnvelopeError = TextView.TextViewError
 
 data FileError e = FileError   FilePath e
+                 | FileErrorTempFile
+                     FilePath
+                     -- ^ Target path
+                     FilePath
+                     -- ^ Temporary path
+                     Handle
                  | FileIOError FilePath IOException
   deriving Show
 
 instance Error e => Error (FileError e) where
+  displayError (FileErrorTempFile targetPath tempPath h)=
+    "Error creating temporary file at: " ++ tempPath ++
+    "/n" ++ "Target path: " ++ targetPath ++
+    "/n" ++ "Handle: " ++ show h
   displayError (FileIOError path ioe) =
     path ++ ": " ++ displayException ioe
   displayError (FileError path e) =
@@ -3123,6 +3140,22 @@ deserialiseFromTextEnvelopeAnyOf types te =
 
     matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
 
+writeFileWithOwnerPermissions
+  :: FilePath
+  -> ByteString
+  -> IO (Either (FileError ()) ())
+writeFileWithOwnerPermissions targetPath a = do
+  let (targetDir, targetFile) = splitFileName targetPath
+  Exception.bracketOnError
+    (openTempFile targetDir $ targetFile <.> "tmp")
+    (\(tmpPath, fHandle) -> do
+      hClose fHandle >> removeFile tmpPath
+      return . Left $ FileErrorTempFile targetPath tmpPath fHandle)
+    (\(tmpPath, fHandle) -> do
+        BS.hPut fHandle a
+        hClose fHandle
+        renameFile tmpPath targetPath
+        return $ Right ())
 
 writeFileTextEnvelope :: HasTextEnvelope a
                       => FilePath
@@ -3133,7 +3166,23 @@ writeFileTextEnvelope path mbDescr a =
     runExceptT $ do
       handleIOExceptT (FileIOError path) $ BS.writeFile path content
   where
-    content = LBS.toStrict $ encodePretty' TextView.textViewJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
+    content = textEnvelopeToJSON mbDescr a
+
+writeFileTextEnvelopeWithOwnerPermissions
+  :: HasTextEnvelope a
+  => FilePath
+  -> Maybe TextEnvelopeDescr
+  -> a
+  -> IO (Either (FileError ()) ())
+writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
+  writeFileWithOwnerPermissions targetPath content
+ where
+  content = textEnvelopeToJSON mbDescr a
+
+
+textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> ByteString
+textEnvelopeToJSON mbDescr a  =
+  LBS.toStrict $ encodePretty' TextView.textViewJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
 
 readFileTextEnvelope :: HasTextEnvelope a
                      => AsType a

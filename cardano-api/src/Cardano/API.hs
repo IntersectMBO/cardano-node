@@ -191,6 +191,7 @@ module Cardano.API (
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,
     writeFileTextEnvelope,
+    writeFileTextEnvelopeWithOwnerPermissions,
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
     -- *** Reading one of several key types
@@ -199,7 +200,7 @@ module Cardano.API (
     readFileTextEnvelopeAnyOf,
 
     -- * Errors
-    Error,
+    Error(..),
     throwErrorAsException,
     FileError,
 

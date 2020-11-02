@@ -4,18 +4,19 @@ module Cardano.CLI.Shelley.Run.Node
   , runNodeCmd
   ) where
 
+import           Cardano.Prelude hiding ((<.>))
+import           Prelude (id)
+
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Text as Text
+
 import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
                      readSigningKeyFileAnyOf, readVerificationKeyOrFile)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
-import           Cardano.Prelude
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
-import           Prelude (id)
-
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Text as Text
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -24,11 +25,20 @@ data ShelleyNodeCmdError
   | ShelleyNodeCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyNodeCmdWriteFileError !(FileError ())
   | ShelleyNodeCmdOperationalCertificateIssueError !OperationalCertIssueError
+  | ShelleyNodeCmdVrfSigningKeyCreationError
+      FilePath
+      -- ^ Target path
+      FilePath
+      -- ^ Temp path
   deriving Show
 
 renderShelleyNodeCmdError :: ShelleyNodeCmdError -> Text
 renderShelleyNodeCmdError err =
   case err of
+    ShelleyNodeCmdVrfSigningKeyCreationError targetPath tempPath ->
+      Text.pack $ "Error creating VRF signing key file. Target path: " <> targetPath
+      <> " Temporary path: " <> tempPath
+
     ShelleyNodeCmdReadFileError fileErr -> Text.pack (displayError fileErr)
 
     ShelleyNodeCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
@@ -99,7 +109,6 @@ runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     skeyDesc = TextViewDescription "KES Signing Key"
     vkeyDesc = TextViewDescription "KES Verification Key"
 
-
 runNodeKeyGenVRF :: VerificationKeyFile -> SigningKeyFile
                  -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
@@ -107,7 +116,7 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeFileTextEnvelopeWithOwnerPermissions skeyPath (Just skeyDesc) skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
@@ -243,3 +252,4 @@ readColdVerificationKeyOrFile coldVerKeyOrFile =
         , FromSomeType (AsVerificationKey AsGenesisDelegateKey) castVerificationKey
         ]
         fp
+
