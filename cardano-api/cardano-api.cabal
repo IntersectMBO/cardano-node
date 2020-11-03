@@ -49,7 +49,7 @@ library
                       , aeson
                       , aeson-pretty
                       , attoparsec
-                      , base16-bytestring
+                      , base16-bytestring >= 1.0
                       , base58-bytestring
                       , base64
                       , bech32 >= 1.1.0

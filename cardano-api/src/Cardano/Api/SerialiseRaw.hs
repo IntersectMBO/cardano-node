@@ -10,7 +10,6 @@ module Cardano.Api.SerialiseRaw
   ) where
 
 import           Prelude
-import           Cardano.Prelude (decodeEitherBase16)
 
 import           Data.String (IsString(..))
 import qualified Data.ByteString.Char8 as BSC
@@ -31,9 +30,10 @@ serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
 
 deserialiseFromRawBytesHex :: SerialiseAsRawBytes a
                            => AsType a -> ByteString -> Maybe a
-deserialiseFromRawBytesHex proxy hex = case decodeEitherBase16 hex of
-  Right raw -> deserialiseFromRawBytes proxy raw
-  Left _ -> Nothing
+deserialiseFromRawBytesHex proxy hex =
+    case Base16.decode hex of
+      Right raw -> deserialiseFromRawBytes proxy raw
+      Left _msg -> Nothing
 
 
 -- | For use with @deriving via@, to provide 'Show' and\/or 'IsString' instances
@@ -48,7 +48,7 @@ instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
 
 instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
     fromString str =
-      case decodeEitherBase16 (BSC.pack str) of
+      case Base16.decode (BSC.pack str) of
         Right raw -> case deserialiseFromRawBytes ttoken raw of
           Just x  -> UsingRawBytesHex x
           Nothing -> error ("fromString: cannot deserialise " ++ show str)
