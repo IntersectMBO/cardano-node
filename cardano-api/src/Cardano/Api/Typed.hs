@@ -346,7 +346,6 @@ module Cardano.Api.Typed (
 
 import           Prelude
 
-import           Cardano.Prelude (decodeEitherBase16)
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
 import           Data.Kind (Constraint, Type)
@@ -369,9 +368,7 @@ import qualified Network.URI as URI
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Base58 as Base58
-import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 
@@ -518,9 +515,10 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 
 import           Cardano.Api.Eras
+import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
-import           Cardano.Api.Error
+import           Cardano.Api.SerialiseRaw
 
 {- HLINT ignore "Redundant flip" -}
 
@@ -2832,47 +2830,6 @@ deserialiseFromJSON :: FromJSON a
                     -> Either JsonDecodeError a
 deserialiseFromJSON _proxy = either (Left . JsonDecodeError) Right
                            . Aeson.eitherDecodeStrict'
-
-
--- ----------------------------------------------------------------------------
--- Raw binary serialisation
---
-
-class HasTypeProxy a => SerialiseAsRawBytes a where
-
-  serialiseToRawBytes :: a -> ByteString
-
-  deserialiseFromRawBytes :: AsType a -> ByteString -> Maybe a
-
-serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
-serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
-
-deserialiseFromRawBytesHex :: SerialiseAsRawBytes a
-                           => AsType a -> ByteString -> Maybe a
-deserialiseFromRawBytesHex proxy hex = case decodeEitherBase16 hex of
-  Right raw -> deserialiseFromRawBytes proxy raw
-  Left _ -> Nothing
-
--- | For use with @deriving via@, to provide 'Show' and\/or 'IsString' instances
--- using a hex encoding, based on the 'SerialiseAsRawBytes' instance.
---
--- > deriving (Show, IsString) via (UsingRawBytesHex Blah)
---
-newtype UsingRawBytesHex a = UsingRawBytesHex a
-
-instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
-    show (UsingRawBytesHex x) = show (serialiseToRawBytesHex x)
-
-instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
-    fromString str =
-      case decodeEitherBase16 (BSC.pack str) of
-        Right raw -> case deserialiseFromRawBytes ttoken raw of
-          Just x  -> UsingRawBytesHex x
-          Nothing -> error ("fromString: cannot deserialise " ++ show str)
-        Left msg -> error ("fromString: invalid hex " ++ show str ++ ", " ++ msg)
-      where
-        ttoken :: AsType a
-        ttoken = proxyToAsType Proxy
 
 
 -- ----------------------------------------------------------------------------
