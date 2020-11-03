@@ -347,7 +347,7 @@ import           Prelude
 
 import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
-import           Data.Kind (Constraint, Type)
+import           Data.Kind (Type)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
@@ -3017,10 +3017,6 @@ deserialiseFromTextEnvelope ttoken te = do
     TextView.expectTextViewOfType (textEnvelopeType ttoken) te
     first TextView.TextViewDecodeError $
       deserialiseFromCBOR ttoken (TextView.tvRawCBOR te) --TODO: You have switched from CBOR to JSON
-
-data FromSomeType (c :: Type -> Constraint) b where
-     FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
-
 
 deserialiseFromTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
                                  -> TextEnvelope
