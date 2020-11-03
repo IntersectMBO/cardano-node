@@ -52,11 +52,11 @@ chairmanOver H.Conf {..} allNodes = do
 
   (_, _, _, hProcess, _) <- H.createProcess =<<
     ( H.procChairman
-      ( [ "--timeout", "100"
+      ( [ "--timeout", "120"
         , "--config", tempAbsPath </> "configuration.yaml"
         , "--security-parameter", "2160"
         , "--testnet-magic", show @Int testnetMagic
-        , "--slot-length", "20"
+        , "--require-progress", "3"
         ]
       <> (sprockets >>= (\sprocket -> ["--socket-path", IO.sprocketArgumentName sprocket]))
       ) <&>
@@ -69,11 +69,12 @@ chairmanOver H.Conf {..} allNodes = do
       )
     )
 
-  chairmanResult <- H.waitSecondsForProcess 110 hProcess
+  chairmanResult <- H.waitSecondsForProcess 130 hProcess
 
   case chairmanResult of
     Right ExitSuccess -> return ()
     _ -> do
-      H.note_ $ "Failed with: " <> show chairmanResult
-      H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stdout.log"
-      H.noteM_ $ H.noteTempFile logDir $ "chairman" <> ".stderr.log"
+      H.note_ $ "Chairman failed with: " <> show chairmanResult
+      H.cat nodeStdoutFile
+      H.cat nodeStderrFile
+      H.failure
