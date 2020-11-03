@@ -1,19 +1,17 @@
-# Installing the node from source
+# Installing the Node from Source
 
 **Latest version:** [https://github.com/input-output-hk/cardano-node/releases](https://github.com/input-output-hk/cardano-node/releases)
 
 #### Prerequisites
 
-Set up your platform:
+To set up your platform you will need the following:
 
-You will need:
-
-* An x86 host \(AMD or Intel\), Virtual Machine or AWS instance with at least 2 cores, 4GB of RAM and at least 10GB of free disk space;
+* An x86 host \(AMD or Intel\), virtual machine or AWS instance with at least 2 cores, 4GB of RAM, and at least 10GB of free disk space;
 * A recent version of Linux.
 
 #### Install dependencies
 
-We need the following packages and tools on our Linux system to download the source code and build it:
+You need the following packages and tools on your Linux system to download the source code and build it:
 
 * the version control system `git`,
 * the `gcc` C-compiler,
