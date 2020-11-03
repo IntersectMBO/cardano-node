@@ -38,6 +38,7 @@ library
 
                         -- Splitting up the big Typed module:
                         Cardano.Api.Eras
+                        Cardano.Api.Error
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
 

@@ -390,7 +390,7 @@ import           Control.Applicative
 import           Control.Monad
 --import Control.Monad.IO.Class
 import           Control.Concurrent.STM
-import           Control.Exception (Exception (..), IOException, throwIO)
+import           Control.Exception (Exception (..), IOException)
 import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except (ExceptT (..))
 import           Control.Monad.Trans.Except.Extra
@@ -520,6 +520,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmis
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.Error
 
 {- HLINT ignore "Redundant flip" -}
 
@@ -3201,32 +3202,6 @@ readTextEnvelopeOfTypeFromFile expectedType path =
       TextView.expectTextViewOfType expectedType te
     return te
 
-
--- ----------------------------------------------------------------------------
--- Error reporting
---
-
-class Show e => Error e where
-
-    displayError :: e -> String
-
-instance Error () where
-    displayError () = ""
-
--- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
--- necessary use IO exceptions.
---
-throwErrorAsException :: Error e => e -> IO a
-throwErrorAsException e = throwIO (ErrorAsException e)
-
-data ErrorAsException where
-     ErrorAsException :: Error e => e -> ErrorAsException
-
-instance Show ErrorAsException where
-    show (ErrorAsException e) = show e
-
-instance Exception ErrorAsException where
-    displayException (ErrorAsException e) = displayError e
 
 -- ----------------------------------------------------------------------------
 -- Key instances
