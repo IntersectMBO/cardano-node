@@ -1,5 +1,4 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -518,6 +517,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 
 {- HLINT ignore "Redundant flip" -}
@@ -2795,24 +2795,6 @@ submitTxToNodeLocal connctInfo tx = do
         pure $ SendMsgSubmitTx tx $ \result -> do
         atomically $ putTMVar resultVar result
         pure (TxSubmission.SendMsgDone ())
-
-
--- ----------------------------------------------------------------------------
--- CBOR serialisation
---
-
-class HasTypeProxy a => SerialiseAsCBOR a where
-    serialiseToCBOR :: a -> ByteString
-    deserialiseFromCBOR :: AsType a -> ByteString -> Either CBOR.DecoderError a
-
-    default serialiseToCBOR :: ToCBOR a => a -> ByteString
-    serialiseToCBOR = CBOR.serialize'
-
-    default deserialiseFromCBOR :: FromCBOR a
-                                => AsType a
-                                -> ByteString
-                                -> Either CBOR.DecoderError a
-    deserialiseFromCBOR _proxy = CBOR.decodeFull'
 
 
 -- ----------------------------------------------------------------------------
