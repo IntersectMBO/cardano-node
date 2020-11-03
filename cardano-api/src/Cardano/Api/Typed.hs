@@ -520,6 +520,7 @@ import           Cardano.Api.Hash
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils
 
 {- HLINT ignore "Redundant flip" -}
 
@@ -4598,14 +4599,3 @@ instance HasTextEnvelope (SigningKey VrfKey) where
         proxy :: Proxy (Shelley.VRF StandardCrypto)
         proxy = Proxy
 
---
--- Utils
---
-
-(?!) :: Maybe a -> e -> Either e a
-Nothing ?! e = Left e
-Just x  ?! _ = Right x
-
-(?!.) :: Either e a -> (e -> e') -> Either e' a
-Left  e ?!. f = Left (f e)
-Right x ?!. _ = Right x
