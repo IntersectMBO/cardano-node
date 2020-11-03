@@ -1,76 +1,91 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
--- The Shelley ledger uses promoted data kinds which we have to use, but we do
--- not export any from this API. We also use them unticked as nature intended.
-{-# LANGUAGE DataKinds #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-
 module Cardano.Api.Key
-  ( AsType (AsPaymentKey, AsHash)
-
-    -- ** Hashes
-    -- | In Cardano most keys are identified by their hash, and hashes are
-    -- used in many other places.
-  , Hash(PaymentKeyHash)
-
-  , PaymentKey
-  , PaymentExtendedKey
-  , GenesisKey
-  , GenesisUTxOKey
-  , GenesisDelegateKey
-  , StakeKey
-  , StakePoolKey
+  ( Key(..)
+  , generateSigningKey
+  , CastVerificationKeyRole(..)
+  , CastSigningKeyRole(..)
+  , AsType(AsVerificationKey, AsSigningKey)
   ) where
 
-import           Cardano.Prelude
+import Prelude
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import qualified Shelley.Spec.Ledger.Keys as Shelley
+import           Data.Kind (Type)
 
-import           Cardano.Api.HasTypeProxy (HasTypeProxy (..))
-import           Cardano.Api.Serialisation
-import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.DSIGN.Class as Crypto
+import qualified Cardano.Crypto.Seed as Crypto
 
-data family Hash keyrole :: Type
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
 
-instance HasTypeProxy a => HasTypeProxy (Hash a) where
-    data AsType (Hash a) = AsHash (AsType a)
-    proxyToAsType _ = AsHash (proxyToAsType (Proxy :: Proxy a))
 
-newtype instance Hash PaymentKey =
-    PaymentKeyHash (Shelley.KeyHash Shelley.Payment StandardCrypto)
-  deriving (Eq, Ord, Show)
-
-instance SerialiseAsRawBytes (Hash PaymentKey) where
-    serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.hashToBytes vkh
-
-    deserialiseFromRawBytes (AsHash AsPaymentKey) bs =
-      PaymentKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
-
--- | Map the various Shelley key role types into corresponding 'Shelley.KeyRole'
--- types.
+-- | An interface for cryptographic keys used for signatures with a 'SigningKey'
+-- and a 'VerificationKey' key.
 --
-type family ShelleyKeyRole (keyrole :: Type) :: Shelley.KeyRole
+-- This interface does not provide actual signing or verifying functions since
+-- this API is concerned with the management of keys: generating and
+-- serialising.
+--
+class (Eq (VerificationKey keyrole),
+       Show (VerificationKey keyrole),
+       SerialiseAsRawBytes (Hash keyrole),
+       HasTextEnvelope (VerificationKey keyrole),
+       HasTextEnvelope (SigningKey keyrole))
+    => Key keyrole where
 
-data PaymentKey
-data PaymentExtendedKey
+    -- | The type of cryptographic verification key, for each key role.
+    data VerificationKey keyrole :: Type
 
-instance HasTypeProxy PaymentKey where
-    data AsType PaymentKey = AsPaymentKey
-    proxyToAsType _ = AsPaymentKey
+    -- | The type of cryptographic signing key, for each key role.
+    data SigningKey keyrole :: Type
 
-data GenesisKey
-data GenesisUTxOKey
-data GenesisDelegateKey
-data StakeKey
-data StakePoolKey
+    -- | Get the corresponding verification key from a signing key.
+    getVerificationKey :: SigningKey keyrole -> VerificationKey keyrole
 
-type instance ShelleyKeyRole PaymentKey         = Shelley.Payment
-type instance ShelleyKeyRole GenesisKey         = Shelley.Genesis
-type instance ShelleyKeyRole GenesisUTxOKey     = Shelley.Payment
-type instance ShelleyKeyRole GenesisDelegateKey = Shelley.GenesisDelegate
-type instance ShelleyKeyRole StakeKey           = Shelley.Staking
-type instance ShelleyKeyRole StakePoolKey       = Shelley.StakePool
+    -- | Generate a 'SigningKey' deterministically, given a 'Crypto.Seed'. The
+    -- required size of the seed is given by 'deterministicSigningKeySeedSize'.
+    --
+    deterministicSigningKey :: AsType keyrole -> Crypto.Seed -> SigningKey keyrole
+    deterministicSigningKeySeedSize :: AsType keyrole -> Word
+
+    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
+
+
+-- TODO: We should move this into the Key type class, with the existing impl as the default impl.
+-- For KES we can then override it to keep the seed and key in mlocked memory at all times.
+-- | Generate a 'SigningKey' using a seed from operating system entropy.
+--
+generateSigningKey :: Key keyrole => AsType keyrole -> IO (SigningKey keyrole)
+generateSigningKey keytype = do
+    seed <- Crypto.readSeedFromSystemEntropy seedSize
+    return $! deterministicSigningKey keytype seed
+  where
+    seedSize = deterministicSigningKeySeedSize keytype
+
+
+instance HasTypeProxy a => HasTypeProxy (VerificationKey a) where
+    data AsType (VerificationKey a) = AsVerificationKey (AsType a)
+    proxyToAsType _ = AsVerificationKey (proxyToAsType (Proxy :: Proxy a))
+
+instance HasTypeProxy a => HasTypeProxy (SigningKey a) where
+    data AsType (SigningKey a) = AsSigningKey (AsType a)
+    proxyToAsType _ = AsSigningKey (proxyToAsType (Proxy :: Proxy a))
+
+
+-- | Some key roles share the same representation and it is sometimes
+-- legitimate to change the role of a key.
+--
+class CastVerificationKeyRole keyroleA keyroleB where
+
+    -- | Change the role of a 'VerificationKey', if the representation permits.
+    castVerificationKey :: VerificationKey keyroleA -> VerificationKey keyroleB
+
+class CastSigningKeyRole keyroleA keyroleB where
+
+    -- | Change the role of a 'SigningKey', if the representation permits.
+    castSigningKey :: SigningKey keyroleA -> SigningKey keyroleB
 

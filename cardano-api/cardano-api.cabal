@@ -41,6 +41,7 @@ library
                         Cardano.Api.Error
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
+                        Cardano.Api.Key
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
