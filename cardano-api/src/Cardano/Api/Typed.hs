@@ -396,7 +396,7 @@ import           System.FilePath (splitFileName, (<.>))
 import           System.IO (Handle, hClose, openTempFile)
 
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.:), (.=))
+import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 
@@ -518,6 +518,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 
 {- HLINT ignore "Redundant flip" -}
@@ -2795,23 +2796,6 @@ submitTxToNodeLocal connctInfo tx = do
         pure $ SendMsgSubmitTx tx $ \result -> do
         atomically $ putTMVar resultVar result
         pure (TxSubmission.SendMsgDone ())
-
-
--- ----------------------------------------------------------------------------
--- JSON serialisation
---
-
-newtype JsonDecodeError = JsonDecodeError String
-
-serialiseToJSON :: ToJSON a => a -> ByteString
-serialiseToJSON = LBS.toStrict . Aeson.encode
-
-deserialiseFromJSON :: FromJSON a
-                    => AsType a
-                    -> ByteString
-                    -> Either JsonDecodeError a
-deserialiseFromJSON _proxy = either (Left . JsonDecodeError) Right
-                           . Aeson.eitherDecodeStrict'
 
 
 -- ----------------------------------------------------------------------------
