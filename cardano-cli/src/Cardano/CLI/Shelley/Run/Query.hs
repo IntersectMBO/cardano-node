@@ -50,6 +50,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (Either (Deg
 import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
+import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..),
                      PoolDistr (..))
@@ -95,6 +96,8 @@ runQueryCmd cmd =
       runQueryStakeAddressInfo protocol addr network mOutFile
     QueryLedgerState protocol network mOutFile ->
       runQueryLedgerState protocol network mOutFile
+    QueryProtocolState protocol network mOutFile ->
+      runQueryProtocolState protocol network mOutFile
     QueryUTxO protocol qFilter networkId mOutFile ->
       runQueryUTxO protocol qFilter networkId mOutFile
 
@@ -171,6 +174,21 @@ runQueryLedgerState protocol network mOutFile = do
       liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
       firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR lbs
 
+runQueryProtocolState
+  :: Protocol
+  -> NetworkId
+  -> Maybe OutputFile
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryProtocolState protocol network mOutFile = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+    withlocalNodeConnectInfo protocol network sockPath queryLocalProtocolState
+  case els of
+    Right protocolState -> writeProtocolState mOutFile protocolState
+    Left pbs -> do
+      liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
+      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR pbs
+
 runQueryStakeAddressInfo
   :: Protocol
   -> StakeAddress
@@ -226,6 +244,14 @@ writeLedgerState mOutFile lstate =
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty lstate)
+
+writeProtocolState :: Maybe OutputFile -> Ledger.ChainDepState StandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
+writeProtocolState mOutFile pstate =
+  case mOutFile of
+    Nothing -> liftIO $ LBS.putStrLn (encodePretty pstate)
+    Just (OutputFile fpath) ->
+      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
+        $ LBS.writeFile fpath (encodePretty pstate)
 
 writeFilteredUTxOs :: Maybe OutputFile -> Ledger.UTxO StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
 writeFilteredUTxOs mOutFile utxo =
@@ -491,6 +517,40 @@ queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
     -- CBOR decode.
     decodeLedgerState (Serialised lbs) =
       first (const lbs) (decodeFull lbs)
+
+queryLocalProtocolState
+  :: LocalNodeConnectInfo mode blk
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
+             (Either LByteString (Ledger.ChainDepState StandardCrypto))
+queryLocalProtocolState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
+  case localNodeConsensusMode of
+    ByronMode{} -> throwError ByronProtocolNotSupportedError
+
+    ShelleyMode{} -> do
+      tip <- liftIO $ getLocalTip connectInfo
+      DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
+          queryNodeLocalState
+            connectInfo
+            ( getTipPoint tip
+            , DegenQuery $
+                GetCBOR DebugChainDepState  -- Get CBOR-in-CBOR version
+            )
+      return (decodeProtocolState result)
+
+    CardanoMode{} -> do
+      tip <- liftIO $ getLocalTip connectInfo
+      result <- firstExceptT AcquireFailureError . newExceptT $
+        queryNodeLocalState
+          connectInfo
+          (getTipPoint tip, QueryIfCurrentShelley (GetCBOR DebugChainDepState)) -- Get CBOR-in-CBOR version
+      case result of
+        QueryResultEraMismatch err -> throwError (EraMismatchError err)
+        QueryResultSuccess ls -> return (decodeProtocolState ls)
+  where
+    -- If decode as a ChainDepState fails we return the ByteString so we can do a generic
+    -- CBOR decode.
+    decodeProtocolState (Serialised pbs) =
+      first (const pbs) (decodeFull pbs)
 
 
 -- | Query the current delegations and reward accounts, filtered by a given
