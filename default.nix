@@ -73,7 +73,6 @@ let
 
       hlint = callPackage iohkNix.tests.hlint {
         src = ./. ;
-        projects = attrNames (selectProjectPackages cardanoNodeHaskellPackages);
       };
     };
 

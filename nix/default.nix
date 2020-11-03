@@ -5,7 +5,7 @@
 , gitrev ? null
 }:
 let
-  sources = import ./sources.nix { pkgs = import iohkNixMain.nixpkgs {}; }
+  sources = import ./sources.nix { inherit pkgs; }
     // sourcesOverride;
   iohkNixMain = import sources.iohk-nix {};
   haskellNix = (import sources."haskell.nix" { inherit system sourcesOverride; }).nixpkgsArgs;
