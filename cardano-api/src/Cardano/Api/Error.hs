@@ -7,10 +7,13 @@ module Cardano.Api.Error
   ( Error(..)
   , throwErrorAsException
   , ErrorAsException(..)
+  , FileError(..)
   ) where
 
 import           Prelude
-import           Control.Exception (Exception(..), throwIO)
+
+import           Control.Exception (Exception(..), IOException, throwIO)
+import           System.IO (Handle)
 
 
 class Show e => Error e where
@@ -35,4 +38,26 @@ instance Show ErrorAsException where
 
 instance Exception ErrorAsException where
     displayException (ErrorAsException e) = displayError e
+
+
+data FileError e = FileError   FilePath e
+                 | FileErrorTempFile
+                     FilePath
+                     -- ^ Target path
+                     FilePath
+                     -- ^ Temporary path
+                     Handle
+                 | FileIOError FilePath IOException
+  deriving Show
+
+instance Error e => Error (FileError e) where
+  displayError (FileErrorTempFile targetPath tempPath h)=
+    "Error creating temporary file at: " ++ tempPath ++
+    "/n" ++ "Target path: " ++ targetPath ++
+    "/n" ++ "Handle: " ++ show h
+  displayError (FileIOError path ioe) =
+    path ++ ": " ++ displayException ioe
+  displayError (FileError path e) =
+    path ++ ": " ++ displayError e
+
 

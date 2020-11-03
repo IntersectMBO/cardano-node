@@ -383,14 +383,13 @@ import           Control.Applicative
 import           Control.Monad
 --import Control.Monad.IO.Class
 import           Control.Concurrent.STM
-import           Control.Exception (Exception (..), IOException)
 import qualified Control.Exception as Exception
 import           Control.Monad.Trans.Except (ExceptT (..))
 import           Control.Monad.Trans.Except.Extra
 import           Control.Tracer (nullTracer)
 import           System.Directory (removeFile, renameFile)
 import           System.FilePath (splitFileName, (<.>))
-import           System.IO (Handle, hClose, openTempFile)
+import           System.IO (hClose, openTempFile)
 
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
@@ -2830,26 +2829,6 @@ class SerialiseAsCBOR a => HasTextEnvelope a where
     textEnvelopeDefaultDescr _ = ""
 
 type TextEnvelopeError = TextView.TextViewError
-
-data FileError e = FileError   FilePath e
-                 | FileErrorTempFile
-                     FilePath
-                     -- ^ Target path
-                     FilePath
-                     -- ^ Temporary path
-                     Handle
-                 | FileIOError FilePath IOException
-  deriving Show
-
-instance Error e => Error (FileError e) where
-  displayError (FileErrorTempFile targetPath tempPath h)=
-    "Error creating temporary file at: " ++ tempPath ++
-    "/n" ++ "Target path: " ++ targetPath ++
-    "/n" ++ "Handle: " ++ show h
-  displayError (FileIOError path ioe) =
-    path ++ ": " ++ displayException ioe
-  displayError (FileError path e) =
-    path ++ ": " ++ displayError e
 
 instance Error TextView.TextViewError where
   displayError = Text.unpack . TextView.renderTextViewError
