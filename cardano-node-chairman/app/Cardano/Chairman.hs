@@ -24,7 +24,6 @@ import           Control.Tracer
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Coerce (coerce)
 import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig, GetHeader (..), Header)
-import           Ouroboros.Consensus.BlockchainTime (SlotLength, getSlotLength)
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient
@@ -62,24 +61,23 @@ import qualified Ouroboros.Network.Block as Block
 -- is only checked at the end.
 chairmanTest
   :: Tracer IO String
-  -> SlotLength
-  -> SecurityParam
-  -> DiffTime
-  -> Maybe BlockNo
-  -> [SocketPath]
   -> SomeNodeClientProtocol
   -> NetworkMagic
+  -> SecurityParam
+  -> DiffTime
+  -> BlockNo
+  -> [SocketPath]
   -> IO ()
-chairmanTest tracer slotLength securityParam runningTime optionalProgressThreshold socketPaths someNodeClientProtocol nw = do
+chairmanTest tracer protocol nw securityParam runningTime progressThreshold socketPaths = do
   traceWith tracer ("Will observe nodes for " ++ show runningTime)
   traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
-  SomeNodeClientProtocol (p :: ProtocolClient blk (BlockProtocol blk)) <- return someNodeClientProtocol
+  SomeNodeClientProtocol (ptcl :: ProtocolClient blk (BlockProtocol blk)) <- return protocol
 
   -- Run the chairman and get the final snapshot of the chain from each node.
   chainsSnapshot <- runChairman
     tracer
-    (pClientInfoCodecConfig $ protocolClientInfo p)
+    (pClientInfoCodecConfig (protocolClientInfo ptcl))
     nw
     securityParam
     runningTime
@@ -99,30 +97,6 @@ chairmanTest tracer slotLength securityParam runningTime optionalProgressThresho
 
   traceWith tracer (show progressSuccess)
   traceWith tracer "================== chairman results =================="
-
-  where
-    progressThreshold = deriveProgressThreshold
-      slotLength
-      runningTime
-      optionalProgressThreshold
-
--- | The caller specifies how long to run the chairman for and optionally a
--- chain growth progress threshold. If the threshold is not given, we can
--- derive a reasonable default from the running time and slot length.
-deriveProgressThreshold
-  :: SlotLength
-  -> DiffTime
-  -> Maybe BlockNo
-  -> BlockNo
-deriveProgressThreshold _ _ (Just progressThreshold) = progressThreshold
-
--- If only the progress threshold is not specified, derive it from the running time
-deriveProgressThreshold slotLength runningTime Nothing =
-  Block.BlockNo (floor (runningTime / getSlotLengthDiffTime slotLength) - 2)
-
-
-getSlotLengthDiffTime :: SlotLength -> DiffTime
-getSlotLengthDiffTime = realToFrac . getSlotLength
 
 type ChainsSnapshot blk = Map PeerId (AnchoredFragment (Header blk))
 
