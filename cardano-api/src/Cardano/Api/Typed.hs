@@ -345,10 +345,8 @@ module Cardano.Api.Typed (
 
 import           Prelude
 
-import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
 import           Data.Kind (Type)
-import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
 import           Data.Scientific (toBoundedInteger)
@@ -383,14 +381,7 @@ import           Control.Applicative
 import           Control.Monad
 --import Control.Monad.IO.Class
 import           Control.Concurrent.STM
-import qualified Control.Exception as Exception
-import           Control.Monad.Trans.Except (ExceptT (..))
-import           Control.Monad.Trans.Except.Extra
 import           Control.Tracer (nullTracer)
-import           System.Directory (removeFile, renameFile)
-import           System.FilePath (splitFileName, (<.>))
-import           System.IO (hClose, openTempFile)
-
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -502,7 +493,6 @@ import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
-import qualified Cardano.Api.TextView as TextView
 
 import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client as StateQuery
@@ -517,6 +507,7 @@ import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Utils
 
 {- HLINT ignore "Redundant flip" -}
@@ -2812,152 +2803,6 @@ class HasTypeProxy addr => SerialiseAddress addr where
 
     deserialiseAddress :: AsType addr -> Text -> Maybe addr
     -- TODO: consider adding data AddressDecodeError
-
-
--- ----------------------------------------------------------------------------
--- TextEnvelope Serialisation
---
-
-type TextEnvelope = TextView.TextView
-type TextEnvelopeType = TextView.TextViewType
-type TextEnvelopeDescr = TextView.TextViewDescription
-
-class SerialiseAsCBOR a => HasTextEnvelope a where
-    textEnvelopeType :: AsType a -> TextEnvelopeType
-
-    textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
-    textEnvelopeDefaultDescr _ = ""
-
-type TextEnvelopeError = TextView.TextViewError
-
-instance Error TextView.TextViewError where
-  displayError = Text.unpack . TextView.renderTextViewError
-
-serialiseToTextEnvelope :: forall a. HasTextEnvelope a
-                        => Maybe TextEnvelopeDescr -> a -> TextEnvelope
-serialiseToTextEnvelope mbDescr a =
-    TextView.TextView {
-      TextView.tvType    = textEnvelopeType ttoken
-    , TextView.tvDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
-    , TextView.tvRawCBOR = serialiseToCBOR a
-    }
-  where
-    ttoken :: AsType a
-    ttoken = proxyToAsType Proxy
-
-
-deserialiseFromTextEnvelope :: HasTextEnvelope a
-                            => AsType a
-                            -> TextEnvelope
-                            -> Either TextEnvelopeError a
-deserialiseFromTextEnvelope ttoken te = do
-    TextView.expectTextViewOfType (textEnvelopeType ttoken) te
-    first TextView.TextViewDecodeError $
-      deserialiseFromCBOR ttoken (TextView.tvRawCBOR te) --TODO: You have switched from CBOR to JSON
-
-deserialiseFromTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                                 -> TextEnvelope
-                                 -> Either TextEnvelopeError b
-deserialiseFromTextEnvelopeAnyOf types te =
-    case List.find matching types of
-      Nothing ->
-        Left (TextView.TextViewTypeError expectedTypes actualType)
-
-      Just (FromSomeType ttoken f) ->
-        first TextView.TextViewDecodeError $
-          f <$> deserialiseFromCBOR ttoken (TextView.tvRawCBOR te)
-  where
-    actualType    = TextView.tvType te
-    expectedTypes = [ textEnvelopeType ttoken
-                    | FromSomeType ttoken _f <- types ]
-
-    matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
-
-writeFileWithOwnerPermissions
-  :: FilePath
-  -> ByteString
-  -> IO (Either (FileError ()) ())
-writeFileWithOwnerPermissions targetPath a = do
-  let (targetDir, targetFile) = splitFileName targetPath
-  Exception.bracketOnError
-    (openTempFile targetDir $ targetFile <.> "tmp")
-    (\(tmpPath, fHandle) -> do
-      hClose fHandle >> removeFile tmpPath
-      return . Left $ FileErrorTempFile targetPath tmpPath fHandle)
-    (\(tmpPath, fHandle) -> do
-        BS.hPut fHandle a
-        hClose fHandle
-        renameFile tmpPath targetPath
-        return $ Right ())
-
-writeFileTextEnvelope :: HasTextEnvelope a
-                      => FilePath
-                      -> Maybe TextEnvelopeDescr
-                      -> a
-                      -> IO (Either (FileError ()) ())
-writeFileTextEnvelope path mbDescr a =
-    runExceptT $ do
-      handleIOExceptT (FileIOError path) $ BS.writeFile path content
-  where
-    content = textEnvelopeToJSON mbDescr a
-
-writeFileTextEnvelopeWithOwnerPermissions
-  :: HasTextEnvelope a
-  => FilePath
-  -> Maybe TextEnvelopeDescr
-  -> a
-  -> IO (Either (FileError ()) ())
-writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
-  writeFileWithOwnerPermissions targetPath content
- where
-  content = textEnvelopeToJSON mbDescr a
-
-
-textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> ByteString
-textEnvelopeToJSON mbDescr a  =
-  LBS.toStrict $ encodePretty' TextView.textViewJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
-
-readFileTextEnvelope :: HasTextEnvelope a
-                     => AsType a
-                     -> FilePath
-                     -> IO (Either (FileError TextEnvelopeError) a)
-readFileTextEnvelope ttoken path =
-    runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ BS.readFile path
-      firstExceptT (FileError path) $ hoistEither $ do
-        te <- first TextView.TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelope ttoken te
-
-
-readFileTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                          -> FilePath
-                          -> IO (Either (FileError TextEnvelopeError) b)
-readFileTextEnvelopeAnyOf types path =
-    runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ BS.readFile path
-      firstExceptT (FileError path) $ hoistEither $ do
-        te <- first TextView.TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelopeAnyOf types te
-
-readTextEnvelopeFromFile :: FilePath
-                         -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
-readTextEnvelopeFromFile path =
-  runExceptT $ do
-    bs <- handleIOExceptT (FileIOError path) $
-            BS.readFile path
-    firstExceptT (FileError path . TextView.TextViewAesonDecodeError)
-      . hoistEither $ Aeson.eitherDecodeStrict' bs
-
-readTextEnvelopeOfTypeFromFile
-  :: TextEnvelopeType
-  -> FilePath
-  -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
-readTextEnvelopeOfTypeFromFile expectedType path =
-  runExceptT $ do
-    te <- ExceptT (readTextEnvelopeFromFile path)
-    firstExceptT (FileError path) $ hoistEither $
-      TextView.expectTextViewOfType expectedType te
-    return te
 
 
 -- ----------------------------------------------------------------------------

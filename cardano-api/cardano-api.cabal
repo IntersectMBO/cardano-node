@@ -45,6 +45,7 @@ library
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
                         Cardano.Api.SerialiseRaw
+                        Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.Utils
 
 
