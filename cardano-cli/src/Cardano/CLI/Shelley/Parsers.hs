@@ -16,10 +16,12 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
-import           Cardano.Api.Typed hiding (PoolId)
 import           Cardano.Api.Protocol (Protocol (..))
+import           Cardano.Api.Typed hiding (PoolId)
 
 import           Cardano.Chain.Slotting (EpochSlots (..))
+import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
+import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
                      VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
@@ -33,7 +35,6 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (str)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import qualified Data.IP as IP
@@ -41,7 +42,13 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+
 import qualified Options.Applicative as Opt
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
+import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.String as Parsec
+import qualified Text.Parsec.Error  as Parsec
+
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
@@ -1551,34 +1558,23 @@ parseTxIx = toEnum <$> Atto.decimal
 
 pTxOut :: Parser TxOutAnyEra
 pTxOut =
-  Opt.option (readerFromAttoParser parseTxOut)
-    (  Opt.long "tx-out"
-    <> Opt.metavar "TX-OUT"
-    <> Opt.help "The transaction output as Address+Lovelace where Address is \
-                \the Bech32-encoded address followed by the amount in \
-                \Lovelace."
-    )
-  where
-    parseTxOut :: Atto.Parser TxOutAnyEra
-    parseTxOut =
-      TxOutAnyEra <$> parseAddressAny
-                  <*  Atto.char '+'
-                  <*> pAdaOnlyValue
-
-pAdaOnlyValue :: Atto.Parser Value
-pAdaOnlyValue = lovelaceToValue <$> parseLovelace
+    Opt.option (readerFromParsecParser parseTxOutAnyEra)
+      (  Opt.long "tx-out"
+      <> Opt.metavar "TX-OUT"
+      -- TODO: Update the help text to describe the new syntax as well.
+      <> Opt.help "The transaction output as Address+Lovelace where Address is \
+                  \the Bech32-encoded address followed by the amount in \
+                  \Lovelace."
+      )
 
 pMintMultiAsset :: Parser Value
 pMintMultiAsset =
   Opt.option
-    (Opt.eitherReader readValue)
+    (readerFromParsecParser parseValue)
       (  Opt.long "mint"
       <> Opt.metavar "VALUE"
       <> Opt.help "Mint multi-asset value(s) with the multi-asset cli syntax"
       )
-
-readValue :: String -> Either String Value
-readValue _maCliSyntax = Left "Need 2072 for MA cli syntax parser"
 
 pTxLowerBound :: Parser SlotNo
 pTxLowerBound =
@@ -2424,3 +2420,16 @@ readRational = toRational <$> readerFromAttoParser Atto.scientific
 readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
 readerFromAttoParser p =
     Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
+
+readerFromParsecParser :: Parsec.Parser a -> Opt.ReadM a
+readerFromParsecParser p =
+    Opt.eitherReader (first formatError . Parsec.parse (p <* Parsec.eof) "")
+  where
+    --TODO: the default parsec error formatting is quite good, but we could
+    -- customise it somewhat:
+    formatError err =
+      Parsec.showErrorMessages "or" "unknown parse error"
+                               "expecting" "unexpected" "end of input"
+                               (Parsec.errorMessages err)
+
+
