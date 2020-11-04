@@ -218,12 +218,13 @@ module Cardano.Api.Typed (
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
     HasTextEnvelope(..),
-    TextEnvelope,
+    TextEnvelope(..),
     TextEnvelopeType,
     TextEnvelopeDescr,
-    TextEnvelopeError,
+    textEnvelopeRawCBOR,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
+    TextEnvelopeError(..),
     readFileTextEnvelope,
     writeFileTextEnvelope,
     writeFileTextEnvelopeWithOwnerPermissions,

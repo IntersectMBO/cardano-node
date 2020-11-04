@@ -8,20 +8,22 @@ module Test.OptParse
   , noteTempFile
   ) where
 
-import           Cardano.Api.TextView (TextView (..), TextViewError, TextViewType (..))
-import           Cardano.Api.Typed (FileError, displayError, readTextEnvelopeOfTypeFromFile)
 import           Cardano.Prelude hiding (lines, readFile, stderr, stdout)
-import           Control.Monad.Catch
-import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
-import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
-import           Hedgehog.Internal.Source (getCaller)
 import           Prelude (String)
+import qualified Prelude
 
+import           Control.Monad.Catch
 import qualified GHC.Stack as GHC
+
+import           Cardano.Api.Typed
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
-import qualified Prelude
+import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
+import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
+import           Hedgehog.Internal.Source (getCaller)
+
 
 -- | Execute cardano-cli via the command line.
 --
@@ -37,7 +39,7 @@ execCardanoCLI = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI
 -- | Checks that the 'tvType' and 'tvDescription' are equivalent between two files.
 checkTextEnvelopeFormat
   :: (MonadTest m, MonadIO m, HasCallStack)
-  => TextViewType
+  => TextEnvelopeType
   -> FilePath
   -> FilePath
   -> m ()
@@ -50,12 +52,15 @@ checkTextEnvelopeFormat tve reference created = do
 
   typeTitleEquivalence refTextEnvelope createdTextEnvelope
  where
-   handleTextEnvelope :: MonadTest m => Either (FileError TextViewError) TextView -> m TextView
+   handleTextEnvelope :: MonadTest m
+                      => Either (FileError TextEnvelopeError) TextEnvelope
+                      -> m TextEnvelope
    handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
    handleTextEnvelope (Left fileErr) = failWithCustom callStack Nothing . displayError $ fileErr
 
-   typeTitleEquivalence :: MonadTest m => TextView -> TextView -> m ()
-   typeTitleEquivalence (TextView refType refTitle _) (TextView createdType createdTitle _) = do
+   typeTitleEquivalence :: MonadTest m => TextEnvelope -> TextEnvelope -> m ()
+   typeTitleEquivalence (TextEnvelope refType refTitle _)
+                        (TextEnvelope createdType createdTitle _) = do
      equivalence refType createdType
      equivalence refTitle createdTitle
 

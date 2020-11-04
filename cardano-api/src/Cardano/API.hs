@@ -187,6 +187,7 @@ module Cardano.API (
     TextEnvelopeType,
     TextEnvelopeDescr,
     TextEnvelopeError,
+    textEnvelopeRawCBOR,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
     readFileTextEnvelope,

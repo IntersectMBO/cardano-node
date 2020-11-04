@@ -10,7 +10,6 @@ import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, right)
 
-import           Cardano.Api.TextView (TextViewDescription (..), textShow)
 import           Cardano.Api.Typed
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHashOrFile,
@@ -48,7 +47,8 @@ renderShelleyGovernanceError err =
        <> " The number of staking keys: " <> textShow numVKeys
        <> " and the number of reward amounts: " <> textShow numRwdAmts
        <> " are not equivalent."
-
+  where
+    textShow x = Text.pack (show x)
 
 
 runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceCmdError IO ()
@@ -78,8 +78,8 @@ runGovernanceMIRCertificate mirPot vKeys rwdAmts (OutputFile oFp) = do
       . newExceptT
       $ writeFileTextEnvelope oFp (Just mirCertDesc) mirCert
   where
-    mirCertDesc :: TextViewDescription
-    mirCertDesc = TextViewDescription "Move Instantaneous Rewards Certificate"
+    mirCertDesc :: TextEnvelopeDescr
+    mirCertDesc = "Move Instantaneous Rewards Certificate"
 
     checkEqualKeyRewards :: [VerificationKeyFile] -> [Lovelace] -> ExceptT ShelleyGovernanceCmdError IO ()
     checkEqualKeyRewards keys rwds = do
@@ -119,8 +119,8 @@ runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
       $ writeFileTextEnvelope oFp (Just genKeyDelegCertDesc)
       $ makeGenesisKeyDelegationCertificate genesisVkHash genesisDelVkHash vrfVkHash
   where
-    genKeyDelegCertDesc :: TextViewDescription
-    genKeyDelegCertDesc = TextViewDescription "Genesis Key Delegation Certificate"
+    genKeyDelegCertDesc :: TextEnvelopeDescr
+    genKeyDelegCertDesc = "Genesis Key Delegation Certificate"
 
 runGovernanceUpdateProposal
   :: OutputFile

@@ -7,11 +7,12 @@ module Cardano.CLI.Shelley.Run.Node
 import           Cardano.Prelude hiding ((<.>))
 import           Prelude (id)
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
+import           Data.String (fromString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 
-import           Cardano.Api.TextView (TextViewDescription (..))
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
+
 import           Cardano.Api.Typed
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
@@ -83,10 +84,11 @@ runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
       $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter initialCounter vkey
   where
-    skeyDesc, vkeyDesc, ocertCtrDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "Stake Pool Operator Signing Key"
-    vkeyDesc = TextViewDescription "Stake Pool Operator Verification Key"
-    ocertCtrDesc = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show initialCounter)
+    skeyDesc, vkeyDesc, ocertCtrDesc :: TextEnvelopeDescr
+    skeyDesc = "Stake Pool Operator Signing Key"
+    vkeyDesc = "Stake Pool Operator Verification Key"
+    ocertCtrDesc = "Next certificate issue number: "
+                <> fromString (show initialCounter)
 
     initialCounter :: Word64
     initialCounter = 0
@@ -105,9 +107,9 @@ runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
   where
-    skeyDesc, vkeyDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "KES Signing Key"
-    vkeyDesc = TextViewDescription "KES Verification Key"
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "KES Signing Key"
+    vkeyDesc = "KES Verification Key"
 
 runNodeKeyGenVRF :: VerificationKeyFile -> SigningKeyFile
                  -> ExceptT ShelleyNodeCmdError IO ()
@@ -121,9 +123,9 @@ runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
   where
-    skeyDesc, vkeyDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "VRF Signing Key"
-    vkeyDesc = TextViewDescription "VRF Verification Key"
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "VRF Signing Key"
+    vkeyDesc = "VRF Verification Key"
 
 runNodeKeyHashVRF :: VerificationKeyOrFile VrfKey
                   -> Maybe OutputFile
@@ -214,8 +216,8 @@ runNodeIssueOpCert kesVerKeyOrFile
     getCounter :: OperationalCertificateIssueCounter -> Word64
     getCounter (OperationalCertificateIssueCounter n _) = n
 
-    ocertCtrDesc :: Word64 -> TextViewDescription
-    ocertCtrDesc n = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show n)
+    ocertCtrDesc :: Word64 -> TextEnvelopeDescr
+    ocertCtrDesc n = "Next certificate issue number: " <> fromString (show n)
 
     textEnvPossibleBlockIssuers
       :: [FromSomeType HasTextEnvelope

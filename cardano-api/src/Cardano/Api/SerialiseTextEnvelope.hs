@@ -1,15 +1,18 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | TextEnvelope Serialisation
 --
 module Cardano.Api.SerialiseTextEnvelope
   ( HasTextEnvelope(..)
-  , TextEnvelope
-  , TextEnvelopeType
-  , TextEnvelopeDescr
-  , TextEnvelopeError
+  , TextEnvelope(..)
+  , TextEnvelopeType(..)
+  , TextEnvelopeDescr(..)
+  , textEnvelopeRawCBOR
+  , TextEnvelopeError(..)
   , serialiseToTextEnvelope
   , deserialiseFromTextEnvelope
   , readFileTextEnvelope
@@ -33,15 +36,12 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.List as List
-import qualified Data.Text as Text
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson
-                   (FromJSON (..), ToJSON (..), Value, object, withObject,
-                    (.:), (.=))
-import           Data.Aeson.Types (Parser)
+                   (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import           Data.Aeson.Encode.Pretty
                    (Config (..), encodePretty', defConfig, keyOrder)
 
@@ -66,20 +66,15 @@ import           Cardano.Api.SerialiseCBOR
 -- Text envelopes
 --
 
-type TextEnvelope = TextView
-type TextEnvelopeType = TextViewType
-type TextEnvelopeDescr = TextViewDescription
-type TextEnvelopeError = TextViewError
+newtype TextEnvelopeType = TextEnvelopeType String
+  deriving (Eq, Show)
+  deriving newtype (IsString, Semigroup, ToJSON, FromJSON)
 
-newtype TextViewType
-  = TextViewType { unTextViewType :: ByteString }
-  deriving (Eq, IsString, Show, Semigroup)
+newtype TextEnvelopeDescr = TextEnvelopeDescr String
+  deriving (Eq, Show)
+  deriving newtype (IsString, Semigroup, ToJSON, FromJSON)
 
-newtype TextViewDescription
-  = TextViewDescription { unTextViewDescription :: ByteString }
-  deriving (Eq, IsString, Show, Semigroup)
-
--- | A 'TextView' is a structured envelope for serialised binary values
+-- | A 'TextEnvelope' is a structured envelope for serialised binary values
 -- with an external format with a semi-readable textual format.
 --
 -- It contains a \"type\" field, e.g. \"PublicKeyByron\" or \"TxSignedShelley\"
@@ -89,75 +84,74 @@ newtype TextViewDescription
 -- It also contains a \"title\" field which is free-form, and could be used
 -- to indicate the role or purpose to a reader.
 --
-data TextView = TextView
-  { tvType :: !TextViewType
-  , tvDescription :: !TextViewDescription
-  , tvRawCBOR :: !ByteString
+data TextEnvelope = TextEnvelope
+  { teType        :: !TextEnvelopeType
+  , teDescription :: !TextEnvelopeDescr
+  , teRawCBOR     :: !ByteString
   } deriving (Eq, Show)
 
-instance ToJSON TextView where
-  toJSON (TextView (TextViewType tvType') (TextViewDescription desc) rawCBOR) =
-    object [ "type"        .= Text.decodeUtf8 tvType'
-           , "description" .= Text.decodeUtf8 desc
-           , "cborHex"     .= Text.decodeUtf8 (Base16.encode rawCBOR)
+instance ToJSON TextEnvelope where
+  toJSON TextEnvelope {teType, teDescription, teRawCBOR} =
+    object [ "type"        .= teType
+           , "description" .= teDescription
+           , "cborHex"     .= Text.decodeUtf8 (Base16.encode teRawCBOR)
            ]
 
-instance FromJSON TextView where
-  parseJSON = withObject "TextView" $ \v -> TextView
-                <$> (TextViewType . Text.encodeUtf8 <$> v .: "type")
-                <*> (TextViewDescription . Text.encodeUtf8 <$> v .: "description")
-                <*> (parseJSONBase16 =<< v .: "cborHex")
+instance FromJSON TextEnvelope where
+  parseJSON = withObject "TextEnvelope" $ \v ->
+                TextEnvelope <$> (v .: "type")
+                             <*> (v .: "description")
+                             <*> (parseJSONBase16 =<< v .: "cborHex")
+    where
+      parseJSONBase16 v =
+        either fail return . Base16.decode . Text.encodeUtf8 =<< parseJSON v
 
-parseJSONBase16 :: Value -> Parser ByteString
-parseJSONBase16 v = do
-  t <- parseJSON v
-  either fail return (Base16.decode (Text.encodeUtf8 t))
+textEnvelopeJSONConfig :: Config
+textEnvelopeJSONConfig = defConfig { confCompare = textEnvelopeJSONKeyOrder }
 
-textViewJSONConfig :: Config
-textViewJSONConfig = defConfig { confCompare = textViewJSONKeyOrder }
-
-textViewJSONKeyOrder :: Text -> Text -> Ordering
-textViewJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
+textEnvelopeJSONKeyOrder :: Text -> Text -> Ordering
+textEnvelopeJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
 
 
--- | The errors that the pure 'TextView' parsing\/decoding functions can return.
+textEnvelopeRawCBOR :: TextEnvelope -> ByteString
+textEnvelopeRawCBOR = teRawCBOR
+
+
+-- | The errors that the pure 'TextEnvelope' parsing\/decoding functions can return.
 --
-data TextViewError
-  = TextViewFormatError !Text
-  | TextViewTypeError   ![TextViewType] !TextViewType -- ^ expected, actual
-  | TextViewDecodeError !DecoderError
-  | TextViewAesonDecodeError !String
+data TextEnvelopeError
+  = TextEnvelopeTypeError   ![TextEnvelopeType] !TextEnvelopeType -- ^ expected, actual
+  | TextEnvelopeDecodeError !DecoderError
+  | TextEnvelopeAesonDecodeError !String
   deriving (Eq, Show)
 
-renderTextViewError :: TextViewError -> Text
-renderTextViewError tve =
-  case tve of
-    TextViewFormatError err -> "TextView format error: " <> err
+instance Error TextEnvelopeError where
+  displayError tee =
+    case tee of
+      TextEnvelopeTypeError [TextEnvelopeType expType]
+                            (TextEnvelopeType actType) ->
+          "TextEnvelope type error: "
+       <> " Expected: " <> expType
+       <> " Actual: " <> actType
 
-    TextViewTypeError [expType] actType ->
-        "TextView type error: "
-     <> " Expected: " <> Text.decodeLatin1 (unTextViewType expType)
-     <> " Actual: " <> Text.decodeLatin1 (unTextViewType actType)
-
-    TextViewTypeError expTypes actType ->
-        "TextView type error: "
-     <> " Expected one of: "
-     <> Text.intercalate ", "
-          [ Text.decodeLatin1 (unTextViewType expType) | expType <- expTypes ]
-     <> " Actual: " <> Text.decodeLatin1 (unTextViewType actType)
-    TextViewAesonDecodeError decErr -> "TextView aeson decode error: " <> Text.pack decErr
-    TextViewDecodeError decErr -> "TextView decode error: " <> Text.pack (show decErr)
+      TextEnvelopeTypeError expTypes (TextEnvelopeType actType) ->
+          "TextEnvelope type error: "
+       <> " Expected one of: "
+       <> List.intercalate ", "
+            [ expType | TextEnvelopeType expType <- expTypes ]
+       <> " Actual: " <> actType
+      TextEnvelopeAesonDecodeError decErr -> "TextEnvelope aeson decode error: " <> decErr
+      TextEnvelopeDecodeError decErr -> "TextEnvelope decode error: " <> show decErr
 
 
--- | Check that the \"type\" of the 'TextView' is as expected.
+-- | Check that the \"type\" of the 'TextEnvelope' is as expected.
 --
 -- For example, one might check that the type is \"TxSignedShelley\".
 --
-expectTextViewOfType :: TextViewType -> TextView -> Either TextViewError ()
-expectTextViewOfType expectedType tv =
-    let actualType = tvType tv in
+expectTextEnvelopeOfType :: TextEnvelopeType -> TextEnvelope -> Either TextEnvelopeError ()
+expectTextEnvelopeOfType expectedType TextEnvelope { teType = actualType } =
     unless (expectedType == actualType) $
-      Left (TextViewTypeError [expectedType] actualType)
+      Left (TextEnvelopeTypeError [expectedType] actualType)
 
 
 -- ----------------------------------------------------------------------------
@@ -171,17 +165,13 @@ class SerialiseAsCBOR a => HasTextEnvelope a where
     textEnvelopeDefaultDescr _ = ""
 
 
-instance Error TextViewError where
-  displayError = Text.unpack . renderTextViewError
-
-
 serialiseToTextEnvelope :: forall a. HasTextEnvelope a
                         => Maybe TextEnvelopeDescr -> a -> TextEnvelope
 serialiseToTextEnvelope mbDescr a =
-    TextView {
-      tvType    = textEnvelopeType ttoken
-    , tvDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
-    , tvRawCBOR = serialiseToCBOR a
+    TextEnvelope {
+      teType    = textEnvelopeType ttoken
+    , teDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
+    , teRawCBOR = serialiseToCBOR a
     }
   where
     ttoken :: AsType a
@@ -193,9 +183,9 @@ deserialiseFromTextEnvelope :: HasTextEnvelope a
                             -> TextEnvelope
                             -> Either TextEnvelopeError a
 deserialiseFromTextEnvelope ttoken te = do
-    expectTextViewOfType (textEnvelopeType ttoken) te
-    first TextViewDecodeError $
-      deserialiseFromCBOR ttoken (tvRawCBOR te) --TODO: You have switched from CBOR to JSON
+    expectTextEnvelopeOfType (textEnvelopeType ttoken) te
+    first TextEnvelopeDecodeError $
+      deserialiseFromCBOR ttoken (teRawCBOR te) --TODO: You have switched from CBOR to JSON
 
 
 deserialiseFromTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
@@ -204,13 +194,13 @@ deserialiseFromTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
 deserialiseFromTextEnvelopeAnyOf types te =
     case List.find matching types of
       Nothing ->
-        Left (TextViewTypeError expectedTypes actualType)
+        Left (TextEnvelopeTypeError expectedTypes actualType)
 
       Just (FromSomeType ttoken f) ->
-        first TextViewDecodeError $
-          f <$> deserialiseFromCBOR ttoken (tvRawCBOR te)
+        first TextEnvelopeDecodeError $
+          f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
   where
-    actualType    = tvType te
+    actualType    = teType te
     expectedTypes = [ textEnvelopeType ttoken
                     | FromSomeType ttoken _f <- types ]
 
@@ -261,7 +251,7 @@ writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
 
 textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> ByteString
 textEnvelopeToJSON mbDescr a  =
-  LBS.toStrict $ encodePretty' textViewJSONConfig
+  LBS.toStrict $ encodePretty' textEnvelopeJSONConfig
                                (serialiseToTextEnvelope mbDescr a)
               <> "\n"
 
@@ -274,7 +264,7 @@ readFileTextEnvelope ttoken path =
     runExceptT $ do
       content <- handleIOExceptT (FileIOError path) $ BS.readFile path
       firstExceptT (FileError path) $ hoistEither $ do
-        te <- first TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
+        te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelope ttoken te
 
 
@@ -285,7 +275,7 @@ readFileTextEnvelopeAnyOf types path =
     runExceptT $ do
       content <- handleIOExceptT (FileIOError path) $ BS.readFile path
       firstExceptT (FileError path) $ hoistEither $ do
-        te <- first TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
+        te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelopeAnyOf types te
 
 
@@ -295,7 +285,7 @@ readTextEnvelopeFromFile path =
   runExceptT $ do
     bs <- handleIOExceptT (FileIOError path) $
             BS.readFile path
-    firstExceptT (FileError path . TextViewAesonDecodeError)
+    firstExceptT (FileError path . TextEnvelopeAesonDecodeError)
       . hoistEither $ Aeson.eitherDecodeStrict' bs
 
 
@@ -307,6 +297,6 @@ readTextEnvelopeOfTypeFromFile expectedType path =
   runExceptT $ do
     te <- ExceptT (readTextEnvelopeFromFile path)
     firstExceptT (FileError path) $ hoistEither $
-      expectTextViewOfType expectedType te
+      expectTextEnvelopeOfType expectedType te
     return te
 

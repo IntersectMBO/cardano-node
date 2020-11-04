@@ -17,7 +17,6 @@ import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
 
-import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
@@ -80,9 +79,9 @@ runAddressKeyGen kt (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
         . newExceptT
         $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
 
-    skeyDesc, vkeyDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "Payment Signing Key"
-    vkeyDesc = TextViewDescription "Payment Verification Key"
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "Payment Signing Key"
+    vkeyDesc = "Payment Verification Key"
 
 
 runAddressKeyHash :: VerificationKeyTextOrFile

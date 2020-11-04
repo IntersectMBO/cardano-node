@@ -16,6 +16,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
+import           Data.String (fromString)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
@@ -30,7 +31,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import qualified Cardano.Crypto.Hash as Crypto
 
 import           Cardano.Api.Shelley.Genesis
-import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -103,9 +103,9 @@ runGenesisKeyGenGenesis (VerificationKeyFile vkeyPath)
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
   where
-    skeyDesc, vkeyDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "Genesis Signing Key"
-    vkeyDesc = TextViewDescription "Genesis Verification Key"
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "Genesis Signing Key"
+    vkeyDesc = "Genesis Verification Key"
 
 
 runGenesisKeyGenDelegate :: VerificationKeyFile
@@ -130,10 +130,11 @@ runGenesisKeyGenDelegate (VerificationKeyFile vkeyPath)
           initialCounter
           (castVerificationKey vkey)  -- Cast to a 'StakePoolKey'
   where
-    skeyDesc, vkeyDesc, certCtrDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "Genesis delegate operator key"
-    vkeyDesc = TextViewDescription "Genesis delegate operator key"
-    certCtrDesc = TextViewDescription $ "Next certificate issue number: " <> BS.pack (show initialCounter)
+    skeyDesc, vkeyDesc, certCtrDesc :: TextEnvelopeDescr
+    skeyDesc = "Genesis delegate operator key"
+    vkeyDesc = "Genesis delegate operator key"
+    certCtrDesc = "Next certificate issue number: "
+               <> fromString (show initialCounter)
 
     initialCounter :: Word64
     initialCounter = 0
@@ -152,9 +153,9 @@ runGenesisKeyGenDelegateVRF (VerificationKeyFile vkeyPath)
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
   where
-    skeyDesc, vkeyDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "VRF Signing Key"
-    vkeyDesc = TextViewDescription "VRF Verification Key"
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "VRF Signing Key"
+    vkeyDesc = "VRF Verification Key"
 
 
 runGenesisKeyGenUTxO :: VerificationKeyFile -> SigningKeyFile
@@ -170,9 +171,9 @@ runGenesisKeyGenUTxO (VerificationKeyFile vkeyPath)
       . newExceptT
       $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
   where
-    skeyDesc, vkeyDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "Genesis Initial UTxO Signing Key"
-    vkeyDesc = TextViewDescription "Genesis Initial UTxO Verification Key"
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "Genesis Initial UTxO Signing Key"
+    vkeyDesc = "Genesis Initial UTxO Verification Key"
 
 
 runGenesisKeyHash :: VerificationKeyFile -> ExceptT ShelleyGenesisCmdError IO ()

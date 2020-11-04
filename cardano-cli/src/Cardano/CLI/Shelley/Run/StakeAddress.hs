@@ -12,7 +12,6 @@ import qualified Data.Text.IO as Text
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
-import           Cardano.Api.TextView (TextViewDescription (..))
 import           Cardano.Api.Typed
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
@@ -68,9 +67,9 @@ runStakeAddressKeyGen (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
       . newExceptT
       $ writeFileTextEnvelope vkFp (Just vkeyDesc) vkey
   where
-    skeyDesc, vkeyDesc :: TextViewDescription
-    skeyDesc = TextViewDescription "Stake Signing Key"
-    vkeyDesc = TextViewDescription "Stake Verification Key"
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "Stake Signing Key"
+    vkeyDesc = "Stake Verification Key"
 
 runStakeAddressKeyHash
   :: VerificationKeyOrFile StakeKey
@@ -117,8 +116,8 @@ runStakeKeyRegistrationCert stakeVerKeyOrFile (OutputFile oFp) = do
       . newExceptT
       $ writeFileTextEnvelope oFp (Just regCertDesc) regCert
   where
-    regCertDesc :: TextViewDescription
-    regCertDesc = TextViewDescription "Stake Address Registration Certificate"
+    regCertDesc :: TextEnvelopeDescr
+    regCertDesc = "Stake Address Registration Certificate"
 
 
 runStakeKeyDelegationCert
@@ -147,8 +146,8 @@ runStakeKeyDelegationCert stakeVerKeyOrFile poolVKeyOrHashOrFile (OutputFile out
       . newExceptT
       $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
   where
-    delegCertDesc :: TextViewDescription
-    delegCertDesc = TextViewDescription "Stake Address Delegation Certificate"
+    delegCertDesc :: TextEnvelopeDescr
+    delegCertDesc = "Stake Address Delegation Certificate"
 
 
 runStakeKeyDeRegistrationCert
@@ -165,5 +164,5 @@ runStakeKeyDeRegistrationCert stakeVerKeyOrFile (OutputFile oFp) = do
       . newExceptT
       $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
   where
-    deregCertDesc :: TextViewDescription
-    deregCertDesc = TextViewDescription "Stake Address Deregistration Certificate"
+    deregCertDesc :: TextEnvelopeDescr
+    deregCertDesc = "Stake Address Deregistration Certificate"
