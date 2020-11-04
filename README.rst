@@ -419,7 +419,12 @@ run *ghcid* with: ``ghcid -c "cabal v2-repl exe:cardano-node --reorder-goals"``
 Testing
 ========
 
-`cardano-node` is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
+``cardano-node`` is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
+
+Developers on ``cardano-node`` can `launch their own testnets <doc/getting-started/launching-a-testnet.md>`_ or `run the chairman tests <doc/getting-started/running-chairman-tests.md>`_ locally.
+
+Chairman tests
+--------------
 
 Debugging
 =========
