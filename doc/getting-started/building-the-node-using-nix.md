@@ -32,6 +32,24 @@ cd cardano-node
 nix-build -A scripts.mainnet.node -o mainnet-node-local
 ./mainnet-node-local
 ```
+Disk space requirements may be higher when building with Nix. As the node executes and its database grows in size, the node might run out of disk space sooner than anticipated. If many nodes lack enough disk space, nodes will be down, bringing downtime to the network. To optimize space requirements and speed up the build process you can compile the node with Nix and edit the `nix.conf` file as follows:
+```
+substituters = https://hydra.iohk.io https://cache.nixos.org/ 
+
+trusted-substituters = 
+
+trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= 
+
+max-jobs = 2 # run at most two builds at once 
+
+cores = 0 # the builder will use all available CPU cores 
+
+nix
+
+Once the node is compiled, you should run the clean up command:
+collect-garbage
+
+```
 
 ### Building under Debian/Ubuntu or CentOS
 The required versions are [GHC 8.10.2][ghc8102] and [Cabal-3.0][cabal30].
