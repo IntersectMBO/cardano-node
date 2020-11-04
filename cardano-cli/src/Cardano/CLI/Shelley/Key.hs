@@ -43,7 +43,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
-import           Cardano.Api.TextView (TextViewError (..))
 import           Cardano.Api.Typed
 
 import           Cardano.CLI.Types
@@ -135,13 +134,13 @@ deserialiseInput asType acceptedFormats inputBs =
       let textEnvRes :: Either TextEnvelopeError a
           textEnvRes =
             deserialiseFromTextEnvelope asType
-              =<< first TextViewAesonDecodeError (Aeson.eitherDecodeStrict' inputBs)
+              =<< first TextEnvelopeAesonDecodeError (Aeson.eitherDecodeStrict' inputBs)
       case textEnvRes of
         Right res -> DeserialiseInputSuccess res
 
         -- The input was valid a text envelope, but there was a type mismatch
         -- error.
-        Left err@(TextViewTypeError _ _) ->
+        Left err@TextEnvelopeTypeError{} ->
           DeserialiseInputError (InputTextEnvelopeError err)
 
         -- The input was not valid a text envelope.
@@ -209,13 +208,13 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
       let textEnvRes :: Either TextEnvelopeError b
           textEnvRes =
             deserialiseFromTextEnvelopeAnyOf textEnvTypes
-              =<< first TextViewAesonDecodeError (Aeson.eitherDecodeStrict' inputBs)
+              =<< first TextEnvelopeAesonDecodeError (Aeson.eitherDecodeStrict' inputBs)
       case textEnvRes of
         Right res -> DeserialiseInputSuccess res
 
         -- The input was valid a text envelope, but there was a type mismatch
         -- error.
-        Left err@(TextViewTypeError _ _) ->
+        Left err@TextEnvelopeTypeError{} ->
           DeserialiseInputError (InputTextEnvelopeError err)
 
         -- The input was not valid a text envelope.

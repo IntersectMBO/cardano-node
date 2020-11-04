@@ -1,5 +1,4 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -219,12 +218,13 @@ module Cardano.Api.Typed (
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
     HasTextEnvelope(..),
-    TextEnvelope,
+    TextEnvelope(..),
     TextEnvelopeType,
     TextEnvelopeDescr,
-    TextEnvelopeError,
+    textEnvelopeRawCBOR,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
+    TextEnvelopeError(..),
     readFileTextEnvelope,
     writeFileTextEnvelope,
     writeFileTextEnvelopeWithOwnerPermissions,
@@ -346,14 +346,10 @@ module Cardano.Api.Typed (
 
 import           Prelude
 
-import           Cardano.Prelude (decodeEitherBase16)
-import           Data.Aeson.Encode.Pretty (encodePretty')
 import           Data.Bifunctor (first)
-import           Data.Kind (Constraint, Type)
-import qualified Data.List as List
+import           Data.Kind (Type)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
-import           Data.Proxy (Proxy (..))
 import           Data.Scientific (toBoundedInteger)
 import           Data.String (IsString (fromString))
 import           Data.Text (Text)
@@ -370,9 +366,7 @@ import qualified Network.URI as URI
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Base58 as Base58
-import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 
@@ -380,28 +374,17 @@ import qualified Data.Map.Lazy as Map.Lazy
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
-
-import qualified Codec.Binary.Bech32 as Bech32
 
 import           Control.Applicative
 import           Control.Monad
 --import Control.Monad.IO.Class
 import           Control.Concurrent.STM
-import           Control.Exception (Exception (..), IOException, throwIO)
-import qualified Control.Exception as Exception
-import           Control.Monad.Trans.Except (ExceptT (..))
-import           Control.Monad.Trans.Except.Extra
 import           Control.Tracer (nullTracer)
-import           System.Directory (removeFile, renameFile)
-import           System.FilePath (splitFileName, (<.>))
-import           System.IO (Handle, hClose, openTempFile)
 
-
-import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, (.:), (.=))
+import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 
@@ -511,36 +494,25 @@ import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)
 import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
-import qualified Cardano.Api.TextView as TextView
 
 import           Ouroboros.Network.Protocol.ChainSync.Client as ChainSync
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client as StateQuery
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmission
 
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
+import           Cardano.Api.Key
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.Utils
+
 {- HLINT ignore "Redundant flip" -}
-
--- ----------------------------------------------------------------------------
--- Cardano eras, sometimes we have to distinguish them
---
-
--- | A type used as a tag to distinguish the Byron era.
-data Byron
-
--- | A type used as a tag to distinguish the Shelley era.
-data Shelley
-
-
-class HasTypeProxy t where
-  -- | A family of singleton types used in this API to indicate which type to
-  -- use where it would otherwise be ambiguous or merely unclear.
-  --
-  -- Values of this type are passed to
-  --
-  data AsType t
-
-  proxyToAsType :: Proxy t -> AsType t
-
 
 -- ----------------------------------------------------------------------------
 -- Keys key keys!
@@ -557,70 +529,6 @@ class HasTypeProxy t where
 -- distinguish the key /role/. These are type level distinctions, so each of
 -- these roles is a type level tag.
 --
-
--- | An interface for cryptographic keys used for signatures with a 'SigningKey'
--- and a 'VerificationKey' key.
---
--- This interface does not provide actual signing or verifying functions since
--- this API is concerned with the management of keys: generating and
--- serialising.
---
-class (Eq (VerificationKey keyrole),
-       Show (VerificationKey keyrole),
-       SerialiseAsRawBytes (Hash keyrole),
-       HasTextEnvelope (VerificationKey keyrole),
-       HasTextEnvelope (SigningKey keyrole))
-    => Key keyrole where
-
-    -- | The type of cryptographic verification key, for each key role.
-    data VerificationKey keyrole :: Type
-
-    -- | The type of cryptographic signing key, for each key role.
-    data SigningKey keyrole :: Type
-
-    -- | Get the corresponding verification key from a signing key.
-    getVerificationKey :: SigningKey keyrole -> VerificationKey keyrole
-
-    -- | Generate a 'SigningKey' deterministically, given a 'Crypto.Seed'. The
-    -- required size of the seed is given by 'deterministicSigningKeySeedSize'.
-    --
-    deterministicSigningKey :: AsType keyrole -> Crypto.Seed -> SigningKey keyrole
-    deterministicSigningKeySeedSize :: AsType keyrole -> Word
-
-    verificationKeyHash :: VerificationKey keyrole -> Hash keyrole
-
--- TODO: We should move this into the Key type class, with the existing impl as the default impl.
--- For KES we can then override it to keep the seed and key in mlocked memory at all times.
--- | Generate a 'SigningKey' using a seed from operating system entropy.
---
-generateSigningKey :: Key keyrole => AsType keyrole -> IO (SigningKey keyrole)
-generateSigningKey keytype = do
-    seed <- Crypto.readSeedFromSystemEntropy seedSize
-    return $! deterministicSigningKey keytype seed
-  where
-    seedSize = deterministicSigningKeySeedSize keytype
-
-
--- | Some key roles share the same representation and it is sometimes
--- legitimate to change the role of a key.
---
-class CastVerificationKeyRole keyroleA keyroleB where
-
-    -- | Change the role of a 'VerificationKey', if the representation permits.
-    castVerificationKey :: VerificationKey keyroleA -> VerificationKey keyroleB
-
-class CastSigningKeyRole keyroleA keyroleB where
-
-    -- | Change the role of a 'SigningKey', if the representation permits.
-    castSigningKey :: SigningKey keyroleA -> SigningKey keyroleB
-
-
-data family Hash keyrole :: Type
-
-class CastHash keyroleA keyroleB where
-
-    castHash :: Hash keyroleA -> Hash keyroleB
-
 
 -- ----------------------------------------------------------------------------
 -- Addresses
@@ -2825,222 +2733,6 @@ submitTxToNodeLocal connctInfo tx = do
 
 
 -- ----------------------------------------------------------------------------
--- CBOR serialisation
---
-
-class HasTypeProxy a => SerialiseAsCBOR a where
-    serialiseToCBOR :: a -> ByteString
-    deserialiseFromCBOR :: AsType a -> ByteString -> Either CBOR.DecoderError a
-
-    default serialiseToCBOR :: ToCBOR a => a -> ByteString
-    serialiseToCBOR = CBOR.serialize'
-
-    default deserialiseFromCBOR :: FromCBOR a
-                                => AsType a
-                                -> ByteString
-                                -> Either CBOR.DecoderError a
-    deserialiseFromCBOR _proxy = CBOR.decodeFull'
-
-
--- ----------------------------------------------------------------------------
--- JSON serialisation
---
-
-newtype JsonDecodeError = JsonDecodeError String
-
-serialiseToJSON :: ToJSON a => a -> ByteString
-serialiseToJSON = LBS.toStrict . Aeson.encode
-
-deserialiseFromJSON :: FromJSON a
-                    => AsType a
-                    -> ByteString
-                    -> Either JsonDecodeError a
-deserialiseFromJSON _proxy = either (Left . JsonDecodeError) Right
-                           . Aeson.eitherDecodeStrict'
-
-
--- ----------------------------------------------------------------------------
--- Raw binary serialisation
---
-
-class HasTypeProxy a => SerialiseAsRawBytes a where
-
-  serialiseToRawBytes :: a -> ByteString
-
-  deserialiseFromRawBytes :: AsType a -> ByteString -> Maybe a
-
-serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
-serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
-
-deserialiseFromRawBytesHex :: SerialiseAsRawBytes a
-                           => AsType a -> ByteString -> Maybe a
-deserialiseFromRawBytesHex proxy hex = case decodeEitherBase16 hex of
-  Right raw -> deserialiseFromRawBytes proxy raw
-  Left _ -> Nothing
-
--- | For use with @deriving via@, to provide 'Show' and\/or 'IsString' instances
--- using a hex encoding, based on the 'SerialiseAsRawBytes' instance.
---
--- > deriving (Show, IsString) via (UsingRawBytesHex Blah)
---
-newtype UsingRawBytesHex a = UsingRawBytesHex a
-
-instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
-    show (UsingRawBytesHex x) = show (serialiseToRawBytesHex x)
-
-instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
-    fromString str =
-      case decodeEitherBase16 (BSC.pack str) of
-        Right raw -> case deserialiseFromRawBytes ttoken raw of
-          Just x  -> UsingRawBytesHex x
-          Nothing -> error ("fromString: cannot deserialise " ++ show str)
-        Left msg -> error ("fromString: invalid hex " ++ show str ++ ", " ++ msg)
-      where
-        ttoken :: AsType a
-        ttoken = proxyToAsType Proxy
-
-
--- ----------------------------------------------------------------------------
--- Bech32 Serialisation
---
-
-class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
-
-    -- | The human readable prefix to use when encoding this value to Bech32.
-    --
-    bech32PrefixFor :: a -> Text
-
-    -- | The set of human readable prefixes that can be used for this type.
-    --
-    bech32PrefixesPermitted :: AsType a -> [Text]
-
-
-serialiseToBech32 :: SerialiseAsBech32 a => a -> Text
-serialiseToBech32 a =
-    Bech32.encodeLenient
-      humanReadablePart
-      (Bech32.dataPartFromBytes (serialiseToRawBytes a))
-  where
-    humanReadablePart =
-      case Bech32.humanReadablePartFromText (bech32PrefixFor a) of
-        Right p  -> p
-        Left err -> error $ "serialiseToBech32: invalid prefix "
-                         ++ show (bech32PrefixFor a)
-                         ++ ", " ++ show err
-
-deserialiseFromBech32 :: SerialiseAsBech32 a
-                      => AsType a -> Text -> Either Bech32DecodeError a
-deserialiseFromBech32 asType bech32Str = do
-    (prefix, dataPart) <- Bech32.decodeLenient bech32Str
-                            ?!. Bech32DecodingError
-
-    let actualPrefix      = Bech32.humanReadablePartToText prefix
-        permittedPrefixes = bech32PrefixesPermitted asType
-    guard (actualPrefix `elem` permittedPrefixes)
-      ?! Bech32UnexpectedPrefix actualPrefix (Set.fromList permittedPrefixes)
-
-    payload <- Bech32.dataPartToBytes dataPart
-                 ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
-
-    value <- deserialiseFromRawBytes asType payload
-               ?! Bech32DeserialiseFromBytesError payload
-
-    let expectedPrefix = bech32PrefixFor value
-    guard (actualPrefix == expectedPrefix)
-      ?! Bech32WrongPrefix actualPrefix expectedPrefix
-
-    return value
-
-deserialiseAnyOfFromBech32
-  :: forall b.
-     [FromSomeType SerialiseAsBech32 b]
-  -> Text
-  -> Either Bech32DecodeError b
-deserialiseAnyOfFromBech32 types bech32Str = do
-    (prefix, dataPart) <- Bech32.decodeLenient bech32Str
-                            ?!. Bech32DecodingError
-
-    let actualPrefix = Bech32.humanReadablePartToText prefix
-
-    FromSomeType actualType fromType <-
-      findForPrefix actualPrefix
-        ?! Bech32UnexpectedPrefix actualPrefix permittedPrefixes
-
-    payload <- Bech32.dataPartToBytes dataPart
-                 ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
-
-    value <- deserialiseFromRawBytes actualType payload
-               ?! Bech32DeserialiseFromBytesError payload
-
-    let expectedPrefix = bech32PrefixFor value
-    guard (actualPrefix == expectedPrefix)
-      ?! Bech32WrongPrefix actualPrefix expectedPrefix
-
-    return (fromType value)
-  where
-    findForPrefix
-      :: Text
-      -> Maybe (FromSomeType SerialiseAsBech32 b)
-    findForPrefix prefix =
-      List.find
-        (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)
-        types
-
-    permittedPrefixes :: Set Text
-    permittedPrefixes =
-      Set.fromList $ concat
-        [ bech32PrefixesPermitted ttoken
-        | FromSomeType ttoken _f <- types
-        ]
-
--- | Bech32 decoding error.
-data Bech32DecodeError =
-
-       -- | There was an error decoding the string as Bech32.
-       Bech32DecodingError !Bech32.DecodingError
-
-       -- | The human-readable prefix in the Bech32-encoded string is not one
-       -- of the ones expected.
-     | Bech32UnexpectedPrefix !Text !(Set Text)
-
-       -- | There was an error in extracting a 'ByteString' from the data part of
-       -- the Bech32-encoded string.
-     | Bech32DataPartToBytesError !Text
-
-       -- | There was an error in deserialising the bytes into a value of the
-       -- expected type.
-     | Bech32DeserialiseFromBytesError !ByteString
-
-       -- | The human-readable prefix in the Bech32-encoded string does not
-       -- correspond to the prefix that should be used for the payload value.
-     | Bech32WrongPrefix !Text !Text
-
-  deriving (Eq, Show)
-
-instance Error Bech32DecodeError where
-  displayError err = case err of
-    Bech32DecodingError decErr -> show decErr -- TODO
-
-    Bech32UnexpectedPrefix actual permitted ->
-        "Unexpected Bech32 prefix: the actual prefix is " <> show actual
-     <> ", but it was expected to be "
-     <> List.intercalate " or " (map show (Set.toList permitted))
-
-    Bech32DataPartToBytesError _dataPart ->
-        "There was an error in extracting the bytes from the data part of the"
-     <> " Bech32-encoded string."
-
-    Bech32DeserialiseFromBytesError _bytes ->
-        "There was an error in deserialising the data part of the "
-     <> "Bech32-encoded string into a value of the expected type."
-
-    Bech32WrongPrefix actual expected ->
-        "Mismatch in the Bech32 prefix: the actual prefix is " <> show actual
-     <> ", but the prefix for this payload value should be " <> show expected
-
-
-
--- ----------------------------------------------------------------------------
 -- Address Serialisation
 --
 
@@ -3059,216 +2751,8 @@ class HasTypeProxy addr => SerialiseAddress addr where
 
 
 -- ----------------------------------------------------------------------------
--- TextEnvelope Serialisation
---
-
-type TextEnvelope = TextView.TextView
-type TextEnvelopeType = TextView.TextViewType
-type TextEnvelopeDescr = TextView.TextViewDescription
-
-class SerialiseAsCBOR a => HasTextEnvelope a where
-    textEnvelopeType :: AsType a -> TextEnvelopeType
-
-    textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
-    textEnvelopeDefaultDescr _ = ""
-
-type TextEnvelopeError = TextView.TextViewError
-
-data FileError e = FileError   FilePath e
-                 | FileErrorTempFile
-                     FilePath
-                     -- ^ Target path
-                     FilePath
-                     -- ^ Temporary path
-                     Handle
-                 | FileIOError FilePath IOException
-  deriving Show
-
-instance Error e => Error (FileError e) where
-  displayError (FileErrorTempFile targetPath tempPath h)=
-    "Error creating temporary file at: " ++ tempPath ++
-    "/n" ++ "Target path: " ++ targetPath ++
-    "/n" ++ "Handle: " ++ show h
-  displayError (FileIOError path ioe) =
-    path ++ ": " ++ displayException ioe
-  displayError (FileError path e) =
-    path ++ ": " ++ displayError e
-
-instance Error TextView.TextViewError where
-  displayError = Text.unpack . TextView.renderTextViewError
-
-serialiseToTextEnvelope :: forall a. HasTextEnvelope a
-                        => Maybe TextEnvelopeDescr -> a -> TextEnvelope
-serialiseToTextEnvelope mbDescr a =
-    TextView.TextView {
-      TextView.tvType    = textEnvelopeType ttoken
-    , TextView.tvDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
-    , TextView.tvRawCBOR = serialiseToCBOR a
-    }
-  where
-    ttoken :: AsType a
-    ttoken = proxyToAsType Proxy
-
-
-deserialiseFromTextEnvelope :: HasTextEnvelope a
-                            => AsType a
-                            -> TextEnvelope
-                            -> Either TextEnvelopeError a
-deserialiseFromTextEnvelope ttoken te = do
-    TextView.expectTextViewOfType (textEnvelopeType ttoken) te
-    first TextView.TextViewDecodeError $
-      deserialiseFromCBOR ttoken (TextView.tvRawCBOR te) --TODO: You have switched from CBOR to JSON
-
-data FromSomeType (c :: Type -> Constraint) b where
-     FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
-
-
-deserialiseFromTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                                 -> TextEnvelope
-                                 -> Either TextEnvelopeError b
-deserialiseFromTextEnvelopeAnyOf types te =
-    case List.find matching types of
-      Nothing ->
-        Left (TextView.TextViewTypeError expectedTypes actualType)
-
-      Just (FromSomeType ttoken f) ->
-        first TextView.TextViewDecodeError $
-          f <$> deserialiseFromCBOR ttoken (TextView.tvRawCBOR te)
-  where
-    actualType    = TextView.tvType te
-    expectedTypes = [ textEnvelopeType ttoken
-                    | FromSomeType ttoken _f <- types ]
-
-    matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
-
-writeFileWithOwnerPermissions
-  :: FilePath
-  -> ByteString
-  -> IO (Either (FileError ()) ())
-writeFileWithOwnerPermissions targetPath a = do
-  let (targetDir, targetFile) = splitFileName targetPath
-  Exception.bracketOnError
-    (openTempFile targetDir $ targetFile <.> "tmp")
-    (\(tmpPath, fHandle) -> do
-      hClose fHandle >> removeFile tmpPath
-      return . Left $ FileErrorTempFile targetPath tmpPath fHandle)
-    (\(tmpPath, fHandle) -> do
-        BS.hPut fHandle a
-        hClose fHandle
-        renameFile tmpPath targetPath
-        return $ Right ())
-
-writeFileTextEnvelope :: HasTextEnvelope a
-                      => FilePath
-                      -> Maybe TextEnvelopeDescr
-                      -> a
-                      -> IO (Either (FileError ()) ())
-writeFileTextEnvelope path mbDescr a =
-    runExceptT $ do
-      handleIOExceptT (FileIOError path) $ BS.writeFile path content
-  where
-    content = textEnvelopeToJSON mbDescr a
-
-writeFileTextEnvelopeWithOwnerPermissions
-  :: HasTextEnvelope a
-  => FilePath
-  -> Maybe TextEnvelopeDescr
-  -> a
-  -> IO (Either (FileError ()) ())
-writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
-  writeFileWithOwnerPermissions targetPath content
- where
-  content = textEnvelopeToJSON mbDescr a
-
-
-textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> ByteString
-textEnvelopeToJSON mbDescr a  =
-  LBS.toStrict $ encodePretty' TextView.textViewJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
-
-readFileTextEnvelope :: HasTextEnvelope a
-                     => AsType a
-                     -> FilePath
-                     -> IO (Either (FileError TextEnvelopeError) a)
-readFileTextEnvelope ttoken path =
-    runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ BS.readFile path
-      firstExceptT (FileError path) $ hoistEither $ do
-        te <- first TextView.TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelope ttoken te
-
-
-readFileTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                          -> FilePath
-                          -> IO (Either (FileError TextEnvelopeError) b)
-readFileTextEnvelopeAnyOf types path =
-    runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ BS.readFile path
-      firstExceptT (FileError path) $ hoistEither $ do
-        te <- first TextView.TextViewAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelopeAnyOf types te
-
-readTextEnvelopeFromFile :: FilePath
-                         -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
-readTextEnvelopeFromFile path =
-  runExceptT $ do
-    bs <- handleIOExceptT (FileIOError path) $
-            BS.readFile path
-    firstExceptT (FileError path . TextView.TextViewAesonDecodeError)
-      . hoistEither $ Aeson.eitherDecodeStrict' bs
-
-readTextEnvelopeOfTypeFromFile
-  :: TextEnvelopeType
-  -> FilePath
-  -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
-readTextEnvelopeOfTypeFromFile expectedType path =
-  runExceptT $ do
-    te <- ExceptT (readTextEnvelopeFromFile path)
-    firstExceptT (FileError path) $ hoistEither $
-      TextView.expectTextViewOfType expectedType te
-    return te
-
-
--- ----------------------------------------------------------------------------
--- Error reporting
---
-
-class Show e => Error e where
-
-    displayError :: e -> String
-
-instance Error () where
-    displayError () = ""
-
--- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
--- necessary use IO exceptions.
---
-throwErrorAsException :: Error e => e -> IO a
-throwErrorAsException e = throwIO (ErrorAsException e)
-
-data ErrorAsException where
-     ErrorAsException :: Error e => e -> ErrorAsException
-
-instance Show ErrorAsException where
-    show (ErrorAsException e) = show e
-
-instance Exception ErrorAsException where
-    displayException (ErrorAsException e) = displayError e
-
--- ----------------------------------------------------------------------------
 -- Key instances
 --
-
-instance HasTypeProxy a => HasTypeProxy (VerificationKey a) where
-    data AsType (VerificationKey a) = AsVerificationKey (AsType a)
-    proxyToAsType _ = AsVerificationKey (proxyToAsType (Proxy :: Proxy a))
-
-instance HasTypeProxy a => HasTypeProxy (SigningKey a) where
-    data AsType (SigningKey a) = AsSigningKey (AsType a)
-    proxyToAsType _ = AsSigningKey (proxyToAsType (Proxy :: Proxy a))
-
-instance HasTypeProxy a => HasTypeProxy (Hash a) where
-    data AsType (Hash a) = AsHash (AsType a)
-    proxyToAsType _ = AsHash (proxyToAsType (Proxy :: Proxy a))
 
 -- | Map the various Shelley key role types into corresponding 'Shelley.KeyRole'
 -- types.
@@ -4730,14 +4214,3 @@ instance HasTextEnvelope (SigningKey VrfKey) where
         proxy :: Proxy (Shelley.VRF StandardCrypto)
         proxy = Proxy
 
---
--- Utils
---
-
-(?!) :: Maybe a -> e -> Either e a
-Nothing ?! e = Left e
-Just x  ?! _ = Right x
-
-(?!.) :: Either e a -> (e -> e') -> Either e' a
-Left  e ?!. f = Left (f e)
-Right x ?!. _ = Right x
