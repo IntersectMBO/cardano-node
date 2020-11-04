@@ -486,6 +486,7 @@ import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
+import qualified Shelley.Spec.Ledger.Hashing as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.MetaData as Shelley
@@ -1446,8 +1447,8 @@ makeShelleyKeyWitness :: TxBody Shelley
                       -> ShelleyWitnessSigningKey
                       -> Witness Shelley
 makeShelleyKeyWitness (ShelleyTxBody txbody _) =
-    let txhash :: Shelley.Hash StandardCrypto (Shelley.TxBody StandardShelley)
-        txhash = Crypto.hashWith CBOR.serialize' txbody
+    let txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
+        txhash = Shelley.hashAnnotated txbody
 
         -- To allow sharing of the txhash computation across many signatures we
         -- define and share the txhash outside the lambda for the signing key:
