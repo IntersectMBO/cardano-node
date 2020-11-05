@@ -24,7 +24,6 @@ import           Control.Tracer
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import           Data.Version (showVersion)
-import           GHC.Clock (getMonotonicTimeNSec)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
@@ -36,7 +35,6 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 
-import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
@@ -129,8 +127,6 @@ runNode cmdPc = do
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
-    upTimeThread <- Async.async $ traceNodeUpTime (appendName "metrics" trace) =<< getMonotonicTimeNSec
-
     -- This IORef contains node kernel structure which holds node kernel.
     -- Used for ledger queries and peer connection status.
     nodeKernelData :: NodeKernelData blk <- mkNodeKernelData
@@ -139,7 +135,6 @@ runNode cmdPc = do
 
     peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
     handleSimpleNode p trace tracers nc (setNodeKernel nodeKernelData)
-    Async.uninterruptibleCancel upTimeThread
     Async.uninterruptibleCancel peersThread
 
     shutdownLoggingLayer loggingLayer
@@ -172,19 +167,6 @@ setupTrace loggingLayer = do
     hostname = do
       hn0 <- pack <$> getHostName
       return $ take 8 $ fst $ breakOn "." hn0
-
--- | The node sends its real up time, every second.
-traceNodeUpTime
-  :: Trace IO Text
-  -> Word64
-  -> IO ()
-traceNodeUpTime tr nodeLaunchTime = do
-  now <- getMonotonicTimeNSec
-  let upTimeInNs = now - nodeLaunchTime
-  meta <- mkLOMeta Notice Public
-  traceNamedObject tr (meta, LogValue "upTime" (Nanoseconds upTimeInNs))
-  threadDelay 1000000
-  traceNodeUpTime tr nodeLaunchTime
 
 handlePeersListSimple
   :: Trace IO Text
