@@ -12,7 +12,9 @@ module Test.Golden.Shelley
 import           Test.Golden.Shelley.Address.Build (golden_shelleyAddressBuild)
 import           Test.Golden.Shelley.Address.Info (golden_shelleyAddressInfo)
 import           Test.Golden.Shelley.Address.KeyGen (golden_shelleyAddressExtendedKeyGen,
-                   golden_shelleyAddressKeyGen)
+                   golden_shelleyAddressExtendedKeyGen_bech32,
+                   golden_shelleyAddressExtendedKeyGen_te, golden_shelleyAddressKeyGen,
+                   golden_shelleyAddressKeyGen_bech32, golden_shelleyAddressKeyGen_te)
 import           Test.Golden.Shelley.Genesis.Create (golden_shelleyGenesisCreate)
 import           Test.Golden.Shelley.Genesis.InitialTxIn (golden_shelleyGenesisInitialTxIn)
 import           Test.Golden.Shelley.Genesis.KeyGenDelegate (golden_shelleyGenesisKeyGenDelegate)
@@ -96,7 +98,11 @@ keyTests =
     $ H.Group "TextEnvelope Key Goldens"
         [ ("golden_shelleyAddressInfo", golden_shelleyAddressInfo)
         , ("golden_shelleyAddressKeyGen", golden_shelleyAddressKeyGen)
+        , ("golden_shelleyAddressKeyGen_bech32", golden_shelleyAddressKeyGen_bech32)
+        , ("golden_shelleyAddressKeyGen_te", golden_shelleyAddressKeyGen_te)
         , ("golden_shelleyAddressExtendedKeyGen", golden_shelleyAddressExtendedKeyGen)
+        , ("golden_shelleyAddressExtendedKeyGen_bech32", golden_shelleyAddressExtendedKeyGen_bech32)
+        , ("golden_shelleyAddressExtendedKeyGen_te", golden_shelleyAddressExtendedKeyGen_te)
         , ("golden_shelleyAddressBuild", golden_shelleyAddressBuild)
         , ("golden_shelleyExtendedPaymentKeys", golden_shelleyExtendedPaymentKeys)
         , ("golden_shelleyExtendedPaymentKeys_bech32", golden_shelleyExtendedPaymentKeys_bech32)
