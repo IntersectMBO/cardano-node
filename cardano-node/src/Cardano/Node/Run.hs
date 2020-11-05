@@ -77,8 +77,7 @@ import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                      gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Protocol (mkConsensusProtocol,
-                     renderProtocolInstantiationError)
+import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
