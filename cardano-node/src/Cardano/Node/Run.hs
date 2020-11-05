@@ -23,6 +23,7 @@ import           Control.Monad.Trans.Except.Extra (left)
 import           Control.Tracer
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
+import           Data.Time.Clock (getCurrentTime)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
@@ -35,7 +36,8 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 
-import           Cardano.BM.Data.LogItem (LOContent (..), PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
+                     mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -43,12 +45,11 @@ import           Paths_cardano_node (version)
 
 import qualified Cardano.Crypto.Libsodium as Crypto
 
-import           Cardano.Config.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
-                     createLoggingLayer, shutdownLoggingLayer)
+                     createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                      PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
-                     makeNodeConfiguration, ncProtocol, parseNodeConfigurationFP)
+                     makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
@@ -76,8 +77,8 @@ import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                      gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Protocol (SomeConsensusProtocol (..), mkConsensusProtocol,
-                     renderProtocolInstantiationError)
+import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
+import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
@@ -106,9 +107,17 @@ runNode cmdPc = do
                            pure ()
       Nothing -> pure ()
 
+    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc
+
+    SomeConsensusProtocol (p :: Consensus.Protocol IO blk (BlockProtocol blk)) <-
+      case eitherSomeProtocol of
+        Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
+        Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
+
     eLoggingLayer <- runExceptT $ createLoggingLayer
                      (Text.pack (showVersion version))
                      nc
+                     p
 
     loggingLayer <- case eLoggingLayer of
                       Left err -> putTextLn (show err) >> exitFailure
@@ -117,15 +126,7 @@ runNode cmdPc = do
     !trace <- setupTrace loggingLayer
     let tracer = contramap pack $ toLogObject trace
 
-
     logTracingVerbosity nc tracer
-
-    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc
-
-    SomeConsensusProtocol (p :: Consensus.Protocol IO blk (BlockProtocol blk)) <-
-      case eitherSomeProtocol of
-        Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
-        Right (SomeConsensusProtocol p) -> pure $ SomeConsensusProtocol p
 
     -- This IORef contains node kernel structure which holds node kernel.
     -- Used for ledger queries and peer connection status.
@@ -196,7 +197,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   let pInfo@ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
       tracer = toLogObject trace
 
-  createTracers nc trace tracer cfg
+  createTracers nc trace tracer
 
   (publicIPv4SocketOrAddr
     , publicIPv6SocketOrAddr
@@ -314,25 +315,23 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
     :: NodeConfiguration
     -> Trace IO Text
     -> Tracer IO Text
-    -> Consensus.TopLevelConfig blk
     -> IO ()
   createTracers NodeConfiguration { ncValidateDB }
-                tr tracer cfg = do
+                tr tracer = do
+    let ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
 
-         traceWith tracer $
-           "System started at " <> show (getSystemStart $ Consensus.configBlock cfg)
+    meta <- mkLOMeta Notice Public
+    traceNamedObject (appendName "networkMagic" tr)
+                     (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
 
-         meta <- mkLOMeta Notice Public
-         let rTr = appendName "release" tr
-             nTr = appendName "networkMagic" tr
-             vTr = appendName "version" tr
-             cTr = appendName "commit"  tr
-         traceNamedObject rTr (meta, LogMessage . Text.pack . protocolName $ ncProtocol nc)
-         traceNamedObject nTr (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
-         traceNamedObject vTr (meta, LogMessage . pack . showVersion $ version)
-         traceNamedObject cTr (meta, LogMessage gitRev)
+    traceNodeBasicInfo tr =<< nodeBasicInfo nc p =<< getCurrentTime
 
-         when ncValidateDB $ traceWith tracer "Performing DB validation"
+    when ncValidateDB $ traceWith tracer "Performing DB validation"
+
+  traceNodeBasicInfo :: Trace IO Text -> [LogObject Text] -> IO ()
+  traceNodeBasicInfo tr basicInfoItems =
+    forM_ basicInfoItems $ \(LogObject nm mt content) ->
+      traceNamedObject (appendName nm tr) (mt, content)
 
 --------------------------------------------------------------------------------
 -- Helper functions
