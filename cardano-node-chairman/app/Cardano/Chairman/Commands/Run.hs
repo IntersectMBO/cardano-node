@@ -19,12 +19,14 @@ import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Prelude hiding (option)
 import           Control.Monad.Class.MonadTime (DiffTime)
-import           Control.Tracer (stdoutTracer)
+import           Control.Tracer (Tracer (..), stdoutTracer)
 import           Options.Applicative
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
 import           Ouroboros.Network.Block (BlockNo)
 
+import qualified Data.Time.Clock as DTC
 import qualified Options.Applicative as Opt
+import qualified System.IO as IO
 
 --TODO: replace this with the new stuff from Cardano.Api.Protocol
 mkNodeClientProtocol :: Protocol -> SomeNodeClientProtocol
@@ -138,7 +140,7 @@ run RunOpts
   let someNodeClientProtocol = mkNodeClientProtocol ptcl
 
   chairmanTest
-    stdoutTracer
+    (timed stdoutTracer)
     someNodeClientProtocol
     caNetworkMagic
     caSecurityParam
@@ -147,6 +149,12 @@ run RunOpts
     caSocketPaths
 
   return ()
+
+timed :: Tracer IO a -> Tracer IO a
+timed (Tracer runTracer) = Tracer $ \a -> do
+  ts <- DTC.getCurrentTime
+  IO.putStr ("[" <> show ts <> "] ")
+  runTracer a
 
 cmdRun :: Mod CommandFields (IO ())
 cmdRun = command "run"  $ flip info idm $ run <$> parseRunOpts
