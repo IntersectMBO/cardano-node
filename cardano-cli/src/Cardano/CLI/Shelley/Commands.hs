@@ -266,6 +266,7 @@ data QueryCmd =
   | QueryStakeAddressInfo Protocol StakeAddress NetworkId (Maybe OutputFile)
   | QueryUTxO Protocol QueryFilter NetworkId (Maybe OutputFile)
   | QueryLedgerState Protocol NetworkId (Maybe OutputFile)
+  | QueryProtocolState Protocol NetworkId (Maybe OutputFile)
   deriving (Eq, Show)
 
 renderQueryCmd :: QueryCmd -> Text
@@ -277,6 +278,7 @@ renderQueryCmd cmd =
     QueryStakeAddressInfo {} -> "query stake-address-info"
     QueryUTxO {} -> "query utxo"
     QueryLedgerState {} -> "query ledger-state"
+    QueryProtocolState {} -> "query protocol-state"
 
 data GovernanceCmd
   = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Lovelace] OutputFile

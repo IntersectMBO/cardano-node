@@ -33,6 +33,7 @@ import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
 import qualified Cardano.Ledger.Core as Core
 
+import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import           Shelley.Spec.Ledger.BlockChain (HashHeader (..))
 import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
@@ -44,6 +45,8 @@ import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
 import qualified Shelley.Spec.Ledger.Rewards as Ledger
+import qualified Shelley.Spec.Ledger.STS.Prtcl as Ledger
+import qualified Shelley.Spec.Ledger.STS.Tickn as Ledger
 import           Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
@@ -133,6 +136,9 @@ deriving instance ToJSON (Ledger.PParams' StrictMaybe StandardShelley)
 deriving instance ToJSON (Ledger.PState StandardShelley)
 deriving instance ToJSON (Ledger.StakeReference StandardShelley)
 deriving instance ToJSON (Ledger.UTxOState StandardShelley)
+deriving instance ToJSON (Ledger.PrtclState StandardCrypto)
+deriving instance ToJSON Ledger.TicknState
+deriving instance ToJSON (Ledger.ChainDepState StandardCrypto)
 
 deriving instance ToJSONKey Ledger.Ptr
 deriving instance ToJSONKey (Ledger.FutureGenDeleg StandardCrypto)
