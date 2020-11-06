@@ -782,6 +782,11 @@ pGenesisCmd =
              Opt.progDesc ("Create a Shelley genesis file from a genesis "
                         ++ "template and genesis/delegation/spending keys."))
 
+      , Opt.command "create-staked"
+          (Opt.info pGenesisCreateStaked $
+             Opt.progDesc ("Create a staked Shelley genesis file from a genesis "
+                        ++ "template and genesis/delegation/spending keys."))
+
       , Opt.command "hash"
           (Opt.info pGenesisHash $
              Opt.progDesc "Compute the hash of a genesis file")
@@ -823,8 +828,24 @@ pGenesisCmd =
                     <*> pGenesisNumGenesisKeys
                     <*> pGenesisNumUTxOKeys
                     <*> pMaybeSystemStart
-                    <*> pInitialSupply
+                    <*> pInitialSupplyNonDelegated
                     <*> pNetworkId
+
+    pGenesisCreateStaked :: Parser GenesisCmd
+    pGenesisCreateStaked =
+      GenesisCreateStaked
+        <$> pGenesisDir
+        <*> pGenesisNumGenesisKeys
+        <*> pGenesisNumUTxOKeys
+        <*> pGenesisNumPools
+        <*> pGenesisNumStDelegs
+        <*> pMaybeSystemStart
+        <*> pInitialSupplyNonDelegated
+        <*> pInitialSupplyDelegated
+        <*> pNetworkId
+        <*> pBulkPoolCredFiles
+        <*> pBulkPoolsPerFile
+        <*> pStuffedUtxoCount
 
     pGenesisHash :: Parser GenesisCmd
     pGenesisHash =
@@ -867,18 +888,73 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
+    pGenesisNumPools :: Parser Word
+    pGenesisNumPools =
+        Opt.option Opt.auto
+          (  Opt.long "gen-pools"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of stake pool credential sets to make [default is 0]."
+          <> Opt.value 0
+          )
+
+    pGenesisNumStDelegs :: Parser Word
+    pGenesisNumStDelegs =
+        Opt.option Opt.auto
+          (  Opt.long "gen-stake-delegs"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of stake delegator credential sets to make [default is 0]."
+          <> Opt.value 0
+          )
+
+    pStuffedUtxoCount :: Parser Word
+    pStuffedUtxoCount =
+        Opt.option Opt.auto
+          (  Opt.long "num-stuffed-utxo"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of fake UTxO entries to generate [default is 0]."
+          <> Opt.value 0
+          )
+
     convertTime :: String -> UTCTime
     convertTime =
       parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
-    pInitialSupply :: Parser (Maybe Lovelace)
-    pInitialSupply =
+    pInitialSupplyNonDelegated :: Parser (Maybe Lovelace)
+    pInitialSupplyNonDelegated =
       Opt.optional $
       Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
-          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial stake holders."
+          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial, non-delegating stake holders."
+          )
+
+    pInitialSupplyDelegated :: Parser Lovelace
+    pInitialSupplyDelegated =
+      fmap (Lovelace . fromMaybe 0) $ Opt.optional $
+        Opt.option Opt.auto
+          (  Opt.long "supply-delegated"
+          <> Opt.metavar "LOVELACE"
+          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial, delegating stake holders."
+          <> Opt.value 0
+          )
+
+    pBulkPoolCredFiles :: Parser Word
+    pBulkPoolCredFiles =
+        Opt.option Opt.auto
+          (  Opt.long "bulk-pool-cred-files"
+          <> Opt.metavar "INT"
+          <> Opt.help "Generate bulk pool credential files [default is 0]."
+          <> Opt.value 0
+          )
+
+    pBulkPoolsPerFile :: Parser Word
+    pBulkPoolsPerFile =
+        Opt.option Opt.auto
+          (  Opt.long "bulk-pools-per-file"
+          <> Opt.metavar "INT"
+          <> Opt.help "Each bulk pool to contain this many pool credential sets [default is 0]."
+          <> Opt.value 0
           )
 
 
