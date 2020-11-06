@@ -83,7 +83,7 @@ rewriteGenesisSpec startTime supply =
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
-testnet :: H.Conf -> H.Integration [String]
+testnet :: H.Conf -> H.Integration (UTCTime, [String])
 testnet H.Conf {..} = do
   void $ H.note OS.os
 
@@ -399,7 +399,7 @@ testnet H.Conf {..} = do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  return allNodes
+  return (startTime, allNodes)
 
 hprop_testnet :: H.Property
 hprop_testnet = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do

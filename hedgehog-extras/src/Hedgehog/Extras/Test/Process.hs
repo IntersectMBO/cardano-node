@@ -11,6 +11,7 @@ module Hedgehog.Extras.Test.Process
   , maybeWaitForProcess
   , getPid
   , waitSecondsForProcess
+  , waitUntilForProcess
   ) where
 
 import           Control.Monad
@@ -26,6 +27,7 @@ import           Data.Int
 import           Data.Maybe (Maybe (..))
 import           Data.Semigroup ((<>))
 import           Data.String (String)
+import           Data.Time.Clock
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Internal.Cli (argQuote)
@@ -135,6 +137,25 @@ maybeWaitForProcess
   -> m (Maybe ExitCode)
 maybeWaitForProcess hProcess = GHC.withFrozenCallStack $
   H.evalIO $ IO.maybeWaitForProcess hProcess
+
+-- | Wait until 'deadline' secons for process to exit.
+waitUntilForProcess
+  :: (MonadTest m, MonadIO m, HasCallStack)
+  => UTCTime
+  -> ProcessHandle
+  -> m (Either TimedOut ExitCode)
+waitUntilForProcess deadline hProcess = GHC.withFrozenCallStack $ do
+  result <- H.evalIO $ IO.waitUntilForProcess deadline hProcess
+  case result of
+    Left TimedOut -> do
+      H.annotate "Timed out waiting for process to exit"
+      return (Left TimedOut)
+    Right maybeExitCode -> do
+      case maybeExitCode of
+        Nothing -> H.failMessage GHC.callStack "No exit code for process"
+        Just exitCode -> do
+          H.annotate $ "Process exited " <> show exitCode
+          return (Right exitCode)
 
 -- | Wait a maximum of 'seconds' secons for process to exit.
 waitSecondsForProcess

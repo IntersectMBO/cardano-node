@@ -18,6 +18,7 @@ module Hedgehog.Extras.Test.File
 
   , readJsonFile
   , rewriteJson
+  , rewriteLbsJson
 
   , cat
 
@@ -145,6 +146,12 @@ readJsonFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m (Either 
 readJsonFile filePath = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Reading JSON file: " <> filePath
   H.evalIO $ eitherDecode @Value <$> LBS.readFile filePath
+
+rewriteLbsJson :: (MonadTest m, HasCallStack) => (Value -> Value) -> LBS.ByteString -> m LBS.ByteString
+rewriteLbsJson f lbs = GHC.withFrozenCallStack $ do
+  case eitherDecode lbs of
+    Right iv -> return (encode (f iv))
+    Left msg -> H.failMessage GHC.callStack msg
 
 -- | Rewrite the 'filePath' JSON file using the function 'f'.
 rewriteJson :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> (Value -> Value) -> m ()

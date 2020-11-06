@@ -83,7 +83,7 @@ ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
 
-testnet :: H.Conf -> H.Integration [String]
+testnet :: H.Conf -> H.Integration (UTCTime, [String])
 testnet H.Conf {..} = do
   -- This script sets up a cluster that starts out in Byron, and can transition to Shelley.
   --
@@ -686,4 +686,4 @@ testnet H.Conf {..} = do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  return allNodes
+  return (startTime, allNodes)

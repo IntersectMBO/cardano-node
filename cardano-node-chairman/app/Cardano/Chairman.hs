@@ -18,11 +18,11 @@ import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Monad.Class.MonadThrow
-import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Coerce (coerce)
+import           Data.Time.Clock (UTCTime)
 import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig, GetHeader (..), Header)
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
@@ -43,8 +43,10 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type
 import           Prelude (String, error, show)
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Time.Clock as DTC
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.Block as Block
+import qualified System.IO as IO
 
 -- | The chairman checks for consensus and progress.
 --
@@ -64,12 +66,15 @@ chairmanTest
   -> SomeNodeClientProtocol
   -> NetworkMagic
   -> SecurityParam
-  -> DiffTime
+  -> UTCTime
   -> BlockNo
   -> [SocketPath]
   -> IO ()
-chairmanTest tracer protocol nw securityParam runningTime progressThreshold socketPaths = do
-  traceWith tracer ("Will observe nodes for " ++ show runningTime)
+chairmanTest tracer protocol nw securityParam deadline progressThreshold socketPaths = do
+  now <- DTC.getCurrentTime
+  let runningTime = DTC.diffUTCTime deadline now
+
+  traceWith tracer ("Will observe nodes until " ++ show deadline ++ ", " ++ show runningTime ++ " left")
   traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
   SomeNodeClientProtocol (ptcl :: ProtocolClient blk (BlockProtocol blk)) <- return protocol
@@ -80,7 +85,7 @@ chairmanTest tracer protocol nw securityParam runningTime progressThreshold sock
     (pClientInfoCodecConfig (protocolClientInfo ptcl))
     nw
     securityParam
-    runningTime
+    deadline
     socketPaths
 
   traceWith tracer "================== chairman results =================="
@@ -231,7 +236,6 @@ progressCondition minBlockNo (ConsensusSuccess _ tips) =
     Just (peerid, tip) -> Left (ProgressFailure minBlockNo peerid tip)
     Nothing            -> Right (ProgressSuccess minBlockNo)
 
-
 runChairman
   :: RunNode blk
   => Tracer IO String
@@ -240,18 +244,24 @@ runChairman
   -> SecurityParam
   -- ^ Security parameter, if a fork is deeper than it 'runChairman'
   -- will throw an exception.
-  -> DiffTime
+  -> UTCTime
   -- ^ Run for this much time.
   -> [SocketPath]
   -- ^ Local socket directory
   -> IO (ChainsSnapshot blk)
-runChairman tracer cfg networkMagic securityParam runningTime socketPaths = do
+runChairman tracer cfg networkMagic securityParam deadline socketPaths = do
     let initialChains = Map.fromList
           [ (socketPath, AF.Empty AF.AnchorGenesis)
           | socketPath <- socketPaths]
     chainsVar <- newTVarIO initialChains
 
-    void $ timeout runningTime $
+    now <- DTC.getCurrentTime
+
+    let runningTimeMicros = fromRational (toRational (DTC.diffUTCTime deadline now * 1000000))
+
+    IO.putStrLn ("micros: " <> show runningTimeMicros)
+
+    void $ timeout runningTimeMicros $
       withIOManager $ \iomgr ->
         forConcurrently_ socketPaths $ \sockPath ->
           createConnection

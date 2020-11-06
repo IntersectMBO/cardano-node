@@ -15,14 +15,19 @@ import           Data.Int
 import           Data.Maybe
 import           Data.Semigroup
 import           Data.String
-import           GHC.Num
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
+import           GHC.Real
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Test.Base (Integration)
+import           Prelude (Double)
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
+import           Text.Printf (printf)
 import           Text.Show
 
+import qualified Data.Time.Clock as DTC
+import qualified Data.Time.Clock.POSIX as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
@@ -41,9 +46,11 @@ import qualified Testnet.Conf as H
 mkSprocket :: FilePath -> FilePath -> String -> Sprocket
 mkSprocket tempBaseAbsPath socketDir node = Sprocket tempBaseAbsPath (socketDir </> node)
 
-chairmanOver :: Int -> Int -> H.Conf -> [String] -> Integration ()
-chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
+chairmanOver :: UTCTime -> NominalDiffTime -> Int -> H.Conf -> [String] -> Integration ()
+chairmanOver startTime timeoutSeconds requiredProgress H.Conf {..} allNodes = do
   maybeChairman <- H.evalIO $ IO.lookupEnv "DISABLE_CHAIRMAN"
+
+  deadline <- H.noteShow $ DTC.addUTCTime timeoutSeconds startTime
 
   when (maybeChairman /= Just "1") $ do
     nodeStdoutFile <- H.noteTempFile logDir $ "chairman" <> ".stdout.log"
@@ -58,7 +65,7 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
 
     (_, _, _, hProcess, _) <- H.createProcess =<<
       ( H.procChairman
-        ( [ "--timeout", show @Int timeoutSeconds
+        ( [ "--deadline", printf "%.3f" (fromRational @Double (toRational (DTC.utcTimeToPOSIXSeconds deadline)))
           , "--config", tempAbsPath </> "configuration.yaml"
           , "--security-parameter", "2160"
           , "--testnet-magic", show @Int testnetMagic
@@ -75,12 +82,13 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
         )
       )
 
-    chairmanResult <- H.waitSecondsForProcess (timeoutSeconds + 10) hProcess
+    chairmanResult <- H.waitUntilForProcess (DTC.addUTCTime 20 deadline) hProcess
 
     case chairmanResult of
       Right ExitSuccess -> return ()
       _ -> do
-        H.note_ $ "Chairman failed with: " <> show chairmanResult
+        now <- H.evalIO DTC.getCurrentTime
+        H.note_ $ "Chairman failed with: " <> show chairmanResult <> " at " <> show now
         H.cat nodeStdoutFile
         H.cat nodeStderrFile
         H.failure

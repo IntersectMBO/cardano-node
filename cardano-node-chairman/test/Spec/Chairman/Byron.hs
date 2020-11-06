@@ -21,6 +21,6 @@ import qualified Testnet.Conf as H
 hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
   conf <- H.mkConf tempAbsPath' Nothing
-  allNodes <- H.testnet conf
+  (startTime, allNodes) <- H.testnet conf
 
-  chairmanOver 120 6 conf allNodes
+  chairmanOver startTime 120 3 conf allNodes

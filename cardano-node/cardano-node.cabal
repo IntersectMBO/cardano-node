@@ -214,7 +214,7 @@ test-suite cardano-node-test
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
                       , temporary
-                      , time
+                      , time                          >= 1.9
                       , unliftio
 
   other-modules:        Test.Cardano.Node.FilePermissions

@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chairman.Commands.Run
   ( cmdRun
@@ -18,13 +19,14 @@ import           Cardano.Node.Configuration.POM (parseNodeConfigurationFP, pncPr
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Prelude hiding (option)
-import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (Tracer (..), stdoutTracer)
+import           Data.Time.Clock (UTCTime)
 import           Options.Applicative
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
 import           Ouroboros.Network.Block (BlockNo)
 
 import qualified Data.Time.Clock as DTC
+import qualified Data.Time.Clock.POSIX as DTC
 import qualified Options.Applicative as Opt
 import qualified System.IO as IO
 
@@ -48,7 +50,7 @@ data RunOpts = RunOpts
     -- observe only for the given period of time, and check the consensus
     -- and progress conditions at the end.
     --
-  { caRunningTime :: !DiffTime
+  { caDeadline :: !UTCTime
     -- | Expect this amount of progress (chain growth) by the end of the test.
   , caMinProgress :: !BlockNo
   , caSocketPaths :: ![SocketPath]
@@ -75,13 +77,13 @@ parseSocketPath helpMessage =
     <> metavar "FILEPATH"
     )
 
-parseRunningTime :: Parser DiffTime
-parseRunningTime =
-  option ((fromIntegral :: Int -> DiffTime) <$> auto)
-    (  long "timeout"
-    <> short 't'
-    <> metavar "SECONDS"
-    <> help "Run the chairman for this length of time in seconds."
+parseDeadline :: Parser UTCTime
+parseDeadline =
+  option (DTC.posixSecondsToUTCTime . fromRational . toRational @Double <$> auto)
+    (  long "deadline"
+    <> short 'd'
+    <> metavar "POSIXSECONDS"
+    <> help "Run the chairman for until this deadline."
     )
 
 parseSecurityParam :: Parser SecurityParam
@@ -114,7 +116,7 @@ parseProgress =
 parseRunOpts :: Parser RunOpts
 parseRunOpts =
   RunOpts
-  <$> parseRunningTime
+  <$> parseDeadline
   <*> parseProgress
   <*> some (parseSocketPath "Path to a cardano-node socket")
   <*> fmap ConfigYamlFilePath parseConfigFile
@@ -123,7 +125,7 @@ parseRunOpts =
 
 run :: RunOpts -> IO ()
 run RunOpts
-    { caRunningTime
+    { caDeadline
     , caMinProgress
     , caSocketPaths
     , caConfigYaml
@@ -144,7 +146,7 @@ run RunOpts
     someNodeClientProtocol
     caNetworkMagic
     caSecurityParam
-    caRunningTime
+    caDeadline
     caMinProgress
     caSocketPaths
 
