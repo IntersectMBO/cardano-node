@@ -10,7 +10,7 @@ module Testnet.Byron
 
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Data.Aeson ((.=))
+import           Data.Aeson (Value, toJSON, (.=))
 import           Data.Bool
 import           Data.Either
 import           Data.Eq
@@ -26,6 +26,7 @@ import           GHC.Float
 import           GHC.Num
 import           GHC.Real
 import           Hedgehog (Property, discover, (===))
+import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
 import           System.Exit (ExitCode (..))
@@ -70,6 +71,10 @@ rewriteConfiguration :: String -> String
 rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
+rewriteParams :: Value -> Value
+rewriteParams = rewriteObject
+  $ HM.insert "slotDuration" (toJSON @String "2000")
+
 testnet :: H.Conf -> H.Integration [String]
 testnet H.Conf {..} = do
   void $ H.note OS.os
@@ -79,13 +84,17 @@ testnet H.Conf {..} = do
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts nodeCount
 
+  H.copyFile (base </> "scripts/protocol-params.json") (tempAbsPath </> "protocol-params.json")
+
+  H.rewriteJson (tempAbsPath </> "protocol-params.json") rewriteParams
+
   -- Generate keys
   void $ H.execCli
     [ "genesis"
     , "--genesis-output-dir", tempAbsPath </> "genesis"
     , "--start-time", showUTCTimeSeconds startTime
-    , "--protocol-parameters-file", base </> "scripts/protocol-params.json"
-    , "--k", "2160"
+    , "--protocol-parameters-file", tempAbsPath </> "protocol-params.json"
+    , "--k", "10"
     , "--protocol-magic", show @Int testnetMagic
     , "--n-poor-addresses", "128"
     , "--n-delegate-addresses", "7"
@@ -164,7 +173,7 @@ testnet H.Conf {..} = do
     si <- H.noteShow $ show @Int i
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
+    H.waitByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i

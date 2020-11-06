@@ -31,6 +31,7 @@ import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String
+import           Data.Time
 import           GHC.Float
 import           GHC.Num
 import           GHC.Real
@@ -334,6 +335,7 @@ testnet H.Conf {..} = do
     . HM.insert "activeSlotsCoeff" (J.toJSON @Double 0.1)
     . HM.insert "securityParam" (J.toJSON @Int 10)
     . HM.insert "epochLength" (J.toJSON @Int 1500)
+    . HM.insert "slotLength" (J.toJSON @Double 0.2)
     . HM.insert "maxLovelaceSupply" (J.toJSON @Int maxSupply)
     . flip HM.adjust "protocolParams"
       ( J.rewriteObject (HM.insert "decentralisationParam" (J.toJSON @Double 0.7))
@@ -675,7 +677,7 @@ testnet H.Conf {..} = do
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
+    H.waitByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
