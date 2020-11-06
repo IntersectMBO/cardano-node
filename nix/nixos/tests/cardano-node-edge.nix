@@ -41,7 +41,7 @@ with pkgs;
     machine.succeed("systemctl status cardano-node")
     machine.succeed("stat /run/cardano-node")
     machine.succeed("stat /run/cardano-node/node.socket")
-    machine.sleep(15)
+    machine.sleep(25)
     machine.succeed("nc -z 127.0.0.1 12798")
     machine.succeed("nc -z 127.0.0.1 3001")
   '';
