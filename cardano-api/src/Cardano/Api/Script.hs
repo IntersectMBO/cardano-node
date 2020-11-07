@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -26,6 +27,9 @@ module Cardano.Api.Script (
   , scriptHash
   , MultiSigScript(..)
   , makeMultiSigScript
+
+    -- * Data family instances
+  , AsType(..)
   , Hash(ScriptHash)
   ) where
 
@@ -55,6 +59,7 @@ import qualified Cardano.Ledger.Core as Shelley (Script)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
+import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
@@ -70,16 +75,19 @@ import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 -- Script type: covering all script languages
 --
 
-newtype Script = Script (Shelley.Script StandardShelley)
-  deriving stock (Eq, Ord, Show)
-  deriving newtype (ToCBOR)
+data Script era where
 
-instance HasTypeProxy Script where
-    data AsType Script = AsScript
-    proxyToAsType _ = AsScript
+     ShelleyScript :: Shelley.Script StandardShelley -> Script Shelley
 
-instance SerialiseAsCBOR Script where
-    serialiseToCBOR (Script s) =
+deriving stock instance (Eq (Script Shelley))
+deriving stock instance (Show (Script Shelley))
+
+instance HasTypeProxy (Script Shelley) where
+    data AsType (Script Shelley) = AsShelleyScript
+    proxyToAsType _ = AsShelleyScript
+
+instance SerialiseAsCBOR (Script Shelley) where
+    serialiseToCBOR (ShelleyScript s) =
       -- We use 'WrappedMultiSig' here to support the legacy binary
       -- serialisation format for the @Script@ type from
       -- @cardano-ledger-specs@.
@@ -87,36 +95,36 @@ instance SerialiseAsCBOR Script where
       -- See the documentation of 'WrappedMultiSig' for more information.
       CBOR.serialize' (Legacy.WrappedMultiSig s)
 
-    deserialiseFromCBOR AsScript bs =
+    deserialiseFromCBOR AsShelleyScript bs =
       -- We use 'WrappedMultiSig' here to support the legacy binary
       -- serialisation format for the @Script@ type from
       -- @cardano-ledger-specs@.
       --
       -- See the documentation of 'WrappedMultiSig' for more information.
-      Script . Legacy.unWrappedMultiSig <$>
+      ShelleyScript . Legacy.unWrappedMultiSig <$>
         CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
-instance HasTextEnvelope Script where
+instance HasTextEnvelope (Script Shelley) where
     textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr (Script _) = "Multi-signature script"
+    textEnvelopeDefaultDescr (ShelleyScript _) = "Multi-signature script"
 
 
 -- ----------------------------------------------------------------------------
 -- Script Hash
 --
 
-newtype instance Hash Script = ScriptHash (Shelley.ScriptHash StandardShelley)
+newtype instance Hash (Script Shelley) = ScriptHash (Shelley.ScriptHash StandardShelley)
   deriving (Eq, Ord, Show)
 
-instance SerialiseAsRawBytes (Hash Script) where
+instance SerialiseAsRawBytes (Hash (Script Shelley)) where
     serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
       Crypto.hashToBytes h
 
-    deserialiseFromRawBytes (AsHash AsScript) bs =
+    deserialiseFromRawBytes (AsHash AsShelleyScript) bs =
       ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
-scriptHash :: Script -> Hash Script
-scriptHash (Script s) = ScriptHash (Shelley.hashMultiSigScript s)
+scriptHash :: Script era -> Hash (Script era)
+scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashMultiSigScript s)
 
 
 -- ----------------------------------------------------------------------------
@@ -129,8 +137,8 @@ data MultiSigScript = RequireSignature (Hash PaymentKey)
                     | RequireMOf Int [MultiSigScript]
   deriving (Eq, Show)
 
-makeMultiSigScript :: MultiSigScript -> Script
-makeMultiSigScript = Script . go
+makeMultiSigScript :: MultiSigScript -> Script Shelley
+makeMultiSigScript = ShelleyScript . go
   where
     go :: MultiSigScript -> Shelley.MultiSig StandardShelley
     go (RequireSignature (PaymentKeyHash kh))

@@ -571,12 +571,12 @@ data NetworkId
 
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
-       | PaymentCredentialByScript (Hash Script)
+       | PaymentCredentialByScript (Hash (Script Shelley))
   deriving (Eq, Show)
 
 data StakeCredential
        = StakeCredentialByKey    (Hash StakeKey)
-       | StakeCredentialByScript (Hash Script)
+       | StakeCredentialByScript (Hash (Script Shelley))
   deriving (Eq, Show)
 
 data StakeAddressReference
@@ -1449,8 +1449,8 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
       error "makeShelleyKeyWitnessSignature: byron and shelley signature sizes do not match"
 
 
-makeShelleyScriptWitness :: Script -> Witness Shelley
-makeShelleyScriptWitness (Script s) = ShelleyScriptWitness s
+makeShelleyScriptWitness :: Script era -> Witness era
+makeShelleyScriptWitness (ShelleyScript s) = ShelleyScriptWitness s
 
 
 -- order of signing keys must match txins
