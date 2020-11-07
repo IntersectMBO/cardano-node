@@ -67,21 +67,82 @@ import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 
 
 -- ----------------------------------------------------------------------------
--- Scripts
+-- Script type: covering all script languages
 --
 
 newtype Script = Script (Shelley.Script StandardShelley)
   deriving stock (Eq, Ord, Show)
   deriving newtype (ToCBOR)
 
+instance HasTypeProxy Script where
+    data AsType Script = AsScript
+    proxyToAsType _ = AsScript
+
+instance SerialiseAsCBOR Script where
+    serialiseToCBOR (Script s) =
+      -- We use 'WrappedMultiSig' here to support the legacy binary
+      -- serialisation format for the @Script@ type from
+      -- @cardano-ledger-specs@.
+      --
+      -- See the documentation of 'WrappedMultiSig' for more information.
+      CBOR.serialize' (Legacy.WrappedMultiSig s)
+
+    deserialiseFromCBOR AsScript bs =
+      -- We use 'WrappedMultiSig' here to support the legacy binary
+      -- serialisation format for the @Script@ type from
+      -- @cardano-ledger-specs@.
+      --
+      -- See the documentation of 'WrappedMultiSig' for more information.
+      Script . Legacy.unWrappedMultiSig <$>
+        CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+instance HasTextEnvelope Script where
+    textEnvelopeType _ = "Script"
+    textEnvelopeDefaultDescr (Script _) = "Multi-signature script"
+
+
+-- ----------------------------------------------------------------------------
+-- Script Hash
+--
+
 newtype instance Hash Script = ScriptHash (Shelley.ScriptHash StandardShelley)
   deriving (Eq, Ord, Show)
+
+instance SerialiseAsRawBytes (Hash Script) where
+    serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
+      Crypto.hashToBytes h
+
+    deserialiseFromRawBytes (AsHash AsScript) bs =
+      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
+
+scriptHash :: Script -> Hash Script
+scriptHash (Script s) = ScriptHash (Shelley.hashMultiSigScript s)
+
+
+-- ----------------------------------------------------------------------------
+-- The multi-signature script language
+--
 
 data MultiSigScript = RequireSignature (Hash PaymentKey)
                     | RequireAllOf [MultiSigScript]
                     | RequireAnyOf [MultiSigScript]
                     | RequireMOf Int [MultiSigScript]
   deriving (Eq, Show)
+
+makeMultiSigScript :: MultiSigScript -> Script
+makeMultiSigScript = Script . go
+  where
+    go :: MultiSigScript -> Shelley.MultiSig StandardShelley
+    go (RequireSignature (PaymentKeyHash kh))
+                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
+    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
+    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
+    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
+
+
+--
+-- JSON serialisation
+--
 
 instance ToJSON MultiSigScript where
   toJSON (RequireSignature pKeyHash) =
@@ -162,51 +223,4 @@ convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text
 
 gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript]
 gatherMultiSigScripts vs = sequence . Vector.toList $ Vector.map parseScript vs
-
-instance HasTypeProxy Script where
-    data AsType Script = AsScript
-    proxyToAsType _ = AsScript
-
-instance SerialiseAsRawBytes (Hash Script) where
-    serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
-      Crypto.hashToBytes h
-
-    deserialiseFromRawBytes (AsHash AsScript) bs =
-      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
-
-instance SerialiseAsCBOR Script where
-    serialiseToCBOR (Script s) =
-      -- We use 'WrappedMultiSig' here to support the legacy binary
-      -- serialisation format for the @Script@ type from
-      -- @cardano-ledger-specs@.
-      --
-      -- See the documentation of 'WrappedMultiSig' for more information.
-      CBOR.serialize' (Legacy.WrappedMultiSig s)
-
-    deserialiseFromCBOR AsScript bs =
-      -- We use 'WrappedMultiSig' here to support the legacy binary
-      -- serialisation format for the @Script@ type from
-      -- @cardano-ledger-specs@.
-      --
-      -- See the documentation of 'WrappedMultiSig' for more information.
-      Script . Legacy.unWrappedMultiSig <$>
-        CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
-
-instance HasTextEnvelope Script where
-    textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr (Script _) = "Multi-signature script"
-
-
-scriptHash :: Script -> Hash Script
-scriptHash (Script s) = ScriptHash (Shelley.hashMultiSigScript s)
-
-makeMultiSigScript :: MultiSigScript -> Script
-makeMultiSigScript = Script . go
-  where
-    go :: MultiSigScript -> Shelley.MultiSig StandardShelley
-    go (RequireSignature (PaymentKeyHash kh))
-                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
-    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
-    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
-    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
 
