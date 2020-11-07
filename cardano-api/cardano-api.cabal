@@ -44,6 +44,7 @@ library
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysShelley
                         Cardano.Api.KeysPraos
+                        Cardano.Api.Script
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
