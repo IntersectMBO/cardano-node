@@ -131,16 +131,22 @@ scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashMultiSigScript s)
 -- The multi-signature script language
 --
 
-data MultiSigScript = RequireSignature (Hash PaymentKey)
-                    | RequireAllOf [MultiSigScript]
-                    | RequireAnyOf [MultiSigScript]
-                    | RequireMOf Int [MultiSigScript]
-  deriving (Eq, Show)
+data MultiSigScript era where
 
-makeMultiSigScript :: MultiSigScript -> Script Shelley
+     RequireSignature :: Hash PaymentKey
+                      -> MultiSigScript era
+
+     RequireAllOf     ::        [MultiSigScript era] -> MultiSigScript era
+     RequireAnyOf     ::        [MultiSigScript era] -> MultiSigScript era
+     RequireMOf       :: Int -> [MultiSigScript era] -> MultiSigScript era
+
+deriving instance Eq   (MultiSigScript Shelley)
+deriving instance Show (MultiSigScript Shelley)
+
+makeMultiSigScript :: MultiSigScript Shelley -> Script Shelley
 makeMultiSigScript = ShelleyScript . go
   where
-    go :: MultiSigScript -> Shelley.MultiSig StandardShelley
+    go :: MultiSigScript Shelley -> Shelley.MultiSig StandardShelley
     go (RequireSignature (PaymentKeyHash kh))
                         = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
     go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
@@ -152,7 +158,7 @@ makeMultiSigScript = ShelleyScript . go
 -- JSON serialisation
 --
 
-instance ToJSON MultiSigScript where
+instance ToJSON (MultiSigScript Shelley) where
   toJSON (RequireSignature pKeyHash) =
     object [ "keyHash" .= String (Text.decodeUtf8 . serialiseToRawBytesHex $ pKeyHash)
            , "type" .= String "sig"
@@ -167,16 +173,16 @@ instance ToJSON MultiSigScript where
            , "scripts" .= map toJSON reqScripts
            ]
 
-instance FromJSON MultiSigScript where
+instance FromJSON (MultiSigScript Shelley) where
   parseJSON = parseScript
 
-parseScript :: Value -> Aeson.Parser MultiSigScript
+parseScript :: Value -> Aeson.Parser (MultiSigScript Shelley)
 parseScript v = parseScriptSig v
                   <|> parseScriptAny v
                   <|> parseScriptAll v
                   <|> parseScriptAtLeast v
 
-parseScriptAny :: Value -> Aeson.Parser MultiSigScript
+parseScriptAny :: Value -> Aeson.Parser (MultiSigScript Shelley)
 parseScriptAny = Aeson.withObject "any" $ \obj -> do
   t <- obj .: "type"
   case t :: Text of
@@ -184,7 +190,7 @@ parseScriptAny = Aeson.withObject "any" $ \obj -> do
                 RequireAnyOf <$> gatherMultiSigScripts s
     _ -> fail "\"any\" multi-signature script value not found"
 
-parseScriptAll :: Value -> Aeson.Parser MultiSigScript
+parseScriptAll :: Value -> Aeson.Parser (MultiSigScript Shelley)
 parseScriptAll = Aeson.withObject "all" $ \obj -> do
   t <- obj .: "type"
   case t :: Text of
@@ -192,7 +198,7 @@ parseScriptAll = Aeson.withObject "all" $ \obj -> do
                 RequireAllOf <$> gatherMultiSigScripts s
     _ -> fail "\"all\" multi-signature script value not found"
 
-parseScriptAtLeast :: Value -> Aeson.Parser MultiSigScript
+parseScriptAtLeast :: Value -> Aeson.Parser (MultiSigScript Shelley)
 parseScriptAtLeast = Aeson.withObject "atLeast" $ \obj -> do
   v <- obj .: "type"
   case v :: Text of
@@ -216,7 +222,7 @@ parseScriptAtLeast = Aeson.withObject "atLeast" $ \obj -> do
         _ -> fail "\"required\" value should be an integer"
     _        -> fail "\"atLeast\" multi-signature script value not found"
 
-parseScriptSig :: Value -> Aeson.Parser MultiSigScript
+parseScriptSig :: Value -> Aeson.Parser (MultiSigScript Shelley)
 parseScriptSig = Aeson.withObject "sig" $ \obj -> do
   v <- obj .: "type"
   case v :: Text of
@@ -229,6 +235,6 @@ convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text
                       Just payKeyHash -> return payKeyHash
                       Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
 
-gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript]
+gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript Shelley]
 gatherMultiSigScripts vs = sequence . Vector.toList $ Vector.map parseScript vs
 
