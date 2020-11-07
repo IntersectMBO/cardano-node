@@ -80,10 +80,10 @@ genMultiSigScript :: Gen MultiSigScript
 genMultiSigScript =
   Gen.choice [genAllRequiredSig, genAnyRequiredSig, genMofNRequiredSig]
 
-genScript :: Gen Script
+genScript :: Gen (Script Shelley)
 genScript = makeMultiSigScript <$> genMultiSigScript
 
-genScriptHash :: Gen (Hash Script)
+genScriptHash :: Gen (Hash (Script Shelley))
 genScriptHash = scriptHash <$> genScript
 
 genNetworkId :: Gen NetworkId
