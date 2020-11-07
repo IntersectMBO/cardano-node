@@ -57,26 +57,26 @@ genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 genLovelace :: Gen Lovelace
 genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 
-genRequiredSig :: Gen MultiSigScript
+genRequiredSig :: Gen (MultiSigScript Shelley)
 genRequiredSig = do
   verKey <- genVerificationKey AsPaymentKey
   return . RequireSignature $ verificationKeyHash verKey
 
-genAllRequiredSig :: Gen MultiSigScript
+genAllRequiredSig :: Gen (MultiSigScript Shelley)
 genAllRequiredSig =
   RequireAllOf <$> Gen.list (Range.constant 1 10) genRequiredSig
 
-genAnyRequiredSig :: Gen MultiSigScript
+genAnyRequiredSig :: Gen (MultiSigScript Shelley)
 genAnyRequiredSig =
   RequireAnyOf <$> Gen.list (Range.constant 1 10) genRequiredSig
 
-genMofNRequiredSig :: Gen MultiSigScript
+genMofNRequiredSig :: Gen (MultiSigScript Shelley)
 genMofNRequiredSig = do
  required <- Gen.integral (Range.linear 2 15)
  total <- Gen.integral (Range.linear (required + 1) 15)
  RequireMOf required <$> Gen.list (Range.singleton total) genRequiredSig
 
-genMultiSigScript :: Gen MultiSigScript
+genMultiSigScript :: Gen (MultiSigScript Shelley)
 genMultiSigScript =
   Gen.choice [genAllRequiredSig, genAnyRequiredSig, genMofNRequiredSig]
 

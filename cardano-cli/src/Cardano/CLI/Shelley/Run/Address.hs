@@ -206,7 +206,7 @@ runAddressBuildScript
 runAddressBuildScript (ScriptFile fp) nId mOutFp = do
   scriptLB <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp)
                 $ LB.readFile fp
-  script <- case eitherDecode scriptLB :: Either String MultiSigScript of
+  script <- case eitherDecode scriptLB :: Either String (MultiSigScript Shelley) of
                Right mss -> return $ makeMultiSigScript mss
                Left err -> left . ShelleyAddressCmdAesonDecodeError fp $ Text.pack err
   let payCred = PaymentCredentialByScript $ scriptHash script

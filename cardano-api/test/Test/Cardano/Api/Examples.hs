@@ -37,7 +37,7 @@ import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import           Cardano.Api.Shelley.Genesis
 
 
-exampleAll :: MultiSigScript
+exampleAll :: MultiSigScript Api.Shelley
 exampleAll =
   RequireAllOf [ RequireSignature
                    $ convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a"
@@ -58,7 +58,7 @@ exampleAll =
                ]
 
 
-exampleAny :: MultiSigScript
+exampleAny :: MultiSigScript Api.Shelley
 exampleAny =
   RequireAnyOf [ RequireSignature
                    $ convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09"
@@ -74,7 +74,7 @@ exampleAny =
                    $ convertToHash "622be5fab3b5c3f371a50a535e4d3349c942a98cecee93b24e2fd11d"
                ]
 
-exampleMofN :: MultiSigScript
+exampleMofN :: MultiSigScript Api.Shelley
 exampleMofN =
   RequireMOf 2 [ RequireSignature
                    $ convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"
