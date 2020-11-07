@@ -41,6 +41,9 @@ library
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.Key
+                        Cardano.Api.KeysByron
+                        Cardano.Api.KeysShelley
+                        Cardano.Api.KeysPraos
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON

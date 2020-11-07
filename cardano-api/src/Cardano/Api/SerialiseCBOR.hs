@@ -4,6 +4,8 @@
 --
 module Cardano.Api.SerialiseCBOR
   ( SerialiseAsCBOR(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
   ) where
 
 import           Prelude
