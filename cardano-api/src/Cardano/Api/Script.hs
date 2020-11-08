@@ -225,16 +225,36 @@ instance ToJSON (MultiSigScript era) where
            , "scripts" .= map toJSON reqScripts
            ]
 
-instance FromJSON (MultiSigScript Shelley) where
+instance HasScriptFeatures era => FromJSON (MultiSigScript era) where
   parseJSON = parseScript
 
-parseScript :: Value -> Aeson.Parser (MultiSigScript Shelley)
-parseScript v = parseScriptSig v
-                  <|> parseScriptAny v
-                  <|> parseScriptAll v
-                  <|> parseScriptAtLeast v
+class HasScriptFeatures era where
+   hasSignatureFeature :: Maybe (ScriptFeatureInEra SignatureFeature era)
+   hasTimeLocksFeature :: Maybe (ScriptFeatureInEra TimeLocksFeature era)
 
-parseScriptAny :: Value -> Aeson.Parser (MultiSigScript Shelley)
+instance HasScriptFeatures Shelley where
+   hasSignatureFeature = Just SignaturesInShelleyEra
+   hasTimeLocksFeature = Nothing
+
+instance HasScriptFeatures Allegra where
+   hasSignatureFeature = Just SignaturesInAllegraEra
+   hasTimeLocksFeature = Just TimeLocksInAllegraEra
+
+instance HasScriptFeatures Mary where
+   hasSignatureFeature = Just SignaturesInMaryEra
+   hasTimeLocksFeature = Just TimeLocksInMaryEra
+
+parseScript :: HasScriptFeatures era
+            => Value -> Aeson.Parser (MultiSigScript era)
+parseScript v = maybe mempty (flip parseScriptSig    v) hasSignatureFeature
+            <|> maybe mempty (flip parseScriptBefore v) hasTimeLocksFeature
+            <|> maybe mempty (flip parseScriptAfter  v) hasTimeLocksFeature
+            <|> parseScriptAny v
+            <|> parseScriptAll v
+            <|> parseScriptAtLeast v
+
+parseScriptAny :: HasScriptFeatures era
+               => Value -> Aeson.Parser (MultiSigScript era)
 parseScriptAny = Aeson.withObject "any" $ \obj -> do
   t <- obj .: "type"
   case t :: Text of
@@ -242,7 +262,8 @@ parseScriptAny = Aeson.withObject "any" $ \obj -> do
                 RequireAnyOf <$> gatherMultiSigScripts s
     _ -> fail "\"any\" multi-signature script value not found"
 
-parseScriptAll :: Value -> Aeson.Parser (MultiSigScript Shelley)
+parseScriptAll :: HasScriptFeatures era
+               => Value -> Aeson.Parser (MultiSigScript era)
 parseScriptAll = Aeson.withObject "all" $ \obj -> do
   t <- obj .: "type"
   case t :: Text of
@@ -250,7 +271,8 @@ parseScriptAll = Aeson.withObject "all" $ \obj -> do
                 RequireAllOf <$> gatherMultiSigScripts s
     _ -> fail "\"all\" multi-signature script value not found"
 
-parseScriptAtLeast :: Value -> Aeson.Parser (MultiSigScript Shelley)
+parseScriptAtLeast :: HasScriptFeatures era
+                   => Value -> Aeson.Parser (MultiSigScript era)
 parseScriptAtLeast = Aeson.withObject "atLeast" $ \obj -> do
   v <- obj .: "type"
   case v :: Text of
@@ -274,19 +296,38 @@ parseScriptAtLeast = Aeson.withObject "atLeast" $ \obj -> do
         _ -> fail "\"required\" value should be an integer"
     _        -> fail "\"atLeast\" multi-signature script value not found"
 
-parseScriptSig :: Value -> Aeson.Parser (MultiSigScript Shelley)
-parseScriptSig = Aeson.withObject "sig" $ \obj -> do
+parseScriptSig :: ScriptFeatureInEra SignatureFeature era
+               -> Value -> Aeson.Parser (MultiSigScript era)
+parseScriptSig signaturesInEra = Aeson.withObject "sig" $ \obj -> do
   v <- obj .: "type"
   case v :: Text of
     "sig" -> do k <- obj .: "keyHash"
-                RequireSignature SignaturesInShelleyEra <$> convertToHash k
+                RequireSignature signaturesInEra <$> convertToHash k
     _     -> fail "\"sig\" multi-signature script value not found"
+
+
+parseScriptBefore :: ScriptFeatureInEra TimeLocksFeature era
+                  -> Value -> Aeson.Parser (MultiSigScript era)
+parseScriptBefore timelocksInEra = Aeson.withObject "before" $ \obj -> do
+  v <- obj .: "type"
+  case v :: Text of
+    "before" -> RequireTimeBefore timelocksInEra <$> obj .: "slot"
+    _        -> fail "\"before\" multi-signature script value not found"
+
+parseScriptAfter :: ScriptFeatureInEra TimeLocksFeature era
+                 -> Value -> Aeson.Parser (MultiSigScript era)
+parseScriptAfter timelocksInEra = Aeson.withObject "after" $ \obj -> do
+  v <- obj .: "type"
+  case v :: Text of
+    "after" -> RequireTimeAfter timelocksInEra <$> obj .: "slot"
+    _       -> fail "\"after\" multi-signature script value not found"
 
 convertToHash :: Text -> Aeson.Parser (Hash PaymentKey)
 convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
                       Just payKeyHash -> return payKeyHash
                       Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
 
-gatherMultiSigScripts :: Vector Value -> Aeson.Parser [MultiSigScript Shelley]
+gatherMultiSigScripts :: HasScriptFeatures era
+                      => Vector Value -> Aeson.Parser [MultiSigScript era]
 gatherMultiSigScripts vs = sequence . Vector.toList $ Vector.map parseScript vs
 
