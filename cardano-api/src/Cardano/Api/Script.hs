@@ -202,10 +202,18 @@ makeMultiSigScript = ShelleyScript . go
 -- JSON serialisation
 --
 
-instance ToJSON (MultiSigScript Shelley) where
+instance ToJSON (MultiSigScript era) where
   toJSON (RequireSignature _ pKeyHash) =
-    object [ "keyHash" .= String (Text.decodeUtf8 . serialiseToRawBytesHex $ pKeyHash)
-           , "type" .= String "sig"
+    object [ "type"    .= String "sig"
+           , "keyHash" .= Text.decodeUtf8 (serialiseToRawBytesHex pKeyHash)
+           ]
+  toJSON (RequireTimeBefore _ slot) =
+    object [ "type" .= String "before"
+           , "slot" .= slot
+           ]
+  toJSON (RequireTimeAfter _ slot) =
+    object [ "type" .= String "after"
+           , "slot" .= slot
            ]
   toJSON (RequireAnyOf reqScripts) =
     object [ "type" .= String "any", "scripts" .= map toJSON reqScripts ]
