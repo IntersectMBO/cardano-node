@@ -18,7 +18,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Api.Script (
-    Script(..)
+    Script(SimpleScript, ShelleyScript)
   , parseScript
   , parseScriptAny
   , parseScriptAll
@@ -29,7 +29,6 @@ module Cardano.Api.Script (
   , ScriptFeatureInEra(..)
   , SignatureFeature
   , TimeLocksFeature
-  , makeSimpleScript
 
     -- * Deprecated aliases
   , MultiSigScript
@@ -91,6 +90,13 @@ data Script era where
 
 deriving stock instance (Eq (Script Shelley))
 deriving stock instance (Show (Script Shelley))
+
+pattern SimpleScript :: HasScriptFeatures era
+                     => SimpleScript era -> Script era
+pattern SimpleScript s <- (scriptToSimpleScript -> s) where
+    SimpleScript = simpleScriptToScript
+
+{-# COMPLETE SimpleScript #-}
 
 instance HasTypeProxy era => HasTypeProxy (Script era) where
     data AsType (Script era) = AsScript (AsType era)
@@ -220,12 +226,13 @@ instance HasScriptFeatures Mary where
    hasTimeLocksFeature   = Just TimeLocksInMaryEra
 
 
+--TODO: add a deprecation pragma and switch to the SimpleScript constructor
 makeMultiSigScript :: MultiSigScript Shelley -> Script Shelley
-makeMultiSigScript = makeSimpleScript
+makeMultiSigScript = simpleScriptToScript
 
-makeSimpleScript :: forall era. HasScriptFeatures era
-                 => SimpleScript era -> Script era
-makeSimpleScript =
+simpleScriptToScript :: forall era. HasScriptFeatures era
+                     => SimpleScript era -> Script era
+simpleScriptToScript =
     case simpleScriptSupported :: SimpleScriptSupportedInEra era of
       SimpleScriptInShelleyEra -> ShelleyScript . go
         where
@@ -236,8 +243,19 @@ makeSimpleScript =
           go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
           go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
 
-      SimpleScriptInAllegraEra -> error "TODO: makeSimpleScript conversion for Allegra era"
-      SimpleScriptInMaryEra    -> error "TODO: makeSimpleScript conversion for Mary era"
+      SimpleScriptInAllegraEra -> error "TODO: simpleScriptToScript conversion for Allegra era"
+      SimpleScriptInMaryEra    -> error "TODO: simpleScriptToScript conversion for Mary era"
+
+scriptToSimpleScript :: Script era -> SimpleScript era
+scriptToSimpleScript (ShelleyScript s0) = go s0
+  where
+    go :: Shelley.MultiSig StandardShelley -> SimpleScript Shelley
+    go (Shelley.RequireSignature kh)
+                                = RequireSignature SignaturesInShelleyEra
+                                    (PaymentKeyHash (Shelley.coerceKeyRole kh))
+    go (Shelley.RequireAllOf s) = RequireAllOf (map go s)
+    go (Shelley.RequireAnyOf s) = RequireAnyOf (map go s)
+    go (Shelley.RequireMOf m s) = RequireMOf m (map go s)
 
 
 --
