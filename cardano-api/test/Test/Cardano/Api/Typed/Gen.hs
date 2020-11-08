@@ -60,7 +60,7 @@ genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 genRequiredSig :: Gen (MultiSigScript Shelley)
 genRequiredSig = do
   verKey <- genVerificationKey AsPaymentKey
-  return . RequireSignature $ verificationKeyHash verKey
+  return . RequireSignature SignaturesInShelleyEra $ verificationKeyHash verKey
 
 genAllRequiredSig :: Gen (MultiSigScript Shelley)
 genAllRequiredSig =
