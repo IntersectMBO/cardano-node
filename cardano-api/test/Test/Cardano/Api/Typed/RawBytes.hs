@@ -34,7 +34,7 @@ prop_roundtrip_stake_address_raw =
 
 prop_roundtrip_script_hash_raw :: Property
 prop_roundtrip_script_hash_raw =
-  roundtrip_raw_bytes (AsHash AsShelleyScript) genScriptHash
+  roundtrip_raw_bytes (AsHash (AsScript AsShelley)) genScriptHash
 
 prop_roundtrip_verification_ByronKey_hash_raw :: Property
 prop_roundtrip_verification_ByronKey_hash_raw =

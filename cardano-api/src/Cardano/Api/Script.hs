@@ -55,9 +55,10 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
-import qualified Cardano.Ledger.Core as Shelley (Script)
+import qualified Cardano.Ledger.Core as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
+import qualified Shelley.Spec.Ledger.Tx as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -82,9 +83,9 @@ data Script era where
 deriving stock instance (Eq (Script Shelley))
 deriving stock instance (Show (Script Shelley))
 
-instance HasTypeProxy (Script Shelley) where
-    data AsType (Script Shelley) = AsShelleyScript
-    proxyToAsType _ = AsShelleyScript
+instance HasTypeProxy era => HasTypeProxy (Script era) where
+    data AsType (Script era) = AsScript (AsType era)
+    proxyToAsType _ = AsScript (proxyToAsType (Proxy :: Proxy era))
 
 instance SerialiseAsCBOR (Script Shelley) where
     serialiseToCBOR (ShelleyScript s) =
@@ -95,7 +96,7 @@ instance SerialiseAsCBOR (Script Shelley) where
       -- See the documentation of 'WrappedMultiSig' for more information.
       CBOR.serialize' (Legacy.WrappedMultiSig s)
 
-    deserialiseFromCBOR AsShelleyScript bs =
+    deserialiseFromCBOR (AsScript AsShelley) bs =
       -- We use 'WrappedMultiSig' here to support the legacy binary
       -- serialisation format for the @Script@ type from
       -- @cardano-ledger-specs@.
@@ -113,18 +114,18 @@ instance HasTextEnvelope (Script Shelley) where
 -- Script Hash
 --
 
-newtype instance Hash (Script Shelley) = ScriptHash (Shelley.ScriptHash StandardShelley)
+newtype instance Hash (Script era) = ScriptHash (Shelley.ScriptHash StandardShelley)
   deriving (Eq, Ord, Show)
 
-instance SerialiseAsRawBytes (Hash (Script Shelley)) where
+instance HasTypeProxy era => SerialiseAsRawBytes (Hash (Script era)) where
     serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
       Crypto.hashToBytes h
 
-    deserialiseFromRawBytes (AsHash AsShelleyScript) bs =
+    deserialiseFromRawBytes (AsHash (AsScript _)) bs =
       ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
 scriptHash :: Script era -> Hash (Script era)
-scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashMultiSigScript s)
+scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashScript s)
 
 
 -- ----------------------------------------------------------------------------
