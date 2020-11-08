@@ -18,7 +18,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
-import           Cardano.Api.Typed (MultiSigScript (..), ScriptFeatureInEra(..))
+import           Cardano.Api.Typed (SimpleScript (..), ScriptFeatureInEra(..))
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
@@ -37,7 +37,7 @@ import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import           Cardano.Api.Shelley.Genesis
 
 
-exampleAll :: MultiSigScript Api.Shelley
+exampleAll :: SimpleScript Api.Shelley
 exampleAll =
   RequireAllOf [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a"
@@ -58,7 +58,7 @@ exampleAll =
                ]
 
 
-exampleAny :: MultiSigScript Api.Shelley
+exampleAny :: SimpleScript Api.Shelley
 exampleAny =
   RequireAnyOf [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09"
@@ -74,7 +74,7 @@ exampleAny =
                    $ convertToHash "622be5fab3b5c3f371a50a535e4d3349c942a98cecee93b24e2fd11d"
                ]
 
-exampleMofN :: MultiSigScript Api.Shelley
+exampleMofN :: SimpleScript Api.Shelley
 exampleMofN =
   RequireMOf 2 [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"

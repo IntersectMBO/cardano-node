@@ -105,12 +105,7 @@ module Cardano.Api.Shelley
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
     Script(ShelleyScript),
-    MultiSigScript
-      ( RequireSignature
-      , RequireAllOf
-      , RequireAnyOf
-      , RequireMOf
-      ),
+    SimpleScript(..),
     parseScript,
     parseScriptAny,
     parseScriptAll,
