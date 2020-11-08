@@ -26,6 +26,9 @@ module Cardano.Api.Script (
   , parseScriptSig
   , scriptHash
   , MultiSigScript(..)
+  , ScriptFeatureInEra(..)
+  , SignatureFeature
+  , TimeLocksFeature
   , makeMultiSigScript
 
     -- * Data family instances
@@ -53,6 +56,8 @@ import           Control.Monad
 import qualified Cardano.Binary as CBOR
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+
+import           Cardano.Slotting.Slot (SlotNo)
 
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import qualified Cardano.Ledger.Core as Shelley
@@ -134,21 +139,59 @@ scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashScript s)
 
 data MultiSigScript era where
 
-     RequireSignature :: Hash PaymentKey
-                      -> MultiSigScript era
+     RequireSignature  :: !(ScriptFeatureInEra SignatureFeature era)
+                       -> !(Hash PaymentKey)
+                       -> MultiSigScript era
 
-     RequireAllOf     ::        [MultiSigScript era] -> MultiSigScript era
-     RequireAnyOf     ::        [MultiSigScript era] -> MultiSigScript era
-     RequireMOf       :: Int -> [MultiSigScript era] -> MultiSigScript era
+     RequireTimeBefore :: !(ScriptFeatureInEra TimeLocksFeature era)
+                       -> !SlotNo
+                       -> MultiSigScript era
 
-deriving instance Eq   (MultiSigScript Shelley)
-deriving instance Show (MultiSigScript Shelley)
+     RequireTimeAfter  :: !(ScriptFeatureInEra TimeLocksFeature era)
+                       -> !SlotNo
+                       -> MultiSigScript era
+
+     RequireAllOf      ::        [MultiSigScript era] -> MultiSigScript era
+     RequireAnyOf      ::        [MultiSigScript era] -> MultiSigScript era
+     RequireMOf        :: Int -> [MultiSigScript era] -> MultiSigScript era
+
+deriving instance Eq   (MultiSigScript era)
+deriving instance Show (MultiSigScript era)
+
+
+-- | Script Features
+--
+-- These are used in conjunction with the era (e.g 'Shelley', 'Allegra' etc) to
+-- specify which script features are enabled in a given era.
+--
+data ScriptFeatureInEra feature era where
+     SignaturesInShelleyEra  :: ScriptFeatureInEra SignatureFeature Shelley
+     SignaturesInAllegraEra  :: ScriptFeatureInEra SignatureFeature Allegra
+     SignaturesInMaryEra     :: ScriptFeatureInEra SignatureFeature Mary
+
+     TimeLocksInAllegraEra   :: ScriptFeatureInEra TimeLocksFeature Allegra
+     TimeLocksInMaryEra      :: ScriptFeatureInEra TimeLocksFeature Mary
+
+deriving instance Eq   (ScriptFeatureInEra feature era)
+deriving instance Show (ScriptFeatureInEra feature era)
+
+-- | The signature feature enables the use of 'RequireSignature' and is
+-- available in the 'MultiSigScript' language from 'Shelley' era onwards.
+--
+data SignatureFeature
+
+-- | The time lock feature makes it possible to make the script result depend
+-- on the slot number which is a proxy for the time. Is available in the
+-- 'MultiSigScript' language from 'Allegra' onwards.
+--
+data TimeLocksFeature
+
 
 makeMultiSigScript :: MultiSigScript Shelley -> Script Shelley
 makeMultiSigScript = ShelleyScript . go
   where
     go :: MultiSigScript Shelley -> Shelley.MultiSig StandardShelley
-    go (RequireSignature (PaymentKeyHash kh))
+    go (RequireSignature _ (PaymentKeyHash kh))
                         = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
     go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
     go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
@@ -160,7 +203,7 @@ makeMultiSigScript = ShelleyScript . go
 --
 
 instance ToJSON (MultiSigScript Shelley) where
-  toJSON (RequireSignature pKeyHash) =
+  toJSON (RequireSignature _ pKeyHash) =
     object [ "keyHash" .= String (Text.decodeUtf8 . serialiseToRawBytesHex $ pKeyHash)
            , "type" .= String "sig"
            ]
@@ -228,7 +271,7 @@ parseScriptSig = Aeson.withObject "sig" $ \obj -> do
   v <- obj .: "type"
   case v :: Text of
     "sig" -> do k <- obj .: "keyHash"
-                RequireSignature <$> convertToHash k
+                RequireSignature SignaturesInShelleyEra <$> convertToHash k
     _     -> fail "\"sig\" multi-signature script value not found"
 
 convertToHash :: Text -> Aeson.Parser (Hash PaymentKey)

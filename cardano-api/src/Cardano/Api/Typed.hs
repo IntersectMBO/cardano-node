@@ -175,6 +175,9 @@ module Cardano.Api.Typed (
     -- ** Multi-signature scripts
     -- | Making multi-signature scripts.
     MultiSigScript(..),
+    ScriptFeatureInEra(..),
+    SignatureFeature,
+    TimeLocksFeature,
     makeMultiSigScript,
 
     -- * Serialisation

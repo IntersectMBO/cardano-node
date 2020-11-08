@@ -139,7 +139,10 @@ module Cardano.API (
 
     -- ** Multi-signature scripts
     -- | Making multi-signature scripts.
-    MultiSigScript,
+    MultiSigScript(..),
+    ScriptFeatureInEra(..),
+    SignatureFeature,
+    TimeLocksFeature,
     makeMultiSigScript,
 
     -- * Serialisation
