@@ -192,19 +192,52 @@ data SignatureFeature
 --
 data TimeLocksFeature
 
+-- | Is the 'SimpleScript' language supported at all in this era?
+--
+data SimpleScriptSupportedInEra era where
+     SimpleScriptInShelleyEra :: SimpleScriptSupportedInEra Shelley
+     SimpleScriptInAllegraEra :: SimpleScriptSupportedInEra Allegra
+     SimpleScriptInMaryEra    :: SimpleScriptSupportedInEra Mary
+
+class HasScriptFeatures era where
+   simpleScriptSupported :: SimpleScriptSupportedInEra era
+   hasSignatureFeature   :: Maybe (ScriptFeatureInEra SignatureFeature era)
+   hasTimeLocksFeature   :: Maybe (ScriptFeatureInEra TimeLocksFeature era)
+
+instance HasScriptFeatures Shelley where
+   simpleScriptSupported = SimpleScriptInShelleyEra
+   hasSignatureFeature   = Just SignaturesInShelleyEra
+   hasTimeLocksFeature   = Nothing
+
+instance HasScriptFeatures Allegra where
+   simpleScriptSupported = SimpleScriptInAllegraEra
+   hasSignatureFeature   = Just SignaturesInAllegraEra
+   hasTimeLocksFeature   = Just TimeLocksInAllegraEra
+
+instance HasScriptFeatures Mary where
+   simpleScriptSupported = SimpleScriptInMaryEra
+   hasSignatureFeature   = Just SignaturesInMaryEra
+   hasTimeLocksFeature   = Just TimeLocksInMaryEra
+
 
 makeMultiSigScript :: MultiSigScript Shelley -> Script Shelley
 makeMultiSigScript = makeSimpleScript
 
-makeSimpleScript :: SimpleScript Shelley -> Script Shelley
-makeSimpleScript = ShelleyScript . go
-  where
-    go :: SimpleScript Shelley -> Shelley.MultiSig StandardShelley
-    go (RequireSignature _ (PaymentKeyHash kh))
-                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
-    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
-    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
-    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
+makeSimpleScript :: forall era. HasScriptFeatures era
+                 => SimpleScript era -> Script era
+makeSimpleScript =
+    case simpleScriptSupported :: SimpleScriptSupportedInEra era of
+      SimpleScriptInShelleyEra -> ShelleyScript . go
+        where
+          go :: SimpleScript Shelley -> Shelley.MultiSig StandardShelley
+          go (RequireSignature _ (PaymentKeyHash kh))
+                              = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
+          go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
+          go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
+          go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
+
+      SimpleScriptInAllegraEra -> error "TODO: makeSimpleScript conversion for Allegra era"
+      SimpleScriptInMaryEra    -> error "TODO: makeSimpleScript conversion for Mary era"
 
 
 --
@@ -236,22 +269,6 @@ instance ToJSON (SimpleScript era) where
 
 instance HasScriptFeatures era => FromJSON (SimpleScript era) where
   parseJSON = parseScript
-
-class HasScriptFeatures era where
-   hasSignatureFeature :: Maybe (ScriptFeatureInEra SignatureFeature era)
-   hasTimeLocksFeature :: Maybe (ScriptFeatureInEra TimeLocksFeature era)
-
-instance HasScriptFeatures Shelley where
-   hasSignatureFeature = Just SignaturesInShelleyEra
-   hasTimeLocksFeature = Nothing
-
-instance HasScriptFeatures Allegra where
-   hasSignatureFeature = Just SignaturesInAllegraEra
-   hasTimeLocksFeature = Just TimeLocksInAllegraEra
-
-instance HasScriptFeatures Mary where
-   hasSignatureFeature = Just SignaturesInMaryEra
-   hasTimeLocksFeature = Just TimeLocksInMaryEra
 
 parseScript :: HasScriptFeatures era
             => Value -> Aeson.Parser (SimpleScript era)
