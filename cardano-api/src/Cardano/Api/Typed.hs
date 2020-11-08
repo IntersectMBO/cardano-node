@@ -174,10 +174,13 @@ module Cardano.Api.Typed (
 
     -- ** Multi-signature scripts
     -- | Making multi-signature scripts.
-    MultiSigScript(..),
+    SimpleScript(..),
     ScriptFeatureInEra(..),
     SignatureFeature,
     TimeLocksFeature,
+    makeSimpleScript,
+    -- *** Deprecated aliases
+    MultiSigScript,
     makeMultiSigScript,
 
     -- * Serialisation
