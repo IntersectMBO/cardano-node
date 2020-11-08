@@ -178,7 +178,6 @@ module Cardano.Api.Typed (
     ScriptFeatureInEra(..),
     SignatureFeature,
     TimeLocksFeature,
-    makeSimpleScript,
     -- *** Deprecated aliases
     MultiSigScript,
     makeMultiSigScript,
