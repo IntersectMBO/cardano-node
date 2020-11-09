@@ -7,6 +7,7 @@ module Hedgehog.Extras.Test.File
   , createFileLink
   , listDirectory
 
+  , appendFile
   , writeFile
   , openFile
   , readFile
@@ -15,8 +16,10 @@ module Hedgehog.Extras.Test.File
   , textWriteFile
   , textReadFile
 
+  , copyRewriteJsonFile
   , readJsonFile
-  , rewriteJson
+  , rewriteJsonFile
+  , rewriteLbsJson
 
   , cat
 
@@ -41,7 +44,6 @@ import           Data.String (String)
 import           Data.Text (Text)
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
-import           Hedgehog.Extras.Stock.Monad
 import           Hedgehog.Extras.Stock.OS
 import           System.IO (FilePath, Handle, IOMode)
 import           Text.Show
@@ -86,6 +88,12 @@ listDirectory :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m [FilePa
 listDirectory p = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Listing directory: " <> p
   H.evalIO $ IO.listDirectory p
+
+-- | Append 'contents' to the 'filePath' file.
+appendFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> String -> m ()
+appendFile filePath contents = GHC.withFrozenCallStack $ do
+  void . H.annotate $ "Writing file: " <> filePath
+  H.evalIO $ IO.appendFile filePath contents
 
 -- | Write 'contents' to the 'filePath' file.
 writeFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> String -> m ()
@@ -135,14 +143,23 @@ readJsonFile filePath = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Reading JSON file: " <> filePath
   H.evalIO $ eitherDecode @Value <$> LBS.readFile filePath
 
--- | Rewrite the 'filePath' JSON file using the function 'f'.
-rewriteJson :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> (Value -> Value) -> m ()
-rewriteJson filePath f = GHC.withFrozenCallStack $ do
-  void . H.annotate $ "Rewriting JSON file: " <> filePath
-  lbs <- forceM $ lbsReadFile filePath
+rewriteLbsJson :: (MonadTest m, HasCallStack) => (Value -> Value) -> LBS.ByteString -> m LBS.ByteString
+rewriteLbsJson f lbs = GHC.withFrozenCallStack $ do
   case eitherDecode lbs of
-    Right iv -> lbsWriteFile filePath (encode (f iv))
+    Right iv -> return (encode (f iv))
     Left msg -> H.failMessage GHC.callStack msg
+
+-- | Rewrite the 'filePath' JSON file using the function 'f'.
+rewriteJsonFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> (Value -> Value) -> m ()
+rewriteJsonFile filePath f = GHC.withFrozenCallStack $ do
+  void . H.annotate $ "Rewriting JSON file: " <> filePath
+  lbsReadFile filePath >>= rewriteLbsJson f >>= lbsWriteFile filePath
+
+-- | Rewrite the 'filePath' JSON file using the function 'f'.
+copyRewriteJsonFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> FilePath -> (Value -> Value) -> m ()
+copyRewriteJsonFile src dst f = GHC.withFrozenCallStack $ do
+  void . H.annotate $ "Rewriting JSON from file: " <> src <> " to file " <> dst
+  lbsReadFile src >>= rewriteLbsJson f >>= lbsWriteFile dst
 
 -- | Annotate the contents of the 'filePath' file.
 cat :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m ()

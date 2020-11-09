@@ -115,7 +115,7 @@ testnet H.Conf {..} = do
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteJson (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec supply)
+  H.rewriteJsonFile (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec supply)
 
   H.assertIsJsonFile $ tempAbsPath </> "genesis.spec.json"
 

@@ -329,7 +329,7 @@ testnet H.Conf {..} = do
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteJson (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
+  H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
     $ HM.insert "slotLength" (J.toJSON @Double 0.2)
     . HM.insert "activeSlotsCoeff" (J.toJSON @Double 0.1)
     . HM.insert "securityParam" (J.toJSON @Int 10)
