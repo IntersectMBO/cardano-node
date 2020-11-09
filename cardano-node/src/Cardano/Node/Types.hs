@@ -310,18 +310,13 @@ data NodeByronProtocolConfiguration =
 data NodeHardForkProtocolConfiguration =
      NodeHardForkProtocolConfiguration {
 
-       -- | If we have knowledge about when the Shelley hard fork is then we
-       -- have an opportunity to optimise the bulk sync slightly.
-       --
-       npcShelleyHardForkNotBeforeEpoch :: Maybe EpochNo
-
        -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
        --
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestShelleyHardForkAtEpoch :: Maybe EpochNo
+       npcTestShelleyHardForkAtEpoch :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at a given major protocol version. For example this can be
@@ -333,11 +328,6 @@ data NodeHardForkProtocolConfiguration =
        -- configured the same, or they will disagree.
        --
      , npcTestShelleyHardForkAtVersion :: Maybe Word
-
-       -- | If we have knowledge about when the Allegra hard fork is then we
-       -- have an opportunity to optimise the bulk sync slightly.
-       --
-     , npcAllegraHardForkNotBeforeEpoch :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
@@ -371,10 +361,6 @@ data NodeHardForkProtocolConfiguration =
        --
      , npcTestMaryHardForkAtVersion :: Maybe Word
 
-       -- | If we have knowledge about when the Shelley hard fork is then we
-       -- have an opportunity to optimise the bulk sync slightly.
-       --
-     , npcMaryHardForkNotBeforeEpoch :: Maybe EpochNo
      }
   deriving (Eq, Show)
 

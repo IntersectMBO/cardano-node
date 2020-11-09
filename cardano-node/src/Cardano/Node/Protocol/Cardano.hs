@@ -110,13 +110,10 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                            NodeHardForkProtocolConfiguration {
                              npcTestShelleyHardForkAtEpoch,
                              npcTestShelleyHardForkAtVersion,
-                             npcShelleyHardForkNotBeforeEpoch,
                              npcTestAllegraHardForkAtEpoch,
                              npcTestAllegraHardForkAtVersion,
-                             npcAllegraHardForkNotBeforeEpoch,
                              npcTestMaryHardForkAtEpoch,
-                             npcTestMaryHardForkAtVersion,
-                             npcMaryHardForkNotBeforeEpoch
+                             npcTestMaryHardForkAtVersion
                            }
                            files = do
     byronGenesis <-
@@ -187,7 +184,6 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
         -- Byron to Shelley hard fork parameters
         Consensus.ProtocolParamsTransition {
-          transitionLowerBound = npcShelleyHardForkNotBeforeEpoch,
           transitionTrigger =
             -- What will trigger the Byron -> Shelley hard fork?
             case npcTestShelleyHardForkAtEpoch of
@@ -213,7 +209,6 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         }
         -- Shelley to Allegra hard fork parameters
         Consensus.ProtocolParamsTransition {
-          transitionLowerBound = npcAllegraHardForkNotBeforeEpoch,
           transitionTrigger =
             case npcTestAllegraHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
@@ -222,7 +217,6 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
         }
         -- Allegra to Mary hard fork parameters
         Consensus.ProtocolParamsTransition {
-          transitionLowerBound = npcMaryHardForkNotBeforeEpoch,
           transitionTrigger =
             case npcTestMaryHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
