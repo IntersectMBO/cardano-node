@@ -198,7 +198,7 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
     $ mkShelleyBootstrapWitnesses mnw txbody sksByron
 
   let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness txbody) sksShelley
-      shelleyScriptWitnesses = map (makeShelleyScriptWitness . makeMultiSigScript) scsShelley
+      shelleyScriptWitnesses = map (makeScriptWitness . makeMultiSigScript) scsShelley
       shelleyWitnesses = shelleyKeyWitnesses ++ shelleyScriptWitnesses
       tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
 
@@ -530,7 +530,7 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
       AShelleyKeyWitness skShelley ->
         pure $ makeShelleyKeyWitness txbody skShelley
       AShelleyScriptWitness scShelley ->
-        pure $ makeShelleyScriptWitness (makeMultiSigScript scShelley)
+        pure $ makeScriptWitness (makeMultiSigScript scShelley)
 
   firstExceptT ShelleyTxCmdWriteFileError
     . newExceptT

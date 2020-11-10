@@ -120,7 +120,7 @@ module Cardano.Api.Typed (
     makeShelleyKeyWitness,
     WitnessNetworkIdOrByronAddress (..),
     makeShelleyBootstrapWitness,
-    makeShelleyScriptWitness,
+    makeScriptWitness,
     makeShelleySignature,
     getShelleyKeyWitnessVerificationKey,
 
@@ -1117,6 +1117,10 @@ data Witness era where
        :: Allegra.Timelock StandardAllegra
        -> Witness Allegra
 
+     MaryScriptWitness
+       :: Allegra.Timelock StandardMary
+       -> Witness Mary
+
 deriving instance Eq (Witness Byron)
 deriving instance Show (Witness Byron)
 
@@ -1461,9 +1465,10 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
       error "makeShelleyKeyWitnessSignature: byron and shelley signature sizes do not match"
 
 
-makeShelleyScriptWitness :: forall era. Script era -> Witness era
-makeShelleyScriptWitness (ShelleyScript s) = ShelleyScriptWitness s
-makeShelleyScriptWitness (AllegraScript s) = AllegraScriptwitness s
+makeScriptWitness :: forall era. Script era -> Witness era
+makeScriptWitness (ShelleyScript s) = ShelleyScriptWitness s
+makeScriptWitness (AllegraScript s) = AllegraScriptwitness s
+makeScriptWitness (MaryScript    s) = MaryScriptWitness s
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId

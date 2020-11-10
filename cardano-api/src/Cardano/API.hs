@@ -94,7 +94,7 @@ module Cardano.API (
     ShelleyWitnessSigningKey,
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,
-    makeShelleyScriptWitness,
+    makeScriptWitness,
 
     -- * Fee calculation
     transactionFee,
