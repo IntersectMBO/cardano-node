@@ -9,55 +9,36 @@ module Testnet.Byron
   ) where
 
 import           Control.Monad
-import           Control.Monad.IO.Class
-import           Data.Aeson ((.=))
-import           Data.Bool
-import           Data.Either
-import           Data.Eq
+import           Data.Aeson (Value, toJSON)
 import           Data.Function
 import           Data.Functor
 import           Data.Int
-import           Data.List ((\\))
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String
-import           GHC.Float
+import           Data.Time.Clock
 import           GHC.Num
-import           GHC.Real
-import           Hedgehog (Property, discover, (===))
+import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
-import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
-import           System.IO (IO)
-import           Text.Read
 import           Text.Show
 
-import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
-import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.File as IO
-import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Directory as IO
-import qualified System.Environment as IO
-import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
-import qualified System.Random as IO
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
 
@@ -70,6 +51,9 @@ rewriteConfiguration :: String -> String
 rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
+rewriteParams :: Value -> Value
+rewriteParams = rewriteObject id -- TODO: Put configuration changes here
+
 testnet :: H.Conf -> H.Integration [String]
 testnet H.Conf {..} = do
   void $ H.note OS.os
@@ -77,14 +61,18 @@ testnet H.Conf {..} = do
   baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
-  allPorts <- H.noteShowIO $ IO.allocateRandomPorts nodeCount
+
+  H.copyRewriteJsonFile
+    (base </> "scripts/protocol-params.json")
+    (tempAbsPath </> "protocol-params.json")
+    rewriteParams
 
   -- Generate keys
   void $ H.execCli
     [ "genesis"
     , "--genesis-output-dir", tempAbsPath </> "genesis"
     , "--start-time", showUTCTimeSeconds startTime
-    , "--protocol-parameters-file", base </> "scripts/protocol-params.json"
+    , "--protocol-parameters-file", tempAbsPath </> "protocol-params.json"
     , "--k", "2160"
     , "--protocol-magic", show @Int testnetMagic
     , "--n-poor-addresses", "128"
