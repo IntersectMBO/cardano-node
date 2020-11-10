@@ -83,7 +83,7 @@ genMultiSigScript =
 genScript :: Gen (Script Shelley)
 genScript = makeMultiSigScript <$> genMultiSigScript
 
-genScriptHash :: Gen (Hash (Script Shelley))
+genScriptHash :: Gen ScriptHash
 genScriptHash = scriptHash <$> genScript
 
 genNetworkId :: Gen NetworkId
