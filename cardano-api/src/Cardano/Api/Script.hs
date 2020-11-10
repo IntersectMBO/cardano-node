@@ -1,5 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -18,6 +18,7 @@ module Cardano.Api.Script (
       , AllegraScript
       , MaryScript
       )
+  , ScriptHash(..)
   , parseScript
   , parseScriptAny
   , parseScriptAll
@@ -35,7 +36,6 @@ module Cardano.Api.Script (
 
     -- * Data family instances
   , AsType(..)
-  , Hash(ScriptHash)
   ) where
 
 import           Prelude
@@ -43,6 +43,7 @@ import           Prelude
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
+import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -163,17 +164,27 @@ instance HasTextEnvelope (Script Mary) where
 -- Script Hash
 --
 
-newtype instance Hash (Script era) = ScriptHash (Shelley.ScriptHash StandardShelley)
-  deriving (Eq, Ord, Show)
+-- | We have this type separate from the 'Hash' type to avoid the script
+-- hash type being parametrised by the era. The representation is era
+-- independent, and there are many places where we want to use a script
+-- hash where we don't want things to be era-parametrised.
+--
+newtype ScriptHash = ScriptHash (Shelley.ScriptHash StandardShelley)
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex ScriptHash
 
-instance HasTypeProxy era => SerialiseAsRawBytes (Hash (Script era)) where
+instance HasTypeProxy ScriptHash where
+    data AsType ScriptHash = AsScriptHash
+    proxyToAsType _ = AsScriptHash
+
+instance SerialiseAsRawBytes ScriptHash where
     serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
       Crypto.hashToBytes h
 
-    deserialiseFromRawBytes (AsHash (AsScript _)) bs =
+    deserialiseFromRawBytes AsScriptHash bs =
       ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
-scriptHash :: Script era -> Hash (Script era)
+scriptHash :: Script era -> ScriptHash
 scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashScript s)
 scriptHash (AllegraScript s) = ScriptHash (Timelock.hashTimelockScript s)
 scriptHash (MaryScript s) = ScriptHash (Timelock.hashTimelockScript s)
