@@ -37,22 +37,22 @@ module Cardano.Api.KeysShelley (
 
 import           Prelude
 
-import           Data.Maybe
-import           Data.String (IsString(..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import           Data.Maybe
+import           Data.String (IsString (..))
 
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto.HD
 
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Key
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR

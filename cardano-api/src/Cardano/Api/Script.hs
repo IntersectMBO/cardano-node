@@ -12,7 +12,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Api.Script (
-    Script(SimpleScript, ShelleyScript)
+    Script(SimpleScript, ShelleyScript, AllegraScript)
   , parseScript
   , parseScriptAny
   , parseScriptAll
@@ -35,15 +35,17 @@ module Cardano.Api.Script (
 
 import           Prelude
 
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.ByteString.Lazy as LBS
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.Sequence.Strict as Sequence
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 
@@ -56,15 +58,19 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.Slotting.Slot (SlotNo)
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import qualified Cardano.Ledger.Core as Shelley
+
+import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardShelley)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 
-import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Eras (Allegra, AsType (AsAllegra, AsByron, AsMary, AsShelley), Mary,
+                     Shelley)
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -83,9 +89,13 @@ import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 data Script era where
 
      ShelleyScript :: Shelley.Script StandardShelley -> Script Shelley
+     AllegraScript :: Timelock.Timelock StandardAllegra -> Script Allegra
 
 deriving stock instance (Eq (Script Shelley))
 deriving stock instance (Show (Script Shelley))
+
+deriving stock instance (Eq (Script Allegra))
+deriving stock instance (Show (Script Allegra))
 
 pattern SimpleScript :: HasScriptFeatures era
                      => SimpleScript era -> Script era
@@ -120,6 +130,14 @@ instance HasTextEnvelope (Script Shelley) where
     textEnvelopeType _ = "Script"
     textEnvelopeDefaultDescr (ShelleyScript _) = "Multi-signature script"
 
+instance SerialiseAsCBOR (Script Allegra) where
+    serialiseToCBOR (AllegraScript s) = CBOR.serialize' s
+    deserialiseFromCBOR (AsScript AsAllegra) bs =
+        AllegraScript <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+instance HasTextEnvelope (Script Allegra) where
+    textEnvelopeType _ = "Script"
+    textEnvelopeDefaultDescr (AllegraScript _) = "Multi-signature script"
 
 -- ----------------------------------------------------------------------------
 -- Script Hash
@@ -137,6 +155,7 @@ instance HasTypeProxy era => SerialiseAsRawBytes (Hash (Script era)) where
 
 scriptHash :: Script era -> Hash (Script era)
 scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashScript s)
+scriptHash (AllegraScript s) = ScriptHash (Timelock.hashTimelockScript s)
 
 
 -- ----------------------------------------------------------------------------
@@ -239,7 +258,22 @@ simpleScriptToScript =
           go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
           go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
 
-      SimpleScriptInAllegraEra -> error "TODO: simpleScriptToScript conversion for Allegra era"
+      SimpleScriptInAllegraEra -> AllegraScript . go
+        where
+          go :: MultiSigScript Allegra -> Timelock.Timelock StandardAllegra
+          go (RequireSignature _ (PaymentKeyHash kh))
+                              = Timelock.Multi (Shelley.RequireSignature (Shelley.coerceKeyRole kh))
+          go (RequireAllOf s) = Timelock.TimelockAnd  (fmap go $ Sequence.fromList s)
+          go (RequireAnyOf s) = Timelock.TimelockOr (fmap go $ Sequence.fromList s)
+          go (RequireMOf _m _s) = error "To fill in when ledger specs is updated in cabal project file"
+          go (RequireTimeBefore _ sBefore) =
+            Timelock.Interval $ Timelock.ValidityInterval { Timelock.validFrom = SNothing
+                                                          , Timelock.validTo = SJust sBefore
+                                                          }
+          go (RequireTimeAfter _ sAfter) =
+            Timelock.Interval $ Timelock.ValidityInterval { Timelock.validFrom = SJust sAfter
+                                                          , Timelock.validTo = SNothing
+                                                          }
       SimpleScriptInMaryEra    -> error "TODO: simpleScriptToScript conversion for Mary era"
 
 scriptToSimpleScript :: Script era -> SimpleScript era
@@ -252,6 +286,32 @@ scriptToSimpleScript (ShelleyScript s0) = go s0
     go (Shelley.RequireAllOf s) = RequireAllOf (map go s)
     go (Shelley.RequireAnyOf s) = RequireAnyOf (map go s)
     go (Shelley.RequireMOf m s) = RequireMOf m (map go s)
+
+scriptToSimpleScript (AllegraScript s0) = go s0
+  where
+    go :: Timelock.Timelock StandardAllegra -> SimpleScript Allegra
+    go (Timelock.Multi (Shelley.RequireSignature kh))
+                   = RequireSignature SignaturesInAllegraEra
+                       (PaymentKeyHash (Shelley.coerceKeyRole kh))
+    go (Timelock.Multi (Shelley.RequireAllOf s)) = RequireAllOf $ map ms s
+    go (Timelock.Multi (Shelley.RequireAnyOf s)) = RequireAnyOf $ map ms s
+    go (Timelock.Multi (Shelley.RequireMOf i s)) = RequireMOf i $ map ms s
+    go (Timelock.TimelockAnd seq') = RequireAllOf . map go $ toList seq'
+    go (Timelock.TimelockOr seq') = RequireAnyOf . map go $ toList seq'
+    go (Timelock.Interval (Timelock.ValidityInterval before after)) =
+      case (before, after) of
+        (SJust b, SNothing) ->  RequireTimeBefore TimeLocksInAllegraEra b
+        (SNothing, SJust a) ->  RequireTimeAfter TimeLocksInAllegraEra a
+        _ -> error "Cardano.Api.Script.scriptToSimpleScript: Upper and lower\
+                   \ bound has been specified in a given ValidityInterval."
+
+    ms :: Shelley.MultiSig StandardAllegra -> SimpleScript Allegra
+    ms (Shelley.RequireSignature kh)
+                                = RequireSignature SignaturesInAllegraEra
+                                    (PaymentKeyHash (Shelley.coerceKeyRole kh))
+    ms (Shelley.RequireAllOf s) = RequireAllOf (map ms s)
+    ms (Shelley.RequireAnyOf s) = RequireAnyOf (map ms s)
+    ms (Shelley.RequireMOf m s) = RequireMOf m (map ms s)
 
 
 --
