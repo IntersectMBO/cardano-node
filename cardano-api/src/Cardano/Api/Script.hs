@@ -134,7 +134,7 @@ instance SerialiseAsCBOR (Script Shelley) where
 
 instance HasTextEnvelope (Script Shelley) where
     textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr (ShelleyScript _) = "Multi-signature script"
+    textEnvelopeDefaultDescr ShelleyScript{} = "Multi-signature script"
 
 instance SerialiseAsCBOR (Script Allegra) where
     serialiseToCBOR (AllegraScript s) = CBOR.serialize' s
@@ -143,7 +143,7 @@ instance SerialiseAsCBOR (Script Allegra) where
 
 instance HasTextEnvelope (Script Allegra) where
     textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr (AllegraScript _) = "Multi-signature script"
+    textEnvelopeDefaultDescr AllegraScript{} = "Simple script"
 
 instance SerialiseAsCBOR (Script Mary) where
     serialiseToCBOR (MaryScript s) = CBOR.serialize' s
@@ -152,7 +152,8 @@ instance SerialiseAsCBOR (Script Mary) where
 
 instance HasTextEnvelope (Script Mary) where
     textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr (MaryScript _) = "Multi-signature script"
+    textEnvelopeDefaultDescr MaryScript{} = "Simple script"
+
 
 -- ----------------------------------------------------------------------------
 -- Script Hash
