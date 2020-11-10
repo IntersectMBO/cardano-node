@@ -24,4 +24,4 @@ hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
 
   allNodes <- H.testnet conf
 
-  chairmanOver conf allNodes
+  chairmanOver 120 33 conf allNodes

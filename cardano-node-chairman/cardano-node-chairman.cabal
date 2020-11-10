@@ -17,6 +17,7 @@ common common-modules
                         Testnet.Byron
                         Testnet.ByronShelley
                         Testnet.Conf
+                        Testnet.List
                         Testnet.Shelley
 
 executable cardano-node-chairman
