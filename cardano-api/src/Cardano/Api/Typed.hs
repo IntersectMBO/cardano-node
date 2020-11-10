@@ -482,6 +482,9 @@ import qualified Shelley.Spec.Ledger.UTxO as Shelley
 -- Types we will re-export as-is
 import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 
+import qualified Cardano.Ledger.ShelleyMA.Scripts as Allegra
+
+
 -- TODO: replace the above with
 --import qualified Cardano.Api.Byron   as Byron
 --import qualified Cardano.Api.Shelley as Shelley
@@ -501,12 +504,12 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client as TxSubmis
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysShelley
 import           Cardano.Api.KeysPraos
+import           Cardano.Api.KeysShelley
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
@@ -1110,6 +1113,10 @@ data Witness era where
        :: Shelley.Script StandardShelley
        -> Witness Shelley
 
+     AllegraScriptwitness
+       :: Allegra.Timelock StandardAllegra
+       -> Witness Allegra
+
 deriving instance Eq (Witness Byron)
 deriving instance Show (Witness Byron)
 
@@ -1454,9 +1461,9 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
       error "makeShelleyKeyWitnessSignature: byron and shelley signature sizes do not match"
 
 
-makeShelleyScriptWitness :: Script era -> Witness era
+makeShelleyScriptWitness :: forall era. Script era -> Witness era
 makeShelleyScriptWitness (ShelleyScript s) = ShelleyScriptWitness s
-
+makeShelleyScriptWitness (AllegraScript s) = AllegraScriptwitness s
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId

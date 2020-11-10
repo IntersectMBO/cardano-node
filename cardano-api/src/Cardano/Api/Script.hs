@@ -12,7 +12,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Api.Script (
-    Script(SimpleScript, ShelleyScript)
+    Script(SimpleScript, ShelleyScript, AllegraScript)
   , parseScript
   , parseScriptAny
   , parseScriptAll
@@ -35,15 +35,17 @@ module Cardano.Api.Script (
 
 import           Prelude
 
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.ByteString.Lazy as LBS
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
 
@@ -56,15 +58,19 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.Slotting.Slot (SlotNo)
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import qualified Cardano.Ledger.Core as Shelley
+
+import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardShelley)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 
-import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Eras (Allegra, AsType (AsAllegra, AsByron, AsMary, AsShelley), Mary,
+                     Shelley)
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -83,9 +89,13 @@ import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 data Script era where
 
      ShelleyScript :: Shelley.Script StandardShelley -> Script Shelley
+     AllegraScript :: Timelock.Timelock StandardAllegra -> Script Allegra
 
 deriving stock instance (Eq (Script Shelley))
 deriving stock instance (Show (Script Shelley))
+
+deriving stock instance (Eq (Script Allegra))
+deriving stock instance (Show (Script Allegra))
 
 pattern SimpleScript :: HasScriptFeatures era
                      => SimpleScript era -> Script era
@@ -120,6 +130,14 @@ instance HasTextEnvelope (Script Shelley) where
     textEnvelopeType _ = "Script"
     textEnvelopeDefaultDescr (ShelleyScript _) = "Multi-signature script"
 
+instance SerialiseAsCBOR (Script Allegra) where
+    serialiseToCBOR (AllegraScript s) = CBOR.serialize' s
+    deserialiseFromCBOR (AsScript AsAllegra) bs =
+        AllegraScript <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+instance HasTextEnvelope (Script Allegra) where
+    textEnvelopeType _ = "Script"
+    textEnvelopeDefaultDescr (AllegraScript _) = "Multi-signature script"
 
 -- ----------------------------------------------------------------------------
 -- Script Hash
@@ -137,6 +155,14 @@ instance HasTypeProxy era => SerialiseAsRawBytes (Hash (Script era)) where
 
 scriptHash :: Script era -> Hash (Script era)
 scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashScript s)
+scriptHash (AllegraScript s) = ScriptHash (cast (Timelock.hashTimelockScript s))
+  where
+    -- We're using a single monomorphic type for the script hash, and
+    -- arbitrarily picked the Shelley one, so we have to convert the hashes
+    -- from the other eras.
+    cast :: Shelley.ScriptHash StandardAllegra
+         -> Shelley.ScriptHash StandardShelley
+    cast (Shelley.ScriptHash sh) = Shelley.ScriptHash (Crypto.castHash sh)
 
 
 -- ----------------------------------------------------------------------------
@@ -239,8 +265,19 @@ simpleScriptToScript =
           go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
           go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
 
-      SimpleScriptInAllegraEra -> error "TODO: simpleScriptToScript conversion for Allegra era"
+      SimpleScriptInAllegraEra -> AllegraScript . go
+        where
+          go :: MultiSigScript Allegra -> Timelock.Timelock StandardAllegra
+          go (RequireSignature _ (PaymentKeyHash kh))
+                              = Timelock.RequireSignature (Shelley.coerceKeyRole kh)
+          go (RequireAllOf s) = Timelock.RequireAllOf (Seq.fromList (map go s))
+          go (RequireAnyOf s) = Timelock.RequireAnyOf (Seq.fromList (map go s))
+          go (RequireMOf m s) = Timelock.RequireMOf m (Seq.fromList (map go s))
+          go (RequireTimeBefore _ sl) = Timelock.RequireTimeExpire (SJust sl)
+          go (RequireTimeAfter  _ sl) = Timelock.RequireTimeStart  (SJust sl)
+
       SimpleScriptInMaryEra    -> error "TODO: simpleScriptToScript conversion for Mary era"
+
 
 scriptToSimpleScript :: Script era -> SimpleScript era
 scriptToSimpleScript (ShelleyScript s0) = go s0
@@ -252,6 +289,17 @@ scriptToSimpleScript (ShelleyScript s0) = go s0
     go (Shelley.RequireAllOf s) = RequireAllOf (map go s)
     go (Shelley.RequireAnyOf s) = RequireAnyOf (map go s)
     go (Shelley.RequireMOf m s) = RequireMOf m (map go s)
+
+scriptToSimpleScript (AllegraScript s0) = go s0
+  where
+    go :: Timelock.Timelock StandardAllegra -> SimpleScript Allegra
+    go (Timelock.RequireSignature kh) = RequireSignature SignaturesInAllegraEra
+                                          (PaymentKeyHash (Shelley.coerceKeyRole kh))
+    go (Timelock.RequireTimeExpire (SJust sl)) = RequireTimeBefore TimeLocksInAllegraEra sl
+    go (Timelock.RequireTimeStart  (SJust sl)) = RequireTimeAfter  TimeLocksInAllegraEra sl
+    go (Timelock.RequireAllOf      s) = RequireAllOf (map go (toList s))
+    go (Timelock.RequireAnyOf      s) = RequireAnyOf (map go (toList s))
+    go (Timelock.RequireMOf      i s) = RequireMOf i (map go (toList s))
 
 
 --
