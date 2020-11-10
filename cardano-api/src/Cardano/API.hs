@@ -135,6 +135,7 @@ module Cardano.API (
 
     -- ** Script addresses
     -- | Making addresses from scripts.
+    ScriptHash,
     scriptHash,
 
     -- ** Multi-signature scripts

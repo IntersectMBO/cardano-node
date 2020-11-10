@@ -170,6 +170,7 @@ module Cardano.Api.Typed (
 
     -- ** Script addresses
     -- | Making addresses from scripts.
+    ScriptHash,
     scriptHash,
 
     -- ** Multi-signature scripts
@@ -579,12 +580,12 @@ data NetworkId
 
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
-       | PaymentCredentialByScript (Hash (Script Shelley))
+       | PaymentCredentialByScript  ScriptHash
   deriving (Eq, Show)
 
 data StakeCredential
        = StakeCredentialByKey    (Hash StakeKey)
-       | StakeCredentialByScript (Hash (Script Shelley))
+       | StakeCredentialByScript  ScriptHash
   deriving (Eq, Show)
 
 data StakeAddressReference
