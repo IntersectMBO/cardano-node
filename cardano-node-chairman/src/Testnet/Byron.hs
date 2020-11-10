@@ -17,7 +17,6 @@ import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String
-import           Data.Time.Clock
 import           GHC.Num
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
@@ -52,7 +51,8 @@ rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
 rewriteConfiguration s = s
 
 rewriteParams :: Value -> Value
-rewriteParams = rewriteObject id -- TODO: Put configuration changes here
+rewriteParams = rewriteObject
+  $ HM.insert "slotDuration" (toJSON @String "2000")
 
 testnet :: H.Conf -> H.Integration [String]
 testnet H.Conf {..} = do
@@ -73,10 +73,10 @@ testnet H.Conf {..} = do
     , "--genesis-output-dir", tempAbsPath </> "genesis"
     , "--start-time", showUTCTimeSeconds startTime
     , "--protocol-parameters-file", tempAbsPath </> "protocol-params.json"
-    , "--k", "2160"
+    , "--k", "10"
     , "--protocol-magic", show @Int testnetMagic
     , "--n-poor-addresses", "128"
-    , "--n-delegate-addresses", "7"
+    , "--n-delegate-addresses", "3"
     , "--total-balance", "8000000000000000"
     , "--avvm-entry-count", "128"
     , "--avvm-entry-balance", "10000000000000"
@@ -152,7 +152,7 @@ testnet H.Conf {..} = do
     si <- H.noteShow $ show @Int i
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
+    H.waitByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i

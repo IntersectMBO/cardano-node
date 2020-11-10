@@ -103,7 +103,7 @@ Protocol: RealPBFT
 GenesisFile: genesis/genesis.json
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
-PBftSignatureThreshold:
+PBftSignatureThreshold: 0.6
 TurnOnLogging: True
 TurnOnLogMetrics: True
 SocketPath:
@@ -144,7 +144,7 @@ TraceBlockFetchServer: True
 TraceBlockchainTime: False
 
 # Verbose tracer of ChainDB.
-TraceChainDb: False
+TraceChainDb: True
 
 # Trace ChainSync client.
 TraceChainSyncClient: False

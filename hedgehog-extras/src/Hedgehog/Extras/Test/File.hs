@@ -28,6 +28,8 @@ module Hedgehog.Extras.Test.File
   , assertFileOccurences
   , assertFileLines
   , assertEndsWithSingleNewline
+
+  , appendFileTimeDelta
   ) where
 
 import           Control.Monad
@@ -42,6 +44,7 @@ import           Data.Maybe
 import           Data.Semigroup
 import           Data.String (String)
 import           Data.Text (Text)
+import           Data.Time.Clock (UTCTime)
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Stock.OS
@@ -51,6 +54,7 @@ import           Text.Show
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
 import qualified Data.Text.IO as T
+import qualified Data.Time.Clock as DTC
 import qualified GHC.Stack as GHC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
@@ -218,3 +222,10 @@ assertEndsWithSingleNewline fp = GHC.withFrozenCallStack $ do
     '\n':'\n':_ -> H.failWithCustom GHC.callStack Nothing (fp <> " ends with too many newlines.")
     '\n':_ -> return ()
     _ -> H.failWithCustom GHC.callStack Nothing (fp <> " must end with newline.")
+
+-- | Write 'contents' to the 'filePath' file.
+appendFileTimeDelta :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> UTCTime ->  m ()
+appendFileTimeDelta filePath offsetTime = GHC.withFrozenCallStack $ do
+  baseTime <- H.noteShowIO DTC.getCurrentTime
+  let delay = DTC.diffUTCTime baseTime offsetTime
+  appendFile filePath $ show @DTC.NominalDiffTime delay <> "\n"
