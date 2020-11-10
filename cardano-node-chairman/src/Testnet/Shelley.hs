@@ -29,6 +29,7 @@ import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String (String)
+import           Data.Time.Clock
 import           GHC.Float
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
@@ -56,6 +57,7 @@ import qualified System.IO as IO
 #ifdef UNIX
 import           System.Posix.Files
 #endif
+import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified System.Process as IO
 import qualified Test.Base as H
 import qualified Test.Process as H
@@ -65,18 +67,18 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
-
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
-
-rewriteGenesisSpec :: Int -> Value -> Value
-rewriteGenesisSpec supply =
+rewriteGenesisSpec :: UTCTime -> Int -> Value -> Value
+rewriteGenesisSpec startTime supply =
   rewriteObject
     $ HM.insert "activeSlotsCoeff" (toJSON @Double 0.1)
     . HM.insert "securityParam" (toJSON @Int 10)
-    . HM.insert "epochLength" (toJSON @Int 1500)
+    . HM.insert "epochLength" (toJSON @Int 1000)
+    . HM.insert "slotLength" (toJSON @Double 0.2)
     . HM.insert "maxLovelaceSupply" (toJSON supply)
+    . HM.insert "systemStart" (toJSON @String (DTC.formatIso8601 startTime))
     . flip HM.adjust "protocolParams"
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
@@ -93,6 +95,8 @@ testnet H.Conf {..} = do
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts numPraosNodes
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
+  currentTime <- H.noteShowIO DTC.getCurrentTime
+  startTime <- H.noteShow $ DTC.addUTCTime 31 currentTime -- 31 seconds into the future
 
   let userAddrs = ["user1"]
   let poolAddrs = ["pool-owner1"]
@@ -115,7 +119,8 @@ testnet H.Conf {..} = do
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteJsonFile (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec supply)
+  H.rewriteJsonFile (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec startTime supply)
+  H.rewriteJsonFile (tempAbsPath </> "genesis.json"     ) (rewriteGenesisSpec startTime supply)
 
   H.assertIsJsonFile $ tempAbsPath </> "genesis.spec.json"
 
@@ -385,7 +390,7 @@ testnet H.Conf {..} = do
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
-    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
+    H.waitByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"

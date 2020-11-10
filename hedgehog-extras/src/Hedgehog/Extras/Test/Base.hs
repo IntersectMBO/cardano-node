@@ -40,6 +40,9 @@ module Hedgehog.Extras.Test.Base
   , assertM
   , assertIO
 
+  , waitByDeadlineM
+  , waitByDeadlineIO
+
   , onFailure
 
   , Integration
@@ -85,6 +88,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.MonadAssertion as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
+import qualified System.Environment as IO
 import qualified System.Info as IO
 import qualified System.IO as IO
 import qualified System.IO.Temp as IO
@@ -115,13 +119,15 @@ failMessage cs = failWithCustom cs Nothing
 workspace :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> (FilePath -> m ()) -> m ()
 workspace prefixPath f = GHC.withFrozenCallStack $ do
   systemTemp <- H.evalIO IO.getCanonicalTemporaryDirectory
+  maybeKeepWorkspace <- H.evalIO $ IO.lookupEnv "KEEP_WORKSPACE"
   let systemPrefixPath = systemTemp <> "/" <> prefixPath
   H.evalIO $ IO.createDirectoryIfMissing True systemPrefixPath
   ws <- H.evalIO $ IO.createTempDirectory systemPrefixPath "test"
   H.annotate $ "Workspace: " <> ws
   liftIO $ IO.writeFile (ws <> "/module") callerModuleName
   f ws
-  when (IO.os /= "mingw32") . H.evalIO $ IO.removeDirectoryRecursive ws
+  when (IO.os /= "mingw32" && maybeKeepWorkspace /= Just "1") $ do
+    H.evalIO $ IO.removeDirectoryRecursive ws
 
 -- | Create a workspace directory which will exist for at least the duration of
 -- the supplied block.
@@ -292,6 +298,37 @@ assertByDeadlineM deadline f = GHC.withFrozenCallStack $ do
       else do
         H.annotateShow currentTime
         failMessage GHC.callStack "Condition not met by deadline"
+
+
+-- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
+--
+-- Expiration of the deadline results in an assertion failure
+waitByDeadlineIO :: (MonadTest m, MonadIO m, HasCallStack) => UTCTime -> IO Bool -> m ()
+waitByDeadlineIO deadline f = GHC.withFrozenCallStack $ do
+  success <- liftIO f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        waitByDeadlineIO deadline f
+      else do
+        H.annotateShow currentTime
+        failMessage GHC.callStack "Condition not met by deadline"
+
+-- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
+--
+-- Expiration of the deadline results in an assertion failure
+waitByDeadlineM :: (MonadTest m, MonadIO m, HasCallStack) => UTCTime -> m Bool -> m ()
+waitByDeadlineM deadline f = GHC.withFrozenCallStack $ do
+  success <- f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        waitByDeadlineM deadline f
+      else H.annotateShow currentTime
 
 -- | Run the operation 'f' once a second until it returns 'True' or the deadline expires.
 --
