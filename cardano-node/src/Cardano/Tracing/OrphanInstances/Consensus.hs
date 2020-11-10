@@ -393,13 +393,13 @@ instance ( ConvertRawHash blk
           "Replaying ledger from genesis"
         LedgerDB.ReplayFromSnapshot snap tip' _replayTo -> \_o ->
           "Replaying ledger from snapshot " <> showT snap <> " at " <>
-            renderPointAsPhrase tip'
+            renderRealPointAsPhrase tip'
         LedgerDB.ReplayedBlock pt _ledgerEvents replayTo -> \_o ->
           "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
       ChainDB.TraceLedgerEvent ev -> case ev of
         LedgerDB.TookSnapshot snap pt -> \_o ->
           "Took ledger snapshot " <> showT snap <>
-          " at " <> renderPointAsPhrase pt
+          " at " <> renderRealPointAsPhrase pt
         LedgerDB.DeletedSnapshot snap -> \_o ->
           "Deleted old snapshot " <> showT snap
         LedgerDB.InvalidSnapshot snap failure -> \_o ->

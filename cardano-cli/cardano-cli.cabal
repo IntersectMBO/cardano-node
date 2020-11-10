@@ -79,6 +79,7 @@ library
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
+                     , cardano-ledger-shelley-ma
                      -- TODO: We shouldn't be forced to import "cardano-node". Fix this.
                      , cardano-node
                      , cardano-prelude

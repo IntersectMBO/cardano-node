@@ -22,9 +22,10 @@ import           Cardano.Prelude
 import           Data.Aeson (ToJSONKey (..), ToJSONKeyFunction (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.HashMap.Strict as HMS
-import qualified Data.Set as Set
 import           Data.Scientific (Scientific)
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
@@ -46,13 +47,17 @@ import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
-import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as Core
+import qualified Cardano.Ledger.Mary.Value as MA
+import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
+import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
+import qualified Cardano.Ledger.Torsor as Core
 
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API
-import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
+import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
@@ -334,10 +339,10 @@ instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
     mkObject [ "kind" .= String "InvalidMetaData"
              ]
 
--- TODO the equality will need to be removed when Mary is switched to the real
--- Mary era instead of just a copy of Shelley. 'renderValueNotConservedErr' will
--- need to be changed accordingly.
-instance (ShelleyBasedEra era, Core.Value era ~ Coin)
+instance ( ShelleyBasedEra era
+         , ToJSON (Core.Value era)
+         , ToJSON (Core.Delta (Core.Value era))
+         )
       => ToObject (UtxoPredicateFailure era) where
   toObject _verb (BadInputsUTxO badInputs) =
     mkObject [ "kind" .= String "BadInputsUTxO"
@@ -389,16 +394,101 @@ instance (ShelleyBasedEra era, Core.Value era ~ Coin)
              , "addrs"   .= addrs
              ]
 
+instance ToJSON (MA.Value era) where
+  toJSON (MA.Value l ps) =
+    Aeson.object
+      [ "lovelace" .= toJSON l
+      , "policies" .= toJSON ps
+      ]
+
+instance ToJSON (MA.PolicyID era) where
+  toJSON (MA.PolicyID (ScriptHash h)) = Aeson.String (hashToTextAsHex h)
+
+instance ToJSONKey (MA.PolicyID era) where
+  toJSONKey = ToJSONKeyText render (Aeson.text . render)
+    where
+      render (MA.PolicyID (ScriptHash h)) = hashToTextAsHex h
+
+instance ToJSON MA.AssetID where
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . MA.assetID
+
+instance ToJSONKey MA.AssetID where
+  toJSONKey = ToJSONKeyText render (Aeson.text . render)
+    where
+      render = Text.decodeLatin1 . B16.encode . MA.assetID
+
+instance ToJSON MA.ValidityInterval where
+  toJSON vi =
+    Aeson.object $
+        [ "validFrom" .= x | x <- mbfield (MA.validFrom vi) ]
+     ++ [ "validTo"   .= x | x <- mbfield (MA.validTo   vi) ]
+    where
+      mbfield SNothing  = []
+      mbfield (SJust x) = [x]
+
+instance ( ShelleyBasedEra era
+         , ToJSON (Core.Value era)
+         , ToJSON (Core.Delta (Core.Value era))
+         ) => ToObject (MA.UtxoPredicateFailure era) where
+  toObject _verb (MA.BadInputsUTxO badInputs) =
+    mkObject [ "kind" .= String "BadInputsUTxO"
+             , "badInputs" .= badInputs
+             , "error" .= renderBadInputsUTxOErr badInputs
+             ]
+  toObject _verb (MA.OutsideValidityIntervalUTxO validityInterval slot) =
+    mkObject [ "kind" .= String "ExpiredUTxO"
+             , "validityInterval" .= validityInterval
+             , "slot" .= slot ]
+  toObject _verb (MA.MaxTxSizeUTxO txsize maxtxsize) =
+    mkObject [ "kind" .= String "MaxTxSizeUTxO"
+             , "size" .= txsize
+             , "maxSize" .= maxtxsize ]
+  toObject _verb MA.InputSetEmptyUTxO =
+    mkObject [ "kind" .= String "InputSetEmptyUTxO" ]
+  toObject _verb (MA.FeeTooSmallUTxO minfee txfee) =
+    mkObject [ "kind" .= String "FeeTooSmallUTxO"
+             , "minimum" .= minfee
+             , "fee" .= txfee ]
+  toObject _verb (MA.ValueNotConservedUTxO consumed produced) =
+    mkObject [ "kind" .= String "ValueNotConservedUTxO"
+             , "consumed" .= consumed
+             , "produced" .= produced
+             , "error" .= renderValueNotConservedErr consumed produced
+             ]
+  toObject _verb (MA.WrongNetwork network addrs) =
+    mkObject [ "kind" .= String "WrongNetwork"
+             , "network" .= network
+             , "addrs"   .= addrs
+             ]
+  toObject _verb (MA.WrongNetworkWithdrawal network addrs) =
+    mkObject [ "kind" .= String "WrongNetworkWithdrawal"
+             , "network" .= network
+             , "addrs"   .= addrs
+             ]
+  -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
+  toObject _verb (MA.OutputTooSmallUTxO badOutputs) =
+    mkObject [ "kind" .= String "OutputTooSmallUTxO"
+             , "outputs" .= badOutputs
+             , "error" .= String "The output is smaller than the allow minimum \
+                                 \UTxO value defined in the protocol parameters"
+             ]
+  toObject verb (MA.UpdateFailure f) = toObject verb f
+  toObject _verb (MA.OutputBootAddrAttrsTooBig badOutputs) =
+    mkObject [ "kind" .= String "OutputBootAddrAttrsTooBig"
+             , "outputs" .= badOutputs
+             , "error" .= String "The Byron address attributes are too big"
+             ]
+  toObject _verb MA.TriesToForgeADA =
+    mkObject [ "kind" .= String "TriesToForgeADA" ]
+
 renderBadInputsUTxOErr ::  Set (TxIn era) -> Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
 
-renderValueNotConservedErr :: DeltaCoin -> DeltaCoin -> Value
-renderValueNotConservedErr consumed produced
-  | consumed > produced = String "This transaction has consumed more Lovelace than it has produced."
-  | consumed < produced = String "This transaction has produced more Lovelace than it has consumed."
-  | otherwise = String "Impossible: Somehow this error has occurred in spite of the transaction being balanced."
+renderValueNotConservedErr :: Show val => val -> val -> Value
+renderValueNotConservedErr consumed produced = String $
+    "This transaction consumed " <> show consumed <> " but produced " <> show produced
 
 instance ToObject (PpupPredicateFailure era) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
