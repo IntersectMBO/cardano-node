@@ -120,7 +120,7 @@ module Cardano.Api.Typed (
     makeShelleyKeyWitness,
     WitnessNetworkIdOrByronAddress (..),
     makeShelleyBootstrapWitness,
-    makeShelleyScriptWitness,
+    makeScriptWitness,
     makeShelleySignature,
     getShelleyKeyWitnessVerificationKey,
 
@@ -454,7 +454,7 @@ import qualified Cardano.Chain.UTxO as Byron
 --
 -- Shelley imports
 --
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Core as Shelley (Script)
@@ -1115,6 +1115,10 @@ data Witness era where
        :: MA.Script StandardAllegra
        -> Witness Allegra
 
+     MaryScriptWitness
+       :: MA.Script StandardMary
+       -> Witness Mary
+
 deriving instance Eq (Witness Byron)
 deriving instance Show (Witness Byron)
 
@@ -1459,9 +1463,10 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
       error "makeShelleyKeyWitnessSignature: byron and shelley signature sizes do not match"
 
 
-makeShelleyScriptWitness :: forall era. Script era -> Witness era
-makeShelleyScriptWitness (ShelleyScript s) = ShelleyScriptWitness s
-makeShelleyScriptWitness (AllegraScript s) = AllegraScriptwitness $ MA.ScriptTimelock s
+makeScriptWitness :: forall era. Script era -> Witness era
+makeScriptWitness (ShelleyScript s) = ShelleyScriptWitness s
+makeScriptWitness (AllegraScript s) = AllegraScriptwitness $ MA.ScriptTimelock s
+makeScriptWitness (MaryScript s) = MaryScriptWitness $ MA.ScriptTimelock s
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId

@@ -12,7 +12,12 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Api.Script (
-    Script(SimpleScript, ShelleyScript, AllegraScript)
+    Script
+      ( SimpleScript
+      , ShelleyScript
+      , AllegraScript
+      , MaryScript
+      )
   , parseScript
   , parseScriptAny
   , parseScriptAll
@@ -60,8 +65,10 @@ import           Cardano.Slotting.Slot (SlotNo)
 
 import qualified Cardano.Ledger.Core as Shelley
 
+import           Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardCrypto, StandardMary,
+                     StandardShelley)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
@@ -90,12 +97,16 @@ data Script era where
 
      ShelleyScript :: Shelley.Script StandardShelley -> Script Shelley
      AllegraScript :: Timelock.Timelock StandardAllegra -> Script Allegra
+     MaryScript    :: Timelock.Timelock StandardMary -> Script Mary
 
 deriving stock instance (Eq (Script Shelley))
 deriving stock instance (Show (Script Shelley))
 
 deriving stock instance (Eq (Script Allegra))
 deriving stock instance (Show (Script Allegra))
+
+deriving stock instance (Eq (Script Mary))
+deriving stock instance (Show (Script Mary))
 
 pattern SimpleScript :: HasScriptFeatures era
                      => SimpleScript era -> Script era
@@ -139,6 +150,15 @@ instance HasTextEnvelope (Script Allegra) where
     textEnvelopeType _ = "Script"
     textEnvelopeDefaultDescr (AllegraScript _) = "Multi-signature script"
 
+instance SerialiseAsCBOR (Script Mary) where
+    serialiseToCBOR (MaryScript s) = CBOR.serialize' s
+    deserialiseFromCBOR (AsScript AsMary) bs =
+        MaryScript <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+instance HasTextEnvelope (Script Mary) where
+    textEnvelopeType _ = "Script"
+    textEnvelopeDefaultDescr (MaryScript _) = "Multi-signature script"
+
 -- ----------------------------------------------------------------------------
 -- Script Hash
 --
@@ -156,6 +176,7 @@ instance HasTypeProxy era => SerialiseAsRawBytes (Hash (Script era)) where
 scriptHash :: Script era -> Hash (Script era)
 scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashScript s)
 scriptHash (AllegraScript s) = ScriptHash (Timelock.hashTimelockScript s)
+scriptHash (MaryScript s) = ScriptHash (Timelock.hashTimelockScript s)
 
 
 -- ----------------------------------------------------------------------------
@@ -274,7 +295,22 @@ simpleScriptToScript =
             Timelock.Interval $ Timelock.ValidityInterval { Timelock.validFrom = SJust sAfter
                                                           , Timelock.validTo = SNothing
                                                           }
-      SimpleScriptInMaryEra    -> error "TODO: simpleScriptToScript conversion for Mary era"
+      SimpleScriptInMaryEra    -> MaryScript . go
+        where
+          go :: MultiSigScript Mary -> Timelock.Timelock StandardMary
+          go (RequireSignature _ (PaymentKeyHash kh))
+                              = Timelock.Multi (Shelley.RequireSignature (Shelley.coerceKeyRole kh))
+          go (RequireAllOf s) = Timelock.TimelockAnd  (fmap go $ Sequence.fromList s)
+          go (RequireAnyOf s) = Timelock.TimelockOr (fmap go $ Sequence.fromList s)
+          go (RequireMOf _m _s) = error "To fill in when ledger specs is updated in cabal project file"
+          go (RequireTimeBefore _ sBefore) =
+            Timelock.Interval $ Timelock.ValidityInterval { Timelock.validFrom = SNothing
+                                                          , Timelock.validTo = SJust sBefore
+                                                          }
+          go (RequireTimeAfter _ sAfter) =
+            Timelock.Interval $ Timelock.ValidityInterval { Timelock.validFrom = SJust sAfter
+                                                          , Timelock.validTo = SNothing
+                                                          }
 
 scriptToSimpleScript :: Script era -> SimpleScript era
 scriptToSimpleScript (ShelleyScript s0) = go s0
@@ -290,12 +326,14 @@ scriptToSimpleScript (ShelleyScript s0) = go s0
 scriptToSimpleScript (AllegraScript s0) = go s0
   where
     go :: Timelock.Timelock StandardAllegra -> SimpleScript Allegra
-    go (Timelock.Multi (Shelley.RequireSignature kh))
-                   = RequireSignature SignaturesInAllegraEra
-                       (PaymentKeyHash (Shelley.coerceKeyRole kh))
-    go (Timelock.Multi (Shelley.RequireAllOf s)) = RequireAllOf $ map ms s
-    go (Timelock.Multi (Shelley.RequireAnyOf s)) = RequireAnyOf $ map ms s
-    go (Timelock.Multi (Shelley.RequireMOf i s)) = RequireMOf i $ map ms s
+    go (Timelock.Multi (Shelley.RequireSignature kh)) =
+      RequireSignature SignaturesInAllegraEra (PaymentKeyHash (Shelley.coerceKeyRole kh))
+    go (Timelock.Multi (Shelley.RequireAllOf s)) =
+      RequireAllOf $ map (multiSigToSimpleScript SignaturesInAllegraEra) s
+    go (Timelock.Multi (Shelley.RequireAnyOf s)) =
+      RequireAnyOf $ map (multiSigToSimpleScript SignaturesInAllegraEra) s
+    go (Timelock.Multi (Shelley.RequireMOf i s)) =
+      RequireMOf i $ map (multiSigToSimpleScript SignaturesInAllegraEra) s
     go (Timelock.TimelockAnd seq') = RequireAllOf . map go $ toList seq'
     go (Timelock.TimelockOr seq') = RequireAnyOf . map go $ toList seq'
     go (Timelock.Interval (Timelock.ValidityInterval before after)) =
@@ -305,14 +343,39 @@ scriptToSimpleScript (AllegraScript s0) = go s0
         _ -> error "Cardano.Api.Script.scriptToSimpleScript: Upper and lower\
                    \ bound has been specified in a given ValidityInterval."
 
-    ms :: Shelley.MultiSig StandardAllegra -> SimpleScript Allegra
-    ms (Shelley.RequireSignature kh)
-                                = RequireSignature SignaturesInAllegraEra
-                                    (PaymentKeyHash (Shelley.coerceKeyRole kh))
-    ms (Shelley.RequireAllOf s) = RequireAllOf (map ms s)
-    ms (Shelley.RequireAnyOf s) = RequireAnyOf (map ms s)
-    ms (Shelley.RequireMOf m s) = RequireMOf m (map ms s)
+scriptToSimpleScript (MaryScript s0) = go s0
+  where
+    go :: Timelock.Timelock StandardMary -> SimpleScript Mary
+    go (Timelock.Multi (Shelley.RequireSignature kh)) =
+      RequireSignature SignaturesInMaryEra (PaymentKeyHash (Shelley.coerceKeyRole kh))
+    go (Timelock.Multi (Shelley.RequireAllOf s)) =
+      RequireAllOf $ map (multiSigToSimpleScript SignaturesInMaryEra) s
+    go (Timelock.Multi (Shelley.RequireAnyOf s)) =
+      RequireAnyOf $ map (multiSigToSimpleScript SignaturesInMaryEra) s
+    go (Timelock.Multi (Shelley.RequireMOf i s)) =
+      RequireMOf i $ map (multiSigToSimpleScript SignaturesInMaryEra) s
+    go (Timelock.TimelockAnd seq') = RequireAllOf . map go $ toList seq'
+    go (Timelock.TimelockOr seq') = RequireAnyOf . map go $ toList seq'
+    go (Timelock.Interval (Timelock.ValidityInterval before after)) =
+      case (before, after) of
+        (SJust b, SNothing) ->  RequireTimeBefore TimeLocksInMaryEra b
+        (SNothing, SJust a) ->  RequireTimeAfter TimeLocksInMaryEra a
+        _ -> error "Cardano.Api.Script.scriptToSimpleScript: Upper and lower\
+                   \ bound has been specified in a given ValidityInterval."
 
+multiSigToSimpleScript
+  :: (Era ledgerEra, Crypto ledgerEra ~ StandardCrypto)
+  => ScriptFeatureInEra SignatureFeature typedEra
+  -> Shelley.MultiSig ledgerEra
+  -> SimpleScript typedEra
+multiSigToSimpleScript feat (Shelley.RequireSignature kh) =
+  RequireSignature feat (PaymentKeyHash (Shelley.coerceKeyRole kh))
+multiSigToSimpleScript feat (Shelley.RequireAllOf s) =
+  RequireAllOf (map (multiSigToSimpleScript feat) s)
+multiSigToSimpleScript feat (Shelley.RequireAnyOf s) =
+  RequireAnyOf (map (multiSigToSimpleScript feat) s)
+multiSigToSimpleScript feat (Shelley.RequireMOf m s) =
+  RequireMOf m (map (multiSigToSimpleScript feat) s)
 
 --
 -- JSON serialisation

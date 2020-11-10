@@ -267,9 +267,9 @@ genShelleyWitnessSigningKey =
              , WitnessGenesisUTxOKey <$>  genSigningKey AsGenesisUTxOKey
              ]
 {-
--- TODO: makeShelleyScriptWitness = undefined
+-- TODO: makeScriptWitness = undefined
 genShelleyScriptWitness :: Gen (Witness Shelley)
-genShelleyScriptWitness = makeShelleyScriptWitness
+genShelleyScriptWitness = makeScriptWitness
 -}
 
 genSeed :: Int -> Gen Crypto.Seed
