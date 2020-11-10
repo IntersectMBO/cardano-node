@@ -102,14 +102,8 @@ data Script era where
      AllegraScript :: Timelock.Timelock StandardAllegra -> Script Allegra
      MaryScript    :: Timelock.Timelock StandardMary -> Script Mary
 
-deriving stock instance (Eq (Script Shelley))
-deriving stock instance (Show (Script Shelley))
-
-deriving stock instance (Eq (Script Allegra))
-deriving stock instance (Show (Script Allegra))
-
-deriving stock instance (Eq (Script Mary))
-deriving stock instance (Show (Script Mary))
+deriving stock instance (Eq   (Script era))
+deriving stock instance (Show (Script era))
 
 pattern SimpleScript :: HasScriptFeatures era
                      => SimpleScript era -> Script era
