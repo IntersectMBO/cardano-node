@@ -117,6 +117,9 @@ library
                         -Wpartial-fields
                         -Wcompat
 
+  if impl(ghc < 8.10)
+    ghc-options:        -Wno-incomplete-patterns
+
 test-suite cardano-api-test
   hs-source-dirs:       test
   main-is:              cardano-api-test.hs
