@@ -229,28 +229,22 @@ instance FromJSON PartialNodeConfiguration where
       parseHardForkProtocol v = do
         npcTestShelleyHardForkAtEpoch   <- v .:? "TestShelleyHardForkAtEpoch"
         npcTestShelleyHardForkAtVersion <- v .:? "TestShelleyHardForkAtVersion"
-        npcShelleyHardForkNotBeforeEpoch <- v .:? "ShelleyHardForkNotBeforeEpoch"
 
         npcTestAllegraHardForkAtEpoch   <- v .:? "TestAllegraHardForkAtEpoch"
         npcTestAllegraHardForkAtVersion <- v .:? "TestAllegraHardForkAtVersion"
-        npcAllegraHardForkNotBeforeEpoch <- v .:? "AllegraHardForkNotBeforeEpoch"
 
         npcTestMaryHardForkAtEpoch   <- v .:? "TestMaryHardForkAtEpoch"
         npcTestMaryHardForkAtVersion <- v .:? "TestMaryHardForkAtVersion"
-        npcMaryHardForkNotBeforeEpoch <- v .:? "MaryHardForkNotBeforeEpoch"
 
         pure NodeHardForkProtocolConfiguration {
                npcTestShelleyHardForkAtEpoch,
                npcTestShelleyHardForkAtVersion,
-               npcShelleyHardForkNotBeforeEpoch,
 
                npcTestAllegraHardForkAtEpoch,
                npcTestAllegraHardForkAtVersion,
-               npcAllegraHardForkNotBeforeEpoch,
 
                npcTestMaryHardForkAtEpoch,
-               npcTestMaryHardForkAtVersion,
-               npcMaryHardForkNotBeforeEpoch
+               npcTestMaryHardForkAtVersion
              }
 
 -- | Default configuration is mainnet
