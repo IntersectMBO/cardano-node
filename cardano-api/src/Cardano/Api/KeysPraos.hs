@@ -29,7 +29,6 @@ import           Data.String (IsString (..))
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.KES.Class as Crypto
-import qualified Cardano.Crypto.Libsodium as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
 
@@ -76,7 +75,7 @@ instance Key KesKey where
     deterministicSigningKey AsKesKey =
         KesSigningKey
           . Crypto.genKeyKES
-          . Crypto.mlsbFromByteString
+          . Crypto.mkSeedFromBytes
           . Crypto.getSeedBytes
 
     deterministicSigningKeySeedSize :: AsType KesKey -> Word
@@ -235,4 +234,3 @@ instance HasTextEnvelope (SigningKey VrfKey) where
       where
         proxy :: Proxy (Shelley.VRF StandardCrypto)
         proxy = Proxy
-

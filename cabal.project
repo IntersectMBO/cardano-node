@@ -91,8 +91,8 @@ package io-sim-classes
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: acac87c7af2652b8d86d92c583b6c29234634866
-  --sha256: 1awxr663zgkn8dw13pjzzlzzz5y9y5l2fy14f87331gbrw6n2xdg
+  tag: 1cd56867210b70626d8ed6e3f290034a56780681
+  --sha256: 034q2anpbc7bgp5draykz6lkzznxk31wy4nbgr4jv4f7778yls6b
   subdir:
     binary
     binary/test
@@ -159,8 +159,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 35c5950088a7c9fc725868f1e68a2f3bf14f0595
-  --sha256: 1xizr0r36xnsmkcd1p0c9m1bj918n5bja1p6y30qrbxsph5wn94v
+  tag: 5ed4a135020b8075fc14ad53548898bfd111a843
+  --sha256: 19rc3a4v09nyb8mr1pfs7lyl3nd5aw7hhklr0khynsbflzaaaf1a
   subdir:
     io-sim
     io-sim-classes
