@@ -740,4 +740,3 @@ submitTxToNodeLocal connctInfo tx = do
         pure $ SendMsgSubmitTx tx $ \result -> do
         atomically $ putTMVar resultVar result
         pure (TxSubmission.SendMsgDone ())
-

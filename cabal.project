@@ -91,8 +91,8 @@ package io-sim-classes
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: acac87c7af2652b8d86d92c583b6c29234634866
-  --sha256: 1awxr663zgkn8dw13pjzzlzzz5y9y5l2fy14f87331gbrw6n2xdg
+  tag: 6226a0feb1d74f50a430242a1b4608fd48e10aad
+  --sha256: 034q2anpbc7bgp5draykz6lkzznxk31wy4nbgr4jv4f7778yls6b
   subdir:
     binary
     binary/test
@@ -110,8 +110,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 8d836e61bb88bda4a6a5c00694735928390067a1
-  --sha256: 0jpdz2294k5q8c90hbg7s808ypglar94j1rm2x81h69ilsp5g3j3
+  tag: 36b6127ea9ed076b3781d5fe9e2a32c916eff522
+  --sha256: 0kjlaxfdgxd2wl7p2dxfdaxc9a5d7l92s72g204rgm3ly7hgnkaw
   subdir:
     byron/chain/executable-spec
     byron/crypto
@@ -129,8 +129,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: bec71e48b027b2022e7be1fb7dd265bbbd80490b
-  --sha256: 0jnxa9m84ka799a3i863sqvlygzf18941pi00d88ar45qdmzkagm
+  tag: 58e146c14e1349553d0ed75dd5245bbe65f0533e
+  --sha256: 166rm0sxldnf0g2g9jp4k0rgd01wcbm0g54fcw3bxilzr1dvwqfi
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -144,8 +144,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: b5965e013fbcfb2a155582953d4a9a99eee22a8a
-  --sha256: 0c2xmf57rw2p1llm69x4b3cxzigxj0iyxa6cl0ivps92m9l2rv2n
+  tag: 65834fcfde3d86461a8f8525b04e4bdf9cc06e41
+  --sha256: 0vlxfbfa4skagngwirx5fnyhl8bycskgk0gnhaawrbi3w9qxbd1s
   subdir:
     contra-tracer
     iohk-monitoring
@@ -159,8 +159,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 35c5950088a7c9fc725868f1e68a2f3bf14f0595
-  --sha256: 1xizr0r36xnsmkcd1p0c9m1bj918n5bja1p6y30qrbxsph5wn94v
+  tag: 560f6d202749b38bece2ceb7227792f6cb7b6bf7
+  --sha256: 0ha73bm9f9z1wpmwjclbz8696m60sv7wanq2054d87h9jrz80rah
   subdir:
     io-sim
     io-sim-classes
