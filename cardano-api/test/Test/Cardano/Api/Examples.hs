@@ -4,9 +4,15 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Test.Cardano.Api.Examples
-  ( exampleAll
-  , exampleAny
-  , exampleMofN
+  ( exampleAllShelley
+  , exampleAnyShelley
+  , exampleMofNShelley
+  , exampleAllAllegra
+  , exampleAnyAllegra
+  , exampleMofNAllegra
+  , exampleAllMary
+  , exampleAnyMary
+  , exampleMofNMary
   , exampleShelleyGenesis
   ) where
 
@@ -18,11 +24,11 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
-import           Cardano.Api.Typed (SimpleScript (..), ScriptFeatureInEra(..))
+import           Cardano.Api.Typed (ScriptFeatureInEra (..), SimpleScript (..), SlotNo (..))
 import qualified Cardano.Api.Typed as Api
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Consensus.Util.Time
 
 import           Shelley.Spec.Ledger.Address (Addr (..))
@@ -37,8 +43,8 @@ import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import           Cardano.Api.Shelley.Genesis
 
 
-exampleAll :: SimpleScript Api.Shelley
-exampleAll =
+exampleAllShelley :: SimpleScript Api.Shelley
+exampleAllShelley =
   RequireAllOf [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a"
                , RequireSignature SignaturesInShelleyEra
@@ -58,8 +64,8 @@ exampleAll =
                ]
 
 
-exampleAny :: SimpleScript Api.Shelley
-exampleAny =
+exampleAnyShelley :: SimpleScript Api.Shelley
+exampleAnyShelley =
   RequireAnyOf [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09"
                , RequireSignature SignaturesInShelleyEra
@@ -74,8 +80,8 @@ exampleAny =
                    $ convertToHash "622be5fab3b5c3f371a50a535e4d3349c942a98cecee93b24e2fd11d"
                ]
 
-exampleMofN :: SimpleScript Api.Shelley
-exampleMofN =
+exampleMofNShelley :: SimpleScript Api.Shelley
+exampleMofNShelley =
   RequireMOf 2 [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"
                , RequireSignature SignaturesInShelleyEra
@@ -84,6 +90,55 @@ exampleMofN =
                    $ convertToHash "b275b08c999097247f7c17e77007c7010cd19f20cc086ad99d398538"
                , RequireSignature SignaturesInShelleyEra
                    $ convertToHash "686024aecb5884d73a11b9ae4e63931112ba737e878d74638b78513a"
+               ]
+
+exampleAllAllegra :: SimpleScript Api.Allegra
+exampleAllAllegra =
+  RequireAllOf [ RequireSignature SignaturesInAllegraEra
+                   (convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a")
+               , RequireTimeBefore TimeLocksInAllegraEra (SlotNo 42)
+               ]
+
+
+exampleAnyAllegra :: SimpleScript Api.Allegra
+exampleAnyAllegra =
+  RequireAnyOf [ RequireSignature SignaturesInAllegraEra
+                   (convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09")
+               , RequireTimeAfter TimeLocksInAllegraEra (SlotNo 42)
+               ]
+
+exampleMofNAllegra :: SimpleScript Api.Allegra
+exampleMofNAllegra =
+  RequireMOf 1 [ RequireSignature SignaturesInAllegraEra
+                   (convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413")
+               , RequireSignature SignaturesInAllegraEra
+                   (convertToHash "f856c0c5839bab22673747d53f1ae9eed84afafb085f086e8e988614")
+               , RequireTimeBefore TimeLocksInAllegraEra (SlotNo 42)
+               ]
+
+
+exampleAllMary :: SimpleScript Api.Mary
+exampleAllMary =
+  RequireAllOf [ RequireSignature SignaturesInMaryEra
+                   (convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a")
+               , RequireTimeBefore TimeLocksInMaryEra (SlotNo 42)
+               ]
+
+
+exampleAnyMary :: SimpleScript Api.Mary
+exampleAnyMary =
+  RequireAnyOf [ RequireSignature SignaturesInMaryEra
+                   (convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09")
+               , RequireTimeAfter TimeLocksInMaryEra (SlotNo 42)
+               ]
+
+exampleMofNMary :: SimpleScript Api.Mary
+exampleMofNMary =
+  RequireMOf 1 [ RequireSignature SignaturesInMaryEra
+                   (convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413")
+               , RequireSignature SignaturesInMaryEra
+                   (convertToHash "f856c0c5839bab22673747d53f1ae9eed84afafb085f086e8e988614")
+               , RequireTimeBefore TimeLocksInMaryEra (SlotNo 42)
                ]
 
 convertToHash :: Text -> Api.Hash Api.PaymentKey

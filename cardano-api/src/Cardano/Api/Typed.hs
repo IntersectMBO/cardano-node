@@ -35,6 +35,8 @@ module Cardano.Api.Typed (
     -- * Eras
     Byron,
     Shelley,
+    Allegra,
+    Mary,
     HasTypeProxy(..),
     AsType(..),
     -- * Cryptographic key interface

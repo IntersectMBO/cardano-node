@@ -13,7 +13,7 @@ module Cardano.Api.Eras
   , AsType(..)
   ) where
 
-import Cardano.Api.HasTypeProxy
+import           Cardano.Api.HasTypeProxy
 
 
 -- | A type used as a tag to distinguish the Byron era.
@@ -25,7 +25,7 @@ data Shelley
 -- | A type used as a tag to distinguish the Allegra era.
 data Allegra
 
-  -- | A type used as a tag to distinguish the Mary era.
+-- | A type used as a tag to distinguish the Mary era.
 data Mary
 
 
