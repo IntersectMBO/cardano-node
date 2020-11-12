@@ -41,6 +41,10 @@ library
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.Key
+                        Cardano.Api.KeysByron
+                        Cardano.Api.KeysShelley
+                        Cardano.Api.KeysPraos
+                        Cardano.Api.Script
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
@@ -65,6 +69,7 @@ library
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
+                      , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-slotting
                       , cborg
@@ -112,6 +117,9 @@ library
                         -Wpartial-fields
                         -Wcompat
 
+  if impl(ghc < 8.10)
+    ghc-options:        -Wno-incomplete-patterns
+
 test-suite cardano-api-test
   hs-source-dirs:       test
   main-is:              cardano-api-test.hs
@@ -158,7 +166,9 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
-                        Test.Cardano.Api.Typed.MultiSigScript
+                        Test.Cardano.Api.Typed.MultiSig.Allegra
+                        Test.Cardano.Api.Typed.MultiSig.Mary
+                        Test.Cardano.Api.Typed.MultiSig.Shelley
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
                         Test.Tasty.Hedgehog.Group

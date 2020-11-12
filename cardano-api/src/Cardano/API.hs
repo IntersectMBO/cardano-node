@@ -94,7 +94,7 @@ module Cardano.API (
     ShelleyWitnessSigningKey,
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,
-    makeShelleyScriptWitness,
+    makeScriptWitness,
 
     -- * Fee calculation
     transactionFee,
@@ -131,16 +131,19 @@ module Cardano.API (
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.
-    Script,
+    Script(SimpleScript),
 
     -- ** Script addresses
     -- | Making addresses from scripts.
+    ScriptHash,
     scriptHash,
 
     -- ** Multi-signature scripts
     -- | Making multi-signature scripts.
-    MultiSigScript,
-    makeMultiSigScript,
+    SimpleScript(..),
+    ScriptFeatureInEra(..),
+    SignatureFeature,
+    TimeLocksFeature,
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.
