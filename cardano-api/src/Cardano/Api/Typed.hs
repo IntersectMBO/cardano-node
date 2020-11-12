@@ -520,6 +520,8 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Utils
+import           Cardano.Api.Value
+
 
 {- HLINT ignore "Redundant flip" -}
 
@@ -859,10 +861,6 @@ deriving instance Eq (TxOut Byron)
 deriving instance Eq (TxOut Shelley)
 deriving instance Show (TxOut Byron)
 deriving instance Show (TxOut Shelley)
-
-newtype Lovelace = Lovelace Integer
-  deriving (Eq, Ord, Enum, Show)
-
 
 toByronTxIn  :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
