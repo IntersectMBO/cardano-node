@@ -1,8 +1,10 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
--- | Class of errors used in the Api.
---
+-- | Deserialisation of input that may be formatted/encoded in one of several specified
+-- ways.
 module Cardano.Api.DeserialiseAnyOf
   ( InputFormat (..)
   , InputDecodeError (..)
@@ -16,11 +18,17 @@ module Cardano.Api.DeserialiseAnyOf
   , deserialiseAnyVerificationKeyBech32
   , deserialiseAnyVerificationKeyTextEnvelope
   , renderSomeAddressVerificationKey
+
+  , readFileAnyOfInputFormats
+  , readFileTextEnvelope'
   ) where
 
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toLower)
 import           Data.List.NonEmpty (NonEmpty)
@@ -75,6 +83,7 @@ data InputDecodeError
   -- ^ The provided data does not represent a valid value of the provided
   -- type.
   deriving (Eq, Show)
+
 instance Error InputDecodeError where
   displayError = Text.unpack . renderInputDecodeError
 
@@ -229,6 +238,7 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
 
         -- The input was valid Bech32, but some other error occurred.
         Left err -> DeserialiseInputError $ InputBech32DecodeError err
+
 data SomeAddressVerificationKey
   = AByronVerificationKey           (VerificationKey ByronKey)
   | APaymentVerificationKey         (VerificationKey PaymentKey)
@@ -315,3 +325,44 @@ deserialiseAnyVerificationKeyTextEnvelope bs =
     , FromSomeType (AsVerificationKey AsGenesisExtendedKey) AGenesisExtendedVerificationKey
     ]
 
+
+------------------------------------------------------------------------------
+-- Encoded file deserialisation
+------------------------------------------------------------------------------
+
+-- | Read and decode input from a file.
+--
+-- The contents of the file can either be Bech32-encoded, hex-encoded, or in
+-- the text envelope format.
+readFileAnyOfInputFormats
+  :: AsType a
+  -> NonEmpty (InputFormat a)
+  -> FilePath
+  -> IO (Either (FileError InputDecodeError) a)
+readFileAnyOfInputFormats asType acceptedFormats path =
+  runExceptT $ do
+    content <- handleIOExceptT (FileIOError path) $ BS.readFile path
+    firstExceptT (FileError path) $ hoistEither $
+      deserialiseInput asType acceptedFormats content
+
+-- | Read and decode input from a text envelope file.
+--
+-- The contents of the file must be in the text envelope format.
+readFileTextEnvelope'
+  :: HasTextEnvelope a
+  => AsType a
+  -> FilePath
+  -> IO (Either (FileError InputDecodeError) a)
+readFileTextEnvelope' asType fp =
+    first toInputDecodeError <$> readFileTextEnvelope asType fp
+  where
+    toInputDecodeError
+      :: FileError TextEnvelopeError
+      -> FileError InputDecodeError
+    toInputDecodeError err =
+      case err of
+        FileIOError path ex -> FileIOError path ex
+        FileError path textEnvErr ->
+          FileError path (InputTextEnvelopeError textEnvErr)
+        FileErrorTempFile targetP tempP h ->
+          FileErrorTempFile targetP tempP h

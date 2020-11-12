@@ -45,6 +45,7 @@ library
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.DeserialiseAnyOf
                         Cardano.Api.Shelley
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
@@ -59,7 +60,7 @@ library
                         Cardano.Api.Convenience.Constraints
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
-                        Cardano.Api.DeserialiseAnyOf
+                        Cardano.Api.Protocol
                         Cardano.Api.Environment
                         Cardano.Api.EraCast
                         Cardano.Api.Eras

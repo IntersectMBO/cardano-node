@@ -25,8 +25,6 @@ import           Text.Regex.TDFA ((=~))
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyVRFKeys :: Property
 golden_shelleyVRFKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-  H.note_ tempDir
-
   -- Reference keys
   referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/vrf_keys/verification_key"
   referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/vrf_keys/signing_key"
@@ -55,8 +53,6 @@ golden_shelleyVRFKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyVRFKeys_te :: Property
 golden_shelleyVRFKeys_te = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-  H.note_ tempDir
-
   -- Reference keys
   referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/vrf_keys/verification_key"
   referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/vrf_keys/signing_key"

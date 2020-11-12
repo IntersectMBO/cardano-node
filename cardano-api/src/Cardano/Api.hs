@@ -540,6 +540,8 @@ module Cardano.Api (
     writeFileTextEnvelope,
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
+    readFileAnyOfInputFormats,
+    readFileTextEnvelope',
 
     -- ** Text envelope CDDL
     -- | Support for serialising values in the ledger's CDDL format.
