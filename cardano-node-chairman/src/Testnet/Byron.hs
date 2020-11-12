@@ -121,7 +121,7 @@ testnet H.Conf {..} = do
     H.createDirectoryIfMissing dbDir
     H.createDirectoryIfMissing $ tempBaseAbsPath </> "" <> socketDir
 
-    let otherPorts = L.dropNth i allPorts
+    otherPorts <- H.noteShow $ L.dropNth i allPorts
 
     H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $ J.encode $
       J.object
