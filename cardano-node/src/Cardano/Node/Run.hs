@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -56,22 +55,15 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Fragment.InFuture (defaultClockSkew)
+import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), NodeArgs (..), RunNode,
-                     RunNodeArgs (..))
+                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode,
+                     RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
-
-import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import           Ouroboros.Consensus.Storage.ImmutableDB (ValidationPolicy (..))
-import           Ouroboros.Consensus.Storage.VolatileDB (BlockValidationPolicy (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                      gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -194,7 +186,7 @@ handleSimpleNode
   -> IO ()
 handleSimpleNode p trace nodeTracers nc onKernel = do
 
-  let pInfo@ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
+  let pInfo = Consensus.protocolInfo p
       tracer = toLogObject trace
 
   createTracers nc trace tracer
@@ -249,53 +241,26 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   withShutdownHandling nc trace $ \sfds ->
    Node.run
-     RunNodeArgs {
-       rnTraceConsensus       = consensusTracers nodeTracers,
-       rnTraceNTN             = nodeToNodeTracers nodeTracers,
-       rnTraceNTC             = nodeToClientTracers nodeTracers,
-       rnTraceDB              = chainDBTracer nodeTracers,
-       rnTraceDiffusion       = diffusionTracers,
-       rnDiffusionArguments   = diffusionArguments,
-       rnNetworkMagic         = getNetworkMagic (Consensus.configBlock cfg),
-       rnDatabasePath         = dbPath,
-       rnProtocolInfo         = pInfo,
-       rnCustomiseChainDbArgs = customiseChainDbArgs $ ncValidateDB nc,
-       rnCustomiseNodeArgs    = customiseNodeArgs (ncMaxConcurrencyBulkSync nc)
-                                  (ncMaxConcurrencyDeadline nc),
-       rnNodeToNodeVersions   = supportedNodeToNodeVersions (Proxy @blk),
-       rnNodeToClientVersions = supportedNodeToClientVersions (Proxy @blk),
-       rnNodeKernelHook       = \registry nodeKernel -> do
-         maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
-           (Node.getChainDB nodeKernel)
-         onKernel nodeKernel,
-       rnMaxClockSkew         = defaultClockSkew
-    }
+     RunNodeArgs
+       { rnTraceConsensus = consensusTracers nodeTracers
+       , rnTraceNTN       = nodeToNodeTracers nodeTracers
+       , rnTraceNTC       = nodeToClientTracers nodeTracers
+       , rnProtocolInfo   = pInfo
+       , rnNodeKernelHook = \registry nodeKernel -> do
+           maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
+             (Node.getChainDB nodeKernel)
+           onKernel nodeKernel
+       }
+     StdRunNodeArgs
+       { srnBfcMaxConcurrencyBulkSync = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+       , srnBfcMaxConcurrencyDeadline = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+       , srcChainDbValidateOverride   = ncValidateDB nc
+       , srnDatabasePath              = dbPath
+       , srnDiffusionArguments        = diffusionArguments
+       , srnDiffusionTracers          = diffusionTracers
+       , srnTraceChainDB              = chainDBTracer nodeTracers
+       }
  where
-  customiseNodeArgs :: Maybe MaxConcurrencyBulkSync
-                    -> Maybe MaxConcurrencyDeadline
-                    -> NodeArgs IO RemoteConnectionId LocalConnectionId blk
-                    -> NodeArgs IO RemoteConnectionId LocalConnectionId blk
-  customiseNodeArgs bulk_m deadline_m args@NodeArgs{ blockFetchConfiguration } = args {
-      blockFetchConfiguration = blockFetchConfiguration {
-          bfcMaxConcurrencyBulkSync = maybe (bfcMaxConcurrencyBulkSync blockFetchConfiguration)
-            unMaxConcurrencyBulkSync bulk_m
-        , bfcMaxConcurrencyDeadline = maybe (bfcMaxConcurrencyDeadline blockFetchConfiguration)
-            unMaxConcurrencyDeadline deadline_m
-        }
-      }
-
-  customiseChainDbArgs :: Bool
-                       -> ChainDB.ChainDbArgs Identity IO blk
-                       -> ChainDB.ChainDbArgs Identity IO blk
-  customiseChainDbArgs runValid args
-    | runValid
-    = args
-      { ChainDB.cdbImmutableDbValidation = ValidateAllChunks
-      , ChainDB.cdbVolatileDbValidation = ValidateAll
-      }
-    | otherwise
-    = args
-
   createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk
                          -> DiffusionTracers
   createDiffusionTracers nodeTracers' = DiffusionTracers
