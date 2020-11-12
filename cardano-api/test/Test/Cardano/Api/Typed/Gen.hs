@@ -261,11 +261,11 @@ genTxBodyShelley =
 
 genByronTxOut :: Gen (TxOut Byron)
 genByronTxOut =
-  TxOut <$> genAddressByron <*> genLovelace
+  TxOut <$> genAddressByron <*> (TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace)
 
 genShelleyTxOut :: Gen (TxOut Shelley)
 genShelleyTxOut =
-  TxOut <$> genAddressShelley <*> genLovelace
+  TxOut <$> genAddressShelley <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
 
 genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 ())
 genShelleyHash = return $ Crypto.hashWith CBOR.serialize' ()

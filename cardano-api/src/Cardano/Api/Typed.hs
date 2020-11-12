@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -85,17 +86,42 @@ module Cardano.Api.Typed (
     StakeKey,
     StakeExtendedKey,
 
+    -- * Currency values
+    -- ** Ada \/ Lovelace
+    Lovelace(..),
+
+    -- ** Multi-asset values
+    Quantity(..),
+    PolicyId(..),
+    AssetName(..),
+    AssetId(..),
+    Value,
+    selectAsset,
+    valueFromList,
+    valueToList,
+    filterValue,
+    negateValue,
+
+    -- ** Ada \/ Lovelace within multi-asset values
+    quantityToLovelace,
+    lovelaceToQuantity,
+    selectLovelace,
+    lovelaceToValue,
+
     -- * Building transactions
     -- | Constructing and inspecting transactions
     TxBody(..),
     TxId(..),
     getTxId,
     TxIn(..),
-    TxOut(..),
     TxIx(..),
+    TxOut(..),
+    TxOutValue(..),
+    AdaOnlyInEra(..),
+    MultiAssetInEra(..),
     TTL,
     TxFee,
-    Lovelace(..),
+    MintValue(..),
     makeByronTransaction,
     makeShelleyTransaction,
     SlotNo(..),
@@ -855,7 +881,7 @@ newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
 
-data TxOut era = TxOut (Address era) Lovelace
+data TxOut era = TxOut (Address era) (TxOutValue era)
 
 deriving instance Eq (TxOut Byron)
 deriving instance Eq (TxOut Shelley)
@@ -867,8 +893,10 @@ toByronTxIn (TxIn txid (TxIx txix)) =
     Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
 toByronTxOut :: TxOut Byron -> Maybe Byron.TxOut
-toByronTxOut (TxOut (ByronAddress addr) value) =
+toByronTxOut (TxOut (ByronAddress addr) (TxOutAdaOnly AdaOnlyInByronEra value)) =
     Byron.TxOut addr <$> toByronLovelace value
+
+toByronTxOut (TxOut (ByronAddress _) (TxOutValue era _)) = case era of {}
 
 toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
 toByronLovelace (Lovelace x) =
@@ -880,9 +908,10 @@ toShelleyTxIn  :: TxIn -> Shelley.TxIn StandardShelley
 toShelleyTxIn (TxIn txid (TxIx txix)) =
     Shelley.TxIn (toShelleyTxId txid) (fromIntegral txix)
 
-toShelleyTxOut :: TxOut era -> Shelley.TxOut StandardShelley
-toShelleyTxOut (TxOut addr value) =
+toShelleyTxOut :: TxOut Shelley -> Shelley.TxOut StandardShelley
+toShelleyTxOut (TxOut addr (TxOutAdaOnly _ value)) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
+toShelleyTxOut (TxOut _addr (TxOutValue evidence _)) = case evidence of {}
 
 toShelleyLovelace :: Lovelace -> Shelley.Coin
 toShelleyLovelace (Lovelace l) = Shelley.Coin l
@@ -1011,7 +1040,7 @@ makeShelleyTransaction :: TxExtraContent
                        -> TTL
                        -> TxFee
                        -> [TxIn]
-                       -> [TxOut anyera]
+                       -> [TxOut Shelley]
                        -> TxBody Shelley
 makeShelleyTransaction TxExtraContent {
                          txMetadata,
