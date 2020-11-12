@@ -472,6 +472,8 @@ pTransaction =
              , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
              ]
           )
+    , subParser "policyid"
+        (Opt.info pTransactionPolicyId $ Opt.progDesc "Calculate the PolicyId from the monetary policy script.")
     , subParser "calculate-min-fee"
         (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
     , subParser "txid"
@@ -494,6 +496,7 @@ pTransaction =
   pTransactionBuild :: Parser TransactionCmd
   pTransactionBuild = TxBuildRaw <$> some pTxIn
                                  <*> some pTxOut
+                                 <*> optional pMint
                                  <*> pTxTTL
                                  <*> pTxFee
                                  <*> many pCertificateFile
@@ -522,10 +525,13 @@ pTransaction =
                                     <*> some pWitnessFile
                                     <*> pOutputFile
 
-  pTransactionSubmit  :: Parser TransactionCmd
+  pTransactionSubmit :: Parser TransactionCmd
   pTransactionSubmit = TxSubmit <$> pProtocol
                                 <*> pNetworkId
                                 <*> pTxSubmitFile
+
+  pTransactionPolicyId :: Parser TransactionCmd
+  pTransactionPolicyId = TxMintedPolicyId <$> pScript
 
   pTransactionCalculateMinFee :: Parser TransactionCmd
   pTransactionCalculateMinFee =
@@ -1448,7 +1454,7 @@ pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
     <> Opt.metavar "TX-OUT"
-    <> Opt.help "The ouput transaction as Address+Lovelace where Address is \
+    <> Opt.help "The transaction ouput as Address+Lovelace where Address is \
                 \the Bech32-encoded address followed by the amount in \
                 \Lovelace."
     )
@@ -1456,6 +1462,15 @@ pTxOut =
     parseTxOut :: Atto.Parser (TxOut Shelley)
     parseTxOut =
       TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
+
+pMint :: Parser String
+pMint =
+  Opt.strOption
+    (  Opt.long "mint"
+    <> Opt.metavar "VALUE"
+    <> Opt.help "Mint multi-asset value(s) with the multi-asset cli syntax"
+    <> Opt.value ""
+    )
 
 pTxTTL :: Parser SlotNo
 pTxTTL =
