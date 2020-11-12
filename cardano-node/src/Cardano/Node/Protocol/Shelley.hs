@@ -166,7 +166,7 @@ readLeaderCredentialsSingleton
                       shelleyKESFile = Just kesFile
                     } = do
     vrfSKey <-
-      firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile)
+      firstExceptT FileError (newExceptT $ readFileTextEnvelope' (AsSigningKey AsVrfKey) vrfFile)
 
     (opCert, kesSKey) <- opCertKesKeyCheck kesFile opCertFile
 
@@ -188,9 +188,9 @@ opCertKesKeyCheck
   -> ExceptT PraosLeaderCredentialsError IO (OperationalCertificate, SigningKey KesKey)
 opCertKesKeyCheck kesFile certFile = do
   opCert <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope AsOperationalCertificate certFile)
+    firstExceptT FileError (newExceptT $ readFileTextEnvelope' AsOperationalCertificate certFile)
   kesSKey <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile)
+    firstExceptT FileError (newExceptT $ readFileTextEnvelope' (AsSigningKey AsKesKey) kesFile)
   let opCertSpecifiedKesKeyhash = verificationKeyHash $ getHotKey opCert
       suppliedKesKeyHash = verificationKeyHash $ getVerificationKey kesSKey
   -- Specified KES key in operational certificate should match the one
@@ -266,7 +266,7 @@ parseEnvelope ::
   -> (TextEnvelope, String)
   -> ExceptT PraosLeaderCredentialsError IO a
 parseEnvelope as (te, loc) =
-  firstExceptT (FileError . Api.FileError loc) . hoistEither $
+  firstExceptT (FileError . Api.FileError loc . InputTextEnvelopeError) . hoistEither $
     deserialiseFromTextEnvelope as te
 
 
@@ -318,7 +318,7 @@ instance Error GenesisValidationError where
 data PraosLeaderCredentialsError =
        CredentialsReadError !FilePath !IOException
      | EnvelopeParseError !FilePath !String
-     | FileError !(Api.FileError TextEnvelopeError)
+     | FileError !(Api.FileError InputDecodeError)
 --TODO: pick a less generic constructor than FileError
 
      | OCertNotSpecified
