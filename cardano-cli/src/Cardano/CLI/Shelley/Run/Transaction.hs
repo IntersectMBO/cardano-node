@@ -26,8 +26,8 @@ import qualified Cardano.Binary as CBOR
 
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 --TODO: following import needed for orphan Eq Script instance
-import           Shelley.Spec.Ledger.Scripts ()
 import           Cardano.Ledger.ShelleyMA.TxBody ()
+import           Shelley.Spec.Ledger.Scripts ()
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..), HardForkApplyTxErr (..))
@@ -105,7 +105,7 @@ renderShelleyTxCmdError err =
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw txins txouts ttl fee certs wdrls
+    TxBuildRaw txins txouts _Values ttl fee certs wdrls
                metadataSchema metadataFiles mUpProp out ->
       runTxBuildRaw txins txouts ttl fee certs wdrls
                     metadataSchema metadataFiles mUpProp out
@@ -119,6 +119,7 @@ runTransactionCmd cmd =
                            nShelleyKeyWitnesses nByronKeyWitnesses
     TxGetTxId txinfile ->
       runTxGetTxId txinfile
+    TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
     TxCreateWitness txBodyfile witSignData mbNw outFile ->
       runTxCreateWitness txBodyfile witSignData mbNw outFile
     TxAssembleTxBodyWitness txBodyFile witnessFile outFile ->
@@ -289,6 +290,11 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
                              nByronKeyWitnesses nShelleyKeyWitnesses
 
     liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+
+runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
+runTxCreatePolicyId (ScriptFile _sFile) =
+  -- Here we would decode the JSON script file and then hash.
+  liftIO $ putTextLn "Not implemented yet"
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.

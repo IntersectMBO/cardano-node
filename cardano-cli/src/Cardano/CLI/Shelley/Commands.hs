@@ -164,6 +164,7 @@ data TransactionCmd
   = TxBuildRaw
       [TxIn]
       [TxOut Shelley]
+      (Maybe String) -- Placeholder for multi asset Values
       SlotNo
       Lovelace
       [CertificateFile]
@@ -176,6 +177,7 @@ data TransactionCmd
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit Protocol NetworkId FilePath
+  | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)
@@ -195,6 +197,7 @@ renderTransactionCmd cmd =
     TxCreateWitness {} -> "transaction witness"
     TxAssembleTxBodyWitness {} -> "transaction sign-witness"
     TxSubmit {} -> "transaction submit"
+    TxMintedPolicyId {} -> "transaction policyid"
     TxCalculateMinFee {} -> "transaction calculate-min-fee"
     TxGetTxId {} -> "transaction txid"
 
