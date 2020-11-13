@@ -1,9 +1,12 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Api.Typed.Gen
   ( genAddressByron
   , genAddressShelley
+  , genValueNestedRep
+  , genValueNestedBundle
   , genByronKeyWitness
   , genRequiredSig
   , genMofNRequiredSig
@@ -22,6 +25,7 @@ module Test.Cardano.Api.Typed.Gen
   , genStakeAddress
   , genTx
   , genTxBody
+  , genValue
   , genVerificationKey
   ) where
 
@@ -30,13 +34,14 @@ import           Cardano.Api.Typed
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
+import           Data.String
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 
-import           Hedgehog (Gen, Range)
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -168,6 +173,55 @@ genMultiSigScriptsMary =
                       sequence [genAll subSeq, genAny subSeq, genMofN subSeq]
                       )
 
+    ]
+
+genAssetName :: Gen AssetName
+genAssetName =
+  Gen.frequency
+    -- mostly from a small number of choices, so we get plenty of repetition
+    [ (9, Gen.element ["", "a", "b", "c"])
+    , (1, AssetName <$> Gen.utf8 (Range.singleton  32) Gen.alphaNum)
+    , (1, AssetName <$> Gen.utf8 (Range.constant 1 31) Gen.alphaNum)
+    ]
+
+genPolicyId :: Gen PolicyId
+genPolicyId =
+  Gen.frequency
+      -- mostly from a small number of choices, so we get plenty of repetition
+    [ (9, Gen.element [ fromString (x : replicate 55 '0') | x <- ['a'..'c'] ])
+
+       -- and some from the full range of the type
+    , (1, PolicyId <$> genScriptHash)
+    ]
+
+genAssetId :: Gen AssetId
+genAssetId = Gen.choice [ AssetId <$> genPolicyId <*> genAssetName
+                        , return AdaAssetId
+                        ]
+
+genQuantity :: Gen Quantity
+genQuantity = fromInteger <$> Gen.integral (Range.constantFrom 0 (-2) 2)
+
+genValue :: Gen Value
+genValue =
+  valueFromList <$>
+    Gen.list (Range.constant 0 10)
+             ((,) <$> genAssetId <*> genQuantity)
+
+
+-- Note that we expect to sometimes generate duplicate policy id keys since we
+-- pick 90% of policy ids from a set of just three.
+genValueNestedRep :: Gen ValueNestedRep
+genValueNestedRep =
+  ValueNestedRep <$> Gen.list (Range.constant 0 5) genValueNestedBundle
+
+genValueNestedBundle :: Gen ValueNestedBundle
+genValueNestedBundle =
+  Gen.choice
+    [ ValueNestedBundleAda <$> genQuantity
+    , ValueNestedBundle <$> genPolicyId
+                        <*> Gen.map (Range.constant 0 5)
+                                    ((,) <$> genAssetName <*> genQuantity)
     ]
 
 genAllRequiredSig :: Gen (MultiSigScript ShelleyEra)
@@ -304,32 +358,6 @@ genTxId = TxId <$> genShelleyHash
 
 genTxIndex :: Gen TxIx
 genTxIndex = TxIx <$> Gen.word Range.constantBounded
-
-genQuantity :: Gen Quantity
-genQuantity = Quantity <$> Gen.integral (Range.linear 0 5000)
-
--- TODO: UTF8 bytes or random bytes?
-genAssetName :: Gen AssetName
-genAssetName = AssetName <$> Gen.bytes (Range.singleton 32)
-
-genPolicyId :: Gen PolicyId
-genPolicyId = PolicyId <$> genScriptHash
-
-genAssetId :: Gen AssetId
-genAssetId =
-  Gen.frequency
-    [ (1, pure AdaAssetId)
-    , (9, AssetId <$> genPolicyId <*> genAssetName)
-    ]
-
-genValue :: Gen Value
-genValue = valueFromList <$> Gen.list range genKeyValuePair
-  where
-    range :: Range Int
-    range = Range.constant 1 10
-
-    genKeyValuePair :: Gen (AssetId, Quantity)
-    genKeyValuePair = (,) <$> genAssetId <*> genQuantity
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
 genTxOutValue era =
