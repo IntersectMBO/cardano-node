@@ -170,7 +170,8 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
               npcShelleySupportedProtocolVersionMajor
               npcShelleySupportedProtocolVersionMinor,
           allegraLeaderCredentials =
-            shelleyLeaderCredentials
+            -- TODO: separate credentials for Allega
+            Nothing
         }
         Consensus.ProtocolParamsMary {
           maryProtVer =
@@ -178,7 +179,8 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
               npcShelleySupportedProtocolVersionMajor
               npcShelleySupportedProtocolVersionMinor,
           maryLeaderCredentials =
-            shelleyLeaderCredentials
+            -- TODO: separate credentials for Mary
+            Nothing
         }
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
