@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Node.Types
   ( -- * Configuration
@@ -48,7 +49,7 @@ module Cardano.Node.Types
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String)
+import           Prelude (String, fail)
 
 import           Data.Aeson
 import           Data.IP (IP (..), IPv4, IPv6)
@@ -91,8 +92,8 @@ newtype GenesisFile = GenesisFile
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
-  parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
-                           <> "Encountered: " <> Text.pack (show invalid)
+  parseJSON invalid = fail $ "Parsing of GenesisFile failed due to type mismatch. "
+                          <> "Encountered: " <> show invalid
 
 newtype MaxConcurrencyBulkSync = MaxConcurrencyBulkSync
   { unMaxConcurrencyBulkSync :: Word }
@@ -163,9 +164,9 @@ instance FromJSON NodeHostIPv4Address where
   parseJSON (String ipStr) =
     case readMaybe $ Text.unpack ipStr of
       Just ip -> pure $ NodeHostIPv4Address ip
-      Nothing -> panic $ "Parsing of IPv4 failed: " <> ipStr
-  parseJSON invalid = panic $ "Parsing of IPv4 failed due to type mismatch. "
-                            <> "Encountered: " <> Text.pack (show invalid) <> "\n"
+      Nothing -> fail $ "Parsing of IPv4 failed: " <> Text.unpack ipStr
+  parseJSON invalid = fail $ "Parsing of IPv4 failed due to type mismatch. "
+                           <> "Encountered: " <> show invalid <> "\n"
 
 instance ToJSON NodeHostIPv4Address where
   toJSON (NodeHostIPv4Address ip) = String (Text.pack $ show ip)
@@ -180,9 +181,9 @@ instance FromJSON NodeHostIPv6Address where
   parseJSON (String ipStr) =
     case readMaybe $ Text.unpack ipStr of
       Just ip -> pure $ NodeHostIPv6Address ip
-      Nothing -> panic $ "Parsing of IPv6 failed: " <> ipStr
-  parseJSON invalid = panic $ "Parsing of IPv6 failed due to type mismatch. "
-                            <> "Encountered: " <> Text.pack (show invalid) <> "\n"
+      Nothing -> fail $ "Parsing of IPv6 failed: " <> Text.unpack ipStr
+  parseJSON invalid = fail $ "Parsing of IPv6 failed due to type mismatch. "
+                          <> "Encountered: " <> show invalid <> "\n"
 instance ToJSON NodeHostIPv6Address where
   toJSON (NodeHostIPv6Address ip) = String (Text.pack $ show ip)
 
@@ -196,9 +197,9 @@ instance FromJSON NodeHostIPAddress where
   parseJSON (String ipStr) =
     case readMaybe $ Text.unpack ipStr of
       Just ip -> pure $ NodeHostIPAddress ip
-      Nothing -> panic $ "Parsing of IP failed: " <> ipStr
-  parseJSON invalid = panic $ "Parsing of IP failed due to type mismatch. "
-                            <> "Encountered: " <> Text.pack (show invalid) <> "\n"
+      Nothing -> fail $ "Parsing of IP failed: " <> Text.unpack ipStr
+  parseJSON invalid = fail $ "Parsing of IP failed due to type mismatch. "
+                          <> "Encountered: " <> show invalid <> "\n"
 
 instance ToJSON NodeHostIPAddress where
   toJSON (NodeHostIPAddress ip) = String (Text.pack $ show ip)
@@ -235,8 +236,8 @@ instance FromJSON NodeDiffusionMode where
           -> pure $ NodeDiffusionMode InitiatorOnlyDiffusionMode
         "InitiatorAndResponder"
           -> pure $ NodeDiffusionMode InitiatorAndResponderDiffusionMode
-        _ -> panic "Parsing NodeDiffusionMode failed: can be either 'InitiatorOnly' or 'InitiatorAndResponder'"
-    parseJSON _ = panic "Parsing NodeDiffusionMode failed"
+        _ -> fail "Parsing NodeDiffusionMode failed: can be either 'InitiatorOnly' or 'InitiatorAndResponder'"
+    parseJSON _ = fail "Parsing NodeDiffusionMode failed"
 
 class AdjustFilePaths a where
   adjustFilePaths :: (FilePath -> FilePath) -> a -> a
