@@ -13,7 +13,7 @@ module Cardano.Api.Value
   , PolicyId
   , AssetName
   , AssetId(..)
-  , Value(..)
+  , Value
   , selectAsset
   , valueFromList
   , valueToList
@@ -35,11 +35,11 @@ module Cardano.Api.Value
 
 import           Prelude
 
-import           Data.String (IsString)
 import           Data.ByteString (ByteString)
+import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Map.Merge.Strict as Map
+import           Data.String (IsString)
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Script
@@ -94,7 +94,11 @@ data AssetId = AssetId !PolicyId !AssetName
 
 
 newtype Value = Value (Map AssetId Quantity)
-  deriving (Eq, Show)
+  deriving Eq
+
+instance Show Value where
+  showsPrec d v = showParen (d > 10) $
+    showString "valueFromList " . shows (valueToList v)
 
 instance Semigroup Value where
   Value a <> Value b = Value (mergeAssetMaps a b)
