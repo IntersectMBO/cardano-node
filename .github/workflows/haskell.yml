@@ -88,10 +88,14 @@ jobs:
         restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
 
     - name: Install dependencies
-      run: cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
+      run: |
+        cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies &&
+        cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
 
     - name: Build
-      run: cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR"
+      run: |
+        cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR" &&
+        cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR"
 
     - name: Git clone
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
