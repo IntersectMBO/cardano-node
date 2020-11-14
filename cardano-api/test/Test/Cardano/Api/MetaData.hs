@@ -6,7 +6,7 @@ module Test.Cardano.Api.MetaData
 
 import           Cardano.Prelude hiding (MetaData)
 
-import           Cardano.Api.MetaData
+import           Cardano.Api.Typed
 
 import           Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as Aeson

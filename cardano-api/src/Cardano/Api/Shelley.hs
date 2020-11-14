@@ -67,13 +67,6 @@ module Cardano.Api.Shelley
       ( TxMetadata
       , TxMetadataShelley
       ),
-    TxMetadataValue
-      (TxMetaNumber
-      , TxMetaBytes
-      , TxMetaText
-      , TxMetaList
-      , TxMetaMap
-      ),
     toShelleyMetaData,
     fromShelleyMetaData,
 

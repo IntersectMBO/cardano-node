@@ -128,8 +128,22 @@ module Cardano.API (
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
     TxMetadata(TxMetadata),
-    TxMetadataValue,
+
+    -- ** Constructing metadata
+    TxMetadataValue(..),
     makeTransactionMetadata,
+
+    -- ** Validating metadata
+    validateTxMetadata,
+    TxMetadataRangeError (..),
+
+    -- ** Converstion to\/from JSON
+    TxMetadataJsonSchema (..),
+    metadataFromJson,
+    metadataToJson,
+    metadataValueToJsonNoSchema,
+    TxMetadataJsonError (..),
+    TxMetadataJsonSchemaError (..),
 
     -- * Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and

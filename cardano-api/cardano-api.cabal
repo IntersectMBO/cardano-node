@@ -19,7 +19,6 @@ library
                         Cardano.Api.Byron
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.LocalChainSync
-                        Cardano.Api.MetaData
                         Cardano.Api.Protocol
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
