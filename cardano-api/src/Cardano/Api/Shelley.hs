@@ -136,7 +136,6 @@ module Cardano.Api.Shelley
       , StakePoolRelayDnsARecord
       , StakePoolRelayDnsSrvRecord
       ),
-    toShelleyPoolParams,
 
     -- ** Stake pool operator's keys
     StakePoolKey,
