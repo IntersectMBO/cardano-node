@@ -31,6 +31,9 @@ module Cardano.Api.Value
   , TxOutValue(..)
   , AdaOnlyInEra(..)
   , MultiAssetInEra(..)
+
+    -- * Internal conversion functions
+  , toShelleyLovelace
   ) where
 
 import           Prelude
@@ -40,6 +43,8 @@ import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
+
+import qualified Shelley.Spec.Ledger.Coin as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Script
@@ -58,6 +63,10 @@ instance Semigroup Lovelace where
 
 instance Monoid Lovelace where
   mempty = Lovelace 0
+
+toShelleyLovelace :: Lovelace -> Shelley.Coin
+toShelleyLovelace (Lovelace l) = Shelley.Coin l
+--TODO: validate bounds
 
 
 -- ----------------------------------------------------------------------------

@@ -92,7 +92,6 @@ module Cardano.Api.Shelley
     protocolUpdateTreasuryCut,
     EpochNo(..),
     NetworkMagic(..),
-    toShelleyPParamsUpdate,
 
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
