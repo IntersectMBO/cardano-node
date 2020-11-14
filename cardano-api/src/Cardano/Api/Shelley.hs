@@ -171,3 +171,21 @@ module Cardano.Api.Shelley
 
 import           Cardano.API
 import           Cardano.Api.Typed
+
+
+-- For the deprecated functions below
+import           Prelude
+import           Data.Word
+import           Data.Map (Map)
+import qualified Shelley.Spec.Ledger.MetaData as Shelley
+
+{-# DEPRECATED toShelleyMetaData
+    "Use the 'TxMetadata' and 'TxMetadataShelley' constructors" #-}
+toShelleyMetaData :: Map Word64 TxMetadataValue -> Shelley.MetaData
+toShelleyMetaData = (\(TxMetadataShelley m) -> m) . TxMetadata
+
+{-# DEPRECATED fromShelleyMetaData
+    "Use the 'TxMetadata' and 'TxMetadataShelley' constructors" #-}
+fromShelleyMetaData :: Shelley.MetaData -> Map Word64 TxMetadataValue
+fromShelleyMetaData = (\(TxMetadata m) -> m) . TxMetadataShelley
+
