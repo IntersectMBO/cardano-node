@@ -434,7 +434,6 @@ import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..
 
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
 import           Ouroboros.Network.Block (Point, Tip)
-import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.Mux (MuxMode (InitiatorMode), MuxPeer (..),
                      RunMiniProtocol (InitiatorProtocolOnly))
 import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..),
@@ -477,7 +476,6 @@ import qualified Cardano.Crypto.ProtocolMagic as Byron
 import qualified Cardano.Crypto.Signing as Byron
 
 import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.Genesis as Byron
 import qualified Cardano.Chain.Slotting as Byron
 import qualified Cardano.Chain.UTxO as Byron
 
@@ -539,6 +537,7 @@ import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
+import           Cardano.Api.NetworkId
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
@@ -602,11 +601,6 @@ data StakeAddress where
        -> Shelley.StakeCredential StandardShelley
        -> StakeAddress
   deriving (Eq, Ord, Show)
-
-data NetworkId
-       = Mainnet
-       | Testnet !NetworkMagic
-  deriving (Eq, Show)
 
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
@@ -768,26 +762,6 @@ makeStakeAddress nw sc =
       (toShelleyNetwork nw)
       (toShelleyStakeCredential sc)
 
-
-toByronProtocolMagicId :: NetworkId -> Byron.ProtocolMagicId
-toByronProtocolMagicId Mainnet = Byron.mainnetProtocolMagicId
-toByronProtocolMagicId (Testnet (NetworkMagic pm)) = Byron.ProtocolMagicId pm
-
-toByronNetworkMagic :: NetworkId -> Byron.NetworkMagic
-toByronNetworkMagic Mainnet                     = Byron.NetworkMainOrStage
-toByronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
-
-toByronRequiresNetworkMagic :: NetworkId -> Byron.RequiresNetworkMagic
-toByronRequiresNetworkMagic Mainnet   = Byron.RequiresNoMagic
-toByronRequiresNetworkMagic Testnet{} = Byron.RequiresMagic
-
-toShelleyNetwork :: NetworkId -> Shelley.Network
-toShelleyNetwork  Mainnet    = Shelley.Mainnet
-toShelleyNetwork (Testnet _) = Shelley.Testnet
-
-toNetworkMagic :: NetworkId -> NetworkMagic
-toNetworkMagic Mainnet      = NetworkMagic (Byron.unProtocolMagicId Byron.mainnetProtocolMagicId)
-toNetworkMagic (Testnet nm) = nm
 
 toShelleyAddr :: Address era -> Shelley.Addr StandardShelley
 toShelleyAddr (ByronAddress addr)        = Shelley.AddrBootstrap
