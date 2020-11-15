@@ -47,6 +47,7 @@ library
                         Cardano.Api.KeysShelley
                         Cardano.Api.KeysPraos
                         Cardano.Api.NetworkId
+                        Cardano.Api.OperationalCertificate
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Script
                         Cardano.Api.SerialiseBech32
