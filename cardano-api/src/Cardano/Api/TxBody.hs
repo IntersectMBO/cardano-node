@@ -242,8 +242,8 @@ instance SerialiseAsCBOR (TxBody Shelley) where
           txmetadata <- CBOR.decodeNullMaybe fromCBOR
           return $ CBOR.Annotator $ \fbs ->
             ShelleyTxBody
-              (flip CBOR.runAnnotator fbs txbody)
-              (flip CBOR.runAnnotator fbs <$> txmetadata)
+              (CBOR.runAnnotator txbody fbs)
+              (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
 
 
 instance HasTextEnvelope (TxBody Byron) where
