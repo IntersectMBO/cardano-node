@@ -365,10 +365,6 @@ module Cardano.Api.Typed (
     toByronNetworkMagic,
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
-    toByronLovelace,
-    toByronTxIn,
-    toByronTxId,
-    toByronTxOut,
     toShelleyNetwork,
     toNetworkMagic,
 
@@ -392,9 +388,7 @@ module Cardano.Api.Typed (
 
 import           Prelude
 
-import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Maybe
-import           Data.String (IsString)
 import           Data.Void (Void)
 import           Data.Word
 import           Numeric.Natural
@@ -402,10 +396,8 @@ import           Numeric.Natural
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Short as SBS
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import qualified Data.Vector as Vector
 
@@ -415,11 +407,10 @@ import           Control.Tracer (nullTracer)
 --
 -- Common types, consensus, network
 --
-import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
+import           Cardano.Binary (Annotated (..))
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Prelude as CBOR (cborError)
-import qualified Shelley.Spec.Ledger.Serialization as CBOR (CBORGroup (..), decodeNullMaybe,
-                     encodeNullMaybe)
+import qualified Shelley.Spec.Ledger.Serialization as CBOR (CBORGroup (..))
 
 import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 
@@ -454,7 +445,6 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
 --
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Util as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto.HD
@@ -484,18 +474,14 @@ import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
-import qualified Shelley.Spec.Ledger.Credential as Shelley
-import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Hashing as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.MetaData as Shelley
 import qualified Shelley.Spec.Ledger.OCert as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
-import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 import qualified Cardano.Ledger.ShelleyMA.Scripts as Allegra
 
@@ -536,8 +522,8 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
-import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 
@@ -558,251 +544,6 @@ import           Cardano.Api.Value
 -- distinguish the key /role/. These are type level distinctions, so each of
 -- these roles is a type level tag.
 --
-
-
--- ----------------------------------------------------------------------------
--- Transaction Ids
---
-
-newtype TxId = TxId (Shelley.Hash StandardCrypto ())
-  deriving stock (Eq, Ord, Show)
-  deriving newtype (IsString)
-               -- We use the Shelley representation and convert the Byron one
-
-instance HasTypeProxy TxId where
-    data AsType TxId = AsTxId
-    proxyToAsType _ = AsTxId
-
-instance SerialiseAsRawBytes TxId where
-    serialiseToRawBytes (TxId h) = Crypto.hashToBytes h
-    deserialiseFromRawBytes AsTxId bs = TxId <$> Crypto.hashFromBytes bs
-
-toByronTxId :: TxId -> Byron.TxId
-toByronTxId (TxId h) =
-    Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
-
-toShelleyTxId :: TxId -> Shelley.TxId StandardShelley
-toShelleyTxId (TxId h) =
-    Shelley.TxId (Crypto.castHash h)
-
--- | Calculate the transaction identifier for a 'TxBody'.
---
-getTxId :: TxBody era -> TxId
-getTxId (ByronTxBody tx) =
-    TxId
-  . Crypto.UnsafeHash
-  . SBS.toShort
-  . recoverBytes
-  $ tx
-
-getTxId (ShelleyTxBody tx _) =
-    TxId
-  . Crypto.castHash
-  . (\(Shelley.TxId txhash) -> txhash)
-  . Shelley.txid @StandardShelley
-  $ tx
-
-
--- ----------------------------------------------------------------------------
--- Transaction constituent types
---
-
-data TxIn = TxIn TxId TxIx
-
-deriving instance Eq TxIn
-deriving instance Show TxIn
-
-newtype TxIx = TxIx Word
-  deriving stock (Eq, Ord, Show)
-  deriving newtype (Enum)
-
-data TxOut era = TxOut (Address era) (TxOutValue era)
-
-deriving instance Eq (TxOut Byron)
-deriving instance Eq (TxOut Shelley)
-deriving instance Show (TxOut Byron)
-deriving instance Show (TxOut Shelley)
-
-toByronTxIn  :: TxIn -> Byron.TxIn
-toByronTxIn (TxIn txid (TxIx txix)) =
-    Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
-
-toByronTxOut :: TxOut Byron -> Maybe Byron.TxOut
-toByronTxOut (TxOut (ByronAddress addr) (TxOutAdaOnly AdaOnlyInByronEra value)) =
-    Byron.TxOut addr <$> toByronLovelace value
-
-toByronTxOut (TxOut (ByronAddress _) (TxOutValue era _)) = case era of {}
-
-toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
-toByronLovelace (Lovelace x) =
-    case Byron.integerToLovelace x of
-      Left  _  -> Nothing
-      Right x' -> Just x'
-
-toShelleyTxIn  :: TxIn -> Shelley.TxIn StandardShelley
-toShelleyTxIn (TxIn txid (TxIx txix)) =
-    Shelley.TxIn (toShelleyTxId txid) (fromIntegral txix)
-
-toShelleyTxOut :: TxOut Shelley -> Shelley.TxOut StandardShelley
-toShelleyTxOut (TxOut addr (TxOutAdaOnly _ value)) =
-    Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
-toShelleyTxOut (TxOut _addr (TxOutValue evidence _)) = case evidence of {}
-
-
--- ----------------------------------------------------------------------------
--- Unsigned transactions
---
-
-data TxBody era where
-
-     ByronTxBody
-       :: Annotated Byron.Tx ByteString
-       -> TxBody Byron
-
-     ShelleyTxBody
-       :: Shelley.TxBody StandardShelley
-       -> Maybe Shelley.MetaData
-       -> TxBody Shelley
-
-deriving instance Eq (TxBody Byron)
-deriving instance Show (TxBody Byron)
-
-deriving instance Eq (TxBody Shelley)
-deriving instance Show (TxBody Shelley)
-
-instance HasTypeProxy (TxBody Byron) where
-    data AsType (TxBody Byron) = AsByronTxBody
-    proxyToAsType _ = AsByronTxBody
-
-instance HasTypeProxy (TxBody Shelley) where
-    data AsType (TxBody Shelley) = AsShelleyTxBody
-    proxyToAsType _ = AsShelleyTxBody
-
-
-instance SerialiseAsCBOR (TxBody Byron) where
-    serialiseToCBOR (ByronTxBody txbody) =
-      recoverBytes txbody
-
-    deserialiseFromCBOR AsByronTxBody bs = do
-      ByronTxBody <$>
-        CBOR.decodeFullAnnotatedBytes
-          "Byron TxBody"
-          CBOR.fromCBORAnnotated
-          (LBS.fromStrict bs)
-
-instance SerialiseAsCBOR (TxBody Shelley) where
-    serialiseToCBOR (ShelleyTxBody txbody txmetadata) =
-      CBOR.serializeEncoding' $
-          CBOR.encodeListLen 2
-       <> CBOR.toCBOR txbody
-       <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
-
-    deserialiseFromCBOR AsShelleyTxBody bs =
-      CBOR.decodeAnnotator
-        "Shelley TxBody"
-        decodeAnnotatedPair
-        (LBS.fromStrict bs)
-      where
-        decodeAnnotatedPair :: CBOR.Decoder s (CBOR.Annotator (TxBody Shelley))
-        decodeAnnotatedPair =  do
-          CBOR.decodeListLenOf 2
-          txbody     <- fromCBOR
-          txmetadata <- CBOR.decodeNullMaybe fromCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody
-              (flip CBOR.runAnnotator fbs txbody)
-              (flip CBOR.runAnnotator fbs <$> txmetadata)
-
-
-instance HasTextEnvelope (TxBody Byron) where
-    textEnvelopeType _ = "TxUnsignedByron"
-
-instance HasTextEnvelope (TxBody Shelley) where
-    textEnvelopeType _ = "TxUnsignedShelley"
-
-
-data ByronTxBodyConversionError =
-       ByronTxBodyEmptyTxIns
-     | ByronTxBodyEmptyTxOuts
-     | ByronTxBodyLovelaceOverflow (TxOut Byron)
-     deriving Show
-
-makeByronTransaction :: [TxIn]
-                     -> [TxOut Byron]
-                     -> Either ByronTxBodyConversionError
-                               (TxBody Byron)
-makeByronTransaction ins outs = do
-    ins'  <- NonEmpty.nonEmpty ins        ?! ByronTxBodyEmptyTxIns
-    let ins'' = NonEmpty.map toByronTxIn ins'
-
-    outs'  <- NonEmpty.nonEmpty outs      ?! ByronTxBodyEmptyTxOuts
-    outs'' <- traverse
-                (\out -> toByronTxOut out ?! ByronTxBodyLovelaceOverflow out)
-                outs'
-    return $
-      ByronTxBody $
-        reAnnotate $
-          Annotated
-            (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
-            ()
-
-
-data TxExtraContent =
-     TxExtraContent {
-       txMetadata        :: Maybe TxMetadata,
-       txWithdrawals     :: [(StakeAddress, Lovelace)],
-       txCertificates    :: [Certificate],
-       txUpdateProposal  :: Maybe UpdateProposal
-     }
-
-txExtraContentEmpty :: TxExtraContent
-txExtraContentEmpty =
-    TxExtraContent {
-      txMetadata        = Nothing,
-      txWithdrawals     = [],
-      txCertificates    = [],
-      txUpdateProposal  = Nothing
-    }
-
-type TxFee = Lovelace
-type TTL   = SlotNo
-
-makeShelleyTransaction :: TxExtraContent
-                       -> TTL
-                       -> TxFee
-                       -> [TxIn]
-                       -> [TxOut Shelley]
-                       -> TxBody Shelley
-makeShelleyTransaction TxExtraContent {
-                         txMetadata,
-                         txWithdrawals,
-                         txCertificates,
-                         txUpdateProposal
-                       } ttl fee ins outs =
-    --TODO: validate the txins are not empty, and tx out coin values are in range
-    ShelleyTxBody
-      (Shelley.TxBody
-        (Set.fromList (map toShelleyTxIn ins))
-        (Seq.fromList (map toShelleyTxOut outs))
-        (Seq.fromList [ cert | Certificate cert <- txCertificates ])
-        (toShelleyWdrl txWithdrawals)
-        (toShelleyLovelace fee)
-        ttl
-        (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
-        (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata))
-      (toShelleyMetadata <$> txMetadata)
-  where
-    toShelleyUpdate (UpdateProposal p) = p
-
-    toShelleyMetadata     (TxMetadataShelley m) = m
-    toShelleyMetadataHash (TxMetadataShelley m) = Shelley.hashMetaData m
-
-    toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl StandardShelley
-    toShelleyWdrl wdrls =
-        Shelley.Wdrl $
-          Map.fromList
-            [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
-            | (stakeAddr, value) <- wdrls ]
 
 
 -- ----------------------------------------------------------------------------
@@ -1691,34 +1432,4 @@ submitTxToNodeLocal connctInfo tx = do
         pure $ SendMsgSubmitTx tx $ \result -> do
         atomically $ putTMVar resultVar result
         pure (TxSubmission.SendMsgDone ())
-
-
-
--- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
--- to the given address in the genesis initial funds.
---
--- The Shelley initial UTxO is constructed from the 'sgInitialFunds' which
--- is not a full UTxO but just a map from addresses to coin values.
---
--- This gets turned into a UTxO by making a pseudo-transaction for each address,
--- with the 0th output being the coin value. So to spend from the initial UTxO
--- we need this same 'TxIn' to use as an input to the spending transaction.
---
-genesisUTxOPseudoTxIn :: NetworkId -> Hash GenesisUTxOKey -> TxIn
-genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
-    --TODO: should handle Byron UTxO case too.
-    fromShelleyTxIn (Shelley.initialFundsPseudoTxIn addr)
-  where
-    addr = Shelley.Addr
-             (toShelleyNetwork nw)
-             (Shelley.KeyHashObj kh)
-             Shelley.StakeRefNull
-
-    fromShelleyTxIn  :: Shelley.TxIn StandardShelley -> TxIn
-    fromShelleyTxIn (Shelley.TxIn txid txix) =
-        TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
-
-    fromShelleyTxId :: Shelley.TxId StandardShelley -> TxId
-    fromShelleyTxId (Shelley.TxId h) =
-        TxId (Crypto.castHash h)
 
