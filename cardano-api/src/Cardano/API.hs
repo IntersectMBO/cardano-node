@@ -59,17 +59,42 @@ module Cardano.API (
     StakeKey,
     StakeExtendedKey,
 
+    -- * Currency values
+    -- ** Ada \/ Lovelace
+    Lovelace,
+
+    -- ** Multi-asset values
+    Quantity,
+    PolicyId,
+    AssetName,
+    AssetId(..),
+    Value,
+    selectAsset,
+    valueFromList,
+    valueToList,
+    filterValue,
+    negateValue,
+
+    -- ** Ada \/ Lovelace within multi-asset values
+    quantityToLovelace,
+    lovelaceToQuantity,
+    selectLovelace,
+    lovelaceToValue,
+
     -- * Building transactions
     -- | Constructing and inspecting transactions
     TxBody,
     TxId,
     getTxId,
     TxIn(TxIn),
-    TxOut(TxOut),
     TxIx(TxIx),
+    TxOut(TxOut),
+    TxOutValue(..),
+    AdaOnlyInEra(..),
+    MultiAssetInEra(..),
     TTL,
     TxFee,
-    Lovelace(Lovelace),
+    MintValue(..),
     makeByronTransaction,
     makeShelleyTransaction,
     SlotNo,

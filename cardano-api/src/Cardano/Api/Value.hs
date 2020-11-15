@@ -9,9 +9,9 @@ module Cardano.Api.Value
   ( Lovelace(..)
 
     -- * Multi-asset values
-  , Quantity
-  , PolicyId
-  , AssetName
+  , Quantity(..)
+  , PolicyId(..)
+  , AssetName(..)
   , AssetId(..)
   , Value
   , selectAsset

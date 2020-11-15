@@ -1461,7 +1461,9 @@ pTxOut =
   where
     parseTxOut :: Atto.Parser (TxOut Shelley)
     parseTxOut =
-      TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
+      TxOut <$> parseAddress
+            <*  Atto.char '+'
+            <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> parseLovelace)
 
 pMint :: Parser String
 pMint =
