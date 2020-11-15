@@ -54,6 +54,7 @@ library
                         Cardano.Api.SerialiseRaw
                         Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.StakePoolMetadata
+                        Cardano.Api.Tx
                         Cardano.Api.TxBody
                         Cardano.Api.TxMetadata
                         Cardano.Api.Utils
