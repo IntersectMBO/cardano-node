@@ -390,9 +390,7 @@ import           Prelude
 
 import           Data.Void (Void)
 import           Data.Word
-import           Numeric.Natural
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import qualified Data.Map.Strict as Map
@@ -403,7 +401,6 @@ import           Control.Tracer (nullTracer)
 --
 -- Common types, consensus, network
 --
-import qualified Cardano.Binary as CBOR
 import qualified Shelley.Spec.Ledger.Serialization as CBOR (CBORGroup (..))
 
 import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
@@ -444,7 +441,6 @@ import qualified Cardano.Crypto.Seed as Crypto
 --
 -- Byron imports
 --
-import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.Slotting as Byron
 
 --
@@ -457,7 +453,6 @@ import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.OCert as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
@@ -477,6 +472,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Fees
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Key
@@ -515,93 +511,6 @@ import           Cardano.Api.Value
 -- distinguish the key /role/. These are type level distinctions, so each of
 -- these roles is a type level tag.
 --
-
-
--- ----------------------------------------------------------------------------
--- Transaction fees
---
-
--- | For a concrete fully-constructed transaction, determine the minimum fee
--- that it needs to pay.
---
--- This function is simple, but if you are doing input selection then you
--- probably want to consider estimateTransactionFee.
---
-transactionFee :: Natural -- ^ The fixed tx fee
-               -> Natural -- ^ The tx fee per byte
-               -> Tx Shelley
-               -> Lovelace
-transactionFee txFeeFixed txFeePerByte (ShelleyTx tx) =
-    Lovelace (a * x + b)
-  where
-    a = toInteger txFeePerByte
-    x = Shelley.txsize tx
-    b = toInteger txFeeFixed
-
---TODO: in the Byron case the per-byte is non-integral, would need different
--- parameters. e.g. a new data type for fee params, Byron vs Shelley
-
--- | This can estimate what the transaction fee will be, based on a starting
--- base transaction, plus the numbers of the additional components of the
--- transaction that may be added.
---
--- So for example with wallet coin selection, the base transaction should
--- contain all the things not subject to coin selection (such as script inputs,
--- metadata, withdrawals, certs etc)
---
-estimateTransactionFee :: NetworkId
-                       -> Natural -- ^ The fixed tx fee
-                       -> Natural -- ^ The tx fee per byte
-                       -> Tx Shelley
-                       -> Int -- ^ The number of extra UTxO transaction inputs
-                       -> Int -- ^ The number of extra transaction outputs
-                       -> Int -- ^ The number of extra Shelley key witnesses
-                       -> Int -- ^ The number of extra Byron key witnesses
-                       -> Lovelace
-estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
-    let Lovelace baseFee = transactionFee txFeeFixed txFeePerByte (ShelleyTx tx)
-     in \nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
-
-        --TODO: this is fragile. Move something like this to the ledger and
-        -- make it robust, based on the txsize calculation.
-        let extraBytes :: Int
-            extraBytes = nInputs               * sizeInput
-                       + nOutputs              * sizeOutput
-                       + nByronKeyWitnesses    * sizeByronKeyWitnesses
-                       + nShelleyKeyWitnesses  * sizeShelleyKeyWitnesses
-
-         in Lovelace (baseFee + toInteger txFeePerByte * toInteger extraBytes)
-  where
-    sizeInput               = smallArray + uint + hashObj
-    sizeOutput              = smallArray + uint + address
-    sizeByronKeyWitnesses   = smallArray + keyObj + sigObj + ccodeObj + attrsObj
-    sizeShelleyKeyWitnesses = smallArray + keyObj + sigObj
-
-    smallArray  = 1
-    uint        = 5
-
-    hashObj     = 2 + hashLen
-    hashLen     = 32
-
-    keyObj      = 2 + keyLen
-    keyLen      = 32
-
-    sigObj      = 2 + sigLen
-    sigLen      = 64
-
-    ccodeObj    = 2 + ccodeLen
-    ccodeLen    = 32
-
-    address     = 2 + addrHeader + 2 * addrHashLen
-    addrHeader  = 1
-    addrHashLen = 28
-
-    attrsObj    = 2 + BS.length attributes
-    attributes  = CBOR.serialize' $
-                    Byron.mkAttributes Byron.AddrAttributes {
-                      Byron.aaVKDerivationPath = Nothing,
-                      Byron.aaNetworkMagic     = toByronNetworkMagic nw
-                    }
 
 
 -- ----------------------------------------------------------------------------

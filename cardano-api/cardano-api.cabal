@@ -39,6 +39,7 @@ library
                         Cardano.Api.Certificate
                         Cardano.Api.Eras
                         Cardano.Api.Error
+                        Cardano.Api.Fees
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.Key
