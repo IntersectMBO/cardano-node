@@ -150,16 +150,16 @@ newtype TxIx = TxIx Word
 
 data TxOut era = TxOut (Address era) (TxOutValue era)
 
-deriving instance Eq (TxOut Byron)
-deriving instance Eq (TxOut Shelley)
-deriving instance Show (TxOut Byron)
-deriving instance Show (TxOut Shelley)
+deriving instance Eq (TxOut ByronEra)
+deriving instance Eq (TxOut ShelleyEra)
+deriving instance Show (TxOut ByronEra)
+deriving instance Show (TxOut ShelleyEra)
 
 toByronTxIn  :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
     Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
-toByronTxOut :: TxOut Byron -> Maybe Byron.TxOut
+toByronTxOut :: TxOut ByronEra -> Maybe Byron.TxOut
 toByronTxOut (TxOut (ByronAddress addr) (TxOutAdaOnly AdaOnlyInByronEra value)) =
     Byron.TxOut addr <$> toByronLovelace value
 
@@ -175,7 +175,7 @@ toShelleyTxIn  :: TxIn -> Shelley.TxIn StandardShelley
 toShelleyTxIn (TxIn txid (TxIx txix)) =
     Shelley.TxIn (toShelleyTxId txid) (fromIntegral txix)
 
-toShelleyTxOut :: TxOut Shelley -> Shelley.TxOut StandardShelley
+toShelleyTxOut :: TxOut ShelleyEra -> Shelley.TxOut StandardShelley
 toShelleyTxOut (TxOut addr (TxOutAdaOnly _ value)) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 toShelleyTxOut (TxOut _addr (TxOutValue evidence _)) = case evidence of {}
@@ -189,29 +189,29 @@ data TxBody era where
 
      ByronTxBody
        :: Annotated Byron.Tx ByteString
-       -> TxBody Byron
+       -> TxBody ByronEra
 
      ShelleyTxBody
        :: Shelley.TxBody StandardShelley
        -> Maybe Shelley.MetaData
-       -> TxBody Shelley
+       -> TxBody ShelleyEra
 
-deriving instance Eq (TxBody Byron)
-deriving instance Show (TxBody Byron)
+deriving instance Eq (TxBody ByronEra)
+deriving instance Show (TxBody ByronEra)
 
-deriving instance Eq (TxBody Shelley)
-deriving instance Show (TxBody Shelley)
+deriving instance Eq (TxBody ShelleyEra)
+deriving instance Show (TxBody ShelleyEra)
 
-instance HasTypeProxy (TxBody Byron) where
-    data AsType (TxBody Byron) = AsByronTxBody
+instance HasTypeProxy (TxBody ByronEra) where
+    data AsType (TxBody ByronEra) = AsByronTxBody
     proxyToAsType _ = AsByronTxBody
 
-instance HasTypeProxy (TxBody Shelley) where
-    data AsType (TxBody Shelley) = AsShelleyTxBody
+instance HasTypeProxy (TxBody ShelleyEra) where
+    data AsType (TxBody ShelleyEra) = AsShelleyTxBody
     proxyToAsType _ = AsShelleyTxBody
 
 
-instance SerialiseAsCBOR (TxBody Byron) where
+instance SerialiseAsCBOR (TxBody ByronEra) where
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
@@ -222,7 +222,7 @@ instance SerialiseAsCBOR (TxBody Byron) where
           CBOR.fromCBORAnnotated
           (LBS.fromStrict bs)
 
-instance SerialiseAsCBOR (TxBody Shelley) where
+instance SerialiseAsCBOR (TxBody ShelleyEra) where
     serialiseToCBOR (ShelleyTxBody txbody txmetadata) =
       CBOR.serializeEncoding' $
           CBOR.encodeListLen 2
@@ -235,7 +235,7 @@ instance SerialiseAsCBOR (TxBody Shelley) where
         decodeAnnotatedPair
         (LBS.fromStrict bs)
       where
-        decodeAnnotatedPair :: CBOR.Decoder s (CBOR.Annotator (TxBody Shelley))
+        decodeAnnotatedPair :: CBOR.Decoder s (CBOR.Annotator (TxBody ShelleyEra))
         decodeAnnotatedPair =  do
           CBOR.decodeListLenOf 2
           txbody     <- fromCBOR
@@ -246,23 +246,23 @@ instance SerialiseAsCBOR (TxBody Shelley) where
               (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
 
 
-instance HasTextEnvelope (TxBody Byron) where
+instance HasTextEnvelope (TxBody ByronEra) where
     textEnvelopeType _ = "TxUnsignedByron"
 
-instance HasTextEnvelope (TxBody Shelley) where
+instance HasTextEnvelope (TxBody ShelleyEra) where
     textEnvelopeType _ = "TxUnsignedShelley"
 
 
 data ByronTxBodyConversionError =
        ByronTxBodyEmptyTxIns
      | ByronTxBodyEmptyTxOuts
-     | ByronTxBodyLovelaceOverflow (TxOut Byron)
+     | ByronTxBodyLovelaceOverflow (TxOut ByronEra)
      deriving Show
 
 makeByronTransaction :: [TxIn]
-                     -> [TxOut Byron]
+                     -> [TxOut ByronEra]
                      -> Either ByronTxBodyConversionError
-                               (TxBody Byron)
+                               (TxBody ByronEra)
 makeByronTransaction ins outs = do
     ins'  <- NonEmpty.nonEmpty ins        ?! ByronTxBodyEmptyTxIns
     let ins'' = NonEmpty.map toByronTxIn ins'
@@ -303,8 +303,8 @@ makeShelleyTransaction :: TxExtraContent
                        -> TTL
                        -> TxFee
                        -> [TxIn]
-                       -> [TxOut Shelley]
-                       -> TxBody Shelley
+                       -> [TxOut ShelleyEra]
+                       -> TxBody ShelleyEra
 makeShelleyTransaction TxExtraContent {
                          txMetadata,
                          txWithdrawals,

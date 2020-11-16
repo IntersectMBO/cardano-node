@@ -118,35 +118,35 @@ data Tx era where
 
      ByronTx
        :: Byron.ATxAux ByteString
-       -> Tx Byron
+       -> Tx ByronEra
 
      ShelleyTx
        :: Shelley.Tx StandardShelley
-       -> Tx Shelley
+       -> Tx ShelleyEra
 
-deriving instance Eq (Tx Byron)
-deriving instance Show (Tx Byron)
+deriving instance Eq (Tx ByronEra)
+deriving instance Show (Tx ByronEra)
 
-deriving instance Eq (Tx Shelley)
-deriving instance Show (Tx Shelley)
+deriving instance Eq (Tx ShelleyEra)
+deriving instance Show (Tx ShelleyEra)
 
-instance HasTypeProxy (Tx Byron) where
-    data AsType (Tx Byron) = AsByronTx
+instance HasTypeProxy (Tx ByronEra) where
+    data AsType (Tx ByronEra) = AsByronTx
     proxyToAsType _ = AsByronTx
 
-instance HasTypeProxy (Tx Shelley) where
-    data AsType (Tx Shelley) = AsShelleyTx
+instance HasTypeProxy (Tx ShelleyEra) where
+    data AsType (Tx ShelleyEra) = AsShelleyTx
     proxyToAsType _ = AsShelleyTx
 
 
-instance SerialiseAsCBOR (Tx Byron) where
+instance SerialiseAsCBOR (Tx ByronEra) where
     serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx
 
     deserialiseFromCBOR AsByronTx bs =
       ByronTx <$>
         CBOR.decodeFullAnnotatedBytes "Byron Tx" fromCBOR (LBS.fromStrict bs)
 
-instance SerialiseAsCBOR (Tx Shelley) where
+instance SerialiseAsCBOR (Tx ShelleyEra) where
     serialiseToCBOR (ShelleyTx tx) =
       CBOR.serialize' tx
 
@@ -154,10 +154,10 @@ instance SerialiseAsCBOR (Tx Shelley) where
       ShelleyTx <$>
         CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
 
-instance HasTextEnvelope (Tx Byron) where
+instance HasTextEnvelope (Tx ByronEra) where
     textEnvelopeType _ = "TxSignedByron"
 
-instance HasTextEnvelope (Tx Shelley) where
+instance HasTextEnvelope (Tx ShelleyEra) where
     textEnvelopeType _ = "TxSignedShelley"
 
 
@@ -165,52 +165,52 @@ data Witness era where
 
      ByronKeyWitness
        :: Byron.TxInWitness
-       -> Witness Byron
+       -> Witness ByronEra
 
      ShelleyBootstrapWitness
        :: Shelley.BootstrapWitness StandardShelley
-       -> Witness Shelley
+       -> Witness ShelleyEra
 
      ShelleyKeyWitness
        :: Shelley.WitVKey Shelley.Witness StandardShelley
-       -> Witness Shelley
+       -> Witness ShelleyEra
 
      ShelleyScriptWitness
        :: Shelley.Script StandardShelley
-       -> Witness Shelley
+       -> Witness ShelleyEra
 
      AllegraScriptwitness
        :: Allegra.Timelock StandardAllegra
-       -> Witness Allegra
+       -> Witness AllegraEra
 
      MaryScriptWitness
        :: Allegra.Timelock StandardMary
-       -> Witness Mary
+       -> Witness MaryEra
 
-deriving instance Eq (Witness Byron)
-deriving instance Show (Witness Byron)
+deriving instance Eq (Witness ByronEra)
+deriving instance Show (Witness ByronEra)
 
-deriving instance Eq (Witness Shelley)
-deriving instance Show (Witness Shelley)
+deriving instance Eq (Witness ShelleyEra)
+deriving instance Show (Witness ShelleyEra)
 
-instance HasTypeProxy (Witness Byron) where
-    data AsType (Witness Byron) = AsByronWitness
+instance HasTypeProxy (Witness ByronEra) where
+    data AsType (Witness ByronEra) = AsByronWitness
     proxyToAsType _ = AsByronWitness
 
-instance HasTypeProxy (Witness Shelley) where
-    data AsType (Witness Shelley) = AsShelleyWitness
+instance HasTypeProxy (Witness ShelleyEra) where
+    data AsType (Witness ShelleyEra) = AsShelleyWitness
     proxyToAsType _ = AsShelleyWitness
 
-instance SerialiseAsCBOR (Witness Byron) where
+instance SerialiseAsCBOR (Witness ByronEra) where
     serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
 
     deserialiseFromCBOR AsByronWitness bs =
       ByronKeyWitness <$> CBOR.decodeFull' bs
 
-instance SerialiseAsCBOR (Witness Shelley) where
+instance SerialiseAsCBOR (Witness ShelleyEra) where
     serialiseToCBOR = CBOR.serializeEncoding' . encodeShelleyWitness
       where
-        encodeShelleyWitness :: Witness Shelley -> CBOR.Encoding
+        encodeShelleyWitness :: Witness ShelleyEra -> CBOR.Encoding
         encodeShelleyWitness (ShelleyKeyWitness    wit) =
             CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
         encodeShelleyWitness (ShelleyBootstrapWitness wit) =
@@ -230,7 +230,7 @@ instance SerialiseAsCBOR (Witness Shelley) where
         CBOR.decodeAnnotator "Shelley Witness"
                              decodeShelleyWitness (LBS.fromStrict bs)
       where
-        decodeShelleyWitness :: CBOR.Decoder s (CBOR.Annotator (Witness Shelley))
+        decodeShelleyWitness :: CBOR.Decoder s (CBOR.Annotator (Witness ShelleyEra))
         decodeShelleyWitness =  do
           CBOR.decodeListLenOf 2
           t <- CBOR.decodeWord
@@ -247,10 +247,10 @@ instance SerialiseAsCBOR (Witness Shelley) where
             _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
                                     "Shelley Witness" (fromIntegral t)
 
-instance HasTextEnvelope (Witness Byron) where
+instance HasTextEnvelope (Witness ByronEra) where
     textEnvelopeType _ = "TxWitnessByron"
 
-instance HasTextEnvelope (Witness Shelley) where
+instance HasTextEnvelope (Witness ShelleyEra) where
     textEnvelopeType _ = "TxWitnessShelley"
 
 
@@ -294,7 +294,7 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
       (unAnnotated txbody)
       (Vector.fromList (map selectByronWitness witnesses))
   where
-    selectByronWitness :: Witness Byron -> Byron.TxInWitness
+    selectByronWitness :: Witness ByronEra -> Byron.TxInWitness
     selectByronWitness (ByronKeyWitness w) = w
 
 makeSignedTransaction witnesses (ShelleyTxBody txbody txmetadata) =
@@ -309,9 +309,9 @@ makeSignedTransaction witnesses (ShelleyTxBody txbody txmetadata) =
         (maybeToStrictMaybe txmetadata)
 
 makeByronKeyWitness :: NetworkId
-                    -> TxBody Byron
+                    -> TxBody ByronEra
                     -> SigningKey ByronKey
-                    -> Witness Byron
+                    -> Witness ByronEra
 makeByronKeyWitness nw (ByronTxBody txbody) =
     let txhash :: Byron.Hash Byron.Tx
         txhash = Byron.hashDecoded txbody
@@ -336,7 +336,7 @@ data WitnessNetworkIdOrByronAddress
   -- If this value is used in the construction of a Shelley bootstrap witness,
   -- the result will not consist of a derivation path. If that is required,
   -- specify a 'WitnessByronAddress' value instead.
-  | WitnessByronAddress !(Address Byron)
+  | WitnessByronAddress !(Address ByronEra)
   -- ^ Byron address.
   --
   -- If this value is used in the construction of a Shelley bootstrap witness,
@@ -344,9 +344,9 @@ data WitnessNetworkIdOrByronAddress
   -- address and used in the construction of the witness.
 
 makeShelleyBootstrapWitness :: WitnessNetworkIdOrByronAddress
-                            -> TxBody Shelley
+                            -> TxBody ShelleyEra
                             -> SigningKey ByronKey
-                            -> Witness Shelley
+                            -> Witness ShelleyEra
 makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody txbody _) (ByronSigningKey sk) =
     ShelleyBootstrapWitness $
       -- Byron era witnesses were weird. This reveals all that weirdness.
@@ -391,16 +391,16 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody txbody _) (ByronSigningKey s
         }
 
     -- The 'WitnessNetworkIdOrByronAddress' value converted to an 'Either'.
-    eitherNwOrAddr :: Either NetworkId (Address Byron)
+    eitherNwOrAddr :: Either NetworkId (Address ByronEra)
     eitherNwOrAddr =
       case nwOrAddr of
         WitnessNetworkId nw -> Left nw
         WitnessByronAddress addr -> Right addr
 
-    unByronAddr :: Address Byron -> Byron.Address
+    unByronAddr :: Address ByronEra -> Byron.Address
     unByronAddr (ByronAddress addr) = addr
 
-    unAddrAttrs :: Address Byron -> Byron.AddrAttributes
+    unAddrAttrs :: Address ByronEra -> Byron.AddrAttributes
     unAddrAttrs = Byron.attrData . Byron.addrAttributes . unByronAddr
 
     derivationPath :: Maybe Byron.HDAddressPayload
@@ -431,9 +431,9 @@ data ShelleyWitnessSigningKey =
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
 
 
-makeShelleyKeyWitness :: TxBody Shelley
+makeShelleyKeyWitness :: TxBody ShelleyEra
                       -> ShelleyWitnessSigningKey
-                      -> Witness Shelley
+                      -> Witness ShelleyEra
 makeShelleyKeyWitness (ShelleyTxBody txbody _) =
     let txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
         txhash = Shelley.hashAnnotated txbody
@@ -538,18 +538,18 @@ makeScriptWitness (MaryScript    s) = MaryScriptWitness s
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId
-                     -> TxBody Byron
+                     -> TxBody ByronEra
                      -> [SigningKey ByronKey]
-                     -> Tx Byron
+                     -> Tx ByronEra
 signByronTransaction nw txbody sks =
     makeSignedTransaction witnesses txbody
   where
     witnesses = map (makeByronKeyWitness nw txbody) sks
 
 -- signing keys is a set
-signShelleyTransaction :: TxBody Shelley
+signShelleyTransaction :: TxBody ShelleyEra
                        -> [ShelleyWitnessSigningKey]
-                       -> Tx Shelley
+                       -> Tx ShelleyEra
 signShelleyTransaction txbody sks =
     makeSignedTransaction witnesses txbody
   where

@@ -105,23 +105,23 @@ data Address era where
        :: Shelley.Network
        -> Shelley.PaymentCredential StandardShelley
        -> Shelley.StakeReference    StandardShelley
-       -> Address Shelley
+       -> Address ShelleyEra
 
 deriving instance Eq (Address era)
 deriving instance Ord (Address era)
 deriving instance Show (Address era)
 
 
-instance HasTypeProxy (Address Byron) where
-    data AsType (Address Byron) = AsByronAddress
+instance HasTypeProxy (Address ByronEra) where
+    data AsType (Address ByronEra) = AsByronAddress
     proxyToAsType _ = AsByronAddress
 
-instance HasTypeProxy (Address Shelley) where
-    data AsType (Address Shelley) = AsShelleyAddress
+instance HasTypeProxy (Address ShelleyEra) where
+    data AsType (Address ShelleyEra) = AsShelleyAddress
     proxyToAsType _ = AsShelleyAddress
 
 
-instance SerialiseAsRawBytes (Address Byron) where
+instance SerialiseAsRawBytes (Address ByronEra) where
     serialiseToRawBytes (ByronAddress addr) = CBOR.serialize' addr
 
     deserialiseFromRawBytes AsByronAddress bs =
@@ -130,7 +130,7 @@ instance SerialiseAsRawBytes (Address Byron) where
         Right addr -> Just (ByronAddress addr)
 
 
-instance SerialiseAsRawBytes (Address Shelley) where
+instance SerialiseAsRawBytes (Address ShelleyEra) where
     serialiseToRawBytes (ByronAddress addr) =
         Shelley.serialiseAddr
       . Shelley.AddrBootstrap
@@ -149,7 +149,7 @@ instance SerialiseAsRawBytes (Address Shelley) where
           Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
             Just (ByronAddress addr)
 
-instance SerialiseAsBech32 (Address Shelley) where
+instance SerialiseAsBech32 (Address ShelleyEra) where
     bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = "addr"
     bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = "addr_test"
     bech32PrefixFor (ByronAddress _)                     = "addr"
@@ -157,7 +157,7 @@ instance SerialiseAsBech32 (Address Shelley) where
     bech32PrefixesPermitted AsShelleyAddress = ["addr", "addr_test"]
 
 
-instance SerialiseAddress (Address Byron) where
+instance SerialiseAddress (Address ByronEra) where
     serialiseAddress addr@ByronAddress{} =
          Text.decodeLatin1
        . Base58.encodeBase58 Base58.bitcoinAlphabet
@@ -168,9 +168,9 @@ instance SerialiseAddress (Address Byron) where
       bs <- Base58.decodeBase58 Base58.bitcoinAlphabet (Text.encodeUtf8 txt)
       deserialiseFromRawBytes AsByronAddress bs
 
-instance SerialiseAddress (Address Shelley) where
+instance SerialiseAddress (Address ShelleyEra) where
     serialiseAddress (ByronAddress addr) =
-      serialiseAddress (ByronAddress addr :: Address Byron)
+      serialiseAddress (ByronAddress addr :: Address ByronEra)
 
     serialiseAddress addr@ShelleyAddress{} =
       serialiseToBech32 addr
@@ -187,7 +187,7 @@ instance SerialiseAddress (Address Shelley) where
           castByronToShelleyAddress <$>
           deserialiseAddress AsByronAddress t
 
-        castByronToShelleyAddress :: Address Byron -> Address Shelley
+        castByronToShelleyAddress :: Address ByronEra -> Address ShelleyEra
         castByronToShelleyAddress (ByronAddress addr) = ByronAddress addr
 
 
@@ -204,7 +204,7 @@ makeByronAddress nw (ByronVerificationKey vk) =
 makeShelleyAddress :: NetworkId
                    -> PaymentCredential
                    -> StakeAddressReference
-                   -> Address Shelley
+                   -> Address ShelleyEra
 makeShelleyAddress nw pc scr =
     ShelleyAddress
       (toShelleyNetwork nw)

@@ -43,7 +43,7 @@ import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import           Cardano.Api.Shelley.Genesis
 
 
-exampleAllShelley :: SimpleScript Api.Shelley
+exampleAllShelley :: SimpleScript Api.ShelleyEra
 exampleAllShelley =
   RequireAllOf [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a"
@@ -64,7 +64,7 @@ exampleAllShelley =
                ]
 
 
-exampleAnyShelley :: SimpleScript Api.Shelley
+exampleAnyShelley :: SimpleScript Api.ShelleyEra
 exampleAnyShelley =
   RequireAnyOf [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09"
@@ -80,7 +80,7 @@ exampleAnyShelley =
                    $ convertToHash "622be5fab3b5c3f371a50a535e4d3349c942a98cecee93b24e2fd11d"
                ]
 
-exampleMofNShelley :: SimpleScript Api.Shelley
+exampleMofNShelley :: SimpleScript Api.ShelleyEra
 exampleMofNShelley =
   RequireMOf 2 [ RequireSignature SignaturesInShelleyEra
                    $ convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"
@@ -92,7 +92,7 @@ exampleMofNShelley =
                    $ convertToHash "686024aecb5884d73a11b9ae4e63931112ba737e878d74638b78513a"
                ]
 
-exampleAllAllegra :: SimpleScript Api.Allegra
+exampleAllAllegra :: SimpleScript Api.AllegraEra
 exampleAllAllegra =
   RequireAllOf [ RequireSignature SignaturesInAllegraEra
                    (convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a")
@@ -100,14 +100,14 @@ exampleAllAllegra =
                ]
 
 
-exampleAnyAllegra :: SimpleScript Api.Allegra
+exampleAnyAllegra :: SimpleScript Api.AllegraEra
 exampleAnyAllegra =
   RequireAnyOf [ RequireSignature SignaturesInAllegraEra
                    (convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09")
                , RequireTimeAfter TimeLocksInAllegraEra (SlotNo 42)
                ]
 
-exampleMofNAllegra :: SimpleScript Api.Allegra
+exampleMofNAllegra :: SimpleScript Api.AllegraEra
 exampleMofNAllegra =
   RequireMOf 1 [ RequireSignature SignaturesInAllegraEra
                    (convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413")
@@ -117,7 +117,7 @@ exampleMofNAllegra =
                ]
 
 
-exampleAllMary :: SimpleScript Api.Mary
+exampleAllMary :: SimpleScript Api.MaryEra
 exampleAllMary =
   RequireAllOf [ RequireSignature SignaturesInMaryEra
                    (convertToHash "e09d36c79dec9bd1b3d9e152247701cd0bb860b5ebfd1de8abb6735a")
@@ -125,14 +125,14 @@ exampleAllMary =
                ]
 
 
-exampleAnyMary :: SimpleScript Api.Mary
+exampleAnyMary :: SimpleScript Api.MaryEra
 exampleAnyMary =
   RequireAnyOf [ RequireSignature SignaturesInMaryEra
                    (convertToHash "d92b712d1882c3b0f75b6f677e0b2cbef4fbc8b8121bb9dde324ff09")
                , RequireTimeAfter TimeLocksInMaryEra (SlotNo 42)
                ]
 
-exampleMofNMary :: SimpleScript Api.Mary
+exampleMofNMary :: SimpleScript Api.MaryEra
 exampleMofNMary =
   RequireMOf 1 [ RequireSignature SignaturesInMaryEra
                    (convertToHash "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413")

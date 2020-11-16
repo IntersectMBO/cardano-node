@@ -41,11 +41,11 @@ import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 {- HLINT ignore "Reduce duplication" -}
 
-genAddressByron :: Gen (Address Byron)
+genAddressByron :: Gen (Address ByronEra)
 genAddressByron = makeByronAddress <$> genNetworkId
                                    <*> genVerificationKey AsByronKey
 
-genAddressShelley :: Gen (Address Shelley)
+genAddressShelley :: Gen (Address ShelleyEra)
 genAddressShelley =
   Gen.choice
     [ makeShelleyAddress <$> genNetworkId
@@ -89,10 +89,10 @@ genMofN s = do
 
 -- Shelley
 
-genMultiSigScriptShelley :: Gen (MultiSigScript Shelley)
+genMultiSigScriptShelley :: Gen (MultiSigScript ShelleyEra)
 genMultiSigScriptShelley = genMultiSigScriptsShelley >>= Gen.element
 
-genMultiSigScriptsShelley :: Gen [MultiSigScript Shelley]
+genMultiSigScriptsShelley :: Gen [MultiSigScript ShelleyEra]
 genMultiSigScriptsShelley =
   Gen.recursive Gen.choice
     -- Non-recursive generators
@@ -107,10 +107,10 @@ genMultiSigScriptsShelley =
 
 -- Allegra
 
-genMultiSigScriptAllegra :: Gen (MultiSigScript Allegra)
+genMultiSigScriptAllegra :: Gen (MultiSigScript AllegraEra)
 genMultiSigScriptAllegra = genMultiSigScriptsAllegra >>= Gen.element
 
-genMultiSigScriptsAllegra :: Gen [MultiSigScript Allegra]
+genMultiSigScriptsAllegra :: Gen [MultiSigScript AllegraEra]
 genMultiSigScriptsAllegra =
   Gen.recursive Gen.choice
     -- Non-recursive generators
@@ -132,10 +132,10 @@ genMultiSigScriptsAllegra =
 
 -- Mary
 
-genMultiSigScriptMary :: Gen (MultiSigScript Mary)
+genMultiSigScriptMary :: Gen (MultiSigScript MaryEra)
 genMultiSigScriptMary = genMultiSigScriptsMary >>= Gen.element
 
-genMultiSigScriptsMary :: Gen [MultiSigScript Mary]
+genMultiSigScriptsMary :: Gen [MultiSigScript MaryEra]
 genMultiSigScriptsMary =
   Gen.recursive Gen.choice
     -- Non-recursive generators
@@ -155,25 +155,25 @@ genMultiSigScriptsMary =
 
     ]
 
-genAllRequiredSig :: Gen (MultiSigScript Shelley)
+genAllRequiredSig :: Gen (MultiSigScript ShelleyEra)
 genAllRequiredSig =
   RequireAllOf <$> Gen.list (Range.constant 1 10) (genRequiredSig SignaturesInShelleyEra)
 
-genAnyRequiredSig :: Gen (MultiSigScript Shelley)
+genAnyRequiredSig :: Gen (MultiSigScript ShelleyEra)
 genAnyRequiredSig =
   RequireAnyOf <$> Gen.list (Range.constant 1 10) (genRequiredSig SignaturesInShelleyEra)
 
-genMofNRequiredSig :: Gen (MultiSigScript Shelley)
+genMofNRequiredSig :: Gen (MultiSigScript ShelleyEra)
 genMofNRequiredSig = do
  required <- Gen.integral (Range.linear 2 15)
  total <- Gen.integral (Range.linear (required + 1) 15)
  RequireMOf required <$> Gen.list (Range.singleton total) (genRequiredSig SignaturesInShelleyEra)
 
-genMultiSigScript :: Gen (MultiSigScript Shelley)
+genMultiSigScript :: Gen (MultiSigScript ShelleyEra)
 genMultiSigScript =
   Gen.choice [genAllRequiredSig, genAnyRequiredSig, genMofNRequiredSig]
 
-genScript :: Gen (Script Shelley)
+genScript :: Gen (Script ShelleyEra)
 genScript = makeMultiSigScript <$> genMultiSigScript
 
 genScriptHash :: Gen ScriptHash
@@ -250,7 +250,7 @@ genStakeCredential = do
   vKey <- genVerificationKey AsStakeKey
   return . StakeCredentialByKey $ verificationKeyHash vKey
 
-genTxBodyShelley :: Gen (TxBody Shelley)
+genTxBodyShelley :: Gen (TxBody ShelleyEra)
 genTxBodyShelley =
    makeShelleyTransaction
      <$> genTxExtraContent
@@ -259,11 +259,11 @@ genTxBodyShelley =
      <*> Gen.list (Range.constant 1 10) genTxIn
      <*> Gen.list (Range.constant 1 10) genShelleyTxOut
 
-genByronTxOut :: Gen (TxOut Byron)
+genByronTxOut :: Gen (TxOut ByronEra)
 genByronTxOut =
   TxOut <$> genAddressByron <*> (TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace)
 
-genShelleyTxOut :: Gen (TxOut Shelley)
+genShelleyTxOut :: Gen (TxOut ShelleyEra)
 genShelleyTxOut =
   TxOut <$> genAddressShelley <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
 
@@ -274,7 +274,7 @@ genSlotNo :: Gen SlotNo
 genSlotNo = SlotNo <$> Gen.word64 Range.constantBounded
 
 -- TODO: Should probably have a naive generator that generates no inputs, no outputs etc
-genTxBodyByron :: Gen (TxBody Byron)
+genTxBodyByron :: Gen (TxBody ByronEra)
 genTxBodyByron = do
   txIns <- Gen.list (Range.constant 1 10) genTxIn
   txOuts <- Gen.list (Range.constant 1 10) genByronTxOut
@@ -282,7 +282,7 @@ genTxBodyByron = do
     Left err -> panic $ show err
     Right txBody -> return txBody
 
-genTxByron :: Gen (Tx Byron)
+genTxByron :: Gen (Tx ByronEra)
 genTxByron =
   makeSignedTransaction
     <$> Gen.list (Range.constant 1 10) genByronKeyWitness
@@ -297,13 +297,13 @@ genTxId = TxId <$> genShelleyHash
 genTxIndex :: Gen TxIx
 genTxIndex = TxIx <$> Gen.word Range.constantBounded
 
-genTxShelley :: Gen (Tx Shelley)
+genTxShelley :: Gen (Tx ShelleyEra)
 genTxShelley =
   makeSignedTransaction
     <$> genWitnessList
     <*> genTxBodyShelley
  where
-   genWitnessList :: Gen [Witness Shelley]
+   genWitnessList :: Gen [Witness ShelleyEra]
    genWitnessList = do
      bsWits <- Gen.list (Range.constant 0 10) genShelleyBootstrapWitness
      keyWits <- Gen.list (Range.constant 0 10) genShelleyKeyWitness
@@ -321,7 +321,7 @@ genTxFee = genLovelace
 genVerificationKey :: Key keyrole => AsType keyrole -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
-genByronKeyWitness :: Gen (Witness Byron)
+genByronKeyWitness :: Gen (Witness ByronEra)
 genByronKeyWitness = do
   pmId <- genProtocolMagicId
   txinWitness <- genVKWitness pmId
@@ -334,20 +334,20 @@ genWitnessNetworkIdOrByronAddress =
     , WitnessByronAddress <$> genAddressByron
     ]
 
-genShelleyBootstrapWitness :: Gen (Witness Shelley)
+genShelleyBootstrapWitness :: Gen (Witness ShelleyEra)
 genShelleyBootstrapWitness =
  makeShelleyBootstrapWitness
    <$> genWitnessNetworkIdOrByronAddress
    <*> genTxBodyShelley
    <*> genSigningKey AsByronKey
 
-genShelleyKeyWitness :: Gen (Witness Shelley)
+genShelleyKeyWitness :: Gen (Witness ShelleyEra)
 genShelleyKeyWitness =
   makeShelleyKeyWitness
     <$> genTxBodyShelley
     <*> genShelleyWitnessSigningKey
 
-genShelleyWitness :: Gen (Witness Shelley)
+genShelleyWitness :: Gen (Witness ShelleyEra)
 genShelleyWitness = Gen.choice [genShelleyKeyWitness, genShelleyBootstrapWitness]
 
 genShelleyWitnessSigningKey :: Gen ShelleyWitnessSigningKey
