@@ -39,10 +39,9 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAn
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
-import           Cardano.Api.MetaData
+import           Cardano.Api.Typed as Api
 import           Cardano.Api.Protocol
 import           Cardano.Api.TxSubmit as Api
-import           Cardano.Api.Typed as Api
 
 data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text

@@ -34,10 +34,6 @@ module Cardano.Api.Byron
     TxIx(TxIx),
     Lovelace(Lovelace),
     SlotNo(SlotNo),
-    toByronLovelace,
-    toByronTxId,
-    toByronTxIn,
-    toByronTxOut,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.

@@ -19,7 +19,6 @@ library
                         Cardano.Api.Byron
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.LocalChainSync
-                        Cardano.Api.MetaData
                         Cardano.Api.Protocol
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
@@ -36,20 +35,30 @@ library
                         Cardano.Api.TxSubmit.Types
 
                         -- Splitting up the big Typed module:
+                        Cardano.Api.Address
+                        Cardano.Api.Certificate
                         Cardano.Api.Eras
                         Cardano.Api.Error
+                        Cardano.Api.Fees
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysShelley
                         Cardano.Api.KeysPraos
+                        Cardano.Api.NetworkId
+                        Cardano.Api.OperationalCertificate
+                        Cardano.Api.ProtocolParameters
                         Cardano.Api.Script
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
                         Cardano.Api.SerialiseRaw
                         Cardano.Api.SerialiseTextEnvelope
+                        Cardano.Api.StakePoolMetadata
+                        Cardano.Api.Tx
+                        Cardano.Api.TxBody
+                        Cardano.Api.TxMetadata
                         Cardano.Api.Utils
                         Cardano.Api.Value
 

@@ -16,9 +16,9 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
-import           Cardano.Api.MetaData
-import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Typed hiding (PoolId)
+import           Cardano.Api.Protocol (Protocol (..))
+
 import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),

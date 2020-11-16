@@ -1,46 +1,55 @@
-module Cardano.Api.MetaData
-  (
-    -- * Transaction metadata type
-    TxMetadata(..)
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
+
+-- | Metadata embedded in transactions
+--
+module Cardano.Api.TxMetadata (
+
+    -- * Types
+    TxMetadata (TxMetadata, TxMetadataShelley),
 
     -- * Constructing metadata
-  , makeTransactionMetadata
-  , TxMetadataValue(..)
+    TxMetadataValue(..),
+    makeTransactionMetadata,
 
     -- * Validating metadata
-  , validateTxMetadata
-  , TxMetadataRangeError (..)
+    validateTxMetadata,
+    TxMetadataRangeError (..),
 
     -- * Converstion to\/from JSON
-  , TxMetadataJsonSchema (..)
-  , metadataFromJson
-  , metadataToJson
-  , metadataValueToJsonNoSchema
-  , TxMetadataJsonError (..)
-  , TxMetadataJsonSchemaError (..)
+    TxMetadataJsonSchema (..),
+    metadataFromJson,
+    metadataToJson,
+    metadataValueToJsonNoSchema,
+    TxMetadataJsonError (..),
+    TxMetadataJsonSchemaError (..),
+
+    -- * Data family instances
+    AsType(..)
   ) where
 
-import           Cardano.Prelude (decodeEitherBase16)
 import           Prelude
 
 import           Data.Bifunctor (first)
+import           Data.Maybe (fromMaybe)
+import           Data.Word
+import qualified Data.Scientific as Scientific
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Maybe (fromMaybe)
-import qualified Data.Scientific as Scientific
+import qualified Data.ByteString.Base16 as Base16
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
-import           Data.Word (Word64)
-
+import qualified Data.Map.Lazy as Map.Lazy
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
 import           Data.List.NonEmpty (NonEmpty, nonEmpty)
-import qualified Data.Map.Strict as Map
 import qualified Data.Vector as Vector
 
 import qualified Data.Aeson as Aeson
@@ -50,8 +59,102 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Control.Applicative (Alternative (..))
 import           Control.Monad (guard, when)
 
-import           Cardano.Api.Typed
+import qualified Cardano.Binary as CBOR
 
+import qualified Shelley.Spec.Ledger.MetaData as Shelley
+
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseCBOR
+
+
+-- ----------------------------------------------------------------------------
+-- TxMetadata types
+--
+
+newtype TxMetadata = TxMetadataShelley Shelley.MetaData
+    deriving (Eq, Show)
+
+{-# COMPLETE TxMetadata #-}
+pattern TxMetadata :: Map Word64 TxMetadataValue -> TxMetadata
+pattern TxMetadata m <- TxMetadataShelley (fromShelleyMetaData -> m) where
+    TxMetadata = TxMetadataShelley . toShelleyMetaData
+
+data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
+                     | TxMetaBytes  ByteString
+                     | TxMetaText   Text
+                     | TxMetaList   [TxMetadataValue]
+                     | TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
+    deriving (Eq, Ord, Show)
+
+-- | Merge metadata maps. When there are clashing entries the left hand side
+-- takes precedence.
+--
+instance Semigroup TxMetadata where
+    TxMetadataShelley (Shelley.MetaData m1)
+      <> TxMetadataShelley (Shelley.MetaData m2) =
+
+      TxMetadataShelley (Shelley.MetaData (m1 <> m2))
+
+instance Monoid TxMetadata where
+    mempty = TxMetadataShelley (Shelley.MetaData mempty)
+
+instance HasTypeProxy TxMetadata where
+    data AsType TxMetadata = AsTxMetadata
+    proxyToAsType _ = AsTxMetadata
+
+instance SerialiseAsCBOR TxMetadata where
+    serialiseToCBOR (TxMetadataShelley tx) =
+      CBOR.serialize' tx
+
+    deserialiseFromCBOR AsTxMetadata bs =
+      TxMetadataShelley <$>
+        CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
+
+makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
+makeTransactionMetadata = TxMetadata
+
+
+-- ----------------------------------------------------------------------------
+-- Internal conversion functions
+--
+
+toShelleyMetaData :: Map Word64 TxMetadataValue -> Shelley.MetaData
+toShelleyMetaData =
+    Shelley.MetaData
+  . Map.map toShelleyMetaDatum
+  where
+    toShelleyMetaDatum :: TxMetadataValue -> Shelley.MetaDatum
+    toShelleyMetaDatum (TxMetaNumber x) = Shelley.I x
+    toShelleyMetaDatum (TxMetaBytes  x) = Shelley.B x
+    toShelleyMetaDatum (TxMetaText   x) = Shelley.S x
+    toShelleyMetaDatum (TxMetaList  xs) = Shelley.List
+                                            [ toShelleyMetaDatum x | x <- xs ]
+    toShelleyMetaDatum (TxMetaMap   xs) = Shelley.Map
+                                            [ (toShelleyMetaDatum k,
+                                               toShelleyMetaDatum v)
+                                            | (k,v) <- xs ]
+
+fromShelleyMetaData :: Shelley.MetaData -> Map Word64 TxMetadataValue
+fromShelleyMetaData (Shelley.MetaData mdMap) =
+    Map.Lazy.map fromShelleyMetaDatum mdMap
+  where
+    fromShelleyMetaDatum :: Shelley.MetaDatum -> TxMetadataValue
+    fromShelleyMetaDatum (Shelley.I     x) = TxMetaNumber x
+    fromShelleyMetaDatum (Shelley.B     x) = TxMetaBytes  x
+    fromShelleyMetaDatum (Shelley.S     x) = TxMetaText   x
+    fromShelleyMetaDatum (Shelley.List xs) = TxMetaList
+                                               [ fromShelleyMetaDatum x | x <- xs ]
+    fromShelleyMetaDatum (Shelley.Map  xs) = TxMetaMap
+                                               [ (fromShelleyMetaDatum k,
+                                                  fromShelleyMetaDatum v)
+                                               | (k,v) <- xs ]
+
+
+-- ----------------------------------------------------------------------------
+-- Validate tx metaData
+--
 
 -- | Validate transaction metadata. This is for use with existing constructed
 -- metadata values, e.g. constructed manually or decoded from CBOR directly.
@@ -326,7 +429,7 @@ metadataValueFromJsonNoSchema = conv
     conv (Aeson.String s)
       | Just s' <- Text.stripPrefix bytesPrefix s
       , let bs' = Text.encodeUtf8 s'
-      , Right bs <- decodeEitherBase16 bs'
+      , Right bs <- Base16.decode bs'
       , not (BSC.any (\c -> c >= 'A' && c <= 'F') bs')
       = Right (TxMetaBytes bs)
 
@@ -398,7 +501,7 @@ metadataValueFromJsonDetailedSchema = conv
             Right n -> Right (TxMetaNumber n)
 
         [("bytes", Aeson.String s)]
-          | Right bs <- decodeEitherBase16 (Text.encodeUtf8 s)
+          | Right bs <- Base16.decode (Text.encodeUtf8 s)
           -> Right (TxMetaBytes bs)
 
         [("string", Aeson.String s)] -> Right (TxMetaText s)
@@ -522,7 +625,7 @@ pBytes = do
   _ <- Atto.string "0x"
   remaining <- Atto.takeByteString
   when (BSC.any hexUpper remaining) $ fail ("Unexpected uppercase hex characters in " <> show remaining)
-  case decodeEitherBase16 remaining of
+  case Base16.decode remaining of
     Right bs -> return bs
     _ -> fail ("Expecting base16 encoded string, found: " <> show remaining)
   where

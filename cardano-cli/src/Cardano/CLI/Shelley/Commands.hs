@@ -48,9 +48,8 @@ module Cardano.CLI.Shelley.Commands
 import           Data.Text (Text)
 import           Prelude
 
-import           Cardano.Api.MetaData
-import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Typed hiding (PoolId)
+import           Cardano.Api.Protocol (Protocol)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
