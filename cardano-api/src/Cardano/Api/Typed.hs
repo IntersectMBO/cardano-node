@@ -26,10 +26,16 @@
 --
 module Cardano.Api.Typed (
     -- * Eras
+    ByronEra,
+    ShelleyEra,
+    AllegraEra,
+    MaryEra,
+    -- ** Deprecated
     Byron,
     Shelley,
     Allegra,
     Mary,
+    -- * Type tags
     HasTypeProxy(..),
     AsType(..),
     -- * Cryptographic key interface

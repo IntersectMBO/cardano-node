@@ -5,13 +5,6 @@
 
 module Cardano.Api.Shelley
   ( module Cardano.API,
-    -- * Era
-    Shelley,
-    HasTypeProxy(..),
-    AsType(AsShelleyAddress,
-           AsShelleyTxBody,
-           AsShelleyTx,
-           AsShelleyWitness),
 
     -- * Cryptographic key interface
     -- $keys
