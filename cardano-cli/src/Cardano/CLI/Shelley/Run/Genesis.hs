@@ -369,7 +369,7 @@ updateTemplate
     :: SystemStart
     -> Maybe Lovelace
     -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
-    -> [Address Shelley]
+    -> [Address ShelleyEra]
     -> ShelleyGenesis StandardShelley
     -> ShelleyGenesis StandardShelley
 updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
@@ -397,12 +397,12 @@ updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
     eachAddrCoin :: Integer
     eachAddrCoin = totalCoin `div` fromIntegral (length utxoAddrs)
 
-    utxoList :: [(Address Shelley, Lovelace)]
+    utxoList :: [(Address ShelleyEra, Lovelace)]
     utxoList = fst $ List.foldl' folder ([], totalCoin) utxoAddrs
 
-    folder :: ([(Address Shelley, Lovelace)], Integer)
-           -> Address Shelley
-           -> ([(Address Shelley, Lovelace)], Integer)
+    folder :: ([(Address ShelleyEra, Lovelace)], Integer)
+           -> Address ShelleyEra
+           -> ([(Address ShelleyEra, Lovelace)], Integer)
     folder (acc, rest) addr
       | rest > eachAddrCoin + fromIntegral (length utxoAddrs) =
                     ((addr, Lovelace eachAddrCoin) : acc, rest - eachAddrCoin)
@@ -412,7 +412,7 @@ writeShelleyGenesis :: FilePath -> ShelleyGenesis StandardShelley -> ExceptT She
 writeShelleyGenesis fpath sg =
   handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.writeFile fpath (encodePretty sg)
 
-toShelleyAddr :: Address Shelley -> Ledger.Addr StandardShelley
+toShelleyAddr :: Address ShelleyEra -> Ledger.Addr StandardShelley
 toShelleyAddr (ByronAddress addr)        = Ledger.AddrBootstrap
                                              (Ledger.BootstrapAddress addr)
 toShelleyAddr (ShelleyAddress nw pc scr) = Ledger.Addr nw pc scr
@@ -539,7 +539,7 @@ extractFileNameIndexes files = do
     filesIxs = [ (file, extractFileNameIndex file) | file <- files ]
 
 readInitialFundAddresses :: FilePath -> NetworkId
-                         -> ExceptT ShelleyGenesisCmdError IO [Address Shelley]
+                         -> ExceptT ShelleyGenesisCmdError IO [Address ShelleyEra]
 readInitialFundAddresses utxodir nw = do
     files <- liftIO (listDirectory utxodir)
     vkeys <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError $

@@ -1449,7 +1449,7 @@ parseTxIx :: Atto.Parser TxIx
 parseTxIx = toEnum <$> Atto.decimal
 
 
-pTxOut :: Parser (TxOut Shelley)
+pTxOut :: Parser (TxOut ShelleyEra)
 pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
@@ -1459,7 +1459,7 @@ pTxOut =
                 \Lovelace."
     )
   where
-    parseTxOut :: Atto.Parser (TxOut Shelley)
+    parseTxOut :: Atto.Parser (TxOut ShelleyEra)
     parseTxOut =
       TxOut <$> parseAddress
             <*  Atto.char '+'
@@ -1589,7 +1589,7 @@ pQueryFilter = pAddresses <|> pure NoFilter
     pAddresses = FilterByAddress . Set.fromList <$>
                    some pFilterByAddress
 
-pFilterByAddress :: Parser (Address Shelley)
+pFilterByAddress :: Parser (Address ShelleyEra)
 pFilterByAddress =
     Opt.option (readerFromAttoParser parseAddress)
       (  Opt.long "address"
@@ -1605,7 +1605,7 @@ pFilterByStakeAddress =
       <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
       )
 
-pByronAddress :: Parser (Address Byron)
+pByronAddress :: Parser (Address ByronEra)
 pByronAddress =
     Opt.option
       (Opt.eitherReader deserialise)
@@ -1614,7 +1614,7 @@ pByronAddress =
         <> Opt.help "Byron address (Base58-encoded)."
         )
   where
-    deserialise :: String -> Either String (Address Byron)
+    deserialise :: String -> Either String (Address ByronEra)
     deserialise =
       maybe (Left "Invalid Byron address.") Right
         . deserialiseAddress AsByronAddress
@@ -2211,7 +2211,7 @@ pProtocolVersion =
 parseLovelace :: Atto.Parser Lovelace
 parseLovelace = Lovelace <$> Atto.decimal
 
-parseAddress :: Atto.Parser (Address Shelley)
+parseAddress :: Atto.Parser (Address ShelleyEra)
 parseAddress = do
     str <- lexPlausibleAddressString
     case deserialiseAddress AsShelleyAddress str of

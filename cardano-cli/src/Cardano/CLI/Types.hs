@@ -56,7 +56,7 @@ data OutputFormat
 
 -- | UTxO query filtering options.
 data QueryFilter
-  = FilterByAddress !(Set (Address Shelley))
+  = FilterByAddress !(Set (Address ShelleyEra))
   | NoFilter
   deriving (Eq, Show)
 

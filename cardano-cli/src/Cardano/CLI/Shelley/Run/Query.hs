@@ -377,7 +377,7 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
     -- But alternatively, the API can also be extended to cover the queries
     -- properly using the API types.
 
-    toShelleyAddrs :: Set (Address Shelley) -> Set (Ledger.Addr StandardShelley)
+    toShelleyAddrs :: Set (Address ShelleyEra) -> Set (Ledger.Addr StandardShelley)
     toShelleyAddrs = Set.map toShelleyAddr
 
     toShelleyAddr :: Address era -> Ledger.Addr StandardShelley
