@@ -1411,7 +1411,7 @@ Usage: cardano-cli shelley transaction build-raw --tx-in TX-IN --tx-out TX-OUT
 Available options:
   --tx-in TX-IN            The input transaction as TxId#TxIx where TxId is the
                            transaction hash and TxIx is the index.
-  --tx-out TX-OUT          The ouput transaction as Address+Lovelace where
+  --tx-out TX-OUT          The output transaction as Address+Lovelace where
                            Address is the Bech32-encoded address followed by the
                            amount in Lovelace.
   --ttl SLOT               Time to live (in slots).
