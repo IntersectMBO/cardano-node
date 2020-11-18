@@ -944,29 +944,32 @@ traceCounter logValueName aCounter tracer = do
   traceNamedObject (appendName "metrics" tracer)
                    (meta, LogValue logValueName (PureI $ fromIntegral aCounter))
 
-tracerOnOff
-  :: Transformable Text IO a
-  => Bool -> TracingVerbosity -> LoggerName -> Trace IO Text -> Tracer IO a
-tracerOnOff False _ _ _ = nullTracer
-tracerOnOff True verb name trcer = annotateSeverity
-                                $ toLogObject' verb
-                                $ appendName name trcer
+tracerOnOff :: Transformable Text IO a
+            => OnOff b
+            -> TracingVerbosity
+            -> LoggerName
+            -> Trace IO Text
+            -> Tracer IO a
+tracerOnOff (OnOff False) _ _ _ = nullTracer
+tracerOnOff (OnOff True) verb name trcer = annotateSeverity
+                                        $ toLogObject' verb
+                                        $ appendName name trcer
 
 tracerOnOff'
-  :: Bool -> Tracer IO a -> Tracer IO a
-tracerOnOff' False _ = nullTracer
-tracerOnOff' True tr = tr
+  :: OnOff b -> Tracer IO a -> Tracer IO a
+tracerOnOff' (OnOff False) _ = nullTracer
+tracerOnOff' (OnOff True) tr = tr
 
 instance Show a => Show (WithSeverity a) where
   show (WithSeverity _sev a) = show a
 
 showOnOff
   :: (Show a, HasSeverityAnnotation a)
-  => Bool -> LoggerName -> Trace IO Text -> Tracer IO a
-showOnOff False _ _ = nullTracer
-showOnOff True name trcer = annotateSeverity
-                                $ showTracing
-                                $ withName name trcer
+  => OnOff b -> LoggerName -> Trace IO Text -> Tracer IO a
+showOnOff (OnOff False) _ _ = nullTracer
+showOnOff (OnOff True) name trcer = annotateSeverity
+                                        $ showTracing
+                                        $ withName name trcer
 
 withName :: Text -> Trace IO Text -> Tracer IO String
 withName name tr = contramap Text.pack $ toLogObject $ appendName name tr
