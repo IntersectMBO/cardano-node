@@ -1454,7 +1454,7 @@ pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
     <> Opt.metavar "TX-OUT"
-    <> Opt.help "The transaction ouput as Address+Lovelace where Address is \
+    <> Opt.help "The transaction output as Address+Lovelace where Address is \
                 \the Bech32-encoded address followed by the amount in \
                 \Lovelace."
     )
