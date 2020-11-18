@@ -26,6 +26,7 @@ import           Cardano.CLI.Types
 
 import           Cardano.Chain.Common (Address (..))
 import           Cardano.Chain.UTxO (TxIn (..), TxOut (..))
+import           Cardano.CLI.Shelley.Commands (ByronKeyFormat)
 
 data ByronCommand =
 
@@ -36,36 +37,36 @@ data ByronCommand =
   | Genesis
         NewDirectory
         GenesisParameters
-        CardanoEra
+        ByronKeyFormat
   | PrintGenesisHash
         GenesisFile
 
   --- Key Related Commands ---
   | Keygen
-        CardanoEra
+        ByronKeyFormat
         NewSigningKeyFile
         PasswordRequirement
   | ToVerification
-        CardanoEra
+        ByronKeyFormat
         SigningKeyFile
         NewVerificationKeyFile
 
   | PrettySigningKeyPublic
-        CardanoEra
+        ByronKeyFormat
         SigningKeyFile
 
   | MigrateDelegateKeyFrom
-        CardanoEra
-        -- ^ Old CardanoEra
+        ByronKeyFormat
+        -- ^ Old ByronKeyFormat
         SigningKeyFile
         -- ^ Old key
-        CardanoEra
-        -- ^ New CardanoEra
+        ByronKeyFormat
+        -- ^ New ByronKeyFormat
         NewSigningKeyFile
         -- ^ New Key
 
   | PrintSigningKeyAddress
-        CardanoEra
+        ByronKeyFormat
         NetworkId
         SigningKeyFile
 
@@ -73,7 +74,7 @@ data ByronCommand =
 
   | IssueDelegationCertificate
         NetworkId
-        CardanoEra
+        ByronKeyFormat
         EpochNumber
         -- ^ The epoch from which the delegation is valid.
         SigningKeyFile
@@ -101,7 +102,7 @@ data ByronCommand =
   | SpendGenesisUTxO
         GenesisFile
         NetworkId
-        CardanoEra
+        ByronKeyFormat
         NewTxFile
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
@@ -112,7 +113,7 @@ data ByronCommand =
         -- ^ Tx output.
   | SpendUTxO
         NetworkId
-        CardanoEra
+        ByronKeyFormat
         NewTxFile
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile

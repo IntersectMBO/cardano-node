@@ -34,10 +34,10 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.Api.Typed (NetworkId, toByronProtocolMagicId)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, CardanoEra (..), readEraSigningKey)
+import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
+import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
-
 data ByronUpdateProposalError
   = ByronReadUpdateProposalFileFailure !FilePath !Text
   | ByronUpdateProposalWriteError !HelpersError
@@ -75,7 +75,7 @@ runProposalCreation
   -> ExceptT ByronUpdateProposalError IO ()
 runProposalCreation nw sKey@(SigningKeyFile sKeyfp) pVer sVer
                     sysTag insHash outputFp params = do
-  sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readEraSigningKey ByronEra sKey
+  sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readEraSigningKey NonLegacyByronKeyFormat sKey
   let proposal = createUpdateProposal nw sK pVer sVer sysTag insHash params
   firstExceptT ByronUpdateProposalWriteError $
     ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
