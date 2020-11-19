@@ -1,6 +1,6 @@
 # Making a Shelley blockchain from scratch
 
-**Last validated: 2020/10/12**
+**Last validated: 2020/11/19**
 
 ## Preliminaries
 
@@ -11,7 +11,7 @@ We also assume a Linux system, though it should work fine on OSX too.
 
 ```bash
 $ cardano-cli version
-cardano-cli 1.21.1 - linux-x86_64 - ghc-8.6
+cardano-cli 1.22.0 - linux-x86_64 - ghc-8.10
 ```
 
 Everything we'll be doing uses the `shelley` sub-command
@@ -206,11 +206,11 @@ Let's make two genesis delegate key pairs, to use with our two genesis keys
 $ cardano-cli shelley genesis key-gen-delegate \
     --verification-key-file example/delegate-keys/delegate1.vkey \
     --signing-key-file example/delegate-keys/delegate1.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert1.counter
+    --operational-certificate-issue-counter example/delegate-keys/delegate1.counter
 $ cardano-cli shelley genesis key-gen-delegate \
     --verification-key-file example/delegate-keys/delegate2.vkey \
     --signing-key-file example/delegate-keys/delegate2.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert2.counter
+    --operational-certificate-issue-counter example/delegate-keys/delegate2.counter
 ```
 
 Let's see what's in that counter file
@@ -322,20 +322,6 @@ When we regenerate the genesis file it will fill in the:
  * `initialFunds`
  * `systemStart`
  * and optionally it can override the `maxLovelaceSupply`
-
-We need to generate VRF keys to prove that the node has the right to create a block in this slot.
-
-So let's do that too
-
-```bash
-$ cardano-cli shelley node key-gen-VRF \
-    --verification-key-file example/delegate-keys/delegate1.vrf.vkey \
-    --signing-key-file example/delegate-keys/delegate1.vrf.skey
-
-$ cardano-cli shelley node key-gen-VRF \
-    --verification-key-file example/delegate-keys/delegate2.vrf.vkey \
-    --signing-key-file example/delegate-keys/delegate2.vrf.skey
-```
 
 Let's regenerate the genesis file (note, this command does not set an initial
 Lovelace supply, that will be done later)
@@ -486,6 +472,8 @@ And if we compare this with the `initialFunds` from the generated file we see
         "6003662510383a9901958f7a16ceb977917d8102eb2013f4ba5e0b0763": 0
     },
 ```
+
+TODO: this currenty looks like `addr_test1vzvlgknq87k62ltjg9u6rgujskkm7drf06tvfashgpfyywcpvfde4` which doesn't match the above
 
 This means we'll start with 0 lovelace in a special genesis UTxO at that
 address.
@@ -923,6 +911,18 @@ Available options:
 
 However, the `genesis create` command has already generated VRF keys for you at: `example/delegate-keys/delegate{1,2}.vrf.{vkey,skey}`
 and the corresponding key hashes exist in the `genesis.json` file in the `vrf` key.
+
+If you skipped that and used the manual method, we need to generate VRF keys. Otherwise, skip the following commands.
+
+```bash
+$ cardano-cli shelley node key-gen-VRF \
+    --verification-key-file example/delegate-keys/delegate1.vrf.vkey \
+    --signing-key-file example/delegate-keys/delegate1.vrf.skey
+
+$ cardano-cli shelley node key-gen-VRF \
+    --verification-key-file example/delegate-keys/delegate2.vrf.vkey \
+    --signing-key-file example/delegate-keys/delegate2.vrf.skey
+```
 
 ### Issuing an operational certificate
 
