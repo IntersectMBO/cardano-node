@@ -409,13 +409,13 @@ instance ToJSONKey (MA.PolicyID era) where
     where
       render (MA.PolicyID (ScriptHash h)) = hashToTextAsHex h
 
-instance ToJSON MA.AssetID where
-  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . MA.assetID
+instance ToJSON MA.AssetName where
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . MA.assetName
 
-instance ToJSONKey MA.AssetID where
+instance ToJSONKey MA.AssetName where
   toJSONKey = ToJSONKeyText render (Aeson.text . render)
     where
-      render = Text.decodeLatin1 . B16.encode . MA.assetID
+      render = Text.decodeLatin1 . B16.encode . MA.assetName
 
 instance ToJSON MA.ValidityInterval where
   toJSON vi =

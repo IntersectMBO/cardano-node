@@ -71,7 +71,6 @@ import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras
                    (StandardAllegra, StandardMary, StandardShelley,
                     StandardCrypto)
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
@@ -312,8 +311,8 @@ simpleScriptToTimelock = go
     go (RequireAllOf s) = Timelock.RequireAllOf (Seq.fromList (map go s))
     go (RequireAnyOf s) = Timelock.RequireAnyOf (Seq.fromList (map go s))
     go (RequireMOf m s) = Timelock.RequireMOf m (Seq.fromList (map go s))
-    go (RequireTimeBefore _ sl) = Timelock.RequireTimeExpire (SJust sl)
-    go (RequireTimeAfter  _ sl) = Timelock.RequireTimeStart  (SJust sl)
+    go (RequireTimeBefore _ t) = Timelock.RequireTimeExpire t
+    go (RequireTimeAfter  _ t) = Timelock.RequireTimeStart  t
 
 
 scriptToSimpleScript :: Script era -> SimpleScript era
@@ -348,14 +347,12 @@ timelockToSimpleScript signaturesInEra timeLocksInEra = go
     go :: Timelock.Timelock ledgerera -> SimpleScript era
     go (Timelock.RequireSignature kh) = RequireSignature signaturesInEra
                                           (PaymentKeyHash (Shelley.coerceKeyRole kh))
-    go (Timelock.RequireTimeExpire (SJust sl)) = RequireTimeBefore timeLocksInEra sl
-    go (Timelock.RequireTimeStart  (SJust sl)) = RequireTimeAfter  timeLocksInEra sl
+    go (Timelock.RequireTimeExpire t) = RequireTimeBefore timeLocksInEra t
+    go (Timelock.RequireTimeStart  t) = RequireTimeAfter  timeLocksInEra t
     go (Timelock.RequireAllOf      s) = RequireAllOf (map go (toList s))
     go (Timelock.RequireAnyOf      s) = RequireAnyOf (map go (toList s))
     go (Timelock.RequireMOf      i s) = RequireMOf i (map go (toList s))
 
-    go (Timelock.RequireTimeExpire SNothing) = error "TODO: review need for this case with ledger team"
-    go (Timelock.RequireTimeStart  SNothing) = error "TODO: review need for this case with ledger team"
 
 
 --

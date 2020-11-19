@@ -37,8 +37,8 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
                      OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
                      OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeBeforeEpoch,
-                     SafeZone)
+import           Ouroboros.Consensus.HardFork.History.EraParams
+                   (EraParams (..), SafeZone)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
@@ -198,7 +198,6 @@ instance ToObject EraParams where
         ]
 
 deriving instance ToJSON SafeZone
-deriving instance ToJSON SafeBeforeEpoch
 
 
 --

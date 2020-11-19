@@ -29,8 +29,6 @@ import           Data.String (IsString (..))
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.KES.Class as Crypto
-import qualified Cardano.Crypto.Libsodium as Crypto
-import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
@@ -74,10 +72,7 @@ instance Key KesKey where
     --This loses the mlock safety of the seed, since it starts from a normal in-memory seed.
     deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
     deterministicSigningKey AsKesKey =
-        KesSigningKey
-          . Crypto.genKeyKES
-          . Crypto.mlsbFromByteString
-          . Crypto.getSeedBytes
+        KesSigningKey . Crypto.genKeyKES
 
     deterministicSigningKeySeedSize :: AsType KesKey -> Word
     deterministicSigningKeySeedSize AsKesKey =
