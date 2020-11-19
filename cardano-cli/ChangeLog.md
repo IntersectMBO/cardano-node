@@ -1,5 +1,11 @@
 # Changelog for cardano-cli
 
+## 1.23.0 -- November 2020
+
+- Create VRF keys with the correct file permissions (#1948)
+- New command to query the Shelley protocol (not just ledger) state (#2057)
+- Skeletons of the new commands and flags for the multi-asset extensions (#2081)
+
 ## 1.22.1 -- October 2020
 
 None

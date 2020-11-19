@@ -1,5 +1,49 @@
 # Changelog for cardano-node
 
+## 1.23.0 -- November 2020
+
+### node changes
+
+- Preliminary support for the upcoming Allegra and Mary eras (#2038, #2080)
+- Remove the HardForkNotBeforeEpoch setting from the config file (#2073)
+- Tracing changes for the benefit of the RTView monitoring tool (#2047, #2062)
+- Minor documentation improvements requested by the external audit (#2046)
+- Miscellaneous "chairman" integration test improvements (#2042, #2043, #2048,
+  #2061, #2078, #2087, #2086)
+- Improve handling of invalid command line input (#2088)
+
+### ledger changes
+
+- Fix a space leak in the stake pool performance tracking that caused writing
+  ledger state snapshots in consensus to take too long (#1967)
+- Improved ledger state serialisation performance. This involving a change to
+  the serialisation format which will require the ledger state to be rebuilt
+  upon node startup (#1968)
+- Further development for the Allegra era (#1951, #1965, #1984, #1989)
+- Further development for the Mary multi-asset era (#1961, #1959, #1971, #1977,
+  #1981, #1987, #1988, #1990)
+- Internal refactoring to support the new eras (#1954, 1978)
+- Extra test coverage (#1958, #1966)
+- Minor corrections to the formal spec arising from internal review (#1969, #1992)
+
+### consensus changes
+
+- Internal changes to improve the clarity of the chain selection algorithm and
+  to better match the description in the tech report (#2732, #2735, #2743)
+- Support for creating ledger state snapshots for testing purposes (#2733)
+- Support for the new Allegra and Mary ledger eras (#2668, #2670, #2677, #2679)
+- Extra test coverage for new eras (#2669, #2737, #2738, #2740)
+- Remove the SafeBeforeEpoch feature as it provided no benefit. In the node
+  config file this was called HardForkNotBeforeEpoch. (#2736, #2739)
+- Internal refactoring (#2720)
+
+### network changes
+- None.
+
+### crypto changes
+
+- Revert the use of libsodium in the KES implementation for now (#1986, #2752)
+
 ## 1.22.1 -- October 2020
 
 ### node changes

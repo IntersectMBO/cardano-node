@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 1.23.0 -- November 2020
+
+- Preliminary support for the Allegra script language extensions (#2069)
+- Preliminary support for the Mary multi-asset extensions (#2083, #2085, #2093)
+- Internal refactoring of the API code (#2040, #2055, #2094)
+
 ## 1.22.1 -- October 2020
 
 None
