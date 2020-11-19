@@ -11,6 +11,9 @@ You will need:
 * An x86 host \(AMD or Intel\), Virtual Machine or AWS instance with at least 2 cores, 4GB of RAM and at least 10GB of free disk space;
 * A recent version of Linux.
 
+The node can be built and run on other operating systems, including Windows and MacOSX, but there are performance advantages that mean that
+stake pool operators are recommended to use Linux.
+
 #### Install dependencies
 
 We need the following packages and tools on our Linux system to download the source code and build it:
@@ -48,11 +51,11 @@ If you are using a different flavor of Linux, you will need to use the package m
     mkdir -p ~/.local/bin
     mv cabal ~/.local/bin/
 
-Verify that .local/bin is in your PATH
+Verify that ~/.local/bin is in your PATH
 
     echo $PATH
 
-If `.local/bin` is not in the PATH, you need to add the following line to  your `.bashrc` file
+If `~/.local/bin` is not in the PATH, you need to add the following line to  your `.bashrc` file
 
     export PATH="~/.local/bin:$PATH"
 
@@ -70,16 +73,30 @@ Confirm that you installed cabal version `3.2.0.0`.
 
 #### Download and install GHC:
 
+Create a working directory for your builds:
+
+    mkdir -p ~/src
+    cd ~/src
+ 
+ Download and install the latest version of GHC:
+ 
     wget https://downloads.haskell.org/ghc/8.10.2/ghc-8.10.2-x86_64-deb9-linux.tar.xz
     tar -xf ghc-8.10.2-x86_64-deb9-linux.tar.xz
     rm ghc-8.10.2-x86_64-deb9-linux.tar.xz
     cd ghc-8.10.2
     ./configure
     sudo make install
-
-Back in your home directory:
+    
+This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing).
 
 #### Install Libsodium
+
+Create a working directory for your builds:
+
+    mkdir -p ~/src
+    cd ~/src
+ 
+Download and install libsodium
 
     git clone https://github.com/input-output-hk/libsodium
     cd libsodium
@@ -96,7 +113,12 @@ Add the following to your .bashrc file and source it.
 
 #### Download the source code for cardano-node
 
-Back in the home directory: 
+Create a working directory for your builds:
+
+    mkdir -p ~/src
+    cd ~/src
+    
+Download the Cardano node sources:
 
     git clone https://github.com/input-output-hk/cardano-node.git
 
@@ -107,27 +129,44 @@ Change the working directory to the downloaded source code folder:
 
 Checkout the latest version of cardano-node
 
-    git fetch --all --tags
+    git fetch --all --recurse-submodules --tags
     git tag
     git checkout tags/<TAGGED VERSION>
 
+#### Configure the build options
+
+We turn off compiler optimisations, and explicitly use the GHC version that we installed earlier.  This avoids
+possible problems with prevously installed versions of GHC.
+
+    cabal configure -O0 -w ghc-8.10.2
+
+Update the local project file to use the VRF library that you installed earlier.
+   
+    echo "package cardano-crypto-praos" >>  cabal.project.local
+    echo "  flags: -external-libsodium-vrf" >>  cabal.project.local
+
+
 #### Build and install the node
 
-Build and install the node with `cabal`,
+Build the node and CLI with `cabal`,
 
     cabal build all
 
-Copy the executables files to the `.local/bin` directory. Replace the place holder <TAGGED VERSION> with your targeted version:
+Install the newly built node and CLI commands.
+
+    cabal install all --bindir ~/.local/bin
+
+If this doesn't work, you can manually copy the executable files to the `~/.local/bin` directory. Replace the place holder <TAGGED VERSION> with your targeted version:
 
     cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
 
     cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
 
-Check the version installed:
+Check the version that has been installed:
 
     cardano-cli --version
 
-If you need to update to a newer version repeat this process.
+Repeat the process when you need to update to a new version
 
 
 **Note:** It might be necessary to delete the `db`-folder \(the database-folder\) before running an updated version of the node.
