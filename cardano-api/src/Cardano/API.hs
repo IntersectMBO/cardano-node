@@ -16,6 +16,13 @@ module Cardano.API (
     ShelleyEra,
     AllegraEra,
     MaryEra,
+    CardanoEra(..),
+    CardanoEraStyle(..),
+    IsCardanoEra(..),
+    -- ** Shelley-based eras
+    ShelleyBasedEra(..),
+    IsShelleyBasedEra(..),
+    ShelleyLedgerEra,
     -- ** Deprecated
     Byron,
     Shelley,

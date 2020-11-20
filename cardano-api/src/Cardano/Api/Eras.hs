@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -11,6 +12,9 @@ module Cardano.Api.Eras
   , ShelleyEra
   , AllegraEra
   , MaryEra
+  , CardanoEra(..)
+  , CardanoEraStyle(..)
+  , IsCardanoEra(..)
 
     -- * Deprecated aliases
   , Byron
@@ -18,10 +22,20 @@ module Cardano.Api.Eras
   , Allegra
   , Mary
 
+    -- * Shelley-based eras
+  , ShelleyBasedEra(..)
+  , IsShelleyBasedEra(..)
+  , ShelleyLedgerEra
+
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra,
            AsByron,    AsShelley,    AsAllegra,    AsMary)
   ) where
+
+import           Prelude
+
+import           Ouroboros.Consensus.Shelley.Eras as Ledger
+                   (StandardShelley, StandardAllegra, StandardMary)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -86,4 +100,126 @@ pattern AsMary     = AsMaryEra
 {-# DEPRECATED AsShelley "Use 'AsShelleyEra' instead" #-}
 {-# DEPRECATED AsAllegra "Use 'AsAllegraEra' instead" #-}
 {-# DEPRECATED AsMary    "Use 'AsMaryEra' instead" #-}
+
+-- ----------------------------------------------------------------------------
+-- Value level representation for Cardano eras
+--
+
+-- | This GADT provides a value-level representation of all the Cardano eras.
+-- This enables pattern matching on the era to allow them to be treated in a
+-- non-uniform way.
+--
+-- This can be used in combination with the 'IsCardanoEra' class to get access
+-- to this value.
+--
+-- In combination this can often enable code that handles all eras, and does
+-- so uniformly where possible, and non-uniformly where necessary.
+--
+data CardanoEra era where
+     ByronEra   :: CardanoEra ByronEra
+     ShelleyEra :: CardanoEra ShelleyEra
+     AllegraEra :: CardanoEra AllegraEra
+     MaryEra    :: CardanoEra MaryEra
+
+deriving instance Eq   (CardanoEra era)
+deriving instance Ord  (CardanoEra era)
+deriving instance Show (CardanoEra era)
+
+
+-- | This is the same essential information as 'CardanoEra' but instead of a
+-- flat set of alternative eras, it is factored into the legcy Byron era and
+-- the current Shelley-based eras.
+--
+-- This way of factoring the eras is useful because in many cases the
+-- major differences are between the Byron and Shelley-based eras, and
+-- the Shelley-based eras can often be treated uniformly.
+--
+data CardanoEraStyle era where
+     LegacyByronEra  ::                        CardanoEraStyle ByronEra
+     ShelleyBasedEra :: ShelleyBasedEra era -> CardanoEraStyle era
+
+deriving instance Eq   (CardanoEraStyle era)
+deriving instance Ord  (CardanoEraStyle era)
+deriving instance Show (CardanoEraStyle era)
+
+
+-- | The class of Cardano eras. This allows uniform handling of all Cardano
+-- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
+-- or 'CardanoEraStyle' constructors.
+--
+class HasTypeProxy era => IsCardanoEra era where
+   cardanoEra      :: CardanoEra era
+   cardanoEraStyle :: CardanoEraStyle era
+
+instance IsCardanoEra ByronEra where
+   cardanoEra      = ByronEra
+   cardanoEraStyle = LegacyByronEra
+
+instance IsCardanoEra ShelleyEra where
+   cardanoEra      = ShelleyEra
+   cardanoEraStyle = ShelleyBasedEra ShelleyBasedEraShelley
+
+instance IsCardanoEra AllegraEra where
+   cardanoEra      = AllegraEra
+   cardanoEraStyle = ShelleyBasedEra ShelleyBasedEraAllegra
+
+instance IsCardanoEra MaryEra where
+   cardanoEra      = MaryEra
+   cardanoEraStyle = ShelleyBasedEra ShelleyBasedEraMary
+
+
+-- ----------------------------------------------------------------------------
+-- Shelley-based eras
+--
+
+-- | While the Byron and Shelley eras are quite different, there are several
+-- eras that are based on Shelley with only minor differences. It is useful
+-- to be able to treat the Shelley-based eras in a mostly-uniform way.
+--
+-- Values of this type witness the fact that the era is Shelley-based. This
+-- can be used to constrain the era to being a Shelley-based on. It allows
+-- non-uniform handling making case distinctions on the constructor.
+--
+data ShelleyBasedEra era where
+     ShelleyBasedEraShelley :: ShelleyBasedEra ShelleyEra
+     ShelleyBasedEraAllegra :: ShelleyBasedEra AllegraEra
+     ShelleyBasedEraMary    :: ShelleyBasedEra MaryEra
+
+deriving instance Eq   (ShelleyBasedEra era)
+deriving instance Ord  (ShelleyBasedEra era)
+deriving instance Show (ShelleyBasedEra era)
+
+-- | The class of eras that are based on Shelley. This allows uniform handling
+-- of Shelley-based eras, but also non-uniform by making case distinctions on
+-- the 'ShelleyBasedEra' constructors.
+--
+class HasTypeProxy era => IsShelleyBasedEra era where
+   shelleyBasedEra :: ShelleyBasedEra era
+
+instance IsShelleyBasedEra ShelleyEra where
+   shelleyBasedEra = ShelleyBasedEraShelley
+
+instance IsShelleyBasedEra AllegraEra where
+   shelleyBasedEra = ShelleyBasedEraAllegra
+
+instance IsShelleyBasedEra MaryEra where
+   shelleyBasedEra = ShelleyBasedEraMary
+
+
+-- ----------------------------------------------------------------------------
+-- Conversion to Shelley ledger library types
+--
+
+-- | A type family that connects our era type tags to equivalent type tags used
+-- in the Shelley ledger library.
+--
+-- This type mapping  connect types from this API with types in the Shelley
+-- ledger library which allows writing conversion functions in a more generic
+-- way.
+--
+type family ShelleyLedgerEra era where
+
+  ShelleyLedgerEra ShelleyEra = Ledger.StandardShelley
+  ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
+  ShelleyLedgerEra MaryEra    = Ledger.StandardMary
 
