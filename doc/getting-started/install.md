@@ -138,8 +138,7 @@ Checkout the latest version of cardano-node (choose the tag with the highest ver
 
 #### Configure the build options
 
-We explicitly use the GHC version that we installed earlier.  This avoids
-possible problems with prevously installed versions of GHC.
+We explicitly use the GHC version that we installed earlier.  This avoids defaulting to a system version of GHC that might be older than the one you have installed.
 
     cabal configure --with-compiler=ghc-8.10.2
 
