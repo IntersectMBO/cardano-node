@@ -72,16 +72,31 @@ module Cardano.Api.Typed (
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
     Address(..),
+    ByronAddr,
+    ShelleyAddr,
     NetworkId(..),
-    -- * Byron addresses
+    -- ** Byron addresses
     makeByronAddress,
     ByronKey,
-    -- * Shelley addresses
+    -- ** Shelley addresses
     makeShelleyAddress,
     PaymentCredential(..),
     StakeAddressReference(..),
     PaymentKey,
     PaymentExtendedKey,
+
+    -- ** Addresses in any era
+    AddressAny(..),
+
+    -- ** Addresses in specific eras
+    AddressInEra(..),
+    AddressTypeInEra(..),
+    byronAddressInEra,
+    shelleyAddressInEra,
+    anyAddressInShelleyBasedEra,
+    anyAddressInEra,
+    makeByronAddressInEra,
+    makeShelleyAddressInEra,
 
     -- * Stake addresses
     -- | Constructing and inspecting stake addresses

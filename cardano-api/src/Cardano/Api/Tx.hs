@@ -336,7 +336,7 @@ data WitnessNetworkIdOrByronAddress
   -- If this value is used in the construction of a Shelley bootstrap witness,
   -- the result will not consist of a derivation path. If that is required,
   -- specify a 'WitnessByronAddress' value instead.
-  | WitnessByronAddress !(Address ByronEra)
+  | WitnessByronAddress !(Address ByronAddr)
   -- ^ Byron address.
   --
   -- If this value is used in the construction of a Shelley bootstrap witness,
@@ -391,16 +391,16 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody txbody _) (ByronSigningKey s
         }
 
     -- The 'WitnessNetworkIdOrByronAddress' value converted to an 'Either'.
-    eitherNwOrAddr :: Either NetworkId (Address ByronEra)
+    eitherNwOrAddr :: Either NetworkId (Address ByronAddr)
     eitherNwOrAddr =
       case nwOrAddr of
         WitnessNetworkId nw -> Left nw
         WitnessByronAddress addr -> Right addr
 
-    unByronAddr :: Address ByronEra -> Byron.Address
+    unByronAddr :: Address ByronAddr -> Byron.Address
     unByronAddr (ByronAddress addr) = addr
 
-    unAddrAttrs :: Address ByronEra -> Byron.AddrAttributes
+    unAddrAttrs :: Address ByronAddr -> Byron.AddrAttributes
     unAddrAttrs = Byron.attrData . Byron.addrAttributes . unByronAddr
 
     derivationPath :: Maybe Byron.HDAddressPayload

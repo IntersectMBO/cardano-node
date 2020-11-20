@@ -148,22 +148,25 @@ newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
 
-data TxOut era = TxOut (Address era) (TxOutValue era)
+data TxOut era = TxOut (AddressInEra era) (TxOutValue era)
 
-deriving instance Eq (TxOut ByronEra)
-deriving instance Eq (TxOut ShelleyEra)
-deriving instance Show (TxOut ByronEra)
-deriving instance Show (TxOut ShelleyEra)
+deriving instance Eq   (TxOut era)
+deriving instance Show (TxOut era)
 
 toByronTxIn  :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
     Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
 toByronTxOut :: TxOut ByronEra -> Maybe Byron.TxOut
-toByronTxOut (TxOut (ByronAddress addr) (TxOutAdaOnly AdaOnlyInByronEra value)) =
+toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
+                    (TxOutAdaOnly AdaOnlyInByronEra value)) =
     Byron.TxOut addr <$> toByronLovelace value
 
-toByronTxOut (TxOut (ByronAddress _) (TxOutValue era _)) = case era of {}
+toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
+                    (TxOutValue era _)) = case era of {}
+
+toByronTxOut (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
+                    _) = case era of {}
 
 toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
 toByronLovelace (Lovelace x) =

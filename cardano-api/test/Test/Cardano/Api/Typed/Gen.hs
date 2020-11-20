@@ -41,20 +41,14 @@ import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
 {- HLINT ignore "Reduce duplication" -}
 
-genAddressByron :: Gen (Address ByronEra)
+genAddressByron :: Gen (Address ByronAddr)
 genAddressByron = makeByronAddress <$> genNetworkId
                                    <*> genVerificationKey AsByronKey
 
-genAddressShelley :: Gen (Address ShelleyEra)
-genAddressShelley =
-  Gen.choice
-    [ makeShelleyAddress <$> genNetworkId
-                         <*> genPaymentCredential
-                         <*> genStakeAddressReference
-
-    , makeByronAddress   <$> genNetworkId
-                         <*> genVerificationKey AsByronKey
-    ]
+genAddressShelley :: Gen (Address ShelleyAddr)
+genAddressShelley = makeShelleyAddress <$> genNetworkId
+                                       <*> genPaymentCredential
+                                       <*> genStakeAddressReference
 
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
@@ -261,11 +255,13 @@ genTxBodyShelley =
 
 genByronTxOut :: Gen (TxOut ByronEra)
 genByronTxOut =
-  TxOut <$> genAddressByron <*> (TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace)
+  TxOut <$> (byronAddressInEra <$> genAddressByron)
+        <*> (TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace)
 
 genShelleyTxOut :: Gen (TxOut ShelleyEra)
 genShelleyTxOut =
-  TxOut <$> genAddressShelley <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
+  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
+        <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
 
 genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 ())
 genShelleyHash = return $ Crypto.hashWith CBOR.serialize' ()
