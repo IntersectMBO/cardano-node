@@ -305,7 +305,7 @@ readProtocolParameters (ProtocolParamsFile fpath) = do
     Aeson.eitherDecode' pparams
 
 data SomeWitness
-  = AByronSigningKey           (Api.SigningKey Api.ByronKey) (Maybe (Address ByronEra))
+  = AByronSigningKey           (Api.SigningKey Api.ByronKey) (Maybe (Address ByronAddr))
   | APaymentSigningKey         (Api.SigningKey Api.PaymentKey)
   | APaymentExtendedSigningKey (Api.SigningKey Api.PaymentExtendedKey)
   | AStakeSigningKey           (Api.SigningKey Api.StakeKey)
@@ -458,7 +458,7 @@ data ShelleyBootstrapWitnessSigningKeyData
   = ShelleyBootstrapWitnessSigningKeyData
       !(SigningKey ByronKey)
       -- ^ Byron signing key.
-      !(Maybe (Address ByronEra))
+      !(Maybe (Address ByronAddr))
       -- ^ An optionally specified Byron address.
       --
       -- If specified, both the network ID and derivation path are extracted

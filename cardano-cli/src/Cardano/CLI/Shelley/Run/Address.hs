@@ -110,24 +110,26 @@ runAddressBuild payVkeyTextOrFile mbStkVkeyOrFile nw mOutFp = do
 
     addr <- case payVKey of
               AByronVerificationKey vk ->
-                return (makeByronAddress nw vk)
+                return (AddressByron (makeByronAddress nw vk))
 
               APaymentVerificationKey vk ->
-                buildShelleyAddress vk
+                AddressShelley <$> buildShelleyAddress vk
 
               APaymentExtendedVerificationKey vk ->
-                buildShelleyAddress (castVerificationKey vk)
+                AddressShelley <$> buildShelleyAddress (castVerificationKey vk)
 
               AGenesisUTxOVerificationKey vk ->
-                buildShelleyAddress (castVerificationKey vk)
+                AddressShelley <$> buildShelleyAddress (castVerificationKey vk)
 
-    let addrText = serialiseAddress addr
+    let addrText = serialiseAddress (addr :: AddressAny)
 
     case mOutFp of
       Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath addrText
       Nothing                 -> liftIO $ Text.putStrLn        addrText
 
   where
+    buildShelleyAddress :: VerificationKey PaymentKey
+                        -> ExceptT ShelleyAddressCmdError IO (Address ShelleyAddr)
     buildShelleyAddress vkey = do
       mstakeVKey <-
         case mbStkVkeyOrFile of

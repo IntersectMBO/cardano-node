@@ -449,7 +449,7 @@ data WitnessSigningData
   = KeyWitnessSigningData
       !SigningKeyFile
       -- ^ Path to a file that should contain a signing key.
-      !(Maybe (Address ByronEra))
+      !(Maybe (Address ByronAddr))
       -- ^ An optionally specified Byron address.
       --
       -- If specified, both the network ID and derivation path are extracted

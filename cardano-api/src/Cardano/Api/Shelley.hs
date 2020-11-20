@@ -13,6 +13,8 @@ module Cardano.Api.Shelley
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
     Address(ShelleyAddress),
+    toShelleyAddr,
+    toShelleyStakeAddr,
     NetworkId(Mainnet, Testnet),
 
     -- * Building transactions
@@ -23,6 +25,7 @@ module Cardano.Api.Shelley
     TxOut(TxOut),
     TxIx(TxIx),
     Lovelace(Lovelace),
+    toShelleyLovelace,
     SlotNo(SlotNo),
 
     -- * Signing transactions
@@ -155,6 +158,8 @@ module Cardano.Api.Shelley
 
 import           Cardano.API
 import           Cardano.Api.Typed
+import           Cardano.Api.Address
+import           Cardano.Api.Value
 
 
 -- For the deprecated functions below

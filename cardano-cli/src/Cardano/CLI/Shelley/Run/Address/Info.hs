@@ -41,15 +41,13 @@ instance ToJSON AddressInfo where
 
 runAddressInfo :: Text -> Maybe OutputFile -> ExceptT ShelleyAddressInfoError IO ()
 runAddressInfo addrTxt mOutputFp = do
-    addrInfo <- case (Left  <$> deserialiseAddress AsShelleyAddress addrTxt)
+    addrInfo <- case (Left  <$> deserialiseAddress AsAddressAny addrTxt)
                  <|> (Right <$> deserialiseAddress AsStakeAddress addrTxt) of
 
       Nothing ->
         left $ ShelleyAddressInvalid addrTxt
 
-      Just (Left payaddr) ->
-        case payaddr of
-          ByronAddress{} ->
+      Just (Left (AddressByron payaddr)) ->
             pure $ AddressInfo
               { aiType = "payment"
               , aiEra = "byron"
@@ -57,7 +55,8 @@ runAddressInfo addrTxt mOutputFp = do
               , aiAddress = addrTxt
               , aiBase16 = asBase16 payaddr
               }
-          ShelleyAddress{} ->
+
+      Just (Left (AddressShelley payaddr)) ->
             pure $ AddressInfo
               { aiType = "payment"
               , aiEra = "shelley"
