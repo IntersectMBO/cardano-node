@@ -1449,7 +1449,7 @@ parseTxIx :: Atto.Parser TxIx
 parseTxIx = toEnum <$> Atto.decimal
 
 
-pTxOut :: Parser (TxOut Shelley)
+pTxOut :: Parser (TxOut ShelleyEra)
 pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
@@ -1459,9 +1459,9 @@ pTxOut =
                 \Lovelace."
     )
   where
-    parseTxOut :: Atto.Parser (TxOut Shelley)
+    parseTxOut :: Atto.Parser (TxOut ShelleyEra)
     parseTxOut =
-      TxOut <$> parseAddress
+      TxOut <$> parseAddressInEra
             <*  Atto.char '+'
             <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> parseLovelace)
 
@@ -1589,9 +1589,9 @@ pQueryFilter = pAddresses <|> pure NoFilter
     pAddresses = FilterByAddress . Set.fromList <$>
                    some pFilterByAddress
 
-pFilterByAddress :: Parser (Address Shelley)
+pFilterByAddress :: Parser AddressAny
 pFilterByAddress =
-    Opt.option (readerFromAttoParser parseAddress)
+    Opt.option (readerFromAttoParser parseAddressAny)
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
@@ -1605,7 +1605,7 @@ pFilterByStakeAddress =
       <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
       )
 
-pByronAddress :: Parser (Address Byron)
+pByronAddress :: Parser (Address ByronAddr)
 pByronAddress =
     Opt.option
       (Opt.eitherReader deserialise)
@@ -1614,7 +1614,7 @@ pByronAddress =
         <> Opt.help "Byron address (Base58-encoded)."
         )
   where
-    deserialise :: String -> Either String (Address Byron)
+    deserialise :: String -> Either String (Address ByronAddr)
     deserialise =
       maybe (Left "Invalid Byron address.") Right
         . deserialiseAddress AsByronAddress
@@ -2211,12 +2211,19 @@ pProtocolVersion =
 parseLovelace :: Atto.Parser Lovelace
 parseLovelace = Lovelace <$> Atto.decimal
 
-parseAddress :: Atto.Parser (Address Shelley)
-parseAddress = do
+parseAddressAny :: Atto.Parser AddressAny
+parseAddressAny = do
     str <- lexPlausibleAddressString
-    case deserialiseAddress AsShelleyAddress str of
+    case deserialiseAddress AsAddressAny str of
       Nothing   -> fail "invalid address"
       Just addr -> pure addr
+
+parseAddressInEra :: IsCardanoEra era => Atto.Parser (AddressInEra era)
+parseAddressInEra = do
+    addr <- parseAddressAny
+    case anyAddressInEra addr of
+      Nothing        -> fail "invalid address in the target era"
+      Just addrinera -> pure addrinera
 
 parseStakeAddress :: Atto.Parser StakeAddress
 parseStakeAddress = do

@@ -126,7 +126,7 @@ runTransactionCmd cmd =
 
 runTxBuildRaw
   :: [Api.TxIn]
-  -> [Api.TxOut Api.Shelley]
+  -> [Api.TxOut Api.ShelleyEra]
   -> SlotNo
   -> Api.Lovelace
   -> [CertificateFile]
@@ -305,7 +305,7 @@ readProtocolParameters (ProtocolParamsFile fpath) = do
     Aeson.eitherDecode' pparams
 
 data SomeWitness
-  = AByronSigningKey           (Api.SigningKey Api.ByronKey) (Maybe (Address Byron))
+  = AByronSigningKey           (Api.SigningKey Api.ByronKey) (Maybe (Address ByronAddr))
   | APaymentSigningKey         (Api.SigningKey Api.PaymentKey)
   | APaymentExtendedSigningKey (Api.SigningKey Api.PaymentExtendedKey)
   | AStakeSigningKey           (Api.SigningKey Api.StakeKey)
@@ -317,7 +317,7 @@ data SomeWitness
   | AGenesisDelegateExtendedSigningKey
                                (Api.SigningKey Api.GenesisDelegateExtendedKey)
   | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
-  | AShelleyMultiSigScript     (Api.MultiSigScript Shelley)
+  | AShelleyMultiSigScript     (Api.MultiSigScript ShelleyEra)
 
 -- | Error deserialising a JSON-encoded script.
 newtype ScriptJsonDecodeError = ScriptJsonDecodeError String
@@ -413,7 +413,7 @@ partitionSomeWitnesses
   :: [ByronOrShelleyWitness]
   -> ( [ShelleyBootstrapWitnessSigningKeyData]
      , [Api.ShelleyWitnessSigningKey]
-     , [Api.MultiSigScript Shelley]
+     , [Api.MultiSigScript ShelleyEra]
      )
 partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
   where
@@ -434,7 +434,7 @@ partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
 data ByronOrShelleyWitness
   = AByronWitness !ShelleyBootstrapWitnessSigningKeyData
   | AShelleyKeyWitness !Api.ShelleyWitnessSigningKey
-  | AShelleyScriptWitness !(Api.MultiSigScript Shelley)
+  | AShelleyScriptWitness !(Api.MultiSigScript ShelleyEra)
 
 categoriseSomeWitness :: SomeWitness -> ByronOrShelleyWitness
 categoriseSomeWitness swsk =
@@ -458,7 +458,7 @@ data ShelleyBootstrapWitnessSigningKeyData
   = ShelleyBootstrapWitnessSigningKeyData
       !(SigningKey ByronKey)
       -- ^ Byron signing key.
-      !(Maybe (Address Byron))
+      !(Maybe (Address ByronAddr))
       -- ^ An optionally specified Byron address.
       --
       -- If specified, both the network ID and derivation path are extracted
@@ -484,9 +484,9 @@ renderShelleyBootstrapWitnessError MissingNetworkIdOrByronAddressError =
 -- Shelley era).
 mkShelleyBootstrapWitness
   :: Maybe NetworkId
-  -> TxBody Shelley
+  -> TxBody ShelleyEra
   -> ShelleyBootstrapWitnessSigningKeyData
-  -> Either ShelleyBootstrapWitnessError (Witness Shelley)
+  -> Either ShelleyBootstrapWitnessError (Witness ShelleyEra)
 mkShelleyBootstrapWitness Nothing _ (ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
   Left MissingNetworkIdOrByronAddressError
 mkShelleyBootstrapWitness (Just nw) txBody (ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
@@ -498,9 +498,9 @@ mkShelleyBootstrapWitness _ txBody (ShelleyBootstrapWitnessSigningKeyData skey (
 -- encountered.
 mkShelleyBootstrapWitnesses
   :: Maybe NetworkId
-  -> TxBody Shelley
+  -> TxBody ShelleyEra
   -> [ShelleyBootstrapWitnessSigningKeyData]
-  -> Either ShelleyBootstrapWitnessError [Witness Shelley]
+  -> Either ShelleyBootstrapWitnessError [Witness ShelleyEra]
 mkShelleyBootstrapWitnesses mnw txBody =
   mapM (mkShelleyBootstrapWitness mnw txBody)
 
@@ -556,7 +556,7 @@ runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
       . newExceptT
       $ Api.writeFileTextEnvelope oFp Nothing tx
 
-readWitnessFile :: WitnessFile -> ExceptT ShelleyTxCmdError IO (Witness Shelley)
+readWitnessFile :: WitnessFile -> ExceptT ShelleyTxCmdError IO (Witness ShelleyEra)
 readWitnessFile (WitnessFile fp) =
   firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT (Api.readFileTextEnvelope AsShelleyWitness fp)
 

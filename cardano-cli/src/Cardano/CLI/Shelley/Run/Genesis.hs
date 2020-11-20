@@ -32,11 +32,10 @@ import qualified Cardano.Crypto.Hash as Crypto
 
 import           Cardano.Api.Shelley.Genesis
 import           Cardano.Api.Typed
+import           Cardano.Api.Shelley
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import qualified Shelley.Spec.Ledger.Address as Ledger
-import qualified Shelley.Spec.Ledger.Coin as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 
 import           Cardano.CLI.Helpers (textShow)
@@ -369,7 +368,7 @@ updateTemplate
     :: SystemStart
     -> Maybe Lovelace
     -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
-    -> [Address Shelley]
+    -> [AddressInEra ShelleyEra]
     -> ShelleyGenesis StandardShelley
     -> ShelleyGenesis StandardShelley
 updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
@@ -397,12 +396,12 @@ updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
     eachAddrCoin :: Integer
     eachAddrCoin = totalCoin `div` fromIntegral (length utxoAddrs)
 
-    utxoList :: [(Address Shelley, Lovelace)]
+    utxoList :: [(AddressInEra ShelleyEra, Lovelace)]
     utxoList = fst $ List.foldl' folder ([], totalCoin) utxoAddrs
 
-    folder :: ([(Address Shelley, Lovelace)], Integer)
-           -> Address Shelley
-           -> ([(Address Shelley, Lovelace)], Integer)
+    folder :: ([(AddressInEra ShelleyEra, Lovelace)], Integer)
+           -> AddressInEra ShelleyEra
+           -> ([(AddressInEra ShelleyEra, Lovelace)], Integer)
     folder (acc, rest) addr
       | rest > eachAddrCoin + fromIntegral (length utxoAddrs) =
                     ((addr, Lovelace eachAddrCoin) : acc, rest - eachAddrCoin)
@@ -411,14 +410,6 @@ updateTemplate (SystemStart start) mAmount delKeys utxoAddrs template =
 writeShelleyGenesis :: FilePath -> ShelleyGenesis StandardShelley -> ExceptT ShelleyGenesisCmdError IO ()
 writeShelleyGenesis fpath sg =
   handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.writeFile fpath (encodePretty sg)
-
-toShelleyAddr :: Address Shelley -> Ledger.Addr StandardShelley
-toShelleyAddr (ByronAddress addr)        = Ledger.AddrBootstrap
-                                             (Ledger.BootstrapAddress addr)
-toShelleyAddr (ShelleyAddress nw pc scr) = Ledger.Addr nw pc scr
-
-toShelleyLovelace :: Lovelace -> Ledger.Coin
-toShelleyLovelace (Lovelace l) = Ledger.Coin l
 
 
 -- -------------------------------------------------------------------------------------------------
@@ -539,7 +530,7 @@ extractFileNameIndexes files = do
     filesIxs = [ (file, extractFileNameIndex file) | file <- files ]
 
 readInitialFundAddresses :: FilePath -> NetworkId
-                         -> ExceptT ShelleyGenesisCmdError IO [Address Shelley]
+                         -> ExceptT ShelleyGenesisCmdError IO [AddressInEra ShelleyEra]
 readInitialFundAddresses utxodir nw = do
     files <- liftIO (listDirectory utxodir)
     vkeys <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError $
@@ -551,8 +542,8 @@ readInitialFundAddresses utxodir nw = do
                  , takeExtension file == ".vkey" ]
     return [ addr | vkey <- vkeys
            , let vkh  = verificationKeyHash (castVerificationKey vkey)
-                 addr = makeShelleyAddress nw (PaymentCredentialByKey vkh)
-                                           NoStakeAddress
+                 addr = makeShelleyAddressInEra nw (PaymentCredentialByKey vkh)
+                                                NoStakeAddress
            ]
 
 

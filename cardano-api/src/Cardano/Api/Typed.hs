@@ -26,10 +26,23 @@
 --
 module Cardano.Api.Typed (
     -- * Eras
+    ByronEra,
+    ShelleyEra,
+    AllegraEra,
+    MaryEra,
+    CardanoEra(..),
+    CardanoEraStyle(..),
+    IsCardanoEra(..),
+    -- ** Shelley-based eras
+    ShelleyBasedEra(..),
+    IsShelleyBasedEra(..),
+    ShelleyLedgerEra,
+    -- ** Deprecated
     Byron,
     Shelley,
     Allegra,
     Mary,
+    -- * Type tags
     HasTypeProxy(..),
     AsType(..),
     -- * Cryptographic key interface
@@ -59,16 +72,31 @@ module Cardano.Api.Typed (
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
     Address(..),
+    ByronAddr,
+    ShelleyAddr,
     NetworkId(..),
-    -- * Byron addresses
+    -- ** Byron addresses
     makeByronAddress,
     ByronKey,
-    -- * Shelley addresses
+    -- ** Shelley addresses
     makeShelleyAddress,
     PaymentCredential(..),
     StakeAddressReference(..),
     PaymentKey,
     PaymentExtendedKey,
+
+    -- ** Addresses in any era
+    AddressAny(..),
+
+    -- ** Addresses in specific eras
+    AddressInEra(..),
+    AddressTypeInEra(..),
+    byronAddressInEra,
+    shelleyAddressInEra,
+    anyAddressInShelleyBasedEra,
+    anyAddressInEra,
+    makeByronAddressInEra,
+    makeShelleyAddressInEra,
 
     -- * Stake addresses
     -- | Constructing and inspecting stake addresses

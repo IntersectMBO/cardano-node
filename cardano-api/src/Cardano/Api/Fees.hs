@@ -36,7 +36,7 @@ import           Cardano.Api.Value
 --
 transactionFee :: Natural -- ^ The fixed tx fee
                -> Natural -- ^ The tx fee per byte
-               -> Tx Shelley
+               -> Tx ShelleyEra
                -> Lovelace
 transactionFee txFeeFixed txFeePerByte (ShelleyTx tx) =
     Lovelace (a * x + b)
@@ -59,7 +59,7 @@ transactionFee txFeeFixed txFeePerByte (ShelleyTx tx) =
 estimateTransactionFee :: NetworkId
                        -> Natural -- ^ The fixed tx fee
                        -> Natural -- ^ The tx fee per byte
-                       -> Tx Shelley
+                       -> Tx ShelleyEra
                        -> Int -- ^ The number of extra UTxO transaction inputs
                        -> Int -- ^ The number of extra transaction outputs
                        -> Int -- ^ The number of extra Shelley key witnesses

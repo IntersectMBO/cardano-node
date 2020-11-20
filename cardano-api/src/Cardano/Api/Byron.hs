@@ -5,16 +5,6 @@
 
 module Cardano.Api.Byron
   ( module Cardano.API,
-    -- * Era
-    Byron,
-    HasTypeProxy(..),
-    AsType
-      ( AsByronAddress
-      , AsByronKey
-      , AsByronTx
-      , AsByronTxBody
-      , AsByronWitness
-      ),
 
     -- * Cryptographic key interface
     -- $keys

@@ -110,24 +110,26 @@ runAddressBuild payVkeyTextOrFile mbStkVkeyOrFile nw mOutFp = do
 
     addr <- case payVKey of
               AByronVerificationKey vk ->
-                return (makeByronAddress nw vk)
+                return (AddressByron (makeByronAddress nw vk))
 
               APaymentVerificationKey vk ->
-                buildShelleyAddress vk
+                AddressShelley <$> buildShelleyAddress vk
 
               APaymentExtendedVerificationKey vk ->
-                buildShelleyAddress (castVerificationKey vk)
+                AddressShelley <$> buildShelleyAddress (castVerificationKey vk)
 
               AGenesisUTxOVerificationKey vk ->
-                buildShelleyAddress (castVerificationKey vk)
+                AddressShelley <$> buildShelleyAddress (castVerificationKey vk)
 
-    let addrText = serialiseAddress addr
+    let addrText = serialiseAddress (addr :: AddressAny)
 
     case mOutFp of
       Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath addrText
       Nothing                 -> liftIO $ Text.putStrLn        addrText
 
   where
+    buildShelleyAddress :: VerificationKey PaymentKey
+                        -> ExceptT ShelleyAddressCmdError IO (Address ShelleyAddr)
     buildShelleyAddress vkey = do
       mstakeVKey <-
         case mbStkVkeyOrFile of
@@ -206,7 +208,7 @@ runAddressBuildScript
 runAddressBuildScript (ScriptFile fp) nId mOutFp = do
   scriptLB <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp)
                 $ LB.readFile fp
-  script <- case eitherDecode scriptLB :: Either String (MultiSigScript Shelley) of
+  script <- case eitherDecode scriptLB :: Either String (MultiSigScript ShelleyEra) of
                Right mss -> return $ makeMultiSigScript mss
                Left err -> left . ShelleyAddressCmdAesonDecodeError fp $ Text.pack err
   let payCred = PaymentCredentialByScript $ scriptHash script

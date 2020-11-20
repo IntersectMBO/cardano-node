@@ -35,15 +35,15 @@ import           Cardano.Api.Typed
 data TxForMode mode where
 
      TxForByronMode
-       :: Tx Byron
+       :: Tx ByronEra
        -> TxForMode ByronMode
 
      TxForShelleyMode
-       :: Tx Shelley
+       :: Tx ShelleyEra
        -> TxForMode ShelleyMode
 
      TxForCardanoMode
-       :: Either (Tx Byron) (Tx Shelley)
+       :: Either (Tx ByronEra) (Tx ShelleyEra)
        -> TxForMode CardanoMode
 
 

@@ -76,8 +76,6 @@ import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 
 import           Cardano.Api.Eras
-                   (Shelley, Allegra, Mary,
-                    AsType (AsByron, AsShelley, AsAllegra, AsMary))
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
@@ -97,9 +95,9 @@ import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 
 data Script era where
 
-     ShelleyScript :: Shelley.Script StandardShelley -> Script Shelley
-     AllegraScript :: Timelock.Timelock StandardAllegra -> Script Allegra
-     MaryScript    :: Timelock.Timelock StandardMary -> Script Mary
+     ShelleyScript :: Shelley.Script StandardShelley    -> Script ShelleyEra
+     AllegraScript :: Timelock.Timelock StandardAllegra -> Script AllegraEra
+     MaryScript    :: Timelock.Timelock StandardMary    -> Script MaryEra
 
 deriving stock instance (Eq   (Script era))
 deriving stock instance (Show (Script era))
@@ -115,7 +113,7 @@ instance HasTypeProxy era => HasTypeProxy (Script era) where
     data AsType (Script era) = AsScript (AsType era)
     proxyToAsType _ = AsScript (proxyToAsType (Proxy :: Proxy era))
 
-instance SerialiseAsCBOR (Script Shelley) where
+instance SerialiseAsCBOR (Script ShelleyEra) where
     serialiseToCBOR (ShelleyScript s) =
       -- We use 'WrappedMultiSig' here to support the legacy binary
       -- serialisation format for the @Script@ type from
@@ -124,7 +122,7 @@ instance SerialiseAsCBOR (Script Shelley) where
       -- See the documentation of 'WrappedMultiSig' for more information.
       CBOR.serialize' (Legacy.WrappedMultiSig s)
 
-    deserialiseFromCBOR (AsScript AsShelley) bs =
+    deserialiseFromCBOR (AsScript AsShelleyEra) bs =
       -- We use 'WrappedMultiSig' here to support the legacy binary
       -- serialisation format for the @Script@ type from
       -- @cardano-ledger-specs@.
@@ -133,25 +131,25 @@ instance SerialiseAsCBOR (Script Shelley) where
       ShelleyScript . Legacy.unWrappedMultiSig <$>
         CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
-instance HasTextEnvelope (Script Shelley) where
+instance HasTextEnvelope (Script ShelleyEra) where
     textEnvelopeType _ = "Script"
     textEnvelopeDefaultDescr ShelleyScript{} = "Multi-signature script"
 
-instance SerialiseAsCBOR (Script Allegra) where
+instance SerialiseAsCBOR (Script AllegraEra) where
     serialiseToCBOR (AllegraScript s) = CBOR.serialize' s
-    deserialiseFromCBOR (AsScript AsAllegra) bs =
+    deserialiseFromCBOR (AsScript AsAllegraEra) bs =
         AllegraScript <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
-instance HasTextEnvelope (Script Allegra) where
+instance HasTextEnvelope (Script AllegraEra) where
     textEnvelopeType _ = "Script"
     textEnvelopeDefaultDescr AllegraScript{} = "Simple script"
 
-instance SerialiseAsCBOR (Script Mary) where
+instance SerialiseAsCBOR (Script MaryEra) where
     serialiseToCBOR (MaryScript s) = CBOR.serialize' s
-    deserialiseFromCBOR (AsScript AsMary) bs =
+    deserialiseFromCBOR (AsScript AsMaryEra) bs =
         MaryScript <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
-instance HasTextEnvelope (Script Mary) where
+instance HasTextEnvelope (Script MaryEra) where
     textEnvelopeType _ = "Script"
     textEnvelopeDefaultDescr MaryScript{} = "Simple script"
 
@@ -229,12 +227,12 @@ deriving instance Show (SimpleScript era)
 -- specify which script features are enabled in a given era.
 --
 data ScriptFeatureInEra feature era where
-     SignaturesInShelleyEra  :: ScriptFeatureInEra SignatureFeature Shelley
-     SignaturesInAllegraEra  :: ScriptFeatureInEra SignatureFeature Allegra
-     SignaturesInMaryEra     :: ScriptFeatureInEra SignatureFeature Mary
+     SignaturesInShelleyEra  :: ScriptFeatureInEra SignatureFeature ShelleyEra
+     SignaturesInAllegraEra  :: ScriptFeatureInEra SignatureFeature AllegraEra
+     SignaturesInMaryEra     :: ScriptFeatureInEra SignatureFeature MaryEra
 
-     TimeLocksInAllegraEra   :: ScriptFeatureInEra TimeLocksFeature Allegra
-     TimeLocksInMaryEra      :: ScriptFeatureInEra TimeLocksFeature Mary
+     TimeLocksInAllegraEra   :: ScriptFeatureInEra TimeLocksFeature AllegraEra
+     TimeLocksInMaryEra      :: ScriptFeatureInEra TimeLocksFeature MaryEra
 
 deriving instance Eq   (ScriptFeatureInEra feature era)
 deriving instance Show (ScriptFeatureInEra feature era)
@@ -253,33 +251,33 @@ data TimeLocksFeature
 -- | Is the 'SimpleScript' language supported at all in this era?
 --
 data SimpleScriptSupportedInEra era where
-     SimpleScriptInShelleyEra :: SimpleScriptSupportedInEra Shelley
-     SimpleScriptInAllegraEra :: SimpleScriptSupportedInEra Allegra
-     SimpleScriptInMaryEra    :: SimpleScriptSupportedInEra Mary
+     SimpleScriptInShelleyEra :: SimpleScriptSupportedInEra ShelleyEra
+     SimpleScriptInAllegraEra :: SimpleScriptSupportedInEra AllegraEra
+     SimpleScriptInMaryEra    :: SimpleScriptSupportedInEra MaryEra
 
 class HasScriptFeatures era where
    simpleScriptSupported :: SimpleScriptSupportedInEra era
    hasSignatureFeature   :: Maybe (ScriptFeatureInEra SignatureFeature era)
    hasTimeLocksFeature   :: Maybe (ScriptFeatureInEra TimeLocksFeature era)
 
-instance HasScriptFeatures Shelley where
+instance HasScriptFeatures ShelleyEra where
    simpleScriptSupported = SimpleScriptInShelleyEra
    hasSignatureFeature   = Just SignaturesInShelleyEra
    hasTimeLocksFeature   = Nothing
 
-instance HasScriptFeatures Allegra where
+instance HasScriptFeatures AllegraEra where
    simpleScriptSupported = SimpleScriptInAllegraEra
    hasSignatureFeature   = Just SignaturesInAllegraEra
    hasTimeLocksFeature   = Just TimeLocksInAllegraEra
 
-instance HasScriptFeatures Mary where
+instance HasScriptFeatures MaryEra where
    simpleScriptSupported = SimpleScriptInMaryEra
    hasSignatureFeature   = Just SignaturesInMaryEra
    hasTimeLocksFeature   = Just TimeLocksInMaryEra
 
 
 --TODO: add a deprecation pragma and switch to the SimpleScript constructor
-makeMultiSigScript :: MultiSigScript Shelley -> Script Shelley
+makeMultiSigScript :: MultiSigScript ShelleyEra -> Script ShelleyEra
 makeMultiSigScript = simpleScriptToScript
 
 simpleScriptToScript :: forall era. HasScriptFeatures era
@@ -288,7 +286,7 @@ simpleScriptToScript =
     case simpleScriptSupported :: SimpleScriptSupportedInEra era of
       SimpleScriptInShelleyEra -> ShelleyScript . go
         where
-          go :: SimpleScript Shelley -> Shelley.MultiSig StandardShelley
+          go :: SimpleScript ShelleyEra -> Shelley.MultiSig StandardShelley
           go (RequireSignature _ (PaymentKeyHash kh))
                               = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
           go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
@@ -318,7 +316,7 @@ simpleScriptToTimelock = go
 scriptToSimpleScript :: Script era -> SimpleScript era
 scriptToSimpleScript (ShelleyScript s0) = go s0
   where
-    go :: Shelley.MultiSig StandardShelley -> SimpleScript Shelley
+    go :: Shelley.MultiSig StandardShelley -> SimpleScript ShelleyEra
     go (Shelley.RequireSignature kh)
                                 = RequireSignature SignaturesInShelleyEra
                                     (PaymentKeyHash (Shelley.coerceKeyRole kh))

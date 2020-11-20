@@ -34,6 +34,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.Api.Protocol
 import           Cardano.Api.Typed
+import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
@@ -372,18 +373,11 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
     applyUTxOFilter (FilterByAddress as) = GetFilteredUTxO (toShelleyAddrs as)
     applyUTxOFilter NoFilter             = GetUTxO
 
-    -- TODO: ultimately, these should be exported from Cardano.API.Shelley
-    -- for the Shelley-specific types and conversion for the API wrapper types.
-    -- But alternatively, the API can also be extended to cover the queries
-    -- properly using the API types.
-
-    toShelleyAddrs :: Set (Address Shelley) -> Set (Ledger.Addr StandardShelley)
-    toShelleyAddrs = Set.map toShelleyAddr
-
-    toShelleyAddr :: Address era -> Ledger.Addr StandardShelley
-    toShelleyAddr (ByronAddress addr)        = Ledger.AddrBootstrap
-                                                 (Ledger.BootstrapAddress addr)
-    toShelleyAddr (ShelleyAddress nw pc scr) = Ledger.Addr nw pc scr
+    --TODO: generalise across eras
+    toShelleyAddrs :: Set AddressAny -> Set (Ledger.Addr StandardShelley)
+    toShelleyAddrs = Set.map (toShelleyAddr
+                           . (anyAddressInShelleyBasedEra
+                                :: AddressAny -> AddressInEra ShelleyEra))
 
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they

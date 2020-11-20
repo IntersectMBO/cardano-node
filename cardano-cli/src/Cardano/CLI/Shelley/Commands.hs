@@ -162,7 +162,7 @@ renderKeyCmd cmd =
 data TransactionCmd
   = TxBuildRaw
       [TxIn]
-      [TxOut Shelley]
+      [TxOut ShelleyEra]
       (Maybe String) -- Placeholder for multi asset Values
       SlotNo
       Lovelace
@@ -449,7 +449,7 @@ data WitnessSigningData
   = KeyWitnessSigningData
       !SigningKeyFile
       -- ^ Path to a file that should contain a signing key.
-      !(Maybe (Address Byron))
+      !(Maybe (Address ByronAddr))
       -- ^ An optionally specified Byron address.
       --
       -- If specified, both the network ID and derivation path are extracted

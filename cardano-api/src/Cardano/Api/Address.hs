@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Cardano addresses: payment and stake addresses.
@@ -9,15 +11,29 @@ module Cardano.Api.Address (
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
     Address(..),
-    -- * Byron addresses
+
+    -- ** Byron addresses
+    ByronAddr,
     makeByronAddress,
-    ByronKey,
-    -- * Shelley addresses
+
+    -- ** Shelley addresses
+    ShelleyAddr,
     makeShelleyAddress,
     PaymentCredential(..),
     StakeAddressReference(..),
-    PaymentKey,
-    PaymentExtendedKey,
+
+    -- ** Addresses in any era
+    AddressAny(..),
+
+    -- ** Addresses in specific eras
+    AddressInEra(..),
+    AddressTypeInEra(..),
+    byronAddressInEra,
+    shelleyAddressInEra,
+    anyAddressInShelleyBasedEra,
+    anyAddressInEra,
+    makeByronAddressInEra,
+    makeShelleyAddressInEra,
 
     -- * Stake addresses
     -- | Constructing and inspecting stake addresses
@@ -36,18 +52,18 @@ module Cardano.Api.Address (
     SerialiseAddress(..),
 
     -- * Data family instances
-    AsType(..)
+    AsType(AsByronAddr, AsShelleyAddr, AsByronAddress, AsShelleyAddress,
+           AsAddress, AsAddressAny, AsAddressInEra, AsStakeAddress)
   ) where
 
 import           Prelude
 
+import           Data.Coerce
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import qualified Data.ByteString.Base58 as Base58
 
 import           Control.Applicative
-
-import qualified Cardano.Binary as CBOR
 
 import qualified Cardano.Chain.Common as Byron
 
@@ -61,7 +77,6 @@ import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Script
@@ -88,112 +103,137 @@ class HasTypeProxy addr => SerialiseAddress addr where
 
 
 -- ----------------------------------------------------------------------------
+-- Payment address types
+--
+
+-- | A type used as a tag to distinguish Byron addresses.
+data ByronAddr
+
+-- | A type used as a tag to distinguish Shelley addresses.
+data ShelleyAddr
+
+instance HasTypeProxy ByronAddr where
+    data AsType ByronAddr = AsByronAddr
+    proxyToAsType _ = AsByronAddr
+
+instance HasTypeProxy ShelleyAddr where
+    data AsType ShelleyAddr = AsShelleyAddr
+    proxyToAsType _ = AsShelleyAddr
+
+
+-- ----------------------------------------------------------------------------
 -- Payment addresses
 --
 
-data Address era where
+-- | Addresses are used as locations where assets live. The address determines
+-- the rights needed to spend assets at the address: in particular holding some
+-- signing key or being able to satisfy the conditions of a script.
+--
+-- There are currently two types of address:
+--
+-- * Byron addresses, which use the type tag 'ByronAddr'; and
+-- * Shelley addresses, which use the type tag 'ShelleyAddr'. Notably, Shelley
+--   addresses support scripts and stake delegation.
+--
+-- The /address type/ is subtly from the /ledger era/ in which each
+-- address type is valid: while Byron addresses are the only choice in the
+-- Byron era, the Shelley era and all subsequent eras support both Byron and
+-- Shelley addresses. The 'Address' type param only says the type of the address
+-- (either Byron or Shelley). The 'AddressInEra' type connects the address type
+-- with the era in which it is supported.
+--
+data Address addrtype where
 
-     -- | Byron addresses are valid in both the Byron and Shelley era.
+     -- | Byron addresses were the only supported address type in the original
+     -- Byron era.
      --
      ByronAddress
        :: Byron.Address
-       -> Address era
+       -> Address ByronAddr
 
-     -- | Shelley addresses are only valid in the Shelley era.
+     -- | Shelley addresses allow delegation. Shelley addresses were introduced
+     -- in Shelley era and are thus supported from the Shelley era onwards
      --
      ShelleyAddress
        :: Shelley.Network
        -> Shelley.PaymentCredential StandardShelley
        -> Shelley.StakeReference    StandardShelley
-       -> Address Shelley
+       -> Address ShelleyAddr
+       -- Note that the two ledger credential types here are parametrised by
+       -- the era, but in fact this is a phantom type parameter and they are
+       -- the same for all eras. See 'toShelleyAddr' below.
 
-deriving instance Eq (Address era)
-deriving instance Ord (Address era)
-deriving instance Show (Address era)
-
-
-instance HasTypeProxy (Address Byron) where
-    data AsType (Address Byron) = AsByronAddress
-    proxyToAsType _ = AsByronAddress
-
-instance HasTypeProxy (Address Shelley) where
-    data AsType (Address Shelley) = AsShelleyAddress
-    proxyToAsType _ = AsShelleyAddress
+deriving instance Eq   (Address addrtype)
+deriving instance Ord  (Address addrtype)
+deriving instance Show (Address addrtype)
 
 
-instance SerialiseAsRawBytes (Address Byron) where
-    serialiseToRawBytes (ByronAddress addr) = CBOR.serialize' addr
+instance HasTypeProxy addrtype => HasTypeProxy (Address addrtype) where
+    data AsType (Address addrtype) = AsAddress (AsType addrtype)
+    proxyToAsType _ = AsAddress (proxyToAsType (Proxy :: Proxy addrtype))
 
-    deserialiseFromRawBytes AsByronAddress bs =
-      case CBOR.decodeFull' bs of
-        Left  _    -> Nothing
-        Right addr -> Just (ByronAddress addr)
+pattern AsByronAddress :: AsType (Address ByronAddr)
+pattern AsByronAddress   = AsAddress AsByronAddr
+{-# COMPLETE AsByronAddress #-}
 
+pattern AsShelleyAddress :: AsType (Address ShelleyAddr)
+pattern AsShelleyAddress = AsAddress AsShelleyAddr
+{-# COMPLETE AsShelleyAddress #-}
 
-instance SerialiseAsRawBytes (Address Shelley) where
+instance SerialiseAsRawBytes (Address ByronAddr) where
     serialiseToRawBytes (ByronAddress addr) =
         Shelley.serialiseAddr
       . Shelley.AddrBootstrap
       . Shelley.BootstrapAddress
       $ addr
 
-    serialiseToRawBytes (ShelleyAddress nw pc scr) =
-        Shelley.serialiseAddr (Shelley.Addr nw pc scr)
-
-    deserialiseFromRawBytes AsShelleyAddress bs =
-        case Shelley.deserialiseAddr bs of
-          Nothing -> Nothing
-          Just (Shelley.Addr nw pc scr) ->
-            Just (ShelleyAddress nw pc scr)
-
+    deserialiseFromRawBytes (AsAddress AsByronAddr) bs =
+        case Shelley.deserialiseAddr bs :: Maybe (Shelley.Addr StandardShelley) of
+          Nothing             -> Nothing
+          Just Shelley.Addr{} -> Nothing
           Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
             Just (ByronAddress addr)
 
-instance SerialiseAsBech32 (Address Shelley) where
+instance SerialiseAsRawBytes (Address ShelleyAddr) where
+    serialiseToRawBytes (ShelleyAddress nw pc scr) =
+        Shelley.serialiseAddr (Shelley.Addr nw pc scr)
+
+    deserialiseFromRawBytes (AsAddress AsShelleyAddr) bs =
+        case Shelley.deserialiseAddr bs of
+          Nothing                       -> Nothing
+          Just Shelley.AddrBootstrap{}  -> Nothing
+          Just (Shelley.Addr nw pc scr) -> Just (ShelleyAddress nw pc scr)
+
+instance SerialiseAsBech32 (Address ShelleyAddr) where
     bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = "addr"
     bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = "addr_test"
-    bech32PrefixFor (ByronAddress _)                     = "addr"
 
-    bech32PrefixesPermitted AsShelleyAddress = ["addr", "addr_test"]
+    bech32PrefixesPermitted (AsAddress AsShelleyAddr) = ["addr", "addr_test"]
 
 
-instance SerialiseAddress (Address Byron) where
+instance SerialiseAddress (Address ByronAddr) where
     serialiseAddress addr@ByronAddress{} =
          Text.decodeLatin1
        . Base58.encodeBase58 Base58.bitcoinAlphabet
        . serialiseToRawBytes
        $ addr
 
-    deserialiseAddress AsByronAddress txt = do
+    deserialiseAddress (AsAddress AsByronAddr) txt = do
       bs <- Base58.decodeBase58 Base58.bitcoinAlphabet (Text.encodeUtf8 txt)
-      deserialiseFromRawBytes AsByronAddress bs
+      deserialiseFromRawBytes (AsAddress AsByronAddr) bs
 
-instance SerialiseAddress (Address Shelley) where
-    serialiseAddress (ByronAddress addr) =
-      serialiseAddress (ByronAddress addr :: Address Byron)
-
+instance SerialiseAddress (Address ShelleyAddr) where
     serialiseAddress addr@ShelleyAddress{} =
       serialiseToBech32 addr
 
-    deserialiseAddress AsShelleyAddress t =
-          deserialiseAsShelleyAddress
-      <|> deserialiseAsByronAddress
-      where
-        deserialiseAsShelleyAddress =
-          either (const Nothing) Just $
-          deserialiseFromBech32 AsShelleyAddress t
-
-        deserialiseAsByronAddress =
-          castByronToShelleyAddress <$>
-          deserialiseAddress AsByronAddress t
-
-        castByronToShelleyAddress :: Address Byron -> Address Shelley
-        castByronToShelleyAddress (ByronAddress addr) = ByronAddress addr
+    deserialiseAddress (AsAddress AsShelleyAddr) t =
+      either (const Nothing) Just $
+      deserialiseFromBech32 (AsAddress AsShelleyAddr) t
 
 
 makeByronAddress :: NetworkId
                  -> VerificationKey ByronKey
-                 -> Address era
+                 -> Address ByronAddr
 makeByronAddress nw (ByronVerificationKey vk) =
     ByronAddress $
       Byron.makeVerKeyAddress
@@ -204,12 +244,160 @@ makeByronAddress nw (ByronVerificationKey vk) =
 makeShelleyAddress :: NetworkId
                    -> PaymentCredential
                    -> StakeAddressReference
-                   -> Address Shelley
+                   -> Address ShelleyAddr
 makeShelleyAddress nw pc scr =
     ShelleyAddress
       (toShelleyNetwork nw)
       (toShelleyPaymentCredential pc)
       (toShelleyStakeReference scr)
+
+
+-- ----------------------------------------------------------------------------
+-- Either type of address
+--
+
+-- | Either a Byron address or a Shelley address.
+--
+-- Sometimes we need to be able to work with either of the two types of
+-- address (Byron or Shelley addresses), but without reference to an era in
+-- which the address will be used. This type serves that purpose.
+--
+data AddressAny = AddressByron   !(Address ByronAddr)
+                | AddressShelley !(Address ShelleyAddr)
+  deriving (Eq, Ord, Show)
+
+instance HasTypeProxy AddressAny where
+    data AsType AddressAny = AsAddressAny
+    proxyToAsType _ = AsAddressAny
+
+instance SerialiseAsRawBytes AddressAny where
+    serialiseToRawBytes (AddressByron   addr) = serialiseToRawBytes addr
+    serialiseToRawBytes (AddressShelley addr) = serialiseToRawBytes addr
+
+    deserialiseFromRawBytes AsAddressAny bs =
+      case Shelley.deserialiseAddr bs of
+        Nothing -> Nothing
+        Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
+          Just (AddressByron (ByronAddress addr))
+
+        Just (Shelley.Addr nw pc scr) ->
+          Just (AddressShelley (ShelleyAddress nw pc scr))
+
+instance SerialiseAddress AddressAny where
+    serialiseAddress (AddressByron   addr) = serialiseAddress addr
+    serialiseAddress (AddressShelley addr) = serialiseAddress addr
+
+    deserialiseAddress AsAddressAny t =
+          (AddressByron   <$> deserialiseAddress (AsAddress AsByronAddr)   t)
+      <|> (AddressShelley <$> deserialiseAddress (AsAddress AsShelleyAddr) t)
+
+
+-- ----------------------------------------------------------------------------
+-- Addresses in the context of a ledger era
+--
+
+-- | An 'Address' that can be used in a particular ledger era.
+--
+-- All current ledger eras support Byron addresses. Shelley addresses are
+-- supported in the 'ShelleyEra' and later eras.
+--
+data AddressInEra era where
+     AddressInEra :: AddressTypeInEra addrtype era
+                  -> Address addrtype
+                  -> AddressInEra era
+
+instance Eq (AddressInEra era) where
+  (==) (AddressInEra ByronAddressInAnyEra addr1)
+       (AddressInEra ByronAddressInAnyEra addr2) = addr1 == addr2
+
+  (==) (AddressInEra ShelleyAddressInEra{} addr1)
+       (AddressInEra ShelleyAddressInEra{} addr2) = addr1 == addr2
+
+  (==) (AddressInEra ByronAddressInAnyEra _)
+       (AddressInEra ShelleyAddressInEra{} _) = False
+
+  (==) (AddressInEra ShelleyAddressInEra{} _)
+       (AddressInEra ByronAddressInAnyEra _) = False
+
+deriving instance Show (AddressInEra era)
+
+data AddressTypeInEra addrtype era where
+
+     ByronAddressInAnyEra :: AddressTypeInEra ByronAddr era
+
+     ShelleyAddressInEra  :: ShelleyBasedEra era
+                          -> AddressTypeInEra ShelleyAddr era
+
+deriving instance Show (AddressTypeInEra addrtype era)
+
+
+instance HasTypeProxy era => HasTypeProxy (AddressInEra era) where
+    data AsType (AddressInEra era) = AsAddressInEra (AsType era)
+    proxyToAsType _ = AsAddressInEra (proxyToAsType (Proxy :: Proxy era))
+
+instance IsCardanoEra era => SerialiseAsRawBytes (AddressInEra era) where
+
+    serialiseToRawBytes (AddressInEra ByronAddressInAnyEra addr) =
+      serialiseToRawBytes addr
+
+    serialiseToRawBytes (AddressInEra ShelleyAddressInEra{} addr) =
+      serialiseToRawBytes addr
+
+    deserialiseFromRawBytes _ bs = do
+      anyAddressInEra =<< deserialiseFromRawBytes AsAddressAny bs
+
+instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
+    serialiseAddress (AddressInEra ByronAddressInAnyEra addr) =
+      serialiseAddress addr
+
+    serialiseAddress (AddressInEra ShelleyAddressInEra{} addr) =
+      serialiseAddress addr
+
+    deserialiseAddress _ t =
+      anyAddressInEra =<< deserialiseAddress AsAddressAny t
+
+
+byronAddressInEra :: Address ByronAddr -> AddressInEra era
+byronAddressInEra = AddressInEra ByronAddressInAnyEra
+
+
+shelleyAddressInEra :: IsShelleyBasedEra era
+                    => Address ShelleyAddr -> AddressInEra era
+shelleyAddressInEra = AddressInEra (ShelleyAddressInEra shelleyBasedEra)
+
+
+anyAddressInShelleyBasedEra :: IsShelleyBasedEra era
+                            => AddressAny -> AddressInEra era
+anyAddressInShelleyBasedEra (AddressByron   addr) = byronAddressInEra addr
+anyAddressInShelleyBasedEra (AddressShelley addr) = shelleyAddressInEra addr
+
+
+anyAddressInEra :: IsCardanoEra era
+                => AddressAny
+                -> Maybe (AddressInEra era)
+anyAddressInEra (AddressByron addr) =
+    Just (AddressInEra ByronAddressInAnyEra addr)
+
+anyAddressInEra (AddressShelley addr) =
+    case cardanoEraStyle of
+      LegacyByronEra      -> Nothing
+      ShelleyBasedEra era -> Just (AddressInEra (ShelleyAddressInEra era) addr)
+
+
+makeByronAddressInEra :: NetworkId
+                      -> VerificationKey ByronKey
+                      -> AddressInEra era
+makeByronAddressInEra nw vk =
+    byronAddressInEra (makeByronAddress nw vk)
+
+
+makeShelleyAddressInEra :: IsShelleyBasedEra era
+                        => NetworkId
+                        -> PaymentCredential
+                        -> StakeAddressReference
+                        -> AddressInEra era
+makeShelleyAddressInEra nw pc scr =
+    shelleyAddressInEra (makeShelleyAddress nw pc scr)
 
 
 -- ----------------------------------------------------------------------------
@@ -288,10 +476,26 @@ makeStakeAddress nw sc =
 -- Internal conversion functions
 --
 
-toShelleyAddr :: Address era -> Shelley.Addr StandardShelley
-toShelleyAddr (ByronAddress addr)        = Shelley.AddrBootstrap
-                                             (Shelley.BootstrapAddress addr)
-toShelleyAddr (ShelleyAddress nw pc scr) = Shelley.Addr nw pc scr
+toShelleyAddr :: AddressInEra era -> Shelley.Addr (ShelleyLedgerEra era)
+toShelleyAddr (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) =
+    Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)
+toShelleyAddr (AddressInEra (ShelleyAddressInEra _)
+                            (ShelleyAddress nw pc scr)) =
+    Shelley.Addr nw
+      (coerceShelleyPaymentCredential pc)
+      (coerceShelleyStakeReference   scr)
+  where
+    -- The era parameter in these types is a phantom type so it is safe to cast.
+    -- We choose to cast because we need to use an era-independent address
+    -- representation, but have to produce an era-dependent format used by the
+    -- Shelley ledger lib.
+    coerceShelleyPaymentCredential :: Shelley.PaymentCredential eraA
+                                   -> Shelley.PaymentCredential eraB
+    coerceShelleyPaymentCredential = coerce
+
+    coerceShelleyStakeReference :: Shelley.StakeReference eraA
+                                -> Shelley.StakeReference eraB
+    coerceShelleyStakeReference = coerce
 
 toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAcnt StandardShelley
 toShelleyStakeAddr (StakeAddress nw sc) =

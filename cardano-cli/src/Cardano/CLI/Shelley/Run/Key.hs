@@ -33,7 +33,6 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.Typed
 
-import           Cardano.CLI.Byron.Key (CardanoEra (..))
 import qualified Cardano.CLI.Byron.Key as Byron
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
@@ -349,9 +348,9 @@ convertByronSigningKey mPwd byronFormat convert
 
   where
     -- TODO: merge these two types
-    toCarandoEra :: ByronKeyFormat -> CardanoEra
-    toCarandoEra NonLegacyByronKeyFormat = ByronEra
-    toCarandoEra LegacyByronKeyFormat    = ByronEraLegacy
+    toCarandoEra :: ByronKeyFormat -> Byron.CardanoEra
+    toCarandoEra NonLegacyByronKeyFormat = Byron.ByronEra
+    toCarandoEra LegacyByronKeyFormat    = Byron.ByronEraLegacy
 
 
 convertByronVerificationKey

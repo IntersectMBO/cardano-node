@@ -187,9 +187,9 @@ deriving instance Show (TxOutValue era)
 --
 data AdaOnlyInEra era where
 
-     AdaOnlyInByronEra   :: AdaOnlyInEra Byron
-     AdaOnlyInShelleyEra :: AdaOnlyInEra Shelley
-     AdaOnlyInAllegraEra :: AdaOnlyInEra Allegra
+     AdaOnlyInByronEra   :: AdaOnlyInEra ByronEra
+     AdaOnlyInShelleyEra :: AdaOnlyInEra ShelleyEra
+     AdaOnlyInAllegraEra :: AdaOnlyInEra AllegraEra
 
 deriving instance Eq   (AdaOnlyInEra era)
 deriving instance Show (AdaOnlyInEra era)
@@ -200,7 +200,7 @@ deriving instance Show (AdaOnlyInEra era)
 data MultiAssetInEra era where
 
      -- | Multi-asset transactions are supported in the 'Mary' era.
-     MultiAssetInMaryEra :: MultiAssetInEra Mary
+     MultiAssetInMaryEra :: MultiAssetInEra MaryEra
 
 deriving instance Eq   (MultiAssetInEra era)
 deriving instance Show (MultiAssetInEra era)
