@@ -34,6 +34,7 @@ module Cardano.Api.Value
 
     -- * Internal conversion functions
   , toShelleyLovelace
+  , fromShelleyLovelace
   ) where
 
 import           Prelude
@@ -67,6 +68,9 @@ instance Monoid Lovelace where
 toShelleyLovelace :: Lovelace -> Shelley.Coin
 toShelleyLovelace (Lovelace l) = Shelley.Coin l
 --TODO: validate bounds
+
+fromShelleyLovelace :: Shelley.Coin -> Lovelace
+fromShelleyLovelace (Shelley.Coin l) = Lovelace l
 
 
 -- ----------------------------------------------------------------------------

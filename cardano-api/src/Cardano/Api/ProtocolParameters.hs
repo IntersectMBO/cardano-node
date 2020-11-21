@@ -31,6 +31,7 @@ import           Prelude
 import           Numeric.Natural
 import           Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
+import           Data.Map.Strict (Map)
 
 import           Control.Monad
 
@@ -39,7 +40,8 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
+import           Shelley.Spec.Ledger.BaseTypes
+                   (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
@@ -287,11 +289,11 @@ toShelleyPParamsUpdate
     , Shelley._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
     , Shelley._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
     , Shelley._a0          = maybeToStrictMaybe protocolUpdatePoolPledgeInfluence
-    , Shelley._rho         = Shelley.truncateUnitInterval . fromRational <$>
+    , Shelley._rho         = Shelley.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateMonetaryExpansion
-    , Shelley._tau         = Shelley.truncateUnitInterval . fromRational <$>
+    , Shelley._tau         = Shelley.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateTreasuryCut
-    , Shelley._d           = Shelley.truncateUnitInterval . fromRational <$>
+    , Shelley._d           = Shelley.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateDecentralization
     , Shelley._extraEntropy    = toShelleyNonce <$>
                                    maybeToStrictMaybe protocolUpdateExtraPraosEntropy
@@ -301,6 +303,69 @@ toShelleyPParamsUpdate
                                    maybeToStrictMaybe protocolUpdateMinUTxOValue
     , Shelley._minPoolCost     = toShelleyLovelace <$>
                                    maybeToStrictMaybe protocolUpdateMinPoolCost
+    }
+
+fromShelleyUpdate :: Shelley.Update StandardShelley -> UpdateProposal
+fromShelleyUpdate = UpdateProposal
+
+
+fromShelleyProposedPPUpdates :: Shelley.ProposedPPUpdates StandardShelley
+                             -> Map (Hash GenesisKey) ProtocolParametersUpdate
+fromShelleyProposedPPUpdates =
+    Map.map fromShelleyPParamsUpdate
+  . Map.mapKeysMonotonic GenesisKeyHash
+  . (\(Shelley.ProposedPPUpdates ppup) -> ppup)
+
+
+fromShelleyPParamsUpdate :: Shelley.PParamsUpdate StandardShelley
+                         -> ProtocolParametersUpdate
+fromShelleyPParamsUpdate
+    Shelley.PParams {
+      Shelley._minfeeA
+    , Shelley._minfeeB
+    , Shelley._maxBBSize
+    , Shelley._maxTxSize
+    , Shelley._maxBHSize
+    , Shelley._keyDeposit
+    , Shelley._poolDeposit
+    , Shelley._eMax
+    , Shelley._nOpt
+    , Shelley._a0
+    , Shelley._rho
+    , Shelley._tau
+    , Shelley._d
+    , Shelley._extraEntropy
+    , Shelley._protocolVersion
+    , Shelley._minUTxOValue
+    , Shelley._minPoolCost
+    } =
+    ProtocolParametersUpdate {
+      protocolUpdateProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b)) <$>
+                                          strictMaybeToMaybe _protocolVersion
+    , protocolUpdateDecentralization    = Shelley.unitIntervalToRational <$>
+                                            strictMaybeToMaybe _d
+    , protocolUpdateExtraPraosEntropy   = fromPraosNonce <$>
+                                            strictMaybeToMaybe _extraEntropy
+    , protocolUpdateMaxBlockHeaderSize  = strictMaybeToMaybe _maxBHSize
+    , protocolUpdateMaxBlockBodySize    = strictMaybeToMaybe _maxBBSize
+    , protocolUpdateMaxTxSize           = strictMaybeToMaybe _maxTxSize
+    , protocolUpdateTxFeeFixed          = strictMaybeToMaybe _minfeeB
+    , protocolUpdateTxFeePerByte        = strictMaybeToMaybe _minfeeA
+    , protocolUpdateMinUTxOValue        = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _minUTxOValue
+    , protocolUpdateStakeAddressDeposit = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _keyDeposit
+    , protocolUpdateStakePoolDeposit    = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _poolDeposit
+    , protocolUpdateMinPoolCost         = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _minPoolCost
+    , protocolUpdatePoolRetireMaxEpoch  = strictMaybeToMaybe _eMax
+    , protocolUpdateStakePoolTargetNum  = strictMaybeToMaybe _nOpt
+    , protocolUpdatePoolPledgeInfluence = strictMaybeToMaybe _a0
+    , protocolUpdateMonetaryExpansion   = Shelley.unitIntervalToRational <$>
+                                            strictMaybeToMaybe _rho
+    , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
+                                            strictMaybeToMaybe _tau
     }
 
 
