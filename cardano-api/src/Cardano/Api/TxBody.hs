@@ -320,7 +320,7 @@ makeShelleyTransaction TxExtraContent {
         (Set.fromList (map toShelleyTxIn ins))
         (Seq.fromList (map toShelleyTxOut outs))
         (Seq.fromList [ cert | Certificate cert <- txCertificates ])
-        (toShelleyWdrl txWithdrawals)
+        (toShelleyWithdrawal txWithdrawals)
         (toShelleyLovelace fee)
         ttl
         (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
@@ -329,14 +329,12 @@ makeShelleyTransaction TxExtraContent {
   where
     toShelleyUpdate (UpdateProposal p) = p
 
-    toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl StandardShelley
-    toShelleyWdrl wdrls =
-        Shelley.Wdrl $
-          Map.fromList
-            [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
-            | (stakeAddr, value) <- wdrls ]
-
-
+toShelleyWithdrawal :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ledgerera
+toShelleyWithdrawal withdrawals =
+    Shelley.Wdrl $
+      Map.fromList
+        [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
+        | (stakeAddr, value) <- withdrawals ]
 
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
