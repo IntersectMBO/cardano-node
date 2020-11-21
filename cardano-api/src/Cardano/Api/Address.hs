@@ -484,24 +484,12 @@ toShelleyAddr (AddressInEra (ShelleyAddressInEra _)
     Shelley.Addr nw
       (coerceShelleyPaymentCredential pc)
       (coerceShelleyStakeReference   scr)
-  where
-    -- The era parameter in these types is a phantom type so it is safe to cast.
-    -- We choose to cast because we need to use an era-independent address
-    -- representation, but have to produce an era-dependent format used by the
-    -- Shelley ledger lib.
-    coerceShelleyPaymentCredential :: Shelley.PaymentCredential eraA
-                                   -> Shelley.PaymentCredential eraB
-    coerceShelleyPaymentCredential = coerce
 
-    coerceShelleyStakeReference :: Shelley.StakeReference eraA
-                                -> Shelley.StakeReference eraB
-    coerceShelleyStakeReference = coerce
-
-toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAcnt StandardShelley
+toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAcnt ledgerera
 toShelleyStakeAddr (StakeAddress nw sc) =
     Shelley.RewardAcnt {
       Shelley.getRwdNetwork = nw,
-      Shelley.getRwdCred    = sc
+      Shelley.getRwdCred    = coerceShelleyStakeCredential sc
     }
 
 toShelleyPaymentCredential :: PaymentCredential
@@ -526,3 +514,20 @@ toShelleyStakeReference (StakeAddressByPointer ptr) =
     Shelley.StakeRefPtr ptr
 toShelleyStakeReference  NoStakeAddress =
     Shelley.StakeRefNull
+
+-- The era parameter in these types is a phantom type so it is safe to cast.
+-- We choose to cast because we need to use an era-independent address
+-- representation, but have to produce an era-dependent format used by the
+-- Shelley ledger lib.
+coerceShelleyPaymentCredential :: Shelley.PaymentCredential eraA
+                               -> Shelley.PaymentCredential eraB
+coerceShelleyPaymentCredential = coerce
+
+coerceShelleyStakeCredential :: Shelley.StakeCredential eraA
+                             -> Shelley.StakeCredential eraB
+coerceShelleyStakeCredential = coerce
+
+coerceShelleyStakeReference :: Shelley.StakeReference eraA
+                            -> Shelley.StakeReference eraB
+coerceShelleyStakeReference = coerce
+
