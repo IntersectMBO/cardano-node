@@ -319,7 +319,7 @@ makeShelleyTransaction TxExtraContent {
       (Shelley.TxBody
         (Set.fromList (map toShelleyTxIn ins))
         (Seq.fromList (map toShelleyTxOut outs))
-        (Seq.fromList [ cert | Certificate cert <- txCertificates ])
+        (Seq.fromList (map toShelleyCertificate txCertificates))
         (toShelleyWithdrawal txWithdrawals)
         (toShelleyLovelace fee)
         ttl

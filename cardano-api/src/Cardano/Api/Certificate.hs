@@ -26,6 +26,10 @@ module Cardano.Api.Certificate (
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
 
+    -- * Internal conversion functions
+    toShelleyCertificate,
+    fromShelleyCertificate,
+
     -- * Data family instances
     AsType(..)
   ) where
@@ -188,6 +192,17 @@ data StakePoolMetadataReference =
        stakePoolMetadataHash :: Hash StakePoolMetadata
      }
   deriving (Eq, Show)
+
+
+-- ----------------------------------------------------------------------------
+-- Internal conversion functions
+--
+
+toShelleyCertificate :: Certificate -> Shelley.DCert StandardShelley
+toShelleyCertificate (Certificate c) = c
+
+fromShelleyCertificate :: Shelley.DCert StandardShelley -> Certificate
+fromShelleyCertificate c = Certificate c
 
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams StandardShelley
 toShelleyPoolParams StakePoolParameters {
