@@ -62,9 +62,11 @@ import           Cardano.Api.Value
 -- Protocol updates embedded in transactions
 --
 
-newtype UpdateProposal = UpdateProposal (Shelley.Update StandardShelley)
+data UpdateProposal =
+     UpdateProposal
+       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
+       !EpochNo
     deriving stock (Eq, Show)
-    deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy UpdateProposal where
@@ -73,6 +75,12 @@ instance HasTypeProxy UpdateProposal where
 
 instance HasTextEnvelope UpdateProposal where
     textEnvelopeType _ = "UpdateProposalShelley"
+
+instance ToCBOR UpdateProposal where
+    toCBOR = toCBOR . toShelleyUpdate
+
+instance FromCBOR UpdateProposal where
+    fromCBOR = fromShelleyUpdate <$> fromCBOR
 
 data ProtocolParametersUpdate =
      ProtocolParametersUpdate {
@@ -243,16 +251,23 @@ makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> UpdateProposal
 makeShelleyUpdateProposal params genesisKeyHashes epochno =
     --TODO decide how to handle parameter validation
-    let ppup = toShelleyPParamsUpdate params in
-    UpdateProposal $
-      Shelley.Update
-        (Shelley.ProposedPPUpdates
-           (Map.fromList
-              [ (kh, ppup) | GenesisKeyHash kh <- genesisKeyHashes ]))
-        epochno
+    UpdateProposal
+      (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
+      epochno
+
 
 toShelleyUpdate :: UpdateProposal -> Shelley.Update StandardShelley
-toShelleyUpdate (UpdateProposal p) = p
+toShelleyUpdate (UpdateProposal ppup epochno) =
+    Shelley.Update (toShelleyProposedPPUpdates ppup) epochno
+
+
+toShelleyProposedPPUpdates :: Map (Hash GenesisKey) ProtocolParametersUpdate
+                           -> Shelley.ProposedPPUpdates StandardShelley
+toShelleyProposedPPUpdates =
+    Shelley.ProposedPPUpdates
+  . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
+  . Map.map toShelleyPParamsUpdate
+
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
                        -> Shelley.PParamsUpdate StandardShelley
@@ -306,7 +321,8 @@ toShelleyPParamsUpdate
     }
 
 fromShelleyUpdate :: Shelley.Update StandardShelley -> UpdateProposal
-fromShelleyUpdate = UpdateProposal
+fromShelleyUpdate (Shelley.Update ppup epochno) =
+    UpdateProposal (fromShelleyProposedPPUpdates ppup) epochno
 
 
 fromShelleyProposedPPUpdates :: Shelley.ProposedPPUpdates StandardShelley
