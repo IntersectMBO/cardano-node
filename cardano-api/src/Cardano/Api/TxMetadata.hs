@@ -25,6 +25,10 @@ module Cardano.Api.TxMetadata (
     TxMetadataJsonError (..),
     TxMetadataJsonSchemaError (..),
 
+    -- * Internal conversion functions
+    toShelleyMetadata,
+    toShelleyMetadataHash,
+
     -- * Data family instances
     AsType(..)
   ) where
@@ -61,6 +65,7 @@ import           Control.Monad (guard, when)
 
 import qualified Cardano.Binary as CBOR
 
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Shelley.Spec.Ledger.MetaData as Shelley
 
 import           Cardano.Api.Eras
@@ -150,6 +155,13 @@ fromShelleyMetaData (Shelley.MetaData mdMap) =
                                                [ (fromShelleyMetaDatum k,
                                                   fromShelleyMetaDatum v)
                                                | (k,v) <- xs ]
+
+toShelleyMetadata :: TxMetadata -> Shelley.MetaData
+toShelleyMetadata (TxMetadataShelley m) = m
+
+toShelleyMetadataHash :: Ledger.Era ledgerera
+                      => TxMetadata -> Shelley.MetaDataHash ledgerera
+toShelleyMetadataHash (TxMetadataShelley m) = Shelley.hashMetaData m
 
 
 -- ----------------------------------------------------------------------------

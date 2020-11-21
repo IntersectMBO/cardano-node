@@ -329,9 +329,6 @@ makeShelleyTransaction TxExtraContent {
   where
     toShelleyUpdate (UpdateProposal p) = p
 
-    toShelleyMetadata     (TxMetadataShelley m) = m
-    toShelleyMetadataHash (TxMetadataShelley m) = Shelley.hashMetaData m
-
     toShelleyWdrl :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl StandardShelley
     toShelleyWdrl wdrls =
         Shelley.Wdrl $
