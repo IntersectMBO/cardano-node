@@ -338,6 +338,8 @@ module Cardano.API (
 
     NetworkMagic,
     makeShelleyUpdateProposal,
+    PraosNonce,
+    makePraosNonce,
   ) where
 
 import           Cardano.Api.Typed

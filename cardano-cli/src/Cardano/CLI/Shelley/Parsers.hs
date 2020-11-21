@@ -2120,9 +2120,9 @@ pDecentralParam =
       <> Opt.help "Decentralization parameter."
       )
 
-pExtraEntropy :: Parser (Maybe ByteString)
+pExtraEntropy :: Parser (Maybe PraosNonce)
 pExtraEntropy =
-      Opt.option (Just <$> readerFromAttoParser parseEntropyBytes)
+      Opt.option (Just <$> readerFromAttoParser parsePraosNonce)
         (  Opt.long "extra-entropy"
         <> Opt.metavar "HEX"
         <> Opt.help "Praos extra entropy, as a hex byte string."
@@ -2132,8 +2132,13 @@ pExtraEntropy =
         <> Opt.help "Reset the Praos extra entropy to none."
         )
   where
+    parsePraosNonce :: Atto.Parser PraosNonce
+    parsePraosNonce = makePraosNonce <$> parseEntropyBytes
+
     parseEntropyBytes :: Atto.Parser ByteString
-    parseEntropyBytes = Atto.takeWhile1 Char.isHexDigit <&> decodeEitherBase16 >>= either fail return
+    parseEntropyBytes = either fail return
+                      . decodeEitherBase16
+                    =<< Atto.takeWhile1 Char.isHexDigit
 
 pProtocol :: Parser Protocol
 pProtocol =

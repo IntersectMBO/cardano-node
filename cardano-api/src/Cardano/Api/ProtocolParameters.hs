@@ -15,6 +15,10 @@ module Cardano.Api.ProtocolParameters (
     ProtocolParametersUpdate(..),
     makeShelleyUpdateProposal,
 
+    -- * PraosNonce
+    PraosNonce,
+    makePraosNonce,
+
     -- * Internal conversion functions
     toShelleyUpdate,
 
@@ -33,8 +37,11 @@ import           Control.Monad
 import           Cardano.Slotting.Slot (EpochNo)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Api.Address
@@ -89,7 +96,7 @@ data ProtocolParametersUpdate =
        -- federated operators did not subtly bias the initial schedule so that
        -- they retain undue influence after decentralisation.
        --
-       protocolUpdateExtraPraosEntropy :: Maybe (Maybe ByteString),
+       protocolUpdateExtraPraosEntropy :: Maybe (Maybe PraosNonce),
 
        -- | The maximum permitted size of a block header.
        --
@@ -286,7 +293,7 @@ toShelleyPParamsUpdate
                                maybeToStrictMaybe protocolUpdateTreasuryCut
     , Shelley._d           = Shelley.truncateUnitInterval . fromRational <$>
                                maybeToStrictMaybe protocolUpdateDecentralization
-    , Shelley._extraEntropy    = mkNonce <$>
+    , Shelley._extraEntropy    = toShelleyNonce <$>
                                    maybeToStrictMaybe protocolUpdateExtraPraosEntropy
     , Shelley._protocolVersion = uncurry Shelley.ProtVer <$>
                                    maybeToStrictMaybe protocolUpdateProtocolVersion
@@ -295,10 +302,23 @@ toShelleyPParamsUpdate
     , Shelley._minPoolCost     = toShelleyLovelace <$>
                                    maybeToStrictMaybe protocolUpdateMinPoolCost
     }
-  where
-    mkNonce Nothing   = Shelley.NeutralNonce
-    mkNonce (Just bs) = Shelley.Nonce
-                      . Crypto.castHash
-                      . Crypto.hashWith id
-                      $ bs
+
+
+-- ----------------------------------------------------------------------------
+-- Praos nonce
+--
+
+newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
+  deriving (Eq, Ord, Show)
+
+makePraosNonce :: ByteString -> PraosNonce
+makePraosNonce = PraosNonce . Crypto.hashWith id
+
+toShelleyNonce :: Maybe PraosNonce -> Shelley.Nonce
+toShelleyNonce Nothing               = Shelley.NeutralNonce
+toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
+
+fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
+fromPraosNonce Shelley.NeutralNonce = Nothing
+fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
 

@@ -379,6 +379,8 @@ module Cardano.Api.Typed (
     EpochNo(..),
     NetworkMagic(..),
     makeShelleyUpdateProposal,
+    PraosNonce,
+    makePraosNonce,
 
     -- ** Conversions
     --TODO: arrange not to export these
