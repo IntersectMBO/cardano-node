@@ -326,8 +326,6 @@ makeShelleyTransaction TxExtraContent {
         (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
         (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata))
       (toShelleyMetadata <$> txMetadata)
-  where
-    toShelleyUpdate (UpdateProposal p) = p
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ledgerera
 toShelleyWithdrawal withdrawals =

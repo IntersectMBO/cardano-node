@@ -15,6 +15,9 @@ module Cardano.Api.ProtocolParameters (
     ProtocolParametersUpdate(..),
     makeShelleyUpdateProposal,
 
+    -- * Internal conversion functions
+    toShelleyUpdate,
+
     -- * Data family instances
     AsType(..)
   ) where
@@ -238,6 +241,9 @@ makeShelleyUpdateProposal params genesisKeyHashes epochno =
            (Map.fromList
               [ (kh, ppup) | GenesisKeyHash kh <- genesisKeyHashes ]))
         epochno
+
+toShelleyUpdate :: UpdateProposal -> Shelley.Update StandardShelley
+toShelleyUpdate (UpdateProposal p) = p
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
                        -> Shelley.PParamsUpdate StandardShelley
