@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Protocol parameters.
@@ -37,6 +38,8 @@ import           Control.Monad
 
 import           Cardano.Slotting.Slot (EpochNo)
 import qualified Cardano.Crypto.Hash.Class as Crypto
+
+import qualified Cardano.Ledger.Era as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -77,10 +80,12 @@ instance HasTextEnvelope UpdateProposal where
     textEnvelopeType _ = "UpdateProposalShelley"
 
 instance ToCBOR UpdateProposal where
-    toCBOR = toCBOR . toShelleyUpdate
+    toCBOR = toCBOR . toShelleyUpdate @StandardShelley
+    -- We have to pick a monomorphic era type for the serialisation. We use the
+    -- Shelley era. This makes no difference since era type is phantom.
 
 instance FromCBOR UpdateProposal where
-    fromCBOR = fromShelleyUpdate <$> fromCBOR
+    fromCBOR = fromShelleyUpdate @StandardShelley <$> fromCBOR
 
 data ProtocolParametersUpdate =
      ProtocolParametersUpdate {
@@ -256,13 +261,15 @@ makeShelleyUpdateProposal params genesisKeyHashes epochno =
       epochno
 
 
-toShelleyUpdate :: UpdateProposal -> Shelley.Update StandardShelley
+toShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
+                => UpdateProposal -> Shelley.Update ledgerera
 toShelleyUpdate (UpdateProposal ppup epochno) =
     Shelley.Update (toShelleyProposedPPUpdates ppup) epochno
 
 
-toShelleyProposedPPUpdates :: Map (Hash GenesisKey) ProtocolParametersUpdate
-                           -> Shelley.ProposedPPUpdates StandardShelley
+toShelleyProposedPPUpdates :: Ledger.Crypto ledgerera ~ StandardCrypto
+                           => Map (Hash GenesisKey) ProtocolParametersUpdate
+                           -> Shelley.ProposedPPUpdates ledgerera
 toShelleyProposedPPUpdates =
     Shelley.ProposedPPUpdates
   . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
@@ -270,7 +277,7 @@ toShelleyProposedPPUpdates =
 
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
-                       -> Shelley.PParamsUpdate StandardShelley
+                       -> Shelley.PParamsUpdate ledgerera
 toShelleyPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion
@@ -320,12 +327,14 @@ toShelleyPParamsUpdate
                                    maybeToStrictMaybe protocolUpdateMinPoolCost
     }
 
-fromShelleyUpdate :: Shelley.Update StandardShelley -> UpdateProposal
+fromShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
+                  => Shelley.Update ledgerera -> UpdateProposal
 fromShelleyUpdate (Shelley.Update ppup epochno) =
     UpdateProposal (fromShelleyProposedPPUpdates ppup) epochno
 
 
-fromShelleyProposedPPUpdates :: Shelley.ProposedPPUpdates StandardShelley
+fromShelleyProposedPPUpdates :: Ledger.Crypto ledgerera ~ StandardCrypto
+                             => Shelley.ProposedPPUpdates ledgerera
                              -> Map (Hash GenesisKey) ProtocolParametersUpdate
 fromShelleyProposedPPUpdates =
     Map.map fromShelleyPParamsUpdate
@@ -333,7 +342,7 @@ fromShelleyProposedPPUpdates =
   . (\(Shelley.ProposedPPUpdates ppup) -> ppup)
 
 
-fromShelleyPParamsUpdate :: Shelley.PParamsUpdate StandardShelley
+fromShelleyPParamsUpdate :: Shelley.PParamsUpdate ledgerera
                          -> ProtocolParametersUpdate
 fromShelleyPParamsUpdate
     Shelley.PParams {
