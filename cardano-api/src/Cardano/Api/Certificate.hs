@@ -34,7 +34,7 @@ import           Prelude
 
 import           Data.Maybe
 import           Data.ByteString (ByteString)
-import qualified Data.Text as Text
+import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -42,7 +42,6 @@ import qualified Data.Sequence.Strict as Seq
 
 import           Data.IP (IPv4, IPv6)
 import           Network.Socket (PortNumber)
-import qualified Network.URI as URI
 
 import           Cardano.Slotting.Slot (EpochNo (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -183,7 +182,7 @@ data StakePoolRelay =
 
 data StakePoolMetadataReference =
      StakePoolMetadataReference {
-       stakePoolMetadataURL  :: URI.URI,
+       stakePoolMetadataURL  :: Text,
        stakePoolMetadataHash :: Hash StakePoolMetadata
      }
   deriving (Eq, Show)
@@ -248,11 +247,9 @@ toShelleyPoolParams StakePoolParameters {
                      . Shelley.textToDns
                      . Text.decodeLatin1
 
-    toShelleyUrl :: URI.URI -> Shelley.Url
-    toShelleyUrl uri = fromMaybe (error "toShelleyUrl: invalid url. TODO: proper validation")
-                     . Shelley.textToUrl
-                     . Text.pack
-                     $ URI.uriToString id uri ""
+    toShelleyUrl :: Text -> Shelley.Url
+    toShelleyUrl = fromMaybe (error "toShelleyUrl: invalid url. TODO: proper validation")
+                 . Shelley.textToUrl
 
 
 -- ----------------------------------------------------------------------------

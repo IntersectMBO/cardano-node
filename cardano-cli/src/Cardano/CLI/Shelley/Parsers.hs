@@ -30,11 +30,9 @@ import           Data.Attoparsec.Combinator ((<?>))
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 import           Network.Socket (PortNumber)
-import           Network.URI (URI, parseURI)
 import           Options.Applicative hiding (str)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import qualified Cardano.Crypto.Hash as Crypto (Blake2b_256, Hash (..), hashFromBytesAsHex)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
@@ -1932,7 +1930,7 @@ pStakePoolMetadataReference =
       <$> pStakePoolMetadataUrl
       <*> pStakePoolMetadataHash
 
-pStakePoolMetadataUrl :: Parser URI
+pStakePoolMetadataUrl :: Parser Text
 pStakePoolMetadataUrl =
   Opt.option (readURIOfMaxLength 64)
     (  Opt.long "metadata-url"
@@ -1949,11 +1947,9 @@ pStakePoolMetadataHash =
         <> Opt.help "Pool metadata hash."
         )
   where
-    getHashFromHexString :: String -> Maybe (Crypto.Hash Crypto.Blake2b_256 ByteString)
-    getHashFromHexString = Crypto.hashFromBytesAsHex . BSC.pack
-
     metadataHash :: String -> Maybe (Hash StakePoolMetadata)
-    metadataHash str = StakePoolMetadataHash <$> getHashFromHexString str
+    metadataHash = deserialiseFromRawBytesHex (AsHash AsStakePoolMetadata)
+                 . BSC.pack
 
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
@@ -2282,10 +2278,9 @@ readOutputFormat = do
         <> s
         <> "\". Accepted output formats are \"hex\" and \"bech32\"."
 
-readURIOfMaxLength :: Int -> Opt.ReadM URI
-readURIOfMaxLength maxLen = do
-  s <- readStringOfMaxLength maxLen
-  maybe (fail "The provided string must be a valid URI.") pure (parseURI s)
+readURIOfMaxLength :: Int -> Opt.ReadM Text
+readURIOfMaxLength maxLen =
+  Text.pack <$> readStringOfMaxLength maxLen
 
 readStringOfMaxLength :: Int -> Opt.ReadM String
 readStringOfMaxLength maxLen = do
