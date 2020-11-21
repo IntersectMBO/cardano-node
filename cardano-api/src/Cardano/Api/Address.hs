@@ -47,6 +47,8 @@ module Cardano.Api.Address (
     toShelleyAddr,
     toShelleyStakeAddr,
     toShelleyStakeCredential,
+    fromShelleyAddr,
+    fromShelleyStakeAddr,
 
     -- * Serialising addresses
     SerialiseAddress(..),
@@ -514,6 +516,25 @@ toShelleyStakeReference (StakeAddressByPointer ptr) =
     Shelley.StakeRefPtr ptr
 toShelleyStakeReference  NoStakeAddress =
     Shelley.StakeRefNull
+
+
+fromShelleyAddr :: IsShelleyBasedEra era
+                => Shelley.Addr (ShelleyLedgerEra era) -> AddressInEra era
+fromShelleyAddr (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
+    AddressInEra ByronAddressInAnyEra (ByronAddress addr)
+
+fromShelleyAddr (Shelley.Addr nw pc scr) =
+    AddressInEra
+      (ShelleyAddressInEra shelleyBasedEra)
+      (ShelleyAddress
+        nw
+        (coerceShelleyPaymentCredential pc)
+        (coerceShelleyStakeReference   scr))
+
+fromShelleyStakeAddr :: Shelley.RewardAcnt ledgerera -> StakeAddress
+fromShelleyStakeAddr (Shelley.RewardAcnt nw sc) =
+    StakeAddress nw (coerceShelleyStakeCredential sc)
+
 
 -- The era parameter in these types is a phantom type so it is safe to cast.
 -- We choose to cast because we need to use an era-independent address

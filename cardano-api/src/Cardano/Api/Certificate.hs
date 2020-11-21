@@ -39,6 +39,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sequence.Strict as Seq
+import qualified Data.Foldable as Foldable
 
 import           Data.IP (IPv4, IPv6)
 import           Network.Socket (PortNumber)
@@ -47,7 +48,8 @@ import           Cardano.Slotting.Slot (EpochNo (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
+import           Shelley.Spec.Ledger.BaseTypes
+                   (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
@@ -205,8 +207,7 @@ toShelleyPoolParams StakePoolParameters {
     , Shelley._poolVrf    = vrfkh
     , Shelley._poolPledge = toShelleyLovelace stakePoolPledge
     , Shelley._poolCost   = toShelleyLovelace stakePoolCost
-    , Shelley._poolMargin = Shelley.truncateUnitInterval
-                              (fromRational stakePoolMargin)
+    , Shelley._poolMargin = Shelley.unitIntervalFromRational stakePoolMargin
     , Shelley._poolRAcnt  = toShelleyStakeAddr stakePoolRewardAccount
     , Shelley._poolOwners = Set.fromList
                               [ kh | StakeKeyHash kh <- stakePoolOwners ]
@@ -250,6 +251,69 @@ toShelleyPoolParams StakePoolParameters {
     toShelleyUrl :: Text -> Shelley.Url
     toShelleyUrl = fromMaybe (error "toShelleyUrl: invalid url. TODO: proper validation")
                  . Shelley.textToUrl
+
+
+fromShelleyPoolParams :: Shelley.PoolParams StandardShelley
+                      -> StakePoolParameters
+fromShelleyPoolParams
+    Shelley.PoolParams {
+      Shelley._poolId
+    , Shelley._poolVrf
+    , Shelley._poolPledge
+    , Shelley._poolCost
+    , Shelley._poolMargin
+    , Shelley._poolRAcnt
+    , Shelley._poolOwners
+    , Shelley._poolRelays
+    , Shelley._poolMD
+    } =
+    StakePoolParameters {
+      stakePoolId            = StakePoolKeyHash _poolId
+    , stakePoolVRF           = VrfKeyHash _poolVrf
+    , stakePoolCost          = fromShelleyLovelace _poolCost
+    , stakePoolMargin        = Shelley.unitIntervalToRational _poolMargin
+    , stakePoolRewardAccount = fromShelleyStakeAddr _poolRAcnt
+    , stakePoolPledge        = fromShelleyLovelace _poolPledge
+    , stakePoolOwners        = map StakeKeyHash (Set.toList _poolOwners)
+    , stakePoolRelays        = map fromShelleyStakePoolRelay
+                                   (Foldable.toList _poolRelays)
+    , stakePoolMetadata      = fromShelleyPoolMetaData <$>
+                                 strictMaybeToMaybe _poolMD
+    }
+  where
+    fromShelleyStakePoolRelay :: Shelley.StakePoolRelay -> StakePoolRelay
+    fromShelleyStakePoolRelay (Shelley.SingleHostAddr mport mipv4 mipv6) =
+      StakePoolRelayIp
+        (strictMaybeToMaybe mipv4)
+        (strictMaybeToMaybe mipv6)
+        (fromIntegral . Shelley.portToWord16 <$> strictMaybeToMaybe mport)
+
+    fromShelleyStakePoolRelay (Shelley.SingleHostName mport dnsname) =
+      StakePoolRelayDnsARecord
+        (fromShelleyDnsName dnsname)
+        (fromIntegral . Shelley.portToWord16 <$> strictMaybeToMaybe mport)
+
+    fromShelleyStakePoolRelay (Shelley.MultiHostName dnsname) =
+      StakePoolRelayDnsSrvRecord
+        (fromShelleyDnsName dnsname)
+
+    fromShelleyPoolMetaData :: Shelley.PoolMetaData -> StakePoolMetadataReference
+    fromShelleyPoolMetaData Shelley.PoolMetaData {
+                              Shelley._poolMDUrl
+                            , Shelley._poolMDHash
+                            } =
+      StakePoolMetadataReference {
+        stakePoolMetadataURL  = Shelley.urlToText _poolMDUrl
+      , stakePoolMetadataHash = StakePoolMetadataHash
+                              . fromMaybe (error "fromShelleyPoolMetaData: invalid hash. TODO: proper validation")
+                              . Crypto.hashFromBytes
+                              $ _poolMDHash
+      }
+
+    --TODO: change the ledger rep of the DNS name to use ShortByteString
+    fromShelleyDnsName :: Shelley.DnsName -> ByteString
+    fromShelleyDnsName = Text.encodeUtf8
+                       . Shelley.dnsToText
 
 
 -- ----------------------------------------------------------------------------
