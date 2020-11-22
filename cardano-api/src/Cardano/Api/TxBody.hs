@@ -329,12 +329,14 @@ txExtraContentEmpty =
 type TxFee = Lovelace
 type TTL   = SlotNo
 
-makeShelleyTransaction :: TxExtraContent
+makeShelleyTransaction :: forall era.
+                          IsShelleyBasedEra era
+                       => TxExtraContent
                        -> TTL
                        -> TxFee
                        -> [TxIn]
-                       -> [TxOut ShelleyEra]
-                       -> TxBody ShelleyEra
+                       -> [TxOut era]
+                       -> TxBody era
 makeShelleyTransaction TxExtraContent {
                          txMetadata,
                          txWithdrawals,
@@ -342,17 +344,22 @@ makeShelleyTransaction TxExtraContent {
                          txUpdateProposal
                        } ttl fee ins outs =
     --TODO: validate the txins are not empty, and tx out coin values are in range
-    ShelleyTxBody
-      (Shelley.TxBody
-        (Set.fromList (map toShelleyTxIn ins))
-        (Seq.fromList (map toShelleyTxOut outs))
-        (Seq.fromList (map toShelleyCertificate txCertificates))
-        (toShelleyWithdrawal txWithdrawals)
-        (toShelleyLovelace fee)
-        ttl
-        (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
-        (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata))
-      (toShelleyMetadata <$> txMetadata)
+    case shelleyBasedEra :: ShelleyBasedEra era of
+      ShelleyBasedEraShelley ->
+        ShelleyTxBody
+          (Shelley.TxBody
+            (Set.fromList (map toShelleyTxIn ins))
+            (Seq.fromList (map toShelleyTxOut outs))
+            (Seq.fromList (map toShelleyCertificate txCertificates))
+            (toShelleyWithdrawal txWithdrawals)
+            (toShelleyLovelace fee)
+            ttl
+            (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
+            (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata))
+          (toShelleyMetadata <$> txMetadata)
+      ShelleyBasedEraAllegra -> error "TODO: makeShelleyTransaction AllegraEra"
+      ShelleyBasedEraMary    -> error "TODO: makeShelleyTransaction MaryEra"
+
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ledgerera
 toShelleyWithdrawal withdrawals =
