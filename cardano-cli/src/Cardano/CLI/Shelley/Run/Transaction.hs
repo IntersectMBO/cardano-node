@@ -104,12 +104,12 @@ renderShelleyTxCmdError err =
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw txins txouts _Values ttl fee certs wdrls
+    TxBuildRaw era txins txouts _Values ttl fee certs wdrls
                metadataSchema metadataFiles mUpProp out ->
-      runTxBuildRaw txins txouts ttl fee certs wdrls
+      runTxBuildRaw era txins txouts ttl fee certs wdrls
                     metadataSchema metadataFiles mUpProp out
-    TxSign txinfile skfiles network txoutfile ->
-      runTxSign txinfile skfiles network txoutfile
+    TxSign era txinfile skfiles network txoutfile ->
+      runTxSign era txinfile skfiles network txoutfile
     TxSubmit protocol network txFp ->
       runTxSubmit protocol network txFp
     TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
@@ -119,13 +119,14 @@ runTransactionCmd cmd =
     TxGetTxId txinfile ->
       runTxGetTxId txinfile
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
-    TxCreateWitness txBodyfile witSignData mbNw outFile ->
-      runTxCreateWitness txBodyfile witSignData mbNw outFile
+    TxCreateWitness era txBodyfile witSignData mbNw outFile ->
+      runTxCreateWitness era txBodyfile witSignData mbNw outFile
     TxAssembleTxBodyWitness txBodyFile witnessFile outFile ->
       runTxSignWitness txBodyFile witnessFile outFile
 
 runTxBuildRaw
-  :: [Api.TxIn]
+  :: UseCardanoEra
+  -> [Api.TxIn]
   -> [Api.TxOut Api.ShelleyEra]
   -> SlotNo
   -> Api.Lovelace
@@ -136,7 +137,7 @@ runTxBuildRaw
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw txins txouts ttl fee
+runTxBuildRaw _useEra txins txouts ttl fee
               certFiles withdrawals
               metadataSchema metadataFiles
               mUpdatePropFile
@@ -178,12 +179,13 @@ runTxBuildRaw txins txouts ttl fee
       $ Api.writeFileTextEnvelope fpath Nothing txBody
 
 
-runTxSign :: TxBodyFile
+runTxSign :: UseCardanoEra
+          -> TxBodyFile
           -> [WitnessSigningData]
           -> Maybe Api.NetworkId
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
-runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
+runTxSign _useEra (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
   txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
               Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
   sks    <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError $
@@ -512,12 +514,13 @@ runTxGetTxId (TxBodyFile txbodyFile) = do
   liftIO $ BS.putStrLn $ Api.serialiseToRawBytesHex (Api.getTxId txbody)
 
 runTxCreateWitness
-  :: TxBodyFile
+  :: UseCardanoEra
+  -> TxBodyFile
   -> WitnessSigningData
   -> Maybe NetworkId
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
+runTxCreateWitness _useEra (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
   txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError
     . newExceptT
     $ Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile

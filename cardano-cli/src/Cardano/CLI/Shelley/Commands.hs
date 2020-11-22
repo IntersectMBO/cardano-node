@@ -100,7 +100,7 @@ data AddressCmd
       (Maybe (VerificationKeyOrFile StakeKey))
       NetworkId
       (Maybe OutputFile)
-  | AddressBuildMultiSig ScriptFile NetworkId (Maybe OutputFile)
+  | AddressBuildMultiSig UseCardanoEra ScriptFile NetworkId (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
   deriving (Eq, Show)
 
@@ -161,6 +161,7 @@ renderKeyCmd cmd =
 
 data TransactionCmd
   = TxBuildRaw
+      UseCardanoEra
       [TxIn]
       [TxOut ShelleyEra]
       (Maybe String) -- Placeholder for multi asset Values
@@ -172,8 +173,8 @@ data TransactionCmd
       [MetaDataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
-  | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
-  | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
+  | TxSign UseCardanoEra TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
+  | TxCreateWitness UseCardanoEra TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit Protocol NetworkId FilePath
   | TxMintedPolicyId ScriptFile

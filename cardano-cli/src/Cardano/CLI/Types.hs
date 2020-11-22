@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Cardano.CLI.Types
   ( CBORObject (..)
@@ -12,7 +13,9 @@ module Cardano.CLI.Types
   , SocketPath (..)
   , ScriptFile (..)
   , UpdateProposalFile (..)
+  , UseCardanoEra (..)
   , VerificationKeyFile (..)
+  , withCardanoEra
   ) where
 
 import           Cardano.Prelude
@@ -80,3 +83,17 @@ newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
 data SigningKeyOrScriptFile = ScriptFileForWitness FilePath
                             | SigningKeyFileForWitness FilePath
                             deriving (Eq, Show)
+
+data UseCardanoEra = UseByronEra
+                   | UseShelleyEra
+                   | UseAllegraEra
+                   | UseMaryEra
+                   deriving (Eq, Show)
+
+withCardanoEra :: UseCardanoEra
+               -> (forall era. CardanoEra era -> CardanoEraStyle era -> a)
+               -> a
+withCardanoEra UseByronEra   f = f ByronEra   cardanoEraStyle
+withCardanoEra UseShelleyEra f = f ShelleyEra cardanoEraStyle
+withCardanoEra UseAllegraEra f = f AllegraEra cardanoEraStyle
+withCardanoEra UseMaryEra    f = f MaryEra    cardanoEraStyle

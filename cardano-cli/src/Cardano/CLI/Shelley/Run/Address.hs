@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Shelley.Run.Address
   ( ShelleyAddressCmdError
@@ -56,7 +57,7 @@ runAddressCmd cmd =
     AddressKeyGen kt vkf skf -> runAddressKeyGen kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
-    AddressBuildMultiSig sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
+    AddressBuildMultiSig useEra sFp nId mOutFp -> runAddressBuildScript useEra sFp nId mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
 runAddressKeyGen :: AddressKeyType
@@ -201,11 +202,12 @@ readAddressVerificationKeyTextOrFile vkTextOrFile =
 --
 
 runAddressBuildScript
-  :: ScriptFile
+  :: UseCardanoEra
+  -> ScriptFile
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuildScript (ScriptFile fp) nId mOutFp = do
+runAddressBuildScript _useEra (ScriptFile fp) nId mOutFp = do
   scriptLB <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp)
                 $ LB.readFile fp
   script <- case eitherDecode scriptLB :: Either String (MultiSigScript ShelleyEra) of
