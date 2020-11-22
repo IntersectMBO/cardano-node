@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -38,7 +39,7 @@ module Cardano.Api.TxBody (
     txExtraContentEmpty,
 
     -- * Data family instances
-    AsType(..),
+    AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody),
   ) where
 
 import           Prelude
@@ -219,26 +220,27 @@ data TxBody era where
        -> Maybe Shelley.MetaData
        -> TxBody ShelleyEra
 
-deriving instance Eq (TxBody ByronEra)
-deriving instance Show (TxBody ByronEra)
+deriving instance Eq (TxBody era)
+deriving instance Show (TxBody era)
 
-deriving instance Eq (TxBody ShelleyEra)
-deriving instance Show (TxBody ShelleyEra)
+instance HasTypeProxy era => HasTypeProxy (TxBody era) where
+    data AsType (TxBody era) = AsTxBody (AsType era)
+    proxyToAsType _ = AsTxBody (proxyToAsType (Proxy :: Proxy era))
 
-instance HasTypeProxy (TxBody ByronEra) where
-    data AsType (TxBody ByronEra) = AsByronTxBody
-    proxyToAsType _ = AsByronTxBody
+pattern AsByronTxBody :: AsType (TxBody ByronEra)
+pattern AsByronTxBody   = AsTxBody AsByronEra
+{-# COMPLETE AsByronTxBody #-}
 
-instance HasTypeProxy (TxBody ShelleyEra) where
-    data AsType (TxBody ShelleyEra) = AsShelleyTxBody
-    proxyToAsType _ = AsShelleyTxBody
+pattern AsShelleyTxBody :: AsType (TxBody ShelleyEra)
+pattern AsShelleyTxBody = AsTxBody AsShelleyEra
+{-# COMPLETE AsShelleyTxBody #-}
 
 
 instance SerialiseAsCBOR (TxBody ByronEra) where
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
-    deserialiseFromCBOR AsByronTxBody bs = do
+    deserialiseFromCBOR _ bs = do
       ByronTxBody <$>
         CBOR.decodeFullAnnotatedBytes
           "Byron TxBody"
@@ -252,7 +254,7 @@ instance SerialiseAsCBOR (TxBody ShelleyEra) where
        <> CBOR.toCBOR txbody
        <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
-    deserialiseFromCBOR AsShelleyTxBody bs =
+    deserialiseFromCBOR _ bs =
       CBOR.decodeAnnotator
         "Shelley TxBody"
         decodeAnnotatedPair
