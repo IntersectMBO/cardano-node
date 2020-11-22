@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -262,7 +263,7 @@ getTxBody (ShelleyTx Shelley.Tx {
                        Shelley._body     = txbody,
                        Shelley._metadata = txmetadata
                      }) =
-    ShelleyTxBody txbody (strictMaybeToMaybe txmetadata)
+    ShelleyTxBody ShelleyBasedEraShelley txbody (strictMaybeToMaybe txmetadata)
 
 
 getTxWitnesses :: Tx era -> [Witness era]
@@ -297,7 +298,7 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
     selectByronWitness :: Witness ByronEra -> Byron.TxInWitness
     selectByronWitness (ByronKeyWitness w) = w
 
-makeSignedTransaction witnesses (ShelleyTxBody txbody txmetadata) =
+makeSignedTransaction witnesses (ShelleyTxBody ShelleyBasedEraShelley txbody txmetadata) =
     ShelleyTx $
       Shelley.Tx
         txbody
@@ -307,11 +308,16 @@ makeSignedTransaction witnesses (ShelleyTxBody txbody txmetadata) =
                         | ShelleyScriptWitness sw <- witnesses ])
           (Set.fromList [ w | ShelleyBootstrapWitness w <- witnesses ]))
         (maybeToStrictMaybe txmetadata)
+makeSignedTransaction _ (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
+    error "TODO: makeSignedTransaction AllegraEra"
+makeSignedTransaction _ (ShelleyTxBody ShelleyBasedEraMary _ _) =
+    error "TODO: makeSignedTransaction MaryEra"
 
 makeByronKeyWitness :: NetworkId
                     -> TxBody ByronEra
                     -> SigningKey ByronKey
                     -> Witness ByronEra
+makeByronKeyWitness _ (ShelleyTxBody era _ _) = case era of {}
 makeByronKeyWitness nw (ByronTxBody txbody) =
     let txhash :: Byron.Hash Byron.Tx
         txhash = Byron.hashDecoded txbody
@@ -347,7 +353,9 @@ makeShelleyBootstrapWitness :: WitnessNetworkIdOrByronAddress
                             -> TxBody ShelleyEra
                             -> SigningKey ByronKey
                             -> Witness ShelleyEra
-makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody txbody _) (ByronSigningKey sk) =
+makeShelleyBootstrapWitness nwOrAddr
+                            (ShelleyTxBody ShelleyBasedEraShelley txbody _)
+                            (ByronSigningKey sk) =
     ShelleyBootstrapWitness $
       -- Byron era witnesses were weird. This reveals all that weirdness.
       Shelley.BootstrapWitness {
@@ -434,7 +442,7 @@ data ShelleyWitnessSigningKey =
 makeShelleyKeyWitness :: TxBody ShelleyEra
                       -> ShelleyWitnessSigningKey
                       -> Witness ShelleyEra
-makeShelleyKeyWitness (ShelleyTxBody txbody _) =
+makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraShelley txbody _) =
     let txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
         txhash = Shelley.hashAnnotated txbody
 

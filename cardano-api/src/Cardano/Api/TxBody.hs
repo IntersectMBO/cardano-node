@@ -68,6 +68,7 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
+import qualified Cardano.Ledger.ShelleyMA.TxBody ()
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -134,12 +135,20 @@ getTxId (ByronTxBody tx) =
   . recoverBytes
   $ tx
 
-getTxId (ShelleyTxBody tx _) =
-    TxId
-  . Crypto.castHash
-  . (\(Shelley.TxId txhash) -> txhash)
-  . Shelley.txid
-  $ tx
+getTxId (ShelleyTxBody era tx _) =
+    case era of
+      ShelleyBasedEraShelley -> getTxIdShelley tx
+      ShelleyBasedEraAllegra -> getTxIdShelley tx
+      ShelleyBasedEraMary    -> getTxIdShelley tx
+  where
+    getTxIdShelley :: Ledger.Crypto ledgerera ~ StandardCrypto
+                   => Ledger.TxBodyConstraints ledgerera
+                   => Ledger.TxBody ledgerera -> TxId
+    getTxIdShelley =
+        TxId
+      . Crypto.castHash
+      . (\(Shelley.TxId txhash) -> txhash)
+      . Shelley.txid
 
 
 -- ----------------------------------------------------------------------------
@@ -217,12 +226,63 @@ data TxBody era where
        -> TxBody ByronEra
 
      ShelleyTxBody
-       :: Ledger.TxBody StandardShelley
+       :: ShelleyBasedEra era
+       -> Ledger.TxBody (ShelleyLedgerEra era)
        -> Maybe Shelley.MetaData
-       -> TxBody ShelleyEra
+       -> TxBody era
+     -- The 'ShelleyBasedEra' GADT tells us what era we are in.
+     -- The 'ShelleyLedgerEra' type family maps that to the era type from the
+     -- ledger lib. The 'Ledger.TxBody' type family maps that to a specific
+     -- tx body type, which is different for each Shelley-based era.
 
-deriving instance Eq (TxBody era)
-deriving instance Show (TxBody era)
+
+-- The GADT in the ShelleyTxBody case requires a custom instance
+instance Eq (TxBody era) where
+    (==) (ByronTxBody txbodyA)
+         (ByronTxBody txbodyB) = txbodyA == txbodyB
+
+    (==) (ShelleyTxBody era txbodyA txmetadataA)
+         (ShelleyTxBody _   txbodyB txmetadataB) =
+         txmetadataA == txmetadataB
+      && case era of
+           ShelleyBasedEraShelley -> txbodyA == txbodyB
+           ShelleyBasedEraAllegra -> txbodyA == txbodyB
+           ShelleyBasedEraMary    -> txbodyA == txbodyB
+
+    (==) (ByronTxBody{}) (ShelleyTxBody era _ _) = case era of {}
+
+
+-- The GADT in the ShelleyTxBody case requires a custom instance
+instance Show (TxBody era) where
+    showsPrec p (ByronTxBody txbody) =
+      showParen (p >= 11)
+        ( showString "ByronTxBody "
+        . showsPrec 11 txbody
+        )
+
+    showsPrec p (ShelleyTxBody ShelleyBasedEraShelley txbody txmetadata) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxBody ShelleyBasedEraShelley "
+        . showsPrec 11 txbody
+        . showChar ' '
+        . showsPrec 11 txmetadata
+        )
+
+    showsPrec p (ShelleyTxBody ShelleyBasedEraAllegra txbody txmetadata) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxBody ShelleyBasedEraAllegra "
+        . showsPrec 11 txbody
+        . showChar ' '
+        . showsPrec 11 txmetadata
+        )
+
+    showsPrec p (ShelleyTxBody ShelleyBasedEraMary txbody txmetadata) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxBody ShelleyBasedEraMary "
+        . showsPrec 11 txbody
+        . showChar ' '
+        . showsPrec 11 txmetadata
+        )
 
 instance HasTypeProxy era => HasTypeProxy (TxBody era) where
     data AsType (TxBody era) = AsTxBody (AsType era)
@@ -242,11 +302,15 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
-    serialiseToCBOR (ShelleyTxBody txbody txmetadata) =
+    serialiseToCBOR (ShelleyTxBody ShelleyBasedEraShelley txbody txmetadata) =
       CBOR.serializeEncoding' $
           CBOR.encodeListLen 2
        <> CBOR.toCBOR txbody
        <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
+    serialiseToCBOR (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
+      error "TODO: SerialiseAsCBOR (TxBody AllegraEra)"
+    serialiseToCBOR (ShelleyTxBody ShelleyBasedEraMary _ _) =
+      error "TODO: SerialiseAsCBOR (TxBody MaryEra)"
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -271,6 +335,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
           txmetadata <- CBOR.decodeNullMaybe fromCBOR
           return $ CBOR.Annotator $ \fbs ->
             ShelleyTxBody
+              ShelleyBasedEraShelley
               (CBOR.runAnnotator txbody fbs)
               (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
 
@@ -348,6 +413,7 @@ makeShelleyTransaction TxExtraContent {
     case shelleyBasedEra :: ShelleyBasedEra era of
       ShelleyBasedEraShelley ->
         ShelleyTxBody
+          ShelleyBasedEraShelley
           (Shelley.TxBody
             (Set.fromList (map toShelleyTxIn ins))
             (Seq.fromList (map toShelleyTxOut outs))
