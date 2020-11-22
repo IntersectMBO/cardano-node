@@ -104,9 +104,9 @@ renderShelleyTxCmdError err =
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw txins txouts _Values ttl fee certs wdrls
+    TxBuildRaw era txins txouts _Values ttl fee certs wdrls
                metadataSchema metadataFiles mUpProp out ->
-      runTxBuildRaw txins txouts ttl fee certs wdrls
+      runTxBuildRaw era txins txouts ttl fee certs wdrls
                     metadataSchema metadataFiles mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
@@ -125,7 +125,8 @@ runTransactionCmd cmd =
       runTxSignWitness txBodyFile witnessFile outFile
 
 runTxBuildRaw
-  :: [Api.TxIn]
+  :: UseCardanoEra
+  -> [Api.TxIn]
   -> [Api.TxOut Api.ShelleyEra]
   -> SlotNo
   -> Api.Lovelace
@@ -136,7 +137,7 @@ runTxBuildRaw
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw txins txouts ttl fee
+runTxBuildRaw _useEra txins txouts ttl fee
               certFiles withdrawals
               metadataSchema metadataFiles
               mUpdatePropFile

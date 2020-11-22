@@ -12,6 +12,7 @@ module Cardano.CLI.Types
   , SocketPath (..)
   , ScriptFile (..)
   , UpdateProposalFile (..)
+  , UseCardanoEra (..)
   , VerificationKeyFile (..)
   ) where
 
@@ -80,3 +81,10 @@ newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
 data SigningKeyOrScriptFile = ScriptFileForWitness FilePath
                             | SigningKeyFileForWitness FilePath
                             deriving (Eq, Show)
+
+data UseCardanoEra = UseByronEra
+                   | UseShelleyEra
+                   | UseAllegraEra
+                   | UseMaryEra
+                   deriving (Eq, Show)
+

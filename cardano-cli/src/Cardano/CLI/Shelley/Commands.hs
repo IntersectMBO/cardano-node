@@ -161,6 +161,7 @@ renderKeyCmd cmd =
 
 data TransactionCmd
   = TxBuildRaw
+      UseCardanoEra
       [TxIn]
       [TxOut ShelleyEra]
       (Maybe String) -- Placeholder for multi asset Values
