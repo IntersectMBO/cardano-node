@@ -350,9 +350,9 @@ data WitnessNetworkIdOrByronAddress
   -- address and used in the construction of the witness.
 
 makeShelleyBootstrapWitness :: WitnessNetworkIdOrByronAddress
-                            -> TxBody ShelleyEra
+                            -> TxBody era
                             -> SigningKey ByronKey
-                            -> Witness ShelleyEra
+                            -> Witness era
 makeShelleyBootstrapWitness nwOrAddr
                             (ShelleyTxBody ShelleyBasedEraShelley txbody _)
                             (ByronSigningKey sk) =
@@ -425,6 +425,14 @@ makeShelleyBootstrapWitness nwOrAddr
         (Byron.aaNetworkMagic . unAddrAttrs)
         eitherNwOrAddr
 
+makeShelleyBootstrapWitness _ (ShelleyTxBody ShelleyBasedEraAllegra _ _) _ =
+    error "TODO: makeShelleyBootstrapWitness AllegraEra"
+makeShelleyBootstrapWitness _ (ShelleyTxBody ShelleyBasedEraMary _ _) _ =
+    error "TODO: makeShelleyBootstrapWitness MaryEra"
+makeShelleyBootstrapWitness _ ByronTxBody{} _ =
+    error "TODO: makeShelleyBootstrapWitness ByronEra"
+
+
 data ShelleyWitnessSigningKey =
        WitnessPaymentKey         (SigningKey PaymentKey)
      | WitnessPaymentExtendedKey (SigningKey PaymentExtendedKey)
@@ -439,9 +447,9 @@ data ShelleyWitnessSigningKey =
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
 
 
-makeShelleyKeyWitness :: TxBody ShelleyEra
+makeShelleyKeyWitness :: TxBody era
                       -> ShelleyWitnessSigningKey
-                      -> Witness ShelleyEra
+                      -> Witness era
 makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraShelley txbody _) =
     let txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
         txhash = Shelley.hashAnnotated txbody
@@ -454,6 +462,12 @@ makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraShelley txbody _) =
             signature = makeShelleySignature txhash sk
          in ShelleyKeyWitness $
               Shelley.WitVKey vk signature
+makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
+    error "TODO: makeShelleyKeyWitness AllegraEra"
+makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraMary _ _) =
+    error "TODO: makeShelleyKeyWitness MaryEra"
+makeShelleyKeyWitness ByronTxBody{} =
+    error "TODO: makeShelleyKeyWitness ByronEra"
 
 
 -- | We support making key witnesses with both normal and extended signing keys.
@@ -555,9 +569,9 @@ signByronTransaction nw txbody sks =
     witnesses = map (makeByronKeyWitness nw txbody) sks
 
 -- signing keys is a set
-signShelleyTransaction :: TxBody ShelleyEra
+signShelleyTransaction :: TxBody era
                        -> [ShelleyWitnessSigningKey]
-                       -> Tx ShelleyEra
+                       -> Tx era
 signShelleyTransaction txbody sks =
     makeSignedTransaction witnesses txbody
   where
