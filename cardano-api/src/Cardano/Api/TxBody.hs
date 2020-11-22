@@ -236,18 +236,11 @@ pattern AsShelleyTxBody = AsTxBody AsShelleyEra
 {-# COMPLETE AsShelleyTxBody #-}
 
 
-instance SerialiseAsCBOR (TxBody ByronEra) where
+instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
+
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
-    deserialiseFromCBOR _ bs = do
-      ByronTxBody <$>
-        CBOR.decodeFullAnnotatedBytes
-          "Byron TxBody"
-          CBOR.fromCBORAnnotated
-          (LBS.fromStrict bs)
-
-instance SerialiseAsCBOR (TxBody ShelleyEra) where
     serialiseToCBOR (ShelleyTxBody txbody txmetadata) =
       CBOR.serializeEncoding' $
           CBOR.encodeListLen 2
@@ -255,10 +248,20 @@ instance SerialiseAsCBOR (TxBody ShelleyEra) where
        <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
     deserialiseFromCBOR _ bs =
-      CBOR.decodeAnnotator
-        "Shelley TxBody"
-        decodeAnnotatedPair
-        (LBS.fromStrict bs)
+      case cardanoEra :: CardanoEra era of
+        ByronEra ->
+          ByronTxBody <$>
+            CBOR.decodeFullAnnotatedBytes
+              "Byron TxBody"
+              CBOR.fromCBORAnnotated
+              (LBS.fromStrict bs)
+        ShelleyEra ->
+          CBOR.decodeAnnotator
+            "Shelley TxBody"
+            decodeAnnotatedPair
+            (LBS.fromStrict bs)
+        AllegraEra -> error "TODO: SerialiseAsCBOR (TxBody AllegraEra)"
+        MaryEra    -> error "TODO: SerialiseAsCBOR (TxBody MaryEra)"
       where
         decodeAnnotatedPair :: CBOR.Decoder s (CBOR.Annotator (TxBody ShelleyEra))
         decodeAnnotatedPair =  do
@@ -271,11 +274,13 @@ instance SerialiseAsCBOR (TxBody ShelleyEra) where
               (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
 
 
-instance HasTextEnvelope (TxBody ByronEra) where
-    textEnvelopeType _ = "TxUnsignedByron"
-
-instance HasTextEnvelope (TxBody ShelleyEra) where
-    textEnvelopeType _ = "TxUnsignedShelley"
+instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
+    textEnvelopeType _ =
+      case cardanoEra :: CardanoEra era of
+        ByronEra   -> "TxUnsignedByron"
+        ShelleyEra -> "TxUnsignedShelley"
+        AllegraEra -> "TxBodyAllegra"
+        MaryEra    -> "TxBodyMary"
 
 
 data ByronTxBodyConversionError =
