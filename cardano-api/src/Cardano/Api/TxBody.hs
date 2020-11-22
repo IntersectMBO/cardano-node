@@ -1,9 +1,11 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -62,6 +64,8 @@ import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 
+import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Shelley as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -113,7 +117,8 @@ toByronTxId :: TxId -> Byron.TxId
 toByronTxId (TxId h) =
     Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
 
-toShelleyTxId :: TxId -> Shelley.TxId StandardShelley
+toShelleyTxId :: Ledger.Crypto ledgerera ~ StandardCrypto
+              => TxId -> Shelley.TxId ledgerera
 toShelleyTxId (TxId h) =
     Shelley.TxId (Crypto.castHash h)
 
@@ -174,14 +179,29 @@ toByronLovelace (Lovelace x) =
       Left  _  -> Nothing
       Right x' -> Just x'
 
-toShelleyTxIn  :: TxIn -> Shelley.TxIn StandardShelley
+toShelleyTxIn  :: (Ledger.Era ledgerera,
+                   Ledger.Crypto ledgerera ~ StandardCrypto)
+               => TxIn -> Shelley.TxIn ledgerera
 toShelleyTxIn (TxIn txid (TxIx txix)) =
     Shelley.TxIn (toShelleyTxId txid) (fromIntegral txix)
 
-toShelleyTxOut :: TxOut ShelleyEra -> Shelley.TxOut StandardShelley
-toShelleyTxOut (TxOut addr (TxOutAdaOnly _ value)) =
+toShelleyTxOut :: forall era ledgerera.
+                 (ShelleyLedgerEra era ~ ledgerera,
+                  IsShelleyBasedEra era, Ledger.ShelleyBased ledgerera)
+               => TxOut era -> Shelley.TxOut ledgerera
+toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _)) =
+    case shelleyBasedEra :: ShelleyBasedEra era of {}
+
+toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value)) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
-toShelleyTxOut (TxOut _addr (TxOutValue evidence _)) = case evidence of {}
+
+toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value)) =
+    Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
+
+toShelleyTxOut (TxOut _addr (TxOutValue MultiAssetInMaryEra _value)) =
+    error "toShelleyTxOut: TODO: TxOutValue MultiAssetInMaryEra"
+
+
 
 
 -- ----------------------------------------------------------------------------
