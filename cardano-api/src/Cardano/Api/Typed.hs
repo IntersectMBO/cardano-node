@@ -148,6 +148,8 @@ module Cardano.Api.Typed (
     TxExtraContent(..),
     txExtraContentEmpty,
     Certificate(..),
+    toShelleyCertificate,
+    fromShelleyCertificate,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.

@@ -82,7 +82,9 @@ module Cardano.Api.Shelley
     parseScriptSig,
 
     -- * Certificates
-    Certificate (Certificate),
+    Certificate (..),
+    toShelleyCertificate,
+    fromShelleyCertificate,
 
     -- ** Operational certificates
     OperationalCertificate(OperationalCertificate),

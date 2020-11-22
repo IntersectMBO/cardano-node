@@ -49,6 +49,7 @@ module Cardano.Api.Address (
     toShelleyStakeCredential,
     fromShelleyAddr,
     fromShelleyStakeAddr,
+    fromShelleyStakeCredential,
 
     -- * Serialising addresses
     SerialiseAddress(..),
@@ -534,6 +535,13 @@ fromShelleyAddr (Shelley.Addr nw pc scr) =
 fromShelleyStakeAddr :: Shelley.RewardAcnt ledgerera -> StakeAddress
 fromShelleyStakeAddr (Shelley.RewardAcnt nw sc) =
     StakeAddress nw (coerceShelleyStakeCredential sc)
+
+fromShelleyStakeCredential :: Shelley.StakeCredential StandardShelley
+                           -> StakeCredential
+fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
+    StakeCredentialByKey (StakeKeyHash kh)
+fromShelleyStakeCredential (Shelley.ScriptHashObj kh) =
+    StakeCredentialByScript (ScriptHash kh)
 
 
 -- The era parameter in these types is a phantom type so it is safe to cast.
