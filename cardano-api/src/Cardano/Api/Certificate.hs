@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Certificates embedded in transactions
@@ -51,7 +52,10 @@ import           Network.Socket (PortNumber)
 import           Cardano.Slotting.Slot (EpochNo (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
+import qualified Cardano.Ledger.Era as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+
 import           Shelley.Spec.Ledger.BaseTypes
                    (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
@@ -99,10 +103,10 @@ instance HasTypeProxy Certificate where
     proxyToAsType _ = AsCertificate
 
 instance ToCBOR Certificate where
-    toCBOR = toCBOR . toShelleyCertificate
+    toCBOR = toCBOR . toShelleyCertificate @StandardShelley
 
 instance FromCBOR Certificate where
-    fromCBOR = fromShelleyCertificate <$> fromCBOR
+    fromCBOR = fromShelleyCertificate @StandardShelley <$> fromCBOR
 
 instance HasTextEnvelope Certificate where
     textEnvelopeType _ = "CertificateShelley"
@@ -193,7 +197,8 @@ makeMIRCertificate = MIRCertificate
 -- Internal conversion functions
 --
 
-toShelleyCertificate :: Certificate -> Shelley.DCert StandardShelley
+toShelleyCertificate :: Ledger.Crypto ledgerera ~ StandardCrypto
+                     => Certificate -> Shelley.DCert ledgerera
 toShelleyCertificate (StakeAddressRegistrationCertificate stakecred) =
     Shelley.DCertDeleg $
       Shelley.RegKey
@@ -243,7 +248,8 @@ toShelleyCertificate (MIRCertificate mirpot amounts) =
            | (sc, v) <- amounts ])
 
 
-fromShelleyCertificate :: Shelley.DCert StandardShelley -> Certificate
+fromShelleyCertificate :: Ledger.Crypto ledgerera ~ StandardCrypto
+                       => Shelley.DCert ledgerera -> Certificate
 fromShelleyCertificate (Shelley.DCertDeleg (Shelley.RegKey stakecred)) =
     StakeAddressRegistrationCertificate
       (fromShelleyStakeCredential stakecred)
@@ -281,7 +287,8 @@ fromShelleyCertificate (Shelley.DCertMir (Shelley.MIRCert mirpot amounts)) =
       | (sc, v) <- Map.toList amounts ]
 
 
-toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams StandardShelley
+toShelleyPoolParams :: Ledger.Crypto ledgerera ~ StandardCrypto
+                    => StakePoolParameters -> Shelley.PoolParams ledgerera
 toShelleyPoolParams StakePoolParameters {
                       stakePoolId            = StakePoolKeyHash poolkh
                     , stakePoolVRF           = VrfKeyHash vrfkh
@@ -345,7 +352,8 @@ toShelleyPoolParams StakePoolParameters {
                  . Shelley.textToUrl
 
 
-fromShelleyPoolParams :: Shelley.PoolParams StandardShelley
+fromShelleyPoolParams :: Ledger.Crypto ledgerera ~ StandardCrypto
+                      => Shelley.PoolParams ledgerera
                       -> StakePoolParameters
 fromShelleyPoolParams
     Shelley.PoolParams {
