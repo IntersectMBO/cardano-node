@@ -66,6 +66,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
@@ -216,7 +217,7 @@ data TxBody era where
        -> TxBody ByronEra
 
      ShelleyTxBody
-       :: Shelley.TxBody StandardShelley
+       :: Ledger.TxBody StandardShelley
        -> Maybe Shelley.MetaData
        -> TxBody ShelleyEra
 
