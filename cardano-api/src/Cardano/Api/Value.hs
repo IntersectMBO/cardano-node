@@ -108,8 +108,8 @@ newtype AssetName = AssetName ByteString
   deriving stock (Show)
   deriving newtype (Eq, Ord, IsString)
 
-data AssetId = AssetId !PolicyId !AssetName
-             | AdaAssetId
+data AssetId = AdaAssetId
+             | AssetId !PolicyId !AssetName
   deriving (Eq, Ord, Show)
 
 
