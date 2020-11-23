@@ -209,8 +209,8 @@ toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value)) =
 toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value)) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut _addr (TxOutValue MultiAssetInMaryEra _value)) =
-    error "toShelleyTxOut: TODO: TxOutValue MultiAssetInMaryEra"
+toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value)) =
+    Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
 
 
