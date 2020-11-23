@@ -68,7 +68,7 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
-import qualified Cardano.Ledger.ShelleyMA.TxBody ()
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -444,8 +444,36 @@ makeShelleyTransaction TxExtraContent {
             (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
             (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata))
           (toShelleyMetadata <$> txMetadata)
-      ShelleyBasedEraAllegra -> error "TODO: makeShelleyTransaction AllegraEra"
-      ShelleyBasedEraMary    -> error "TODO: makeShelleyTransaction MaryEra"
+
+      ShelleyBasedEraAllegra ->
+        ShelleyTxBody
+          ShelleyBasedEraAllegra
+          (Allegra.TxBody
+            (Set.fromList (map toShelleyTxIn ins))
+            (Seq.fromList (map toShelleyTxOut outs))
+            (Seq.fromList (map toShelleyCertificate txCertificates))
+            (toShelleyWithdrawal txWithdrawals)
+            (toShelleyLovelace fee)
+            (error "TODO: support validity interval")
+            (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
+            (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata)
+            mempty) -- No minting in Allegra, only Mary
+          (toShelleyMetadata <$> txMetadata)
+
+      ShelleyBasedEraMary ->
+        ShelleyTxBody
+          ShelleyBasedEraMary
+          (Allegra.TxBody
+            (Set.fromList (map toShelleyTxIn ins))
+            (Seq.fromList (map toShelleyTxOut outs))
+            (Seq.fromList (map toShelleyCertificate txCertificates))
+            (toShelleyWithdrawal txWithdrawals)
+            (toShelleyLovelace fee)
+            (error "TODO: makeShelleyTransaction support validity interval")
+            (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
+            (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata)
+            (error "TODO: makeShelleyTransaction support minting"))
+          (toShelleyMetadata <$> txMetadata)
 
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ledgerera
