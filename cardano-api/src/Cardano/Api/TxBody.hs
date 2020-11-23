@@ -19,14 +19,16 @@ module Cardano.Api.TxBody (
     TxId(..),
     getTxId,
 
-    -- * Transaction inputs and outputs
+    -- * Transaction inputs
     TxIn(..),
     TxIx(..),
+    genesisUTxOPseudoTxIn,
+
+    -- * Transaction outputs
     TxOut(..),
     TxOutValue(..),
     AdaOnlyInEra(..),
     MultiAssetInEra(..),
-    genesisUTxOPseudoTxIn,
 
     -- * Transaction bodies
     TxBody(..),
@@ -152,7 +154,7 @@ getTxId (ShelleyTxBody era tx _) =
 
 
 -- ----------------------------------------------------------------------------
--- Transaction inputs and outputs
+-- Transaction inputs
 --
 
 data TxIn = TxIn TxId TxIx
@@ -164,14 +166,27 @@ newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
 
+
+toByronTxIn  :: TxIn -> Byron.TxIn
+toByronTxIn (TxIn txid (TxIx txix)) =
+    Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
+
+toShelleyTxIn  :: (Ledger.Era ledgerera,
+                   Ledger.Crypto ledgerera ~ StandardCrypto)
+               => TxIn -> Shelley.TxIn ledgerera
+toShelleyTxIn (TxIn txid (TxIx txix)) =
+    Shelley.TxIn (toShelleyTxId txid) (fromIntegral txix)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction outputs
+--
+
 data TxOut era = TxOut (AddressInEra era) (TxOutValue era)
 
 deriving instance Eq   (TxOut era)
 deriving instance Show (TxOut era)
 
-toByronTxIn  :: TxIn -> Byron.TxIn
-toByronTxIn (TxIn txid (TxIx txix)) =
-    Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
 toByronTxOut :: TxOut ByronEra -> Maybe Byron.TxOut
 toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
@@ -184,17 +199,6 @@ toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
 toByronTxOut (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
                     _) = case era of {}
 
-toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
-toByronLovelace (Lovelace x) =
-    case Byron.integerToLovelace x of
-      Left  _  -> Nothing
-      Right x' -> Just x'
-
-toShelleyTxIn  :: (Ledger.Era ledgerera,
-                   Ledger.Crypto ledgerera ~ StandardCrypto)
-               => TxIn -> Shelley.TxIn ledgerera
-toShelleyTxIn (TxIn txid (TxIx txix)) =
-    Shelley.TxIn (toShelleyTxId txid) (fromIntegral txix)
 
 toShelleyTxOut :: forall era ledgerera.
                  (ShelleyLedgerEra era ~ ledgerera,
@@ -211,8 +215,6 @@ toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value)) =
 
 toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value)) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
-
-
 
 
 -- ----------------------------------------------------------------------------
@@ -483,6 +485,10 @@ toShelleyWithdrawal withdrawals =
         [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
         | (stakeAddr, value) <- withdrawals ]
 
+
+-- ----------------------------------------------------------------------------
+-- Other utilities helpful with making transaction bodies
+--
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
 -- to the given address in the genesis initial funds.

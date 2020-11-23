@@ -34,6 +34,7 @@ module Cardano.Api.Value
   , MultiAssetInEra(..)
 
     -- * Internal conversion functions
+  , toByronLovelace
   , toShelleyLovelace
   , fromShelleyLovelace
   , toMaryValue
@@ -47,6 +48,8 @@ import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
+
+import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Shelley.Spec.Ledger.Coin as Shelley
@@ -71,6 +74,13 @@ instance Semigroup Lovelace where
 
 instance Monoid Lovelace where
   mempty = Lovelace 0
+
+
+toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
+toByronLovelace (Lovelace x) =
+    case Byron.integerToLovelace x of
+      Left  _  -> Nothing
+      Right x' -> Just x'
 
 toShelleyLovelace :: Lovelace -> Shelley.Coin
 toShelleyLovelace (Lovelace l) = Shelley.Coin l
