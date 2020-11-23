@@ -68,8 +68,6 @@ import qualified Data.ByteString.Base58 as Base58
 
 import           Control.Applicative
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Era as Ledger
@@ -79,7 +77,6 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Credential as Shelley
-import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
@@ -506,16 +503,16 @@ toShelleyPaymentCredential :: Ledger.Crypto ledgerera ~ StandardCrypto
                            -> Shelley.PaymentCredential ledgerera
 toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
     Shelley.KeyHashObj kh
-toShelleyPaymentCredential (PaymentCredentialByScript (ScriptHash sh)) =
-    Shelley.ScriptHashObj (coerceShelleyScriptHash sh)
+toShelleyPaymentCredential (PaymentCredentialByScript sh) =
+    Shelley.ScriptHashObj (toShelleyScriptHash sh)
 
 toShelleyStakeCredential :: Ledger.Crypto ledgerera ~ StandardCrypto
                          => StakeCredential
                          -> Shelley.StakeCredential ledgerera
 toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
     Shelley.KeyHashObj kh
-toShelleyStakeCredential (StakeCredentialByScript (ScriptHash kh)) =
-    Shelley.ScriptHashObj (coerceShelleyScriptHash kh)
+toShelleyStakeCredential (StakeCredentialByScript sh) =
+    Shelley.ScriptHashObj (toShelleyScriptHash sh)
 
 toShelleyStakeReference :: Ledger.Crypto ledgerera ~ StandardCrypto
                         => StakeAddressReference
@@ -550,8 +547,8 @@ fromShelleyStakeCredential :: Ledger.Crypto ledgerera ~ StandardCrypto
                            -> StakeCredential
 fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
     StakeCredentialByKey (StakeKeyHash kh)
-fromShelleyStakeCredential (Shelley.ScriptHashObj kh) =
-    StakeCredentialByScript (ScriptHash (coerceShelleyScriptHash kh))
+fromShelleyStakeCredential (Shelley.ScriptHashObj sh) =
+    StakeCredentialByScript (fromShelleyScriptHash sh)
 
 
 -- The era parameter in these types is a phantom type so it is safe to cast.
@@ -569,10 +566,4 @@ coerceShelleyStakeCredential = coerce
 coerceShelleyStakeReference :: Shelley.StakeReference eraA
                             -> Shelley.StakeReference eraB
 coerceShelleyStakeReference = coerce
-
-coerceShelleyScriptHash :: Ledger.Crypto eraA ~ Ledger.Crypto eraB
-                        => Shelley.ScriptHash eraA
-                        -> Shelley.ScriptHash eraB
-coerceShelleyScriptHash (Shelley.ScriptHash h) =
-    Shelley.ScriptHash (Crypto.castHash h)
 

@@ -34,6 +34,10 @@ module Cardano.Api.Script (
   , MultiSigScript
   , makeMultiSigScript
 
+    -- * Internal conversion functions
+  , toShelleyScriptHash
+  , fromShelleyScriptHash
+
     -- * Data family instances
   , AsType(..)
   ) where
@@ -191,6 +195,21 @@ scriptHash (MaryScript s)    = ScriptHash
                              . (\(Shelley.ScriptHash sh) ->
                                    Shelley.ScriptHash (Crypto.castHash sh))
                              $ Timelock.hashTimelockScript s
+
+toShelleyScriptHash :: Ledger.Crypto ledgerera ~ StandardCrypto
+                    => ScriptHash -> Shelley.ScriptHash ledgerera
+toShelleyScriptHash (ScriptHash h) = coerceShelleyScriptHash h
+
+fromShelleyScriptHash :: Ledger.Crypto ledgerera ~ StandardCrypto
+                      => Shelley.ScriptHash ledgerera -> ScriptHash
+fromShelleyScriptHash = ScriptHash . coerceShelleyScriptHash
+
+coerceShelleyScriptHash :: Ledger.Crypto ledgereraA ~ Ledger.Crypto ledgereraB
+                        => Shelley.ScriptHash ledgereraA
+                        -> Shelley.ScriptHash ledgereraB
+coerceShelleyScriptHash (Shelley.ScriptHash h) =
+    Shelley.ScriptHash (Crypto.castHash h)
+
 
 
 -- ----------------------------------------------------------------------------
