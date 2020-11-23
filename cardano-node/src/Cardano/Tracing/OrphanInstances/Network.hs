@@ -394,7 +394,13 @@ instance ( ConvertTxId blk
          , HasTxs blk
          )
       => ToObject (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
-  toObject MaximalVerbosity (AnyMessageAndAgency _ (MsgBlock blk)) =
+  toObject MinimalVerbosity (AnyMessageAndAgency _ (MsgBlock blk)) =
+    mkObject [ "kind" .= String "MsgBlock"
+             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             ]
+
+  toObject verb (AnyMessageAndAgency _ (MsgBlock blk)) =
     mkObject [ "kind" .= String "MsgBlock"
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
@@ -402,13 +408,8 @@ instance ( ConvertTxId blk
              ]
       where
         presentTx :: GenTx blk -> Value
-        presentTx =  String . renderTxIdForVerbosity MaximalVerbosity . txId
+        presentTx =  String . renderTxIdForVerbosity verb . txId
 
-  toObject _v (AnyMessageAndAgency _ (MsgBlock blk)) =
-    mkObject [ "kind" .= String "MsgBlock"
-             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             ]
   toObject _v (AnyMessageAndAgency _ MsgRequestRange{}) =
     mkObject [ "kind" .= String "MsgRequestRange" ]
   toObject _v (AnyMessageAndAgency _ MsgStartBatch{}) =
