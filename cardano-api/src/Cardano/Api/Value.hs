@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 -- | Currency values
@@ -35,6 +36,8 @@ module Cardano.Api.Value
     -- * Internal conversion functions
   , toShelleyLovelace
   , fromShelleyLovelace
+  , toMaryValue
+  , fromMaryValue
   ) where
 
 import           Prelude
@@ -45,7 +48,11 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Shelley.Spec.Ledger.Coin as Shelley
+import qualified Cardano.Ledger.Mary.Value as Mary
+
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Script
@@ -160,6 +167,44 @@ selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 
 lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
+
+
+toMaryValue :: forall ledgerera.
+               Ledger.Crypto ledgerera ~ StandardCrypto
+            => Value -> Mary.Value ledgerera
+toMaryValue v =
+    Mary.Value lovelace other
+  where
+    Quantity lovelace = selectAsset v AdaAssetId
+      --TODO: write QC tests to show it's ok to use Map.fromAscListWith here
+    other = Map.fromListWith Map.union
+              [ (toMaryPolicyID pid, Map.singleton (toMaryAssetName name) q)
+              | (AssetId pid name, Quantity q) <- valueToList v ]
+
+    toMaryPolicyID :: PolicyId -> Mary.PolicyID ledgerera
+    toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
+
+    toMaryAssetName :: AssetName -> Mary.AssetName
+    toMaryAssetName (AssetName n) = Mary.AssetName n
+
+
+fromMaryValue :: forall ledgerera.
+                 Ledger.Crypto ledgerera ~ StandardCrypto
+              => Mary.Value ledgerera -> Value
+fromMaryValue (Mary.Value lovelace other) =
+    Value $
+      --TODO: write QC tests to show it's ok to use Map.fromAscList here
+      Map.fromList $
+        [ (AdaAssetId, Quantity lovelace) | lovelace /= 0 ]
+     ++ [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
+        | (pid, as) <- Map.toList other
+        , (name, q) <- Map.toList as ]
+  where
+    fromMaryPolicyID :: Mary.PolicyID ledgerera -> PolicyId
+    fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
+
+    fromMaryAssetName :: Mary.AssetName -> AssetName
+    fromMaryAssetName (Mary.AssetName n) = AssetName n
 
 
 -- ----------------------------------------------------------------------------
