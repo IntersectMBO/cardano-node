@@ -15,6 +15,11 @@
 --
 module Cardano.Api.TxBody (
 
+    -- * Transaction bodies
+    TxBody(..),
+    makeByronTransaction,
+    makeShelleyTransaction,
+
     -- * Transaction Ids
     TxId(..),
     getTxId,
@@ -27,18 +32,17 @@ module Cardano.Api.TxBody (
     -- * Transaction outputs
     TxOut(..),
     TxOutValue(..),
-    AdaOnlyInEra(..),
-    MultiAssetInEra(..),
 
-    -- * Transaction bodies
-    TxBody(..),
+    -- * Other transaction body types
     TTL,
     TxFee,
     MintValue(..),
-    makeByronTransaction,
-    makeShelleyTransaction,
     TxExtraContent(..),
     txExtraContentEmpty,
+
+    -- * Era-dependent transaction body features
+    AdaOnlyInEra(..),
+    MultiAssetInEra(..),
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody),
@@ -215,6 +219,62 @@ toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value)) =
 
 toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value)) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
+
+
+-- ----------------------------------------------------------------------------
+-- Era-dependent transaction body features
+--
+
+-- | Representation of whether only ada transactions are supported in a
+-- particular era.
+--
+data AdaOnlyInEra era where
+
+     AdaOnlyInByronEra   :: AdaOnlyInEra ByronEra
+     AdaOnlyInShelleyEra :: AdaOnlyInEra ShelleyEra
+     AdaOnlyInAllegraEra :: AdaOnlyInEra AllegraEra
+
+deriving instance Eq   (AdaOnlyInEra era)
+deriving instance Show (AdaOnlyInEra era)
+
+-- | Representation of whether multi-asset transactions are supported in a
+-- particular era.
+--
+data MultiAssetInEra era where
+
+     -- | Multi-asset transactions are supported in the 'Mary' era.
+     MultiAssetInMaryEra :: MultiAssetInEra MaryEra
+
+deriving instance Eq   (MultiAssetInEra era)
+deriving instance Show (MultiAssetInEra era)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction output values (era-dependent)
+--
+
+data TxOutValue era where
+
+     TxOutAdaOnly :: AdaOnlyInEra era -> Lovelace -> TxOutValue era
+
+     TxOutValue   :: MultiAssetInEra era -> Value -> TxOutValue era
+
+deriving instance Eq   (TxOutValue era)
+deriving instance Show (TxOutValue era)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction value minting (era-dependent)
+--
+
+data MintValue era where
+
+     MintNothing :: MintValue era
+
+     MintValue   :: MultiAssetInEra era -> Value -> MintValue era
+
+deriving instance Eq   (MintValue era)
+deriving instance Show (MintValue era)
 
 
 -- ----------------------------------------------------------------------------

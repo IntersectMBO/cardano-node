@@ -27,12 +27,6 @@ module Cardano.Api.Value
   , selectLovelace
   , lovelaceToValue
 
-    -- * Era-dependent use of multi-assert values
-  , MintValue(..)
-  , TxOutValue(..)
-  , AdaOnlyInEra(..)
-  , MultiAssetInEra(..)
-
     -- * Internal conversion functions
   , toByronLovelace
   , toShelleyLovelace
@@ -57,7 +51,6 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
-import           Cardano.Api.Eras
 import           Cardano.Api.Script
 
 
@@ -215,52 +208,4 @@ fromMaryValue (Mary.Value lovelace other) =
 
     fromMaryAssetName :: Mary.AssetName -> AssetName
     fromMaryAssetName (Mary.AssetName n) = AssetName n
-
-
--- ----------------------------------------------------------------------------
--- Era-dependent use of multi-assert values
---
-
-data MintValue era where
-
-     MintNothing :: MintValue era
-
-     MintValue   :: MultiAssetInEra era -> Value -> MintValue era
-
-deriving instance Eq   (MintValue era)
-deriving instance Show (MintValue era)
-
-
-data TxOutValue era where
-
-     TxOutAdaOnly :: AdaOnlyInEra era -> Lovelace -> TxOutValue era
-
-     TxOutValue   :: MultiAssetInEra era -> Value -> TxOutValue era
-
-deriving instance Eq   (TxOutValue era)
-deriving instance Show (TxOutValue era)
-
-
--- | Representation of whether only ada transactions are supported in a
--- particular era.
---
-data AdaOnlyInEra era where
-
-     AdaOnlyInByronEra   :: AdaOnlyInEra ByronEra
-     AdaOnlyInShelleyEra :: AdaOnlyInEra ShelleyEra
-     AdaOnlyInAllegraEra :: AdaOnlyInEra AllegraEra
-
-deriving instance Eq   (AdaOnlyInEra era)
-deriving instance Show (AdaOnlyInEra era)
-
--- | Representation of whether multi-asset transactions are supported in a
--- particular era.
---
-data MultiAssetInEra era where
-
-     -- | Multi-asset transactions are supported in the 'Mary' era.
-     MultiAssetInMaryEra :: MultiAssetInEra MaryEra
-
-deriving instance Eq   (MultiAssetInEra era)
-deriving instance Show (MultiAssetInEra era)
 
