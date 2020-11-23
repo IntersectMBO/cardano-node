@@ -36,11 +36,13 @@ import qualified Cardano.Chain.Genesis as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Conversions as Byron
 
 -- Shelley
-import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
+import           Ouroboros.Consensus.Shelley.Ledger (shelleyLedgerGenesis)
 import qualified Shelley.Spec.Ledger.API as SL
 
 -- Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
+import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
+import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as CanHardFork
 
 import           Cardano.Tracing.Kernel
@@ -68,26 +70,11 @@ answerQueryWithLedgerState
 answerQueryWithLedgerState protocol extLedgerState query = runIdentity $
     case protocol of
       Consensus.ProtocolByron {} ->
-        let DegenLedgerConfig ledgerConfig = configLedger cfg
-            genesis = CanHardFork.byronLedgerConfig ledgerConfig
-            epochSize = Byron.fromByronEpochSlots $ Byron.configEpochSlots genesis
-            slotLength = Byron.fromByronSlotLength $ Byron.genesisSlotLength genesis
-        in HF.singleEraCompatQuery
-             epochSize
-             slotLength
-             answerQueryHelper
-             query
+        byronQuery
       Consensus.ProtocolShelley {} ->
-        let DegenLedgerConfig ledgerConfig = configLedger cfg
-            genesis = shelleyLedgerGenesis $
-                        CanHardFork.shelleyLedgerConfig ledgerConfig
-            epochSize = SL.sgEpochLength genesis
-            slotLength = WCT.mkSlotLength $ SL.sgSlotLength genesis
-        in HF.singleEraCompatQuery
-             epochSize
-             slotLength
-             answerQueryHelper
-             query
+        shelleyBasedQuery
+      Consensus.ProtocolMary {} ->
+        shelleyBasedQuery
       Consensus.ProtocolCardano {} ->
         HF.forwardCompatQuery
           answerQueryHelper
@@ -102,6 +89,33 @@ answerQueryWithLedgerState protocol extLedgerState query = runIdentity $
       -> m result'
     answerQueryHelper q = pure $
       Consensus.answerQuery (ExtLedgerCfg cfg) q extLedgerState
+
+    byronQuery :: blk ~ ByronBlockHFC => Identity result
+    byronQuery =
+        HF.singleEraCompatQuery
+          epochSize
+          slotLength
+          answerQueryHelper
+          query
+      where
+        DegenLedgerConfig ledgerConfig = configLedger cfg
+        genesis = CanHardFork.byronLedgerConfig ledgerConfig
+        epochSize = Byron.fromByronEpochSlots $ Byron.configEpochSlots genesis
+        slotLength = Byron.fromByronSlotLength $ Byron.genesisSlotLength genesis
+
+    shelleyBasedQuery :: blk ~ ShelleyBlockHFC era => Identity result
+    shelleyBasedQuery =
+        HF.singleEraCompatQuery
+          epochSize
+          slotLength
+          answerQueryHelper
+          query
+      where
+        DegenLedgerConfig ledgerConfig = configLedger cfg
+        genesis = shelleyLedgerGenesis $
+                    CanHardFork.shelleyLedgerConfig ledgerConfig
+        epochSize = SL.sgEpochLength genesis
+        slotLength = WCT.mkSlotLength $ SL.sgSlotLength genesis
 
 -- | To avoid confusing 'HFI.Qry' with 'HF.Query' and 'HF.HardForkCompatQuery,
 -- we introduce a type synonym for the former which we can use in docstrings

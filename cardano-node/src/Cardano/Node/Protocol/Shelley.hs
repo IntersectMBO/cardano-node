@@ -36,9 +36,9 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
-import           Ouroboros.Consensus.Shelley.Node (Nonce (..),
-                     ProtocolParamsShelley (..), ShelleyGenesis, TPraosLeaderCredentials (..))
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..), StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
+                     ProtocolParamsShelleyBased (..), ShelleyGenesis, TPraosLeaderCredentials (..))
+import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto, TPraosCanBeLeader (..))
 
 import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
                      validateGenesis)
@@ -101,16 +101,18 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     firstExceptT GenesisValidationFailure . hoistEither $ validateGenesis genesis
     optionalLeaderCredentials <- readLeaderCredentials files
 
-    return $
-      Consensus.ProtocolShelley $ Consensus.ProtocolParamsShelley {
-        shelleyGenesis = genesis,
-        shelleyInitialNonce = genesisHashToPraosNonce genesisHash,
+    return $ Consensus.ProtocolShelley
+      Consensus.ProtocolParamsShelleyBased {
+        shelleyBasedGenesis = genesis,
+        shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,
+        shelleyBasedLeaderCredentials =
+          maybeToList optionalLeaderCredentials
+      }
+      Consensus.ProtocolParamsShelley {
         shelleyProtVer =
           ProtVer
             npcShelleySupportedProtocolVersionMajor
-            npcShelleySupportedProtocolVersionMinor,
-        shelleyLeaderCredentials =
-          maybeToList optionalLeaderCredentials
+            npcShelleySupportedProtocolVersionMinor
       }
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce

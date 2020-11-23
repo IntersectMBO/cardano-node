@@ -4,6 +4,7 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -77,10 +78,13 @@ instance HasKESMetricsData ByronBlock where
 
 instance All HasKESMetricsData xs => HasKESMetricsData (HardForkBlock xs) where
   getKESMetricsData _ forgeStateInfo =
-        hcollapse
-      . hcmap (Proxy @HasKESMetricsData) getOne
-      . getOneEraForgeStateInfo
-      $ forgeStateInfo
+      case forgeStateInfo of
+        CurrentEraLacksBlockForging _ -> NoKESMetricsData
+        CurrentEraForgeStateUpdated currentEraForgeStateInfo ->
+            hcollapse
+          . hcmap (Proxy @HasKESMetricsData) getOne
+          . getOneEraForgeStateInfo
+          $ currentEraForgeStateInfo
     where
       getOne :: forall blk. HasKESMetricsData blk
              => WrapForgeStateInfo blk
