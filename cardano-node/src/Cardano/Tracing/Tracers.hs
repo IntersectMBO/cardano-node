@@ -39,7 +39,7 @@ import qualified Network.Socket as Socket (SockAddr)
 import           Control.Tracer
 import           Control.Tracer.Transformers
 
-import           Cardano.Slotting.Slot (EpochNo (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName)
@@ -461,8 +461,12 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr bcCounters
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
-        Tracer $ \(Consensus.TraceLabelCreds _ ev) -> do
-          traceWith (forgeTracer verb tr forgeTracers nodeKern bcCounters) ev
+        Tracer $ \tlcev@(Consensus.TraceLabelCreds _ ev) -> do
+          traceWith (annotateSeverity
+                     $ traceLeadershipChecks forgeTracers nodeKern verb
+                     $ appendName "LeadershipCheck" tr) tlcev
+          traceWith (forgeTracer verb tr forgeTracers fStats) tlcev
+          -- Don't track credentials in ForgeTime.
           traceWith (blockForgeOutcomeExtractor
                     $ toLogObject' verb
                     $ appendName "ForgeTime" tr) ev
@@ -492,10 +496,44 @@ mkConsensusTracers trSel verb tr nodeKern bcCounters = do
        <*> counting (liftCounting staticMeta name "slot-is-immutable" tr)
        <*> counting (liftCounting staticMeta name "node-is-leader" tr)
 
-teeForge ::
+traceLeadershipChecks ::
   forall blk
   . ( Consensus.RunNode blk
      , LedgerQueries blk
+     )
+  => ForgeTracers
+  -> NodeKernelData blk
+  -> TracingVerbosity
+  -> Trace IO Text
+  -> Tracer IO (WithSeverity (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk)))
+traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
+  \(WithSeverity sev (Consensus.TraceLabelCreds creds event)) ->
+    case event of
+      Consensus.TraceStartLeadershipCheck slot -> do
+        !query <- mapNodeKernelDataIO
+                    (\nk ->
+                       (,) <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
+                           <*> nkQueryChain fragmentChainDensity nk)
+                    nodeKern
+        meta <- mkLOMeta sev Public
+        traceNamedObject tr
+          ( meta
+          , LogStructured $ Map.fromList $
+            [("kind", String "TraceStartLeadershipCheck")
+            ,("credentials", String creds)
+            ,("slot", toJSON $ unSlotNo slot)]
+            ++ fromSMaybe []
+               (query <&>
+                 \(utxoSize, chainDensity) ->
+                   [ ("utxoSize",     toJSON utxoSize)
+                   , ("chainDensity", toJSON (fromRational chainDensity :: Float))
+                   ])
+          )
+      _ -> pure ()
+
+teeForge ::
+  forall blk
+  . ( Consensus.RunNode blk
      , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
@@ -503,12 +541,12 @@ teeForge ::
      , ToObject (ForgeStateUpdateError blk)
      )
   => ForgeTracers
-  -> NodeKernelData blk
   -> TracingVerbosity
   -> Trace IO Text
-  -> Tracer IO (WithSeverity (Consensus.TraceForgeEvent blk))
-teeForge ft nodeKern tverb tr = Tracer $ \ev@(WithSeverity sev event) -> do
-  flip traceWith ev $ fanning $ \(WithSeverity _ e) ->
+  -> Tracer IO (WithSeverity (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk)))
+teeForge ft tverb tr = Tracer $
+ \ev@(WithSeverity sev (Consensus.TraceLabelCreds _creds event)) -> do
+  flip traceWith (WithSeverity sev event) $ fanning $ \(WithSeverity _ e) ->
     case e of
       Consensus.TraceStartLeadershipCheck{} -> teeForge' (ftForgeAboutToLead ft)
       Consensus.TraceSlotIsImmutable{} -> teeForge' (ftTraceSlotIsImmutable ft)
@@ -527,22 +565,8 @@ teeForge ft nodeKern tverb tr = Tracer $ \ev@(WithSeverity sev event) -> do
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
       Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
   case event of
-    Consensus.TraceStartLeadershipCheck slot -> do
-      !utxoSize <- mapNodeKernelDataIO nkUtxoSize nodeKern
-      meta <- mkLOMeta sev Public
-      traceNamedObject tr
-        ( meta
-        , LogStructured $ Map.fromList $
-          [("kind", String "TraceStartLeadershipCheck")
-          ,("slot", toJSON $ unSlotNo slot)]
-          ++ fromSMaybe [] ((:[]) . ("utxoSize",) . toJSON <$> utxoSize))
+    Consensus.TraceStartLeadershipCheck _slot -> pure ()
     _ -> traceWith (toLogObject' tverb tr) ev
- where
-   nkUtxoSize
-     :: NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO Int
-   nkUtxoSize NodeKernel{getChainDB} =
-     atomically (ChainDB.getCurrentLedger getChainDB)
-     <&> ledgerUtxoSize . ledgerState
 
 teeForge'
   :: Trace IO Text
@@ -728,8 +752,9 @@ forgeStateInfoMetricsTraceTransformer
   :: forall a blk. HasKESMetricsData blk
   => Proxy blk
   -> Trace IO a
-  -> Tracer IO (ForgeStateInfo blk)
-forgeStateInfoMetricsTraceTransformer p tr = Tracer $ \forgeStateInfo -> do
+  -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
+forgeStateInfoMetricsTraceTransformer p tr = Tracer $
+  \(Consensus.TraceLabelCreds _ forgeStateInfo) -> do
     case getKESMetricsData p forgeStateInfo of
       NoKESMetricsData -> pure ()
       TPraosKESMetricsData kesPeriodOfKey
@@ -792,13 +817,13 @@ forgeStateInfoTracer
   => Proxy blk
   -> TraceSelection
   -> Trace IO Text
-  -> Tracer IO (ForgeStateInfo blk)
+  -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
 forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
     let tr = appendName "Forge" tracer
     traceWith (forgeStateInfoMetricsTraceTransformer p tr) ev
     traceWith (fsTracer tr) ev
   where
-    fsTracer :: Trace IO Text -> Tracer IO (ForgeStateInfo blk)
+    fsTracer :: Trace IO Text -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
     fsTracer tr = showTracing $ contramap Text.pack $ toLogObject tr
 
 --------------------------------------------------------------------------------
