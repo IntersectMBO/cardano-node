@@ -35,7 +35,7 @@ parseClientCommand :: Parser ClientCommand
 parseClientCommand =
   asum
     [ parseByron <|> backwardsCompatibilityCommands
-    , parseShelley
+    , parseShelley <|> parseDeprecatedShelleySubcommand
     , parseDisplayVersion
     ]
 
@@ -51,15 +51,25 @@ parseByron =
          parseByronCommands
     ]
 
+-- | Parse Shelley-related commands at the top level of the CLI.
 parseShelley :: Parser ClientCommand
-parseShelley =
+parseShelley = ShelleyCommand <$> parseShelleyCommands
+
+-- | Parse Shelley-related commands under the now-deprecated \"shelley\"
+-- subcommand.
+--
+-- Note that this subcommand is 'internal' and is therefore hidden from the
+-- help text.
+parseDeprecatedShelleySubcommand :: Parser ClientCommand
+parseDeprecatedShelleySubcommand =
   subparser $ mconcat
-    [ commandGroup "Shelley specific commands"
+    [ commandGroup "Shelley specific commands (deprecated)"
     , metavar "Shelley specific commands"
     , command'
         "shelley"
-        "Shelley specific commands"
-        (ShelleyCommand <$> parseShelleyCommands)
+        "Shelley specific commands (deprecated)"
+        (DeprecatedShelleySubcommand <$> parseShelleyCommands)
+    , internal
     ]
 
 -- Yes! A --version flag or version command. Either guess is right!

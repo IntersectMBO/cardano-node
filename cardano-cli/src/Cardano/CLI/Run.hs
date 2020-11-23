@@ -11,6 +11,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
@@ -33,6 +34,10 @@ data ClientCommand =
     -- | Shelley Related Commands
   | ShelleyCommand ShelleyCommand
 
+    -- | Shelley-related commands that have been parsed under the
+    -- now-deprecated \"shelley\" subcommand.
+  | DeprecatedShelleySubcommand ShelleyCommand
+
   | DisplayVersion
   deriving Show
 
@@ -45,6 +50,10 @@ data ClientCommandErrors
 runClientCommand :: ClientCommand -> ExceptT ClientCommandErrors IO ()
 runClientCommand (ByronCommand c) = firstExceptT ByronClientError $ runByronClientCommand c
 runClientCommand (ShelleyCommand c) = firstExceptT (ShelleyClientError c) $ runShelleyClientCommand c
+runClientCommand (DeprecatedShelleySubcommand c) =
+  firstExceptT (ShelleyClientError c)
+    $ runShelleyClientCommandWithDeprecationWarning
+    $ runShelleyClientCommand c
 runClientCommand DisplayVersion = runDisplayVersion
 
 renderClientCommandError :: ClientCommandErrors -> Text
@@ -52,6 +61,26 @@ renderClientCommandError (ByronClientError err) =
   renderByronClientCmdError err
 renderClientCommandError (ShelleyClientError cmd err) =
   renderShelleyClientCmdError cmd err
+
+-- | Combine an 'ExceptT' that will write a warning message to @stderr@ with
+-- the provided 'ExceptT'.
+ioExceptTWithWarning :: MonadIO m => Text -> ExceptT e m () -> ExceptT e m ()
+ioExceptTWithWarning warningMsg e =
+  liftIO (Text.hPutStrLn stderr warningMsg) >> e
+
+-- | Used in the event that Shelley-related commands are run using the
+-- now-deprecated \"shelley\" subcommand.
+runShelleyClientCommandWithDeprecationWarning
+  :: MonadIO m
+  => ExceptT e m ()
+  -> ExceptT e m ()
+runShelleyClientCommandWithDeprecationWarning =
+    ioExceptTWithWarning warningMsg
+  where
+    warningMsg :: Text
+    warningMsg =
+      "WARNING: The \"shelley\" subcommand is now deprecated and will be "
+        <> "removed in the future. Please use the top-level commands instead."
 
 runDisplayVersion :: ExceptT ClientCommandErrors IO ()
 runDisplayVersion = do
