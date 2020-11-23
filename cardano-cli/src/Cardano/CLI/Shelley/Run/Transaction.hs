@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
@@ -39,9 +40,9 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAn
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
-import           Cardano.Api.Typed as Api
 import           Cardano.Api.Protocol
 import           Cardano.Api.TxSubmit as Api
+import           Cardano.Api.Typed as Api
 
 data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
@@ -127,7 +128,7 @@ runTransactionCmd cmd =
 runTxBuildRaw
   :: UseCardanoEra
   -> [Api.TxIn]
-  -> [Api.TxOut Api.ShelleyEra]
+  -> [Api.TxOut ShelleyEra]
   -> SlotNo
   -> Api.Lovelace
   -> [CertificateFile]
@@ -137,12 +138,11 @@ runTxBuildRaw
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw _useEra txins txouts ttl fee
+runTxBuildRaw useEra txins txouts ttl fee
               certFiles withdrawals
               metadataSchema metadataFiles
               mUpdatePropFile
               (TxBodyFile fpath) = do
-
     certs <- sequence
                [ firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
                    Api.readFileTextEnvelope Api.AsCertificate certFile
@@ -162,21 +162,26 @@ runTxBuildRaw _useEra txins txouts ttl fee
           fmap Just <$> firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT $
             Api.readFileTextEnvelope Api.AsUpdateProposal file
 
-    --TODO: update to new API
-    let Right txBody =
-          Api.makeShelleyTransaction
-            txins
-            txouts
-            ttl
-            fee
-            certs
-            withdrawals
-            mMetaData
-            mUpdateProp
+    let Right txBody = Api.makeShelleyTransaction
+                         txins
+                         txouts
+                         ttl
+                         fee
+                         certs
+                         withdrawals
+                         mMetaData
+                         mUpdateProp
 
-    firstExceptT ShelleyTxCmdWriteFileError
-      . newExceptT
-      $ Api.writeFileTextEnvelope fpath Nothing txBody
+        writeTxBody = firstExceptT ShelleyTxCmdWriteFileError
+                        . newExceptT
+                        $ Api.writeFileTextEnvelope fpath Nothing txBody
+
+    withCardanoEra useEra $ \ _era _eraStyle ->
+      case useEra of
+        UseByronEra -> liftIO $ putTextLn "Not implemented yet"
+        UseShelleyEra -> writeTxBody
+        UseAllegraEra -> writeTxBody
+        UseMaryEra -> writeTxBody
 
 
 runTxSign :: UseCardanoEra
@@ -185,27 +190,34 @@ runTxSign :: UseCardanoEra
           -> Maybe Api.NetworkId
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
-runTxSign _useEra (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
+runTxSign useEra (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
   txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
               Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
   sks    <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError $
-              mapM readWitnessSigningData witSigningData
+              mapM (readWitnessSigningData useEra) witSigningData
 
-  let (sksByron, sksShelley, scsShelley) = partitionSomeWitnesses $ map categoriseSomeWitness sks
+  let (sksByron, sksShelley, scsShelley, _scWitAllegra, _scWitMary) = partitionSomeWitnesses $ map (categoriseSomeWitness UseShelleyEra) sks
 
-  -- Byron witnesses require the network ID. This can either be provided
-  -- directly or derived from a provided Byron address.
-  byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
-    . hoistEither
-    $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+  withCardanoEra useEra $ \_era _eraStyle ->
+    case useEra of
+      UseByronEra -> liftIO $ putTextLn "Not implemented yet"
+      UseShelleyEra -> do
 
-  let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness txbody) sksShelley
-      shelleyScriptWitnesses = map (makeScriptWitness . makeMultiSigScript) scsShelley
-      shelleyWitnesses = shelleyKeyWitnesses ++ shelleyScriptWitnesses
-      tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
+        -- Byron witnesses require the network ID. This can either be provided
+        -- directly or derived from a provided Byron address.
+        byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
+          . hoistEither
+          $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+        let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness txbody) sksShelley
+            shelleyScriptWitnesses = map (makeScriptWitness . makeMultiSigScript) scsShelley
+            shelleyWitnesses = shelleyKeyWitnesses ++ shelleyScriptWitnesses
+            tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
 
-  firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-    Api.writeFileTextEnvelope txFile Nothing tx
+        firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+          Api.writeFileTextEnvelope txFile Nothing tx
+      UseAllegraEra -> liftIO $ putTextLn "Not implemented yet"
+      UseMaryEra -> liftIO $ putTextLn "Not implemented yet"
+
 
 runTxSubmit :: Protocol -> NetworkId -> FilePath
             -> ExceptT ShelleyTxCmdError IO ()
@@ -319,7 +331,9 @@ data SomeWitness
   | AGenesisDelegateExtendedSigningKey
                                (Api.SigningKey Api.GenesisDelegateExtendedKey)
   | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
-  | AShelleyMultiSigScript     (Api.MultiSigScript ShelleyEra)
+  | AAllegraSimpleScript       (Api.SimpleScript AllegraEra)
+  | AMarySimpleScript          (Api.SimpleScript MaryEra)
+  | AShelleyMultiSigScript     (Api.SimpleScript ShelleyEra)
 
 -- | Error deserialising a JSON-encoded script.
 newtype ScriptJsonDecodeError = ScriptJsonDecodeError String
@@ -334,6 +348,8 @@ data ReadWitnessSigningDataError
   | ReadWitnessSigningDataScriptError !(FileError ScriptJsonDecodeError)
   | ReadWitnessSigningDataSigningKeyAndAddressMismatch
   -- ^ A Byron address was specified alongside a non-Byron signing key.
+  | ReadWitnessSigningDataNoByronScripts !FilePath
+  -- ^ A Byron script was specified (there are no scripts in the Byron era)
   deriving Show
 
 -- | Render an error message for a 'ReadWitnessSigningDataError'.
@@ -346,20 +362,33 @@ renderReadWitnessSigningDataError err =
       "Error reading script: " <> Text.pack (displayError fileErr)
     ReadWitnessSigningDataSigningKeyAndAddressMismatch ->
       "Only a Byron signing key may be accompanied by a Byron address."
+    ReadWitnessSigningDataNoByronScripts fp ->
+      "Scripts do not exist in the Byron era: " <> Text.pack fp
 
 readWitnessSigningData
-  :: WitnessSigningData
+  :: UseCardanoEra
+  -> WitnessSigningData
   -> ExceptT ReadWitnessSigningDataError IO SomeWitness
-readWitnessSigningData (ScriptWitnessSigningData (ScriptFile fp)) = do
+readWitnessSigningData useEra (ScriptWitnessSigningData (ScriptFile fp)) = do
   msJson <- handleIOExceptT (ReadWitnessSigningDataScriptError . FileIOError fp)
     $ LBS.readFile fp
+  withCardanoEra useEra $ \_era _eraStyle ->
+    case useEra of
+      UseByronEra -> left $ ReadWitnessSigningDataNoByronScripts fp
+      UseShelleyEra ->
+        AShelleyMultiSigScript
+          <$> (firstExceptT (ReadWitnessSigningDataScriptError . FileError fp . ScriptJsonDecodeError) $ hoistEither $ decodeScript msJson)
+      UseAllegraEra ->
+        AAllegraSimpleScript
+          <$> (firstExceptT (ReadWitnessSigningDataScriptError . FileError fp . ScriptJsonDecodeError) $ hoistEither $ decodeScript msJson)
+      UseMaryEra ->
+        AMarySimpleScript
+          <$> (firstExceptT (ReadWitnessSigningDataScriptError . FileError fp . ScriptJsonDecodeError) $ hoistEither $ decodeScript msJson)
+ where
+  decodeScript :: HasScriptFeatures era => LBS.ByteString -> Either String (SimpleScript era)
+  decodeScript bs = Aeson.eitherDecode bs
 
-  hoistEither $ bimap
-    (ReadWitnessSigningDataScriptError . FileError fp . ScriptJsonDecodeError)
-    AShelleyMultiSigScript
-    (Aeson.eitherDecode' msJson)
-
-readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
+readWitnessSigningData _ (KeyWitnessSigningData skFile mbByronAddr) = do
     res <- firstExceptT ReadWitnessSigningDataSigningKeyDecodeError
       . newExceptT
       $ readSigningKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
@@ -412,48 +441,94 @@ readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
       ]
 
 partitionSomeWitnesses
-  :: [ByronOrShelleyWitness]
+  :: [AnyEraWitness]
   -> ( [ShelleyBootstrapWitnessSigningKeyData]
      , [Api.ShelleyWitnessSigningKey]
      , [Api.MultiSigScript ShelleyEra]
+     , [Api.SimpleScript AllegraEra]
+     , [Api.SimpleScript MaryEra]
      )
 partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
   where
-    reversePartitionedWits (bw, skw, ssw) =
-      (reverse bw, reverse skw, reverse ssw)
+    reversePartitionedWits (bw, skw, ssw, asw, msw) =
+      (reverse bw, reverse skw, reverse ssw, reverse asw, reverse msw)
 
-    go (byronAcc, shelleyKeyAcc, shelleyScriptAcc) byronOrShelleyWit =
+    go (byronAcc, shelleyKeyAcc, shelleyScriptAcc, allegraScriptAcc, maryScriptAcc) byronOrShelleyWit =
       case byronOrShelleyWit of
         AByronWitness byronWit ->
-          (byronWit:byronAcc, shelleyKeyAcc, shelleyScriptAcc)
+          (byronWit:byronAcc, shelleyKeyAcc, shelleyScriptAcc, allegraScriptAcc, maryScriptAcc)
         AShelleyKeyWitness shelleyKeyWit ->
-          (byronAcc, shelleyKeyWit:shelleyKeyAcc, shelleyScriptAcc)
+          (byronAcc, shelleyKeyWit:shelleyKeyAcc, shelleyScriptAcc, allegraScriptAcc, maryScriptAcc)
         AShelleyScriptWitness shelleyScriptWit ->
-          (byronAcc, shelleyKeyAcc, shelleyScriptWit:shelleyScriptAcc)
+          (byronAcc, shelleyKeyAcc, shelleyScriptWit:shelleyScriptAcc, allegraScriptAcc, maryScriptAcc)
+        AAllegraScriptWitness allegraScriptWit ->
+          (byronAcc, shelleyKeyAcc, shelleyScriptAcc, allegraScriptWit : allegraScriptAcc, maryScriptAcc)
+        AMaryScriptWitness maryScriptWit ->
+          (byronAcc, shelleyKeyAcc, shelleyScriptAcc,allegraScriptAcc ,  maryScriptWit : maryScriptAcc)
 
 
 -- | Some kind of Byron or Shelley witness.
-data ByronOrShelleyWitness
+data AnyEraWitness
   = AByronWitness !ShelleyBootstrapWitnessSigningKeyData
   | AShelleyKeyWitness !Api.ShelleyWitnessSigningKey
   | AShelleyScriptWitness !(Api.MultiSigScript ShelleyEra)
+  | AAllegraScriptWitness !(Api.SimpleScript AllegraEra)
+  | AMaryScriptWitness !(Api.SimpleScript MaryEra)
 
-categoriseSomeWitness :: SomeWitness -> ByronOrShelleyWitness
-categoriseSomeWitness swsk =
-  case swsk of
-    AByronSigningKey           sk addr -> AByronWitness (ShelleyBootstrapWitnessSigningKeyData sk addr)
-    APaymentSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessPaymentKey         sk)
-    APaymentExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessPaymentExtendedKey sk)
-    AStakeSigningKey           sk      -> AShelleyKeyWitness (Api.WitnessStakeKey           sk)
-    AStakeExtendedSigningKey   sk      -> AShelleyKeyWitness (Api.WitnessStakeExtendedKey   sk)
-    AStakePoolSigningKey       sk      -> AShelleyKeyWitness (Api.WitnessStakePoolKey       sk)
-    AGenesisSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessGenesisKey sk)
-    AGenesisExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisExtendedKey sk)
-    AGenesisDelegateSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisDelegateKey sk)
-    AGenesisDelegateExtendedSigningKey sk
-                                       -> AShelleyKeyWitness (Api.WitnessGenesisDelegateExtendedKey sk)
-    AGenesisUTxOSigningKey     sk      -> AShelleyKeyWitness (Api.WitnessGenesisUTxOKey     sk)
-    AShelleyMultiSigScript scr         -> AShelleyScriptWitness scr
+
+categoriseSomeWitness :: UseCardanoEra -> SomeWitness -> AnyEraWitness
+categoriseSomeWitness useEra swsk =
+  withCardanoEra useEra $ \_era _eraStyle ->
+  case useEra of
+    UseByronEra ->
+      case swsk of
+        AByronSigningKey sk addr -> AByronWitness (ShelleyBootstrapWitnessSigningKeyData sk addr)
+        _ -> panic "placeholder"
+    UseShelleyEra ->
+      case swsk of
+        AByronSigningKey           sk addr -> AByronWitness (ShelleyBootstrapWitnessSigningKeyData sk addr)
+        APaymentSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessPaymentKey         sk)
+        APaymentExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessPaymentExtendedKey sk)
+        AStakeSigningKey           sk      -> AShelleyKeyWitness (Api.WitnessStakeKey           sk)
+        AStakeExtendedSigningKey   sk      -> AShelleyKeyWitness (Api.WitnessStakeExtendedKey   sk)
+        AStakePoolSigningKey       sk      -> AShelleyKeyWitness (Api.WitnessStakePoolKey       sk)
+        AGenesisSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessGenesisKey sk)
+        AGenesisExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisExtendedKey sk)
+        AGenesisDelegateSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisDelegateKey sk)
+        AGenesisDelegateExtendedSigningKey sk
+                                           -> AShelleyKeyWitness (Api.WitnessGenesisDelegateExtendedKey sk)
+        AGenesisUTxOSigningKey     sk      -> AShelleyKeyWitness (Api.WitnessGenesisUTxOKey     sk)
+        AShelleyMultiSigScript scr         -> AShelleyScriptWitness scr
+    UseAllegraEra ->
+      case swsk of
+        AByronSigningKey           sk addr -> AByronWitness (ShelleyBootstrapWitnessSigningKeyData sk addr)
+        APaymentSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessPaymentKey         sk)
+        APaymentExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessPaymentExtendedKey sk)
+        AStakeSigningKey           sk      -> AShelleyKeyWitness (Api.WitnessStakeKey           sk)
+        AStakeExtendedSigningKey   sk      -> AShelleyKeyWitness (Api.WitnessStakeExtendedKey   sk)
+        AStakePoolSigningKey       sk      -> AShelleyKeyWitness (Api.WitnessStakePoolKey       sk)
+        AGenesisSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessGenesisKey sk)
+        AGenesisExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisExtendedKey sk)
+        AGenesisDelegateSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisDelegateKey sk)
+        AGenesisDelegateExtendedSigningKey sk
+                                           -> AShelleyKeyWitness (Api.WitnessGenesisDelegateExtendedKey sk)
+        AGenesisUTxOSigningKey     sk      -> AShelleyKeyWitness (Api.WitnessGenesisUTxOKey     sk)
+        AAllegraSimpleScript scr           -> AAllegraScriptWitness scr
+    UseMaryEra ->
+      case swsk of
+        AByronSigningKey           sk addr -> AByronWitness (ShelleyBootstrapWitnessSigningKeyData sk addr)
+        APaymentSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessPaymentKey         sk)
+        APaymentExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessPaymentExtendedKey sk)
+        AStakeSigningKey           sk      -> AShelleyKeyWitness (Api.WitnessStakeKey           sk)
+        AStakeExtendedSigningKey   sk      -> AShelleyKeyWitness (Api.WitnessStakeExtendedKey   sk)
+        AStakePoolSigningKey       sk      -> AShelleyKeyWitness (Api.WitnessStakePoolKey       sk)
+        AGenesisSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessGenesisKey sk)
+        AGenesisExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisExtendedKey sk)
+        AGenesisDelegateSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisDelegateKey sk)
+        AGenesisDelegateExtendedSigningKey sk
+                                           -> AShelleyKeyWitness (Api.WitnessGenesisDelegateExtendedKey sk)
+        AGenesisUTxOSigningKey     sk      -> AShelleyKeyWitness (Api.WitnessGenesisUTxOKey     sk)
+        AMarySimpleScript scr              -> AMaryScriptWitness scr
 
 -- | Data required for constructing a Shelley bootstrap witness.
 data ShelleyBootstrapWitnessSigningKeyData
@@ -520,15 +595,15 @@ runTxCreateWitness
   -> Maybe NetworkId
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCreateWitness _useEra (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
+runTxCreateWitness useEra (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
   txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError
     . newExceptT
     $ Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
   someWit <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError
-    $ readWitnessSigningData witSignData
+    $ readWitnessSigningData useEra witSignData
 
   witness <-
-    case categoriseSomeWitness someWit of
+    case categoriseSomeWitness useEra someWit of
       -- Byron witnesses require the network ID. This can either be provided
       -- directly or derived from a provided Byron address.
       AByronWitness bootstrapWitData ->
@@ -540,9 +615,16 @@ runTxCreateWitness _useEra (TxBodyFile txbodyFile) witSignData mbNw (OutputFile 
       AShelleyScriptWitness scShelley ->
         pure $ makeScriptWitness (makeMultiSigScript scShelley)
 
-  firstExceptT ShelleyTxCmdWriteFileError
-    . newExceptT
-    $ Api.writeFileTextEnvelope oFile Nothing witness
+  let writeWitness = firstExceptT ShelleyTxCmdWriteFileError
+                       . newExceptT
+                       $ Api.writeFileTextEnvelope oFile Nothing witness
+
+  withCardanoEra useEra $ \_era _eraStyle ->
+    case useEra of
+      UseByronEra -> liftIO $ putTextLn "Not implemented yet"
+      UseShelleyEra -> writeWitness
+      UseAllegraEra -> writeWitness
+      UseMaryEra -> writeWitness
 
 runTxSignWitness
   :: TxBodyFile
