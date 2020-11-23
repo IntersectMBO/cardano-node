@@ -156,5 +156,5 @@ trimHashTextForVerbosity :: TracingVerbosity -> Text -> Text
 trimHashTextForVerbosity verb =
   case verb of
     MinimalVerbosity -> Text.take 7
-    NormalVerbosity -> Text.take 7
+    NormalVerbosity -> id
     MaximalVerbosity -> id
