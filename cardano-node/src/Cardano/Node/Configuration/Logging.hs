@@ -25,6 +25,7 @@ import           Cardano.Prelude hiding (trace)
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
+import           Control.Tracer
 import           Data.List (nub)
 import           Data.Text (pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
@@ -39,14 +40,8 @@ import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
-import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Data.Backend (Backend, BackendKind)
-import           Cardano.BM.Data.Counter
-import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LogObject (..), LoggerName,
-                     PrivacyAnnotation (..), mkLOMeta)
-import           Cardano.BM.Data.Observable
-import           Cardano.BM.Data.Severity (Severity (..))
-import           Cardano.BM.Data.SubTrace
+import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName)
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
@@ -54,8 +49,9 @@ import           Cardano.BM.Plugin (loadPlugin)
 import           Cardano.BM.Scribe.Systemd (plugin)
 #endif
 import           Cardano.BM.Setup (setupTrace_, shutdown)
-import           Cardano.BM.Trace (Trace, appendName, traceNamedObject)
+import           Cardano.BM.Stats
 import qualified Cardano.BM.Trace as Trace
+import           Cardano.BM.Tracing
 
 import qualified Cardano.Chain.Genesis as Gen
 import           Cardano.Slotting.Slot (EpochSize (..))
@@ -75,6 +71,7 @@ import qualified Shelley.Spec.Ledger.API as SL
 import           Cardano.Config.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Types
+import           Cardano.Tracing.OrphanInstances.Common()
 import           Paths_cardano_node (version)
 
 --------------------------------
@@ -224,19 +221,12 @@ createLoggingLayer ver nodeConfig' p = do
    startCapturingMetrics :: Trace IO Text -> IO ()
    startCapturingMetrics trace0 = do
      let trace = appendName "node-metrics" trace0
-         counters = [MemoryStats, ProcessStats, NetStats, IOStats, GhcRtsStats, SysStats]
      _ <- Async.async $ forever $ do
-       cts <- readCounters (ObservableTraceSelf counters)
-       traceCounters trace cts
-       threadDelay 30000000   -- 30 seconds
+       readResourceStats
+         >>= maybe (pure ())
+             (traceWith $ toLogObject' NormalVerbosity trace)
+       threadDelay 1000000 -- TODO:  make configurable
      pure ()
-    where
-      traceCounters :: forall m a. MonadIO m => Trace m a -> [Counter] -> m ()
-      traceCounters _tr [] = return ()
-      traceCounters tr (c@(Counter _ct cn cv) : cs) = do
-        mle <- mkLOMeta Notice Confidential
-        traceNamedObject tr (mle, LogValue (nameCounter c <> "." <> cn) cv)
-        traceCounters tr cs
 
 shutdownLoggingLayer :: LoggingLayer -> IO ()
 shutdownLoggingLayer = shutdown . llSwitchboard

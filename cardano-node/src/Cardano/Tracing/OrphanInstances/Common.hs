@@ -1,7 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -53,6 +55,7 @@ import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), Privac
                      mkLOMeta)
 import           Cardano.BM.Data.Tracer (HasTextFormatter (..), emptyObject, mkObject, trStructured,
                      trStructuredText)
+import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                      Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                      Transformable (..))
@@ -110,3 +113,15 @@ instance ToJSON (OneEraHash xs) where
 
 deriving newtype instance ToJSON ByronHash
 deriving newtype instance ToJSON BlockNo
+
+instance HasPrivacyAnnotation  ResourceStats
+instance HasSeverityAnnotation ResourceStats where
+  getSeverityAnnotation _ = Info
+instance Transformable Text IO ResourceStats where
+  trTransformer = trStructured
+
+instance ToObject ResourceStats where
+  toObject _verb stats =
+    case toJSON stats of
+      Object x -> x
+      _ -> mempty
