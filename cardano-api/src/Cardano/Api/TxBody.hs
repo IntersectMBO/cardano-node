@@ -302,15 +302,12 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
-    serialiseToCBOR (ShelleyTxBody ShelleyBasedEraShelley txbody txmetadata) =
-      CBOR.serializeEncoding' $
-          CBOR.encodeListLen 2
-       <> CBOR.toCBOR txbody
-       <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
-    serialiseToCBOR (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
-      error "TODO: SerialiseAsCBOR (TxBody AllegraEra)"
-    serialiseToCBOR (ShelleyTxBody ShelleyBasedEraMary _ _) =
-      error "TODO: SerialiseAsCBOR (TxBody MaryEra)"
+    serialiseToCBOR (ShelleyTxBody era txbody txmetadata) =
+      case era of
+        -- Use the same serialisation impl, but at different types:
+        ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody txbody txmetadata
+        ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody txbody txmetadata
+        ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody txbody txmetadata
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -320,25 +317,48 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
               "Byron TxBody"
               CBOR.fromCBORAnnotated
               (LBS.fromStrict bs)
-        ShelleyEra ->
-          CBOR.decodeAnnotator
-            "Shelley TxBody"
-            decodeAnnotatedPair
-            (LBS.fromStrict bs)
-        AllegraEra -> error "TODO: SerialiseAsCBOR (TxBody AllegraEra)"
-        MaryEra    -> error "TODO: SerialiseAsCBOR (TxBody MaryEra)"
-      where
-        decodeAnnotatedPair :: CBOR.Decoder s (CBOR.Annotator (TxBody ShelleyEra))
-        decodeAnnotatedPair =  do
-          CBOR.decodeListLenOf 2
-          txbody     <- fromCBOR
-          txmetadata <- CBOR.decodeNullMaybe fromCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody
-              ShelleyBasedEraShelley
-              (CBOR.runAnnotator txbody fbs)
-              (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
 
+        -- Use the same derialisation impl, but at different types:
+        ShelleyEra -> deserialiseShelleyBasedTxBody
+                        (ShelleyTxBody ShelleyBasedEraShelley) bs
+        AllegraEra -> deserialiseShelleyBasedTxBody
+                        (ShelleyTxBody ShelleyBasedEraAllegra) bs
+        MaryEra    -> deserialiseShelleyBasedTxBody
+                        (ShelleyTxBody ShelleyBasedEraMary) bs
+
+-- | The serialisation format for the different Shelley-based eras are not the
+-- same, but they can be handled generally with one overloaded implementation.
+--
+serialiseShelleyBasedTxBody :: forall txbody metadata.
+                                (ToCBOR txbody, ToCBOR metadata)
+                            => txbody -> Maybe metadata -> ByteString
+serialiseShelleyBasedTxBody txbody txmetadata =
+    CBOR.serializeEncoding' $
+        CBOR.encodeListLen 2
+     <> CBOR.toCBOR txbody
+     <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
+
+deserialiseShelleyBasedTxBody :: forall txbody metadata pair.
+                                (FromCBOR (CBOR.Annotator txbody),
+                                 FromCBOR (CBOR.Annotator metadata))
+                              => (txbody -> Maybe metadata -> pair)
+                              -> ByteString
+                              -> Either CBOR.DecoderError pair
+deserialiseShelleyBasedTxBody mkTxBody bs =
+    CBOR.decodeAnnotator
+      "Shelley TxBody"
+      decodeAnnotatedPair
+      (LBS.fromStrict bs)
+  where
+    decodeAnnotatedPair :: CBOR.Decoder s (CBOR.Annotator pair)
+    decodeAnnotatedPair =  do
+      CBOR.decodeListLenOf 2
+      txbody     <- fromCBOR
+      txmetadata <- CBOR.decodeNullMaybe fromCBOR
+      return $ CBOR.Annotator $ \fbs ->
+        mkTxBody
+          (CBOR.runAnnotator txbody fbs)
+          (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
     textEnvelopeType _ =
