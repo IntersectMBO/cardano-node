@@ -242,11 +242,37 @@ data Witness era where
        -> Ledger.Script (ShelleyLedgerEra era)
        -> Witness era
 
-{-
-deriving instance Eq (Witness ByronEra)
-deriving instance Show (Witness ByronEra)
 
-deriving instance Eq (Witness ShelleyEra)
+-- The GADT in the Shelley cases requires a custom instance
+instance Eq (Witness era) where
+    (==) (ByronKeyWitness wA)
+         (ByronKeyWitness wB) = wA == wB
+
+    (==) (ShelleyBootstrapWitness era wA)
+         (ShelleyBootstrapWitness _   wB) =
+      case era of
+        ShelleyBasedEraShelley -> wA == wB
+        ShelleyBasedEraAllegra -> wA == wB
+        ShelleyBasedEraMary    -> wA == wB
+
+    (==) (ShelleyKeyWitness era wA)
+         (ShelleyKeyWitness _   wB) =
+      case era of
+        ShelleyBasedEraShelley -> wA == wB
+        ShelleyBasedEraAllegra -> wA == wB
+        ShelleyBasedEraMary    -> wA == wB
+
+    (==) (ShelleyScriptWitness era wA)
+         (ShelleyScriptWitness _   wB) =
+      case era of
+        ShelleyBasedEraShelley -> wA == wB
+        ShelleyBasedEraAllegra -> wA == wB
+        ShelleyBasedEraMary    -> wA == wB
+
+    (==) _ _ = False
+
+{-
+deriving instance Show (Witness ByronEra)
 deriving instance Show (Witness ShelleyEra)
 -}
 
