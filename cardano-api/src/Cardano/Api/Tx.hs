@@ -141,6 +141,29 @@ instance Eq (Tx era) where
 
     (==) (ByronTx{}) (ShelleyTx era _) = case era of {}
 
+-- The GADT in the ShelleyTx case requires a custom instance
+instance Show (Tx era) where
+    showsPrec p (ByronTx tx) =
+      showParen (p >= 11) $
+        showString "ByronTx "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyTx ShelleyBasedEraShelley tx) =
+      showParen (p >= 11) $
+        showString "ShelleyTx ShelleyBasedEraShelley "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyTx ShelleyBasedEraAllegra tx) =
+      showParen (p >= 11) $
+        showString "ShelleyTx ShelleyBasedEraAllegra "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyTx ShelleyBasedEraMary tx) =
+      showParen (p >= 11) $
+        showString "ShelleyTx ShelleyBasedEraMary "
+      . showsPrec 11 tx
+
+
 instance HasTypeProxy era => HasTypeProxy (Tx era) where
     data AsType (Tx era) = AsTx (AsType era)
     proxyToAsType _ = AsTx (proxyToAsType (Proxy :: Proxy era))
