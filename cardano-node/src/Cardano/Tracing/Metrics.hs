@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Tracing.Metrics
@@ -28,7 +29,6 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Node ()
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
-
 
 -- | KES-related data to be traced as metrics.
 data KESMetricsData
@@ -76,11 +76,13 @@ instance HasKESMetricsData (ShelleyBlock c) where
 instance HasKESMetricsData ByronBlock where
 
 instance All HasKESMetricsData xs => HasKESMetricsData (HardForkBlock xs) where
-  getKESMetricsData _ forgeStateInfo =
-        hcollapse
-      . hcmap (Proxy @HasKESMetricsData) getOne
-      . getOneEraForgeStateInfo
-      $ forgeStateInfo
+  getKESMetricsData _ forgeStateInfo = case forgeStateInfo of
+    CurrentEraLacksBlockForging _ -> NoKESMetricsData
+    CurrentEraForgeStateUpdated currentEraForgeStateInfo ->
+          hcollapse
+        . hcmap (Proxy @HasKESMetricsData) getOne
+        . getOneEraForgeStateInfo
+        $ currentEraForgeStateInfo
     where
       getOne :: forall blk. HasKESMetricsData blk
              => WrapForgeStateInfo blk
