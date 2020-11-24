@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -254,11 +253,9 @@ makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> [Hash GenesisKey]
                           -> EpochNo
                           -> UpdateProposal
-makeShelleyUpdateProposal params genesisKeyHashes epochno =
+makeShelleyUpdateProposal params genesisKeyHashes =
     --TODO decide how to handle parameter validation
-    UpdateProposal
-      (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
-      epochno
+    UpdateProposal (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
 
 
 toShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
@@ -411,4 +408,3 @@ toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
 fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
 fromPraosNonce Shelley.NeutralNonce = Nothing
 fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
-

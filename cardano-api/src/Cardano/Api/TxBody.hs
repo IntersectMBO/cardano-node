@@ -311,7 +311,7 @@ instance Eq (TxBody era) where
            ShelleyBasedEraAllegra -> txbodyA == txbodyB
            ShelleyBasedEraMary    -> txbodyA == txbodyB
 
-    (==) (ByronTxBody{}) (ShelleyTxBody era _ _) = case era of {}
+    (==) ByronTxBody{} (ShelleyTxBody era _ _) = case era of {}
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -577,4 +577,3 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
     fromShelleyTxId :: Shelley.TxId StandardShelley -> TxId
     fromShelleyTxId (Shelley.TxId h) =
         TxId (Crypto.castHash h)
-

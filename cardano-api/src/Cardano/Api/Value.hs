@@ -2,7 +2,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 -- | Currency values
 --
@@ -208,4 +207,3 @@ fromMaryValue (Mary.Value lovelace other) =
 
     fromMaryAssetName :: Mary.AssetName -> AssetName
     fromMaryAssetName (Mary.AssetName n) = AssetName n
-

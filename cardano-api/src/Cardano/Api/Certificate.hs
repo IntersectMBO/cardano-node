@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -414,4 +413,3 @@ fromShelleyPoolParams
     fromShelleyDnsName :: Shelley.DnsName -> ByteString
     fromShelleyDnsName = Text.encodeUtf8
                        . Shelley.dnsToText
-
