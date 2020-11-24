@@ -1,4 +1,5 @@
 {-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -153,27 +154,51 @@ pattern AsShelleyTx = AsTx AsShelleyEra
 {-# COMPLETE AsShelleyTx #-}
 
 
-instance SerialiseAsCBOR (Tx ByronEra) where
-    serialiseToCBOR (ShelleyTx era _) = case era of {}
+instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
     serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx
 
-    deserialiseFromCBOR AsByronTx bs =
-      ByronTx <$>
-        CBOR.decodeFullAnnotatedBytes "Byron Tx" fromCBOR (LBS.fromStrict bs)
+    serialiseToCBOR (ShelleyTx era tx) =
+      case era of
+        ShelleyBasedEraShelley -> serialiseShelleyBasedTx tx
+        ShelleyBasedEraAllegra -> serialiseShelleyBasedTx tx
+        ShelleyBasedEraMary    -> serialiseShelleyBasedTx tx
 
-instance SerialiseAsCBOR (Tx ShelleyEra) where
-    serialiseToCBOR (ShelleyTx _ tx) =
-      CBOR.serialize' tx
+    deserialiseFromCBOR _ bs =
+      case cardanoEra :: CardanoEra era of
+        ByronEra ->
+          ByronTx <$>
+            CBOR.decodeFullAnnotatedBytes
+              "Byron Tx" fromCBOR (LBS.fromStrict bs)
 
-    deserialiseFromCBOR AsShelleyTx bs =
-      ShelleyTx ShelleyBasedEraShelley <$>
-        CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
+        -- Use the same derialisation impl, but at different types:
+        ShelleyEra -> deserialiseShelleyBasedTx
+                        (ShelleyTx ShelleyBasedEraShelley) bs
+        AllegraEra -> deserialiseShelleyBasedTx
+                        (ShelleyTx ShelleyBasedEraAllegra) bs
+        MaryEra    -> deserialiseShelleyBasedTx
+                        (ShelleyTx ShelleyBasedEraMary) bs
 
-instance HasTextEnvelope (Tx ByronEra) where
-    textEnvelopeType _ = "TxSignedByron"
+-- | The serialisation format for the different Shelley-based eras are not the
+-- same, but they can be handled generally with one overloaded implementation.
+--
+serialiseShelleyBasedTx :: ToCBOR tx => tx -> ByteString
+serialiseShelleyBasedTx = CBOR.serialize'
 
-instance HasTextEnvelope (Tx ShelleyEra) where
-    textEnvelopeType _ = "TxSignedShelley"
+deserialiseShelleyBasedTx :: FromCBOR (CBOR.Annotator tx)
+                          => (tx -> tx')
+                          -> ByteString
+                          -> Either CBOR.DecoderError tx'
+deserialiseShelleyBasedTx mkTx bs =
+    mkTx <$> CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
+
+
+instance IsCardanoEra era => HasTextEnvelope (Tx era) where
+    textEnvelopeType _ =
+      case cardanoEra :: CardanoEra era of
+        ByronEra   -> "TxSignedByron"
+        ShelleyEra -> "TxSignedShelley"
+        AllegraEra -> "Tx AllegraEra"
+        MaryEra    -> "Tx MaryEra"
 
 
 data Witness era where
