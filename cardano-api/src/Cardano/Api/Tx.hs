@@ -1,6 +1,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -38,7 +39,7 @@ module Cardano.Api.Tx (
     getShelleyKeyWitnessVerificationKey,
 
     -- * Data family instances
-    AsType(..),
+    AsType(AsTx, AsByronTx, AsShelleyTx, AsByronWitness, AsShelleyWitness),
   ) where
 
 import           Prelude
@@ -104,7 +105,6 @@ import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
-import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
@@ -122,25 +122,39 @@ data Tx era where
        -> Tx ByronEra
 
      ShelleyTx
-       :: Shelley.Tx StandardShelley
-       -> Tx ShelleyEra
+       :: ShelleyBasedEra era
+       -> Shelley.Tx (ShelleyLedgerEra era)
+       -> Tx era
 
-deriving instance Eq (Tx ByronEra)
-deriving instance Show (Tx ByronEra)
+-- The GADT in the ShelleyTx case requires a custom instance
+instance Eq (Tx era) where
+    (==) (ByronTx txA)
+         (ByronTx txB) = txA == txB
 
-deriving instance Eq (Tx ShelleyEra)
-deriving instance Show (Tx ShelleyEra)
+    (==) (ShelleyTx era txA)
+         (ShelleyTx _   txB) =
+      case era of
+        ShelleyBasedEraShelley -> txA == txB
+        ShelleyBasedEraAllegra -> txA == txB
+        ShelleyBasedEraMary    -> txA == txB
 
-instance HasTypeProxy (Tx ByronEra) where
-    data AsType (Tx ByronEra) = AsByronTx
-    proxyToAsType _ = AsByronTx
+    (==) (ByronTx{}) (ShelleyTx era _) = case era of {}
 
-instance HasTypeProxy (Tx ShelleyEra) where
-    data AsType (Tx ShelleyEra) = AsShelleyTx
-    proxyToAsType _ = AsShelleyTx
+instance HasTypeProxy era => HasTypeProxy (Tx era) where
+    data AsType (Tx era) = AsTx (AsType era)
+    proxyToAsType _ = AsTx (proxyToAsType (Proxy :: Proxy era))
+
+pattern AsByronTx :: AsType (Tx ByronEra)
+pattern AsByronTx   = AsTx AsByronEra
+{-# COMPLETE AsByronTx #-}
+
+pattern AsShelleyTx :: AsType (Tx ShelleyEra)
+pattern AsShelleyTx = AsTx AsShelleyEra
+{-# COMPLETE AsShelleyTx #-}
 
 
 instance SerialiseAsCBOR (Tx ByronEra) where
+    serialiseToCBOR (ShelleyTx era _) = case era of {}
     serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx
 
     deserialiseFromCBOR AsByronTx bs =
@@ -148,11 +162,11 @@ instance SerialiseAsCBOR (Tx ByronEra) where
         CBOR.decodeFullAnnotatedBytes "Byron Tx" fromCBOR (LBS.fromStrict bs)
 
 instance SerialiseAsCBOR (Tx ShelleyEra) where
-    serialiseToCBOR (ShelleyTx tx) =
+    serialiseToCBOR (ShelleyTx _ tx) =
       CBOR.serialize' tx
 
     deserialiseFromCBOR AsShelleyTx bs =
-      ShelleyTx <$>
+      ShelleyTx ShelleyBasedEraShelley <$>
         CBOR.decodeAnnotator "Shelley Tx" fromCBOR (LBS.fromStrict bs)
 
 instance HasTextEnvelope (Tx ByronEra) where
@@ -259,11 +273,16 @@ getTxBody :: Tx era -> TxBody era
 getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
     ByronTxBody txbody
 
-getTxBody (ShelleyTx Shelley.Tx {
+getTxBody (ShelleyTx ShelleyBasedEraShelley Shelley.Tx {
                        Shelley._body     = txbody,
                        Shelley._metadata = txmetadata
                      }) =
     ShelleyTxBody ShelleyBasedEraShelley txbody (strictMaybeToMaybe txmetadata)
+
+getTxBody (ShelleyTx ShelleyBasedEraAllegra _) =
+    error "TODO: getTxBody AllegraEra"
+getTxBody (ShelleyTx ShelleyBasedEraMary _) =
+    error "TODO: getTxBody MaryEra"
 
 
 getTxWitnesses :: Tx era -> [Witness era]
@@ -273,7 +292,7 @@ getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
   . unAnnotated
   $ witnesses
 
-getTxWitnesses (ShelleyTx Shelley.Tx {
+getTxWitnesses (ShelleyTx ShelleyBasedEraShelley Shelley.Tx {
                        Shelley._witnessSet =
                          Shelley.WitnessSet
                            addrWits
@@ -283,6 +302,11 @@ getTxWitnesses (ShelleyTx Shelley.Tx {
     map ShelleyBootstrapWitness (Set.elems bootWits)
  ++ map ShelleyKeyWitness       (Set.elems addrWits)
  ++ map ShelleyScriptWitness    (Map.elems msigWits)
+
+getTxWitnesses (ShelleyTx ShelleyBasedEraAllegra _) =
+    error "TODO: getTxWitnesses AllegraEra"
+getTxWitnesses (ShelleyTx ShelleyBasedEraMary _) =
+    error "TODO: getTxWitnesses MaryEra"
 
 
 makeSignedTransaction :: [Witness era]
@@ -299,7 +323,7 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
     selectByronWitness (ByronKeyWitness w) = w
 
 makeSignedTransaction witnesses (ShelleyTxBody ShelleyBasedEraShelley txbody txmetadata) =
-    ShelleyTx $
+    ShelleyTx ShelleyBasedEraShelley $
       Shelley.Tx
         txbody
         (Shelley.WitnessSet
