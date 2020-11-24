@@ -81,10 +81,9 @@ import qualified Cardano.Chain.UTxO as Byron
 --
 -- Shelley imports
 --
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardShelley, StandardMary)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
-import qualified Cardano.Ledger.Core as Shelley (Script)
+import qualified Cardano.Ledger.Core as Ledger (Script)
 
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
@@ -93,8 +92,6 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
-
-import qualified Cardano.Ledger.ShelleyMA.Scripts as Allegra
 
 import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 
@@ -231,30 +228,27 @@ data Witness era where
        -> Witness ByronEra
 
      ShelleyBootstrapWitness
-       :: Shelley.BootstrapWitness StandardShelley
-       -> Witness ShelleyEra
+       :: ShelleyBasedEra era
+       -> Shelley.BootstrapWitness (ShelleyLedgerEra era)
+       -> Witness era
 
      ShelleyKeyWitness
-       :: Shelley.WitVKey Shelley.Witness StandardShelley
-       -> Witness ShelleyEra
+       :: ShelleyBasedEra era
+       -> Shelley.WitVKey Shelley.Witness (ShelleyLedgerEra era)
+       -> Witness era
 
      ShelleyScriptWitness
-       :: Shelley.Script StandardShelley
-       -> Witness ShelleyEra
+       :: ShelleyBasedEra era
+       -> Ledger.Script (ShelleyLedgerEra era)
+       -> Witness era
 
-     AllegraScriptwitness
-       :: Allegra.Timelock StandardAllegra
-       -> Witness AllegraEra
-
-     MaryScriptWitness
-       :: Allegra.Timelock StandardMary
-       -> Witness MaryEra
-
+{-
 deriving instance Eq (Witness ByronEra)
 deriving instance Show (Witness ByronEra)
 
 deriving instance Eq (Witness ShelleyEra)
 deriving instance Show (Witness ShelleyEra)
+-}
 
 instance HasTypeProxy (Witness ByronEra) where
     data AsType (Witness ByronEra) = AsByronWitness
@@ -265,6 +259,9 @@ instance HasTypeProxy (Witness ShelleyEra) where
     proxyToAsType _ = AsShelleyWitness
 
 instance SerialiseAsCBOR (Witness ByronEra) where
+    serialiseToCBOR (ShelleyBootstrapWitness era _) = case era of {}
+    serialiseToCBOR (ShelleyKeyWitness era _) = case era of {}
+    serialiseToCBOR (ShelleyScriptWitness era _) = case era of {}
     serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
 
     deserialiseFromCBOR AsByronWitness bs =
@@ -274,11 +271,11 @@ instance SerialiseAsCBOR (Witness ShelleyEra) where
     serialiseToCBOR = CBOR.serializeEncoding' . encodeShelleyWitness
       where
         encodeShelleyWitness :: Witness ShelleyEra -> CBOR.Encoding
-        encodeShelleyWitness (ShelleyKeyWitness    wit) =
+        encodeShelleyWitness (ShelleyKeyWitness _ wit) =
             CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
-        encodeShelleyWitness (ShelleyBootstrapWitness wit) =
+        encodeShelleyWitness (ShelleyBootstrapWitness _ wit) =
             CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
-        encodeShelleyWitness (ShelleyScriptWitness wit) =
+        encodeShelleyWitness (ShelleyScriptWitness _ wit) =
             CBOR.encodeListLen 2
               <> CBOR.encodeWord 2
               -- We use 'WrappedMultiSig' here to support the legacy
@@ -298,15 +295,15 @@ instance SerialiseAsCBOR (Witness ShelleyEra) where
           CBOR.decodeListLenOf 2
           t <- CBOR.decodeWord
           case t of
-            0 -> fmap (fmap ShelleyKeyWitness) fromCBOR
-            1 -> fmap (fmap ShelleyBootstrapWitness) fromCBOR
+            0 -> fmap (fmap (ShelleyKeyWitness ShelleyBasedEraShelley)) fromCBOR
+            1 -> fmap (fmap (ShelleyBootstrapWitness ShelleyBasedEraShelley)) fromCBOR
             -- We use 'WrappedMultiSig' here to support the legacy binary
             -- serialisation format for the @Script@ type from
             -- @cardano-ledger-specs@.
             --
             -- See the documentation of 'WrappedMultiSig' for more
             -- information.
-            2 -> fmap (fmap (ShelleyScriptWitness . Legacy.unWrappedMultiSig)) fromCBOR
+            2 -> fmap (fmap (ShelleyScriptWitness ShelleyBasedEraShelley . Legacy.unWrappedMultiSig)) fromCBOR
             _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
                                     "Shelley Witness" (fromIntegral t)
 
@@ -347,9 +344,9 @@ getTxWitnesses (ShelleyTx ShelleyBasedEraShelley Shelley.Tx {
                            msigWits
                            bootWits
                      }) =
-    map ShelleyBootstrapWitness (Set.elems bootWits)
- ++ map ShelleyKeyWitness       (Set.elems addrWits)
- ++ map ShelleyScriptWitness    (Map.elems msigWits)
+    map (ShelleyBootstrapWitness ShelleyBasedEraShelley) (Set.elems bootWits)
+ ++ map (ShelleyKeyWitness       ShelleyBasedEraShelley) (Set.elems addrWits)
+ ++ map (ShelleyScriptWitness    ShelleyBasedEraShelley) (Map.elems msigWits)
 
 getTxWitnesses (ShelleyTx ShelleyBasedEraAllegra _) =
     error "TODO: getTxWitnesses AllegraEra"
@@ -369,16 +366,19 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
   where
     selectByronWitness :: Witness ByronEra -> Byron.TxInWitness
     selectByronWitness (ByronKeyWitness w) = w
+    selectByronWitness (ShelleyBootstrapWitness era _) = case era of {}
+    selectByronWitness (ShelleyKeyWitness       era _) = case era of {}
+    selectByronWitness (ShelleyScriptWitness    era _) = case era of {}
 
 makeSignedTransaction witnesses (ShelleyTxBody ShelleyBasedEraShelley txbody txmetadata) =
     ShelleyTx ShelleyBasedEraShelley $
       Shelley.Tx
         txbody
         (Shelley.WitnessSet
-          (Set.fromList [ w | ShelleyKeyWitness w <- witnesses ])
+          (Set.fromList [ w | ShelleyKeyWitness ShelleyBasedEraShelley w <- witnesses ])
           (Map.fromList [ (Shelley.hashMultiSigScript sw, sw)
-                        | ShelleyScriptWitness sw <- witnesses ])
-          (Set.fromList [ w | ShelleyBootstrapWitness w <- witnesses ]))
+                        | ShelleyScriptWitness ShelleyBasedEraShelley sw <- witnesses ])
+          (Set.fromList [ w | ShelleyBootstrapWitness ShelleyBasedEraShelley w <- witnesses ]))
         (maybeToStrictMaybe txmetadata)
 makeSignedTransaction _ (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
     error "TODO: makeSignedTransaction AllegraEra"
@@ -428,7 +428,7 @@ makeShelleyBootstrapWitness :: WitnessNetworkIdOrByronAddress
 makeShelleyBootstrapWitness nwOrAddr
                             (ShelleyTxBody ShelleyBasedEraShelley txbody _)
                             (ByronSigningKey sk) =
-    ShelleyBootstrapWitness $
+    ShelleyBootstrapWitness ShelleyBasedEraShelley $
       -- Byron era witnesses were weird. This reveals all that weirdness.
       Shelley.BootstrapWitness {
         Shelley.bwKey        = vk,
@@ -532,7 +532,7 @@ makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraShelley txbody _) =
         let sk        = toShelleySigningKey wsk
             vk        = getShelleyKeyWitnessVerificationKey sk
             signature = makeShelleySignature txhash sk
-         in ShelleyKeyWitness $
+         in ShelleyKeyWitness ShelleyBasedEraShelley $
               Shelley.WitVKey vk signature
 makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
     error "TODO: makeShelleyKeyWitness AllegraEra"
@@ -626,9 +626,9 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
 
 
 makeScriptWitness :: forall era. Script era -> Witness era
-makeScriptWitness (ShelleyScript s) = ShelleyScriptWitness s
-makeScriptWitness (AllegraScript s) = AllegraScriptwitness s
-makeScriptWitness (MaryScript    s) = MaryScriptWitness s
+makeScriptWitness (ShelleyScript s) = ShelleyScriptWitness ShelleyBasedEraShelley s
+makeScriptWitness (AllegraScript s) = ShelleyScriptWitness ShelleyBasedEraAllegra s
+makeScriptWitness (MaryScript    s) = ShelleyScriptWitness ShelleyBasedEraMary    s
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId
