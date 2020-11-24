@@ -55,7 +55,7 @@ import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Cardano.Ledger.Torsor as Core
 
 -- TODO: this should be exposed via Cardano.Api
-import           Shelley.Spec.Ledger.API
+import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
