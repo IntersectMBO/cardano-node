@@ -114,24 +114,47 @@ module Cardano.API (
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
+
+    -- ** Transaction bodies
     TxBody,
+    makeTransactionBody,
+    TxBodyContent(..),
+
+    -- ** Transaction Ids
     TxId,
     getTxId,
+
+    -- ** Transaction inputs
     TxIn(TxIn),
     TxIx(TxIx),
+
+    -- ** Transaction outputs
     TxOut(TxOut),
     TxOutValue(..),
-    AdaOnlyInEra(..),
-    MultiAssetInEra(..),
-    TTL,
-    TxFee,
-    MintValue(..),
-    makeByronTransaction,
-    makeShelleyTransaction,
-    SlotNo,
-    TxExtraContent,
-    txExtraContentEmpty,
-    Certificate,
+
+    -- ** Other transaction body types
+    TxFee(..),
+    TxValidityLowerBound(..),
+    TxValidityUpperBound(..),
+    SlotNo(..),
+    TxMetadataInEra(..),
+    TxAuxScripts(..),
+    TxWithdrawals(..),
+    TxCertificates(..),
+    TxUpdateProposal(..),
+    TxMintValue(..),
+
+    -- ** Era-dependent transaction body features
+    OnlyAdaSupportedInEra(..),
+    MultiAssetSupportedInEra(..),
+    ValidityUpperBoundSupportedInEra(..),
+    ValidityNoUpperBoundSupportedInEra(..),
+    ValidityLowerBoundSupportedInEra(..),
+    TxMetadataSupportedInEra(..),
+    AuxScriptsSupportedInEra(..),
+    WithdrawalsSupportedInEra(..),
+    CertificatesSupportedInEra(..),
+    UpdateProposalSupportedInEra(..),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -176,7 +199,10 @@ module Cardano.API (
     TxMetadataJsonError (..),
     TxMetadataJsonSchemaError (..),
 
-    -- * Registering stake address and delegating
+    -- * Certificates
+    Certificate,
+
+    -- ** Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and
     -- unregistering stake address, and for setting the stake pool delegation
     -- choice for a stake address.
@@ -184,7 +210,7 @@ module Cardano.API (
     makeStakeAddressDeregistrationCertificate,
     makeStakeAddressDelegationCertificate,
 
-    -- * Registering stake pools
+    -- ** Registering stake pools
     -- | Certificates that are embedded in transactions for registering and
     -- retiring stake pools. This includes updating the stake pool parameters.
     makeStakePoolRegistrationCertificate,
@@ -193,7 +219,7 @@ module Cardano.API (
     StakePoolRelay,
     StakePoolMetadataReference,
 
-    -- ** Stake pool off-chain metadata
+    -- * Stake pool off-chain metadata
     StakePoolMetadata,
     validateAndHashStakePoolMetadata,
     StakePoolMetadataValidationError,
