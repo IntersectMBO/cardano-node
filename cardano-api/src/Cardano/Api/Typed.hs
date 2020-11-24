@@ -130,26 +130,54 @@ module Cardano.Api.Typed (
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
+
+    -- ** Transaction bodies
     TxBody(..),
-    TxId(..),
-    getTxId,
-    TxIn(..),
-    TxIx(..),
-    TxOut(..),
-    TxOutValue(..),
-    AdaOnlyInEra(..),
-    MultiAssetInEra(..),
-    TTL,
-    TxFee,
-    MintValue(..),
+    makeTransactionBody,
+    TxBodyContent(..),
+
+    -- ** Transitional utils
     makeByronTransaction,
     makeShelleyTransaction,
+
+    -- ** Transaction Ids
+    TxId(..),
+    getTxId,
+
+    -- ** Transaction inputs
+    TxIn(..),
+    TxIx(..),
+
+    -- ** Transaction outputs
+    TxOut(..),
+    TxOutValue(..),
+
+    -- ** Other transaction body types
+    TxFee(..),
+    TxValidityLowerBound(..),
+    TxValidityUpperBound(..),
     SlotNo(..),
-    TxExtraContent(..),
-    txExtraContentEmpty,
+    TxMetadataInEra(..),
+    TxAuxScripts(..),
+    TxWithdrawals(..),
+    TxCertificates(..),
     Certificate(..),
     toShelleyCertificate,
     fromShelleyCertificate,
+    TxUpdateProposal(..),
+    TxMintValue(..),
+
+    -- ** Era-dependent transaction body features
+    OnlyAdaSupportedInEra(..),
+    MultiAssetSupportedInEra(..),
+    ValidityUpperBoundSupportedInEra(..),
+    ValidityNoUpperBoundSupportedInEra(..),
+    ValidityLowerBoundSupportedInEra(..),
+    TxMetadataSupportedInEra(..),
+    AuxScriptsSupportedInEra(..),
+    WithdrawalsSupportedInEra(..),
+    CertificatesSupportedInEra(..),
+    UpdateProposalSupportedInEra(..),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.

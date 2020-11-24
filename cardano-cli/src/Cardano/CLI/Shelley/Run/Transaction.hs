@@ -161,17 +161,17 @@ runTxBuildRaw txins txouts ttl fee
           fmap Just <$> firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT $
             Api.readFileTextEnvelope Api.AsUpdateProposal file
 
-    let txBody = Api.makeShelleyTransaction
-                   Api.txExtraContentEmpty {
-                     Api.txCertificates   = certs,
-                     Api.txWithdrawals    = withdrawals,
-                     Api.txMetadata       = mMetaData,
-                     Api.txUpdateProposal = mUpdateProp
-                   }
-                   ttl
-                   fee
-                   txins
-                   txouts
+    --TODO: update to new API
+    let Right txBody =
+          Api.makeShelleyTransaction
+            txins
+            txouts
+            ttl
+            fee
+            certs
+            withdrawals
+            mMetaData
+            mUpdateProp
 
     firstExceptT ShelleyTxCmdWriteFileError
       . newExceptT

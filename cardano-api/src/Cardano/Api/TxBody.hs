@@ -17,6 +17,10 @@ module Cardano.Api.TxBody (
 
     -- * Transaction bodies
     TxBody(..),
+    makeTransactionBody,
+    TxBodyContent(..),
+
+    -- ** Transitional utils
     makeByronTransaction,
     makeShelleyTransaction,
 
@@ -34,15 +38,27 @@ module Cardano.Api.TxBody (
     TxOutValue(..),
 
     -- * Other transaction body types
-    TTL,
-    TxFee,
-    MintValue(..),
-    TxExtraContent(..),
-    txExtraContentEmpty,
+    TxFee(..),
+    TxValidityLowerBound(..),
+    TxValidityUpperBound(..),
+    TxMetadataInEra(..),
+    TxAuxScripts(..),
+    TxWithdrawals(..),
+    TxCertificates(..),
+    TxUpdateProposal(..),
+    TxMintValue(..),
 
     -- * Era-dependent transaction body features
-    AdaOnlyInEra(..),
-    MultiAssetInEra(..),
+    OnlyAdaSupportedInEra(..),
+    MultiAssetSupportedInEra(..),
+    ValidityUpperBoundSupportedInEra(..),
+    ValidityNoUpperBoundSupportedInEra(..),
+    ValidityLowerBoundSupportedInEra(..),
+    TxMetadataSupportedInEra(..),
+    AuxScriptsSupportedInEra(..),
+    WithdrawalsSupportedInEra(..),
+    CertificatesSupportedInEra(..),
+    UpdateProposalSupportedInEra(..),
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody),
@@ -79,7 +95,7 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe(..))
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
@@ -97,6 +113,7 @@ import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
@@ -225,28 +242,177 @@ toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value)) =
 -- Era-dependent transaction body features
 --
 
--- | Representation of whether only ada transactions are supported in a
--- particular era.
+-- | A representation of whether the era supports only ada transactions.
 --
-data AdaOnlyInEra era where
-
-     AdaOnlyInByronEra   :: AdaOnlyInEra ByronEra
-     AdaOnlyInShelleyEra :: AdaOnlyInEra ShelleyEra
-     AdaOnlyInAllegraEra :: AdaOnlyInEra AllegraEra
-
-deriving instance Eq   (AdaOnlyInEra era)
-deriving instance Show (AdaOnlyInEra era)
-
--- | Representation of whether multi-asset transactions are supported in a
--- particular era.
+-- Prior to the Mary era only ada transactions are supported. Multi-assets are
+-- supported from the Mary era onwards.
 --
-data MultiAssetInEra era where
+data OnlyAdaSupportedInEra era where
+
+     AdaOnlyInByronEra   :: OnlyAdaSupportedInEra ByronEra
+     AdaOnlyInShelleyEra :: OnlyAdaSupportedInEra ShelleyEra
+     AdaOnlyInAllegraEra :: OnlyAdaSupportedInEra AllegraEra
+
+deriving instance Eq   (OnlyAdaSupportedInEra era)
+deriving instance Show (OnlyAdaSupportedInEra era)
+
+-- | A representation of whether the era supports multi-asset transactions.
+--
+-- The Mary and subsequent eras support multi-asset transactions.
+--
+data MultiAssetSupportedInEra era where
 
      -- | Multi-asset transactions are supported in the 'Mary' era.
-     MultiAssetInMaryEra :: MultiAssetInEra MaryEra
+     MultiAssetInMaryEra :: MultiAssetSupportedInEra MaryEra
 
-deriving instance Eq   (MultiAssetInEra era)
-deriving instance Show (MultiAssetInEra era)
+deriving instance Eq   (MultiAssetSupportedInEra era)
+deriving instance Show (MultiAssetSupportedInEra era)
+
+
+-- | A representation of whether the era requires explicitly specified fees in
+-- transactions.
+--
+-- The Byron era tx fees are implicit (as the difference bettween the sum of
+-- outputs and sum of inputs), but all later eras the fees are specified in the
+-- transaction explicitly.
+--
+data TxFeesExplicitInEra era where
+
+     TxFeesExplicitInShelleyEra :: TxFeesExplicitInEra ShelleyEra
+     TxFeesExplicitInAllegraEra :: TxFeesExplicitInEra AllegraEra
+     TxFeesExplicitInMaryEra    :: TxFeesExplicitInEra MaryEra
+
+deriving instance Eq   (TxFeesExplicitInEra era)
+deriving instance Show (TxFeesExplicitInEra era)
+
+
+-- | A representation of whether the era supports transactions with an upper
+-- bound on the range of slots in which they are valid.
+--
+-- The Shelley and subsequent eras support an upper bound on the validity
+-- range. In the Shelley era specifically it is actually required. It is
+-- optional in later eras.
+--
+data ValidityUpperBoundSupportedInEra era where
+
+     ValidityUpperBoundInShelleyEra :: ValidityUpperBoundSupportedInEra ShelleyEra
+     ValidityUpperBoundInAllegraEra :: ValidityUpperBoundSupportedInEra AllegraEra
+     ValidityUpperBoundInMaryEra    :: ValidityUpperBoundSupportedInEra MaryEra
+
+deriving instance Eq   (ValidityUpperBoundSupportedInEra era)
+deriving instance Show (ValidityUpperBoundSupportedInEra era)
+
+
+-- | A representation of whether the era supports transactions having /no/
+-- upper bound on the range of slots in which they are valid.
+--
+-- Note that the 'ShelleyEra' /does not support/ omitting a validity upper
+-- bound. It was introduced as a /required/ field in Shelley and then made
+-- optional in Allegra and subsequent eras.
+--
+-- The Byron era supports this by virtue of the fact that it does not support
+-- validity ranges at all.
+--
+data ValidityNoUpperBoundSupportedInEra era where
+
+     ValidityNoUpperBoundInByronEra   :: ValidityNoUpperBoundSupportedInEra ByronEra
+     ValidityNoUpperBoundInAllegraEra :: ValidityNoUpperBoundSupportedInEra AllegraEra
+     ValidityNoUpperBoundInMaryEra    :: ValidityNoUpperBoundSupportedInEra MaryEra
+
+deriving instance Eq   (ValidityNoUpperBoundSupportedInEra era)
+deriving instance Show (ValidityNoUpperBoundSupportedInEra era)
+
+
+-- | A representation of whether the era supports transactions with a lower
+-- bound on the range of slots in which they are valid.
+--
+-- The Allegra and subsequent eras support an optional lower bound on the
+-- validity range. No equivalent of 'ValidityNoUpperBoundSupportedInEra' is
+-- needed since all eras support having no lower bound.
+--
+data ValidityLowerBoundSupportedInEra era where
+
+     ValidityLowerBoundInAllegraEra :: ValidityLowerBoundSupportedInEra AllegraEra
+     ValidityLowerBoundInMaryEra    :: ValidityLowerBoundSupportedInEra MaryEra
+
+deriving instance Eq   (ValidityLowerBoundSupportedInEra era)
+deriving instance Show (ValidityLowerBoundSupportedInEra era)
+
+
+-- | A representation of whether the era supports transaction metadata.
+--
+-- Transaction metadata is supported from the Shelley era onwards.
+--
+data TxMetadataSupportedInEra era where
+
+     TxMetadataInShelleyEra :: TxMetadataSupportedInEra ShelleyEra
+     TxMetadataInAllegraEra :: TxMetadataSupportedInEra AllegraEra
+     TxMetadataInMaryEra    :: TxMetadataSupportedInEra MaryEra
+
+deriving instance Eq   (TxMetadataSupportedInEra era)
+deriving instance Show (TxMetadataSupportedInEra era)
+
+
+-- | A representation of whether the era supports auxiliary scripts in
+-- transactions.
+--
+-- Auxiliary scripts are supported from the Allegra era onwards.
+--
+data AuxScriptsSupportedInEra era where
+
+     AuxScriptsInAllegraEra :: AuxScriptsSupportedInEra AllegraEra
+     AuxScriptsInMaryEra    :: AuxScriptsSupportedInEra MaryEra
+
+deriving instance Eq   (AuxScriptsSupportedInEra era)
+deriving instance Show (AuxScriptsSupportedInEra era)
+
+
+-- | A representation of whether the era supports withdrawals from reward
+-- accounts.
+--
+-- The Shelley and subsequent eras support stake addresses, their associated
+-- reward accounts and support for withdrawals from them.
+--
+data WithdrawalsSupportedInEra era where
+
+     WithdrawalsInShelleyEra :: WithdrawalsSupportedInEra ShelleyEra
+     WithdrawalsInAllegraEra :: WithdrawalsSupportedInEra AllegraEra
+     WithdrawalsInMaryEra    :: WithdrawalsSupportedInEra MaryEra
+
+deriving instance Eq   (WithdrawalsSupportedInEra era)
+deriving instance Show (WithdrawalsSupportedInEra era)
+
+
+-- | A representation of whether the era supports 'Certificate's embedded in
+-- transactions.
+--
+-- The Shelley and subsequent eras support such certificates.
+--
+data CertificatesSupportedInEra era where
+
+     CertificatesInShelleyEra :: CertificatesSupportedInEra ShelleyEra
+     CertificatesInAllegraEra :: CertificatesSupportedInEra AllegraEra
+     CertificatesInMaryEra    :: CertificatesSupportedInEra MaryEra
+
+deriving instance Eq   (CertificatesSupportedInEra era)
+deriving instance Show (CertificatesSupportedInEra era)
+
+
+-- | A representation of whether the era supports 'UpdateProposal's embedded in
+-- transactions.
+--
+-- The Shelley and subsequent eras support such update proposals. They Byron
+-- era has a notion of an update proposal, but it is a standalone chain object
+-- and not embedded in a transaction.
+--
+data UpdateProposalSupportedInEra era where
+
+     UpdateProposalInShelleyEra :: UpdateProposalSupportedInEra ShelleyEra
+     UpdateProposalInAllegraEra :: UpdateProposalSupportedInEra AllegraEra
+     UpdateProposalInMaryEra    :: UpdateProposalSupportedInEra MaryEra
+
+deriving instance Eq   (UpdateProposalSupportedInEra era)
+deriving instance Show (UpdateProposalSupportedInEra era)
 
 
 -- ----------------------------------------------------------------------------
@@ -255,26 +421,171 @@ deriving instance Show (MultiAssetInEra era)
 
 data TxOutValue era where
 
-     TxOutAdaOnly :: AdaOnlyInEra era -> Lovelace -> TxOutValue era
+     TxOutAdaOnly :: OnlyAdaSupportedInEra era -> Lovelace -> TxOutValue era
 
-     TxOutValue   :: MultiAssetInEra era -> Value -> TxOutValue era
+     TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
 
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
 
 
 -- ----------------------------------------------------------------------------
--- Transaction value minting (era-dependent)
+-- Transaction fees
 --
 
-data MintValue era where
+data TxFee era where
 
-     MintNothing :: MintValue era
+     TxFeeImplicit :: TxFee ByronEra
 
-     MintValue   :: MultiAssetInEra era -> Value -> MintValue era
+     TxFeeExplicit :: TxFeesExplicitInEra era -> Lovelace -> TxFee era
 
-deriving instance Eq   (MintValue era)
-deriving instance Show (MintValue era)
+deriving instance Eq   (TxFee era)
+deriving instance Show (TxFee era)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction validity range
+--
+
+-- | This was formerly known as the TTL.
+--
+data TxValidityUpperBound era where
+
+     TxValidityNoUpperBound :: ValidityNoUpperBoundSupportedInEra era
+                            -> TxValidityUpperBound era
+
+     TxValidityUpperBound   :: ValidityUpperBoundSupportedInEra era
+                            -> SlotNo
+                            -> TxValidityUpperBound era
+
+deriving instance Eq   (TxValidityUpperBound era)
+deriving instance Show (TxValidityUpperBound era)
+
+
+data TxValidityLowerBound era where
+
+     TxValidityNoLowerBound :: TxValidityLowerBound era
+
+     TxValidityLowerBound   :: ValidityLowerBoundSupportedInEra era
+                            -> SlotNo
+                            -> TxValidityLowerBound era
+
+deriving instance Eq   (TxValidityLowerBound era)
+deriving instance Show (TxValidityLowerBound era)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction metadata (era-dependent)
+--
+
+data TxMetadataInEra era where
+
+     TxMetadataNone  :: TxMetadataInEra era
+
+     TxMetadataInEra :: TxMetadataSupportedInEra era
+                     -> TxMetadata
+                     -> TxMetadataInEra era
+
+deriving instance Eq   (TxMetadataInEra era)
+deriving instance Show (TxMetadataInEra era)
+
+
+-- ----------------------------------------------------------------------------
+-- Auxiliary scripts (era-dependent)
+--
+
+data TxAuxScripts era where
+
+     TxAuxScriptsNone :: TxAuxScripts era
+
+     TxAuxScripts     :: AuxScriptsSupportedInEra era
+                      -> [Script era]
+                      -> TxAuxScripts era
+
+deriving instance Eq   (TxAuxScripts era)
+deriving instance Show (TxAuxScripts era)
+
+
+-- ----------------------------------------------------------------------------
+-- Withdrawals within transactions (era-dependent)
+--
+
+data TxWithdrawals era where
+
+     TxWithdrawalsNone :: TxWithdrawals era
+
+     TxWithdrawals     :: WithdrawalsSupportedInEra era
+                       -> [(StakeAddress, Lovelace)]
+                       -> TxWithdrawals era
+
+deriving instance Eq   (TxWithdrawals era)
+deriving instance Show (TxWithdrawals era)
+
+
+-- ----------------------------------------------------------------------------
+-- Certificates within transactions (era-dependent)
+--
+
+data TxCertificates era where
+
+     TxCertificatesNone :: TxCertificates era
+
+     TxCertificates     :: CertificatesSupportedInEra era
+                        -> [Certificate]
+                        -> TxCertificates era
+
+deriving instance Eq   (TxCertificates era)
+deriving instance Show (TxCertificates era)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction metadata (era-dependent)
+--
+
+data TxUpdateProposal era where
+
+     TxUpdateProposalNone :: TxUpdateProposal era
+
+     TxUpdateProposal     :: UpdateProposalSupportedInEra era
+                          -> UpdateProposal
+                          -> TxUpdateProposal era
+
+deriving instance Eq   (TxUpdateProposal era)
+deriving instance Show (TxUpdateProposal era)
+
+
+-- ----------------------------------------------------------------------------
+-- Value minting within transactions (era-dependent)
+--
+
+data TxMintValue era where
+
+     TxMintNone  :: TxMintValue era
+
+     TxMintValue :: MultiAssetSupportedInEra era -> Value -> TxMintValue era
+
+deriving instance Eq   (TxMintValue era)
+deriving instance Show (TxMintValue era)
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction body content
+--
+
+data TxBodyContent era =
+     TxBodyContent {
+       txIns            :: [TxIn],
+       txOuts           :: [TxOut era],
+       txFee            :: TxFee era,
+       txValidityRange  :: (TxValidityLowerBound era,
+                            TxValidityUpperBound era),
+       txMetadata       :: TxMetadataInEra era,
+       txAuxScripts     :: TxAuxScripts era,
+       txWithdrawals    :: TxWithdrawals era,
+       txCertificates   :: TxCertificates era,
+       txUpdateProposal :: TxUpdateProposal era,
+       txMintValue      :: TxMintValue era
+     }
 
 
 -- ----------------------------------------------------------------------------
@@ -431,23 +742,36 @@ instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
         MaryEra    -> "TxBodyMary"
 
 
-data ByronTxBodyConversionError =
-       ByronTxBodyEmptyTxIns
-     | ByronTxBodyEmptyTxOuts
-     | ByronTxBodyLovelaceOverflow (TxOut ByronEra)
+-- ----------------------------------------------------------------------------
+-- Constructing transaction bodies
+--
+
+data TxBodyError era =
+       TxBodyEmptyTxIns
+     | TxBodyEmptyTxOuts
+     | TxBodyLovelaceOverflow (TxOut era)
      deriving Show
 
-makeByronTransaction :: [TxIn]
-                     -> [TxOut ByronEra]
-                     -> Either ByronTxBodyConversionError
-                               (TxBody ByronEra)
-makeByronTransaction ins outs = do
-    ins'  <- NonEmpty.nonEmpty ins        ?! ByronTxBodyEmptyTxIns
+
+makeTransactionBody :: forall era.
+                       IsCardanoEra era
+                    => TxBodyContent era
+                    -> Either (TxBodyError era) (TxBody era)
+makeTransactionBody =
+    case cardanoEraStyle :: CardanoEraStyle era of
+      LegacyByronEra      -> makeByronTransactionBody
+      ShelleyBasedEra era -> makeShelleyTransactionBody era
+
+
+makeByronTransactionBody :: TxBodyContent ByronEra
+                         -> Either (TxBodyError ByronEra) (TxBody ByronEra)
+makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
+    ins'  <- NonEmpty.nonEmpty txIns      ?! TxBodyEmptyTxIns
     let ins'' = NonEmpty.map toByronTxIn ins'
 
-    outs'  <- NonEmpty.nonEmpty outs      ?! ByronTxBodyEmptyTxOuts
+    outs'  <- NonEmpty.nonEmpty txOuts    ?! TxBodyEmptyTxOuts
     outs'' <- traverse
-                (\out -> toByronTxOut out ?! ByronTxBodyLovelaceOverflow out)
+                (\out -> toByronTxOut out ?! TxBodyLovelaceOverflow out)
                 outs'
     return $
       ByronTxBody $
@@ -456,86 +780,139 @@ makeByronTransaction ins outs = do
             (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
             ()
 
-
-data TxExtraContent =
-     TxExtraContent {
-       txMetadata        :: Maybe TxMetadata,
-       txWithdrawals     :: [(StakeAddress, Lovelace)],
-       txCertificates    :: [Certificate],
-       txUpdateProposal  :: Maybe UpdateProposal
-     }
-
-txExtraContentEmpty :: TxExtraContent
-txExtraContentEmpty =
-    TxExtraContent {
-      txMetadata        = Nothing,
-      txWithdrawals     = [],
-      txCertificates    = [],
-      txUpdateProposal  = Nothing
-    }
-
-type TxFee = Lovelace
-type TTL   = SlotNo
-
-makeShelleyTransaction :: forall era.
-                          IsShelleyBasedEra era
-                       => TxExtraContent
-                       -> TTL
-                       -> TxFee
-                       -> [TxIn]
-                       -> [TxOut era]
-                       -> TxBody era
-makeShelleyTransaction TxExtraContent {
-                         txMetadata,
-                         txWithdrawals,
-                         txCertificates,
-                         txUpdateProposal
-                       } ttl fee ins outs =
+makeShelleyTransactionBody :: ShelleyBasedEra era
+                           -> TxBodyContent era
+                           -> Either (TxBodyError era) (TxBody era)
+makeShelleyTransactionBody era@ShelleyBasedEraShelley
+                           TxBodyContent {
+                             txIns,
+                             txOuts,
+                             txFee,
+                             txValidityRange = (_, upperBound),
+                             txMetadata,
+                             txWithdrawals,
+                             txCertificates,
+                             txUpdateProposal
+                           } =
     --TODO: validate the txins are not empty, and tx out coin values are in range
-    case shelleyBasedEra :: ShelleyBasedEra era of
-      ShelleyBasedEraShelley ->
-        ShelleyTxBody
-          ShelleyBasedEraShelley
-          (Shelley.TxBody
-            (Set.fromList (map toShelleyTxIn ins))
-            (Seq.fromList (map toShelleyTxOut outs))
-            (Seq.fromList (map toShelleyCertificate txCertificates))
-            (toShelleyWithdrawal txWithdrawals)
-            (toShelleyLovelace fee)
-            ttl
-            (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
-            (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata))
-          (toShelleyMetadata <$> txMetadata)
+    return $
+      ShelleyTxBody era
+        (Shelley.TxBody
+          (Set.fromList (map toShelleyTxIn  txIns))
+          (Seq.fromList (map toShelleyTxOut txOuts))
+          (case txCertificates of
+             TxCertificatesNone  -> Seq.empty
+             TxCertificates _ cs -> Seq.fromList (map toShelleyCertificate cs))
+          (case txWithdrawals of
+             TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
+             TxWithdrawals _ ws -> toShelleyWithdrawal ws)
+          (case txFee of
+             TxFeeExplicit _ fee -> toShelleyLovelace fee)
+          (case upperBound of
+             TxValidityNoUpperBound era' -> case era' of {}
+             TxValidityUpperBound _ ttl  -> ttl)
+          (case txUpdateProposal of
+             TxUpdateProposalNone -> SNothing
+             TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
+          (case txMetadata of
+             TxMetadataNone      -> SNothing
+             TxMetadataInEra _ m -> SJust (toShelleyMetadataHash m)))
+        (case txMetadata of
+           TxMetadataNone      -> Nothing
+           TxMetadataInEra _ m -> Just (toShelleyMetadata m))
 
-      ShelleyBasedEraAllegra ->
-        ShelleyTxBody
-          ShelleyBasedEraAllegra
-          (Allegra.TxBody
-            (Set.fromList (map toShelleyTxIn ins))
-            (Seq.fromList (map toShelleyTxOut outs))
-            (Seq.fromList (map toShelleyCertificate txCertificates))
-            (toShelleyWithdrawal txWithdrawals)
-            (toShelleyLovelace fee)
-            (error "TODO: support validity interval")
-            (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
-            (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata)
-            mempty) -- No minting in Allegra, only Mary
-          (toShelleyMetadata <$> txMetadata)
+makeShelleyTransactionBody era@ShelleyBasedEraAllegra
+                           TxBodyContent {
+                             txIns,
+                             txOuts,
+                             txFee,
+                             txValidityRange = (lowerBound, upperBound),
+                             txMetadata,
+                             txAuxScripts = _unused, --TODO: now supported in ledger
+                             txWithdrawals,
+                             txCertificates,
+                             txUpdateProposal
+                           } =
+    --TODO: validate the txins are not empty, and tx out coin values are in range
+    return $
+      ShelleyTxBody era
+        (Allegra.TxBody
+          (Set.fromList (map toShelleyTxIn  txIns))
+          (Seq.fromList (map toShelleyTxOut txOuts))
+          (case txCertificates of
+             TxCertificatesNone  -> Seq.empty
+             TxCertificates _ cs -> Seq.fromList (map toShelleyCertificate cs))
+          (case txWithdrawals of
+             TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
+             TxWithdrawals _ ws -> toShelleyWithdrawal ws)
+          (case txFee of
+             TxFeeExplicit _ fee -> toShelleyLovelace fee)
+          (Allegra.ValidityInterval {
+             Allegra.validFrom = case lowerBound of
+                                   TxValidityNoLowerBound   -> SNothing
+                                   TxValidityLowerBound _ s -> SJust s,
+             Allegra.validTo   = case upperBound of
+                                   TxValidityNoUpperBound _ -> SNothing
+                                   TxValidityUpperBound _ s -> SJust s
+           })
+          (case txUpdateProposal of
+             TxUpdateProposalNone -> SNothing
+             TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
+          (case txMetadata of
+             TxMetadataNone      -> SNothing
+             TxMetadataInEra _ m -> SJust (toShelleyMetadataHash m))
+          mempty) -- No minting in Allegra, only Mary
+        (case txMetadata of
+           TxMetadataNone      -> Nothing
+           TxMetadataInEra _ m -> Just (toShelleyMetadata m))
 
-      ShelleyBasedEraMary ->
-        ShelleyTxBody
-          ShelleyBasedEraMary
-          (Allegra.TxBody
-            (Set.fromList (map toShelleyTxIn ins))
-            (Seq.fromList (map toShelleyTxOut outs))
-            (Seq.fromList (map toShelleyCertificate txCertificates))
-            (toShelleyWithdrawal txWithdrawals)
-            (toShelleyLovelace fee)
-            (error "TODO: makeShelleyTransaction support validity interval")
-            (toShelleyUpdate <$> maybeToStrictMaybe txUpdateProposal)
-            (toShelleyMetadataHash <$> maybeToStrictMaybe txMetadata)
-            (error "TODO: makeShelleyTransaction support minting"))
-          (toShelleyMetadata <$> txMetadata)
+makeShelleyTransactionBody era@ShelleyBasedEraMary
+                           TxBodyContent {
+                             txIns,
+                             txOuts,
+                             txFee,
+                             txValidityRange = (lowerBound, upperBound),
+                             txMetadata,
+                             txAuxScripts = _unused, --TODO: now supported in ledger
+                             txWithdrawals,
+                             txCertificates,
+                             txUpdateProposal,
+                             txMintValue
+                           } =
+    --TODO: validate the txins are not empty, and tx out coin values are in range
+    return $
+      ShelleyTxBody era
+        (Allegra.TxBody
+          (Set.fromList (map toShelleyTxIn  txIns))
+          (Seq.fromList (map toShelleyTxOut txOuts))
+          (case txCertificates of
+             TxCertificatesNone  -> Seq.empty
+             TxCertificates _ cs -> Seq.fromList (map toShelleyCertificate cs))
+          (case txWithdrawals of
+             TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
+             TxWithdrawals _ ws -> toShelleyWithdrawal ws)
+          (case txFee of
+             TxFeeExplicit _ fee -> toShelleyLovelace fee)
+          (Allegra.ValidityInterval {
+             Allegra.validFrom = case lowerBound of
+                                   TxValidityNoLowerBound   -> SNothing
+                                   TxValidityLowerBound _ s -> SJust s,
+             Allegra.validTo   = case upperBound of
+                                   TxValidityNoUpperBound _ -> SNothing
+                                   TxValidityUpperBound _ s -> SJust s
+           })
+          (case txUpdateProposal of
+             TxUpdateProposalNone -> SNothing
+             TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
+          (case txMetadata of
+             TxMetadataNone      -> SNothing
+             TxMetadataInEra _ m -> SJust (toShelleyMetadataHash m))
+          (case txMintValue of
+             TxMintNone      -> mempty
+             TxMintValue _ v -> toMaryValue v))
+        (case txMetadata of
+           TxMetadataNone      -> Nothing
+           TxMetadataInEra _ m -> Just (toShelleyMetadata m))
 
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ledgerera
@@ -544,6 +921,68 @@ toShelleyWithdrawal withdrawals =
       Map.fromList
         [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
         | (stakeAddr, value) <- withdrawals ]
+
+
+-- ----------------------------------------------------------------------------
+-- Transitional utility functions for making transaction bodies
+--
+
+-- | Transitional function to help the CLI move to the updated TxBody API.
+--
+makeByronTransaction :: [TxIn]
+                     -> [TxOut ByronEra]
+                     -> Either (TxBodyError ByronEra) (TxBody ByronEra)
+makeByronTransaction txIns txOuts =
+    makeTransactionBody $
+      TxBodyContent {
+        txIns,
+        txOuts,
+        txFee            = TxFeeImplicit,
+        txValidityRange  = (TxValidityNoLowerBound,
+                            TxValidityNoUpperBound
+                              ValidityNoUpperBoundInByronEra),
+        txMetadata       = TxMetadataNone,
+        txAuxScripts     = TxAuxScriptsNone,
+        txWithdrawals    = TxWithdrawalsNone,
+        txCertificates   = TxCertificatesNone,
+        txUpdateProposal = TxUpdateProposalNone,
+        txMintValue      = TxMintNone
+      }
+
+-- | Transitional function to help the CLI move to the updated TxBody API.
+--
+makeShelleyTransaction :: [TxIn]
+                       -> [TxOut ShelleyEra]
+                       -> SlotNo
+                       -> Lovelace
+                       -> [Certificate]
+                       -> [(StakeAddress, Lovelace)]
+                       -> Maybe TxMetadata
+                       -> Maybe UpdateProposal
+                       -> Either (TxBodyError ShelleyEra) (TxBody ShelleyEra)
+makeShelleyTransaction txIns txOuts ttl fee
+                       certs withdrawals mMetaData mUpdateProp =
+    makeTransactionBody $
+      TxBodyContent {
+        txIns,
+        txOuts,
+        txFee            = TxFeeExplicit TxFeesExplicitInShelleyEra fee,
+        txValidityRange  = (TxValidityNoLowerBound,
+                            TxValidityUpperBound
+                              ValidityUpperBoundInShelleyEra ttl),
+        txMetadata       = case mMetaData of
+                             Nothing -> TxMetadataNone
+                             Just md -> TxMetadataInEra
+                                          TxMetadataInShelleyEra md,
+        txAuxScripts     = TxAuxScriptsNone,
+        txWithdrawals    = TxWithdrawals WithdrawalsInShelleyEra withdrawals,
+        txCertificates   = TxCertificates CertificatesInShelleyEra certs,
+        txUpdateProposal = case mUpdateProp of
+                             Nothing -> TxUpdateProposalNone
+                             Just up -> TxUpdateProposal
+                                          UpdateProposalInShelleyEra up,
+        txMintValue      = TxMintNone
+      }
 
 
 -- ----------------------------------------------------------------------------
