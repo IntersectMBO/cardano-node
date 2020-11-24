@@ -40,7 +40,8 @@ module Cardano.Api.Tx (
     getShelleyKeyWitnessVerificationKey,
 
     -- * Data family instances
-    AsType(AsTx, AsByronTx, AsShelleyTx, AsByronWitness, AsShelleyWitness),
+    AsType(AsTx, AsByronTx, AsShelleyTx,
+           AsWitness, AsByronWitness, AsShelleyWitness),
   ) where
 
 import           Prelude
@@ -326,13 +327,18 @@ instance Show (Witness era) where
       . showsPrec 11 tx
 
 
-instance HasTypeProxy (Witness ByronEra) where
-    data AsType (Witness ByronEra) = AsByronWitness
-    proxyToAsType _ = AsByronWitness
+instance HasTypeProxy era => HasTypeProxy (Witness era) where
+    data AsType (Witness era) = AsWitness (AsType era)
+    proxyToAsType _ = AsWitness (proxyToAsType (Proxy :: Proxy era))
 
-instance HasTypeProxy (Witness ShelleyEra) where
-    data AsType (Witness ShelleyEra) = AsShelleyWitness
-    proxyToAsType _ = AsShelleyWitness
+pattern AsByronWitness :: AsType (Witness ByronEra)
+pattern AsByronWitness   = AsWitness AsByronEra
+{-# COMPLETE AsByronWitness #-}
+
+pattern AsShelleyWitness :: AsType (Witness ShelleyEra)
+pattern AsShelleyWitness = AsWitness AsShelleyEra
+{-# COMPLETE AsShelleyWitness #-}
+
 
 instance SerialiseAsCBOR (Witness ByronEra) where
     serialiseToCBOR (ShelleyBootstrapWitness era _) = case era of {}
