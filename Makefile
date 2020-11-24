@@ -9,7 +9,7 @@ stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -not -path '*.stack-work*' -print0 | xargs -0 stylish-haskell -i
 
 cabal-hashes:
-	$$(nix-build default.nix -A checkCabalProject --no-out-link)
+	$$(nix-build ./nix -A iohkNix.checkCabalProject --no-out-link)
 
 ghci: ## Run repl
 	@stack ghci $(PROJECT_NAME):lib --haddock-deps --ghci-options=-fobject-code --nix
@@ -31,7 +31,7 @@ test-ghcid-nix: ## Run ghcid on test suites with Nix
 	@ghcid --command="stack ghci --test --main-is $(PROJECT_NAME):test:$(PROJECT_NAME)-test --nix -j$(NUM_PROC)"
 
 test-chairmans-cluster:
-	@scripts/cluster-test.sh
+	@scripts/chairmans-cluster/cluster-test.sh
 
 BENCH_REPEATS ?= 3
 BENCH_CONFIG ?= both

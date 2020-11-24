@@ -9,6 +9,13 @@
 GenesisFile: genesis.json
 SocketPath: db/node.socket
 
+##### Blockfetch Protocol
+
+# The maximum number of used peers during bulk sync.
+MaxConcurrencyBulkSync: 1
+# The maximum number of used peers when fetching newly forged blocks.
+MaxConcurrencyDeadline: 2
+
 #TODO: These parameters cannot yet be used in the config file, only on the CLI:
 #DatabasePath: db/
 #Topology: configuration/mainnet-topology.json
@@ -17,9 +24,8 @@ SocketPath: db/node.socket
 ##### Core protocol parameters #####
 
 # This is the instance of the Ouroboros family that we are running.
-# The node also supports various test and mock instances.
-# "RealPBFT" is the real (ie not mock) (permissive) OBFT protocol, which
-# is what we use on mainnet in Byron era.
+# "RealPBFT" is the real (permissive) OBFT protocol, which is what we use on
+# mainnet in Byron era.
 Protocol: RealPBFT
 
 # The mainnet does not include the network magic into addresses. Testnets do.
@@ -28,8 +34,8 @@ RequiresNetworkMagic: RequiresNoMagic
 
 ##### Update system parameters #####
 
-# This protocol version number gets used by by block producing nodes as part
-# part of the system for agreeing on and synchronising protocol updates.
+# This protocol version number gets used by block producing nodes as part
+# of the system for agreeing on and synchronising protocol updates.
 LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
@@ -42,14 +48,7 @@ ApplicationVersion: 1
 
 ##### Logging configuration #####
 
-# The node can run in either the SimpleView or LiveView. The SimpleView just
-# uses standard output, optionally with log output. The LiveView is a text
-# console on Linux and Mac OSX with a live view of various node metrics.
-# When LiveView is used logging output to 'stdout' is automatically disabled.
-ViewMode: SimpleView
-#ViewMode: LiveView
-
-# Enble or disable logging overall
+# Enable or disable logging overall
 TurnOnLogging: True
 
 # Enable the collection of various OS metrics such as memory and CPU use.
@@ -66,7 +65,7 @@ minSeverity: Info
 TracingVerbosity: NormalVerbosity
 
 # The system supports a number of backends for logging and monitoring.
-# This setting lists the the backends that will be available to use in the
+# This setting lists the backends that will be available to use in the
 # configuration below. The logging backend is called Katip.
 setupBackends:
   - KatipBK
@@ -151,7 +150,6 @@ rotation:
 TraceBlockFetchClient: False
 
 # Trace BlockFetch decisions made by the BlockFetch client.
-# needed to display "peers" and their block height in LiveView
 TraceBlockFetchDecisions: False
 
 # Trace BlockFetch protocol messages.
@@ -163,6 +161,9 @@ TraceBlockFetchProtocolSerialised: False
 # Trace BlockFetch server.
 TraceBlockFetchServer: False
 
+# Trace BlockchainTime.
+TraceBlockchainTime: False
+
 # Verbose tracer of ChainDB
 TraceChainDb: True
 
@@ -172,7 +173,7 @@ TraceChainSyncClient: False
 # Trace ChainSync server (blocks).
 TraceChainSyncBlockServer: False
 
-# Trace ChainSync server (headers)
+# Trace ChainSync server (headers).
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
@@ -214,7 +215,7 @@ TraceLocalTxSubmissionServer: False
 # Trace mempool.
 TraceMempool: True
 
-# Trace Mux Events
+# Trace Mux Events.
 TraceMux: False
 
 # Trace TxSubmission server (inbound transactions).
@@ -244,18 +245,12 @@ options:
     cardano.node.BlockFetchDecision.peers:
       - TraceForwarderBK
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.ChainDB.metrics:
       - TraceForwarderBK
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.metrics:
       - TraceForwarderBK
       - EKGViewBK  
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.Forge.metrics:
       - EKGViewBK
     cardano.node.release:

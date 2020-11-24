@@ -6,26 +6,27 @@ module Cardano.CLI.Shelley.Run.TextView
 
 import           Cardano.Prelude
 
+import qualified Data.Text as Text
+
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Shelley.Parsers
 
-import           Cardano.Config.TextView
+import           Cardano.Api.Typed
 
-import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
 data ShelleyTextViewFileError
-  = ShelleyTextViewFileError' TextViewFileError
-  | ShelleyTextViewCBORPrettyPrintError !HelpersError
+  = TextViewReadFileError (FileError TextEnvelopeError)
+  | TextViewCBORPrettyPrintError !HelpersError
   deriving Show
 
 renderShelleyTextViewFileError :: ShelleyTextViewFileError -> Text
 renderShelleyTextViewFileError err =
   case err of
-    ShelleyTextViewFileError' txtViewFileErr -> renderTextViewFileError txtViewFileErr
-    ShelleyTextViewCBORPrettyPrintError hlprsErr ->
+    TextViewReadFileError fileErr -> Text.pack (displayError fileErr)
+    TextViewCBORPrettyPrintError hlprsErr ->
       "Error pretty printing CBOR: " <> renderHelpersError hlprsErr
 
 
@@ -36,8 +37,8 @@ runTextViewCmd cmd =
 
 runTextViewInfo :: FilePath -> Maybe OutputFile -> ExceptT ShelleyTextViewFileError IO ()
 runTextViewInfo fpath mOutFile = do
-  tv <- firstExceptT ShelleyTextViewFileError' $ newExceptT (readTextViewFile fpath)
-  let lbCBOR = LBS.fromStrict (tvRawCBOR tv)
+  tv <- firstExceptT TextViewReadFileError $ newExceptT (readTextEnvelopeFromFile fpath)
+  let lbCBOR = LBS.fromStrict (textEnvelopeRawCBOR tv)
   case mOutFile of
     Just (OutputFile oFpath) -> liftIO $ LBS.writeFile oFpath lbCBOR
-    Nothing -> firstExceptT ShelleyTextViewCBORPrettyPrintError $ pPrintCBOR lbCBOR
+    Nothing -> firstExceptT TextViewCBORPrettyPrintError $ pPrintCBOR lbCBOR

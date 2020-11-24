@@ -67,24 +67,18 @@ options:
   mapBackends:
     cardano.node.ChainDB.metrics:
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
     cardano.node.metrics.Forge:
       - EKGViewBK
     cardano.node.metrics.Mempool:
       - EKGViewBK
     cardano.node.metrics:
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
 # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
 #     - TraceForwarderBK
     cardano.node.peers:
       - EKGViewBK
     cardano.node.BlockFetchDecision.peers:
       - EKGViewBK
-      - kind: UserDefinedBK
-        name: LiveViewBackend
 # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
 #    cardano.node.release:
 #      - TraceForwarderBK
@@ -104,14 +98,12 @@ options:
 ############### Cardano Node Configuration ###############
 ##########################################################
 
-NodeId:
 Protocol: RealPBFT
 GenesisFile: genesis/genesis.json
 NumCoreNodes: 1
 RequiresNetworkMagic: RequiresMagic
 PBftSignatureThreshold:
 TurnOnLogging: True
-ViewMode: SimpleView
 TurnOnLogMetrics: True
 SocketPath:
 
@@ -147,6 +139,9 @@ TraceBlockFetchProtocolSerialised: False
 # Trace BlockFetch server.
 TraceBlockFetchServer: True
 
+# Trace BlockchainTime.
+TraceBlockchainTime: False
+
 # Verbose tracer of ChainDB
 TraceChainDb: False
 
@@ -156,7 +151,7 @@ TraceChainSyncClient: False
 # Trace ChainSync server (blocks).
 TraceChainSyncBlockServer: False
 
-# Trace ChainSync server (headers)
+# Trace ChainSync server (headers).
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
@@ -198,7 +193,7 @@ TraceLocalTxSubmissionServer: True
 # Trace mempool.
 TraceMempool: True
 
-# Trace Mux Events
+# Trace Mux Events.
 TraceMux: False
 
 # Trace TxSubmission server (inbound transactions).

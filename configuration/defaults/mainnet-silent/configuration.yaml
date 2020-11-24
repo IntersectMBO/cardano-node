@@ -13,5 +13,4 @@ TurnOnLogging: False
 TurnOnLogMetrics: False
 minSeverity: Notice
 TracingVerbosity: NormalVerbosity
-ViewMode: SimpleView
 

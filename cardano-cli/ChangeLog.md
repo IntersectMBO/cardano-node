@@ -1,5 +1,123 @@
 # Changelog for cardano-cli
 
+## 1.23.0 -- November 2020
+
+- Create VRF keys with the correct file permissions (#1948)
+- New command to query the Shelley protocol (not just ledger) state (#2057)
+- Skeletons of the new commands and flags for the multi-asset extensions (#2081)
+
+## 1.22.1 -- October 2020
+
+None
+
+## 1.22.0 -- October 2020
+
+- Adjust the ledger state dump to return the "extended" ledger state (#2019)
+- Preliminary support for the upcoming Allegra and Mary eras (#1958, #2019)
+
+## 1.21.2 -- October 2020
+
+- Support bech32 and hex formats for reading verification keys (#1852)
+- Minor help text improvements (#1661, #1956)
+- Fix typo in KES docs (#1917, #1953)
+- Improved documentation for CLI multi-signature support (#1976)
+
+## 1.21.1 -- September 2020
+
+None
+
+## 1.21.0 -- September 2020
+- Support for multi-signature scripts (#1788, #1880)
+
+## 1.20.0 -- September 2020
+
+- New command for creating genesis key delegation certificates (#1784)
+- New command for converting more legacy signing key formats (#1756, #1822)
+- Improved support for JSON to Tx metadata conversions, with two supported
+  JSON schemas, suitable for different use cases (#1797)
+- Support bech32 and hex formats for reading signing keys (#1790)
+- Improved error messages for cli errors (#1801, #1839)
+
+## 1.19.1 -- September 2020
+
+- Fix the testnet vs mainnet argument for the genesis create command (#1761)
+- Fix the --treasury flag for MIR cert creation (#1780)
+- Fix the output rendering in the command to hash genesis files (#1713, #1767)
+- Validate CBOR tx metadata when building tx bodies (#1432, #1677)
+
+## 1.19.0 -- August 2020
+
+- Support for converting ITN extended keys to Shelley stake keys (#1579)
+- Support for converting password-protected Byron signing keys (#1633)
+- Support for building script addresses (#1641)
+- Improve the output of the stake-address-info query (#1546, #1636, #1671)
+- Support for Bech32-encoded stake pool IDs (#1528, #1638, #1730)
+- Reorganise the Byron CLI commands similarly to the Shelley ones (#1609, #1628)
+- Code organisation refactoring (#1457, #1594)
+- Extra tests and refactoring of tests (#1565, #1566, #1602, #1668)
+- Code tidying using hlint and style tool (#1590, #1625, #1663, #1707, #1708)
+
+## 1.18.0 -- July 2020
+
+- Properly display the tx hash in the UTxO query command output (#1526, #1535)
+- Refactoring and minor improvements in tests (#1538, #1541)
+
+## 1.17.0 -- July 2020
+
+- Allow genesis keys as tx witnesses (#1483)
+- Allow extended genesis delegate keys to sign operational certs (#1497)
+- New cli "key" command with key utilities (#1487, #1493)
+- More helpful flag defaults in cli command for fee calculation (#1516)
+- Default to the Cardano protocol for talking to a node (#1515)
+
+## 1.16.0 -- July 2020
+
+- Accept either a pool id or verification key in delegation cli command (#1460)
+- Improved bash completion for flags that accept files (#1459)
+- More and improved integration tests (#1429, #1450, #1453)
+
+## 1.15.1 -- July 2020
+
+- Support for interacting with nodes running in Byron-only, Shelley-only or
+  the composite Cardano mode (Byron;Shelley) (#1435)
+- Add support for byron keys and extended ed25519 keys (#1411)
+- Port the CLI command implementations to the new API (#1416)
+- Fix the output of the calculate-min-fee command (#1408)
+- New stake and VRF key hashing commands (#1407)
+- Use JSON output format for the address info command (#1426)
+
+## 1.15.0 -- July 2020
+
+- Fix the ledger state dump query (#1333, #1334)
+- Fix the format of Byron addresses used in Byron CLI commands (#1326)
+- Port CLI commands to use the new API (#1341, #1375, #1396, #1397)
+- Change to JSON output for the "query tip" command (#1340, #1365)
+- Moving code around to eliminate the cardano-config package (#1289, #1316)
+
+## 1.14.2 -- June 2020
+
+- Fix the hashing of stake pool metadata
+- Fix the query that dumps the ledger state as JSON (#1333)
+
+## 1.14.1 -- June 2020
+
+No changes in the cardano-cli. There were changes in the cardano-node.
+
+## 1.14.0 -- June 2020
+
+- New flags for transaction metadata in tx construction (#1233)
+- New flags for reward account withdrawals in tx construction (#1237)
+- New command for pool metadata JSON validation and hashing (#1234, #1299)
+- New flags for pool metadata in pool registration cert command (#1234)
+- New flags for pool relays in pool registration cert command (#1282, #1296)
+- New command to convert ITN keys (#1070, #1136)
+- New command to get the txid of a tx body (#1231)
+- Return appropriate exit code for tx submission failures (#1226)
+- Fix the query stake-address-info to accept stake addresses (#1194, #1197)
+- More regression tests (pioneer exercises 2, 3, 4) (#1209, #1247, #1279, #1287)
+- Start to migrate to using the new typed API from cardano-api lib (#1284, #1298)
+- Fix reporting of git revision via version command (#1283)
+
 ## 1.13.0 -- June 2020
 
 - Fix the parsing of the pool margin in pool registration certs (#1063, #1110)

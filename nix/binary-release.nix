@@ -13,6 +13,7 @@
 }:
 
 let
+  lib = pkgs.lib;
   name = "cardano-node-${project.version}-${platform}";
 
 in pkgs.runCommand name {

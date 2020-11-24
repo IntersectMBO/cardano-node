@@ -24,9 +24,9 @@ let
 
   scripts = callPackage ./nix/scripts.nix { inherit customConfig; };
   # NixOS tests run a proxy and validate it listens
-  nixosTests = import ./nix/nixos/tests {
+  nixosTests = recRecurseIntoAttrs (import ./nix/nixos/tests {
     inherit pkgs;
-  };
+  });
 
   dockerImage = let
     defaultConfig = rec {
@@ -36,7 +36,7 @@ let
     };
     customConfig' = defaultConfig // customConfig;
   in pkgs.callPackage ./nix/docker.nix {
-    inherit (self) cardano-node;
+    inherit (packages) cardano-node cardano-cli;
     scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
   };
 
@@ -54,19 +54,11 @@ let
       $STRIP $out/bin/*
     '' else p;
 
-  self = {
-    inherit haskellPackages scripts nixosTests environments dockerImage;
+  packages = {
+    inherit haskellPackages cardano-node cardano-cli db-converter
+      scripts nixosTests environments dockerImage mkCluster bech32;
 
     inherit (haskellPackages.cardano-node.identifier) version;
-    # Grab the executable component of our package.
-    inherit (haskellPackages.cardano-node.components.exes) cardano-node;
-    cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
-    inherit (haskellPackages.cardano-cli.components.exes) cardano-cli;
-    inherit (haskellPackages.cardano-node.components.exes) chairman;
-    # expose the db-converter from the ouroboros-network we depend on
-    inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
-
-    inherit (pkgs.iohkNix) checkCabalProject;
 
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
@@ -78,6 +70,10 @@ let
     checks = recurseIntoAttrs {
       # `checks.tests` collect results of executing the tests:
       tests = collectChecks haskellPackages;
+
+      hlint = callPackage iohkNix.tests.hlint {
+        src = ./. ;
+      };
     };
 
     shell = import ./shell.nix {
@@ -85,4 +81,4 @@ let
       withHoogle = true;
     };
 };
-in self
+in packages

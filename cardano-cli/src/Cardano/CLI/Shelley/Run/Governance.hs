@@ -1,38 +1,31 @@
 module Cardano.CLI.Shelley.Run.Governance
-  ( ShelleyGovernanceError
+  ( ShelleyGovernanceCmdError
   , renderShelleyGovernanceError
   , runGovernanceCmd
   ) where
 
 import           Cardano.Prelude
 
-import qualified Data.Map.Strict as Map
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right,
-                   newExceptT)
+import qualified Data.Text as Text
 
-import           Cardano.Api (ApiError, EpochNo, ShelleyCoin,
-                   ShelleyCredentialStaking, ShelleyPParamsUpdate, emptyPParamsUpdate,
-                   StakingVerificationKey (..), Update (..),
-                   createShelleyUpdateProposal, hashKey, mkShelleyStakingCredential,
-                   readStakingVerificationKey, renderApiError, shelleyMIRCertificate,
-                   textShow, writeCertificate, writeUpdate)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, right)
 
+import           Cardano.Api.Typed
 
-import           Cardano.Config.Shelley.ColdKeys (KeyError, KeyRole(..), readVerKey,
-                   renderKeyError)
+import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHashOrFile,
+                     readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
 import           Cardano.CLI.Shelley.Parsers
+import           Cardano.CLI.Types
 
-import qualified Shelley.Spec.Ledger.TxData as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 
-data ShelleyGovernanceError
-  = GovernanceWriteMIRCertError !FilePath !ApiError
-  | GovernanceWriteUpdateError !FilePath !ApiError
-  | GovernanceEmptyUpdateProposalError
-  | GovernanceReadGenVerKeyError !FilePath !KeyError
-  | GovernanceReadStakeVerKeyError !FilePath !ApiError
-  | GovernanceMIRCertificateKeyRewardMistmach
+data ShelleyGovernanceCmdError
+  = ShelleyGovernanceCmdTextEnvReadError !(FileError TextEnvelopeError)
+  | ShelleyGovernanceCmdKeyReadError !(FileError InputDecodeError)
+  | ShelleyGovernanceCmdTextEnvWriteError !(FileError ())
+  | ShelleyGovernanceCmdEmptyUpdateProposalError
+  | ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
       !FilePath
       !Int
       -- ^ Number of stake verification keys
@@ -40,87 +33,111 @@ data ShelleyGovernanceError
       -- ^ Number of reward amounts
   deriving Show
 
-renderShelleyGovernanceError :: ShelleyGovernanceError -> Text
+renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Text
 renderShelleyGovernanceError err =
   case err of
-    GovernanceReadGenVerKeyError fp keyErr ->
-      "Error reading genesis verification key at: " <> textShow fp <> " Error: " <> renderKeyError keyErr
-    GovernanceReadStakeVerKeyError stKeyFp apiErr ->
-      "Error reading stake key at: " <> textShow stKeyFp <> " Error: " <> renderApiError apiErr
-    GovernanceWriteMIRCertError certFp apiErr ->
-      "Error writing MIR certificate at: " <> textShow certFp <> " Error: " <> renderApiError apiErr
-    GovernanceWriteUpdateError fp apiError ->
-      "Error writing shelley update proposal at: " <> textShow fp <> " Error: " <> renderApiError apiError
+    ShelleyGovernanceCmdTextEnvReadError fileErr -> Text.pack (displayError fileErr)
+    ShelleyGovernanceCmdKeyReadError fileErr -> Text.pack (displayError fileErr)
+    ShelleyGovernanceCmdTextEnvWriteError fileErr -> Text.pack (displayError fileErr)
     -- TODO: The equality check is still not working for empty update proposals.
-    GovernanceEmptyUpdateProposalError ->
+    ShelleyGovernanceCmdEmptyUpdateProposalError ->
       "Empty update proposals are not allowed"
-    GovernanceMIRCertificateKeyRewardMistmach fp numVKeys numRwdAmts ->
+    ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach fp numVKeys numRwdAmts ->
        "Error creating the MIR certificate at: " <> textShow fp
        <> " The number of staking keys: " <> textShow numVKeys
        <> " and the number of reward amounts: " <> textShow numRwdAmts
        <> " are not equivalent."
+  where
+    textShow x = Text.pack (show x)
 
 
-
-runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceError IO ()
-runGovernanceCmd (GovernanceMIRCertificate mirpot vKeys rewards out) = runGovernanceMIRCertificate mirpot vKeys rewards out
-runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) = runGovernanceUpdateProposal out eNo genVKeys ppUp
-runGovernanceCmd cmd = liftIO $ putStrLn $ "TODO: runGovernanceCmd: " ++ show cmd
+runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceCmdError IO ()
+runGovernanceCmd (GovernanceMIRCertificate mirpot vKeys rewards out) =
+  runGovernanceMIRCertificate mirpot vKeys rewards out
+runGovernanceCmd (GovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out) =
+  runGovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out
+runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
+  runGovernanceUpdateProposal out eNo genVKeys ppUp
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot
   -> [VerificationKeyFile]
   -- ^ Stake verification keys
-  -> [ShelleyCoin]
+  -> [Lovelace]
   -- ^ Reward amounts
   -> OutputFile
-  -> ExceptT ShelleyGovernanceError IO ()
+  -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceMIRCertificate mirPot vKeys rwdAmts (OutputFile oFp) = do
     sCreds <- mapM readStakeKeyToCred vKeys
 
     checkEqualKeyRewards vKeys rwdAmts
 
-    let mirCert = shelleyMIRCertificate mirPot (mirMap sCreds rwdAmts)
+    let mirCert = makeMIRCertificate mirPot (zip sCreds rwdAmts)
 
-    firstExceptT (GovernanceWriteMIRCertError oFp) . newExceptT $ writeCertificate oFp mirCert
+    firstExceptT ShelleyGovernanceCmdTextEnvWriteError
+      . newExceptT
+      $ writeFileTextEnvelope oFp (Just mirCertDesc) mirCert
   where
-    checkEqualKeyRewards :: [VerificationKeyFile] -> [ShelleyCoin] -> ExceptT ShelleyGovernanceError IO ()
+    mirCertDesc :: TextEnvelopeDescr
+    mirCertDesc = "Move Instantaneous Rewards Certificate"
+
+    checkEqualKeyRewards :: [VerificationKeyFile] -> [Lovelace] -> ExceptT ShelleyGovernanceCmdError IO ()
     checkEqualKeyRewards keys rwds = do
        let numVKeys = length keys
            numRwdAmts = length rwds
        if numVKeys == numRwdAmts
-       then return () else left $ GovernanceMIRCertificateKeyRewardMistmach oFp numVKeys numRwdAmts
+       then return () else left $ ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach oFp numVKeys numRwdAmts
 
-    readStakeKeyToCred :: VerificationKeyFile -> ExceptT ShelleyGovernanceError IO ShelleyCredentialStaking
+    readStakeKeyToCred :: VerificationKeyFile -> ExceptT ShelleyGovernanceCmdError IO StakeCredential
     readStakeKeyToCred (VerificationKeyFile stVKey) = do
-      StakingVerificationKeyShelley stakeVkey <-
-        firstExceptT (GovernanceReadStakeVerKeyError stVKey) . newExceptT $ readStakingVerificationKey stVKey
-      right . mkShelleyStakingCredential $ hashKey stakeVkey
+      stakeVkey <- firstExceptT ShelleyGovernanceCmdTextEnvReadError
+        . newExceptT
+        $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stVKey
+      right . StakeCredentialByKey $ verificationKeyHash stakeVkey
 
-    mirMap :: [ShelleyCredentialStaking] -> [ShelleyCoin] -> Map.Map ShelleyCredentialStaking ShelleyCoin
-    mirMap stakeCreds rwds = Map.fromList $ zip stakeCreds rwds
+runGovernanceGenesisKeyDelegationCertificate
+  :: VerificationKeyOrHashOrFile GenesisKey
+  -> VerificationKeyOrHashOrFile GenesisDelegateKey
+  -> VerificationKeyOrHashOrFile VrfKey
+  -> OutputFile
+  -> ExceptT ShelleyGovernanceCmdError IO ()
+runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
+                                             genDelVkOrHashOrFp
+                                             vrfVkOrHashOrFp
+                                             (OutputFile oFp) = do
+    genesisVkHash <- firstExceptT ShelleyGovernanceCmdKeyReadError
+      . newExceptT
+      $ readVerificationKeyOrHashOrTextEnvFile AsGenesisKey genVkOrHashOrFp
+    genesisDelVkHash <-firstExceptT ShelleyGovernanceCmdKeyReadError
+      . newExceptT
+      $ readVerificationKeyOrHashOrTextEnvFile AsGenesisDelegateKey genDelVkOrHashOrFp
+    vrfVkHash <- firstExceptT ShelleyGovernanceCmdKeyReadError
+      . newExceptT
+      $ readVerificationKeyOrHashOrFile AsVrfKey vrfVkOrHashOrFp
+    firstExceptT ShelleyGovernanceCmdTextEnvWriteError
+      . newExceptT
+      $ writeFileTextEnvelope oFp (Just genKeyDelegCertDesc)
+      $ makeGenesisKeyDelegationCertificate genesisVkHash genesisDelVkHash vrfVkHash
+  where
+    genKeyDelegCertDesc :: TextEnvelopeDescr
+    genKeyDelegCertDesc = "Genesis Key Delegation Certificate"
 
 runGovernanceUpdateProposal
   :: OutputFile
   -> EpochNo
   -> [VerificationKeyFile]
   -- ^ Genesis verification keys
-  -> ShelleyPParamsUpdate
-  -> ExceptT ShelleyGovernanceError IO ()
-runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams' = do
-    upPprams <- checkForEmptyProposal $! upPprams'
-    genVKeys <- mapM
-                  (\(VerificationKeyFile fp) -> do
-                    gvk <- firstExceptT (GovernanceReadGenVerKeyError fp) $ readVerKey GenesisKey fp
-                    pure gvk
-                  )
-                  genVerKeyFiles
-    let genKeyHashes = map hashKey genVKeys
-        upProp = ShelleyUpdate $ createShelleyUpdateProposal eNo genKeyHashes upPprams
-    firstExceptT (GovernanceWriteUpdateError upFile)  . newExceptT $ writeUpdate upFile upProp
-  where
-    checkForEmptyProposal :: ShelleyPParamsUpdate -> ExceptT ShelleyGovernanceError IO ShelleyPParamsUpdate
-    checkForEmptyProposal sPParams
-      | sPParams == emptyPParamsUpdate = left GovernanceEmptyUpdateProposalError
-      | otherwise = right sPParams
-
+  -> ProtocolParametersUpdate
+  -> ExceptT ShelleyGovernanceCmdError IO ()
+runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
+    when (upPprams == mempty) $ left ShelleyGovernanceCmdEmptyUpdateProposalError
+    genVKeys <- sequence
+                  [ firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
+                      readFileTextEnvelope
+                        (AsVerificationKey AsGenesisKey)
+                        vkeyFile
+                  | VerificationKeyFile vkeyFile <- genVerKeyFiles ]
+    let genKeyHashes = map verificationKeyHash genVKeys
+        upProp = makeShelleyUpdateProposal upPprams genKeyHashes eNo
+    firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $
+      writeFileTextEnvelope upFile Nothing upProp

@@ -1,5 +1,566 @@
 # Changelog for cardano-node
 
+## 1.23.0 -- November 2020
+
+### node changes
+
+- Preliminary support for the upcoming Allegra and Mary eras (#2038, #2080)
+- Remove the HardForkNotBeforeEpoch setting from the config file (#2073)
+- Tracing changes for the benefit of the RTView monitoring tool (#2047, #2062)
+- Minor documentation improvements requested by the external audit (#2046)
+- Miscellaneous "chairman" integration test improvements (#2042, #2043, #2048,
+  #2061, #2078, #2087, #2086)
+- Improve handling of invalid command line input (#2088)
+
+### ledger changes
+
+- Fix a space leak in the stake pool performance tracking that caused writing
+  ledger state snapshots in consensus to take too long (#1967)
+- Improved ledger state serialisation performance. This involving a change to
+  the serialisation format which will require the ledger state to be rebuilt
+  upon node startup (#1968)
+- Further development for the Allegra era (#1951, #1965, #1984, #1989)
+- Further development for the Mary multi-asset era (#1961, #1959, #1971, #1977,
+  #1981, #1987, #1988, #1990)
+- Internal refactoring to support the new eras (#1954, 1978)
+- Extra test coverage (#1958, #1966)
+- Minor corrections to the formal spec arising from internal review (#1969, #1992)
+
+### consensus changes
+
+- Internal changes to improve the clarity of the chain selection algorithm and
+  to better match the description in the tech report (#2732, #2735, #2743)
+- Support for creating ledger state snapshots for testing purposes (#2733)
+- Support for the new Allegra and Mary ledger eras (#2668, #2670, #2677, #2679)
+- Extra test coverage for new eras (#2669, #2737, #2738, #2740)
+- Remove the SafeBeforeEpoch feature as it provided no benefit. In the node
+  config file this was called HardForkNotBeforeEpoch. (#2736, #2739)
+- Internal refactoring (#2720)
+
+### network changes
+- None.
+
+### crypto changes
+
+- Revert the use of libsodium in the KES implementation for now (#1986, #2752)
+
+## 1.22.1 -- October 2020
+
+### node changes
+- Miscellaneous "chairman" integration test improvements (#2025, #2028, #2030
+  #2033, #2035, #2037)
+
+### ledger changes
+- Fix a bug in the serialisation of coin values that appear in tx validation
+  errors. Also added regression tests. This bug was introduced in the
+  unreleased 1.22.0 so has not been in any released version. (#1995)
+- Restore build compatibility with GHC 8.6.5, so this release builds with
+  both GHC 8.6.5 and 8.10.2. Future releases will support 8.10.x only. (#1956)
+- Further development of the multi-asset ledger rules (#1905, #1938, #1931)
+
+### consensus changes
+- Internal updates for ledger interface changes (#2716, #2719)
+
+### network changes
+- Internal API improvements that will subsequently allow the cardano-api
+  package to present a simpler API for applications that use the node's
+  client-side IPC protocols (#2713, #2714)
+
+## 1.22.0 -- October 2020
+
+### node changes
+- Remove the deprecated LiveView feature, now that RTView is released (#1977)
+- Switch the default compiler version to GHC 8.10.2 (#1990)
+- Preliminary support for the upcoming Allegra and Mary eras (#1958)
+- Documentation updates (#1613, #1968, #1960, #2015)
+
+### consensus changes
+- Preliminary support for the upcoming Allegra and Mary eras (#2666)
+- Fixes for building with the compiler version GHC 8.10.2 (#2540, #2652)
+- Several new local state queries in v4 of the node-to-client protocol (#2694)
+- Keep a compact form of the Shelley genesis content, to allow it to be
+  queried later (#2704)
+- Switch to the newly-published "nothunks" package (#2664)
+- Address technical debt in the db-analyser tool (#2667)
+- Internal code renaming for improved clarity of protocol names (#2683)
+- Refactoring (#2687)
+- Documentation for the hard fork transition (#1741)
+
+### ledger changes
+- Fix a corner case in the way the pool performance history is calculated as
+  part of the overall pool score calculation (#1897)
+- Preliminary support for the upcoming Allegra and Mary eras (#1899)
+- Preliminary support for the time-lock feature in the script language to be
+  included in the Allegra era (#1895)
+- Preparation for multi-asset support by allowing the representation of coin
+  values to be chosen differently for different eras (#1847, #1875)
+- Preparation for new eras by allowing the representation of tx bodies to be
+  chosen differently for different eras (#1908)
+- Allow most Shelley ledger rules to be reused in subsequent eras (#1922)
+- New internal infrastructure to improve how we handle the translation of
+  configuration and state between ledger eras (#1893, #1902, #1923)
+- Adjust how the ledger is parametrised to reflect the fact that some parts
+  change with the ledger era, while others change with the consensus protocol.
+  This makes it easier to handle ledger-only era changes that still use the
+  same Praos consensus protocol. (#1915)
+- Improved internal infrastructure for managing types, such as txs, that cache
+  their serialised representation (#1917)
+- Support serialisation for the Shelley genesis data structure to support a
+  new node query that can return the genesis parameters (#1927)
+- Minor corrections to the formal spec arising from internal and external review
+  and internal audit (#1878, #1896, #1918)
+- Test improvements (#1843, #1844, #1845, #1886, #1888, #1889, #1900, #1903, #1929)
+- Switch to the newly-published "nothunks" package (#1894)
+
+### network changes
+- Fix a bug in IPv6 support (introduced in the unreleased 1.21.2) that caused
+  the node to be unable to establish any network connections on Windows systems
+  that have IPv6 support enabled (#1991, #1994)
+- New cardano-ping demo and tool (#2701)
+- Make the node fail on startup if we cannot bind to the necessary ports (#2696)
+- Improvement to the calculation and collection of network connection
+  performance metrics (#2636)
+- Improvements to the handling of the initial connection handshake (#2691)
+- Preparations for publishing io-sim as a public library (#2631)
+- Improved tests for protocol shutdown and restart (#2628, #2629)
+
+## 1.21.2 -- October 2020
+
+### node changes
+- Check VRF signing key files have the correct file permissions (#1936, #1938)
+- Improve IPv6 support and related internal refactoring (#1928)
+- Extend the "chairman" testing tool to support different testnets (#1915)
+- Miscellaneous "chairman" integration test improvements (#1951, #1961, #1939,
+  #1966, #1970, #1973, #1981)
+
+### consensus changes
+- Fix a failure that occurs on starting a node when there are certain kinds of
+  DB corruption (specifically a ledger snapshot that is newer than the tip of
+  the immutable DB, which would typically occur when chain DB files are manually
+  moved or removed) (#2651)
+- Fix a long-standing (highly unlikely) bug in evaluating alternative chains
+  that cross a hard fork boundary (#2314, #2318, #2657, #2661)
+- Internal support for using multiple leader credentials for the purpose of
+  running large scale benchmarks. It is not exposed in the node (#2640).
+
+### ledger changes
+- None.
+
+### network changes
+- Preparations for publishing io-sim as a public library (#2580, #2649)
+- Improved IPv6 support (#2662)
+- Preparation for the p2p governor: add a new node-to-node protocol version (4)
+  with a new negotiated handshake parameter to determine if the connection will
+  be uni-directional or bi-directional (#2658)
+
+## 1.21.1 -- September 2020
+
+### node changes
+- Fix configuration defaults that was interfering with using systemd socket
+  activation (#1927)
+- Workaround for building on Linux systems without systemd (#1775)
+- Fix the severity level for some protocol tracers (#1910)
+- Add more detail to the logging of the keep-alive protocol (#1873)
+- Improve the reporting of failures in the "chairman" CI test (#1916, #1923)
+
+### consensus changes
+- None.
+
+### ledger changes
+- None.
+
+### network changes
+- None.
+
+## 1.21.0 -- September 2020
+
+### node changes
+- Mention the RTView component (replacement for LiveView) in node docs (#1866)
+- Extensions and improvements to the new node+cli integration tests (#1865,
+  #1894, #1897)
+- New internal infrastructure for more consistent handling of configuration
+  from config files and the command line, using the partial options monoid
+  pattern (#1850)
+- Remove last appearance of stack build support to avoid confusion (#1896)
+
+### consensus changes
+- Avoid the expensive reward calculations while checking if the node is the
+  slot leader, which should significantly reduce the CPU spike at the 4k/f
+  (2day) point within each epoch (#2642)
+- Fix a unlikely-but-possible bug in crossing the hard fork from Byron to
+  Shelley (#2455, #2626)
+- Initial support for hard forks after Shelley (#2452, #2471)
+- Trace interesting ledger events during db replay (#2508, #2621, #2627)
+- Preparation for unifying two parts of the ledger db (#2621)
+- Remove last appearance of stack build support to avoid confusion (#2638)
+- Improvements to the automated tests (#2581, #2643)
+
+### ledger changes
+- Support for a low-impact soft fork with stricter metadata validation (#1874)
+- Further improvements to the performance of reward calculations and some other
+  ledger calculations (#1857, #1881, #1884)
+- Fix a bug in the calculation of the pool stake fraction reported in the stake
+  pool query used by wallets (#1880)
+- Fix a bug for the corner case for testnets where all value is in the reserves
+  with no value in circulation (#1876)
+- Improved transaction generator (used in tests) (#1865)
+- Improved automatic tests for stake pool register/de-register (#1882)
+- Minor corrections to the formal spec arising from internal review and internal
+  audit (#1776, #1808, #1811, #1820, #1861)
+- Update the formal spec with the change in how we calculate the overlay
+  schedule (#1862)
+- Document in the CDDL chain spec the meaning of the MIR pot field (#1864)
+- Updates to the document on the details of pool ranking (#1852)
+- Internal technical debt improvements (#1859, #1867, #1871, #1872, #1879)
+
+### network changes
+- Improved protocol logging (#2609, #2610, #2618, #2611)
+- Fixes to the mux protocol description in the network tech report, and other
+  documentation typos (#2625, #2639)
+- Adjust the outstanding data limit for the block fetch protocol (#2624)
+
+## 1.20.0 -- September 2020
+
+Note that this release will automatically perform a chain DB migration on
+first startup, which can take 10-20 minutes.
+
+### node changes
+- Extensions and improvements to the new node+cli integration tests (#1782,
+  #1799, #1804, #1806, #1807, #1808, #1812, #1813, #1814, #1816, #1818, #1824,
+  #1825, #1826, #1840, #1841, #1846)
+- Sanity check the Shelley genesis on node start up to help with configuring
+  private test nets (#1149, #1478, #1820)
+- Minor logging message improvement for DB events (#576, #1819)
+- Tidy up the benchmarking scripts (#1810)
+- Add a simple script for a node that connects to the current mainnet (#1847)
+
+### consensus changes
+- Fix a bug in the time (slot/era) node query (e.g. affecting db-sync) (#2579)
+- Micro-optimisations leading to ~15% sync time improvements (#2555)
+- Refactoring to reduce tech debt (#225, #548, #2264, #2513, #2514, #2534,
+  #2575, #2604)
+- Improvements to the automated Shelley tests (#2462, #2557, #2567)
+- Improvements to the automated Praos tests (#2577, #2578)
+- Improvements to failure reporting in automated tests to make them easier to
+  understand (#2582, #2585)
+- API improvements to make it easier for node client to set up the necessary
+  configuration to get the initial ledger state and apply blocks (#2593)
+
+### ledger changes
+- Use the total stake (not total supply) in the pool stake fraction reported in
+  the stake pool query used by wallets, and use the current pool stake rather
+  than the stake from the last epoch boundary snapshot (#1836, #1850, #1854)
+- New document on the details of pool ranking (#1816)
+- Performance improvement in and new micro-benchmarks of the reward calculation,
+  to reduce the CPU spike at the 4k/f (2day) point in each epoch (#1851)
+- Performance and memory improvement in the overlay schedule (#1849)
+- Initial parts of a new scheme to support multiple ledger eras in a single code
+  base (#1819, #1826, #1827, #1829, #1837, #1846)
+- Initial parts of multi-asset support as a separate era (#1830, #1831, #1839)
+- Move code from consensus that should be in the ledger (#1813, #1817)
+- Improvements to test tx generation to help with consensus tests (#1824)
+- Minor test simplifications (#1841)
+
+### network changes
+- Build the design docs in CI and link to them in the README (#2589, #2602)
+
+## 1.19.1 -- September 2020
+
+### node changes
+- Code tidying using hlint and style tool (#1726, #1727, #1733)
+- Documentation updates (#1718, #1736, #1740, #1741, #1750, #1752, #1757, #1763,
+  #1764, #1770)
+- Extensions to the new node+cli integration tests (#1716, #1760, #1773, #1774)
+- Mention TraceBlockchainTime in config files and documentation (#1786)
+
+### consensus changes
+- Fix bugs related to the ledger view history (#1935, #2506, #2559, #2562, #2546)
+- Fix the reporting of the metrics for the opcert/KES status (#2529)
+- Fix an accidental memory use spike in block streaming (#2532)
+- Reduce memory use by not keeping unnecessary AVVM balances (#2533)
+- Extend automatic tests to include active stake pools (#2388, #2502)
+- Adjust the extended nightly tests for recent ledger updates (#2549, #2550)
+- Simplify the management of ledger state snapshots (#2440, #2459)
+- Internal code simplifications (#2432, #2538, #2543)
+- Preparations for adding the new network connection manager (#2548)
+- Rearrange the mock and test packages (#2551)
+- Merge and improve the db-validator and db-analyser tools (#2501, #2537)
+- Support building with GHC 8.10.x (#2542)
+
+### ledger changes
+- Minor performance optimisations (#1790, #1798)
+- Extend tests to cover different normal vs address hash algorithms (#1802)
+- Minor corrections to the formal spec arising from internal review and internal
+  audit (#1791, #1797, #1800, #1805, #1806, #1809
+- Support building with GHC 8.10.x (#1807)
+- Reduce unnecessary build-time dependencies (#1810)
+- Remove unused code spotted by the weeder tool (#1812)
+- Minor code rearrangements (#1814)
+
+### network changes
+- Publish two previously internal reports on the network design (#2522, #2527)
+- Preliminary refactoring to simplify adding the new connection manager (#2541)
+- Internal code simplifications (#2556)
+- Support building with GHC 8.10.x (#2539)
+
+## 1.19.0 -- August 2020
+
+### node changes
+- Code organisation refactoring (#1457, #1594, #1621)
+- Fix the live view display of memory metrics (#1552)
+- Add the KES current and remaining periods to the live view (#1503)
+- Fix incorrect console state after live view shutdown (#1569)
+- Minor improvement to rendering of points in unstructured log output (#1693)
+- Minor internal cleanup of tracing code (#570, #1619, #1651)
+- New node+cli integration tests (#1617, #1644, #1657, #1680, #1683, #1705)
+- Improve error messages for problems in the JSON topology file (#1446, #1634)
+- Code tidying using hlint and style tool (#1590, #1625, #1663, #1707, #1708)
+
+### consensus changes
+- Performance optimisations (#2512, #2520, 2521)
+- Fix size accounting in block forging to avoid over-filling blocks (#2469)
+- Fix size accounting for block fetching (#2480, #2481, #2484)
+- Support to forget old copies of KES keys, pending crypto support (#2446)
+- Various internal clean-ups and refactoring (#2446)
+- Extended automatic tests to cover more parameters (#2497, #2498, #2235, #2491)
+- Improve automatic Shelley consensus tests based on ledger tests (#2490, #2503)
+- Drop an unnecessary runtime dependency on the io-sim test library (#2507)
+- Allow the db-validator tool to work with networks other than mainnet (#2493)
+
+### ledger changes
+- Performance optimisations (#1707, #1760, #1771, #1779, #1785, #1786)
+- Additions to enable consensus layer performance optimisations (#1742, #1789)
+- Fix pool ranking calculation for newly registered pools (#1724)
+- Correct which hash algorithm is used for script hashes (#1746)
+- Minor corrections to the formal spec arising from internal review and internal
+  audit (#1714, #1717, #1725, #1733, #1728, #1745, #1748, #1751, #1752, #1753,
+  #1764, #1765, #1773)
+- Minor correction to the CDDL specification for tx metadata (#1743)
+- Refactoring to how the tests handle crypto types (#1735, #1739, #1754)
+- Extend test tx generator to cover tx metadata (#1731)
+- Refactoring in the automatic tests (#1749)
+- Reorganise the ledger rule examples (#1741, #1757, #1763, #1778)
+- Additional ledger assertions, to use in tests (#1780)
+
+### network changes
+- Introduce a new keep-alive mini protocol, but not yet used (#2251)
+
+## 1.18.0 -- July 2020
+
+### node changes
+- Properly display tx hash in Shelley UTxO query command output (#1535)
+- Documentation improvements (#1533, #1534, #1536, #1537)
+- Minor changes to test cases (#1538, #1541)
+- Changes to genesis file and NIX setup (#1531, #1532)
+
+### consensus changes
+- Account for encoding overhead of Shelley transactions (#2466)
+- Optimise translating Byron to Shelley UTxOs (#2464)
+- Improve error reporting (#2458)
+- Tune defaultDiskPolicy (#2454)
+
+### ledger changes
+- Changed the expected block count to account for the decentralisation parameter (#111)
+- Replace dependency on lens with microlens (#1705)
+- Fix typo in CDDL key name (#1706)
+- Enable more efficient  transaction translations (#1708)
+
+### network changes
+- Reduce default block fetch concurrency deadline to 1 (#2457)
+- Update dependencies with the ledger (#2456)
+
+
+## 1.17.0 -- July 2020
+
+### node changes
+- Fix KES metric reporting in the Cardano mode (#1448, #1505)
+- Fix rendering of block hashes in logging output (#1488)
+- Trace hard fork transition events (#1520)
+- Script for setting up a local cluster in Cardano mode (#1487)
+- Documentation reorganisation (#1490, #1491, #1508)
+
+### consensus changes
+- Trace hard fork transition events (#2449)
+- Refactor HFC serialisation and fix a bug in the serialisation for the
+  Shelley-only era  (#2239, #2435)
+- Initial infrastructure for supporting old transactions in new eras, for
+  future hard forks (#2371, #2431)
+- Add extra long-running nightly CI tests (#2393, #2398)
+
+### ledger changes
+- Unclaimed rewards go back to reserves, not the treasury (#1703)
+- Fix an accidental change to the delegation update rule arising from previous
+  optimisation work (#1701)
+- Fix serialisation of protocol state to be valid CBOR (#1684)
+- Memory use optimisations (#1678, #1683)
+- Improve performance of a particular calculation in the rules (#1700)
+- Improve clarity between executable and formal spec, arising from audit
+  feedback (#1685, #1687, #1690, #1694)
+- Remove stkCreds and stpools maps from formal spec, in line with
+  simplifications from the executable specification (#1692)
+
+### network changes
+- Infrastructure for showing the type of protocols in errors (#2419)
+- Adjust the local state query wrapper type as needed by db-sync (#2437)
+- New tip-sampling mini-protocol for later use in P2P governor (#2340)
+- Block fetch improvements (#2430, #2433, #2434, #2441, #2451)
+
+## 1.16.0 -- July 2020
+
+### node changes
+- New config param to specify max concurrency of block downloads (#1420, #1469)
+- Single-era modes now use the hard-fork combinator for consistency (#1475)
+- The initial Praos epoch nonce is now set to the Shelley genesis hash (#1470)
+- Changes from refactoring in the API and config libraries (#1422, #1444)
+
+### consensus changes
+- Add new local state queries specific to the hard fork support (#2365, #2370)
+- Support hard fork queries in all protocol modes (#2399)
+- Fix query compatibility between Cardano and Byron modes (#2361, #2385)
+- Use the hard-fork combinator for single-era modes (#2405, #2407, #2412, #2414)
+- Use slightly smaller KES keys with 2^6 not 2^7 max periods (#2403)
+- Improve performance of syncing in Cardano mode (#2375, #2390)
+- Use a smaller representation for hashes for reduced memory use (#2266)
+- Improve chain selection across future hard forks (#2118, #2416)
+- Identify and warn about a likely hard fork misconfiguration (#2386, #2391)
+- Add validation for Shelley genesis configurations to avoid mistakes (#2423)
+- Test improvements (#1533, #2366, #2130, #2362, #2377, #2361, #2385)
+- Extend automated tests to cover Shelley d=0 environments (#2378)
+- Extend db-converter tool for use in regression tests (#2369, #2375)
+- Internal refactoring (#2036, #2372, #2354, #2357, #2380, #2345, #2381)
+
+### ledger changes
+- Change the tx size definition to simply be its size in bytes (#1639)
+- Finalise the format and specification of Byron address witness (#1657, #1670)
+- Unclaimed epoch pool rewards go to the treasury not the reserves (#1642)
+- Limit the sizes of attributes in Byron addresses (#1662)
+- Simplify the calculation of the VRF seed (#1659)
+- Fix the selection of the epoch nonce (#1651)
+- Eliminate protocolMagicId from the Shelley genesis file (#1668)
+- Include in the pool ranking function whether the pool pledge is met (#1634)
+- Performance optimisation for large UTxO and other state sizes (#1658)
+- Memory use optimisations for the UTxO (#1663)
+- Audit of uses of serialisation with hashing and signing (#1613, #1659, #1666)
+- Additional tests (#1606, #1640, #1661)
+- Add ability to run with STS assertions enabled (#1610, #1629, #1672)
+- Clarify design specification on how pool pledges are enforced (#1611)
+- Fix minor design specification description mistake (#1612)
+- Clarifications and fix typos in the formal spec (#1618, #1655)
+- Fix the documentation of the sizes of key hashes (#1622)
+- Improve the README description the main design and spec documents (#1626)
+
+### network changes
+- Refactor how the network protocol versioning is managed (#2358)
+- Improved error messages for protocol codec failures (#1964, #2360)
+- Make the max concurrency of block downloads be configurable (#2363)
+- Enable the keep-alive responder-side protocol handler (#2392)
+
+## 1.15.1 -- July 2020
+
+No changes in the node. There were changes in the cardano-api and cardano-cli.
+
+## 1.15.0 -- July 2020
+
+### node changes
+- Support for triggering a hard fork at a specific epoch (#1328)
+- Support for triggering a hard fork at a specific protocol version (#1345)
+- Changes resulting from refactoring in the Cardano API library (#1289, #1316,
+  #1380, #1384)
+- Update the README build instructions, including libsodium (#1325, #1361, #1362)
+- Trace the UTxO size in block forging to help the benchmarking tools (#1329)
+- Remove the "forks created" metric from the live view (#1315)
+
+### consensus changes
+- Fix an off-by-one error in the KES cert validity period (#2306)
+- Fix KES-related tests (#2306)
+- Fix bugs found by the hard fork tests (#2310, #2312)
+- Fix bugs found by the hard fork tests in the hard fork tests themselves (#2305)
+- Extend hard fork tests to include network partitions at interesting times
+  around or during the hard fork (#2292, #2337, #2342)
+- Prefer blocks we created, irrespective of the VRF value (#1286, #2348)
+- Allow setting the intial Praos nonce (#2005, #2289)
+- Richer support for queries when using multiple protocol eras to allow some
+  queries to be answered outside of the era to which they belong (#2349)
+- Optimisation in chain selection for forks (#1223, #2323)
+- Preparation for removing EBBs (#2322, #2336, #2339)
+- Clarify and document the interface for triggering a hard fork (#2307)
+- Internal cleanups and refactoring (#2327, #2328, #2329)
+
+### ledger changes
+- Fix bug in the pool reaping that could cause a crash on epoch boundaries (#1593)
+- Fix a preservation of value bug in rewards to retired stake pools (#1598, #1604)
+- Fix a bug in pool reaping when multiple pools share a reward account (#1605)
+- Fix the calculation of non-myopic rewards that is queried by the wallet (#1601)
+- Allow update proposals to be submitted near the end of an epoch, but apply
+  them only at the end of the following epoch (#1574)
+- Simpler calculation for turning the VRF output into the leader value (#1579)
+- Check the VRF for BFT blocks too (#1590)
+- Tests and other clean-up for witnesses for spending from Byron address in
+  Shelley transactions (#1573, #1591)
+- Additional tests for serialisation of parts of the ledger state (#1603)
+- Fix the presentation of pool metadata hashes in JSON output (#1596)
+- Clean up the serialisation used with hashing (#1602)
+
+### network changes
+- Additional concurrency utilities (#2298)
+- Improved tests for error handling of socket send/recv (#2317)
+- Port existing DNS-related bug fixes to the new DNS provider in the p2p
+  governor (#1873, #1893, #2311)
+- Internal cleanups (#2096)
+
+## 1.14.2 -- June 2020
+
+No changes in the node. There were changes in the cardano-api and cardano-cli.
+
+## 1.14.1 -- June 2020
+
+- Include the libsodium.dll info Windows build artefacts (#1327)
+- Fix compiler warnings on Windows (#1303)
+- Split live view code into more modules (#1323)
+
+## 1.14.0 -- June 2020
+
+### node changes
+- Initial integration of the "Byron;Shelley" composite protocol (#1242, #1294)
+- Fix a minor regression in the logging so all tracers are configurable (#1192)
+- Minor adjustment to logging verbosity defaults (#1225)
+- Log warnings and alerts for certificate expiry (#1228)
+- Report number of missed opportunities to make blocks in the live view (#1202)
+- Allow overriding the hostname shown in logs with an env var (#1278)
+- Fix reporting of git revision (#1263)
+
+### consensus changes
+- Refactoring of serialisation and other details for the Byron-to-Shelley
+  hard-fork (#2147, #2207, #2224, #2226, #2237, #2240, #2241, #2243, #2244, #2246,
+  #2248, #2250, #2252, #2263)
+- Extend the automated testing (#2027, #2029, #2066, #2222, #2277, #2282, #2293)
+- New common protocol params interface for querying ledger-specific params (#2275)
+- Change the ledger state dump query to return the whole state (#2288)
+
+### ledger changes
+- Remove the decaying deposits feature. Deposits are returned in full. (#1512)
+- New feature for a minimum pool cost, via updateable protocol parameter (#1546)
+- Change address hashes to be 224 bit, as in the design spec (#1549)
+- Track historical pool performance for pool ranking (#1565)
+- Support pool ranking with hypothetical amount to delegate (#1543)
+- Remove unnecessary pool relay port number override in DNS SRV case (#1570)
+- Move genesis JSON support into the ledger (#1534, #1536)
+- Add genesis JSON support for initial stake pools and delegation (#1552)
+- Fix genesis JSON conversion of fractional values to preserve precision (#1569)
+- Benchmarks and optimisations (#1527, #1566)
+- Update to latest VRF API changes (#1577)
+- Update the formal specification to cover MIR drawing from the treasury (#1526)
+- Update the design specification address terminology, and multi-sig (#1547, #1554)
+- Update the design specification on stake pool metadata (#1507)
+
+### network changes
+- Timeouts for chain sync are drawn from a Praos-specific distribution (#2249)
+- New keep-alive mini-protocol (#2230)
+- New support for restarting mini-protocols (#2205, #2221, #2286)
+- Testing for bi-directional use of mini-protocols (#2203)
+- Adjust and simplify the block fetch calculation for determining if we are in
+  deadline mode or in bulk sync mode (#2267)
+
 ## 1.13.0 -- June 2020
 
 ### node changes
@@ -262,9 +823,9 @@
 ## 1.9.0 -- March 2020
 
 ### node changes
-- Remove CLI override for genesis file. It must be in the confg file. (#683)
-- Genesis file path in confg relative to the config file location (#648)
-- For security adjust default confg to not listen on local ports (#707)
+- Remove CLI override for genesis file. It must be in the config file. (#683)
+- Genesis file path in config relative to the config file location (#648)
+- For security adjust default config to not listen on local ports (#707)
 - Use new DNS relay pool in default mainnet configuration (#708, )
 - CLI support for creating Byron era update proposals (#696)
 - Improved Windows CI (#669, #685)
@@ -418,7 +979,7 @@
 - Improve bulk sync performance by adjusting default RTS options (#506)
 - Adjust the default set of enabled tracers (#494)
 - Allow logging output to journald on Linux (#502)
-- Show network status information in the the node console "live view" (#493)
+- Show network status information in the node console "live view" (#493)
 - Set PBFT signature threshold to the default value in the config files (#452)
 - Blank fields in config files use default values (#453)
 - Add tracers for the benchmarking of block forging (#464)
@@ -514,7 +1075,7 @@
 ### node changes
 - Update to latest dependencies (consensus, ledger, logging etc)
 - More monitoring counters/statistics, including Prometheus output (#366)
-- Remove unused legacy and wallet configuration fields (code and confg files)
+- Remove unused legacy and wallet configuration fields (code and config files)
 - Improve README files
 - Hide tracing options from default `--help` command
 - Fix flakeyness in logging setup & shutdown

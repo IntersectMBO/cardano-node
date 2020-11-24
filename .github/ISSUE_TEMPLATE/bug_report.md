@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-**Internal/Exernal**
+**Internal/External**
 *Internal*   if an IOHK staff member.
 *External*   otherwise.
 

@@ -13,36 +13,30 @@ module Cardano.CLI.Byron.UpdateProposal
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
 
-import           Cardano.Api (textShow)
 import qualified Cardano.Binary as Binary
-import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy(..))
-import           Cardano.Chain.Genesis (GenesisData(..))
-import           Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
-import           Cardano.Chain.Update
-                   (AProposal(..), ProtocolParametersUpdate(..),
-                    InstallerHash(..), Proposal, ProposalBody(..), ProtocolVersion(..),
-                    SoftforkRule(..), SoftwareVersion(..), SystemTag(..), recoverUpId,
-                    signProposal)
-import           Cardano.Config.Types
-import           Cardano.Config.Protocol (CardanoEra(..))
-import           Ouroboros.Consensus.Util.Condense (condense)
+import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy (..))
+import           Cardano.Chain.Slotting (EpochNumber (..), SlotNumber (..))
+import           Cardano.Chain.Update (AProposal (..), InstallerHash (..), Proposal,
+                     ProposalBody (..), ProtocolParametersUpdate (..), ProtocolVersion (..),
+                     SoftforkRule (..), SoftwareVersion (..), SystemTag (..), recoverUpId,
+                     signProposal)
+import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError, textShow)
 import           Cardano.Crypto.Signing (SigningKey, noPassSafeSigner)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
-import           Ouroboros.Network.NodeToClient (IOManager)
+import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api (Network)
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
-import           Cardano.CLI.Byron.Genesis (ByronGenesisError, readGenesis)
+import           Cardano.Api.Typed (NetworkId, toByronProtocolMagicId)
+import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
+import           Cardano.CLI.Byron.Key (ByronKeyFailure, CardanoEra (..), readEraSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
-import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError)
+import           Cardano.CLI.Types
 
 data ByronUpdateProposalError
   = ByronReadUpdateProposalFileFailure !FilePath !Text
@@ -70,7 +64,7 @@ renderByronUpdateProposalError err =
       "Error decoding update proposal: " <> textShow decErr
 
 runProposalCreation
-  :: ConfigYamlFilePath
+  :: NetworkId
   -> SigningKeyFile
   -> ProtocolVersion
   -> SoftwareVersion
@@ -79,11 +73,12 @@ runProposalCreation
   -> FilePath
   -> [ParametersToUpdate]
   -> ExceptT ByronUpdateProposalError IO ()
-runProposalCreation configFp sKey pVer sVer sysTag insHash outputFp params = do
-  let sKeyfp = unSigningKeyFile sKey
+runProposalCreation nw sKey@(SigningKeyFile sKeyfp) pVer sVer
+                    sysTag insHash outputFp params = do
   sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readEraSigningKey ByronEra sKey
-  proposal <- createUpdateProposal configFp sK pVer sVer sysTag insHash params
-  firstExceptT ByronUpdateProposalWriteError $ ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
+  let proposal = createUpdateProposal nw sK pVer sVer sysTag insHash params
+  firstExceptT ByronUpdateProposalWriteError $
+    ensureNewFileLBS outputFp (serialiseByronUpdateProposal proposal)
 
 
 data ParametersToUpdate =
@@ -111,7 +106,7 @@ createProtocolParametersUpdate
   :: ProtocolParametersUpdate
   -> [ParametersToUpdate]
   -> ProtocolParametersUpdate
-createProtocolParametersUpdate init paramsToUpdate = go init paramsToUpdate
+createProtocolParametersUpdate = go
  where go i [] = i
        go i (paramToUpdate : rest) =
          case paramToUpdate of
@@ -134,33 +129,24 @@ convertProposalToGenTx :: AProposal ByteString -> Mempool.GenTx ByronBlock
 convertProposalToGenTx prop = Mempool.ByronUpdateProposal (recoverUpId prop) prop
 
 createUpdateProposal
-  :: ConfigYamlFilePath
+  :: NetworkId
   -> SigningKey
   -> ProtocolVersion
   -> SoftwareVersion
   -> SystemTag
   -> InstallerHash
   -> [ParametersToUpdate]
-  -> ExceptT ByronUpdateProposalError IO Proposal
-createUpdateProposal yamlConfigFile sKey pVer sVer sysTag inshash paramsToUpdate = do
+  -> Proposal
+createUpdateProposal nw sKey pVer sVer sysTag inshash paramsToUpdate =
+    signProposal (toByronProtocolMagicId nw) proposalBody noPassSigningKey
+  where
+    proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
 
-  nc <- liftIO $ parseNodeConfigurationFP yamlConfigFile
-  let updatePropFp = unGenesisFile $ ncGenesisFile nc
-  (genData, _) <- firstExceptT (ByronUpdateProposalGenesisReadError updatePropFp) . readGenesis $ ncGenesisFile nc
-
-  let metaData :: M.Map SystemTag InstallerHash
-      metaData = M.singleton sysTag inshash
-      noPassSigningKey = noPassSafeSigner sKey
-      pmId = gdProtocolMagicId genData
-      protocolParamsUpdate = createProtocolParametersUpdate
-                               emptyProtocolParametersUpdate paramsToUpdate
-
-
-  let proposalBody = ProposalBody pVer protocolParamsUpdate sVer metaData
-
-  let proposal = signProposal pmId proposalBody noPassSigningKey
-
-  pure proposal
+    metaData :: M.Map SystemTag InstallerHash
+    metaData = M.singleton sysTag inshash
+    noPassSigningKey = noPassSafeSigner sKey
+    protocolParamsUpdate = createProtocolParametersUpdate
+                             emptyProtocolParametersUpdate paramsToUpdate
 
 emptyProtocolParametersUpdate :: ProtocolParametersUpdate
 emptyProtocolParametersUpdate =
@@ -201,14 +187,13 @@ readByronUpdateProposal fp =
 
 
 submitByronUpdateProposal
-  :: IOManager
-  -> Network
+  :: NetworkId
   -> FilePath
   -> ExceptT ByronUpdateProposalError IO ()
-submitByronUpdateProposal iomgr network proposalFp = do
+submitByronUpdateProposal network proposalFp = do
     proposalBs <- readByronUpdateProposal proposalFp
     aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
     let genTx = convertProposalToGenTx aProposal
     traceWith stdoutTracer $
       "Update proposal TxId: " ++ condense (txId genTx)
-    firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx iomgr network genTx
+    firstExceptT ByronUpdateProposalTxError $ nodeSubmitTx network genTx

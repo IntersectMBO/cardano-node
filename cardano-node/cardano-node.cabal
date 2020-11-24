@@ -1,5 +1,7 @@
+cabal-version: 2.4
+
 name:                  cardano-node
-version:               1.13.0
+version:               1.23.0
 description:           The cardano full node
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -8,7 +10,6 @@ license-files:
   LICENSE
   NOTICE
 build-type:            Simple
-cabal-version:         >= 1.10
 extra-source-files:    ChangeLog.md
 
 Flag unexpected_thunks
@@ -20,56 +21,97 @@ flag systemd
   default:     True
   manual:      False
 
-
 library
-
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
 
   if os(linux) && flag(systemd)
     cpp-options: -DSYSTEMD
-    build-depends:     systemd
+    build-depends:     lobemo-scribe-systemd
+                     , systemd
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Common.Help
-                       Cardano.Node.Features.Node
+  exposed-modules:     Cardano.Node.Configuration.Logging
+                       Cardano.Node.Configuration.POM
+                       Cardano.Node.Configuration.Topology
+                       Cardano.Node.Handlers.Shutdown
+                       Cardano.Node.Handlers.TopLevel
+                       Cardano.Node.Orphans
+                       Cardano.Node.Protocol
+                       Cardano.Node.Protocol.Byron
+                       Cardano.Node.Protocol.Cardano
+                       Cardano.Node.Protocol.Shelley
+                       Cardano.Node.Protocol.Types
+                       Cardano.Node.Query
+                       Cardano.Node.Parsers
                        Cardano.Node.Run
-                       Cardano.Node.Shutdown
+                       Cardano.Node.Types
+                       Cardano.Tracing.Config
+                       Cardano.Tracing.Constraints
+                       Cardano.Tracing.ConvertTxId
+                       Cardano.Tracing.Kernel
+                       Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
+                       Cardano.Tracing.Queries
+                       Cardano.Tracing.Render
                        Cardano.Tracing.Tracers
+                       Cardano.Tracing.OrphanInstances.Byron
+                       Cardano.Tracing.OrphanInstances.Common
+                       Cardano.Tracing.OrphanInstances.Consensus
+                       Cardano.Tracing.OrphanInstances.HardFork
+                       Cardano.Tracing.OrphanInstances.Network
+                       Cardano.Tracing.OrphanInstances.Shelley
+
 
   other-modules:       Paths_cardano_node
-                       Cardano.Node.Socket
+                       Cardano.Node.Configuration.Socket
                        Cardano.Tracing.MicroBenchmarking
 
   build-depends:       aeson
                      , async
                      , base >=4.12 && <5
+                     , base16-bytestring
+                     , byron-spec-ledger
                      , bytestring
                      , deepseq
+                     , cardano-api
                      , cardano-config
+                     , cardano-crypto-class
+                     , cardano-crypto-wrapper
                      , cardano-ledger
+                     , cardano-ledger-shelley-ma
                      , cardano-prelude
-                     , cardano-shell
                      , cardano-slotting
                      , contra-tracer
-                     , cborg >= 0.2.2 && < 0.3
+                     , cborg >= 0.2.4 && < 0.3
                      , containers
                      , directory
+                     , dns
                      , filepath
+                     , generic-data
+                     , hedgehog-extras
                      , hostname
+                     , iproute
                      , io-sim-classes
                      , iohk-monitoring
+                     , lobemo-backend-aggregation
+                     , lobemo-backend-ekg
+                     , lobemo-backend-monitoring
+                     , lobemo-backend-trace-forwarder
                      , network
                      , network-mux
+                     , nothunks
                      , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
+                     , ouroboros-consensus-shelley
                      , ouroboros-network
                      , ouroboros-network-framework
                      , process
+                     , safe-exceptions
+                     , scientific
                      , shelley-spec-ledger
                      , strict-concurrency
                      , text
@@ -77,6 +119,8 @@ library
                      , tracer-transformers
                      , transformers
                      , transformers-except
+                     , unordered-containers
+                     , yaml
 
 
   default-language:    Haskell2010
@@ -90,13 +134,16 @@ library
                        -Wpartial-fields
                        -Wcompat
 
+  -- Pattern match checking has improved since 8.6.5. GHC now considers more
+  -- pattern matches as redundant than before, so disable this warning for older
+  -- versions of GHC that still consider them incomplete.
+  if impl(ghc < 8.10)
+    ghc-options:       -Wno-incomplete-patterns
+
   if os(windows)
-     build-depends:    Win32
+    build-depends:    Win32
   else
-     build-depends:    unix
-                     , brick
-                     , vty
-     exposed-modules:  Cardano.Node.TUI.LiveView
+    build-depends:     unix
 
 executable cardano-node
   hs-source-dirs:      app
@@ -104,8 +151,13 @@ executable cardano-node
   default-language:    Haskell2010
   ghc-options:         -threaded
                        -Wall
-                       -rtsopts
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -Wpartial-fields
+                       -Wcompat
                        -Wno-unticked-promoted-constructors
+                       -rtsopts
   if arch(arm)
     ghc-options:         "-with-rtsopts=-T -I0 -N1 -A16m"
   else
@@ -117,7 +169,6 @@ executable cardano-node
                      , cardano-config
                      , cardano-node
                      , cardano-prelude
-                     , cardano-shell
                      , optparse-applicative
                      , text
 
@@ -126,39 +177,60 @@ executable cardano-node
   else
      build-depends:    unix
 
-executable chairman
-  hs-source-dirs:      chairman
-  main-is:             chairman.hs
-  other-modules:       Cardano.Chairman
-                       Paths_cardano_node
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
-                       -Wno-unticked-promoted-constructors
-  build-depends:       base >=4.12 && <5
-                     , async
-                     , bytestring
-                     , containers
-                     , cardano-config
-                     , cardano-prelude
-                     , contra-tracer
-                     , cardano-prelude
-                     , io-sim-classes
-                     , network-mux
-                     , optparse-applicative
-                     , ouroboros-consensus
-                     , ouroboros-consensus-cardano
-                     , ouroboros-network
-                     , text
-                     , transformers-except
-                     , typed-protocols
-                     , ouroboros-network-framework
+test-suite cardano-node-test
+  hs-source-dirs:       test
+  main-is:              cardano-node-test.hs
+  type:                 exitcode-stdio-1.0
 
-  default-extensions:  NoImplicitPrelude
+  if !os(windows)
+      build-depends:     unix
 
-  if os(windows)
-     build-depends:    Win32
-  else
-     build-depends:    unix
+  build-depends:
+                        base >= 4.12 && < 5
+                      , aeson
+                      , async
+                      , bytestring
+                      , cardano-api
+                      , cardano-config
+                      , cardano-crypto-class
+                      , cardano-crypto-test
+                      , cardano-crypto-wrapper
+                      , cardano-node
+                      , cardano-prelude
+                      , cardano-prelude-test
+                      , cardano-slotting
+                      , containers
+                      , cryptonite
+                      , directory
+                      , hedgehog
+                      , hedgehog-corpus
+                      , iproute
+                      , mmorph
+                      , network
+                      , ouroboros-consensus
+                      , ouroboros-consensus-shelley
+                      , ouroboros-network
+                      , process
+                      , random
+                      , resourcet
+                      , shelley-spec-ledger
+                      , shelley-spec-ledger-test
+                      , temporary
+                      , time
+                      , unliftio
+
+  other-modules:        Test.Cardano.Node.FilePermissions
+                        Test.Cardano.Node.Gen
+                        Test.Cardano.Node.Json
+                        Test.Cardano.Node.POM
+
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

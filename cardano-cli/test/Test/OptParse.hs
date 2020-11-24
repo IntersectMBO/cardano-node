@@ -1,117 +1,136 @@
 module Test.OptParse
-  ( doFilesExist
-  , evalCardanoCLIParser
-  , execCardanoCLIParser
-  , fileCleanup
+  ( checkTextEnvelopeFormat
+  , equivalence
+  , execCardanoCLI
   , propertyOnce
+  , withSnd
+  , noteInputFile
+  , noteTempFile
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (lines, readFile, stderr, stdout)
 import           Prelude (String)
+import qualified Prelude
 
-import           System.IO.Error
-import           Control.Monad.Trans.Except.Extra (runExceptT)
-import qualified Data.Text as Text
-import           Options.Applicative (ParserHelp(..), ParserResult(..))
-import qualified Options.Applicative as Opt
-import           Options.Applicative.Help.Chunk
-import           Options.Applicative.Help.Pretty
-import           System.Directory (doesFileExist, removeFile)
+import           Control.Monad.Catch
+import qualified GHC.Stack as GHC
 
-import           Cardano.CLI.Parsers (opts, pref)
-import           Cardano.CLI.Run (ClientCommand(..),
-                   renderClientCommandError, runClientCommand)
+import           Cardano.Api.Typed
 
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
-import           Hedgehog.Internal.Property (Diff, MonadTest, failWith, liftTest, mkTest)
+import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
+import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
 import           Hedgehog.Internal.Source (getCaller)
 
--- | Purely evalutate the cardano-cli parser.
--- e.g evalCardanoCLIParser ["shelley"] would be equivalent to cabal exec cardano-cli shelley
--- without running underlying IO.
-evalCardanoCLIParser :: [String] -> Opt.ParserResult ClientCommand
-evalCardanoCLIParser args = Opt.execParserPure pref opts args
 
--- | This takes a 'ParserResult', which is pure, and executes it.
-execCardanoCLIParser
-  :: HasCallStack
-  => [FilePath]
-  -- ^ Files to clean up on failure
-  -> String
-  -- ^ Name of command, used in error rendering
-  -> Opt.ParserResult ClientCommand
-  -- ^ ParserResult to execute
-  -> H.PropertyT IO ()
-execCardanoCLIParser fps cmdName pureParseResult =
-  case pureParseResult of
+-- | Execute cardano-cli via the command line.
+--
+-- Waits for the process to finish and returns the stdout.
+execCardanoCLI
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -- ^ Arguments to the CLI command
+  -> m String
+  -- ^ Captured stdout
+execCardanoCLI = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI"
 
-    -- The pure 'ParserResult' succeeds and we can then execute the result.
-    -- This would be equivalent to `cabal exec cardano-cli ...`
-    Success cmd -> execClientCommand callStack fps cmd
+-- | Checks that the 'tvType' and 'tvDescription' are equivalent between two files.
+checkTextEnvelopeFormat
+  :: (MonadTest m, MonadIO m, HasCallStack)
+  => TextEnvelopeType
+  -> FilePath
+  -> FilePath
+  -> m ()
+checkTextEnvelopeFormat tve reference created = do
+  eRefTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve reference
+  refTextEnvelope <- handleTextEnvelope eRefTextEnvelope
 
-    -- The pure `ParserResult` failed and we clean up any created files
-    -- and fail with `optparse-applicative`'s error message
-    Failure failure -> let (parserHelp, _exitCode, cols) = Opt.execFailure failure cmdName
-                           helpMessage = renderHelp cols parserHelp cmdName
+  eCreatedTextEnvelope <- liftIO $ readTextEnvelopeOfTypeFromFile tve created
+  createdTextEnvelope <- handleTextEnvelope eCreatedTextEnvelope
 
-                       in liftIO (fileCleanup fps) >> failWith Nothing helpMessage
-
-
-    CompletionInvoked compl -> do msg <- lift $ Opt.execCompletion compl cmdName
-                                  liftIO (fileCleanup fps) >> failWith Nothing msg
-
--- | Executes a `ClientCommand`. If successful the property passes
--- if not, the property fails and the error is rendered.
-execClientCommand
-  :: CallStack
-  -- ^ CallStack allows us to render the error
-  -- at the appropriate function call site
-  -> [FilePath]
-  -- ^ Files to clean up on failure
-  -> ClientCommand
-  -> H.PropertyT IO ()
-execClientCommand cS fps cmd = do e <- lift . runExceptT $ runClientCommand cmd
-                                  case e of
-                                    Left cmdErrors -> do
-                                      liftIO (fileCleanup fps)
-                                      failWithCustom cS Nothing . Text.unpack $ renderClientCommandError cmdErrors
-                                    Right _ -> H.success
-
---------------------------------------------------------------------------------
--- Error rendering & Clean up
---------------------------------------------------------------------------------
-
--- | Checks if all files gives exists. If this fails, all files are deleted.
-doFilesExist :: [FilePath] -> H.PropertyT IO ()
-doFilesExist [] = return ()
-doFilesExist allFiles@(file:rest) = do
-  exists <- liftIO $ doesFileExist file
-  if exists == True
-  then doFilesExist rest
-  else liftIO (fileCleanup allFiles) >> failWith Nothing (file <> " has not been successfully created.")
-
-fileCleanup :: [FilePath] -> IO ()
-fileCleanup fps = mapM_ (\fp -> removeFile fp `catch` fileExists) fps
+  typeTitleEquivalence refTextEnvelope createdTextEnvelope
  where
-   fileExists e
-     | isDoesNotExistError e = return ()
-     | otherwise = throwIO e
+   handleTextEnvelope :: MonadTest m
+                      => Either (FileError TextEnvelopeError) TextEnvelope
+                      -> m TextEnvelope
+   handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
+   handleTextEnvelope (Left fileErr) = failWithCustom callStack Nothing . displayError $ fileErr
 
--- These were lifted from opt-parsers-applicative and slightly modified
+   typeTitleEquivalence :: MonadTest m => TextEnvelope -> TextEnvelope -> m ()
+   typeTitleEquivalence (TextEnvelope refType refTitle _)
+                        (TextEnvelope createdType createdTitle _) = do
+     equivalence refType createdType
+     equivalence refTitle createdTitle
 
-customHelpText :: Opt.ParserHelp -> Doc
-customHelpText (ParserHelp e s h _ b f) = extractChunk . vsepChunks $ [e, s, h, b, f]
+--------------------------------------------------------------------------------
+-- Helpers, Error rendering & Clean up
+--------------------------------------------------------------------------------
+
+cardanoCliPath :: FilePath
+cardanoCliPath = "cardano-cli"
+
+-- | Return the input file path after annotating it relative to the project root directory
+noteInputFile :: (MonadTest m, HasCallStack) => FilePath -> m FilePath
+noteInputFile filePath = withFrozenCallStack $ do
+  H.annotate $ cardanoCliPath <> "/" <> filePath
+  return filePath
+
+-- | Return the test file path after annotating it relative to the project root directory
+noteTempFile :: (MonadTest m, HasCallStack) => FilePath -> FilePath -> m FilePath
+noteTempFile tempDir filePath = withFrozenCallStack $ do
+  let relPath = tempDir <> "/" <> filePath
+  H.annotate $ cardanoCliPath <> "/" <> relPath
+  return relPath
+
+-- | Return the supply value with the result of the supplied function as a tuple
+withSnd :: (a -> b) -> a -> (a, b)
+withSnd f a = (a, f a)
+
+-- These were lifted from hedgehog and slightly modified
+
+propertyOnce :: H.PropertyT IO () -> H.Property
+propertyOnce =  H.withTests 1 . H.withShrinks 0 . H.property
+
+-- | Check for equivalence between two types and perform a file cleanup on failure.
+equivalence
+  :: (MonadTest m, Eq a, Show a, HasCallStack)
+  => a
+  -> a
+  -> m ()
+equivalence x y = do
+  ok <- H.eval (x == y)
+  if ok
+    then H.success
+    else failDiffCustom callStack x y
 
 -- | Takes a 'CallStack' so the error can be rendered at the appropriate call site.
-failWithCustom :: (MonadTest m) => CallStack -> Maybe Diff -> String -> m a
+failWithCustom :: MonadTest m => CallStack -> Maybe Diff -> String -> m a
 failWithCustom cs mdiff msg =
   liftTest $ mkTest (Left $ H.Failure (getCaller cs) msg mdiff, mempty)
 
--- | Convert a help text to 'String'.
-renderHelp :: Int -> Opt.ParserHelp -> String -> String
-renderHelp cols pHelp testName =
-  "Failure in: " ++ testName ++ "\n\n" ++ ((`displayS` "") . renderPretty 1.0 cols $ customHelpText pHelp)
+-- | Fails with an error that shows the difference between two values.
+failDiffCustom :: (MonadTest m, Show a) => CallStack -> a -> a -> m ()
+failDiffCustom cS x y =
+  case valueDiff <$> mkValue x <*> mkValue y of
+    Nothing ->
+      withFrozenCallStack $
+        failWithCustom cS Nothing $
+        Prelude.unlines [
+            "Failed"
+          , "━━ lhs ━━"
+          , showPretty x
+          , "━━ rhs ━━"
+          , showPretty y
+          ]
 
-propertyOnce :: H.PropertyT IO () -> H.Property
-propertyOnce =  H.withTests 1 . H.property
+    Just vdiff@(ValueSame _) ->
+      withFrozenCallStack $
+        failWithCustom cS (Just $
+          H.Diff "━━━ Failed ("  "" "no differences" "" ") ━━━" vdiff) ""
+
+    Just vdiff ->
+      withFrozenCallStack $
+        failWithCustom cS (Just $
+          H.Diff "━━━ Failed (" "- lhs" ") (" "+ rhs" ") ━━━" vdiff) ""

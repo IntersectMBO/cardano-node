@@ -4,15 +4,19 @@ module Cardano.CLI.Parsers
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Cardano.Config.Parsers (command')
-import           Cardano.CLI.Byron.Parsers   (parseByronCommands)
-import           Cardano.CLI.Run (ClientCommand(..))
+import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
+import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 
+command' :: String -> String -> Parser a -> Mod CommandFields a
+command' c descr p =
+    command c $ info (p <**> helper)
+              $ mconcat [ progDesc descr ]
 
 opts :: ParserInfo ClientCommand
 opts =
@@ -30,8 +34,8 @@ pref = Opt.prefs showHelpOnEmpty
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
   asum
-    [ parseByron
-    , parseShelley
+    [ parseByron <|> backwardsCompatibilityCommands
+    , parseShelley <|> parseDeprecatedShelleySubcommand
     , parseDisplayVersion
     ]
 
@@ -41,18 +45,31 @@ parseByron =
   subparser $ mconcat
     [ commandGroup "Byron specific commands"
     , metavar "Byron specific commands"
-    , parseByronCommands
+    , command'
+        "byron"
+        "Byron specific commands"
+         parseByronCommands
     ]
 
+-- | Parse Shelley-related commands at the top level of the CLI.
 parseShelley :: Parser ClientCommand
-parseShelley =
+parseShelley = ShelleyCommand <$> parseShelleyCommands
+
+-- | Parse Shelley-related commands under the now-deprecated \"shelley\"
+-- subcommand.
+--
+-- Note that this subcommand is 'internal' and is therefore hidden from the
+-- help text.
+parseDeprecatedShelleySubcommand :: Parser ClientCommand
+parseDeprecatedShelleySubcommand =
   subparser $ mconcat
-    [ commandGroup "Shelley specific commands"
+    [ commandGroup "Shelley specific commands (deprecated)"
     , metavar "Shelley specific commands"
     , command'
         "shelley"
-        "Shelley specific commands"
-        (ShelleyCommand <$> parseShelleyCommands)
+        "Shelley specific commands (deprecated)"
+        (DeprecatedShelleySubcommand <$> parseShelleyCommands)
+    , internal
     ]
 
 -- Yes! A --version flag or version command. Either guess is right!

@@ -4,11 +4,6 @@ steps:
     agents:
       system: x86_64-linux
 
-  - label: 'stack-cabal-sync'
-    command: 'nix-shell ./nix -A iohkNix.stack-cabal-sync-shell --run scripts/buildkite/stack-cabal-sync.sh'
-    agents:
-      system: x86_64-linux
-
 # newParallelJobControl: not a sensible number of jobs: 0
 # CallStack (from HasCallStack):
 #   error, called at ./Distribution/Client/JobControl.hs:101:3 in main:Distribution.Client.JobControl

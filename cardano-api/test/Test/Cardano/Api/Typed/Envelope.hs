@@ -7,15 +7,16 @@ module Test.Cardano.Api.Typed.Envelope
   ) where
 
 import           Cardano.Api.Typed
-
 import           Cardano.Prelude
-
 import           Hedgehog (Property, discover)
+import           Test.Cardano.Api.Typed.Gen
+import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
+
 import qualified Hedgehog as H
 
-import           Test.Cardano.Api.Orphans ()
-import           Test.Cardano.Api.Typed.Orphans ()
-import           Test.Cardano.Api.Typed.Gen
+{- HLINT ignore "Use camelCase" -}
 
 prop_roundtrip_ByronVerificationKey_envelope :: Property
 prop_roundtrip_ByronVerificationKey_envelope =
@@ -98,7 +99,8 @@ roundtrip_VerificationKey_envelope roletoken =
                     (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
 
 roundtrip_SigningKey_envelope :: (Key keyrole,
-                                  Eq (SigningKey keyrole))
+                                  Eq (SigningKey keyrole),
+                                  Show (SigningKey keyrole))
                               => AsType keyrole -> Property
 roundtrip_SigningKey_envelope roletoken =
   H.property $ do
@@ -108,6 +110,5 @@ roundtrip_SigningKey_envelope roletoken =
 
 -- -----------------------------------------------------------------------------
 
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

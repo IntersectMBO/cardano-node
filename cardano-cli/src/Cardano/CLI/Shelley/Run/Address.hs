@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Cardano.CLI.Shelley.Run.Address
   ( ShelleyAddressCmdError
   , renderShelleyAddressCmdError
@@ -5,93 +7,212 @@ module Cardano.CLI.Shelley.Run.Address
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
-import           Prelude (putStrLn)
+import           Prelude (String)
 
+import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
 
-import           Cardano.Api
+import           Cardano.Api.Typed
 
-import           Cardano.CLI.Helpers (textToByteString)
-import           Cardano.CLI.Shelley.Parsers
-                   (OutputFile (..), SigningKeyFile (..), VerificationKeyFile (..),
-                    AddressCmd (..))
-import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, renderShelleyAddressInfoError,
-                   runAddressInfo)
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
-import qualified Shelley.Spec.Ledger.Keys as Ledger
+import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
+                     VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..),
+                     readVerificationKeyOrFile, readVerificationKeyTextOrFileAnyOf,
+                     renderVerificationKeyTextOrFileError)
+import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
+import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
+import           Cardano.CLI.Types
 
 data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
-  | ShelleyAddressCmdPaySigningKeyWriteErr !ApiError
-  | ShelleyAddressCmdPayVerificationKeyReadErrr !ApiError
-  | ShelleyAddressCmdPayVerificationKeyWriteErr !ApiError
+  | ShelleyAddressCmdAesonDecodeError !FilePath !Text
+  | ShelleyAddressCmdReadKeyFileError !(FileError InputDecodeError)
+  | ShelleyAddressCmdReadFileException !(FileError ())
+  | ShelleyAddressCmdVerificationKeyTextOrFileError !VerificationKeyTextOrFileError
+  | ShelleyAddressCmdWriteFileError !(FileError ())
   deriving Show
 
 renderShelleyAddressCmdError :: ShelleyAddressCmdError -> Text
 renderShelleyAddressCmdError err =
   case err of
     ShelleyAddressCmdAddressInfoError addrInfoErr ->
-      "Error occurred while printing address info: " <> renderShelleyAddressInfoError addrInfoErr
-    ShelleyAddressCmdPaySigningKeyWriteErr apiErr ->
-      "Error occured while writing the payment signing key: " <> renderApiError apiErr
-    ShelleyAddressCmdPayVerificationKeyReadErrr apiErr ->
-      "Error occured while reading the payment verification key: " <> renderApiError apiErr
-    ShelleyAddressCmdPayVerificationKeyWriteErr apiErr ->
-      "Error occured while writing the payment verification key: " <> renderApiError apiErr
+      Text.pack (displayError addrInfoErr)
+    ShelleyAddressCmdReadKeyFileError fileErr ->
+      Text.pack (displayError fileErr)
+    ShelleyAddressCmdVerificationKeyTextOrFileError vkTextOrFileErr ->
+      renderVerificationKeyTextOrFileError vkTextOrFileErr
+    ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyAddressCmdAesonDecodeError fp decErr -> "Error decoding multisignature JSON object at: "
+                                                   <> Text.pack fp <> " Error: " <> decErr
+    ShelleyAddressCmdReadFileException fileErr -> Text.pack (displayError fileErr)
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
   case cmd of
-    AddressKeyGen vkf skf -> runAddressKeyGen  vkf skf
+    AddressKeyGen kt vkf skf -> runAddressKeyGen kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild payVk stkVk nw mOutFp -> runAddressBuild payVk stkVk nw mOutFp
-    AddressBuildMultiSig {} -> runAddressBuildMultiSig
-    AddressInfo txt -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt
+    AddressBuildMultiSig sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
+    AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
-runAddressKeyGen :: VerificationKeyFile -> SigningKeyFile -> ExceptT ShelleyAddressCmdError IO ()
-runAddressKeyGen (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-    sk <- liftIO shelleyGenSigningKey
-    let vk = getPaymentVerificationKey sk
-    firstExceptT ShelleyAddressCmdPayVerificationKeyWriteErr
-      . ExceptT $ writePaymentVerificationKey vkeyPath vk
-    firstExceptT ShelleyAddressCmdPaySigningKeyWriteErr
-      . ExceptT $ writeSigningKey skeyPath sk
+runAddressKeyGen :: AddressKeyType
+                 -> VerificationKeyFile
+                 -> SigningKeyFile
+                 -> ExceptT ShelleyAddressCmdError IO ()
+runAddressKeyGen kt (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+    case kt of
+      AddressKeyShelley         -> generateAndWriteKeyFiles AsPaymentKey
+      AddressKeyShelleyExtended -> generateAndWriteKeyFiles AsPaymentExtendedKey
+      AddressKeyByron           -> generateAndWriteKeyFiles AsByronKey
+  where
+    generateAndWriteKeyFiles asType = do
+      skey <- liftIO $ generateSigningKey asType
+      let vkey = getVerificationKey skey
+      firstExceptT ShelleyAddressCmdWriteFileError
+        . newExceptT
+        $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      firstExceptT ShelleyAddressCmdWriteFileError
+        . newExceptT
+        $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
 
-runAddressKeyHash :: VerificationKeyFile -> Maybe OutputFile -> ExceptT ShelleyAddressCmdError IO ()
-runAddressKeyHash (VerificationKeyFile vkeyPath) mOutputFp =
-    firstExceptT ShelleyAddressCmdPayVerificationKeyReadErrr $ do
-      PaymentVerificationKeyShelley vkey <- ExceptT $ readPaymentVerificationKey vkeyPath
-      let Ledger.KeyHash khash = Ledger.hashKey vkey
-          b16Hash = Crypto.getHashBytesAsHex khash
-      case mOutputFp of
-        Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath b16Hash
-        Nothing -> liftIO $ BS.putStrLn b16Hash
+    skeyDesc, vkeyDesc :: TextEnvelopeDescr
+    skeyDesc = "Payment Signing Key"
+    vkeyDesc = "Payment Verification Key"
 
-runAddressBuild :: VerificationKeyFile
-                -> Maybe VerificationKeyFile
-                -> Network
+
+runAddressKeyHash :: VerificationKeyTextOrFile
+                  -> Maybe OutputFile
+                  -> ExceptT ShelleyAddressCmdError IO ()
+runAddressKeyHash vkeyTextOrFile mOutputFp = do
+  vkey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
+            readAddressVerificationKeyTextOrFile vkeyTextOrFile
+
+  let hexKeyHash = foldSomeAddressVerificationKey
+                     (serialiseToRawBytesHex . verificationKeyHash) vkey
+
+  case mOutputFp of
+    Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexKeyHash
+    Nothing -> liftIO $ BS.putStrLn hexKeyHash
+
+
+runAddressBuild :: VerificationKeyTextOrFile
+                -> Maybe (VerificationKeyOrFile StakeKey)
+                -> NetworkId
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuild (VerificationKeyFile payVkeyFp) mstkVkeyFp nw mOutFp =
-  firstExceptT ShelleyAddressCmdPayVerificationKeyReadErrr $ do
-    payVKey <- newExceptT $ readPaymentVerificationKey payVkeyFp
-    mstkVKey <- case mstkVkeyFp of
-                  Just (VerificationKeyFile stkVkeyFp) ->
-                    Just <$> newExceptT (readStakingVerificationKey stkVkeyFp)
-                  Nothing ->
-                    return Nothing
-    let addr = shelleyVerificationKeyAddress nw payVKey mstkVKey
-        hexAddr = addressToHex addr
-    case mOutFp of
-      Just (OutputFile fpath) -> liftIO . BS.writeFile fpath $ textToByteString hexAddr
-      Nothing -> liftIO $ Text.putStrLn hexAddr
+runAddressBuild payVkeyTextOrFile mbStkVkeyOrFile nw mOutFp = do
+    payVKey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
+                 readAddressVerificationKeyTextOrFile payVkeyTextOrFile
 
-runAddressBuildMultiSig :: ExceptT ShelleyAddressCmdError IO ()
-runAddressBuildMultiSig =
-    liftIO $ putStrLn ("runAddressBuildMultiSig: TODO")
+    addr <- case payVKey of
+              AByronVerificationKey vk ->
+                return (AddressByron (makeByronAddress nw vk))
+
+              APaymentVerificationKey vk ->
+                AddressShelley <$> buildShelleyAddress vk
+
+              APaymentExtendedVerificationKey vk ->
+                AddressShelley <$> buildShelleyAddress (castVerificationKey vk)
+
+              AGenesisUTxOVerificationKey vk ->
+                AddressShelley <$> buildShelleyAddress (castVerificationKey vk)
+
+    let addrText = serialiseAddress (addr :: AddressAny)
+
+    case mOutFp of
+      Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath addrText
+      Nothing                 -> liftIO $ Text.putStrLn        addrText
+
+  where
+    buildShelleyAddress :: VerificationKey PaymentKey
+                        -> ExceptT ShelleyAddressCmdError IO (Address ShelleyAddr)
+    buildShelleyAddress vkey = do
+      mstakeVKey <-
+        case mbStkVkeyOrFile of
+          Nothing -> pure Nothing
+          Just stkVkeyOrFile ->
+            firstExceptT ShelleyAddressCmdReadKeyFileError $
+              fmap Just $ newExceptT $
+                readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
+
+      let paymentCred  = PaymentCredentialByKey (verificationKeyHash vkey)
+          stakeAddrRef = maybe NoStakeAddress
+                               (StakeAddressByValue . StakeCredentialByKey
+                                                    . verificationKeyHash)
+                               mstakeVKey
+          address      = makeShelleyAddress nw paymentCred stakeAddrRef
+
+      return address
+
+
+--
+-- Handling the variety of address key types
+--
+
+-- TODO: if we could make unions like this an instance of the Key class then
+-- it would simplify some of the code above
+data SomeAddressVerificationKey
+  = AByronVerificationKey           (VerificationKey ByronKey)
+  | APaymentVerificationKey         (VerificationKey PaymentKey)
+  | APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
+  | AGenesisUTxOVerificationKey     (VerificationKey GenesisUTxOKey)
+
+foldSomeAddressVerificationKey :: (forall keyrole. Key keyrole =>
+                                   VerificationKey keyrole -> a)
+                               -> SomeAddressVerificationKey -> a
+foldSomeAddressVerificationKey f (AByronVerificationKey           vk) = f vk
+foldSomeAddressVerificationKey f (APaymentVerificationKey         vk) = f vk
+foldSomeAddressVerificationKey f (APaymentExtendedVerificationKey vk) = f vk
+foldSomeAddressVerificationKey f (AGenesisUTxOVerificationKey     vk) = f vk
+
+readAddressVerificationKeyTextOrFile
+  :: VerificationKeyTextOrFile
+  -> ExceptT VerificationKeyTextOrFileError IO SomeAddressVerificationKey
+readAddressVerificationKeyTextOrFile vkTextOrFile =
+    newExceptT $
+      readVerificationKeyTextOrFileAnyOf bech32Types textEnvTypes vkTextOrFile
+  where
+    bech32Types =
+      [ FromSomeType (AsVerificationKey AsByronKey)
+                     AByronVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentKey)
+                     APaymentVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
+                     APaymentExtendedVerificationKey
+      ]
+
+    textEnvTypes =
+      [ FromSomeType (AsVerificationKey AsByronKey)
+                     AByronVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentKey)
+                     APaymentVerificationKey
+      , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
+                     APaymentExtendedVerificationKey
+      , FromSomeType (AsVerificationKey AsGenesisUTxOKey)
+                     AGenesisUTxOVerificationKey
+      ]
+
+--
+-- Multisig addresses
+--
+
+runAddressBuildScript
+  :: ScriptFile
+  -> NetworkId
+  -> Maybe OutputFile
+  -> ExceptT ShelleyAddressCmdError IO ()
+runAddressBuildScript (ScriptFile fp) nId mOutFp = do
+  scriptLB <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp)
+                $ LB.readFile fp
+  script <- case eitherDecode scriptLB :: Either String (MultiSigScript ShelleyEra) of
+               Right mss -> return $ makeMultiSigScript mss
+               Left err -> left . ShelleyAddressCmdAesonDecodeError fp $ Text.pack err
+  let payCred = PaymentCredentialByScript $ scriptHash script
+      scriptAddr = serialiseAddress $ makeShelleyAddress nId payCred NoStakeAddress
+  case mOutFp of
+    Just (OutputFile oFp) -> liftIO $ Text.writeFile oFp scriptAddr
+    Nothing -> liftIO $ Text.putStr scriptAddr

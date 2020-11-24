@@ -6,32 +6,43 @@ module Test.Cardano.Api.Typed.CBOR
   ) where
 
 import           Cardano.Api.Typed
-
 import           Cardano.Prelude
-
 import           Hedgehog (Gen, Property, discover)
-import qualified Hedgehog as H
-
-import           Test.Cardano.Api.Orphans ()
 import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog.Group (fromGroup)
 
+import qualified Hedgehog as H
 
+{- HLINT ignore "Use camelCase" -}
 
-{-
--- CBOR tests to fill in
+-- TODO: Need to add PaymentExtendedKey roundtrip tests however
+-- we can't derive an Eq instance for Crypto.HD.XPrv
 
--- TODO: Currently undefined
-(TxBody Byron)
-(TxBody Shelley)
--- TODO: Currently undefined
-(Tx Byron)
-(Tx Shelley)
--- TODO: Currently undefined
-(Witness Byron)
-(Witness Shelley)
+prop_roundtrip_txbody_byron_CBOR :: Property
+prop_roundtrip_txbody_byron_CBOR =
+  roundtrip_CBOR AsByronTxBody genTxBodyByron
 
--}
+prop_roundtrip_txbody_shelley_CBOR :: Property
+prop_roundtrip_txbody_shelley_CBOR =
+  roundtrip_CBOR AsShelleyTxBody genTxBodyShelley
+
+prop_roundtrip_tx_byron_CBOR :: Property
+prop_roundtrip_tx_byron_CBOR =
+  roundtrip_CBOR AsByronTx genTxByron
+
+prop_roundtrip_tx_shelley_CBOR :: Property
+prop_roundtrip_tx_shelley_CBOR =
+  roundtrip_CBOR AsShelleyTx genTxShelley
+
+prop_roundtrip_witness_shelley_CBOR :: Property
+prop_roundtrip_witness_shelley_CBOR =
+  roundtrip_CBOR AsShelleyWitness genShelleyWitness
+
+prop_roundtrip_witness_byron_CBOR :: Property
+prop_roundtrip_witness_byron_CBOR =
+  roundtrip_CBOR AsByronWitness genByronKeyWitness
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR =
@@ -105,6 +116,10 @@ prop_roundtrip_signing_key_kes_CBOR :: Property
 prop_roundtrip_signing_key_kes_CBOR =
   roundtrip_CBOR (AsSigningKey AsKesKey) (genSigningKey AsKesKey)
 
+prop_roundtrip_script_CBOR :: Property
+prop_roundtrip_script_CBOR =
+  roundtrip_CBOR (AsScript AsShelleyEra) genScript
+
 -- -----------------------------------------------------------------------------
 
 roundtrip_CBOR
@@ -119,6 +134,5 @@ roundtrip_CBOR typeProxy gen =
 
 -- -----------------------------------------------------------------------------
 
-tests :: IO Bool
-tests =
-  H.checkParallel $$discover
+tests :: TestTree
+tests = fromGroup $$discover

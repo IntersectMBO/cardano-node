@@ -7,21 +7,16 @@ module Cardano.CLI.Environment
   ) where
 
 import           Cardano.Prelude
-
-import           Cardano.Api (textShow)
-import           Cardano.Config.Types (SocketPath (..))
-
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (left)
-
-import qualified Data.Text as Text
-
 import           Prelude (String)
 
+import           Control.Monad.Trans.Except.Extra (left)
+import qualified Data.Text as Text
 import           System.Environment (lookupEnv)
 
-data EnvSocketError
-  = CliEnvVarLookup !Text deriving Show
+import           Cardano.CLI.Helpers (textShow)
+import           Cardano.CLI.Types (SocketPath (..))
+
+newtype EnvSocketError = CliEnvVarLookup Text deriving Show
 
 renderEnvSocketError :: EnvSocketError -> Text
 renderEnvSocketError err =

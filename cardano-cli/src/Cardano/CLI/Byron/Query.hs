@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Byron.Query
   ( ByronQueryError(..)
@@ -9,28 +10,24 @@ module Cardano.CLI.Byron.Query
   , runGetLocalNodeTip
   ) where
 
-import           Prelude (unlines)
-import           Cardano.Prelude hiding (unlines)
+import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import qualified Data.Text as T
+import qualified Data.Text as Text
 
-import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Ouroboros.Consensus.Cardano
-                   (protocolClientInfo, SecurityParam(..))
-import           Ouroboros.Consensus.Node.ProtocolInfo (pClientInfoCodecConfig)
-import           Ouroboros.Consensus.Util.Condense (Condense(..))
+import           Cardano.Api.Typed
+import           Cardano.Chain.Slotting (EpochSlots (..))
+import           Ouroboros.Consensus.Block (ConvertRawHash (..))
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.NodeToClient (withIOManager)
 
-import           Cardano.Config.Byron.Protocol (mkNodeClientProtocolRealPBFT)
+import           Cardano.Api.LocalChainSync (getLocalTip)
+import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Types (SocketPath (..))
+import           Cardano.Tracing.Render (renderHeaderHash, renderSlotNo)
 
-import           Cardano.Api (Network(..), getLocalTip)
-import           Cardano.CLI.Environment
-                   (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+{- HLINT ignore "Reduce duplication" -}
 
-data ByronQueryError
-  = ByronQueryEnvVarSocketErr !EnvSocketError
+newtype ByronQueryError = ByronQueryEnvVarSocketErr EnvSocketError
   deriving Show
 
 renderByronQueryError :: ByronQueryError -> Text
@@ -42,25 +39,27 @@ renderByronQueryError err =
 -- Query local node's chain tip
 --------------------------------------------------------------------------------
 
-runGetLocalNodeTip :: Network -> ExceptT ByronQueryError IO ()
-runGetLocalNodeTip network = do
-    sockPath <- firstExceptT ByronQueryEnvVarSocketErr $ readEnvSocketPath
-    let ptclClientInfo = pClientInfoCodecConfig . protocolClientInfo $
-          mkNodeClientProtocolRealPBFT
-            (EpochSlots 21600)
-            (SecurityParam 2160)
-
+runGetLocalNodeTip :: NetworkId -> ExceptT ByronQueryError IO ()
+runGetLocalNodeTip networkId = do
+    SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr
+                           readEnvSocketPath
+    let connctInfo =
+          LocalNodeConnectInfo {
+            localNodeSocketPath    = sockPath,
+            localNodeNetworkId     = networkId,
+            localNodeConsensusMode = ByronMode (EpochSlots 21600)
+          }
     liftIO $ do
-      tip <- withIOManager $ \iomgr ->
-               getLocalTip iomgr ptclClientInfo network sockPath
+      tip <- getLocalTip connctInfo
       putTextLn (getTipOutput tip)
   where
-    getTipOutput :: forall blk. Condense (HeaderHash blk) => Tip blk -> Text
-    getTipOutput (TipGenesis) = "Current tip: genesis (origin)"
-    getTipOutput (Tip slotNo headerHash blkNo) =
-      T.pack $ unlines [ "\n"
-                        , "Current tip: "
-                        , "Block hash: " <> condense headerHash
-                        , "Slot: " <> condense slotNo
-                        , "Block number: " <> condense blkNo
-                        ]
+    getTipOutput :: forall blk. ConvertRawHash blk => Tip blk -> Text
+    getTipOutput TipGenesis = "Current tip: genesis (origin)"
+    getTipOutput (Tip slotNo headerHash (BlockNo blkNo)) =
+      Text.unlines
+        [ "\n"
+        , "Current tip: "
+        , "Block hash: " <> renderHeaderHash (Proxy @blk) headerHash
+        , "Slot: " <> renderSlotNo slotNo
+        , "Block number: " <> show blkNo
+        ]

@@ -1,5 +1,7 @@
+cabal-version: 2.4
+
 name:                   cardano-api
-version:                1.13.0
+version:                1.23.0
 description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -8,52 +10,93 @@ license-files:
   LICENSE
   NOTICE
 build-type:             Simple
-cabal-version:          >= 1.10
 extra-source-files:     README.md, ChangeLog.md
 
 library
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Api
+  exposed-modules:      Cardano.API
+                        Cardano.Api.Byron
+                        Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.LocalChainSync
+                        Cardano.Api.Protocol
+                        Cardano.Api.Protocol.Byron
+                        Cardano.Api.Protocol.Cardano
+                        Cardano.Api.Protocol.Shelley
+                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Shelley
+                        Cardano.Api.Shelley.Genesis
+                        Cardano.Api.Shelley.Serialisation.Legacy
+                        Cardano.Api.TxSubmit
                         Cardano.Api.Typed
 
-  other-modules:        Cardano.Api.CBOR
-                        Cardano.Api.Convert
-                        Cardano.Api.Error
-                        Cardano.Api.LocalChainSync
-                        Cardano.Api.LocalStateQuery
-                        Cardano.Api.MetaData
-                        Cardano.Api.TxSubmit
-                        Cardano.Api.TxSubmit.ErrorRender
+
+  other-modules:        Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
-                        Cardano.Api.Types
-                        Cardano.Api.View
+
+                        -- Splitting up the big Typed module:
+                        Cardano.Api.Address
+                        Cardano.Api.Certificate
+                        Cardano.Api.Eras
+                        Cardano.Api.Error
+                        Cardano.Api.Fees
+                        Cardano.Api.Hash
+                        Cardano.Api.HasTypeProxy
+                        Cardano.Api.Key
+                        Cardano.Api.KeysByron
+                        Cardano.Api.KeysShelley
+                        Cardano.Api.KeysPraos
+                        Cardano.Api.NetworkId
+                        Cardano.Api.OperationalCertificate
+                        Cardano.Api.ProtocolParameters
+                        Cardano.Api.Script
+                        Cardano.Api.SerialiseBech32
+                        Cardano.Api.SerialiseCBOR
+                        Cardano.Api.SerialiseJSON
+                        Cardano.Api.SerialiseRaw
+                        Cardano.Api.SerialiseTextEnvelope
+                        Cardano.Api.StakePoolMetadata
+                        Cardano.Api.Tx
+                        Cardano.Api.TxBody
+                        Cardano.Api.TxMetadata
+                        Cardano.Api.Utils
+                        Cardano.Api.Value
+
 
 
   build-depends:        base >=4.12 && <5
                       , aeson
+                      , aeson-pretty
                       , attoparsec
-                      , base16-bytestring
+                      , base16-bytestring >= 1.0
+                      , base58-bytestring
                       , base64
+                      , bech32 >= 1.1.0
                       , bytestring
                       , cardano-binary
                       , cardano-config
+                      , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger
+                      , cardano-ledger-shelley-ma
                       , cardano-prelude
-                      , cardano-shell
                       , cardano-slotting
                       , cborg
                       , contra-tracer
                       , containers
                       , cryptonite
+                      , directory
+                      , filepath
                       , formatting
                       , io-sim-classes
                       , iohk-monitoring
+                      , iproute
                       , memory
                       , network
                       , network-mux
+                      , network-uri
+                      , nothunks
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
@@ -65,6 +108,8 @@ library
                       , shelley-spec-ledger
                       , stm
                       , text
+                      , time
+                      , transformers
                       , transformers-except
                       , typed-protocols
                       , typed-protocols-examples
@@ -82,6 +127,9 @@ library
                         -Wpartial-fields
                         -Wcompat
 
+  if impl(ghc < 8.10)
+    ghc-options:        -Wno-incomplete-patterns
+
 test-suite cardano-api-test
   hs-source-dirs:       test
   main-is:              cardano-api-test.hs
@@ -90,32 +138,50 @@ test-suite cardano-api-test
   build-depends:
                         base >=4.12 && <5
                       , aeson
+                      , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-binary
+                      , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-test
+                      , cardano-crypto-tests
                       , cardano-crypto-wrapper
                       , cardano-ledger-test
                       , cardano-prelude
+                      , cardano-prelude-test
+                      , cardano-slotting
                       , containers
                       , cryptonite
                       , hedgehog
+                      , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
+                      , QuickCheck
                       , shelley-spec-ledger
+                      , shelley-spec-ledger-test
+                      , tasty
+                      , tasty-hedgehog
+                      , tasty-quickcheck
+                      , text
+                      , time
+                      , unordered-containers
 
-  other-modules:        Test.Cardano.Api
-                        Test.Cardano.Api.CBOR
-                        Test.Cardano.Api.Convert
+  other-modules:        Test.Cardano.Api.Crypto
+                        Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
-                        Test.Cardano.Api.Orphans
-                        Test.Cardano.Api.View
+                        Test.Cardano.Api.Ledger
+                        Test.Cardano.Api.MetaData
+                        Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
+                        Test.Cardano.Api.Typed.MultiSig.Allegra
+                        Test.Cardano.Api.Typed.MultiSig.Mary
+                        Test.Cardano.Api.Typed.MultiSig.Shelley
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
+                        Test.Tasty.Hedgehog.Group
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude
@@ -126,25 +192,4 @@ test-suite cardano-api-test
                         -Wredundant-constraints
                         -Wpartial-fields
                         -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
-
-
-executable cardano-api-demo
-  hs-source-dirs:       app
-  main-is:              cardano-api-demo.hs
-
-  build-depends:
-                        base >=4.12 && <5
-                      , bytestring
-                      , cardano-api
-                      , cardano-prelude
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Weverything
-                        -fno-warn-missing-import-lists
-                        -fno-warn-safe
-                        -fno-warn-unsafe
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

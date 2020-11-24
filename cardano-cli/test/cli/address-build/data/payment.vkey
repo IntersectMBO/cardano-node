@@ -1,4 +1,0 @@
-type: PaymentVerificationKeyShelley
-title: Free form text
-cbor-hex:
- 18af582018fbad930b64667fa98c84000628a202cd40eb6083b592e1fd3f05035b506046

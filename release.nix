@@ -77,15 +77,14 @@ let
     };
   };
   extraBuilds = {
-    # only build nixos tests on first supported system (linux)
-    inherit (pkgsFor (builtins.head  supportedSystems)) nixosTests;
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet ff; };
+    # Environments listed in Network Configuration page
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet; };
   } // (builtins.listToAttrs (map makeRelease [
+    # Environments we want to build scripts for on hydra
     "mainnet"
-    "staging"
-    "shelley_staging_short"
-    "shelley_staging"
     "testnet"
+    "staging"
+    "shelley_qa"
   ]));
 
   # restrict supported systems to a subset where tests (if exist) are required to pass:
@@ -99,8 +98,24 @@ let
       map (drv: drv // { inherit packageName; }) (collectJobs' package)
     ) ds);
 
+  nonDefaultBuildSystems = tail supportedSystems;
+
+  # Paths or prefixes of paths of derivations to build only on the default system (ie. linux on hydra):
+  onlyBuildOnDefaultSystem = [
+    ["checks" "hlint"] ["dockerImage"] ["clusterTests"] ["nixosTests"]
+  ];
+  # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
+  noCrossBuild = [
+    ["shell"]
+  ] ++ onlyBuildOnDefaultSystem;
+  noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ]
+    ++ noCrossBuild;
+
   # Remove build jobs for which cross compiling does not make sense.
-  filterJobsCross = filterAttrs (n: _: n != "dockerImage" && n != "shell" && n != "checkCabalProject");
+  filterProject = noBuildList: mapAttrsRecursiveCond (a: !(isDerivation a)) (path: value:
+    if (isDerivation value && (any (p: take (length p) path == p) noBuildList)) then null
+    else value
+  ) project;
 
   inherit (systems.examples) mingwW64 musl64;
 
@@ -108,8 +123,12 @@ let
 
   jobs = {
     inherit dockerImageArtifact;
-    native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
-    musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterJobsCross project));
+    native =
+      let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
+        if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
+        (packagePlatforms project);
+      in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
+    musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterProject noMusl64Build));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
       inherit nixpkgs;
@@ -126,7 +145,7 @@ let
       exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.musl64.exes);
     };
   } // (optionalAttrs windowsBuild {
-    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterJobsCross project));
+    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterProject noCrossBuild));
     cardano-node-win64 = import ./nix/binary-release.nix {
       inherit pkgs project;
       platform = "win64";
@@ -134,12 +153,12 @@ let
     };
   }) // extraBuilds // (mkRequiredJob (concatLists [
       (collectJobs jobs.native.checks)
+      (collectJobs jobs.native.nixosTests)
       (collectJobs jobs.native.benchmarks)
       (collectJobs jobs.native.exes)
       (optional windowsBuild jobs.cardano-node-win64)
       (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
-      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" ])
-      (collectJobs jobs.nixosTests.chairmansCluster)
+      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" ])
       [
         jobs.cardano-node-linux
         jobs.cardano-node-macos

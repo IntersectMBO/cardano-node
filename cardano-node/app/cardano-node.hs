@@ -3,28 +3,23 @@
 {-# LANGUAGE RankNTypes #-}
 
 import           Cardano.Prelude hiding (option)
-import           Prelude (String)
 import qualified Data.Text as Text
+import           Prelude (String)
 
-import           Data.Semigroup ((<>))
-import           Options.Applicative (Parser)
+import           Options.Applicative
 import qualified Options.Applicative as Opt
+import           Options.Applicative.Help ((<$$>))
 
+import           Cardano.Config.Git.Rev (gitRev)
 import           Data.Version (showVersion)
 import           Paths_cardano_node (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
-import           Cardano.Config.GitRev (gitRev)
 
-import           Cardano.Shell.Lib (runCardanoApplicationWithFeatures)
-import           Cardano.Shell.Types (CardanoApplication (..),
-                                      CardanoFeature (..))
-
-import           Cardano.Common.Help
-import           Cardano.Config.TopHandler
-import           Cardano.Config.Parsers
-import           Cardano.Config.Logging (createLoggingFeature)
-import           Cardano.Config.Types
-import           Cardano.Node.Features.Node
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration)
+import           Cardano.Node.Handlers.TopLevel
+import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
+                     renderHelpDoc)
+import           Cardano.Node.Run (runNode)
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
@@ -59,7 +54,7 @@ main = toplevelExceptionHandler $ do
         <$$> parserHelpOptions nodeCLIParser
 
 
-data Command = RunCmd NodeCLI
+data Command = RunCmd PartialNodeConfiguration
              | VersionCmd
 
 -- Yes! A --version flag or version command. Either guess is right!
@@ -94,38 +89,10 @@ runVersionCommand =
     renderVersion = Text.pack . showVersion
 
 
-runRunCommand :: NodeCLI -> IO ()
-runRunCommand cli = do
-    (features, nodeLayer) <- initializeAllFeatures cli env
+runRunCommand :: PartialNodeConfiguration -> IO ()
+runRunCommand pnc = liftIO $ runNode pnc
 
-    runCardanoApplicationWithFeatures features (cardanoApplication nodeLayer)
-
-    where
-      env :: CardanoEnvironment
-      env = NoEnvironment
-
-      cardanoApplication :: NodeLayer -> CardanoApplication
-      cardanoApplication = CardanoApplication . nlRunNode
-
-
-initializeAllFeatures
-  :: NodeCLI
-  -> CardanoEnvironment
-  -> IO ([CardanoFeature], NodeLayer)
-initializeAllFeatures npm cardanoEnvironment = do
-
-  eitherFeatures <- runExceptT $ createLoggingFeature
-                      (Text.pack (showVersion version))
-                      cardanoEnvironment
-                      npm
-
-  (loggingLayer, loggingFeature) <- case eitherFeatures of
-                                      Left err -> putTextLn (show err) >> exitFailure
-                                      Right res -> return res
-
-  (nodeLayer, nodeFeature) <- createNodeFeature
-                                loggingLayer
-                                cardanoEnvironment
-                                npm
-
-  pure ([loggingFeature, nodeFeature] :: [CardanoFeature], nodeLayer)
+command' :: String -> String -> Parser a -> Mod CommandFields a
+command' c descr p =
+    command c $ info (p <**> helper)
+              $ mconcat [ progDesc descr ]

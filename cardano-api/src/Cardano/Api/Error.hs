@@ -1,52 +1,63 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE GADTSyntax #-}
 
+-- | Class of errors used in the Api.
+--
 module Cardano.Api.Error
-  ( ApiError (..)
-  , renderApiError
-  , textShow
+  ( Error(..)
+  , throwErrorAsException
+  , ErrorAsException(..)
+  , FileError(..)
   ) where
 
-import           Cardano.Binary (DecoderError (..))
+import           Prelude
 
-import           Cardano.Prelude
+import           Control.Exception (Exception(..), IOException, throwIO)
+import           System.IO (Handle)
 
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Formatting (build, sformat)
 
-import           Cardano.Config.TextView (TextViewError(..), TextViewType(..))
+class Show e => Error e where
 
-data ApiError
-  = ApiError !Text
-  | ApiErrorCBOR !DecoderError
-  | ApiErrorIO !FilePath !IOException
-  | ApiTextView !TextViewError
-  deriving (Eq, Show)
+    displayError :: e -> String
 
-renderApiError :: ApiError -> Text
-renderApiError ae =
-  case ae of
-    ApiError txt -> txt
-    ApiErrorCBOR de -> sformat build de
-    ApiErrorIO fp e -> mconcat [Text.pack fp, ": ", textShow e]
-    ApiTextView err -> case err of
-      TextViewFormatError msg -> msg
+instance Error () where
+    displayError () = ""
 
-      TextViewTypeError [expected] actual ->
-        mconcat
-          [ "Expected file type ", Text.decodeLatin1 (unTextViewType expected)
-          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
-          ]
 
-      TextViewTypeError expected actual ->
-        mconcat
-          [ "Expected file type to be one of "
-          , Text.intercalate ", "
-              [ Text.decodeLatin1 (unTextViewType t) | t <- expected ]
-          , ", but got type ", Text.decodeLatin1 (unTextViewType actual)
-          ]
+-- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
+-- necessary use IO exceptions.
+--
+throwErrorAsException :: Error e => e -> IO a
+throwErrorAsException e = throwIO (ErrorAsException e)
 
-      TextViewDecodeError de -> sformat build de
+data ErrorAsException where
+     ErrorAsException :: Error e => e -> ErrorAsException
 
-textShow :: Show a => a -> Text
-textShow = Text.pack . show
+instance Show ErrorAsException where
+    show (ErrorAsException e) = show e
+
+instance Exception ErrorAsException where
+    displayException (ErrorAsException e) = displayError e
+
+
+data FileError e = FileError   FilePath e
+                 | FileErrorTempFile
+                     FilePath
+                     -- ^ Target path
+                     FilePath
+                     -- ^ Temporary path
+                     Handle
+                 | FileIOError FilePath IOException
+  deriving Show
+
+instance Error e => Error (FileError e) where
+  displayError (FileErrorTempFile targetPath tempPath h)=
+    "Error creating temporary file at: " ++ tempPath ++
+    "/n" ++ "Target path: " ++ targetPath ++
+    "/n" ++ "Handle: " ++ show h
+  displayError (FileIOError path ioe) =
+    path ++ ": " ++ displayException ioe
+  displayError (FileError path e) =
+    path ++ ": " ++ displayError e
+
+
