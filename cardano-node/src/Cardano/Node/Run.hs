@@ -23,6 +23,7 @@ import           Control.Tracer
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
@@ -289,7 +290,9 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
     traceNamedObject (appendName "networkMagic" tr)
                      (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
 
-    traceNodeBasicInfo tr =<< nodeBasicInfo nc p =<< getCurrentTime
+    startTime <- getCurrentTime
+    traceNodeBasicInfo tr =<< nodeBasicInfo nc p startTime
+    traceCounter "nodeStartTime" (ceiling $ utcTimeToPOSIXSeconds startTime) tr
 
     when ncValidateDB $ traceWith tracer "Performing DB validation"
 

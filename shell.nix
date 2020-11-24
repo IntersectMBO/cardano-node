@@ -51,6 +51,7 @@ let
     stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
+      cabal-install
       niv
       cardano-cli
       bech32
