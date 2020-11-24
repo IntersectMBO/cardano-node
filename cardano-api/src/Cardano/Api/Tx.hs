@@ -271,10 +271,60 @@ instance Eq (Witness era) where
 
     (==) _ _ = False
 
-{-
-deriving instance Show (Witness ByronEra)
-deriving instance Show (Witness ShelleyEra)
--}
+-- The GADT in the ShelleyTx case requires a custom instance
+--TODO: once we start providing custom patterns we should do the show in terms
+-- of those. It'll be less verbose too!
+instance Show (Witness era) where
+    showsPrec p (ByronKeyWitness tx) =
+      showParen (p >= 11) $
+        showString "ByronKeyWitness "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyBootstrapWitness ShelleyBasedEraShelley tx) =
+      showParen (p >= 11) $
+        showString "ShelleyBootstrapWitness ShelleyBasedEraShelley "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyBootstrapWitness ShelleyBasedEraAllegra tx) =
+      showParen (p >= 11) $
+        showString "ShelleyBootstrapWitness ShelleyBasedEraAllegra "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyBootstrapWitness ShelleyBasedEraMary tx) =
+      showParen (p >= 11) $
+        showString "ShelleyBootstrapWitness ShelleyBasedEraMary "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyKeyWitness ShelleyBasedEraShelley tx) =
+      showParen (p >= 11) $
+        showString "ShelleyKeyWitness ShelleyBasedEraShelley "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyKeyWitness ShelleyBasedEraAllegra tx) =
+      showParen (p >= 11) $
+        showString "ShelleyKeyWitness ShelleyBasedEraAllegra "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyKeyWitness ShelleyBasedEraMary tx) =
+      showParen (p >= 11) $
+        showString "ShelleyKeyWitness ShelleyBasedEraMary "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyScriptWitness ShelleyBasedEraShelley tx) =
+      showParen (p >= 11) $
+        showString "ShelleyScriptWitness ShelleyBasedEraShelley "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyScriptWitness ShelleyBasedEraAllegra tx) =
+      showParen (p >= 11) $
+        showString "ShelleyScriptWitness ShelleyBasedEraAllegra "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyScriptWitness ShelleyBasedEraMary tx) =
+      showParen (p >= 11) $
+        showString "ShelleyScriptWitness ShelleyBasedEraMary "
+      . showsPrec 11 tx
+
 
 instance HasTypeProxy (Witness ByronEra) where
     data AsType (Witness ByronEra) = AsByronWitness
