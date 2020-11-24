@@ -135,6 +135,12 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationErrorShelley $
         Shelley.readLeaderCredentials files
 
+    let paramsShellyBased = Consensus.ProtocolParamsShelleyBased
+          { Consensus.shelleyBasedGenesis = shelleyGenesis
+          , Consensus.shelleyBasedInitialNonce = Shelley.genesisHashToPraosNonce shelleyGenesisHash
+          , Consensus.shelleyBasedLeaderCredentials = shelleyLeaderCredentials
+          }
+
     return $!
       Consensus.ProtocolCardano
         Consensus.ProtocolParamsByron {
@@ -153,34 +159,24 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
           byronLeaderCredentials =
             byronLeaderCredentials
         }
+        paramsShellyBased
         Consensus.ProtocolParamsShelley {
-          shelleyGenesis = shelleyGenesis,
-          shelleyInitialNonce =
-            Shelley.genesisHashToPraosNonce shelleyGenesisHash,
           shelleyProtVer =
             ProtVer
               npcShelleySupportedProtocolVersionMajor
-              npcShelleySupportedProtocolVersionMinor,
-          shelleyLeaderCredentials =
-            shelleyLeaderCredentials
+              npcShelleySupportedProtocolVersionMinor
         }
         Consensus.ProtocolParamsAllegra {
           allegraProtVer =
             ProtVer
               npcShelleySupportedProtocolVersionMajor
-              npcShelleySupportedProtocolVersionMinor,
-          allegraLeaderCredentials =
-            -- TODO: separate credentials for Allega
-            Nothing
+              npcShelleySupportedProtocolVersionMinor
         }
         Consensus.ProtocolParamsMary {
           maryProtVer =
             ProtVer
               npcShelleySupportedProtocolVersionMajor
-              npcShelleySupportedProtocolVersionMinor,
-          maryLeaderCredentials =
-            -- TODO: separate credentials for Mary
-            Nothing
+              npcShelleySupportedProtocolVersionMinor
         }
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.

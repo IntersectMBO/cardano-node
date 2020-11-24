@@ -101,17 +101,19 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
     firstExceptT GenesisValidationFailure . hoistEither $ validateGenesis genesis
     optionalLeaderCredentials <- readLeaderCredentials files
 
-    return $
-      Consensus.ProtocolShelley $ Consensus.ProtocolParamsShelley {
-        shelleyGenesis = genesis,
-        shelleyInitialNonce = genesisHashToPraosNonce genesisHash,
-        shelleyProtVer =
-          ProtVer
-            npcShelleySupportedProtocolVersionMajor
-            npcShelleySupportedProtocolVersionMinor,
-        shelleyLeaderCredentials =
-          maybeToList optionalLeaderCredentials
-      }
+    let paramsShelley = Consensus.ProtocolParamsShelley
+          { shelleyProtVer = ProtVer
+              npcShelleySupportedProtocolVersionMajor
+              npcShelleySupportedProtocolVersionMinor
+          }
+
+    let paramsShellyBased = Consensus.ProtocolParamsShelleyBased
+          { Consensus.shelleyBasedGenesis = genesis
+          , Consensus.shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash
+          , Consensus.shelleyBasedLeaderCredentials = maybeToList optionalLeaderCredentials
+          }
+
+    return $ Consensus.ProtocolShelley paramsShellyBased paramsShelley
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce
 genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
