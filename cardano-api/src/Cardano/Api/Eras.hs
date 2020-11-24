@@ -193,7 +193,7 @@ deriving instance Show (ShelleyBasedEra era)
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
 -- the 'ShelleyBasedEra' constructors.
 --
-class HasTypeProxy era => IsShelleyBasedEra era where
+class IsCardanoEra era => IsShelleyBasedEra era where
    shelleyBasedEra :: ShelleyBasedEra era
 
 instance IsShelleyBasedEra ShelleyEra where
