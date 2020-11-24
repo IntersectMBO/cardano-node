@@ -170,6 +170,7 @@ module Cardano.Api.Typed (
     -- ** Era-dependent transaction body features
     OnlyAdaSupportedInEra(..),
     MultiAssetSupportedInEra(..),
+    TxFeesExplicitInEra (..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -801,4 +802,3 @@ submitTxToNodeLocal connctInfo tx = do
         pure $ SendMsgSubmitTx tx $ \result -> do
         atomically $ putTMVar resultVar result
         pure (TxSubmission.SendMsgDone ())
-

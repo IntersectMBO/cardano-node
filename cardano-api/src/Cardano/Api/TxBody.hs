@@ -51,6 +51,7 @@ module Cardano.Api.TxBody (
     -- * Era-dependent transaction body features
     OnlyAdaSupportedInEra(..),
     MultiAssetSupportedInEra(..),
+    TxFeesExplicitInEra (..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),

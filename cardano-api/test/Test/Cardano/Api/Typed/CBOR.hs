@@ -22,27 +22,43 @@ import qualified Hedgehog as H
 
 prop_roundtrip_txbody_byron_CBOR :: Property
 prop_roundtrip_txbody_byron_CBOR =
-  roundtrip_CBOR AsByronTxBody genTxBodyByron
+  roundtrip_CBOR (AsTxBody AsByronEra) (genTxBody ByronEra)
 
 prop_roundtrip_txbody_shelley_CBOR :: Property
 prop_roundtrip_txbody_shelley_CBOR =
-  roundtrip_CBOR AsShelleyTxBody genTxBodyShelley
+  roundtrip_CBOR (AsTxBody AsShelleyEra) (genTxBody ShelleyEra)
+
+prop_roundtrip_txbody_allegra_CBOR :: Property
+prop_roundtrip_txbody_allegra_CBOR =
+  roundtrip_CBOR (AsTxBody AsAllegraEra) (genTxBody AllegraEra)
+
+prop_roundtrip_txbody_mary_CBOR :: Property
+prop_roundtrip_txbody_mary_CBOR =
+  roundtrip_CBOR (AsTxBody AsMaryEra) (genTxBody MaryEra)
 
 prop_roundtrip_tx_byron_CBOR :: Property
 prop_roundtrip_tx_byron_CBOR =
-  roundtrip_CBOR AsByronTx genTxByron
+  roundtrip_CBOR (AsTx AsByronEra) (genTx ByronEra)
 
 prop_roundtrip_tx_shelley_CBOR :: Property
 prop_roundtrip_tx_shelley_CBOR =
-  roundtrip_CBOR AsShelleyTx genTxShelley
-
-prop_roundtrip_witness_shelley_CBOR :: Property
-prop_roundtrip_witness_shelley_CBOR =
-  roundtrip_CBOR AsShelleyWitness genShelleyWitness
+  roundtrip_CBOR (AsTx AsShelleyEra) (genTx ShelleyEra)
 
 prop_roundtrip_witness_byron_CBOR :: Property
 prop_roundtrip_witness_byron_CBOR =
-  roundtrip_CBOR AsByronWitness genByronKeyWitness
+  roundtrip_CBOR (AsWitness AsByronEra) genByronKeyWitness
+
+prop_roundtrip_witness_shelley_CBOR :: Property
+prop_roundtrip_witness_shelley_CBOR =
+  roundtrip_CBOR (AsWitness AsShelleyEra) (genShelleyWitness ShelleyEra)
+
+prop_roundtrip_witness_allegra_CBOR :: Property
+prop_roundtrip_witness_allegra_CBOR =
+  roundtrip_CBOR (AsWitness AsAllegraEra) (genShelleyWitness AllegraEra)
+
+prop_roundtrip_witness_mary_CBOR :: Property
+prop_roundtrip_witness_mary_CBOR =
+  roundtrip_CBOR (AsWitness AsMaryEra) (genShelleyWitness MaryEra)
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR =
@@ -116,9 +132,17 @@ prop_roundtrip_signing_key_kes_CBOR :: Property
 prop_roundtrip_signing_key_kes_CBOR =
   roundtrip_CBOR (AsSigningKey AsKesKey) (genSigningKey AsKesKey)
 
-prop_roundtrip_script_CBOR :: Property
-prop_roundtrip_script_CBOR =
-  roundtrip_CBOR (AsScript AsShelleyEra) genScript
+prop_roundtrip_script_shelley_CBOR :: Property
+prop_roundtrip_script_shelley_CBOR =
+  roundtrip_CBOR (AsScript AsShelleyEra) (genScript ShelleyBasedEraShelley)
+
+prop_roundtrip_script_allegra_CBOR :: Property
+prop_roundtrip_script_allegra_CBOR =
+  roundtrip_CBOR (AsScript AsAllegraEra) (genScript ShelleyBasedEraAllegra)
+
+prop_roundtrip_script_mary_CBOR :: Property
+prop_roundtrip_script_mary_CBOR =
+  roundtrip_CBOR (AsScript AsMaryEra) (genScript ShelleyBasedEraMary)
 
 -- -----------------------------------------------------------------------------
 
