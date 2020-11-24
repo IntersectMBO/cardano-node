@@ -67,25 +67,6 @@ module Cardano.Api.Shelley
     fromShelleyMetaData,
 
     -- * Protocol parameter updates
-    UpdateProposal(UpdateProposal),
-    ProtocolParametersUpdate(ProtocolParametersUpdate),
-    protocolUpdateProtocolVersion,
-    protocolUpdateDecentralization,
-    protocolUpdateExtraPraosEntropy,
-    protocolUpdateMaxBlockHeaderSize,
-    protocolUpdateMaxBlockBodySize,
-    protocolUpdateMaxTxSize,
-    protocolUpdateTxFeeFixed,
-    protocolUpdateTxFeePerByte,
-    protocolUpdateMinUTxOValue,
-    protocolUpdateStakeAddressDeposit,
-    protocolUpdateStakePoolDeposit,
-    protocolUpdateMinPoolCost,
-    protocolUpdatePoolRetireMaxEpoch,
-    protocolUpdateStakePoolTargetNum,
-    protocolUpdatePoolPledgeInfluence,
-    protocolUpdateMonetaryExpansion,
-    protocolUpdateTreasuryCut,
     EpochNo(..),
     NetworkMagic(..),
 
@@ -101,7 +82,9 @@ module Cardano.Api.Shelley
     parseScriptSig,
 
     -- * Certificates
-    Certificate (Certificate),
+    Certificate (..),
+    toShelleyCertificate,
+    fromShelleyCertificate,
 
     -- ** Operational certificates
     OperationalCertificate(OperationalCertificate),

@@ -336,8 +336,14 @@ module Cardano.API (
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
 
-    NetworkMagic,
+    -- * Protocol parameter updates
+    UpdateProposal(..),
+    ProtocolParametersUpdate(..),
     makeShelleyUpdateProposal,
+    PraosNonce,
+    makePraosNonce,
+
+    NetworkMagic,
   ) where
 
 import           Cardano.Api.Typed

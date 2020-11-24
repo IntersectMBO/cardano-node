@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Currency values
 --
@@ -26,14 +26,12 @@ module Cardano.Api.Value
   , selectLovelace
   , lovelaceToValue
 
-    -- * Era-dependent use of multi-assert values
-  , MintValue(..)
-  , TxOutValue(..)
-  , AdaOnlyInEra(..)
-  , MultiAssetInEra(..)
-
     -- * Internal conversion functions
+  , toByronLovelace
   , toShelleyLovelace
+  , fromShelleyLovelace
+  , toMaryValue
+  , fromMaryValue
   ) where
 
 import           Prelude
@@ -44,9 +42,14 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 
-import qualified Shelley.Spec.Ledger.Coin as Shelley
+import qualified Cardano.Chain.Common as Byron
 
-import           Cardano.Api.Eras
+import qualified Cardano.Ledger.Era as Ledger
+import qualified Shelley.Spec.Ledger.Coin as Shelley
+import qualified Cardano.Ledger.Mary.Value as Mary
+
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+
 import           Cardano.Api.Script
 
 
@@ -64,9 +67,19 @@ instance Semigroup Lovelace where
 instance Monoid Lovelace where
   mempty = Lovelace 0
 
+
+toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
+toByronLovelace (Lovelace x) =
+    case Byron.integerToLovelace x of
+      Left  _  -> Nothing
+      Right x' -> Just x'
+
 toShelleyLovelace :: Lovelace -> Shelley.Coin
 toShelleyLovelace (Lovelace l) = Shelley.Coin l
 --TODO: validate bounds
+
+fromShelleyLovelace :: Shelley.Coin -> Lovelace
+fromShelleyLovelace (Shelley.Coin l) = Lovelace l
 
 
 -- ----------------------------------------------------------------------------
@@ -97,8 +110,8 @@ newtype AssetName = AssetName ByteString
   deriving stock (Show)
   deriving newtype (Eq, Ord, IsString)
 
-data AssetId = AssetId !PolicyId !AssetName
-             | AdaAssetId
+data AssetId = AdaAssetId
+             | AssetId !PolicyId !AssetName
   deriving (Eq, Ord, Show)
 
 
@@ -158,50 +171,39 @@ lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
 
--- ----------------------------------------------------------------------------
--- Era-dependent use of multi-assert values
---
+toMaryValue :: forall ledgerera.
+               Ledger.Crypto ledgerera ~ StandardCrypto
+            => Value -> Mary.Value ledgerera
+toMaryValue v =
+    Mary.Value lovelace other
+  where
+    Quantity lovelace = selectAsset v AdaAssetId
+      --TODO: write QC tests to show it's ok to use Map.fromAscListWith here
+    other = Map.fromListWith Map.union
+              [ (toMaryPolicyID pid, Map.singleton (toMaryAssetName name) q)
+              | (AssetId pid name, Quantity q) <- valueToList v ]
 
-data MintValue era where
+    toMaryPolicyID :: PolicyId -> Mary.PolicyID ledgerera
+    toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
 
-     MintNothing :: MintValue era
-
-     MintValue   :: MultiAssetInEra era -> Value -> MintValue era
-
-deriving instance Eq   (MintValue era)
-deriving instance Show (MintValue era)
-
-
-data TxOutValue era where
-
-     TxOutAdaOnly :: AdaOnlyInEra era -> Lovelace -> TxOutValue era
-
-     TxOutValue   :: MultiAssetInEra era -> Value -> TxOutValue era
-
-deriving instance Eq   (TxOutValue era)
-deriving instance Show (TxOutValue era)
+    toMaryAssetName :: AssetName -> Mary.AssetName
+    toMaryAssetName (AssetName n) = Mary.AssetName n
 
 
--- | Representation of whether only ada transactions are supported in a
--- particular era.
---
-data AdaOnlyInEra era where
+fromMaryValue :: forall ledgerera.
+                 Ledger.Crypto ledgerera ~ StandardCrypto
+              => Mary.Value ledgerera -> Value
+fromMaryValue (Mary.Value lovelace other) =
+    Value $
+      --TODO: write QC tests to show it's ok to use Map.fromAscList here
+      Map.fromList $
+        [ (AdaAssetId, Quantity lovelace) | lovelace /= 0 ]
+     ++ [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
+        | (pid, as) <- Map.toList other
+        , (name, q) <- Map.toList as ]
+  where
+    fromMaryPolicyID :: Mary.PolicyID ledgerera -> PolicyId
+    fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
 
-     AdaOnlyInByronEra   :: AdaOnlyInEra ByronEra
-     AdaOnlyInShelleyEra :: AdaOnlyInEra ShelleyEra
-     AdaOnlyInAllegraEra :: AdaOnlyInEra AllegraEra
-
-deriving instance Eq   (AdaOnlyInEra era)
-deriving instance Show (AdaOnlyInEra era)
-
--- | Representation of whether multi-asset transactions are supported in a
--- particular era.
---
-data MultiAssetInEra era where
-
-     -- | Multi-asset transactions are supported in the 'Mary' era.
-     MultiAssetInMaryEra :: MultiAssetInEra MaryEra
-
-deriving instance Eq   (MultiAssetInEra era)
-deriving instance Show (MultiAssetInEra era)
-
+    fromMaryAssetName :: Mary.AssetName -> AssetName
+    fromMaryAssetName (Mary.AssetName n) = AssetName n

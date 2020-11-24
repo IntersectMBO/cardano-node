@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Protocol parameters.
@@ -15,6 +15,13 @@ module Cardano.Api.ProtocolParameters (
     ProtocolParametersUpdate(..),
     makeShelleyUpdateProposal,
 
+    -- * PraosNonce
+    PraosNonce,
+    makePraosNonce,
+
+    -- * Internal conversion functions
+    toShelleyUpdate,
+
     -- * Data family instances
     AsType(..)
   ) where
@@ -24,14 +31,21 @@ import           Prelude
 import           Numeric.Natural
 import           Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
+import           Data.Map.Strict (Map)
 
 import           Control.Monad
 
 import           Cardano.Slotting.Slot (EpochNo)
 import qualified Cardano.Crypto.Hash.Class as Crypto
+
+import qualified Cardano.Ledger.Era as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+
+import           Shelley.Spec.Ledger.BaseTypes
+                   (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Api.Address
@@ -50,9 +64,11 @@ import           Cardano.Api.Value
 -- Protocol updates embedded in transactions
 --
 
-newtype UpdateProposal = UpdateProposal (Shelley.Update StandardShelley)
+data UpdateProposal =
+     UpdateProposal
+       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
+       !EpochNo
     deriving stock (Eq, Show)
-    deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy UpdateProposal where
@@ -61,6 +77,14 @@ instance HasTypeProxy UpdateProposal where
 
 instance HasTextEnvelope UpdateProposal where
     textEnvelopeType _ = "UpdateProposalShelley"
+
+instance ToCBOR UpdateProposal where
+    toCBOR = toCBOR . toShelleyUpdate @StandardShelley
+    -- We have to pick a monomorphic era type for the serialisation. We use the
+    -- Shelley era. This makes no difference since era type is phantom.
+
+instance FromCBOR UpdateProposal where
+    fromCBOR = fromShelleyUpdate @StandardShelley <$> fromCBOR
 
 data ProtocolParametersUpdate =
      ProtocolParametersUpdate {
@@ -86,7 +110,7 @@ data ProtocolParametersUpdate =
        -- federated operators did not subtly bias the initial schedule so that
        -- they retain undue influence after decentralisation.
        --
-       protocolUpdateExtraPraosEntropy :: Maybe (Maybe ByteString),
+       protocolUpdateExtraPraosEntropy :: Maybe (Maybe PraosNonce),
 
        -- | The maximum permitted size of a block header.
        --
@@ -229,18 +253,28 @@ makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> [Hash GenesisKey]
                           -> EpochNo
                           -> UpdateProposal
-makeShelleyUpdateProposal params genesisKeyHashes epochno =
+makeShelleyUpdateProposal params genesisKeyHashes =
     --TODO decide how to handle parameter validation
-    let ppup = toShelleyPParamsUpdate params in
-    UpdateProposal $
-      Shelley.Update
-        (Shelley.ProposedPPUpdates
-           (Map.fromList
-              [ (kh, ppup) | GenesisKeyHash kh <- genesisKeyHashes ]))
-        epochno
+    UpdateProposal (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
+
+
+toShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
+                => UpdateProposal -> Shelley.Update ledgerera
+toShelleyUpdate (UpdateProposal ppup epochno) =
+    Shelley.Update (toShelleyProposedPPUpdates ppup) epochno
+
+
+toShelleyProposedPPUpdates :: Ledger.Crypto ledgerera ~ StandardCrypto
+                           => Map (Hash GenesisKey) ProtocolParametersUpdate
+                           -> Shelley.ProposedPPUpdates ledgerera
+toShelleyProposedPPUpdates =
+    Shelley.ProposedPPUpdates
+  . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
+  . Map.map toShelleyPParamsUpdate
+
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
-                       -> Shelley.PParamsUpdate StandardShelley
+                       -> Shelley.PParamsUpdate ledgerera
 toShelleyPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion
@@ -274,13 +308,13 @@ toShelleyPParamsUpdate
     , Shelley._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
     , Shelley._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
     , Shelley._a0          = maybeToStrictMaybe protocolUpdatePoolPledgeInfluence
-    , Shelley._rho         = Shelley.truncateUnitInterval . fromRational <$>
+    , Shelley._rho         = Shelley.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateMonetaryExpansion
-    , Shelley._tau         = Shelley.truncateUnitInterval . fromRational <$>
+    , Shelley._tau         = Shelley.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateTreasuryCut
-    , Shelley._d           = Shelley.truncateUnitInterval . fromRational <$>
+    , Shelley._d           = Shelley.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateDecentralization
-    , Shelley._extraEntropy    = mkNonce <$>
+    , Shelley._extraEntropy    = toShelleyNonce <$>
                                    maybeToStrictMaybe protocolUpdateExtraPraosEntropy
     , Shelley._protocolVersion = uncurry Shelley.ProtVer <$>
                                    maybeToStrictMaybe protocolUpdateProtocolVersion
@@ -289,10 +323,88 @@ toShelleyPParamsUpdate
     , Shelley._minPoolCost     = toShelleyLovelace <$>
                                    maybeToStrictMaybe protocolUpdateMinPoolCost
     }
-  where
-    mkNonce Nothing   = Shelley.NeutralNonce
-    mkNonce (Just bs) = Shelley.Nonce
-                      . Crypto.castHash
-                      . Crypto.hashWith id
-                      $ bs
 
+fromShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
+                  => Shelley.Update ledgerera -> UpdateProposal
+fromShelleyUpdate (Shelley.Update ppup epochno) =
+    UpdateProposal (fromShelleyProposedPPUpdates ppup) epochno
+
+
+fromShelleyProposedPPUpdates :: Ledger.Crypto ledgerera ~ StandardCrypto
+                             => Shelley.ProposedPPUpdates ledgerera
+                             -> Map (Hash GenesisKey) ProtocolParametersUpdate
+fromShelleyProposedPPUpdates =
+    Map.map fromShelleyPParamsUpdate
+  . Map.mapKeysMonotonic GenesisKeyHash
+  . (\(Shelley.ProposedPPUpdates ppup) -> ppup)
+
+
+fromShelleyPParamsUpdate :: Shelley.PParamsUpdate ledgerera
+                         -> ProtocolParametersUpdate
+fromShelleyPParamsUpdate
+    Shelley.PParams {
+      Shelley._minfeeA
+    , Shelley._minfeeB
+    , Shelley._maxBBSize
+    , Shelley._maxTxSize
+    , Shelley._maxBHSize
+    , Shelley._keyDeposit
+    , Shelley._poolDeposit
+    , Shelley._eMax
+    , Shelley._nOpt
+    , Shelley._a0
+    , Shelley._rho
+    , Shelley._tau
+    , Shelley._d
+    , Shelley._extraEntropy
+    , Shelley._protocolVersion
+    , Shelley._minUTxOValue
+    , Shelley._minPoolCost
+    } =
+    ProtocolParametersUpdate {
+      protocolUpdateProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b)) <$>
+                                          strictMaybeToMaybe _protocolVersion
+    , protocolUpdateDecentralization    = Shelley.unitIntervalToRational <$>
+                                            strictMaybeToMaybe _d
+    , protocolUpdateExtraPraosEntropy   = fromPraosNonce <$>
+                                            strictMaybeToMaybe _extraEntropy
+    , protocolUpdateMaxBlockHeaderSize  = strictMaybeToMaybe _maxBHSize
+    , protocolUpdateMaxBlockBodySize    = strictMaybeToMaybe _maxBBSize
+    , protocolUpdateMaxTxSize           = strictMaybeToMaybe _maxTxSize
+    , protocolUpdateTxFeeFixed          = strictMaybeToMaybe _minfeeB
+    , protocolUpdateTxFeePerByte        = strictMaybeToMaybe _minfeeA
+    , protocolUpdateMinUTxOValue        = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _minUTxOValue
+    , protocolUpdateStakeAddressDeposit = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _keyDeposit
+    , protocolUpdateStakePoolDeposit    = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _poolDeposit
+    , protocolUpdateMinPoolCost         = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _minPoolCost
+    , protocolUpdatePoolRetireMaxEpoch  = strictMaybeToMaybe _eMax
+    , protocolUpdateStakePoolTargetNum  = strictMaybeToMaybe _nOpt
+    , protocolUpdatePoolPledgeInfluence = strictMaybeToMaybe _a0
+    , protocolUpdateMonetaryExpansion   = Shelley.unitIntervalToRational <$>
+                                            strictMaybeToMaybe _rho
+    , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
+                                            strictMaybeToMaybe _tau
+    }
+
+
+-- ----------------------------------------------------------------------------
+-- Praos nonce
+--
+
+newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
+  deriving (Eq, Ord, Show)
+
+makePraosNonce :: ByteString -> PraosNonce
+makePraosNonce = PraosNonce . Crypto.hashWith id
+
+toShelleyNonce :: Maybe PraosNonce -> Shelley.Nonce
+toShelleyNonce Nothing               = Shelley.NeutralNonce
+toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
+
+fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
+fromPraosNonce Shelley.NeutralNonce = Nothing
+fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
