@@ -324,6 +324,10 @@ readProtocolParameters (ProtocolParamsFile fpath) = do
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
     Aeson.eitherDecode' pparams
 
+data SomeWitness' era where
+  ByronWitness :: Witness ByronEra -> SomeWitness' ByronEra
+  ShelleyBasedWitness :: ShelleyBasedEra era -> Witness era -> SomeWitness' era
+
 data SomeWitness
   = AByronSigningKey           (Api.SigningKey Api.ByronKey) (Maybe (Address ByronAddr))
   | APaymentSigningKey         (Api.SigningKey Api.PaymentKey)
@@ -371,6 +375,27 @@ renderReadWitnessSigningDataError err =
       "Only a Byron signing key may be accompanied by a Byron address."
     ReadWitnessSigningDataNoByronScripts fp ->
       "Scripts do not exist in the Byron era: " <> Text.pack fp
+
+
+readWitnessSigningData'
+  :: forall era. IsCardanoEra era
+  => UseCardanoEra
+  -> WitnessSigningData
+  -> ExceptT ReadWitnessSigningDataError IO (SomeWitness' era)
+readWitnessSigningData' useEra (ScriptWitnessSigningData (ScriptFile fp)) = do
+  msJson <- handleIOExceptT (ReadWitnessSigningDataScriptError . FileIOError fp)
+    $ LBS.readFile fp
+  w <- firstExceptT (ReadWitnessSigningDataScriptError . FileError fp . ScriptJsonDecodeError) (hoistEither $ decodeScript msJson)
+  withCardanoEra useEra $ \_era _eraStyle ->
+    case useEra of
+      UseShelleyEra -> return $ ShelleyBasedWitness ShelleyBasedEraShelley $ Api.makeScriptWitness $ SimpleScript w
+      _ -> panic ""
+ where
+  decodeScript :: HasScriptFeatures era => LBS.ByteString -> Either String (SimpleScript era)
+  decodeScript bs = Aeson.eitherDecode bs
+
+readWitnessSigningData' _ _ = panic "placeholder"
+
 
 readWitnessSigningData
   :: UseCardanoEra
