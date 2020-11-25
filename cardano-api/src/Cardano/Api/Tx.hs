@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
@@ -135,7 +134,7 @@ instance Eq (Tx era) where
         ShelleyBasedEraAllegra -> txA == txB
         ShelleyBasedEraMary    -> txA == txB
 
-    (==) (ByronTx{}) (ShelleyTx era _) = case era of {}
+    (==) ByronTx{} (ShelleyTx era _) = case era of {}
 
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Show (Tx era) where
