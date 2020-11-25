@@ -670,12 +670,28 @@ data ShelleyWitnessSigningKey =
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
 
 
-makeShelleyKeyWitness :: TxBody era
+makeShelleyKeyWitness :: forall era.
+                         IsShelleyBasedEra era
+                      => TxBody era
                       -> ShelleyWitnessSigningKey
                       -> Witness era
-makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraShelley txbody _) =
-    let txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
-        txhash = Shelley.hashAnnotated txbody
+makeShelleyKeyWitness (ShelleyTxBody era txbody _) =
+    case era of
+      ShelleyBasedEraShelley -> makeShelleyBasedKeyWitness txbody
+      ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody
+      ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
+  where
+    makeShelleyBasedKeyWitness :: forall ledgerera.
+                                  ShelleyLedgerEra era ~ ledgerera
+                               => Shelley.ShelleyBased ledgerera
+                               => Ledger.Crypto ledgerera ~ StandardCrypto
+                               => Ledger.TxBody ledgerera
+                               -> ShelleyWitnessSigningKey
+                               -> Witness era
+    makeShelleyBasedKeyWitness txbody' =
+
+     let txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
+         txhash = Shelley.hashAnnotated txbody'
 
         -- To allow sharing of the txhash computation across many signatures we
         -- define and share the txhash outside the lambda for the signing key:
@@ -683,14 +699,11 @@ makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraShelley txbody _) =
         let sk        = toShelleySigningKey wsk
             vk        = getShelleyKeyWitnessVerificationKey sk
             signature = makeShelleySignature txhash sk
-         in ShelleyKeyWitness ShelleyBasedEraShelley $
+         in ShelleyKeyWitness era $
               Shelley.WitVKey vk signature
-makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
-    error "TODO: makeShelleyKeyWitness AllegraEra"
-makeShelleyKeyWitness (ShelleyTxBody ShelleyBasedEraMary _ _) =
-    error "TODO: makeShelleyKeyWitness MaryEra"
+
 makeShelleyKeyWitness ByronTxBody{} =
-    error "TODO: makeShelleyKeyWitness ByronEra"
+    case shelleyBasedEra :: ShelleyBasedEra era of {}
 
 
 -- | We support making key witnesses with both normal and extended signing keys.
@@ -792,7 +805,8 @@ signByronTransaction nw txbody sks =
     witnesses = map (makeByronKeyWitness nw txbody) sks
 
 -- signing keys is a set
-signShelleyTransaction :: TxBody era
+signShelleyTransaction :: IsShelleyBasedEra era
+                       => TxBody era
                        -> [ShelleyWitnessSigningKey]
                        -> Tx era
 signShelleyTransaction txbody sks =
