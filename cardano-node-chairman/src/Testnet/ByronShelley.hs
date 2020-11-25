@@ -10,7 +10,10 @@
 #endif
 
 module Testnet.ByronShelley
-  ( testnet
+  ( TestnetOptions(..)
+  , emptyTestnetOptions
+
+  , testnet
   ) where
 
 #ifdef UNIX
@@ -18,10 +21,7 @@ import           Prelude (map)
 #endif
 
 import           Control.Monad
-import           Control.Monad.IO.Class
 import           Data.Aeson ((.=))
-import           Data.Bool
-import           Data.Either
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -31,17 +31,12 @@ import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String
-import           Data.Time
 import           GHC.Float
 import           GHC.Num
 import           GHC.Real
-import           Hedgehog (Property, discover, (===))
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
-import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
-import           System.IO (IO)
-import           Text.Read
 import           Text.Show
 
 import qualified Data.Aeson as J
@@ -54,7 +49,6 @@ import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
@@ -63,14 +57,12 @@ import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
-import qualified System.FilePath.Posix as FP
 import qualified System.Info as OS
 import qualified System.IO as IO
 #ifdef UNIX
 import           System.Posix.Files
 #endif
 import qualified System.Process as IO
-import qualified System.Random as IO
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
 
@@ -78,13 +70,21 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
+newtype TestnetOptions = TestnetOptions
+  { maybeActiveSlotsCoeff :: Maybe Double
+  } deriving (Eq, Show)
+
+emptyTestnetOptions :: TestnetOptions
+emptyTestnetOptions = TestnetOptions
+  { maybeActiveSlotsCoeff = Nothing
+  }
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
 
-testnet :: H.Conf -> H.Integration [String]
-testnet H.Conf {..} = do
+testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
+testnet testnetOptions H.Conf {..} = do
   -- This script sets up a cluster that starts out in Byron, and can transition to Shelley.
   --
   -- The script generates all the files needed for the setup, and prints commands
@@ -332,7 +332,7 @@ testnet H.Conf {..} = do
   -- cycling KES keys
   H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
     $ HM.insert "slotLength" (J.toJSON @Double 0.2)
-    . HM.insert "activeSlotsCoeff" (J.toJSON @Double 0.1)
+    . HM.insert "activeSlotsCoeff" (J.toJSON @Double (fromMaybe 0.1 (maybeActiveSlotsCoeff testnetOptions)))
     . HM.insert "securityParam" (J.toJSON @Int 10)
     . HM.insert "epochLength" (J.toJSON @Int 1500)
     . HM.insert "slotLength" (J.toJSON @Double 0.2)

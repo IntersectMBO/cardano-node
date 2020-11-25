@@ -17,9 +17,20 @@ import           Text.Show
 
 import qualified Options.Applicative as OA
 
-newtype ByronShelleyOptions = ByronShelleyOptions
-  { testnetMagic :: Maybe Int
+data ByronShelleyOptions = ByronShelleyOptions
+  { maybeTestnetMagic :: Maybe Int
+  , testnetOptions :: TestnetOptions
   } deriving (Eq, Show)
+
+optsTestnet :: Parser TestnetOptions
+optsTestnet = TestnetOptions
+  <$> optional
+      ( OA.option auto
+        (   long "active-slots-coeff"
+        <>  help "Active slots co-efficient"
+        <>  metavar "DOUBLE"
+        )
+      )
 
 optsByronShelley :: Parser ByronShelleyOptions
 optsByronShelley = ByronShelleyOptions
@@ -30,9 +41,11 @@ optsByronShelley = ByronShelleyOptions
         <>  metavar "INT"
         )
       )
+  <*> optsTestnet
 
 runByronShelleyOptions :: ByronShelleyOptions -> IO ()
-runByronShelleyOptions (ByronShelleyOptions maybeTestnetMagic) = runTestnet maybeTestnetMagic Testnet.ByronShelley.testnet
+runByronShelleyOptions options = runTestnet (maybeTestnetMagic options) $
+  Testnet.ByronShelley.testnet (testnetOptions options)
 
 cmdByronShelley :: Mod CommandFields (IO ())
 cmdByronShelley = command "byron-shelley"  $ flip info idm $ runByronShelleyOptions <$> optsByronShelley
