@@ -86,6 +86,7 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Shelley as Shelley
 
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
@@ -434,44 +435,57 @@ instance IsCardanoEra era => HasTextEnvelope (Witness era) where
         MaryEra    -> "TxWitness MaryEra"
 
 
-getTxBody :: Tx era -> TxBody era
+getTxBody :: forall era. Tx era -> TxBody era
 getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
     ByronTxBody txbody
 
-getTxBody (ShelleyTx ShelleyBasedEraShelley Shelley.Tx {
+getTxBody (ShelleyTx era tx) =
+    case era of
+      ShelleyBasedEraShelley -> getShelleyTxBody tx
+      ShelleyBasedEraAllegra -> getShelleyTxBody tx
+      ShelleyBasedEraMary    -> getShelleyTxBody tx
+  where
+    getShelleyTxBody :: forall ledgerera.
+                        ShelleyLedgerEra era ~ ledgerera
+                     => Shelley.TxBodyConstraints ledgerera
+                     => Shelley.Tx ledgerera
+                     -> TxBody era
+    getShelleyTxBody Shelley.Tx {
                        Shelley._body     = txbody,
                        Shelley._metadata = txmetadata
-                     }) =
-    ShelleyTxBody ShelleyBasedEraShelley txbody (strictMaybeToMaybe txmetadata)
-
-getTxBody (ShelleyTx ShelleyBasedEraAllegra _) =
-    error "TODO: getTxBody AllegraEra"
-getTxBody (ShelleyTx ShelleyBasedEraMary _) =
-    error "TODO: getTxBody MaryEra"
+                     } =
+      ShelleyTxBody era txbody (strictMaybeToMaybe txmetadata)
 
 
-getTxWitnesses :: Tx era -> [Witness era]
+getTxWitnesses :: forall era. Tx era -> [Witness era]
 getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
     map ByronKeyWitness
   . Vector.toList
   . unAnnotated
   $ witnesses
 
-getTxWitnesses (ShelleyTx ShelleyBasedEraShelley Shelley.Tx {
-                       Shelley._witnessSet =
-                         Shelley.WitnessSet
-                           addrWits
-                           msigWits
-                           bootWits
-                     }) =
-    map (ShelleyBootstrapWitness ShelleyBasedEraShelley) (Set.elems bootWits)
- ++ map (ShelleyKeyWitness       ShelleyBasedEraShelley) (Set.elems addrWits)
- ++ map (ShelleyScriptWitness    ShelleyBasedEraShelley) (Map.elems msigWits)
-
-getTxWitnesses (ShelleyTx ShelleyBasedEraAllegra _) =
-    error "TODO: getTxWitnesses AllegraEra"
-getTxWitnesses (ShelleyTx ShelleyBasedEraMary _) =
-    error "TODO: getTxWitnesses MaryEra"
+getTxWitnesses (ShelleyTx era tx) =
+    case era of
+      ShelleyBasedEraShelley -> getShelleyTxWitnesses tx
+      ShelleyBasedEraAllegra -> getShelleyTxWitnesses tx
+      ShelleyBasedEraMary    -> getShelleyTxWitnesses tx
+  where
+    getShelleyTxWitnesses :: forall ledgerera.
+                             ShelleyLedgerEra era ~ ledgerera
+                          => Shelley.TxBodyConstraints ledgerera
+                          => Ledger.AnnotatedData (Ledger.Script ledgerera)
+                          => Shelley.Tx ledgerera
+                          -> [Witness era]
+    getShelleyTxWitnesses Shelley.Tx {
+                            Shelley._witnessSet =
+                              Shelley.WitnessSet
+                                addrWits
+                                msigWits
+                                bootWits
+                          } =
+        map (ShelleyBootstrapWitness era) (Set.elems bootWits)
+     ++ map (ShelleyKeyWitness       era) (Set.elems addrWits)
+     ++ map (ShelleyScriptWitness    era) (Map.elems msigWits)
 
 
 makeSignedTransaction :: [Witness era]
