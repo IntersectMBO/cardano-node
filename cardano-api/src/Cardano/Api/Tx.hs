@@ -92,7 +92,6 @@ import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.Hashing as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
-import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
@@ -447,7 +446,7 @@ getTxBody (ShelleyTx era tx) =
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
-                     => Shelley.TxBodyConstraints ledgerera
+                     => Shelley.ShelleyBased ledgerera
                      => Shelley.Tx ledgerera
                      -> TxBody era
     getShelleyTxBody Shelley.Tx {
@@ -472,8 +471,7 @@ getTxWitnesses (ShelleyTx era tx) =
   where
     getShelleyTxWitnesses :: forall ledgerera.
                              ShelleyLedgerEra era ~ ledgerera
-                          => Shelley.TxBodyConstraints ledgerera
-                          => Ledger.AnnotatedData (Ledger.Script ledgerera)
+                          => Shelley.ShelleyBased ledgerera
                           => Shelley.Tx ledgerera
                           -> [Witness era]
     getShelleyTxWitnesses Shelley.Tx {
@@ -488,7 +486,8 @@ getTxWitnesses (ShelleyTx era tx) =
      ++ map (ShelleyScriptWitness    era) (Map.elems msigWits)
 
 
-makeSignedTransaction :: [Witness era]
+makeSignedTransaction :: forall era.
+                         [Witness era]
                       -> TxBody era
                       -> Tx era
 makeSignedTransaction witnesses (ByronTxBody txbody) =
@@ -496,28 +495,31 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
   . Byron.annotateTxAux
   $ Byron.mkTxAux
       (unAnnotated txbody)
-      (Vector.fromList (map selectByronWitness witnesses))
-  where
-    selectByronWitness :: Witness ByronEra -> Byron.TxInWitness
-    selectByronWitness (ByronKeyWitness w) = w
-    selectByronWitness (ShelleyBootstrapWitness era _) = case era of {}
-    selectByronWitness (ShelleyKeyWitness       era _) = case era of {}
-    selectByronWitness (ShelleyScriptWitness    era _) = case era of {}
+      (Vector.fromList [ w | ByronKeyWitness w <- witnesses ])
 
-makeSignedTransaction witnesses (ShelleyTxBody ShelleyBasedEraShelley txbody txmetadata) =
-    ShelleyTx ShelleyBasedEraShelley $
-      Shelley.Tx
-        txbody
-        (Shelley.WitnessSet
-          (Set.fromList [ w | ShelleyKeyWitness ShelleyBasedEraShelley w <- witnesses ])
-          (Map.fromList [ (Shelley.hashMultiSigScript sw, sw)
-                        | ShelleyScriptWitness ShelleyBasedEraShelley sw <- witnesses ])
-          (Set.fromList [ w | ShelleyBootstrapWitness ShelleyBasedEraShelley w <- witnesses ]))
-        (maybeToStrictMaybe txmetadata)
-makeSignedTransaction _ (ShelleyTxBody ShelleyBasedEraAllegra _ _) =
-    error "TODO: makeSignedTransaction AllegraEra"
-makeSignedTransaction _ (ShelleyTxBody ShelleyBasedEraMary _ _) =
-    error "TODO: makeSignedTransaction MaryEra"
+makeSignedTransaction witnesses (ShelleyTxBody era txbody txmetadata) =
+    case era of
+      ShelleyBasedEraShelley -> makeShelleySignedTransaction txbody
+      ShelleyBasedEraAllegra -> makeShelleySignedTransaction txbody
+      ShelleyBasedEraMary    -> makeShelleySignedTransaction txbody
+  where
+    makeShelleySignedTransaction :: forall ledgerera.
+                                    ShelleyLedgerEra era ~ ledgerera
+                                 => Shelley.ShelleyBased ledgerera
+                                 => Shelley.ValidateScript ledgerera
+                                 => Ledger.TxBody ledgerera
+                                 -> Tx era
+    makeShelleySignedTransaction txbody' =
+      ShelleyTx era $
+        Shelley.Tx
+          txbody'
+          (Shelley.WitnessSet
+            (Set.fromList [ w | ShelleyKeyWitness _ w <- witnesses ])
+            (Map.fromList [ (Shelley.hashScript sw, sw)
+                          | ShelleyScriptWitness _ sw <- witnesses ])
+            (Set.fromList [ w | ShelleyBootstrapWitness _ w <- witnesses ]))
+          (maybeToStrictMaybe txmetadata)
+
 
 makeByronKeyWitness :: NetworkId
                     -> TxBody ByronEra
