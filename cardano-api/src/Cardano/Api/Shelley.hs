@@ -78,6 +78,11 @@ module Cardano.Api.Shelley
     EpochNo(..),
     NetworkMagic(..),
 
+    -- * Credentials & stake references
+    fromShelleyPaymentCredential,
+    fromShelleyStakeCredential,
+    fromShelleyStakeReference,
+
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
     -- Shelley supports multi-signatures via scripts.

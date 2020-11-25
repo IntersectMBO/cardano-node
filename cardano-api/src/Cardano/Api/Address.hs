@@ -49,8 +49,10 @@ module Cardano.Api.Address (
     toShelleyStakeAddr,
     toShelleyStakeCredential,
     fromShelleyAddr,
+    fromShelleyPaymentCredential,
     fromShelleyStakeAddr,
     fromShelleyStakeCredential,
+    fromShelleyStakeReference,
 
     -- * Serialising addresses
     SerialiseAddress(..),
@@ -554,6 +556,21 @@ fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
 fromShelleyStakeCredential (Shelley.ScriptHashObj sh) =
     StakeCredentialByScript (fromShelleyScriptHash sh)
 
+fromShelleyPaymentCredential :: Shelley.PaymentCredential StandardShelley
+                             -> PaymentCredential
+fromShelleyPaymentCredential (Shelley.KeyHashObj kh) =
+  PaymentCredentialByKey (PaymentKeyHash kh)
+fromShelleyPaymentCredential (Shelley.ScriptHashObj sh) =
+  PaymentCredentialByScript (ScriptHash sh)
+
+fromShelleyStakeReference :: Shelley.StakeReference StandardShelley
+                          -> StakeAddressReference
+fromShelleyStakeReference (Shelley.StakeRefBase stakecred) =
+  StakeAddressByValue (fromShelleyStakeCredential stakecred)
+fromShelleyStakeReference (Shelley.StakeRefPtr ptr) =
+  StakeAddressByPointer ptr
+fromShelleyStakeReference Shelley.StakeRefNull =
+  NoStakeAddress
 
 -- The era parameter in these types is a phantom type so it is safe to cast.
 -- We choose to cast because we need to use an era-independent address
@@ -570,4 +587,3 @@ coerceShelleyStakeCredential = coerce
 coerceShelleyStakeReference :: Shelley.StakeReference eraA
                             -> Shelley.StakeReference eraB
 coerceShelleyStakeReference = coerce
-
