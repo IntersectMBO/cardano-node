@@ -95,6 +95,7 @@ module Cardano.Api.Typed (
     shelleyAddressInEra,
     anyAddressInShelleyBasedEra,
     anyAddressInEra,
+    toAddressAny,
     makeByronAddressInEra,
     makeShelleyAddressInEra,
 

@@ -32,6 +32,7 @@ module Cardano.Api.Address (
     shelleyAddressInEra,
     anyAddressInShelleyBasedEra,
     anyAddressInEra,
+    toAddressAny,
     makeByronAddressInEra,
     makeShelleyAddressInEra,
 
@@ -389,6 +390,9 @@ anyAddressInEra (AddressShelley addr) =
       LegacyByronEra      -> Nothing
       ShelleyBasedEra era -> Just (AddressInEra (ShelleyAddressInEra era) addr)
 
+toAddressAny :: Address addr -> AddressAny
+toAddressAny a@ShelleyAddress{} = AddressShelley a
+toAddressAny a@ByronAddress{}   = AddressByron a
 
 makeByronAddressInEra :: NetworkId
                       -> VerificationKey ByronKey

@@ -79,6 +79,7 @@ module Cardano.API (
     shelleyAddressInEra,
     anyAddressInShelleyBasedEra,
     anyAddressInEra,
+    toAddressAny,
     makeByronAddressInEra,
     makeShelleyAddressInEra,
 
