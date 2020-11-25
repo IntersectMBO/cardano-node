@@ -93,7 +93,6 @@ import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeT
 import qualified Shelley.Spec.Ledger.Hashing as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
-import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -557,14 +556,35 @@ data WitnessNetworkIdOrByronAddress
   -- both the network ID and derivation path will be extracted from the
   -- address and used in the construction of the witness.
 
-makeShelleyBootstrapWitness :: WitnessNetworkIdOrByronAddress
+makeShelleyBootstrapWitness :: forall era.
+                               IsShelleyBasedEra era
+                            => WitnessNetworkIdOrByronAddress
                             -> TxBody era
                             -> SigningKey ByronKey
                             -> Witness era
-makeShelleyBootstrapWitness nwOrAddr
-                            (ShelleyTxBody ShelleyBasedEraShelley txbody _)
-                            (ByronSigningKey sk) =
-    ShelleyBootstrapWitness ShelleyBasedEraShelley $
+makeShelleyBootstrapWitness _ ByronTxBody{} _ =
+    case shelleyBasedEra :: ShelleyBasedEra era of {}
+
+makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _) sk =
+    case era of
+      ShelleyBasedEraShelley -> makeShelleyBasedBootstrapWitness era
+                                  nwOrAddr txbody sk
+      ShelleyBasedEraAllegra -> makeShelleyBasedBootstrapWitness era
+                                  nwOrAddr txbody sk
+      ShelleyBasedEraMary    -> makeShelleyBasedBootstrapWitness era
+                                  nwOrAddr txbody sk
+
+makeShelleyBasedBootstrapWitness :: forall era ledgerera.
+                                    ShelleyLedgerEra era ~ ledgerera
+                                 => Shelley.ShelleyBased ledgerera
+                                 => Ledger.Crypto ledgerera ~ StandardCrypto
+                                 => ShelleyBasedEra era
+                                 -> WitnessNetworkIdOrByronAddress
+                                 -> Ledger.TxBody ledgerera
+                                 -> SigningKey ByronKey
+                                 -> Witness era
+makeShelleyBasedBootstrapWitness era nwOrAddr txbody (ByronSigningKey sk) =
+    ShelleyBootstrapWitness era $
       -- Byron era witnesses were weird. This reveals all that weirdness.
       Shelley.BootstrapWitness {
         Shelley.bwKey        = vk,
@@ -594,7 +614,9 @@ makeShelleyBootstrapWitness nwOrAddr
                   (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
 
     txhash :: Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody
-    txhash = Shelley.eraIndTxBodyHash txbody
+    txhash = Shelley.hashAnnotated txbody
+    --TODO: use Shelley.eraIndTxBodyHash txbody once that function has a
+    -- suitably general type.
 
     -- And finally we need to provide the extra suffix bytes necessary to
     -- reconstruct the mini-Merkel tree that is a Byron address. The suffix
@@ -632,13 +654,6 @@ makeShelleyBootstrapWitness nwOrAddr
         toByronNetworkMagic
         (Byron.aaNetworkMagic . unAddrAttrs)
         eitherNwOrAddr
-
-makeShelleyBootstrapWitness _ (ShelleyTxBody ShelleyBasedEraAllegra _ _) _ =
-    error "TODO: makeShelleyBootstrapWitness AllegraEra"
-makeShelleyBootstrapWitness _ (ShelleyTxBody ShelleyBasedEraMary _ _) _ =
-    error "TODO: makeShelleyBootstrapWitness MaryEra"
-makeShelleyBootstrapWitness _ ByronTxBody{} _ =
-    error "TODO: makeShelleyBootstrapWitness ByronEra"
 
 
 data ShelleyWitnessSigningKey =
