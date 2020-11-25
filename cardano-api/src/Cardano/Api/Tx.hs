@@ -84,7 +84,8 @@ import qualified Cardano.Chain.UTxO as Byron
 --
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
-import qualified Cardano.Ledger.Core as Ledger (Script)
+import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
@@ -93,8 +94,6 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
-
-import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -340,60 +339,99 @@ pattern AsShelleyWitness = AsWitness AsShelleyEra
 {-# COMPLETE AsShelleyWitness #-}
 
 
-instance SerialiseAsCBOR (Witness ByronEra) where
-    serialiseToCBOR (ShelleyBootstrapWitness era _) = case era of {}
-    serialiseToCBOR (ShelleyKeyWitness era _) = case era of {}
-    serialiseToCBOR (ShelleyScriptWitness era _) = case era of {}
+instance IsCardanoEra era => SerialiseAsCBOR (Witness era) where
     serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
 
-    deserialiseFromCBOR AsByronWitness bs =
-      ByronKeyWitness <$> CBOR.decodeFull' bs
+    serialiseToCBOR (ShelleyKeyWitness era wit) =
+      CBOR.serializeEncoding' $
+      case era of
+        ShelleyBasedEraShelley -> encodeShelleyBasedKeyWitness wit
+        ShelleyBasedEraAllegra -> encodeShelleyBasedKeyWitness wit
+        ShelleyBasedEraMary    -> encodeShelleyBasedKeyWitness wit
 
-instance SerialiseAsCBOR (Witness ShelleyEra) where
-    serialiseToCBOR = CBOR.serializeEncoding' . encodeShelleyWitness
-      where
-        encodeShelleyWitness :: Witness ShelleyEra -> CBOR.Encoding
-        encodeShelleyWitness (ShelleyKeyWitness _ wit) =
-            CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
-        encodeShelleyWitness (ShelleyBootstrapWitness _ wit) =
-            CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
-        encodeShelleyWitness (ShelleyScriptWitness _ wit) =
-            CBOR.encodeListLen 2
-              <> CBOR.encodeWord 2
-              -- We use 'WrappedMultiSig' here to support the legacy
-              -- binary serialisation format for the @Script@ type from
-              -- @cardano-ledger-specs@.
-              --
-              -- See the documentation of 'WrappedMultiSig' for more
-              -- information.
-              <> toCBOR (Legacy.WrappedMultiSig wit)
+    serialiseToCBOR (ShelleyBootstrapWitness era wit) =
+      CBOR.serializeEncoding' $
+      case era of
+        ShelleyBasedEraShelley -> encodeShelleyBasedBootstrapWitness wit
+        ShelleyBasedEraAllegra -> encodeShelleyBasedBootstrapWitness wit
+        ShelleyBasedEraMary    -> encodeShelleyBasedBootstrapWitness wit
 
-    deserialiseFromCBOR AsShelleyWitness bs =
-        CBOR.decodeAnnotator "Shelley Witness"
-                             decodeShelleyWitness (LBS.fromStrict bs)
-      where
-        decodeShelleyWitness :: CBOR.Decoder s (CBOR.Annotator (Witness ShelleyEra))
-        decodeShelleyWitness =  do
-          CBOR.decodeListLenOf 2
-          t <- CBOR.decodeWord
-          case t of
-            0 -> fmap (fmap (ShelleyKeyWitness ShelleyBasedEraShelley)) fromCBOR
-            1 -> fmap (fmap (ShelleyBootstrapWitness ShelleyBasedEraShelley)) fromCBOR
-            -- We use 'WrappedMultiSig' here to support the legacy binary
-            -- serialisation format for the @Script@ type from
-            -- @cardano-ledger-specs@.
-            --
-            -- See the documentation of 'WrappedMultiSig' for more
-            -- information.
-            2 -> fmap (fmap (ShelleyScriptWitness ShelleyBasedEraShelley . Legacy.unWrappedMultiSig)) fromCBOR
-            _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
-                                    "Shelley Witness" (fromIntegral t)
+    serialiseToCBOR (ShelleyScriptWitness era wit) =
+      CBOR.serializeEncoding' $
+      case era of
+        ShelleyBasedEraShelley -> encodeShelleyBasedScriptWitness wit
+        ShelleyBasedEraAllegra -> encodeShelleyBasedScriptWitness wit
+        ShelleyBasedEraMary    -> encodeShelleyBasedScriptWitness wit
 
-instance HasTextEnvelope (Witness ByronEra) where
-    textEnvelopeType _ = "TxWitnessByron"
+    deserialiseFromCBOR _ bs =
+      case cardanoEra :: CardanoEra era of
+        ByronEra ->
+          ByronKeyWitness <$> CBOR.decodeFull' bs
 
-instance HasTextEnvelope (Witness ShelleyEra) where
-    textEnvelopeType _ = "TxWitnessShelley"
+        -- Use the same derialisation impl, but at different types:
+        ShelleyEra -> decodeShelleyBasedWitness ShelleyBasedEraShelley bs
+        AllegraEra -> decodeShelleyBasedWitness ShelleyBasedEraAllegra bs
+        MaryEra    -> decodeShelleyBasedWitness ShelleyBasedEraMary    bs
+
+
+encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
+encodeShelleyBasedKeyWitness wit =
+    CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR wit
+
+encodeShelleyBasedBootstrapWitness :: ToCBOR w => w -> CBOR.Encoding
+encodeShelleyBasedBootstrapWitness wit =
+    CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR wit
+
+encodeShelleyBasedScriptWitness :: ToCBOR w => w -> CBOR.Encoding
+encodeShelleyBasedScriptWitness wit =
+    CBOR.encodeListLen 2
+ <> CBOR.encodeWord 2
+    -- We use an extra level of wrapping here to support the legacy
+    -- binary serialisation format for the @Script@ type from
+    -- @cardano-ledger-specs@.
+    --
+    -- TODO: make this go away by providing a WitnessSet type and only
+    -- providing serialisation for witness sets, using the serialisation
+    -- from the ledger lib rather than needing something custom here.
+    -- Signed transactions have witness sets, so this is an existing on-chain
+    -- stable format.
+ <> CBOR.encodeListLen 2
+ <> CBOR.encodeWord 0
+ <> toCBOR wit
+
+decodeShelleyBasedWitness :: forall era.
+                             Ledger.Era (ShelleyLedgerEra era)
+                          => FromCBOR (CBOR.Annotator (Ledger.Script (ShelleyLedgerEra era)))
+                          => ShelleyBasedEra era
+                          -> ByteString
+                          -> Either CBOR.DecoderError (Witness era)
+decodeShelleyBasedWitness era =
+    CBOR.decodeAnnotator "Shelley Witness" decode . LBS.fromStrict
+  where
+    decode :: CBOR.Decoder s (CBOR.Annotator (Witness era))
+    decode =  do
+      CBOR.decodeListLenOf 2
+      t <- CBOR.decodeWord
+      case t of
+        0 -> fmap (fmap (ShelleyKeyWitness era)) fromCBOR
+        1 -> fmap (fmap (ShelleyBootstrapWitness era)) fromCBOR
+        -- We use an extra level of wrapping here to support the legacy
+        -- binary serialisation format for the @Script@ type from
+        -- @cardano-ledger-specs@.
+        2 -> do CBOR.decodeListLenOf 2
+                CBOR.decodeWordOf 0
+                fmap (fmap (ShelleyScriptWitness era)) fromCBOR
+        _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag
+                                "Shelley Witness" (fromIntegral t)
+
+
+instance IsCardanoEra era => HasTextEnvelope (Witness era) where
+    textEnvelopeType _ =
+      case cardanoEra :: CardanoEra era of
+        ByronEra   -> "TxWitnessByron"
+        ShelleyEra -> "TxWitnessShelley"
+        AllegraEra -> "TxWitness AllegraEra"
+        MaryEra    -> "TxWitness MaryEra"
 
 
 getTxBody :: Tx era -> TxBody era
