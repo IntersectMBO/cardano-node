@@ -162,6 +162,19 @@ module Cardano.API (
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
 
+    -- ** Feature availability functions
+    onlyAdaSupportedInEra,
+    multiAssetSupportedInEra,
+    txFeesExplicitInEra,
+    validityUpperBoundSupportedInEra,
+    validityNoUpperBoundSupportedInEra,
+    validityLowerBoundSupportedInEra,
+    txMetadataSupportedInEra,
+    auxScriptsSupportedInEra,
+    withdrawalsSupportedInEra,
+    certificatesSupportedInEra,
+    updateProposalSupportedInEra,
+
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx,
