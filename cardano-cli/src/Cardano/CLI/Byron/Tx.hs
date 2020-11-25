@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Byron.Tx
   ( ByronTxError(..)
@@ -20,7 +22,7 @@ module Cardano.CLI.Byron.Tx
 where
 
 import           Cardano.Prelude hiding (option, trace, (%))
-import           Prelude (error)
+import           Prelude (String, error)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
 import qualified Data.ByteString as B
@@ -44,7 +46,11 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
+                     OneEraApplyTxErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (DegenGenTx))
+import           Ouroboros.Consensus.HardFork.Combinator.Mempool (HardForkApplyTxErr (..))
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Cardano.Api.Typed (LocalNodeConnectInfo (..), NetworkId, NodeConsensusMode (..),
                      submitTxToNodeLocal, toByronProtocolMagicId)
@@ -196,9 +202,22 @@ nodeSubmitTx network gentx = do
             localNodeNetworkId     = network,
             localNodeConsensusMode = ByronMode (EpochSlots 21600)
           }
-    _res <- liftIO $ submitTxToNodeLocal connctInfo (DegenGenTx gentx)
-    --TODO: print failures
-    return ()
+    res <- liftIO $ submitTxToNodeLocal connctInfo (DegenGenTx gentx)
+    case res of
+      SubmitSuccess -> liftIO $ putTextLn "Tx successfully submitted"
+      SubmitFail f -> case f of
+                        HardForkApplyTxErrFromEra oneEraApplyTxErr ->
+                          let t :: String = show (oneEraApplyTxErr :: OneEraApplyTxErr '[ByronBlock])
+                          in liftIO $ putStrLn t
+                        HardForkApplyTxErrWrongEra errMisMatch ->
+                          let misMatch = mkEraMismatch errMisMatch
+                          in liftIO . putTextLn
+                               $ T.unlines [ "Incorrect era specified."
+                                           , "Current ledger era: " <> ledgerEraName misMatch
+                                           , "Specified era: " <> otherEraName misMatch
+                                           ]
+
+
 
 
 --TODO: remove these local definitions when the updated ledger lib is available
