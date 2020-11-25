@@ -8,7 +8,10 @@
 #endif
 
 module Testnet.Shelley
-  ( testnet
+  ( TestnetOptions(..)
+  , emptyTestnetOptions
+
+  , testnet
   , hprop_testnet
   , hprop_testnet_pause
   ) where
@@ -21,6 +24,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
+import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Int
@@ -67,13 +71,22 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
+newtype TestnetOptions = TestnetOptions
+  { maybeActiveSlotsCoeff :: Maybe Double
+  } deriving (Eq, Show)
+
+emptyTestnetOptions :: TestnetOptions
+emptyTestnetOptions = TestnetOptions
+  { maybeActiveSlotsCoeff = Nothing
+  }
+
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
-rewriteGenesisSpec :: UTCTime -> Int -> Value -> Value
-rewriteGenesisSpec startTime supply =
+rewriteGenesisSpec :: TestnetOptions -> UTCTime -> Int -> Value -> Value
+rewriteGenesisSpec testnetOptions startTime supply =
   rewriteObject
-    $ HM.insert "activeSlotsCoeff" (toJSON @Double 0.1)
+    $ HM.insert "activeSlotsCoeff" (toJSON @Double (fromMaybe 0.1 (maybeActiveSlotsCoeff testnetOptions)))
     . HM.insert "securityParam" (toJSON @Int 10)
     . HM.insert "epochLength" (toJSON @Int 1000)
     . HM.insert "slotLength" (toJSON @Double 0.2)
@@ -83,8 +96,8 @@ rewriteGenesisSpec startTime supply =
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
-testnet :: H.Conf -> H.Integration [String]
-testnet H.Conf {..} = do
+testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
+testnet testOptions H.Conf {..} = do
   void $ H.note OS.os
 
   let praosNodes = ["node-praos1", "node-praos2"] :: [String]
@@ -119,8 +132,8 @@ testnet H.Conf {..} = do
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteJsonFile (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec startTime supply)
-  H.rewriteJsonFile (tempAbsPath </> "genesis.json"     ) (rewriteGenesisSpec startTime supply)
+  H.rewriteJsonFile (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec testOptions startTime supply)
+  H.rewriteJsonFile (tempAbsPath </> "genesis.json"     ) (rewriteGenesisSpec testOptions startTime supply)
 
   H.assertIsJsonFile $ tempAbsPath </> "genesis.spec.json"
 
@@ -407,7 +420,7 @@ hprop_testnet = H.integration . H.runFinallies . H.workspace "chairman" $ \tempA
 
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
-  void $ testnet conf
+  void $ testnet emptyTestnetOptions conf
 
   H.failure -- Intentional failure to force failure report
 

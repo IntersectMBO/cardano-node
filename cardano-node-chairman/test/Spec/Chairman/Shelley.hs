@@ -22,6 +22,6 @@ hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
   conf <- H.mkConf tempAbsPath' Nothing
 
-  allNodes <- H.testnet conf
+  allNodes <- H.testnet H.emptyTestnetOptions conf
 
   chairmanOver 120 21 conf allNodes

@@ -18,9 +18,20 @@ import           Text.Show
 
 import qualified Options.Applicative as OA
 
-newtype ShelleyOptions = ShelleyOptions
-  { testnetMagic :: Maybe Int
+data ShelleyOptions = ShelleyOptions
+  { maybeTestnetMagic :: Maybe Int
+  , testnetOptions :: TestnetOptions
   } deriving (Eq, Show)
+
+optsTestnet :: Parser TestnetOptions
+optsTestnet = TestnetOptions
+  <$> optional
+      ( OA.option auto
+        (   long "active-slots-coeff"
+        <>  help "Active slots co-efficient"
+        <>  metavar "DOUBLE"
+        )
+      )
 
 optsShelley :: Parser ShelleyOptions
 optsShelley = ShelleyOptions
@@ -31,9 +42,11 @@ optsShelley = ShelleyOptions
         <>  metavar "INT"
         )
       )
+  <*> optsTestnet
 
 runShelleyOptions :: ShelleyOptions -> IO ()
-runShelleyOptions (ShelleyOptions maybeTestnetMagic) = runTestnet maybeTestnetMagic Testnet.Shelley.testnet
+runShelleyOptions options = runTestnet (maybeTestnetMagic options) $
+  Testnet.Shelley.testnet (testnetOptions options)
 
 cmdShelley :: Mod CommandFields (IO ())
 cmdShelley = command "shelley"  $ flip info idm $ runShelleyOptions <$> optsShelley
