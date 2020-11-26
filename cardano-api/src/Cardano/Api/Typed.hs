@@ -31,12 +31,13 @@ module Cardano.Api.Typed (
     AllegraEra,
     MaryEra,
     CardanoEra(..),
-    CardanoEraStyle(..),
     IsCardanoEra(..),
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
     ShelleyLedgerEra,
+    CardanoEraStyle(..),
+    cardanoEraStyle,
     -- ** Deprecated
     Byron,
     Shelley,

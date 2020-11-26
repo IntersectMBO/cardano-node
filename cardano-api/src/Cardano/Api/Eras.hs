@@ -13,7 +13,6 @@ module Cardano.Api.Eras
   , AllegraEra
   , MaryEra
   , CardanoEra(..)
-  , CardanoEraStyle(..)
   , IsCardanoEra(..)
 
     -- * Deprecated aliases
@@ -26,6 +25,10 @@ module Cardano.Api.Eras
   , ShelleyBasedEra(..)
   , IsShelleyBasedEra(..)
   , ShelleyLedgerEra
+
+    -- * Cardano eras, as Byron vs Shelley-based
+  , CardanoEraStyle(..)
+  , cardanoEraStyle
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra,
@@ -126,46 +129,24 @@ deriving instance Ord  (CardanoEra era)
 deriving instance Show (CardanoEra era)
 
 
--- | This is the same essential information as 'CardanoEra' but instead of a
--- flat set of alternative eras, it is factored into the legcy Byron era and
--- the current Shelley-based eras.
---
--- This way of factoring the eras is useful because in many cases the
--- major differences are between the Byron and Shelley-based eras, and
--- the Shelley-based eras can often be treated uniformly.
---
-data CardanoEraStyle era where
-     LegacyByronEra  ::                        CardanoEraStyle ByronEra
-     ShelleyBasedEra :: ShelleyBasedEra era -> CardanoEraStyle era
-
-deriving instance Eq   (CardanoEraStyle era)
-deriving instance Ord  (CardanoEraStyle era)
-deriving instance Show (CardanoEraStyle era)
-
-
 -- | The class of Cardano eras. This allows uniform handling of all Cardano
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
--- or 'CardanoEraStyle' constructors.
+-- constructors, or the 'CardanoEraStyle' constructors via `cardanoEraStyle`.
 --
 class HasTypeProxy era => IsCardanoEra era where
    cardanoEra      :: CardanoEra era
-   cardanoEraStyle :: CardanoEraStyle era
 
 instance IsCardanoEra ByronEra where
    cardanoEra      = ByronEra
-   cardanoEraStyle = LegacyByronEra
 
 instance IsCardanoEra ShelleyEra where
    cardanoEra      = ShelleyEra
-   cardanoEraStyle = ShelleyBasedEra ShelleyBasedEraShelley
 
 instance IsCardanoEra AllegraEra where
    cardanoEra      = AllegraEra
-   cardanoEraStyle = ShelleyBasedEra ShelleyBasedEraAllegra
 
 instance IsCardanoEra MaryEra where
    cardanoEra      = MaryEra
-   cardanoEraStyle = ShelleyBasedEra ShelleyBasedEraMary
 
 
 -- ----------------------------------------------------------------------------
@@ -204,6 +185,35 @@ instance IsShelleyBasedEra AllegraEra where
 
 instance IsShelleyBasedEra MaryEra where
    shelleyBasedEra = ShelleyBasedEraMary
+
+
+-- ----------------------------------------------------------------------------
+-- Cardano eras factored as Byron vs Shelley-based
+--
+
+-- | This is the same essential information as 'CardanoEra' but instead of a
+-- flat set of alternative eras, it is factored into the legcy Byron era and
+-- the current Shelley-based eras.
+--
+-- This way of factoring the eras is useful because in many cases the
+-- major differences are between the Byron and Shelley-based eras, and
+-- the Shelley-based eras can often be treated uniformly.
+--
+data CardanoEraStyle era where
+     LegacyByronEra  ::                        CardanoEraStyle ByronEra
+     ShelleyBasedEra :: ShelleyBasedEra era -> CardanoEraStyle era
+
+deriving instance Eq   (CardanoEraStyle era)
+deriving instance Ord  (CardanoEraStyle era)
+deriving instance Show (CardanoEraStyle era)
+
+-- | The 'CardanoEraStyle' for a 'CardanoEra'.
+--
+cardanoEraStyle :: CardanoEra era -> CardanoEraStyle era
+cardanoEraStyle ByronEra   = LegacyByronEra
+cardanoEraStyle ShelleyEra = ShelleyBasedEra ShelleyBasedEraShelley
+cardanoEraStyle AllegraEra = ShelleyBasedEra ShelleyBasedEraAllegra
+cardanoEraStyle MaryEra    = ShelleyBasedEra ShelleyBasedEraMary
 
 
 -- ----------------------------------------------------------------------------

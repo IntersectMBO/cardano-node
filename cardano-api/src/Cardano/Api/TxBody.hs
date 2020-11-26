@@ -759,7 +759,7 @@ makeTransactionBody :: forall era.
                     => TxBodyContent era
                     -> Either (TxBodyError era) (TxBody era)
 makeTransactionBody =
-    case cardanoEraStyle :: CardanoEraStyle era of
+    case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
       ShelleyBasedEra era -> makeShelleyTransactionBody era
 
