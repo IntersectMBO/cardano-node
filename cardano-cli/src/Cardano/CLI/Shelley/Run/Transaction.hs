@@ -21,6 +21,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
+import           Data.Type.Equality (TestEquality(..))
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
                      newExceptT)
@@ -66,6 +67,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxCmdTxFeatureMismatch UseCardanoEra TxFeature
   | ShelleyTxCmdTxBodyError SomeTxBodyError
+  | ShelleyTxCmdNotImplemented Text
+  | ShelleyTxCmdWitnessEraMismatch UseCardanoEra UseCardanoEra WitnessFile
   deriving Show
 
 data SomeTxBodyError where
@@ -127,6 +130,14 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdTxBodyError (SomeTxBodyError err') ->
       "TxBody error: " <> renderTxBodyError err'
 
+    ShelleyTxCmdNotImplemented msg ->
+      "Feature not yet implemented: " <> msg
+
+    ShelleyTxCmdWitnessEraMismatch era era' (WitnessFile file) ->
+      "The era of a witness does not match the era of the transaction. " <>
+      "The transaction is for the " <> renderEra era <> " era, but the " <>
+      "witness in " <> show file <> " is for the " <> renderEra era' <> " era."
+
 renderEra :: UseCardanoEra -> Text
 renderEra UseByronEra   = "Byron"
 renderEra UseShelleyEra = "Shelley"
@@ -146,6 +157,8 @@ renderFeature TxFeatureWithdrawals          = "Reward account withdrawals"
 renderFeature TxFeatureCertificates         = "Certificates"
 renderFeature TxFeatureMintValue            = "Asset minting"
 renderFeature TxFeatureMultiAssetOutputs    = "Multi-Asset outputs"
+renderFeature TxFeatureScriptWitnesses      = "Script witnesses"
+renderFeature TxFeatureShelleyKeys          = "Shelley keys"
 
 renderTxBodyError :: TxBodyError era -> Text
 renderTxBodyError TxBodyEmptyTxIns = "Transaction body has no inputs"
@@ -254,19 +267,21 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureCertificates
                | TxFeatureMintValue
                | TxFeatureMultiAssetOutputs
+               | TxFeatureScriptWitnesses
+               | TxFeatureShelleyKeys
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
                   -> TxFeature
                   -> ExceptT ShelleyTxCmdError IO a
 txFeatureMismatch era feature =
-    left (ShelleyTxCmdTxFeatureMismatch (untyped era) feature)
-  where
-    untyped :: CardanoEra era -> UseCardanoEra
-    untyped ByronEra   = UseByronEra
-    untyped ShelleyEra = UseShelleyEra
-    untyped AllegraEra = UseAllegraEra
-    untyped MaryEra    = UseMaryEra
+    left (ShelleyTxCmdTxFeatureMismatch (untypedCardanoEra era) feature)
+
+untypedCardanoEra :: CardanoEra era -> UseCardanoEra
+untypedCardanoEra ByronEra   = UseByronEra
+untypedCardanoEra ShelleyEra = UseShelleyEra
+untypedCardanoEra AllegraEra = UseAllegraEra
+untypedCardanoEra MaryEra    = UseMaryEra
 
 validateTxIns :: CardanoEra era
               -> [TxIn]
@@ -434,8 +449,12 @@ runTxSign :: TxBodyFile
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
 runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
-  txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
-              Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
+
+  InAnyShelleyBasedEra era txbody <-
+        --TODO: in principle we should be able to support Byron era txs too
+        onlyInShelleyBasedEras "sign for Byron era transactions"
+    =<< readFileTxBody txbodyFile
+
   sks    <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError $
               mapM readWitnessSigningData witSigningData
 
@@ -448,7 +467,11 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
     $ mkShelleyBootstrapWitnesses mnw txbody sksByron
 
   let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness txbody) sksShelley
-      shelleyScriptWitnesses = map (makeScriptWitness . SimpleScript . coerceSimpleScriptEra ShelleyBasedEraShelley) scsShelley
+      shelleyScriptWitnesses =
+        recoverHasScriptFeatures era $
+          map (makeScriptWitness
+             . SimpleScript
+             . coerceSimpleScriptEra era) scsShelley
       shelleyWitnesses = shelleyKeyWitnesses ++ shelleyScriptWitnesses
       tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
 
@@ -533,8 +556,10 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
 
-    txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
-                Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
+    InAnyShelleyBasedEra _era txbody <-
+          --TODO: in principle we should be able to support Byron era txs too
+          onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions"
+      =<< readFileTxBody txbodyFile
 
     pparams <- readProtocolParameters pParamsFile
 
@@ -776,8 +801,7 @@ mkShelleyBootstrapWitnesses mnw txBody =
 
 runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId (TxBodyFile txbodyFile) = do
-  txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
-              Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
+  InAnyCardanoEra _era txbody <- readFileTxBody txbodyFile
   liftIO $ BS.putStrLn $ Api.serialiseToRawBytesHex (Api.getTxId txbody)
 
 runTxCreateWitness
@@ -787,9 +811,13 @@ runTxCreateWitness
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
-  txbody <- firstExceptT ShelleyTxCmdReadTextViewFileError
-    . newExceptT
-    $ Api.readFileTextEnvelope Api.AsShelleyTxBody txbodyFile
+
+  InAnyShelleyBasedEra era txbody <-
+        --TODO: in principle we should be able to support Byron era txs too
+        onlyInShelleyBasedEras "witness for Byron era transactions"
+    =<< readFileTxBody txbodyFile
+  -- We use the era of the tx we read to determine the era we use for the rest:
+
   someWit <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError
     $ readWitnessSigningData witSignData
 
@@ -804,30 +832,55 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
       AShelleyKeyWitness skShelley ->
         pure $ makeShelleyKeyWitness txbody skShelley
       AShelleyScriptWitness scShelley ->
-        pure $ makeScriptWitness (SimpleScript (coerceSimpleScriptEra ShelleyBasedEraShelley scShelley))
+          recoverHasScriptFeatures era $
+          pure
+        . makeScriptWitness
+        . SimpleScript
+        . coerceSimpleScriptEra era
+        $ scShelley
 
   firstExceptT ShelleyTxCmdWriteFileError
     . newExceptT
     $ Api.writeFileTextEnvelope oFile Nothing witness
+
+--TODO: eliminate the need for this hack as part of the Script API refactor
+recoverHasScriptFeatures :: forall era a.
+                            ShelleyBasedEra era
+                         -> (HasScriptFeatures era => a)
+                         -> a
+recoverHasScriptFeatures ShelleyBasedEraShelley f = f
+recoverHasScriptFeatures ShelleyBasedEraAllegra f = f
+recoverHasScriptFeatures ShelleyBasedEraMary    f = f
+
 
 runTxSignWitness
   :: TxBodyFile
   -> [WitnessFile]
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
-    txBody <- firstExceptT ShelleyTxCmdReadTextViewFileError
-      . newExceptT
-      $ Api.readFileTextEnvelope Api.AsShelleyTxBody txBodyFile
-    witnesses <- mapM readWitnessFile witnessFiles
-    let tx = Api.makeSignedTransaction witnesses txBody
+runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
+
+    InAnyCardanoEra era txbody  <- readFileTxBody txbodyFile
+    InAnyShelleyBasedEra _ _ <-
+          --TODO: in principle we should be able to support Byron era txs too
+          onlyInShelleyBasedEras "sign for Byron era transactions"
+                                 (InAnyCardanoEra era txbody)
+
+    witnesses <-
+      sequence
+        [ do InAnyCardanoEra era' witness <- readFileWitness file
+             case testEquality era era' of
+               Nothing   -> left $ ShelleyTxCmdWitnessEraMismatch
+                                     (untypedCardanoEra era)
+                                     (untypedCardanoEra era')
+                                     witnessFile
+               Just Refl -> return witness
+        | witnessFile@(WitnessFile file) <- witnessFiles ]
+
+    let tx = Api.makeSignedTransaction witnesses txbody
     firstExceptT ShelleyTxCmdWriteFileError
       . newExceptT
       $ Api.writeFileTextEnvelope oFp Nothing tx
-
-readWitnessFile :: WitnessFile -> ExceptT ShelleyTxCmdError IO (Witness ShelleyEra)
-readWitnessFile (WitnessFile fp) =
-  firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT (Api.readFileTextEnvelope AsShelleyWitness fp)
 
 
 -- ----------------------------------------------------------------------------
@@ -839,14 +892,14 @@ _readFileScript :: FilePath
 _readFileScript = readFileInAnyShelleyBasedEra AsScript
 
 
-_readFileWitness :: FilePath
+readFileWitness :: FilePath
                 -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Witness)
-_readFileWitness = readFileInAnyCardanoEra AsWitness
+readFileWitness = readFileInAnyCardanoEra AsWitness
 
 
-_readFileTxBody :: FilePath
+readFileTxBody :: FilePath
                -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra TxBody)
-_readFileTxBody = readFileInAnyCardanoEra AsTxBody
+readFileTxBody = readFileInAnyCardanoEra AsTxBody
 
 
 _readFileTx :: FilePath -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Tx)
@@ -895,6 +948,17 @@ readFileInAnyShelleyBasedEra asThing file =
                          (InAnyShelleyBasedEra ShelleyBasedEraMary)
       ]
       file
+
+-- | Constrain the era to be Shelley based. Fail for the Byron era.
+--
+onlyInShelleyBasedEras :: Text
+                       -> InAnyCardanoEra a
+                       -> ExceptT ShelleyTxCmdError IO
+                                  (InAnyShelleyBasedEra a)
+onlyInShelleyBasedEras notImplMsg (InAnyCardanoEra era x) =
+    case cardanoEraStyle era of
+      LegacyByronEra       -> left (ShelleyTxCmdNotImplemented notImplMsg)
+      ShelleyBasedEra era' -> return (InAnyShelleyBasedEra era' x)
 
 
 -- ----------------------------------------------------------------------------
