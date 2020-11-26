@@ -448,7 +448,7 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
     $ mkShelleyBootstrapWitnesses mnw txbody sksByron
 
   let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness txbody) sksShelley
-      shelleyScriptWitnesses = map (makeScriptWitness . makeMultiSigScript) scsShelley
+      shelleyScriptWitnesses = map (makeScriptWitness . SimpleScript . coerceSimpleScriptEra ShelleyBasedEraShelley) scsShelley
       shelleyWitnesses = shelleyKeyWitnesses ++ shelleyScriptWitnesses
       tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
 
@@ -576,6 +576,10 @@ data SomeWitness
   | AGenesisDelegateExtendedSigningKey
                                (Api.SigningKey Api.GenesisDelegateExtendedKey)
   | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
+
+    --TODO switch from multi-sig specifically, and in Shelley era only,
+    -- to a universal type with the union of any script language, which
+    -- we can later convert to a script in an era.
   | AShelleyMultiSigScript     (Api.MultiSigScript ShelleyEra)
 
 -- | Error deserialising a JSON-encoded script.
@@ -693,6 +697,10 @@ partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
 data ByronOrShelleyWitness
   = AByronWitness !ShelleyBootstrapWitnessSigningKeyData
   | AShelleyKeyWitness !Api.ShelleyWitnessSigningKey
+
+    --TODO switch from multi-sig specifically, and in Shelley era only,
+    -- to a universal type with the union of any script language, which
+    -- we can later convert to a script in an era.
   | AShelleyScriptWitness !(Api.MultiSigScript ShelleyEra)
 
 categoriseSomeWitness :: SomeWitness -> ByronOrShelleyWitness
@@ -796,7 +804,7 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
       AShelleyKeyWitness skShelley ->
         pure $ makeShelleyKeyWitness txbody skShelley
       AShelleyScriptWitness scShelley ->
-        pure $ makeScriptWitness (makeMultiSigScript scShelley)
+        pure $ makeScriptWitness (SimpleScript (coerceSimpleScriptEra ShelleyBasedEraShelley scShelley))
 
   firstExceptT ShelleyTxCmdWriteFileError
     . newExceptT
