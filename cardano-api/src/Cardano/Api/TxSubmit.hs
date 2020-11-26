@@ -23,7 +23,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (CardanoApplyTxErr,
-                     GenTx (GenTxByron, GenTxShelley),
+                     GenTx (GenTxByron, GenTxShelley, GenTxAllegra, GenTxMary),
                      HardForkApplyTxErr (ApplyTxErrAllegra, ApplyTxErrByron, ApplyTxErrMary, ApplyTxErrShelley, ApplyTxErrWrongEra))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, mkShelleyTx)
@@ -44,7 +44,7 @@ data TxForMode mode where
        -> TxForMode ShelleyMode
 
      TxForCardanoMode
-       :: Either (Tx ByronEra) (Tx ShelleyEra)
+       :: InAnyCardanoEra Tx
        -> TxForMode CardanoMode
 
 
@@ -95,15 +95,22 @@ submitTx connctInfo txformode =
           SubmitFail (DegenApplyTxErr failure) ->
             return (TxSubmitFailureShelleyMode failure)
 
-      (CardanoMode{}, TxForCardanoMode etx) -> do
-        let genTx = case etx of
-              Left  (ByronTx tx) ->
-                GenTxByron (Byron.ByronTx (Byron.byronIdTx tx) tx)
+      (CardanoMode{}, TxForCardanoMode (InAnyCardanoEra era tx)) -> do
+        let genTx = case (era, tx) of
+              (ByronEra, ByronTx tx') ->
+                GenTxByron (Byron.ByronTx (Byron.byronIdTx tx') tx')
 
-              Left  (ShelleyTx era _) -> case era of {}
+              (ByronEra, ShelleyTx era' _) -> case era' of {}
 
-              Right (ShelleyTx _ tx) ->
-                GenTxShelley (mkShelleyTx tx)
+              (ShelleyEra, ShelleyTx _ tx') ->
+                GenTxShelley (mkShelleyTx tx')
+
+              (AllegraEra, ShelleyTx _ tx') ->
+                GenTxAllegra (mkShelleyTx tx')
+
+              (MaryEra, ShelleyTx _ tx') ->
+                GenTxMary (mkShelleyTx tx')
+
         result <- submitTxToNodeLocal connctInfo genTx
         case result of
           SubmitSuccess      -> return TxSubmitSuccess

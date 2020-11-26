@@ -487,43 +487,40 @@ runTxSubmit :: Protocol -> NetworkId -> FilePath
             -> ExceptT ShelleyTxCmdError IO ()
 runTxSubmit protocol network txFile = do
     SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
-    tx <- firstExceptT ShelleyTxCmdReadTextViewFileError
-      . newExceptT
-      $ Api.readFileTextEnvelopeAnyOf
-          [ Api.FromSomeType Api.AsByronTx   Left
-          , Api.FromSomeType Api.AsShelleyTx Right ]
-          txFile
+
+    InAnyCardanoEra era tx <- readFileTx txFile
 
     withlocalNodeConnectInfo protocol network sockPath $ \connectInfo ->
-      case (localNodeConsensusMode connectInfo, tx) of
-        (ByronMode{}, Left tx') -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForByronMode tx')
+      case (localNodeConsensusMode connectInfo, era) of
+        (ByronMode{}, ByronEra) -> do
+          result <- liftIO $ Api.submitTx connectInfo (TxForByronMode tx)
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureByronMode err ->
               left (ShelleyTxCmdTxSubmitErrorByron err)
 
-        (ByronMode{}, Right{}) ->
+        (ByronMode{}, _) ->
           left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
                    ledgerEraName = "Byron",
-                   otherEraName  = "Shelley"
+                   otherEraName  = show era
                  }
 
-        (ShelleyMode{}, Right tx') -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForShelleyMode tx')
+        (ShelleyMode{}, ShelleyEra) -> do
+          result <- liftIO $ Api.submitTx connectInfo (TxForShelleyMode tx)
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureShelleyMode err ->
               left (ShelleyTxCmdTxSubmitErrorShelley err)
 
-        (ShelleyMode{}, Left{}) ->
+        (ShelleyMode{}, _) ->
           left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
                    ledgerEraName = "Shelley",
-                   otherEraName  = "Byron"
+                   otherEraName  = show era
                  }
 
-        (CardanoMode{}, tx') -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForCardanoMode tx')
+        (CardanoMode{}, _) -> do
+          result <- liftIO $ Api.submitTx connectInfo
+                               (TxForCardanoMode (InAnyCardanoEra era tx))
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureCardanoMode (ApplyTxErrByron err) ->
@@ -902,8 +899,8 @@ readFileTxBody :: FilePath
 readFileTxBody = readFileInAnyCardanoEra AsTxBody
 
 
-_readFileTx :: FilePath -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Tx)
-_readFileTx = readFileInAnyCardanoEra AsTx
+readFileTx :: FilePath -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Tx)
+readFileTx = readFileInAnyCardanoEra AsTx
 
 
 readFileInAnyCardanoEra
