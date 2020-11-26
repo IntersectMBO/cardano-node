@@ -1,6 +1,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -817,6 +818,74 @@ runTxSignWitness (TxBodyFile txBodyFile) witnessFiles (OutputFile oFp) = do
 readWitnessFile :: WitnessFile -> ExceptT ShelleyTxCmdError IO (Witness ShelleyEra)
 readWitnessFile (WitnessFile fp) =
   firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT (Api.readFileTextEnvelope AsShelleyWitness fp)
+
+
+-- ----------------------------------------------------------------------------
+-- Reading files in any era
+--
+
+_readFileScript :: FilePath
+               -> ExceptT ShelleyTxCmdError IO (InAnyShelleyBasedEra Script)
+_readFileScript = readFileInAnyShelleyBasedEra AsScript
+
+
+_readFileWitness :: FilePath
+                -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Witness)
+_readFileWitness = readFileInAnyCardanoEra AsWitness
+
+
+_readFileTxBody :: FilePath
+               -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra TxBody)
+_readFileTxBody = readFileInAnyCardanoEra AsTxBody
+
+
+_readFileTx :: FilePath -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Tx)
+_readFileTx = readFileInAnyCardanoEra AsTx
+
+
+readFileInAnyCardanoEra
+  :: ( HasTextEnvelope (thing ByronEra)
+     , HasTextEnvelope (thing ShelleyEra)
+     , HasTextEnvelope (thing AllegraEra)
+     , HasTextEnvelope (thing MaryEra)
+     )
+  => (forall era. AsType era -> AsType (thing era))
+  -> FilePath
+  -> ExceptT ShelleyTxCmdError IO
+            (InAnyCardanoEra thing)
+readFileInAnyCardanoEra asThing file =
+    firstExceptT ShelleyTxCmdReadTextViewFileError
+  . newExceptT
+  $ Api.readFileTextEnvelopeAnyOf
+      [ Api.FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
+      , Api.FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
+      , Api.FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
+      , Api.FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
+      ]
+      file
+
+readFileInAnyShelleyBasedEra
+  :: ( HasTextEnvelope (thing ShelleyEra)
+     , HasTextEnvelope (thing AllegraEra)
+     , HasTextEnvelope (thing MaryEra)
+     )
+  => (forall era. AsType era -> AsType (thing era))
+  -> FilePath
+  -> ExceptT ShelleyTxCmdError IO
+            (InAnyShelleyBasedEra thing)
+readFileInAnyShelleyBasedEra asThing file =
+    firstExceptT ShelleyTxCmdReadTextViewFileError
+  . newExceptT
+  $ Api.readFileTextEnvelopeAnyOf
+      [ Api.FromSomeType (asThing AsShelleyEra)
+                         (InAnyShelleyBasedEra ShelleyBasedEraShelley)
+      , Api.FromSomeType (asThing AsAllegraEra)
+                         (InAnyShelleyBasedEra ShelleyBasedEraAllegra)
+      , Api.FromSomeType (asThing AsMaryEra)
+                         (InAnyShelleyBasedEra ShelleyBasedEraMary)
+      ]
+      file
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction metadata
