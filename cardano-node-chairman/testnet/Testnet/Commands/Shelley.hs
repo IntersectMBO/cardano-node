@@ -25,19 +25,40 @@ data ShelleyOptions = ShelleyOptions
 
 optsTestnet :: Parser TestnetOptions
 optsTestnet = TestnetOptions
-  <$> optional
-      ( OA.option auto
-        (   long "active-slots-coeff"
-        <>  help "Active slots co-efficient"
-        <>  metavar "DOUBLE"
-        )
+  <$> OA.option auto
+      (   OA.long "active-slots-coeff"
+      <>  OA.help "Active slots co-efficient"
+      <>  OA.metavar "DOUBLE"
+      <>  OA.showDefault
+      <>  OA.value (activeSlotsCoeff defaultTestnetOptions)
       )
-  <*> optional
-      ( OA.option auto
-        (   long "epoch-length"
-        <>  help "Epoch length"
-        <>  metavar "MILLISECONDS"
-        )
+  <*> OA.option auto
+      (   OA.long "security-param"
+      <>  OA.help "Security param"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (securityParam defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "epoch-length"
+      <>  OA.help "Epoch length"
+      <>  OA.metavar "MILLISECONDS"
+      <>  OA.showDefault
+      <>  OA.value (epochLength defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "slot-length"
+      <>  OA.help "Slot length"
+      <>  OA.metavar "MILLISECONDS"
+      <>  OA.showDefault
+      <>  OA.value (slotLength defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "max-lovelace-supply"
+      <>  OA.help "Max lovelace supply"
+      <>  OA.metavar "INTEGER"
+      <>  OA.showDefault
+      <>  OA.value (maxLovelaceSupply defaultTestnetOptions)
       )
 
 optsShelley :: Parser ShelleyOptions

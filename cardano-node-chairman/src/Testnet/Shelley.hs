@@ -9,7 +9,7 @@
 
 module Testnet.Shelley
   ( TestnetOptions(..)
-  , emptyTestnetOptions
+  , defaultTestnetOptions
 
   , testnet
   , hprop_testnet
@@ -17,7 +17,9 @@ module Testnet.Shelley
   ) where
 
 #ifdef UNIX
-import           Prelude (map)
+import           Prelude (map, Integer)
+#else
+import           Prelude (Integer)
 #endif
 
 import           Control.Monad
@@ -72,34 +74,40 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant flip" -}
 
 data TestnetOptions = TestnetOptions
-  { maybeActiveSlotsCoeff :: Maybe Double
-  , maybeEpochLength :: Maybe Int
+  { activeSlotsCoeff :: Double
+  , securityParam :: Int
+  , epochLength :: Int
+  , slotLength :: Double
+  , maxLovelaceSupply :: Integer
   } deriving (Eq, Show)
 
-emptyTestnetOptions :: TestnetOptions
-emptyTestnetOptions = TestnetOptions
-  { maybeActiveSlotsCoeff = Nothing
-  , maybeEpochLength = Nothing
+defaultTestnetOptions :: TestnetOptions
+defaultTestnetOptions = TestnetOptions
+  { activeSlotsCoeff = 0.1
+  , securityParam = 10
+  , epochLength = 1000
+  , slotLength = 0.2
+  , maxLovelaceSupply = 1000000000
   }
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
-rewriteGenesisSpec :: TestnetOptions -> UTCTime -> Int -> Value -> Value
-rewriteGenesisSpec testnetOptions startTime supply =
+rewriteGenesisSpec :: TestnetOptions -> UTCTime -> Value -> Value
+rewriteGenesisSpec testnetOptions startTime =
   rewriteObject
-    $ HM.insert "activeSlotsCoeff" (toJSON @Double (fromMaybe 0.1 (maybeActiveSlotsCoeff testnetOptions)))
-    . HM.insert "securityParam" (toJSON @Int 10)
-    . HM.insert "epochLength" (J.toJSON @Int (fromMaybe 1000 (maybeEpochLength testnetOptions)))
-    . HM.insert "slotLength" (toJSON @Double 0.2)
-    . HM.insert "maxLovelaceSupply" (toJSON supply)
-    . HM.insert "systemStart" (toJSON @String (DTC.formatIso8601 startTime))
+    $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
+    . HM.insert "securityParam" (J.toJSON @Int (securityParam testnetOptions))
+    . HM.insert "epochLength" (J.toJSON @Int (epochLength testnetOptions))
+    . HM.insert "slotLength" (J.toJSON @Double (slotLength testnetOptions))
+    . HM.insert "maxLovelaceSupply" (J.toJSON @Integer (maxLovelaceSupply testnetOptions))
+    . HM.insert "systemStart" (J.toJSON @String (DTC.formatIso8601 startTime))
     . flip HM.adjust "protocolParams"
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
-testnet testOptions H.Conf {..} = do
+testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
 
   let praosNodes = ["node-praos1", "node-praos2"] :: [String]
@@ -129,13 +137,12 @@ testnet testOptions H.Conf {..} = do
     ]
 
   -- Then edit the genesis.spec.json ...
-  let supply = 1000000000
 
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
-  H.rewriteJsonFile (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec testOptions startTime supply)
-  H.rewriteJsonFile (tempAbsPath </> "genesis.json"     ) (rewriteGenesisSpec testOptions startTime supply)
+  H.rewriteJsonFile (tempAbsPath </> "genesis.spec.json") (rewriteGenesisSpec testnetOptions startTime)
+  H.rewriteJsonFile (tempAbsPath </> "genesis.json"     ) (rewriteGenesisSpec testnetOptions startTime)
 
   H.assertIsJsonFile $ tempAbsPath </> "genesis.spec.json"
 
@@ -325,7 +332,7 @@ testnet testOptions H.Conf {..} = do
     , "--ttl", "1000"
     , "--fee", "0"
     , "--tx-in", genesisTxinResult
-    , "--tx-out", user1Addr <> "+" <> show supply
+    , "--tx-out", user1Addr <> "+" <> show @Integer (maxLovelaceSupply testnetOptions)
     , "--certificate-file", tempAbsPath </> "addresses/pool-owner1-stake.reg.cert"
     , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
     , "--certificate-file", tempAbsPath </> "addresses/user1-stake.reg.cert"
@@ -422,7 +429,7 @@ hprop_testnet = H.integration . H.runFinallies . H.workspace "chairman" $ \tempA
 
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000
 
-  void $ testnet emptyTestnetOptions conf
+  void $ testnet defaultTestnetOptions conf
 
   H.failure -- Intentional failure to force failure report
 
