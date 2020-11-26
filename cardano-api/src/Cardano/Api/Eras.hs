@@ -37,6 +37,8 @@ module Cardano.Api.Eras
 
 import           Prelude
 
+import           Data.Type.Equality (TestEquality(..), (:~:)(Refl))
+
 import           Ouroboros.Consensus.Shelley.Eras as Ledger
                    (StandardShelley, StandardAllegra, StandardMary)
 
@@ -127,6 +129,13 @@ data CardanoEra era where
 deriving instance Eq   (CardanoEra era)
 deriving instance Ord  (CardanoEra era)
 deriving instance Show (CardanoEra era)
+
+instance TestEquality CardanoEra where
+    testEquality ByronEra   ByronEra   = Just Refl
+    testEquality ShelleyEra ShelleyEra = Just Refl
+    testEquality AllegraEra AllegraEra = Just Refl
+    testEquality MaryEra    MaryEra    = Just Refl
+    testEquality _          _          = Nothing
 
 
 -- | The class of Cardano eras. This allows uniform handling of all Cardano
