@@ -1,5 +1,8 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
@@ -60,7 +63,15 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxSubmitErrorAllegra !(ApplyTxErr (ShelleyBlock StandardAllegra))
   | ShelleyTxCmdTxSubmitErrorMary !(ApplyTxErr (ShelleyBlock StandardMary))
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
+  | ShelleyTxCmdTxFeatureMismatch UseCardanoEra TxFeature
+  | ShelleyTxCmdTxBodyError SomeTxBodyError
   deriving Show
+
+data SomeTxBodyError where
+     SomeTxBodyError :: TxBodyError era -> SomeTxBodyError
+
+deriving instance Show SomeTxBodyError
+
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -101,6 +112,40 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdBootstrapWitnessError sbwErr ->
       renderShelleyBootstrapWitnessError sbwErr
 
+    ShelleyTxCmdTxFeatureMismatch era TxFeatureImplicitFees ->
+      "An explicit transaction fee must be specified for " <>
+      renderEra era <> " era transactions."
+
+    ShelleyTxCmdTxFeatureMismatch UseShelleyEra TxFeatureValidityNoUpperBound ->
+      "A TTL must be specified for Shelley era transactions."
+
+    ShelleyTxCmdTxFeatureMismatch era feature ->
+      renderFeature feature <> " cannot be used for " <> renderEra era <>
+      " era transactions."
+
+    ShelleyTxCmdTxBodyError _err ->
+      "TODO: ShelleyTxCmdTxBodyError"
+
+renderEra :: UseCardanoEra -> Text
+renderEra UseByronEra   = "Byron"
+renderEra UseShelleyEra = "Shelley"
+renderEra UseAllegraEra = "Allegra"
+renderEra UseMaryEra    = "Mary"
+
+renderFeature :: TxFeature -> Text
+renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"
+renderFeature TxFeatureExplicitFees         = "Explicit fees"
+renderFeature TxFeatureImplicitFees         = "Implicit fees"
+renderFeature TxFeatureValidityLowerBound   = "A validity lower bound"
+renderFeature TxFeatureValidityUpperBound   = "A validity upper bound"
+renderFeature TxFeatureValidityNoUpperBound = "An absent validity upper bound"
+renderFeature TxFeatureTxMetadata           = "Transaction metadata"
+renderFeature TxFeatureAuxScripts           = "Auxiliary scripts"
+renderFeature TxFeatureWithdrawals          = "Reward account withdrawals"
+renderFeature TxFeatureCertificates         = "Certificates"
+renderFeature TxFeatureMintValue            = "Asset minting"
+
+
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
@@ -124,6 +169,11 @@ runTransactionCmd cmd =
     TxAssembleTxBodyWitness txBodyFile witnessFile outFile ->
       runTxSignWitness txBodyFile witnessFile outFile
 
+
+-- ----------------------------------------------------------------------------
+-- Building transactions
+--
+
 runTxBuildRaw
   :: UseCardanoEra
   -> [Api.TxIn]
@@ -137,47 +187,223 @@ runTxBuildRaw
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw _useEra txins txouts ttl fee
+runTxBuildRaw useEra txins txouts ttl fee
               certFiles withdrawals
               metadataSchema metadataFiles
               mUpdatePropFile
-              (TxBodyFile fpath) = do
+              (TxBodyFile fpath) =
 
-    certs <- sequence
-               [ firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
-                   Api.readFileTextEnvelope Api.AsCertificate certFile
-               | CertificateFile certFile <- certFiles ]
+    withCardanoEra useEra $ \era -> do
+
+      txBodyContent <-
+        TxBodyContent
+          <$> validateTxIns  era txins
+          <*> validateTxOuts era txouts
+          <*> validateTxFee  era (Just fee) --TODO: make optional
+          <*> ((,) <$> validateTxValidityLowerBound era Nothing     --TODO: support this
+                   <*> validateTxValidityUpperBound era (Just ttl)) --TODO: make optional
+          <*> validateTxMetadataInEra  era metadataSchema metadataFiles
+          <*> validateTxAuxScripts     era Nothing --TODO: support this
+          <*> validateTxWithdrawals    era withdrawals
+          <*> validateTxCertificates   era certFiles
+          <*> validateTxUpdateProposal era mUpdatePropFile
+          <*> validateTxMintValue      era Nothing --TODO: support this
+
+      txBody <- firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError)
+              . hoistEither
+              $ makeTransactionBody txBodyContent
+
+      firstExceptT ShelleyTxCmdWriteFileError
+        . newExceptT
+        $ Api.writeFileTextEnvelope fpath Nothing txBody
 
 
-    mMetaData <- case metadataFiles of
-      []    -> return Nothing
-      files -> Just . mconcat <$> mapM (readFileTxMetaData metadataSchema) files
-               -- read all the files and merge their metadata maps
-               -- in case of clashes earlier entries take precedence
+-- ----------------------------------------------------------------------------
+-- Transaction body validation and conversion
+--
 
-    mUpdateProp <-
-      case mUpdatePropFile of
-        Nothing                        -> return Nothing
-        Just (UpdateProposalFile file) ->
-          fmap Just <$> firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT $
-            Api.readFileTextEnvelope Api.AsUpdateProposal file
+-- | An enumeration of era-dependent features where we have to check that it
+-- is permissible to use this feature in this era.
+--
+data TxFeature = TxFeatureShelleyAddresses
+               | TxFeatureExplicitFees
+               | TxFeatureImplicitFees
+               | TxFeatureValidityLowerBound
+               | TxFeatureValidityUpperBound
+               | TxFeatureValidityNoUpperBound
+               | TxFeatureTxMetadata
+               | TxFeatureAuxScripts
+               | TxFeatureWithdrawals
+               | TxFeatureCertificates
+               | TxFeatureMintValue
+  deriving Show
 
-    --TODO: update to new API
-    let Right txBody =
-          Api.makeShelleyTransaction
-            txins
-            txouts
-            ttl
-            fee
-            certs
-            withdrawals
-            mMetaData
-            mUpdateProp
+txFeatureMismatch :: CardanoEra era
+                  -> TxFeature
+                  -> ExceptT ShelleyTxCmdError IO a
+txFeatureMismatch era feature =
+    left (ShelleyTxCmdTxFeatureMismatch (untyped era) feature)
+  where
+    untyped :: CardanoEra era -> UseCardanoEra
+    untyped ByronEra   = UseByronEra
+    untyped ShelleyEra = UseShelleyEra
+    untyped AllegraEra = UseAllegraEra
+    untyped MaryEra    = UseMaryEra
 
-    firstExceptT ShelleyTxCmdWriteFileError
-      . newExceptT
-      $ Api.writeFileTextEnvelope fpath Nothing txBody
+validateTxIns :: CardanoEra era
+              -> [TxIn]
+              -> ExceptT ShelleyTxCmdError IO [TxIn]
+validateTxIns _ txins = return txins -- no validation or era-checking needed
 
+validateTxOuts :: forall era.
+                  CardanoEra era
+               -> [TxOut ShelleyEra] --TODO: switch to TxOutAnyEra type
+               -> ExceptT ShelleyTxCmdError IO [TxOut era]
+validateTxOuts era = mapM toTxOutInAnyEra
+  where
+    --TODO: this is purely transitional
+    -- we should not start from TxOut ShelleyEra
+    -- we should start from a universal TxOut-style type like
+    -- data TxOutAny = TxOutAny AddressAny Value
+    toTxOutInAnyEra :: TxOut ShelleyEra
+                    -> ExceptT ShelleyTxCmdError IO (TxOut era)
+    toTxOutInAnyEra (TxOut addr val) = TxOut <$> toAddressInAnyEra addr
+                                             <*> toTxOutValueInAnyEra val
+
+    toAddressInAnyEra :: AddressInEra ShelleyEra
+                      -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
+    toAddressInAnyEra (AddressInEra ByronAddressInAnyEra addr) =
+      return (AddressInEra ByronAddressInAnyEra addr)
+
+    toAddressInAnyEra (AddressInEra (ShelleyAddressInEra _) addr) =
+      case cardanoEraStyle era of
+        LegacyByronEra -> txFeatureMismatch era TxFeatureShelleyAddresses
+
+        ShelleyBasedEra era' ->
+          return (AddressInEra (ShelleyAddressInEra era') addr)
+
+    toTxOutValueInAnyEra :: TxOutValue ShelleyEra
+                         -> ExceptT ShelleyTxCmdError IO (TxOutValue era)
+    toTxOutValueInAnyEra (TxOutAdaOnly AdaOnlyInShelleyEra l) =
+      case multiAssetSupportedInEra era of
+        Left  adaOnlyInEra    -> return (TxOutAdaOnly adaOnlyInEra  l)
+        Right multiAssetInEra -> return (TxOutValue multiAssetInEra
+                                                    (lovelaceToValue l))
+    toTxOutValueInAnyEra (TxOutValue era' _) = case era' of {}
+
+
+validateTxFee :: CardanoEra era
+              -> Maybe Lovelace
+              -> ExceptT ShelleyTxCmdError IO (TxFee era)
+validateTxFee era mfee =
+    case (txFeesExplicitInEra era, mfee) of
+      (Left  implicit, Nothing)  -> return (TxFeeImplicit implicit)
+      (Right explicit, Just fee) -> return (TxFeeExplicit explicit fee)
+
+      (Right _, Nothing) -> txFeatureMismatch era TxFeatureImplicitFees
+      (Left  _, Just _)  -> txFeatureMismatch era TxFeatureExplicitFees
+
+
+validateTxValidityLowerBound :: CardanoEra era
+                             -> Maybe SlotNo
+                             -> ExceptT ShelleyTxCmdError IO
+                                        (TxValidityLowerBound era)
+validateTxValidityLowerBound _ Nothing = return TxValidityNoLowerBound
+validateTxValidityLowerBound era (Just slot) =
+    case validityLowerBoundSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureValidityLowerBound
+      Just supported -> return (TxValidityLowerBound supported slot)
+
+
+validateTxValidityUpperBound :: CardanoEra era
+                             -> Maybe SlotNo
+                             -> ExceptT ShelleyTxCmdError IO
+                                        (TxValidityUpperBound era)
+validateTxValidityUpperBound era Nothing =
+    case validityNoUpperBoundSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureValidityNoUpperBound
+      Just supported -> return (TxValidityNoUpperBound supported)
+validateTxValidityUpperBound era (Just slot) =
+    case validityUpperBoundSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureValidityUpperBound
+      Just supported -> return (TxValidityUpperBound supported slot)
+
+
+validateTxMetadataInEra :: CardanoEra era
+                        -> TxMetadataJsonSchema
+                        -> [MetaDataFile]
+                        -> ExceptT ShelleyTxCmdError IO (TxMetadataInEra era)
+validateTxMetadataInEra _ _ [] = return TxMetadataNone
+validateTxMetadataInEra era schema files =
+    case txMetadataSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureTxMetadata
+      Just supported -> do
+        metadata <- mconcat <$> mapM (readFileTxMetaData schema) files
+        return (TxMetadataInEra supported metadata)
+
+
+validateTxAuxScripts :: CardanoEra era
+                     -> Maybe () --TODO
+                     -> ExceptT ShelleyTxCmdError IO (TxAuxScripts era)
+validateTxAuxScripts _ Nothing = return TxAuxScriptsNone
+validateTxAuxScripts era (Just ()) =
+    case auxScriptsSupportedInEra era of
+       Nothing -> txFeatureMismatch era TxFeatureAuxScripts
+       Just supported -> return (TxAuxScripts supported []) --TODO
+
+
+validateTxWithdrawals :: CardanoEra era
+                      -> [(StakeAddress, Lovelace)]
+                      -> ExceptT ShelleyTxCmdError IO (TxWithdrawals era)
+validateTxWithdrawals _ [] = return TxWithdrawalsNone
+validateTxWithdrawals era withdrawals =
+    case withdrawalsSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureWithdrawals
+      Just supported -> return (TxWithdrawals supported withdrawals)
+
+
+validateTxCertificates :: CardanoEra era
+                       -> [CertificateFile]
+                       -> ExceptT ShelleyTxCmdError IO (TxCertificates era)
+validateTxCertificates era certFiles =
+  case certificatesSupportedInEra era of
+    Nothing
+      | null certFiles -> return TxCertificatesNone
+      | otherwise      -> panic ""   --- fail with indication of feature not supported in this era
+    Just supported -> do
+      certs <- sequence
+                 [ firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $
+                     readFileTextEnvelope AsCertificate certFile
+                 | CertificateFile certFile <- certFiles ]
+      return $ TxCertificates supported certs
+
+
+validateTxUpdateProposal :: CardanoEra era
+                         -> Maybe UpdateProposalFile
+                         -> ExceptT ShelleyTxCmdError IO (TxUpdateProposal era)
+validateTxUpdateProposal _ Nothing = return TxUpdateProposalNone
+validateTxUpdateProposal era (Just (UpdateProposalFile file)) =
+    case updateProposalSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureCertificates
+      Just supported -> do
+         prop <- firstExceptT ShelleyTxCmdReadTextViewFileError $ newExceptT $
+                   readFileTextEnvelope AsUpdateProposal file
+         return (TxUpdateProposal supported prop)
+
+
+validateTxMintValue :: CardanoEra era
+                    -> Maybe () --TODO
+                    -> ExceptT ShelleyTxCmdError IO (TxMintValue era)
+validateTxMintValue _ Nothing = return TxMintNone
+validateTxMintValue era (Just ()) =
+    case multiAssetSupportedInEra era of
+       Left _ -> txFeatureMismatch era TxFeatureMintValue
+       Right supported -> return (TxMintValue supported mempty) --TODO
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction signing
+--
 
 runTxSign :: TxBodyFile
           -> [WitnessSigningData]
@@ -205,6 +431,11 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
 
   firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
     Api.writeFileTextEnvelope txFile Nothing tx
+
+
+-- ----------------------------------------------------------------------------
+-- Transaction submission
+--
 
 runTxSubmit :: Protocol -> NetworkId -> FilePath
             -> ExceptT ShelleyTxCmdError IO ()
@@ -260,6 +491,10 @@ runTxSubmit protocol network txFile = do
             TxSubmitFailureCardanoMode (ApplyTxErrWrongEra mismatch) ->
               left (ShelleyTxCmdTxSubmitErrorEraMismatch mismatch)
 
+
+-- ----------------------------------------------------------------------------
+-- Transaction fee calculation
+--
 
 runTxCalculateMinFee
   :: TxBodyFile
