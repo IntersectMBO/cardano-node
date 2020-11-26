@@ -146,6 +146,7 @@ module Cardano.Api.Typed (
     TxBody(..),
     makeTransactionBody,
     TxBodyContent(..),
+    TxBodyError(..),
 
     -- ** Transitional utils
     makeByronTransaction,
