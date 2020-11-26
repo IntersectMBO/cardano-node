@@ -13,6 +13,7 @@ import qualified Test.Cardano.Api.Typed.Envelope
 import qualified Test.Cardano.Api.Typed.MultiSig.Allegra
 import qualified Test.Cardano.Api.Typed.MultiSig.Mary
 import qualified Test.Cardano.Api.Typed.RawBytes
+import qualified Test.Cardano.Api.Typed.Value
 
 main :: IO ()
 main = do
@@ -23,7 +24,8 @@ main = do
 tests :: TestTree
 tests =
   testGroup "Cardano.Api"
-    [ Test.Cardano.Api.Crypto.tests
+    [ Test.Cardano.Api.Typed.Value.tests
+    , Test.Cardano.Api.Crypto.tests
     , Test.Cardano.Api.Ledger.tests
     , Test.Cardano.Api.MetaData.tests
     , Test.Cardano.Api.Typed.Bech32.tests

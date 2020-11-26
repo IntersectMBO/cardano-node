@@ -128,6 +128,12 @@ module Cardano.Api.Typed (
     selectLovelace,
     lovelaceToValue,
 
+    -- ** Alternative nested representation
+    ValueNestedRep(..),
+    ValueNestedBundle(..),
+    valueToNestedRep,
+    valueFromNestedRep,
+
     -- * Building transactions
     -- | Constructing and inspecting transactions
 
