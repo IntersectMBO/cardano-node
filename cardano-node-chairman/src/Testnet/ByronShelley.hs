@@ -70,13 +70,15 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
-newtype TestnetOptions = TestnetOptions
+data TestnetOptions = TestnetOptions
   { maybeActiveSlotsCoeff :: Maybe Double
+  , maybeEpochLength :: Maybe Int
   } deriving (Eq, Show)
 
 emptyTestnetOptions :: TestnetOptions
 emptyTestnetOptions = TestnetOptions
   { maybeActiveSlotsCoeff = Nothing
+  , maybeEpochLength = Nothing
   }
 
 ifaceAddress :: String
@@ -334,7 +336,7 @@ testnet testnetOptions H.Conf {..} = do
     $ HM.insert "slotLength" (J.toJSON @Double 0.2)
     . HM.insert "activeSlotsCoeff" (J.toJSON @Double (fromMaybe 0.1 (maybeActiveSlotsCoeff testnetOptions)))
     . HM.insert "securityParam" (J.toJSON @Int 10)
-    . HM.insert "epochLength" (J.toJSON @Int 1500)
+    . HM.insert "epochLength" (J.toJSON @Int (fromMaybe 1500 (maybeEpochLength testnetOptions)))
     . HM.insert "slotLength" (J.toJSON @Double 0.2)
     . HM.insert "maxLovelaceSupply" (J.toJSON @Int maxSupply)
     . flip HM.adjust "protocolParams"

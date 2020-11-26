@@ -32,6 +32,13 @@ optsTestnet = TestnetOptions
         <>  metavar "DOUBLE"
         )
       )
+  <*> optional
+      ( OA.option auto
+        (   long "epoch-length"
+        <>  help "Epoch length"
+        <>  metavar "MILLISECONDS"
+        )
+      )
 
 optsShelley :: Parser ShelleyOptions
 optsShelley = ShelleyOptions

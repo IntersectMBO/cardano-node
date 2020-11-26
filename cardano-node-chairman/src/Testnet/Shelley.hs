@@ -71,13 +71,15 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
-newtype TestnetOptions = TestnetOptions
+data TestnetOptions = TestnetOptions
   { maybeActiveSlotsCoeff :: Maybe Double
+  , maybeEpochLength :: Maybe Int
   } deriving (Eq, Show)
 
 emptyTestnetOptions :: TestnetOptions
 emptyTestnetOptions = TestnetOptions
   { maybeActiveSlotsCoeff = Nothing
+  , maybeEpochLength = Nothing
   }
 
 ifaceAddress :: String
@@ -88,7 +90,7 @@ rewriteGenesisSpec testnetOptions startTime supply =
   rewriteObject
     $ HM.insert "activeSlotsCoeff" (toJSON @Double (fromMaybe 0.1 (maybeActiveSlotsCoeff testnetOptions)))
     . HM.insert "securityParam" (toJSON @Int 10)
-    . HM.insert "epochLength" (toJSON @Int 1000)
+    . HM.insert "epochLength" (J.toJSON @Int (fromMaybe 1000 (maybeEpochLength testnetOptions)))
     . HM.insert "slotLength" (toJSON @Double 0.2)
     . HM.insert "maxLovelaceSupply" (toJSON supply)
     . HM.insert "systemStart" (toJSON @String (DTC.formatIso8601 startTime))
