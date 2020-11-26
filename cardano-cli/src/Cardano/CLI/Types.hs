@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Cardano.CLI.Types
   ( CBORObject (..)
@@ -13,6 +14,7 @@ module Cardano.CLI.Types
   , ScriptFile (..)
   , UpdateProposalFile (..)
   , UseCardanoEra (..)
+  , withCardanoEra
   , VerificationKeyFile (..)
   ) where
 
@@ -87,4 +89,12 @@ data UseCardanoEra = UseByronEra
                    | UseAllegraEra
                    | UseMaryEra
                    deriving (Eq, Show)
+
+withCardanoEra :: UseCardanoEra
+               -> (forall era. IsCardanoEra era => CardanoEra era -> a)
+               -> a
+withCardanoEra UseByronEra   f = f ByronEra
+withCardanoEra UseShelleyEra f = f ShelleyEra
+withCardanoEra UseAllegraEra f = f AllegraEra
+withCardanoEra UseMaryEra    f = f MaryEra
 
