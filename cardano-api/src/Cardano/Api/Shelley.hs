@@ -13,9 +13,17 @@ module Cardano.Api.Shelley
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
     Address(ShelleyAddress),
+    fromShelleyAddr,
+    fromShelleyStakeAddr,
     toShelleyAddr,
     toShelleyStakeAddr,
     NetworkId(Mainnet, Testnet),
+
+    -- * Stake addresses
+    PaymentCredential(..),
+    StakeAddress(..),
+    StakeAddressReference(..),
+    StakeCredential(..),
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
