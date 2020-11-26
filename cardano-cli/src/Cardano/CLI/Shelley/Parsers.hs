@@ -1483,7 +1483,7 @@ pTxOut =
                 \Lovelace."
     )
   where
-    parseTxOut :: Atto.Parser (TxOutAnyEra)
+    parseTxOut :: Atto.Parser TxOutAnyEra
     parseTxOut =
       TxOutAnyEra <$> parseAddressAny
                   <*  Atto.char '+'

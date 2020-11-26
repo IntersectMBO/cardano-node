@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -286,7 +285,7 @@ untypedCardanoEra MaryEra    = UseMaryEra
 validateTxIns :: CardanoEra era
               -> [TxIn]
               -> ExceptT ShelleyTxCmdError IO [TxIn]
-validateTxIns _ txins = return txins -- no validation or era-checking needed
+validateTxIns _ = return -- no validation or era-checking needed
 
 validateTxOuts :: forall era.
                   CardanoEra era
