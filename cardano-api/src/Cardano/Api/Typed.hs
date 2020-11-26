@@ -179,9 +179,10 @@ module Cardano.Api.Typed (
     TxMintValue(..),
 
     -- ** Era-dependent transaction body features
-    OnlyAdaSupportedInEra(..),
     MultiAssetSupportedInEra(..),
-    TxFeesExplicitInEra (..),
+    OnlyAdaSupportedInEra(..),
+    TxFeesExplicitInEra(..),
+    TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -192,7 +193,6 @@ module Cardano.Api.Typed (
     UpdateProposalSupportedInEra(..),
 
     -- ** Feature availability functions
-    onlyAdaSupportedInEra,
     multiAssetSupportedInEra,
     txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,
