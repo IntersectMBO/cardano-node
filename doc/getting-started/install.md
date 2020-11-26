@@ -32,7 +32,7 @@ We need the following packages and tools on our Linux system to download the sou
 In Redhat, Fedora and Centos
 
     sudo yum update -y
-    sudo yum install git gcc gcc-c++ tmux gmp-devel make tar wget zlib-devel libtool autoconf -y
+    sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
     sudo yum install systemd-devel ncurses-devel ncurses-compat-libs -y
 
 For Debian/Ubuntu use the following instead:
