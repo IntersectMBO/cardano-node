@@ -14,6 +14,7 @@ module Cardano.Api.Eras
   , MaryEra
   , CardanoEra(..)
   , IsCardanoEra(..)
+  , InAnyCardanoEra(..)
 
     -- * Deprecated aliases
   , Byron
@@ -24,6 +25,9 @@ module Cardano.Api.Eras
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
   , IsShelleyBasedEra(..)
+  , InAnyShelleyBasedEra(..)
+
+    -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
 
     -- * Cardano eras, as Byron vs Shelley-based
@@ -158,6 +162,16 @@ instance IsCardanoEra MaryEra where
    cardanoEra      = MaryEra
 
 
+-- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
+-- us what era it is, but hides the era type. This is useful when the era is
+-- not statically known, for example when deserialising from a file.
+--
+data InAnyCardanoEra thing where
+     InAnyCardanoEra :: CardanoEra era
+                     -> thing era
+                     -> InAnyCardanoEra thing
+
+
 -- ----------------------------------------------------------------------------
 -- Shelley-based eras
 --
@@ -194,6 +208,16 @@ instance IsShelleyBasedEra AllegraEra where
 
 instance IsShelleyBasedEra MaryEra where
    shelleyBasedEra = ShelleyBasedEraMary
+
+
+-- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
+-- tells us what era it is, but hides the era type. This is useful when the era
+-- is not statically known, for example when deserialising from a file.
+--
+data InAnyShelleyBasedEra thing where
+     InAnyShelleyBasedEra :: ShelleyBasedEra era
+                          -> thing era
+                          -> InAnyShelleyBasedEra thing
 
 
 -- ----------------------------------------------------------------------------

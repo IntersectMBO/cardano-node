@@ -32,9 +32,12 @@ module Cardano.Api.Typed (
     MaryEra,
     CardanoEra(..),
     IsCardanoEra(..),
+    InAnyCardanoEra(..),
+
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
+    InAnyShelleyBasedEra(..),
     ShelleyLedgerEra,
     CardanoEraStyle(..),
     cardanoEraStyle,
