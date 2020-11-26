@@ -652,9 +652,9 @@ pQueryCmd =
           (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
                                               \filtering by address(es)")
       , Opt.command "ledger-state"
-          (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node")
+          (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
       , Opt.command "protocol-state"
-          (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node")
+          (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node (Ledger.ChainDepState -- advanced command)")
       ]
   where
     pQueryProtocolParameters :: Parser QueryCmd

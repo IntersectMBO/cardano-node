@@ -1,4 +1,6 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Fee calculation
 --
@@ -34,16 +36,24 @@ import           Cardano.Api.Value
 -- This function is simple, but if you are doing input selection then you
 -- probably want to consider estimateTransactionFee.
 --
-transactionFee :: Natural -- ^ The fixed tx fee
+transactionFee :: forall era.
+                  IsShelleyBasedEra era
+               => Natural -- ^ The fixed tx fee
                -> Natural -- ^ The tx fee per byte
-               -> Tx ShelleyEra
+               -> Tx era
                -> Lovelace
-transactionFee txFeeFixed txFeePerByte (ShelleyTx tx) =
+transactionFee txFeeFixed txFeePerByte (ShelleyTx _ tx) =
     Lovelace (a * x + b)
   where
     a = toInteger txFeePerByte
     x = Shelley.txsize tx
     b = toInteger txFeeFixed
+
+--TODO: This can be made to work for Byron txs too. Do that: fill in this case
+-- and remove the IsShelleyBasedEra constraint.
+transactionFee _ _ (ByronTx _) =
+    case shelleyBasedEra :: ShelleyBasedEra era of {}
+
 
 --TODO: in the Byron case the per-byte is non-integral, would need different
 -- parameters. e.g. a new data type for fee params, Byron vs Shelley
@@ -56,17 +66,19 @@ transactionFee txFeeFixed txFeePerByte (ShelleyTx tx) =
 -- contain all the things not subject to coin selection (such as script inputs,
 -- metadata, withdrawals, certs etc)
 --
-estimateTransactionFee :: NetworkId
+estimateTransactionFee :: forall era.
+                          IsShelleyBasedEra era
+                       => NetworkId
                        -> Natural -- ^ The fixed tx fee
                        -> Natural -- ^ The tx fee per byte
-                       -> Tx ShelleyEra
+                       -> Tx era
                        -> Int -- ^ The number of extra UTxO transaction inputs
                        -> Int -- ^ The number of extra transaction outputs
                        -> Int -- ^ The number of extra Shelley key witnesses
                        -> Int -- ^ The number of extra Byron key witnesses
                        -> Lovelace
-estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
-    let Lovelace baseFee = transactionFee txFeeFixed txFeePerByte (ShelleyTx tx)
+estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx era tx) =
+    let Lovelace baseFee = transactionFee txFeeFixed txFeePerByte (ShelleyTx era tx)
      in \nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
 
         --TODO: this is fragile. Move something like this to the ledger and
@@ -109,4 +121,9 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx tx) =
                       Byron.aaVKDerivationPath = Nothing,
                       Byron.aaNetworkMagic     = toByronNetworkMagic nw
                     }
+
+--TODO: This can be made to work for Byron txs too. Do that: fill in this case
+-- and remove the IsShelleyBasedEra constraint.
+estimateTransactionFee _ _ _ (ByronTx _) =
+    case shelleyBasedEra :: ShelleyBasedEra era of {}
 

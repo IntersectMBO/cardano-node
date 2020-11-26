@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Test.Cardano.Api.MetaData
   ( tests
+  , genTxMetadata
   ) where
 
 import           Cardano.Prelude hiding (MetaData)

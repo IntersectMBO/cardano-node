@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -83,7 +84,9 @@ submitTx connctInfo txformode =
           SubmitFail (DegenApplyTxErr failure) ->
             return (TxSubmitFailureByronMode failure)
 
-      (ShelleyMode{}, TxForShelleyMode (ShelleyTx tx)) -> do
+      (ByronMode{}, TxForByronMode (ShelleyTx era _)) -> case era of {}
+
+      (ShelleyMode{}, TxForShelleyMode (ShelleyTx _ tx)) -> do
         let genTx = DegenGenTx (mkShelleyTx tx)
         result <- submitTxToNodeLocal connctInfo genTx
         case result of
@@ -94,8 +97,13 @@ submitTx connctInfo txformode =
 
       (CardanoMode{}, TxForCardanoMode etx) -> do
         let genTx = case etx of
-              Left  (ByronTx   tx) -> GenTxByron (Byron.ByronTx (Byron.byronIdTx tx) tx)
-              Right (ShelleyTx tx) -> GenTxShelley (mkShelleyTx tx)
+              Left  (ByronTx tx) ->
+                GenTxByron (Byron.ByronTx (Byron.byronIdTx tx) tx)
+
+              Left  (ShelleyTx era _) -> case era of {}
+
+              Right (ShelleyTx _ tx) ->
+                GenTxShelley (mkShelleyTx tx)
         result <- submitTxToNodeLocal connctInfo genTx
         case result of
           SubmitSuccess      -> return TxSubmitSuccess
