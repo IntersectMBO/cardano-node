@@ -11,7 +11,7 @@
 
 module Testnet.ByronShelley
   ( TestnetOptions(..)
-  , emptyTestnetOptions
+  , defaultTestnetOptions
 
   , testnet
   ) where
@@ -71,14 +71,14 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant flip" -}
 
 data TestnetOptions = TestnetOptions
-  { maybeActiveSlotsCoeff :: Maybe Double
-  , maybeEpochLength :: Maybe Int
+  { activeSlotsCoeff :: Double
+  , epochLength :: Int
   } deriving (Eq, Show)
 
-emptyTestnetOptions :: TestnetOptions
-emptyTestnetOptions = TestnetOptions
-  { maybeActiveSlotsCoeff = Nothing
-  , maybeEpochLength = Nothing
+defaultTestnetOptions :: TestnetOptions
+defaultTestnetOptions = TestnetOptions
+  { activeSlotsCoeff = 0.1
+  , epochLength = 1500
   }
 
 ifaceAddress :: String
@@ -334,9 +334,9 @@ testnet testnetOptions H.Conf {..} = do
   -- cycling KES keys
   H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
     $ HM.insert "slotLength" (J.toJSON @Double 0.2)
-    . HM.insert "activeSlotsCoeff" (J.toJSON @Double (fromMaybe 0.1 (maybeActiveSlotsCoeff testnetOptions)))
+    . HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
     . HM.insert "securityParam" (J.toJSON @Int 10)
-    . HM.insert "epochLength" (J.toJSON @Int (fromMaybe 1500 (maybeEpochLength testnetOptions)))
+    . HM.insert "epochLength" (J.toJSON @Int (epochLength testnetOptions))
     . HM.insert "slotLength" (J.toJSON @Double 0.2)
     . HM.insert "maxLovelaceSupply" (J.toJSON @Int maxSupply)
     . flip HM.adjust "protocolParams"

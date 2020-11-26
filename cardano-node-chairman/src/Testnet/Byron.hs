@@ -9,11 +9,7 @@ module Testnet.Byron
   ) where
 
 import           Control.Monad
-import           Control.Monad.IO.Class
-import           Data.Aeson (Value, toJSON, (.=))
-import           Data.Bool
-import           Data.Either
-import           Data.Eq
+import           Data.Aeson (Value, (.=))
 import           Data.Function
 import           Data.Functor
 import           Data.Int
@@ -60,7 +56,7 @@ rewriteConfiguration s = s
 
 rewriteParams :: Value -> Value
 rewriteParams = rewriteObject
-  $ HM.insert "slotDuration" (toJSON @String "2000")
+  $ HM.insert "slotDuration" (J.toJSON @String "2000")
 
 testnet :: H.Conf -> H.Integration [String]
 testnet H.Conf {..} = do
@@ -69,7 +65,7 @@ testnet H.Conf {..} = do
   baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
-  allPorts <- H.noteShowIO $ IO.allocateRandomPorts 3
+  allPorts <- H.noteShowIO $ IO.allocateRandomPorts nodeCount
 
   H.copyRewriteJsonFile
     (base </> "scripts/protocol-params.json")
@@ -85,7 +81,7 @@ testnet H.Conf {..} = do
     , "--k", "10"
     , "--protocol-magic", show @Int testnetMagic
     , "--n-poor-addresses", "128"
-    , "--n-delegate-addresses", "3"
+    , "--n-delegate-addresses", show @Int nodeCount
     , "--total-balance", "8000000000000000"
     , "--avvm-entry-count", "128"
     , "--avvm-entry-balance", "10000000000000"
@@ -126,16 +122,16 @@ testnet H.Conf {..} = do
     H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $ J.encode $
       J.object
       [ ( "Producers"
-        , toJSON
+        , J.toJSON
           [ J.object
             [ ("addr", "127.0.0.1")
-            , ("valency", toJSON @Int 1)
-            , ("port", toJSON (otherPorts L.!! 0))
+            , ("valency", J.toJSON @Int 1)
+            , ("port", J.toJSON (otherPorts L.!! 0))
             ]
           , J.object
             [ ("addr", "127.0.0.1")
-            , ("valency", toJSON @Int 1)
-            , ("port", toJSON (otherPorts L.!! 1))
+            , ("valency", J.toJSON @Int 1)
+            , ("port", J.toJSON (otherPorts L.!! 1))
             ]
           ]
         )
