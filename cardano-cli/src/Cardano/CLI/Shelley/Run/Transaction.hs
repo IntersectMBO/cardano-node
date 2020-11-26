@@ -742,10 +742,11 @@ renderShelleyBootstrapWitnessError MissingNetworkIdOrByronAddressError =
 -- | Construct a Shelley bootstrap witness (i.e. a Byron key witness in the
 -- Shelley era).
 mkShelleyBootstrapWitness
-  :: Maybe NetworkId
-  -> TxBody ShelleyEra
+  :: IsShelleyBasedEra era
+  => Maybe NetworkId
+  -> TxBody era
   -> ShelleyBootstrapWitnessSigningKeyData
-  -> Either ShelleyBootstrapWitnessError (Witness ShelleyEra)
+  -> Either ShelleyBootstrapWitnessError (Witness era)
 mkShelleyBootstrapWitness Nothing _ (ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
   Left MissingNetworkIdOrByronAddressError
 mkShelleyBootstrapWitness (Just nw) txBody (ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
@@ -756,10 +757,11 @@ mkShelleyBootstrapWitness _ txBody (ShelleyBootstrapWitnessSigningKeyData skey (
 -- | Attempt to construct Shelley bootstrap witnesses until an error is
 -- encountered.
 mkShelleyBootstrapWitnesses
-  :: Maybe NetworkId
-  -> TxBody ShelleyEra
+  :: IsShelleyBasedEra era
+  => Maybe NetworkId
+  -> TxBody era
   -> [ShelleyBootstrapWitnessSigningKeyData]
-  -> Either ShelleyBootstrapWitnessError [Witness ShelleyEra]
+  -> Either ShelleyBootstrapWitnessError [Witness era]
 mkShelleyBootstrapWitnesses mnw txBody =
   mapM (mkShelleyBootstrapWitness mnw txBody)
 
