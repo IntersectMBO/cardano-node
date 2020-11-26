@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.CLI.Types
   ( CBORObject (..)
@@ -12,6 +13,7 @@ module Cardano.CLI.Types
   , SigningKeyOrScriptFile (..)
   , SocketPath (..)
   , ScriptFile (..)
+  , TxOutAnyEra (..)
   , UpdateProposalFile (..)
   , UseCardanoEra (..)
   , withCardanoEra
@@ -20,7 +22,7 @@ module Cardano.CLI.Types
 
 import           Cardano.Prelude
 
-import           Data.Aeson
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 
 import qualified Cardano.Chain.Slotting as Byron
@@ -47,7 +49,7 @@ newtype GenesisFile = GenesisFile
   deriving newtype (IsString, Show)
 
 instance FromJSON GenesisFile where
-  parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
+  parseJSON (Aeson.String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> Text.pack (show invalid)
 
@@ -97,4 +99,12 @@ withCardanoEra UseByronEra   f = f ByronEra
 withCardanoEra UseShelleyEra f = f ShelleyEra
 withCardanoEra UseAllegraEra f = f AllegraEra
 withCardanoEra UseMaryEra    f = f MaryEra
+
+-- | A TxOut value that is the superset of possibilities for any era: any
+-- address type and allowing multi-asset values. This is used as the type for
+-- values passed on the command line. It can be converted into the
+-- era-dependent 'TxOutValue' type.
+--
+data TxOutAnyEra = TxOutAnyEra AddressAny Value
+  deriving (Eq, Show)
 

@@ -163,13 +163,20 @@ data TransactionCmd
   = TxBuildRaw
       UseCardanoEra
       [TxIn]
-      [TxOut ShelleyEra]
-      (Maybe String) -- Placeholder for multi asset Values
-      SlotNo
-      Lovelace
+      [TxOutAnyEra]
+      (Maybe Value)
+      -- ^ Multi-Asset value
+      (Maybe SlotNo)
+      -- ^ Transaction lower bound
+      (Maybe SlotNo)
+      -- ^ Transaction upper bound
+      (Maybe Lovelace)
+      -- ^ Tx fee
       [CertificateFile]
       [(StakeAddress, Lovelace)]
       TxMetadataJsonSchema
+      [ScriptFile]
+      -- ^ Auxillary scripts
       [MetaDataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile

@@ -132,6 +132,7 @@ module Cardano.Api.Typed (
     lovelaceToQuantity,
     selectLovelace,
     lovelaceToValue,
+    valueToLovelace,
 
     -- ** Alternative nested representation
     ValueNestedRep(..),

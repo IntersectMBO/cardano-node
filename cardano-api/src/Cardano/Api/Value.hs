@@ -26,6 +26,7 @@ module Cardano.Api.Value
   , lovelaceToQuantity
   , selectLovelace
   , lovelaceToValue
+  , valueToLovelace
 
     -- ** Alternative nested representation
   , ValueNestedRep(..)
@@ -205,6 +206,17 @@ selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
+-- | Check if the 'Value' consists of /only/ 'Lovelace' and no other assets,
+-- and if so then return the Lovelace.
+--
+-- See also 'selectLovelace' to select the Lovelace quantity from the Value,
+-- ignoring other assets.
+--
+valueToLovelace :: Value -> Maybe Lovelace
+valueToLovelace v =
+    case valueToList v of
+      [(AdaAssetId, q)] -> Just (quantityToLovelace q)
+      _                 -> Nothing
 
 toMaryValue :: forall ledgerera.
                Ledger.Crypto ledgerera ~ StandardCrypto

@@ -116,6 +116,7 @@ module Cardano.API (
     lovelaceToQuantity,
     selectLovelace,
     lovelaceToValue,
+    valueToLovelace,
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
