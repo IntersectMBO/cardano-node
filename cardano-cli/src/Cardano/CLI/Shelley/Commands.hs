@@ -270,13 +270,13 @@ renderPoolCmd cmd =
     PoolMetaDataHash {} -> "stake-pool metadata-hash"
 
 data QueryCmd =
-    QueryProtocolParameters Protocol NetworkId (Maybe OutputFile)
+    QueryProtocolParameters AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
   | QueryTip Protocol NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution Protocol NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo Protocol StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO Protocol QueryFilter NetworkId (Maybe OutputFile)
-  | QueryLedgerState Protocol NetworkId (Maybe OutputFile)
-  | QueryProtocolState Protocol NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo AnyCardanoEra Protocol StakeAddress NetworkId (Maybe OutputFile)
+  | QueryUTxO AnyCardanoEra Protocol QueryFilter NetworkId (Maybe OutputFile)
+  | QueryLedgerState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
+  | QueryProtocolState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
   deriving (Eq, Show)
 
 renderQueryCmd :: QueryCmd -> Text

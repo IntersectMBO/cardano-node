@@ -88,28 +88,28 @@ renderShelleyQueryCmdError err =
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryProtocolParameters protocol network mOutFile ->
-      runQueryProtocolParameters protocol network mOutFile
+    QueryProtocolParameters era protocol network mOutFile ->
+      runQueryProtocolParameters era protocol network mOutFile
     QueryTip protocol network mOutFile ->
       runQueryTip protocol network mOutFile
-    QueryStakeDistribution protocol network mOutFile ->
-      runQueryStakeDistribution protocol network mOutFile
-    QueryStakeAddressInfo protocol addr network mOutFile ->
-      runQueryStakeAddressInfo protocol addr network mOutFile
-    QueryLedgerState protocol network mOutFile ->
-      runQueryLedgerState protocol network mOutFile
-    QueryProtocolState protocol network mOutFile ->
-      runQueryProtocolState protocol network mOutFile
-    QueryUTxO protocol qFilter networkId mOutFile ->
-      runQueryUTxO protocol qFilter networkId mOutFile
-
+    QueryStakeDistribution era protocol network mOutFile ->
+      runQueryStakeDistribution era protocol network mOutFile
+    QueryStakeAddressInfo era protocol addr network mOutFile ->
+      runQueryStakeAddressInfo era protocol addr network mOutFile
+    QueryLedgerState era protocol network mOutFile ->
+      runQueryLedgerState era protocol network mOutFile
+    QueryProtocolState era protocol network mOutFile ->
+      runQueryProtocolState era protocol network mOutFile
+    QueryUTxO era protocol qFilter networkId mOutFile ->
+      runQueryUTxO era protocol qFilter networkId mOutFile
 
 runQueryProtocolParameters
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters protocol network mOutFile = do
+runQueryProtocolParameters (AnyCardanoEra _era) protocol network mOutFile = do
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
                            readEnvSocketPath
     pparams <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
@@ -150,23 +150,25 @@ runQueryTip protocol network mOutFile = do
 
 
 runQueryUTxO
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> QueryFilter
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryUTxO protocol qfilter network mOutFile = do
+runQueryUTxO (AnyCardanoEra _era) protocol qfilter network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   filteredUtxo <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
     withlocalNodeConnectInfo protocol network sockPath (queryUTxOFromLocalState qfilter)
   writeFilteredUTxOs mOutFile filteredUtxo
 
 runQueryLedgerState
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryLedgerState protocol network mOutFile = do
+runQueryLedgerState (AnyCardanoEra _era) protocol network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
     withlocalNodeConnectInfo protocol network sockPath queryLocalLedgerState
@@ -177,11 +179,12 @@ runQueryLedgerState protocol network mOutFile = do
       firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR lbs
 
 runQueryProtocolState
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolState protocol network mOutFile = do
+runQueryProtocolState (AnyCardanoEra _era) protocol network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
     withlocalNodeConnectInfo protocol network sockPath queryLocalProtocolState
@@ -192,12 +195,13 @@ runQueryProtocolState protocol network mOutFile = do
       firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR pbs
 
 runQueryStakeAddressInfo
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> StakeAddress
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo protocol addr network mOutFile = do
+runQueryStakeAddressInfo (AnyCardanoEra _era) protocol addr network mOutFile = do
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
     delegsAndRwds <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
       withlocalNodeConnectInfo
@@ -288,11 +292,12 @@ printFilteredUTxOs (Ledger.UTxO utxo) = do
       in Text.pack $ replicate (max 1 (len - slen)) ' ' ++ str
 
 runQueryStakeDistribution
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeDistribution protocol network mOutFile = do
+runQueryStakeDistribution (AnyCardanoEra _era) protocol network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   stakeDist <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
       withlocalNodeConnectInfo
