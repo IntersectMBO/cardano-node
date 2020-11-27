@@ -29,6 +29,7 @@ module Cardano.Api.Certificate (
     -- * Internal conversion functions
     toShelleyCertificate,
     fromShelleyCertificate,
+    toShelleyPoolParams,
 
     -- * Data family instances
     AsType(..)

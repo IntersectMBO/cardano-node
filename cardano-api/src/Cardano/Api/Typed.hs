@@ -448,6 +448,8 @@ module Cardano.Api.Typed (
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
     toShelleyNetwork,
+    toShelleyPoolParams,
+    toShelleyStakeAddr,
     toNetworkMagic,
 
     Shelley.Addr(..),

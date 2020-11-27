@@ -68,6 +68,7 @@ library
                      , aeson-pretty
                      , attoparsec
                      , bech32 >= 1.1.0
+                     , binary
                      , bytestring
                      , base16-bytestring
                      , base58-bytestring
@@ -87,6 +88,7 @@ library
                      , contra-tracer
                      , cborg >= 0.2.4 && < 0.3
                      , containers
+                     , cryptonite
                      , directory
                      , filepath
                      , formatting
@@ -103,10 +105,12 @@ library
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-shelley
                      , ouroboros-network
+                     , primitive
                      , process
                      , scientific
                      , shelley-spec-ledger
                      , small-steps
+                     , split
                      , text
                      , time
                      , transformers
