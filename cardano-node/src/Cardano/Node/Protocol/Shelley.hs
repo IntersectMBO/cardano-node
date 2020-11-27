@@ -29,7 +29,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, newExceptT)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
@@ -144,8 +144,41 @@ readLeaderCredentials :: Maybe ProtocolFilepaths
                                  [TPraosLeaderCredentials StandardCrypto]
 readLeaderCredentials Nothing = return []
 readLeaderCredentials (Just pfp) =
-  readShelleyCredentials pfp
-  >>= mapM parseShelleyCredentials
+  -- The set of credentials is a sum total of what comes from the CLI,
+  -- as well as what's in the bulk credentials file.
+  (<>) <$> readLeaderCredentialsSingleton pfp
+       <*> readLeaderCredentialsBulk      pfp
+
+readLeaderCredentialsSingleton ::
+     ProtocolFilepaths ->
+     ExceptT ShelleyProtocolInstantiationError IO
+             [TPraosLeaderCredentials StandardCrypto]
+-- It's OK to supply none of the files on the CLI
+readLeaderCredentialsSingleton
+   ProtocolFilepaths
+     { shelleyCertFile      = Nothing,
+       shelleyVRFFile       = Nothing,
+       shelleyKESFile       = Nothing
+     } = pure []
+-- Or to supply all of the files
+readLeaderCredentialsSingleton
+   ProtocolFilepaths
+     { shelleyCertFile      = Just certFile,
+       shelleyVRFFile       = Just vrfFile,
+       shelleyKESFile       = Just kesFile
+     } =
+     fmap (:[]) $
+     mkPraosLeaderCredentials
+       <$> firstExceptT FileError (newExceptT $ readFileTextEnvelope AsOperationalCertificate certFile)
+       <*> firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile)
+       <*> firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile)
+-- But not OK to supply some of the files without the others.
+readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
+     throwError OCertNotSpecified
+readLeaderCredentialsSingleton ProtocolFilepaths {shelleyVRFFile = Nothing} =
+     throwError VRFKeyNotSpecified
+readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESFile = Nothing} =
+     throwError KESKeyNotSpecified
 
 data ShelleyCredentials
   = ShelleyCredentials
@@ -154,45 +187,22 @@ data ShelleyCredentials
     , scKes  :: (TextEnvelope, FilePath)
     }
 
-readShelleyCredentials ::
+readLeaderCredentialsBulk ::
      ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO
-             [ShelleyCredentials]
-readShelleyCredentials pfp@ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
-  -- The set of credentials files is a sum total of what comes from the CLI,
-  -- as well as what is referred to by the bulk credentials file.
-  (<>) <$> interpCLI pfp <*> readBulkFile mfp
+             [TPraosLeaderCredentials StandardCrypto]
+readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
+  mapM parseShelleyCredentials =<< readBulkFile mfp
  where
-   -- It's OK to supply none of the files on the CLI
-   interpCLI ProtocolFilepaths
-     { shelleyCertFile      = Nothing,
-       shelleyVRFFile       = Nothing,
-       shelleyKESFile       = Nothing
-     } = pure []
-   -- Or to supply all of the files
-   interpCLI ProtocolFilepaths
-     { shelleyCertFile      = Just certFile,
-       shelleyVRFFile       = Just vrfFile,
-       shelleyKESFile       = Just kesFile
-     } = fmap (:[]) $ ShelleyCredentials
-                        <$> readEnvelope certFile
-                        <*> readEnvelope vrfFile
-                        <*> readEnvelope kesFile
-   -- But not OK to supply some of the files without the others.
-   interpCLI ProtocolFilepaths {shelleyCertFile = Nothing} =
-     throwError OCertNotSpecified
-   interpCLI ProtocolFilepaths {shelleyVRFFile = Nothing} =
-     throwError VRFKeyNotSpecified
-   interpCLI ProtocolFilepaths {shelleyKESFile = Nothing} =
-     throwError KESKeyNotSpecified
-
-   readEnvelope :: FilePath -> ExceptT ShelleyProtocolInstantiationError IO
-                                       (TextEnvelope, FilePath)
-   readEnvelope fp = do
-     content <- handleIOExceptT (CredentialsReadError fp) $
-                  BS.readFile fp
-     firstExceptT (EnvelopeParseError fp) $ hoistEither $
-       (, fp) <$> Aeson.eitherDecodeStrict' content
+   parseShelleyCredentials ::
+        ShelleyCredentials
+     -> ExceptT ShelleyProtocolInstantiationError IO
+                (TPraosLeaderCredentials StandardCrypto)
+   parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
+     mkPraosLeaderCredentials
+       <$> parseEnvelope AsOperationalCertificate scCert
+       <*> parseEnvelope (AsSigningKey AsVrfKey) scVrf
+       <*> parseEnvelope (AsSigningKey AsKesKey) scKes
 
    readBulkFile :: Maybe FilePath
                 -> ExceptT ShelleyProtocolInstantiationError IO
@@ -213,37 +223,34 @@ readShelleyCredentials pfp@ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
                              (teVrf,  loc "vrf")
                              (teKes,  loc "kes")
 
-parseShelleyCredentials ::
-     ShelleyCredentials
-  -> ExceptT ShelleyProtocolInstantiationError IO
-             (TPraosLeaderCredentials StandardCrypto)
-parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
-    (OperationalCertificate opcert (StakePoolVerificationKey vkey),
-     VrfSigningKey vrfKey,
-     KesSigningKey kesKey)
-      <- (,,) <$> parseEnvelope AsOperationalCertificate scCert
-              <*> parseEnvelope (AsSigningKey AsVrfKey) scVrf
-              <*> parseEnvelope (AsSigningKey AsKesKey) scKes
+mkPraosLeaderCredentials ::
+     OperationalCertificate
+  -> SigningKey VrfKey
+  -> SigningKey KesKey
+  -> TPraosLeaderCredentials StandardCrypto
+mkPraosLeaderCredentials
+    (OperationalCertificate opcert (StakePoolVerificationKey vkey))
+    (VrfSigningKey vrfKey)
+    (KesSigningKey kesKey) =
+    TPraosLeaderCredentials
+    { tpraosLeaderCredentialsCanBeLeader =
+        TPraosCanBeLeader {
+        tpraosCanBeLeaderOpCert     = opcert,
+          tpraosCanBeLeaderColdVerKey = coerceKeyRole vkey,
+          tpraosCanBeLeaderSignKeyVRF = vrfKey
+        },
+      tpraosLeaderCredentialsInitSignKey = kesKey,
+      tpraosLeaderCredentialsLabel = "Shelley"
+    }
 
-    return $ TPraosLeaderCredentials {
-               tpraosLeaderCredentialsCanBeLeader =
-                 TPraosCanBeLeader {
-                   tpraosCanBeLeaderOpCert     = opcert,
-                   tpraosCanBeLeaderColdVerKey = coerceKeyRole vkey,
-                   tpraosCanBeLeaderSignKeyVRF = vrfKey
-                 },
-               tpraosLeaderCredentialsInitSignKey = kesKey,
-               tpraosLeaderCredentialsLabel = "Shelley"
-             }
-  where
-    parseEnvelope ::
-         HasTextEnvelope a
-      => AsType a
-      -> (TextEnvelope, String)
-      -> ExceptT ShelleyProtocolInstantiationError IO a
-    parseEnvelope as (te, loc) =
-      firstExceptT (FileError . Api.FileError loc) . hoistEither $
-        deserialiseFromTextEnvelope as te
+parseEnvelope ::
+     HasTextEnvelope a
+  => AsType a
+  -> (TextEnvelope, String)
+  -> ExceptT ShelleyProtocolInstantiationError IO a
+parseEnvelope as (te, loc) =
+  firstExceptT (FileError . Api.FileError loc) . hoistEither $
+    deserialiseFromTextEnvelope as te
 
 
 ------------------------------------------------------------------------------
