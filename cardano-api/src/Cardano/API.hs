@@ -17,12 +17,16 @@ module Cardano.API (
     AllegraEra,
     MaryEra,
     CardanoEra(..),
-    CardanoEraStyle(..),
     IsCardanoEra(..),
+    InAnyCardanoEra(..),
+
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
-    ShelleyLedgerEra,
+    InAnyShelleyBasedEra(..),
+    CardanoEraStyle(..),
+    cardanoEraStyle,
+
     -- ** Deprecated
     Byron,
     Shelley,
@@ -112,6 +116,7 @@ module Cardano.API (
     lovelaceToQuantity,
     selectLovelace,
     lovelaceToValue,
+    valueToLovelace,
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
@@ -120,6 +125,7 @@ module Cardano.API (
     TxBody,
     makeTransactionBody,
     TxBodyContent(..),
+    TxBodyError(..),
 
     -- ** Transaction Ids
     TxId,
@@ -146,9 +152,10 @@ module Cardano.API (
     TxMintValue(..),
 
     -- ** Era-dependent transaction body features
-    OnlyAdaSupportedInEra(..),
     MultiAssetSupportedInEra(..),
-    TxFeesExplicitInEra (..),
+    OnlyAdaSupportedInEra(..),
+    TxFeesExplicitInEra(..),
+    TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -157,6 +164,18 @@ module Cardano.API (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
+
+    -- ** Feature availability functions
+    multiAssetSupportedInEra,
+    txFeesExplicitInEra,
+    validityUpperBoundSupportedInEra,
+    validityNoUpperBoundSupportedInEra,
+    validityLowerBoundSupportedInEra,
+    txMetadataSupportedInEra,
+    auxScriptsSupportedInEra,
+    withdrawalsSupportedInEra,
+    certificatesSupportedInEra,
+    updateProposalSupportedInEra,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.

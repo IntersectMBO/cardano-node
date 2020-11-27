@@ -388,7 +388,7 @@ anyAddressInEra (AddressByron addr) =
     Just (AddressInEra ByronAddressInAnyEra addr)
 
 anyAddressInEra (AddressShelley addr) =
-    case cardanoEraStyle of
+    case cardanoEraStyle cardanoEra of
       LegacyByronEra      -> Nothing
       ShelleyBasedEra era -> Just (AddressInEra (ShelleyAddressInEra era) addr)
 

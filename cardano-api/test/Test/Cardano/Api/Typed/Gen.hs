@@ -546,7 +546,7 @@ genTxBodyContent era = do
 genTxFee :: CardanoEra era -> Gen (TxFee era)
 genTxFee era =
   case era of
-    ByronEra -> pure TxFeeImplicit
+    ByronEra -> pure (TxFeeImplicit TxFeesImplicitInByronEra)
     ShelleyEra -> TxFeeExplicit TxFeesExplicitInShelleyEra <$> genLovelace
     AllegraEra -> TxFeeExplicit TxFeesExplicitInAllegraEra <$> genLovelace
     MaryEra -> TxFeeExplicit TxFeesExplicitInMaryEra <$> genLovelace

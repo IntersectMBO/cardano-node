@@ -19,6 +19,7 @@ module Cardano.Api.TxBody (
     TxBody(..),
     makeTransactionBody,
     TxBodyContent(..),
+    TxBodyError(..),
 
     -- ** Transitional utils
     makeByronTransaction,
@@ -49,9 +50,10 @@ module Cardano.Api.TxBody (
     TxMintValue(..),
 
     -- * Era-dependent transaction body features
-    OnlyAdaSupportedInEra(..),
     MultiAssetSupportedInEra(..),
-    TxFeesExplicitInEra (..),
+    OnlyAdaSupportedInEra(..),
+    TxFeesExplicitInEra(..),
+    TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -60,6 +62,18 @@ module Cardano.Api.TxBody (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
+
+    -- ** Feature availability functions
+    multiAssetSupportedInEra,
+    txFeesExplicitInEra,
+    validityUpperBoundSupportedInEra,
+    validityNoUpperBoundSupportedInEra,
+    validityLowerBoundSupportedInEra,
+    txMetadataSupportedInEra,
+    auxScriptsSupportedInEra,
+    withdrawalsSupportedInEra,
+    certificatesSupportedInEra,
+    updateProposalSupportedInEra,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody),
@@ -243,10 +257,27 @@ toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value)) =
 -- Era-dependent transaction body features
 --
 
+-- | A representation of whether the era supports multi-asset transactions.
+--
+-- The Mary and subsequent eras support multi-asset transactions.
+--
+-- The negation of this is 'OnlyAdaSupportedInEra'.
+--
+data MultiAssetSupportedInEra era where
+
+     -- | Multi-asset transactions are supported in the 'Mary' era.
+     MultiAssetInMaryEra :: MultiAssetSupportedInEra MaryEra
+
+deriving instance Eq   (MultiAssetSupportedInEra era)
+deriving instance Show (MultiAssetSupportedInEra era)
+
 -- | A representation of whether the era supports only ada transactions.
 --
 -- Prior to the Mary era only ada transactions are supported. Multi-assets are
 -- supported from the Mary era onwards.
+--
+-- This is the negation of 'MultiAssetSupportedInEra'. It exists since we need
+-- evidence to be positive.
 --
 data OnlyAdaSupportedInEra era where
 
@@ -257,17 +288,13 @@ data OnlyAdaSupportedInEra era where
 deriving instance Eq   (OnlyAdaSupportedInEra era)
 deriving instance Show (OnlyAdaSupportedInEra era)
 
--- | A representation of whether the era supports multi-asset transactions.
---
--- The Mary and subsequent eras support multi-asset transactions.
---
-data MultiAssetSupportedInEra era where
-
-     -- | Multi-asset transactions are supported in the 'Mary' era.
-     MultiAssetInMaryEra :: MultiAssetSupportedInEra MaryEra
-
-deriving instance Eq   (MultiAssetSupportedInEra era)
-deriving instance Show (MultiAssetSupportedInEra era)
+multiAssetSupportedInEra :: CardanoEra era
+                         -> Either (OnlyAdaSupportedInEra era)
+                                   (MultiAssetSupportedInEra era)
+multiAssetSupportedInEra ByronEra   = Left AdaOnlyInByronEra
+multiAssetSupportedInEra ShelleyEra = Left AdaOnlyInShelleyEra
+multiAssetSupportedInEra AllegraEra = Left AdaOnlyInAllegraEra
+multiAssetSupportedInEra MaryEra    = Right MultiAssetInMaryEra
 
 
 -- | A representation of whether the era requires explicitly specified fees in
@@ -286,6 +313,25 @@ data TxFeesExplicitInEra era where
 deriving instance Eq   (TxFeesExplicitInEra era)
 deriving instance Show (TxFeesExplicitInEra era)
 
+-- | A representation of whether the era requires implicitly specified fees in
+-- transactions.
+--
+-- This is the negation of 'TxFeesExplicitInEra'.
+--
+data TxFeesImplicitInEra era where
+     TxFeesImplicitInByronEra :: TxFeesImplicitInEra ByronEra
+
+deriving instance Eq   (TxFeesImplicitInEra era)
+deriving instance Show (TxFeesImplicitInEra era)
+
+txFeesExplicitInEra :: CardanoEra era
+                    -> Either (TxFeesImplicitInEra era)
+                              (TxFeesExplicitInEra era)
+txFeesExplicitInEra ByronEra   = Left  TxFeesImplicitInByronEra
+txFeesExplicitInEra ShelleyEra = Right TxFeesExplicitInShelleyEra
+txFeesExplicitInEra AllegraEra = Right TxFeesExplicitInAllegraEra
+txFeesExplicitInEra MaryEra    = Right TxFeesExplicitInMaryEra
+
 
 -- | A representation of whether the era supports transactions with an upper
 -- bound on the range of slots in which they are valid.
@@ -302,6 +348,13 @@ data ValidityUpperBoundSupportedInEra era where
 
 deriving instance Eq   (ValidityUpperBoundSupportedInEra era)
 deriving instance Show (ValidityUpperBoundSupportedInEra era)
+
+validityUpperBoundSupportedInEra :: CardanoEra era
+                                 -> Maybe (ValidityUpperBoundSupportedInEra era)
+validityUpperBoundSupportedInEra ByronEra   = Nothing
+validityUpperBoundSupportedInEra ShelleyEra = Just ValidityUpperBoundInShelleyEra
+validityUpperBoundSupportedInEra AllegraEra = Just ValidityUpperBoundInAllegraEra
+validityUpperBoundSupportedInEra MaryEra    = Just ValidityUpperBoundInMaryEra
 
 
 -- | A representation of whether the era supports transactions having /no/
@@ -323,6 +376,13 @@ data ValidityNoUpperBoundSupportedInEra era where
 deriving instance Eq   (ValidityNoUpperBoundSupportedInEra era)
 deriving instance Show (ValidityNoUpperBoundSupportedInEra era)
 
+validityNoUpperBoundSupportedInEra :: CardanoEra era
+                                   -> Maybe (ValidityNoUpperBoundSupportedInEra era)
+validityNoUpperBoundSupportedInEra ByronEra   = Just ValidityNoUpperBoundInByronEra
+validityNoUpperBoundSupportedInEra ShelleyEra = Nothing
+validityNoUpperBoundSupportedInEra AllegraEra = Just ValidityNoUpperBoundInAllegraEra
+validityNoUpperBoundSupportedInEra MaryEra    = Just ValidityNoUpperBoundInMaryEra
+
 
 -- | A representation of whether the era supports transactions with a lower
 -- bound on the range of slots in which they are valid.
@@ -339,6 +399,13 @@ data ValidityLowerBoundSupportedInEra era where
 deriving instance Eq   (ValidityLowerBoundSupportedInEra era)
 deriving instance Show (ValidityLowerBoundSupportedInEra era)
 
+validityLowerBoundSupportedInEra :: CardanoEra era
+                                 -> Maybe (ValidityLowerBoundSupportedInEra era)
+validityLowerBoundSupportedInEra ByronEra   = Nothing
+validityLowerBoundSupportedInEra ShelleyEra = Nothing
+validityLowerBoundSupportedInEra AllegraEra = Just ValidityLowerBoundInAllegraEra
+validityLowerBoundSupportedInEra MaryEra    = Just ValidityLowerBoundInMaryEra
+
 
 -- | A representation of whether the era supports transaction metadata.
 --
@@ -353,6 +420,13 @@ data TxMetadataSupportedInEra era where
 deriving instance Eq   (TxMetadataSupportedInEra era)
 deriving instance Show (TxMetadataSupportedInEra era)
 
+txMetadataSupportedInEra :: CardanoEra era
+                         -> Maybe (TxMetadataSupportedInEra era)
+txMetadataSupportedInEra ByronEra   = Nothing
+txMetadataSupportedInEra ShelleyEra = Just TxMetadataInShelleyEra
+txMetadataSupportedInEra AllegraEra = Just TxMetadataInAllegraEra
+txMetadataSupportedInEra MaryEra    = Just TxMetadataInMaryEra
+
 
 -- | A representation of whether the era supports auxiliary scripts in
 -- transactions.
@@ -366,6 +440,13 @@ data AuxScriptsSupportedInEra era where
 
 deriving instance Eq   (AuxScriptsSupportedInEra era)
 deriving instance Show (AuxScriptsSupportedInEra era)
+
+auxScriptsSupportedInEra :: CardanoEra era
+                         -> Maybe (AuxScriptsSupportedInEra era)
+auxScriptsSupportedInEra ByronEra   = Nothing
+auxScriptsSupportedInEra ShelleyEra = Nothing
+auxScriptsSupportedInEra AllegraEra = Just AuxScriptsInAllegraEra
+auxScriptsSupportedInEra MaryEra    = Just AuxScriptsInMaryEra
 
 
 -- | A representation of whether the era supports withdrawals from reward
@@ -383,6 +464,13 @@ data WithdrawalsSupportedInEra era where
 deriving instance Eq   (WithdrawalsSupportedInEra era)
 deriving instance Show (WithdrawalsSupportedInEra era)
 
+withdrawalsSupportedInEra :: CardanoEra era
+                          -> Maybe (WithdrawalsSupportedInEra era)
+withdrawalsSupportedInEra ByronEra   = Nothing
+withdrawalsSupportedInEra ShelleyEra = Just WithdrawalsInShelleyEra
+withdrawalsSupportedInEra AllegraEra = Just WithdrawalsInAllegraEra
+withdrawalsSupportedInEra MaryEra    = Just WithdrawalsInMaryEra
+
 
 -- | A representation of whether the era supports 'Certificate's embedded in
 -- transactions.
@@ -397,6 +485,13 @@ data CertificatesSupportedInEra era where
 
 deriving instance Eq   (CertificatesSupportedInEra era)
 deriving instance Show (CertificatesSupportedInEra era)
+
+certificatesSupportedInEra :: CardanoEra era
+                           -> Maybe (CertificatesSupportedInEra era)
+certificatesSupportedInEra ByronEra   = Nothing
+certificatesSupportedInEra ShelleyEra = Just CertificatesInShelleyEra
+certificatesSupportedInEra AllegraEra = Just CertificatesInAllegraEra
+certificatesSupportedInEra MaryEra    = Just CertificatesInMaryEra
 
 
 -- | A representation of whether the era supports 'UpdateProposal's embedded in
@@ -414,6 +509,13 @@ data UpdateProposalSupportedInEra era where
 
 deriving instance Eq   (UpdateProposalSupportedInEra era)
 deriving instance Show (UpdateProposalSupportedInEra era)
+
+updateProposalSupportedInEra :: CardanoEra era
+                             -> Maybe (UpdateProposalSupportedInEra era)
+updateProposalSupportedInEra ByronEra   = Nothing
+updateProposalSupportedInEra ShelleyEra = Just UpdateProposalInShelleyEra
+updateProposalSupportedInEra AllegraEra = Just UpdateProposalInAllegraEra
+updateProposalSupportedInEra MaryEra    = Just UpdateProposalInMaryEra
 
 
 -- ----------------------------------------------------------------------------
@@ -436,7 +538,7 @@ deriving instance Show (TxOutValue era)
 
 data TxFee era where
 
-     TxFeeImplicit :: TxFee ByronEra
+     TxFeeImplicit :: TxFeesImplicitInEra era -> TxFee era
 
      TxFeeExplicit :: TxFeesExplicitInEra era -> Lovelace -> TxFee era
 
@@ -759,7 +861,7 @@ makeTransactionBody :: forall era.
                     => TxBodyContent era
                     -> Either (TxBodyError era) (TxBody era)
 makeTransactionBody =
-    case cardanoEraStyle :: CardanoEraStyle era of
+    case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
       ShelleyBasedEra era -> makeShelleyTransactionBody era
 
@@ -808,6 +910,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
              TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
              TxWithdrawals _ ws -> toShelleyWithdrawal ws)
           (case txFee of
+             TxFeeImplicit era'  -> case era' of {}
              TxFeeExplicit _ fee -> toShelleyLovelace fee)
           (case upperBound of
              TxValidityNoUpperBound era' -> case era' of {}
@@ -847,6 +950,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
              TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
              TxWithdrawals _ ws -> toShelleyWithdrawal ws)
           (case txFee of
+             TxFeeImplicit era'  -> case era' of {}
              TxFeeExplicit _ fee -> toShelleyLovelace fee)
           (Allegra.ValidityInterval {
              Allegra.validFrom = case lowerBound of
@@ -893,6 +997,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
              TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
              TxWithdrawals _ ws -> toShelleyWithdrawal ws)
           (case txFee of
+             TxFeeImplicit era'  -> case era' of {}
              TxFeeExplicit _ fee -> toShelleyLovelace fee)
           (Allegra.ValidityInterval {
              Allegra.validFrom = case lowerBound of
@@ -938,7 +1043,7 @@ makeByronTransaction txIns txOuts =
       TxBodyContent {
         txIns,
         txOuts,
-        txFee            = TxFeeImplicit,
+        txFee            = TxFeeImplicit TxFeesImplicitInByronEra,
         txValidityRange  = (TxValidityNoLowerBound,
                             TxValidityNoUpperBound
                               ValidityNoUpperBoundInByronEra),

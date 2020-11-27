@@ -492,14 +492,17 @@ pTransaction =
       $ Opt.command "sign-witness" assembleInfo <> Opt.internal
 
   pTransactionBuild :: Parser TransactionCmd
-  pTransactionBuild = TxBuildRaw <$> some pTxIn
+  pTransactionBuild = TxBuildRaw <$> pUseCardanoEra
+                                 <*> some pTxIn
                                  <*> some pTxOut
-                                 <*> optional pMint
-                                 <*> pTxTTL
-                                 <*> pTxFee
+                                 <*> optional pMintMultiAsset
+                                 <*> optional pTxLowerBound
+                                 <*> optional pTxUpperBound
+                                 <*> optional pTxFee
                                  <*> many pCertificateFile
                                  <*> many pWithdrawal
                                  <*> pTxMetadataJsonSchema
+                                 <*> many pScript
                                  <*> many pMetaDataFile
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
@@ -1417,6 +1420,29 @@ pTxSubmitFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
+pUseCardanoEra :: Parser UseCardanoEra
+pUseCardanoEra = asum
+  [ Opt.flag' UseByronEra
+      (  Opt.long "byron-era"
+      <> Opt.help "Specify the Byron era"
+      )
+  , Opt.flag' UseShelleyEra
+      (  Opt.long "shelley-era"
+      <> Opt.help "Specify the Shelley era (default)"
+      )
+  , Opt.flag' UseAllegraEra
+      (  Opt.long "allegra-era"
+      <> Opt.help "Specify the Allegra era"
+      )
+  , Opt.flag' UseMaryEra
+      (  Opt.long "mary-era"
+      <> Opt.help "Specify the Mary era"
+      )
+
+    -- Default for now:
+  , pure UseShelleyEra
+  ]
+
 pTxIn :: Parser TxIn
 pTxIn =
   Opt.option (readerFromAttoParser parseTxIn)
@@ -1447,7 +1473,7 @@ parseTxIx :: Atto.Parser TxIx
 parseTxIx = toEnum <$> Atto.decimal
 
 
-pTxOut :: Parser (TxOut ShelleyEra)
+pTxOut :: Parser TxOutAnyEra
 pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
@@ -1457,29 +1483,51 @@ pTxOut =
                 \Lovelace."
     )
   where
-    parseTxOut :: Atto.Parser (TxOut ShelleyEra)
+    parseTxOut :: Atto.Parser TxOutAnyEra
     parseTxOut =
-      TxOut <$> parseAddressInEra
-            <*  Atto.char '+'
-            <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> parseLovelace)
+      TxOutAnyEra <$> parseAddressAny
+                  <*  Atto.char '+'
+                  <*> pAdaOnlyValue
 
-pMint :: Parser String
-pMint =
-  Opt.strOption
-    (  Opt.long "mint"
-    <> Opt.metavar "VALUE"
-    <> Opt.help "Mint multi-asset value(s) with the multi-asset cli syntax"
-    <> Opt.value ""
-    )
+pAdaOnlyValue :: Atto.Parser Value
+pAdaOnlyValue = lovelaceToValue <$> parseLovelace
 
-pTxTTL :: Parser SlotNo
-pTxTTL =
+pMintMultiAsset :: Parser Value
+pMintMultiAsset =
+  Opt.option
+    (Opt.eitherReader readValue)
+      (  Opt.long "mint"
+      <> Opt.metavar "VALUE"
+      <> Opt.help "Mint multi-asset value(s) with the multi-asset cli syntax"
+      )
+
+readValue :: String -> Either String Value
+readValue _maCliSyntax = Left "Need 2072 for MA cli syntax parser"
+
+pTxLowerBound :: Parser SlotNo
+pTxLowerBound =
   SlotNo <$>
     Opt.option Opt.auto
-      (  Opt.long "ttl"
+      (  Opt.long "lower-bound"
       <> Opt.metavar "SLOT"
-      <> Opt.help "Time to live (in slots)."
+      <> Opt.help "Time that transaction is valid from (in slots)."
       )
+
+pTxUpperBound :: Parser SlotNo
+pTxUpperBound =
+  SlotNo <$>
+    ( Opt.option Opt.auto
+        (  Opt.long "upper-bound"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time that transaction is valid until (in slots)."
+        )
+    <|>
+      Opt.option Opt.auto
+        (  Opt.long "ttl"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time to live (in slots) (deprecated; use --upper-bound instead)."
+        )
+    )
 
 pTxFee :: Parser Lovelace
 pTxFee =
@@ -2218,13 +2266,6 @@ parseAddressAny = do
     case deserialiseAddress AsAddressAny str of
       Nothing   -> fail "invalid address"
       Just addr -> pure addr
-
-parseAddressInEra :: IsCardanoEra era => Atto.Parser (AddressInEra era)
-parseAddressInEra = do
-    addr <- parseAddressAny
-    case anyAddressInEra addr of
-      Nothing        -> fail "invalid address in the target era"
-      Just addrinera -> pure addrinera
 
 parseStakeAddress :: Atto.Parser StakeAddress
 parseStakeAddress = do

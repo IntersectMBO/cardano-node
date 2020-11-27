@@ -31,12 +31,16 @@ module Cardano.Api.Typed (
     AllegraEra,
     MaryEra,
     CardanoEra(..),
-    CardanoEraStyle(..),
     IsCardanoEra(..),
+    InAnyCardanoEra(..),
+
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
+    InAnyShelleyBasedEra(..),
     ShelleyLedgerEra,
+    CardanoEraStyle(..),
+    cardanoEraStyle,
     -- ** Deprecated
     Byron,
     Shelley,
@@ -128,6 +132,7 @@ module Cardano.Api.Typed (
     lovelaceToQuantity,
     selectLovelace,
     lovelaceToValue,
+    valueToLovelace,
 
     -- ** Alternative nested representation
     ValueNestedRep(..),
@@ -142,6 +147,7 @@ module Cardano.Api.Typed (
     TxBody(..),
     makeTransactionBody,
     TxBodyContent(..),
+    TxBodyError(..),
 
     -- ** Transitional utils
     makeByronTransaction,
@@ -175,9 +181,10 @@ module Cardano.Api.Typed (
     TxMintValue(..),
 
     -- ** Era-dependent transaction body features
-    OnlyAdaSupportedInEra(..),
     MultiAssetSupportedInEra(..),
-    TxFeesExplicitInEra (..),
+    OnlyAdaSupportedInEra(..),
+    TxFeesExplicitInEra(..),
+    TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -186,6 +193,18 @@ module Cardano.Api.Typed (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
+
+    -- ** Feature availability functions
+    multiAssetSupportedInEra,
+    txFeesExplicitInEra,
+    validityUpperBoundSupportedInEra,
+    validityNoUpperBoundSupportedInEra,
+    validityLowerBoundSupportedInEra,
+    txMetadataSupportedInEra,
+    auxScriptsSupportedInEra,
+    withdrawalsSupportedInEra,
+    certificatesSupportedInEra,
+    updateProposalSupportedInEra,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -278,6 +297,8 @@ module Cardano.Api.Typed (
     SignatureFeature,
     TimeLocksFeature,
     HasScriptFeatures,
+    coerceSimpleScriptEra,
+
     -- *** Deprecated aliases
     MultiSigScript,
     makeMultiSigScript,

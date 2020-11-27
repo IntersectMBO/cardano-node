@@ -30,6 +30,7 @@ module Cardano.Api.Script (
   , SignatureFeature
   , TimeLocksFeature
   , HasScriptFeatures
+  , coerceSimpleScriptEra
 
     -- * Deprecated aliases
   , MultiSigScript
@@ -371,6 +372,26 @@ timelockToSimpleScript signaturesInEra timeLocksInEra = go
     go (Timelock.RequireAnyOf      s) = RequireAnyOf (map go (toList s))
     go (Timelock.RequireMOf      i s) = RequireMOf i (map go (toList s))
 
+
+--TODO: eliminate the need for this
+coerceSimpleScriptEra :: forall era.
+                         ShelleyBasedEra era
+                      -> SimpleScript ShelleyEra
+                      -> SimpleScript era
+coerceSimpleScriptEra era = go
+  where
+    go :: SimpleScript ShelleyEra -> SimpleScript era
+    go (RequireSignature _ pkh) = RequireSignature signaturesFeature pkh
+    go (RequireAllOf s)         = RequireAllOf (map go s)
+    go (RequireAnyOf s)         = RequireAnyOf (map go s)
+    go (RequireMOf m s)         = RequireMOf m (map go s)
+
+    signaturesFeature :: ScriptFeatureInEra SignatureFeature era
+    signaturesFeature =
+      case era of
+        ShelleyBasedEraShelley -> SignaturesInShelleyEra
+        ShelleyBasedEraAllegra -> SignaturesInAllegraEra
+        ShelleyBasedEraMary    -> SignaturesInMaryEra
 
 
 --
