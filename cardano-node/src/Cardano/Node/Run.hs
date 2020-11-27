@@ -127,11 +127,14 @@ runNode cmdPc = do
 
     tracers <- mkTracers (ncTraceConfig nc) trace nodeKernelData
 
-    peersThread <- Async.async $ handlePeersListSimple trace nodeKernelData
-    handleSimpleNode p trace tracers nc (setNodeKernel nodeKernelData)
-    Async.uninterruptibleCancel peersThread
+    Async.withAsync (handlePeersListSimple trace nodeKernelData)
+        $ \_peerLogingThread ->
+          -- We ignore peer loging thread if it dies, but it will be killed
+          -- when 'handleSimpleNode' terminates.
+          handleSimpleNode p trace tracers nc (setNodeKernel nodeKernelData)
+          `finally`
+          shutdownLoggingLayer loggingLayer
 
-    shutdownLoggingLayer loggingLayer
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
 logTracingVerbosity nc tracer =
