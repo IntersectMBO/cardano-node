@@ -1516,11 +1516,19 @@ pTxLowerBound =
 pTxUpperBound :: Parser SlotNo
 pTxUpperBound =
   SlotNo <$>
-    Opt.option Opt.auto
-      (  Opt.long "upper-bound"
-      <> Opt.metavar "SLOT"
-      <> Opt.help "Time that transaction is valid until (in slots)."
-      )
+    ( Opt.option Opt.auto
+        (  Opt.long "upper-bound"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time that transaction is valid until (in slots)."
+        )
+    <|>
+      Opt.option Opt.auto
+        (  Opt.long "ttl"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time to live (in slots) (deprecated; use --upper-bound instead)."
+        )
+    )
+
 pTxFee :: Parser Lovelace
 pTxFee =
   Lovelace . (fromIntegral :: Natural -> Integer) <$>
