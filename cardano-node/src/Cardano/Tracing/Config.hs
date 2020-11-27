@@ -40,6 +40,7 @@ type TraceChainSyncClient = ("TraceChainSyncClient" :: Symbol)
 type TraceChainSyncBlockServer = ("TraceChainSyncBlockServer" :: Symbol)
 type TraceChainSyncHeaderServer = ("TraceChainSyncHeaderServer" :: Symbol)
 type TraceChainSyncProtocol = ("TraceChainSyncProtocol" :: Symbol)
+type TraceDiffusionInitialization = ("TraceDiffusionInitialization" :: Symbol)
 type TraceDnsResolver = ("TraceDnsResolver" :: Symbol)
 type TraceDnsSubscription = ("TraceDnsSubscription" :: Symbol)
 type TraceErrorPolicy = ("TraceErrorPolicy" :: Symbol)
@@ -86,6 +87,7 @@ data TraceSelection
   , traceChainSyncClient :: OnOff TraceChainSyncClient
   , traceChainSyncHeaderServer :: OnOff TraceChainSyncHeaderServer
   , traceChainSyncProtocol :: OnOff TraceChainSyncProtocol
+  , traceDiffusionInitialization :: OnOff TraceDiffusionInitialization
   , traceDnsResolver :: OnOff TraceDnsResolver
   , traceDnsSubscription :: OnOff TraceDnsSubscription
   , traceErrorPolicy :: OnOff TraceErrorPolicy
@@ -134,6 +136,8 @@ traceConfigParser v =
       chainSyncHeaderServer = OnOff False
       chainSyncProtocol :: OnOff TraceChainSyncProtocol
       chainSyncProtocol = OnOff False
+      diffusionInitialization :: OnOff TraceDiffusionInitialization
+      diffusionInitialization = OnOff False
       dnsResolver :: OnOff TraceDnsResolver
       dnsResolver = OnOff False
       dnsSubscription :: OnOff TraceDnsSubscription
@@ -188,6 +192,7 @@ traceConfigParser v =
     <*> v .:? getName chainSyncClient .!= chainSyncClient
     <*> v .:? getName chainSyncHeaderServer .!= chainSyncHeaderServer
     <*> v .:? getName chainSyncProtocol .!= chainSyncProtocol
+    <*> v .:? getName diffusionInitialization .!= diffusionInitialization
     <*> v .:? getName dnsResolver .!= dnsResolver
     <*> v .:? getName dnsSubscription .!= dnsSubscription
     <*> v .:? getName errorPolicy .!=  errorPolicy

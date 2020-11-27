@@ -27,18 +27,18 @@ import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
-                     ForgeStateInfo, ForgeStateUpdateError)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
+                     ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
-                     OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraLedgerError (..),
+                     OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
+                     OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
                      OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
-                     OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..), mkEraMismatch)
+                     mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import           Ouroboros.Consensus.HardFork.History.EraParams
-                   (EraParams (..), SafeZone)
+import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)

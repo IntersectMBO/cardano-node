@@ -157,6 +157,9 @@ TraceChainSyncHeaderServer: False
 # Trace ChainSync protocol messages.
 TraceChainSyncProtocol: True
 
+# Trace diffusion initialization messages
+TraceDiffusionInitialization: True
+
 # Trace DNS Resolver messages.
 TraceDNSResolver: False
 

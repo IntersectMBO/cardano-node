@@ -92,6 +92,8 @@ import           Cardano.Tracing.Queries
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
 
+import qualified Ouroboros.Network.Diffusion as ND
+
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
 
@@ -120,6 +122,7 @@ data Tracers peer localPeer blk = Tracers
   , muxTracer :: Tracer IO (WithMuxBearer peer MuxTrace)
   , handshakeTracer :: Tracer IO NtN.HandshakeTr
   , localHandshakeTracer :: Tracer IO NtC.HandshakeTr
+  , diffusionInitializationTracer :: Tracer IO ND.DiffusionInitializationTracer
   }
 
 data ForgeTracers = ForgeTracers
@@ -152,6 +155,7 @@ nullTracers = Tracers
   , muxTracer = nullTracer
   , handshakeTracer = nullTracer
   , localHandshakeTracer = nullTracer
+  , diffusionInitializationTracer = nullTracer
   }
 
 
@@ -297,6 +301,7 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
     , muxTracer = tracerOnOff (traceMux trSel) verb "Mux" tr
     , handshakeTracer = tracerOnOff (traceHandshake trSel) verb "Handshake" tr
     , localHandshakeTracer = tracerOnOff (traceLocalHandshake trSel) verb "LocalHandshake" tr
+    , diffusionInitializationTracer = tracerOnOff (traceDiffusionInitialization trSel) verb "DiffusionInitializationTracer" tr
     }
  where
    verb :: TracingVerbosity
@@ -342,6 +347,7 @@ mkTracers TracingOff _ _ =
     , muxTracer = nullTracer
     , handshakeTracer = nullTracer
     , localHandshakeTracer = nullTracer
+    , diffusionInitializationTracer = nullTracer
     }
 
 --------------------------------------------------------------------------------
