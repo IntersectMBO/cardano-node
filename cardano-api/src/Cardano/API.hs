@@ -18,6 +18,8 @@ module Cardano.API (
     MaryEra,
     CardanoEra(..),
     IsCardanoEra(..),
+    AnyCardanoEra(..),
+    anyCardanoEra,
     InAnyCardanoEra(..),
 
     -- ** Shelley-based eras
