@@ -305,6 +305,9 @@ module Cardano.API (
     FromJSON,
     serialiseToJSON,
     deserialiseFromJSON,
+    JsonDecodeError(..),
+    readFileJSON,
+    writeFileJSON,
 
     -- ** Bech32
     SerialiseAsBech32,

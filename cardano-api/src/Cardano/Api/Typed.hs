@@ -344,6 +344,9 @@ module Cardano.Api.Typed (
     FromJSON,
     serialiseToJSON,
     deserialiseFromJSON,
+    JsonDecodeError(..),
+    readFileJSON,
+    writeFileJSON,
 
     -- ** Bech32
     SerialiseAsBech32,
