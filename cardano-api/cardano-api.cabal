@@ -170,6 +170,7 @@ test-suite cardano-api-test
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
+                        Test.Cardano.Api.Genesis
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.MetaData
                         Test.Cardano.Api.Typed.Bech32
