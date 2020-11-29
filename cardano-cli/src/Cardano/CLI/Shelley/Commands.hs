@@ -161,7 +161,7 @@ renderKeyCmd cmd =
 
 data TransactionCmd
   = TxBuildRaw
-      UseCardanoEra
+      AnyCardanoEra
       [TxIn]
       [TxOutAnyEra]
       (Maybe Value)

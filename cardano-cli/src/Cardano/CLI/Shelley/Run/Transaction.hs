@@ -64,10 +64,10 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxSubmitErrorAllegra !(ApplyTxErr (ShelleyBlock StandardAllegra))
   | ShelleyTxCmdTxSubmitErrorMary !(ApplyTxErr (ShelleyBlock StandardMary))
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
-  | ShelleyTxCmdTxFeatureMismatch UseCardanoEra TxFeature
+  | ShelleyTxCmdTxFeatureMismatch AnyCardanoEra TxFeature
   | ShelleyTxCmdTxBodyError SomeTxBodyError
   | ShelleyTxCmdNotImplemented Text
-  | ShelleyTxCmdWitnessEraMismatch UseCardanoEra UseCardanoEra WitnessFile
+  | ShelleyTxCmdWitnessEraMismatch AnyCardanoEra AnyCardanoEra WitnessFile
   deriving Show
 
 data SomeTxBodyError where
@@ -119,7 +119,8 @@ renderShelleyTxCmdError err =
       "An explicit transaction fee must be specified for " <>
       renderEra era <> " era transactions."
 
-    ShelleyTxCmdTxFeatureMismatch UseShelleyEra TxFeatureValidityNoUpperBound ->
+    ShelleyTxCmdTxFeatureMismatch (AnyCardanoEra ShelleyEra)
+                                  TxFeatureValidityNoUpperBound ->
       "A TTL must be specified for Shelley era transactions."
 
     ShelleyTxCmdTxFeatureMismatch era feature ->
@@ -137,11 +138,11 @@ renderShelleyTxCmdError err =
       "The transaction is for the " <> renderEra era <> " era, but the " <>
       "witness in " <> show file <> " is for the " <> renderEra era' <> " era."
 
-renderEra :: UseCardanoEra -> Text
-renderEra UseByronEra   = "Byron"
-renderEra UseShelleyEra = "Shelley"
-renderEra UseAllegraEra = "Allegra"
-renderEra UseMaryEra    = "Mary"
+renderEra :: AnyCardanoEra -> Text
+renderEra (AnyCardanoEra ByronEra)   = "Byron"
+renderEra (AnyCardanoEra ShelleyEra) = "Shelley"
+renderEra (AnyCardanoEra AllegraEra) = "Allegra"
+renderEra (AnyCardanoEra MaryEra)    = "Mary"
 
 renderFeature :: TxFeature -> Text
 renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"
@@ -196,7 +197,7 @@ runTransactionCmd cmd =
 --
 
 runTxBuildRaw
-  :: UseCardanoEra
+  :: AnyCardanoEra
   -> [Api.TxIn]
   -> [TxOutAnyEra]
   -> Maybe SlotNo
@@ -215,36 +216,33 @@ runTxBuildRaw
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw useEra txins txouts mLowerBound
+runTxBuildRaw (AnyCardanoEra era) txins txouts mLowerBound
               mUpperBound mFee mValue
               certFiles withdrawals
               metadataSchema scriptFiles
               metadataFiles mUpdatePropFile
-              (TxBodyFile fpath) =
+              (TxBodyFile fpath) = do
 
-    withCardanoEra useEra $ \era -> do
+    txBodyContent <-
+      TxBodyContent
+        <$> validateTxIns  era txins
+        <*> validateTxOuts era txouts
+        <*> validateTxFee  era mFee
+        <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
+                 <*> validateTxValidityUpperBound era mUpperBound)
+        <*> validateTxMetadataInEra  era metadataSchema metadataFiles
+        <*> validateTxAuxScripts     era scriptFiles
+        <*> validateTxWithdrawals    era withdrawals
+        <*> validateTxCertificates   era certFiles
+        <*> validateTxUpdateProposal era mUpdatePropFile
+        <*> validateTxMintValue      era mValue
 
-      txBodyContent <-
-        TxBodyContent
-          <$> validateTxIns  era txins
-          <*> validateTxOuts era txouts
-          <*> validateTxFee  era mFee
-          <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
-                   <*> validateTxValidityUpperBound era mUpperBound)
-          <*> validateTxMetadataInEra  era metadataSchema metadataFiles
-          <*> validateTxAuxScripts     era scriptFiles
-          <*> validateTxWithdrawals    era withdrawals
-          <*> validateTxCertificates   era certFiles
-          <*> validateTxUpdateProposal era mUpdatePropFile
-          <*> validateTxMintValue      era mValue
+    txBody <-
+      firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError) . hoistEither $
+        makeTransactionBody txBodyContent
 
-      txBody <- firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError)
-              . hoistEither
-              $ makeTransactionBody txBodyContent
-
-      firstExceptT ShelleyTxCmdWriteFileError
-        . newExceptT
-        $ Api.writeFileTextEnvelope fpath Nothing txBody
+    firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+      Api.writeFileTextEnvelope fpath Nothing txBody
 
 
 -- ----------------------------------------------------------------------------
@@ -274,13 +272,7 @@ txFeatureMismatch :: CardanoEra era
                   -> TxFeature
                   -> ExceptT ShelleyTxCmdError IO a
 txFeatureMismatch era feature =
-    left (ShelleyTxCmdTxFeatureMismatch (untypedCardanoEra era) feature)
-
-untypedCardanoEra :: CardanoEra era -> UseCardanoEra
-untypedCardanoEra ByronEra   = UseByronEra
-untypedCardanoEra ShelleyEra = UseShelleyEra
-untypedCardanoEra AllegraEra = UseAllegraEra
-untypedCardanoEra MaryEra    = UseMaryEra
+    left (ShelleyTxCmdTxFeatureMismatch (anyCardanoEra era) feature)
 
 validateTxIns :: CardanoEra era
               -> [TxIn]
@@ -867,8 +859,8 @@ runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
         [ do InAnyCardanoEra era' witness <- readFileWitness file
              case testEquality era era' of
                Nothing   -> left $ ShelleyTxCmdWitnessEraMismatch
-                                     (untypedCardanoEra era)
-                                     (untypedCardanoEra era')
+                                     (AnyCardanoEra era)
+                                     (AnyCardanoEra era')
                                      witnessFile
                Just Refl -> return witness
         | witnessFile@(WitnessFile file) <- witnessFiles ]
