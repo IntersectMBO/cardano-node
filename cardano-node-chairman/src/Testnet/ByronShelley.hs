@@ -200,7 +200,9 @@ testnet testnetOptions H.Conf {..} = do
 
   -- stuff
   void . H.execCli $
-    [ "genesis"
+    [ "byron"
+    , "genesis"
+    , "genesis"
     , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
     , "--k", show @Int securityParam

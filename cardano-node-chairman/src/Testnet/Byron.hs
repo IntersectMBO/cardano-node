@@ -74,7 +74,9 @@ testnet H.Conf {..} = do
 
   -- Generate keys
   void $ H.execCli
-    [ "genesis"
+    [ "byron"
+    , "genesis"
+    , "genesis"
     , "--genesis-output-dir", tempAbsPath </> "genesis"
     , "--start-time", showUTCTimeSeconds startTime
     , "--protocol-parameters-file", tempAbsPath </> "protocol-params.json"
