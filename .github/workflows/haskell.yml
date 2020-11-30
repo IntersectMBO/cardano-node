@@ -22,9 +22,12 @@ jobs:
     - name: Select build directory
       run: echo "CABAL_BUILDDIR=dist" >> $GITHUB_ENV
 
+    - name: Add build script path
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
+
     - name: Install pkgconfiglite
       if: matrix.os == 'windows-latest'
-      run: choco install -y pkgconfiglite
+      run: retry 2 choco install -y pkgconfiglite
 
     - name: Install libsodium
       if: matrix.os == 'windows-latest'
@@ -88,25 +91,23 @@ jobs:
         restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
 
     - name: Install dependencies
-      run: |
-        cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies &&
-        cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
+      run: retry 2 cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
 
     - name: Build
-      run: |
-        cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR" &&
-        cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR"
+      run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR"
 
     - name: Git clone
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
 
     - name: Run tests
-      run: TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" cabal test --builddir="$CABAL_BUILDDIR" cardano-node-chairman
+      run: TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" retry 2 cabal test --builddir="$CABAL_BUILDDIR" cardano-node-chairman
 
     - name: Delete socket files in preparation for upload artifacts
       if: ${{ always() }}
       run: |
-        find "${{ runner.temp }}/chairman/" -type s -exec rm -f {} \;
+        if [ -d "${{ runner.temp }}/chairman" ]; then
+          find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
+        fi
 
     - uses: actions/upload-artifact@v2
       if: ${{ always() }}

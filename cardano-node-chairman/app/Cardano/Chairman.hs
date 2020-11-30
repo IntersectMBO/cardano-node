@@ -11,6 +11,7 @@
 
 module Cardano.Chairman (chairmanTest) where
 
+
 import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
 import           Cardano.Node.Types (SocketPath (..))
 import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show, throwIO)
@@ -18,7 +19,6 @@ import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
 import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Monad.Class.MonadThrow
-import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 import           Data.ByteString.Lazy (ByteString)
