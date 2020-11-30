@@ -598,17 +598,11 @@ data SomeWitness
   | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
   | AShelleyScript              ScriptInAnyLang
 
--- | Error deserialising a JSON-encoded script.
-newtype ScriptJsonDecodeError = ScriptJsonDecodeError String
-  deriving Show
-
-instance Error ScriptJsonDecodeError where
-  displayError (ScriptJsonDecodeError errStr) = errStr
 
 -- | Error reading the data required to construct a key witness.
 data ReadWitnessSigningDataError
   = ReadWitnessSigningDataSigningKeyDecodeError !(FileError InputDecodeError)
-  | ReadWitnessSigningDataScriptError !(FileError ScriptJsonDecodeError)
+  | ReadWitnessSigningDataScriptError !(FileError JsonDecodeError)
   | ReadWitnessSigningDataSigningKeyAndAddressMismatch
   -- ^ A Byron address was specified alongside a non-Byron signing key.
   deriving Show
@@ -627,14 +621,9 @@ renderReadWitnessSigningDataError err =
 readWitnessSigningData
   :: WitnessSigningData
   -> ExceptT ReadWitnessSigningDataError IO SomeWitness
-readWitnessSigningData (ScriptWitnessSigningData (ScriptFile fp)) = do
-  msJson <- handleIOExceptT (ReadWitnessSigningDataScriptError . FileIOError fp)
-    $ LBS.readFile fp
-
-  hoistEither $ bimap
-    (ReadWitnessSigningDataScriptError . FileError fp . ScriptJsonDecodeError)
-    AShelleyScript
-    (Aeson.eitherDecode' msJson)
+readWitnessSigningData (ScriptWitnessSigningData (ScriptFile fp)) =
+    firstExceptT ReadWitnessSigningDataScriptError $
+      AShelleyScript <$> readFileScriptInAnyLang fp
 
 readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
     res <- firstExceptT ReadWitnessSigningDataSigningKeyDecodeError
