@@ -249,20 +249,46 @@ module Cardano.API (
 
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
-    -- Shelley supports multi-signatures via scripts.
-    Script(SimpleScript),
+
+    -- ** Script languages
+    SimpleScriptV1,
+    SimpleScriptV2,
+    ScriptLanguage(..),
+    SimpleScriptVersion(..),
+    PlutusScriptVersion,
+    AnyScriptLanguage(..),
+    IsScriptLanguage(..),
+    IsSimpleScriptLanguage(..),
+
+    -- ** Scripts in a specific language
+    Script(..),
+
+    -- ** Scripts in any language
+    ScriptInAnyLang(..),
+    toScriptInAnyLang,
+
+    -- ** Scripts in a specific era
+    ScriptInEra(..),
+    toScriptInEra,
+    eraOfScriptInEra,
+
+    -- *** Languages supported in each era
+    ScriptLanguageInEra(..),
+    scriptLanguageSupportedInEra,
+    languageOfScriptLanguageInEra,
+    eraOfScriptLanguageInEra,
+
+    -- ** Simple scripts
+    -- | Making multi-signature and time-lock scripts.
+    SimpleScript(..),
+    TimeLocksSupported(..),
+    timeLocksSupported,
+    adjustSimpleScriptVersion,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
     ScriptHash,
-    scriptHash,
-
-    -- ** Multi-signature scripts
-    -- | Making multi-signature scripts.
-    SimpleScript(..),
-    ScriptFeatureInEra(..),
-    SignatureFeature,
-    TimeLocksFeature,
+    hashScript,
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.

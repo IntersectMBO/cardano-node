@@ -11,15 +11,15 @@ module Cardano.CLI.Shelley.Run.Address
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
-import           Prelude (String)
 
-import           Data.Aeson
+import           Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
+import           Control.Monad.Trans.Except.Extra
+                   (firstExceptT, handleIOExceptT, hoistEither, newExceptT)
 
 import           Cardano.Api.Typed
 
@@ -213,13 +213,24 @@ runAddressBuildScript
   -> Maybe OutputFile
   -> ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildScript (ScriptFile fp) nId mOutFp = do
-  scriptLB <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp)
-                $ LB.readFile fp
-  script <- case eitherDecode scriptLB :: Either String (MultiSigScript ShelleyEra) of
-               Right mss -> return $ makeMultiSigScript mss
-               Left err -> left . ShelleyAddressCmdAesonDecodeError fp $ Text.pack err
-  let payCred = PaymentCredentialByScript $ scriptHash script
-      scriptAddr = serialiseAddress $ makeShelleyAddress nId payCred NoStakeAddress
-  case mOutFp of
-    Just (OutputFile oFp) -> liftIO $ Text.writeFile oFp scriptAddr
-    Nothing -> liftIO $ Text.putStr scriptAddr
+  scriptBytes <-
+    handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp) $
+      LBS.readFile fp
+  ScriptInAnyLang _lang script <-
+    firstExceptT (ShelleyAddressCmdAesonDecodeError fp . Text.pack) $
+    hoistEither $
+      Aeson.eitherDecode scriptBytes
+
+  let payCred = PaymentCredentialByScript (hashScript script)
+
+      scriptAddr :: Address ShelleyAddr
+      scriptAddr = makeShelleyAddress nId payCred NoStakeAddress
+                   --TODO: add support for referring to stake addresses
+
+      scriptAddrText :: Text
+      scriptAddrText = serialiseAddress scriptAddr
+
+  liftIO $ case mOutFp of
+    Just (OutputFile oFp) -> Text.writeFile oFp scriptAddrText
+    Nothing               -> Text.putStr        scriptAddrText
+

@@ -1,47 +1,60 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Api.Script (
-    Script
-      ( SimpleScript
-      , ShelleyScript
-      , AllegraScript
-      , MaryScript
-      )
-  , ScriptHash(..)
-  , parseScript
-  , parseScriptAny
-  , parseScriptAll
-  , parseScriptAtLeast
-  , parseScriptSig
-  , scriptHash
-  , SimpleScript(..)
-  , ScriptFeatureInEra(..)
-  , SignatureFeature
-  , TimeLocksFeature
-  , HasScriptFeatures
-  , coerceSimpleScriptEra
+    -- * Languages
+    SimpleScriptV1,
+    SimpleScriptV2,
+    ScriptLanguage(..),
+    SimpleScriptVersion(..),
+    PlutusScriptVersion,
+    AnyScriptLanguage(..),
+    IsScriptLanguage(..),
+    IsSimpleScriptLanguage(..),
 
-    -- * Deprecated aliases
-  , MultiSigScript
-  , makeMultiSigScript
+    -- * Scripts in a specific language
+    Script(..),
+
+    -- * Scripts in any language
+    ScriptInAnyLang(..),
+    toScriptInAnyLang,
+
+    -- * Scripts in an era
+    ScriptInEra(..),
+    toScriptInEra,
+    eraOfScriptInEra,
+
+    -- ** Languages supported in each era
+    ScriptLanguageInEra(..),
+    scriptLanguageSupportedInEra,
+    languageOfScriptLanguageInEra,
+    eraOfScriptLanguageInEra,
+
+    -- * The simple script language
+    SimpleScript(..),
+    TimeLocksSupported(..),
+    timeLocksSupported,
+    adjustSimpleScriptVersion,
+
+    -- * Script hashes
+    ScriptHash(..),
+    hashScript,
 
     -- * Internal conversion functions
-  , toShelleyScriptHash
-  , fromShelleyScriptHash
+    toShelleyScript,
+    toShelleyMultiSig,
+    fromShelleyMultiSig,
+    toAllegraTimelock,
+    fromAllegraTimelock,
+    toShelleyScriptHash,
+    fromShelleyScriptHash,
 
     -- * Data family instances
-  , AsType(..)
+    AsType(..)
   ) where
 
 import           Prelude
@@ -53,6 +66,7 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Type.Equality (TestEquality(..), (:~:)(Refl))
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -65,21 +79,20 @@ import           Control.Applicative
 import           Control.Monad
 
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Prelude as CBOR (cborError)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.Slotting.Slot (SlotNo)
 
-import qualified Cardano.Ledger.Core as Shelley
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era  as Ledger
 
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras
-                   (StandardAllegra, StandardMary, StandardShelley,
-                    StandardCrypto)
+                   (StandardAllegra, StandardCrypto, StandardShelley)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
-import qualified Shelley.Spec.Ledger.Tx as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
@@ -90,74 +103,421 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 
-import qualified Cardano.Api.Shelley.Serialisation.Legacy as Legacy
-
 {- HLINT ignore "Use section" -}
+
+
+-- ----------------------------------------------------------------------------
+-- Types for script language and version
+--
+
+-- | The original simple script language which supports
+--
+-- * require a signature from a given key (by verification key hash)
+-- * n-way and combinator
+-- * n-way or combinator
+-- * m-of-n combinator
+--
+-- This version of the language was introduced in the 'ShelleyEra'.
+--
+data SimpleScriptV1
+
+-- | The second version of the simple script language. It has all the features
+-- of 'SimpleScriptV1' plus new atomic predicates:
+--
+-- * require the time be before a given slot number
+-- * require the time be after a given slot number
+--
+-- This version of the language was introduced in the 'AllegraEra'.
+--
+data SimpleScriptV2
+
+-- | Place holder type to show what the pattern is to extend to multiple
+-- languages, not just multiple versions of a single language.
+--
+data PlutusScriptV1
+
+instance HasTypeProxy SimpleScriptV1 where
+    data AsType SimpleScriptV1 = AsSimpleScriptV1
+    proxyToAsType _ = AsSimpleScriptV1
+
+instance HasTypeProxy SimpleScriptV2 where
+    data AsType SimpleScriptV2 = AsSimpleScriptV2
+    proxyToAsType _ = AsSimpleScriptV2
+
+instance HasTypeProxy PlutusScriptV1 where
+    data AsType PlutusScriptV1 = AsPlutusScriptV1
+    proxyToAsType _ = AsPlutusScriptV1
+
+
+-- ----------------------------------------------------------------------------
+-- Value level representation for script languages
+--
+data ScriptLanguage lang where
+
+     SimpleScriptLanguage :: SimpleScriptVersion lang -> ScriptLanguage lang
+
+     PlutusScriptLanguage :: PlutusScriptVersion lang -> ScriptLanguage lang
+
+deriving instance (Eq   (ScriptLanguage lang))
+deriving instance (Show (ScriptLanguage lang))
+
+instance TestEquality ScriptLanguage where
+    testEquality (SimpleScriptLanguage lang)
+                 (SimpleScriptLanguage lang') = testEquality lang lang'
+
+    testEquality (PlutusScriptLanguage lang)
+                 (PlutusScriptLanguage lang') = testEquality lang lang'
+
+    testEquality  _ _ = Nothing
+
+
+data SimpleScriptVersion lang where
+
+     SimpleScriptV1 :: SimpleScriptVersion SimpleScriptV1
+     SimpleScriptV2 :: SimpleScriptVersion SimpleScriptV2
+
+deriving instance (Eq   (SimpleScriptVersion lang))
+deriving instance (Show (SimpleScriptVersion lang))
+
+instance TestEquality SimpleScriptVersion where
+    testEquality SimpleScriptV1 SimpleScriptV1 = Just Refl
+    testEquality SimpleScriptV2 SimpleScriptV2 = Just Refl
+    testEquality _              _              = Nothing
+
+
+data PlutusScriptVersion lang
+  -- For now, there are no such versions, but it'd be like this:
+  -- PlutusScriptV1 :: PlutusScriptVersion PlutusScriptV1
+
+deriving instance (Eq   (PlutusScriptVersion lang))
+deriving instance (Show (PlutusScriptVersion lang))
+
+instance TestEquality PlutusScriptVersion where
+    testEquality lang = case lang of {}
+
+
+data AnyScriptLanguage where
+     AnyScriptLanguage :: ScriptLanguage lang -> AnyScriptLanguage
+
+deriving instance (Show AnyScriptLanguage)
+
+instance Eq AnyScriptLanguage where
+    AnyScriptLanguage lang == AnyScriptLanguage lang' =
+      case testEquality lang lang' of
+        Nothing   -> False
+        Just Refl -> True -- since no constructors share types
+
+instance Enum AnyScriptLanguage where
+    toEnum 0 = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)
+    toEnum 1 = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+    toEnum _ = error "AnyScriptLanguage.toEnum: bad argument"
+
+    fromEnum (AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)) = 0
+    fromEnum (AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)) = 1
+    fromEnum (AnyScriptLanguage (PlutusScriptLanguage lang)) = case lang of {}
+
+instance Bounded AnyScriptLanguage where
+    minBound = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)
+    maxBound = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+
+
+class HasTypeProxy lang => IsScriptLanguage lang where
+    scriptLanguage :: ScriptLanguage lang
+
+instance IsScriptLanguage SimpleScriptV1 where
+    scriptLanguage = SimpleScriptLanguage SimpleScriptV1
+
+instance IsScriptLanguage SimpleScriptV2 where
+    scriptLanguage = SimpleScriptLanguage SimpleScriptV2
+
+--instance IsScriptLanguage PlutusScriptV1 where
+--    scriptLanguage = PlutusScriptLanguage PlutusScriptV1
+
+
+class IsScriptLanguage lang => IsSimpleScriptLanguage lang where
+    simpleScriptVersion :: SimpleScriptVersion lang
+
+instance IsSimpleScriptLanguage SimpleScriptV1 where
+    simpleScriptVersion = SimpleScriptV1
+
+instance IsSimpleScriptLanguage SimpleScriptV2 where
+    simpleScriptVersion = SimpleScriptV2
+
 
 
 -- ----------------------------------------------------------------------------
 -- Script type: covering all script languages
 --
 
-data Script era where
+-- | A script in a particular language.
+--
+-- See also 'ScriptInAnyLang' for a script in any of the languages that is available within
+-- a particular era.
+--
+-- See also 'ScriptInEra' for a script in a language that is available within
+-- a particular era.
+--
+data Script lang where
 
-     ShelleyScript :: Shelley.Script StandardShelley    -> Script ShelleyEra
-     AllegraScript :: Timelock.Timelock StandardAllegra -> Script AllegraEra
-     MaryScript    :: Timelock.Timelock StandardMary    -> Script MaryEra
+     SimpleScript :: !(SimpleScriptVersion lang)
+                  -> !(SimpleScript lang)
+                  -> Script lang
 
-deriving stock instance (Eq   (Script era))
-deriving stock instance (Show (Script era))
+     -- Place holder type to show what the pattern is to extend to multiple
+     -- languages, not just multiple versions of a single language.
+     -- For now there are no values of PlutusScriptVersion so this branch
+     -- is inaccessible.
+     PlutusScript :: !(PlutusScriptVersion lang)
+                  -> ()
+                  -> Script lang
 
-pattern SimpleScript :: HasScriptFeatures era
-                     => SimpleScript era -> Script era
-pattern SimpleScript s <- (scriptToSimpleScript -> s) where
-    SimpleScript = simpleScriptToScript
+deriving instance (Eq   (Script lang))
+deriving instance (Show (Script lang))
 
-{-# COMPLETE SimpleScript #-}
+instance HasTypeProxy lang => HasTypeProxy (Script lang) where
+    data AsType (Script lang) = AsScript (AsType lang)
+    proxyToAsType _ = AsScript (proxyToAsType (Proxy :: Proxy lang))
 
-instance HasTypeProxy era => HasTypeProxy (Script era) where
-    data AsType (Script era) = AsScript (AsType era)
-    proxyToAsType _ = AsScript (proxyToAsType (Proxy :: Proxy era))
+instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
+    serialiseToCBOR (SimpleScript SimpleScriptV1 s) =
+      CBOR.serialize' (toShelleyMultiSig s)
 
-instance SerialiseAsCBOR (Script ShelleyEra) where
-    serialiseToCBOR (ShelleyScript s) =
-      -- We use 'WrappedMultiSig' here to support the legacy binary
-      -- serialisation format for the @Script@ type from
-      -- @cardano-ledger-specs@.
+    serialiseToCBOR (SimpleScript SimpleScriptV2 s) =
+      CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock StandardAllegra)
+
+    deserialiseFromCBOR _ bs =
+      case scriptLanguage :: ScriptLanguage lang of
+        SimpleScriptLanguage SimpleScriptV1 ->
+              SimpleScript SimpleScriptV1
+            . fromShelleyMultiSig
+          <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+        SimpleScriptLanguage SimpleScriptV2 ->
+              SimpleScript SimpleScriptV2
+            . (fromAllegraTimelock TimeLocksInSimpleScriptV2
+                                :: Timelock.Timelock StandardAllegra
+                                -> SimpleScript SimpleScriptV2)
+          <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+
+        PlutusScriptLanguage v -> case v of {}
+
+
+instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
+    textEnvelopeType _ =
+      case scriptLanguage :: ScriptLanguage lang of
+        SimpleScriptLanguage SimpleScriptV1 -> "SimpleScriptV1"
+        SimpleScriptLanguage SimpleScriptV2 -> "SimpleScriptV2"
+        PlutusScriptLanguage v -> case v of {}
+
+
+-- ----------------------------------------------------------------------------
+-- Scripts in any language
+--
+
+-- | Sometimes it is necessary to handle all languages without making static
+-- type distinctions between languages. For example, when reading external
+-- input, or before the era context is known.
+--
+-- Use 'toScriptInEra' to convert to a script in the context of an era.
+--
+data ScriptInAnyLang where
+     ScriptInAnyLang :: ScriptLanguage lang
+                     -> Script lang
+                     -> ScriptInAnyLang
+
+deriving instance Show ScriptInAnyLang
+
+-- The GADT in the ScriptInAnyLang constructor requires a custom Eq instance
+instance Eq ScriptInAnyLang where
+    (==) (ScriptInAnyLang lang  script)
+         (ScriptInAnyLang lang' script') =
+      case testEquality lang lang' of
+        Nothing   -> False
+        Just Refl -> script == script'
+
+
+-- | Convert a script in a specific statically-known language to a
+-- 'ScriptInAnyLang'.
+--
+-- No inverse to this is provided, just do case analysis on the 'ScriptLanguage'
+-- field within the 'ScriptInAnyLang' constructor.
+--
+toScriptInAnyLang :: Script lang -> ScriptInAnyLang
+toScriptInAnyLang s@(SimpleScript v _) =
+    ScriptInAnyLang (SimpleScriptLanguage v) s
+
+instance HasTypeProxy ScriptInAnyLang where
+    data AsType ScriptInAnyLang = AsScriptInAnyLang
+    proxyToAsType _ = AsScriptInAnyLang
+
+instance SerialiseAsCBOR ScriptInAnyLang where
+
+    serialiseToCBOR (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
+                                     (SimpleScript _v s)) =
+      -- Note that the CBOR encoding here is compatible with the previous
+      -- serialisation format for the @Script@ type from @cardano-ledger-specs@.
       --
-      -- See the documentation of 'WrappedMultiSig' for more information.
-      CBOR.serialize' (Legacy.WrappedMultiSig s)
+      CBOR.serializeEncoding' $
+          CBOR.encodeListLen 2
+       <> CBOR.encodeWord 0
+       <> toCBOR (toShelleyMultiSig s)
 
-    deserialiseFromCBOR (AsScript AsShelleyEra) bs =
-      -- We use 'WrappedMultiSig' here to support the legacy binary
-      -- serialisation format for the @Script@ type from
-      -- @cardano-ledger-specs@.
-      --
-      -- See the documentation of 'WrappedMultiSig' for more information.
-      ShelleyScript . Legacy.unWrappedMultiSig <$>
-        CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+    serialiseToCBOR (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
+                                     (SimpleScript _v s)) =
+      CBOR.serializeEncoding' $
+          CBOR.encodeListLen 2
+       <> CBOR.encodeWord 1
+       <> toCBOR (toAllegraTimelock s :: Timelock.Timelock StandardAllegra)
 
-instance HasTextEnvelope (Script ShelleyEra) where
+    serialiseToCBOR (ScriptInAnyLang (PlutusScriptLanguage v) _) = case v of {}
+
+    deserialiseFromCBOR AsScriptInAnyLang bs =
+        CBOR.decodeAnnotator "Script" decodeScript (LBS.fromStrict bs)
+      where
+        decodeScript :: CBOR.Decoder s (CBOR.Annotator ScriptInAnyLang)
+        decodeScript = do
+          CBOR.decodeListLenOf 2
+          tag <- CBOR.decodeWord8
+
+          case tag of
+            0 -> fmap (fmap convert) fromCBOR
+              where
+                convert :: Shelley.MultiSig StandardShelley -> ScriptInAnyLang
+                convert = ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
+                        . SimpleScript SimpleScriptV1
+                        . fromShelleyMultiSig
+
+            1 -> fmap (fmap convert) fromCBOR
+              where
+                convert :: Timelock.Timelock StandardAllegra -> ScriptInAnyLang
+                convert = ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
+                        . SimpleScript SimpleScriptV2
+                        . fromAllegraTimelock TimeLocksInSimpleScriptV2
+
+            _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag "Script" tag
+
+instance HasTextEnvelope ScriptInAnyLang where
     textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr ShelleyScript{} = "Multi-signature script"
 
-instance SerialiseAsCBOR (Script AllegraEra) where
-    serialiseToCBOR (AllegraScript s) = CBOR.serialize' s
-    deserialiseFromCBOR (AsScript AsAllegraEra) bs =
-        AllegraScript <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
-instance HasTextEnvelope (Script AllegraEra) where
-    textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr AllegraScript{} = "Simple script"
+-- ----------------------------------------------------------------------------
+-- Scripts in the context of a ledger era
+--
 
-instance SerialiseAsCBOR (Script MaryEra) where
-    serialiseToCBOR (MaryScript s) = CBOR.serialize' s
-    deserialiseFromCBOR (AsScript AsMaryEra) bs =
-        MaryScript <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
+data ScriptInEra era where
+     ScriptInEra :: ScriptLanguageInEra lang era
+                 -> Script lang
+                 -> ScriptInEra era
 
-instance HasTextEnvelope (Script MaryEra) where
-    textEnvelopeType _ = "Script"
-    textEnvelopeDefaultDescr MaryScript{} = "Simple script"
+deriving instance Show (ScriptInEra era)
+
+-- The GADT in the ScriptInEra constructor requires a custom instance
+instance Eq (ScriptInEra era) where
+    (==) (ScriptInEra langInEra  script)
+         (ScriptInEra langInEra' script') =
+      case testEquality (languageOfScriptLanguageInEra langInEra)
+                        (languageOfScriptLanguageInEra langInEra') of
+        Nothing   -> False
+        Just Refl -> script == script'
+
+
+data ScriptLanguageInEra lang era where
+
+     SimpleScriptV1InShelley :: ScriptLanguageInEra SimpleScriptV1 ShelleyEra
+     SimpleScriptV1InAllegra :: ScriptLanguageInEra SimpleScriptV1 AllegraEra
+     SimpleScriptV1InMary    :: ScriptLanguageInEra SimpleScriptV1 MaryEra
+
+     SimpleScriptV2InAllegra :: ScriptLanguageInEra SimpleScriptV2 AllegraEra
+     SimpleScriptV2InMary    :: ScriptLanguageInEra SimpleScriptV2 MaryEra
+
+deriving instance Eq   (ScriptLanguageInEra lang era)
+deriving instance Show (ScriptLanguageInEra lang era)
+
+instance HasTypeProxy era => HasTypeProxy (ScriptInEra era) where
+    data AsType (ScriptInEra era) = AsScriptInEra (AsType era)
+    proxyToAsType _ = AsScriptInEra (proxyToAsType (Proxy :: Proxy era))
+
+instance IsCardanoEra era => SerialiseAsCBOR (ScriptInEra era) where
+    serialiseToCBOR (ScriptInEra _lang s) =
+      serialiseToCBOR (toScriptInAnyLang s)
+
+    deserialiseFromCBOR (AsScriptInEra _) bs = do
+      s@(ScriptInAnyLang lang _) <- deserialiseFromCBOR AsScriptInAnyLang bs
+      case toScriptInEra cardanoEra s of
+        Just s' -> Right s'
+        Nothing ->
+          Left $ CBOR.DecoderErrorCustom
+                 (Text.pack (show (cardanoEra :: CardanoEra era)) <> " Script")
+                 ("Script language " <> Text.pack (show lang) <>
+                  " not supported in this era")
+
+instance IsShelleyBasedEra era => HasTextEnvelope (ScriptInEra era) where
+    textEnvelopeType _ =
+      case shelleyBasedEra :: ShelleyBasedEra era of
+        ShelleyBasedEraShelley -> "ScriptInEra ShelleyEra"
+        ShelleyBasedEraAllegra -> "ScriptInEra AllegraEra"
+        ShelleyBasedEraMary    -> "ScriptInEra MaryEra"
+
+
+-- | Check if a given script language is supported in a given era, and if so
+-- return the evidence.
+--
+scriptLanguageSupportedInEra :: CardanoEra era
+                             -> ScriptLanguage lang
+                             -> Maybe (ScriptLanguageInEra lang era)
+scriptLanguageSupportedInEra era lang =
+    case (era, lang) of
+      (ShelleyEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InShelley
+
+      (AllegraEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InAllegra
+
+      (MaryEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InMary
+
+      (AllegraEra, SimpleScriptLanguage SimpleScriptV2) ->
+        Just SimpleScriptV2InAllegra
+
+      (MaryEra, SimpleScriptLanguage SimpleScriptV2) ->
+        Just SimpleScriptV2InMary
+
+      _ -> Nothing
+
+languageOfScriptLanguageInEra :: ScriptLanguageInEra lang era
+                              -> ScriptLanguage lang
+languageOfScriptLanguageInEra langInEra =
+    case langInEra of
+      SimpleScriptV1InShelley -> SimpleScriptLanguage SimpleScriptV1
+      SimpleScriptV1InAllegra -> SimpleScriptLanguage SimpleScriptV1
+      SimpleScriptV1InMary    -> SimpleScriptLanguage SimpleScriptV1
+
+      SimpleScriptV2InAllegra -> SimpleScriptLanguage SimpleScriptV2
+      SimpleScriptV2InMary    -> SimpleScriptLanguage SimpleScriptV2
+
+eraOfScriptLanguageInEra :: ScriptLanguageInEra lang era
+                         -> ShelleyBasedEra era
+eraOfScriptLanguageInEra langInEra =
+    case langInEra of
+      SimpleScriptV1InShelley -> ShelleyBasedEraShelley
+
+      SimpleScriptV1InAllegra -> ShelleyBasedEraAllegra
+      SimpleScriptV2InAllegra -> ShelleyBasedEraAllegra
+
+      SimpleScriptV1InMary    -> ShelleyBasedEraMary
+      SimpleScriptV2InMary    -> ShelleyBasedEraMary
+
+
+-- | Given a target era and a script in some language, check if the language is
+-- supported in that era, and if so return a 'ScriptInEra'.
+--
+toScriptInEra :: CardanoEra era -> ScriptInAnyLang -> Maybe (ScriptInEra era)
+toScriptInEra era (ScriptInAnyLang lang s) = do
+    lang' <- scriptLanguageSupportedInEra era lang
+    return (ScriptInEra lang' s)
+
+eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
+eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
 
 
 -- ----------------------------------------------------------------------------
@@ -184,19 +544,26 @@ instance SerialiseAsRawBytes ScriptHash where
     deserialiseFromRawBytes AsScriptHash bs =
       ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
 
-scriptHash :: Script era -> ScriptHash
-scriptHash (ShelleyScript s) = ScriptHash (Shelley.hashScript s)
--- We're using a single monomorphic type for the script hash, and
--- arbitrarily picked the Shelley one, so we have to convert the hashes
--- from the other eras.
-scriptHash (AllegraScript s) = ScriptHash
-                             . (\(Shelley.ScriptHash sh) ->
-                                   Shelley.ScriptHash (Crypto.castHash sh))
-                             $ Timelock.hashTimelockScript s
-scriptHash (MaryScript s)    = ScriptHash
-                             . (\(Shelley.ScriptHash sh) ->
-                                   Shelley.ScriptHash (Crypto.castHash sh))
-                             $ Timelock.hashTimelockScript s
+
+hashScript :: Script lang -> ScriptHash
+hashScript (SimpleScript SimpleScriptV1 s) =
+    -- For V1, we convert to the Shelley-era version specifically and hash that.
+    -- Later ledger eras have to be compatible anyway.
+    ScriptHash
+  . Shelley.hashMultiSigScript
+  . toShelleyMultiSig
+  $ s
+
+hashScript (SimpleScript SimpleScriptV2 s) =
+    -- For V1, we convert to the Allegra-era version specifically and hash that.
+    -- Later ledger eras have to be compatible anyway.
+    ScriptHash
+  . coerceShelleyScriptHash
+  . Timelock.hashTimelockScript
+  . (toAllegraTimelock :: SimpleScript SimpleScriptV2
+                       -> Timelock.Timelock StandardAllegra)
+  $ s
+
 
 toShelleyScriptHash :: Ledger.Crypto ledgerera ~ StandardCrypto
                     => ScriptHash -> Shelley.ScriptHash ledgerera
@@ -213,119 +580,127 @@ coerceShelleyScriptHash (Shelley.ScriptHash h) =
     Shelley.ScriptHash (Crypto.castHash h)
 
 
-
 -- ----------------------------------------------------------------------------
 -- The simple native script language
 --
 
-type MultiSigScript era = SimpleScript era
+data SimpleScript lang where
 
-data SimpleScript era where
+     RequireSignature  :: !(Hash PaymentKey)
+                       -> SimpleScript lang
 
-     RequireSignature  :: !(ScriptFeatureInEra SignatureFeature era)
-                       -> !(Hash PaymentKey)
-                       -> SimpleScript era
-
-     RequireTimeBefore :: !(ScriptFeatureInEra TimeLocksFeature era)
+     RequireTimeBefore :: !(TimeLocksSupported lang)
                        -> !SlotNo
-                       -> SimpleScript era
+                       -> SimpleScript lang
 
-     RequireTimeAfter  :: !(ScriptFeatureInEra TimeLocksFeature era)
+     RequireTimeAfter  :: !(TimeLocksSupported lang)
                        -> !SlotNo
-                       -> SimpleScript era
+                       -> SimpleScript lang
 
-     RequireAllOf      ::        [SimpleScript era] -> SimpleScript era
-     RequireAnyOf      ::        [SimpleScript era] -> SimpleScript era
-     RequireMOf        :: Int -> [SimpleScript era] -> SimpleScript era
+     RequireAllOf      ::        [SimpleScript lang] -> SimpleScript lang
+     RequireAnyOf      ::        [SimpleScript lang] -> SimpleScript lang
+     RequireMOf        :: Int -> [SimpleScript lang] -> SimpleScript lang
 
-deriving instance Eq   (SimpleScript era)
-deriving instance Show (SimpleScript era)
+deriving instance Eq   (SimpleScript lang)
+deriving instance Show (SimpleScript lang)
 
 
--- | Script Features
+-- | Time lock feature in the 'SimpleScript' language.
 --
--- These are used in conjunction with the era (e.g 'Shelley', 'Allegra' etc) to
--- specify which script features are enabled in a given era.
+-- The constructors of this type serve as evidence that the timelocks feature
+-- is supported in particular versions of the language.
 --
-data ScriptFeatureInEra feature era where
-     SignaturesInShelleyEra  :: ScriptFeatureInEra SignatureFeature ShelleyEra
-     SignaturesInAllegraEra  :: ScriptFeatureInEra SignatureFeature AllegraEra
-     SignaturesInMaryEra     :: ScriptFeatureInEra SignatureFeature MaryEra
+data TimeLocksSupported lang where
+     TimeLocksInSimpleScriptV2 :: TimeLocksSupported SimpleScriptV2
 
-     TimeLocksInAllegraEra   :: ScriptFeatureInEra TimeLocksFeature AllegraEra
-     TimeLocksInMaryEra      :: ScriptFeatureInEra TimeLocksFeature MaryEra
+deriving instance Eq   (TimeLocksSupported lang)
+deriving instance Show (TimeLocksSupported lang)
 
-deriving instance Eq   (ScriptFeatureInEra feature era)
-deriving instance Show (ScriptFeatureInEra feature era)
+timeLocksSupported :: SimpleScriptVersion lang
+                   -> Maybe (TimeLocksSupported lang)
+timeLocksSupported SimpleScriptV1 = Nothing
+timeLocksSupported SimpleScriptV2 = Just TimeLocksInSimpleScriptV2
 
--- | The signature feature enables the use of 'RequireSignature' and is
--- available in the 'SimpleScript' language from 'Shelley' era onwards.
+
+-- | Try converting the 'SimpleScript' into a different version of the language.
 --
-data SignatureFeature
-
--- | The time lock feature makes it possible to make the script result depend
--- on the slot number which is a proxy for the time. Is available in the
--- 'SimpleScript' language from 'Allegra' onwards.
+-- This will work when the script only uses the features of the target language
+-- version. For example converting from 'SimpleScriptV2' to 'SimpleScriptV1'
+-- will work if the script happens not to use time locks feature. On the other
+-- hand converting 'SimpleScriptV1' to 'SimpleScriptV2' will always work because
+-- it is backwards compatible.
 --
-data TimeLocksFeature
+adjustSimpleScriptVersion :: SimpleScriptVersion lang'
+                          -> SimpleScript lang
+                          -> Maybe (SimpleScript lang')
+adjustSimpleScriptVersion target = go
+  where
+    go (RequireSignature sig) = pure (RequireSignature sig)
 
--- | Is the 'SimpleScript' language supported at all in this era?
+    go (RequireTimeBefore _ slot) = do
+      supported <- timeLocksSupported target
+      pure (RequireTimeBefore supported slot)
+
+    go (RequireTimeAfter _ slot) = do
+      supported <- timeLocksSupported target
+      pure (RequireTimeAfter supported slot)
+
+    go (RequireAllOf ss) = RequireAllOf <$> traverse go ss
+    go (RequireAnyOf ss) = RequireAnyOf <$> traverse go ss
+    go (RequireMOf m ss) = RequireMOf m <$> traverse go ss
+
+
+-- ----------------------------------------------------------------------------
+-- Conversion functions
 --
-data SimpleScriptSupportedInEra era where
-     SimpleScriptInShelleyEra :: SimpleScriptSupportedInEra ShelleyEra
-     SimpleScriptInAllegraEra :: SimpleScriptSupportedInEra AllegraEra
-     SimpleScriptInMaryEra    :: SimpleScriptSupportedInEra MaryEra
 
-class HasScriptFeatures era where
-   simpleScriptSupported :: SimpleScriptSupportedInEra era
-   hasSignatureFeature   :: Maybe (ScriptFeatureInEra SignatureFeature era)
-   hasTimeLocksFeature   :: Maybe (ScriptFeatureInEra TimeLocksFeature era)
+toShelleyScript :: ScriptInEra era -> Ledger.Script (ShelleyLedgerEra era)
+toShelleyScript (ScriptInEra langInEra (SimpleScript _ script)) =
+    case langInEra of
+      SimpleScriptV1InShelley -> toShelleyMultiSig script
 
-instance HasScriptFeatures ShelleyEra where
-   simpleScriptSupported = SimpleScriptInShelleyEra
-   hasSignatureFeature   = Just SignaturesInShelleyEra
-   hasTimeLocksFeature   = Nothing
-
-instance HasScriptFeatures AllegraEra where
-   simpleScriptSupported = SimpleScriptInAllegraEra
-   hasSignatureFeature   = Just SignaturesInAllegraEra
-   hasTimeLocksFeature   = Just TimeLocksInAllegraEra
-
-instance HasScriptFeatures MaryEra where
-   simpleScriptSupported = SimpleScriptInMaryEra
-   hasSignatureFeature   = Just SignaturesInMaryEra
-   hasTimeLocksFeature   = Just TimeLocksInMaryEra
+      SimpleScriptV1InAllegra -> toAllegraTimelock script
+      SimpleScriptV1InMary    -> toAllegraTimelock script
+      SimpleScriptV2InAllegra -> toAllegraTimelock script
+      SimpleScriptV2InMary    -> toAllegraTimelock script
 
 
---TODO: add a deprecation pragma and switch to the SimpleScript constructor
-makeMultiSigScript :: MultiSigScript ShelleyEra -> Script ShelleyEra
-makeMultiSigScript = simpleScriptToScript
+-- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
+--
+toShelleyMultiSig :: SimpleScript SimpleScriptV1
+                  -> Shelley.MultiSig StandardShelley
+toShelleyMultiSig = go
+  where
+    go :: SimpleScript SimpleScriptV1 -> Shelley.MultiSig StandardShelley
+    go (RequireSignature (PaymentKeyHash kh))
+                        = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
+    go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
+    go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
+    go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
 
-simpleScriptToScript :: forall era. HasScriptFeatures era
-                     => SimpleScript era -> Script era
-simpleScriptToScript =
-    case simpleScriptSupported :: SimpleScriptSupportedInEra era of
-      SimpleScriptInShelleyEra -> ShelleyScript . go
-        where
-          go :: SimpleScript ShelleyEra -> Shelley.MultiSig StandardShelley
-          go (RequireSignature _ (PaymentKeyHash kh))
-                              = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
-          go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
-          go (RequireAnyOf s) = Shelley.RequireAnyOf (map go s)
-          go (RequireMOf m s) = Shelley.RequireMOf m (map go s)
-
-      SimpleScriptInAllegraEra -> AllegraScript . simpleScriptToTimelock
-      SimpleScriptInMaryEra    -> MaryScript    . simpleScriptToTimelock
+-- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
+--
+fromShelleyMultiSig :: Shelley.MultiSig StandardShelley -> SimpleScript lang
+fromShelleyMultiSig = go
+  where
+    go (Shelley.RequireSignature kh)
+                                = RequireSignature
+                                    (PaymentKeyHash (Shelley.coerceKeyRole kh))
+    go (Shelley.RequireAllOf s) = RequireAllOf (map go s)
+    go (Shelley.RequireAnyOf s) = RequireAnyOf (map go s)
+    go (Shelley.RequireMOf m s) = RequireMOf m (map go s)
 
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
 --
-simpleScriptToTimelock :: (Ledger.Era ledgerera,
-                           Ledger.Crypto ledgerera ~ StandardCrypto)
-                       => SimpleScript era -> Timelock.Timelock ledgerera
-simpleScriptToTimelock = go
+toAllegraTimelock :: forall lang ledgerera.
+                     (Ledger.Era ledgerera,
+                      Ledger.Crypto ledgerera ~ StandardCrypto)
+                  => SimpleScript lang -> Timelock.Timelock ledgerera
+toAllegraTimelock = go
   where
-    go (RequireSignature _ (PaymentKeyHash kh))
+    go :: SimpleScript lang -> Timelock.Timelock ledgerera
+    go (RequireSignature (PaymentKeyHash kh))
                         = Timelock.RequireSignature (Shelley.coerceKeyRole kh)
     go (RequireAllOf s) = Timelock.RequireAllOf (Seq.fromList (map go s))
     go (RequireAnyOf s) = Timelock.RequireAnyOf (Seq.fromList (map go s))
@@ -333,73 +708,40 @@ simpleScriptToTimelock = go
     go (RequireTimeBefore _ t) = Timelock.RequireTimeExpire t
     go (RequireTimeAfter  _ t) = Timelock.RequireTimeStart  t
 
-
-scriptToSimpleScript :: Script era -> SimpleScript era
-scriptToSimpleScript (ShelleyScript s0) = go s0
-  where
-    go :: Shelley.MultiSig StandardShelley -> SimpleScript ShelleyEra
-    go (Shelley.RequireSignature kh)
-                                = RequireSignature SignaturesInShelleyEra
-                                    (PaymentKeyHash (Shelley.coerceKeyRole kh))
-    go (Shelley.RequireAllOf s) = RequireAllOf (map go s)
-    go (Shelley.RequireAnyOf s) = RequireAnyOf (map go s)
-    go (Shelley.RequireMOf m s) = RequireMOf m (map go s)
-
-scriptToSimpleScript (AllegraScript s) = timelockToSimpleScript
-                                           SignaturesInAllegraEra
-                                           TimeLocksInAllegraEra s
-scriptToSimpleScript (MaryScript    s) = timelockToSimpleScript
-                                           SignaturesInMaryEra
-                                           TimeLocksInMaryEra s
-
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
 --
-timelockToSimpleScript :: forall ledgerera era.
-                          (Ledger.Era ledgerera,
+fromAllegraTimelock ::    (Ledger.Era ledgerera,
                            Ledger.Crypto ledgerera ~ StandardCrypto)
-                       => ScriptFeatureInEra SignatureFeature era
-                       -> ScriptFeatureInEra TimeLocksFeature era
-                       -> Timelock.Timelock ledgerera -> SimpleScript era
-timelockToSimpleScript signaturesInEra timeLocksInEra = go
+                       => TimeLocksSupported lang
+                       -> Timelock.Timelock ledgerera
+                       -> SimpleScript lang
+fromAllegraTimelock timelocks = go
   where
-    go :: Timelock.Timelock ledgerera -> SimpleScript era
-    go (Timelock.RequireSignature kh) = RequireSignature signaturesInEra
+    go (Timelock.RequireSignature kh) = RequireSignature
                                           (PaymentKeyHash (Shelley.coerceKeyRole kh))
-    go (Timelock.RequireTimeExpire t) = RequireTimeBefore timeLocksInEra t
-    go (Timelock.RequireTimeStart  t) = RequireTimeAfter  timeLocksInEra t
+    go (Timelock.RequireTimeExpire t) = RequireTimeBefore timelocks t
+    go (Timelock.RequireTimeStart  t) = RequireTimeAfter  timelocks t
     go (Timelock.RequireAllOf      s) = RequireAllOf (map go (toList s))
     go (Timelock.RequireAnyOf      s) = RequireAnyOf (map go (toList s))
     go (Timelock.RequireMOf      i s) = RequireMOf i (map go (toList s))
 
 
---TODO: eliminate the need for this
-coerceSimpleScriptEra :: forall era.
-                         ShelleyBasedEra era
-                      -> SimpleScript ShelleyEra
-                      -> SimpleScript era
-coerceSimpleScriptEra era = go
-  where
-    go :: SimpleScript ShelleyEra -> SimpleScript era
-    go (RequireSignature _ pkh) = RequireSignature signaturesFeature pkh
-    go (RequireAllOf s)         = RequireAllOf (map go s)
-    go (RequireAnyOf s)         = RequireAnyOf (map go s)
-    go (RequireMOf m s)         = RequireMOf m (map go s)
-
-    signaturesFeature :: ScriptFeatureInEra SignatureFeature era
-    signaturesFeature =
-      case era of
-        ShelleyBasedEraShelley -> SignaturesInShelleyEra
-        ShelleyBasedEraAllegra -> SignaturesInAllegraEra
-        ShelleyBasedEraMary    -> SignaturesInMaryEra
-
-
---
+-- ----------------------------------------------------------------------------
 -- JSON serialisation
 --
 
-instance ToJSON (SimpleScript era) where
-  toJSON (RequireSignature _ pKeyHash) =
+instance ToJSON (Script lang) where
+  toJSON (SimpleScript _ script) = toJSON script
+
+instance ToJSON ScriptInAnyLang where
+  toJSON (ScriptInAnyLang _ script) = toJSON script
+
+instance ToJSON (ScriptInEra era) where
+  toJSON (ScriptInEra _ script) = toJSON script
+
+instance ToJSON (SimpleScript lang) where
+  toJSON (RequireSignature pKeyHash) =
     object [ "type"    .= String "sig"
            , "keyHash" .= Text.decodeUtf8 (serialiseToRawBytesHex pKeyHash)
            ]
@@ -421,93 +763,165 @@ instance ToJSON (SimpleScript era) where
            , "scripts" .= map toJSON reqScripts
            ]
 
-instance HasScriptFeatures era => FromJSON (SimpleScript era) where
-  parseJSON = parseScript
 
-parseScript :: HasScriptFeatures era
-            => Value -> Aeson.Parser (SimpleScript era)
-parseScript v = maybe mempty (flip parseScriptSig    v) hasSignatureFeature
-            <|> maybe mempty (flip parseScriptBefore v) hasTimeLocksFeature
-            <|> maybe mempty (flip parseScriptAfter  v) hasTimeLocksFeature
-            <|> parseScriptAny v
-            <|> parseScriptAll v
-            <|> parseScriptAtLeast v
-
-parseScriptAny :: HasScriptFeatures era
-               => Value -> Aeson.Parser (SimpleScript era)
-parseScriptAny = Aeson.withObject "any" $ \obj -> do
-  t <- obj .: "type"
-  case t :: Text of
-    "any" -> do s <- obj .: "scripts"
-                RequireAnyOf <$> gatherSimpleScriptTerms s
-    _ -> fail "\"any\" script value not found"
-
-parseScriptAll :: HasScriptFeatures era
-               => Value -> Aeson.Parser (SimpleScript era)
-parseScriptAll = Aeson.withObject "all" $ \obj -> do
-  t <- obj .: "type"
-  case t :: Text of
-    "all" -> do s <- obj .: "scripts"
-                RequireAllOf <$> gatherSimpleScriptTerms s
-    _ -> fail "\"all\" script value not found"
-
-parseScriptAtLeast :: HasScriptFeatures era
-                   => Value -> Aeson.Parser (SimpleScript era)
-parseScriptAtLeast = Aeson.withObject "atLeast" $ \obj -> do
-  v <- obj .: "type"
-  case v :: Text of
-    "atLeast" -> do
-      r <- obj .: "required"
-      s <- obj .: "scripts"
-      case r of
-        Number sci ->
-          case toBoundedInteger sci of
-            Just reqInt ->
-              do scripts <- gatherSimpleScriptTerms s
-                 let numScripts = length scripts
-                 when
-                   (reqInt > numScripts)
-                   (fail $ "Required number of script signatures exceeds the number of scripts."
-                         <> " Required number: " <> show reqInt
-                         <> " Number of scripts: " <> show numScripts)
-                 return $ RequireMOf reqInt scripts
-            Nothing -> fail $ "Error in \"required\" key: "
-                            <> show sci <> " is not a valid Int"
-        _ -> fail "\"required\" value should be an integer"
-    _        -> fail "\"atLeast\" script value not found"
-
-parseScriptSig :: ScriptFeatureInEra SignatureFeature era
-               -> Value -> Aeson.Parser (SimpleScript era)
-parseScriptSig signaturesInEra = Aeson.withObject "sig" $ \obj -> do
-  v <- obj .: "type"
-  case v :: Text of
-    "sig" -> do k <- obj .: "keyHash"
-                RequireSignature signaturesInEra <$> convertToHash k
-    _     -> fail "\"sig\" script value not found"
+instance IsScriptLanguage lang => FromJSON (Script lang) where
+  parseJSON v =
+    case scriptLanguage :: ScriptLanguage lang of
+      SimpleScriptLanguage lang -> SimpleScript lang <$>
+                                     parseSimpleScript lang v
+      PlutusScriptLanguage lang -> case lang of {}
 
 
-parseScriptBefore :: ScriptFeatureInEra TimeLocksFeature era
-                  -> Value -> Aeson.Parser (SimpleScript era)
-parseScriptBefore timelocksInEra = Aeson.withObject "before" $ \obj -> do
-  v <- obj .: "type"
-  case v :: Text of
-    "before" -> RequireTimeBefore timelocksInEra <$> obj .: "slot"
-    _        -> fail "\"before\" script value not found"
+instance FromJSON ScriptInAnyLang where
+  parseJSON v =
+      -- The SimpleScript language has the property that it is backwards
+      -- compatible, so we can parse as the latest version and then downgrade
+      -- to the minimum version that has all the features actually used.
+      toMinimumSimpleScriptVersion <$> parseSimpleScript SimpleScriptV2 v
+    where
+      --TODO: this will need to be adjusted when more versions are added
+      -- with appropriate helper functions it can probably be done in an
+      -- era-generic style
+      toMinimumSimpleScriptVersion s =
+        case adjustSimpleScriptVersion SimpleScriptV1 s of
+          Nothing -> ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
+                                     (SimpleScript SimpleScriptV2 s)
+          Just s' -> ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
+                                     (SimpleScript SimpleScriptV1 s')
 
-parseScriptAfter :: ScriptFeatureInEra TimeLocksFeature era
-                 -> Value -> Aeson.Parser (SimpleScript era)
-parseScriptAfter timelocksInEra = Aeson.withObject "after" $ \obj -> do
-  v <- obj .: "type"
-  case v :: Text of
-    "after" -> RequireTimeAfter timelocksInEra <$> obj .: "slot"
-    _       -> fail "\"after\" script value not found"
 
-convertToHash :: Text -> Aeson.Parser (Hash PaymentKey)
-convertToHash txt = case deserialiseFromRawBytesHex (AsHash AsPaymentKey) $ Text.encodeUtf8 txt of
-                      Just payKeyHash -> return payKeyHash
-                      Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
+instance IsCardanoEra era => FromJSON (ScriptInEra era) where
+  parseJSON v =
+    case cardanoEra :: CardanoEra era of
+      ByronEra   -> fail "Scripts are not supported in the Byron era"
 
-gatherSimpleScriptTerms :: HasScriptFeatures era
-                        => Vector Value -> Aeson.Parser [SimpleScript era]
-gatherSimpleScriptTerms = sequence . Vector.toList . Vector.map parseScript
+      ShelleyEra -> ScriptInEra SimpleScriptV1InShelley
+                  . SimpleScript SimpleScriptV1
+                <$> parseSimpleScript SimpleScriptV1 v
+
+      --TODO: this will need to be adjusted when more versions are added.
+      -- It can probably be done in an era-generic style, with the use of
+      -- appropriate helper functions.
+      AllegraEra -> toMinimumSimpleScriptVersion
+                <$> parseSimpleScript SimpleScriptV2 v
+        where
+          toMinimumSimpleScriptVersion s =
+            case adjustSimpleScriptVersion SimpleScriptV1 s of
+              Nothing -> ScriptInEra SimpleScriptV2InAllegra
+                                     (SimpleScript SimpleScriptV2 s)
+              Just s' -> ScriptInEra SimpleScriptV1InAllegra
+                                     (SimpleScript SimpleScriptV1 s')
+
+      MaryEra -> toMinimumSimpleScriptVersion
+             <$> parseSimpleScript SimpleScriptV2 v
+        where
+          toMinimumSimpleScriptVersion s =
+            case adjustSimpleScriptVersion SimpleScriptV1 s of
+              Nothing -> ScriptInEra SimpleScriptV2InMary
+                                     (SimpleScript SimpleScriptV2 s)
+              Just s' -> ScriptInEra SimpleScriptV1InMary
+                                     (SimpleScript SimpleScriptV1 s')
+
+
+instance IsSimpleScriptLanguage lang => FromJSON (SimpleScript lang) where
+  parseJSON = parseSimpleScript simpleScriptVersion
+
+
+parseSimpleScript :: SimpleScriptVersion lang
+                  -> Value -> Aeson.Parser (SimpleScript lang)
+parseSimpleScript lang v = parseScriptSig          v
+                       <|> parseScriptBefore  lang v
+                       <|> parseScriptAfter   lang v
+                       <|> parseScriptAny     lang v
+                       <|> parseScriptAll     lang v
+                       <|> parseScriptAtLeast lang v
+
+parseScriptAny :: SimpleScriptVersion lang
+               -> Value -> Aeson.Parser (SimpleScript lang)
+parseScriptAny lang =
+    Aeson.withObject "any" $ \obj -> do
+      t <- obj .: "type"
+      case t :: Text of
+        "any" -> do vs <- obj .: "scripts"
+                    RequireAnyOf <$> gatherSimpleScriptTerms lang vs
+        _ -> fail "\"any\" script value not found"
+
+parseScriptAll :: SimpleScriptVersion lang
+               -> Value -> Aeson.Parser (SimpleScript lang)
+parseScriptAll lang =
+    Aeson.withObject "all" $ \obj -> do
+      t <- obj .: "type"
+      case t :: Text of
+        "all" -> do vs <- obj .: "scripts"
+                    RequireAllOf <$> gatherSimpleScriptTerms lang vs
+        _ -> fail "\"all\" script value not found"
+
+parseScriptAtLeast :: SimpleScriptVersion lang
+                   -> Value -> Aeson.Parser (SimpleScript lang)
+parseScriptAtLeast lang =
+    Aeson.withObject "atLeast" $ \obj -> do
+      v <- obj .: "type"
+      case v :: Text of
+        "atLeast" -> do
+          r  <- obj .: "required"
+          vs <- obj .: "scripts"
+          case r of
+            Number sci ->
+              case toBoundedInteger sci of
+                Just reqInt ->
+                  do scripts <- gatherSimpleScriptTerms lang vs
+                     let numScripts = length scripts
+                     when
+                       (reqInt > numScripts)
+                       (fail $ "Required number of script signatures exceeds the number of scripts."
+                             <> " Required number: " <> show reqInt
+                             <> " Number of scripts: " <> show numScripts)
+                     return $ RequireMOf reqInt scripts
+                Nothing -> fail $ "Error in \"required\" key: "
+                                <> show sci <> " is not a valid Int"
+            _ -> fail "\"required\" value should be an integer"
+        _        -> fail "\"atLeast\" script value not found"
+
+gatherSimpleScriptTerms :: SimpleScriptVersion lang
+                        -> Vector Value -> Aeson.Parser [SimpleScript lang]
+gatherSimpleScriptTerms lang = mapM (parseSimpleScript lang) . Vector.toList
+
+parseScriptSig :: Value -> Aeson.Parser (SimpleScript lang)
+parseScriptSig =
+    Aeson.withObject "sig" $ \obj -> do
+      v <- obj .: "type"
+      case v :: Text of
+        "sig" -> do k <- obj .: "keyHash"
+                    RequireSignature <$> parsePaymentKeyHash k
+        _     -> fail "\"sig\" script value not found"
+
+parseScriptBefore :: SimpleScriptVersion lang
+                  -> Value -> Aeson.Parser (SimpleScript lang)
+parseScriptBefore lang =
+    Aeson.withObject "before" $ \obj -> do
+      v <- obj .: "type"
+      case v :: Text of
+        "before" ->
+          case timeLocksSupported lang of
+            Just supported -> RequireTimeBefore supported <$> obj .: "slot"
+            Nothing -> fail ("type \"before\" not supported in " ++ show lang)
+        _ -> fail "\"before\" script value not found"
+
+parseScriptAfter :: SimpleScriptVersion lang
+                 -> Value -> Aeson.Parser (SimpleScript lang)
+parseScriptAfter lang =
+    Aeson.withObject "after" $ \obj -> do
+      v <- obj .: "type"
+      case v :: Text of
+        "after" ->
+          case timeLocksSupported lang of
+            Just supported -> RequireTimeAfter supported <$> obj .: "slot"
+            Nothing -> fail ("type \"after\" not supported in " ++ show lang)
+        _       -> fail "\"after\" script value not found"
+
+parsePaymentKeyHash :: Text -> Aeson.Parser (Hash PaymentKey)
+parsePaymentKeyHash txt =
+    case deserialiseFromRawBytesHex (AsHash AsPaymentKey) (Text.encodeUtf8 txt) of
+      Just payKeyHash -> return payKeyHash
+      Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
 

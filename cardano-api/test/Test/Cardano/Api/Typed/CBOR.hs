@@ -134,15 +134,15 @@ prop_roundtrip_signing_key_kes_CBOR =
 
 prop_roundtrip_script_shelley_CBOR :: Property
 prop_roundtrip_script_shelley_CBOR =
-  roundtrip_CBOR (AsScript AsShelleyEra) (genScript ShelleyBasedEraShelley)
+  roundtrip_CBOR (AsScriptInEra AsShelleyEra) (genScriptInEra ShelleyEra)
 
 prop_roundtrip_script_allegra_CBOR :: Property
 prop_roundtrip_script_allegra_CBOR =
-  roundtrip_CBOR (AsScript AsAllegraEra) (genScript ShelleyBasedEraAllegra)
+  roundtrip_CBOR (AsScriptInEra AsAllegraEra) (genScriptInEra AllegraEra)
 
 prop_roundtrip_script_mary_CBOR :: Property
 prop_roundtrip_script_mary_CBOR =
-  roundtrip_CBOR (AsScript AsMaryEra) (genScript ShelleyBasedEraMary)
+  roundtrip_CBOR (AsScriptInEra AsMaryEra) (genScriptInEra MaryEra)
 
 -- -----------------------------------------------------------------------------
 

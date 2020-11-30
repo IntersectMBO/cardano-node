@@ -12,6 +12,8 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 
+import           Cardano.API
+
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Prelude (goldenTestJSONPretty)
@@ -31,8 +33,8 @@ prop_golden_MofNMultiSig =
 prop_roundtrip_MaryMultiSigScript_JSON :: Property
 prop_roundtrip_MaryMultiSigScript_JSON =
   H.property $ do
-    mss <- H.forAll genMultiSigScriptMary
-    H.tripping mss encode eitherDecode
+    script <- H.forAll (genScriptInEra MaryEra)
+    H.tripping (canonicaliseScriptVersion script) encode eitherDecode
 
 tests :: TestTree
 tests = fromGroup $$discover

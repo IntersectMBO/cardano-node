@@ -279,31 +279,55 @@ module Cardano.Api.Typed (
 
     -- * Scripts
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
-    -- Shelley supports multi-signatures via scripts.
+
+    -- ** Script languages
+    SimpleScriptV1,
+    SimpleScriptV2,
+    ScriptLanguage(..),
+    SimpleScriptVersion(..),
+    PlutusScriptVersion,
+    AnyScriptLanguage(..),
+    IsScriptLanguage(..),
+    IsSimpleScriptLanguage(..),
+
+    -- ** Scripts in a specific language
     Script(..),
-    parseScript,
-    parseScriptAny,
-    parseScriptAll,
-    parseScriptAtLeast,
-    parseScriptSig,
+
+    -- ** Scripts in any language
+    ScriptInAnyLang(..),
+    toScriptInAnyLang,
+
+    -- ** Scripts in a specific era
+    ScriptInEra(..),
+    toScriptInEra,
+    eraOfScriptInEra,
+
+    -- *** Languages supported in each era
+    ScriptLanguageInEra(..),
+    scriptLanguageSupportedInEra,
+    languageOfScriptLanguageInEra,
+    eraOfScriptLanguageInEra,
+
+    -- ** Simple scripts
+    -- | Making multi-signature and time-lock scripts.
+    SimpleScript(..),
+    TimeLocksSupported(..),
+    timeLocksSupported,
+    adjustSimpleScriptVersion,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
     ScriptHash,
-    scriptHash,
+    hashScript,
 
-    -- ** Multi-signature scripts
-    -- | Making multi-signature scripts.
-    SimpleScript(..),
-    ScriptFeatureInEra(..),
-    SignatureFeature,
-    TimeLocksFeature,
-    HasScriptFeatures,
-    coerceSimpleScriptEra,
-
-    -- *** Deprecated aliases
-    MultiSigScript,
-    makeMultiSigScript,
+    -- ** Internal conversion functions
+    toShelleyScript,
+    toShelleyMultiSig,
+    fromShelleyMultiSig,
+    toAllegraTimelock,
+    fromAllegraTimelock,
+    toShelleyScriptHash,
+    fromShelleyScriptHash,
 
     -- * Serialisation
     -- | Support for serialising data in JSON, CBOR and text files.

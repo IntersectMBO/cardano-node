@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -8,18 +9,17 @@ module Test.Cardano.Api.Typed.Gen
   , genValueNestedRep
   , genValueNestedBundle
   , genByronKeyWitness
-  , genRequiredSig
-  , genMofNRequiredSig
+
+    -- * Scripts
+  , genScript
   , genSimpleScript
-  , genSimpleScripts
-  , genMultiSigScript
-  , genMultiSigScriptAllegra
-  , genMultiSigScriptMary
-  , genMultiSigScriptShelley
+  , genScriptInAnyLang
+  , genScriptInEra
   , genScriptHash
+  , canonicaliseScriptVersion
+
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
-  , genScript
   , genShelleyWitness
   , genSigningKey
   , genStakeAddress
@@ -66,114 +66,93 @@ genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 genLovelace :: Gen Lovelace
 genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 
--- Script Primitive Generators --
 
-genRequiredSig :: ScriptFeatureInEra SignatureFeature era -> Gen (MultiSigScript era)
-genRequiredSig sfeat = do
-  verKey <- genVerificationKey AsPaymentKey
-  return $ RequireSignature sfeat (verificationKeyHash verKey)
+----------------------------------------------------------------------------
+-- SimpleScript generators
+--
 
-genRequireTimeBefore :: ScriptFeatureInEra TimeLocksFeature era -> Gen (MultiSigScript era)
-genRequireTimeBefore sfeat = RequireTimeBefore sfeat <$> genSlotNo
+genScript :: ScriptLanguage lang -> Gen (Script lang)
+genScript (SimpleScriptLanguage lang) =
+    SimpleScript lang <$> genSimpleScript lang
 
-genRequireTimeAfter :: ScriptFeatureInEra TimeLocksFeature era -> Gen (MultiSigScript era)
-genRequireTimeAfter sfeat = RequireTimeAfter sfeat <$> genSlotNo
+genScript (PlutusScriptLanguage lang) = case lang of {}
 
-genAll :: [MultiSigScript era] -> Gen (MultiSigScript era)
-genAll s = pure $ RequireAllOf s
+genSimpleScript :: SimpleScriptVersion lang -> Gen (SimpleScript lang)
+genSimpleScript lang =
+    genTerm
+  where
+    genTerm = Gen.recursive Gen.choice nonRecursive recursive
 
-genAny :: [MultiSigScript era] -> Gen (MultiSigScript era)
-genAny s = pure $ RequireAnyOf s
-
-genMofN :: [MultiSigScript era] -> Gen (MultiSigScript era)
-genMofN s = do
- let numKeys = length s
- required <- Gen.integral (Range.linear 0 numKeys)
- pure $ RequireMOf required s
-
--- Script generators for a provided Shelley-based era
-
-genSimpleScript :: ShelleyBasedEra era -> Gen (SimpleScript era)
-genSimpleScript era =
-  case era of
-    ShelleyBasedEraShelley -> genMultiSigScriptShelley
-    ShelleyBasedEraAllegra -> genMultiSigScriptAllegra
-    ShelleyBasedEraMary -> genMultiSigScriptMary
-
-genSimpleScripts :: ShelleyBasedEra era -> Gen [SimpleScript era]
-genSimpleScripts era =
-  case era of
-    ShelleyBasedEraShelley -> genMultiSigScriptsShelley
-    ShelleyBasedEraAllegra -> genMultiSigScriptsAllegra
-    ShelleyBasedEraMary -> genMultiSigScriptsMary
-
--- Shelley
-
-genMultiSigScriptShelley :: Gen (MultiSigScript ShelleyEra)
-genMultiSigScriptShelley = genMultiSigScriptsShelley >>= Gen.element
-
-genMultiSigScriptsShelley :: Gen [MultiSigScript ShelleyEra]
-genMultiSigScriptsShelley =
-  Gen.recursive Gen.choice
     -- Non-recursive generators
-    [ Gen.list (Range.constant 1 10) $ genRequiredSig SignaturesInShelleyEra
-    ]
+    nonRecursive =
+         (RequireSignature . verificationKeyHash <$>
+             genVerificationKey AsPaymentKey)
+
+      : [ RequireTimeBefore supported <$> genSlotNo
+        | supported <- maybeToList (timeLocksSupported lang) ]
+
+     ++ [ RequireTimeAfter supported <$> genSlotNo
+        | supported <- maybeToList (timeLocksSupported lang) ]
+
     -- Recursive generators
-    [ Gen.subtermM
-        genMultiSigScriptsShelley
-        (\a -> sequence [genAll a, genAny a, genMofN a])
+    recursive =
+      [ RequireAllOf <$> Gen.list (Range.linear 0 10) genTerm
 
-    ]
+      , RequireAnyOf <$> Gen.list (Range.linear 0 10) genTerm
 
--- Allegra
+      , do ts <- Gen.list (Range.linear 0 10) genTerm
+           m  <- Gen.integral (Range.constant 0 (length ts))
+           return (RequireMOf m ts)
+      ]
 
-genMultiSigScriptAllegra :: Gen (MultiSigScript AllegraEra)
-genMultiSigScriptAllegra = genMultiSigScriptsAllegra >>= Gen.element
 
-genMultiSigScriptsAllegra :: Gen [MultiSigScript AllegraEra]
-genMultiSigScriptsAllegra =
-  Gen.recursive Gen.choice
-    -- Non-recursive generators
-    [ Gen.list (Range.constant 1 10) $ genRequireTimeAfter TimeLocksInAllegraEra
-    , Gen.list (Range.constant 1 10) $ genRequireTimeBefore TimeLocksInAllegraEra
-    , Gen.list (Range.constant 1 10) $ genRequiredSig SignaturesInAllegraEra
-    ]
-    -- Recursive generators
-    [ Gen.subtermM3
-        genMultiSigScriptsAllegra
-        genMultiSigScriptsAllegra
-        genMultiSigScriptsAllegra
-        (\a b c -> do shuffled <- Gen.shuffle $ a ++ b ++ c
-                      subSeq <- Gen.subsequence shuffled
-                      sequence [genAll subSeq, genAny subSeq, genMofN subSeq]
-                      )
+-- ----------------------------------------------------------------------------
+-- Script generators for any language, or any language valid in a specific era
+--
 
-    ]
+genScriptInAnyLang :: Gen ScriptInAnyLang
+genScriptInAnyLang =
+    Gen.choice
+      [ ScriptInAnyLang lang <$> genScript lang
+      | AnyScriptLanguage lang <- [minBound..maxBound] ]
 
--- Mary
+genScriptInEra :: CardanoEra era -> Gen (ScriptInEra era)
+genScriptInEra era =
+    Gen.choice
+      [ ScriptInEra langInEra <$> genScript lang
+      | AnyScriptLanguage lang <- [minBound..maxBound]
+      , Just langInEra <- [scriptLanguageSupportedInEra era lang] ]
 
-genMultiSigScriptMary :: Gen (MultiSigScript MaryEra)
-genMultiSigScriptMary = genMultiSigScriptsMary >>= Gen.element
+genScriptHash :: Gen ScriptHash
+genScriptHash = do
+    ScriptInAnyLang _ script <- genScriptInAnyLang
+    return (hashScript script)
 
-genMultiSigScriptsMary :: Gen [MultiSigScript MaryEra]
-genMultiSigScriptsMary =
-  Gen.recursive Gen.choice
-    -- Non-recursive generators
-    [ Gen.list (Range.constant 1 10) $ genRequireTimeAfter TimeLocksInMaryEra
-    , Gen.list (Range.constant 1 10) $ genRequireTimeBefore TimeLocksInMaryEra
-    , Gen.list (Range.constant 1 10) $ genRequiredSig SignaturesInMaryEra
-    ]
-    -- Recursive generators
-    [ Gen.subtermM3
-        genMultiSigScriptsMary
-        genMultiSigScriptsMary
-        genMultiSigScriptsMary
-        (\a b c -> do shuffled <- Gen.shuffle $ a ++ b ++ c
-                      subSeq <- Gen.subsequence shuffled
-                      sequence [genAll subSeq, genAny subSeq, genMofN subSeq]
-                      )
 
-    ]
+-- | For JSON round-trip testing we need to re-tag scripts with the lowest
+-- language version that they fit into.
+
+-- The reason for this is that the external JSON syntax for the simple script
+-- language does specify the language version and so the JSON decoder simply
+-- uses the lowest version of the language that supports the concrete script.
+--
+canonicaliseScriptVersion :: ScriptInEra era -> ScriptInEra era
+canonicaliseScriptVersion (ScriptInEra SimpleScriptV2InAllegra
+                                      (SimpleScript SimpleScriptV2 s))
+    | Just s' <- adjustSimpleScriptVersion SimpleScriptV1 s
+    = ScriptInEra SimpleScriptV1InAllegra (SimpleScript SimpleScriptV1 s')
+
+canonicaliseScriptVersion (ScriptInEra SimpleScriptV2InMary
+                                      (SimpleScript SimpleScriptV2 s))
+    | Just s' <- adjustSimpleScriptVersion SimpleScriptV1 s
+    = ScriptInEra SimpleScriptV1InMary (SimpleScript SimpleScriptV1 s')
+
+canonicaliseScriptVersion s = s
+
+
+----------------------------------------------------------------------------
+-- Multi-asset generators
+--
 
 genAssetName :: Gen AssetName
 genAssetName =
@@ -223,30 +202,6 @@ genValueNestedBundle =
                         <*> Gen.map (Range.constant 0 5)
                                     ((,) <$> genAssetName <*> genQuantity)
     ]
-
-genAllRequiredSig :: Gen (MultiSigScript ShelleyEra)
-genAllRequiredSig =
-  RequireAllOf <$> Gen.list (Range.constant 1 10) (genRequiredSig SignaturesInShelleyEra)
-
-genAnyRequiredSig :: Gen (MultiSigScript ShelleyEra)
-genAnyRequiredSig =
-  RequireAnyOf <$> Gen.list (Range.constant 1 10) (genRequiredSig SignaturesInShelleyEra)
-
-genMofNRequiredSig :: Gen (MultiSigScript ShelleyEra)
-genMofNRequiredSig = do
- required <- Gen.integral (Range.linear 2 15)
- total <- Gen.integral (Range.linear (required + 1) 15)
- RequireMOf required <$> Gen.list (Range.singleton total) (genRequiredSig SignaturesInShelleyEra)
-
-genMultiSigScript :: Gen (MultiSigScript ShelleyEra)
-genMultiSigScript =
-  Gen.choice [genAllRequiredSig, genAnyRequiredSig, genMofNRequiredSig]
-
-genScript :: HasScriptFeatures era => ShelleyBasedEra era -> Gen (Script era)
-genScript era = SimpleScript <$> genSimpleScript era
-
-genScriptHash :: Gen ScriptHash
-genScriptHash = scriptHash <$> genScript ShelleyBasedEraShelley
 
 genNetworkId :: Gen NetworkId
 genNetworkId =
@@ -433,14 +388,14 @@ genTxMetadataInEra era =
 genTxAuxScripts :: CardanoEra era -> Gen (TxAuxScripts era)
 genTxAuxScripts era =
   case era of
-    ByronEra -> pure TxAuxScriptsNone
+    ByronEra   -> pure TxAuxScriptsNone
     ShelleyEra -> pure TxAuxScriptsNone
-    AllegraEra ->
-      TxAuxScripts AuxScriptsInAllegraEra
-        <$> (map SimpleScript <$> genSimpleScripts ShelleyBasedEraAllegra)
-    MaryEra ->
-      TxAuxScripts AuxScriptsInMaryEra
-        <$> (map SimpleScript <$> genSimpleScripts ShelleyBasedEraMary)
+    AllegraEra -> TxAuxScripts AuxScriptsInAllegraEra
+                           <$> Gen.list (Range.linear 0 3)
+                                        (genScriptInEra AllegraEra)
+    MaryEra    -> TxAuxScripts AuxScriptsInMaryEra
+                           <$> Gen.list (Range.linear 0 3)
+                                        (genScriptInEra MaryEra)
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals era)
 genTxWithdrawals era =
