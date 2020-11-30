@@ -7,7 +7,7 @@ To retire a pool we need to:
 
 The deregistration certificate contains the _epoch_ in which we want to retire the pool. This epoch must be _after_ the current epoch and _not later than_ `eMax` epochs in the future, where `eMax` is a protocol parameter.
 
-So we first need to figure out the current epoch. For this, the easiest way to query epoch would be by querying using EKG port (part of node config). To query the current epoch , you can use the command (where jq is a command line tool for parsing JSON, part of EPEL package on linux):
+So we first need to figure out the current epoch. For this, the easiest way to query epoch would be by querying using EKG port (look for `hasEKG` variable in your node's config, or checkout sample config [here](https://github.com/input-output-hk/cardano-node/blob/master/configuration/cardano/mainnet-config.json) ). To query the current epoch , you can use the command below (where jq is a command line tool for parsing JSON, part of EPEL package on linux):
 
     curl -s -H 'Accept: application/json' http://127.0.0.1:12788/ | jq -r .cardano.node.ChainDB.metrics.epoch.int.val
     39
