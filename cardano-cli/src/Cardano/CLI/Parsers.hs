@@ -34,8 +34,13 @@ pref = Opt.prefs showHelpOnEmpty
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
   asum
-    [ parseByron <|> backwardsCompatibilityCommands
-    , parseShelley <|> parseDeprecatedShelleySubcommand
+    -- There are name clashes between Shelley commands and the Byron backwards
+    -- compat commands (e.g. "genesis"), and we need to prefer the Shelley ones
+    -- so we list it first.
+    [ parseShelley
+    , parseByron
+    , parseDeprecatedShelleySubcommand
+    , backwardsCompatibilityCommands
     , parseDisplayVersion
     ]
 
