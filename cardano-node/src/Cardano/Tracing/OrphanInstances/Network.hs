@@ -53,12 +53,18 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
+import qualified Ouroboros.Network.Diffusion as ND
+
 {- HLINT ignore "Use record patterns" -}
 
 --
 -- * instances of @HasPrivacyAnnotation@ and @HasSeverityAnnotation@
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
+
+instance HasPrivacyAnnotation ND.DiffusionInitializationTracer
+instance HasSeverityAnnotation ND.DiffusionInitializationTracer where
+  getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation NtC.HandshakeTr
 instance HasSeverityAnnotation NtC.HandshakeTr where
@@ -288,6 +294,11 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
+instance Transformable Text IO ND.DiffusionInitializationTracer where
+  trTransformer = trStructuredText
+instance HasTextFormatter ND.DiffusionInitializationTracer where
+  formatText _ = pack . show . toList
+
 instance Transformable Text IO NtN.HandshakeTr where
   trTransformer = trStructuredText
 instance HasTextFormatter NtN.HandshakeTr where
@@ -465,6 +476,71 @@ instance ToObject (FetchDecision [Point header]) where
              , "length" .= String (pack $ show $ length results)
              ]
 
+instance ToObject ND.DiffusionInitializationTracer where
+  toObject _verb (ND.RunServer sockAddr) = mkObject
+    [ "kind" .= String "RunServer"
+    , "socketAddress" .= String (pack (show sockAddr))
+    ]
+
+  toObject _verb (ND.RunLocalServer localAddress) = mkObject
+    [ "kind" .= String "RunLocalServer"
+    , "localAddress" .= String (pack (show localAddress))
+    ]
+  toObject _verb (ND.UsingSystemdSocket path) = mkObject
+    [ "kind" .= String "UsingSystemdSocket"
+    , "path" .= String (pack path)
+    ]
+
+  toObject _verb (ND.CreateSystemdSocketForSnocketPath path) = mkObject
+    [ "kind" .= String "CreateSystemdSocketForSnocketPath"
+    , "path" .= String (pack path)
+    ]
+  toObject _verb (ND.CreatedLocalSocket path) = mkObject
+    [ "kind" .= String "CreatedLocalSocket"
+    , "path" .= String (pack path)
+    ]
+  toObject _verb (ND.ConfiguringLocalSocket path socket) = mkObject
+    [ "kind" .= String "ConfiguringLocalSocket"
+    , "path" .= String (pack path)
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.ListeningLocalSocket path socket) = mkObject
+    [ "kind" .= String "ListeningLocalSocket"
+    , "path" .= String (pack path)
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.LocalSocketUp path fd) = mkObject
+    [ "kind" .= String "LocalSocketUp"
+    , "path" .= String (pack path)
+    , "socket" .= String (pack (show fd))
+    ]
+  toObject _verb (ND.CreatingServerSocket socket) = mkObject
+    [ "kind" .= String "CreatingServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.ListeningServerSocket socket) = mkObject
+    [ "kind" .= String "ListeningServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.ServerSocketUp socket) = mkObject
+    [ "kind" .= String "ServerSocketUp"
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.ConfiguringServerSocket socket) = mkObject
+    [ "kind" .= String "ConfiguringServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.UnsupportedLocalSystemdSocket path) = mkObject
+    [ "kind" .= String "UnsupportedLocalSystemdSocket"
+    , "path" .= String (pack (show path))
+    ]
+  toObject _verb ND.UnsupportedReadySocketCase = mkObject
+    [ "kind" .= String "UnsupportedReadySocketCase"
+    ]
+  toObject _verb (ND.DiffusionErrored exception) = mkObject
+    [ "kind" .= String "DiffusionErrored"
+    , "path" .= String (pack (show exception))
+    ]
 
 instance ToObject NtC.HandshakeTr where
   toObject _verb (WithMuxBearer b ev) =

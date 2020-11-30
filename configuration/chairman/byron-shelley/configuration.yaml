@@ -185,6 +185,9 @@ TraceChainSyncHeaderServer: False
 TraceChainSyncProtocol: False
 PBftSignatureThreshold: 0.6
 
+# Trace diffusion initialization messages
+TraceDiffusionInitialization: True
+
 # Trace DNS Resolver messages.
 TraceDNSResolver: True
 
