@@ -116,7 +116,8 @@ instance SerialiseAsBech32 (SigningKey ByronKey) where
 
 
 newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKey)
 
 instance SerialiseAsRawBytes (Hash ByronKey) where
     serialiseToRawBytes (ByronKeyHash (Byron.KeyHash vkh)) =
