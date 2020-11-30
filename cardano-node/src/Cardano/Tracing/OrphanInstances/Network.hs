@@ -481,6 +481,7 @@ instance ToObject ND.DiffusionInitializationTracer where
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
     ]
+
   toObject _verb (ND.RunLocalServer localAddress) = mkObject
     [ "kind" .= String "RunLocalServer"
     , "localAddress" .= String (pack (show localAddress))
@@ -508,8 +509,21 @@ instance ToObject ND.DiffusionInitializationTracer where
     , "path" .= String (pack path)
     , "socket" .= String (pack (show socket))
     ]
+  toObject _verb (ND.LocalSocketUp path fd) = mkObject
+    [ "kind" .= String "LocalSocketUp"
+    , "path" .= String (pack path)
+    , "socket" .= String (pack (show fd))
+    ]
   toObject _verb (ND.CreatingServerSocket socket) = mkObject
     [ "kind" .= String "CreatingServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.ListeningServerSocket socket) = mkObject
+    [ "kind" .= String "ListeningServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  toObject _verb (ND.ServerSocketUp socket) = mkObject
+    [ "kind" .= String "ServerSocketUp"
     , "socket" .= String (pack (show socket))
     ]
   toObject _verb (ND.ConfiguringServerSocket socket) = mkObject
