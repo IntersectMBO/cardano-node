@@ -1,4 +1,4 @@
-index-state: 2020-10-01T00:00:00Z
+index-state: 2020-11-15T00:00:00Z
 
 packages:
     cardano-api
@@ -82,7 +82,6 @@ package io-sim-classes
 
 -- ---------------------------------------------------------
 
-
 -- The two following one-liners will restore / cut off the remainder of this file (for nix-shell users):
 -- git checkout HEAD "$(git rev-parse --show-toplevel)"/cabal.project
 -- sed -ni '1,/--- 8< ---/ p' "$(git rev-parse --show-toplevel)"/cabal.project
@@ -91,8 +90,8 @@ package io-sim-classes
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 6226a0feb1d74f50a430242a1b4608fd48e10aad
-  --sha256: 034q2anpbc7bgp5draykz6lkzznxk31wy4nbgr4jv4f7778yls6b
+  tag: 980e6ca052c8dbad91336b6230c58b78ac1032f5
+  --sha256: 0vid3qi20pfadjxqmklanbh701avjbclx549cqb38dvmz5p0g0xi
   subdir:
     binary
     binary/test
@@ -129,8 +128,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 58e146c14e1349553d0ed75dd5245bbe65f0533e
-  --sha256: 166rm0sxldnf0g2g9jp4k0rgd01wcbm0g54fcw3bxilzr1dvwqfi
+  tag: 742e8525b96bf4b66fb61a00c8298d75d7931d5e
+  --sha256: 1132r58bjgdcf7yz3n77nlrkanqcmpn5b5km4nw151yar2dgifsv
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -159,8 +158,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 57ab00435e6c38d146e029ac2d3f824ff6e738a8
-  --sha256: 0l9nv0lr9wxf9z7gs91dvpci7ghfbk9d4mcly1mm5xd76d21jbbb
+  tag: 680b1725cdc10d6ae09b311509ef7c59c93372fd
+  --sha256: 0pm7cz0ww2hap3c88p1r2kx9nnd8x86wj9q3f7jsjsdca2r3ki9a
   subdir:
     io-sim
     io-sim-classes
@@ -183,6 +182,7 @@ constraints:
     -- systemd-2.3.0 requires at least network 3.1.1.0 but it doesn't declare
     -- that dependency
   , network >= 3.1.1.0
+  , streaming-bytestring < 0.1.7
 
 package comonad
   flags: -test-doctests

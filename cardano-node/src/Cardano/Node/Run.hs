@@ -278,6 +278,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
     , dtMuxLocalTracer = nullTracer
     , dtHandshakeTracer = handshakeTracer nodeTracers'
     , dtHandshakeLocalTracer = localHandshakeTracer nodeTracers'
+    , dtDiffusionInitializationTracer = nullTracer
     }
 
   createTracers
