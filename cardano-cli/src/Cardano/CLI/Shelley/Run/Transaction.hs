@@ -875,11 +875,6 @@ runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
 -- Reading files in any era
 --
 
-_readFileScript :: FilePath
-               -> ExceptT ShelleyTxCmdError IO (InAnyShelleyBasedEra Script)
-_readFileScript = readFileInAnyShelleyBasedEra AsScript
-
-
 readFileWitness :: FilePath
                 -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Witness)
 readFileWitness = readFileInAnyCardanoEra AsWitness
@@ -912,28 +907,6 @@ readFileInAnyCardanoEra asThing file =
       , Api.FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
       , Api.FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
       , Api.FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
-      ]
-      file
-
-readFileInAnyShelleyBasedEra
-  :: ( HasTextEnvelope (thing ShelleyEra)
-     , HasTextEnvelope (thing AllegraEra)
-     , HasTextEnvelope (thing MaryEra)
-     )
-  => (forall era. AsType era -> AsType (thing era))
-  -> FilePath
-  -> ExceptT ShelleyTxCmdError IO
-            (InAnyShelleyBasedEra thing)
-readFileInAnyShelleyBasedEra asThing file =
-    firstExceptT ShelleyTxCmdReadTextViewFileError
-  . newExceptT
-  $ Api.readFileTextEnvelopeAnyOf
-      [ Api.FromSomeType (asThing AsShelleyEra)
-                         (InAnyShelleyBasedEra ShelleyBasedEraShelley)
-      , Api.FromSomeType (asThing AsAllegraEra)
-                         (InAnyShelleyBasedEra ShelleyBasedEraAllegra)
-      , Api.FromSomeType (asThing AsMaryEra)
-                         (InAnyShelleyBasedEra ShelleyBasedEraMary)
       ]
       file
 
