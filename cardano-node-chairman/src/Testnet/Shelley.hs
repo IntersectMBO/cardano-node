@@ -74,7 +74,9 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant flip" -}
 
 data TestnetOptions = TestnetOptions
-  { activeSlotsCoeff :: Double
+  { numPraosNodes :: Int
+  , numPoolNodes :: Int
+  , activeSlotsCoeff :: Double
   , securityParam :: Int
   , epochLength :: Int
   , slotLength :: Double
@@ -83,7 +85,9 @@ data TestnetOptions = TestnetOptions
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
-  { activeSlotsCoeff = 0.1
+  { numPraosNodes = 2
+  , numPoolNodes = 1
+  , activeSlotsCoeff = 0.1
   , securityParam = 10
   , epochLength = 1000
   , slotLength = 0.2
@@ -110,19 +114,21 @@ testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
 
-  let praosNodes = ["node-praos1", "node-praos2"] :: [String]
-  let praosNodesN = ["1", "2"] :: [String]
-  let poolNodes = ["node-pool1"] :: [String]
+  let praosNodesN = show @Int <$> [1 .. numPraosNodes testnetOptions]
+  let praosNodes = ("node-praos" <>) <$> praosNodesN
+  let poolNodesN = show @Int <$> [1 .. numPoolNodes testnetOptions]
+  let poolNodes = ("node-pool" <>) <$> poolNodesN
   let allNodes = praosNodes <> poolNodes :: [String]
   let numPraosNodes = L.length allNodes :: Int
+  let userPoolN = poolNodesN -- User N will delegate to pool N
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts numPraosNodes
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 31 currentTime -- 31 seconds into the future
 
-  let userAddrs = ["user1"]
-  let poolAddrs = ["pool-owner1"]
+  let userAddrs = ("user" <>) <$> userPoolN
+  let poolAddrs = ("pool-owner" <>) <$> poolNodesN
   let addrs = userAddrs <> poolAddrs
 
   H.copyFile
@@ -152,7 +158,7 @@ testnet testnetOptions H.Conf {..} = do
     , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath
     , "--gen-genesis-keys", show numPraosNodes
-    , "--gen-utxo-keys", "1"
+    , "--gen-utxo-keys", show @Int (numPoolNodes testnetOptions)
     ]
 
 #ifdef UNIX
@@ -273,9 +279,6 @@ testnet testnetOptions H.Conf {..} = do
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
 
-  -- User N will delegate to pool N
-  let userPoolN = ["1"]
-
   forM_ userPoolN $ \n -> do
     -- Stake address delegation certs
     void $ H.execCli
@@ -313,52 +316,53 @@ testnet testnetOptions H.Conf {..} = do
   -- Now we'll construct one whopper of a transaction that does everything
   -- just to show off that we can, and to make the script shorter
 
-  -- We'll transfer all the funds to the user1, which delegates to pool1
-  -- We'll register certs to:
-  --  1. register the pool-owner1 stake address
-  --  2. register the stake pool 1
-  --  3. register the user1 stake address
-  --  4. delegate from the user1 stake address to the stake pool
-  genesisTxinResult <- H.noteShowM $ S.strip <$> H.execCli
-    [ "shelley", "genesis", "initial-txin"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--verification-key-file", tempAbsPath </> "utxo-keys/utxo1.vkey"
-    ]
+  forM_ userPoolN $ \n -> do
+    -- We'll transfer all the funds to the user n, which delegates to pool n
+    -- We'll register certs to:
+    --  1. register the pool-owner n stake address
+    --  2. register the stake pool n
+    --  3. register the usern stake address
+    --  4. delegate from the usern stake address to the stake pool
+    genesisTxinResult <- H.noteShowM $ S.strip <$> H.execCli
+      [ "shelley", "genesis", "initial-txin"
+      , "--testnet-magic", show @Int testnetMagic
+      , "--verification-key-file", tempAbsPath </> "utxo-keys/utxo" <> n <> ".vkey"
+      ]
 
-  user1Addr <- H.readFile $ tempAbsPath </> "addresses/user1.addr"
+    userNAddr <- H.readFile $ tempAbsPath </> "addresses/user" <> n <> ".addr"
 
-  void $ H.execCli
-    [ "shelley", "transaction", "build-raw"
-    , "--ttl", "1000"
-    , "--fee", "0"
-    , "--tx-in", genesisTxinResult
-    , "--tx-out", user1Addr <> "+" <> show @Integer (maxLovelaceSupply testnetOptions)
-    , "--certificate-file", tempAbsPath </> "addresses/pool-owner1-stake.reg.cert"
-    , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
-    , "--certificate-file", tempAbsPath </> "addresses/user1-stake.reg.cert"
-    , "--certificate-file", tempAbsPath </> "addresses/user1-stake.deleg.cert"
-    , "--out-file", tempAbsPath </> "tx1.txbody"
-    ]
+    void $ H.execCli
+      [ "shelley", "transaction", "build-raw"
+      , "--ttl", "1000"
+      , "--fee", "0"
+      , "--tx-in", genesisTxinResult
+      , "--tx-out", userNAddr <> "+" <> show @Integer (maxLovelaceSupply testnetOptions)
+      , "--certificate-file", tempAbsPath </> "addresses/pool-owner" <> n <> "-stake.reg.cert"
+      , "--certificate-file", tempAbsPath </> "node-pool" <> n <> "/registration.cert"
+      , "--certificate-file", tempAbsPath </> "addresses/user" <> n <> "-stake.reg.cert"
+      , "--certificate-file", tempAbsPath </> "addresses/user" <> n <> "-stake.deleg.cert"
+      , "--out-file", tempAbsPath </> "tx" <> n <> ".txbody"
+      ]
 
-  -- So we'll need to sign this with a bunch of keys:
-  -- 1. the initial utxo spending key, for the funds
-  -- 2. the user1 stake address key, due to the delegatation cert
-  -- 3. the pool1 owner key, due to the pool registration cert
-  -- 3. the pool1 operator key, due to the pool registration cert
+    -- So we'll need to sign this with a bunch of keys:
+    -- 1. the initial utxo spending key, for the funds
+    -- 2. the user n stake address key, due to the delegatation cert
+    -- 3. the pool n owner key, due to the pool registration cert
+    -- 3. the pool n operator key, due to the pool registration cert
 
-  void $ H.execCli
-    [ "shelley", "transaction", "sign"
-    , "--signing-key-file", tempAbsPath </> "utxo-keys/utxo1.skey"
-    , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
-    , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
-    , "--signing-key-file", tempAbsPath </> "node-pool1/operator.skey"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--tx-body-file", tempAbsPath </> "tx1.txbody"
-    , "--out-file", tempAbsPath </> "tx1.tx"
-    ]
+    void $ H.execCli
+      [ "shelley", "transaction", "sign"
+      , "--signing-key-file", tempAbsPath </> "utxo-keys/utxo" <> n <> ".skey"
+      , "--signing-key-file", tempAbsPath </> "addresses/user" <> n <> "-stake.skey"
+      , "--signing-key-file", tempAbsPath </> "node-pool" <> n <> "/owner.skey"
+      , "--signing-key-file", tempAbsPath </> "node-pool" <> n <> "/operator.skey"
+      , "--testnet-magic", show @Int testnetMagic
+      , "--tx-body-file", tempAbsPath </> "tx" <> n <> ".txbody"
+      , "--out-file", tempAbsPath </> "tx" <> n <> ".tx"
+      ]
 
-  -- Generated a signed 'do it all' transaction:
-  H.assertIO . IO.doesFileExist $ tempAbsPath </> "tx1.tx"
+    -- Generated a signed 'do it all' transaction:
+    H.assertIO . IO.doesFileExist $ tempAbsPath </> "tx" <> n <> ".tx"
 
   --------------------------------
   -- Launch cluster of three nodes
