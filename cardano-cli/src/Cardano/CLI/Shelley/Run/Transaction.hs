@@ -50,6 +50,7 @@ import           Cardano.Api.TxSubmit as Api
 data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
   | ShelleyTxCmdReadFileError !(FileError ())
+  | ShelleyTxCmdReadJsonFileError (FileError JsonDecodeError)
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
   | ShelleyTxCmdReadWitnessSigningDataError !ReadWitnessSigningDataError
   | ShelleyTxCmdWriteFileError !(FileError ())
@@ -82,6 +83,7 @@ renderShelleyTxCmdError err =
   case err of
     ShelleyTxCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadTextViewFileError fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdReadJsonFileError  fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
@@ -375,15 +377,15 @@ validateTxAuxScripts era files =
     Nothing -> txFeatureMismatch era TxFeatureAuxScripts
     Just AuxScriptsInAllegraEra -> do
       scripts <- sequence
-        [ do script <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT
-                     $ readFileTextEnvelope AsScriptInAnyLang file
+        [ do script <- firstExceptT ShelleyTxCmdReadJsonFileError $
+                         readFileScriptInAnyLang file
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
       return $ TxAuxScripts AuxScriptsInAllegraEra scripts
     Just AuxScriptsInMaryEra -> do
       scripts <- sequence
-        [ do script <- firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT
-                     $ readFileTextEnvelope AsScriptInAnyLang file
+        [ do script <- firstExceptT ShelleyTxCmdReadJsonFileError $
+                         readFileScriptInAnyLang file
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
       return (TxAuxScripts AuxScriptsInMaryEra scripts)
@@ -903,6 +905,16 @@ onlyInShelleyBasedEras notImplMsg (InAnyCardanoEra era x) =
     case cardanoEraStyle era of
       LegacyByronEra       -> left (ShelleyTxCmdNotImplemented notImplMsg)
       ShelleyBasedEra era' -> return (InAnyShelleyBasedEra era' x)
+
+
+-- ----------------------------------------------------------------------------
+-- Reading other files
+--
+
+readFileScriptInAnyLang :: FilePath
+                        -> ExceptT (FileError JsonDecodeError) IO ScriptInAnyLang
+readFileScriptInAnyLang path =
+    newExceptT $ readFileJSON AsScriptInAnyLang path
 
 validateScriptSupportedInEra :: CardanoEra era
                              -> ScriptInAnyLang
