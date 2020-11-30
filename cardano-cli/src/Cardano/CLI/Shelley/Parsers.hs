@@ -492,7 +492,7 @@ pTransaction =
       $ Opt.command "sign-witness" assembleInfo <> Opt.internal
 
   pTransactionBuild :: Parser TransactionCmd
-  pTransactionBuild = TxBuildRaw <$> pUseCardanoEra
+  pTransactionBuild = TxBuildRaw <$> pCardanoEra
                                  <*> some pTxIn
                                  <*> some pTxOut
                                  <*> optional pMintMultiAsset
@@ -1496,27 +1496,27 @@ pTxSubmitFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pUseCardanoEra :: Parser UseCardanoEra
-pUseCardanoEra = asum
-  [ Opt.flag' UseByronEra
+pCardanoEra :: Parser AnyCardanoEra
+pCardanoEra = asum
+  [ Opt.flag' (AnyCardanoEra ByronEra)
       (  Opt.long "byron-era"
       <> Opt.help "Specify the Byron era"
       )
-  , Opt.flag' UseShelleyEra
+  , Opt.flag' (AnyCardanoEra ShelleyEra)
       (  Opt.long "shelley-era"
       <> Opt.help "Specify the Shelley era (default)"
       )
-  , Opt.flag' UseAllegraEra
+  , Opt.flag' (AnyCardanoEra AllegraEra)
       (  Opt.long "allegra-era"
       <> Opt.help "Specify the Allegra era"
       )
-  , Opt.flag' UseMaryEra
+  , Opt.flag' (AnyCardanoEra MaryEra)
       (  Opt.long "mary-era"
       <> Opt.help "Specify the Mary era"
       )
 
     -- Default for now:
-  , pure UseShelleyEra
+  , pure (AnyCardanoEra ShelleyEra)
   ]
 
 pTxIn :: Parser TxIn

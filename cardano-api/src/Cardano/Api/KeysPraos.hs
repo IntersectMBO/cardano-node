@@ -117,7 +117,8 @@ instance SerialiseAsBech32 (SigningKey KesKey) where
 newtype instance Hash KesKey =
     KesKeyHash (Shelley.Hash StandardCrypto
                              (Shelley.VerKeyKES StandardCrypto))
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash VrfKey)
 
 instance SerialiseAsRawBytes (Hash KesKey) where
     serialiseToRawBytes (KesKeyHash vkh) =
@@ -210,7 +211,8 @@ instance SerialiseAsBech32 (SigningKey VrfKey) where
 newtype instance Hash VrfKey =
     VrfKeyHash (Shelley.Hash StandardCrypto
                              (Shelley.VerKeyVRF StandardCrypto))
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash VrfKey)
 
 instance SerialiseAsRawBytes (Hash VrfKey) where
     serialiseToRawBytes (VrfKeyHash vkh) =

@@ -602,7 +602,7 @@ data TxAuxScripts era where
      TxAuxScriptsNone :: TxAuxScripts era
 
      TxAuxScripts     :: AuxScriptsSupportedInEra era
-                      -> [Script era]
+                      -> [ScriptInEra era]
                       -> TxAuxScripts era
 
 deriving instance Eq   (TxAuxScripts era)

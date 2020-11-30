@@ -14,8 +14,6 @@ module Cardano.CLI.Types
   , ScriptFile (..)
   , TxOutAnyEra (..)
   , UpdateProposalFile (..)
-  , UseCardanoEra (..)
-  , withCardanoEra
   , VerificationKeyFile (..)
   ) where
 
@@ -84,20 +82,6 @@ newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
 data SigningKeyOrScriptFile = ScriptFileForWitness FilePath
                             | SigningKeyFileForWitness FilePath
                             deriving (Eq, Show)
-
-data UseCardanoEra = UseByronEra
-                   | UseShelleyEra
-                   | UseAllegraEra
-                   | UseMaryEra
-                   deriving (Eq, Show)
-
-withCardanoEra :: UseCardanoEra
-               -> (forall era. IsCardanoEra era => CardanoEra era -> a)
-               -> a
-withCardanoEra UseByronEra   f = f ByronEra
-withCardanoEra UseShelleyEra f = f ShelleyEra
-withCardanoEra UseAllegraEra f = f AllegraEra
-withCardanoEra UseMaryEra    f = f MaryEra
 
 -- | A TxOut value that is the superset of possibilities for any era: any
 -- address type and allowing multi-asset values. This is used as the type for

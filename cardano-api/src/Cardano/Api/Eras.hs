@@ -14,6 +14,8 @@ module Cardano.Api.Eras
   , MaryEra
   , CardanoEra(..)
   , IsCardanoEra(..)
+  , AnyCardanoEra(..)
+  , anyCardanoEra
   , InAnyCardanoEra(..)
 
     -- * Deprecated aliases
@@ -160,6 +162,45 @@ instance IsCardanoEra AllegraEra where
 
 instance IsCardanoEra MaryEra where
    cardanoEra      = MaryEra
+
+
+data AnyCardanoEra where
+     AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint
+                   => CardanoEra era    -- and explicit value.
+                   -> AnyCardanoEra
+
+deriving instance Show AnyCardanoEra
+
+instance Eq AnyCardanoEra where
+    AnyCardanoEra era == AnyCardanoEra era' =
+      case testEquality era era' of
+        Nothing   -> False
+        Just Refl -> True -- since no constructors share types
+
+instance Enum AnyCardanoEra where
+    toEnum 0 = AnyCardanoEra ByronEra
+    toEnum 1 = AnyCardanoEra ShelleyEra
+    toEnum 2 = AnyCardanoEra AllegraEra
+    toEnum 3 = AnyCardanoEra MaryEra
+    toEnum _ = error "AnyCardanoEra.toEnum: bad argument"
+
+    fromEnum (AnyCardanoEra ByronEra)   = 0
+    fromEnum (AnyCardanoEra ShelleyEra) = 1
+    fromEnum (AnyCardanoEra AllegraEra) = 2
+    fromEnum (AnyCardanoEra MaryEra)    = 3
+
+instance Bounded AnyCardanoEra where
+    minBound = AnyCardanoEra ByronEra
+    maxBound = AnyCardanoEra MaryEra
+
+-- | Like the 'AnyCardanoEra' constructor but does not demand a 'IsCardanoEra'
+-- class constraint.
+--
+anyCardanoEra :: CardanoEra era -> AnyCardanoEra
+anyCardanoEra ByronEra   = AnyCardanoEra ByronEra
+anyCardanoEra ShelleyEra = AnyCardanoEra ShelleyEra
+anyCardanoEra AllegraEra = AnyCardanoEra AllegraEra
+anyCardanoEra MaryEra    = AnyCardanoEra MaryEra
 
 
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells

@@ -18,7 +18,7 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
 
-import           Test.Cardano.Api.Examples
+import           Test.Cardano.Api.Genesis
 import           Test.Cardano.Prelude
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 

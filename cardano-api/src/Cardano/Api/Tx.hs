@@ -788,10 +788,11 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
       error "makeShelleyKeyWitnessSignature: byron and shelley signature sizes do not match"
 
 
-makeScriptWitness :: forall era. Script era -> Witness era
-makeScriptWitness (ShelleyScript s) = ShelleyScriptWitness ShelleyBasedEraShelley s
-makeScriptWitness (AllegraScript s) = ShelleyScriptWitness ShelleyBasedEraAllegra s
-makeScriptWitness (MaryScript    s) = ShelleyScriptWitness ShelleyBasedEraMary    s
+makeScriptWitness :: forall era. ScriptInEra era -> Witness era
+makeScriptWitness s = ShelleyScriptWitness
+                        (eraOfScriptInEra s)
+                        (toShelleyScript s)
+
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId
