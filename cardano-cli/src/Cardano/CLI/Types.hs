@@ -90,4 +90,3 @@ data SigningKeyOrScriptFile = ScriptFileForWitness FilePath
 --
 data TxOutAnyEra = TxOutAnyEra AddressAny Value
   deriving (Eq, Show)
-
