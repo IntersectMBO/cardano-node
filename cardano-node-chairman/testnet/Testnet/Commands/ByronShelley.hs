@@ -25,6 +25,20 @@ data ByronShelleyOptions = ByronShelleyOptions
 optsTestnet :: Parser TestnetOptions
 optsTestnet = TestnetOptions
   <$> OA.option auto
+      (   OA.long "num-bft-nodes"
+      <>  OA.help "Number of BFT nodes"
+      <>  OA.metavar "COUNT"
+      <>  OA.showDefault
+      <>  OA.value (numBftNodes defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "num-pool-nodes"
+      <>  OA.help "Number of pool nodes"
+      <>  OA.metavar "COUNT"
+      <>  OA.showDefault
+      <>  OA.value (numPoolNodes defaultTestnetOptions)
+      )
+  <*> OA.option auto
       (   OA.long "active-slots-coeff"
       <>  OA.help "Active slots co-efficient"
       <>  OA.metavar "DOUBLE"
