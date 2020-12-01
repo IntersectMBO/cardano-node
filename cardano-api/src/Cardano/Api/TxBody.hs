@@ -81,14 +81,20 @@ module Cardano.Api.TxBody (
 
 import           Prelude
 
+import           Data.Bifunctor (first)
+import           Data.List (intercalate)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.String (IsString)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
+import           Data.Word (Word64)
+
+import           Control.Monad (guard)
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
@@ -104,13 +110,16 @@ import qualified Cardano.Chain.UTxO as Byron
 
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Shelley as Ledger
+import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import qualified Cardano.Ledger.ShelleyMA.Metadata as Allegra
+import qualified Shelley.Spec.Ledger.MetaData as Ledger (MetaDataHash, hashMetadata)
+import           Ouroboros.Consensus.Shelley.Eras
+                   (StandardShelley, StandardAllegra, StandardMary)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe(..))
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe(..), maybeToStrictMaybe)
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
@@ -122,6 +131,7 @@ import qualified Shelley.Spec.Ledger.UTxO as Shelley
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
@@ -704,7 +714,14 @@ data TxBody era where
      ShelleyTxBody
        :: ShelleyBasedEra era
        -> Ledger.TxBody (ShelleyLedgerEra era)
-       -> Maybe Shelley.MetaData
+
+          -- The 'Ledger.Metadata' is really the /auxiliary/ data, it consists
+          -- of one or several things, depending on era:
+          -- * tranaction metadata   (in Shelley and later)
+          -- * auxiliary scripts     (in Allegra and later)
+          -- * auxiliary script data (in Allonzo and later)
+       -> Maybe (Ledger.Metadata (ShelleyLedgerEra era))
+
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
      -- The 'ShelleyLedgerEra' type family maps that to the era type from the
@@ -719,7 +736,10 @@ instance Eq (TxBody era) where
 
     (==) (ShelleyTxBody era txbodyA txmetadataA)
          (ShelleyTxBody _   txbodyB txmetadataB) =
-         txmetadataA == txmetadataB
+         case era of
+           ShelleyBasedEraShelley -> txmetadataA == txmetadataB
+           ShelleyBasedEraAllegra -> txmetadataA == txmetadataB
+           ShelleyBasedEraMary    -> txmetadataA == txmetadataB
       && case era of
            ShelleyBasedEraShelley -> txbodyA == txbodyB
            ShelleyBasedEraAllegra -> txbodyA == txbodyB
@@ -853,7 +873,24 @@ data TxBodyError era =
        TxBodyEmptyTxIns
      | TxBodyEmptyTxOuts
      | TxBodyLovelaceOverflow (TxOut era)
+     | TxBodyMetadataError [(Word64, TxMetadataRangeError)]
+     | TxBodyMintAdaError
      deriving Show
+
+instance Error (TxBodyError era) where
+    displayError TxBodyEmptyTxIns  = "Transaction body has no inputs"
+    displayError TxBodyEmptyTxOuts = "Transaction body has no outputs"
+    displayError (TxBodyLovelaceOverflow txout) =
+      "Lovelace greater than 2^64 in transaction output " <> show txout
+    displayError (TxBodyMetadataError [(k, err)]) =
+      "Error in metadata entry " ++ show k ++ ": " ++ displayError err
+    displayError (TxBodyMetadataError errs) =
+      "Error in metadata entries: " ++
+      intercalate "; "
+        [ show k ++ ": " ++ displayError err
+        | (k, err) <- errs ]
+    displayError TxBodyMintAdaError =
+      "Transaction cannot mint ada, only non-ada assets"
 
 
 makeTransactionBody :: forall era.
@@ -896,8 +933,16 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
                              txWithdrawals,
                              txCertificates,
                              txUpdateProposal
-                           } =
-    --TODO: validate the txins are not empty, and tx out coin values are in range
+                           } = do
+
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ guard (v >= 0) ?! TxBodyLovelaceOverflow txout
+      | txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v)) <- txOuts ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> first TxBodyMetadataError (validateTxMetadata m)
+
     return $
       ShelleyTxBody era
         (Shelley.TxBody
@@ -918,12 +963,17 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
-          (case txMetadata of
-             TxMetadataNone      -> SNothing
-             TxMetadataInEra _ m -> SJust (toShelleyMetadataHash m)))
-        (case txMetadata of
-           TxMetadataNone      -> Nothing
-           TxMetadataInEra _ m -> Just (toShelleyMetadata m))
+          (maybeToStrictMaybe (hashAuxiliaryData <$> txAuxData)))
+        txAuxData
+  where
+    txAuxData :: Maybe (Ledger.Metadata StandardShelley)
+    txAuxData
+      | Map.null ms = Nothing
+      | otherwise   = Just (toShelleyAuxiliaryData ms)
+      where
+        ms = case txMetadata of
+               TxMetadataNone                     -> Map.empty
+               TxMetadataInEra _ (TxMetadata ms') -> ms'
 
 makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                            TxBodyContent {
@@ -932,12 +982,20 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                              txFee,
                              txValidityRange = (lowerBound, upperBound),
                              txMetadata,
-                             txAuxScripts = _unused, --TODO: now supported in ledger
+                             txAuxScripts,
                              txWithdrawals,
                              txCertificates,
                              txUpdateProposal
-                           } =
-    --TODO: validate the txins are not empty, and tx out coin values are in range
+                           } = do
+
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ guard (v >= 0) ?! TxBodyLovelaceOverflow txout
+      | txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v)) <- txOuts ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
+
     return $
       ShelleyTxBody era
         (Allegra.TxBody
@@ -963,13 +1021,22 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
-          (case txMetadata of
-             TxMetadataNone      -> SNothing
-             TxMetadataInEra _ m -> SJust (toShelleyMetadataHash m))
+          (maybeToStrictMaybe (hashAuxiliaryData <$> txAuxData))
           mempty) -- No minting in Allegra, only Mary
-        (case txMetadata of
-           TxMetadataNone      -> Nothing
-           TxMetadataInEra _ m -> Just (toShelleyMetadata m))
+        txAuxData
+  where
+    txAuxData :: Maybe (Ledger.Metadata StandardAllegra)
+    txAuxData
+      | Map.null ms
+      , null ss   = Nothing
+      | otherwise = Just (toAllegraAuxiliaryData ms ss)
+      where
+        ms = case txMetadata of
+               TxMetadataNone                     -> Map.empty
+               TxMetadataInEra _ (TxMetadata ms') -> ms'
+        ss = case txAuxScripts of
+               TxAuxScriptsNone   -> []
+               TxAuxScripts _ ss' -> ss'
 
 makeShelleyTransactionBody era@ShelleyBasedEraMary
                            TxBodyContent {
@@ -978,13 +1045,26 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
                              txFee,
                              txValidityRange = (lowerBound, upperBound),
                              txMetadata,
-                             txAuxScripts = _unused, --TODO: now supported in ledger
+                             txAuxScripts,
                              txWithdrawals,
                              txCertificates,
                              txUpdateProposal,
                              txMintValue
-                           } =
-    --TODO: validate the txins are not empty, and tx out coin values are in range
+                           } = do
+
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ guard allPositive ?! TxBodyLovelaceOverflow txout
+      | txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v)) <- txOuts
+      , let allPositive = and [ q >= 0 | (_,q) <- valueToList v ]
+      ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
+    case txMintValue of
+      TxMintNone      -> return ()
+      TxMintValue _ v -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+
     return $
       ShelleyTxBody era
         (Allegra.TxBody
@@ -1010,15 +1090,24 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
-          (case txMetadata of
-             TxMetadataNone      -> SNothing
-             TxMetadataInEra _ m -> SJust (toShelleyMetadataHash m))
+          (maybeToStrictMaybe (hashAuxiliaryData <$> txAuxData))
           (case txMintValue of
              TxMintNone      -> mempty
              TxMintValue _ v -> toMaryValue v))
-        (case txMetadata of
-           TxMetadataNone      -> Nothing
-           TxMetadataInEra _ m -> Just (toShelleyMetadata m))
+        txAuxData
+  where
+    txAuxData :: Maybe (Ledger.Metadata StandardMary)
+    txAuxData
+      | Map.null ms
+      , null ss   = Nothing
+      | otherwise = Just (toAllegraAuxiliaryData ms ss)
+      where
+        ms = case txMetadata of
+               TxMetadataNone                     -> Map.empty
+               TxMetadataInEra _ (TxMetadata ms') -> ms'
+        ss = case txAuxScripts of
+               TxAuxScriptsNone   -> []
+               TxAuxScripts _ ss' -> ss'
 
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace)] -> Shelley.Wdrl ledgerera
@@ -1027,6 +1116,33 @@ toShelleyWithdrawal withdrawals =
       Map.fromList
         [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
         | (stakeAddr, value) <- withdrawals ]
+
+-- | In the Shelley era the auxiliary data consists only of the tx metadata
+toShelleyAuxiliaryData :: Map Word64 TxMetadataValue
+                       -> Ledger.Metadata StandardShelley
+toShelleyAuxiliaryData m =
+    Shelley.MetaData
+      (toShelleyMetaData m)
+
+-- | In the Allegra and Mary eras the auxiliary data consists of the tx metadata
+-- and the axiliary scripts.
+--
+toAllegraAuxiliaryData :: forall era ledgeera.
+                          ShelleyLedgerEra era ~ ledgeera
+                       => Ledger.Metadata ledgeera ~ Allegra.Metadata ledgeera
+                       => Ledger.AnnotatedData (Ledger.Script ledgeera)
+                       => Ord (Ledger.Script ledgeera)
+                       => Map Word64 TxMetadataValue
+                       -> [ScriptInEra era]
+                       -> Ledger.Metadata ledgeera
+toAllegraAuxiliaryData m ss =
+    Allegra.Metadata
+      (toShelleyMetaData m)
+      (Seq.fromList (map toShelleyScript ss))
+
+hashAuxiliaryData :: Shelley.ValidateMetadata ledgeera
+                  => Ledger.Metadata ledgeera -> Ledger.MetaDataHash ledgeera
+hashAuxiliaryData = Ledger.hashMetadata
 
 
 -- ----------------------------------------------------------------------------

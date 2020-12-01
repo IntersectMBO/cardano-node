@@ -20,13 +20,13 @@ import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
-  property $ do v <- forAll genValue
+  property $ do v <- forAll genValueDefault
                 tripping v encode eitherDecode
 
 
 prop_roundtrip_Value_flatten_unflatten :: Property
 prop_roundtrip_Value_flatten_unflatten =
-  property $ do v <- forAll genValue
+  property $ do v <- forAll genValueDefault
                 valueFromNestedRep (valueToNestedRep v) === v
 
 prop_roundtrip_Value_unflatten_flatten :: Property
@@ -76,4 +76,3 @@ canonicalise =
 
 tests :: TestTree
 tests = fromGroup $$discover
-

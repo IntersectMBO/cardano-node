@@ -46,16 +46,15 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
-import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
+import           Ouroboros.Consensus.Cardano.Block as Consensus
+                   (Either (..), EraMismatch (..), Query (..))
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (Either (DegenQueryResult),
-                     Query (DegenQuery))
+import           Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
-import qualified Cardano.Ledger.Shelley as Ledger
-import qualified Ouroboros.Consensus.Shelley.Ledger as Ledger
+import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
@@ -70,7 +69,7 @@ import           Shelley.Spec.Ledger.Scripts ()
 import qualified Shelley.Spec.Ledger.TxBody as Ledger (TxId (..), TxIn (..), TxOut (..))
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO (..))
 
-import           Ouroboros.Consensus.Shelley.Ledger hiding (ShelleyBasedEra)
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -320,7 +319,7 @@ writeProtocolState mOutFile pstate =
 
 writeFilteredUTxOs :: forall era ledgerera.
                       Ledger.Value ledgerera ~ Coin --TODO: support multi-asset
-                   => Ledger.ShelleyBasedEra ledgerera
+                   => Consensus.ShelleyBasedEra ledgerera
                    => CardanoEra era
                    -> Maybe OutputFile
                    -> Ledger.UTxO ledgerera
@@ -441,10 +440,13 @@ queryUTxOFromLocalState era qFilter
 
     ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
-      DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
-        queryNodeLocalState
-          connectInfo
-          (getTipPoint tip, DegenQuery (applyUTxOFilter qFilter))
+      Consensus.DegenQueryResult result <-
+        firstExceptT AcquireFailureError . newExceptT $
+          queryNodeLocalState
+            connectInfo
+            ( getTipPoint tip
+            , Consensus.DegenQuery (applyUTxOFilter qFilter)
+            )
       return result
 
     ShelleyMode{} | otherwise -> throwError ShelleyProtocolEraMismatch
@@ -460,10 +462,10 @@ queryUTxOFromLocalState era qFilter
         QueryResultSuccess utxo -> return utxo
   where
     applyUTxOFilter :: QueryFilter
-                    -> Query (ShelleyBlock ledgerera)
+                    -> Query (Consensus.ShelleyBlock ledgerera)
                              (Ledger.UTxO ledgerera)
-    applyUTxOFilter (FilterByAddress as) = GetFilteredUTxO (toShelleyAddrs as)
-    applyUTxOFilter NoFilter             = GetUTxO
+    applyUTxOFilter (FilterByAddress as) = Consensus.GetFilteredUTxO (toShelleyAddrs as)
+    applyUTxOFilter NoFilter             = Consensus.GetUTxO
 
     toShelleyAddrs :: Set AddressAny -> Set (Ledger.Addr ledgerera)
     toShelleyAddrs = Set.map (toShelleyAddr
@@ -522,10 +524,13 @@ queryPParamsFromLocalState era connectInfo@LocalNodeConnectInfo{
                                }
   | ShelleyBasedEraShelley <- era = do
     tip <- liftIO $ getLocalTip connectInfo
-    DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
-      queryNodeLocalState
-        connectInfo
-        (getTipPoint tip, DegenQuery GetCurrentPParams)
+    Consensus.DegenQueryResult result <-
+      firstExceptT AcquireFailureError . newExceptT $
+        queryNodeLocalState
+          connectInfo
+          ( getTipPoint tip
+          , Consensus.DegenQuery Consensus.GetCurrentPParams
+          )
     return result
 
   | otherwise = throwError ShelleyProtocolEraMismatch
@@ -537,7 +542,7 @@ queryPParamsFromLocalState era connectInfo@LocalNodeConnectInfo{
     result <- firstExceptT AcquireFailureError . newExceptT $
       queryNodeLocalState
         connectInfo
-        (getTipPoint tip, queryIfCurrentEra era GetCurrentPParams)
+        (getTipPoint tip, queryIfCurrentEra era Consensus.GetCurrentPParams)
     case result of
       QueryResultEraMismatch eraerr  -> throwError (EraMismatchError eraerr)
       QueryResultSuccess     pparams -> return pparams
@@ -565,10 +570,13 @@ queryStakeDistributionFromLocalState era connectInfo@LocalNodeConnectInfo{
                                          }
   | ShelleyBasedEraShelley <- era = do
     tip <- liftIO $ getLocalTip connectInfo
-    DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
-      queryNodeLocalState
-        connectInfo
-        (getTipPoint tip, DegenQuery GetStakeDistribution)
+    Consensus.DegenQueryResult result <-
+      firstExceptT AcquireFailureError . newExceptT $
+        queryNodeLocalState
+          connectInfo
+          ( getTipPoint tip
+          , Consensus.DegenQuery Consensus.GetStakeDistribution
+          )
     return result
 
   | otherwise = throwError ShelleyProtocolEraMismatch
@@ -580,7 +588,7 @@ queryStakeDistributionFromLocalState era connectInfo@LocalNodeConnectInfo{
   result <- firstExceptT AcquireFailureError . newExceptT $
     queryNodeLocalState
       connectInfo
-      (getTipPoint tip, queryIfCurrentEra era GetStakeDistribution)
+      (getTipPoint tip, queryIfCurrentEra era Consensus.GetStakeDistribution)
   case result of
     QueryResultEraMismatch err -> throwError (EraMismatchError err)
     QueryResultSuccess stakeDist -> return stakeDist
@@ -588,7 +596,7 @@ queryStakeDistributionFromLocalState era connectInfo@LocalNodeConnectInfo{
 queryLocalLedgerState
   :: forall era ledgerera mode block.
      ShelleyLedgerEra era ~ ledgerera
-  => Ledger.ShelleyBasedEra ledgerera
+  => Ledger.ShelleyBased ledgerera
   => ShelleyBasedEra era
   -> LocalNodeConnectInfo mode block
   -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
@@ -599,12 +607,14 @@ queryLocalLedgerState era connectInfo@LocalNodeConnectInfo{localNodeConsensusMod
 
     ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
-      DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
+      Consensus.DegenQueryResult result <-
+        firstExceptT AcquireFailureError . newExceptT $
           queryNodeLocalState
             connectInfo
             ( getTipPoint tip
-            , DegenQuery $
-                GetCBOR DebugNewEpochState  -- Get CBOR-in-CBOR version
+            , Consensus.DegenQuery $
+                Consensus.GetCBOR Consensus.DebugNewEpochState
+                -- Get CBOR-in-CBOR version
             )
       return (decodeLedgerState result)
 
@@ -615,7 +625,9 @@ queryLocalLedgerState era connectInfo@LocalNodeConnectInfo{localNodeConsensusMod
       result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
-          (getTipPoint tip, queryIfCurrentEra era (GetCBOR DebugNewEpochState)) -- Get CBOR-in-CBOR version
+          (getTipPoint tip,
+           queryIfCurrentEra era (Consensus.GetCBOR Consensus.DebugNewEpochState))
+           -- Get CBOR-in-CBOR version
       case result of
         QueryResultEraMismatch err -> throwError (EraMismatchError err)
         QueryResultSuccess ls -> return (decodeLedgerState ls)
@@ -638,12 +650,14 @@ queryLocalProtocolState era connectInfo@LocalNodeConnectInfo{localNodeConsensusM
 
     ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
-      DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
+      Consensus.DegenQueryResult result <-
+        firstExceptT AcquireFailureError . newExceptT $
           queryNodeLocalState
             connectInfo
             ( getTipPoint tip
-            , DegenQuery $
-                GetCBOR DebugChainDepState  -- Get CBOR-in-CBOR version
+            , Consensus.DegenQuery $
+                Consensus.GetCBOR Consensus.DebugChainDepState
+                -- Get CBOR-in-CBOR version
             )
       return (decodeProtocolState result)
 
@@ -654,7 +668,9 @@ queryLocalProtocolState era connectInfo@LocalNodeConnectInfo{localNodeConsensusM
       result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
-          (getTipPoint tip, queryIfCurrentEra era (GetCBOR DebugChainDepState)) -- Get CBOR-in-CBOR version
+          (getTipPoint tip,
+           queryIfCurrentEra era (Consensus.GetCBOR Consensus.DebugChainDepState))
+                                  -- Get CBOR-in-CBOR version
       case result of
         QueryResultEraMismatch err -> throwError (EraMismatchError err)
         QueryResultSuccess ls -> return (decodeProtocolState ls)
@@ -689,13 +705,13 @@ queryDelegationsAndRewardsFromLocalState era stakeaddrs
 
     ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
-      DegenQueryResult result <-
+      Consensus.DegenQueryResult result <-
         firstExceptT AcquireFailureError . newExceptT $
           queryNodeLocalState
             connectInfo
             ( getTipPoint tip
-            , DegenQuery $
-                GetFilteredDelegationsAndRewardAccounts
+            , Consensus.DegenQuery $
+                Consensus.GetFilteredDelegationsAndRewardAccounts
                   (toShelleyStakeCredentials stakeaddrs)
             )
       return (uncurry toDelegsAndRwds result)
@@ -709,7 +725,7 @@ queryDelegationsAndRewardsFromLocalState era stakeaddrs
           connectInfo
           ( getTipPoint tip
           , queryIfCurrentEra era $
-              GetFilteredDelegationsAndRewardAccounts
+              Consensus.GetFilteredDelegationsAndRewardAccounts
                 (toShelleyStakeCredentials stakeaddrs)
           )
       case result of
@@ -744,17 +760,17 @@ queryDelegationsAndRewardsFromLocalState era stakeaddrs
 --
 --
 queryIfCurrentEra :: ShelleyBasedEra era
-                  -> Query (ShelleyBlock (ShelleyLedgerEra era)) result
+                  -> Query (Consensus.ShelleyBlock (ShelleyLedgerEra era)) result
                   -> Consensus.CardanoQuery StandardCrypto
                        (Consensus.CardanoQueryResult StandardCrypto result)
-queryIfCurrentEra ShelleyBasedEraShelley = QueryIfCurrentShelley
-queryIfCurrentEra ShelleyBasedEraAllegra = QueryIfCurrentAllegra
-queryIfCurrentEra ShelleyBasedEraMary    = QueryIfCurrentMary
+queryIfCurrentEra ShelleyBasedEraShelley = Consensus.QueryIfCurrentShelley
+queryIfCurrentEra ShelleyBasedEraAllegra = Consensus.QueryIfCurrentAllegra
+queryIfCurrentEra ShelleyBasedEraMary    = Consensus.QueryIfCurrentMary
 
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
-  -> (Ledger.ShelleyBasedEra ledgerera => a) -> a
+  -> (Consensus.ShelleyBasedEra ledgerera => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
