@@ -1,13 +1,11 @@
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Metadata embedded in transactions
 --
 module Cardano.Api.TxMetadata (
 
     -- * Types
-    TxMetadata (TxMetadata, TxMetadataShelley),
+    TxMetadata (TxMetadata),
 
     -- * Constructing metadata
     TxMetadataValue(..),
@@ -26,8 +24,8 @@ module Cardano.Api.TxMetadata (
     TxMetadataJsonSchemaError (..),
 
     -- * Internal conversion functions
-    toShelleyMetadata,
-    toShelleyMetadataHash,
+    toShelleyMetaData,
+    fromShelleyMetaData,
 
     -- * Data family instances
     AsType(..)
@@ -65,7 +63,6 @@ import           Control.Monad (guard, when)
 
 import qualified Cardano.Binary as CBOR
 
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Shelley.Spec.Ledger.MetaData as Shelley
 
 import           Cardano.Api.Eras
@@ -78,13 +75,8 @@ import           Cardano.Api.SerialiseCBOR
 -- TxMetadata types
 --
 
-newtype TxMetadata = TxMetadataShelley Shelley.MetaData
+newtype TxMetadata = TxMetadata (Map Word64 TxMetadataValue)
     deriving (Eq, Show)
-
-{-# COMPLETE TxMetadata #-}
-pattern TxMetadata :: Map Word64 TxMetadataValue -> TxMetadata
-pattern TxMetadata m <- TxMetadataShelley (fromShelleyMetaData -> m) where
-    TxMetadata = TxMetadataShelley . toShelleyMetaData
 
 data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
                      | TxMetaBytes  ByteString
@@ -97,25 +89,27 @@ data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
 -- takes precedence.
 --
 instance Semigroup TxMetadata where
-    TxMetadataShelley (Shelley.MetaData m1)
-      <> TxMetadataShelley (Shelley.MetaData m2) =
-
-      TxMetadataShelley (Shelley.MetaData (m1 <> m2))
+    TxMetadata m1 <> TxMetadata m2 = TxMetadata (m1 <> m2)
 
 instance Monoid TxMetadata where
-    mempty = TxMetadataShelley (Shelley.MetaData mempty)
+    mempty = TxMetadata mempty
 
 instance HasTypeProxy TxMetadata where
     data AsType TxMetadata = AsTxMetadata
     proxyToAsType _ = AsTxMetadata
 
 instance SerialiseAsCBOR TxMetadata where
-    serialiseToCBOR (TxMetadataShelley tx) =
-      CBOR.serialize' tx
+    serialiseToCBOR =
+          CBOR.serialize'
+        . Shelley.MetaData
+        . toShelleyMetaData
+        . (\(TxMetadata m) -> m)
 
     deserialiseFromCBOR AsTxMetadata bs =
-      TxMetadataShelley <$>
-        CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
+          TxMetadata
+        . fromShelleyMetaData
+        . (\(Shelley.MetaData m) -> m)
+      <$> CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
 
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
 makeTransactionMetadata = TxMetadata
@@ -125,10 +119,8 @@ makeTransactionMetadata = TxMetadata
 -- Internal conversion functions
 --
 
-toShelleyMetaData :: Map Word64 TxMetadataValue -> Shelley.MetaData
-toShelleyMetaData =
-    Shelley.MetaData
-  . Map.map toShelleyMetaDatum
+toShelleyMetaData :: Map Word64 TxMetadataValue -> Map Word64 Shelley.MetaDatum
+toShelleyMetaData = Map.map toShelleyMetaDatum
   where
     toShelleyMetaDatum :: TxMetadataValue -> Shelley.MetaDatum
     toShelleyMetaDatum (TxMetaNumber x) = Shelley.I x
@@ -141,9 +133,8 @@ toShelleyMetaData =
                                                toShelleyMetaDatum v)
                                             | (k,v) <- xs ]
 
-fromShelleyMetaData :: Shelley.MetaData -> Map Word64 TxMetadataValue
-fromShelleyMetaData (Shelley.MetaData mdMap) =
-    Map.Lazy.map fromShelleyMetaDatum mdMap
+fromShelleyMetaData :: Map Word64 Shelley.MetaDatum -> Map Word64 TxMetadataValue
+fromShelleyMetaData = Map.Lazy.map fromShelleyMetaDatum
   where
     fromShelleyMetaDatum :: Shelley.MetaDatum -> TxMetadataValue
     fromShelleyMetaDatum (Shelley.I     x) = TxMetaNumber x
@@ -155,13 +146,6 @@ fromShelleyMetaData (Shelley.MetaData mdMap) =
                                                [ (fromShelleyMetaDatum k,
                                                   fromShelleyMetaDatum v)
                                                | (k,v) <- xs ]
-
-toShelleyMetadata :: TxMetadata -> Shelley.MetaData
-toShelleyMetadata (TxMetadataShelley m) = m
-
-toShelleyMetadataHash :: Ledger.Era ledgerera
-                      => TxMetadata -> Shelley.MetaDataHash ledgerera
-toShelleyMetadataHash (TxMetadataShelley m) = Shelley.hashMetaData m
 
 
 -- ----------------------------------------------------------------------------

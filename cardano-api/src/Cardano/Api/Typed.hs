@@ -237,7 +237,9 @@ module Cardano.Api.Typed (
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
-    TxMetadata (TxMetadata, TxMetadataShelley),
+    TxMetadata(..),
+    toShelleyMetaData,
+    fromShelleyMetaData,
 
     -- ** Constructing metadata
     TxMetadataValue(..),

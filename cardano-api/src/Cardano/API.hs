@@ -204,7 +204,7 @@ module Cardano.API (
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
-    TxMetadata(TxMetadata),
+    TxMetadata(..),
 
     -- ** Constructing metadata
     TxMetadataValue(..),
