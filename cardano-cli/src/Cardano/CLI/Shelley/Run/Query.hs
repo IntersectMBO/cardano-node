@@ -109,13 +109,18 @@ runQueryProtocolParameters
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters (AnyCardanoEra _era) protocol network mOutFile = do
+runQueryProtocolParameters (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra _era' <- cardanoEraStyle era = do
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
                            readEnvSocketPath
     pparams <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
                withlocalNodeConnectInfo protocol network sockPath
                  queryPParamsFromLocalState
     writeProtocolParameters mOutFile pparams
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 writeProtocolParameters
   :: Maybe OutputFile
@@ -156,11 +161,17 @@ runQueryUTxO
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryUTxO (AnyCardanoEra _era) protocol qfilter network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  filteredUtxo <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-    withlocalNodeConnectInfo protocol network sockPath (queryUTxOFromLocalState qfilter)
-  writeFilteredUTxOs mOutFile filteredUtxo
+runQueryUTxO (AnyCardanoEra era) protocol qfilter network mOutFile
+  | ShelleyBasedEra _era' <- cardanoEraStyle era = do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    filteredUtxo <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+      withlocalNodeConnectInfo protocol network sockPath (queryUTxOFromLocalState qfilter)
+    writeFilteredUTxOs mOutFile filteredUtxo
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 runQueryLedgerState
   :: AnyCardanoEra
@@ -168,15 +179,21 @@ runQueryLedgerState
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryLedgerState (AnyCardanoEra _era) protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-    withlocalNodeConnectInfo protocol network sockPath queryLocalLedgerState
-  case els of
-    Right lstate -> writeLedgerState mOutFile lstate
-    Left lbs -> do
-      liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
-      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR lbs
+runQueryLedgerState (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra _era' <- cardanoEraStyle era = do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+      withlocalNodeConnectInfo protocol network sockPath queryLocalLedgerState
+    case els of
+      Right lstate -> writeLedgerState mOutFile lstate
+      Left lbs -> do
+        liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
+        firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR lbs
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 runQueryProtocolState
   :: AnyCardanoEra
@@ -184,15 +201,21 @@ runQueryProtocolState
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolState (AnyCardanoEra _era) protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-    withlocalNodeConnectInfo protocol network sockPath queryLocalProtocolState
-  case els of
-    Right protocolState -> writeProtocolState mOutFile protocolState
-    Left pbs -> do
-      liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
-      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR pbs
+runQueryProtocolState (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra _era' <- cardanoEraStyle era = do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+      withlocalNodeConnectInfo protocol network sockPath queryLocalProtocolState
+    case els of
+      Right protocolState -> writeProtocolState mOutFile protocolState
+      Left pbs -> do
+        liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
+        firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR pbs
+
+    | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 runQueryStakeAddressInfo
   :: AnyCardanoEra
@@ -201,7 +224,9 @@ runQueryStakeAddressInfo
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo (AnyCardanoEra _era) protocol addr network mOutFile = do
+runQueryStakeAddressInfo (AnyCardanoEra era) protocol addr network mOutFile
+  | ShelleyBasedEra _era' <- cardanoEraStyle era = do
+
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
     delegsAndRwds <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
       withlocalNodeConnectInfo
@@ -210,6 +235,10 @@ runQueryStakeAddressInfo (AnyCardanoEra _era) protocol addr network mOutFile = d
         sockPath
         (queryDelegationsAndRewardsFromLocalState (Set.singleton addr))
     writeStakeAddressInfo mOutFile delegsAndRwds
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -297,15 +326,21 @@ runQueryStakeDistribution
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeDistribution (AnyCardanoEra _era) protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  stakeDist <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-      withlocalNodeConnectInfo
-        protocol
-        network
-        sockPath
-        queryStakeDistributionFromLocalState
-  writeStakeDistribution mOutFile stakeDist
+runQueryStakeDistribution (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra _era' <- cardanoEraStyle era = do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    stakeDist <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+        withlocalNodeConnectInfo
+          protocol
+          network
+          sockPath
+          queryStakeDistributionFromLocalState
+    writeStakeDistribution mOutFile stakeDist
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 writeStakeDistribution :: Maybe OutputFile
                        -> PoolDistr StandardCrypto
