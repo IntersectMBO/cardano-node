@@ -51,7 +51,6 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
-import           Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Vector as Vector
 
 import qualified Data.Aeson as Aeson
@@ -155,14 +154,14 @@ fromShelleyMetaData = Map.Lazy.map fromShelleyMetaDatum
 -- | Validate transaction metadata. This is for use with existing constructed
 -- metadata values, e.g. constructed manually or decoded from CBOR directly.
 --
-validateTxMetadata :: TxMetadata
-                   -> Either (NonEmpty TxMetadataRangeError) TxMetadata
-validateTxMetadata txMd@(TxMetadata mdMap) =
+validateTxMetadata :: TxMetadata -> Either [(Word64, TxMetadataRangeError)] ()
+validateTxMetadata (TxMetadata m) =
     -- Collect all errors and do a top-level check to see if there are any.
-    maybe (Right txMd) Left
-  . nonEmpty
-  . foldMap validateTxMetadataValue
-  $ mdMap
+    case [ (k, err)
+         | (k, v) <- Map.toList m
+         , err <- validateTxMetadataValue v ] of
+      []   -> Right ()
+      errs -> Left errs
 
 -- collect all errors in a monoidal fold style
 validateTxMetadataValue :: TxMetadataValue -> [TxMetadataRangeError]

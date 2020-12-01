@@ -81,6 +81,8 @@ module Cardano.Api.TxBody (
 
 import           Prelude
 
+import           Data.Bifunctor (first)
+import           Data.List (intercalate)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.String (IsString)
 import           Data.ByteString (ByteString)
@@ -91,6 +93,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
+
+import           Control.Monad (guard)
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
@@ -127,6 +131,7 @@ import qualified Shelley.Spec.Ledger.UTxO as Shelley
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
@@ -868,7 +873,24 @@ data TxBodyError era =
        TxBodyEmptyTxIns
      | TxBodyEmptyTxOuts
      | TxBodyLovelaceOverflow (TxOut era)
+     | TxBodyMetadataError [(Word64, TxMetadataRangeError)]
+     | TxBodyMintAdaError
      deriving Show
+
+instance Error (TxBodyError era) where
+    displayError TxBodyEmptyTxIns  = "Transaction body has no inputs"
+    displayError TxBodyEmptyTxOuts = "Transaction body has no outputs"
+    displayError (TxBodyLovelaceOverflow txout) =
+      "Lovelace greater than 2^64 in transaction output " <> show txout
+    displayError (TxBodyMetadataError [(k, err)]) =
+      "Error in metadata entry " ++ show k ++ ": " ++ displayError err
+    displayError (TxBodyMetadataError errs) =
+      "Error in metadata entries: " ++
+      intercalate "; "
+        [ show k ++ ": " ++ displayError err
+        | (k, err) <- errs ]
+    displayError TxBodyMintAdaError =
+      "Transaction cannot mint ada, only non-ada assets"
 
 
 makeTransactionBody :: forall era.
@@ -911,8 +933,16 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
                              txWithdrawals,
                              txCertificates,
                              txUpdateProposal
-                           } =
-    --TODO: validate the txins are not empty, and tx out coin values are in range
+                           } = do
+
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ guard (v >= 0) ?! TxBodyLovelaceOverflow txout
+      | txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v)) <- txOuts ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> first TxBodyMetadataError (validateTxMetadata m)
+
     return $
       ShelleyTxBody era
         (Shelley.TxBody
@@ -956,8 +986,16 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                              txWithdrawals,
                              txCertificates,
                              txUpdateProposal
-                           } =
-    --TODO: validate the txins are not empty, and tx out coin values are in range
+                           } = do
+
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ guard (v >= 0) ?! TxBodyLovelaceOverflow txout
+      | txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v)) <- txOuts ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
+
     return $
       ShelleyTxBody era
         (Allegra.TxBody
@@ -1012,8 +1050,21 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
                              txCertificates,
                              txUpdateProposal,
                              txMintValue
-                           } =
-    --TODO: validate the txins are not empty, and tx out coin values are in range
+                           } = do
+
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ guard allPositive ?! TxBodyLovelaceOverflow txout
+      | txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v)) <- txOuts
+      , let allPositive = and [ q >= 0 | (_,q) <- valueToList v ]
+      ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
+    case txMintValue of
+      TxMintNone      -> return ()
+      TxMintValue _ v -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+
     return $
       ShelleyTxBody era
         (Allegra.TxBody

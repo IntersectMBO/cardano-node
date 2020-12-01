@@ -18,7 +18,6 @@ import           Prelude (String)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality(..))
 
@@ -56,7 +55,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdWriteFileError !(FileError ())
   | ShelleyTxCmdMetaDataJsonParseError !FilePath !String
   | ShelleyTxCmdMetaDataConversionError !FilePath !TxMetadataJsonError
-  | ShelleyTxCmdMetaValidationError !FilePath !TxMetadataRangeError
+  | ShelleyTxCmdMetaValidationError !FilePath ![(Word64, TxMetadataRangeError)]
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
@@ -96,9 +95,11 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdMetaDecodeError fp metaDataErr ->
        "Error decoding CBOR metadata at: " <> show fp
                              <> " Error: " <> show metaDataErr
-    ShelleyTxCmdMetaValidationError fp valErr ->
-      "Error validating transaction metadata at: " <> show fp
-                                           <> "\n" <> Text.pack (displayError valErr)
+    ShelleyTxCmdMetaValidationError fp errs ->
+      "Error validating transaction metadata at: " <> show fp <> "\n" <>
+      Text.intercalate "\n"
+        [ "key " <> show k <> ":" <> Text.pack (displayError valErr)
+        | (k, valErr) <- errs ]
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxCmdAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> show fp
@@ -131,7 +132,7 @@ renderShelleyTxCmdError err =
       " era transactions."
 
     ShelleyTxCmdTxBodyError (SomeTxBodyError err') ->
-      "TxBody error: " <> renderTxBodyError err'
+      "Transaction validaton error: " <> Text.pack (displayError err')
 
     ShelleyTxCmdNotImplemented msg ->
       "Feature not yet implemented: " <> msg
@@ -166,12 +167,6 @@ renderFeature TxFeatureMintValue            = "Asset minting"
 renderFeature TxFeatureMultiAssetOutputs    = "Multi-Asset outputs"
 renderFeature TxFeatureScriptWitnesses      = "Script witnesses"
 renderFeature TxFeatureShelleyKeys          = "Shelley keys"
-
-renderTxBodyError :: TxBodyError era -> Text
-renderTxBodyError TxBodyEmptyTxIns = "Transaction body has no inputs"
-renderTxBodyError TxBodyEmptyTxOuts = "Transaction body has no outputs"
-renderTxBodyError (TxBodyLovelaceOverflow txout) =
-  "Lovelace overflow error: " <> show txout
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -934,5 +929,6 @@ readFileTxMetaData _ (MetaDataFileCBOR fp) = do
           BS.readFile fp
     txMetadata <- firstExceptT (ShelleyTxCmdMetaDecodeError fp) $ hoistEither $
       Api.deserialiseFromCBOR Api.AsTxMetadata bs
-    firstExceptT (ShelleyTxCmdMetaValidationError fp . NE.head) $ hoistEither $
-      validateTxMetadata txMetadata
+    firstExceptT (ShelleyTxCmdMetaValidationError fp) $ hoistEither $ do
+        validateTxMetadata txMetadata
+        return txMetadata
