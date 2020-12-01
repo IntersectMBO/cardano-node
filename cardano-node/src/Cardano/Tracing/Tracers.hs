@@ -495,8 +495,10 @@ traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
       Consensus.TraceStartLeadershipCheck slot -> do
         !query <- mapNodeKernelDataIO
                     (\nk ->
-                       (,) <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
-                           <*> nkQueryChain fragmentChainDensity nk)
+                       (,,)
+                         <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
+                         <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
+                         <*> nkQueryChain fragmentChainDensity nk)
                     nodeKern
         meta <- mkLOMeta sev Public
         traceNamedObject tr
@@ -507,8 +509,9 @@ traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
             ,("slot", toJSON $ unSlotNo slot)]
             ++ fromSMaybe []
                (query <&>
-                 \(utxoSize, chainDensity) ->
+                 \(utxoSize, delegMapSize, chainDensity) ->
                    [ ("utxoSize",     toJSON utxoSize)
+                   , ("delegMapSize", toJSON delegMapSize)
                    , ("chainDensity", toJSON (fromRational chainDensity :: Float))
                    ])
           )
