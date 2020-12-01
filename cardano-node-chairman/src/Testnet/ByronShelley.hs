@@ -71,19 +71,22 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant flip" -}
 
 data TestnetOptions = TestnetOptions
-  { activeSlotsCoeff :: Double
+  { numBftNodes :: Int
+  , numPoolNodes :: Int
+  , activeSlotsCoeff :: Double
   , epochLength :: Int
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
-  { activeSlotsCoeff = 0.1
+  { numBftNodes = 2
+  , numPoolNodes = 1
+  , activeSlotsCoeff = 0.1
   , epochLength = 1500
   }
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
-
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
@@ -127,15 +130,17 @@ testnet testnetOptions H.Conf {..} = do
   env <- H.evalIO IO.getEnvironment
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
-  let bftNodes = ["node-bft1", "node-bft2"]
-  let poolNodes = ["node-pool1"]
+
+  let bftNodesN = [1 .. numBftNodes testnetOptions]
+  let poolNodesN = [1 .. numPoolNodes testnetOptions]
+  let bftNodes = ("node-bft" <>) . show @Int <$> bftNodesN
+  let poolNodes = ("node-pool" <> ) . show @Int <$> poolNodesN
   let allNodes = bftNodes <> poolNodes
-  let bftNodesN = [1, 2]
-  let numBftNodes = 2
   let initSupply = 1000000000
   let maxSupply = 1000000000
-  let fundsPerGenesisAddress = initSupply `div` numBftNodes
+  let fundsPerGenesisAddress = initSupply `div` numBftNodes testnetOptions
   let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
+  let userPoolN = poolNodesN
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodes)
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
@@ -207,7 +212,7 @@ testnet testnetOptions H.Conf {..} = do
     , "--start-time", showUTCTimeSeconds startTime
     , "--k", show @Int securityParam
     , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int numBftNodes
+    , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
     , "--total-balance", show @Int initSupply
     , "--byron-formats"
     , "--delegate-share", "1"
@@ -223,8 +228,8 @@ testnet testnetOptions H.Conf {..} = do
 
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
-    H.createFileLink (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key") (tempAbsPath </> "node-bft" <> show n </> "byron/delegate.key")
-    H.createFileLink (tempAbsPath </> "byron/delegation-cert.00" <> show @Int (n - 1) <> ".json") (tempAbsPath </> "node-bft" <> show n </> "byron/delegate.cert")
+    H.createFileLink (tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key") (tempAbsPath </> "node-bft" <> show @Int n </> "byron/delegate.key")
+    H.createFileLink (tempAbsPath </> "byron/delegation-cert.00" <> show @Int (n - 1) <> ".json") (tempAbsPath </> "node-bft" <> show @Int n </> "byron/delegate.cert")
 
   -- Create keys and addresses to withdraw the initial UTxO into
   forM_ bftNodesN $ \n -> do
@@ -350,15 +355,14 @@ testnet testnetOptions H.Conf {..} = do
     [ "shelley", "genesis", "create"
     , "--testnet-magic", "42"
     , "--genesis-dir", tempAbsPath </> "shelley"
-    , "--gen-genesis-keys", show @Int numBftNodes
+    , "--gen-genesis-keys", show @Int (numBftNodes testnetOptions)
     , "--start-time", formatIso8601 startTime
-    , "--gen-utxo-keys", "1"
+    , "--gen-utxo-keys", show @Int (numPoolNodes testnetOptions)
     ]
 #ifdef UNIX
   --TODO: Remove me after #1948 is merged.
-  let numNodesStr = map show [1..numBftNodes]
-      vrfPath n = tempAbsPath </> "shelley" </> "delegate-keys" </> "delegate" <> n <> ".vrf.skey"
-  H.evalIO $ mapM_ (\n -> setFileMode (vrfPath n) ownerModes) numNodesStr
+  let vrfPath n = tempAbsPath </> "shelley" </> "delegate-keys" </> "delegate" <> n <> ".vrf.skey"
+  H.evalIO . forM_ bftNodesN $ \n -> setFileMode (vrfPath (show @Int n)) ownerModes
 #endif
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "shelley"
@@ -418,8 +422,8 @@ testnet testnetOptions H.Conf {..} = do
   --                 initial utxo the
   -- pool-owner1..n: will be the owner of the pools and we'll use their reward
   --                 account for pool rewards
-  let userAddrs = ["user1"]
-  let poolAddrs = ["pool-owner1"]
+  let userAddrs = ("user" <>) . show @Int <$> userPoolN
+  let poolAddrs = ("pool-owner" <>) . show @Int <$> poolNodesN
   let addrs = userAddrs <> poolAddrs
 
   H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
@@ -464,8 +468,6 @@ testnet testnetOptions H.Conf {..} = do
       ]
 
   -- user N will delegate to pool N
-  let userPoolN = [1]
-
   forM_ userPoolN $ \n -> do
     -- Stake address delegation certs
     void $ H.execCli
