@@ -26,6 +26,7 @@ module Test.Cardano.Api.Typed.Gen
   , genTx
   , genTxBody
   , genValue
+  , genValueDefault
   , genVerificationKey
   ) where
 
@@ -41,7 +42,7 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 
-import           Hedgehog (Gen)
+import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -178,14 +179,38 @@ genAssetId = Gen.choice [ AssetId <$> genPolicyId <*> genAssetName
                         , return AdaAssetId
                         ]
 
-genQuantity :: Gen Quantity
-genQuantity = fromInteger <$> Gen.integral (Range.constantFrom 0 (-2) 2)
+genQuantity :: Range Integer -> Gen Quantity
+genQuantity range = fromInteger <$> Gen.integral range
 
-genValue :: Gen Value
-genValue =
+-- | Generate a positive or negative quantity.
+genSignedQuantity :: Gen Quantity
+genSignedQuantity = genQuantity (Range.constantFrom 0 (-2) 2)
+
+genUnsignedQuantity :: Gen Quantity
+genUnsignedQuantity = genQuantity (Range.constant 0 2)
+
+genValue :: Gen AssetId -> Gen Quantity -> Gen Value
+genValue genAId genQuant =
   valueFromList <$>
     Gen.list (Range.constant 0 10)
-             ((,) <$> genAssetId <*> genQuantity)
+             ((,) <$> genAId <*> genQuant)
+
+-- | Generate a 'Value' with any asset ID and a positive or negative quantity.
+genValueDefault :: Gen Value
+genValueDefault = genValue genAssetId genSignedQuantity
+
+-- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
+-- positive or negative quantity.
+genValueForMinting :: Gen Value
+genValueForMinting = genValue genAssetIdNoAda genSignedQuantity
+  where
+    genAssetIdNoAda :: Gen AssetId
+    genAssetIdNoAda = AssetId <$> genPolicyId <*> genAssetName
+
+-- | Generate a 'Value' suitable for usage in a transaction output, i.e. any
+-- asset ID and a positive quantity.
+genValueForTxOut :: Gen Value
+genValueForTxOut = genValue genAssetId genUnsignedQuantity
 
 
 -- Note that we expect to sometimes generate duplicate policy id keys since we
@@ -197,10 +222,10 @@ genValueNestedRep =
 genValueNestedBundle :: Gen ValueNestedBundle
 genValueNestedBundle =
   Gen.choice
-    [ ValueNestedBundleAda <$> genQuantity
+    [ ValueNestedBundleAda <$> genSignedQuantity
     , ValueNestedBundle <$> genPolicyId
                         <*> Gen.map (Range.constant 0 5)
-                                    ((,) <$> genAssetName <*> genQuantity)
+                                    ((,) <$> genAssetName <*> genSignedQuantity)
     ]
 
 genNetworkId :: Gen NetworkId
@@ -320,7 +345,7 @@ genTxOutValue era =
     ByronEra -> TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace
     ShelleyEra -> TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace
     AllegraEra -> TxOutAdaOnly AdaOnlyInAllegraEra <$> genLovelace
-    MaryEra -> TxOutValue MultiAssetInMaryEra <$> genValue
+    MaryEra -> TxOutValue MultiAssetInMaryEra <$> genValueForTxOut
 
 genTxOut :: CardanoEra era -> Gen (TxOut era)
 genTxOut era =
@@ -469,7 +494,7 @@ genTxMintValue era =
     MaryEra ->
       Gen.choice
         [ pure TxMintNone
-        , TxMintValue MultiAssetInMaryEra <$> genValue
+        , TxMintValue MultiAssetInMaryEra <$> genValueForMinting
         ]
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent era)
