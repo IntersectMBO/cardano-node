@@ -10,6 +10,8 @@
 , compiler
 # Enable profiling
 , profiling ? false
+# Link with -eventlog
+, eventlog ? false
 # Enable asserts for given packages
 , assertedPackages ? []
 # Version info, to be passed when not building from a git work tree
@@ -114,6 +116,10 @@ let
         packages = lib.genAttrs projectPackages
           (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
       }
+      (lib.optionalAttrs eventlog {
+        packages = lib.genAttrs ["cardano-node"]
+          (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
+      })
       (lib.optionalAttrs profiling {
         enableLibraryProfiling = true;
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;

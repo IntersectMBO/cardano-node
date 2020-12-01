@@ -6,7 +6,7 @@
 with lib; with builtins;
 let
   cfg = config.services.cardano-node;
-  inherit (cfg.cardanoNodePkgs) commonLib cardano-node cardano-node-profiled cardano-node-asserted;
+  inherit (cfg.cardanoNodePkgs) commonLib cardano-node cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: let
@@ -100,6 +100,11 @@ in {
         default = "none";
       };
 
+      eventlog = mkOption {
+        type = types.bool;
+        default = false;
+      };
+
       asserts = mkOption {
         type = types.bool;
         default = false;
@@ -123,6 +128,7 @@ in {
         type = types.package;
         default = if (cfg.profiling != "none")
           then cardano-node-profiled
+          else if cfg.eventlog then cardano-node-eventlogged
           else if cfg.asserts then cardano-node-asserted
           else cardano-node;
         defaultText = "cardano-node";
