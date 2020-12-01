@@ -670,17 +670,22 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters
-        <$> pProtocol
+        <$> pCardanoEra
+        <*> pProtocol
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
+    pQueryTip = QueryTip
+                  <$> pProtocol
+                  <*> pNetworkId
+                  <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO
-        <$> pProtocol
+        <$> pCardanoEra
+        <*> pProtocol
         <*> pQueryFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
@@ -688,23 +693,29 @@ pQueryCmd =
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution
-        <$> pProtocol
+        <$> pCardanoEra
+        <*> pProtocol
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
-        <$> pProtocol
+        <$> pCardanoEra
+        <*> pProtocol
         <*> pFilterByStakeAddress
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
+    pQueryLedgerState = QueryLedgerState <$> pCardanoEra <*> pProtocol <*> pNetworkId <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
-    pQueryProtocolState = QueryProtocolState <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
+    pQueryProtocolState = QueryProtocolState
+                            <$> pCardanoEra
+                            <*> pProtocol
+                            <*> pNetworkId
+                            <*> pMaybeOutputFile
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
@@ -2262,21 +2273,21 @@ pProtocol =
         (  Opt.long "shelley-mode"
         <> Opt.help "For talking to a node running in Shelley-only mode."
         )
-    *> pShelley
+    *> pShelleyMode
     )
   <|>
     (  Opt.flag' ()
         (  Opt.long "byron-mode"
         <> Opt.help "For talking to a node running in Byron-only mode."
         )
-    *> pByron
+    *> pByronMode
     )
   <|>
     (  Opt.flag' ()
         (  Opt.long "cardano-mode"
         <> Opt.help "For talking to a node running in full Cardano mode (default)."
         )
-    *> pCardano
+    *> pCardanoMode
     )
   <|>
     -- Default to the Cardano protocol.
@@ -2284,14 +2295,14 @@ pProtocol =
       (CardanoProtocol
         (EpochSlots defaultByronEpochSlots))
   where
-    pByron :: Parser Protocol
-    pByron = ByronProtocol <$> pEpochSlots
+    pByronMode :: Parser Protocol
+    pByronMode = ByronProtocol <$> pEpochSlots
 
-    pShelley :: Parser Protocol
-    pShelley = pure ShelleyProtocol
+    pShelleyMode :: Parser Protocol
+    pShelleyMode = pure ShelleyProtocol
 
-    pCardano :: Parser Protocol
-    pCardano = CardanoProtocol <$> pEpochSlots
+    pCardanoMode :: Parser Protocol
+    pCardanoMode = CardanoProtocol <$> pEpochSlots
 
     pEpochSlots :: Parser EpochSlots
     pEpochSlots =

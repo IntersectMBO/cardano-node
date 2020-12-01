@@ -13,10 +13,10 @@ module Cardano.Api.Shelley
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
     Address(ShelleyAddress),
-    fromShelleyAddr,
-    fromShelleyStakeAddr,
     toShelleyAddr,
-    toShelleyStakeAddr,
+    fromShelleyAddr,
+    toShelleyStakeCredential,
+    fromShelleyStakeCredential,
     NetworkId(Mainnet, Testnet),
 
     -- * Stake addresses
@@ -24,6 +24,10 @@ module Cardano.Api.Shelley
     StakeAddress(..),
     StakeAddressReference(..),
     StakeCredential(..),
+    toShelleyStakeAddr,
+    fromShelleyStakeAddr,
+    fromShelleyStakeReference,
+    fromShelleyPaymentCredential,
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
@@ -77,11 +81,6 @@ module Cardano.Api.Shelley
     -- * Protocol parameter updates
     EpochNo(..),
     NetworkMagic(..),
-
-    -- * Credentials & stake references
-    fromShelleyPaymentCredential,
-    fromShelleyStakeCredential,
-    fromShelleyStakeReference,
 
     -- * Scripts
     toShelleyScript,

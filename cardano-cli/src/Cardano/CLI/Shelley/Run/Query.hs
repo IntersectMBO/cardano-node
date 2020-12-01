@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -15,7 +16,7 @@ module Cardano.CLI.Shelley.Run.Query
   ) where
 
 import           Cardano.Prelude hiding (atomically)
-import           Prelude (String)
+import           Prelude (String, error)
 
 import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
@@ -46,9 +47,15 @@ import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
 import           Ouroboros.Consensus.Cardano.Block (Either (..), EraMismatch (..), Query (..))
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (Either (DegenQueryResult),
                      Query (DegenQuery))
 import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
+
+import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Shelley as Ledger
+import qualified Ouroboros.Consensus.Shelley.Ledger as Ledger
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
@@ -63,7 +70,7 @@ import           Shelley.Spec.Ledger.Scripts ()
 import qualified Shelley.Spec.Ledger.TxBody as Ledger (TxId (..), TxIn (..), TxOut (..))
 import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO (..))
 
-import           Ouroboros.Consensus.Shelley.Ledger
+import           Ouroboros.Consensus.Shelley.Ledger hiding (ShelleyBasedEra)
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -88,38 +95,44 @@ renderShelleyQueryCmdError err =
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryProtocolParameters protocol network mOutFile ->
-      runQueryProtocolParameters protocol network mOutFile
+    QueryProtocolParameters era protocol network mOutFile ->
+      runQueryProtocolParameters era protocol network mOutFile
     QueryTip protocol network mOutFile ->
       runQueryTip protocol network mOutFile
-    QueryStakeDistribution protocol network mOutFile ->
-      runQueryStakeDistribution protocol network mOutFile
-    QueryStakeAddressInfo protocol addr network mOutFile ->
-      runQueryStakeAddressInfo protocol addr network mOutFile
-    QueryLedgerState protocol network mOutFile ->
-      runQueryLedgerState protocol network mOutFile
-    QueryProtocolState protocol network mOutFile ->
-      runQueryProtocolState protocol network mOutFile
-    QueryUTxO protocol qFilter networkId mOutFile ->
-      runQueryUTxO protocol qFilter networkId mOutFile
-
+    QueryStakeDistribution era protocol network mOutFile ->
+      runQueryStakeDistribution era protocol network mOutFile
+    QueryStakeAddressInfo era protocol addr network mOutFile ->
+      runQueryStakeAddressInfo era protocol addr network mOutFile
+    QueryLedgerState era protocol network mOutFile ->
+      runQueryLedgerState era protocol network mOutFile
+    QueryProtocolState era protocol network mOutFile ->
+      runQueryProtocolState era protocol network mOutFile
+    QueryUTxO era protocol qFilter networkId mOutFile ->
+      runQueryUTxO era protocol qFilter networkId mOutFile
 
 runQueryProtocolParameters
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters protocol network mOutFile = do
+runQueryProtocolParameters (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra era' <- cardanoEraStyle era = do
+
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
                            readEnvSocketPath
     pparams <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-               withlocalNodeConnectInfo protocol network sockPath
-                 queryPParamsFromLocalState
+               withlocalNodeConnectInfo protocol network sockPath $
+                 queryPParamsFromLocalState era'
     writeProtocolParameters mOutFile pparams
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 writeProtocolParameters
   :: Maybe OutputFile
-  -> PParams StandardShelley
+  -> PParams ledgerera
   -> ExceptT ShelleyQueryCmdError IO ()
 writeProtocolParameters mOutFile pparams =
   case mOutFile of
@@ -150,62 +163,101 @@ runQueryTip protocol network mOutFile = do
 
 
 runQueryUTxO
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> QueryFilter
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryUTxO protocol qfilter network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  filteredUtxo <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-    withlocalNodeConnectInfo protocol network sockPath (queryUTxOFromLocalState qfilter)
-  writeFilteredUTxOs mOutFile filteredUtxo
+runQueryUTxO (AnyCardanoEra era) protocol qfilter network mOutFile
+  | ShelleyBasedEra era' <- cardanoEraStyle era =
+
+    -- Obtain the required type equality constaints and class constaints
+    requireValueTypeIsCoin era' $
+    obtainLedgerEraClassConstraints era' $ do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    filteredUtxo <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+      withlocalNodeConnectInfo protocol network sockPath $
+        queryUTxOFromLocalState era' qfilter
+    writeFilteredUTxOs era mOutFile filteredUtxo
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 runQueryLedgerState
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryLedgerState protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-    withlocalNodeConnectInfo protocol network sockPath queryLocalLedgerState
-  case els of
-    Right lstate -> writeLedgerState mOutFile lstate
-    Left lbs -> do
-      liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
-      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR lbs
+runQueryLedgerState (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra era' <- cardanoEraStyle era =
+
+    -- Obtain the required class constaints
+    obtainLedgerEraClassConstraints era' $
+    obtainToJSONNewEpochState era' $ do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+      withlocalNodeConnectInfo protocol network sockPath $
+        queryLocalLedgerState era'
+    case els of
+      Right lstate -> writeLedgerState mOutFile lstate
+      Left lbs -> do
+        liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
+        firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR lbs
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 runQueryProtocolState
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolState protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-    withlocalNodeConnectInfo protocol network sockPath queryLocalProtocolState
-  case els of
-    Right protocolState -> writeProtocolState mOutFile protocolState
-    Left pbs -> do
-      liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
-      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR pbs
+runQueryProtocolState (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra era' <- cardanoEraStyle era = do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    els <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+      withlocalNodeConnectInfo protocol network sockPath $
+        queryLocalProtocolState era'
+    case els of
+      Right protocolState -> writeProtocolState mOutFile protocolState
+      Left pbs -> do
+        liftIO $ putTextLn "Version mismatch between node and consensus, so dumping this as generic CBOR."
+        firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR pbs
+
+    | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 runQueryStakeAddressInfo
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> StakeAddress
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo protocol addr network mOutFile = do
+runQueryStakeAddressInfo (AnyCardanoEra era) protocol addr network mOutFile
+  | ShelleyBasedEra era' <- cardanoEraStyle era =
+
+    -- Obtain the required type equality constaints
+    obtainStandardCrypto era' $ do
+
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
     delegsAndRwds <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-      withlocalNodeConnectInfo
-        protocol
-        network
-        sockPath
-        (queryDelegationsAndRewardsFromLocalState (Set.singleton addr))
+      withlocalNodeConnectInfo protocol network sockPath $
+        queryDelegationsAndRewardsFromLocalState era' (Set.singleton addr)
     writeStakeAddressInfo mOutFile delegsAndRwds
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -217,6 +269,8 @@ data ShelleyQueryCmdLocalStateQueryError
   -- era.
   | ByronProtocolNotSupportedError
   -- ^ The query does not support the Byron protocol.
+  | ShelleyProtocolEraMismatch
+  -- ^ The Shelley protocol only supports the Shelley era.
   deriving (Eq, Show)
 
 renderLocalStateQueryError :: ShelleyQueryCmdLocalStateQueryError -> Text
@@ -227,10 +281,14 @@ renderLocalStateQueryError lsqErr =
       "A query from a certain era was applied to a ledger from a different era: " <> show err
     ByronProtocolNotSupportedError ->
       "The attempted local state query does not support the Byron protocol."
+    ShelleyProtocolEraMismatch ->
+        "The Shelley protocol mode can only be used with the Shelley era, "
+     <> "i.e. with --shelley-mode use --shelly-era flag"
 
 writeStakeAddressInfo
-  :: Maybe OutputFile
-  -> DelegationsAndRewards
+  :: Ledger.Crypto ledgerera ~ StandardCrypto
+  => Maybe OutputFile
+  -> DelegationsAndRewards ledgerera
   -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _ _delegsAndRwds) =
   case mOutFile of
@@ -239,7 +297,10 @@ writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _ _delegsAndRwds) =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty dr)
 
-writeLedgerState :: Maybe OutputFile -> NewEpochState StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
+writeLedgerState :: ToJSON (NewEpochState ledgerera)
+                 => Maybe OutputFile
+                 -> NewEpochState ledgerera
+                 -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile lstate =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty lstate)
@@ -247,7 +308,9 @@ writeLedgerState mOutFile lstate =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty lstate)
 
-writeProtocolState :: Maybe OutputFile -> Ledger.ChainDepState StandardCrypto -> ExceptT ShelleyQueryCmdError IO ()
+writeProtocolState :: Maybe OutputFile
+                   -> Ledger.ChainDepState StandardCrypto
+                   -> ExceptT ShelleyQueryCmdError IO ()
 writeProtocolState mOutFile pstate =
   case mOutFile of
     Nothing -> liftIO $ LBS.putStrLn (encodePretty pstate)
@@ -255,14 +318,23 @@ writeProtocolState mOutFile pstate =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty pstate)
 
-writeFilteredUTxOs :: Maybe OutputFile -> Ledger.UTxO StandardShelley -> ExceptT ShelleyQueryCmdError IO ()
-writeFilteredUTxOs mOutFile utxo =
+writeFilteredUTxOs :: forall era ledgerera.
+                      Ledger.Value ledgerera ~ Coin --TODO: support multi-asset
+                   => Ledger.ShelleyBasedEra ledgerera
+                   => CardanoEra era
+                   -> Maybe OutputFile
+                   -> Ledger.UTxO ledgerera
+                   -> ExceptT ShelleyQueryCmdError IO ()
+writeFilteredUTxOs _era mOutFile utxo =
     case mOutFile of
       Nothing -> liftIO $ printFilteredUTxOs utxo
       Just (OutputFile fpath) ->
         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $ LBS.writeFile fpath (encodePretty utxo)
 
-printFilteredUTxOs :: Ledger.UTxO StandardShelley -> IO ()
+printFilteredUTxOs :: forall ledgerera.
+                      Ledger.Value ledgerera ~ Coin --TODO: support multi-asset
+                   => Ledger.ShelleyBased ledgerera
+                   => Ledger.UTxO ledgerera -> IO ()
 printFilteredUTxOs (Ledger.UTxO utxo) = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
@@ -272,7 +344,7 @@ printFilteredUTxOs (Ledger.UTxO utxo) = do
     title =
       "                           TxHash                                 TxIx        Lovelace"
 
-    printUtxo :: (Ledger.TxIn StandardShelley, Ledger.TxOut StandardShelley) -> IO ()
+    printUtxo :: (Ledger.TxIn ledgerera, Ledger.TxOut ledgerera) -> IO ()
     printUtxo (Ledger.TxIn (Ledger.TxId txhash) txin , Ledger.TxOut _ (Coin coin)) =
       Text.putStrLn $
         mconcat
@@ -288,19 +360,26 @@ printFilteredUTxOs (Ledger.UTxO utxo) = do
       in Text.pack $ replicate (max 1 (len - slen)) ' ' ++ str
 
 runQueryStakeDistribution
-  :: Protocol
+  :: AnyCardanoEra
+  -> Protocol
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeDistribution protocol network mOutFile = do
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  stakeDist <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-      withlocalNodeConnectInfo
-        protocol
-        network
-        sockPath
-        queryStakeDistributionFromLocalState
-  writeStakeDistribution mOutFile stakeDist
+runQueryStakeDistribution (AnyCardanoEra era) protocol network mOutFile
+  | ShelleyBasedEra era' <- cardanoEraStyle era =
+
+    -- Obtain the required type equality constaints
+    obtainStandardCrypto era' $ do
+
+    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+    stakeDist <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
+        withlocalNodeConnectInfo protocol network sockPath $
+          queryStakeDistributionFromLocalState era'
+    writeStakeDistribution mOutFile stakeDist
+
+  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
+                              ByronProtocolNotSupportedError)
+
 
 writeStakeDistribution :: Maybe OutputFile
                        -> PoolDistr StandardCrypto
@@ -346,14 +425,21 @@ printStakeDistribution (PoolDistr stakeDist) = do
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryUTxOFromLocalState
-  :: QueryFilter
+  :: forall era ledgerera mode block.
+     ShelleyLedgerEra era ~ ledgerera
+  => IsShelleyBasedEra era
+  => ShelleyBasedEra era
+  -> QueryFilter
   -> LocalNodeConnectInfo mode block
-  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (Ledger.UTxO StandardShelley)
-queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (Ledger.UTxO ledgerera)
+queryUTxOFromLocalState era qFilter
+                        connectInfo@LocalNodeConnectInfo{
+                          localNodeConsensusMode
+                        } =
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
 
-    ShelleyMode{} -> do
+    ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
       DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
@@ -361,41 +447,45 @@ queryUTxOFromLocalState qFilter connectInfo@LocalNodeConnectInfo{localNodeConsen
           (getTipPoint tip, DegenQuery (applyUTxOFilter qFilter))
       return result
 
+    ShelleyMode{} | otherwise -> throwError ShelleyProtocolEraMismatch
+
     CardanoMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
       result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
-          (getTipPoint tip, QueryIfCurrentShelley (applyUTxOFilter qFilter))
+          (getTipPoint tip, queryIfCurrentEra era (applyUTxOFilter qFilter))
       case result of
         QueryResultEraMismatch err -> throwError (EraMismatchError err)
         QueryResultSuccess utxo -> return utxo
   where
+    applyUTxOFilter :: QueryFilter
+                    -> Query (ShelleyBlock ledgerera)
+                             (Ledger.UTxO ledgerera)
     applyUTxOFilter (FilterByAddress as) = GetFilteredUTxO (toShelleyAddrs as)
     applyUTxOFilter NoFilter             = GetUTxO
 
-    --TODO: generalise across eras
-    toShelleyAddrs :: Set AddressAny -> Set (Ledger.Addr StandardShelley)
+    toShelleyAddrs :: Set AddressAny -> Set (Ledger.Addr ledgerera)
     toShelleyAddrs = Set.map (toShelleyAddr
                            . (anyAddressInShelleyBasedEra
-                                :: AddressAny -> AddressInEra ShelleyEra))
-
+                                :: AddressAny -> AddressInEra era))
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they
 -- delegate to and their reward account balance.
-data DelegationsAndRewards
+data DelegationsAndRewards ledgerera
   = DelegationsAndRewards
       !NetworkId
-      !(Map (Ledger.Credential Ledger.Staking StandardShelley)
+      !(Map (Ledger.Credential Ledger.Staking ledgerera)
             (Maybe (Hash StakePoolKey), Coin))
 
-instance ToJSON DelegationsAndRewards where
+instance Ledger.Crypto ledgerera ~ StandardCrypto
+      => ToJSON (DelegationsAndRewards ledgerera) where
   toJSON (DelegationsAndRewards nw delegsAndRwds) =
       Aeson.Array . Vector.fromList
         . map delegAndRwdToJson $ Map.toList delegsAndRwds
     where
       delegAndRwdToJson
-        :: (Ledger.Credential Ledger.Staking StandardShelley, (Maybe (Hash StakePoolKey), Coin))
+        :: (Ledger.Credential Ledger.Staking ledgerera, (Maybe (Hash StakePoolKey), Coin))
         -> Aeson.Value
       delegAndRwdToJson (k, (d, r)) =
         Aeson.object
@@ -404,8 +494,11 @@ instance ToJSON DelegationsAndRewards where
           , "rewardAccountBalance" .= r
           ]
 
-      renderAddress :: Ledger.Credential Ledger.Staking StandardShelley -> Text
-      renderAddress = serialiseAddress . StakeAddress (toShelleyNetwork nw)
+      renderAddress :: Ledger.Credential Ledger.Staking ledgerera -> Text
+      renderAddress = serialiseAddress
+                    . StakeAddress (toShelleyNetwork nw)
+                    . toShelleyStakeCredential
+                    . fromShelleyStakeCredential
 
 
 -- | Query the current protocol parameters from a Shelley node via the local
@@ -414,16 +507,20 @@ instance ToJSON DelegationsAndRewards where
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryPParamsFromLocalState
-  :: LocalNodeConnectInfo mode block
-  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (PParams StandardShelley)
-queryPParamsFromLocalState LocalNodeConnectInfo{
-                             localNodeConsensusMode = ByronMode{}
-                           } =
+  :: forall era ledgerera mode block.
+     ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> LocalNodeConnectInfo mode block
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (PParams ledgerera)
+queryPParamsFromLocalState _ LocalNodeConnectInfo{
+                               localNodeConsensusMode = ByronMode{}
+                             } =
     throwError ByronProtocolNotSupportedError
 
-queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
-                             localNodeConsensusMode = ShelleyMode
-                           } = do
+queryPParamsFromLocalState era connectInfo@LocalNodeConnectInfo{
+                                 localNodeConsensusMode = ShelleyMode
+                               }
+  | ShelleyBasedEraShelley <- era = do
     tip <- liftIO $ getLocalTip connectInfo
     DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
       queryNodeLocalState
@@ -431,14 +528,16 @@ queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
         (getTipPoint tip, DegenQuery GetCurrentPParams)
     return result
 
-queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
-                             localNodeConsensusMode = CardanoMode{}
-                           } = do
+  | otherwise = throwError ShelleyProtocolEraMismatch
+
+queryPParamsFromLocalState era connectInfo@LocalNodeConnectInfo{
+                                 localNodeConsensusMode = CardanoMode{}
+                               } = do
     tip <- liftIO $ getLocalTip connectInfo
     result <- firstExceptT AcquireFailureError . newExceptT $
       queryNodeLocalState
         connectInfo
-        (getTipPoint tip, QueryIfCurrentShelley GetCurrentPParams)
+        (getTipPoint tip, queryIfCurrentEra era GetCurrentPParams)
     case result of
       QueryResultEraMismatch eraerr  -> throwError (EraMismatchError eraerr)
       QueryResultSuccess     pparams -> return pparams
@@ -450,44 +549,55 @@ queryPParamsFromLocalState connectInfo@LocalNodeConnectInfo{
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryStakeDistributionFromLocalState
-  :: LocalNodeConnectInfo mode block
+  :: forall era ledgerera mode block.
+     ShelleyLedgerEra era ~ ledgerera
+  => Ledger.Crypto ledgerera ~ StandardCrypto
+  => ShelleyBasedEra era
+  -> LocalNodeConnectInfo mode block
   -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (PoolDistr StandardCrypto)
-queryStakeDistributionFromLocalState LocalNodeConnectInfo{
-                                       localNodeConsensusMode = ByronMode{}
-                                     } =
+queryStakeDistributionFromLocalState _ LocalNodeConnectInfo{
+                                         localNodeConsensusMode = ByronMode{}
+                                       } =
   throwError ByronProtocolNotSupportedError
 
-queryStakeDistributionFromLocalState connectInfo@LocalNodeConnectInfo{
-                                       localNodeConsensusMode = ShelleyMode{}
-                                     } = do
-  tip <- liftIO $ getLocalTip connectInfo
-  DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
-    queryNodeLocalState
-      connectInfo
-      (getTipPoint tip, DegenQuery GetStakeDistribution)
-  return result
+queryStakeDistributionFromLocalState era connectInfo@LocalNodeConnectInfo{
+                                           localNodeConsensusMode = ShelleyMode{}
+                                         }
+  | ShelleyBasedEraShelley <- era = do
+    tip <- liftIO $ getLocalTip connectInfo
+    DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
+      queryNodeLocalState
+        connectInfo
+        (getTipPoint tip, DegenQuery GetStakeDistribution)
+    return result
 
-queryStakeDistributionFromLocalState connectInfo@LocalNodeConnectInfo{
-                                       localNodeConsensusMode = CardanoMode{}
-                                     } = do
+  | otherwise = throwError ShelleyProtocolEraMismatch
+
+queryStakeDistributionFromLocalState era connectInfo@LocalNodeConnectInfo{
+                                           localNodeConsensusMode = CardanoMode{}
+                                         } = do
   tip <- liftIO $ getLocalTip connectInfo
   result <- firstExceptT AcquireFailureError . newExceptT $
     queryNodeLocalState
       connectInfo
-      (getTipPoint tip, QueryIfCurrentShelley GetStakeDistribution)
+      (getTipPoint tip, queryIfCurrentEra era GetStakeDistribution)
   case result of
     QueryResultEraMismatch err -> throwError (EraMismatchError err)
     QueryResultSuccess stakeDist -> return stakeDist
 
 queryLocalLedgerState
-  :: LocalNodeConnectInfo mode blk
+  :: forall era ledgerera mode block.
+     ShelleyLedgerEra era ~ ledgerera
+  => Ledger.ShelleyBasedEra ledgerera
+  => ShelleyBasedEra era
+  -> LocalNodeConnectInfo mode block
   -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
-             (Either LByteString (NewEpochState StandardShelley))
-queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
+             (Either LByteString (NewEpochState ledgerera))
+queryLocalLedgerState era connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
 
-    ShelleyMode{} -> do
+    ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
       DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
           queryNodeLocalState
@@ -498,12 +608,14 @@ queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
             )
       return (decodeLedgerState result)
 
+    ShelleyMode{} | otherwise -> throwError ShelleyProtocolEraMismatch
+
     CardanoMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
       result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
-          (getTipPoint tip, QueryIfCurrentShelley (GetCBOR DebugNewEpochState)) -- Get CBOR-in-CBOR version
+          (getTipPoint tip, queryIfCurrentEra era (GetCBOR DebugNewEpochState)) -- Get CBOR-in-CBOR version
       case result of
         QueryResultEraMismatch err -> throwError (EraMismatchError err)
         QueryResultSuccess ls -> return (decodeLedgerState ls)
@@ -514,14 +626,17 @@ queryLocalLedgerState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
       first (const lbs) (decodeFull lbs)
 
 queryLocalProtocolState
-  :: LocalNodeConnectInfo mode blk
+  :: forall era ledgerera mode block.
+     ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> LocalNodeConnectInfo mode block
   -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
              (Either LByteString (Ledger.ChainDepState StandardCrypto))
-queryLocalProtocolState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
+queryLocalProtocolState era connectInfo@LocalNodeConnectInfo{localNodeConsensusMode} =
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
 
-    ShelleyMode{} -> do
+    ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
       DegenQueryResult result <- firstExceptT AcquireFailureError . newExceptT $
           queryNodeLocalState
@@ -532,12 +647,14 @@ queryLocalProtocolState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode}
             )
       return (decodeProtocolState result)
 
+    ShelleyMode{} | otherwise -> throwError ShelleyProtocolEraMismatch
+
     CardanoMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
       result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
-          (getTipPoint tip, QueryIfCurrentShelley (GetCBOR DebugChainDepState)) -- Get CBOR-in-CBOR version
+          (getTipPoint tip, queryIfCurrentEra era (GetCBOR DebugChainDepState)) -- Get CBOR-in-CBOR version
       case result of
         QueryResultEraMismatch err -> throwError (EraMismatchError err)
         QueryResultSuccess ls -> return (decodeProtocolState ls)
@@ -554,10 +671,15 @@ queryLocalProtocolState connectInfo@LocalNodeConnectInfo{localNodeConsensusMode}
 -- This one is Shelley-specific because the query is Shelley-specific.
 --
 queryDelegationsAndRewardsFromLocalState
-  :: Set StakeAddress
+  :: forall era ledgerera mode block.
+     ShelleyLedgerEra era ~ ledgerera
+  => Ledger.Crypto ledgerera ~ StandardCrypto
+  => ShelleyBasedEra era
+  -> Set StakeAddress
   -> LocalNodeConnectInfo mode block
-  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO DelegationsAndRewards
-queryDelegationsAndRewardsFromLocalState stakeaddrs
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
+             (DelegationsAndRewards ledgerera)
+queryDelegationsAndRewardsFromLocalState era stakeaddrs
                                          connectInfo@LocalNodeConnectInfo{
                                            localNodeNetworkId,
                                            localNodeConsensusMode
@@ -565,7 +687,7 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
   case localNodeConsensusMode of
     ByronMode{} -> throwError ByronProtocolNotSupportedError
 
-    ShelleyMode{} -> do
+    ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
       tip <- liftIO $ getLocalTip connectInfo
       DegenQueryResult result <-
         firstExceptT AcquireFailureError . newExceptT $
@@ -578,13 +700,15 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
             )
       return (uncurry toDelegsAndRwds result)
 
+    ShelleyMode{} | otherwise -> throwError ShelleyProtocolEraMismatch
+
     CardanoMode{} -> do
       tip <- liftIO $ getLocalTip connectInfo
       result <- firstExceptT AcquireFailureError . newExceptT $
         queryNodeLocalState
           connectInfo
           ( getTipPoint tip
-          , QueryIfCurrentShelley $
+          , queryIfCurrentEra era $
               GetFilteredDelegationsAndRewardAccounts
                 (toShelleyStakeCredentials stakeaddrs)
           )
@@ -593,10 +717,10 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
         QueryResultSuccess drs -> return $ uncurry toDelegsAndRwds drs
   where
     toDelegsAndRwds
-      :: Map (Ledger.Credential Ledger.Staking StandardShelley)
+      :: Map (Ledger.Credential Ledger.Staking ledgerera)
              (Ledger.KeyHash Ledger.StakePool StandardCrypto)
-      -> Ledger.RewardAccounts StandardShelley
-      -> DelegationsAndRewards
+      -> Ledger.RewardAccounts ledgerera
+      -> DelegationsAndRewards ledgerera
     toDelegsAndRwds delegs rwdAcnts =
       DelegationsAndRewards localNodeNetworkId $
         Map.mapWithKey
@@ -604,5 +728,60 @@ queryDelegationsAndRewardsFromLocalState stakeaddrs
           rwdAcnts
 
     toShelleyStakeCredentials :: Set StakeAddress
-                              -> Set (Ledger.StakeCredential StandardShelley)
-    toShelleyStakeCredentials = Set.map (\(StakeAddress _ cred) -> cred)
+                              -> Set (Ledger.StakeCredential ledgerera)
+    toShelleyStakeCredentials =
+      Set.map (toShelleyStakeCredential
+             . fromShelleyStakeCredential
+             . (\(StakeAddress _ cred) -> cred))
+
+
+-- -----------------------------------------------------------------------------
+-- Era-generic helper functions
+--
+
+-- | Select the appropriate query constructor based on the era
+-- 'QueryIfCurrentShelley', 'QueryIfCurrentAllegra' or 'QueryIfCurrentMary'.
+--
+--
+queryIfCurrentEra :: ShelleyBasedEra era
+                  -> Query (ShelleyBlock (ShelleyLedgerEra era)) result
+                  -> Consensus.CardanoQuery StandardCrypto
+                       (Consensus.CardanoQueryResult StandardCrypto result)
+queryIfCurrentEra ShelleyBasedEraShelley = QueryIfCurrentShelley
+queryIfCurrentEra ShelleyBasedEraAllegra = QueryIfCurrentAllegra
+queryIfCurrentEra ShelleyBasedEraMary    = QueryIfCurrentMary
+
+obtainLedgerEraClassConstraints
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (Ledger.ShelleyBasedEra ledgerera => a) -> a
+obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
+
+obtainToJSONNewEpochState
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (ToJSON (NewEpochState ledgerera) => a) -> a
+obtainToJSONNewEpochState ShelleyBasedEraShelley f = f
+obtainToJSONNewEpochState ShelleyBasedEraAllegra f = f
+obtainToJSONNewEpochState ShelleyBasedEraMary    f = f
+
+obtainStandardCrypto
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (Ledger.Crypto ledgerera ~ StandardCrypto => a) -> a
+obtainStandardCrypto ShelleyBasedEraShelley f = f
+obtainStandardCrypto ShelleyBasedEraAllegra f = f
+obtainStandardCrypto ShelleyBasedEraMary    f = f
+
+--TODO: eliminate this and support multi-asset properly
+requireValueTypeIsCoin
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (Ledger.Value ledgerera ~ Coin => a) -> a
+requireValueTypeIsCoin ShelleyBasedEraShelley f = f
+requireValueTypeIsCoin ShelleyBasedEraAllegra f = f
+requireValueTypeIsCoin ShelleyBasedEraMary    _ =
+    error "TODO: requireValueTypeIsCoin eliminate this and support Mary era"
+
