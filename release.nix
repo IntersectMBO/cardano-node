@@ -78,13 +78,15 @@ let
   };
   extraBuilds = {
     # Environments listed in Network Configuration page
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet; };
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet launchpad allegra; };
   } // (builtins.listToAttrs (map makeRelease [
     # Environments we want to build scripts for on hydra
     "mainnet"
     "testnet"
     "staging"
     "shelley_qa"
+    "launchpad"
+    "allegra"
   ]));
 
   # restrict supported systems to a subset where tests (if exist) are required to pass:
@@ -158,7 +160,7 @@ let
       (collectJobs jobs.native.exes)
       (optional windowsBuild jobs.cardano-node-win64)
       (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
-      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" ])
+      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" "launchpad" "allegra" ])
       [
         jobs.cardano-node-linux
         jobs.cardano-node-macos
