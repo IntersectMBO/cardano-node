@@ -59,6 +59,7 @@ library
                        Cardano.CLI.Shelley.Run.TextView
                        Cardano.CLI.Shelley.Run.Transaction
 
+                       Cardano.CLI.Mary.RenderValue
                        Cardano.CLI.Mary.TxOutParser
                        Cardano.CLI.Mary.ValueParser
 
