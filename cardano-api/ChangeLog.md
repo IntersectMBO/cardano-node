@@ -1,5 +1,14 @@
 # Changelog for cardano-api
 
+## 1.24.0 -- December 2020
+
+- Full API support for the Allegra and Mary eras, including creating
+  transactions for the new eras, and support for the special new features in
+  the new eras: script extensions, tx validity intervals, auxiliary scripts,
+  multi-asset tx outputs and asset minting (#2092, #2110, #2111, #2121, #2127,
+  #2128, #2141, #2149)
+
+
 ## 1.23.0 -- November 2020
 
 - Preliminary support for the Allegra script language extensions (#2069)

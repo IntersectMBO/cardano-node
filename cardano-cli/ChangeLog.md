@@ -1,5 +1,25 @@
 # Changelog for cardano-cli
 
+## 1.24.0 -- December 2020
+
+- CLI support for the Allegra and Mary eras, including creating transactions
+  for the new eras, and support for the special new features in the new eras:
+  script extensions, tx validity intervals, auxiliary scripts, multi-asset tx
+  outputs and asset minting. (#2072, #2129, #2136)
+- It is now necessary to specify the target era (e.g. `--allegra-era`) when
+  creating a transaction (with `build-raw`) so that the right format and
+  feature-set is used. The `--shelley-era` remains the default.
+- It is necessary for now to specify the target era when using the CLI query
+  commands. This may become automatic in future. The default is `--shelley-era`.
+- Move all the Shelley sub-commands to the top level of the command line.
+  For example `cardano-cli shelley transaction build-raw` becomes simply
+  `cardano-cli transaction build-raw`. The existing names are also kept for
+  compatibility. (#2076, #2145)
+- Updated help text for the ledger/protocol state queries to clarify that they
+  are primarily for debugging and are not stable interfaces (#2125, #2126, #2133)
+- New command `genesis create-staked` to make it easier to set up Shelley-based
+  testnets with stake pools and delegation set up from the genesis. (#2052)
+
 ## 1.23.0 -- November 2020
 
 - Create VRF keys with the correct file permissions (#1948)
@@ -169,4 +189,3 @@ No changes in the cardano-cli. There were changes in the cardano-node.
 - Group Byron commands under a top-level "byron" command
 - Commands to generate Shelley KES and VRF keys (#816)
 - Command to generate Shelley address keys (#824)
-

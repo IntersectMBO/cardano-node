@@ -1,5 +1,43 @@
 # Changelog for cardano-node
 
+## 1.24.0 -- December 2020
+
+### node changes
+
+- Add a nodeStartTime metric. This is a partial replacement for the uptime
+  metric that was removed in the 1.23.0 release. (#2118)
+- Miscellaneous "chairman" integration test improvements (#2122, #2123, #2130, #2146)
+- Allow starting a node with the credentials for many stake pools. This is used
+  for benchmarking large numbers of stake pools more easily. This feature is
+  not available in the "Cardano" protocol mode used for the mainnet. (#2068)
+
+### ledger changes
+- Support for optional additional scripts in the tx auxiliary data (#1993)
+- Ensure the minting field in is not used in the Allegra era (#2028)
+- Update the CDDL specification of the blockchain binary format for Allegra
+  and Mary eras (#1994, #1999, #2009)
+- Improved serialised binary format for multi-asset values (#1979)
+- Add a compact in-memory storage format for multi-asset values (#1996)
+- Updates to the multi-asset formal specifiation (#2003)
+- Adjust how the major protocol version is handled for soft forks (#1998)
+- Extend more Shelley tests to cover the Allegra and Mary eras too (#1997,
+  #2012, #2029)
+- Internal refactoring and clean-ups (#2013, #2014, #2018, #2021, #2025)
+- Initial preparatory steps for the Alonzo era (#2016, #2027)
+- Minor corrections to the formal spec arising from internal review (#2023)
+
+### consensus changes
+- Use a single set of credentials for all Shelley-based eras. This keeps the
+  node configuration simple for the new eras. (#2753)
+- Add the Allegra era in the "ThreadNet" consensus tests (#2633, #2641)
+- Add support for a Mary-only protocol mode to simplify benchmarking (#2754)
+- Internal refactoring and clean-ups (#2598, #2751, #2779, #2778)
+
+### network changes
+- Preparations for publishing io-sim as a public library (#2775)
+- Internal improvements to the "snockets" API (#2772, #2777)
+- Improved logging of the creation of the node's sockts (#2746)
+
 ## 1.23.0 -- November 2020
 
 ### node changes
