@@ -215,6 +215,7 @@ lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 valueToLovelace :: Value -> Maybe Lovelace
 valueToLovelace v =
     case valueToList v of
+      []                -> Just (Lovelace 0)
       [(AdaAssetId, q)] -> Just (quantityToLovelace q)
       _                 -> Nothing
 
