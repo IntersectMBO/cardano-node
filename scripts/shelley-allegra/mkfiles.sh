@@ -513,7 +513,7 @@ for NODE in ${BFT_NODES}; do
   echo "  --port                            $(cat ${NODE}/port) \\"
   echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
   echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee -a ${NODE}.log"
 
 done
 for NODE in ${POOL_NODES}; do
@@ -527,7 +527,7 @@ for NODE in ${POOL_NODES}; do
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
   echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee -a ${NODE}.log"
 
 done
 
