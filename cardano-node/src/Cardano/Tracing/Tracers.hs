@@ -272,7 +272,8 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
 
   pure Tracers
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
-        annotateSeverity . teeTraceChainTip tOpts elidedChainDB $ appendName "ChainDB" tr
+        annotateSeverity $ teeTraceChainTip tOpts elidedChainDB
+                             (appendName "ChainDB" tr) tr
     , consensusTracers = consensusTracers
     , nodeToClientTracers = nodeToClientTracers' trSel verb tr
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
@@ -348,12 +349,13 @@ teeTraceChainTip
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
   -> Trace IO Text
+  -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip TracingOff _ _ = nullTracer
-teeTraceChainTip (TracingOn trSel) elided tr =
+teeTraceChainTip TracingOff _ _ _ = nullTracer
+teeTraceChainTip (TracingOn trSel) elided trTrc trMet =
   Tracer $ \ev -> do
-    traceWith (teeTraceChainTip' tr) ev
-    traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided tr) ev
+    traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
+    traceWith (ignoringSeverity (traceChainMetrics trMet)) ev
 
 teeTraceChainTipElide
   :: ( ConvertRawHash blk
@@ -367,36 +369,43 @@ teeTraceChainTipElide
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
 teeTraceChainTipElide = elideToLogObject
+{-# INLINE teeTraceChainTipElide #-}
 
-traceChainInformation :: Trace IO Text -> ChainInformation -> IO ()
-traceChainInformation tr ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
-  -- TODO this is executed each time the chain changes. How cheap is it?
-  meta <- mkLOMeta Critical Confidential
-  let tr' = appendName "metrics" tr
-      traceD :: Text -> Double -> IO ()
-      traceD msg d = traceNamedObject tr' (meta, LogValue msg (PureD d))
-      traceI :: Integral a => Text -> a -> IO ()
-      traceI msg i = traceNamedObject tr' (meta, LogValue msg (PureI (fromIntegral i)))
+ignoringSeverity :: Tracer IO a -> Tracer IO (WithSeverity a)
+ignoringSeverity tr = Tracer $ \(WithSeverity _ ev) -> traceWith tr ev
+{-# INLINE ignoringSeverity #-}
 
-  traceD "density"     (fromRational density)
-  traceI "slotNum"     slots
-  traceI "blockNum"    blocks
-  traceI "slotInEpoch" slotInEpoch
-  traceI "epoch"       (unEpochNo epoch)
+traceChainMetrics
+  :: forall blk. HasHeader (Header blk)
+  => Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
+traceChainMetrics tr = Tracer $ \ev ->
+  fromMaybe (pure ()) $
+    doTrace <$> chainTipInformation ev
+ where
+   chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
+   chainTipInformation = \case
+     ChainDB.TraceAddBlockEvent ev -> case ev of
+       ChainDB.SwitchedToAFork _warnings newTipInfo _ newChain ->
+         Just $ chainInformation newTipInfo newChain
+       ChainDB.AddedToCurrentChain _warnings newTipInfo _ newChain ->
+         Just $ chainInformation newTipInfo newChain
+       _ -> Nothing
+     _ -> Nothing
 
-teeTraceChainTip'
-  :: HasHeader (Header blk)
-  => Trace IO Text -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip' tr =
-    Tracer $ \(WithSeverity _ ev') ->
-      case ev' of
-          (ChainDB.TraceAddBlockEvent ev) -> case ev of
-            ChainDB.SwitchedToAFork _warnings newTipInfo _ newChain ->
-              traceChainInformation tr (chainInformation newTipInfo newChain)
-            ChainDB.AddedToCurrentChain _warnings newTipInfo _ newChain ->
-              traceChainInformation tr (chainInformation newTipInfo newChain)
-            _ -> pure ()
-          _ -> pure ()
+   doTrace :: ChainInformation -> IO ()
+   doTrace ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
+     -- TODO this is executed each time the chain changes. How cheap is it?
+     meta <- mkLOMeta Critical Confidential
+     let traceD :: Text -> Double -> IO ()
+         traceD msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
+         traceI :: Integral a => Text -> a -> IO ()
+         traceI msg i = traceNamedObject tr (meta, LogValue msg (PureI (fromIntegral i)))
+
+     traceD "density"     (fromRational density)
+     traceI "slotNum"     slots
+     traceI "blockNum"    blocks
+     traceI "slotInEpoch" slotInEpoch
+     traceI "epoch"       (unEpochNo epoch)
 
 --------------------------------------------------------------------------------
 -- Consensus Tracers
@@ -446,8 +455,7 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
         Tracer $ \tlcev@(Consensus.TraceLabelCreds _ ev) -> do
           traceWith (annotateSeverity
-                     $ traceLeadershipChecks forgeTracers nodeKern verb
-                     $ appendName "LeadershipCheck" tr) tlcev
+                     $ traceLeadershipChecks forgeTracers nodeKern verb tr) tlcev
           traceWith (forgeTracer verb tr forgeTracers fStats) tlcev
           -- Don't track credentials in ForgeTime.
           traceWith (blockForgeOutcomeExtractor
@@ -504,9 +512,9 @@ traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
         fromSMaybe (pure ()) $
           query <&>
             \(utxoSize, delegMapSize, _) -> do
-               traceCounter "utxoSize"     tr utxoSize
-               traceCounter "delegMapSize" tr delegMapSize
-        traceNamedObject tr
+                traceCounter "utxoSize"     tr utxoSize
+                traceCounter "delegMapSize" tr delegMapSize
+        traceNamedObject (appendName "LeadershipCheck" tr)
           ( meta
           , LogStructured $ Map.fromList $
             [("kind", String "TraceStartLeadershipCheck")
@@ -795,7 +803,7 @@ forgeStateInfoTracer
   -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
 forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
     let tr = appendName "Forge" tracer
-    traceWith (forgeStateInfoMetricsTraceTransformer p tr) ev
+    traceWith (forgeStateInfoMetricsTraceTransformer p tracer) ev
     traceWith (fsTracer tr) ev
   where
     fsTracer :: Trace IO Text -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
