@@ -501,6 +501,11 @@ traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
                          <*> nkQueryChain fragmentChainDensity nk)
                     nodeKern
         meta <- mkLOMeta sev Public
+        fromSMaybe (pure ()) $
+          query <&>
+            \(utxoSize, delegMapSize, _) -> do
+               traceCounter "utxoSize"     tr utxoSize
+               traceCounter "delegMapSize" tr delegMapSize
         traceNamedObject tr
           ( meta
           , LogStructured $ Map.fromList $
