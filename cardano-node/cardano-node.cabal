@@ -113,6 +113,7 @@ library
                      , safe-exceptions
                      , scientific
                      , shelley-spec-ledger
+                     , stm
                      , strict-concurrency
                      , text
                      , time

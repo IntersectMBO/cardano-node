@@ -296,7 +296,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
     startTime <- getCurrentTime
     traceNodeBasicInfo tr =<< nodeBasicInfo nc p startTime
-    traceCounter "nodeStartTime" (ceiling $ utcTimeToPOSIXSeconds startTime) tr
+    traceCounter "nodeStartTime" tr (ceiling $ utcTimeToPOSIXSeconds startTime)
 
     when ncValidateDB $ traceWith tracer "Performing DB validation"
 
