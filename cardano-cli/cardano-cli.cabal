@@ -204,6 +204,8 @@ test-suite cardano-cli-test
                         Test.Cli.Pioneers.Exercise2
                         Test.Cli.Pioneers.Exercise3
                         Test.Cli.Pioneers.Exercise4
+                        Test.Cli.Pioneers.Exercise5
+                        Test.Cli.Pioneers.Exercise6
                         Test.OptParse
 
   default-language:     Haskell2010
