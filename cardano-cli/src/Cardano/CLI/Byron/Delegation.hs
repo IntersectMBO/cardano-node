@@ -104,9 +104,11 @@ checkDlgCert cert magic issuerVK' delegateVK' =
     epoch = unAnnotated $ Dlg.aEpoch cert
 
     cert' :: Dlg.ACertificate ByteString
-    cert' = cert { Dlg.aEpoch = Annotated epoch (serialize' epoch)
-                 , Dlg.annotation = serialize' (void cert')
-                 }
+    cert' =
+      let unannotated = cert { Dlg.aEpoch = Annotated epoch ()
+                             , Dlg.annotation = () }
+      in unannotated { Dlg.annotation = serialize' unannotated
+                     , Dlg.aEpoch = Annotated epoch (serialize' epoch) }
 
     vkF :: forall r. Format r (Crypto.VerificationKey -> r)
     vkF = Crypto.fullVerificationKeyF
