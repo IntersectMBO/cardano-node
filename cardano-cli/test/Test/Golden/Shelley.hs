@@ -4,7 +4,7 @@ module Test.Golden.Shelley
   ( keyTests
   , certificateTests
   , keyConversionTests
-  , metaDatatests
+  , metadataTests
   , multiSigTests
   , txTests
   ) where
@@ -152,8 +152,8 @@ keyConversionTests =
         , ("golden_convertCardanoAddressShelleyStakeSigningKey", golden_convertCardanoAddressShelleyStakeSigningKey)
         ]
 
-metaDatatests :: IO Bool
-metaDatatests =
+metadataTests :: IO Bool
+metadataTests =
   H.checkSequential
     $ H.Group "Metadata Goldens"
         [ ("golden_stakePoolMetadataHash", golden_stakePoolMetadataHash)

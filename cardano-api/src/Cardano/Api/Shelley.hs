@@ -75,8 +75,8 @@ module Cardano.Api.Shelley
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
-    toShelleyMetaData,
-    fromShelleyMetaData,
+    toShelleyMetadata,
+    fromShelleyMetadata,
 
     -- * Protocol parameter updates
     EpochNo(..),

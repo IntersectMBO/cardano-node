@@ -10,7 +10,7 @@ main =
     [ Test.Golden.Shelley.keyTests
     , Test.Golden.Shelley.certificateTests
     , Test.Golden.Shelley.keyConversionTests
-    , Test.Golden.Shelley.metaDatatests
+    , Test.Golden.Shelley.metadataTests
     , Test.Golden.Shelley.multiSigTests
     , Test.Golden.Shelley.txTests
     ]

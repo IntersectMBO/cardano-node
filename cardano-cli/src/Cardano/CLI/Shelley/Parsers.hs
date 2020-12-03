@@ -513,7 +513,7 @@ pTransaction =
                                  <*> many pWithdrawal
                                  <*> pTxMetadataJsonSchema
                                  <*> many pScript
-                                 <*> many pMetaDataFile
+                                 <*> many pMetadataFile
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
 
@@ -638,14 +638,14 @@ pPoolCmd =
           (Opt.info pId $
              Opt.progDesc "Build pool id from the offline key")
       , Opt.command "metadata-hash"
-          (Opt.info pPoolMetaDataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
+          (Opt.info pPoolMetadataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
     pId :: Parser PoolCmd
     pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
 
-    pPoolMetaDataHashSubCmd :: Parser PoolCmd
-    pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile <*> pMaybeOutputFile
+    pPoolMetadataHashSubCmd :: Parser PoolCmd
+    pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
 
 
 pQueryCmd :: Parser QueryCmd
@@ -1040,9 +1040,9 @@ pCertificateFile =
          )
     )
 
-pPoolMetaDataFile :: Parser PoolMetaDataFile
-pPoolMetaDataFile =
-  PoolMetaDataFile <$>
+pPoolMetadataFile :: Parser PoolMetadataFile
+pPoolMetadataFile =
+  PoolMetadataFile <$>
     Opt.strOption
       (  Opt.long "pool-metadata-file"
       <> Opt.metavar "FILE"
@@ -1069,9 +1069,9 @@ pTxMetadataJsonSchema =
     -- Default to the no-schema conversion.
     pure TxMetadataJsonNoSchema
 
-pMetaDataFile :: Parser MetaDataFile
-pMetaDataFile =
-      MetaDataFileJSON <$>
+pMetadataFile :: Parser MetadataFile
+pMetadataFile =
+      MetadataFileJSON <$>
         ( Opt.strOption
             (  Opt.long "metadata-json-file"
             <> Opt.metavar "FILE"
@@ -1085,7 +1085,7 @@ pMetaDataFile =
             )
         )
   <|>
-      MetaDataFileCBOR <$>
+      MetadataFileCBOR <$>
         Opt.strOption
           (  Opt.long "metadata-cbor-file"
           <> Opt.metavar "FILE"

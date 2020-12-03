@@ -36,9 +36,9 @@ module Cardano.CLI.Shelley.Commands
   , TxFile (..)
   , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
-  , MetaDataFile (..)
+  , MetadataFile (..)
   , PoolId (..)
-  , PoolMetaDataFile (..)
+  , PoolMetadataFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
   , WitnessSigningData (..)
@@ -178,7 +178,7 @@ data TransactionCmd
       TxMetadataJsonSchema
       [ScriptFile]
       -- ^ Auxillary scripts
-      [MetaDataFile]
+      [MetadataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
@@ -259,7 +259,7 @@ data PoolCmd
       -- ^ Epoch in which to retire the stake pool.
       OutputFile
   | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
-  | PoolMetaDataHash PoolMetaDataFile (Maybe OutputFile)
+  | PoolMetadataHash PoolMetadataFile (Maybe OutputFile)
   deriving (Eq, Show)
 
 renderPoolCmd :: PoolCmd -> Text
@@ -268,7 +268,7 @@ renderPoolCmd cmd =
     PoolRegistrationCert {} -> "stake-pool registration-certificate"
     PoolRetirementCert {} -> "stake-pool deregistration-certificate"
     PoolGetId {} -> "stake-pool id"
-    PoolMetaDataHash {} -> "stake-pool metadata-hash"
+    PoolMetadataHash {} -> "stake-pool metadata-hash"
 
 data QueryCmd =
     QueryProtocolParameters AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
@@ -377,8 +377,8 @@ newtype GenesisKeyFile
   = GenesisKeyFile FilePath
   deriving (Eq, Show)
 
-data MetaDataFile = MetaDataFileJSON FilePath
-                  | MetaDataFileCBOR FilePath
+data MetadataFile = MetadataFileJSON FilePath
+                  | MetadataFileCBOR FilePath
 
   deriving (Eq, Show)
 
@@ -390,8 +390,8 @@ newtype PoolId
   = PoolId String -- Probably not a String
   deriving (Eq, Show)
 
-newtype PoolMetaDataFile = PoolMetaDataFile
-  { unPoolMetaDataFile :: FilePath }
+newtype PoolMetadataFile = PoolMetadataFile
+  { unPoolMetadataFile :: FilePath }
   deriving (Eq, Show)
 
 newtype GenesisDir
