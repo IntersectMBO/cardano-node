@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 1.24.1 -- December 2020
+
+None
+
 ## 1.24.0 -- December 2020
 
 - Full API support for the Allegra and Mary eras, including creating

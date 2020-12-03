@@ -1,5 +1,9 @@
 # Changelog for cardano-cli
 
+## 1.24.1 -- December 2020
+
+- Add a regression test for the "0" case of multi-asset tx out values (#2155)
+
 ## 1.24.0 -- December 2020
 
 - CLI support for the Allegra and Mary eras, including creating transactions
