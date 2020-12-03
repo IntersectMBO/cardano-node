@@ -113,7 +113,7 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import qualified Cardano.Ledger.ShelleyMA.Metadata as Allegra
-import qualified Shelley.Spec.Ledger.MetaData as Ledger (MetaDataHash, hashMetadata)
+import qualified Shelley.Spec.Ledger.Metadata as Ledger (MetadataHash, hashMetadata)
 import           Ouroboros.Consensus.Shelley.Eras
                    (StandardShelley, StandardAllegra, StandardMary)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
@@ -123,7 +123,7 @@ import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe(..), maybeToStrictMa
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
-import qualified Shelley.Spec.Ledger.MetaData as Shelley
+import qualified Shelley.Spec.Ledger.Metadata as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
@@ -1157,8 +1157,8 @@ toShelleyWithdrawal withdrawals =
 toShelleyAuxiliaryData :: Map Word64 TxMetadataValue
                        -> Ledger.Metadata StandardShelley
 toShelleyAuxiliaryData m =
-    Shelley.MetaData
-      (toShelleyMetaData m)
+    Shelley.Metadata
+      (toShelleyMetadata m)
 
 -- | In the Allegra and Mary eras the auxiliary data consists of the tx metadata
 -- and the axiliary scripts.
@@ -1173,11 +1173,11 @@ toAllegraAuxiliaryData :: forall era ledgeera.
                        -> Ledger.Metadata ledgeera
 toAllegraAuxiliaryData m ss =
     Allegra.Metadata
-      (toShelleyMetaData m)
+      (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
 
 hashAuxiliaryData :: Shelley.ValidateMetadata ledgeera
-                  => Ledger.Metadata ledgeera -> Ledger.MetaDataHash ledgeera
+                  => Ledger.Metadata ledgeera -> Ledger.MetadataHash ledgeera
 hashAuxiliaryData = Ledger.hashMetadata
 
 
@@ -1219,7 +1219,7 @@ makeShelleyTransaction :: [TxIn]
                        -> Maybe UpdateProposal
                        -> Either (TxBodyError ShelleyEra) (TxBody ShelleyEra)
 makeShelleyTransaction txIns txOuts ttl fee
-                       certs withdrawals mMetaData mUpdateProp =
+                       certs withdrawals mMetadata mUpdateProp =
     makeTransactionBody $
       TxBodyContent {
         txIns,
@@ -1228,7 +1228,7 @@ makeShelleyTransaction txIns txOuts ttl fee
         txValidityRange  = (TxValidityNoLowerBound,
                             TxValidityUpperBound
                               ValidityUpperBoundInShelleyEra ttl),
-        txMetadata       = case mMetaData of
+        txMetadata       = case mMetadata of
                              Nothing -> TxMetadataNone
                              Just md -> TxMetadataInEra
                                           TxMetadataInShelleyEra md,

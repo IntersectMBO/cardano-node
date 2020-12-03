@@ -57,8 +57,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
   | ShelleyTxCmdReadWitnessSigningDataError !ReadWitnessSigningDataError
   | ShelleyTxCmdWriteFileError !(FileError ())
-  | ShelleyTxCmdMetaDataJsonParseError !FilePath !String
-  | ShelleyTxCmdMetaDataConversionError !FilePath !TxMetadataJsonError
+  | ShelleyTxCmdMetadataJsonParseError !FilePath !String
+  | ShelleyTxCmdMetadataConversionError !FilePath !TxMetadataJsonError
   | ShelleyTxCmdMetaValidationError !FilePath ![(Word64, TxMetadataRangeError)]
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
@@ -90,15 +90,15 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyTxCmdMetaDataJsonParseError fp jsonErr ->
+    ShelleyTxCmdMetadataJsonParseError fp jsonErr ->
        "Invalid JSON format in file: " <> show fp
                 <> "\nJSON parse error: " <> Text.pack jsonErr
-    ShelleyTxCmdMetaDataConversionError fp metaDataErr ->
+    ShelleyTxCmdMetadataConversionError fp metadataErr ->
        "Error reading metadata at: " <> show fp
-                             <> "\n" <> Text.pack (displayError metaDataErr)
-    ShelleyTxCmdMetaDecodeError fp metaDataErr ->
+                             <> "\n" <> Text.pack (displayError metadataErr)
+    ShelleyTxCmdMetaDecodeError fp metadataErr ->
        "Error decoding CBOR metadata at: " <> show fp
-                             <> " Error: " <> show metaDataErr
+                             <> " Error: " <> show metadataErr
     ShelleyTxCmdMetaValidationError fp errs ->
       "Error validating transaction metadata at: " <> show fp <> "\n" <>
       Text.intercalate "\n"
@@ -218,7 +218,7 @@ runTxBuildRaw
   -> [(StakeAddress, Lovelace)]
   -> TxMetadataJsonSchema
   -> [ScriptFile]
-  -> [MetaDataFile]
+  -> [MetadataFile]
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
@@ -356,14 +356,14 @@ validateTxValidityUpperBound era (Just slot) =
 
 validateTxMetadataInEra :: CardanoEra era
                         -> TxMetadataJsonSchema
-                        -> [MetaDataFile]
+                        -> [MetadataFile]
                         -> ExceptT ShelleyTxCmdError IO (TxMetadataInEra era)
 validateTxMetadataInEra _ _ [] = return TxMetadataNone
 validateTxMetadataInEra era schema files =
     case txMetadataSupportedInEra era of
       Nothing -> txFeatureMismatch era TxFeatureTxMetadata
       Just supported -> do
-        metadata <- mconcat <$> mapM (readFileTxMetaData schema) files
+        metadata <- mconcat <$> mapM (readFileTxMetadata schema) files
         return (TxMetadataInEra supported metadata)
 
 
@@ -924,17 +924,17 @@ validateScriptSupportedInEra era script@(ScriptInAnyLang lang _) =
 -- Transaction metadata
 --
 
-readFileTxMetaData :: TxMetadataJsonSchema -> MetaDataFile
+readFileTxMetadata :: TxMetadataJsonSchema -> MetadataFile
                    -> ExceptT ShelleyTxCmdError IO TxMetadata
-readFileTxMetaData mapping (MetaDataFileJSON fp) = do
+readFileTxMetadata mapping (MetadataFileJSON fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           LBS.readFile fp
-    v  <- firstExceptT (ShelleyTxCmdMetaDataJsonParseError fp) $
+    v  <- firstExceptT (ShelleyTxCmdMetadataJsonParseError fp) $
           hoistEither $
             Aeson.eitherDecode' bs
-    firstExceptT (ShelleyTxCmdMetaDataConversionError fp) $ hoistEither $
+    firstExceptT (ShelleyTxCmdMetadataConversionError fp) $ hoistEither $
       metadataFromJson mapping v
-readFileTxMetaData _ (MetaDataFileCBOR fp) = do
+readFileTxMetadata _ (MetadataFileCBOR fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           BS.readFile fp
     txMetadata <- firstExceptT (ShelleyTxCmdMetaDecodeError fp) $ hoistEither $

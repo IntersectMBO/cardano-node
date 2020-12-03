@@ -176,7 +176,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Genesis
                         Test.Cardano.Api.Ledger
-                        Test.Cardano.Api.MetaData
+                        Test.Cardano.Api.Metadata
                         Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope

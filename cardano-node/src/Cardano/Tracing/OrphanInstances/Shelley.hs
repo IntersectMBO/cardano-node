@@ -60,7 +60,7 @@ import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
-import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
+import           Shelley.Spec.Ledger.Metadata (MetadataHash (..))
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
 import           Shelley.Spec.Ledger.STS.Deleg
@@ -322,21 +322,21 @@ instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
     mkObject [ "kind" .= String "MIRInsufficientGenesisSigsUTXOW"
              , "genesisSigs" .= genesisSigs
              ]
-  toObject _verb (MissingTxBodyMetaDataHash metaDataHash) =
-    mkObject [ "kind" .= String "MissingTxBodyMetaDataHash"
-             , "metaDataHash" .= metaDataHash
+  toObject _verb (MissingTxBodyMetadataHash metadataHash) =
+    mkObject [ "kind" .= String "MissingTxBodyMetadataHash"
+             , "metadataHash" .= metadataHash
              ]
-  toObject _verb (MissingTxMetaData txBodyMetaDataHash) =
-    mkObject [ "kind" .= String "MissingTxMetaData"
-             , "txBodyMetaDataHash" .= txBodyMetaDataHash
+  toObject _verb (MissingTxMetadata txBodyMetadataHash) =
+    mkObject [ "kind" .= String "MissingTxMetadata"
+             , "txBodyMetadataHash" .= txBodyMetadataHash
              ]
-  toObject _verb (ConflictingMetaDataHash txBodyMetaDataHash fullMetaDataHash) =
-    mkObject [ "kind" .= String "ConflictingMetaDataHash"
-             , "txBodyMetaDataHash" .= txBodyMetaDataHash
-             , "fullMetaDataHash" .= fullMetaDataHash
+  toObject _verb (ConflictingMetadataHash txBodyMetadataHash fullMetadataHash) =
+    mkObject [ "kind" .= String "ConflictingMetadataHash"
+             , "txBodyMetadataHash" .= txBodyMetadataHash
+             , "fullMetadataHash" .= fullMetadataHash
              ]
-  toObject _verb InvalidMetaData =
-    mkObject [ "kind" .= String "InvalidMetaData"
+  toObject _verb InvalidMetadata =
+    mkObject [ "kind" .= String "InvalidMetadata"
              ]
 
 instance ( ShelleyBasedEra era
@@ -777,7 +777,7 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 -- Common to cardano-cli
 
-deriving newtype instance ShelleyBasedEra era => ToJSON (MetaDataHash era)
+deriving newtype instance ShelleyBasedEra era => ToJSON (MetadataHash era)
 
 deriving instance ShelleyBasedEra era => ToJSON (TxIn era)
 deriving newtype instance ToJSON (TxId era)

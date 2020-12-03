@@ -24,8 +24,8 @@ module Cardano.Api.TxMetadata (
     TxMetadataJsonSchemaError (..),
 
     -- * Internal conversion functions
-    toShelleyMetaData,
-    fromShelleyMetaData,
+    toShelleyMetadata,
+    fromShelleyMetadata,
 
     -- * Data family instances
     AsType(..)
@@ -62,7 +62,7 @@ import           Control.Monad (guard, when)
 
 import qualified Cardano.Binary as CBOR
 
-import qualified Shelley.Spec.Ledger.MetaData as Shelley
+import qualified Shelley.Spec.Ledger.Metadata as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -100,14 +100,14 @@ instance HasTypeProxy TxMetadata where
 instance SerialiseAsCBOR TxMetadata where
     serialiseToCBOR =
           CBOR.serialize'
-        . Shelley.MetaData
-        . toShelleyMetaData
+        . Shelley.Metadata
+        . toShelleyMetadata
         . (\(TxMetadata m) -> m)
 
     deserialiseFromCBOR AsTxMetadata bs =
           TxMetadata
-        . fromShelleyMetaData
-        . (\(Shelley.MetaData m) -> m)
+        . fromShelleyMetadata
+        . (\(Shelley.Metadata m) -> m)
       <$> CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
 
 makeTransactionMetadata :: Map Word64 TxMetadataValue -> TxMetadata
@@ -118,37 +118,37 @@ makeTransactionMetadata = TxMetadata
 -- Internal conversion functions
 --
 
-toShelleyMetaData :: Map Word64 TxMetadataValue -> Map Word64 Shelley.MetaDatum
-toShelleyMetaData = Map.map toShelleyMetaDatum
+toShelleyMetadata :: Map Word64 TxMetadataValue -> Map Word64 Shelley.Metadatum
+toShelleyMetadata = Map.map toShelleyMetadatum
   where
-    toShelleyMetaDatum :: TxMetadataValue -> Shelley.MetaDatum
-    toShelleyMetaDatum (TxMetaNumber x) = Shelley.I x
-    toShelleyMetaDatum (TxMetaBytes  x) = Shelley.B x
-    toShelleyMetaDatum (TxMetaText   x) = Shelley.S x
-    toShelleyMetaDatum (TxMetaList  xs) = Shelley.List
-                                            [ toShelleyMetaDatum x | x <- xs ]
-    toShelleyMetaDatum (TxMetaMap   xs) = Shelley.Map
-                                            [ (toShelleyMetaDatum k,
-                                               toShelleyMetaDatum v)
+    toShelleyMetadatum :: TxMetadataValue -> Shelley.Metadatum
+    toShelleyMetadatum (TxMetaNumber x) = Shelley.I x
+    toShelleyMetadatum (TxMetaBytes  x) = Shelley.B x
+    toShelleyMetadatum (TxMetaText   x) = Shelley.S x
+    toShelleyMetadatum (TxMetaList  xs) = Shelley.List
+                                            [ toShelleyMetadatum x | x <- xs ]
+    toShelleyMetadatum (TxMetaMap   xs) = Shelley.Map
+                                            [ (toShelleyMetadatum k,
+                                               toShelleyMetadatum v)
                                             | (k,v) <- xs ]
 
-fromShelleyMetaData :: Map Word64 Shelley.MetaDatum -> Map Word64 TxMetadataValue
-fromShelleyMetaData = Map.Lazy.map fromShelleyMetaDatum
+fromShelleyMetadata :: Map Word64 Shelley.Metadatum -> Map Word64 TxMetadataValue
+fromShelleyMetadata = Map.Lazy.map fromShelleyMetadatum
   where
-    fromShelleyMetaDatum :: Shelley.MetaDatum -> TxMetadataValue
-    fromShelleyMetaDatum (Shelley.I     x) = TxMetaNumber x
-    fromShelleyMetaDatum (Shelley.B     x) = TxMetaBytes  x
-    fromShelleyMetaDatum (Shelley.S     x) = TxMetaText   x
-    fromShelleyMetaDatum (Shelley.List xs) = TxMetaList
-                                               [ fromShelleyMetaDatum x | x <- xs ]
-    fromShelleyMetaDatum (Shelley.Map  xs) = TxMetaMap
-                                               [ (fromShelleyMetaDatum k,
-                                                  fromShelleyMetaDatum v)
+    fromShelleyMetadatum :: Shelley.Metadatum -> TxMetadataValue
+    fromShelleyMetadatum (Shelley.I     x) = TxMetaNumber x
+    fromShelleyMetadatum (Shelley.B     x) = TxMetaBytes  x
+    fromShelleyMetadatum (Shelley.S     x) = TxMetaText   x
+    fromShelleyMetadatum (Shelley.List xs) = TxMetaList
+                                               [ fromShelleyMetadatum x | x <- xs ]
+    fromShelleyMetadatum (Shelley.Map  xs) = TxMetaMap
+                                               [ (fromShelleyMetadatum k,
+                                                  fromShelleyMetadatum v)
                                                | (k,v) <- xs ]
 
 
 -- ----------------------------------------------------------------------------
--- Validate tx metaData
+-- Validate tx metadata
 --
 
 -- | Validate transaction metadata. This is for use with existing constructed

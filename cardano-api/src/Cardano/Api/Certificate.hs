@@ -312,7 +312,7 @@ toShelleyPoolParams StakePoolParameters {
                               [ kh | StakeKeyHash kh <- stakePoolOwners ]
     , Shelley._poolRelays = Seq.fromList
                               (map toShelleyStakePoolRelay stakePoolRelays)
-    , Shelley._poolMD     = toShelleyPoolMetaData <$>
+    , Shelley._poolMD     = toShelleyPoolMetadata <$>
                               maybeToStrictMaybe stakePoolMetadata
     }
   where
@@ -332,12 +332,12 @@ toShelleyPoolParams StakePoolParameters {
       Shelley.MultiHostName
         (toShelleyDnsName dnsname)
 
-    toShelleyPoolMetaData :: StakePoolMetadataReference -> Shelley.PoolMetaData
-    toShelleyPoolMetaData StakePoolMetadataReference {
+    toShelleyPoolMetadata :: StakePoolMetadataReference -> Shelley.PoolMetadata
+    toShelleyPoolMetadata StakePoolMetadataReference {
                             stakePoolMetadataURL
                           , stakePoolMetadataHash = StakePoolMetadataHash mdh
                           } =
-      Shelley.PoolMetaData {
+      Shelley.PoolMetadata {
         Shelley._poolMDUrl  = toShelleyUrl stakePoolMetadataURL
       , Shelley._poolMDHash = Crypto.hashToBytes mdh
       }
@@ -377,7 +377,7 @@ fromShelleyPoolParams
     , stakePoolOwners        = map StakeKeyHash (Set.toList _poolOwners)
     , stakePoolRelays        = map fromShelleyStakePoolRelay
                                    (Foldable.toList _poolRelays)
-    , stakePoolMetadata      = fromShelleyPoolMetaData <$>
+    , stakePoolMetadata      = fromShelleyPoolMetadata <$>
                                  strictMaybeToMaybe _poolMD
     }
   where
@@ -397,15 +397,15 @@ fromShelleyPoolParams
       StakePoolRelayDnsSrvRecord
         (fromShelleyDnsName dnsname)
 
-    fromShelleyPoolMetaData :: Shelley.PoolMetaData -> StakePoolMetadataReference
-    fromShelleyPoolMetaData Shelley.PoolMetaData {
+    fromShelleyPoolMetadata :: Shelley.PoolMetadata -> StakePoolMetadataReference
+    fromShelleyPoolMetadata Shelley.PoolMetadata {
                               Shelley._poolMDUrl
                             , Shelley._poolMDHash
                             } =
       StakePoolMetadataReference {
         stakePoolMetadataURL  = Shelley.urlToText _poolMDUrl
       , stakePoolMetadataHash = StakePoolMetadataHash
-                              . fromMaybe (error "fromShelleyPoolMetaData: invalid hash. TODO: proper validation")
+                              . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
                               . Crypto.hashFromBytes
                               $ _poolMDHash
       }

@@ -44,7 +44,7 @@ import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger
 import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
-import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
+import           Shelley.Spec.Ledger.Metadata (MetadataHash (..))
 import qualified Shelley.Spec.Ledger.PParams as Ledger
 import qualified Shelley.Spec.Ledger.Rewards as Ledger
 import qualified Shelley.Spec.Ledger.STS.Prtcl as Ledger
@@ -109,7 +109,7 @@ deriving newtype instance (ShelleyBasedEra era, ToJSON (Core.Value era)) => ToJS
 deriving newtype instance ToJSON (ShelleyHash era)
 deriving newtype instance ToJSON (HashHeader era)
 
-deriving newtype instance ToJSON (MetaDataHash era)
+deriving newtype instance ToJSON (MetadataHash era)
 deriving newtype instance ToJSON Ledger.LogWeight
 deriving newtype instance ToJSON Ledger.Likelihood
 deriving newtype instance ToJSON (Ledger.PoolDistr StandardCrypto)

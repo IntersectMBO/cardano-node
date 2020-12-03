@@ -14,7 +14,7 @@ build-type:             Simple
 library
   exposed-modules:      Test.Cardano.Api.Typed.Gen
 
-  other-modules:        Test.Cardano.Api.MetaData
+  other-modules:        Test.Cardano.Api.Metadata
                         Test.Tasty.Hedgehog.Group
 
   build-depends:
