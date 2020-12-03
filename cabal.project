@@ -2,6 +2,7 @@ index-state: 2020-11-15T00:00:00Z
 
 packages:
     cardano-api
+    cardano-api/test
     cardano-cli
     cardano-config
     cardano-node
