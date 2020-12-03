@@ -62,8 +62,9 @@ pkgs: _: with pkgs;
   cardano-node-eventlogged = cardanoNodeEventlogHaskellPackages.cardano-node.components.exes.cardano-node;
   cardano-node-asserted = cardanoNodeAssertedHaskellPackages.cardano-node.components.exes.cardano-node;
 
-  # expose the db-converter from the ouroboros-network we depend on
+  # expose the db-converter and cardano-ping from the ouroboros-network we depend on
   inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
+  inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
 
   mkCluster = callPackage ./supervisord-cluster;
   hfcCluster = callPackage ./supervisord-cluster/hfc {};
