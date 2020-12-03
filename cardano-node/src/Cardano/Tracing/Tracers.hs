@@ -31,6 +31,8 @@ import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Text as Text
+import           Data.Time (UTCTime)
+
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 
@@ -930,13 +932,17 @@ fragmentChainDensity frag = calcDensity blockD slotD
 -- Trace Helpers
 --------------------------------------------------------------------------------
 
-readableTraceBlockchainTimeEvent :: TraceBlockchainTimeEvent -> Text
+readableTraceBlockchainTimeEvent :: TraceBlockchainTimeEvent UTCTime -> Text
 readableTraceBlockchainTimeEvent ev = case ev of
     TraceStartTimeInTheFuture (SystemStart start) toWait ->
       "Waiting " <> (Text.pack . show) toWait <> " until genesis start time at " <> (Text.pack . show) start
     TraceCurrentSlotUnknown time _ ->
       "Too far from the chain tip to determine the current slot number for the time "
        <> (Text.pack . show) time
+    TraceSystemClockMovedBack prevTime newTime ->
+      "The system wall clock time moved backwards, but within our tolerance "
+      <> "threshold. Previous 'current' time: " <> (Text.pack . show) prevTime
+      <> ". New 'current' time: " <> (Text.pack . show) newTime
 
 traceCounter
   :: Text
