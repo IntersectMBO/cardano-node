@@ -376,7 +376,7 @@ in {
     ##   2. heartbeat & watchdog functionality
     systemd.services."${systemdServiceName}" = {
       description   = "cardano-node node service";
-      after         = [ "network-online.target" "multi-user.target" ]
+      after         = [ "network-online.target" ]
         ++ lib.optional cfg.systemdSocketActivation "${systemdServiceName}.socket";
       requires = lib.mkIf cfg.systemdSocketActivation [ "${systemdServiceName}.socket" ];
       wants = [ "network-online.target" ];
