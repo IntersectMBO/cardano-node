@@ -1,9 +1,29 @@
 # Changelog for cardano-node
 
+## 1.24.1 -- December 2020
+
+### node changes
+- Tracing changes to support "K=1000" benchmarks (#2156)
+- Mention the required `xz` tool in the Cabal build instructions (#2132)
+
+### ledger changes
+- Fix the use of Shelley multi-sig scripts in the Allegra and later eras (#2035)
+- Additional "golden" tests for encodings in the Allegra and Mary eras (#2031)
+- Additional binary encoding "round-trip" tests (#2032)
+- Benchmarks for the transaction generators (#2024)
+
+### consensus changes
+- Fix support for Shelley transactions in the Allegra era (#2788)
+- Add support for the system wall clock time being adjusted backwards by a small
+  amount without triggering a node shutdown and restart. Small backwards
+  adjustments can be caused by NTP. (#2781, #2785)
+
+### network changes
+- Update the `cardano-ping` tool to support the node-to-node protocol V4 (#2787)
+
 ## 1.24.0 -- December 2020
 
 ### node changes
-
 - Add a nodeStartTime metric. This is a partial replacement for the uptime
   metric that was removed in the 1.23.0 release. (#2118)
 - Miscellaneous "chairman" integration test improvements (#2122, #2123, #2130, #2146)
