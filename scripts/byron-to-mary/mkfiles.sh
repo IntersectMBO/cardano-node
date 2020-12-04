@@ -45,12 +45,11 @@ POOL_NODES="node-pool1"
 
 ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 
-NUM_UTXO_KEYS=1
-MAX_SUPPLY=1000000000
-INIT_SUPPLY=1000000000
+INIT_SUPPLY=1002000000
 FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
-FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
+FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} - 1000000))
 # We need to allow for a fee to transfer the funds out of the genesis.
+# We don't care too much, 1 ada is more than enough.
 
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
@@ -208,39 +207,35 @@ for N in ${BFT_NODES_N}; do
 
 done
 
-# Create keys and addresses to withdraw the initial UTxO into
+# Create keys, addresses and transactions to withdraw the initial UTxO into
+# regular addresses.
 for N in ${BFT_NODES_N}; do
 
-  cardano-cli keygen \
+  cardano-cli byron key keygen \
     --byron-formats \
     --secret byron/payment-keys.00$((${N} - 1)).key \
     --no-password
 
-  cardano-cli signing-key-address \
+  cardano-cli byron key signing-key-address \
     --byron-formats \
     --testnet-magic 42 \
     --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
 
-  # Write Genesis addresses to files
-
-  cardano-cli signing-key-address \
+  cardano-cli byron key signing-key-address \
     --byron-formats  \
     --testnet-magic 42 \
     --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
 
+  cardano-cli byron transaction issue-genesis-utxo-expenditure \
+    --genesis-json byron/genesis.json \
+    --testnet-magic 42 \
+    --byron-formats \
+    --tx tx$((${N} - 1)).tx \
+    --wallet-key byron/delegate-keys.00$((${N} - 1)).key \
+    --rich-addr-from $(head -n 1 byron/genesis-address-00$((${N} - 1))) \
+    --txout "(\"$(head -n 1 byron/address-00$((${N} - 1)))\", $FUNDS_PER_BYRON_ADDRESS)"
+
 done
-
-# Create Byron address that moves funds out of the genesis UTxO into a regular
-# address.
-
-cardano-cli issue-genesis-utxo-expenditure \
-            --genesis-json byron/genesis.json \
-            --testnet-magic 42 \
-            --byron-formats \
-            --tx tx0.tx \
-            --wallet-key byron/delegate-keys.000.key \
-            --rich-addr-from $(head -n 1 byron/genesis-address-000) \
-            --txout "(\"$(head -n 1 byron/address-000)\", $FUNDS_PER_BYRON_ADDRESS)"
 
 # Update Proposal and votes
 cardano-cli byron governance create-update-proposal \

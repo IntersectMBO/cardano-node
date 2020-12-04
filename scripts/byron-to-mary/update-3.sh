@@ -22,13 +22,14 @@ EPOCH=$1
 VERSION=3
 
 ROOT=example
-COINS_IN_INPUT=450000000
+COINS_IN_INPUT=1000000000
 
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
 
-TXHASH=$(cardano-cli query utxo --testnet-magic 42 | grep ${COINS_IN_INPUT} | awk '{print $1;}')
+TXID0=$(cardano-cli byron transaction txid --tx tx0.tx)
+TXID1=$(cardano-cli byron transaction txid --tx tx1.tx)
 
 cardano-cli governance create-update-proposal \
             --out-file update-proposal-allegra \
@@ -41,6 +42,11 @@ cardano-cli governance create-update-proposal \
 cardano-cli key convert-byron-key \
             --byron-signing-key-file byron/payment-keys.000.key \
             --out-file byron/payment-keys.000-converted.key \
+            --byron-payment-key-type
+
+cardano-cli key convert-byron-key \
+            --byron-signing-key-file byron/payment-keys.001.key \
+            --out-file byron/payment-keys.001-converted.key \
             --byron-payment-key-type
 
 # Now we'll construct one whopper of a transaction that does everything
@@ -57,14 +63,16 @@ cardano-cli key convert-byron-key \
 cardano-cli transaction build-raw \
             --ttl 100000 \
             --fee 0 \
-            --tx-in $TXHASH#0\
-            --tx-out $(cat addresses/user1.addr)+${COINS_IN_INPUT} \
+            --tx-in ${TXID0}#0\
+            --tx-in ${TXID1}#0\
+            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
+            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
             --certificate-file addresses/pool-owner1-stake.reg.cert \
             --certificate-file node-pool1/registration.cert \
             --certificate-file addresses/user1-stake.reg.cert \
             --certificate-file addresses/user1-stake.deleg.cert \
             --update-proposal-file update-proposal-allegra \
-            --out-file tx1.txbody
+            --out-file tx2.txbody
 
 # So we'll need to sign this with a bunch of keys:
 # 1. the initial utxo spending key, for the funds
@@ -83,12 +91,13 @@ cardano-cli transaction sign \
             --signing-key-file shelley/delegate-keys/delegate1.skey \
             --signing-key-file shelley/delegate-keys/delegate2.skey \
             --signing-key-file byron/payment-keys.000-converted.key \
+            --signing-key-file byron/payment-keys.001-converted.key \
             --testnet-magic 42 \
-            --tx-body-file  tx1.txbody \
-            --out-file      tx1.tx
+            --tx-body-file  tx2.txbody \
+            --out-file      tx2.tx
 
 
-cardano-cli transaction submit --tx-file tx1.tx --testnet-magic 42
+cardano-cli transaction submit --tx-file tx2.tx --testnet-magic 42
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 2/LastKnownBlockVersion-Major: 3/' \

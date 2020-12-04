@@ -17,6 +17,9 @@ export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
 cardano-cli submit-tx \
             --testnet-magic 42 \
             --tx tx0.tx
+cardano-cli submit-tx \
+            --testnet-magic 42 \
+            --tx tx1.tx
 
 # submit update proposal
 cardano-cli byron submit-update-proposal \
