@@ -20,13 +20,14 @@ EPOCH=$1
 VERSION=4
 
 ROOT=example
-COINS_IN_INPUT=450000000
+COINS_IN_INPUT=1000000000
 
 pushd ${ROOT}
 
 export CARDANO_NODE_SOCKET_PATH=node-bft1/node.sock
 
-TXHASH=$(cardano-cli query utxo --allegra-era --testnet-magic 42 | grep ${COINS_IN_INPUT} | awk '{print $1;}')
+TXID2=$(cardano-cli transaction txid --tx-file tx2.tx)
+
 
 # Create the update proposal to change the protocol version to 4
 
@@ -43,10 +44,12 @@ cardano-cli governance create-update-proposal \
 cardano-cli transaction build-raw \
             --allegra-era \
             --fee 0 \
-            --tx-in $TXHASH#0\
-            --tx-out $(cat addresses/user1.addr)+${COINS_IN_INPUT} \
+            --tx-in $TXID2#0\
+            --tx-in $TXID2#1\
+            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
+            --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
             --update-proposal-file update-proposal-mary \
-            --out-file tx2.txbody
+            --out-file tx3.txbody
 
 # Sign the transaction body with the two genesis delegate keys,
 # and the the uxto spending key.
@@ -56,11 +59,11 @@ cardano-cli transaction sign \
             --signing-key-file shelley/delegate-keys/delegate1.skey \
             --signing-key-file shelley/delegate-keys/delegate2.skey \
             --testnet-magic 42 \
-            --tx-body-file  tx2.txbody \
-            --out-file      tx2.tx
+            --tx-body-file  tx3.txbody \
+            --out-file      tx3.tx
 
 
-cardano-cli transaction submit --tx-file tx2.tx --testnet-magic 42
+cardano-cli transaction submit --tx-file tx3.tx --testnet-magic 42
 
 sed -i configuration.yaml \
     -e 's/LastKnownBlockVersion-Major: 3/LastKnownBlockVersion-Major: 4/' \
