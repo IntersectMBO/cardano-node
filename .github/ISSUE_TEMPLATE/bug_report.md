@@ -11,6 +11,11 @@ assignees: ''
 *Internal*   if an IOHK staff member.
 *External*   otherwise.
 
+**Area**
+*Token Locking*    Related to Token Locking (Allegra).
+*Native Tokens*    Related to Native Tokens (Mary).
+*Other*   Any other topic (Delegation, Ranking, ...).
+
 **Summary**
 A clear and specific description of what the bug is.
 
