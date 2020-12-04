@@ -275,7 +275,7 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
   pure Tracers
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
         annotateSeverity $ teeTraceChainTip tOpts elidedChainDB
-                             (appendName "ChainDB" tr) tr
+                             (appendName "ChainDB" tr) (appendName "metrics" tr)
     , consensusTracers = consensusTracers
     , nodeToClientTracers = nodeToClientTracers' trSel verb tr
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
