@@ -10,7 +10,8 @@
 #endif
 
 module Testnet.ByronShelley
-  ( TestnetOptions(..)
+  ( ForkPoint(..)
+  , TestnetOptions(..)
   , defaultTestnetOptions
 
   , testnet
@@ -37,6 +38,7 @@ import           GHC.Real
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
+import           Text.Read
 import           Text.Show
 
 import qualified Data.Aeson as J
@@ -70,11 +72,17 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
+data ForkPoint
+  = AtVersion Int
+  | AtEpoch Int
+  deriving (Show, Eq, Read)
+
 data TestnetOptions = TestnetOptions
   { numBftNodes :: Int
   , numPoolNodes :: Int
   , activeSlotsCoeff :: Double
   , epochLength :: Int
+  , forkPoint :: ForkPoint
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -83,6 +91,7 @@ defaultTestnetOptions = TestnetOptions
   , numPoolNodes = 1
   , activeSlotsCoeff = 0.1
   , epochLength = 1500
+  , forkPoint = AtVersion 1
   }
 
 ifaceAddress :: String
@@ -150,9 +159,9 @@ testnet testnetOptions H.Conf {..} = do
   H.createDirectoryIfMissing logDir
 
   -- Choose one of the following fork methods:
-  forkMethod <- H.noteShow
-    ["TestShelleyHardForkAtVersion: 1"]
-    -- ["TestShelleyHardForkAtEpoch: 1"]
+  forkMethod <- H.noteShow $ case forkPoint testnetOptions of
+    AtVersion n -> ["TestShelleyHardForkAtVersion: " <> show @Int n]
+    AtEpoch n -> ["TestShelleyHardForkAtEpoch: " <> show @Int n]
 
   H.readFile (base </> "configuration/chairman/byron-shelley/configuration.yaml")
     <&> L.unlines . (<> forkMethod) . L.lines
