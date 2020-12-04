@@ -14,6 +14,8 @@ set -e
 # Also, you need to restart the nodes after running this script in order for the
 # update to be endorsed by the nodes.
 
+if [ ! "$1" ]; then echo "update-4.sh: expects an <N> epoch argument"; exit; fi
+
 EPOCH=$1
 VERSION=4
 
