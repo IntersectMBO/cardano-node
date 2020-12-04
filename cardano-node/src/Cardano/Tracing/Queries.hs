@@ -27,10 +27,12 @@ import qualified Ouroboros.Consensus.Cardano.Block as Cardano
 
 
 class LedgerQueries blk where
-  ledgerUtxoSize :: LedgerState blk -> Int
+  ledgerUtxoSize     :: LedgerState blk -> Int
+  ledgerDelegMapSize :: LedgerState blk -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
+  ledgerDelegMapSize _ = 0
 
 instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
@@ -40,10 +42,19 @@ instance LedgerQueries (Shelley.ShelleyBlock era) where
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
+  ledgerDelegMapSize =
+      Map.size
+    . Shelley._delegations
+    . Shelley._dstate
+    . Shelley._delegationState
+    . Shelley.esLState
+    . Shelley.nesEs
+    . Shelley.shelleyLedgerState
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
   ledgerUtxoSize = ledgerUtxoSize . project
+  ledgerDelegMapSize = ledgerDelegMapSize . project
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
@@ -51,3 +62,8 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
     Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
     Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
+  ledgerDelegMapSize = \case
+    Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
+    Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
+    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
+    Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
