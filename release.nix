@@ -108,7 +108,7 @@ let
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [
-    ["shell"]
+    ["shell"] ["cardano-ping"]
   ] ++ onlyBuildOnDefaultSystem;
   noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ]
     ++ noCrossBuild;
