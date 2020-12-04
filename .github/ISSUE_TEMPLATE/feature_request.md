@@ -11,6 +11,11 @@ assignees: ''
 *Internal*   if an IOHK staff member.
 *External*   otherwise.
 
+**Area**
+*Token Locking*    Related to Token Locking (Allegra).
+*Native Tokens*    Related to Native Tokens (Mary).
+*Other*   Any other topic (Delegation, Ranking, ...).
+
 **Describe the feature you'd like**
 A clear and detailed description of what you are suggesting.
 
