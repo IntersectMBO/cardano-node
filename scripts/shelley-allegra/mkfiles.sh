@@ -3,7 +3,7 @@
 set -e
 #set -x
 
-# This script sets up a cluster that starts out in Byron, and can transition to Shelley.
+# This script sets up a cluster that starts out in Byron, and can transition to Mary.
 #
 # The script generates all the files needed for the setup, and prints commands
 # to be run manually (to start the nodes, post transactions, etc.).
@@ -548,6 +548,8 @@ echo "     that will tell you the current epoch, and can run"
 echo "     the script again."
 echo "  3. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
+echo "  4. invoke ./scripts/shelley-allegra/update-4.sh <N>"
+echo "  5. restart the nodes"
 echo
 echo "You can observe the status of the updates by grepping the logs, via"
 echo
@@ -561,7 +563,13 @@ echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
 echo "  cardano-cli query protocol-parameters \\"
 echo "  --cardano-mode --testnet-magic 42"
 echo
-echo "This will fail in both Allegra and Byron. In particular, "
+echo "This will fail outside of the Shelley era. In particular, "
 echo "after step 3, you will get an error message that tells you "
-echo "that you are in the Allegra era."
+echo "that you are in the Allegra era. You must then use the --allegra-era flag:"
+echo
+echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+echo "  cardano-cli query protocol-parameters \\"
+echo "  --cardano-mode --allegra-era --testnet-magic 42"
+echo
+echo "Similarly, use --mary-era in the Mary era."
 popd
