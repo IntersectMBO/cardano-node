@@ -534,21 +534,21 @@ done
 echo "In order to do the protocol updates, proceed as follows:"
 echo
 echo "  0. wait for the nodes to start producing blocks"
-echo "  1. invoke ./scripts/shelley-allegra/update-1.sh"
+echo "  1. invoke ./scripts/byron-to-mary/update-1.sh"
 echo "     wait for the next epoch for the update to take effect"
 echo
-echo "  2. invoke ./scripts/shelley-allegra/update-2.sh"
+echo "  2. invoke ./scripts/byron-to-mary/update-2.sh"
 echo "  3. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
 echo
-echo "  2. invoke ./scripts/shelley-allegra/update-3.sh <N>"
+echo "  2. invoke ./scripts/byron-to-mary/update-3.sh <N>"
 echo "     Here, <N> the current epoch (2 if you're quick)."
 echo "     If you provide the wrong epoch, you will see an error"
 echo "     that will tell you the current epoch, and can run"
 echo "     the script again."
 echo "  3. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
-echo "  4. invoke ./scripts/shelley-allegra/update-4.sh <N>"
+echo "  4. invoke ./scripts/byron-to-mary/update-4.sh <N>"
 echo "  5. restart the nodes"
 echo
 echo "You can observe the status of the updates by grepping the logs, via"
