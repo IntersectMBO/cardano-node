@@ -717,7 +717,7 @@ data TxBody era where
 
           -- The 'Ledger.Metadata' is really the /auxiliary/ data, it consists
           -- of one or several things, depending on era:
-          -- • transaction metadata   (in Shelley and later)
+          -- • transaction metadata  (in Shelley and later)
           -- • auxiliary scripts     (in Allegra and later)
           -- • auxiliary script data (in Allonzo and later)
        -> Maybe (Ledger.Metadata (ShelleyLedgerEra era))
