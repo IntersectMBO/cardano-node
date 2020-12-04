@@ -363,7 +363,13 @@ parseTxRelatedValues =
                   "Key that has access to all mentioned genesis UTxO inputs."
             <*> (NE.fromList <$> some parseTxIn)
             <*> (NE.fromList <$> some parseTxOut)
-      ]
+
+    , command'
+        "txid"
+        "Print the txid of a raw, signed transaction."
+        $ GetTxId
+            <$> parseTxFile "tx"
+    ]
 
 parseVerificationKeyFile :: String -> String -> Parser VerificationKeyFile
 parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt desc

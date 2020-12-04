@@ -81,12 +81,12 @@ prettyAddress addr = sformat
   (Common.addressF %"\n"%Common.addressDetailedF)
   addr addr
 
-readByronTx :: TxFile -> ExceptT ByronTxError IO (GenTx ByronBlock)
+readByronTx :: TxFile -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)
 readByronTx (TxFile fp) = do
   txBS <- liftIO $ LB.readFile fp
   case fromCborTxAux txBS of
     Left e -> left $ TxDeserialisationFailed fp e
-    Right tx -> pure (normalByronTxToGenTx tx)
+    Right tx -> pure tx
 
 -- | The 'GenTx' is all the kinds of transactions that can be submitted
 -- and \"normal\" Byron transactions are just one of the kinds.
