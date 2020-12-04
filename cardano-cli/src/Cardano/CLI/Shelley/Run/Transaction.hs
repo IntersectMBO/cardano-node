@@ -770,10 +770,16 @@ mkShelleyBootstrapWitnesses mnw txBody =
   mapM (mkShelleyBootstrapWitness mnw txBody)
 
 
-runTxGetTxId :: TxBodyFile -> ExceptT ShelleyTxCmdError IO ()
-runTxGetTxId (TxBodyFile txbodyFile) = do
-  InAnyCardanoEra _era txbody <- readFileTxBody txbodyFile
-  liftIO $ BS.putStrLn $ Api.serialiseToRawBytesHex (Api.getTxId txbody)
+runTxGetTxId :: Either TxBodyFile TxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxGetTxId txfile = do
+    InAnyCardanoEra _era txbody <-
+      case txfile of
+        Left (TxBodyFile txbodyFile) -> readFileTxBody txbodyFile
+        Right (TxFile txFile) -> do
+          InAnyCardanoEra era tx <- readFileTx txFile
+          return (InAnyCardanoEra era (getTxBody tx))
+
+    liftIO $ BS.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
 
 runTxCreateWitness
   :: TxBodyFile
