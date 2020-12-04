@@ -490,7 +490,7 @@ for NODE in ${BFT_NODES}; do
   echo "  --port                            $(cat ${NODE}/port) \\"
   echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
   echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee -a ${ROOT}/${NODE}/node.log"
 
 done
 for NODE in ${POOL_NODES}; do
@@ -504,7 +504,7 @@ for NODE in ${POOL_NODES}; do
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
   echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee -a ${ROOT}/${NODE}/node.log"
 
 done
 
@@ -531,7 +531,7 @@ echo "  7. restart the nodes"
 echo
 echo "You can observe the status of the updates by grepping the logs, via"
 echo
-echo "  grep LedgerUpdate node-pool1.log"
+echo "  grep LedgerUpdate ${ROOT}/node-pool1/node.log"
 echo
 echo "When in Shelley (after 3, and before 4), you should be able "
 echo "to look at the protocol parameters, or the ledger state, "
