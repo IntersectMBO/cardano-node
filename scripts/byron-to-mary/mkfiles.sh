@@ -34,10 +34,6 @@ set -e
 #    This is quite convenient, but it does not test that we can do the
 #    transition by posting update proposals to the network.
 #
-# TODO: The script allows transitioning to Shelley, but not yet to register a
-# pool and delegate, so all blocks will still be produced by the BFT nodes.
-# We will need CLI support for Byron witnesses in Shelley transactions to do
-# that.
 
 ROOT=example
 
@@ -335,25 +331,6 @@ cat shelley/genesis.json
 echo
 echo "====================================================================="
 
-echo "To start the nodes, in separate terminals use:"
-echo
-for NODE in ${ALL_NODES}; do
-
-  echo "cardano-node run \\"
-  echo "  --config                          ${ROOT}/configuration.yaml \\"
-  echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
-  echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-  echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
-if [ -f ${NODE}/byron/delegate.key ]; then
-  echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
-fi
-  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
-  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
-  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
-  echo "  --port                            $(cat ${NODE}/port)"
-
-done
 
 # Make the pool operator cold keys
 # This was done already for the BFT nodes as part of the genesis creation
