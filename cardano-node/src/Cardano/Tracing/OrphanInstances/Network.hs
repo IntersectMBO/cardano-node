@@ -257,7 +257,7 @@ instance HasSeverityAnnotation (Identity (SubscriptionTrace LocalAddress)) where
 instance Transformable Text IO (Identity (SubscriptionTrace LocalAddress)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (Identity (SubscriptionTrace LocalAddress)) where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
 instance ToObject (Identity (SubscriptionTrace LocalAddress)) where
@@ -305,81 +305,85 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
 instance Transformable Text IO ND.DiffusionInitializationTracer where
   trTransformer = trStructuredText
 instance HasTextFormatter ND.DiffusionInitializationTracer where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 instance Transformable Text IO NtN.HandshakeTr where
   trTransformer = trStructuredText
 instance HasTextFormatter NtN.HandshakeTr where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
 instance Transformable Text IO NtC.HandshakeTr where
   trTransformer = trStructuredText
 instance HasTextFormatter NtC.HandshakeTr where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
 instance Transformable Text IO NtN.AcceptConnectionsPolicyTrace where
   trTransformer = trStructuredText
 instance HasTextFormatter NtN.AcceptConnectionsPolicyTrace where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
-instance Show peer
+instance (StandardHash header, Show peer)
       => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer = trStructuredText
-instance HasTextFormatter [TraceLabelPeer peer (FetchDecision [Point header])] where
-  formatText _ = pack . show . toList
+instance (StandardHash header, Show peer)
+      => HasTextFormatter [TraceLabelPeer peer (FetchDecision [Point header])] where
+  formatText a _ = pack (show a)
 
 
-instance (Show peer, HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
+instance (Show peer, Show a, HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
       => Transformable Text IO (TraceLabelPeer peer a) where
   trTransformer = trStructuredText
-instance HasTextFormatter (TraceLabelPeer peer a) where
-  formatText _ = pack . show . toList
+instance (Show peer, Show a)
+      => HasTextFormatter (TraceLabelPeer peer a) where
+  formatText a _ = pack (show a)
 
 
 instance Transformable Text IO (TraceTxSubmissionInbound txid tx) where
   trTransformer = trStructuredText
 instance HasTextFormatter (TraceTxSubmissionInbound txid tx) where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
 instance (Show tx, Show txid)
       => Transformable Text IO (TraceTxSubmissionOutbound txid tx) where
   trTransformer = trStructuredText
-instance HasTextFormatter (TraceTxSubmissionOutbound txid tx) where
-  formatText _ = pack . show . toList
+instance (Show tx, Show txid)
+      => HasTextFormatter (TraceTxSubmissionOutbound txid tx) where
+  formatText a _ = pack (show a)
 
 
 instance Show remotePeer => Transformable Text IO (TraceKeepAliveClient remotePeer) where
   trTransformer = trStructuredText
-instance HasTextFormatter (TraceKeepAliveClient peer) where
-  formatText _ = pack . show . toList
+instance Show addr
+      => HasTextFormatter (TraceKeepAliveClient addr) where
+    formatText a _ = pack (show a)
 
 
 instance Show addr => Transformable Text IO (WithAddr addr ErrorPolicyTrace) where
   trTransformer = trStructuredText
-instance HasTextFormatter (WithAddr addr ErrorPolicyTrace) where
-  formatText _ = pack . show . toList
+instance Show addr => HasTextFormatter (WithAddr addr ErrorPolicyTrace) where
+  formatText a _ = pack (show a)
 
 
 instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
 instance Transformable Text IO (WithDomainName DnsTrace) where
   trTransformer = trStructuredText
 instance HasTextFormatter (WithDomainName DnsTrace) where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
 instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   trTransformer = trStructuredText
 instance HasTextFormatter (WithIPList (SubscriptionTrace Socket.SockAddr)) where
-  formatText _ = pack . show . toList
+  formatText a _ = pack (show a)
 
 
 instance (Show peer)
@@ -388,8 +392,8 @@ instance (Show peer)
 instance (Show peer)
       => HasTextFormatter (WithMuxBearer peer MuxTrace) where
   formatText (WithMuxBearer peer ev) = \_o ->
-    "Bearer on " <> pack (show peer)
-   <> " event: " <> pack (show ev)
+        "Bearer on " <> pack (show peer)
+     <> " event: " <> pack (show ev)
 
 
 --

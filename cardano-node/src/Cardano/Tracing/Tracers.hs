@@ -75,6 +75,7 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Subscription
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
@@ -419,6 +420,7 @@ mkConsensusTracers
      , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
      , HasKESMetricsData blk
+     , Show (Header blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -800,8 +802,11 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
 --------------------------------------------------------------------------------
 
 nodeToClientTracers'
-  :: ( Show localPeer
-     , forall result. Show (Query blk result)
+  :: ( StandardHash blk
+     , Show (ApplyTxErr blk)
+     , Show (GenTx blk)
+     , Show localPeer
+     , ShowQuery (Query blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -825,6 +830,8 @@ nodeToNodeTracers'
   :: ( Consensus.RunNode blk
      , ConvertTxId blk
      , HasTxs blk
+     , Show blk
+     , Show (Header blk)
      , Show peer
      )
   => TraceSelection
