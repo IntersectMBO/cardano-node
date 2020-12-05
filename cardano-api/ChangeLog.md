@@ -2,7 +2,7 @@
 
 ## 1.24.1 -- December 2020
 
-None
+- Fix the getTxId implementation for Byron-era transactions (#2169)
 
 ## 1.24.0 -- December 2020
 
