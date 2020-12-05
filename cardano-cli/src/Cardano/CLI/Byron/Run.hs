@@ -9,6 +9,7 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Data.Text.Lazy.IO as TL
+import qualified Data.ByteString.Char8 as BS
 import qualified Formatting as F
 
 import qualified Cardano.Chain.Common as Common
@@ -78,6 +79,7 @@ runByronClientCommand c =
       runIssueDelegationCertificate nw era epoch issuerSK delVK cert
     CheckDelegation nw cert issuerVF delegateVF -> runCheckDelegation nw cert issuerVF delegateVF
     SubmitTx network fp -> runSubmitTx network fp
+    GetTxId fp -> runGetTxId fp
     SpendGenesisUTxO genFp nw era nftx ctKey genRichAddr outs ->
       runSpendGenesisUTxO genFp nw era nftx ctKey genRichAddr outs
     SpendUTxO nw era nftx ctKey ins outs ->
@@ -199,8 +201,15 @@ runCheckDelegation nw cert issuerVF delegateVF = do
 runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
 runSubmitTx network fp = do
     tx <- firstExceptT ByronCmdTxError $ readByronTx fp
-    firstExceptT ByronCmdTxError $ nodeSubmitTx network tx
+    firstExceptT ByronCmdTxError $
+      nodeSubmitTx network (normalByronTxToGenTx tx)
 
+runGetTxId :: TxFile -> ExceptT ByronClientCmdError IO ()
+runGetTxId fp = firstExceptT ByronCmdTxError $ do
+    tx <- readByronTx fp
+    let txbody = Typed.getTxBody (Typed.ByronTx tx)
+        txid   = Typed.getTxId txbody
+    liftIO $ BS.putStrLn $ Typed.serialiseToRawBytesHex txid
 
 runSpendGenesisUTxO
   :: GenesisFile

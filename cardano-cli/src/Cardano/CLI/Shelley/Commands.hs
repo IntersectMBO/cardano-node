@@ -193,7 +193,7 @@ data TransactionCmd
       TxOutCount
       TxShelleyWitnessCount
       TxByronWitnessCount
-  | TxGetTxId TxBodyFile
+  | TxGetTxId (Either TxBodyFile TxFile)
   deriving (Eq, Show)
 
 renderTransactionCmd :: TransactionCmd -> Text

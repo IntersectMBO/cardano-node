@@ -553,7 +553,8 @@ pTransaction =
       <*> pTxByronWitnessCount
 
   pTransactionId  :: Parser TransactionCmd
-  pTransactionId = TxGetTxId <$> pTxBodyFile Input
+  pTransactionId = TxGetTxId <$> (Left  <$> pTxBodyFile Input
+                              <|> Right <$> pTxFile Input)
 
 
 pNodeCmd :: Parser NodeCmd

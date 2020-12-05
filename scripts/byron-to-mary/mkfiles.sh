@@ -3,7 +3,7 @@
 set -e
 #set -x
 
-# This script sets up a cluster that starts out in Byron, and can transition to Shelley.
+# This script sets up a cluster that starts out in Byron, and can transition to Mary.
 #
 # The script generates all the files needed for the setup, and prints commands
 # to be run manually (to start the nodes, post transactions, etc.).
@@ -34,10 +34,6 @@ set -e
 #    This is quite convenient, but it does not test that we can do the
 #    transition by posting update proposals to the network.
 #
-# TODO: The script allows transitioning to Shelley, but not yet to register a
-# pool and delegate, so all blocks will still be produced by the BFT nodes.
-# We will need CLI support for Byron witnesses in Shelley transactions to do
-# that.
 
 ROOT=example
 
@@ -49,12 +45,11 @@ POOL_NODES="node-pool1"
 
 ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 
-NUM_UTXO_KEYS=1
-MAX_SUPPLY=1000000000
-INIT_SUPPLY=1000000000
+INIT_SUPPLY=1002000000
 FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
-FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} * 9 / 10))
+FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} - 1000000))
 # We need to allow for a fee to transfer the funds out of the genesis.
+# We don't care too much, 1 ada is more than enough.
 
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
@@ -212,39 +207,35 @@ for N in ${BFT_NODES_N}; do
 
 done
 
-# Create keys and addresses to withdraw the initial UTxO into
+# Create keys, addresses and transactions to withdraw the initial UTxO into
+# regular addresses.
 for N in ${BFT_NODES_N}; do
 
-  cardano-cli keygen \
+  cardano-cli byron key keygen \
     --byron-formats \
     --secret byron/payment-keys.00$((${N} - 1)).key \
     --no-password
 
-  cardano-cli signing-key-address \
+  cardano-cli byron key signing-key-address \
     --byron-formats \
     --testnet-magic 42 \
     --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
 
-  # Write Genesis addresses to files
-
-  cardano-cli signing-key-address \
+  cardano-cli byron key signing-key-address \
     --byron-formats  \
     --testnet-magic 42 \
     --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
 
+  cardano-cli byron transaction issue-genesis-utxo-expenditure \
+    --genesis-json byron/genesis.json \
+    --testnet-magic 42 \
+    --byron-formats \
+    --tx tx$((${N} - 1)).tx \
+    --wallet-key byron/delegate-keys.00$((${N} - 1)).key \
+    --rich-addr-from $(head -n 1 byron/genesis-address-00$((${N} - 1))) \
+    --txout "(\"$(head -n 1 byron/address-00$((${N} - 1)))\", $FUNDS_PER_BYRON_ADDRESS)"
+
 done
-
-# Create Byron address that moves funds out of the genesis UTxO into a regular
-# address.
-
-cardano-cli issue-genesis-utxo-expenditure \
-            --genesis-json byron/genesis.json \
-            --testnet-magic 42 \
-            --byron-formats \
-            --tx tx0.tx \
-            --wallet-key byron/delegate-keys.000.key \
-            --rich-addr-from $(head -n 1 byron/genesis-address-000) \
-            --txout "(\"$(head -n 1 byron/address-000)\", $FUNDS_PER_BYRON_ADDRESS)"
 
 # Update Proposal and votes
 cardano-cli byron governance create-update-proposal \
@@ -298,7 +289,7 @@ echo "====================================================================="
 
 # Set up our template
 mkdir shelley
-cardano-cli shelley genesis create --testnet-magic 42 --genesis-dir shelley
+cardano-cli genesis create --testnet-magic 42 --genesis-dir shelley
 
 # Then edit the genesis.spec.json ...
 
@@ -317,7 +308,7 @@ sed -i shelley/genesis.spec.json \
 
 # Now generate for real:
 
-cardano-cli shelley genesis create \
+cardano-cli genesis create \
     --testnet-magic 42 \
     --genesis-dir shelley/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
@@ -335,37 +326,18 @@ cat shelley/genesis.json
 echo
 echo "====================================================================="
 
-echo "To start the nodes, in separate terminals use:"
-echo
-for NODE in ${ALL_NODES}; do
-
-  echo "cardano-node run \\"
-  echo "  --config                          ${ROOT}/configuration.yaml \\"
-  echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
-  echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-  echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
-if [ -f ${NODE}/byron/delegate.key ]; then
-  echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
-fi
-  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
-  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
-  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
-  echo "  --port                            $(cat ${NODE}/port)"
-
-done
 
 # Make the pool operator cold keys
 # This was done already for the BFT nodes as part of the genesis creation
 
 for NODE in ${POOL_NODES}; do
 
-  cardano-cli shelley node key-gen \
+  cardano-cli node key-gen \
       --cold-verification-key-file                 ${NODE}/shelley/operator.vkey \
       --cold-signing-key-file                      ${NODE}/shelley/operator.skey \
       --operational-certificate-issue-counter-file ${NODE}/shelley/operator.counter
 
-  cardano-cli shelley node key-gen-VRF \
+  cardano-cli node key-gen-VRF \
       --verification-key-file ${NODE}/shelley/vrf.vkey \
       --signing-key-file      ${NODE}/shelley/vrf.skey
 
@@ -388,11 +360,11 @@ done
 
 for NODE in ${ALL_NODES}; do
 
-  cardano-cli shelley node key-gen-KES \
+  cardano-cli node key-gen-KES \
       --verification-key-file ${NODE}/shelley/kes.vkey \
       --signing-key-file      ${NODE}/shelley/kes.skey
 
-  cardano-cli shelley node issue-op-cert \
+  cardano-cli node issue-op-cert \
       --kes-period 0 \
       --kes-verification-key-file                  ${NODE}/shelley/kes.vkey \
       --cold-signing-key-file                      ${NODE}/shelley/operator.skey \
@@ -423,30 +395,30 @@ mkdir addresses
 for ADDR in ${ADDRS}; do
 
   # Payment address keys
-  cardano-cli shelley address key-gen \
+  cardano-cli address key-gen \
       --verification-key-file addresses/${ADDR}.vkey \
       --signing-key-file      addresses/${ADDR}.skey
 
   # Stake address keys
-  cardano-cli shelley stake-address key-gen \
+  cardano-cli stake-address key-gen \
       --verification-key-file addresses/${ADDR}-stake.vkey \
       --signing-key-file      addresses/${ADDR}-stake.skey
 
   # Payment addresses
-  cardano-cli shelley address build \
+  cardano-cli address build \
       --payment-verification-key-file addresses/${ADDR}.vkey \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --testnet-magic 42 \
       --out-file addresses/${ADDR}.addr
 
   # Stake addresses
-  cardano-cli shelley stake-address build \
+  cardano-cli stake-address build \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --testnet-magic 42 \
       --out-file addresses/${ADDR}-stake.addr
 
   # Stake addresses registration certs
-  cardano-cli shelley stake-address registration-certificate \
+  cardano-cli stake-address registration-certificate \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --out-file addresses/${ADDR}-stake.reg.cert
 
@@ -458,7 +430,7 @@ USER_POOL_N="1"
 for N in ${USER_POOL_N}; do
 
   # Stake address delegation certs
-  cardano-cli shelley stake-address delegation-certificate \
+  cardano-cli stake-address delegation-certificate \
       --stake-verification-key-file addresses/user${N}-stake.vkey \
       --cold-verification-key-file  node-pool${N}/shelley/operator.vkey \
       --out-file addresses/user${N}-stake.deleg.cert
@@ -479,7 +451,7 @@ echo "====================================================================="
 
 for NODE in ${POOL_NODES}; do
 
-  cardano-cli shelley stake-pool registration-certificate \
+  cardano-cli stake-pool registration-certificate \
     --testnet-magic 42 \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
     --cold-verification-key-file             ${NODE}/shelley/operator.vkey \
@@ -513,7 +485,7 @@ for NODE in ${BFT_NODES}; do
   echo "  --port                            $(cat ${NODE}/port) \\"
   echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
   echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee -a ${ROOT}/${NODE}/node.log"
 
 done
 for NODE in ${POOL_NODES}; do
@@ -527,31 +499,34 @@ for NODE in ${POOL_NODES}; do
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
   echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee -a ${ROOT}/${NODE}/node.log"
 
 done
 
+echo
 echo "In order to do the protocol updates, proceed as follows:"
 echo
 echo "  0. wait for the nodes to start producing blocks"
-echo "  1. invoke ./scripts/shelley-allegra/update-1.sh"
+echo "  1. invoke ./scripts/byron-to-mary/update-1.sh"
 echo "     wait for the next epoch for the update to take effect"
 echo
-echo "  2. invoke ./scripts/shelley-allegra/update-2.sh"
+echo "  2. invoke ./scripts/byron-to-mary/update-2.sh"
 echo "  3. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
 echo
-echo "  2. invoke ./scripts/shelley-allegra/update-3.sh <N>"
+echo "  4. invoke ./scripts/byron-to-mary/update-3.sh <N>"
 echo "     Here, <N> the current epoch (2 if you're quick)."
 echo "     If you provide the wrong epoch, you will see an error"
 echo "     that will tell you the current epoch, and can run"
 echo "     the script again."
-echo "  3. restart the nodes"
+echo "  5. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
+echo "  6. invoke ./scripts/byron-to-mary/update-4.sh <N>"
+echo "  7. restart the nodes"
 echo
 echo "You can observe the status of the updates by grepping the logs, via"
 echo
-echo "  grep LedgerUpdate node-pool1.log"
+echo "  grep LedgerUpdate ${ROOT}/node-pool1/node.log"
 echo
 echo "When in Shelley (after 3, and before 4), you should be able "
 echo "to look at the protocol parameters, or the ledger state, "
@@ -561,7 +536,13 @@ echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
 echo "  cardano-cli query protocol-parameters \\"
 echo "  --cardano-mode --testnet-magic 42"
 echo
-echo "This will fail in both Allegra and Byron. In particular, "
+echo "This will fail outside of the Shelley era. In particular, "
 echo "after step 3, you will get an error message that tells you "
-echo "that you are in the Allegra era."
+echo "that you are in the Allegra era. You must then use the --allegra-era flag:"
+echo
+echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
+echo "  cardano-cli query protocol-parameters \\"
+echo "  --cardano-mode --allegra-era --testnet-magic 42"
+echo
+echo "Similarly, use --mary-era in the Mary era."
 popd

@@ -122,6 +122,8 @@ data ByronCommand =
         (NonEmpty TxOut)
         -- ^ Genesis UTxO output Address.
 
+  | GetTxId TxFile
+
     --- Misc Commands ---
 
   | ValidateCBOR

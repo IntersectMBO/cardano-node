@@ -82,12 +82,12 @@ module Cardano.Api.TxBody (
 import           Prelude
 
 import           Data.Bifunctor (first)
+import           Data.Maybe (fromMaybe)
 import           Data.List (intercalate)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.String (IsString)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Short as SBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq
@@ -178,10 +178,14 @@ toShelleyTxId (TxId h) =
 getTxId :: TxBody era -> TxId
 getTxId (ByronTxBody tx) =
     TxId
-  . Crypto.UnsafeHash
-  . SBS.toShort
-  . recoverBytes
+  . fromMaybe impossible
+  . Crypto.hashFromBytesShort
+  . Byron.abstractHashToShort
+  . Byron.hashDecoded
   $ tx
+  where
+    impossible =
+      error "getTxId: byron and shelley hash sizes do not match"
 
 getTxId (ShelleyTxBody era tx _) =
     case era of
