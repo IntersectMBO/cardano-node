@@ -110,8 +110,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: e499195fbdf38bbece09c36c239bc562921ed68c
-  --sha256: 0w78hsiwl0bg0qm6nzyckk1cd6qv6qzqgj55n4rymnl522n00nan
+  tag: 581767d1329f3f702e332af08355e81a0f85333e
+  --sha256: 198p4v2bi36y6x512w35qycvjm7nds7jf8qh7r84pj1qsy43vf7w
   subdir:
     byron/chain/executable-spec
     byron/crypto
