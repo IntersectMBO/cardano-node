@@ -565,9 +565,9 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
     liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
-runTxCreatePolicyId (ScriptFile _sFile) =
-  -- Here we would decode the JSON script file and then hash.
-  liftIO $ putTextLn "Not implemented yet"
+runTxCreatePolicyId (ScriptFile sFile) = do
+  ScriptInAnyLang _ script <- firstExceptT ShelleyTxCmdReadJsonFileError $ readFileScriptInAnyLang sFile
+  liftIO $ putTextLn $ decodeUtf8 $ serialiseToRawBytesHex $ hashScript script
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
