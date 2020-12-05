@@ -15,11 +15,13 @@ rec {
     ShelleyGenesisFile = "shelley/genesis.json";
     Protocol = "Cardano";
     RequiresNetworkMagic = "RequiresMagic";
-    LastKnownBlockVersion-Major = 0;
+    LastKnownBlockVersion-Major = 4;
     LastKnownBlockVersion-Minor = 0;
     LastKnownBlockVersion-Alt = 0;
     PBftSignatureThreshold = 0.9;
-    MaxKnownMajorProtocolVersion = 2;
+    MaxKnownMajorProtocolVersion = 4;
+    TestAllegraHardForkAtEpoch = 2;
+    TestShelleyHardForkAtEpoch = 1;
 
   };
   nodeConfig = networkConfig // defaultLogConfig;

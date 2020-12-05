@@ -89,10 +89,10 @@ let
     cp ${./byron-params.json} ${stateDir}/byron-params.json
     START_TIME_SHELLEY=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="5 seconds")
     START_TIME=$(date +%s --date="$START_TIME_SHELLEY")
-    cardano-cli genesis --protocol-magic 42 --k ${toString securityParam} --n-poor-addresses 0 --n-delegate-addresses ${toString numBft} --total-balance ${toString (1000000000000000 * numBft)} --byron-formats --delegate-share 1 --avvm-entry-count 0 --avvm-entry-balance 0 --protocol-parameters-file ${stateDir}/byron-params.json --genesis-output-dir ${stateDir}/byron --start-time "$START_TIME"
+    cardano-cli byron genesis genesis --protocol-magic 42 --k ${toString securityParam} --n-poor-addresses 0 --n-delegate-addresses ${toString numBft} --total-balance ${toString (1000000000000000 * numBft)} --byron-formats --delegate-share 1 --avvm-entry-count 0 --avvm-entry-balance 0 --protocol-parameters-file ${stateDir}/byron-params.json --genesis-output-dir ${stateDir}/byron --start-time "$START_TIME"
     mv ${stateDir}/byron-params.json ${stateDir}/byron/params.json
     jq -r '.securityParam = ${toString securityParam} | .updateQuorum = ${toString numBft}' < ${./genesis.spec.json} > ${stateDir}/shelley/genesis.spec.json
-    cardano-cli shelley genesis create --genesis-dir ${stateDir}/shelley --testnet-magic 42 --gen-genesis-keys 3 --start-time "$START_TIME_SHELLEY"
+    cardano-cli genesis create --genesis-dir ${stateDir}/shelley --testnet-magic 42 --gen-genesis-keys 3 --start-time "$START_TIME_SHELLEY"
     cp ${__toFile "node.json" (__toJSON baseEnvConfig.nodeConfig)} ${stateDir}/config.json
     chmod u+w ${stateDir}/config.json
     for i in {1..${toString numBft}}
@@ -100,10 +100,10 @@ let
       mkdir -p "${stateDir}/nodes/node-bft$i"
       ln -s "../../shelley/delegate-keys/delegate$i.vrf.skey" "${stateDir}/nodes/node-bft$i/vrf.skey"
       ln -s "../../shelley/delegate-keys/delegate$i.vrf.vkey" "${stateDir}/nodes/node-bft$i/vrf.vkey"
-      cardano-cli shelley node key-gen-KES \
+      cardano-cli node key-gen-KES \
         --verification-key-file "${stateDir}/nodes/node-bft$i/kes.vkey" \
         --signing-key-file "${stateDir}/nodes/node-bft$i/kes.skey"
-      cardano-cli shelley node issue-op-cert \
+      cardano-cli node issue-op-cert \
         --kes-period 0 \
         --cold-signing-key-file "${stateDir}/shelley/delegate-keys/delegate$i.skey" \
         --kes-verification-key-file "${stateDir}/nodes/node-bft$i/kes.vkey" \

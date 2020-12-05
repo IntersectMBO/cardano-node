@@ -568,12 +568,12 @@ class CardanoCLIWrapper:
     def convert_itn_vkey(self, key):
         with open(f"{key}.pk", "w") as fname:
             fname.write(k)
-        self.cmd(["cardano-cli", "shelley", "stake-address", "convert-itn-key", "--itn-verification-key-file", f"{key}.pk", "--out-file", f"{key}.vkey"])
+        self.cmd(["cardano-cli", "stake-address", "convert-itn-key", "--itn-verification-key-file", f"{key}.pk", "--out-file", f"{key}.vkey"])
 
     def convert_itn_skey(self, key):
         with open(f"{key}.sk", "w") as fname:
             fname.write(k)
-        self.cmd(["cardano-cli", "shelley", "stake-address", "convert-itn-key", "--itn-signing-key-file", f"{key}.sk", "--out-file", f"{key}.skey"])
+        self.cmd(["cardano-cli", "stake-address", "convert-itn-key", "--itn-signing-key-file", f"{key}.sk", "--out-file", f"{key}.skey"])
 
     # Byron specific commands
     def byron_txin_format(self, tx):
