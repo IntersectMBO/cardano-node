@@ -2,6 +2,11 @@
 
 ## 1.24.1 -- December 2020
 
+- New command `transaction policyid` for making multi-asset policy ids (#2176)
+- New command `byron transaction txid` to help scripts with getting the
+  transaction id for Byron transactions made using the cli (#2169)
+- New `--tx-file` flag for the command `transaction txid` to accept complete
+  txs, not just tx bodies (#2169)
 - Add a regression test for the "0" case of multi-asset tx out values (#2155)
 
 ## 1.24.0 -- December 2020
@@ -10,6 +15,13 @@
   for the new eras, and support for the special new features in the new eras:
   script extensions, tx validity intervals, auxiliary scripts, multi-asset tx
   outputs and asset minting. (#2072, #2129, #2136)
+- New flags for the `build-raw` command:
+  + `--lower-bound` and `--upper-bound` for the new Allegra-era feature
+    of transaction validity intervals. The existing flag `--ttl` is equivalent to
+    the new `--upper-bound`, but it is now optional in the Allegra era.
+  + `--script-file` for the new Allegra-era feature of being able to include
+     auxiliary scripts in a transaction.
+  + `--mint` for the Mary-era token minting feature.
 - It is now necessary to specify the target era (e.g. `--allegra-era`) when
   creating a transaction (with `build-raw`) so that the right format and
   feature-set is used. The `--shelley-era` remains the default.

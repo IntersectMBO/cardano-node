@@ -3,11 +3,14 @@
 ## 1.24.1 -- December 2020
 
 ### node changes
-- Tracing changes to support "K=1000" benchmarks (#2156)
+- Move all metrics under the `cardano.node.metrics` namespace (#2158)
+- New metrics for the size of the UTxO and delegation maps (#2158)
+- Tracing changes to support "K=1000" benchmarks (#2156, #2175)
 - Mention the required `xz` tool in the Cabal build instructions (#2132)
 
 ### ledger changes
 - Fix the use of Shelley multi-sig scripts in the Allegra and later eras (#2035)
+- Fix the serialisation format for multi-asset values to follow the CDDL (#2039)
 - Additional "golden" tests for encodings in the Allegra and Mary eras (#2031)
 - Additional binary encoding "round-trip" tests (#2032)
 - Benchmarks for the transaction generators (#2024)
