@@ -1054,8 +1054,8 @@ So create the following two files as `example/node1/topology.json` and
 So node1 will listen on port 3001 and contact node2 on port 3002, and the other
 way around for node2.
 
-Now we are ready to run our two nodes. With the way we have set them up should
-both be block-producing nodes that take part in the BFT overlay schedule.
+Now we are ready to run our two nodes. With the way we have set them up both
+should be block-producing nodes that take part in the BFT overlay schedule.
 
 One final tweak before we start: it has probably been some time since we
 generated the `genesis.json`, so the start time is probably now some time in
@@ -1069,7 +1069,7 @@ you did not do any manual tweaking of the generated `genesis.json`, as it will
 be overwritten.
 
 ```bash
-$ cardano-cli shelley genesis create --testnet-magic 42 --genesis-dir example/
+$ cardano-cli shelley genesis create --testnet-magic 42 --genesis-dir example/ --supply 1000000000
 ```
 
 So, now in two separate terminal windows we can launch our nodes. Node 1:
@@ -1158,7 +1158,7 @@ given as 42. The network "magic" number is used as a simple sanity check (not a
 security measure of course) when nodes connect to each other, to stop nodes
 accidentally connecting to nodes running different blockchains, e.g. testnet
 vs mainnet. We have the same sanity check when we connect to the local node.
-So we have to specify `--testnet-magic 1097911063`, otherwise it defaults to mainnet
+So we have to specify `--testnet-magic 42`, otherwise it defaults to mainnet
 and then the handshake would fail.
 
 This command of course connects to a local node. The socket for the local
@@ -1244,7 +1244,7 @@ Available options:
 So what address do we need? We need to build the bech32 address of a utxo verification key as follows:
 
 ```bash
-$ cardano-cli -- shelley address build \
+$ cardano-cli shelley address build \
     --payment-verification-key-file example/utxo-keys/utxo1.vkey \
     --testnet-magic 42
 
@@ -1470,7 +1470,7 @@ $ cardano-cli shelley transaction build-raw \
     --tx-out addr_test1vzrqr58zm3un86sfeze6039gj8v406p3zt4su0qkemc5vyqrs09az+500000000 \
     --ttl 3600 \
     --fee 0 \
-    --tx-body-file example/tx1.txbody
+    --out-file example/tx1.txbody
 ```
 
 ### Making a signed transaction
@@ -1508,7 +1508,7 @@ $ cardano-cli shelley transaction sign \
   --tx-body-file example/tx1.txbody \
   --signing-key-file example/utxo-keys/utxo1.skey \
   --testnet-magic 1097911063 \
-  --tx-file example/tx1.tx
+  --out-file example/tx1.tx
 ```
 
 ### Submitting the signed transaction
@@ -1543,7 +1543,7 @@ Available options:
 
 This command also needs the `CARDANO_NODE_SOCKET_PATH` like the other commands
 that need to talk to a local node. And as mentioned above in the section on
-querying the node, we have to specify `--testnet-magic 1097911063`, otherwise it
+querying the node, we have to specify `--testnet-magic 42`, otherwise it
 defaults to mainnet and then the handshake with the node would fail.
 
 So let's do it.
