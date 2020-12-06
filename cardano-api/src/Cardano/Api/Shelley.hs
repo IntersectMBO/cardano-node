@@ -38,6 +38,9 @@ module Cardano.Api.Shelley
     TxIx(TxIx),
     Lovelace(Lovelace),
     toShelleyLovelace,
+    fromShelleyLovelace,
+    toMaryValue,
+    fromMaryValue,
     SlotNo(SlotNo),
 
     -- * Signing transactions
@@ -149,4 +152,3 @@ import           Cardano.API
 import           Cardano.Api.Typed
 import           Cardano.Api.Address
 import           Cardano.Api.Value
-

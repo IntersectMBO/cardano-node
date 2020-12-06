@@ -59,6 +59,7 @@ library
                        Cardano.CLI.Shelley.Run.TextView
                        Cardano.CLI.Shelley.Run.Transaction
 
+                       Cardano.CLI.Mary.RenderValue
                        Cardano.CLI.Mary.TxOutParser
                        Cardano.CLI.Mary.ValueParser
 
@@ -172,6 +173,7 @@ test-suite cardano-cli-test
                       , bytestring
                       , base16-bytestring
                       , cardano-api
+                      , cardano-api-test
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-ledger-shelley-ma
@@ -197,9 +199,8 @@ test-suite cardano-cli-test
                       , unordered-containers
 
   other-modules:        Test.Cli.FilePermissions
-                        -- Test.Cli.Gen
                         Test.Cli.ITN
-                        -- Test.Cli.MultiAssetParsing
+                        Test.Cli.MultiAssetParsing
                         Test.Cli.Pioneers.Exercise1
                         Test.Cli.Pioneers.Exercise2
                         Test.Cli.Pioneers.Exercise3

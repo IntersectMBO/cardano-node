@@ -16,7 +16,7 @@ module Cardano.CLI.Shelley.Run.Query
   ) where
 
 import           Cardano.Prelude hiding (atomically)
-import           Prelude (String, error)
+import           Prelude (String)
 
 import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
@@ -34,11 +34,12 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.Api.Protocol
-import           Cardano.Api.Typed
 import           Cardano.Api.Shelley
+import           Cardano.Api.Typed
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Mary.RenderValue (defaultRenderValueOptions, renderValue)
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
@@ -46,8 +47,8 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
-import           Ouroboros.Consensus.Cardano.Block as Consensus
-                   (Either (..), EraMismatch (..), Query (..))
+import           Ouroboros.Consensus.Cardano.Block as Consensus (Either (..), EraMismatch (..),
+                     Query (..))
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
@@ -172,14 +173,14 @@ runQueryUTxO (AnyCardanoEra era) protocol qfilter network mOutFile
   | ShelleyBasedEra era' <- cardanoEraStyle era =
 
     -- Obtain the required type equality constaints and class constaints
-    requireValueTypeIsCoin era' $
+    obtainToJSONValue era' $
     obtainLedgerEraClassConstraints era' $ do
 
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
     filteredUtxo <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
       withlocalNodeConnectInfo protocol network sockPath $
         queryUTxOFromLocalState era' qfilter
-    writeFilteredUTxOs era mOutFile filteredUtxo
+    writeFilteredUTxOs era' mOutFile filteredUtxo
 
   | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
                               ByronProtocolNotSupportedError)
@@ -318,38 +319,39 @@ writeProtocolState mOutFile pstate =
         $ LBS.writeFile fpath (encodePretty pstate)
 
 writeFilteredUTxOs :: forall era ledgerera.
-                      Ledger.Value ledgerera ~ Coin --TODO: support multi-asset
-                   => Consensus.ShelleyBasedEra ledgerera
-                   => CardanoEra era
+                      ( Consensus.ShelleyBasedEra ledgerera
+                      , ShelleyLedgerEra era ~ ledgerera
+                      , ToJSON (Ledger.Value ledgerera)
+                      )
+                   => ShelleyBasedEra era
                    -> Maybe OutputFile
                    -> Ledger.UTxO ledgerera
                    -> ExceptT ShelleyQueryCmdError IO ()
-writeFilteredUTxOs _era mOutFile utxo =
+writeFilteredUTxOs era mOutFile utxo =
     case mOutFile of
-      Nothing -> liftIO $ printFilteredUTxOs utxo
+      Nothing -> liftIO $ printFilteredUTxOs era utxo
       Just (OutputFile fpath) ->
         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $ LBS.writeFile fpath (encodePretty utxo)
 
-printFilteredUTxOs :: forall ledgerera.
-                      Ledger.Value ledgerera ~ Coin --TODO: support multi-asset
-                   => Ledger.ShelleyBased ledgerera
-                   => Ledger.UTxO ledgerera -> IO ()
-printFilteredUTxOs (Ledger.UTxO utxo) = do
+printFilteredUTxOs :: forall era ledgerera.
+                      (Ledger.ShelleyBased ledgerera, ShelleyLedgerEra era ~ ledgerera)
+                   => ShelleyBasedEra era -> Ledger.UTxO ledgerera -> IO ()
+printFilteredUTxOs era (Ledger.UTxO utxo) = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
     mapM_ printUtxo $ Map.toList utxo
   where
     title :: Text
     title =
-      "                           TxHash                                 TxIx        Lovelace"
+      "                           TxHash                                 TxIx        Amount"
 
     printUtxo :: (Ledger.TxIn ledgerera, Ledger.TxOut ledgerera) -> IO ()
-    printUtxo (Ledger.TxIn (Ledger.TxId txhash) txin , Ledger.TxOut _ (Coin coin)) =
+    printUtxo (Ledger.TxIn (Ledger.TxId txhash) txin , Ledger.TxOut _ value) =
       Text.putStrLn $
         mconcat
           [ Text.decodeLatin1 (hashToBytesAsHex txhash)
           , textShowN 6 txin
-          , textShowN 18 coin -- enough to display maxLovelaceVal
+          , "        " <> printableValue (convertToApiValue era value)
           ]
 
     textShowN :: Show a => Int -> a -> Text
@@ -357,6 +359,9 @@ printFilteredUTxOs (Ledger.UTxO utxo) = do
       let str = show x
           slen = length str
       in Text.pack $ replicate (max 1 (len - slen)) ' ' ++ str
+
+    printableValue :: Value -> Text
+    printableValue = renderValue defaultRenderValueOptions
 
 runQueryStakeDistribution
   :: AnyCardanoEra
@@ -791,13 +796,20 @@ obtainStandardCrypto ShelleyBasedEraShelley f = f
 obtainStandardCrypto ShelleyBasedEraAllegra f = f
 obtainStandardCrypto ShelleyBasedEraMary    f = f
 
---TODO: eliminate this and support multi-asset properly
-requireValueTypeIsCoin
+obtainToJSONValue
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
-  -> (Ledger.Value ledgerera ~ Coin => a) -> a
-requireValueTypeIsCoin ShelleyBasedEraShelley f = f
-requireValueTypeIsCoin ShelleyBasedEraAllegra f = f
-requireValueTypeIsCoin ShelleyBasedEraMary    _ =
-    error "TODO: requireValueTypeIsCoin eliminate this and support Mary era"
+  -> (ToJSON (Ledger.Value ledgerera) => a) -> a
+obtainToJSONValue ShelleyBasedEraShelley f = f
+obtainToJSONValue ShelleyBasedEraAllegra f = f
+obtainToJSONValue ShelleyBasedEraMary    f = f
 
+-- | Convert a ledger 'Ledger.Value' to a @cardano-api@ 'Value'.
+convertToApiValue
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> Ledger.Value ledgerera
+  -> Value
+convertToApiValue ShelleyBasedEraShelley = lovelaceToValue . fromShelleyLovelace
+convertToApiValue ShelleyBasedEraAllegra = lovelaceToValue . fromShelleyLovelace
+convertToApiValue ShelleyBasedEraMary = fromMaryValue
