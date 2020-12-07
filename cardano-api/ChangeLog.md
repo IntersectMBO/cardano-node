@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 1.24.2 -- December 2020
+
+None
+
 ## 1.24.1 -- December 2020
 
 - Fix the getTxId implementation for Byron-era transactions (#2169)
