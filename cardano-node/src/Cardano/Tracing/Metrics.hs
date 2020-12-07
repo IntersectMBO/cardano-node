@@ -142,7 +142,7 @@ mapForgingStatsTxsProcessed ::
   -> IO Int
 mapForgingStatsTxsProcessed fs f =
   atomicModifyIORef' (fsTxsProcessedNum fs) $
-    \txCount -> (f txCount, txCount)
+    \txCount -> join (,) $ f txCount
 
 mapForgingCurrentThreadStats ::
      ForgingStats

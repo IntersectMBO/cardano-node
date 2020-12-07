@@ -10,6 +10,7 @@ module Cardano.Node.Configuration.Logging
   , createLoggingLayer
   , nodeBasicInfo
   , shutdownLoggingLayer
+  , traceCounter
   -- re-exports
   , Trace
   , Configuration
@@ -40,6 +41,7 @@ import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
+import           Cardano.BM.Data.Aggregated (Measurable(..))
 import           Cardano.BM.Data.Backend (Backend, BackendKind)
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName)
 import qualified Cardano.BM.Observer.Monadic as Monadic
@@ -50,6 +52,7 @@ import           Cardano.BM.Scribe.Systemd (plugin)
 #endif
 import           Cardano.BM.Setup (setupTrace_, shutdown)
 import           Cardano.BM.Stats
+import           Cardano.BM.Stats.Resources
 import qualified Cardano.BM.Trace as Trace
 import           Cardano.BM.Tracing
 
@@ -219,14 +222,35 @@ createLoggingLayer ver nodeConfig' p = do
        }
 
    startCapturingMetrics :: Trace IO Text -> IO ()
-   startCapturingMetrics trace0 = do
-     let trace = appendName "node-metrics" trace0
-     _ <- Async.async $ forever $ do
+   startCapturingMetrics tr = do
+     void . Async.async . forever $ do
        readResourceStats
          >>= maybe (pure ())
-             (traceWith $ toLogObject' NormalVerbosity trace)
+                   (traceResourceStats
+                      (appendName "node" tr))
        threadDelay 1000000 -- TODO:  make configurable
-     pure ()
+   traceResourceStats :: Trace IO Text -> ResourceStats -> IO ()
+   traceResourceStats tr rs = do
+     traceWith (toLogObject' NormalVerbosity $ appendName "resources" tr) rs
+     traceCounter "Stat.cputicks"    tr . fromIntegral $ rCentiCpu rs
+     traceCounter "Mem.resident"     tr . fromIntegral $ rRSS rs
+     traceCounter "RTS.gcLiveBytes"  tr . fromIntegral $ rLive rs
+     traceCounter "RTS.gcMajorNum"   tr . fromIntegral $ rGcsMajor rs
+     traceCounter "RTS.gcMinorNum"   tr . fromIntegral $ rGcsMinor rs
+     traceCounter "RTS.gcticks"      tr . fromIntegral $ rCentiGC rs
+     traceCounter "RTS.mutticks"     tr . fromIntegral $ rCentiMut rs
+     traceCounter "Stat.threads"     tr . fromIntegral $ rThreads rs
+
+traceCounter
+  :: Text
+  -> Trace IO Text
+  -> Int
+  -> IO ()
+traceCounter logValueName tracer aCounter = do
+  meta <- mkLOMeta Notice Public
+  Trace.traceNamedObject
+    (appendName "metrics" tracer)
+    (meta, LogValue logValueName (PureI $ fromIntegral aCounter))
 
 shutdownLoggingLayer :: LoggingLayer -> IO ()
 shutdownLoggingLayer = shutdown . llSwitchboard
