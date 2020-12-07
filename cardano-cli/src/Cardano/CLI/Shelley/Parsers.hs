@@ -43,11 +43,11 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
-import qualified Options.Applicative as Opt
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
+import qualified Options.Applicative as Opt
 import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.String as Parsec
-import qualified Text.Parsec.Error  as Parsec
 
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
@@ -503,8 +503,8 @@ pTransaction =
                                  <*> some pTxIn
                                  <*> some pTxOut
                                  <*> optional pMintMultiAsset
-                                 <*> optional pTxLowerBound
-                                 <*> optional pTxUpperBound
+                                 <*> optional pInvalidBefore
+                                 <*> optional pInvalidHereafter
                                  <*> optional pTxFee
                                  <*> many pCertificateFile
                                  <*> many pWithdrawal
@@ -1588,28 +1588,46 @@ pMintMultiAsset =
       <> Opt.help "Mint multi-asset value(s) with the multi-asset cli syntax"
       )
 
-pTxLowerBound :: Parser SlotNo
-pTxLowerBound =
-  SlotNo <$>
-    Opt.option Opt.auto
-      (  Opt.long "lower-bound"
-      <> Opt.metavar "SLOT"
-      <> Opt.help "Time that transaction is valid from (in slots)."
-      )
-
-pTxUpperBound :: Parser SlotNo
-pTxUpperBound =
+pInvalidBefore :: Parser SlotNo
+pInvalidBefore =
   SlotNo <$>
     ( Opt.option Opt.auto
-        (  Opt.long "upper-bound"
+       (  Opt.long "invalid-before"
+       <> Opt.metavar "SLOT"
+       <> Opt.help "Time that transaction is valid from (in slots)."
+       )
+    <|>
+      Opt.option Opt.auto
+        (  Opt.long "lower-bound"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time that transaction is valid from (in slots) \
+                    \(deprecated; use --invalid-before instead)."
+        <> Opt.internal
+        )
+    )
+
+pInvalidHereafter :: Parser SlotNo
+pInvalidHereafter =
+  SlotNo <$>
+    ( Opt.option Opt.auto
+        (  Opt.long "invalid-hereafter"
         <> Opt.metavar "SLOT"
         <> Opt.help "Time that transaction is valid until (in slots)."
         )
     <|>
       Opt.option Opt.auto
+        (  Opt.long "upper-bound"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time that transaction is valid until (in slots) \
+                    \(deprecated; use --invalid-hereafter instead)."
+       <> Opt.internal
+        )
+    <|>
+      Opt.option Opt.auto
         (  Opt.long "ttl"
         <> Opt.metavar "SLOT"
-        <> Opt.help "Time to live (in slots) (deprecated; use --upper-bound instead)."
+        <> Opt.help "Time to live (in slots) (deprecated; use --invalid-hereafter instead)."
+        <> Opt.internal
         )
     )
 
