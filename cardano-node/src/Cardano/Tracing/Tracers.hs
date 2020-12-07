@@ -635,11 +635,13 @@ notifyBlockForging fStats tr = Tracer $ \case
       =<< mapForgingCurrentThreadStats fStats
             (\fts -> (fts { ftsNodeCannotForgeNum = ftsNodeCannotForgeNum fts + 1 },
                        ftsNodeCannotForgeNum fts + 1))
-  Consensus.TraceNodeIsLeader{} ->
+  (Consensus.TraceNodeIsLeader (SlotNo slot')) -> do
+    let slot = fromIntegral slot'
     traceCounter "nodeIsLeaderNum" tr
       =<< mapForgingCurrentThreadStats fStats
-            (\fts -> (fts { ftsNodeIsLeaderNum = ftsNodeIsLeaderNum fts + 1 },
-                       ftsNodeIsLeaderNum fts + 1))
+            (\fts -> (fts { ftsNodeIsLeaderNum = ftsNodeIsLeaderNum fts + 1
+                          , ftsLastSlot = slot },
+                      ftsNodeIsLeaderNum fts + 1))
   Consensus.TraceForgedBlock {} ->
     traceCounter "blocksForgedNum" tr
       =<< mapForgingCurrentThreadStats fStats
