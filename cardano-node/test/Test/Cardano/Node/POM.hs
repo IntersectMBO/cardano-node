@@ -39,9 +39,10 @@ prop_sanityCheck_POM =
 testPartialYamlConfig :: PartialNodeConfiguration
 testPartialYamlConfig =
   PartialNodeConfiguration
-    { pncProtocolConfig = Last . Just . NodeProtocolConfigurationShelley
-                                          $ NodeShelleyProtocolConfiguration
-                                          (GenesisFile "dummmy-genesis-file") Nothing 1 2
+    { pncProtocolConfig = Last . Just
+                        . NodeProtocolConfigurationShelley
+                        $ NodeShelleyProtocolConfiguration
+                            (GenesisFile "dummmy-genesis-file") Nothing
     , pncSocketPath = Last Nothing
     , pncDiffusionMode = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
@@ -102,7 +103,7 @@ expectedConfig =
     , ncShutdownOnSlotSynced = MaxSlotNo $ SlotNo 42
     , ncProtocolConfig = NodeProtocolConfigurationShelley
                            $ NodeShelleyProtocolConfiguration
-                             (GenesisFile "dummmy-genesis-file") Nothing 1 2
+                             (GenesisFile "dummmy-genesis-file") Nothing
     , ncSocketPath = Nothing
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncMaxConcurrencyBulkSync = Nothing

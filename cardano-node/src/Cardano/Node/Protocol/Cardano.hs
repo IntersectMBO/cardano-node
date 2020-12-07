@@ -104,9 +104,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                            }
                            NodeShelleyProtocolConfiguration {
                              npcShelleyGenesisFile,
-                             npcShelleyGenesisFileHash,
-                             npcShelleySupportedProtocolVersionMajor,
-                             npcShelleySupportedProtocolVersionMinor
+                             npcShelleyGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
                              npcTestShelleyHardForkAtEpoch,
@@ -136,12 +134,23 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationErrorShelley $
         Shelley.readLeaderCredentials files
 
+    --TODO: all these protocol versions below are confusing and unnecessary.
+    -- It could and should all be automated and these config entries eliminated.
     return $!
       Consensus.ProtocolCardano
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
           byronPbftSignatureThreshold =
             PBftSignatureThreshold <$> npcByronPbftSignatureThresh,
+
+          -- This is /not/ the Byron protocol version. It is the protocol
+          -- version that this node will use in blocks it creates. It is used
+          -- in the Byron update mechanism to signal that this block-producing
+          -- node is ready to move to the new protocol. For example, when the
+          -- protocol version (according to the ledger state) is 0, this setting
+          -- should be 1 when we are ready to move. Similarly when the current
+          -- protocol version is 1, this should be 2 to indicate we are ready
+          -- to move into the Shelley era.
           byronProtocolVersion =
             Byron.ProtocolVersion
               npcByronSupportedProtocolVersionMajor
@@ -162,22 +171,28 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
             headMay shelleyLeaderCredentials
         }
         Consensus.ProtocolParamsShelley {
+          -- This is /not/ the Shelley protocol version. It is the protocol
+          -- version that this node will declare that it understands, when it
+          -- is in the Shelley era. That is, it is the version of protocol
+          -- /after/ Shelley, i.e. Allegra.
           shelleyProtVer =
-            ProtVer
-              npcShelleySupportedProtocolVersionMajor
-              npcShelleySupportedProtocolVersionMinor
+            ProtVer 3 0
         }
         Consensus.ProtocolParamsAllegra {
+          -- This is /not/ the Allegra protocol version. It is the protocol
+          -- version that this node will declare that it understands, when it
+          -- is in the Allegra era. That is, it is the version of protocol
+          -- /after/ Allegra, i.e. Mary.
           allegraProtVer =
-            ProtVer
-              npcShelleySupportedProtocolVersionMajor
-              npcShelleySupportedProtocolVersionMinor
+            ProtVer 4 0
         }
         Consensus.ProtocolParamsMary {
+          -- This is /not/ the Mary protocol version. It is the protocol
+          -- version that this node will declare that it understands, when it
+          -- is in the Mary era. Since Mary is currently the last known
+          -- protocol version then this is also the Mary protocol version.
           maryProtVer =
-            ProtVer
-              npcShelleySupportedProtocolVersionMajor
-              npcShelleySupportedProtocolVersionMinor
+            ProtVer 4 0
         }
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
