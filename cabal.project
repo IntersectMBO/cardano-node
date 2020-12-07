@@ -91,8 +91,8 @@ package io-sim-classes
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 2574600da11065937c1f07e4b234ecb451016a2e
-  --sha256: 0nq8bpzsr3fd2i59a6s6qb6slpymjh47zv57wlifjfvhh0xlgmpx
+  tag: 1312b41c520433478fd4297cfbe9e40d4f3114d4
+  --sha256: 1sw11ifzmbz12p1gmvh8laprmd947kf91l0xr1i4kxc0xnzn9fmf
   subdir:
     binary
     binary/test
@@ -129,8 +129,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 742e8525b96bf4b66fb61a00c8298d75d7931d5e
-  --sha256: 1132r58bjgdcf7yz3n77nlrkanqcmpn5b5km4nw151yar2dgifsv
+  tag: 8ced9d8713a7ad82f75a90c6103259e61c412d33
+  --sha256: 19inypc7ixydjjs7082iysanqrv9r276irs07lba7h1m2jy6d5xq
   subdir:
     cardano-prelude
     cardano-prelude-test
