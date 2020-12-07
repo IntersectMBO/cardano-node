@@ -1,5 +1,11 @@
 # Changelog for cardano-cli
 
+## 1.24.2 -- December 2020
+
+- Rename the flags `--lower-bound` and `--upper-bound` to be `--invalid-before`
+  and `--invalid-hereafter` respectively, for naming consistency (#2186, #2190)
+- Hide the deprecated `--ttl` flag in the `--help` output (#2189, #2190)
+
 ## 1.24.1 -- December 2020
 
 - New command `transaction policyid` for making multi-asset policy ids (#2176)
@@ -16,9 +22,9 @@
   script extensions, tx validity intervals, auxiliary scripts, multi-asset tx
   outputs and asset minting. (#2072, #2129, #2136)
 - New flags for the `build-raw` command:
-  + `--lower-bound` and `--upper-bound` for the new Allegra-era feature
+  + `--invalid-before` and `--invalid-hereafter` for the new Allegra-era feature
     of transaction validity intervals. The existing flag `--ttl` is equivalent to
-    the new `--upper-bound`, but it is now optional in the Allegra era.
+    the new `--invalid-hereafter`, but it is now optional in the Allegra era.
   + `--script-file` for the new Allegra-era feature of being able to include
      auxiliary scripts in a transaction.
   + `--mint` for the Mary-era token minting feature.

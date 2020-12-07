@@ -1,5 +1,24 @@
 # Changelog for cardano-node
 
+## 1.24.2 -- December 2020
+
+### node changes
+- Eliminate the need to update the `LastKnownBlockVersion-*` entries in the node
+  config files for the Shelley-based eras. This means the configuration does not
+  need to be updated for the Allegra or Mary eras. (#2193)
+- Fix an off-by-one error in the `txsProcessedNum` metric (#2183, #2192)
+- Revert the renaming of the metrics from 1.24.1 (#2158, #2187, #2192)
+- Export some more metrics for selected OS and RTS stats (#2192)
+
+### consensus changes
+None
+
+### ledger changes
+None
+
+### network changes
+None
+
 ## 1.24.1 -- December 2020
 
 ### node changes
