@@ -56,8 +56,6 @@ runPoolCmd (PoolMetaDataHash poolMdFile mOutFile) = runPoolMetaDataHash poolMdFi
 --
 
 -- | Create a stake pool registration cert.
--- TODO: Metadata and more stake pool relay support to be
--- added in the future.
 runStakePoolRegistrationCert
   :: VerificationKeyOrFile StakePoolKey
   -- ^ Stake pool verification key.

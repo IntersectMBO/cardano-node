@@ -39,7 +39,7 @@ golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
   -- Create MIR certificate
   void $ execCardanoCLI
     [ "shelley","governance","create-mir-certificate"
-    , "--reserves" --TODO: Should also do "--reserves"
+    , "--reserves"
     , "--stake-verification-key-file", verKey
     , "--reward", "1000"
     , "--out-file", mirCertificate

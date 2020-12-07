@@ -5,7 +5,6 @@ module Cardano.CLI.Byron.UpdateProposal
   , ParametersToUpdate(..)
   , runProposalCreation
   , createUpdateProposal
-  , deserialiseByronUpdateProposal
   , readByronUpdateProposal
   , renderByronUpdateProposalError
   , submitByronUpdateProposal
@@ -13,7 +12,7 @@ module Cardano.CLI.Byron.UpdateProposal
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, right)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
@@ -170,29 +169,24 @@ emptyProtocolParametersUpdate =
 serialiseByronUpdateProposal :: Proposal -> LByteString
 serialiseByronUpdateProposal = Binary.serialize
 
-deserialiseByronUpdateProposal :: LByteString
-                               -> Either ByronUpdateProposalError (AProposal ByteString)
-deserialiseByronUpdateProposal bs =
-  case Binary.decodeFull bs of
-    Left deserFail -> Left $ UpdateProposalDecodingError deserFail
-    Right proposal -> Right $ annotateProposal proposal
+readByronUpdateProposal :: FilePath -> ExceptT ByronUpdateProposalError IO (AProposal ByteString)
+readByronUpdateProposal fp = do
+  lbs <- handleIOExceptT
+           (ByronReadUpdateProposalFileFailure fp . toS . displayException)
+           (LB.readFile fp)
+  case Binary.decodeFull lbs of
+    Left deserFail -> left $ UpdateProposalDecodingError deserFail
+    Right proposal -> right $ annotateProposal lbs proposal
  where
-  annotateProposal :: AProposal Binary.ByteSpan -> AProposal ByteString
-  annotateProposal proposal = Binary.annotationBytes bs proposal
-
-readByronUpdateProposal :: FilePath -> ExceptT ByronUpdateProposalError IO LByteString
-readByronUpdateProposal fp =
-  handleIOExceptT (ByronReadUpdateProposalFileFailure fp . toS . displayException)
-                  (LB.readFile fp)
-
+  annotateProposal :: LByteString -> AProposal Binary.ByteSpan -> AProposal ByteString
+  annotateProposal lbs proposal = Binary.annotationBytes lbs proposal
 
 submitByronUpdateProposal
   :: NetworkId
   -> FilePath
   -> ExceptT ByronUpdateProposalError IO ()
 submitByronUpdateProposal network proposalFp = do
-    proposalBs <- readByronUpdateProposal proposalFp
-    aProposal <- hoistEither $ deserialiseByronUpdateProposal proposalBs
+    aProposal <- readByronUpdateProposal proposalFp
     let genTx = convertProposalToGenTx aProposal
     traceWith stdoutTracer $
       "Update proposal TxId: " ++ condense (txId genTx)

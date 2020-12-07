@@ -18,7 +18,7 @@ import qualified Data.Text as Text
 import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Update (AVote (..), Vote, mkVote, recoverUpId, recoverVoteId)
 import           Cardano.CLI.Byron.UpdateProposal (ByronUpdateProposalError,
-                     deserialiseByronUpdateProposal, readByronUpdateProposal)
+                     readByronUpdateProposal)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
@@ -64,10 +64,8 @@ runVoteCreation
   -> ExceptT ByronVoteError IO ()
 runVoteCreation nw sKey upPropFp voteBool outputFp = do
   sK <- firstExceptT ByronVoteKeyReadFailure $ readEraSigningKey NonLegacyByronKeyFormat sKey
-  -- TODO: readByronUpdateProposal & deserialiseByronUpdateProposal should be one function
   upProp <- firstExceptT ByronVoteUpdateProposalFailure $ readByronUpdateProposal upPropFp
-  proposal <- hoistEither . first ByronVoteUpdateProposalFailure $ deserialiseByronUpdateProposal upProp
-  let updatePropId = recoverUpId proposal
+  let updatePropId = recoverUpId upProp
       vote = mkVote (toByronProtocolMagicId nw) sK updatePropId voteBool
   firstExceptT ByronVoteUpdateHelperError $ ensureNewFileLBS outputFp (serialiseByronVote vote)
 

@@ -691,7 +691,6 @@ instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
              , "registeredVRFKeHash" .= textShow regVRFKeyHash
              , "unregisteredVRFKeyHash" .= textShow unregVRFKeyHash
              ]
-  --TODO: Pipe slot number with VRFKeyUnknown
   toObject _verb (VRFKeyUnknown (KeyHash kHash)) =
     mkObject [ "kind" .= String "VRFKeyUnknownOVERLAY"
              , "keyHash" .= String (textShow kHash)
@@ -703,9 +702,9 @@ instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
              , "activeSlotCoefficient" .= String (textShow actSlotCoefff)
              ]
   toObject _verb (NotActiveSlotOVERLAY notActiveSlotNo) =
-    -- TODO: Elaborate on NotActiveSlot error
     mkObject [ "kind" .= String "NotActiveSlotOVERLAY"
              , "slot" .= String (textShow notActiveSlotNo)
+             , "info" .= String "Silent slot (no block allowed)"
              ]
   toObject _verb (WrongGenesisColdKeyOVERLAY actual expected) =
     mkObject [ "kind" .= String "WrongGenesisColdKeyOVERLAY"
