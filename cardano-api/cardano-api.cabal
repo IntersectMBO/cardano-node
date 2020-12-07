@@ -112,7 +112,7 @@ library
                       , transformers-except
                       , typed-protocols
                       , typed-protocols-examples
-                      , unordered-containers
+                      , unordered-containers >= 0.2.11
                       , vector
 
   default-language:     Haskell2010
