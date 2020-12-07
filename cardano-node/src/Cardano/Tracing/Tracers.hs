@@ -42,7 +42,6 @@ import           Control.Tracer.Transformers
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
-import           Cardano.BM.Data.LogItem (LOContent (..), LoggerName)
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
 import           Cardano.BM.Internal.ElidingTracer
@@ -87,6 +86,7 @@ import           Cardano.Tracing.Metrics
 import           Cardano.Tracing.MicroBenchmarking
 import           Cardano.Tracing.Queries
 
+import           Cardano.Node.Configuration.Logging
 -- For tracing instances
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
@@ -951,16 +951,6 @@ readableTraceBlockchainTimeEvent ev = case ev of
       "The system wall clock time moved backwards, but within our tolerance "
       <> "threshold. Previous 'current' time: " <> (Text.pack . show) prevTime
       <> ". New 'current' time: " <> (Text.pack . show) newTime
-
-traceCounter
-  :: Text
-  -> Trace IO Text
-  -> Int
-  -> IO ()
-traceCounter logValueName tracer aCounter = do
-  meta <- mkLOMeta Notice Public
-  traceNamedObject (appendName "metrics" tracer)
-                   (meta, LogValue logValueName (PureI $ fromIntegral aCounter))
 
 tracerOnOff :: Transformable Text IO a
             => OnOff b
