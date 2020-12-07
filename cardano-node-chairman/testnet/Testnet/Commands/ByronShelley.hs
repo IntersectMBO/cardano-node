@@ -13,6 +13,7 @@ import           Options.Applicative
 import           System.IO (IO)
 import           Testnet.ByronShelley
 import           Testnet.Run (runTestnet)
+import           Text.Read (readEither)
 import           Text.Show
 
 import qualified Options.Applicative as OA
@@ -51,6 +52,13 @@ optsTestnet = TestnetOptions
       <>  OA.metavar "MILLISECONDS"
       <>  OA.showDefault
       <>  OA.value (epochLength defaultTestnetOptions)
+      )
+  <*> OA.option (OA.eitherReader readEither)
+      (   OA.long "fork-point"
+      <>  OA.help "Fork Point.  Valid values are: 'AtVersion <n>' and 'AtEpoch <n>'"
+      <>  OA.metavar "FORKPOINT"
+      <>  OA.showDefault
+      <>  OA.value (forkPoint defaultTestnetOptions)
       )
 
 optsByronShelley :: Parser ByronShelleyOptions
