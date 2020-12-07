@@ -83,6 +83,11 @@ data TestnetOptions = TestnetOptions
   , activeSlotsCoeff :: Double
   , epochLength :: Int
   , forkPoint :: ForkPoint
+  , initialSupply :: Int
+  , maxSupply :: Int
+  , securityParam :: Int
+  , nPoorAddresses :: Int
+  , slotLength :: Double
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -92,6 +97,11 @@ defaultTestnetOptions = TestnetOptions
   , activeSlotsCoeff = 0.1
   , epochLength = 1500
   , forkPoint = AtVersion 1
+  , initialSupply = 1000000000
+  , maxSupply = 1000000000
+  , securityParam = 10
+  , nPoorAddresses = 0
+  , slotLength = 0.2
   }
 
 ifaceAddress :: String
@@ -145,16 +155,12 @@ testnet testnetOptions H.Conf {..} = do
   let bftNodes = ("node-bft" <>) . show @Int <$> bftNodesN
   let poolNodes = ("node-pool" <> ) . show @Int <$> poolNodesN
   let allNodes = bftNodes <> poolNodes
-  let initSupply = 1000000000
-  let maxSupply = 1000000000
-  let fundsPerGenesisAddress = initSupply `div` numBftNodes testnetOptions
+  let fundsPerGenesisAddress = initialSupply testnetOptions `div` numBftNodes testnetOptions
   let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
   let userPoolN = poolNodesN
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodes)
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
-
-  let securityParam = 10
 
   H.createDirectoryIfMissing logDir
 
@@ -219,10 +225,10 @@ testnet testnetOptions H.Conf {..} = do
     , "genesis"
     , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
-    , "--k", show @Int securityParam
-    , "--n-poor-addresses", "0"
+    , "--k", show @Int (securityParam testnetOptions)
+    , "--n-poor-addresses", show @Int (nPoorAddresses testnetOptions)
     , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
-    , "--total-balance", show @Int initSupply
+    , "--total-balance", show @Int (initialSupply testnetOptions)
     , "--byron-formats"
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
@@ -252,7 +258,7 @@ testnet testnetOptions H.Conf {..} = do
     H.execCli
       [ "signing-key-address"
       , "--byron-formats"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--secret", tempAbsPath </> "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
       ] >>= H.writeFile (tempAbsPath </> "byron/address-00" <> show @Int (n - 1))
 
@@ -260,7 +266,7 @@ testnet testnetOptions H.Conf {..} = do
     H.execCli
       [ "signing-key-address"
       , "--byron-formats"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--secret", tempAbsPath </> "byron/genesis-keys.00" <> show @Int (n - 1) <> ".key"
       ] >>= H.writeFile (tempAbsPath </> "byron/genesis-address-00" <> show @Int (n - 1))
 
@@ -273,7 +279,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "issue-genesis-utxo-expenditure"
       , "--genesis-json", tempAbsPath </> "byron/genesis.json"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--byron-formats"
       , "--tx", tempAbsPath </> "tx0.tx"
       , "--wallet-key", tempAbsPath </> "byron/delegate-keys.000.key"
@@ -285,7 +291,7 @@ testnet testnetOptions H.Conf {..} = do
   void $ H.execCli
     [ "byron", "governance", "create-update-proposal"
     , "--filepath", tempAbsPath </> "update-proposal"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
     , "--protocol-version-major", "1"
     , "--protocol-version-minor", "0"
@@ -300,7 +306,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "byron", "governance", "create-proposal-vote"
       , "--proposal-filepath", tempAbsPath </> "update-proposal"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
       , "--vote-yes"
       , "--output-filepath", tempAbsPath </> "update-vote.00" <> show @Int (n - 1)
@@ -309,7 +315,7 @@ testnet testnetOptions H.Conf {..} = do
   void $ H.execCli
     [ "byron", "governance", "create-update-proposal"
     , "--filepath", tempAbsPath </> "update-proposal-1"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
     , "--protocol-version-major", "2"
     , "--protocol-version-minor", "0"
@@ -324,7 +330,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "byron", "governance", "create-proposal-vote"
       , "--proposal-filepath", tempAbsPath </> "update-proposal-1"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
       , "--vote-yes"
       , "--output-filepath", tempAbsPath </> "update-vote-1.00" <> show @Int (n - 1)
@@ -338,7 +344,7 @@ testnet testnetOptions H.Conf {..} = do
 
   void $ H.execCli
     [ "shelley", "genesis", "create"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--start-time", formatIso8601 startTime
     ]
@@ -349,12 +355,11 @@ testnet testnetOptions H.Conf {..} = do
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
   H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
-    $ HM.insert "slotLength" (J.toJSON @Double 0.2)
+    $ HM.insert "slotLength" (J.toJSON @Double (slotLength testnetOptions))
     . HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
-    . HM.insert "securityParam" (J.toJSON @Int 10)
+    . HM.insert "securityParam" (J.toJSON @Int (securityParam testnetOptions))
     . HM.insert "epochLength" (J.toJSON @Int (epochLength testnetOptions))
-    . HM.insert "slotLength" (J.toJSON @Double 0.2)
-    . HM.insert "maxLovelaceSupply" (J.toJSON @Int maxSupply)
+    . HM.insert "maxLovelaceSupply" (J.toJSON @Int (maxSupply testnetOptions))
     . flip HM.adjust "protocolParams"
       ( J.rewriteObject (HM.insert "decentralisationParam" (J.toJSON @Double 0.7))
       )
@@ -362,7 +367,7 @@ testnet testnetOptions H.Conf {..} = do
   -- Now generate for real:
   void $ H.execCli
     [ "shelley", "genesis", "create"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--gen-genesis-keys", show @Int (numBftNodes testnetOptions)
     , "--start-time", formatIso8601 startTime
@@ -457,7 +462,7 @@ testnet testnetOptions H.Conf {..} = do
       [ "shelley", "address", "build"
       , "--payment-verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> ".addr"
       ]
 
@@ -465,7 +470,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "shelley", "stake-address", "build"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.addr"
       ]
 
@@ -497,7 +502,7 @@ testnet testnetOptions H.Conf {..} = do
   forM_ poolNodes $ \node -> do
     H.execCli
       [ "shelley", "stake-pool", "registration-certificate"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--pool-pledge", "0", "--pool-cost", "0", "--pool-margin", "0"
       , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
       , "--vrf-verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
@@ -521,7 +526,7 @@ testnet testnetOptions H.Conf {..} = do
     --  4. delegate from the user1 stake address to the stake pool
     txIn <- H.noteShow . S.strip =<< H.execCli
       [ "shelley", "genesis", "initial-txin"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
       ]
 
@@ -534,7 +539,7 @@ testnet testnetOptions H.Conf {..} = do
       , "--ttl", "1000"
       , "--fee", "0"
       , "--tx-in", txIn
-      , "--tx-out",  user1Addr <> "+" <> show @Int maxSupply
+      , "--tx-out",  user1Addr <> "+" <> show @Int (maxSupply testnetOptions)
       , "--certificate-file", tempAbsPath </> "addresses/pool-owner1-stake.reg.cert"
       , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
       , "--certificate-file", tempAbsPath </> "addresses/user1-stake.reg.cert"
@@ -588,7 +593,7 @@ testnet testnetOptions H.Conf {..} = do
     , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
     , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
     , "--signing-key-file", tempAbsPath </> "node-pool1/shelley/operator.skey"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--tx-body-file", tempAbsPath </> "tx1.txbody"
     , "--out-file", tempAbsPath </> "tx1.tx"
     ]

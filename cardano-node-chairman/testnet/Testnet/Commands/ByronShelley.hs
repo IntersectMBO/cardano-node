@@ -60,6 +60,41 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (forkPoint defaultTestnetOptions)
       )
+  <*> OA.option auto
+      (   OA.long "initial supply"
+      <>  OA.help "Initial supply"
+      <>  OA.metavar "LOVELACE"
+      <>  OA.showDefault
+      <>  OA.value (initialSupply defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "max-supply"
+      <>  OA.help "Max supply"
+      <>  OA.metavar "LOVELACE"
+      <>  OA.showDefault
+      <>  OA.value (maxSupply defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "security-param"
+      <>  OA.help "Security parameter"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (securityParam defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "n-poor-addresses"
+      <>  OA.help "N poor addresses"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (nPoorAddresses defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "slot-length"
+      <>  OA.help "Slot length"
+      <>  OA.metavar "SECONDS"
+      <>  OA.showDefault
+      <>  OA.value (slotLength defaultTestnetOptions)
+      )
 
 optsByronShelley :: Parser ByronShelleyOptions
 optsByronShelley = ByronShelleyOptions
