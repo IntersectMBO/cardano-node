@@ -268,16 +268,6 @@ data NodeShelleyProtocolConfiguration =
      NodeShelleyProtocolConfiguration {
        npcShelleyGenesisFile     :: !GenesisFile
      , npcShelleyGenesisFileHash :: !(Maybe GenesisHash)
-
-       -- | These declare the version of the protocol that the node is prepared
-       -- to run. This is usually the version of the protocol in use on the
-       -- chain now, but during protocol updates this version will be the one
-       -- that we declare that we are ready to move to. This is the endorsement
-       -- mechanism for determining when enough block producers are ready to
-       -- move to the next version.
-       --
-     , npcShelleySupportedProtocolVersionMajor :: !Natural
-     , npcShelleySupportedProtocolVersionMinor :: !Natural
      }
   deriving (Eq, Show)
 
@@ -288,12 +278,14 @@ data NodeByronProtocolConfiguration =
      , npcByronReqNetworkMagic     :: !RequiresNetworkMagic
      , npcByronPbftSignatureThresh :: !(Maybe Double)
 
+       --TODO: eliminate these two: it can be hard-coded
        -- | Update application name.
      , npcByronApplicationName     :: !Byron.ApplicationName
 
        -- | Application (ie software) version.
      , npcByronApplicationVersion  :: !Byron.NumSoftwareVersion
 
+       --TODO: eliminate these: it can be done automatically in consensus
        -- | These declare the version of the protocol that the node is prepared
        -- to run. This is usually the version of the protocol in use on the
        -- chain now, but during protocol updates this version will be the one

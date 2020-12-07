@@ -91,9 +91,7 @@ mkConsensusProtocolShelley
                                  Consensus.ProtocolShelley)
 mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                             npcShelleyGenesisFile,
-                            npcShelleyGenesisFileHash,
-                            npcShelleySupportedProtocolVersionMajor,
-                            npcShelleySupportedProtocolVersionMinor
+                            npcShelleyGenesisFileHash
                           }
                           files = do
     (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
@@ -110,9 +108,7 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
       }
       Consensus.ProtocolParamsShelley {
         shelleyProtVer =
-          ProtVer
-            npcShelleySupportedProtocolVersionMajor
-            npcShelleySupportedProtocolVersionMinor
+          ProtVer 2 0
       }
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce

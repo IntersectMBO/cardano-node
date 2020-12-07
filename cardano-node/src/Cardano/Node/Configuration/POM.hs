@@ -215,15 +215,9 @@ instance FromJSON PartialNodeConfiguration where
                                       ++ "or GenesisFile, but not both"
         npcShelleyGenesisFileHash <- v .:? "ShelleyGenesisHash"
 
-        --TODO: these are silly names, allow better aliases:
-        protVerMajor    <- v .:  "LastKnownBlockVersion-Major"
-        protVerMinor    <- v .:  "LastKnownBlockVersion-Minor"
-
         pure NodeShelleyProtocolConfiguration {
                npcShelleyGenesisFile
              , npcShelleyGenesisFileHash
-             , npcShelleySupportedProtocolVersionMajor = protVerMajor
-             , npcShelleySupportedProtocolVersionMinor = protVerMinor
              }
 
       parseHardForkProtocol v = do
