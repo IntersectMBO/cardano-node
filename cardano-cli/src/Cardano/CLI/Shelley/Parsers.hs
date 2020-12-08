@@ -35,6 +35,7 @@ import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (str)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import qualified Data.IP as IP
@@ -2283,7 +2284,7 @@ pExtraEntropy =
 
     parseEntropyBytes :: Atto.Parser ByteString
     parseEntropyBytes = either fail return
-                      . decodeEitherBase16
+                      . B16.decode
                     =<< Atto.takeWhile1 Char.isHexDigit
 
 pProtocol :: Parser Protocol
