@@ -42,6 +42,34 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (numBftNodes defaultTestnetOptions)
       )
+  <*> OA.option auto
+      (   OA.long "slot-duration"
+      <>  OA.help "Slot duration"
+      <>  OA.metavar "MILLISECONDS"
+      <>  OA.showDefault
+      <>  OA.value (slotDuration defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "security-param"
+      <>  OA.help "Security parameter"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (securityParam defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "n-poor-addresses"
+      <>  OA.help "N poor addresses"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (nPoorAddresses defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "total-balance"
+      <>  OA.help "Total Balance"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (totalBalance defaultTestnetOptions)
+      )
 
 runByronOptions :: ByronOptions -> IO ()
 runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))
