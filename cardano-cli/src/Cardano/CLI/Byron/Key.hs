@@ -6,7 +6,6 @@ module Cardano.CLI.Byron.Key
   , NewSigningKeyFile(..)
   , NewVerificationKeyFile(..)
   , VerificationKeyFile(..)
-  , CardanoEra(..)
   , serialiseSigningKey
   , deserialiseSigningKey
   , keygen
@@ -43,6 +42,7 @@ import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.CLI.Byron.Legacy as Legacy
 import           Cardano.CLI.Helpers (textShow)
+import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto.Random as Crypto
@@ -85,27 +85,21 @@ data PasswordRequirement
 type PasswordPrompt = String
 
 -- | Some commands have variants or file formats that depend on the era.
---
--- TODO: this looks like it's only used for Byron era keys, so could be renamed
---
-data CardanoEra = ByronEraLegacy | ByronEra
-  deriving Show
 
 serialiseSigningKey
-  :: CardanoEra
+  :: ByronKeyFormat
   -> Crypto.SigningKey
   -> Either ByronKeyFailure LB.ByteString
-serialiseSigningKey ByronEraLegacy (Crypto.SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
-serialiseSigningKey ByronEra (Crypto.SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
+serialiseSigningKey _ (Crypto.SigningKey k) = pure $ toLazyByteString (Crypto.toCBORXPrv k)
 
-deserialiseSigningKey :: CardanoEra -> FilePath -> LB.ByteString
+deserialiseSigningKey :: ByronKeyFormat -> FilePath -> LB.ByteString
                       -> Either ByronKeyFailure SigningKey
-deserialiseSigningKey ByronEraLegacy fp delSkey =
+deserialiseSigningKey LegacyByronKeyFormat fp delSkey =
   case deserialiseFromBytes Legacy.decodeLegacyDelegateKey delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, Legacy.LegacyDelegateKey sKey ) -> pure sKey
 
-deserialiseSigningKey ByronEra fp delSkey =
+deserialiseSigningKey NonLegacyByronKeyFormat fp delSkey =
   case deserialiseFromBytes Crypto.fromCBORXPrv delSkey of
     Left deSerFail -> Left $ SigningKeyDeserialisationFailed fp deSerFail
     Right (_, sKey) -> Right $ SigningKey sKey
@@ -123,12 +117,12 @@ prettyPublicKey vk =
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.  Throw an error if the file can't be read or
 -- fails to deserialise.
-readEraSigningKey :: CardanoEra -> SigningKeyFile -> ExceptT ByronKeyFailure IO SigningKey
-readEraSigningKey era (SigningKeyFile fp) = do
+readEraSigningKey :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronKeyFailure IO SigningKey
+readEraSigningKey bKeyFormat (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ LB.readFile fp
 
   -- Signing Key
-  hoistEither $ deserialiseSigningKey era fp sK
+  hoistEither $ deserialiseSigningKey bKeyFormat fp sK
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
 -- or the key fails to deserialise.
@@ -141,12 +135,10 @@ readPaymentVerificationKey (VerificationKeyFile fp) = do
   firstExceptT (VerificationKeyDeserialisationFailed fp . T.pack . show) eVk
 
 
-serialisePoorKey :: CardanoEra -> Genesis.PoorSecret
+serialisePoorKey :: ByronKeyFormat -> Genesis.PoorSecret
                  -> Either ByronKeyFailure LB.ByteString
-serialisePoorKey ByronEraLegacy ps =
-  serialiseSigningKey ByronEraLegacy $ Genesis.poorSecretToKey ps
-serialisePoorKey ByronEra ps =
-  serialiseSigningKey ByronEra $ Genesis.poorSecretToKey ps
+serialisePoorKey bKeyFormat ps =
+  serialiseSigningKey bKeyFormat $ Genesis.poorSecretToKey ps
 
 -- | Generate a cryptographically random signing key,
 --   protected with a (potentially empty) passphrase.

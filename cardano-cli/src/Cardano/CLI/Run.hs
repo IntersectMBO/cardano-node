@@ -45,7 +45,6 @@ data ClientCommandErrors
   = ByronClientError ByronClientCmdError
   | ShelleyClientError ShelleyCommand ShelleyClientCmdError
   deriving Show
-  --TODO: We should include an AgnosticClientError
 
 runClientCommand :: ClientCommand -> ExceptT ClientCommandErrors IO ()
 runClientCommand (ByronCommand c) = firstExceptT ByronClientError $ runByronClientCommand c

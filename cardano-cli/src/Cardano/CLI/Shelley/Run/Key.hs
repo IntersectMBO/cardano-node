@@ -332,7 +332,7 @@ convertByronSigningKey mPwd byronFormat convert
 
     sk@(Crypto.SigningKey xprv) <-
       firstExceptT ShelleyKeyCmdByronKeyFailure
-        $ Byron.readEraSigningKey (toCarandoEra byronFormat) skeyPathOld
+        $ Byron.readEraSigningKey byronFormat skeyPathOld
 
     unprotectedSk <- case mPwd of
                        -- Change password to empty string
@@ -345,13 +345,6 @@ convertByronSigningKey mPwd byronFormat convert
 
     firstExceptT ShelleyKeyCmdWriteFileError . newExceptT $
       writeFileTextEnvelope skeyPathNew Nothing sk'
-
-  where
-    -- TODO: merge these two types
-    toCarandoEra :: ByronKeyFormat -> Byron.CardanoEra
-    toCarandoEra NonLegacyByronKeyFormat = Byron.ByronEra
-    toCarandoEra LegacyByronKeyFormat    = Byron.ByronEraLegacy
-
 
 convertByronVerificationKey
   :: forall keyrole.

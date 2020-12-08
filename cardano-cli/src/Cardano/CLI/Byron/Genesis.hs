@@ -48,12 +48,12 @@ import qualified Cardano.Crypto as Crypto
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Helpers (textShow)
+import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types (GenesisFile (..))
 
 data ByronGenesisError
   = ByronDelegationCertSerializationError !ByronDelegationError
   | ByronDelegationKeySerializationError ByronDelegationError
-  | ByronGenesisCardanoEraNotSupported !CardanoEra
   | GenesisGenerationError !Genesis.GenesisDataGenerationError
   | GenesisOutputDirAlreadyExists FilePath
   | GenesisReadError !FilePath !Genesis.GenesisDataError
@@ -80,8 +80,6 @@ renderByronGenesisError err =
       "Error creating genesis delegation: " <> textShow genDelegError
     GenesisGenerationError genDataGenError ->
       "Error generating genesis: " <> textShow genDataGenError
-    ByronGenesisCardanoEraNotSupported era ->
-      "Error while serialising genesis, " <> textShow era <> " is not supported."
     GenesisOutputDirAlreadyExists genOutDir ->
       "Genesis output directory already exists: " <> textShow genOutDir
     GenesisReadError genFp genDataError ->
@@ -172,7 +170,7 @@ readGenesis (GenesisFile file) nw =
 -- thrown if the directory already exists, or the genesis has delegate keys that
 -- are not delegated to.
 dumpGenesis
-  :: CardanoEra
+  :: ByronKeyFormat
   -> NewDirectory
   -> Genesis.GenesisData
   -> Genesis.GeneratedSecrets

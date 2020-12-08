@@ -58,6 +58,7 @@ import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Run (ClientCommand (ByronCommand))
+import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
@@ -144,7 +145,7 @@ parseDelegationRelatedValues =
         \ delegator to sign blocks on behalf of the issuer"
         $ IssueDelegationCertificate
         <$> pNetworkId
-        <*> parseCardanoEra
+        <*> parseByronKeyFormat
         <*> ( EpochNumber
                 <$> parseIntegral
                       "since-epoch"
@@ -210,7 +211,7 @@ parseGenesisRelatedValues =
               "genesis-output-dir"
               "Non-existent directory where genesis JSON file and secrets shall be placed."
           <*> parseGenesisParameters
-          <*> parseCardanoEra
+          <*> parseByronKeyFormat
     , command' "print-genesis-hash" "Compute hash of a genesis file."
         $ PrintGenesisHash
             <$> parseGenesisFile "genesis-json"
@@ -223,14 +224,14 @@ parseKeyRelatedValues =
     mconcat
         [ command' "keygen" "Generate a signing key."
             $ Keygen
-                <$> parseCardanoEra
+                <$> parseByronKeyFormat
                 <*> parseNewSigningKeyFile "secret"
                 <*> parsePassword
         , command'
             "to-verification"
             "Extract a verification key in its base64 form."
             $ ToVerification
-                <$> parseCardanoEra
+                <$> parseByronKeyFormat
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key file to extract the verification part from."
@@ -239,7 +240,7 @@ parseKeyRelatedValues =
             "signing-key-public"
             "Pretty-print a signing key's verification key (not a secret)."
             $ PrettySigningKeyPublic
-                <$> parseCardanoEra
+                <$> parseByronKeyFormat
                 <*> parseSigningKeyFile
                       "secret"
                       "Signing key to pretty-print."
@@ -247,7 +248,7 @@ parseKeyRelatedValues =
             "signing-key-address"
             "Print address of a signing key."
             $ PrintSigningKeyAddress
-                <$> parseCardanoEra
+                <$> parseByronKeyFormat
                 <*> pNetworkId
                 <*> parseSigningKeyFile
                       "secret"
@@ -256,9 +257,9 @@ parseKeyRelatedValues =
             "migrate-delegate-key-from"
             "Migrate a delegate key from an older version."
             $ MigrateDelegateKeyFrom
-                <$> parseCardanoEra -- Old CardanoEra
+                <$> parseByronKeyFormat -- Old Byron key format
                 <*> parseSigningKeyFile "from" "Signing key file to migrate."
-                <*> parseCardanoEra -- New CardanoEra
+                <*> parseByronKeyFormat -- New Byron key format
                 <*> parseNewSigningKeyFile "to"
         ]
 
@@ -341,7 +342,7 @@ parseTxRelatedValues =
         $ SpendGenesisUTxO
             <$> parseGenesisFile "genesis-json"
             <*> pNetworkId
-            <*> parseCardanoEra
+            <*> parseByronKeyFormat
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -356,7 +357,7 @@ parseTxRelatedValues =
         "Write a file with a signed transaction, spending normal UTxO."
         $ SpendUTxO
             <$> pNetworkId
-            <*> parseCardanoEra
+            <*> parseByronKeyFormat
             <*> parseNewTxFile "tx"
             <*> parseSigningKeyFile
                   "wallet-key"
@@ -619,19 +620,19 @@ parseAddress opt desc =
   option (cliParseBase58Address <$> str)
     $ long opt <> metavar "ADDR" <> help desc
 
-parseCardanoEra :: Parser CardanoEra
-parseCardanoEra = asum
-  [ flag' ByronEraLegacy $
+parseByronKeyFormat :: Parser ByronKeyFormat
+parseByronKeyFormat = asum
+  [ flag' LegacyByronKeyFormat $
         long "byron-legacy-formats"
      <> help "Byron/cardano-sl formats and compatibility"
 
-  , flag' ByronEra $
+  , flag' NonLegacyByronKeyFormat $
         long "byron-formats"
      <> help "Byron era formats and compatibility"
 
     -- And hidden compatibility flag aliases:
-  , flag' ByronEraLegacy $ hidden <> long "byron-legacy"
-  , flag' ByronEra       $ hidden <> long "real-pbft"
+  , flag' LegacyByronKeyFormat $ hidden <> long "byron-legacy"
+  , flag' NonLegacyByronKeyFormat $ hidden <> long "real-pbft"
   ]
 
 parseCertificateFile :: String -> String -> Parser CertificateFile

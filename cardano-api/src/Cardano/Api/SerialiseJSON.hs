@@ -5,6 +5,7 @@ module Cardano.Api.SerialiseJSON
   ( serialiseToJSON
   , ToJSON(..)
   , deserialiseFromJSON
+  , prettyPrintJSON
   , FromJSON(..)
   , JsonDecodeError(..)
   , readFileJSON
@@ -13,19 +14,17 @@ module Cardano.Api.SerialiseJSON
 
 import           Prelude
 
+import           Control.Monad.Trans.Except (runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
+import           Data.Aeson (FromJSON (..), ToJSON (..))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
-import           Data.Aeson (FromJSON (..), ToJSON (..))
-import qualified Data.Aeson as Aeson
-
-import           Control.Monad.Trans.Except (runExceptT)
-import           Control.Monad.Trans.Except.Extra
-                   (hoistEither, firstExceptT, handleIOExceptT)
-
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
 
 
 newtype JsonDecodeError = JsonDecodeError String
@@ -38,7 +37,8 @@ instance Error JsonDecodeError where
 serialiseToJSON :: ToJSON a => a -> ByteString
 serialiseToJSON = LBS.toStrict . Aeson.encode
 
---TODO: add prettyPrintJSON :: ToJSON a => a -> ByteString
+prettyPrintJSON :: ToJSON a => a -> ByteString
+prettyPrintJSON = LBS.toStrict . encodePretty
 
 deserialiseFromJSON :: FromJSON a
                     => AsType a

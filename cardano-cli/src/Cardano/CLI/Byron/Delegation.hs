@@ -26,9 +26,9 @@ import qualified Cardano.CLI.Byron.Legacy as Legacy
 import           Cardano.Crypto (ProtocolMagicId, SigningKey)
 import qualified Cardano.Crypto as Crypto
 
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, CardanoEra (..), renderByronKeyFailure,
-                     serialiseSigningKey)
+import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure, serialiseSigningKey)
 import           Cardano.CLI.Helpers (textShow)
+import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types (CertificateFile (..))
 
 data ByronDelegationError
@@ -117,11 +117,8 @@ checkDlgCert cert magic issuerVK' delegateVK' =
 serialiseDelegationCert :: Dlg.Certificate -> LB.ByteString
 serialiseDelegationCert = canonicalEncodePretty
 
-serialiseDelegateKey :: CardanoEra -> SigningKey -> Either ByronDelegationError LB.ByteString
-serialiseDelegateKey ByronEraLegacy sk = pure
-                                       . toLazyByteString
-                                       . Legacy.encodeLegacyDelegateKey
-                                       $ Legacy.LegacyDelegateKey sk
-serialiseDelegateKey ByronEra  sk =
-  first ByronDelegationKeyError $
-    serialiseSigningKey ByronEra sk
+serialiseDelegateKey :: ByronKeyFormat -> SigningKey -> Either ByronDelegationError LB.ByteString
+serialiseDelegateKey LegacyByronKeyFormat sk =
+  pure . toLazyByteString . Legacy.encodeLegacyDelegateKey $ Legacy.LegacyDelegateKey sk
+serialiseDelegateKey NonLegacyByronKeyFormat sk =
+  first ByronDelegationKeyError $ serialiseSigningKey NonLegacyByronKeyFormat sk
