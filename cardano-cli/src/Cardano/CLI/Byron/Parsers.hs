@@ -50,7 +50,7 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
                      checkApplicationName, checkSystemTag)
 import           Cardano.Chain.UTxO (TxId, TxIn (..), TxOut (..))
 
-import qualified Cardano.Api.Typed as Typed
+import           Cardano.Api hiding (Address, Lovelace, TxId, TxIn, TxOut, UpdateProposal)
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
@@ -665,20 +665,20 @@ parseFractionWithDefault optname desc w =
     <> value w
     )
 
-pNetworkId :: Parser Typed.NetworkId
+pNetworkId :: Parser NetworkId
 pNetworkId =
-  pMainnet' <|> fmap Typed.Testnet pTestnetMagic
+  pMainnet' <|> fmap Testnet pTestnetMagic
  where
-   pMainnet' :: Parser Typed.NetworkId
+   pMainnet' :: Parser NetworkId
    pMainnet' =
-    Opt.flag' Typed.Mainnet
+    Opt.flag' Mainnet
       (  Opt.long "mainnet"
       <> Opt.help "Use the mainnet magic id."
       )
 
-pTestnetMagic :: Parser Typed.NetworkMagic
+pTestnetMagic :: Parser NetworkMagic
 pTestnetMagic =
-  Typed.NetworkMagic <$>
+  NetworkMagic <$>
     Opt.option Opt.auto
       (  Opt.long "testnet-magic"
       <> Opt.metavar "NATURAL"

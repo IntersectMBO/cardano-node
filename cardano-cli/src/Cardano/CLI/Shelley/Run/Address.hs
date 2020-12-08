@@ -18,10 +18,11 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                     newExceptT)
 
-import           Cardano.Api.Typed
+import           Cardano.Api
+import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
                      VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..),

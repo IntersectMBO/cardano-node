@@ -32,7 +32,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
 
-import           Cardano.Binary (ToCBOR(..))
+import           Cardano.Binary (ToCBOR (..))
 
 import           Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
@@ -50,17 +50,21 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 
 import qualified Cardano.Crypto.Hash as Crypto
 
-import           Cardano.Api.Shelley.Genesis
-import           Cardano.Api.Typed
+import           Cardano.Api
 import           Cardano.Api.Shelley
+import           Cardano.Api.Shelley.Genesis
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
-import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking(..))
 
 import qualified Shelley.Spec.Ledger.API as Ledger
-import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.BaseTypes as Ledger
+import           Shelley.Spec.Ledger.Coin (Coin (..))
+import qualified Shelley.Spec.Ledger.Keys as Ledger
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Ledger.Era ()
 
@@ -69,14 +73,11 @@ import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 import           Cardano.CLI.Shelley.Run.Address
-import           Cardano.CLI.Shelley.Run.Node
-                   (ShelleyNodeCmdError(..), renderShelleyNodeCmdError,
-                    runNodeIssueOpCert, runNodeKeyGenKES, runNodeKeyGenVRF, runNodeKeyGenCold)
-import           Cardano.CLI.Shelley.Run.Pool
-                   (ShelleyPoolCmdError(..), renderShelleyPoolCmdError)
-import           Cardano.CLI.Shelley.Run.StakeAddress
-                   (ShelleyStakeAddressCmdError(..),
-                    renderShelleyStakeAddressCmdError, runStakeAddressKeyGen)
+import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderShelleyNodeCmdError,
+                     runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
+import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderShelleyPoolCmdError)
+import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdError (..),
+                     renderShelleyStakeAddressCmdError, runStakeAddressKeyGen)
 import           Cardano.CLI.Types
 
 {- HLINT ignore "Reduce duplication" -}
@@ -759,7 +760,7 @@ updateTemplate (SystemStart start)
 
     mkStuffedUtxo :: [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
     mkStuffedUtxo xs = (, Lovelace minUtxoVal) <$> xs
-      where (Coin minUtxoVal) = _minUTxOValue $ sgProtocolParams template
+      where (Coin minUtxoVal) = Shelley._minUTxOValue $ sgProtocolParams template
 
     shelleyDelKeys =
       Map.fromList

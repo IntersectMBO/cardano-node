@@ -16,8 +16,9 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
+import           Cardano.Api
 import           Cardano.Api.Protocol (Protocol (..))
-import           Cardano.Api.Typed hiding (PoolId)
+import           Cardano.Api.Shelley
 
 import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
@@ -51,6 +52,7 @@ import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.String as Parsec
 
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 --

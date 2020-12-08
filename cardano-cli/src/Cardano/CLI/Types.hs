@@ -24,7 +24,7 @@ import qualified Data.Text as Text
 
 import qualified Cardano.Chain.Slotting as Byron
 
-import           Cardano.Api.Typed
+import           Cardano.Api
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc

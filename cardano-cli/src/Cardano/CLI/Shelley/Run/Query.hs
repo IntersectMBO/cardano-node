@@ -32,10 +32,11 @@ import           Numeric (showEFloat)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, newExceptT)
 
+import           Cardano.Api
+import           Cardano.Api.Byron
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.Api.Protocol
 import           Cardano.Api.Shelley
-import           Cardano.Api.Typed
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError, pPrintCBOR, renderHelpersError)
@@ -59,6 +60,7 @@ import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
+import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Credential as Ledger
 import           Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..),
                      PoolDistr (..))

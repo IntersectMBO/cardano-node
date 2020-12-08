@@ -19,10 +19,15 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
-import           Data.Type.Equality (TestEquality(..))
+import           Data.Type.Equality (TestEquality (..))
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
                      newExceptT)
+
+import           Cardano.Api
+import           Cardano.Api.Byron
+import           Cardano.Api.Shelley
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
@@ -42,9 +47,8 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAn
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
-import           Cardano.Api.Typed as Api
 import           Cardano.Api.Protocol
-import           Cardano.Api.TxSubmit as Api
+import           Cardano.Api.TxSubmit
 
 data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
@@ -200,18 +204,18 @@ runTransactionCmd cmd =
 
 runTxBuildRaw
   :: AnyCardanoEra
-  -> [Api.TxIn]
+  -> [TxIn]
   -> [TxOutAnyEra]
   -> Maybe SlotNo
   -- ^ Tx lower bound
   -> Maybe SlotNo
   -- ^ Tx upper bound
-  -> Maybe Api.Lovelace
+  -> Maybe Lovelace
   -- ^ Tx fee
   -> Maybe Value
   -- ^ Multi-Asset value
   -> [CertificateFile]
-  -> [(Api.StakeAddress, Api.Lovelace)]
+  -> [(StakeAddress, Lovelace)]
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetaDataFile]
@@ -244,7 +248,7 @@ runTxBuildRaw (AnyCardanoEra era) txins txouts mLowerBound
         makeTransactionBody txBodyContent
 
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-      Api.writeFileTextEnvelope fpath Nothing txBody
+      writeFileTextEnvelope fpath Nothing txBody
 
 
 -- ----------------------------------------------------------------------------
@@ -440,7 +444,7 @@ validateTxMintValue era (Just v) =
 
 runTxSign :: TxBodyFile
           -> [WitnessSigningData]
-          -> Maybe Api.NetworkId
+          -> Maybe NetworkId
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
 runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
@@ -463,13 +467,13 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
     . hoistEither
     $ mkShelleyBootstrapWitnesses mnw txbody sksByron
 
-  let shelleyKeyWitnesses = map (Api.makeShelleyKeyWitness txbody) sksShelley
+  let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
       shelleyScriptWitnesses = map makeScriptWitness scsShelley'
       shelleyWitnesses = shelleyKeyWitnesses ++ shelleyScriptWitnesses
-      tx = Api.makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
+      tx = makeSignedTransaction (byronWitnesses ++ shelleyWitnesses) txbody
 
   firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-    Api.writeFileTextEnvelope txFile Nothing tx
+    writeFileTextEnvelope txFile Nothing tx
 
 
 -- ----------------------------------------------------------------------------
@@ -486,7 +490,7 @@ runTxSubmit protocol network txFile = do
     withlocalNodeConnectInfo protocol network sockPath $ \connectInfo ->
       case (localNodeConsensusMode connectInfo, era) of
         (ByronMode{}, ByronEra) -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForByronMode tx)
+          result <- liftIO $ submitTx connectInfo (TxForByronMode tx)
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureByronMode err ->
@@ -499,7 +503,7 @@ runTxSubmit protocol network txFile = do
                  }
 
         (ShelleyMode{}, ShelleyEra) -> do
-          result <- liftIO $ Api.submitTx connectInfo (TxForShelleyMode tx)
+          result <- liftIO $ submitTx connectInfo (TxForShelleyMode tx)
           case result of
             TxSubmitSuccess -> return ()
             TxSubmitFailureShelleyMode err ->
@@ -512,7 +516,7 @@ runTxSubmit protocol network txFile = do
                  }
 
         (CardanoMode{}, _) -> do
-          result <- liftIO $ Api.submitTx connectInfo
+          result <- liftIO $ submitTx connectInfo
                                (TxForCardanoMode (InAnyCardanoEra era tx))
           case result of
             TxSubmitSuccess -> return ()
@@ -534,7 +538,7 @@ runTxSubmit protocol network txFile = do
 
 runTxCalculateMinFee
   :: TxBodyFile
-  -> Maybe Api.NetworkId
+  -> Maybe NetworkId
   -> ProtocolParamsFile
   -> TxInCount
   -> TxOutCount
@@ -553,9 +557,9 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
 
     pparams <- readProtocolParameters pParamsFile
 
-    let tx = Api.makeSignedTransaction [] txbody
-        Api.Lovelace fee = Api.estimateTransactionFee
-                             (fromMaybe Api.Mainnet nw)
+    let tx = makeSignedTransaction [] txbody
+        Lovelace fee = estimateTransactionFee
+                             (fromMaybe Mainnet nw)
                              (Shelley._minfeeB pparams) --TODO: do this better
                              (Shelley._minfeeA pparams)
                              tx
@@ -579,18 +583,18 @@ readProtocolParameters (ProtocolParamsFile fpath) = do
     Aeson.eitherDecode' pparams
 
 data SomeWitness
-  = AByronSigningKey           (Api.SigningKey Api.ByronKey) (Maybe (Address ByronAddr))
-  | APaymentSigningKey         (Api.SigningKey Api.PaymentKey)
-  | APaymentExtendedSigningKey (Api.SigningKey Api.PaymentExtendedKey)
-  | AStakeSigningKey           (Api.SigningKey Api.StakeKey)
-  | AStakeExtendedSigningKey   (Api.SigningKey Api.StakeExtendedKey)
-  | AStakePoolSigningKey       (Api.SigningKey Api.StakePoolKey)
-  | AGenesisSigningKey         (Api.SigningKey Api.GenesisKey)
-  | AGenesisExtendedSigningKey (Api.SigningKey Api.GenesisExtendedKey)
-  | AGenesisDelegateSigningKey (Api.SigningKey Api.GenesisDelegateKey)
+  = AByronSigningKey           (SigningKey ByronKey) (Maybe (Address ByronAddr))
+  | APaymentSigningKey         (SigningKey PaymentKey)
+  | APaymentExtendedSigningKey (SigningKey PaymentExtendedKey)
+  | AStakeSigningKey           (SigningKey StakeKey)
+  | AStakeExtendedSigningKey   (SigningKey StakeExtendedKey)
+  | AStakePoolSigningKey       (SigningKey StakePoolKey)
+  | AGenesisSigningKey         (SigningKey GenesisKey)
+  | AGenesisExtendedSigningKey (SigningKey GenesisExtendedKey)
+  | AGenesisDelegateSigningKey (SigningKey GenesisDelegateKey)
   | AGenesisDelegateExtendedSigningKey
-                               (Api.SigningKey Api.GenesisDelegateExtendedKey)
-  | AGenesisUTxOSigningKey     (Api.SigningKey Api.GenesisUTxOKey)
+                               (SigningKey GenesisDelegateExtendedKey)
+  | AGenesisUTxOSigningKey     (SigningKey GenesisUTxOKey)
   | AShelleyScript              ScriptInAnyLang
 
 
@@ -633,42 +637,42 @@ readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
         left ReadWitnessSigningDataSigningKeyAndAddressMismatch
   where
     textEnvFileTypes =
-      [ Api.FromSomeType (Api.AsSigningKey Api.AsByronKey)
+      [ FromSomeType (AsSigningKey AsByronKey)
                           (`AByronSigningKey` mbByronAddr)
-      , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey)
+      , FromSomeType (AsSigningKey AsPaymentKey)
                           APaymentSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentExtendedKey)
+      , FromSomeType (AsSigningKey AsPaymentExtendedKey)
                           APaymentExtendedSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeKey)
+      , FromSomeType (AsSigningKey AsStakeKey)
                           AStakeSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeExtendedKey)
+      , FromSomeType (AsSigningKey AsStakeExtendedKey)
                           AStakeExtendedSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey)
+      , FromSomeType (AsSigningKey AsStakePoolKey)
                           AStakePoolSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisKey)
+      , FromSomeType (AsSigningKey AsGenesisKey)
                           AGenesisSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisExtendedKey)
+      , FromSomeType (AsSigningKey AsGenesisExtendedKey)
                           AGenesisExtendedSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisDelegateKey)
+      , FromSomeType (AsSigningKey AsGenesisDelegateKey)
                           AGenesisDelegateSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisDelegateExtendedKey)
+      , FromSomeType (AsSigningKey AsGenesisDelegateExtendedKey)
                           AGenesisDelegateExtendedSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsGenesisUTxOKey)
+      , FromSomeType (AsSigningKey AsGenesisUTxOKey)
                           AGenesisUTxOSigningKey
       ]
 
     bech32FileTypes =
-      [ Api.FromSomeType (Api.AsSigningKey Api.AsByronKey)
+      [ FromSomeType (AsSigningKey AsByronKey)
                           (`AByronSigningKey` mbByronAddr)
-      , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentKey)
+      , FromSomeType (AsSigningKey AsPaymentKey)
                           APaymentSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsPaymentExtendedKey)
+      , FromSomeType (AsSigningKey AsPaymentExtendedKey)
                           APaymentExtendedSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeKey)
+      , FromSomeType (AsSigningKey AsStakeKey)
                           AStakeSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsStakeExtendedKey)
+      , FromSomeType (AsSigningKey AsStakeExtendedKey)
                           AStakeExtendedSigningKey
-      , Api.FromSomeType (Api.AsSigningKey Api.AsStakePoolKey)
+      , FromSomeType (AsSigningKey AsStakePoolKey)
                           AStakePoolSigningKey
       ]
 
@@ -696,24 +700,24 @@ partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
 -- | Some kind of Byron or Shelley witness.
 data ByronOrShelleyWitness
   = AByronWitness !ShelleyBootstrapWitnessSigningKeyData
-  | AShelleyKeyWitness !Api.ShelleyWitnessSigningKey
+  | AShelleyKeyWitness !ShelleyWitnessSigningKey
   | AShelleyScriptWitness !ScriptInAnyLang
 
 categoriseSomeWitness :: SomeWitness -> ByronOrShelleyWitness
 categoriseSomeWitness swsk =
   case swsk of
     AByronSigningKey           sk addr -> AByronWitness (ShelleyBootstrapWitnessSigningKeyData sk addr)
-    APaymentSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessPaymentKey         sk)
-    APaymentExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessPaymentExtendedKey sk)
-    AStakeSigningKey           sk      -> AShelleyKeyWitness (Api.WitnessStakeKey           sk)
-    AStakeExtendedSigningKey   sk      -> AShelleyKeyWitness (Api.WitnessStakeExtendedKey   sk)
-    AStakePoolSigningKey       sk      -> AShelleyKeyWitness (Api.WitnessStakePoolKey       sk)
-    AGenesisSigningKey         sk      -> AShelleyKeyWitness (Api.WitnessGenesisKey sk)
-    AGenesisExtendedSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisExtendedKey sk)
-    AGenesisDelegateSigningKey sk      -> AShelleyKeyWitness (Api.WitnessGenesisDelegateKey sk)
+    APaymentSigningKey         sk      -> AShelleyKeyWitness (WitnessPaymentKey         sk)
+    APaymentExtendedSigningKey sk      -> AShelleyKeyWitness (WitnessPaymentExtendedKey sk)
+    AStakeSigningKey           sk      -> AShelleyKeyWitness (WitnessStakeKey           sk)
+    AStakeExtendedSigningKey   sk      -> AShelleyKeyWitness (WitnessStakeExtendedKey   sk)
+    AStakePoolSigningKey       sk      -> AShelleyKeyWitness (WitnessStakePoolKey       sk)
+    AGenesisSigningKey         sk      -> AShelleyKeyWitness (WitnessGenesisKey sk)
+    AGenesisExtendedSigningKey sk      -> AShelleyKeyWitness (WitnessGenesisExtendedKey sk)
+    AGenesisDelegateSigningKey sk      -> AShelleyKeyWitness (WitnessGenesisDelegateKey sk)
     AGenesisDelegateExtendedSigningKey sk
-                                       -> AShelleyKeyWitness (Api.WitnessGenesisDelegateExtendedKey sk)
-    AGenesisUTxOSigningKey     sk      -> AShelleyKeyWitness (Api.WitnessGenesisUTxOKey     sk)
+                                       -> AShelleyKeyWitness (WitnessGenesisDelegateExtendedKey sk)
+    AGenesisUTxOSigningKey     sk      -> AShelleyKeyWitness (WitnessGenesisUTxOKey     sk)
     AShelleyScript             scr     -> AShelleyScriptWitness scr
 
 -- | Data required for constructing a Shelley bootstrap witness.
@@ -813,7 +817,7 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
 
   firstExceptT ShelleyTxCmdWriteFileError
     . newExceptT
-    $ Api.writeFileTextEnvelope oFile Nothing witness
+    $ writeFileTextEnvelope oFile Nothing witness
 
 
 runTxSignWitness
@@ -840,10 +844,10 @@ runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
                Just Refl -> return witness
         | witnessFile@(WitnessFile file) <- witnessFiles ]
 
-    let tx = Api.makeSignedTransaction witnesses txbody
+    let tx = makeSignedTransaction witnesses txbody
     firstExceptT ShelleyTxCmdWriteFileError
       . newExceptT
-      $ Api.writeFileTextEnvelope oFp Nothing tx
+      $ writeFileTextEnvelope oFp Nothing tx
 
 
 -- ----------------------------------------------------------------------------
@@ -877,11 +881,11 @@ readFileInAnyCardanoEra
 readFileInAnyCardanoEra asThing file =
     firstExceptT ShelleyTxCmdReadTextViewFileError
   . newExceptT
-  $ Api.readFileTextEnvelopeAnyOf
-      [ Api.FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
-      , Api.FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
-      , Api.FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
-      , Api.FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
+  $ readFileTextEnvelopeAnyOf
+      [ FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
+      , FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
+      , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
+      , FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
       ]
       file
 
@@ -921,7 +925,7 @@ validateScriptSupportedInEra era script@(ScriptInAnyLang lang _) =
 --
 
 readFileTxMetaData :: TxMetadataJsonSchema -> MetaDataFile
-                   -> ExceptT ShelleyTxCmdError IO Api.TxMetadata
+                   -> ExceptT ShelleyTxCmdError IO TxMetadata
 readFileTxMetaData mapping (MetaDataFileJSON fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           LBS.readFile fp
@@ -934,7 +938,7 @@ readFileTxMetaData _ (MetaDataFileCBOR fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           BS.readFile fp
     txMetadata <- firstExceptT (ShelleyTxCmdMetaDecodeError fp) $ hoistEither $
-      Api.deserialiseFromCBOR Api.AsTxMetadata bs
+      deserialiseFromCBOR AsTxMetadata bs
     firstExceptT (ShelleyTxCmdMetaValidationError fp) $ hoistEither $ do
         validateTxMetadata txMetadata
         return txMetadata

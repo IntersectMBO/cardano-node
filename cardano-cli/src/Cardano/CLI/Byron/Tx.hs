@@ -46,8 +46,8 @@ import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (DegenGenTx))
 
-import           Cardano.Api.Typed (LocalNodeConnectInfo (..), NetworkId, NodeConsensusMode (..),
-                     submitTxToNodeLocal, toByronProtocolMagicId)
+import           Cardano.Api (LocalNodeConnectInfo (..), NetworkId, submitTxToNodeLocal)
+import           Cardano.Api.Byron (NodeConsensusMode (ByronMode), toByronProtocolMagicId)
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Types (SocketPath (..))

@@ -55,7 +55,7 @@ module Cardano.Api (
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
     -- used in many other places.
-    Hash,
+    Hash(..),
     castHash,
 
     -- * Payment addresses
@@ -102,9 +102,9 @@ module Cardano.Api (
     Lovelace,
 
     -- ** Multi-asset values
-    Quantity,
-    PolicyId,
-    AssetName,
+    Quantity(..),
+    PolicyId(..),
+    AssetName(..),
     AssetId(..),
     Value,
     selectAsset,
@@ -193,7 +193,7 @@ module Cardano.Api (
     makeSignedTransaction,
     Witness,
     makeByronKeyWitness,
-    ShelleyWitnessSigningKey,
+    ShelleyWitnessSigningKey(..),
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,
     makeScriptWitness,
@@ -314,7 +314,7 @@ module Cardano.Api (
     serialiseToBech32,
     deserialiseFromBech32,
     deserialiseAnyOfFromBech32,
-    Bech32DecodeError,
+    Bech32DecodeError(..),
 
     -- ** Addresses
     -- | Address serialisation is (sadly) special
@@ -333,11 +333,11 @@ module Cardano.Api (
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
-    HasTextEnvelope,
-    TextEnvelope,
+    HasTextEnvelope(..),
+    TextEnvelope(..),
     TextEnvelopeType,
     TextEnvelopeDescr,
-    TextEnvelopeError,
+    TextEnvelopeError(..),
     textEnvelopeRawCBOR,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
@@ -354,7 +354,7 @@ module Cardano.Api (
     -- * Errors
     Error(..),
     throwErrorAsException,
-    FileError,
+    FileError(..),
 
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
@@ -364,10 +364,7 @@ module Cardano.Api (
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
-    LocalNodeConnectInfo,
-    localNodeSocketPath,
-    localNodeNetworkId,
-    localNodeConsensusMode,
+    LocalNodeConnectInfo(..),
     NodeConsensusMode,
     LocalNodeClientProtocols,
     localChainSyncClient,
@@ -421,7 +418,11 @@ module Cardano.Api (
     PraosNonce,
     makePraosNonce,
 
-    NetworkMagic,
+    NetworkMagic(..),
+
+    -- ** Conversions
+    --TODO: arrange not to export these
+    toNetworkMagic,
   ) where
 
 import           Cardano.Api.Typed

@@ -10,7 +10,8 @@ import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, right)
 
-import           Cardano.Api.Typed
+import           Cardano.Api
+import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHashOrFile,
                      readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)

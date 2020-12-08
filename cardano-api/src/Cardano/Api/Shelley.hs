@@ -146,6 +146,13 @@ module Cardano.Api.Shelley
     LocalNodeClientProtocols(LocalNodeClientProtocols),
     withNodeProtocolClient,
 
+    -- ** Shelley based eras
+    ShelleyLedgerEra,
+
+    -- ** Conversions
+    --TODO: arrange not to export these
+    toShelleyNetwork,
+
   ) where
 
 import           Cardano.Api

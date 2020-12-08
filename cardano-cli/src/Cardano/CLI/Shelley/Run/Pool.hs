@@ -14,7 +14,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 
 import qualified Data.ByteString.Char8 as BS
 
-import           Cardano.Api.Typed
+import           Cardano.Api
+import           Cardano.Api.Shelley
 
 import qualified Shelley.Spec.Ledger.Slot as Shelley
 

@@ -43,7 +43,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
-import           Cardano.Api.Typed
+import           Cardano.Api
 
 import           Cardano.CLI.Types
 

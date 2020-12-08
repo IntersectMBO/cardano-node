@@ -48,8 +48,9 @@ module Cardano.CLI.Shelley.Commands
 import           Data.Text (Text)
 import           Prelude
 
-import           Cardano.Api.Typed hiding (PoolId)
+import           Cardano.Api
 import           Cardano.Api.Protocol (Protocol)
+import           Cardano.Api.Shelley hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
@@ -57,8 +58,8 @@ import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, VerificationKey
                      VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
+import           Shelley.Spec.Ledger.OCert (KESPeriod)
 import           Shelley.Spec.Ledger.TxBody (MIRPot)
-
 --
 -- Shelley CLI command data types
 --

@@ -15,7 +15,7 @@ import           Cardano.Chain.Slotting (EpochNumber (..))
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
 
-import           Cardano.Api.Typed (NetworkId)
+import           Cardano.Api (NetworkId)
 
 import           Cardano.CLI.Byron.UpdateProposal
 

@@ -11,13 +11,17 @@ module Cardano.CLI.Shelley.Run.Node
 import           Cardano.Prelude hiding ((<.>))
 import           Prelude (id)
 
-import           Data.String (fromString)
 import qualified Data.ByteString.Char8 as BS
+import           Data.String (fromString)
 import qualified Data.Text as Text
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT)
 
-import           Cardano.Api.Typed
+import           Cardano.Api
+import           Cardano.Api.Shelley
+
+import           Shelley.Spec.Ledger.OCert (KESPeriod)
+
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
                      readSigningKeyFileAnyOf, readVerificationKeyOrFile)
