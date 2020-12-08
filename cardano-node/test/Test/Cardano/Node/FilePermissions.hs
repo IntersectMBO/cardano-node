@@ -13,7 +13,7 @@ import           Cardano.Prelude
 
 import           System.Directory (removeFile)
 
-import           Cardano.API
+import           Cardano.Api
 import           Cardano.Node.Run (checkVRFFilePermissions)
 import           Hedgehog (Property, PropertyT, property, success)
 import qualified Hedgehog

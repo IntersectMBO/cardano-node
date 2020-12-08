@@ -10,7 +10,7 @@
 -- using "Cardano.Api.Byron" or "Cardano.Api.Shelley".
 --
 
-module Cardano.API (
+module Cardano.Api (
     -- * Eras
     ByronEra,
     ShelleyEra,

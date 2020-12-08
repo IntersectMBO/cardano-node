@@ -4,7 +4,7 @@
 --
 
 module Cardano.Api.Byron
-  ( module Cardano.API,
+  ( module Cardano.Api,
 
     -- * Cryptographic key interface
     -- $keys
@@ -73,5 +73,5 @@ module Cardano.Api.Byron
     toNetworkMagic,
   ) where
 
-import           Cardano.API
+import           Cardano.Api
 import           Cardano.Api.Typed

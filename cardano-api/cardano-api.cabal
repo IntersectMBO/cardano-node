@@ -15,7 +15,7 @@ extra-source-files:     README.md, ChangeLog.md
 library
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.API
+  exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.LocalChainSync

@@ -4,7 +4,7 @@
 --
 
 module Cardano.Api.Shelley
-  ( module Cardano.API,
+  ( module Cardano.Api,
 
     -- * Cryptographic key interface
     -- $keys
@@ -148,7 +148,7 @@ module Cardano.Api.Shelley
 
   ) where
 
-import           Cardano.API
-import           Cardano.Api.Typed
+import           Cardano.Api
 import           Cardano.Api.Address
+import           Cardano.Api.Typed
 import           Cardano.Api.Value
