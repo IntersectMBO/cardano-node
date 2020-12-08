@@ -6,10 +6,14 @@
 
 module Testnet.Byron
   ( testnet
+
+  , TestnetOptions(..)
+  , defaultTestnetOptions
   ) where
 
 import           Control.Monad
 import           Data.Aeson (Value, (.=))
+import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Int
@@ -27,6 +31,7 @@ import           Text.Show
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
+import qualified Data.Text as T
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
@@ -49,23 +54,36 @@ import qualified Testnet.List as L
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use head" -}
 
+newtype TestnetOptions = TestnetOptions
+  { numBftNodes :: Int
+  } deriving (Eq, Show)
+
+defaultTestnetOptions :: TestnetOptions
+defaultTestnetOptions = TestnetOptions
+  { numBftNodes = 3
+  }
+
+replaceNodeLog :: Int -> String -> String
+replaceNodeLog n s = T.unpack (T.replace "logs/node-0.log" replacement (T.pack s))
+  where replacement = T.pack ("logs/node-" <> show @Int n <> ".log")
+
 -- | Rewrite a line in the configuration file
-rewriteConfiguration :: String -> String
-rewriteConfiguration "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
-rewriteConfiguration s = s
+rewriteConfiguration :: Int -> String -> String
+rewriteConfiguration _ "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
+rewriteConfiguration n s | "logs/node-0.log" `L.isInfixOf` s = replaceNodeLog n s
+rewriteConfiguration _ s = s
 
 rewriteParams :: Value -> Value
 rewriteParams = rewriteObject
   $ HM.insert "slotDuration" (J.toJSON @String "2000")
 
-testnet :: H.Conf -> H.Integration [String]
-testnet H.Conf {..} = do
+testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
+testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
-  let nodeCount = 3
   baseConfig <- H.noteShow $ base </> "configuration/chairman/defaults/simpleview"
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
-  allPorts <- H.noteShowIO $ IO.allocateRandomPorts nodeCount
+  allPorts <- H.noteShowIO $ IO.allocateRandomPorts (numBftNodes testnetOptions)
 
   H.copyRewriteJsonFile
     (base </> "scripts/protocol-params.json")
@@ -83,7 +101,7 @@ testnet H.Conf {..} = do
     , "--k", "10"
     , "--protocol-magic", show @Int testnetMagic
     , "--n-poor-addresses", "128"
-    , "--n-delegate-addresses", show @Int nodeCount
+    , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
     , "--total-balance", "8000000000000000"
     , "--avvm-entry-count", "128"
     , "--avvm-entry-balance", "10000000000000"
@@ -98,7 +116,7 @@ testnet H.Conf {..} = do
     , tempAbsPath </> "genesis/genesis.json"
     ]
 
-  let nodeIndexes = [0..nodeCount - 1]
+  let nodeIndexes = [0..numBftNodes testnetOptions - 1]
   let allNodes = fmap (\i -> "node-" <> show @Int i) nodeIndexes
 
   H.createDirectoryIfMissing logDir
@@ -124,23 +142,16 @@ testnet H.Conf {..} = do
     H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $ J.encode $
       J.object
       [ ( "Producers"
-        , J.toJSON
-          [ J.object
-            [ ("addr", "127.0.0.1")
-            , ("valency", J.toJSON @Int 1)
-            , ("port", J.toJSON (otherPorts L.!! 0))
-            ]
-          , J.object
-            [ ("addr", "127.0.0.1")
-            , ("valency", J.toJSON @Int 1)
-            , ("port", J.toJSON (otherPorts L.!! 1))
-            ]
+        , J.toJSON $ flip fmap [0 .. numBftNodes testnetOptions - 2] $ \j -> J.object
+          [ ("addr", "127.0.0.1")
+          , ("valency", J.toJSON @Int 1)
+          , ("port", J.toJSON (otherPorts L.!! j))
           ]
         )
       ]
 
-    H.writeFile (tempAbsPath </> "config-" <> si <> ".yaml") . L.unlines . fmap rewriteConfiguration . L.lines =<<
-      H.readFile (baseConfig </> "config-" <> si <> ".yaml")
+    H.writeFile (tempAbsPath </> "config-" <> si <> ".yaml") . L.unlines . fmap (rewriteConfiguration i) . L.lines =<<
+      H.readFile (baseConfig </> "config-0.yaml")
 
     hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
     hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode

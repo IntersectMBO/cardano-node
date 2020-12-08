@@ -17,8 +17,9 @@ import           Text.Show
 
 import qualified Options.Applicative as OA
 
-newtype ByronOptions = ByronOptions
-  { testnetMagic :: Maybe Int
+data ByronOptions = ByronOptions
+  { maybeTestnetMagic :: Maybe Int
+  , testnetOptions :: TestnetOptions
   } deriving (Eq, Show)
 
 optsByron :: Parser ByronOptions
@@ -30,9 +31,20 @@ optsByron = ByronOptions
         <>  metavar "INT"
         )
       )
+  <*> optsTestnet
+
+optsTestnet :: Parser TestnetOptions
+optsTestnet = TestnetOptions
+  <$> OA.option auto
+      (   OA.long "num-bft-nodes"
+      <>  OA.help "Number of BFT nodes"
+      <>  OA.metavar "COUNT"
+      <>  OA.showDefault
+      <>  OA.value (numBftNodes defaultTestnetOptions)
+      )
 
 runByronOptions :: ByronOptions -> IO ()
-runByronOptions (ByronOptions maybeTestnetMagic) = runTestnet maybeTestnetMagic Testnet.Byron.testnet
+runByronOptions opts = runTestnet (maybeTestnetMagic opts) (Testnet.Byron.testnet (testnetOptions opts))
 
 cmdByron :: Mod CommandFields (IO ())
-cmdByron = command "byron"  $ flip info idm $ runByronOptions <$> optsByron
+cmdByron = command "byron" $ flip info idm $ runByronOptions <$> optsByron
