@@ -58,31 +58,33 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 parseShelleyCommands :: Parser ShelleyCommand
 parseShelleyCommands =
-  Opt.subparser $
+  Opt.hsubparser $
     mconcat
-      [ Opt.command "address"
-          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Shelley payment address commands")
+      [ Opt.metavar "Era based commands"
+      , Opt.commandGroup "Era based commands"
+      , Opt.command "address"
+          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Payment address commands")
       , Opt.command "stake-address"
-          (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
+          (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Stake address commands")
       , Opt.command "key"
-          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Shelley key utility commands")
+          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Key utility commands")
       , Opt.command "transaction"
-          (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
+          (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Transaction commands")
       , Opt.command "node"
-          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Shelley node operaton commands")
+          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Node operaton commands")
       , Opt.command "stake-pool"
-          (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
+          (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Stake pool commands")
       , Opt.command "query"
           (Opt.info (QueryCmd <$> pQueryCmd) . Opt.progDesc $
              mconcat
-               [ "Shelley node query commands. Will query the local node whose Unix domain socket "
+               [ "Node query commands. Will query the local node whose Unix domain socket "
                , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
                ]
             )
       , Opt.command "genesis"
-          (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
+          (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Genesis block commands")
       , Opt.command "governance"
-          (Opt.info (GovernanceCmd <$> pGovernanceCmd) $ Opt.progDesc "Shelley governance commands")
+          (Opt.info (GovernanceCmd <$> pGovernanceCmd) $ Opt.progDesc "Governance commands")
       , Opt.command "text-view"
           (Opt.info (TextViewCmd <$> pTextViewCmd) . Opt.progDesc $
              mconcat
@@ -95,13 +97,12 @@ parseShelleyCommands =
 
 pTextViewCmd :: Parser TextViewCmd
 pTextViewCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "decode-cbor"
-          (Opt.info (TextViewInfo <$> pCBORInFile <*> pMaybeOutputFile)
-            $ Opt.progDesc "Print a TextView file as decoded CBOR."
-            )
-      ]
+  asum
+    [ subParser "decode-cbor"
+        (Opt.info (TextViewInfo <$> pCBORInFile <*> pMaybeOutputFile)
+          $ Opt.progDesc "Print a TextView file as decoded CBOR."
+          )
+    ]
 
 pCBORInFile :: Parser FilePath
 pCBORInFile =
@@ -119,19 +120,18 @@ pCBORInFile =
 
 pAddressCmd :: Parser AddressCmd
 pAddressCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen"
-          (Opt.info pAddressKeyGen $ Opt.progDesc "Create an address key pair.")
-      , Opt.command "key-hash"
-          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key.")
-      , Opt.command "build"
-          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
-      , Opt.command "build-script"
-          (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address.")
-      , Opt.command "info"
-          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
-      ]
+   asum
+     [ subParser "key-gen"
+         (Opt.info pAddressKeyGen $ Opt.progDesc "Create an address key pair.")
+     , subParser "key-hash"
+         (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key.")
+     , subParser "build"
+         (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
+     , subParser "build-script"
+         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address.")
+     , subParser "info"
+         (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
+     ]
   where
     pAddressKeyGen :: Parser AddressCmd
     pAddressKeyGen = AddressKeyGen <$> pAddressKeyType
@@ -201,19 +201,18 @@ pScript = ScriptFile <$> Opt.strOption
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen"
+    asum
+      [ subParser "key-gen"
           (Opt.info pStakeAddressKeyGen $ Opt.progDesc "Create a stake address key pair")
-      , Opt.command "build"
+      , subParser "build"
           (Opt.info pStakeAddressBuild $ Opt.progDesc "Build a stake address")
-      , Opt.command "key-hash"
+      , subParser "key-hash"
           (Opt.info pStakeAddressKeyHash $ Opt.progDesc "Print the hash of a stake address key.")
-      , Opt.command "registration-certificate"
+      , subParser "registration-certificate"
           (Opt.info pStakeAddressRegistrationCert $ Opt.progDesc "Create a stake address registration certificate")
-      , Opt.command "deregistration-certificate"
+      , subParser "deregistration-certificate"
           (Opt.info pStakeAddressDeregistrationCert $ Opt.progDesc "Create a stake address deregistration certificate")
-      , Opt.command "delegation-certificate"
+      , subParser "delegation-certificate"
           (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
       ]
   where
@@ -248,52 +247,46 @@ pStakeAddress =
 
 pKeyCmd :: Parser KeyCmd
 pKeyCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "verification-key" $
-          Opt.info pKeyGetVerificationKey $
-            Opt.progDesc $ "Get a verification key from a signing key. This "
-                        ++ " supports all key types."
-
-      , Opt.command "non-extended-key" $
-          Opt.info pKeyNonExtendedKey $
-            Opt.progDesc $ "Get a non-extended verification key from an "
-                        ++ "extended verification key. This supports all "
-                        ++ "extended key types."
-
-      , Opt.command "convert-byron-key" $
-          Opt.info pKeyConvertByronKey $
-            Opt.progDesc $ "Convert a Byron payment, genesis or genesis "
-                        ++ "delegate key (signing or verification) to a "
-                        ++ "corresponding Shelley-format key."
-
-      , Opt.command "convert-byron-genesis-vkey" $
-          Opt.info pKeyConvertByronGenesisVKey $
-            Opt.progDesc $ "Convert a Base64-encoded Byron genesis "
-                        ++ "verification key to a Shelley genesis "
-                        ++ "verification key"
-
-      , Opt.command "convert-itn-key" $
-          Opt.info pKeyConvertITNKey $
-            Opt.progDesc $ "Convert an Incentivized Testnet (ITN) non-extended "
-                        ++ "(Ed25519) signing or verification key to a "
-                        ++ "corresponding Shelley stake key"
-      , Opt.command "convert-itn-extended-key" $
-          Opt.info pKeyConvertITNExtendedKey $
-            Opt.progDesc $ "Convert an Incentivized Testnet (ITN) extended "
-                        ++ "(Ed25519Extended) signing key to a corresponding "
-                        ++ "Shelley stake signing key"
-      , Opt.command "convert-itn-bip32-key" $
-          Opt.info pKeyConvertITNBip32Key $
-            Opt.progDesc $ "Convert an Incentivized Testnet (ITN) BIP32 "
-                        ++ "(Ed25519Bip32) signing key to a corresponding "
-                        ++ "Shelley stake signing key"
-
-      , Opt.command "convert-cardano-address-key" $
-          Opt.info pKeyConvertCardanoAddressSigningKey $
-            Opt.progDesc $ "Convert a cardano-address extended signing key "
-                        ++ "to a corresponding Shelley-format key."
-      ]
+  asum
+    [ subParser "verification-key" $
+        Opt.info pKeyGetVerificationKey $
+          Opt.progDesc $ "Get a verification key from a signing key. This "
+                      ++ " supports all key types."
+    , subParser "non-extended-key" $
+        Opt.info pKeyNonExtendedKey $
+          Opt.progDesc $ "Get a non-extended verification key from an "
+                      ++ "extended verification key. This supports all "
+                      ++ "extended key types."
+    , subParser "convert-byron-key" $
+        Opt.info pKeyConvertByronKey $
+          Opt.progDesc $ "Convert a Byron payment, genesis or genesis "
+                      ++ "delegate key (signing or verification) to a "
+                      ++ "corresponding Shelley-format key."
+    , subParser "convert-byron-genesis-vkey" $
+        Opt.info pKeyConvertByronGenesisVKey $
+          Opt.progDesc $ "Convert a Base64-encoded Byron genesis "
+                      ++ "verification key to a Shelley genesis "
+                      ++ "verification key"
+    , subParser "convert-itn-key" $
+        Opt.info pKeyConvertITNKey $
+          Opt.progDesc $ "Convert an Incentivized Testnet (ITN) non-extended "
+                      ++ "(Ed25519) signing or verification key to a "
+                      ++ "corresponding Shelley stake key"
+    , subParser "convert-itn-extended-key" $
+        Opt.info pKeyConvertITNExtendedKey $
+          Opt.progDesc $ "Convert an Incentivized Testnet (ITN) extended "
+                      ++ "(Ed25519Extended) signing key to a corresponding "
+                      ++ "Shelley stake signing key"
+    , subParser "convert-itn-bip32-key" $
+        Opt.info pKeyConvertITNBip32Key $
+          Opt.progDesc $ "Convert an Incentivized Testnet (ITN) BIP32 "
+                      ++ "(Ed25519Bip32) signing key to a corresponding "
+                      ++ "Shelley stake signing key"
+    , subParser "convert-cardano-address-key" $
+        Opt.info pKeyConvertCardanoAddressSigningKey $
+          Opt.progDesc $ "Convert a cardano-address extended signing key "
+                      ++ "to a corresponding Shelley-format key."
+    ]
   where
     pKeyGetVerificationKey :: Parser KeyCmd
     pKeyGetVerificationKey =
@@ -485,9 +478,6 @@ pTransaction =
         (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
     ]
  where
-  subParser :: String -> ParserInfo TransactionCmd -> Parser TransactionCmd
-  subParser name pInfo = Opt.subparser $ Opt.command name pInfo
-
   assembleInfo :: ParserInfo TransactionCmd
   assembleInfo =
     Opt.info pTransactionAssembleTxBodyWit
@@ -559,28 +549,27 @@ pTransaction =
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen"
-          (Opt.info pKeyGenOperator $
-             Opt.progDesc "Create a key pair for a node operator's offline \
-                         \ key and a new certificate issue counter")
-      , Opt.command "key-gen-KES"
-          (Opt.info pKeyGenKES $
-             Opt.progDesc "Create a key pair for a node KES operational key")
-      , Opt.command "key-gen-VRF"
-          (Opt.info pKeyGenVRF $
-             Opt.progDesc "Create a key pair for a node VRF operational key")
-      , Opt.command "key-hash-VRF"
-          (Opt.info pKeyHashVRF $
-             Opt.progDesc "Print hash of a node's operational VRF key.")
-      , Opt.command "new-counter"
-          (Opt.info pNewCounter $
-             Opt.progDesc "Create a new certificate issue counter")
-      , Opt.command "issue-op-cert"
-          (Opt.info pIssueOpCert $
-             Opt.progDesc "Issue a node operational certificate")
-      ]
+  asum
+    [ subParser "key-gen"
+        (Opt.info pKeyGenOperator $
+           Opt.progDesc "Create a key pair for a node operator's offline \
+                       \ key and a new certificate issue counter")
+    , subParser "key-gen-KES"
+        (Opt.info pKeyGenKES $
+           Opt.progDesc "Create a key pair for a node KES operational key")
+    , subParser "key-gen-VRF"
+        (Opt.info pKeyGenVRF $
+           Opt.progDesc "Create a key pair for a node VRF operational key")
+    , subParser "key-hash-VRF"
+        (Opt.info pKeyHashVRF $
+           Opt.progDesc "Print hash of a node's operational VRF key.")
+    , subParser "new-counter"
+        (Opt.info pNewCounter $
+           Opt.progDesc "Create a new certificate issue counter")
+    , subParser "issue-op-cert"
+        (Opt.info pIssueOpCert $
+           Opt.progDesc "Issue a node operational certificate")
+    ]
   where
     pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
@@ -625,16 +614,15 @@ pNodeCmd =
 
 pPoolCmd :: Parser PoolCmd
 pPoolCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "registration-certificate"
+  asum
+      [ subParser "registration-certificate"
           (Opt.info pStakePoolRegistrationCert $ Opt.progDesc "Create a stake pool registration certificate")
-      , Opt.command "deregistration-certificate"
+      , subParser "deregistration-certificate"
           (Opt.info pStakePoolRetirementCert $ Opt.progDesc "Create a stake pool deregistration certificate")
-      , Opt.command "id"
+      , subParser "id"
           (Opt.info pId $
              Opt.progDesc "Build pool id from the offline key")
-      , Opt.command "metadata-hash"
+      , subParser "metadata-hash"
           (Opt.info pPoolMetaDataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
@@ -647,26 +635,25 @@ pPoolCmd =
 
 pQueryCmd :: Parser QueryCmd
 pQueryCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "protocol-parameters"
-          (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
-      , Opt.command "tip"
-          (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
-      , Opt.command "stake-distribution"
-          (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
-      , Opt.command "stake-address-info"
-          (Opt.info pQueryStakeAddressInfo $ Opt.progDesc "Get the current delegations and \
-                                                          \reward accounts filtered by stake \
-                                                          \address.")
-      , Opt.command "utxo"
-          (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
-                                              \filtering by address(es)")
-      , Opt.command "ledger-state"
-          (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
-      , Opt.command "protocol-state"
-          (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node (Ledger.ChainDepState -- advanced command)")
-      ]
+  asum
+    [ subParser "protocol-parameters"
+        (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
+    , subParser "tip"
+        (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
+    , subParser "stake-distribution"
+        (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
+    , subParser "stake-address-info"
+        (Opt.info pQueryStakeAddressInfo $ Opt.progDesc "Get the current delegations and \
+                                                        \reward accounts filtered by stake \
+                                                        \address.")
+    , subParser "utxo"
+        (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
+                                            \filtering by address(es)")
+    , subParser "ledger-state"
+        (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
+    , subParser "protocol-state"
+        (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node (Ledger.ChainDepState -- advanced command)")
+    ]
   where
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
@@ -720,18 +707,17 @@ pQueryCmd =
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "create-mir-certificate"
-          (Opt.info pMIRCertificate $
-            Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
-      , Opt.command "create-genesis-key-delegation-certificate"
-          (Opt.info pGovernanceGenesisKeyDelegationCertificate $
-            Opt.progDesc "Create a genesis key delegation certificate")
-      , Opt.command "create-update-proposal"
-          (Opt.info pUpdateProposal $
-            Opt.progDesc "Create an update proposal")
-      ]
+ asum
+   [ subParser "create-mir-certificate"
+       (Opt.info pMIRCertificate $
+         Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
+   , subParser "create-genesis-key-delegation-certificate"
+       (Opt.info pGovernanceGenesisKeyDelegationCertificate $
+         Opt.progDesc "Create a genesis key delegation certificate")
+   , subParser "create-update-proposal"
+       (Opt.info pUpdateProposal $
+         Opt.progDesc "Create an update proposal")
+   ]
   where
     pMIRCertificate :: Parser GovernanceCmd
     pMIRCertificate = GovernanceMIRCertificate
@@ -776,43 +762,40 @@ pRewardAmt =
 
 pGenesisCmd :: Parser GenesisCmd
 pGenesisCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen-genesis"
-          (Opt.info pGenesisKeyGen $
-             Opt.progDesc "Create a Shelley genesis key pair")
-      , Opt.command "key-gen-delegate"
-          (Opt.info pGenesisDelegateKeyGen $
-             Opt.progDesc "Create a Shelley genesis delegate key pair")
-      , Opt.command "key-gen-utxo"
-          (Opt.info pGenesisUTxOKeyGen $
-             Opt.progDesc "Create a Shelley genesis UTxO key pair")
-      , Opt.command "key-hash"
-          (Opt.info pGenesisKeyHash $
-             Opt.progDesc "Print the identifier (hash) of a public key")
-      , Opt.command "get-ver-key"
-          (Opt.info pGenesisVerKey $
-             Opt.progDesc "Derive the verification key from a signing key")
-      , Opt.command "initial-addr"
-          (Opt.info pGenesisAddr $
-             Opt.progDesc "Get the address for an initial UTxO based on the verification key")
-      , Opt.command "initial-txin"
-          (Opt.info pGenesisTxIn $
-             Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
-      , Opt.command "create"
-          (Opt.info pGenesisCreate $
-             Opt.progDesc ("Create a Shelley genesis file from a genesis "
-                        ++ "template and genesis/delegation/spending keys."))
-
-      , Opt.command "create-staked"
-          (Opt.info pGenesisCreateStaked $
-             Opt.progDesc ("Create a staked Shelley genesis file from a genesis "
-                        ++ "template and genesis/delegation/spending keys."))
-
-      , Opt.command "hash"
-          (Opt.info pGenesisHash $
-             Opt.progDesc "Compute the hash of a genesis file")
-      ]
+  asum
+    [ subParser "key-gen-genesis"
+        (Opt.info pGenesisKeyGen $
+           Opt.progDesc "Create a Shelley genesis key pair")
+    , subParser "key-gen-delegate"
+        (Opt.info pGenesisDelegateKeyGen $
+           Opt.progDesc "Create a Shelley genesis delegate key pair")
+    , subParser "key-gen-utxo"
+        (Opt.info pGenesisUTxOKeyGen $
+           Opt.progDesc "Create a Shelley genesis UTxO key pair")
+    , subParser "key-hash"
+        (Opt.info pGenesisKeyHash $
+           Opt.progDesc "Print the identifier (hash) of a public key")
+    , subParser "get-ver-key"
+        (Opt.info pGenesisVerKey $
+           Opt.progDesc "Derive the verification key from a signing key")
+    , subParser "initial-addr"
+        (Opt.info pGenesisAddr $
+           Opt.progDesc "Get the address for an initial UTxO based on the verification key")
+    , subParser "initial-txin"
+        (Opt.info pGenesisTxIn $
+           Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
+    , subParser "create"
+        (Opt.info pGenesisCreate $
+           Opt.progDesc ("Create a Shelley genesis file from a genesis "
+                      ++ "template and genesis/delegation/spending keys."))
+    , subParser "create-staked"
+        (Opt.info pGenesisCreateStaked $
+           Opt.progDesc ("Create a staked Shelley genesis file from a genesis "
+                      ++ "template and genesis/delegation/spending keys."))
+    , subParser "hash"
+        (Opt.info pGenesisHash $
+           Opt.progDesc "Compute the hash of a genesis file")
+    ]
   where
     pGenesisKeyGen :: Parser GenesisCmd
     pGenesisKeyGen =
@@ -2462,4 +2445,7 @@ readerFromParsecParser p =
                                "expecting" "unexpected" "end of input"
                                (Parsec.errorMessages err)
 
+subParser :: String -> ParserInfo a -> Parser a
+subParser availableCommand pInfo =
+  Opt.hsubparser $ Opt.command availableCommand pInfo <> Opt.metavar availableCommand
 
