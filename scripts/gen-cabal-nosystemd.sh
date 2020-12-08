@@ -9,7 +9,7 @@ root="$(dirname "$(dirname "$(realpath "$0")")")"
 
 cd "${root}"
 
-perl -00 -ne 'print if not /.*scribe-systemd.*/' cabal.project > cabal.nosystemd.project
+sed -e '/plugins\/scribe-systemd/d' cabal.project > cabal.nosystemd.project
 echo "" >> cabal.nosystemd.project
 echo "flags: -systemd" >> cabal.nosystemd.project
 
