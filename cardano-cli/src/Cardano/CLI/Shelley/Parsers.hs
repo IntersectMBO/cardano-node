@@ -2360,7 +2360,11 @@ pProtocolVersion =
 --
 
 parseLovelace :: Atto.Parser Lovelace
-parseLovelace = Lovelace <$> Atto.decimal
+parseLovelace = do
+  i <- Atto.decimal
+  if i > toInteger (maxBound :: Word64)
+  then fail $ show i <> " lovelace exceeds the Word64 upper bound"
+  else return $ Lovelace i
 
 parseAddressAny :: Atto.Parser AddressAny
 parseAddressAny = do
