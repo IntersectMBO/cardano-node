@@ -32,7 +32,8 @@ import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
-import           Cardano.Api.Typed (NetworkId, toByronProtocolMagicId)
+import           Cardano.Api (NetworkId)
+import           Cardano.Api.Byron (toByronProtocolMagicId)
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
 import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)

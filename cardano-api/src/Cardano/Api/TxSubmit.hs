@@ -23,14 +23,17 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (CardanoApplyTxErr,
-                     GenTx (GenTxByron, GenTxShelley, GenTxAllegra, GenTxMary),
+                     GenTx (GenTxAllegra, GenTxByron, GenTxMary, GenTxShelley),
                      HardForkApplyTxErr (ApplyTxErrAllegra, ApplyTxErrByron, ApplyTxErrMary, ApplyTxErrShelley, ApplyTxErrWrongEra))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, mkShelleyTx)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
+import           Cardano.Api
+import           Cardano.Api.Byron
+import           Cardano.Api.Shelley
 import           Cardano.Api.TxSubmit.ErrorRender
-import           Cardano.Api.Typed
 
 
 data TxForMode mode where

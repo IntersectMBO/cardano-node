@@ -11,7 +11,7 @@ import qualified Text.Parsec as Parsec (parse)
 import           Hedgehog (Property, checkSequential, discover, forAll, property, tripping)
 import           Hedgehog.Gen (filter)
 
-import           Cardano.Api.Typed (valueToList)
+import           Cardano.Api (valueToList)
 import           Cardano.CLI.Mary.RenderValue (defaultRenderPrettyValueOptions,
                      defaultRenderValueOptions, renderPrettyValue, renderValue)
 import           Cardano.CLI.Mary.ValueParser (parseValue)

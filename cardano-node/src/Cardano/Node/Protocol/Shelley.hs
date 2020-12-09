@@ -29,13 +29,15 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                     newExceptT)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
                      ProtocolParamsShelleyBased (..), ShelleyGenesis, TPraosLeaderCredentials (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto, TPraosCanBeLeader (..))
@@ -45,8 +47,9 @@ import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValida
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 
-import           Cardano.Api.Typed hiding (FileError)
-import qualified Cardano.Api.Typed as Api (FileError(..))
+import qualified Cardano.Api as Api (FileError (..))
+import           Cardano.Api.Shelley hiding (FileError)
+
 
 import           Cardano.Node.Types
 

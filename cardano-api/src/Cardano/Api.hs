@@ -10,7 +10,7 @@
 -- using "Cardano.Api.Byron" or "Cardano.Api.Shelley".
 --
 
-module Cardano.API (
+module Cardano.Api (
     -- * Eras
     ByronEra,
     ShelleyEra,
@@ -55,7 +55,7 @@ module Cardano.API (
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
     -- used in many other places.
-    Hash,
+    Hash(..),
     castHash,
 
     -- * Payment addresses
@@ -102,9 +102,9 @@ module Cardano.API (
     Lovelace,
 
     -- ** Multi-asset values
-    Quantity,
-    PolicyId,
-    AssetName,
+    Quantity(..),
+    PolicyId(..),
+    AssetName(..),
     AssetId(..),
     Value,
     selectAsset,
@@ -193,7 +193,7 @@ module Cardano.API (
     makeSignedTransaction,
     Witness,
     makeByronKeyWitness,
-    ShelleyWitnessSigningKey,
+    ShelleyWitnessSigningKey(..),
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,
     makeScriptWitness,
@@ -314,7 +314,7 @@ module Cardano.API (
     serialiseToBech32,
     deserialiseFromBech32,
     deserialiseAnyOfFromBech32,
-    Bech32DecodeError,
+    Bech32DecodeError(..),
 
     -- ** Addresses
     -- | Address serialisation is (sadly) special
@@ -333,11 +333,11 @@ module Cardano.API (
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
-    HasTextEnvelope,
-    TextEnvelope,
+    HasTextEnvelope(..),
+    TextEnvelope(..),
     TextEnvelopeType,
     TextEnvelopeDescr,
-    TextEnvelopeError,
+    TextEnvelopeError(..),
     textEnvelopeRawCBOR,
     serialiseToTextEnvelope,
     deserialiseFromTextEnvelope,
@@ -354,7 +354,7 @@ module Cardano.API (
     -- * Errors
     Error(..),
     throwErrorAsException,
-    FileError,
+    FileError(..),
 
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
@@ -364,10 +364,7 @@ module Cardano.API (
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
-    LocalNodeConnectInfo,
-    localNodeSocketPath,
-    localNodeNetworkId,
-    localNodeConsensusMode,
+    LocalNodeConnectInfo(..),
     NodeConsensusMode,
     LocalNodeClientProtocols,
     localChainSyncClient,
@@ -377,8 +374,7 @@ module Cardano.API (
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
-    ChainSyncClient,
-    runChainSyncClient,
+    ChainSyncClient(..),
 
     -- *** Local tx submission
     LocalTxSubmissionClient,
@@ -421,7 +417,11 @@ module Cardano.API (
     PraosNonce,
     makePraosNonce,
 
-    NetworkMagic,
+    NetworkMagic(..),
+
+    -- ** Conversions
+    --TODO: arrange not to export these
+    toNetworkMagic,
   ) where
 
 import           Cardano.Api.Typed

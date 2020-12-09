@@ -15,12 +15,12 @@ import qualified Prelude
 import           Control.Monad.Catch
 import qualified GHC.Stack as GHC
 
-import           Cardano.Api.Typed
+import           Cardano.Api
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified Hedgehog.Internal.Property as H
 import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
+import qualified Hedgehog.Internal.Property as H
 import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
 import           Hedgehog.Internal.Source (getCaller)
 

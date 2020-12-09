@@ -59,11 +59,11 @@ import qualified Data.Text.Encoding as Text
 import qualified Network.DNS as DNS (Domain)
 import           Network.Socket (PortNumber, SockAddr (..))
 
-import           Cardano.Api.Typed (EpochNo)
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Protocol.Types (Protocol (..))
+import           Cardano.Slotting.Slot (EpochNo)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAddress (..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead

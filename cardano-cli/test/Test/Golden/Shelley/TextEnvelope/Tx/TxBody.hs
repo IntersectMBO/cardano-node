@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Tx.TxBody
   ( golden_shelleyTxBody
   ) where
 
-import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse

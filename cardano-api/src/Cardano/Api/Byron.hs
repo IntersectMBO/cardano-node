@@ -4,11 +4,12 @@
 --
 
 module Cardano.Api.Byron
-  ( module Cardano.API,
+  ( module Cardano.Api,
 
     -- * Cryptographic key interface
     -- $keys
     VerificationKey(..),
+    SigningKey(..),
 
     -- * Payment addresses
     -- | Constructing and inspecting Byron payment addresses
@@ -70,8 +71,7 @@ module Cardano.Api.Byron
     toByronNetworkMagic,
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
-    toNetworkMagic,
   ) where
 
-import           Cardano.API
+import           Cardano.Api
 import           Cardano.Api.Typed

@@ -15,7 +15,7 @@ module Test.Cardano.Api.Examples
   , exampleMofNMary
   ) where
 
-import           Cardano.Api.Typed as Api
+import           Cardano.Api as Api
 
 
 exampleAllShelley :: ScriptInEra ShelleyEra
@@ -44,7 +44,7 @@ exampleAnyAllegra =
                 (SimpleScript SimpleScriptV2 exampleAnySimpleScriptV2)
 
 exampleMofNAllegra :: ScriptInEra AllegraEra
-exampleMofNAllegra = 
+exampleMofNAllegra =
     ScriptInEra SimpleScriptV2InAllegra
                 (SimpleScript SimpleScriptV2 exampleMofNSimpleScriptV2)
 

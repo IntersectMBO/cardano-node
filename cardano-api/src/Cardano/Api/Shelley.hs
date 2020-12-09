@@ -4,11 +4,12 @@
 --
 
 module Cardano.Api.Shelley
-  ( module Cardano.API,
+  ( module Cardano.Api,
 
     -- * Cryptographic key interface
     -- $keys
     VerificationKey(..),
+    SigningKey(..),
 
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
@@ -146,9 +147,16 @@ module Cardano.Api.Shelley
     LocalNodeClientProtocols(LocalNodeClientProtocols),
     withNodeProtocolClient,
 
+    -- ** Shelley based eras
+    ShelleyLedgerEra,
+
+    -- ** Conversions
+    --TODO: arrange not to export these
+    toShelleyNetwork,
+
   ) where
 
-import           Cardano.API
-import           Cardano.Api.Typed
+import           Cardano.Api
 import           Cardano.Api.Address
+import           Cardano.Api.Typed
 import           Cardano.Api.Value

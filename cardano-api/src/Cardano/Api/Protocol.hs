@@ -22,7 +22,9 @@ import           Cardano.Prelude
 
 import           Cardano.Chain.Slotting (EpochSlots (..))
 
-import           Cardano.Api.Typed
+import           Cardano.Api
+import           Cardano.Api.Byron
+import           Cardano.Api.Shelley
 
 import           Ouroboros.Consensus.Node.Run (RunNode)
 

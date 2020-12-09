@@ -9,13 +9,13 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Control.Applicative (some)
-import           Text.Parsec (satisfy, option, (<?>))
+import           Text.Parsec (option, satisfy, (<?>))
 import           Text.Parsec.Char (char, spaces)
 import           Text.Parsec.String (Parser)
 
-import           Cardano.API (AddressAny (..), AsType (..), deserialiseAddress)
-import           Cardano.CLI.Types (TxOutAnyEra (..))
+import           Cardano.Api (AddressAny (..), AsType (..), deserialiseAddress)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
+import           Cardano.CLI.Types (TxOutAnyEra (..))
 
 
 parseTxOutAnyEra :: Parser TxOutAnyEra

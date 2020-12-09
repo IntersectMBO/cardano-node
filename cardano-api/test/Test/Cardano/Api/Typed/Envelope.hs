@@ -6,7 +6,7 @@ module Test.Cardano.Api.Typed.Envelope
   ( tests
   ) where
 
-import           Cardano.Api.Typed
+import           Cardano.Api
 import           Cardano.Prelude
 import           Hedgehog (Property, discover)
 import           Test.Cardano.Api.Typed.Gen

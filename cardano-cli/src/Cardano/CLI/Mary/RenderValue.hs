@@ -18,8 +18,8 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
-import           Cardano.Api.Typed (AssetId (..), AssetName (..), PolicyId (..), Quantity (..),
-                     Value, serialiseToRawBytesHex, valueToList)
+import           Cardano.Api (AssetId (..), AssetName (..), PolicyId (..), Quantity, Value,
+                     serialiseToRawBytesHex, valueToList)
 
 -- | Whether the ADA asset ID should be rendered.
 data RenderAdaAssetId

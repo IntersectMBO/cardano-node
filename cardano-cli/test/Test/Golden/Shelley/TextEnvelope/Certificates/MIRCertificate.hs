@@ -4,7 +4,7 @@ module Test.Golden.Shelley.TextEnvelope.Certificates.MIRCertificate
   ( golden_shelleyMIRCertificate
   ) where
 
-import           Cardano.Api.Typed (AsType (..), HasTextEnvelope (..))
+import           Cardano.Api (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
 import           Hedgehog (Property)
 import           Test.OptParse

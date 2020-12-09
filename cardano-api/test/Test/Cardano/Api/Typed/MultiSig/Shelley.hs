@@ -12,7 +12,7 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 
-import           Cardano.API
+import           Cardano.Api
 
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Api.Typed.Gen

@@ -21,8 +21,9 @@ import           Cardano.Chain.UTxO (TxIn, TxOut)
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Api.Typed (NetworkId (..), toByronProtocolMagicId)
-import qualified Cardano.Api.Typed as Typed
+import           Cardano.Api hiding (TxIn, TxOut, UpdateProposal)
+import           Cardano.Api.Byron hiding (TxIn, TxOut, UpdateProposal)
+
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
@@ -151,7 +152,7 @@ runPrintSigningKeyAddress :: ByronKeyFormat -> NetworkId -> SigningKeyFile -> Ex
 runPrintSigningKeyAddress bKeyFormat networkid skF = do
   sK <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey bKeyFormat skF
   let sKeyAddress = prettyAddress
-                  . Common.makeVerKeyAddress (Typed.toByronNetworkMagic networkid)
+                  . Common.makeVerKeyAddress (toByronNetworkMagic networkid)
                   . Crypto.toVerification
                   $ sK
   liftIO $ putTextLn sKeyAddress
@@ -208,9 +209,9 @@ runSubmitTx network fp = do
 runGetTxId :: TxFile -> ExceptT ByronClientCmdError IO ()
 runGetTxId fp = firstExceptT ByronCmdTxError $ do
     tx <- readByronTx fp
-    let txbody = Typed.getTxBody (Typed.ByronTx tx)
-        txid   = Typed.getTxId txbody
-    liftIO $ BS.putStrLn $ Typed.serialiseToRawBytesHex txid
+    let txbody = getTxBody (ByronTx tx)
+        txid   = getTxId txbody
+    liftIO $ BS.putStrLn $ serialiseToRawBytesHex txid
 
 runSpendGenesisUTxO
   :: GenesisFile

@@ -19,7 +19,7 @@ import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionPar
 import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
 
-import           Cardano.Api.Typed
+import           Cardano.Api
 
 -- | Parse a 'Value' from its string representation.
 parseValue :: Parser Value

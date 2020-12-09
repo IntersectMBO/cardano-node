@@ -34,7 +34,8 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
-import           Cardano.Api.Typed (NetworkId, toByronRequiresNetworkMagic)
+import           Cardano.Api (NetworkId)
+import           Cardano.Api.Byron (toByronRequiresNetworkMagic)
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
