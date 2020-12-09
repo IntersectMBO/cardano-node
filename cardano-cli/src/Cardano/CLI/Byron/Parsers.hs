@@ -694,7 +694,7 @@ cliParseBase58Address =
 -- | See the rationale for cliParseBase58Address.
 cliParseTxId :: String -> TxId
 cliParseTxId =
-  either (panic . ("Bad Lovelace value: " <>) . show) identity
+  either (panic . ("Bad TxId: " <>) . show) identity
   . decodeHash . Text.pack
 
 parseFraction :: String -> String -> Parser Rational
