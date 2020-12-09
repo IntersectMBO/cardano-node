@@ -6,8 +6,8 @@ module Test.Cardano.Api.Typed.Value
 
 import           Prelude
 
-import           Data.List (sort, groupBy)
 import           Data.Aeson
+import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
 
 import           Cardano.Api.Typed

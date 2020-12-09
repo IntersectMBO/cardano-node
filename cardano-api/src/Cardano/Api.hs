@@ -374,8 +374,7 @@ module Cardano.Api (
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
-    ChainSyncClient,
-    runChainSyncClient,
+    ChainSyncClient(..),
 
     -- *** Local tx submission
     LocalTxSubmissionClient,

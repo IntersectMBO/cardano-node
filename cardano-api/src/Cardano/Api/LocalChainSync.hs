@@ -7,14 +7,13 @@ module Cardano.Api.LocalChainSync
 
 import           Cardano.Prelude hiding (atomically, catch)
 
-import           Cardano.Api.Typed
+import           Cardano.Api
 import           Control.Concurrent.STM
 
 import           Ouroboros.Consensus.Ledger.Query (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Network.Block (Point, Tip)
-import           Ouroboros.Network.Protocol.ChainSync.Client (ClientStIdle (..),
-                     ClientStNext (..))
+import           Ouroboros.Network.Protocol.ChainSync.Client (ClientStIdle (..), ClientStNext (..))
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 

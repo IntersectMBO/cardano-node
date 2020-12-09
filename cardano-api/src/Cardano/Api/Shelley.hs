@@ -9,6 +9,7 @@ module Cardano.Api.Shelley
     -- * Cryptographic key interface
     -- $keys
     VerificationKey(..),
+    SigningKey(..),
 
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
