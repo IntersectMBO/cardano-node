@@ -60,6 +60,8 @@ tests: False
 
 test-show-details: direct
 
+package *
+  ghc-options: -g3
 -- Then enable specific tests in this repo
 
 package cardano-api
