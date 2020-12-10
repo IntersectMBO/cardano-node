@@ -54,13 +54,21 @@ import qualified Testnet.List as L
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use head" -}
 
-newtype TestnetOptions = TestnetOptions
+data TestnetOptions = TestnetOptions
   { numBftNodes :: Int
+  , slotDuration :: Int
+  , securityParam :: Int
+  , nPoorAddresses :: Int
+  , totalBalance :: Int
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
   { numBftNodes = 3
+  , slotDuration = 2000
+  , securityParam = 10
+  , nPoorAddresses = 128
+  , totalBalance = 8000000000000000
   }
 
 replaceNodeLog :: Int -> String -> String
@@ -73,9 +81,9 @@ rewriteConfiguration _ "TraceBlockchainTime: False" = "TraceBlockchainTime: True
 rewriteConfiguration n s | "logs/node-0.log" `L.isInfixOf` s = replaceNodeLog n s
 rewriteConfiguration _ s = s
 
-rewriteParams :: Value -> Value
-rewriteParams = rewriteObject
-  $ HM.insert "slotDuration" (J.toJSON @String "2000")
+rewriteParams :: TestnetOptions -> Value -> Value
+rewriteParams testnetOptions = rewriteObject
+  $ HM.insert "slotDuration" (J.toJSON @String (show @Int (slotDuration testnetOptions)))
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
@@ -88,7 +96,7 @@ testnet testnetOptions H.Conf {..} = do
   H.copyRewriteJsonFile
     (base </> "scripts/protocol-params.json")
     (tempAbsPath </> "protocol-params.json")
-    rewriteParams
+    (rewriteParams testnetOptions)
 
   -- Generate keys
   void $ H.execCli
@@ -98,11 +106,11 @@ testnet testnetOptions H.Conf {..} = do
     , "--genesis-output-dir", tempAbsPath </> "genesis"
     , "--start-time", showUTCTimeSeconds startTime
     , "--protocol-parameters-file", tempAbsPath </> "protocol-params.json"
-    , "--k", "10"
+    , "--k", show @Int (securityParam testnetOptions)
     , "--protocol-magic", show @Int testnetMagic
-    , "--n-poor-addresses", "128"
+    , "--n-poor-addresses", show @Int (nPoorAddresses testnetOptions)
     , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
-    , "--total-balance", "8000000000000000"
+    , "--total-balance", show @Int (totalBalance testnetOptions)
     , "--avvm-entry-count", "128"
     , "--avvm-entry-balance", "10000000000000"
     , "--delegate-share", "0.9"
