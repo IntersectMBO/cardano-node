@@ -876,7 +876,8 @@ instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
 data TxBodyError era =
        TxBodyEmptyTxIns
      | TxBodyEmptyTxOuts
-     | TxBodyLovelaceOverflow (TxOut era)
+     | TxBodyOutputNegative Quantity (TxOut era)
+     | TxBodyOutputOverflow Quantity (TxOut era)
      | TxBodyMetadataError [(Word64, TxMetadataRangeError)]
      | TxBodyMintAdaError
      deriving Show
@@ -884,8 +885,12 @@ data TxBodyError era =
 instance Error (TxBodyError era) where
     displayError TxBodyEmptyTxIns  = "Transaction body has no inputs"
     displayError TxBodyEmptyTxOuts = "Transaction body has no outputs"
-    displayError (TxBodyLovelaceOverflow txout) =
-      "Lovelace greater than 2^64 in transaction output " <> show txout
+    displayError (TxBodyOutputNegative (Quantity q) txout) =
+      "Negative quantity (" ++ show q ++ ") in transaction output: " ++
+      show txout
+    displayError (TxBodyOutputOverflow (Quantity q) txout) =
+      "Quantity too large (" ++ show q ++ " >= 2^64) in transaction output: " ++
+      show txout
     displayError (TxBodyMetadataError [(k, err)]) =
       "Error in metadata entry " ++ show k ++ ": " ++ displayError err
     displayError (TxBodyMetadataError errs) =
@@ -915,7 +920,7 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
 
     outs'  <- NonEmpty.nonEmpty txOuts    ?! TxBodyEmptyTxOuts
     outs'' <- traverse
-                (\out -> toByronTxOut out ?! TxBodyLovelaceOverflow out)
+                (\out -> toByronTxOut out ?! classifyRangeError out)
                 outs'
     return $
       ByronTxBody $
@@ -923,6 +928,21 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
           Annotated
             (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
             ()
+  where
+    classifyRangeError :: TxOut ByronEra -> TxBodyError ByronEra
+    classifyRangeError
+      txout@(TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{})
+                   (TxOutAdaOnly AdaOnlyInByronEra value))
+      | value < 0        = TxBodyOutputNegative (lovelaceToQuantity value) txout
+      | otherwise        = TxBodyOutputOverflow (lovelaceToQuantity value) txout
+
+    classifyRangeError
+      (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
+             (TxOutValue era _)) = case era of {}
+
+    classifyRangeError
+      (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
+             _) = case era of {}
 
 makeShelleyTransactionBody :: ShelleyBasedEra era
                            -> TxBodyContent era
@@ -941,8 +961,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
 
     guard (not (null txIns)) ?! TxBodyEmptyTxIns
     sequence_
-      [ guard (v >= 0) ?! TxBodyLovelaceOverflow txout
-      | txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v)) <- txOuts ]
+      [ do guard (v >= 0) ?! TxBodyOutputNegative (lovelaceToQuantity v) txout
+           guard (v < ub) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
+      | let ub = fromIntegral (maxBound :: Word64) :: Lovelace
+      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v)) <- txOuts ]
     case txMetadata of
       TxMetadataNone      -> return ()
       TxMetadataInEra _ m -> first TxBodyMetadataError (validateTxMetadata m)
@@ -994,8 +1016,11 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
 
     guard (not (null txIns)) ?! TxBodyEmptyTxIns
     sequence_
-      [ guard (v >= 0) ?! TxBodyLovelaceOverflow txout
-      | txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v)) <- txOuts ]
+      [ do guard (v >= 0) ?! TxBodyOutputNegative (lovelaceToQuantity v) txout
+           guard (v < ub) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
+      | let ub = fromIntegral (maxBound :: Word64) :: Lovelace
+      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v)) <- txOuts
+      ]
     case txMetadata of
       TxMetadataNone      -> return ()
       TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
@@ -1058,9 +1083,16 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
 
     guard (not (null txIns)) ?! TxBodyEmptyTxIns
     sequence_
-      [ guard allPositive ?! TxBodyLovelaceOverflow txout
-      | txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v)) <- txOuts
-      , let allPositive = and [ q >= 0 | (_,q) <- valueToList v ]
+      [ do allPositive
+           allWithinMaxBound
+      | let ub = fromIntegral (maxBound :: Word64) :: Quantity
+      , txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v)) <- txOuts
+      , let allPositive       = case [ q | (_,q) <- valueToList v, q >= 0 ] of
+                                  []  -> Right ()
+                                  q:_ -> Left (TxBodyOutputNegative q txout)
+            allWithinMaxBound = case [ q | (_,q) <- valueToList v, q < ub ] of
+                                  []  -> Right ()
+                                  q:_ -> Left (TxBodyOutputOverflow q txout)
       ]
     case txMetadata of
       TxMetadataNone      -> return ()
