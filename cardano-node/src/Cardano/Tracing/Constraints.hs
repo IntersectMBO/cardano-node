@@ -5,6 +5,8 @@ module Cardano.Tracing.Constraints
   ( TraceConstraints
   ) where
 
+import           Prelude (Show)
+
 import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
@@ -38,4 +40,6 @@ type TraceConstraints blk =
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotForge blk)
     , ToObject (ForgeStateUpdateError blk)
+    , Show blk
+    , Show (Header blk)
     )

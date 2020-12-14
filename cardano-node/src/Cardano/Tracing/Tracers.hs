@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -56,6 +57,7 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
+import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
@@ -74,6 +76,7 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Subscription
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
@@ -419,6 +422,7 @@ mkConsensusTracers
      , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
      , HasKESMetricsData blk
+     , Show (Header blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -810,7 +814,12 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
 --------------------------------------------------------------------------------
 
 nodeToClientTracers'
-  :: Show localPeer
+  :: ( StandardHash blk
+     , Show (ApplyTxErr blk)
+     , Show (GenTx blk)
+     , Show localPeer
+     , ShowQuery (Query blk)
+     )
   => TraceSelection
   -> TracingVerbosity
   -> Trace IO Text
@@ -833,6 +842,8 @@ nodeToNodeTracers'
   :: ( Consensus.RunNode blk
      , ConvertTxId blk
      , HasTxs blk
+     , Show blk
+     , Show (Header blk)
      , Show peer
      )
   => TraceSelection
