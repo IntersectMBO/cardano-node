@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Cardano.Tracing.Kernel
   ( NodeKernelData (..)
@@ -20,6 +21,7 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 
 import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Ledger.Abstract (IsLedger, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -52,7 +54,8 @@ mapNodeKernelDataIO f (NodeKernelData ref) =
   readIORef ref >>= traverse f
 
 nkQueryLedger ::
-     (ExtLedgerState blk -> a)
+     IsLedger (LedgerState blk)
+  => (ExtLedgerState blk -> a)
   -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =

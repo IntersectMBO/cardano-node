@@ -45,8 +45,10 @@ import           Prelude
 
 import           Data.Type.Equality (TestEquality(..), (:~:)(Refl))
 
+import           Cardano.Ledger.Era as Ledger (Crypto)
+
 import           Ouroboros.Consensus.Shelley.Eras as Ledger
-                   (StandardShelley, StandardAllegra, StandardMary)
+                   (StandardShelley, StandardAllegra, StandardMary, StandardCrypto)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -239,7 +241,8 @@ deriving instance Show (ShelleyBasedEra era)
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
 -- the 'ShelleyBasedEra' constructors.
 --
-class IsCardanoEra era => IsShelleyBasedEra era where
+class (IsCardanoEra era, Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto)
+   => IsShelleyBasedEra era where
    shelleyBasedEra :: ShelleyBasedEra era
 
 instance IsShelleyBasedEra ShelleyEra where

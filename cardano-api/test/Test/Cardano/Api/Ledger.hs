@@ -14,7 +14,7 @@ import           Hedgehog (Property, discover)
 import qualified Hedgehog
 import           Test.Tasty (TestTree)
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
 
@@ -33,7 +33,7 @@ prop_roundtrip_Address_CBOR :: Property
 prop_roundtrip_Address_CBOR =
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   Hedgehog.property $ do
-    addr <- Hedgehog.forAll (genAddress @StandardShelley)
+    addr <- Hedgehog.forAll (genAddress @StandardCrypto)
     Hedgehog.tripping addr serialiseAddr deserialiseAddr
 
 -- -----------------------------------------------------------------------------

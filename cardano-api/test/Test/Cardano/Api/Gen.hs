@@ -8,7 +8,7 @@ module Test.Cardano.Api.Gen
   ) where
 
 
-import           Cardano.Prelude hiding (Metadata)
+import           Cardano.Prelude
 
 import qualified Data.Map.Strict as Map
 

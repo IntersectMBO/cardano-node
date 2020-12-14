@@ -86,11 +86,9 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (SlotNo)
 
 import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Era  as Ledger
 
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
-import           Ouroboros.Consensus.Shelley.Eras
-                   (StandardAllegra, StandardCrypto, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
@@ -283,7 +281,7 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
       CBOR.serialize' (toShelleyMultiSig s)
 
     serialiseToCBOR (SimpleScript SimpleScriptV2 s) =
-      CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock StandardAllegra)
+      CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock StandardCrypto)
 
     deserialiseFromCBOR _ bs =
       case scriptLanguage :: ScriptLanguage lang of
@@ -295,7 +293,7 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
         SimpleScriptLanguage SimpleScriptV2 ->
               SimpleScript SimpleScriptV2
             . (fromAllegraTimelock TimeLocksInSimpleScriptV2
-                                :: Timelock.Timelock StandardAllegra
+                                :: Timelock.Timelock StandardCrypto
                                 -> SimpleScript SimpleScriptV2)
           <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
@@ -367,7 +365,7 @@ instance SerialiseAsCBOR ScriptInAnyLang where
       CBOR.serializeEncoding' $
           CBOR.encodeListLen 2
        <> CBOR.encodeWord 1
-       <> toCBOR (toAllegraTimelock s :: Timelock.Timelock StandardAllegra)
+       <> toCBOR (toAllegraTimelock s :: Timelock.Timelock StandardCrypto)
 
     serialiseToCBOR (ScriptInAnyLang (PlutusScriptLanguage v) _) = case v of {}
 
@@ -382,14 +380,14 @@ instance SerialiseAsCBOR ScriptInAnyLang where
           case tag of
             0 -> fmap (fmap convert) fromCBOR
               where
-                convert :: Shelley.MultiSig StandardShelley -> ScriptInAnyLang
+                convert :: Shelley.MultiSig StandardCrypto -> ScriptInAnyLang
                 convert = ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
                         . SimpleScript SimpleScriptV1
                         . fromShelleyMultiSig
 
             1 -> fmap (fmap convert) fromCBOR
               where
-                convert :: Timelock.Timelock StandardAllegra -> ScriptInAnyLang
+                convert :: Timelock.Timelock StandardCrypto -> ScriptInAnyLang
                 convert = ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
                         . SimpleScript SimpleScriptV2
                         . fromAllegraTimelock TimeLocksInSimpleScriptV2
@@ -529,7 +527,7 @@ eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
 -- independent, and there are many places where we want to use a script
 -- hash where we don't want things to be era-parametrised.
 --
-newtype ScriptHash = ScriptHash (Shelley.ScriptHash StandardShelley)
+newtype ScriptHash = ScriptHash (Shelley.ScriptHash StandardCrypto)
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex ScriptHash
 
@@ -558,26 +556,17 @@ hashScript (SimpleScript SimpleScriptV2 s) =
     -- For V1, we convert to the Allegra-era version specifically and hash that.
     -- Later ledger eras have to be compatible anyway.
     ScriptHash
-  . coerceShelleyScriptHash
   . Timelock.hashTimelockScript
   . (toAllegraTimelock :: SimpleScript SimpleScriptV2
-                       -> Timelock.Timelock StandardAllegra)
+                       -> Timelock.Timelock StandardCrypto)
   $ s
 
 
-toShelleyScriptHash :: Ledger.Crypto ledgerera ~ StandardCrypto
-                    => ScriptHash -> Shelley.ScriptHash ledgerera
-toShelleyScriptHash (ScriptHash h) = coerceShelleyScriptHash h
+toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
+toShelleyScriptHash (ScriptHash h) =  h
 
-fromShelleyScriptHash :: Ledger.Crypto ledgerera ~ StandardCrypto
-                      => Shelley.ScriptHash ledgerera -> ScriptHash
-fromShelleyScriptHash = ScriptHash . coerceShelleyScriptHash
-
-coerceShelleyScriptHash :: Ledger.Crypto ledgereraA ~ Ledger.Crypto ledgereraB
-                        => Shelley.ScriptHash ledgereraA
-                        -> Shelley.ScriptHash ledgereraB
-coerceShelleyScriptHash (Shelley.ScriptHash h) =
-    Shelley.ScriptHash (Crypto.castHash h)
+fromShelleyScriptHash :: Shelley.ScriptHash StandardCrypto -> ScriptHash
+fromShelleyScriptHash = ScriptHash
 
 
 -- ----------------------------------------------------------------------------
@@ -668,10 +657,10 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript _ script)) =
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
 --
 toShelleyMultiSig :: SimpleScript SimpleScriptV1
-                  -> Shelley.MultiSig StandardShelley
+                  -> Shelley.MultiSig StandardCrypto
 toShelleyMultiSig = go
   where
-    go :: SimpleScript SimpleScriptV1 -> Shelley.MultiSig StandardShelley
+    go :: SimpleScript SimpleScriptV1 -> Shelley.MultiSig StandardCrypto
     go (RequireSignature (PaymentKeyHash kh))
                         = Shelley.RequireSignature (Shelley.coerceKeyRole kh)
     go (RequireAllOf s) = Shelley.RequireAllOf (map go s)
@@ -680,7 +669,7 @@ toShelleyMultiSig = go
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
 --
-fromShelleyMultiSig :: Shelley.MultiSig StandardShelley -> SimpleScript lang
+fromShelleyMultiSig :: Shelley.MultiSig StandardCrypto -> SimpleScript lang
 fromShelleyMultiSig = go
   where
     go (Shelley.RequireSignature kh)
@@ -693,13 +682,11 @@ fromShelleyMultiSig = go
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
 --
-toAllegraTimelock :: forall lang ledgerera.
-                     (Ledger.Era ledgerera,
-                      Ledger.Crypto ledgerera ~ StandardCrypto)
-                  => SimpleScript lang -> Timelock.Timelock ledgerera
+toAllegraTimelock :: forall lang.
+                     SimpleScript lang -> Timelock.Timelock StandardCrypto
 toAllegraTimelock = go
   where
-    go :: SimpleScript lang -> Timelock.Timelock ledgerera
+    go :: SimpleScript lang -> Timelock.Timelock StandardCrypto
     go (RequireSignature (PaymentKeyHash kh))
                         = Timelock.RequireSignature (Shelley.coerceKeyRole kh)
     go (RequireAllOf s) = Timelock.RequireAllOf (Seq.fromList (map go s))
@@ -711,11 +698,9 @@ toAllegraTimelock = go
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
 --
-fromAllegraTimelock ::    (Ledger.Era ledgerera,
-                           Ledger.Crypto ledgerera ~ StandardCrypto)
-                       => TimeLocksSupported lang
-                       -> Timelock.Timelock ledgerera
-                       -> SimpleScript lang
+fromAllegraTimelock :: TimeLocksSupported lang
+                    -> Timelock.Timelock StandardCrypto
+                    -> SimpleScript lang
 fromAllegraTimelock timelocks = go
   where
     go (Timelock.RequireSignature kh) = RequireSignature

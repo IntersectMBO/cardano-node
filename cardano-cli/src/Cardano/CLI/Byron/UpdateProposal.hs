@@ -141,10 +141,11 @@ createUpdateProposal
 createUpdateProposal nw sKey pVer sVer sysTag inshash paramsToUpdate =
     signProposal (toByronProtocolMagicId nw) proposalBody noPassSigningKey
   where
-    proposalBody = ProposalBody pVer protocolParamsUpdate sVer metadata
+    proposalBody = ProposalBody pVer protocolParamsUpdate sVer updateMetadata
 
-    metadata :: M.Map SystemTag InstallerHash
-    metadata = M.singleton sysTag inshash
+    updateMetadata :: M.Map SystemTag InstallerHash
+    updateMetadata = M.singleton sysTag inshash
+
     noPassSigningKey = noPassSafeSigner sKey
     protocolParamsUpdate = createProtocolParametersUpdate
                              emptyProtocolParametersUpdate paramsToUpdate

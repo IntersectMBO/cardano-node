@@ -295,6 +295,7 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceStartEagerly _ _ -> Debug
     MuxTraceStartOnDemand _ _ -> Debug
     MuxTraceStartedOnDemand _ _ -> Debug
+    MuxTraceTerminating {} -> Debug
     MuxTraceShutdown -> Debug
 
 --

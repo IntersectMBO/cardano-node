@@ -5,7 +5,7 @@ module Test.Cardano.Api.Metadata
   , genTxMetadata
   ) where
 
-import           Cardano.Prelude hiding (Metadata)
+import           Cardano.Prelude
 
 import           Cardano.Api
 
