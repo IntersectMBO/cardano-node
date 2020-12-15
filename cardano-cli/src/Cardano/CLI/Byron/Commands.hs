@@ -11,7 +11,6 @@ module Cardano.CLI.Byron.Commands
 
 import           Cardano.Prelude
 
-import           Cardano.Chain.Slotting (EpochNumber (..))
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
 
@@ -69,25 +68,6 @@ data ByronCommand =
         ByronKeyFormat
         NetworkId
         SigningKeyFile
-
-    --- Delegation Related Commands ---
-
-  | IssueDelegationCertificate
-        NetworkId
-        ByronKeyFormat
-        EpochNumber
-        -- ^ The epoch from which the delegation is valid.
-        SigningKeyFile
-        -- ^ The issuer of the certificate, who delegates their right to sign blocks.
-        VerificationKeyFile
-        -- ^ The delegate, who gains the right to sign blocks on behalf of the issuer.
-        NewCertificateFile
-        -- ^ Filepath of the newly created delegation certificate.
-  | CheckDelegation
-        NetworkId
-        CertificateFile
-        VerificationKeyFile
-        VerificationKeyFile
 
   | GetLocalNodeTip
         NetworkId
