@@ -15,6 +15,8 @@ curl -L https://nixos.org/nix/install > install-nix.sh
 ```
 and following the directions.
 
+#### IOHK Binary Cache
+
 To improve build speed, it is possible to set up a binary cache maintained by IOHK (**this is
 optional**):
 ```
@@ -41,7 +43,7 @@ You best get them with the Haskell installer tool [ghcup][ghcup].
 curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
 ```
 confirm 2x ENTER and type YES at the end to add ghcup to your PATH variable
-Then restart your terminal session or execute 
+Then restart your terminal session or execute
 
 ```
 source ~/.ghcup/env
@@ -81,22 +83,22 @@ cd cardano-node
 cabal build all
 ```
 
-Now you can copy the binaries 
+Now you can copy the binaries
 ```
 cardano-node
 cardano-cli
 chairman
 ```
 into your ~/.local/bin folder (when part of the PATH variable)
-you can see the build location path from the last 3 output lines. 
-for cardano-node 1.9.3 it is 
+you can see the build location path from the last 3 output lines.
+for cardano-node 1.9.3 it is
 ```
 ~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
 ```
 
 
 
- 
+
 
 
 [ghcup]: https://www.haskell.org/ghcup/
