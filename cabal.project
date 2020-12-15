@@ -159,8 +159,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 474409e03b559bd6c0943739619c21f110773cef
-  --sha256: 1h0pwddcwz2cfk9ysvqziichra99pslcgbhjpgiwm0412lc8gmps
+  tag: 4fdc309f855792ed30271c30dcd9159232404787
+  --sha256: 1j03pzqw0n10m9af17q37b6l90x2qdajp30xjpv2247rwpgip31i
   subdir:
     io-sim
     io-sim-classes
