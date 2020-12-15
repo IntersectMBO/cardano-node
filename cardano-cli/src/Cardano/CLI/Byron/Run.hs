@@ -13,9 +13,7 @@ import qualified Data.Text.Lazy.IO as TL
 import qualified Formatting as F
 
 import qualified Cardano.Chain.Common as Common
-import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochNumber)
 import           Cardano.Chain.UTxO (TxIn, TxOut)
 
 import qualified Cardano.Crypto.Hashing as Crypto
@@ -77,9 +75,6 @@ runByronClientCommand c =
     PrintSigningKeyAddress bKeyFormat networkid skF -> runPrintSigningKeyAddress bKeyFormat networkid skF
     Keygen bKeyFormat nskf passReq -> runKeygen bKeyFormat nskf passReq
     ToVerification bKeyFormat skFp nvkFp -> runToVerification bKeyFormat skFp nvkFp
-    IssueDelegationCertificate nw bKeyFormat epoch issuerSK delVK cert ->
-      runIssueDelegationCertificate nw bKeyFormat epoch issuerSK delVK cert
-    CheckDelegation nw cert issuerVF delegateVF -> runCheckDelegation nw cert issuerVF delegateVF
     SubmitTx network fp -> runSubmitTx network fp
     GetTxId fp -> runGetTxId fp
     SpendGenesisUTxO genFp nw era nftx ctKey genRichAddr outs ->
@@ -169,36 +164,6 @@ runToVerification bKeyFormat skFp (NewVerificationKeyFile vkFp) = do
   sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey bKeyFormat skFp
   let vKey = Builder.toLazyText . Crypto.formatFullVerificationKey $ Crypto.toVerification sk
   firstExceptT ByronCmdHelpersError $ ensureNewFile TL.writeFile vkFp vKey
-
-runIssueDelegationCertificate
-  :: NetworkId
-  -> ByronKeyFormat
-  -> EpochNumber
-  -> SigningKeyFile
-  -> VerificationKeyFile
-  -> NewCertificateFile
-  -> ExceptT ByronClientCmdError IO ()
-runIssueDelegationCertificate nw bKeyFormat epoch issuerSK delegateVK cert = do
-  vk <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVK
-  sk <- firstExceptT ByronCmdKeyFailure $ readEraSigningKey bKeyFormat issuerSK
-  let byGenDelCert :: Delegation.Certificate
-      byGenDelCert = issueByronGenesisDelegation (toByronProtocolMagicId nw) epoch sk vk
-      sCert        = serialiseDelegationCert byGenDelCert
-  firstExceptT ByronCmdHelpersError $ ensureNewFileLBS (nFp cert) sCert
-
-
-runCheckDelegation
-  :: NetworkId
-  -> CertificateFile
-  -> VerificationKeyFile
-  -> VerificationKeyFile
-  -> ExceptT ByronClientCmdError IO ()
-runCheckDelegation nw cert issuerVF delegateVF = do
-  issuerVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey issuerVF
-  delegateVK <- firstExceptT ByronCmdKeyFailure $ readPaymentVerificationKey delegateVF
-  firstExceptT ByronCmdDelegationError $
-    checkByronGenesisDelegation cert (toByronProtocolMagicId nw)
-                                issuerVK delegateVK
 
 runSubmitTx :: NetworkId -> TxFile -> ExceptT ByronClientCmdError IO ()
 runSubmitTx network fp = do

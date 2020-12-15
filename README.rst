@@ -246,26 +246,6 @@ and ``signing-key-address`` subcommands (the latter requires the network magic):
    2cWKMJemoBakxhXgZSsMteLP9TUvz7owHyEYbUDwKRLsw2UGDrG93gPqmpv1D9ohWNddx
    VerKey address with root e5a3807d99a1807c3f161a1558bcbc45de8392e049682df01809c488, attributes: AddrAttributes { derivation path: {} }
 
-Delegation
-==========
-
-The ``issue-delegation-certificate`` subcommand enables generation of Byron genesis
-delegation certificates, given the following inputs:
-
-   - network magic
-   - starting epoch of delegation
-   - genesis delegator's signing key
-   - delegatee's verification key
-
-To check the generated delegation certificate, you can use the ``check-delegation`` subcommand,
-which would verify:
-
-   - certificate signature validity
-   - correspondence of the expected issuer/delegate with those on the certificate.
-
-The expected issuer and delegate are supplied through the ``--issuer-key`` and ``--delegate-key``
-options.
-
 Transactions
 ============
 

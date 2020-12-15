@@ -76,7 +76,6 @@ backwardsCompatibilityCommands =
   hiddenCmds :: [Parser ClientCommand]
   hiddenCmds = map convertToByronCommand [ parseGenesisRelatedValues
                                          , parseKeyRelatedValues
-                                         , parseDelegationRelatedValues
                                          , parseTxRelatedValues
                                          , parseLocalNodeQueryValues
                                          , parseMiscellaneous
@@ -96,8 +95,6 @@ parseByronCommands = asum
       $ Opt.progDesc "Byron genesis block commands")
   , subParser "governance" (Opt.info (NodeCmd <$> Opt.subparser pNodeCmd)
       $ Opt.progDesc "Byron governance commands")
-  , subParser "delegation" (Opt.info (Opt.subparser parseDelegationRelatedValues)
-      $ Opt.progDesc "Byron delegation commands")
   , subParser "miscellaneous" (Opt.info (Opt.subparser parseMiscellaneous)
       $ Opt.progDesc "Byron miscellaneous commands")
   , NodeCmd <$> pNodeCmdBackwardCompatible
@@ -135,47 +132,6 @@ parseCBORObject = asum
         long "byron-vote"
      <> help "The CBOR file is a byron era vote"
   ]
-
-parseDelegationRelatedValues :: Mod CommandFields ByronCommand
-parseDelegationRelatedValues =
-  mconcat
-    [ command'
-        "issue-delegation-certificate"
-        "Create a delegation certificate allowing the\
-        \ delegator to sign blocks on behalf of the issuer"
-        $ IssueDelegationCertificate
-        <$> pNetworkId
-        <*> parseByronKeyFormat
-        <*> ( EpochNumber
-                <$> parseIntegral
-                      "since-epoch"
-                      "The epoch from which the delegation is valid."
-              )
-        <*> parseSigningKeyFile
-              "secret"
-              "The issuer of the certificate, who delegates\
-              \ their right to sign blocks."
-        <*> parseVerificationKeyFile
-              "delegate-key"
-              "The delegate, who gains the right to sign block."
-        <*> parseNewCertificateFile "certificate"
-    , command'
-        "check-delegation"
-        "Verify that a given certificate constitutes a valid\
-        \ delegation relationship between keys."
-        $ CheckDelegation
-            <$> pNetworkId
-            <*> parseCertificateFile
-                  "certificate"
-                  "The certificate embodying delegation to verify."
-            <*> parseVerificationKeyFile
-                  "issuer-key"
-                  "The genesis key that supposedly delegates."
-            <*> parseVerificationKeyFile
-                  "delegate-key"
-                  "The operation verification key supposedly delegated to."
-      ]
-
 
 -- | Values required to create genesis.
 parseGenesisParameters :: Parser GenesisParameters
@@ -371,9 +327,6 @@ parseTxRelatedValues =
         $ GetTxId
             <$> parseTxFile "tx"
     ]
-
-parseVerificationKeyFile :: String -> String -> Parser VerificationKeyFile
-parseVerificationKeyFile opt desc = VerificationKeyFile <$> parseFilePath opt desc
 
 pNodeCmd :: Mod CommandFields NodeCmd
 pNodeCmd =
@@ -635,8 +588,6 @@ parseByronKeyFormat = asum
   , flag' NonLegacyByronKeyFormat $ hidden <> long "real-pbft"
   ]
 
-parseCertificateFile :: String -> String -> Parser CertificateFile
-parseCertificateFile opt desc = CertificateFile <$> parseFilePath opt desc
 
 parseFakeAvvmOptions :: Parser FakeAvvmOptions
 parseFakeAvvmOptions =
@@ -684,11 +635,6 @@ pTestnetMagic =
       <> Opt.metavar "NATURAL"
       <> Opt.help "Specify a testnet magic id."
       )
-
-parseNewCertificateFile :: String -> Parser NewCertificateFile
-parseNewCertificateFile opt =
-  NewCertificateFile
-    <$> parseFilePath opt "Non-existent file to write the certificate to."
 
 parseNewSigningKeyFile :: String -> Parser NewSigningKeyFile
 parseNewSigningKeyFile opt =
