@@ -443,3 +443,18 @@ Validate CBOR files
 You can validate Byron era blocks, delegation certificates, txs and update proposals with the ``validate-cbor`` command.
 
 ``cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile``
+
+
+Native Token Pre-Production Environment
+=======================================
+
+Thanks for your interest in building native tokens on Cardano. To help you get started we have compiled a handy list of resources:
+
+`Cardano Forum discussion forum <https://forum.cardano.org/c/developers/cardano-tokens/150>`
+
+`Developer Documentation for Native Tokens <https://developers.cardano.org/en/development-environments/native-tokens/native-tokens/>`
+
+
+**Please note that over the holiday period, technical support for the pre-production environment and token builder tool will be extremely limited**. Support is unavailable between the dates of 23rd - 27th December and 31 December - 3rd January inclusive. Outside these hours, our technical and community teams will be periodically checking in on the GitHub repo and dedicated Cardano Forum discussion forum, to expedite any urgent queries or requests. We encourage you to draw on community feedback and support as much as possible.
+
+If you require test ada during this period, please `fill out this form <https://input-output.typeform.com/to/KmeBcnDa>` and you will be sent your test ada. Note that until the wallet backend is fully integrated, this is an essentially manual process and there may therefore be some delay before the request is processed.  For technical reasons, it may only be possible to fund newly created addresses that have been properly set up on the Pre-Production Environment.  Unfortunately, since the form only records payment addresses, it will not be possible to contact you if the funding attempt fails, or to notify you that it has succeeded. Please check that you have submitted the address correctly, and retry if you need to
