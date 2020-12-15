@@ -14,9 +14,6 @@ import           Cardano.Prelude hiding (option)
 
 import qualified Codec.CBOR.Decoding as D
 import qualified Codec.CBOR.Encoding as E
-import           Data.Coerce (coerce)
-import qualified Data.Text as T
-import           Lens.Micro (LensLike, _Left)
 
 import           Cardano.Crypto.Signing (SigningKey (..))
 import qualified Cardano.Crypto.Wallet as Wallet
@@ -34,10 +31,7 @@ encodeXPrv a = E.encodeBytes $ Wallet.unXPrv a
 
 decodeXPrv :: D.Decoder s Wallet.XPrv
 decodeXPrv =
-  toCborError . over _Left T.pack . Wallet.xprv =<< D.decodeBytesCanonical
-
-  where over :: LensLike Identity s t a b -> (a -> b) -> s -> t
-        over = coerce
+  toCborError . Wallet.xprv =<< D.decodeBytesCanonical
 
 -- Stolen from: cardano-sl/binary/src/Pos/Binary/Class/Core.hs
 -- | Enforces that the input size is the same as the decoded one, failing in
