@@ -962,8 +962,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
     guard (not (null txIns)) ?! TxBodyEmptyTxIns
     sequence_
       [ do guard (v >= 0) ?! TxBodyOutputNegative (lovelaceToQuantity v) txout
-           guard (v < ub) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
-      | let ub = fromIntegral (maxBound :: Word64) :: Lovelace
+           guard (v <= maxTxOut) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
+      | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
       , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v)) <- txOuts ]
     case txMetadata of
       TxMetadataNone      -> return ()
@@ -1017,8 +1017,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
     guard (not (null txIns)) ?! TxBodyEmptyTxIns
     sequence_
       [ do guard (v >= 0) ?! TxBodyOutputNegative (lovelaceToQuantity v) txout
-           guard (v < ub) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
-      | let ub = fromIntegral (maxBound :: Word64) :: Lovelace
+           guard (v <= maxTxOut) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
+      | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
       , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v)) <- txOuts
       ]
     case txMetadata of
@@ -1085,12 +1085,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
     sequence_
       [ do allPositive
            allWithinMaxBound
-      | let ub = fromIntegral (maxBound :: Word64) :: Quantity
+      | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
       , txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v)) <- txOuts
-      , let allPositive       = case [ q | (_,q) <- valueToList v, q >= 0 ] of
+      , let allPositive       = case [ q | (_,q) <- valueToList v, q < 0 ] of
                                   []  -> Right ()
                                   q:_ -> Left (TxBodyOutputNegative q txout)
-            allWithinMaxBound = case [ q | (_,q) <- valueToList v, q < ub ] of
+            allWithinMaxBound = case [ q | (_,q) <- valueToList v, q > maxTxOut ] of
                                   []  -> Right ()
                                   q:_ -> Left (TxBodyOutputOverflow q txout)
       ]
