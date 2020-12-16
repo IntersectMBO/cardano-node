@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Cardano.CLI.Byron.Run
   ( ByronClientCmdError
   , renderByronClientCmdError
@@ -8,6 +10,7 @@ import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Text as Text
 import qualified Data.Text.Lazy.Builder as Builder
 import qualified Data.Text.Lazy.IO as TL
 import qualified Formatting as F
@@ -22,6 +25,8 @@ import qualified Cardano.Crypto.Signing as Crypto
 import           Cardano.Api hiding (TxIn, TxOut, UpdateProposal)
 import           Cardano.Api.Byron hiding (TxIn, TxOut, UpdateProposal)
 
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Delegation
@@ -31,10 +36,10 @@ import           Cardano.CLI.Byron.Query
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Byron.Vote
-
 import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
+
 -- | Data type that encompasses all the possible errors of the
 -- Byron client.
 data ByronClientCmdError
@@ -44,6 +49,7 @@ data ByronClientCmdError
   | ByronCmdKeyFailure !ByronKeyFailure
   | ByronCmdQueryError !ByronQueryError
   | ByronCmdTxError !ByronTxError
+  | ByronCmdTxSubmitError !(ApplyTxErr ByronBlock)
   | ByronCmdUpdateProposalError !ByronUpdateProposalError
   | ByronCmdVoteError !ByronVoteError
   deriving Show
@@ -57,6 +63,8 @@ renderByronClientCmdError err =
     ByronCmdKeyFailure e -> renderByronKeyFailure e
     ByronCmdQueryError e -> renderByronQueryError e
     ByronCmdTxError e -> renderByronTxError e
+    ByronCmdTxSubmitError e ->
+      "Error while submitting Byron tx: " <> Text.pack (show e)
     ByronCmdUpdateProposalError e -> renderByronUpdateProposalError e
     ByronCmdVoteError e -> renderByronVoteError e
 

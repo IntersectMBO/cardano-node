@@ -252,6 +252,8 @@ test-suite cardano-cli-golden
                         Test.Golden.Byron.PaymentKeys
                         Test.Golden.Byron.Tx
                         Test.Golden.Byron.TxBody
+                        Test.Golden.Byron.UpdateProposal
+                        Test.Golden.Byron.Vote
                         Test.Golden.Byron.Witness
                         Test.Golden.Shelley.Address.Build
                         Test.Golden.Shelley.Address.Info

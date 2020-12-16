@@ -5,6 +5,7 @@
 
 module Cardano.Api.Byron
   ( module Cardano.Api,
+    AsType(..),
 
     -- * Cryptographic key interface
     -- $keys
@@ -67,6 +68,18 @@ module Cardano.Api.Byron
     -- * Address
     NetworkMagic(..),
 
+    -- * Update Proposal
+    ByronUpdateProposal(..),
+    ByronProtocolParametersUpdate (..),
+    makeByronUpdateProposal,
+    toByronLedgerUpdateProposal,
+    makeProtocolParametersUpdate,
+
+    -- * Vote
+    ByronVote(..),
+    makeByronVote,
+    toByronLedgertoByronVote,
+
     -- ** Conversions
     toByronNetworkMagic,
     toByronProtocolMagicId,
@@ -74,4 +87,5 @@ module Cardano.Api.Byron
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.SpecialByron
 import           Cardano.Api.Typed

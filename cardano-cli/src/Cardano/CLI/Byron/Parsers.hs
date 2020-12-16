@@ -12,7 +12,7 @@ module Cardano.CLI.Byron.Parsers
   , parseMpcThd
   , parseScriptVersion
   , parseSlotDuration
-  , parseSoftforkRuleParam
+  , parseSoftforkRule
   , parseSystemTag
   , parseTxFeePolicy
   , parseUpdateProposalThd
@@ -41,8 +41,9 @@ import           Cardano.Crypto.Hashing (hashRaw)
 import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..), ProtocolMagic,
                      ProtocolMagicId (..))
 
-import           Cardano.Chain.Common (Address (..), BlockCount (..), Lovelace, TxFeePolicy (..),
-                     TxSizeLinear (..), decodeAddressBase58, mkLovelace, rationalToLovelacePortion)
+import           Cardano.Chain.Common (Address (..), BlockCount (..), Lovelace, LovelacePortion,
+                     TxFeePolicy (..), TxSizeLinear (..), decodeAddressBase58, mkLovelace,
+                     rationalToLovelacePortion)
 import           Cardano.Chain.Genesis (FakeAvvmOptions (..), TestnetBalanceOptions (..))
 import           Cardano.Chain.Slotting (EpochNumber (..), EpochSlots (..), SlotNumber (..))
 import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..), NumSoftwareVersion,
@@ -51,12 +52,12 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
 import           Cardano.Chain.UTxO (TxId, TxIn (..), TxOut (..))
 
 import           Cardano.Api hiding (Address, Lovelace, TxId, TxIn, TxOut, UpdateProposal)
+import           Cardano.Api.Byron (ByronProtocolParametersUpdate (..))
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
-import           Cardano.CLI.Byron.UpdateProposal
 import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
@@ -354,7 +355,7 @@ parseByronUpdateProposal = do
     <*> parseSystemTag
     <*> parseInstallerHash
     <*> parseFilePath "filepath" "Byron proposal output filepath."
-    <*> parseParametersToUpdate
+    <*> pByronProtocolParametersUpdate
 
 parseByronVoteSubmission :: Parser NodeCmd
 parseByronVoteSubmission = do
@@ -362,25 +363,24 @@ parseByronVoteSubmission = do
     <$> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
-parseParametersToUpdate :: Parser [ParametersToUpdate]
-parseParametersToUpdate =
-  catMaybes
-    <$> sequenceA
-          [ parseScriptVersion
-          , parseSlotDuration
-          , parseMaxBlockSize
-          , parseMaxHeaderSize
-          , parseMaxTxSize
-          , parseMaxProposalSize
-          , parseMpcThd
-          , parseHeavyDelThd
-          , parseUpdateVoteThd
-          , parseUpdateProposalThd
-          , parseUpdateProposalTTL
-          , parseSoftforkRuleParam
-          , parseTxFeePolicy
-          , parseUnlockStakeEpoch
-          ]
+
+pByronProtocolParametersUpdate :: Parser ByronProtocolParametersUpdate
+pByronProtocolParametersUpdate =
+  ByronProtocolParametersUpdate
+    <$> optional parseScriptVersion
+    <*> optional parseSlotDuration
+    <*> optional parseMaxBlockSize
+    <*> optional parseMaxHeaderSize
+    <*> optional parseMaxTxSize
+    <*> optional parseMaxProposalSize
+    <*> optional parseMpcThd
+    <*> optional parseHeavyDelThd
+    <*> optional parseUpdateVoteThd
+    <*> optional parseUpdateProposalThd
+    <*> optional parseUpdateProposalTTL
+    <*> optional parseSoftforkRule
+    <*> optional parseTxFeePolicy
+    <*> optional parseUnlockStakeEpoch
 
 parseByronUpdateProposalSubmission :: Parser NodeCmd
 parseByronUpdateProposalSubmission =
@@ -402,21 +402,21 @@ parseByronVote =
 -- CLI Parsers
 --------------------------------------------------------------------------------
 
-parseScriptVersion :: Parser (Maybe ParametersToUpdate)
-parseScriptVersion = optional $
-  ScriptVersion <$> option auto
-                      ( long "script-version"
-                      <> metavar "WORD16"
-                      <> help "Proposed script version."
-                      )
+parseScriptVersion :: Parser Word16
+parseScriptVersion =
+  option auto
+    ( long "script-version"
+    <> metavar "WORD16"
+    <> help "Proposed script version."
+    )
 
-parseSlotDuration :: Parser (Maybe ParametersToUpdate)
-parseSlotDuration = optional $
-  SlotDuration <$> option auto
-                     ( long "slot-duration"
-                     <> metavar "NATURAL"
-                     <> help "Proposed slot duration."
-                     )
+parseSlotDuration :: Parser Natural
+parseSlotDuration =
+  option auto
+    ( long "slot-duration"
+    <> metavar "NATURAL"
+    <> help "Proposed slot duration."
+    )
 
 parseSystemTag :: Parser SystemTag
 parseSystemTag = option (eitherReader checkSysTag)
@@ -440,41 +440,41 @@ parseInstallerHash =
                   <> help "Software hash."
                   )
 
-parseMaxBlockSize :: Parser (Maybe ParametersToUpdate)
-parseMaxBlockSize = optional $
-  MaxBlockSize <$> option auto
-                     ( long "max-block-size"
-                     <> metavar "NATURAL"
-                     <> help "Proposed max block size."
-                     )
+parseMaxBlockSize :: Parser Natural
+parseMaxBlockSize =
+  option auto
+    ( long "max-block-size"
+    <> metavar "NATURAL"
+    <> help "Proposed max block size."
+    )
 
-parseMaxHeaderSize :: Parser (Maybe ParametersToUpdate)
-parseMaxHeaderSize = optional $
-  MaxHeaderSize <$> option auto
-                      ( long "max-header-size"
-                      <> metavar "NATURAL"
-                      <> help "Proposed max block header size."
-                      )
+parseMaxHeaderSize :: Parser Natural
+parseMaxHeaderSize =
+  option auto
+    ( long "max-header-size"
+    <> metavar "NATURAL"
+    <> help "Proposed max block header size."
+    )
 
-parseMaxTxSize :: Parser (Maybe ParametersToUpdate)
-parseMaxTxSize = optional $
-  MaxTxSize <$> option auto
-                  ( long "max-tx-size"
-                  <> metavar "NATURAL"
-                  <> help "Proposed max transaction size."
-                  )
+parseMaxTxSize :: Parser Natural
+parseMaxTxSize =
+  option auto
+    ( long "max-tx-size"
+    <> metavar "NATURAL"
+    <> help "Proposed max transaction size."
+    )
 
-parseMaxProposalSize :: Parser (Maybe ParametersToUpdate)
-parseMaxProposalSize = optional $
-  MaxProposalSize <$> option auto
-                        ( long "max-proposal-size"
-                        <> metavar "NATURAL"
-                        <> help "Proposed max update proposal size."
-                        )
+parseMaxProposalSize :: Parser  Natural
+parseMaxProposalSize =
+  option auto
+    ( long "max-proposal-size"
+    <> metavar "NATURAL"
+    <> help "Proposed max update proposal size."
+    )
 
-parseMpcThd :: Parser (Maybe ParametersToUpdate)
-parseMpcThd = optional $
-  MpcThd . rationalToLovelacePortion
+parseMpcThd :: Parser LovelacePortion
+parseMpcThd =
+  rationalToLovelacePortion
     <$> parseFraction "max-mpc-thd" "Proposed max mpc threshold."
 
 parseProtocolVersion :: Parser ProtocolVersion
@@ -483,38 +483,37 @@ parseProtocolVersion =
                   <*> (parseWord "protocol-version-minor" "Protocol verson minor." "WORD16" :: Parser Word16)
                   <*> (parseWord "protocol-version-alt" "Protocol verson alt." "WORD8" :: Parser Word8)
 
-parseHeavyDelThd :: Parser (Maybe ParametersToUpdate)
-parseHeavyDelThd = optional $
-  HeavyDelThd . rationalToLovelacePortion
+parseHeavyDelThd :: Parser LovelacePortion
+parseHeavyDelThd =
+  rationalToLovelacePortion
     <$> parseFraction "heavy-del-thd" "Proposed heavy delegation threshold."
 
-parseUpdateVoteThd :: Parser (Maybe ParametersToUpdate)
-parseUpdateVoteThd = optional $
-  UpdateVoteThd . rationalToLovelacePortion
+parseUpdateVoteThd :: Parser LovelacePortion
+parseUpdateVoteThd =
+  rationalToLovelacePortion
     <$> parseFraction "update-vote-thd" "Propose update vote threshold."
 
-parseUpdateProposalThd :: Parser (Maybe ParametersToUpdate)
-parseUpdateProposalThd = optional $
-  UpdateProposalThd . rationalToLovelacePortion
+parseUpdateProposalThd :: Parser LovelacePortion
+parseUpdateProposalThd =
+  rationalToLovelacePortion
     <$> parseFraction "update-proposal-thd" "Propose update proposal threshold."
 
-parseUpdateProposalTTL :: Parser (Maybe ParametersToUpdate)
-parseUpdateProposalTTL = optional $
-  UpdateProposalTTL . SlotNumber
+parseUpdateProposalTTL :: Parser SlotNumber
+parseUpdateProposalTTL =
+  SlotNumber
     <$> option auto
           ( long "time-to-live"
           <> metavar "WORD64"
           <> help "Proposed time for an update proposal to live."
           )
 
-parseSoftforkRuleParam :: Parser (Maybe ParametersToUpdate)
-parseSoftforkRuleParam = optional $
-  SoftforkRuleParam
-    <$> (SoftforkRule
-           <$> (rationalToLovelacePortion <$> parseFraction "softfork-init-thd" "Propose initial threshold (right after proposal is confirmed).")
-           <*> (rationalToLovelacePortion <$> parseFraction "softfork-min-thd" "Propose minimum threshold (threshold can't be less than this).")
-           <*> (rationalToLovelacePortion <$> parseFraction "softfork-thd-dec" "Propose threshold decrement (threshold will decrease by this amount after each epoch).")
-        )
+parseSoftforkRule :: Parser SoftforkRule
+parseSoftforkRule =
+  SoftforkRule
+    <$> (rationalToLovelacePortion <$> parseFraction "softfork-init-thd" "Propose initial threshold (right after proposal is confirmed).")
+    <*> (rationalToLovelacePortion <$> parseFraction "softfork-min-thd" "Propose minimum threshold (threshold can't be less than this).")
+    <*> (rationalToLovelacePortion <$> parseFraction "softfork-thd-dec" "Propose threshold decrement (threshold will decrease by this amount after each epoch).")
+
 
 parseSoftwareVersion :: Parser SoftwareVersion
 parseSoftwareVersion =
@@ -541,9 +540,9 @@ parseNumSoftwareVersion =
     "Numeric software version associated with application name."
     "WORD32"
 
-parseTxFeePolicy :: Parser (Maybe ParametersToUpdate)
-parseTxFeePolicy = optional $
-  TxFeePolicy . TxFeePolicyTxSizeLinear
+parseTxFeePolicy :: Parser TxFeePolicy
+parseTxFeePolicy =
+  TxFeePolicyTxSizeLinear
     <$> ( TxSizeLinear <$> parseLovelace "tx-fee-a-constant" "Propose the constant a for txfee = a + b*s where s is the size."
                        <*> parseFraction "tx-fee-b-constant" "Propose the constant b for txfee = a + b*s where s is the size."
         )
@@ -552,9 +551,9 @@ parseVoteBool :: Parser Bool
 parseVoteBool = flag' True (long "vote-yes" <> help "Vote yes with respect to an update proposal.")
             <|> flag' False (long "vote-no" <> help "Vote no with respect to an update proposal.")
 
-parseUnlockStakeEpoch :: Parser (Maybe ParametersToUpdate)
-parseUnlockStakeEpoch = optional $
-  UnlockStakeEpoch . EpochNumber
+parseUnlockStakeEpoch :: Parser EpochNumber
+parseUnlockStakeEpoch =
+  EpochNumber
     <$> option auto
       ( long "unlock-stake-epoch"
       <> metavar "WORD64"
