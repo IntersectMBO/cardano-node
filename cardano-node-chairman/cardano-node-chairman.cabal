@@ -116,6 +116,9 @@ test-suite chairman-tests
                       , random
                       , resourcet
                       , tasty
+                      -- Workaround for https://github.com/input-output-hk/haskell.nix/issues/231
+                      -- Should be in build-tool-depends instead
+                      , tasty-discover
                       , tasty-hedgehog
                       , temporary
                       , text
@@ -138,10 +141,12 @@ test-suite chairman-tests
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-  build-tool-depends:   tasty-discover:tasty-discover
-                      , cardano-node:cardano-node
+  build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-node-chairman:cardano-node-chairman
+                      -- Workaround for https://github.com/input-output-hk/haskell.nix/issues/231
+                      -- Included in build-depends instead
+                      -- , tasty-discover:tasty-discover
 
 executable cardano-testnet
   import:               common-modules
