@@ -173,6 +173,9 @@ let
       packages = lib.genAttrs ["cardano-node"]
         (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
     })
+    {
+      packages.ghcOptions = "-g3";
+    }
     (lib.optionalAttrs profiling {
       enableLibraryProfiling = true;
       packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
