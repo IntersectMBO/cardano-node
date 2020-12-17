@@ -494,7 +494,7 @@ pTransaction =
   pTransactionBuild :: Parser TransactionCmd
   pTransactionBuild = TxBuildRaw <$> pCardanoEra
                                  <*> some pTxIn
-                                 <*> some pTxOut
+                                 <*> many pTxOut
                                  <*> optional pMintMultiAsset
                                  <*> optional pInvalidBefore
                                  <*> optional pInvalidHereafter
