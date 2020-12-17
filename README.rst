@@ -34,6 +34,11 @@ How to build
 
 Documentation for building the node can be found `here <https://docs.cardano.org/projects/cardano-node/en/latest/getting-started/install.html>`_.
 
+Linux Executable
+==================
+
+You can download the latest version of ``cardano-node`` and ``cardano-cli`` `here <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-linux/latest-finished>`_.
+
 Windows Executable
 ==================
 
