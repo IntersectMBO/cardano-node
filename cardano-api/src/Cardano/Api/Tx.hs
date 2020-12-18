@@ -50,7 +50,6 @@ module Cardano.Api.Tx (
 import           Data.Maybe
 
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import qualified Data.Map.Strict as Map
@@ -95,6 +94,7 @@ import qualified Cardano.Ledger.Api as L
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.Crypto.Ed25519Bip32
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
@@ -738,10 +738,11 @@ makeShelleyBasedBootstrapWitness era nwOrAddr txbody (ByronSigningKey sk) =
     --
     signature :: Shelley.SignedDSIGN StandardCrypto
                   (Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody)
-    signature = makeShelleySignature
-                  txhash
-                  -- Make the signature with the extended key directly:
-                  (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
+    signature =
+      makeShelleySignature
+        txhash
+        -- Make the signature with the extended key directly:
+        (ShelleyExtendedSigningKey (SignKeyEd25519Bip32DSIGN $ Byron.unSigningKey sk))
 
     txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
     txhash = Ledger.extractHash (Ledger.hashAnnotated txbody)
@@ -843,7 +844,7 @@ data ShelleySigningKey =
        ShelleyNormalSigningKey   (Shelley.SignKeyDSIGN StandardCrypto)
 
        -- | An extended ed25519 signing key
-     | ShelleyExtendedSigningKey Crypto.HD.XPrv
+     | ShelleyExtendedSigningKey (Crypto.SignKeyDSIGN Ed25519Bip32DSIGN)
 
 
 toShelleySigningKey :: ShelleyWitnessSigningKey -> ShelleySigningKey
@@ -901,19 +902,15 @@ makeShelleySignature tosign (ShelleyNormalSigningKey sk) =
     Crypto.signedDSIGN () tosign sk
 
 makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
-    fromXSignature $
-      Crypto.HD.sign
-        BS.empty  -- passphrase for (unused) in-memory encryption
-        sk
-        (Crypto.getSignableRepresentation tosign)
+    fromXSignature (Crypto.signDSIGN () tosign sk)
   where
-    fromXSignature :: Crypto.HD.XSignature
+    fromXSignature :: Crypto.SigDSIGN Ed25519Bip32DSIGN
                    -> Shelley.SignedDSIGN StandardCrypto b
-    fromXSignature =
+    fromXSignature (SigEd25519Bip32DSIGN xSig) =
         Crypto.SignedDSIGN
       . fromMaybe impossible
       . Crypto.rawDeserialiseSigDSIGN
-      . Crypto.HD.unXSignature
+      $ Crypto.HD.unXSignature xSig
 
     impossible =
       error "makeShelleyKeyWitnessSignature: byron and shelley signature sizes do not match"
