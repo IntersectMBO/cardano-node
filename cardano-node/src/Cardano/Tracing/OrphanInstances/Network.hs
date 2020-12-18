@@ -1,8 +1,11 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,6 +20,9 @@ import           Prelude (String, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Text (pack)
+
+import           Network.TypedProtocol.Core (ClientHasAgency,
+                     PeerHasAgency (..), ServerHasAgency)
 
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket (SockAddr)
@@ -443,6 +449,32 @@ instance ( ConvertTxId blk
     mkObject [ "kind" .= String "MsgClientDone"
              , "agency" .= String (pack $ show stok)
              ]
+
+instance ( ToObject (AnyMessageAndAgency ps)
+         , forall (st :: ps). Show (ClientHasAgency st)
+         , forall (st :: ps). Show (ServerHasAgency st)
+         )
+      => ToObject (AnyMessageAndAgency (Hello ps stIdle)) where
+  toObject verb (AnyMessageAndAgency stok msg) =
+    case (stok, msg) of
+      (_, Hello.MsgHello) ->
+        mkObject [ "kind" .= String "MsgHello"
+                 , "agency" .= String (pack $ show stok)
+                 ]
+      ( ClientAgency (Hello.TokClientTalk tok)
+        , Hello.MsgTalk msg' ) ->
+        mkObject [ "kind" .= String "MsgTalk"
+                 , "message" .=
+                     toObject verb
+                       (AnyMessageAndAgency (ClientAgency tok) msg')
+                 ]
+      ( ServerAgency (Hello.TokServerTalk tok)
+        , Hello.MsgTalk msg' ) ->
+        mkObject [ "kind" .= String "MsgTalk"
+                 , "message" .=
+                     toObject verb
+                       (AnyMessageAndAgency (ServerAgency tok) msg')
+                 ]
 
 instance (forall result. Show (query result))
       => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
