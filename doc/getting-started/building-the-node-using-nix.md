@@ -1,11 +1,4 @@
-# Building Cardano Node
-
-There are a number of ways the Cardano Node can be built and run, but the following document
-details the Nix and Ubuntu/Debian methods. The Nix method is probably more robust and foolproof
-than installing on Ubuntu/Debian.
-
-
-### Building under Nix
+# Building Cardano Node with nix
 
 The [Nix Package Manager][nix] can be installed on most Linux distributions by downloading and
 running the installation script:
@@ -27,7 +20,7 @@ trusted-public-keys = iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7R
 EOF
 ```
 
-Once Nix is installed, log out and then log back in and then in a `nix-shell` session:
+Once Nix is installed, log out and then log back in then:
 ```
 git clone https://github.com/input-output-hk/cardano-node
 cd cardano-node
@@ -35,73 +28,4 @@ nix-build -A scripts.mainnet.node -o mainnet-node-local
 ./mainnet-node-local
 ```
 
-### Building under Debian/Ubuntu or CentOS
-The required versions are [GHC 8.10.2][ghc8102] and [Cabal-3.0][cabal30].
-You best get them with the Haskell installer tool [ghcup][ghcup].
-
-```
-curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
-```
-confirm 2x ENTER and type YES at the end to add ghcup to your PATH variable
-Then restart your terminal session or execute
-
-```
-source ~/.ghcup/env
-```
-to use the ghcup command for the next steps
-
-Now install and activate the required GHC version
-```
-ghcup install ghc 8.10.2
-ghcup set ghc 8.10.2
-ghc --version
-```
-or use the interactive TUI to do so:
-```
-ghcup tui
-```
-The code in the Haskell node also requires that the development packages for a couple of Linux
-system libraries be installed:
-
-The instructions for **Debian** and **Ubuntu** are identical.
-
-```
-sudo apt-get update
-sudo apt-get -y install pkg-config libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev
-```
-If you're using **CentOS**, the corresponding packages will be:
-
-```
-sudo yum update
-sudo yum -y install pkgconfig gmp-devel openssl-devel ncurses-libs systemd-devel zlib-devel
-```
-
-Finally the Cardano Node git repo can be cloned and the code built:
-```
-git clone https://github.com/input-output-hk/cardano-node
-cd cardano-node
-cabal build all
-```
-
-Now you can copy the binaries
-```
-cardano-node
-cardano-cli
-chairman
-```
-into your ~/.local/bin folder (when part of the PATH variable)
-you can see the build location path from the last 3 output lines.
-for cardano-node 1.9.3 it is
-```
-~/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-1.9.3/x/cardano-cli/build/cardano-cli/
-```
-
-
-
-
-
-
-[ghcup]: https://www.haskell.org/ghcup/
-[cabal30]: https://www.haskell.org/cabal/download.html
-[ghc865]: https://www.haskell.org/ghc/blog/20200808-ghc-8.10.2-released.html
 [nix]: https://nixos.org/nix/
