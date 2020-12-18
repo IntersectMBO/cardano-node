@@ -22,7 +22,7 @@ if rtd_version not in ["stable", "latest"]:
 # -- Project information -----------------------------------------------------
 
 project = 'cardano-node Documentation'
-copyright = '2020, IOHK'
+copyright = '2021, IOHK'
 author = 'IOHK'
 
 # The full version, including alpha/beta/rc tags
