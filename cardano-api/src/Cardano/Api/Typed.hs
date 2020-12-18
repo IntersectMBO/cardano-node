@@ -84,6 +84,8 @@ module Cardano.Api.Typed (
     -- ** Byron addresses
     makeByronAddress,
     ByronKey,
+    ByronKeyLegacy,
+
     -- ** Shelley addresses
     makeShelleyAddress,
     PaymentCredential(..),
@@ -475,6 +477,8 @@ module Cardano.Api.Typed (
 
     -- ** Conversions
     --TODO: arrange not to export these
+    fromByronTxIn,
+    toByronLovelace,
     toByronNetworkMagic,
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,

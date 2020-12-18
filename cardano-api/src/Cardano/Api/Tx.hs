@@ -73,11 +73,11 @@ import qualified Cardano.Crypto.Wallet as Crypto.HD
 --
 -- Byron imports
 --
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.ProtocolMagic as Byron
 import qualified Cardano.Crypto.Signing as Byron
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.UTxO as Byron
 
 --
 -- Shelley imports
@@ -521,9 +521,10 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txmetadata) =
           (maybeToStrictMaybe txmetadata)
 
 
-makeByronKeyWitness :: NetworkId
+makeByronKeyWitness :: forall key. IsByronLegacyFormat key
+                    => NetworkId
                     -> TxBody ByronEra
-                    -> SigningKey ByronKey
+                    -> SigningKey key
                     -> Witness ByronEra
 makeByronKeyWitness _ (ShelleyTxBody era _ _) = case era of {}
 makeByronKeyWitness nw (ByronTxBody txbody) =
@@ -535,11 +536,18 @@ makeByronKeyWitness nw (ByronTxBody txbody) =
 
         -- To allow sharing of the txhash computation across many signatures we
         -- define and share the txhash outside the lambda for the signing key:
-     in \(ByronSigningKey sk) ->
-        ByronKeyWitness $
-          Byron.VKWitness
-            (Byron.toVerification sk)
-            (Byron.sign pm Byron.SignTx sk (Byron.TxSigData txhash))
+     in case isLegacyFormat :: ByronKeyFormat key of
+          ByronLegacyKeyFormat ->
+            \(ByronSigningKeyLegacy sk) -> witness sk pm txhash
+          ByronNonLegacyKeyFormat ->
+            \(ByronSigningKey sk) -> witness sk pm txhash
+ where
+   witness :: Byron.SigningKey -> Byron.ProtocolMagicId -> Byron.Hash Byron.Tx -> Witness ByronEra
+   witness sk pm txHash =
+     ByronKeyWitness $
+       Byron.VKWitness
+         (Byron.toVerification sk)
+         (Byron.sign pm Byron.SignTx sk (Byron.TxSigData txHash))
 
 -- | Either a network ID or a Byron address to be used in constructing a
 -- Shelley bootstrap witness.

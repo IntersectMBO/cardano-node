@@ -86,6 +86,9 @@ module Cardano.Api.TxBody (
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody),
+
+    -- * Conversion functions
+    fromByronTxIn,
   ) where
 
 import           Prelude
@@ -224,6 +227,13 @@ newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
 
+fromByronTxIn :: Byron.TxIn -> TxIn
+fromByronTxIn (Byron.TxInUtxo txId index) =
+  let shortBs = Byron.abstractHashToShort txId
+      mApiHash = Crypto.hashFromBytesShort shortBs
+  in case mApiHash of
+       Just apiHash -> TxIn (TxId apiHash) (TxIx . fromIntegral $ toInteger index)
+       Nothing -> error $ "Error converting Byron era TxId: " <> show txId
 
 toByronTxIn :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
