@@ -1,25 +1,19 @@
-# Development build of Cardano Node on Windows
+# Building the development version of the Cardano node on Windows
 
-This document describes how to build a __DEVELOPMENT__ version of `cardano-node`.
-This is not a __PRODUCTION__ build!
+This document explains how to build a __DEVELOPMENT__ version of the `cardano-node`.
+Note that this is *not* for building a __PRODUCTION__ version of the node. 
 
-Building on `Windows` is a non trivial task.  There are various tools one needs
-to install and configure.  We recommend to use
-[chocolatey](https://chocolatey.org) (which provides the `choco` command) to
-install them.
+To start building on `Windows`, you will need to install and configure specific tools outlined below. We recommend using [chocolatey](https://chocolatey.org), which provides the `choco` command to install these tools.  
 
-All instructions that invoke `choco` can be done in a PowerShell with root
-privileges.  For development work we recommend installing and using `git-bash`
-(which comes `git` when installed with `choco install git`).
+You can run all the instructions that invoke `choco` in PowerShell with root privileges. We recommend installing and using `git-bash` for development purposes, which is `git` when installed with `choco install git`.
 
 ## Install GHC
 
-The recommended way is to
+The recommended way is to run the following command in PowerShell:
 
 ```PowerShell
 choco install --version 8.10.2 ghc
 ```
-in PowerShell>
 
 ## Install pkg-config
 
@@ -29,31 +23,26 @@ choco install pgkconfiglite
 
 ## Install vcpkg
 
-`vcpkg` is needed to install `libsodium` library, which will be the
-next step.
+You will first need to install `vcpkg` to proceed with `libsodium` library installation (which is the next step). 
 
-To install it one needs `git` (which you can also install using `choco`).  Then
-follow [these
-instructions](https://github.com/microsoft/vcpkg#quick-start-windows)
+For this, use `git`(which you can also install using `choco`) and follow [these
+instructions](https://github.com/microsoft/vcpkg#quick-start-windows).
 
-Now you can install `libsodium` with:
+You can now install `libsodium` with the following command:
 ```bash
 ./vcpkg install --triplet x64-windows libsodium
 ```
 
-## Write libsodium.pc file
+## Create libsodium.pc file
 
-`cabal` is using `pkg-config` to find system dependencies, like `libsodium`.
-On Windows we need to write `libsodium.pc` description file in a correct
+To find system dependencies like `libsodium`, `cabal` uses `pkg-config`. On Windows, you will need to create the `libsodium.pc` description file in a correct
 directory.
 
 In one of the paths reported by:
 ```bash
 pkg-config --variable pc_path pkg-config
 ```
-create `libsodium.pc` file, which contains (but replace `VCPKG_PATH` with the
-absolute path where you put `vcpkg`, please verify that the paths below contain
-`libsodium.dll` file and headers).
+create `libsodium.pc` file, which contains:
 
 ```
 libdir=VCPKG_PATH/installed/x64-windows/bin
@@ -64,15 +53,17 @@ Description: libsodium library
 Cflags: -I${includedir}/sodium
 Libs: -L${libdir} -llibsodium
 ```
+> Note that you need to replace `VCPKG_PATH` with the
+absolute path, where you use `vcpkg`. Please verify that the paths above contain
+`libsodium.dll` file and headers.
 
-Note: one cannot use `prefix=` in `libsodium.pc` file, it might be changed for
+> Also, you cannot use `prefix=` in the `libsodium.pc` file. This might be changed for
 some other directory, `pkg-config` provides a switch to use the provided
-`prefix`, but there's no way to instruct `cabal` to do so.
+`prefix`, but there is no way to instruct `cabal` to do so.
 
+## `cabal` configuration
 
-## cabal configuration
-
-Now go to the directory where you cloned `cardano-node` repository and add this
+Go to the directory, where you cloned the `cardano-node` repository and add the command below
 to your `cabal.project.local` file (if you don't already have it, create one):
 
 ```
@@ -86,25 +77,25 @@ extra-lib-dirs: "VCPKG_PATH\\installed\\x64-windows\\bin"
 extra-include-dirs: "VCPKG_PATH\\installed\\x64-windows\\include"
 ```
 
-The final part is to add `VCPKG_PATH/installed/x64-windows/bin` to `PATH`
-variable, since we are using `git-bash` this can be done with (remember
-to substitute `VCPKG_PATH` with real path):
+The final step is to add `VCPKG_PATH/installed/x64-windows/bin` to the `PATH`
+variable. Since we are using `git-bash`, you can do this with: 
 
 ```
 export PATH="VCPKG_PATH/installed/x64-windows/bin:${PATH}"
 ```
+*Remember to substitute `VCPKG_PATH` with the real path.*
 
-Now build the node with:
+You can now build the node with:
 
 ```bash
 cabal build --builddir /c/dist exe:cardano-node
 ```
-Note: using `--builddir /c/dist` with a succinct directory protects you
-from exceeding [maximal path
+> Note: using `--builddir /c/dist` with a succinct directory protects you
+from exceeding the [maximal path
 size](https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation)
 on Windows (which is a limitation of the linker rather than `ghc` itself).
 
-Now you can verify that the node can run:
+You can now verify whether the node runs: 
 ```bash
 cabal run --builddir /c/dist exe:cardano-node -- run --help
 ```
