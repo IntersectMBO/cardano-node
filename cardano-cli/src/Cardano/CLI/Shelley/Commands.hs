@@ -49,6 +49,7 @@ import           Data.Text (Text)
 import           Prelude
 
 import           Cardano.Api
+import           Cardano.Api.Modes
 import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Shelley hiding (PoolId)
 
@@ -184,7 +185,7 @@ data TransactionCmd
   | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
-  | TxSubmit Protocol NetworkId FilePath
+  | TxSubmit AnyConsensusModeParams NetworkId FilePath
   | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
       TxBodyFile

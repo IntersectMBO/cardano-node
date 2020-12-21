@@ -24,12 +24,14 @@ library
                         -- modules above
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.LocalChainSync
+                        Cardano.Api.Modes
                         Cardano.Api.Protocol
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Shelley.Genesis
+                        Cardano.Api.TxInMode
                         Cardano.Api.TxSubmit
                         Cardano.Api.Typed
 
@@ -56,7 +58,6 @@ library
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysShelley
                         Cardano.Api.KeysPraos
-                        Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.ProtocolParameters
@@ -71,7 +72,6 @@ library
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
-                        Cardano.Api.TxInMode
                         Cardano.Api.TxMetadata
                         Cardano.Api.Utils
                         Cardano.Api.Value
