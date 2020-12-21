@@ -3,7 +3,7 @@
 This document explains how to build a __DEVELOPMENT__ version of the `cardano-node`.
 Note that this is *not* for building a __PRODUCTION__ version of the node. 
 
-To start building on `Windows`, you will need to install and configure specific tools outlined below. We recommend using [chocolatey](https://chocolatey.org), which uses the `choco` command to install these tools.  
+To start building on `Windows`, you will need to install and configure specific tools outlined below. We recommend using [chocolatey](https://chocolatey.org), which provides the `choco` command to install these tools.  
 
 You can run all the instructions that invoke `choco` in PowerShell with root privileges. We recommend installing and using `git-bash` for development purposes, which is `git` when installed with `choco install git`.
 
