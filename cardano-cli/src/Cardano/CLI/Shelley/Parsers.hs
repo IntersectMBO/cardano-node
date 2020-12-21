@@ -17,6 +17,7 @@ import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
 import           Cardano.Api
+import           Cardano.Api.Modes
 import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Shelley
 
@@ -527,7 +528,7 @@ pTransaction =
                                     <*> pOutputFile
 
   pTransactionSubmit :: Parser TransactionCmd
-  pTransactionSubmit = TxSubmit <$> pProtocol
+  pTransactionSubmit = TxSubmit <$> pConsensusModeParams
                                 <*> pNetworkId
                                 <*> pTxSubmitFile
 
@@ -2272,6 +2273,32 @@ pExtraEntropy =
                       . B16.decode
                     =<< Atto.takeWhile1 Char.isHexDigit
 
+
+pConsensusModeParams :: Parser AnyConsensusModeParams
+pConsensusModeParams = asum
+  [ Opt.flag' (AnyConsensusModeParams ShelleyModeParams)
+      (  Opt.long "shelley-mode"
+      <> Opt.help "For talking to a node running in Shelley-only mode."
+      )
+  , Opt.flag' ()
+      (  Opt.long "byron-mode"
+      <> Opt.help "For talking to a node running in Byron-only mode."
+      )
+       *> pByronConsensusMode
+  , Opt.flag' ()
+      (  Opt.long "cardano-mode"
+      <> Opt.help "For talking to a node running in full Cardano mode (default)."
+      )
+       *> pCardanoConsensusMode
+  , -- Default to the Cardano consensus mode.
+    pure . AnyConsensusModeParams . CardanoModeParams $ EpochSlots defaultByronEpochSlots
+  ]
+ where
+   pCardanoConsensusMode :: Parser AnyConsensusModeParams
+   pCardanoConsensusMode = AnyConsensusModeParams . CardanoModeParams <$> pEpochSlots
+   pByronConsensusMode :: Parser AnyConsensusModeParams
+   pByronConsensusMode = AnyConsensusModeParams . ByronModeParams <$> pEpochSlots
+
 pProtocol :: Parser Protocol
 pProtocol =
     (  Opt.flag' ()
@@ -2309,19 +2336,19 @@ pProtocol =
     pCardanoMode :: Parser Protocol
     pCardanoMode = CardanoProtocol <$> pEpochSlots
 
-    pEpochSlots :: Parser EpochSlots
-    pEpochSlots =
-      EpochSlots <$>
-        Opt.option Opt.auto
-          (  Opt.long "epoch-slots"
-          <> Opt.metavar "NATURAL"
-          <> Opt.help "The number of slots per epoch for the Byron era."
-          <> Opt.value defaultByronEpochSlots -- Default to the mainnet value.
-          <> Opt.showDefault
-          )
+defaultByronEpochSlots :: Word64
+defaultByronEpochSlots = 21600
 
-    defaultByronEpochSlots :: Word64
-    defaultByronEpochSlots = 21600
+pEpochSlots :: Parser EpochSlots
+pEpochSlots =
+  EpochSlots <$>
+    Opt.option Opt.auto
+      (  Opt.long "epoch-slots"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The number of slots per epoch for the Byron era."
+      <> Opt.value defaultByronEpochSlots -- Default to the mainnet value.
+      <> Opt.showDefault
+      )
 
 pProtocolVersion :: Parser (Natural, Natural)
 pProtocolVersion =
