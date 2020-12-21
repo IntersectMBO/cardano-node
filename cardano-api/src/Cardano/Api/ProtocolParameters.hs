@@ -13,6 +13,7 @@
 module Cardano.Api.ProtocolParameters (
     UpdateProposal(..),
     ProtocolParametersUpdate(..),
+    EpochNo,
     makeShelleyUpdateProposal,
 
     -- * PraosNonce
