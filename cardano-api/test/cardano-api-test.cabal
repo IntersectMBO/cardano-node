@@ -30,6 +30,7 @@ library
                       , cardano-prelude
                       , containers
                       , hedgehog
+                      , shelley-spec-ledger
                       , tasty
                       , tasty-hedgehog
                       , text
