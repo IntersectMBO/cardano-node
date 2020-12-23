@@ -63,6 +63,11 @@ planJsonFile = IO.unsafePerformIO $ do
 exeSuffix :: String
 exeSuffix = if OS.isWin32 then ".exe" else ""
 
+addExeSuffix :: String -> String
+addExeSuffix s = if ".exe" `L.isSuffixOf` s
+  then s
+  else s <> exeSuffix
+
 -- | Create a process returning handles to stdin, stdout, and stderr as well as the process handle.
 createProcess
   :: (MonadTest m, MonadResource m, HasCallStack)
@@ -175,7 +180,7 @@ procDist pkg arguments = do
   case eitherDecode contents of
     Right plan -> case L.filter matching (plan & installPlan) of
       (component:_) -> case component & binFile of
-        Just bin -> return $ IO.proc (T.unpack bin <> exeSuffix) arguments
+        Just bin -> return $ IO.proc (addExeSuffix (T.unpack bin)) arguments
         Nothing -> error $ "missing bin-file in: " <> show component
       [] -> error $ "Cannot find exe:" <> pkg <> " in plan"
     Left message -> error $ "Cannot decode plan: " <> message
