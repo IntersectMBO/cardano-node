@@ -22,7 +22,6 @@ module Cardano.Api.IPC (
     LocalNodeConnectInfo(..),
     localConsensusMode,
     LocalNodeClientProtocols(..),
-    LocalNodeClientProtocolsInMode,
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
@@ -39,6 +38,7 @@ module Cardano.Api.IPC (
 
     -- *** Local state query
     LocalStateQueryClient(..),
+    AcquireFailure(..),
     QueryInMode(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
@@ -67,6 +67,8 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client   as Net.Quer
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client
                    (LocalStateQueryClient(..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type     as Net.Query
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
+                   (AcquireFailure(..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
                    (LocalTxSubmissionClient(..), SubmitResult(..))
@@ -93,39 +95,33 @@ import           Cardano.Api.TxInMode
 -- The types for the client side of the node-to-client IPC protocols
 --
 
-data LocalNodeClientProtocols block point tip tx txerr query m =
+-- | The protocols we can use with a local node. Use in conjunction with
+-- 'connectToLocalNode'.
+--
+-- These protocols use the types from the rest of this API. The conversion
+-- to\/from the types used by the underlying wire formats is handled by
+-- 'connectToLocalNode'.
+--
+data LocalNodeClientProtocols mode =
      LocalNodeClientProtocols {
        localChainSyncClient
-         :: Maybe (ChainSyncClient         block point tip   m ())
-
-     , localTxSubmissionClient
-         :: Maybe (LocalTxSubmissionClient tx txerr          m ())
+         :: Maybe (ChainSyncClient (BlockInMode mode)
+                                    ChainPoint
+                                    ChainTip
+                                    IO ())
 
      , localStateQueryClient
-         :: Maybe (LocalStateQueryClient   block point query m ())
+         :: Maybe (LocalStateQueryClient (BlockInMode mode)
+                                          ChainPoint
+                                         (QueryInMode mode)
+                                          IO ())
+
+     , localTxSubmissionClient
+         :: Maybe (LocalTxSubmissionClient (TxInMode mode)
+                                           (TxValidationErrorInMode mode)
+                                            IO ())
      }
 
--- public, exported
-type LocalNodeClientProtocolsInMode mode =
-       LocalNodeClientProtocols
-         (BlockInMode mode)
-         ChainPoint
-         ChainTip
-         (TxInMode mode)
-         (TxValidationErrorInMode mode)
-         (QueryInMode mode)
-         IO
-
--- internal, consensus
-type LocalNodeClientProtocolsForBlock block =
-       LocalNodeClientProtocols
-         block
-         (Consensus.Point block)
-         (Net.Tip block)
-         (Consensus.GenTx block)
-         (Consensus.ApplyTxErr block)
-         (Consensus.Query block)
-         IO
 
 data LocalNodeConnectInfo mode =
      LocalNodeConnectInfo {
@@ -153,7 +149,7 @@ consensusModeOnly CardanoModeParams{} = CardanoMode
 -- protocol handlers.
 --
 connectToLocalNode :: LocalNodeConnectInfo mode
-                   -> LocalNodeClientProtocolsInMode mode
+                   -> LocalNodeClientProtocols mode
                    -> IO ()
 connectToLocalNode LocalNodeConnectInfo {
                      localNodeSocketPath,
@@ -199,10 +195,10 @@ mkVersionedProtocols :: forall block.
                              Net.LocalAddress
                              LBS.ByteString IO () Void)
 mkVersionedProtocols networkid ptcl
-                     LocalNodeClientProtocols {
-                       localChainSyncClient,
-                       localTxSubmissionClient,
-                       localStateQueryClient
+                     LocalNodeClientProtocolsForBlock {
+                       localChainSyncClientForBlock,
+                       localTxSubmissionClientForBlock,
+                       localStateQueryClientForBlock
                      } =
      --TODO: really we should construct specific combinations of
      -- protocols for the versions we know about, with different protocol
@@ -231,7 +227,7 @@ mkVersionedProtocols networkid ptcl
                 cChainSyncCodec
                 (maybe Net.chainSyncPeerNull
                        Net.Sync.chainSyncClientPeer
-                       localChainSyncClient)
+                       localChainSyncClientForBlock)
 
         , localTxSubmissionProtocol =
             Net.InitiatorProtocolOnly $
@@ -239,7 +235,8 @@ mkVersionedProtocols networkid ptcl
                 nullTracer
                 cTxSubmissionCodec
                 (maybe Net.localTxSubmissionPeerNull
-                       Net.Tx.localTxSubmissionClientPeer localTxSubmissionClient)
+                       Net.Tx.localTxSubmissionClientPeer
+                       localTxSubmissionClientForBlock)
 
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
@@ -248,7 +245,7 @@ mkVersionedProtocols networkid ptcl
                 cStateQueryCodec
                 (maybe Net.localStateQueryPeerNull
                        Net.Query.localStateQueryClientPeer
-                       localStateQueryClient)
+                       localStateQueryClientForBlock)
         }
       where
         Consensus.Codecs {
@@ -284,13 +281,33 @@ data LocalNodeClientParams where
        -> LocalNodeClientProtocolsForBlock block
        -> LocalNodeClientParams
 
+data LocalNodeClientProtocolsForBlock block =
+     LocalNodeClientProtocolsForBlock {
+       localChainSyncClientForBlock
+         :: Maybe (ChainSyncClient  block
+                                   (Consensus.Point block)
+                                   (Net.Tip         block)
+                                    IO ())
+
+     , localStateQueryClientForBlock
+         :: Maybe (LocalStateQueryClient  block
+                                         (Consensus.Point block)
+                                         (Consensus.Query block)
+                                          IO ())
+
+     , localTxSubmissionClientForBlock
+         :: Maybe (LocalTxSubmissionClient (Consensus.GenTx      block)
+                                           (Consensus.ApplyTxErr block)
+                                            IO ())
+     }
+
 
 -- | Convert from the mode-parametrised style to the block-parametrised style.
 --
 mkLocalNodeClientParams :: forall mode block.
                            ConsensusBlockForMode mode ~ block
                         => ConsensusModeParams mode
-                        -> LocalNodeClientProtocolsInMode mode
+                        -> LocalNodeClientProtocols mode
                         -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =
     -- For each of the possible consensus modes we pick the concrete block type
@@ -320,10 +337,11 @@ mkLocalNodeClientParams modeparams clients =
           (Consensus.ProtocolClientCardano epochSlots)
           (convLocalNodeClientProtocols CardanoMode clients)
 
+
 convLocalNodeClientProtocols :: forall mode block.
                                 ConsensusBlockForMode mode ~ block
                              => ConsensusMode mode
-                             -> LocalNodeClientProtocolsInMode mode
+                             -> LocalNodeClientProtocols mode
                              -> LocalNodeClientProtocolsForBlock block
 convLocalNodeClientProtocols
     mode
@@ -332,15 +350,15 @@ convLocalNodeClientProtocols
       localTxSubmissionClient,
       localStateQueryClient
     } =
-    LocalNodeClientProtocols {
-      localChainSyncClient    = convLocalChainSyncClient mode <$>
-                                  localChainSyncClient,
+    LocalNodeClientProtocolsForBlock {
+      localChainSyncClientForBlock    = convLocalChainSyncClient mode <$>
+                                          localChainSyncClient,
 
-      localTxSubmissionClient = convLocalTxSubmissionClient mode <$>
-                                  localTxSubmissionClient,
+      localTxSubmissionClientForBlock = convLocalTxSubmissionClient mode <$>
+                                          localTxSubmissionClient,
 
-      localStateQueryClient   = convLocalStateQueryClient mode <$>
-                                  localStateQueryClient
+      localStateQueryClientForBlock   = convLocalStateQueryClient mode <$>
+                                          localStateQueryClient
     }
 
 
