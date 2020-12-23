@@ -74,6 +74,7 @@ import           Control.Concurrent.STM
 import           Control.Monad (void)
 import           Control.Tracer (nullTracer)
 
+
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
@@ -83,6 +84,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
                    SubmitResult (..))
@@ -441,44 +443,82 @@ convLocalStateQueryClient mode =
 --
 queryNodeLocalState :: forall mode result.
                        LocalNodeConnectInfo mode
-                    -> ChainPoint
+                    -> Maybe ChainPoint
                     -> QueryInMode mode result
                     -> IO (Either Net.Query.AcquireFailure result)
-queryNodeLocalState connctInfo point query = do
+queryNodeLocalState connctInfo mpoint query = do
+    pointVar  <- maybe newEmptyTMVarIO newTMVarIO mpoint
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
-        localChainSyncClient    = NoLocalChainSyncClient,
-        localTxSubmissionClient = Nothing,
-        localStateQueryClient   = Just (localStateQuerySingle resultVar)
+        localChainSyncClient    = case mpoint of
+                                    Nothing -> LocalChainSyncClient
+                                                 $ getChainPoint pointVar resultVar
+                                    Just{}  -> NoLocalChainSyncClient,
+        localStateQueryClient   = Just (singleQuery pointVar resultVar),
+        localTxSubmissionClient = Nothing
       }
     atomically (takeTMVar resultVar)
   where
-    localStateQuerySingle
-      :: TMVar (Either Net.Query.AcquireFailure result)
+    -- Retry until the local node query protocol
+    -- has returned its result
+    waitOnQuery :: TMVar ChainPoint
+                -> TMVar (Either AcquireFailure result)
+                -> ChainTip -> IO ()
+    waitOnQuery pVar qVar t = do
+      atomically $ putTMVar pVar (chainTipToChainPoint t)
+      atomically $ isEmptyTMVar qVar >>= check . not
+    -- If we were not supplied with a chain point then we'll find out using
+    -- the chain sync protocol.
+    -- TODO: this would be easier if the query protocol supported an implicit
+    -- tip point directly.
+    getChainPoint
+      :: TMVar ChainPoint
+      -> TMVar (Either AcquireFailure result)
+      -> Net.Sync.ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+    getChainPoint pointVar' queryResultVar =
+      Net.Sync.ChainSyncClient $ do
+        pure $
+          Net.Sync.SendMsgRequestNext next (pure next)
+      where
+        next :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+        next = Net.Sync.ClientStNext {
+                 Net.Sync.recvMsgRollForward = \_blk tip ->
+                   Net.Sync.ChainSyncClient $ do
+                     waitOnQuery pointVar' queryResultVar tip
+                     pure $ Net.Sync.SendMsgDone (),
+
+                 Net.Sync.recvMsgRollBackward = \_point tip ->
+                   Net.Sync.ChainSyncClient $ do
+                     waitOnQuery pointVar' queryResultVar tip
+                     pure $ Net.Sync.SendMsgDone ()
+               }
+
+    singleQuery
+      :: TMVar ChainPoint
+      -> TMVar (Either Net.Query.AcquireFailure result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
-    localStateQuerySingle resultVar =
-      LocalStateQueryClient $ pure $
+    singleQuery pointVar' resultVar' =
+      LocalStateQueryClient $ do
+      point <- atomically $ takeTMVar pointVar'
+      pure $
         Net.Query.SendMsgAcquire (Just point) $
-        Net.Query.ClientStAcquiring {
-          Net.Query.recvMsgAcquired = pure $
-            Net.Query.SendMsgQuery query $
-            Net.Query.ClientStQuerying {
-              Net.Query.recvMsgResult = \result -> do
-                --TODO: return the result via the SendMsgDone rather than
-                -- writing into an mvar
-                atomically $ putTMVar resultVar (Right result)
-                pure $ Net.Query.SendMsgRelease $
-                  pure $ Net.Query.SendMsgDone ()
-            }
-        , Net.Query.recvMsgFailure = \failure -> do
-            --TODO: return the result via the SendMsgDone rather than
-            -- writing into an mvar
-            atomically $ putTMVar resultVar (Left failure)
-            pure $ Net.Query.SendMsgDone ()
-        }
+        Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired =
+              pure $ Net.Query.SendMsgQuery query $
+                Net.Query.ClientStQuerying
+                  { Net.Query.recvMsgResult = \result -> do
+                    atomically $ putTMVar resultVar' (Right result)
+
+                    pure $ Net.Query.SendMsgRelease $
+                      pure $ Net.Query.SendMsgDone ()
+                  }
+          , Net.Query.recvMsgFailure = \failure -> do
+              atomically $ putTMVar resultVar' (Left failure)
+              pure $ Net.Query.SendMsgDone ()
+          }
 
 
 submitTxToNodeLocal :: forall mode.
