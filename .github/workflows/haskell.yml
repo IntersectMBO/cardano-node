@@ -20,7 +20,14 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Select build directory
-      run: echo "CABAL_BUILDDIR=dist" >> $GITHUB_ENV
+      run: |
+        CABAL_BUILDDIR=dist
+
+        echo "CABAL_BUILDDIR=$CABAL_BUILDDIR"
+        echo "CABAL_BUILDDIR=$CABAL_BUILDDIR" >> $GITHUB_ENV
+
+    - name: Set cache version
+      run: echo "CACHE_VERSION=9w76Z3Q" >> $GITHUB_ENV
 
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
@@ -29,7 +36,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: retry 2 choco install -y pkgconfiglite
 
-    - name: Install libsodium
+    - name: Install libsodium (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         curl -Ls \
@@ -50,7 +57,7 @@ jobs:
         echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
         echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
 
-    - name: Install libsodium
+    - name: Install libsodium (MacOS)
       if: matrix.os == 'macos-latest'
       run: brew install libsodium
 
@@ -61,18 +68,50 @@ jobs:
           flags: -external-libsodium-vrf
         EOF
 
+    - name: Select optimal cabal version
+      run: |
+        case "$OS" in
+          Windows_NT)   echo "CABAL_VERSION=3.2.0.0"      >> $GITHUB_ENV;;
+          *)            echo "CABAL_VERSION=3.4.0.0-rc4"  >> $GITHUB_ENV;;
+        esac
+
     - uses: actions/setup-haskell@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: '3.2.0.0'
+        cabal-version: ${{ env.CABAL_VERSION }}
+
+    - name: MacOS cabal setup work-around
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo insecure >> $HOME/.curlrc
+        ghcup install cabal 3.4.0.0-rc4
+        ghcup set cabal 3.4.0.0-rc4
+        rm $HOME/.curlrc
+
+    - name: Windows cabal setup work-around
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir -p "$HOME/.local/bin"
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        curl -Ls -o cabal.zip \
+          https://mistuke.blob.core.windows.net/binaries/unofficial/cabal/cabal-install-3.4.0.0-rc3-x86_64-unknown-mingw32.zip
+        unzip cabal.zip
+        mv cabal.exe "$HOME/.local/bin/"
+
+    - name: Haskell versions
+      run: |
+        ghc --version
+        cabal --version
 
     - name: Patch GHC 8.10.2 linker
       if: matrix.os == 'windows-latest' && matrix.ghc == '8.10.2'
       run: |
-        sed -i \
-          's|C:/GitLabRunner/builds/2WeHDSFP/0/ghc/ghc/inplace/mingw/bin/ld.exe|C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/mingw/bin/ld.exe|g' \
-          C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings
+        if [ -f /c/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings ]; then
+          sed -i \
+            's|C:/GitLabRunner/builds/2WeHDSFP/0/ghc/ghc/inplace/mingw/bin/ld.exe|C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/mingw/bin/ld.exe|g' \
+            C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings
+        fi
 
     - name: Install build environment
       if: matrix.os == 'ubuntu-latest'
@@ -89,12 +128,18 @@ jobs:
     - name: Cabal Configure
       run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
+    - name: Record dependencies
+      run: |
+        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
+
     - uses: actions/cache@v2
       name: Cache cabal store
       with:
         path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        key: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
-        restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
+        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        restore-keys: |
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
 
     - name: Install dependencies
       run: retry 2 cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
@@ -121,3 +166,4 @@ jobs:
       with:
         name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
         path: ${{ runner.temp }}/chairman/
+
