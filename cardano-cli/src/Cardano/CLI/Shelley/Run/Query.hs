@@ -181,7 +181,7 @@ runQueryTip (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) network mOu
            ShelleyBasedEra sbe -> do
              let epochQuery = QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryEpoch
                  cPoint = chainTipToChainPoint tip'
-             eResult <- liftIO $ queryNodeLocalState lNodeConnInfo cPoint epochQuery
+             eResult <- liftIO $ queryNodeLocalState lNodeConnInfo (Just cPoint) epochQuery
              case eResult of
                Left _acqFail -> return Nothing
                Right eNum -> case eNum of
