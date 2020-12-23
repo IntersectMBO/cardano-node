@@ -85,7 +85,7 @@ To generate the certificate:
     --kes-verification-key-file kes.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter cold.counter \
-    --kes-period 120 \
+    --kes-period 251 \
     --out-file node.cert
 
 #### Move the cold keys to secure storage and remove them from your local machine.
