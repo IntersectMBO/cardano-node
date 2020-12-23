@@ -47,6 +47,7 @@ import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
+import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.Mary.Value as MA
@@ -60,7 +61,6 @@ import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
-import           Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
 import           Shelley.Spec.Ledger.STS.Deleg
@@ -322,21 +322,21 @@ instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
     mkObject [ "kind" .= String "MIRInsufficientGenesisSigsUTXOW"
              , "genesisSigs" .= genesisSigs
              ]
-  toObject _verb (MissingTxBodyMetaDataHash metaDataHash) =
-    mkObject [ "kind" .= String "MissingTxBodyMetaDataHash"
-             , "metaDataHash" .= metaDataHash
+  toObject _verb (MissingTxBodyMetadataHash metadataHash) =
+    mkObject [ "kind" .= String "MissingTxBodyMetadataHash"
+             , "metadataHash" .= metadataHash
              ]
-  toObject _verb (MissingTxMetaData txBodyMetaDataHash) =
-    mkObject [ "kind" .= String "MissingTxMetaData"
-             , "txBodyMetaDataHash" .= txBodyMetaDataHash
+  toObject _verb (MissingTxMetadata txBodyMetadataHash) =
+    mkObject [ "kind" .= String "MissingTxMetadata"
+             , "txBodyMetadataHash" .= txBodyMetadataHash
              ]
-  toObject _verb (ConflictingMetaDataHash txBodyMetaDataHash fullMetaDataHash) =
-    mkObject [ "kind" .= String "ConflictingMetaDataHash"
-             , "txBodyMetaDataHash" .= txBodyMetaDataHash
-             , "fullMetaDataHash" .= fullMetaDataHash
+  toObject _verb (ConflictingMetadataHash txBodyMetadataHash fullMetadataHash) =
+    mkObject [ "kind" .= String "ConflictingMetadataHash"
+             , "txBodyMetadataHash" .= txBodyMetadataHash
+             , "fullMetadataHash" .= fullMetadataHash
              ]
-  toObject _verb InvalidMetaData =
-    mkObject [ "kind" .= String "InvalidMetaData"
+  toObject _verb InvalidMetadata =
+    mkObject [ "kind" .= String "InvalidMetadata"
              ]
 
 instance ( ShelleyBasedEra era
@@ -420,8 +420,8 @@ instance ToJSONKey MA.AssetName where
 instance ToJSON MA.ValidityInterval where
   toJSON vi =
     Aeson.object $
-        [ "validFrom" .= x | x <- mbfield (MA.validFrom vi) ]
-     ++ [ "validTo"   .= x | x <- mbfield (MA.validTo   vi) ]
+        [ "invalidBefore"    .= x | x <- mbfield (MA.invalidBefore    vi) ]
+     ++ [ "invalidHereafter" .= x | x <- mbfield (MA.invalidHereafter vi) ]
     where
       mbfield SNothing  = []
       mbfield (SJust x) = [x]
@@ -777,15 +777,15 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 -- Common to cardano-cli
 
-deriving newtype instance ShelleyBasedEra era => ToJSON (MetaDataHash era)
+deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
 
-deriving instance ShelleyBasedEra era => ToJSON (TxIn era)
-deriving newtype instance ToJSON (TxId era)
+deriving instance Core.Crypto crypto => ToJSON (TxIn crypto)
+deriving newtype instance ToJSON (TxId crypto)
 deriving newtype instance ToJSON DeltaCoin
-instance ShelleyBasedEra era => ToJSONKey (TxIn era) where
+instance Core.Crypto crypto => ToJSONKey (TxIn crypto) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
-txInToText :: ShelleyBasedEra era => TxIn era -> Text
+txInToText :: Core.Crypto crypto => TxIn crypto -> Text
 txInToText (TxIn (TxId txidHash) ix) =
   hashToText txidHash
     <> Text.pack "#"

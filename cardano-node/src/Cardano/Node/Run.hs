@@ -279,6 +279,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
     , dtHandshakeTracer = handshakeTracer nodeTracers'
     , dtHandshakeLocalTracer = localHandshakeTracer nodeTracers'
     , dtDiffusionInitializationTracer = diffusionInitializationTracer nodeTracers'
+    , dtLedgerPeersTracer = nullTracer -- TODO network team
     }
 
   createTracers

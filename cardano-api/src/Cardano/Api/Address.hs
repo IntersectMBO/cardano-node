@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Cardano addresses: payment and stake addresses.
@@ -64,7 +65,6 @@ module Cardano.Api.Address (
 
 import           Prelude
 
-import           Data.Coerce
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import qualified Data.ByteString.Base58 as Base58
@@ -73,8 +73,6 @@ import           Control.Applicative
 
 import qualified Cardano.Chain.Common as Byron
 
-import qualified Cardano.Ledger.Era as Ledger
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
@@ -165,8 +163,8 @@ data Address addrtype where
      --
      ShelleyAddress
        :: Shelley.Network
-       -> Shelley.PaymentCredential StandardShelley
-       -> Shelley.StakeReference    StandardShelley
+       -> Shelley.PaymentCredential StandardCrypto
+       -> Shelley.StakeReference    StandardCrypto
        -> Address ShelleyAddr
        -- Note that the two ledger credential types here are parametrised by
        -- the era, but in fact this is a phantom type parameter and they are
@@ -197,7 +195,7 @@ instance SerialiseAsRawBytes (Address ByronAddr) where
       $ addr
 
     deserialiseFromRawBytes (AsAddress AsByronAddr) bs =
-        case Shelley.deserialiseAddr bs :: Maybe (Shelley.Addr StandardShelley) of
+        case Shelley.deserialiseAddr bs :: Maybe (Shelley.Addr StandardCrypto) of
           Nothing             -> Nothing
           Just Shelley.Addr{} -> Nothing
           Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
@@ -381,14 +379,14 @@ anyAddressInShelleyBasedEra (AddressByron   addr) = byronAddressInEra addr
 anyAddressInShelleyBasedEra (AddressShelley addr) = shelleyAddressInEra addr
 
 
-anyAddressInEra :: IsCardanoEra era
+anyAddressInEra :: forall era. IsCardanoEra era
                 => AddressAny
                 -> Maybe (AddressInEra era)
 anyAddressInEra (AddressByron addr) =
     Just (AddressInEra ByronAddressInAnyEra addr)
 
 anyAddressInEra (AddressShelley addr) =
-    case cardanoEraStyle cardanoEra of
+    case cardanoEraStyle (cardanoEra @era) of
       LegacyByronEra      -> Nothing
       ShelleyBasedEra era -> Just (AddressInEra (ShelleyAddressInEra era) addr)
 
@@ -420,7 +418,7 @@ data StakeAddress where
 
      StakeAddress
        :: Shelley.Network
-       -> Shelley.StakeCredential StandardShelley
+       -> Shelley.StakeCredential StandardCrypto
        -> StakeAddress
   deriving (Eq, Ord, Show)
 
@@ -488,41 +486,36 @@ makeStakeAddress nw sc =
 -- Internal conversion functions
 --
 
-toShelleyAddr :: AddressInEra era -> Shelley.Addr (ShelleyLedgerEra era)
+toShelleyAddr :: AddressInEra era -> Shelley.Addr StandardCrypto
 toShelleyAddr (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) =
     Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)
 toShelleyAddr (AddressInEra (ShelleyAddressInEra _)
                             (ShelleyAddress nw pc scr)) =
-    Shelley.Addr nw
-      (coerceShelleyPaymentCredential pc)
-      (coerceShelleyStakeReference   scr)
+    Shelley.Addr nw pc scr
 
-toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAcnt ledgerera
+toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAcnt StandardCrypto
 toShelleyStakeAddr (StakeAddress nw sc) =
     Shelley.RewardAcnt {
       Shelley.getRwdNetwork = nw,
-      Shelley.getRwdCred    = coerceShelleyStakeCredential sc
+      Shelley.getRwdCred    = sc
     }
 
-toShelleyPaymentCredential :: Ledger.Crypto ledgerera ~ StandardCrypto
-                           => PaymentCredential
-                           -> Shelley.PaymentCredential ledgerera
+toShelleyPaymentCredential :: PaymentCredential
+                           -> Shelley.PaymentCredential StandardCrypto
 toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
     Shelley.KeyHashObj kh
 toShelleyPaymentCredential (PaymentCredentialByScript sh) =
     Shelley.ScriptHashObj (toShelleyScriptHash sh)
 
-toShelleyStakeCredential :: Ledger.Crypto ledgerera ~ StandardCrypto
-                         => StakeCredential
-                         -> Shelley.StakeCredential ledgerera
+toShelleyStakeCredential :: StakeCredential
+                         -> Shelley.StakeCredential StandardCrypto
 toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
     Shelley.KeyHashObj kh
 toShelleyStakeCredential (StakeCredentialByScript sh) =
     Shelley.ScriptHashObj (toShelleyScriptHash sh)
 
-toShelleyStakeReference :: Ledger.Crypto ledgerera ~ StandardCrypto
-                        => StakeAddressReference
-                        -> Shelley.StakeReference ledgerera
+toShelleyStakeReference :: StakeAddressReference
+                        -> Shelley.StakeReference StandardCrypto
 toShelleyStakeReference (StakeAddressByValue stakecred) =
     Shelley.StakeRefBase (toShelleyStakeCredential stakecred)
 toShelleyStakeReference (StakeAddressByPointer ptr) =
@@ -532,38 +525,33 @@ toShelleyStakeReference  NoStakeAddress =
 
 
 fromShelleyAddr :: IsShelleyBasedEra era
-                => Shelley.Addr (ShelleyLedgerEra era) -> AddressInEra era
+                => Shelley.Addr StandardCrypto -> AddressInEra era
 fromShelleyAddr (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
     AddressInEra ByronAddressInAnyEra (ByronAddress addr)
 
 fromShelleyAddr (Shelley.Addr nw pc scr) =
     AddressInEra
       (ShelleyAddressInEra shelleyBasedEra)
-      (ShelleyAddress
-        nw
-        (coerceShelleyPaymentCredential pc)
-        (coerceShelleyStakeReference   scr))
+      (ShelleyAddress nw pc scr)
 
-fromShelleyStakeAddr :: Shelley.RewardAcnt ledgerera -> StakeAddress
-fromShelleyStakeAddr (Shelley.RewardAcnt nw sc) =
-    StakeAddress nw (coerceShelleyStakeCredential sc)
+fromShelleyStakeAddr :: Shelley.RewardAcnt StandardCrypto -> StakeAddress
+fromShelleyStakeAddr (Shelley.RewardAcnt nw sc) = StakeAddress nw sc
 
-fromShelleyStakeCredential :: Ledger.Crypto ledgerera ~ StandardCrypto
-                           => Shelley.StakeCredential ledgerera
+fromShelleyStakeCredential :: Shelley.StakeCredential StandardCrypto
                            -> StakeCredential
 fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
     StakeCredentialByKey (StakeKeyHash kh)
 fromShelleyStakeCredential (Shelley.ScriptHashObj sh) =
     StakeCredentialByScript (fromShelleyScriptHash sh)
 
-fromShelleyPaymentCredential :: Shelley.PaymentCredential StandardShelley
+fromShelleyPaymentCredential :: Shelley.PaymentCredential StandardCrypto
                              -> PaymentCredential
 fromShelleyPaymentCredential (Shelley.KeyHashObj kh) =
   PaymentCredentialByKey (PaymentKeyHash kh)
 fromShelleyPaymentCredential (Shelley.ScriptHashObj sh) =
   PaymentCredentialByScript (ScriptHash sh)
 
-fromShelleyStakeReference :: Shelley.StakeReference StandardShelley
+fromShelleyStakeReference :: Shelley.StakeReference StandardCrypto
                           -> StakeAddressReference
 fromShelleyStakeReference (Shelley.StakeRefBase stakecred) =
   StakeAddressByValue (fromShelleyStakeCredential stakecred)
@@ -571,19 +559,3 @@ fromShelleyStakeReference (Shelley.StakeRefPtr ptr) =
   StakeAddressByPointer ptr
 fromShelleyStakeReference Shelley.StakeRefNull =
   NoStakeAddress
-
--- The era parameter in these types is a phantom type so it is safe to cast.
--- We choose to cast because we need to use an era-independent address
--- representation, but have to produce an era-dependent format used by the
--- Shelley ledger lib.
-coerceShelleyPaymentCredential :: Shelley.PaymentCredential eraA
-                               -> Shelley.PaymentCredential eraB
-coerceShelleyPaymentCredential = coerce
-
-coerceShelleyStakeCredential :: Shelley.StakeCredential eraA
-                             -> Shelley.StakeCredential eraB
-coerceShelleyStakeCredential = coerce
-
-coerceShelleyStakeReference :: Shelley.StakeReference eraA
-                            -> Shelley.StakeReference eraB
-coerceShelleyStakeReference = coerce

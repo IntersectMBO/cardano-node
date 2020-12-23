@@ -46,7 +46,7 @@ import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           Test.Cardano.Api.MetaData (genTxMetadata)
+import           Test.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 

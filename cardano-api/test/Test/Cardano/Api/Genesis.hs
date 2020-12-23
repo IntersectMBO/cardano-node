@@ -64,15 +64,15 @@ exampleShelleyGenesis =
   delegVerKeyHash = KeyHash "839b047f56e50654bdb504832186dc1ee0c73c8de2daec7ae6273827"
   delegVrfKeyHash :: Hash StandardCrypto (VerKeyVRF StandardCrypto)
   delegVrfKeyHash = "231391e7ec1c450a8518134cf6fad1a8e0ed7ffd66d740f8e8271347a6de7bf2"
-  initialFundedAddress :: Addr StandardShelley
+  initialFundedAddress :: Addr StandardCrypto
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
     where
-      paymentCredential :: PaymentCredential StandardShelley
+      paymentCredential :: PaymentCredential StandardCrypto
       paymentCredential =
         KeyHashObj $ KeyHash
           "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
-      stakingCredential :: StakeCredential StandardShelley
+      stakingCredential :: StakeCredential StandardCrypto
       stakingCredential =
         KeyHashObj $ KeyHash
           "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee"

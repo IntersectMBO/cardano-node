@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
@@ -227,12 +228,12 @@ data Witness era where
 
      ShelleyBootstrapWitness
        :: ShelleyBasedEra era
-       -> Shelley.BootstrapWitness (ShelleyLedgerEra era)
+       -> Shelley.BootstrapWitness StandardCrypto
        -> Witness era
 
      ShelleyKeyWitness
        :: ShelleyBasedEra era
-       -> Shelley.WitVKey Shelley.Witness (ShelleyLedgerEra era)
+       -> Shelley.WitVKey Shelley.Witness StandardCrypto
        -> Witness era
 
      ShelleyScriptWitness
@@ -398,8 +399,7 @@ encodeShelleyBasedScriptWitness wit =
  <> toCBOR wit
 
 decodeShelleyBasedWitness :: forall era.
-                             Ledger.Era (ShelleyLedgerEra era)
-                          => FromCBOR (CBOR.Annotator (Ledger.Script (ShelleyLedgerEra era)))
+                             FromCBOR (CBOR.Annotator (Ledger.Script (ShelleyLedgerEra era)))
                           => ShelleyBasedEra era
                           -> ByteString
                           -> Either CBOR.DecoderError (Witness era)
@@ -469,6 +469,7 @@ getTxWitnesses (ShelleyTx era tx) =
   where
     getShelleyTxWitnesses :: forall ledgerera.
                              ShelleyLedgerEra era ~ ledgerera
+                          => Ledger.Crypto ledgerera ~ StandardCrypto
                           => Shelley.ShelleyBased ledgerera
                           => Shelley.Tx ledgerera
                           -> [Witness era]
@@ -503,6 +504,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txmetadata) =
   where
     makeShelleySignedTransaction :: forall ledgerera.
                                     ShelleyLedgerEra era ~ ledgerera
+                                 => Ledger.Crypto ledgerera ~ StandardCrypto
                                  => Shelley.ShelleyBased ledgerera
                                  => Shelley.ValidateScript ledgerera
                                  => Ledger.TxBody ledgerera
@@ -513,7 +515,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txmetadata) =
           txbody'
           (Shelley.WitnessSet
             (Set.fromList [ w | ShelleyKeyWitness _ w <- witnesses ])
-            (Map.fromList [ (Shelley.hashScript sw, sw)
+            (Map.fromList [ (Shelley.hashScript @ledgerera sw, sw)
                           | ShelleyScriptWitness _ sw <- witnesses ])
             (Set.fromList [ w | ShelleyBootstrapWitness _ w <- witnesses ]))
           (maybeToStrictMaybe txmetadata)
@@ -574,8 +576,7 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _) sk =
                                   nwOrAddr txbody sk
 
 makeShelleyBasedBootstrapWitness :: forall era ledgerera.
-                                    ShelleyLedgerEra era ~ ledgerera
-                                 => Shelley.ShelleyBased ledgerera
+                                    Shelley.ShelleyBased ledgerera
                                  => Ledger.Crypto ledgerera ~ StandardCrypto
                                  => ShelleyBasedEra era
                                  -> WitnessNetworkIdOrByronAddress
@@ -681,8 +682,7 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _) =
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
   where
     makeShelleyBasedKeyWitness :: forall ledgerera.
-                                  ShelleyLedgerEra era ~ ledgerera
-                               => Shelley.ShelleyBased ledgerera
+                                  Shelley.ShelleyBased ledgerera
                                => Ledger.Crypto ledgerera ~ StandardCrypto
                                => Ledger.TxBody ledgerera
                                -> ShelleyWitnessSigningKey

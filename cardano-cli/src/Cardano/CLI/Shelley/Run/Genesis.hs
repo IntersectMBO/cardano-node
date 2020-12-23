@@ -427,7 +427,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
   stuffedUtxoAddrs <- liftIO $ replicateM (fromIntegral numStuffedUtxo)
                       genStuffedAddress
 
-  let poolMap :: Map (Ledger.KeyHash Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardShelley)
+  let poolMap :: Map (Ledger.KeyHash Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
       poolMap = Map.fromList $ mkDelegationMapEntry <$> delegations
       delegAddrs = dInitialUtxoAddr <$> delegations
       finalGenesis = updateTemplate start genDlgs mNonDlgAmount nonDelegAddrs poolMap stDlgAmount delegAddrs stuffedUtxoAddrs template
@@ -456,7 +456,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
   where
     (,) delegsPerPool delegsRemaining = divMod genNumStDelegs genNumPools
     adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
-    mkDelegationMapEntry :: Delegation -> (Ledger.KeyHash Ledger.Staking StandardCrypto, Ledger.PoolParams StandardShelley)
+    mkDelegationMapEntry :: Delegation -> (Ledger.KeyHash Ledger.Staking StandardCrypto, Ledger.PoolParams StandardCrypto)
     mkDelegationMapEntry d = (dDelegStaking d, dPoolParams d)
 
     gendir   = rootdir </> "genesis-keys"
@@ -579,10 +579,10 @@ data Delegation
   = Delegation
     { dInitialUtxoAddr  :: AddressInEra ShelleyEra
     , dDelegStaking     :: Ledger.KeyHash Ledger.Staking StandardCrypto
-    , dPoolParams       :: Ledger.PoolParams StandardShelley
+    , dPoolParams       :: Ledger.PoolParams StandardCrypto
     }
 
-buildPool :: NetworkId -> FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO (Ledger.PoolParams StandardShelley)
+buildPool :: NetworkId -> FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO (Ledger.PoolParams StandardCrypto)
 buildPool nw dir index = do
     StakePoolVerificationKey poolColdVK <- firstExceptT (ShelleyGenesisCmdPoolCmdError
                                                          . ShelleyPoolCmdReadFileError)
@@ -639,7 +639,7 @@ writeBulkPoolCredentials dir bulkIx poolIxs = do
      firstExceptT (ShelleyGenesisCmdAesonDecodeError fp . Text.pack) . hoistEither $
        Aeson.eitherDecodeStrict' content
 
-computeDelegation :: NetworkId -> FilePath -> Ledger.PoolParams StandardShelley -> Word -> ExceptT ShelleyGenesisCmdError IO Delegation
+computeDelegation :: NetworkId -> FilePath -> Ledger.PoolParams StandardCrypto -> Word -> ExceptT ShelleyGenesisCmdError IO Delegation
 computeDelegation nw delegDir pool delegIx = do
     paySVK <- firstExceptT (ShelleyGenesisCmdAddressCmdError
                            . ShelleyAddressCmdVerificationKeyTextOrFileError) $
@@ -708,7 +708,7 @@ updateTemplate
     -> Maybe Lovelace
     -> [AddressInEra ShelleyEra]
     -- Genesis staking: pools/delegation map & delegated initial UTxO spec:
-    -> Map (Ledger.KeyHash 'Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardShelley)
+    -> Map (Ledger.KeyHash 'Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
     -> Lovelace
     -> [AddressInEra ShelleyEra]
     -> [AddressInEra ShelleyEra]

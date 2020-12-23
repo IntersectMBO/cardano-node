@@ -29,7 +29,7 @@ data ShelleyPoolCmdError
   = ShelleyPoolCmdReadFileError !(FileError TextEnvelopeError)
   | ShelleyPoolCmdReadKeyFileError !(FileError InputDecodeError)
   | ShelleyPoolCmdWriteFileError !(FileError ())
-  | ShelleyPoolCmdMetaDataValidationError !StakePoolMetadataValidationError
+  | ShelleyPoolCmdMetadataValidationError !StakePoolMetadataValidationError
   deriving Show
 
 renderShelleyPoolCmdError :: ShelleyPoolCmdError -> Text
@@ -38,7 +38,7 @@ renderShelleyPoolCmdError err =
     ShelleyPoolCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyPoolCmdReadKeyFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyPoolCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyPoolCmdMetaDataValidationError validationErr ->
+    ShelleyPoolCmdMetadataValidationError validationErr ->
       "Error validating stake pool metadata: " <> Text.pack (displayError validationErr)
 
 
@@ -49,7 +49,7 @@ runPoolCmd (PoolRegistrationCert sPvkey vrfVkey pldg pCost pMrgn rwdVerFp ownerV
 runPoolCmd (PoolRetirementCert sPvkeyFp retireEpoch outfp) =
   runStakePoolRetirementCert sPvkeyFp retireEpoch outfp
 runPoolCmd (PoolGetId sPvkey outputFormat) = runPoolId sPvkey outputFormat
-runPoolCmd (PoolMetaDataHash poolMdFile mOutFile) = runPoolMetaDataHash poolMdFile mOutFile
+runPoolCmd (PoolMetadataHash poolMdFile mOutFile) = runPoolMetadataHash poolMdFile mOutFile
 
 
 --
@@ -180,16 +180,16 @@ runPoolId verKeyOrFile outputFormat = do
         OutputFormatBech32 ->
           Text.putStrLn $ serialiseToBech32 (verificationKeyHash stakePoolVerKey)
 
-runPoolMetaDataHash :: PoolMetaDataFile -> Maybe OutputFile -> ExceptT ShelleyPoolCmdError IO ()
-runPoolMetaDataHash (PoolMetaDataFile poolMDPath) mOutFile = do
-  metaDataBytes <- handleIOExceptT (ShelleyPoolCmdReadFileError . FileIOError poolMDPath) $
+runPoolMetadataHash :: PoolMetadataFile -> Maybe OutputFile -> ExceptT ShelleyPoolCmdError IO ()
+runPoolMetadataHash (PoolMetadataFile poolMDPath) mOutFile = do
+  metadataBytes <- handleIOExceptT (ShelleyPoolCmdReadFileError . FileIOError poolMDPath) $
     BS.readFile poolMDPath
-  (_metaData, metaDataHash) <-
-      firstExceptT ShelleyPoolCmdMetaDataValidationError
+  (_metadata, metadataHash) <-
+      firstExceptT ShelleyPoolCmdMetadataValidationError
     . hoistEither
-    $ validateAndHashStakePoolMetadata metaDataBytes
+    $ validateAndHashStakePoolMetadata metadataBytes
   case mOutFile of
-    Nothing -> liftIO $ BS.putStrLn (serialiseToRawBytesHex metaDataHash)
+    Nothing -> liftIO $ BS.putStrLn (serialiseToRawBytesHex metadataHash)
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyPoolCmdWriteFileError . FileIOError fpath)
-        $ BS.writeFile fpath (serialiseToRawBytesHex metaDataHash)
+        $ BS.writeFile fpath (serialiseToRawBytesHex metadataHash)

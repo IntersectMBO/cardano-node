@@ -59,7 +59,6 @@ import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Chain.Common as Byron
 
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Mary.Value as Mary
 
@@ -219,9 +218,7 @@ valueToLovelace v =
       [(AdaAssetId, q)] -> Just (quantityToLovelace q)
       _                 -> Nothing
 
-toMaryValue :: forall ledgerera.
-               Ledger.Crypto ledgerera ~ StandardCrypto
-            => Value -> Mary.Value ledgerera
+toMaryValue :: Value -> Mary.Value StandardCrypto
 toMaryValue v =
     Mary.Value lovelace other
   where
@@ -231,16 +228,14 @@ toMaryValue v =
               [ (toMaryPolicyID pid, Map.singleton (toMaryAssetName name) q)
               | (AssetId pid name, Quantity q) <- valueToList v ]
 
-    toMaryPolicyID :: PolicyId -> Mary.PolicyID ledgerera
+    toMaryPolicyID :: PolicyId -> Mary.PolicyID StandardCrypto
     toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
 
     toMaryAssetName :: AssetName -> Mary.AssetName
     toMaryAssetName (AssetName n) = Mary.AssetName n
 
 
-fromMaryValue :: forall ledgerera.
-                 Ledger.Crypto ledgerera ~ StandardCrypto
-              => Mary.Value ledgerera -> Value
+fromMaryValue :: Mary.Value StandardCrypto -> Value
 fromMaryValue (Mary.Value lovelace other) =
     Value $
       --TODO: write QC tests to show it's ok to use Map.fromAscList here
@@ -250,7 +245,7 @@ fromMaryValue (Mary.Value lovelace other) =
         | (pid, as) <- Map.toList other
         , (name, q) <- Map.toList as ]
   where
-    fromMaryPolicyID :: Mary.PolicyID ledgerera -> PolicyId
+    fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
     fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
 
     fromMaryAssetName :: Mary.AssetName -> AssetName

@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Test.Cardano.Api.MetaData
+module Test.Cardano.Api.Metadata
   ( tests
   , genTxMetadata
   ) where
 
-import           Cardano.Prelude hiding (MetaData)
+import           Cardano.Prelude
 
 import           Cardano.Api
 
