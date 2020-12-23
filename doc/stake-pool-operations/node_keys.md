@@ -74,9 +74,9 @@ Then we need the current tip of the blockchain:
     "slotNo": 906528
     }
 
-Look for Tip `slotNo` value. In this example we are on slot 906528. So we have KES period is 120:
+Look for Tip `slotNo` value. In this example we are on slot 906528. So we have KES period is 251:
 
-    expr 432571 / 3600
+    expr 906528 / 3600
     > 251
 
 To generate the certificate:
