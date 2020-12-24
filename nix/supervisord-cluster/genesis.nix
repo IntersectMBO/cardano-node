@@ -11,19 +11,18 @@
 , profile
 }:
 
+with profile;
 let
-  inherit (profile) composition monetary;
 
   # creates a dummy genesis used as a template
-  genesisSpecJSON = runCommand "create-genesis" { buildInputs = [ cardano-cli ]; } ''
-    cardano-cli genesis create                                   \
-        --testnet-magic ${toString profile.genesis.networkMagic} \
-        --genesis-dir   .                                        \
-        --gen-genesis-keys ${toString composition.numBft}
+  genesisSpecJSON = runCommand "genesis-spec" { buildInputs = [ cardano-cli ]; } ''
+    cardano-cli genesis create --genesis-dir . \
+        ${toString cli_args.createSpec}
     mv genesis.spec.json $out
   '';
-  genesisSpec = __fromJSON (__readFile genesisSpecJSON);
-  genesis = lib.recursiveUpdate genesisSpec profile.genesis;
+  genesisSpec = lib.recursiveUpdate
+                  (__fromJSON (__readFile genesisSpecJSON))
+                  genesis.verbatim;
 in
 
 rec {
@@ -33,17 +32,17 @@ rec {
     rm -rf ${stateDir}
     mkdir -p ${stateDir}/{shelley,webserver}
     cp ${__toFile "node.json" (__toJSON baseEnvConfig.nodeConfig)} ${stateDir}/config.json
-    cp ${writeText "genesis.spec.json" (__toJSON genesis)} ${stateDir}/shelley/genesis.spec.json
-    cardano-cli genesis create --testnet-magic ${toString genesis.networkMagic} \
-                                       --genesis-dir ${stateDir}/shelley \
-                                       --gen-genesis-keys ${toString composition.numBft} \
-                                       --gen-utxo-keys 1
-    jq -r --arg systemStart $(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="5 seconds") \
+    cp ${writeText "genesis.spec.json" (__toJSON genesisSpec)} ${stateDir}/shelley/genesis.spec.json
+    cardano-cli genesis create --genesis-dir ${stateDir}/shelley \
+      ${toString
+        (__trace "creating genesis for profile \"${name}\""
+          cli_args.createSpec)}
+    jq -r --arg systemStart $(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="${genesis.genesis_future_offset}") \
            '.systemStart = $systemStart |
-            .updateQuorum = ${toString composition.numBft} |
-            .initialFunds = (${__toJSON monetary.initialFunds})' \
+            .initialFunds = ${__toJSON genesisSpec.initialFunds} |
+            .updateQuorum = ${toString composition.n_bft_hosts}' \
     ${stateDir}/shelley/genesis.json | sponge ${stateDir}/shelley/genesis.json
-    for i in {1..${toString composition.numBft}}
+    for i in {1..${toString composition.n_bft_hosts}}
     do
       mkdir -p "${stateDir}/nodes/node-bft$i"
       ln -s "../../shelley/delegate-keys/delegate$i.vrf.skey" "${stateDir}/nodes/node-bft$i/vrf.skey"
@@ -60,7 +59,7 @@ rec {
       BFT_PORT=$(("${toString basePort}" + $i))
       echo "$BFT_PORT" > "${stateDir}/nodes/node-bft$i/port"
     done
-    for i in {1..${toString composition.numPools}}
+    for i in {1..${toString composition.n_pools}}
     do
       mkdir -p "${stateDir}/nodes/node-pool$i"
       echo "Generating Pool $i Secrets"
@@ -74,12 +73,12 @@ rec {
       cardano-cli address build \
         --payment-verification-key-file "${stateDir}/nodes/node-pool$i/owner-utxo.vkey" \
         --stake-verification-key-file "${stateDir}/nodes/node-pool$i/owner-stake.vkey" \
-        --testnet-magic ${toString genesis.networkMagic} \
+        --testnet-magic ${toString genesis.network_magic} \
         --out-file "${stateDir}/nodes/node-pool$i/owner.addr"
       # Stake addresses
       cardano-cli stake-address build \
         --stake-verification-key-file "${stateDir}/nodes/node-pool$i/owner-stake.vkey" \
-        --testnet-magic ${toString genesis.networkMagic} \
+        --testnet-magic ${toString genesis.network_magic} \
         --out-file "${stateDir}/nodes/node-pool$i/owner-stake.addr"
       # Stake addresses registration certs
       cardano-cli stake-address registration-certificate \
@@ -128,9 +127,9 @@ rec {
       METADATA_URL="http://localhost:${toString basePort}/pool$i.json"
       METADATA_HASH=$(cardano-cli stake-pool metadata-hash --pool-metadata-file "${stateDir}/webserver/pool$i.json")
       POOL_IP="127.0.0.1"
-      POOL_PORT=$(("${toString basePort}" + "${toString composition.numBft}" + $i))
+      POOL_PORT=$(("${toString basePort}" + "${toString composition.n_bft_hosts}" + $i))
       echo "$POOL_PORT" > "${stateDir}/nodes/node-pool$i/port"
-      POOL_PLEDGE=${toString monetary.delegatePoolAmount}
+      POOL_PLEDGE=${toString genesis.pool_coin}
       echo $POOL_PLEDGE > "${stateDir}/nodes/node-pool$i/pledge"
       POOL_MARGIN_NUM=$(( $RANDOM % 10 + 1))
 
@@ -146,7 +145,7 @@ rec {
         --metadata-hash "$METADATA_HASH" \
         --pool-relay-port "$POOL_PORT" \
         --pool-relay-ipv4 "127.0.0.1" \
-        --testnet-magic ${toString genesis.networkMagic} \
+        --testnet-magic ${toString genesis.network_magic} \
         --out-file "${stateDir}/nodes/node-pool$i/register.cert"
 
     done
@@ -161,29 +160,29 @@ rec {
     jq .protocolParams < ${stateDir}/shelley/genesis.json > ${stateDir}/pparams.json
 
     TXIN_ADDR=$(cardano-cli genesis initial-addr \
-                    --testnet-magic ${toString genesis.networkMagic} \
+                    --testnet-magic ${toString genesis.network_magic} \
                     --verification-key-file ${stateDir}/shelley/genesis-utxo.vkey)
 
     cardano-cli transaction build-raw \
         --ttl 1000 \
         --fee 0 \
         --tx-in $(cardano-cli genesis initial-txin \
-                    --testnet-magic ${toString genesis.networkMagic} \
+                    --testnet-magic ${toString genesis.network_magic} \
                     --verification-key-file ${stateDir}/shelley/genesis-utxo.vkey) \
         --tx-out "$TXIN_ADDR+0" \
         ${lib.concatMapStringsSep "" (i: ''
-          --tx-out $(cat "${stateDir}/nodes/node-pool${toString i}/owner.addr")+${toString monetary.delegatePoolAmount} \
+          --tx-out $(cat "${stateDir}/nodes/node-pool${toString i}/owner.addr")+${toString genesis.delegator_coin} \
           --certificate-file "${stateDir}/nodes/node-pool${toString i}/stake.reg.cert" \
           --certificate-file "${stateDir}/nodes/node-pool${toString i}/stake-reward.reg.cert" \
           --certificate-file "${stateDir}/nodes/node-pool${toString i}/register.cert" \
-          --certificate-file "${stateDir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) composition.numPools)}
+          --certificate-file "${stateDir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) composition.n_pools)}
         --out-file "${stateDir}/shelley/transfer-register-delegate-tx.txbody"
     FEE=$(cardano-cli transaction calculate-min-fee \
-                --testnet-magic ${toString genesis.networkMagic} \
+                --testnet-magic ${toString genesis.network_magic} \
                 --protocol-params-file ${stateDir}/pparams.json \
                 --tx-in-count 1 \
-                --tx-out-count ${toString (composition.numPools + 1)} \
-                --witness-count ${toString (3 * composition.numPools + 1)} \
+                --tx-out-count ${toString (composition.n_pools + 1)} \
+                --witness-count ${toString (3 * composition.n_pools + 1)} \
                 --byron-witness-count 0 \
                 --tx-body-file "${stateDir}/shelley/transfer-register-delegate-tx.txbody" |
                 cut -d' ' -f1)
@@ -192,20 +191,24 @@ rec {
 
     TXOUT_AMOUNT=$(jq --arg addr "$TXIN_ADDR_HEX" \
                       --arg fee "$FEE" \
-    '.initialFunds[$addr] - ($fee|tonumber) - (.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit) + ${toString monetary.delegatePoolAmount}) * ${toString composition.numPools}' < ${stateDir}/shelley/genesis.json)
+    '(if .initialFunds | has($addr)
+      then .initialFunds[$addr]
+      else error("initialFunds has no address corresponding to the genesis key: \($addr)")
+      end) as $funds
+    | $funds - ($fee|tonumber) - (.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit) + ${toString genesis.delegator_coin}) * ${toString composition.n_pools}' < ${stateDir}/shelley/genesis.json)
     cardano-cli transaction build-raw \
         --ttl 1000 \
         --fee "$FEE" \
         --tx-in $(cardano-cli genesis initial-txin \
-                    --testnet-magic ${toString genesis.networkMagic} \
+                    --testnet-magic ${toString genesis.network_magic} \
                     --verification-key-file ${stateDir}/shelley/genesis-utxo.vkey) \
         --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
         ${lib.concatMapStringsSep "" (i: ''
-          --tx-out $(cat "${stateDir}/nodes/node-pool${toString i}/owner.addr")+${toString monetary.delegatePoolAmount} \
+          --tx-out $(cat "${stateDir}/nodes/node-pool${toString i}/owner.addr")+${toString genesis.delegator_coin} \
           --certificate-file "${stateDir}/nodes/node-pool${toString i}/stake.reg.cert" \
           --certificate-file "${stateDir}/nodes/node-pool${toString i}/stake-reward.reg.cert" \
           --certificate-file "${stateDir}/nodes/node-pool${toString i}/register.cert" \
-          --certificate-file "${stateDir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) composition.numPools)}
+          --certificate-file "${stateDir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) composition.n_pools)}
         --out-file "${stateDir}/shelley/transfer-register-delegate-tx.txbody"
 
     cardano-cli transaction sign \
@@ -213,8 +216,8 @@ rec {
       ${lib.concatMapStringsSep "" (i: ''
         --signing-key-file "${stateDir}/nodes/node-pool${toString i}/owner-stake.skey" \
         --signing-key-file "${stateDir}/nodes/node-pool${toString i}/reward.skey" \
-        --signing-key-file "${stateDir}/nodes/node-pool${toString i}/cold.skey" \'') (lib.genList (i: i + 1) composition.numPools)}
-      --testnet-magic ${toString genesis.networkMagic} \
+        --signing-key-file "${stateDir}/nodes/node-pool${toString i}/cold.skey" \'') (lib.genList (i: i + 1) composition.n_pools)}
+      --testnet-magic ${toString genesis.network_magic} \
       --tx-body-file  "${stateDir}/shelley/transfer-register-delegate-tx.txbody" \
       --out-file      "${stateDir}/shelley/transfer-register-delegate-tx.tx"
 
