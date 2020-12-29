@@ -14,8 +14,9 @@ Creating a transaction requires various steps:
 Get the protocol parameters and save them to `protocol.json` with:
 
 ```
-cardano-cli shelley query protocol-parameters \
+cardano-cli query protocol-parameters \
   --mainnet \
+  --allegra-era \
   --out-file protocol.json
 ```
 
