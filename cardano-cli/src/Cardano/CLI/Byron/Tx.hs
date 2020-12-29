@@ -27,27 +27,27 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified Data.Vector as Vector
 import           Formatting (sformat, (%))
 
 import qualified Cardano.Binary as Binary
 
-import           Cardano.Chain.Common (Address)
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Slotting (EpochSlots (..))
-import           Cardano.Chain.UTxO (Tx (..), TxId, TxIn, TxOut, annotateTxAux, mkTxAux)
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.Crypto (ProtocolMagicId, SigningKey (..))
-import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (DegenGenTx))
 
-import           Cardano.Api (LocalNodeConnectInfo (..), NetworkId, submitTxToNodeLocal)
-import           Cardano.Api.Byron (NodeConsensusMode (ByronMode), toByronProtocolMagicId)
+import           Cardano.Api (LocalNodeConnectInfo (..), NetworkId, TxBody, Witness,
+                     submitTxToNodeLocal)
+import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra, ByronWitness (..),
+                     NodeConsensusMode (ByronMode), Tx (..), TxIn, TxOut (..),
+                     VerificationKey (..), fromByronTxIn, makeByronKeyWitness,
+                     makeByronTransaction, makeSignedTransaction)
+import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Types (SocketPath (..))
@@ -76,8 +76,8 @@ newtype NewTxFile =
 
 -- | Pretty-print an address in its Base58 form, and also
 --   its full structure.
-prettyAddress :: Common.Address -> Text
-prettyAddress addr = sformat
+prettyAddress :: Address ByronAddr -> Text
+prettyAddress (ByronAddress addr) = sformat
   (Common.addressF %"\n"%Common.addressDetailedF)
   addr addr
 
@@ -92,18 +92,6 @@ readByronTx (TxFile fp) = do
 -- and \"normal\" Byron transactions are just one of the kinds.
 normalByronTxToGenTx :: UTxO.ATxAux ByteString -> GenTx ByronBlock
 normalByronTxToGenTx tx' = Byron.ByronTx (Byron.byronIdTx tx') tx'
-
--- | Given a Tx id, produce a UTxO Tx input witness, by signing it
---   with respect to a given protocol magic.
-signTxId :: ProtocolMagicId -> SigningKey -> TxId -> UTxO.TxInWitness
-signTxId pmid sk txid =
-  UTxO.VKWitness
-  (Crypto.toVerification sk)
-  (Crypto.sign
-    pmid
-    Crypto.SignTx
-    sk
-    (UTxO.TxSigData txid))
 
 -- | Given a genesis, and a pair of a genesis public key and address,
 --   reconstruct a TxIn corresponding to the genesis UTxO entry.
@@ -122,9 +110,9 @@ genesisUTxOTxIn gc vk genAddr =
         $ gc
       where
         mkEntry :: UTxO.TxIn
-                -> Address
+                -> Common.Address
                 -> UTxO.TxOut
-                -> (Address, (UTxO.TxIn, UTxO.TxOut))
+                -> (Common.Address, (UTxO.TxIn, UTxO.TxOut))
         mkEntry inp addr out = (addr, (inp, out))
 
     fromCompactTxInTxOutList :: [(UTxO.CompactTxIn, UTxO.CompactTxOut)]
@@ -140,48 +128,49 @@ genesisUTxOTxIn gc vk genAddr =
     handleMissingAddr :: Maybe UTxO.TxIn -> UTxO.TxIn
     handleMissingAddr  = fromMaybe . error
       $  "\nGenesis UTxO has no address\n"
-      <> T.unpack (prettyAddress genAddr)
+      <> T.unpack (prettyAddress (ByronAddress genAddr))
       <> "\n\nIt has the following, though:\n\n"
-      <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> Map.keys initialUtxo)
+      <> Cardano.Prelude.concat (T.unpack . prettyAddress <$> map ByronAddress (Map.keys initialUtxo))
 
 -- | Generate a transaction spending genesis UTxO at a given address,
 --   to given outputs, signed by the given key.
 txSpendGenesisUTxOByronPBFT
   :: Genesis.Config
   -> NetworkId
-  -> SigningKey
-  -> Address
-  -> NonEmpty TxOut
-  -> UTxO.ATxAux ByteString
-txSpendGenesisUTxOByronPBFT gc nw sk genAddr outs =
-    annotateTxAux $ mkTxAux tx (pure wit)
+  -> ByronWitness
+  -> Address ByronAddr
+  -> [TxOut ByronEra]
+  -> Tx ByronEra
+txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs =
+    case makeByronTransaction [fromByronTxIn txIn] outs of
+      Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
+      Right txBody -> let bWit = fromByronWitness sk nId txBody
+                      in makeSignedTransaction [bWit] txBody
   where
-    tx = UnsafeTx (pure txIn) outs txattrs
-
-    wit = signTxId (toByronProtocolMagicId nw) sk (Crypto.serializeCborHash tx)
+    ByronVerificationKey vKey = byronWitnessToVerKey sk
 
     txIn :: UTxO.TxIn
-    txIn  = genesisUTxOTxIn gc (Crypto.toVerification sk) genAddr
-
-    txattrs = Common.mkAttributes ()
+    txIn  = genesisUTxOTxIn gc vKey bAddr
 
 -- | Generate a transaction from given Tx inputs to outputs,
 --   signed by the given key.
 txSpendUTxOByronPBFT
   :: NetworkId
-  -> SigningKey
-  -> NonEmpty TxIn
-  -> NonEmpty TxOut
-  -> UTxO.ATxAux ByteString
-txSpendUTxOByronPBFT nw sk ins outs =
-    annotateTxAux $ mkTxAux tx (Vector.singleton wit)
-  where
-    tx = UnsafeTx ins outs txattrs
+  -> ByronWitness
+  -> [TxIn]
+  -> [TxOut ByronEra]
+  -> Tx ByronEra
+txSpendUTxOByronPBFT nId sk txIn outs =
+    case makeByronTransaction txIn outs of
+      Left err -> error $ "An error occurred while making a Byron era transaction: " <> show err
+      Right txBody -> let bWit = fromByronWitness sk nId txBody
+                      in makeSignedTransaction [bWit] txBody
 
-    wit = signTxId (toByronProtocolMagicId nw) sk (Crypto.serializeCborHash tx)
-
-    txattrs = Common.mkAttributes ()
-
+fromByronWitness :: ByronWitness -> NetworkId -> TxBody ByronEra -> Witness ByronEra
+fromByronWitness bw nId txBody =
+  case bw of
+    LegacyWitness sk -> makeByronKeyWitness nId txBody sk
+    NonLegacyWitness sk' -> makeByronKeyWitness nId txBody sk'
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx

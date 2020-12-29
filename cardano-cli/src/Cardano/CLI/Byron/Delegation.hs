@@ -8,27 +8,26 @@ module Cardano.CLI.Byron.Delegation
   , issueByronGenesisDelegation
   , renderByronDelegationError
   , serialiseDelegationCert
-  , serialiseDelegateKey
+  , serialiseByronWitness
   )
 where
 
 import           Cardano.Prelude hiding (option, show, trace)
 
-import           Codec.CBOR.Write (toLazyByteString)
 import           Control.Monad.Trans.Except.Extra (left)
 import qualified Data.ByteString.Lazy as LB
 import           Formatting (Format, sformat)
 
+import           Cardano.Api.Byron
+
 import           Cardano.Binary (Annotated (..), serialize')
 import qualified Cardano.Chain.Delegation as Dlg
 import           Cardano.Chain.Slotting (EpochNumber)
-import qualified Cardano.CLI.Byron.Legacy as Legacy
-import           Cardano.Crypto (ProtocolMagicId, SigningKey)
+import           Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto as Crypto
 
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure, serialiseSigningKey)
+import           Cardano.CLI.Byron.Key (ByronKeyFailure, renderByronKeyFailure)
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types (CertificateFile (..))
 
 data ByronDelegationError
@@ -114,11 +113,12 @@ checkDlgCert cert magic issuerVK' delegateVK' =
     vkF = Crypto.fullVerificationKeyF
 
 
-serialiseDelegationCert :: Dlg.Certificate -> LB.ByteString
-serialiseDelegationCert = canonicalEncodePretty
+serialiseDelegationCert :: Dlg.Certificate -> ByteString
+serialiseDelegationCert = LB.toStrict . canonicalEncodePretty
 
-serialiseDelegateKey :: ByronKeyFormat -> SigningKey -> Either ByronDelegationError LB.ByteString
-serialiseDelegateKey LegacyByronKeyFormat sk =
-  pure . toLazyByteString . Legacy.encodeLegacyDelegateKey $ Legacy.LegacyDelegateKey sk
-serialiseDelegateKey NonLegacyByronKeyFormat sk =
-  first ByronDelegationKeyError $ serialiseSigningKey NonLegacyByronKeyFormat sk
+serialiseByronWitness :: ByronWitness -> ByteString
+serialiseByronWitness sk =
+  case sk of
+    LegacyWitness bSkey -> serialiseToRawBytes bSkey
+    NonLegacyWitness legBKey -> serialiseToRawBytes legBKey
+

@@ -13,7 +13,6 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
 
@@ -26,7 +25,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Cardano.Api.Byron
 
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
+import           Cardano.CLI.Byron.Key (ByronKeyFailure, readByronSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
 import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS)
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
@@ -65,11 +64,11 @@ runVoteCreation
   -> FilePath
   -> ExceptT ByronVoteError IO ()
 runVoteCreation nw sKey upPropFp voteBool outputFp = do
-  sK <- firstExceptT ByronVoteKeyReadFailure $ readEraSigningKey NonLegacyByronKeyFormat sKey
+  sK <- firstExceptT ByronVoteKeyReadFailure $ readByronSigningKey NonLegacyByronKeyFormat sKey
   proposal <- firstExceptT ByronVoteUpdateProposalFailure $ readByronUpdateProposal upPropFp
-  let vote = makeByronVote nw (ByronSigningKey sK) proposal voteBool
+  let vote = makeByronVote nw sK proposal voteBool
   firstExceptT ByronVoteUpdateHelperError . ensureNewFileLBS outputFp
-    . LB.fromStrict $ serialiseToRawBytes vote
+    $ serialiseToRawBytes vote
 
 submitByronVote
   :: NetworkId

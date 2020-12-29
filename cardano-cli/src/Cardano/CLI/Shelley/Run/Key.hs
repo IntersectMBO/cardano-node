@@ -55,6 +55,7 @@ data ShelleyKeyCmdError
   | ShelleyKeyCmdWrongKeyTypeError
   | ShelleyKeyCmdCardanoAddressSigningKeyFileError
       !(FileError CardanoAddressSigningKeyConversionError)
+  | ShelleyKeyCmdNonLegacyKey !FilePath
   deriving Show
 
 renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
@@ -70,6 +71,8 @@ renderShelleyKeyCmdError err =
                                    \when converting ITN BIP32 or Extended keys"
     ShelleyKeyCmdCardanoAddressSigningKeyFileError fileErr ->
       Text.pack (displayError fileErr)
+    ShelleyKeyCmdNonLegacyKey fp -> "Signing key at: " <> Text.pack fp <> " is not a legacy Byron signing key and should \
+                                    \ not need to be converted."
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =
@@ -332,15 +335,20 @@ convertByronSigningKey mPwd byronFormat convert
                        skeyPathOld
                        (OutputFile skeyPathNew) = do
 
-    sk@(Crypto.SigningKey xprv) <-
-      firstExceptT ShelleyKeyCmdByronKeyFailure
-        $ Byron.readEraSigningKey byronFormat skeyPathOld
 
-    unprotectedSk <- case mPwd of
-                       -- Change password to empty string
-                       Just pwd -> return . Crypto.SigningKey
-                                     $ Crypto.xPrvChangePass (encodeUtf8 pwd) (encodeUtf8 "") xprv
-                       Nothing -> return sk
+    witness <- firstExceptT ShelleyKeyCmdByronKeyFailure
+                 $ Byron.readByronSigningKey byronFormat skeyPathOld
+
+    unprotectedSk <- case witness of
+                       LegacyWitness (ByronSigningKeyLegacy sk@(Crypto.SigningKey xprv)) ->
+                         case mPwd of
+                           -- Change password to empty string
+                           Just pwd -> return . Crypto.SigningKey
+                                         $ Crypto.xPrvChangePass (encodeUtf8 pwd) (encodeUtf8 "") xprv
+                           Nothing -> return sk
+                       NonLegacyWitness _ ->
+                         left . ShelleyKeyCmdNonLegacyKey $ unSigningKeyFile skeyPathOld
+
 
     let sk' :: SigningKey keyrole
         sk' = convert unprotectedSk

@@ -25,6 +25,8 @@ module Cardano.Api.KeysByron (
     -- * Legacy format
     IsByronLegacyFormat(..),
     ByronKeyFormat(..),
+
+    ByronWitness(..),
   ) where
 
 import           Cardano.Prelude (cborError, toCborError)
@@ -186,7 +188,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKeyLegacy) where
             CBOR.decodeSequenceLenIndef (flip (:)) [] reverse CBOR.decodeNull
           _    <- do
             enforceSize "wallet" 0
-          pure $ pkey
+          pure pkey
 
 instance CastVerificationKeyRole ByronKeyLegacy ByronKey where
     castVerificationKey (ByronVerificationKeyLegacy vk) =
@@ -280,4 +282,7 @@ instance CastVerificationKeyRole ByronKey PaymentKey where
                              -> VerificationKey PaymentKey)
       . (castVerificationKey :: VerificationKey ByronKey
                              -> VerificationKey PaymentExtendedKey)
+
+data ByronWitness = LegacyWitness (SigningKey ByronKeyLegacy)
+                  | NonLegacyWitness (SigningKey ByronKey)
 

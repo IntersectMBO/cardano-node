@@ -18,6 +18,7 @@ import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import           Codec.CBOR.Term (decodeTerm, encodeTerm)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 import           System.Directory (doesPathExist)
@@ -62,8 +63,8 @@ ensureNewFile writer outFile blob = do
     left $ OutputMustNotAlreadyExist outFile
   liftIO $ writer outFile blob
 
-ensureNewFileLBS :: FilePath -> LB.ByteString -> ExceptT HelpersError IO ()
-ensureNewFileLBS = ensureNewFile LB.writeFile
+ensureNewFileLBS :: FilePath -> ByteString -> ExceptT HelpersError IO ()
+ensureNewFileLBS = ensureNewFile BS.writeFile
 
 pPrintCBOR :: LByteString -> ExceptT HelpersError IO ()
 pPrintCBOR bs = do

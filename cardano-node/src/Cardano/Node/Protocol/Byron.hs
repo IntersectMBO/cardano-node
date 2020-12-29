@@ -20,16 +20,16 @@ module Cardano.Node.Protocol.Byron
 
 
 import           Cardano.Prelude
-
-import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
-import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither, left)
+import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither,
+                     hoistMaybe, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
+
+import           Cardano.Api.Byron
 
 import qualified Cardano.Crypto.Hash as Crypto
 
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
-import qualified Cardano.Crypto.Signing as Byron.Crypto
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
@@ -175,9 +175,8 @@ readLeaderCredentials genesisConfig
 
          signingKeyFileBytes <- liftIO $ LB.readFile signingKeyFile
          delegCertFileBytes <- liftIO $ LB.readFile delegCertFile
-         signingKey <- firstExceptT (SigningKeyDeserialiseFailure signingKeyFile)
-                         . hoistEither
-                         $ deserialiseSigningKey signingKeyFileBytes
+         ByronSigningKey signingKey <- hoistMaybe (SigningKeyDeserialiseFailure signingKeyFile)
+                         $ deserialiseFromRawBytes (AsSigningKey AsByronKey) $ LB.toStrict signingKeyFileBytes
          delegCert  <- firstExceptT (CanonicalDecodeFailure delegCertFile)
                          . hoistEither
                          $ canonicalDecodePretty delegCertFileBytes
@@ -186,12 +185,7 @@ readLeaderCredentials genesisConfig
            . hoistEither
            $ mkByronLeaderCredentials genesisConfig signingKey delegCert "Byron"
 
-  where
-    deserialiseSigningKey :: LB.ByteString
-                          -> Either DeserialiseFailure Byron.Crypto.SigningKey
-    deserialiseSigningKey =
-        fmap (Byron.Crypto.SigningKey . snd)
-      . deserialiseFromBytes Byron.Crypto.fromCBORXPrv
+
 
 ------------------------------------------------------------------------------
 -- Byron Errors
@@ -204,7 +198,7 @@ data ByronProtocolInstantiationError =
   | GenesisConfigurationError !FilePath !Genesis.ConfigurationError
   | GenesisReadError !FilePath !Genesis.GenesisDataError
   | CredentialsError !ByronLeaderCredentialsError
-  | SigningKeyDeserialiseFailure !FilePath !DeserialiseFailure
+  | SigningKeyDeserialiseFailure !FilePath
   | SigningKeyFilepathNotSpecified
   deriving Show
 
@@ -226,6 +220,5 @@ renderByronProtocolInstantiationError pie =
                                 <> " Error: " <> Text.pack (show err)
     -- TODO: Implement ByronLeaderCredentialsError render function in ouroboros-network
     CredentialsError byronLeaderCredentialsError -> "Byron leader credentials error: " <> Text.pack (show byronLeaderCredentialsError)
-    SigningKeyDeserialiseFailure fp deserialiseFailure -> "Signing key deserialisation error in: " <> toS fp
-                                                           <> " Error: " <> Text.pack (show deserialiseFailure)
+    SigningKeyDeserialiseFailure fp -> "Signing key deserialisation error in: " <> toS fp
     SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
