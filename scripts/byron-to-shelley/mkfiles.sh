@@ -188,14 +188,13 @@ cat > byron.genesis.spec.json <<EOF
 }
 EOF
 
-cardano-cli genesis \
+cardano-cli byron genesis genesis \
   --protocol-magic ${NETWORK_MAGIC} \
   --start-time ${START_TIME} \
   --k ${SECURITY_PARAM} \
   --n-poor-addresses 0 \
   --n-delegate-addresses ${NUM_BFT_NODES} \
   --total-balance ${INIT_SUPPLY} \
-  --byron-formats \
   --delegate-share 1 \
   --avvm-entry-count 0 \
   --avvm-entry-balance 0 \
@@ -216,19 +215,16 @@ done
 for N in ${BFT_NODES_N}; do
 
   cardano-cli keygen \
-    --byron-formats \
     --secret byron/payment-keys.00$((${N} - 1)).key \
     --no-password
 
   cardano-cli signing-key-address \
-    --byron-formats \
     --testnet-magic 42 \
     --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
 
   # Write Genesis addresses to files
 
   cardano-cli signing-key-address \
-    --byron-formats  \
     --testnet-magic 42 \
     --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
 
@@ -240,7 +236,6 @@ done
 cardano-cli issue-genesis-utxo-expenditure \
             --genesis-json byron/genesis.json \
             --testnet-magic 42 \
-            --byron-formats \
             --tx tx0.tx \
             --wallet-key byron/delegate-keys.000.key \
             --rich-addr-from $(head -n 1 byron/genesis-address-000) \

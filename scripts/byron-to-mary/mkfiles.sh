@@ -190,7 +190,6 @@ cardano-cli byron genesis genesis \
   --n-poor-addresses 0 \
   --n-delegate-addresses ${NUM_BFT_NODES} \
   --total-balance ${INIT_SUPPLY} \
-  --byron-formats \
   --delegate-share 1 \
   --avvm-entry-count 0 \
   --avvm-entry-balance 0 \
@@ -212,24 +211,20 @@ done
 for N in ${BFT_NODES_N}; do
 
   cardano-cli byron key keygen \
-    --byron-formats \
     --secret byron/payment-keys.00$((${N} - 1)).key \
     --no-password
 
   cardano-cli byron key signing-key-address \
-    --byron-formats \
     --testnet-magic 42 \
     --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
 
   cardano-cli byron key signing-key-address \
-    --byron-formats  \
     --testnet-magic 42 \
     --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
 
   cardano-cli byron transaction issue-genesis-utxo-expenditure \
     --genesis-json byron/genesis.json \
     --testnet-magic 42 \
-    --byron-formats \
     --tx tx$((${N} - 1)).tx \
     --wallet-key byron/delegate-keys.00$((${N} - 1)).key \
     --rich-addr-from $(head -n 1 byron/genesis-address-00$((${N} - 1))) \

@@ -148,7 +148,7 @@ class CardanoCluster:
 
         wallet["value"] = wallet["value"] - txouts_total - fee
         txout_args = self.cli.prepend_flag("--txout", txouts)
-        self.cli.cmd(["cardano-cli", "issue-utxo-expenditure", "--tx", tx_filename, "--testnet-magic", str(self.networkMagic), "--byron-formats", "--txin", getTxIn(current_tx), "--wallet-key", str(wallet["key"]), "--txout", getTxOut(wallet) ] + txout_args)
+        self.cli.cmd(["cardano-cli", "issue-utxo-expenditure", "--tx", tx_filename, "--testnet-magic", str(self.networkMagic), "--txin", getTxIn(current_tx), "--wallet-key", str(wallet["key"]), "--txout", getTxOut(wallet) ] + txout_args)
         return wallet
 
 class CardanoCLIWrapper:
