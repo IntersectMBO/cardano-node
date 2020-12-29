@@ -223,7 +223,6 @@ testnet testnetOptions H.Conf {..} = do
     , "--n-poor-addresses", "0"
     , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
     , "--total-balance", show @Int initSupply
-    , "--byron-formats"
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"
@@ -244,14 +243,12 @@ testnet testnetOptions H.Conf {..} = do
   forM_ bftNodesN $ \n -> do
     void $ H.execCli
       [ "keygen"
-      , "--byron-formats"
       , "--secret", tempAbsPath </> "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
       , "--no-password"
       ]
 
     H.execCli
       [ "signing-key-address"
-      , "--byron-formats"
       , "--testnet-magic", "42"
       , "--secret", tempAbsPath </> "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
       ] >>= H.writeFile (tempAbsPath </> "byron/address-00" <> show @Int (n - 1))
@@ -259,7 +256,6 @@ testnet testnetOptions H.Conf {..} = do
     -- Write Genesis addresses to files
     H.execCli
       [ "signing-key-address"
-      , "--byron-formats"
       , "--testnet-magic", "42"
       , "--secret", tempAbsPath </> "byron/genesis-keys.00" <> show @Int (n - 1) <> ".key"
       ] >>= H.writeFile (tempAbsPath </> "byron/genesis-address-00" <> show @Int (n - 1))
@@ -274,7 +270,6 @@ testnet testnetOptions H.Conf {..} = do
       [ "issue-genesis-utxo-expenditure"
       , "--genesis-json", tempAbsPath </> "byron/genesis.json"
       , "--testnet-magic", "42"
-      , "--byron-formats"
       , "--tx", tempAbsPath </> "tx0.tx"
       , "--wallet-key", tempAbsPath </> "byron/delegate-keys.000.key"
       , "--rich-addr-from", richAddrFrom

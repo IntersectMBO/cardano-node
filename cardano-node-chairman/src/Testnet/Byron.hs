@@ -114,7 +114,6 @@ testnet testnetOptions H.Conf {..} = do
     , "--avvm-entry-count", "128"
     , "--avvm-entry-balance", "10000000000000"
     , "--delegate-share", "0.9"
-    , "--real-pbft"
     , "--secret-seed", "2718281828"
     ]
 
