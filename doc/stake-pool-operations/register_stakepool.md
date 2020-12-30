@@ -45,14 +45,14 @@ Store the file in a url you control. For example [https://teststakepool.com/pool
 
 This validates that the JSON fits the required schema, if it does, you will get the hash of your file.
 
-    cardano-cli shelley stake-pool metadata-hash --pool-metadata-file pool_Metadata.json
+    cardano-cli stake-pool metadata-hash --pool-metadata-file pool_Metadata.json
 
     >6bf124f217d0e5a0a8adb1dbd8540e1334280d49ab861127868339f43b3948af
 
 
 #### Generate Stake pool registration certificate
 
-    cardano-cli shelley stake-pool registration-certificate \
+    cardano-cli stake-pool registration-certificate \
     --cold-verification-key-file cold.vkey \
     --vrf-verification-key-file vrf.vkey \
     --pool-pledge <AMOUNT TO PLEDGE IN LOVELACE> \
@@ -101,7 +101,7 @@ The **pool-registration.cert** file should look like this:
 
 To honor your pledge, create a _delegation certificate_:
 
-    cardano-cli shelley stake-address delegation-certificate \
+    cardano-cli stake-address delegation-certificate \
     --stake-verification-key-file stake.vkey \
     --cold-verification-key-file cold.vkey \
     --out-file delegation.cert
@@ -114,7 +114,7 @@ To submit the `pool registration certificate` and the `delegation certificates` 
 
 #### Draft the transaction
 
-    cardano-cli shelley transaction build-raw \
+    cardano-cli transaction build-raw \
     --tx-in <UTXO>#<TxIx> \
     --tx-out $(cat payment.addr)+0 \
     --ttl 0 \
@@ -125,7 +125,7 @@ To submit the `pool registration certificate` and the `delegation certificates` 
 
 #### Calculate the fees
 
-    cardano-cli shelley transaction calculate-min-fee \
+    cardano-cli transaction calculate-min-fee \
     --tx-body-file tx.raw \
     --tx-in-count 1 \
     --tx-out-count 1 \
@@ -149,7 +149,7 @@ All amounts in Lovelace
 
 #### Build the transaction:
 
-    cardano-cli shelley transaction build-raw \
+    cardano-cli transaction build-raw \
     --tx-in <UTXO>#<TxIx> \
     --tx-out $(cat payment.addr)+<CHANGE IN LOVELACE> \
     --ttl <TTL> \
@@ -160,7 +160,7 @@ All amounts in Lovelace
 
 #### Sign the transaction:
 
-    cardano-cli shelley transaction sign \
+    cardano-cli transaction sign \
     --tx-body-file tx.raw \
     --signing-key-file payment.skey \
     --signing-key-file stake.skey \
@@ -170,7 +170,7 @@ All amounts in Lovelace
 
 #### Submit the transaction:
 
-    cardano-cli shelley transaction submit \
+    cardano-cli transaction submit \
     --tx-file tx.signed \
     --mainnet
 
@@ -179,8 +179,8 @@ All amounts in Lovelace
 
 Get Pool ID
 
-    cardano-cli shelley stake-pool id --verification-key-file cold.vkey
+    cardano-cli stake-pool id --verification-key-file cold.vkey
 
 Check for the presence of your poolID in the network ledger state, with:
 
-    cardano-cli shelley query ledger-state --mainnet | grep publicKey | grep <poolId>
+    cardano-cli query ledger-state --mainnet --allegra-era | grep publicKey | grep <poolId>

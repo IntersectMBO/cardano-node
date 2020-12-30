@@ -7,7 +7,7 @@ Stake address needs to be registered on the blockchain to be useful. Registering
 
 #### Create a _registration certificate_:
 
-    cardano-cli shelley stake-address registration-certificate \
+    cardano-cli stake-address registration-certificate \
     --stake-verification-key-file stake.vkey \
     --out-file stake.cert
 
@@ -15,7 +15,7 @@ Stake address needs to be registered on the blockchain to be useful. Registering
 
 For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
 
-    cardano-cli shelley transaction build-raw \
+    cardano-cli transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
     --tx-out $(cat payment.addr)+0 \
     --ttl 0 \
@@ -25,7 +25,7 @@ For the transaction draft, --tx.out, --ttl and --fee can be set to zero.
 
 #### Calculate fees
 
-    cardano-cli shelley transaction calculate-min-fee \
+    cardano-cli transaction calculate-min-fee \
     --tx-body-file tx.raw \
     --tx-in-count 1 \
     --tx-out-count 1 \
@@ -48,9 +48,10 @@ The deposit amount can be found in the `protocol.json` under `keyDeposit`, for e
 
 Query the UTXO of the address that pays for the transaction and deposit:
 
-    cardano-cli shelley query utxo \
+    cardano-cli query utxo \
         --address $(cat payment.addr) \
-        --mainnet
+        --mainnet \
+        --allegra-era
 
     >                            TxHash                                 TxIx        Lovelace
     > ----------------------------------------------------------------------------------------
@@ -60,13 +61,13 @@ Query the UTXO of the address that pays for the transaction and deposit:
 
     expr 1000000000 - 171485 - 2000000
 
-    > 999428515
+    > 997828515
 
 #### Submit the certificate with a transaction:
 
-Build the transaction, this time include  --ttl and --fee  
+Build the transaction, this time include --ttl and --fee  
 
-    cardano-cli shelley transaction build-raw \
+    cardano-cli transaction build-raw \
     --tx-in b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee#1 \
     --tx-out $(cat payment.addr)+997828515 \
     --ttl 987654 \
@@ -76,7 +77,7 @@ Build the transaction, this time include  --ttl and --fee
 
 Sign it:
 
-    cardano-cli shelley transaction sign \
+    cardano-cli transaction sign \
     --tx-body-file tx.raw \
     --signing-key-file payment.skey \
     --signing-key-file stake.skey \
@@ -85,7 +86,7 @@ Sign it:
 
 And submit it:
 
-    cardano-cli shelley transaction submit \
+    cardano-cli transaction submit \
     --tx-file tx.signed \
     --mainnet
 

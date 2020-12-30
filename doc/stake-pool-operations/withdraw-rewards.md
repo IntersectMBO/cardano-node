@@ -3,8 +3,9 @@
 
 ### Check the balance of the rewards address:
 
-    cardano-cli shelley query stake-address-info \
+    cardano-cli query stake-address-info \
     --mainnet \
+    --allegra-era \
     --address $(cat stake.addr)
 
     [
@@ -20,7 +21,7 @@
 
 You'll withdraw rewards into a payment.addr wich will pay for the transaction fees.
 
-    cardano-cli shelley query utxo --mainnet --address $(cat payment.addr)
+    cardano-cli query utxo --mainnet --allegra-era --address $(cat payment.addr)
 
                                TxHash                                 TxIx        Lovelace
     ----------------------------------------------------------------------------------------
@@ -28,7 +29,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
 
 ### Draft the withdraw transaction to transfer the rewards to a payment.addr
 
-    cardano-cli shelley transaction build-raw \
+    cardano-cli transaction build-raw \
     --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1 \
     --tx-out $(cat payment.addr)+743882981 \
     --withdrawal $(cat stake.addr)+550000000 \
@@ -38,7 +39,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
 
 ### Calculate transaction fees
 
-    cardano-cli shelley transaction calculate-min-fee \
+    cardano-cli transaction calculate-min-fee \
     --mainnet \
     --tx-body-file withdraw_rewards.raw  \
     --tx-in-count 1 \
@@ -54,7 +55,7 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
     expr 194054070 - 171089 + 550000000
     743882981
 
-    cardano-cli shelley transaction build-raw \
+    cardano-cli transaction build-raw \
     --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1 \
     --tx-out $(cat payment.addr)+743882981 \
     --withdrawal $(cat stake.addr)+550000000 \
@@ -64,13 +65,13 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
 
 ### Sign and submit the transactions
 
-    cardano-cli shelley transaction sign \
+    cardano-cli transaction sign \
     --mainnet \
     --tx-body-file withdraw_rewards.raw  \
     --signing-key-file payment.skey \
     --signing-key-file stake.skey \
     --out-file withdraw_rewards.signed
 
-    cardano-cli shelley transaction submit \
+    cardano-cli transaction submit \
     --mainnet \
     --tx-file withdraw_rewards.signed
