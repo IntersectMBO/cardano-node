@@ -686,7 +686,7 @@ pQueryCmd =
     pQueryStakeDistribution =
       QueryStakeDistribution
         <$> pCardanoEra
-        <*> pProtocol
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
