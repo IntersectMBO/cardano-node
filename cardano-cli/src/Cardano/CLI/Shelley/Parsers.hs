@@ -663,7 +663,7 @@ pQueryCmd =
     pQueryProtocolParameters =
       QueryProtocolParameters
         <$> pCardanoEra
-        <*> pProtocol
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 

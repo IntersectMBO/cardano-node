@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -47,27 +49,28 @@ module Cardano.Api.ProtocolParameters (
 
 import           Prelude
 
-import           Numeric.Natural
+import           Data.Aeson (ToJSON)
 import           Data.ByteString (ByteString)
-import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
-import           Data.Time (UTCTime, NominalDiffTime)
+import qualified Data.Map.Strict as Map
+import           Data.Time (NominalDiffTime, UTCTime)
+import           GHC.Generics
+import           Numeric.Natural
 
 import           Control.Monad
 
-import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 
 import qualified Cardano.Ledger.Era as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
-import           Shelley.Spec.Ledger.BaseTypes
-                   (maybeToStrictMaybe, strictMaybeToMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
-import qualified Shelley.Spec.Ledger.Genesis as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Hash
@@ -206,8 +209,9 @@ data ProtocolParameters =
        --
        protocolParamTreasuryCut :: Rational
     }
-  deriving (Eq, Show)
+  deriving (Eq, Generic, Show)
 
+deriving instance ToJSON ProtocolParameters
 
 -- ----------------------------------------------------------------------------
 -- Updates to the protocol paramaters
@@ -384,7 +388,9 @@ instance Monoid ProtocolParametersUpdate where
 --
 
 newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
+
+deriving instance ToJSON PraosNonce
 
 makePraosNonce :: ByteString -> PraosNonce
 makePraosNonce = PraosNonce . Crypto.hashWith id

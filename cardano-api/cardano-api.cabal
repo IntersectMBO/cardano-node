@@ -27,6 +27,7 @@ library
                         Cardano.Api.LocalChainSync
                         Cardano.Api.Modes
                         Cardano.Api.Protocol
+                        Cardano.Api.ProtocolParameters
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley
@@ -60,7 +61,7 @@ library
                         Cardano.Api.KeysPraos
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
-                        Cardano.Api.ProtocolParameters
+-- TODO: move here      Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.SerialiseBech32
