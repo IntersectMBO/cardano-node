@@ -694,7 +694,7 @@ pQueryCmd =
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
         <$> pCardanoEra
-        <*> pProtocol
+        <*> pConsensusModeParams
         <*> pFilterByStakeAddress
         <*> pNetworkId
         <*> pMaybeOutputFile

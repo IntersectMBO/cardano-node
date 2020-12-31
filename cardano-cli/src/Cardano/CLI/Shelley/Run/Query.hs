@@ -22,6 +22,7 @@ import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -63,12 +64,7 @@ import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
-import           Shelley.Spec.Ledger.Coin (Coin (..))
-import qualified Shelley.Spec.Ledger.Credential as Ledger
-
-import qualified Shelley.Spec.Ledger.Keys as Ledger
 import           Shelley.Spec.Ledger.LedgerState (NewEpochState)
-import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.Scripts ()
 import qualified Shelley.Spec.Ledger.TxBody as Shelley (TxId (..), TxIn (..), TxOut (..))
 import qualified Shelley.Spec.Ledger.UTxO as Shelley (UTxO (..))
@@ -110,8 +106,8 @@ runQueryCmd cmd =
       runQueryTip protocol network mOutFile
     QueryStakeDistribution era consensusModeParams network mOutFile ->
       runQueryStakeDistribution era consensusModeParams network mOutFile
-    QueryStakeAddressInfo era protocol addr network mOutFile ->
-      runQueryStakeAddressInfo era protocol addr network mOutFile
+    QueryStakeAddressInfo era consensusModeParams addr network mOutFile ->
+      runQueryStakeAddressInfo era consensusModeParams addr network mOutFile
     QueryLedgerState era protocol network mOutFile ->
       runQueryLedgerState era protocol network mOutFile
     QueryProtocolState era protocol network mOutFile ->
@@ -255,25 +251,39 @@ runQueryProtocolState (AnyCardanoEra era) protocol network mOutFile
     | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
                               ByronProtocolNotSupportedError)
 
+-- | Query the current delegations and reward accounts, filtered by a given
+-- set of addresses, from a Shelley node via the local state query protocol.
 
 runQueryStakeAddressInfo
   :: AnyCardanoEra
-  -> Protocol
+  -> AnyConsensusModeParams
   -> StakeAddress
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeAddressInfo (AnyCardanoEra era) protocol addr network mOutFile
-  | ShelleyBasedEra era' <- cardanoEraStyle era =
+runQueryStakeAddressInfo anyEra@(AnyCardanoEra era) anyCmodeParams@(AnyConsensusModeParams cModeParams)
+                         (StakeAddress _ addr) network mOutFile
+  | ShelleyBasedEra era' <- cardanoEraStyle era = do
+      SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+      eraInMode <- hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch anyEra anyCmodeParams)
+                     $ toEraInMode cModeParams era
 
-    -- Obtain the required type equality constaints
-    obtainStandardCrypto era' $ do
+      let localNodeConnInfo = NewIPC.LocalNodeConnectInfo
+                                { NewIPC.localConsensusModeParams = cModeParams
+                                , NewIPC.localNodeNetworkId = network
+                                , NewIPC.localNodeSocketPath = sockPath
+                                }
+          qInMode = NewIPC.QueryInEra eraInMode (NewIPC.QueryInShelleyBasedEra era'
+                      $ NewIPC.QueryStakeAddresses (Set.singleton $ fromShelleyStakeCredential addr) network)
 
-    SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-    delegsAndRwds <- firstExceptT ShelleyQueryCmdLocalStateQueryError $
-      withlocalNodeConnectInfo protocol network sockPath $
-        queryDelegationsAndRewardsFromLocalState era' (Set.singleton addr)
-    writeStakeAddressInfo mOutFile delegsAndRwds
+      tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
+      res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+      case res of
+        Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
+        Right eDelegsAndRwds ->
+          case eDelegsAndRwds of
+            Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
+            Right delegsAndRewards -> writeStakeAddressInfo mOutFile $ DelegationsAndRewards delegsAndRewards
 
   | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
                               ByronProtocolNotSupportedError)
@@ -309,12 +319,12 @@ writeStakeAddressInfo
   :: Maybe OutputFile
   -> DelegationsAndRewards
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeAddressInfo mOutFile dr@(DelegationsAndRewards _ _delegsAndRwds) =
+writeStakeAddressInfo mOutFile delegsAndRewards =
   case mOutFile of
-    Nothing -> liftIO $ LBS.putStrLn (encodePretty dr)
+    Nothing -> liftIO $ LBS.putStrLn (encodePretty delegsAndRewards)
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
-        $ LBS.writeFile fpath (encodePretty dr)
+        $ LBS.writeFile fpath (encodePretty delegsAndRewards)
 
 writeLedgerState :: ToJSON (NewEpochState ledgerera)
                  => Maybe OutputFile
@@ -542,32 +552,29 @@ queryUTxOFromLocalState era qFilter
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they
 -- delegate to and their reward account balance.
-data DelegationsAndRewards
-  = DelegationsAndRewards
-      !NetworkId
-      !(Map (Ledger.Credential Ledger.Staking StandardCrypto)
-            (Maybe (Hash StakePoolKey), Coin))
+newtype DelegationsAndRewards
+  = DelegationsAndRewards (Map StakeAddress Lovelace, Map StakeAddress PoolId)
+
+
+mergeDelegsAndRewards :: DelegationsAndRewards -> [(StakeAddress, Maybe Lovelace, Maybe PoolId)]
+mergeDelegsAndRewards (DelegationsAndRewards (rewardsMap, delegMap)) =
+ [ (stakeAddr, Map.lookup stakeAddr rewardsMap, Map.lookup stakeAddr delegMap)
+ | stakeAddr <- nub $ Map.keys rewardsMap ++ Map.keys delegMap
+ ]
+
 
 instance ToJSON DelegationsAndRewards where
-  toJSON (DelegationsAndRewards nw delegsAndRwds) =
+  toJSON delegsAndRwds =
       Aeson.Array . Vector.fromList
-        . map delegAndRwdToJson $ Map.toList delegsAndRwds
+        . map delegAndRwdToJson $ mergeDelegsAndRewards delegsAndRwds
     where
-      delegAndRwdToJson
-        :: (Ledger.Credential Ledger.Staking StandardCrypto, (Maybe (Hash StakePoolKey), Coin))
-        -> Aeson.Value
-      delegAndRwdToJson (k, (d, r)) =
+      delegAndRwdToJson :: (StakeAddress, Maybe Lovelace, Maybe PoolId) -> Aeson.Value
+      delegAndRwdToJson (addr, mRewards, mPoolId) =
         Aeson.object
-          [ "address" .= renderAddress k
-          , "delegation" .= d
-          , "rewardAccountBalance" .= r
+          [ "address" .= serialiseAddress addr
+          , "delegation" .= mPoolId
+          , "rewardAccountBalance" .= mRewards
           ]
-
-      renderAddress :: Ledger.Credential Ledger.Staking StandardCrypto -> Text
-      renderAddress = serialiseAddress
-                    . StakeAddress (toShelleyNetwork nw)
-                    . toShelleyStakeCredential
-                    . fromShelleyStakeCredential
 
 queryLocalLedgerState
   :: forall era ledgerera mode block.
@@ -660,77 +667,6 @@ queryLocalProtocolState era connectInfo@LocalNodeConnectInfo{localNodeConsensusM
     decodeProtocolState (Serialised pbs) =
       first (const pbs) (decodeFull pbs)
 
-
--- | Query the current delegations and reward accounts, filtered by a given
--- set of addresses, from a Shelley node via the local state query protocol.
---
--- This one is Shelley-specific because the query is Shelley-specific.
---
-queryDelegationsAndRewardsFromLocalState
-  :: forall era ledgerera mode block.
-     ShelleyLedgerEra era ~ ledgerera
-  => Ledger.Crypto ledgerera ~ StandardCrypto
-  => ShelleyBasedEra era
-  -> Set StakeAddress
-  -> LocalNodeConnectInfo mode block
-  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
-             DelegationsAndRewards
-queryDelegationsAndRewardsFromLocalState era stakeaddrs
-                                         connectInfo@LocalNodeConnectInfo{
-                                           localNodeNetworkId,
-                                           localNodeConsensusMode
-                                         } =
-  case localNodeConsensusMode of
-    ByronMode{} -> throwError ByronProtocolNotSupportedError
-
-    ShelleyMode{} | ShelleyBasedEraShelley <- era -> do
-      tip <- liftIO $ getLocalTip connectInfo
-      Consensus.DegenQueryResult result <-
-        firstExceptT AcquireFailureError . newExceptT $
-          queryNodeLocalState
-            connectInfo
-            ( getTipPoint tip
-            , Consensus.DegenQuery $
-                Consensus.GetFilteredDelegationsAndRewardAccounts
-                  (toShelleyStakeCredentials stakeaddrs)
-            )
-      return (uncurry toDelegsAndRwds result)
-
-    ShelleyMode{} | otherwise -> throwError ShelleyProtocolEraMismatch
-
-    CardanoMode{} -> do
-      tip <- liftIO $ getLocalTip connectInfo
-      result <- firstExceptT AcquireFailureError . newExceptT $
-        queryNodeLocalState
-          connectInfo
-          ( getTipPoint tip
-          , queryIfCurrentEra era $
-              Consensus.GetFilteredDelegationsAndRewardAccounts
-                (toShelleyStakeCredentials stakeaddrs)
-          )
-      case result of
-        QueryResultEraMismatch err -> throwError (EraMismatchError err)
-        QueryResultSuccess drs -> return $ uncurry toDelegsAndRwds drs
-  where
-    toDelegsAndRwds
-      :: Map (Ledger.Credential Ledger.Staking StandardCrypto)
-             (Ledger.KeyHash Ledger.StakePool StandardCrypto)
-      -> Ledger.RewardAccounts StandardCrypto
-      -> DelegationsAndRewards
-    toDelegsAndRwds delegs rwdAcnts =
-      DelegationsAndRewards localNodeNetworkId $
-        Map.mapWithKey
-          (\k v -> (StakePoolKeyHash <$> Map.lookup k delegs, v))
-          rwdAcnts
-
-    toShelleyStakeCredentials :: Set StakeAddress
-                              -> Set (Ledger.StakeCredential StandardCrypto)
-    toShelleyStakeCredentials =
-      Set.map (toShelleyStakeCredential
-             . fromShelleyStakeCredential
-             . (\(StakeAddress _ cred) -> cred))
-
-
 -- -----------------------------------------------------------------------------
 -- Era-generic helper functions
 --
@@ -762,14 +698,6 @@ obtainToJSONNewEpochState
 obtainToJSONNewEpochState ShelleyBasedEraShelley f = f
 obtainToJSONNewEpochState ShelleyBasedEraAllegra f = f
 obtainToJSONNewEpochState ShelleyBasedEraMary    f = f
-
-obtainStandardCrypto
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> (Ledger.Crypto ledgerera ~ StandardCrypto => a) -> a
-obtainStandardCrypto ShelleyBasedEraShelley f = f
-obtainStandardCrypto ShelleyBasedEraAllegra f = f
-obtainStandardCrypto ShelleyBasedEraMary    f = f
 
 obtainToJSONValue
   :: ShelleyLedgerEra era ~ ledgerera

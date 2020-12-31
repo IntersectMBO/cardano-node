@@ -275,7 +275,7 @@ data QueryCmd =
     QueryProtocolParameters AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryTip Protocol NetworkId (Maybe OutputFile)
   | QueryStakeDistribution AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo AnyCardanoEra Protocol StakeAddress NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo AnyCardanoEra AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
   | QueryUTxO AnyCardanoEra Protocol QueryFilter NetworkId (Maybe OutputFile)
   | QueryLedgerState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
   | QueryProtocolState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
