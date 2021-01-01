@@ -83,14 +83,14 @@ Create a working directory for your builds:
 
  Download and install the latest version of GHC:
 
-    wget https://downloads.haskell.org/ghc/8.10.2/ghc-8.10.2-x86_64-deb9-linux.tar.xz
-    tar -xf ghc-8.10.2-x86_64-deb9-linux.tar.xz
-    rm ghc-8.10.2-x86_64-deb9-linux.tar.xz
-    cd ghc-8.10.2
+    wget https://downloads.haskell.org/ghc/8.6.5/ghc-8.6.5-x86_64-deb9-linux.tar.xz
+    tar -xf ghc-8.6.5-x86_64-deb9-linux.tar.xz
+    rm ghc-8.6.5-x86_64-deb9-linux.tar.xz
+    cd ghc-8.6.5
     ./configure
     sudo make install
 
-This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions.
+This assumes GHC 8.6.5 on Linux.  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions.
 
 #### Install Libsodium
 
@@ -140,7 +140,7 @@ Checkout the latest version of cardano-node (choose the tag with the highest ver
 
 We explicitly use the GHC version that we installed earlier.  This avoids defaulting to a system version of GHC that might be older than the one you have installed.
 
-    cabal configure --with-compiler=ghc-8.10.2
+    cabal configure --with-compiler=ghc-8.6.5
 
 Update the local project file to use the VRF library that you installed earlier.
 
@@ -160,9 +160,9 @@ Install the newly built node and CLI commands:
 
 If this doesn't work, you can manually copy the executable files to the `~/.local/bin` directory. Replace the place holder `<TAGGED VERSION>` with your targeted version:
 
-    cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
+    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-node-<TAGGED VERSION>/x/cardano-node/build/cardano-node/cardano-node ~/.local/bin/
 
-    cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.2/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
+    cp -p dist-newstyle/build/x86_64-linux/ghc-8.6.5/cardano-cli-<TAGGED VERSION>/x/cardano-cli/build/cardano-cli/cardano-cli ~/.local/bin/
 
 Check the version that has been installed:
 
