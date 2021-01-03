@@ -1,0 +1,72 @@
+name: Haskell CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Select build directory
+      run: |
+        CABAL_BUILDDIR=ubuntu
+        echo "CABAL_BUILDDIR=$CABAL_BUILDDIR"
+        echo "CABAL_BUILDDIR=$CABAL_BUILDDIR" >> $GITHUB_ENV
+    
+    - name: Set cache version
+      run: echo "CACHE_VERSION=9w76Z3Q" >> $GITHUB_ENV
+    
+    - name: Configure to use libsodium
+      run: |
+        cat >> cabal.project <<EOF
+        package cardano-crypto-praos
+          flags: -external-libsodium-vrf
+        EOF
+    
+    - name: Preparing Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install libsodium23 libsodium-dev
+        sudo apt-get -y install libsystemd0 libsystemd-dev
+        sudo apt-get -y 
+        sudo apt-get -y remove --purge software-properties-common
+        sudo apt-get -y autoremove
+    
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: '8.10.2'
+        cabal-version: '3.4.0.0-rc4'
+
+    - name: Cabal update
+      run: cabal update
+
+    - name: Cabal Configure
+      run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+
+    - name: Record dependencies
+      run: |
+        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
+        
+    - uses: actions/cache@v2
+      name: Cache cabal store
+      with:
+        path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        restore-keys: |
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
+          
+    - name: Install dependencies
+      run: retry 2 cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
+    
+    - name: Build
+      run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR"
+  
+
