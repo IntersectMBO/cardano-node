@@ -15,8 +15,8 @@ import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
 
 import           Cardano.Api (NetworkId)
+import           Cardano.Api.Byron (ByronProtocolParametersUpdate (..))
 
-import           Cardano.CLI.Byron.UpdateProposal
 
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
@@ -131,7 +131,7 @@ data NodeCmd = CreateVote
                SystemTag
                InstallerHash
                FilePath
-               [ParametersToUpdate]
+               ByronProtocolParametersUpdate
              | SubmitUpdateProposal
                NetworkId
                FilePath

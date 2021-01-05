@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Golden.Byron.TextEnvelope.Tx
-  ( golden_byronTx
+module Test.Golden.Byron.Witness
+  ( golden_byronWitness
   ) where
 
 import           Cardano.Prelude
@@ -9,5 +9,5 @@ import           Hedgehog (Property)
 
 {- HLINT ignore "Use camelCase" -}
 
-golden_byronTx :: Property
-golden_byronTx = panic "TODO"
+golden_byronWitness :: Property
+golden_byronWitness = panic "TODO"
