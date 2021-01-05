@@ -1,6 +1,6 @@
 # Monitoring a Node with EKG
 
-This tutorial assumes that you have installed `cardano-node` as explained [here](000_install.md).
+This tutorial assumes that you have installed `cardano-node` as explained [here](../getting-started/install.md).
 
 1. For security reasons, EKG can normally only be used to monitor a node
    running on the local machine.
