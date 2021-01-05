@@ -27,7 +27,7 @@ jobs:
         echo "CABAL_BUILDDIR=$CABAL_BUILDDIR" >> $GITHUB_ENV
 
     - name: Set cache version
-      run: echo "CACHE_VERSION=9w76Z3Q" >> $GITHUB_ENV
+      run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
 
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
@@ -71,47 +71,20 @@ jobs:
     - name: Select optimal cabal version
       run: |
         case "$OS" in
-          Windows_NT)   echo "CABAL_VERSION=3.2.0.0"      >> $GITHUB_ENV;;
+          Windows_NT)   echo "CABAL_VERSION=3.4.0.1-rc3"  >> $GITHUB_ENV;;
           *)            echo "CABAL_VERSION=3.4.0.0-rc4"  >> $GITHUB_ENV;;
         esac
 
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ env.CABAL_VERSION }}
 
-    - name: MacOS cabal setup work-around
-      if: matrix.os == 'macos-latest'
-      run: |
-        echo insecure >> $HOME/.curlrc
-        ghcup install cabal 3.4.0.0-rc4
-        ghcup set cabal 3.4.0.0-rc4
-        rm $HOME/.curlrc
-
-    - name: Windows cabal setup work-around
-      if: matrix.os == 'windows-latest'
-      run: |
-        mkdir -p "$HOME/.local/bin"
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-        curl -Ls -o cabal.zip \
-          https://mistuke.blob.core.windows.net/binaries/unofficial/cabal/cabal-install-3.4.0.0-rc3-x86_64-unknown-mingw32.zip
-        unzip cabal.zip
-        mv cabal.exe "$HOME/.local/bin/"
-
     - name: Haskell versions
       run: |
         ghc --version
         cabal --version
-
-    - name: Patch GHC 8.10.2 linker
-      if: matrix.os == 'windows-latest' && matrix.ghc == '8.10.2'
-      run: |
-        if [ -f /c/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings ]; then
-          sed -i \
-            's|C:/GitLabRunner/builds/2WeHDSFP/0/ghc/ghc/inplace/mingw/bin/ld.exe|C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/mingw/bin/ld.exe|g' \
-            C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings
-        fi
 
     - name: Install build environment
       if: matrix.os == 'ubuntu-latest'
@@ -166,4 +139,3 @@ jobs:
       with:
         name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
         path: ${{ runner.temp }}/chairman/
-
