@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.6.5", "8.10.2"]
+        ghc: ["8.6.5", "8.10.3"]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
@@ -71,7 +71,7 @@ jobs:
     - name: Select optimal cabal version
       run: |
         case "$OS" in
-          Windows_NT)   echo "CABAL_VERSION=3.4.0.1-rc3"  >> $GITHUB_ENV;;
+          Windows_NT)   echo "CABAL_VERSION=3.4.0.0-rc5"  >> $GITHUB_ENV;;
           *)            echo "CABAL_VERSION=3.4.0.0-rc4"  >> $GITHUB_ENV;;
         esac
 
@@ -114,8 +114,8 @@ jobs:
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
 
-    - name: Install dependencies
-      run: retry 2 cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
+    # - name: Install dependencies
+    #   run: retry 2 cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
 
     - name: Build
       run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman --builddir="$CABAL_BUILDDIR"
