@@ -21,7 +21,7 @@ module Cardano.Api.Query (
 
 import           Prelude
 import           Data.Bifunctor (bimap)
-import           Data.Maybe (catMaybes)
+import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import           Data.Set (Set)
 import qualified Data.Map as Map
@@ -148,8 +148,7 @@ toShelleyAddrSet era =
     -- Ignore any addresses that are not appropriate for the era,
     -- e.g. Shelley addresses in the Byron era, as these would not
     -- appear in the UTxO anyway.
-  . catMaybes
-  . map (anyAddressInEra era)
+  . mapMaybe (anyAddressInEra era)
   . Set.toList
 
 fromShelleyUTxO :: ShelleyLedgerEra era ~ ledgerera
