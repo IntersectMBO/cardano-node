@@ -4,24 +4,32 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
--- | Protocol parameters.
+-- | The various Cardano protocol parameters, including:
 --
--- This covers Protocol parameter updates that can be embedded in transactions.
---
--- TODO: add protocol parameters in ledger state queries.
+-- * updates to protocol parameters: 'ProtocolParametersUpdate'
+-- * update proposals that can be embedded in transactions: 'UpdateProposal'
 --
 module Cardano.Api.ProtocolParameters (
-    UpdateProposal(..),
+
+    -- * Updates to the protocol paramaters
     ProtocolParametersUpdate(..),
     EpochNo,
-    makeShelleyUpdateProposal,
 
     -- * PraosNonce
     PraosNonce,
     makePraosNonce,
 
+    -- * Update proposals to change the protocol paramaters
+    UpdateProposal(..),
+    makeShelleyUpdateProposal,
+
     -- * Internal conversion functions
+    toShelleyPParamsUpdate,
+    toShelleyProposedPPUpdates,
     toShelleyUpdate,
+    fromShelleyPParamsUpdate,
+    fromShelleyProposedPPUpdates,
+    fromShelleyUpdate,
 
     -- * Data family instances
     AsType(..)
@@ -62,31 +70,11 @@ import           Cardano.Api.Value
 
 
 -- ----------------------------------------------------------------------------
--- Protocol updates embedded in transactions
+-- Updates to the protocol paramaters
 --
 
-data UpdateProposal =
-     UpdateProposal
-       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
-       !EpochNo
-    deriving stock (Eq, Show)
-    deriving anyclass SerialiseAsCBOR
-
-instance HasTypeProxy UpdateProposal where
-    data AsType UpdateProposal = AsUpdateProposal
-    proxyToAsType _ = AsUpdateProposal
-
-instance HasTextEnvelope UpdateProposal where
-    textEnvelopeType _ = "UpdateProposalShelley"
-
-instance ToCBOR UpdateProposal where
-    toCBOR = toCBOR . toShelleyUpdate @StandardShelley
-    -- We have to pick a monomorphic era type for the serialisation. We use the
-    -- Shelley era. This makes no difference since era type is phantom.
-
-instance FromCBOR UpdateProposal where
-    fromCBOR = fromShelleyUpdate @StandardShelley <$> fromCBOR
-
+-- | The representation of a change in the 'ProtocolParameters'.
+--
 data ProtocolParametersUpdate =
      ProtocolParametersUpdate {
 
@@ -250,6 +238,53 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateTreasuryCut         = Nothing
       }
 
+
+-- ----------------------------------------------------------------------------
+-- Praos nonce
+--
+
+newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
+  deriving (Eq, Ord, Show)
+
+makePraosNonce :: ByteString -> PraosNonce
+makePraosNonce = PraosNonce . Crypto.hashWith id
+
+toShelleyNonce :: Maybe PraosNonce -> Shelley.Nonce
+toShelleyNonce Nothing               = Shelley.NeutralNonce
+toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
+
+fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
+fromPraosNonce Shelley.NeutralNonce = Nothing
+fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
+
+
+-- ----------------------------------------------------------------------------
+-- Proposals embedded in transactions to update protocol parameters
+--
+
+data UpdateProposal =
+     UpdateProposal
+       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
+       !EpochNo
+    deriving stock (Eq, Show)
+    deriving anyclass SerialiseAsCBOR
+
+instance HasTypeProxy UpdateProposal where
+    data AsType UpdateProposal = AsUpdateProposal
+    proxyToAsType _ = AsUpdateProposal
+
+instance HasTextEnvelope UpdateProposal where
+    textEnvelopeType _ = "UpdateProposalShelley"
+
+instance ToCBOR UpdateProposal where
+    toCBOR = toCBOR . toShelleyUpdate @StandardShelley
+    -- We have to pick a monomorphic era type for the serialisation. We use the
+    -- Shelley era. This makes no difference since era type is phantom.
+
+instance FromCBOR UpdateProposal where
+    fromCBOR = fromShelleyUpdate @StandardShelley <$> fromCBOR
+
+
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> [Hash GenesisKey]
                           -> EpochNo
@@ -258,6 +293,10 @@ makeShelleyUpdateProposal params genesisKeyHashes =
     --TODO decide how to handle parameter validation
     UpdateProposal (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
 
+
+-- ----------------------------------------------------------------------------
+-- Conversion functions
+--
 
 toShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
                 => UpdateProposal -> Shelley.Update ledgerera
@@ -390,22 +429,3 @@ fromShelleyPParamsUpdate
     , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
                                             strictMaybeToMaybe _tau
     }
-
-
--- ----------------------------------------------------------------------------
--- Praos nonce
---
-
-newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
-  deriving (Eq, Ord, Show)
-
-makePraosNonce :: ByteString -> PraosNonce
-makePraosNonce = PraosNonce . Crypto.hashWith id
-
-toShelleyNonce :: Maybe PraosNonce -> Shelley.Nonce
-toShelleyNonce Nothing               = Shelley.NeutralNonce
-toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
-
-fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
-fromPraosNonce Shelley.NeutralNonce = Nothing
-fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
