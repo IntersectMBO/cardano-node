@@ -231,8 +231,10 @@ test-suite cardano-cli-golden
                       , base16-bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-crypto-wrapper
                       , cardano-ledger
                       , cardano-prelude
+                      , cborg
                       , containers
                       , deepseq
                       , directory
@@ -249,7 +251,7 @@ test-suite cardano-cli-golden
                       , unordered-containers
 
   other-modules:        Test.Golden.Shelley
-                        Test.Golden.Byron.PaymentKeys
+                        Test.Golden.Byron.SigningKeys
                         Test.Golden.Byron.Tx
                         Test.Golden.Byron.TxBody
                         Test.Golden.Byron.UpdateProposal

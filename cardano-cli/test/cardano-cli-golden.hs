@@ -2,6 +2,7 @@ import           Cardano.Prelude
 
 import           Hedgehog.Main (defaultMain)
 
+import qualified Test.Golden.Byron.SigningKeys
 import qualified Test.Golden.Byron.Tx
 import qualified Test.Golden.Byron.UpdateProposal
 import qualified Test.Golden.Byron.Vote
@@ -10,7 +11,8 @@ import qualified Test.Golden.Shelley
 main :: IO ()
 main =
   defaultMain
-    [ Test.Golden.Byron.Tx.txTests
+    [ Test.Golden.Byron.SigningKeys.tests
+    , Test.Golden.Byron.Tx.txTests
     , Test.Golden.Byron.UpdateProposal.updateProposalTest
     , Test.Golden.Byron.Vote.voteTests
     , Test.Golden.Shelley.keyTests
