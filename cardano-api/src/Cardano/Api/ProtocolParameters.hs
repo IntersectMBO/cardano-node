@@ -6,10 +6,13 @@
 
 -- | The various Cardano protocol parameters, including:
 --
+-- * the current values of updateable protocol parameters: 'ProtocolParameters'
 -- * updates to protocol parameters: 'ProtocolParametersUpdate'
 -- * update proposals that can be embedded in transactions: 'UpdateProposal'
 --
 module Cardano.Api.ProtocolParameters (
+    -- * The updateable protocol paramaters
+    ProtocolParameters(..),
 
     -- * Updates to the protocol paramaters
     ProtocolParametersUpdate(..),
@@ -27,6 +30,7 @@ module Cardano.Api.ProtocolParameters (
     toShelleyPParamsUpdate,
     toShelleyProposedPPUpdates,
     toShelleyUpdate,
+    fromShelleyPParams,
     fromShelleyPParamsUpdate,
     fromShelleyProposedPPUpdates,
     fromShelleyUpdate,
@@ -67,6 +71,131 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
+
+
+-- | The values of the set of /updateable/ protocol paramaters. At any
+-- particular point on the chain there is a current set of paramaters in use.
+--
+-- These paramaters can be updated (at epoch boundaries) via an
+-- 'UpdateProposal', which contains a 'ProtocolParametersUpdate'.
+--
+-- The 'ProtocolParametersUpdate' is essentially a diff for the
+-- 'ProtocolParameters'.
+--
+data ProtocolParameters =
+     ProtocolParameters {
+
+       -- | Protocol version, major and minor. Updating the major version is
+       -- used to trigger hard forks.
+       --
+       protocolParamProtocolVersion :: (Natural, Natural),
+
+       -- | The decentralization parameter. This is fraction of slots that
+       -- belong to the BFT overlay schedule, rather than the Praos schedule.
+       -- So 1 means fully centralised, while 0 means fully decentralised.
+       --
+       -- This is the \"d\" parameter from the design document.
+       --
+       protocolParamDecentralization :: Rational,
+
+       -- | Extra entropy for the Praos per-epoch nonce.
+       --
+       -- This can be used to add extra entropy during the decentralisation
+       -- process. If the extra entropy can be demonstrated to be generated
+       -- randomly then this method can be used to show that the initial
+       -- federated operators did not subtly bias the initial schedule so that
+       -- they retain undue influence after decentralisation.
+       --
+       protocolParamExtraPraosEntropy :: Maybe PraosNonce,
+
+       -- | The maximum permitted size of a block header.
+       --
+       -- This must be at least as big as the largest legitimate block headers
+       -- but should not be too much larger, to help prevent DoS attacks.
+       --
+       -- Caution: setting this to be smaller than legitimate block headers is
+       -- a sure way to brick the system!
+       --
+       protocolParamMaxBlockHeaderSize :: Natural,
+
+       -- | The maximum permitted size of the block body (that is, the block
+       -- payload, without the block header).
+       --
+       -- This should be picked with the Praos network delta security parameter
+       -- in mind. Making this too large can severely weaken the Praos
+       -- consensus properties.
+       --
+       -- Caution: setting this to be smaller than a transaction that can
+       -- change the protocol parameters is a sure way to brick the system!
+       --
+       protocolParamMaxBlockBodySize :: Natural,
+
+       -- | The maximum permitted size of a transaction.
+       --
+       -- Typically this should not be too high a fraction of the block size,
+       -- otherwise wastage from block fragmentation becomes a problem, and
+       -- the current implementation does not use any sophisticated box packing
+       -- algorithm.
+       --
+       protocolParamMaxTxSize :: Natural,
+
+       -- | The constant factor for the minimum fee calculation.
+       --
+       protocolParamTxFeeFixed :: Natural,
+
+       -- | The linear factor for the minimum fee calculation.
+       --
+       protocolParamTxFeePerByte :: Natural,
+
+       -- | The minimum permitted value for new UTxO entries, ie for
+       -- transaction outputs.
+       --
+       protocolParamMinUTxOValue :: Lovelace,
+
+       -- | The deposit required to register a stake address.
+       --
+       protocolParamStakeAddressDeposit :: Lovelace,
+
+       -- | The deposit required to register a stake pool.
+       --
+       protocolParamStakePoolDeposit :: Lovelace,
+
+       -- | The minimum value that stake pools are permitted to declare for
+       -- their cost parameter.
+       --
+       protocolParamMinPoolCost :: Lovelace,
+
+       -- | The maximum number of epochs into the future that stake pools
+       -- are permitted to schedule a retirement.
+       --
+       protocolParamPoolRetireMaxEpoch :: EpochNo,
+
+       -- | The equilibrium target number of stake pools.
+       --
+       -- This is the \"k\" incentives parameter from the design document.
+       --
+       protocolParamStakePoolTargetNum :: Natural,
+
+       -- | The influence of the pledge in stake pool rewards.
+       --
+       -- This is the \"a_0\" incentives parameter from the design document.
+       --
+       protocolParamPoolPledgeInfluence :: Rational,
+
+       -- | The monetary expansion rate. This determines the fraction of the
+       -- reserves that are added to the fee pot each epoch.
+       --
+       -- This is the \"rho\" incentives parameter from the design document.
+       --
+       protocolParamMonetaryExpansion :: Rational,
+
+       -- | The fraction of the fee pot each epoch that goes to the treasury.
+       --
+       -- This is the \"tau\" incentives parameter from the design document.
+       --
+       protocolParamTreasuryCut :: Rational
+    }
+  deriving (Eq, Show)
 
 
 -- ----------------------------------------------------------------------------
@@ -428,4 +557,48 @@ fromShelleyPParamsUpdate
                                             strictMaybeToMaybe _rho
     , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
                                             strictMaybeToMaybe _tau
+    }
+
+
+fromShelleyPParams :: Shelley.PParams ledgerera
+                   -> ProtocolParameters
+fromShelleyPParams
+    Shelley.PParams {
+      Shelley._minfeeA
+    , Shelley._minfeeB
+    , Shelley._maxBBSize
+    , Shelley._maxTxSize
+    , Shelley._maxBHSize
+    , Shelley._keyDeposit
+    , Shelley._poolDeposit
+    , Shelley._eMax
+    , Shelley._nOpt
+    , Shelley._a0
+    , Shelley._rho
+    , Shelley._tau
+    , Shelley._d
+    , Shelley._extraEntropy
+    , Shelley._protocolVersion
+    , Shelley._minUTxOValue
+    , Shelley._minPoolCost
+    } =
+    ProtocolParameters {
+      protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
+                                           _protocolVersion
+    , protocolParamDecentralization    = Shelley.unitIntervalToRational _d
+    , protocolParamExtraPraosEntropy   = fromPraosNonce _extraEntropy
+    , protocolParamMaxBlockHeaderSize  = _maxBHSize
+    , protocolParamMaxBlockBodySize    = _maxBBSize
+    , protocolParamMaxTxSize           = _maxTxSize
+    , protocolParamTxFeeFixed          = _minfeeB
+    , protocolParamTxFeePerByte        = _minfeeA
+    , protocolParamMinUTxOValue        = fromShelleyLovelace _minUTxOValue
+    , protocolParamStakeAddressDeposit = fromShelleyLovelace _keyDeposit
+    , protocolParamStakePoolDeposit    = fromShelleyLovelace _poolDeposit
+    , protocolParamMinPoolCost         = fromShelleyLovelace _minPoolCost
+    , protocolParamPoolRetireMaxEpoch  = _eMax
+    , protocolParamStakePoolTargetNum  = _nOpt
+    , protocolParamPoolPledgeInfluence = _a0
+    , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational _rho
+    , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
     }
