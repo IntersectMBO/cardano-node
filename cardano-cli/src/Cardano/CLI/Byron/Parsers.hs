@@ -55,8 +55,8 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
                      checkApplicationName, checkSystemTag)
 
 import           Cardano.Api hiding (UpdateProposal)
-import           Cardano.Api.Byron (ByronProtocolParametersUpdate (..))
-import           Cardano.Api.Byron (Address (..), Lovelace (..))
+import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..), Lovelace (..),
+                     toByronLovelace)
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
@@ -185,7 +185,6 @@ parseKeyRelatedValues =
         [ command' "keygen" "Generate a signing key."
             $ Keygen
                 <$> parseNewSigningKeyFile "secret"
-                <*> parsePassword
         , command'
             "to-verification"
             "Extract a verification key in its base64 form."
@@ -761,9 +760,3 @@ parseGenesisFile :: String -> Parser GenesisFile
 parseGenesisFile opt =
   GenesisFile <$> parseFilePath opt "Genesis JSON file."
 
-parsePassword :: Parser PasswordRequirement
-parsePassword =
-  flag GetPassword EmptyPassword
-    (  long "no-password"
-    <> help "Disable password protection."
-    )

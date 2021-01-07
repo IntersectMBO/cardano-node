@@ -521,7 +521,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txmetadata) =
           (maybeToStrictMaybe txmetadata)
 
 
-makeByronKeyWitness :: forall key. IsByronLegacyFormat key
+makeByronKeyWitness :: forall key. IsByronKey key
                     => NetworkId
                     -> TxBody ByronEra
                     -> SigningKey key
@@ -536,7 +536,7 @@ makeByronKeyWitness nw (ByronTxBody txbody) =
 
         -- To allow sharing of the txhash computation across many signatures we
         -- define and share the txhash outside the lambda for the signing key:
-     in case isLegacyFormat :: ByronKeyFormat key of
+     in case byronKeyFormat :: ByronKeyFormat key of
           ByronLegacyKeyFormat ->
             \(ByronSigningKeyLegacy sk) -> witness sk pm txhash
           ByronNonLegacyKeyFormat ->

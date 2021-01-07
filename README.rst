@@ -211,14 +211,12 @@ illustrates available options.
 Key operations
 ==============
 
-Note that key operations currently do not support password-protected keys.
-The ``keygen`` subcommand, though, can generate such keys.
+Note that key operations do not support password-protected keys.
 
 Signing key generation & verification key extraction
 ----------------------------------------------------
 
-Signing keys can be generated using the ``keygen`` subcommand, password protection being
-controlled by the ``--no-password`` flag.
+Signing keys can be generated using the ``keygen`` subcommand.
 
 Extracting a verification key out of the signing key is performed by the ``to-verification`` subcommand.
 

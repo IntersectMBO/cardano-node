@@ -14,10 +14,9 @@ import           Cardano.Prelude
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
 
-import           Cardano.Api.Byron (ByronProtocolParametersUpdate (..))
 import           Cardano.Api (NetworkId, TxIn)
-import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra, TxOut)
-
+import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra,
+                     ByronProtocolParametersUpdate (..), TxOut)
 
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
@@ -42,7 +41,7 @@ data ByronCommand =
   --- Key Related Commands ---
   | Keygen
         NewSigningKeyFile
-        PasswordRequirement
+
   | ToVerification
         ByronKeyFormat
         SigningKeyFile

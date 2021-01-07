@@ -244,7 +244,6 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "keygen"
       , "--secret", tempAbsPath </> "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
-      , "--no-password"
       ]
 
     H.execCli

@@ -42,11 +42,11 @@ import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (DegenGenTx))
 
 import           Cardano.Api (LocalNodeConnectInfo (..), NetworkId, TxBody, Witness,
-                     submitTxToNodeLocal)
+                     makeByronTransaction, submitTxToNodeLocal)
 import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra, ByronWitness (..),
                      NodeConsensusMode (ByronMode), Tx (..), TxIn, TxOut (..),
                      VerificationKey (..), fromByronTxIn, makeByronKeyWitness,
-                     makeByronTransaction, makeSignedTransaction)
+                     makeSignedTransaction)
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)

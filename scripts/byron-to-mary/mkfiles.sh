@@ -212,7 +212,6 @@ for N in ${BFT_NODES_N}; do
 
   cardano-cli byron key keygen \
     --secret byron/payment-keys.00$((${N} - 1)).key \
-    --no-password
 
   cardano-cli byron key signing-key-address \
     --testnet-magic 42 \

@@ -79,7 +79,7 @@ runByronClientCommand c =
        runMigrateDelegateKeyFrom oldKeyFormat oldKey nskf
     PrintGenesisHash genFp -> runPrintGenesisHash genFp
     PrintSigningKeyAddress bKeyFormat networkid skF -> runPrintSigningKeyAddress bKeyFormat networkid skF
-    Keygen nskf passReq -> runKeygen nskf passReq
+    Keygen nskf -> runKeygen nskf
     ToVerification bKeyFormat skFp nvkFp -> runToVerification bKeyFormat skFp nvkFp
     SubmitTx network fp -> runSubmitTx network fp
     GetTxId fp -> runGetTxId fp
@@ -158,10 +158,9 @@ runPrintSigningKeyAddress bKeyFormat networkid skF = do
   let sKeyAddr = prettyAddress . makeByronAddress networkid $ byronWitnessToVerKey sK
   liftIO $ putTextLn sKeyAddr
 
-runKeygen :: NewSigningKeyFile -> PasswordRequirement -> ExceptT ByronClientCmdError IO ()
-runKeygen (NewSigningKeyFile skF) passReq = do
-  pPhrase <- liftIO $ getPassphrase ("Enter password to encrypt '" <> skF <> "': ") passReq
-  sK <- liftIO $ keygen pPhrase
+runKeygen :: NewSigningKeyFile -> ExceptT ByronClientCmdError IO ()
+runKeygen (NewSigningKeyFile skF)  = do
+  sK <- liftIO keygen
   firstExceptT ByronCmdHelpersError . ensureNewFileLBS skF $ serialiseToRawBytes sK
 
 runToVerification :: ByronKeyFormat -> SigningKeyFile -> NewVerificationKeyFile -> ExceptT ByronClientCmdError IO ()
