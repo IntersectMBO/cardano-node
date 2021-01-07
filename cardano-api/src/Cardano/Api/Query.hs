@@ -4,6 +4,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
+-- The Shelley ledger uses promoted data kinds which we have to use, but we do
+-- not export any from this API. We also use them unticked as nature intended.
+{-# LANGUAGE DataKinds #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
+
 -- | Queries from local clients to the node.
 --
 module Cardano.Api.Query (
@@ -38,21 +44,25 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
 import qualified Ouroboros.Consensus.Byron.Ledger       as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger     as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block      as Consensus
+import           Ouroboros.Consensus.Cardano.Block (StandardCrypto)
 
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
-import qualified Shelley.Spec.Ledger.API        as Shelley
+import qualified Shelley.Spec.Ledger.API         as Shelley
+import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
+import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
+import           Cardano.Api.Value
 
 
 -- ----------------------------------------------------------------------------
@@ -105,18 +115,17 @@ data QueryInShelleyBasedEra era result where
        :: QueryInShelleyBasedEra era
             (Map (Hash GenesisKey) ProtocolParametersUpdate)
 
---TODO: add support for these
---     QueryStakeDistribution
---       :: QueryInShelleyBasedEra StakeDistribution
+     QueryStakeDistribution
+       :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
 
      QueryUTxO
        :: Maybe (Set AddressAny)
        -> QueryInShelleyBasedEra era (UTxO era)
 
---     QueryStakeAddresses
---       :: Set StakeAddress
---       -> QueryInShelleyBasedEra (Map StakeAddress Lovelace,
---                                  Map StakeAddress PoolId)
+     QueryStakeAddresses
+       :: Set StakeCredential
+       -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace,
+                                      Map StakeCredential PoolId)
 
 --     QueryPoolRanking
 --       :: 
@@ -127,6 +136,7 @@ data QueryInShelleyBasedEra era result where
 
 --     QueryProtocolState
 --       :: QueryInShelleyBasedEra ProtocolState
+--TODO: add support for these
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -167,6 +177,38 @@ fromShelleyUTxO =
   . map (bimap fromShelleyTxIn fromShelleyTxOut)
   . Map.toList
   . Shelley.unUTxO
+
+
+fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
+                     -> Map (Hash StakePoolKey) Rational
+fromShelleyPoolDistr =
+    --TODO: write an appropriate property to show it is safe to use
+    -- Map.fromListAsc or to use Map.mapKeysMonotonic
+    Map.fromList
+  . map (bimap StakePoolKeyHash Shelley.individualPoolStake)
+  . Map.toList
+  . Shelley.unPoolDistr
+
+fromShelleyDelegations :: Map (Shelley.Credential Shelley.Staking StandardCrypto)
+                              (Shelley.KeyHash Shelley.StakePool StandardCrypto)
+                       -> Map StakeCredential PoolId
+fromShelleyDelegations =
+    --TODO: write an appropriate property to show it is safe to use
+    -- Map.fromListAsc or to use Map.mapKeysMonotonic
+    -- In this case it may not be: the Ord instances for Shelley.Credential
+    -- do not match the one for StakeCredential
+    Map.fromList
+  . map (bimap fromShelleyStakeCredential StakePoolKeyHash)
+  . Map.toList
+
+fromShelleyRewardAccounts :: Shelley.RewardAccounts Consensus.StandardCrypto
+                          -> Map StakeCredential Lovelace
+fromShelleyRewardAccounts =
+    --TODO: write an appropriate property to show it is safe to use
+    -- Map.fromListAsc or to use Map.mapKeysMonotonic
+    Map.fromList
+  . map (bimap fromShelleyStakeCredential fromShelleyLovelace)
+  . Map.toList
 
 
 -- ----------------------------------------------------------------------------
@@ -220,6 +262,9 @@ toConsensusQueryShelleyBased erainmode QueryProtocolParameters =
 toConsensusQueryShelleyBased erainmode QueryProtocolParametersUpdate =
     Some (consensusQueryInEraInMode erainmode Consensus.GetProposedPParamsUpdates)
 
+toConsensusQueryShelleyBased erainmode QueryStakeDistribution =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetStakeDistribution)
+
 toConsensusQueryShelleyBased erainmode (QueryUTxO Nothing) =
     Some (consensusQueryInEraInMode erainmode Consensus.GetUTxO)
 
@@ -228,6 +273,13 @@ toConsensusQueryShelleyBased erainmode (QueryUTxO (Just addrs)) =
   where
     addrs' :: Set (Shelley.Addr Consensus.StandardCrypto)
     addrs' = toShelleyAddrSet (eraInModeToEra erainmode) addrs
+
+toConsensusQueryShelleyBased erainmode (QueryStakeAddresses creds) =
+    Some (consensusQueryInEraInMode erainmode
+            (Consensus.GetFilteredDelegationsAndRewardAccounts creds'))
+  where
+    creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
+    creds' = Set.map toShelleyStakeCredential creds
 
 
 consensusQueryInEraInMode
@@ -355,6 +407,11 @@ fromConsensusQueryResultShelleyBased QueryProtocolParametersUpdate q' r' =
       Consensus.GetProposedPParamsUpdates -> fromShelleyProposedPPUpdates r'
       _                                   -> fromConsensusQueryResultMismatch
 
+fromConsensusQueryResultShelleyBased QueryStakeDistribution q' r' =
+    case q' of
+      Consensus.GetStakeDistribution -> fromShelleyPoolDistr r'
+      _                              -> fromConsensusQueryResultMismatch
+
 fromConsensusQueryResultShelleyBased (QueryUTxO Nothing) q' utxo' =
     case q' of
       Consensus.GetUTxO -> fromShelleyUTxO utxo'
@@ -364,6 +421,14 @@ fromConsensusQueryResultShelleyBased (QueryUTxO Just{}) q' utxo' =
     case q' of
       Consensus.GetFilteredUTxO{} -> fromShelleyUTxO utxo'
       _                           -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased QueryStakeAddresses{} q' r' =
+    case q' of
+      Consensus.GetFilteredDelegationsAndRewardAccounts{}
+        -> let (delegs, rwaccs) = r'
+            in (fromShelleyRewardAccounts rwaccs,
+                fromShelleyDelegations delegs)
+      _ -> fromConsensusQueryResultMismatch
 
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'

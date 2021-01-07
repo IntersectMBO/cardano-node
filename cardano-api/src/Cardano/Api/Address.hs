@@ -424,12 +424,12 @@ data StakeAddress where
 data PaymentCredential
        = PaymentCredentialByKey    (Hash PaymentKey)
        | PaymentCredentialByScript  ScriptHash
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 data StakeCredential
        = StakeCredentialByKey    (Hash StakeKey)
        | StakeCredentialByScript  ScriptHash
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 data StakeAddressReference
        = StakeAddressByValue   StakeCredential
