@@ -96,14 +96,12 @@ let
         # cardano-cli-test depends on cardano-cli
         packages.cardano-cli.preCheck = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
 
-        # build-tool-depends are used in cardano-node-chairman but only
-        # tasty-discover should be from the buildPackages.
         packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
           lib.mkForce [
-            config.hsPkgs.buildPackages.tasty-discover.components.exes.tasty-discover
             config.hsPkgs.cardano-node.components.exes.cardano-node
             config.hsPkgs.cardano-cli.components.exes.cardano-cli
             config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman];
+
         # cardano-node-chairman depends on cardano-node and cardano-cli
         packages.cardano-node-chairman.preCheck = "
           export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
