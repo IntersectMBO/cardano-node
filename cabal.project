@@ -90,9 +90,9 @@ package io-sim-classes
 
 source-repository-package
   type: git
-  location: https://github.com/andreasabel/listlike
-  tag: c27e299bd5a638a617370780e17cd2faf04befdb
-  --sha256: 0ycrlyqdalwhs6dk6pv75mxp4z4pmsvg21cvvbygxlq8kknhqqx0
+  location: https://github.com/ddssff/listlike
+  tag: fc051ef219305194422254d36fdcc18de8fb736c
+  --sha256: 1dxcgi6d5bnczvpl4ws0ab63spz0nmm8ibdixl4hwbzirfvj866b
 
 source-repository-package
   type: git
