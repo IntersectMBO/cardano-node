@@ -5,10 +5,10 @@
 ### node changes
 - Eliminate the need to update the `LastKnownBlockVersion-*` entries in the node
   config files for the Shelley-based eras. This means the configuration does not
-  need to be updated for the Allegra or Mary eras. (#2193)
-- Fix an off-by-one error in the `txsProcessedNum` metric (#2183, #2192)
-- Revert the renaming of the metrics from 1.24.1 (#2158, #2187, #2192)
-- Export some more metrics for selected OS and RTS stats (#2192)
+  need to be updated for the Allegra or Mary eras. ([#2193][2193])
+- Fix an off-by-one error in the `txsProcessedNum` metric ([#2183][2183], [#2192][2192])
+- Revert the renaming of the metrics from 1.24.1 ([#2158][2158], [#2187][2187], [#2192][2192])
+- Export some more metrics for selected OS and RTS stats ([#2192][2192])
 
 ### consensus changes
 None
@@ -18,67 +18,125 @@ None
 
 ### network changes
 None
+
+[2183]: https://github.com/input-output-hk/cardano-node/issues/2183
+[2187]: https://github.com/input-output-hk/cardano-node/issues/2187
+[2192]: https://github.com/input-output-hk/cardano-node/issues/2192
+[2193]: https://github.com/input-output-hk/cardano-node/issues/2193
 
 ## 1.24.1 -- December 2020
 
 ### node changes
-- Move all metrics under the `cardano.node.metrics` namespace (#2158)
-- New metrics for the size of the UTxO and delegation maps (#2158)
-- Tracing changes to support "K=1000" benchmarks (#2156, #2175)
-- Mention the required `xz` tool in the Cabal build instructions (#2132)
+- Move all metrics under the `cardano.node.metrics` namespace ([#2158][2158])
+- New metrics for the size of the UTxO and delegation maps ([#2158][2158])
+- Tracing changes to support "K=1000" benchmarks ([#2156][2156], [#2175][2175])
+- Mention the required `xz` tool in the Cabal build instructions ([#2132][2132])
 
 ### ledger changes
-- Fix the use of Shelley multi-sig scripts in the Allegra and later eras (#2035)
-- Fix the serialisation format for multi-asset values to follow the CDDL (#2039)
-- Additional "golden" tests for encodings in the Allegra and Mary eras (#2031)
-- Additional binary encoding "round-trip" tests (#2032)
-- Benchmarks for the transaction generators (#2024)
+- Fix the use of Shelley multi-sig scripts in the Allegra and later eras ([#2035][2035])
+- Fix the serialisation format for multi-asset values to follow the CDDL ([#2039][2039])
+- Additional "golden" tests for encodings in the Allegra and Mary eras ([#2031][2031])
+- Additional binary encoding "round-trip" tests ([#2032][2032])
+- Benchmarks for the transaction generators ([#2024][2024])
 
 ### consensus changes
-- Fix support for Shelley transactions in the Allegra era (#2788)
+- Fix support for Shelley transactions in the Allegra era ([#2788][2788])
 - Add support for the system wall clock time being adjusted backwards by a small
   amount without triggering a node shutdown and restart. Small backwards
-  adjustments can be caused by NTP. (#2781, #2785)
+  adjustments can be caused by NTP. ([#2781][2781], [#2785][2785])
 
 ### network changes
-- Update the `cardano-ping` tool to support the node-to-node protocol V4 (#2787)
+- Update the `cardano-ping` tool to support the node-to-node protocol V4 ([#2787][2787])
+
+[2024]: https://github.com/input-output-hk/cardano-node/issues/2024
+[2031]: https://github.com/input-output-hk/cardano-node/issues/2031
+[2032]: https://github.com/input-output-hk/cardano-node/issues/2032
+[2035]: https://github.com/input-output-hk/cardano-node/issues/2035
+[2039]: https://github.com/input-output-hk/cardano-node/issues/2039
+[2132]: https://github.com/input-output-hk/cardano-node/issues/2132
+[2156]: https://github.com/input-output-hk/cardano-node/issues/2156
+[2158]: https://github.com/input-output-hk/cardano-node/issues/2158
+[2175]: https://github.com/input-output-hk/cardano-node/issues/2175
+[2781]: https://github.com/input-output-hk/cardano-node/issues/2781
+[2788]: https://github.com/input-output-hk/cardano-node/issues/2788
+[2785]: https://github.com/input-output-hk/cardano-node/issues/2785
+[2787]: https://github.com/input-output-hk/cardano-node/issues/2787
 
 ## 1.24.0 -- December 2020
 
 ### node changes
 - Add a nodeStartTime metric. This is a partial replacement for the uptime
-  metric that was removed in the 1.23.0 release. (#2118)
-- Miscellaneous "chairman" integration test improvements (#2122, #2123, #2130, #2146)
+  metric that was removed in the 1.23.0 release. ([#2118][2118])
+- Miscellaneous "chairman" integration test improvements ([#2122][2122], [#2123][2123], [#2130][2130], [#2146][2146])
 - Allow starting a node with the credentials for many stake pools. This is used
   for benchmarking large numbers of stake pools more easily. This feature is
-  not available in the "Cardano" protocol mode used for the mainnet. (#2068)
+  not available in the "Cardano" protocol mode used for the mainnet. ([#2068][2068])
 
 ### ledger changes
-- Support for optional additional scripts in the tx auxiliary data (#1993)
-- Ensure the minting field in is not used in the Allegra era (#2028)
+- Support for optional additional scripts in the tx auxiliary data ([#1993][1993])
+- Ensure the minting field in is not used in the Allegra era ([#2028][2028])
 - Update the CDDL specification of the blockchain binary format for Allegra
-  and Mary eras (#1994, #1999, #2009)
-- Improved serialised binary format for multi-asset values (#1979)
-- Add a compact in-memory storage format for multi-asset values (#1996)
-- Updates to the multi-asset formal specifiation (#2003)
-- Adjust how the major protocol version is handled for soft forks (#1998)
-- Extend more Shelley tests to cover the Allegra and Mary eras too (#1997,
-  #2012, #2029)
-- Internal refactoring and clean-ups (#2013, #2014, #2018, #2021, #2025)
-- Initial preparatory steps for the Alonzo era (#2016, #2027)
-- Minor corrections to the formal spec arising from internal review (#2023)
+  and Mary eras ([#1994][1994], [#1999][1999], [#2009][2009])
+- Improved serialised binary format for multi-asset values ([#1979][1979])
+- Add a compact in-memory storage format for multi-asset values ([#1996][1996])
+- Updates to the multi-asset formal specifiation ([#2003][2003])
+- Adjust how the major protocol version is handled for soft forks ([#1998][1998])
+- Extend more Shelley tests to cover the Allegra and Mary eras too ([#1997][1997],
+  [#2012][2012], [#2029][2029])
+- Internal refactoring and clean-ups ([#2013][2013], [#2014][2014], [#2018][2018], [#2021][2021], [#2025][2025])
+- Initial preparatory steps for the Alonzo era ([#2016][2016], [#2027][2027])
+- Minor corrections to the formal spec arising from internal review ([#2023][2023])
 
 ### consensus changes
 - Use a single set of credentials for all Shelley-based eras. This keeps the
-  node configuration simple for the new eras. (#2753)
-- Add the Allegra era in the "ThreadNet" consensus tests (#2633, #2641)
-- Add support for a Mary-only protocol mode to simplify benchmarking (#2754)
-- Internal refactoring and clean-ups (#2598, #2751, #2779, #2778)
+  node configuration simple for the new eras. ([#2753][2753])
+- Add the Allegra era in the "ThreadNet" consensus tests ([#2633][2633], [#2641][2641])
+- Add support for a Mary-only protocol mode to simplify benchmarking ([#2754][2754])
+- Internal refactoring and clean-ups ([#2598][2598], [#2751][2751], [#2779][2779], [#2778][2778])
 
 ### network changes
-- Preparations for publishing io-sim as a public library (#2775)
-- Internal improvements to the "snockets" API (#2772, #2777)
-- Improved logging of the creation of the node's sockts (#2746)
+- Preparations for publishing io-sim as a public library ([#2775][2775])
+- Internal improvements to the "snockets" API ([#2772][2772], [#2777][2777])
+- Improved logging of the creation of the node's sockts ([#2746][2746])
+
+[1979]: https://github.com/input-output-hk/cardano-node/issues/1979
+[1993]: https://github.com/input-output-hk/cardano-node/issues/1993
+[1994]: https://github.com/input-output-hk/cardano-node/issues/1994
+[1996]: https://github.com/input-output-hk/cardano-node/issues/1996
+[1997]: https://github.com/input-output-hk/cardano-node/issues/1997
+[1998]: https://github.com/input-output-hk/cardano-node/issues/1998
+[1999]: https://github.com/input-output-hk/cardano-node/issues/1999
+[2003]: https://github.com/input-output-hk/cardano-node/issues/2003
+[2009]: https://github.com/input-output-hk/cardano-node/issues/2009
+[2012]: https://github.com/input-output-hk/cardano-node/issues/2012
+[2013]: https://github.com/input-output-hk/cardano-node/issues/2013
+[2014]: https://github.com/input-output-hk/cardano-node/issues/2014
+[2016]: https://github.com/input-output-hk/cardano-node/issues/2016
+[2018]: https://github.com/input-output-hk/cardano-node/issues/2018
+[2021]: https://github.com/input-output-hk/cardano-node/issues/2021
+[2023]: https://github.com/input-output-hk/cardano-node/issues/2023
+[2025]: https://github.com/input-output-hk/cardano-node/issues/2025
+[2027]: https://github.com/input-output-hk/cardano-node/issues/2027
+[2028]: https://github.com/input-output-hk/cardano-node/issues/2028
+[2029]: https://github.com/input-output-hk/cardano-node/issues/2029
+[2068]: https://github.com/input-output-hk/cardano-node/issues/2068
+[2118]: https://github.com/input-output-hk/cardano-node/issues/2118
+[2122]: https://github.com/input-output-hk/cardano-node/issues/2122
+[2123]: https://github.com/input-output-hk/cardano-node/issues/2123
+[2130]: https://github.com/input-output-hk/cardano-node/issues/2130
+[2146]: https://github.com/input-output-hk/cardano-node/issues/2146
+[2598]: https://github.com/input-output-hk/cardano-node/issues/2598
+[2633]: https://github.com/input-output-hk/cardano-node/issues/2633
+[2641]: https://github.com/input-output-hk/cardano-node/issues/2641
+[2746]: https://github.com/input-output-hk/cardano-node/issues/2746
+[2751]: https://github.com/input-output-hk/cardano-node/issues/2751
+[2753]: https://github.com/input-output-hk/cardano-node/issues/2753
+[2754]: https://github.com/input-output-hk/cardano-node/issues/2754
+[2772]: https://github.com/input-output-hk/cardano-node/issues/2772
+[2775]: https://github.com/input-output-hk/cardano-node/issues/2775
+[2777]: https://github.com/input-output-hk/cardano-node/issues/2777
+[2778]: https://github.com/input-output-hk/cardano-node/issues/2778
+[2779]: https://github.com/input-output-hk/cardano-node/issues/2779
 
 ## 1.23.0 -- November 2020
 
