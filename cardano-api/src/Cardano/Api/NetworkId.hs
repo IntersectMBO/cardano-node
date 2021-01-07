@@ -5,12 +5,14 @@ module Cardano.Api.NetworkId (
     NetworkId(..),
     NetworkMagic(..),
     toNetworkMagic,
+    mainnetNetworkMagic,
 
     -- * Internal conversion functions
     toByronProtocolMagicId,
     toByronNetworkMagic,
     toByronRequiresNetworkMagic,
     toShelleyNetwork,
+    fromShelleyNetwork,
   ) where
 
 import           Prelude
@@ -35,9 +37,12 @@ data NetworkId = Mainnet
 
 toNetworkMagic :: NetworkId -> NetworkMagic
 toNetworkMagic (Testnet nm) = nm
-toNetworkMagic Mainnet      = NetworkMagic
-                            . Byron.unProtocolMagicId
-                            $ Byron.mainnetProtocolMagicId
+toNetworkMagic Mainnet      = mainnetNetworkMagic
+
+mainnetNetworkMagic :: NetworkMagic
+mainnetNetworkMagic = NetworkMagic
+                    . Byron.unProtocolMagicId
+                    $ Byron.mainnetProtocolMagicId
 
 
 -- ----------------------------------------------------------------------------
@@ -64,4 +69,10 @@ toByronRequiresNetworkMagic Testnet{} = Byron.RequiresMagic
 toShelleyNetwork :: NetworkId -> Shelley.Network
 toShelleyNetwork  Mainnet    = Shelley.Mainnet
 toShelleyNetwork (Testnet _) = Shelley.Testnet
+
+fromShelleyNetwork :: Shelley.Network -> NetworkMagic -> NetworkId
+fromShelleyNetwork Shelley.Testnet nm = Testnet nm
+fromShelleyNetwork Shelley.Mainnet nm
+  | nm == mainnetNetworkMagic = Mainnet
+  | otherwise = error "fromShelleyNetwork Mainnet: wrong mainnet network magic"
 

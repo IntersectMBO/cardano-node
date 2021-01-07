@@ -49,7 +49,9 @@ import qualified Shelley.Spec.Ledger.API        as Shelley
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Eras
+import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
+import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 
 
@@ -93,16 +95,17 @@ data QueryInShelleyBasedEra era result where
      QueryEpoch
        :: QueryInShelleyBasedEra era EpochNo
 
+     QueryGenesisParameters
+       :: QueryInShelleyBasedEra era GenesisParameters
+
+     QueryProtocolParameters
+       :: QueryInShelleyBasedEra era ProtocolParameters
+
+     QueryProtocolParametersUpdate
+       :: QueryInShelleyBasedEra era
+            (Map (Hash GenesisKey) ProtocolParametersUpdate)
+
 --TODO: add support for these
---     QueryGenesisParameters
---       :: QueryInShelleyBasedEra GenesisParameters
-
---     QueryProtocolParameters
---       :: QueryInShelleyBasedEra ProtocolParameters
-
---     QueryProtocolParametersUpdate
---       :: QueryInShelleyBasedEra ProtocolParametersUpdate
-
 --     QueryStakeDistribution
 --       :: QueryInShelleyBasedEra StakeDistribution
 
@@ -207,6 +210,15 @@ toConsensusQueryShelleyBased erainmode QueryChainPoint =
 
 toConsensusQueryShelleyBased erainmode QueryEpoch =
     Some (consensusQueryInEraInMode erainmode Consensus.GetEpochNo)
+
+toConsensusQueryShelleyBased erainmode QueryGenesisParameters =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetGenesisConfig)
+
+toConsensusQueryShelleyBased erainmode QueryProtocolParameters =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetCurrentPParams)
+
+toConsensusQueryShelleyBased erainmode QueryProtocolParametersUpdate =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetProposedPParamsUpdates)
 
 toConsensusQueryShelleyBased erainmode (QueryUTxO Nothing) =
     Some (consensusQueryInEraInMode erainmode Consensus.GetUTxO)
@@ -326,6 +338,22 @@ fromConsensusQueryResultShelleyBased QueryEpoch q' epoch =
     case q' of
       Consensus.GetEpochNo -> epoch
       _                    -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased QueryGenesisParameters q' r' =
+    case q' of
+      Consensus.GetGenesisConfig -> fromShelleyGenesis
+                                      (Consensus.getCompactGenesis r')
+      _                          -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased QueryProtocolParameters q' r' =
+    case q' of
+      Consensus.GetCurrentPParams -> fromShelleyPParams r'
+      _                           -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased QueryProtocolParametersUpdate q' r' =
+    case q' of
+      Consensus.GetProposedPParamsUpdates -> fromShelleyProposedPPUpdates r'
+      _                                   -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased (QueryUTxO Nothing) q' utxo' =
     case q' of
