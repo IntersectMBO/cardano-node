@@ -92,7 +92,7 @@ executable cardano-node-chairman
 test-suite chairman-tests
   import:               common-modules
   hs-source-dirs:       test
-  main-is:              Spec.hs
+  main-is:              Main.hs
   type:                 exitcode-stdio-1.0
   if !os(windows)
       build-depends:    unix
@@ -138,8 +138,7 @@ test-suite chairman-tests
                         -Wpartial-fields
                         -Wcompat
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-  build-tool-depends:   tasty-discover:tasty-discover
-                      , cardano-node:cardano-node
+  build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-node-chairman:cardano-node-chairman
 
