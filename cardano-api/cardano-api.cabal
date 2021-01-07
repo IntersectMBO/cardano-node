@@ -17,6 +17,11 @@ library
 
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
+                        Cardano.Api.Shelley
+
+                        --TODO: these should either be removed once the new IPC
+                        -- is fully integrated, or re-exported via the export
+                        -- modules above
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.LocalChainSync
                         Cardano.Api.Protocol
@@ -24,10 +29,14 @@ library
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
-                        Cardano.Api.Shelley
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.TxSubmit
                         Cardano.Api.Typed
+
+                        --TODO: this is only exported for now, until the old
+                        -- IPC parts are removed and this modules can be
+                        -- exported via the normal export modules above
+                        Cardano.Api.IPC
 
 
   other-modules:        Cardano.Api.TxSubmit.ErrorRender
@@ -42,7 +51,7 @@ library
                         Cardano.Api.Fees
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
-                        Cardano.Api.IPC
+-- TODO: move here      Cardano.Api.IPC
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysShelley

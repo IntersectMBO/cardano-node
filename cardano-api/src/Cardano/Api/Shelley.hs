@@ -34,8 +34,14 @@ module Cardano.Api.Shelley
     -- | Constructing and inspecting transactions
     TxBody(ShelleyTxBody),
     TxId(TxId),
+    toShelleyTxId,
+    fromShelleyTxId,
     TxIn(TxIn),
+    toShelleyTxIn,
+    fromShelleyTxIn,
     TxOut(TxOut),
+    toShelleyTxOut,
+    fromShelleyTxOut,
     TxIx(TxIx),
     Lovelace(Lovelace),
     toShelleyLovelace,
@@ -158,5 +164,6 @@ module Cardano.Api.Shelley
 
 import           Cardano.Api
 import           Cardano.Api.Address
+import           Cardano.Api.TxBody
 import           Cardano.Api.Typed
 import           Cardano.Api.Value

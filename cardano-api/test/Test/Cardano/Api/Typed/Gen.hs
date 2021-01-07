@@ -41,6 +41,8 @@ import           Data.String
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
+import qualified Shelley.Spec.Ledger.Hashing as Shelley
+
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
@@ -316,8 +318,8 @@ genShelleyTxOut =
   TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
 
-genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 ())
-genShelleyHash = return $ Crypto.hashWith CBOR.serialize' ()
+genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 Shelley.EraIndependentTxBody)
+genShelleyHash = return . Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
 
 genSlotNo :: Gen SlotNo
 genSlotNo = SlotNo <$> Gen.word64 Range.constantBounded
