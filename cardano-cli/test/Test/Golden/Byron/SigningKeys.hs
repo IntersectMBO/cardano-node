@@ -99,6 +99,19 @@ prop_migrate_legacy_to_nonlegacy_signingkeys =
       Left err -> failWith Nothing $ show err
       Right _ -> success
 
+prop_deserialise_NonLegacy_Signing_Key_API :: Property
+prop_deserialise_NonLegacy_Signing_Key_API = propertyOnce $ do
+  eFailOrWit <- liftIO . runExceptT $ readByronSigningKey NonLegacyByronKeyFormat "test/data/golden/byron/keys/byron.skey"
+  case eFailOrWit of
+    Left keyFailure -> failWith Nothing $ show keyFailure
+    Right _ -> success
+
+prop_deserialiseLegacy_Signing_Key_API :: Property
+prop_deserialiseLegacy_Signing_Key_API = propertyOnce $ do
+  eFailOrWit <- liftIO . runExceptT $ readByronSigningKey LegacyByronKeyFormat "test/data/golden/byron/keys/legacy.skey"
+  case eFailOrWit of
+    Left keyFailure -> failWith Nothing $ show keyFailure
+    Right _ -> success
 
 -- -----------------------------------------------------------------------------
 

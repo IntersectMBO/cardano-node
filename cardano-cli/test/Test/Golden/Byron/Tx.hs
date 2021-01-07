@@ -31,7 +31,7 @@ golden_byronTx_legacy = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--byron-legacy-formats"
     , "--wallet-key", signingKey
     , "--tx", createdTx
-    , "--txin", "(\"796a90e0a89b292d53a6129b9f0d757429063b529d27e4f56565192a8c8da5e3\",10)"
+    , "--txin", "(796a90e0a89b292d53a6129b9f0d757429063b529d27e4f56565192a8c8da5e3,10)"
     , "--txout", "(\"2657WMsDfac6eFirdvKVPVMxNVYuACd1RGM2arH3g1y1yaQCr1yYpb2jr2b2aSiDZ\",999)"
     ]
 
@@ -48,7 +48,7 @@ golden_byronTx = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--byron-formats"
     , "--wallet-key", signingKey
     , "--tx", createdTx
-    , "--txin", "(\"796a90e0a89b292d53a6129b9f0d757429063b529d27e4f56565192a8c8da5e3\",10)"
+    , "--txin", "(796a90e0a89b292d53a6129b9f0d757429063b529d27e4f56565192a8c8da5e3,10)"
     , "--txout", "(\"2657WMsDfac6eFirdvKVPVMxNVYuACd1RGM2arH3g1y1yaQCr1yYpb2jr2b2aSiDZ\",999)"
     ]
 
