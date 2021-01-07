@@ -9,14 +9,15 @@
 -- * the current values of updateable protocol parameters: 'ProtocolParameters'
 -- * updates to protocol parameters: 'ProtocolParametersUpdate'
 -- * update proposals that can be embedded in transactions: 'UpdateProposal'
+-- * parameters fixed in the genesis file: 'GenesisParameters'
 --
 module Cardano.Api.ProtocolParameters (
     -- * The updateable protocol paramaters
     ProtocolParameters(..),
+    EpochNo,
 
     -- * Updates to the protocol paramaters
     ProtocolParametersUpdate(..),
-    EpochNo,
 
     -- * PraosNonce
     PraosNonce,
@@ -26,6 +27,10 @@ module Cardano.Api.ProtocolParameters (
     UpdateProposal(..),
     makeShelleyUpdateProposal,
 
+    -- * Protocol paramaters fixed in the genesis file
+    GenesisParameters(..),
+    EpochSize(..),
+
     -- * Internal conversion functions
     toShelleyPParamsUpdate,
     toShelleyProposedPPUpdates,
@@ -34,6 +39,7 @@ module Cardano.Api.ProtocolParameters (
     fromShelleyPParamsUpdate,
     fromShelleyProposedPPUpdates,
     fromShelleyUpdate,
+    fromShelleyGenesis,
 
     -- * Data family instances
     AsType(..)
@@ -45,10 +51,11 @@ import           Numeric.Natural
 import           Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
+import           Data.Time (UTCTime, NominalDiffTime)
 
 import           Control.Monad
 
-import           Cardano.Slotting.Slot (EpochNo)
+import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Cardano.Ledger.Era as Ledger
@@ -60,12 +67,14 @@ import           Shelley.Spec.Ledger.BaseTypes
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
+import qualified Shelley.Spec.Ledger.Genesis as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
+import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
@@ -81,6 +90,8 @@ import           Cardano.Api.Value
 --
 -- The 'ProtocolParametersUpdate' is essentially a diff for the
 -- 'ProtocolParameters'.
+--
+-- There are also paramaters fixed in the Genesis file. See 'GenesisParameters'.
 --
 data ProtocolParameters =
      ProtocolParameters {
@@ -424,6 +435,73 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 
 
 -- ----------------------------------------------------------------------------
+-- Genesis paramaters
+--
+
+data GenesisParameters =
+     GenesisParameters {
+
+       -- | The reference time the system started. The time of slot zero.
+       -- The time epoch against which all Ouroboros time slots are measured.
+       --
+       protocolParamSystemStart :: UTCTime,
+
+       -- | The network identifier for this blockchain instance. This
+       -- distinguishes the mainnet from testnets, and different testnets from
+       -- each other.
+       --
+       protocolParamNetworkId :: NetworkId,
+
+       -- | The Ouroboros Praos active slot coefficient, aka @f@.
+       --
+       protocolParamActiveSlotsCoefficient :: Rational,
+
+       -- | The Ouroboros security paramaters, aka @k@. This is the maximum
+       -- number of blocks the node would ever be prepared to roll back by.
+       --
+       -- Clients of the node following the chain should be prepared to handle
+       -- the node switching forks up to this long.
+       --
+       protocolParamSecurity :: Int,
+
+       -- | The number of Ouroboros time slots in an Ouroboros epoch.
+       --
+       protocolParamEpochLength :: EpochSize,
+
+       -- | The time duration of a slot.
+       --
+       protocolParamSlotLength :: NominalDiffTime,
+
+       -- | For Ouroboros Praos, the length of a KES period as a number of time
+       -- slots. The KES keys get evolved once per KES period.
+       --
+       protocolParamSlotsPerKESPeriod :: Int,
+
+       -- | The maximum number of times a KES key can be evolved before it is
+       -- no longer considered valid. This can be less than the maximum number
+       -- of times given the KES key size. For example the mainnet KES key size
+       -- would allow 64 evolutions, but the max KES evolutions param is 62.
+       --
+       protocolParamMaxKESEvolutions ::  Int,
+
+       -- | In the Shelley era, prior to decentralised governance, this is the
+       -- number of genesis key delegates that need to agree for an update
+       -- proposal to be enacted.
+       --
+       protocolParamUpdateQuorum ::  Int,
+
+       -- | The maximum supply for Lovelace. This determines the initial value
+       -- of the reserves.
+       --
+       protocolParamMaxLovelaceSupply :: Lovelace,
+
+       -- | The initial values of the updateable 'ProtocolParameters'.
+       --
+       protocolInitialUpdateableProtocolParameters :: ProtocolParameters
+     }
+
+
+-- ----------------------------------------------------------------------------
 -- Conversion functions
 --
 
@@ -602,3 +680,41 @@ fromShelleyPParams
     , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational _rho
     , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
     }
+
+
+fromShelleyGenesis :: Shelley.ShelleyGenesis era -> GenesisParameters
+fromShelleyGenesis
+    Shelley.ShelleyGenesis {
+      Shelley.sgSystemStart
+    , Shelley.sgNetworkMagic
+    , Shelley.sgNetworkId
+    , Shelley.sgActiveSlotsCoeff
+    , Shelley.sgSecurityParam
+    , Shelley.sgEpochLength
+    , Shelley.sgSlotsPerKESPeriod
+    , Shelley.sgMaxKESEvolutions
+    , Shelley.sgSlotLength
+    , Shelley.sgUpdateQuorum
+    , Shelley.sgMaxLovelaceSupply
+    , Shelley.sgProtocolParams
+    , Shelley.sgGenDelegs    = _  -- unused, might be of interest
+    , Shelley.sgInitialFunds = _  -- unused, not retained by the node
+    , Shelley.sgStaking      = _  -- unused, not retained by the node
+    } =
+    GenesisParameters {
+      protocolParamSystemStart            = sgSystemStart
+    , protocolParamNetworkId              = fromShelleyNetwork sgNetworkId
+                                              (NetworkMagic sgNetworkMagic)
+    , protocolParamActiveSlotsCoefficient = sgActiveSlotsCoeff
+    , protocolParamSecurity               = fromIntegral sgSecurityParam
+    , protocolParamEpochLength            = sgEpochLength
+    , protocolParamSlotLength             = sgSlotLength
+    , protocolParamSlotsPerKESPeriod      = fromIntegral sgSlotsPerKESPeriod
+    , protocolParamMaxKESEvolutions       = fromIntegral sgMaxKESEvolutions
+    , protocolParamUpdateQuorum           = fromIntegral sgUpdateQuorum
+    , protocolParamMaxLovelaceSupply      = Lovelace
+                                              (fromIntegral sgMaxLovelaceSupply)
+    , protocolInitialUpdateableProtocolParameters = fromShelleyPParams
+                                                      sgProtocolParams
+    }
+
