@@ -1,8 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Currency values
 --
@@ -40,6 +42,9 @@ module Cardano.Api.Value
   , fromShelleyLovelace
   , toMaryValue
   , fromMaryValue
+
+    -- * Data family instances
+  , AsType(..)
   ) where
 
 import           Prelude
@@ -48,11 +53,13 @@ import           Data.Aeson hiding (Value)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (Parser, toJSONKeyText)
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString)
+import           Data.String (IsString(..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -64,8 +71,9 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseRaw (deserialiseFromRawBytesHex, serialiseToRawBytesHex)
+import           Cardano.Api.SerialiseRaw
 
 
 -- ----------------------------------------------------------------------------
@@ -118,12 +126,37 @@ quantityToLovelace (Quantity x) = Lovelace x
 
 
 newtype PolicyId = PolicyId ScriptHash
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, IsString)
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex PolicyId
+
+instance HasTypeProxy PolicyId where
+    data AsType PolicyId = AsPolicyId
+    proxyToAsType _ = AsPolicyId
+
+instance SerialiseAsRawBytes PolicyId where
+    serialiseToRawBytes (PolicyId sh) = serialiseToRawBytes sh
+    deserialiseFromRawBytes AsPolicyId bs =
+      PolicyId <$> deserialiseFromRawBytes AsScriptHash bs
 
 newtype AssetName = AssetName ByteString
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, IsString)
+    deriving stock (Eq, Ord)
+    deriving newtype (Show)
+
+instance IsString AssetName where
+    fromString s
+      | let bs = Text.encodeUtf8 (Text.pack s)
+      , BS.length bs <= 32 = AssetName (BSC.pack s)
+      | otherwise          = error "fromString: AssetName over 32 bytes"
+
+instance HasTypeProxy AssetName where
+    data AsType AssetName = AsAssetName
+    proxyToAsType _ = AsAssetName
+
+instance SerialiseAsRawBytes AssetName where
+    serialiseToRawBytes (AssetName bs) = bs
+    deserialiseFromRawBytes AsAssetName bs
+      | BS.length bs <= 32 = Just (AssetName bs)
+      | otherwise          = Nothing
 
 instance ToJSON AssetName where
   toJSON (AssetName an) = Aeson.String $ Text.decodeUtf8 an
