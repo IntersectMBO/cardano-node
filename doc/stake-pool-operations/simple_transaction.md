@@ -94,7 +94,7 @@ Look for the value of `unSlotNo`
         "slotNo": 369200
     }
 
-Calculate your TTL, for example:  369215 + 200 slots = 369400
+Calculate your TTL, for example:  369200 + 200 slots = 369400
 
 #### Build the transaction
 
