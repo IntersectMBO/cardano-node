@@ -515,7 +515,7 @@ import           Control.Tracer (nullTracer)
 --
 -- Common types, consensus, network
 --
-import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
 import           Ouroboros.Network.Block (Point, Tip)

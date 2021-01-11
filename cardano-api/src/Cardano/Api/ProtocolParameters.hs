@@ -4,24 +4,42 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
--- | Protocol parameters.
+-- | The various Cardano protocol parameters, including:
 --
--- This covers Protocol parameter updates that can be embedded in transactions.
---
--- TODO: add protocol parameters in ledger state queries.
+-- * the current values of updateable protocol parameters: 'ProtocolParameters'
+-- * updates to protocol parameters: 'ProtocolParametersUpdate'
+-- * update proposals that can be embedded in transactions: 'UpdateProposal'
+-- * parameters fixed in the genesis file: 'GenesisParameters'
 --
 module Cardano.Api.ProtocolParameters (
-    UpdateProposal(..),
-    ProtocolParametersUpdate(..),
+    -- * The updateable protocol paramaters
+    ProtocolParameters(..),
     EpochNo,
-    makeShelleyUpdateProposal,
+
+    -- * Updates to the protocol paramaters
+    ProtocolParametersUpdate(..),
 
     -- * PraosNonce
     PraosNonce,
     makePraosNonce,
 
+    -- * Update proposals to change the protocol paramaters
+    UpdateProposal(..),
+    makeShelleyUpdateProposal,
+
+    -- * Protocol paramaters fixed in the genesis file
+    GenesisParameters(..),
+    EpochSize(..),
+
     -- * Internal conversion functions
+    toShelleyPParamsUpdate,
+    toShelleyProposedPPUpdates,
     toShelleyUpdate,
+    fromShelleyPParams,
+    fromShelleyPParamsUpdate,
+    fromShelleyProposedPPUpdates,
+    fromShelleyUpdate,
+    fromShelleyGenesis,
 
     -- * Data family instances
     AsType(..)
@@ -33,10 +51,11 @@ import           Numeric.Natural
 import           Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
+import           Data.Time (UTCTime, NominalDiffTime)
 
 import           Control.Monad
 
-import           Cardano.Slotting.Slot (EpochNo)
+import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Cardano.Ledger.Era as Ledger
@@ -48,12 +67,14 @@ import           Shelley.Spec.Ledger.BaseTypes
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
+import qualified Shelley.Spec.Ledger.Genesis as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
+import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
@@ -61,32 +82,139 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
 
 
+-- | The values of the set of /updateable/ protocol paramaters. At any
+-- particular point on the chain there is a current set of paramaters in use.
+--
+-- These paramaters can be updated (at epoch boundaries) via an
+-- 'UpdateProposal', which contains a 'ProtocolParametersUpdate'.
+--
+-- The 'ProtocolParametersUpdate' is essentially a diff for the
+-- 'ProtocolParameters'.
+--
+-- There are also paramaters fixed in the Genesis file. See 'GenesisParameters'.
+--
+data ProtocolParameters =
+     ProtocolParameters {
+
+       -- | Protocol version, major and minor. Updating the major version is
+       -- used to trigger hard forks.
+       --
+       protocolParamProtocolVersion :: (Natural, Natural),
+
+       -- | The decentralization parameter. This is fraction of slots that
+       -- belong to the BFT overlay schedule, rather than the Praos schedule.
+       -- So 1 means fully centralised, while 0 means fully decentralised.
+       --
+       -- This is the \"d\" parameter from the design document.
+       --
+       protocolParamDecentralization :: Rational,
+
+       -- | Extra entropy for the Praos per-epoch nonce.
+       --
+       -- This can be used to add extra entropy during the decentralisation
+       -- process. If the extra entropy can be demonstrated to be generated
+       -- randomly then this method can be used to show that the initial
+       -- federated operators did not subtly bias the initial schedule so that
+       -- they retain undue influence after decentralisation.
+       --
+       protocolParamExtraPraosEntropy :: Maybe PraosNonce,
+
+       -- | The maximum permitted size of a block header.
+       --
+       -- This must be at least as big as the largest legitimate block headers
+       -- but should not be too much larger, to help prevent DoS attacks.
+       --
+       -- Caution: setting this to be smaller than legitimate block headers is
+       -- a sure way to brick the system!
+       --
+       protocolParamMaxBlockHeaderSize :: Natural,
+
+       -- | The maximum permitted size of the block body (that is, the block
+       -- payload, without the block header).
+       --
+       -- This should be picked with the Praos network delta security parameter
+       -- in mind. Making this too large can severely weaken the Praos
+       -- consensus properties.
+       --
+       -- Caution: setting this to be smaller than a transaction that can
+       -- change the protocol parameters is a sure way to brick the system!
+       --
+       protocolParamMaxBlockBodySize :: Natural,
+
+       -- | The maximum permitted size of a transaction.
+       --
+       -- Typically this should not be too high a fraction of the block size,
+       -- otherwise wastage from block fragmentation becomes a problem, and
+       -- the current implementation does not use any sophisticated box packing
+       -- algorithm.
+       --
+       protocolParamMaxTxSize :: Natural,
+
+       -- | The constant factor for the minimum fee calculation.
+       --
+       protocolParamTxFeeFixed :: Natural,
+
+       -- | The linear factor for the minimum fee calculation.
+       --
+       protocolParamTxFeePerByte :: Natural,
+
+       -- | The minimum permitted value for new UTxO entries, ie for
+       -- transaction outputs.
+       --
+       protocolParamMinUTxOValue :: Lovelace,
+
+       -- | The deposit required to register a stake address.
+       --
+       protocolParamStakeAddressDeposit :: Lovelace,
+
+       -- | The deposit required to register a stake pool.
+       --
+       protocolParamStakePoolDeposit :: Lovelace,
+
+       -- | The minimum value that stake pools are permitted to declare for
+       -- their cost parameter.
+       --
+       protocolParamMinPoolCost :: Lovelace,
+
+       -- | The maximum number of epochs into the future that stake pools
+       -- are permitted to schedule a retirement.
+       --
+       protocolParamPoolRetireMaxEpoch :: EpochNo,
+
+       -- | The equilibrium target number of stake pools.
+       --
+       -- This is the \"k\" incentives parameter from the design document.
+       --
+       protocolParamStakePoolTargetNum :: Natural,
+
+       -- | The influence of the pledge in stake pool rewards.
+       --
+       -- This is the \"a_0\" incentives parameter from the design document.
+       --
+       protocolParamPoolPledgeInfluence :: Rational,
+
+       -- | The monetary expansion rate. This determines the fraction of the
+       -- reserves that are added to the fee pot each epoch.
+       --
+       -- This is the \"rho\" incentives parameter from the design document.
+       --
+       protocolParamMonetaryExpansion :: Rational,
+
+       -- | The fraction of the fee pot each epoch that goes to the treasury.
+       --
+       -- This is the \"tau\" incentives parameter from the design document.
+       --
+       protocolParamTreasuryCut :: Rational
+    }
+  deriving (Eq, Show)
+
+
 -- ----------------------------------------------------------------------------
--- Protocol updates embedded in transactions
+-- Updates to the protocol paramaters
 --
 
-data UpdateProposal =
-     UpdateProposal
-       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
-       !EpochNo
-    deriving stock (Eq, Show)
-    deriving anyclass SerialiseAsCBOR
-
-instance HasTypeProxy UpdateProposal where
-    data AsType UpdateProposal = AsUpdateProposal
-    proxyToAsType _ = AsUpdateProposal
-
-instance HasTextEnvelope UpdateProposal where
-    textEnvelopeType _ = "UpdateProposalShelley"
-
-instance ToCBOR UpdateProposal where
-    toCBOR = toCBOR . toShelleyUpdate @StandardShelley
-    -- We have to pick a monomorphic era type for the serialisation. We use the
-    -- Shelley era. This makes no difference since era type is phantom.
-
-instance FromCBOR UpdateProposal where
-    fromCBOR = fromShelleyUpdate @StandardShelley <$> fromCBOR
-
+-- | The representation of a change in the 'ProtocolParameters'.
+--
 data ProtocolParametersUpdate =
      ProtocolParametersUpdate {
 
@@ -250,6 +378,53 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateTreasuryCut         = Nothing
       }
 
+
+-- ----------------------------------------------------------------------------
+-- Praos nonce
+--
+
+newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
+  deriving (Eq, Ord, Show)
+
+makePraosNonce :: ByteString -> PraosNonce
+makePraosNonce = PraosNonce . Crypto.hashWith id
+
+toShelleyNonce :: Maybe PraosNonce -> Shelley.Nonce
+toShelleyNonce Nothing               = Shelley.NeutralNonce
+toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
+
+fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
+fromPraosNonce Shelley.NeutralNonce = Nothing
+fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
+
+
+-- ----------------------------------------------------------------------------
+-- Proposals embedded in transactions to update protocol parameters
+--
+
+data UpdateProposal =
+     UpdateProposal
+       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
+       !EpochNo
+    deriving stock (Eq, Show)
+    deriving anyclass SerialiseAsCBOR
+
+instance HasTypeProxy UpdateProposal where
+    data AsType UpdateProposal = AsUpdateProposal
+    proxyToAsType _ = AsUpdateProposal
+
+instance HasTextEnvelope UpdateProposal where
+    textEnvelopeType _ = "UpdateProposalShelley"
+
+instance ToCBOR UpdateProposal where
+    toCBOR = toCBOR . toShelleyUpdate @StandardShelley
+    -- We have to pick a monomorphic era type for the serialisation. We use the
+    -- Shelley era. This makes no difference since era type is phantom.
+
+instance FromCBOR UpdateProposal where
+    fromCBOR = fromShelleyUpdate @StandardShelley <$> fromCBOR
+
+
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> [Hash GenesisKey]
                           -> EpochNo
@@ -258,6 +433,77 @@ makeShelleyUpdateProposal params genesisKeyHashes =
     --TODO decide how to handle parameter validation
     UpdateProposal (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
 
+
+-- ----------------------------------------------------------------------------
+-- Genesis paramaters
+--
+
+data GenesisParameters =
+     GenesisParameters {
+
+       -- | The reference time the system started. The time of slot zero.
+       -- The time epoch against which all Ouroboros time slots are measured.
+       --
+       protocolParamSystemStart :: UTCTime,
+
+       -- | The network identifier for this blockchain instance. This
+       -- distinguishes the mainnet from testnets, and different testnets from
+       -- each other.
+       --
+       protocolParamNetworkId :: NetworkId,
+
+       -- | The Ouroboros Praos active slot coefficient, aka @f@.
+       --
+       protocolParamActiveSlotsCoefficient :: Rational,
+
+       -- | The Ouroboros security paramaters, aka @k@. This is the maximum
+       -- number of blocks the node would ever be prepared to roll back by.
+       --
+       -- Clients of the node following the chain should be prepared to handle
+       -- the node switching forks up to this long.
+       --
+       protocolParamSecurity :: Int,
+
+       -- | The number of Ouroboros time slots in an Ouroboros epoch.
+       --
+       protocolParamEpochLength :: EpochSize,
+
+       -- | The time duration of a slot.
+       --
+       protocolParamSlotLength :: NominalDiffTime,
+
+       -- | For Ouroboros Praos, the length of a KES period as a number of time
+       -- slots. The KES keys get evolved once per KES period.
+       --
+       protocolParamSlotsPerKESPeriod :: Int,
+
+       -- | The maximum number of times a KES key can be evolved before it is
+       -- no longer considered valid. This can be less than the maximum number
+       -- of times given the KES key size. For example the mainnet KES key size
+       -- would allow 64 evolutions, but the max KES evolutions param is 62.
+       --
+       protocolParamMaxKESEvolutions ::  Int,
+
+       -- | In the Shelley era, prior to decentralised governance, this is the
+       -- number of genesis key delegates that need to agree for an update
+       -- proposal to be enacted.
+       --
+       protocolParamUpdateQuorum ::  Int,
+
+       -- | The maximum supply for Lovelace. This determines the initial value
+       -- of the reserves.
+       --
+       protocolParamMaxLovelaceSupply :: Lovelace,
+
+       -- | The initial values of the updateable 'ProtocolParameters'.
+       --
+       protocolInitialUpdateableProtocolParameters :: ProtocolParameters
+     }
+
+
+-- ----------------------------------------------------------------------------
+-- Conversion functions
+--
 
 toShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
                 => UpdateProposal -> Shelley.Update ledgerera
@@ -392,20 +638,83 @@ fromShelleyPParamsUpdate
     }
 
 
--- ----------------------------------------------------------------------------
--- Praos nonce
---
+fromShelleyPParams :: Shelley.PParams ledgerera
+                   -> ProtocolParameters
+fromShelleyPParams
+    Shelley.PParams {
+      Shelley._minfeeA
+    , Shelley._minfeeB
+    , Shelley._maxBBSize
+    , Shelley._maxTxSize
+    , Shelley._maxBHSize
+    , Shelley._keyDeposit
+    , Shelley._poolDeposit
+    , Shelley._eMax
+    , Shelley._nOpt
+    , Shelley._a0
+    , Shelley._rho
+    , Shelley._tau
+    , Shelley._d
+    , Shelley._extraEntropy
+    , Shelley._protocolVersion
+    , Shelley._minUTxOValue
+    , Shelley._minPoolCost
+    } =
+    ProtocolParameters {
+      protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
+                                           _protocolVersion
+    , protocolParamDecentralization    = Shelley.unitIntervalToRational _d
+    , protocolParamExtraPraosEntropy   = fromPraosNonce _extraEntropy
+    , protocolParamMaxBlockHeaderSize  = _maxBHSize
+    , protocolParamMaxBlockBodySize    = _maxBBSize
+    , protocolParamMaxTxSize           = _maxTxSize
+    , protocolParamTxFeeFixed          = _minfeeB
+    , protocolParamTxFeePerByte        = _minfeeA
+    , protocolParamMinUTxOValue        = fromShelleyLovelace _minUTxOValue
+    , protocolParamStakeAddressDeposit = fromShelleyLovelace _keyDeposit
+    , protocolParamStakePoolDeposit    = fromShelleyLovelace _poolDeposit
+    , protocolParamMinPoolCost         = fromShelleyLovelace _minPoolCost
+    , protocolParamPoolRetireMaxEpoch  = _eMax
+    , protocolParamStakePoolTargetNum  = _nOpt
+    , protocolParamPoolPledgeInfluence = _a0
+    , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational _rho
+    , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
+    }
 
-newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
-  deriving (Eq, Ord, Show)
 
-makePraosNonce :: ByteString -> PraosNonce
-makePraosNonce = PraosNonce . Crypto.hashWith id
+fromShelleyGenesis :: Shelley.ShelleyGenesis era -> GenesisParameters
+fromShelleyGenesis
+    Shelley.ShelleyGenesis {
+      Shelley.sgSystemStart
+    , Shelley.sgNetworkMagic
+    , Shelley.sgNetworkId
+    , Shelley.sgActiveSlotsCoeff
+    , Shelley.sgSecurityParam
+    , Shelley.sgEpochLength
+    , Shelley.sgSlotsPerKESPeriod
+    , Shelley.sgMaxKESEvolutions
+    , Shelley.sgSlotLength
+    , Shelley.sgUpdateQuorum
+    , Shelley.sgMaxLovelaceSupply
+    , Shelley.sgProtocolParams
+    , Shelley.sgGenDelegs    = _  -- unused, might be of interest
+    , Shelley.sgInitialFunds = _  -- unused, not retained by the node
+    , Shelley.sgStaking      = _  -- unused, not retained by the node
+    } =
+    GenesisParameters {
+      protocolParamSystemStart            = sgSystemStart
+    , protocolParamNetworkId              = fromShelleyNetwork sgNetworkId
+                                              (NetworkMagic sgNetworkMagic)
+    , protocolParamActiveSlotsCoefficient = sgActiveSlotsCoeff
+    , protocolParamSecurity               = fromIntegral sgSecurityParam
+    , protocolParamEpochLength            = sgEpochLength
+    , protocolParamSlotLength             = sgSlotLength
+    , protocolParamSlotsPerKESPeriod      = fromIntegral sgSlotsPerKESPeriod
+    , protocolParamMaxKESEvolutions       = fromIntegral sgMaxKESEvolutions
+    , protocolParamUpdateQuorum           = fromIntegral sgUpdateQuorum
+    , protocolParamMaxLovelaceSupply      = Lovelace
+                                              (fromIntegral sgMaxLovelaceSupply)
+    , protocolInitialUpdateableProtocolParameters = fromShelleyPParams
+                                                      sgProtocolParams
+    }
 
-toShelleyNonce :: Maybe PraosNonce -> Shelley.Nonce
-toShelleyNonce Nothing               = Shelley.NeutralNonce
-toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
-
-fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
-fromPraosNonce Shelley.NeutralNonce = Nothing
-fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
