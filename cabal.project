@@ -1,4 +1,4 @@
-index-state: 2021-01-01T00:00:00Z
+index-state: 2021-01-08T00:00:00Z
 
 packages:
     cardano-api
@@ -90,15 +90,9 @@ package io-sim-classes
 
 source-repository-package
   type: git
-  location: https://github.com/ddssff/listlike
-  tag: fc051ef219305194422254d36fdcc18de8fb736c
-  --sha256: 1dxcgi6d5bnczvpl4ws0ab63spz0nmm8ibdixl4hwbzirfvj866b
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 547f07e6973c5745f3d820e46a2332416d12ff75
-  --sha256: 1x84x2yr3g1jx0c6hxs3n1k4khvp21g05x51zhssmz9zycsccj2y
+  tag: b364d925e0a72689ecba40dd1f4899f76170b894
+  --sha256: 0igb4gnzlwxy1h40vy5s1aysmaa04wypxn7sn67qy6din7ysmad3
   subdir:
     binary
     binary/test
@@ -135,8 +129,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: ee4e7b547a991876e6b05ba542f4e62909f4a571
-  --sha256: 0dg6ihgrn5mgqp95c4f11l6kh9k3y75lwfqf47hdp554w7wyvaw6
+  tag: 116087dbcebb88aafdc7d3d0577477ba36129b41
+  --sha256: 0kxk5vcywsl19qc65y8mkc0npv5qz9fm23avs247xnb0zq17wcrd
   subdir:
     cardano-prelude
     cardano-prelude-test
