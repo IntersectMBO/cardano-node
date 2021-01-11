@@ -11,7 +11,7 @@ module Cardano.Api.Byron
     -- $keys
     VerificationKey(..),
     SigningKey(..),
-    ByronWitness(..),
+    SomeByronSigningKey(..),
 
     -- * Payment addresses
     -- | Constructing and inspecting Byron payment addresses

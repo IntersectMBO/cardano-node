@@ -31,7 +31,8 @@ import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
 import           Cardano.Api
-import           Cardano.Api.Byron
+import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
+import qualified Cardano.Api.Byron as ByronApi
 import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.Shelley
 
@@ -336,18 +337,18 @@ convertByronSigningKey mPwd byronFormat convert
                        (OutputFile skeyPathNew) = do
 
 
-    witness <- firstExceptT ShelleyKeyCmdByronKeyFailure
-                 $ Byron.readByronSigningKey byronFormat skeyPathOld
+    sKey <- firstExceptT ShelleyKeyCmdByronKeyFailure
+              $ Byron.readByronSigningKey byronFormat skeyPathOld
 
-    unprotectedSk <- case witness of
-                       LegacyWitness (ByronSigningKeyLegacy sk@(Crypto.SigningKey xprv)) ->
+    -- Account for password protected legacy Byron keys
+    unprotectedSk <- case sKey of
+                       ByronApi.AByronSigningKeyLegacy (ByronSigningKeyLegacy sk@(Crypto.SigningKey xprv)) ->
                          case mPwd of
                            -- Change password to empty string
                            Just pwd -> return . Crypto.SigningKey
                                          $ Crypto.xPrvChangePass (encodeUtf8 pwd) (encodeUtf8 "") xprv
                            Nothing -> return sk
-                       NonLegacyWitness _ ->
-                         left . ShelleyKeyCmdNonLegacyKey $ unSigningKeyFile skeyPathOld
+                       ByronApi.AByronSigningKey (ByronSigningKey sk) -> return sk
 
 
     let sk' :: SigningKey keyrole

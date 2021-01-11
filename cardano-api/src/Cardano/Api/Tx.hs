@@ -521,7 +521,8 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txmetadata) =
           (maybeToStrictMaybe txmetadata)
 
 
-makeByronKeyWitness :: forall key. IsByronKey key
+makeByronKeyWitness :: forall key.
+                       IsByronKey key
                     => NetworkId
                     -> TxBody ByronEra
                     -> SigningKey key
@@ -539,7 +540,7 @@ makeByronKeyWitness nw (ByronTxBody txbody) =
      in case byronKeyFormat :: ByronKeyFormat key of
           ByronLegacyKeyFormat ->
             \(ByronSigningKeyLegacy sk) -> witness sk pm txhash
-          ByronNonLegacyKeyFormat ->
+          ByronModernKeyFormat ->
             \(ByronSigningKey sk) -> witness sk pm txhash
  where
    witness :: Byron.SigningKey -> Byron.ProtocolMagicId -> Byron.Hash Byron.Tx -> Witness ByronEra

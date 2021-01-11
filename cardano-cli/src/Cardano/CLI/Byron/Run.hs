@@ -8,7 +8,7 @@ module Cardano.CLI.Byron.Run
 
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, left)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy.Builder as Builder
@@ -21,7 +21,8 @@ import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api hiding (UpdateProposal)
-import           Cardano.Api.Byron (Tx (..), VerificationKey (..))
+import           Cardano.Api.Byron (SigningKey (..), SomeByronSigningKey (..), Tx (..),
+                     VerificationKey (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
@@ -128,9 +129,14 @@ runPrettySigningKeyPublic bKeyFormat skF = do
 runMigrateDelegateKeyFrom
         :: ByronKeyFormat -> SigningKeyFile -> NewSigningKeyFile
         -> ExceptT ByronClientCmdError IO ()
-runMigrateDelegateKeyFrom oldKeyformat oldKey (NewSigningKeyFile newKey) = do
+runMigrateDelegateKeyFrom oldKeyformat oldKey@(SigningKeyFile fp) (NewSigningKeyFile newKey) = do
   sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey oldKeyformat oldKey
-  firstExceptT ByronCmdHelpersError . ensureNewFileLBS newKey $ serialiseByronWitness sk
+  migratedWitness <- case sk of
+                       AByronSigningKeyLegacy (ByronSigningKeyLegacy sKey) ->
+                         return . AByronSigningKey $ ByronSigningKey sKey
+                       AByronSigningKey _ ->
+                         left . ByronCmdKeyFailure $ CannotMigrateFromNonLegacySigningKey fp
+  firstExceptT ByronCmdHelpersError . ensureNewFileLBS newKey $ serialiseByronWitness migratedWitness
 
 runPrintGenesisHash :: GenesisFile -> ExceptT ByronClientCmdError IO ()
 runPrintGenesisHash genFp = do
@@ -160,7 +166,7 @@ runPrintSigningKeyAddress bKeyFormat networkid skF = do
 
 runKeygen :: NewSigningKeyFile -> ExceptT ByronClientCmdError IO ()
 runKeygen (NewSigningKeyFile skF)  = do
-  sK <- liftIO keygen
+  sK <- liftIO $ generateSigningKey AsByronKey
   firstExceptT ByronCmdHelpersError . ensureNewFileLBS skF $ serialiseToRawBytes sK
 
 runToVerification :: ByronKeyFormat -> SigningKeyFile -> NewVerificationKeyFile -> ExceptT ByronClientCmdError IO ()

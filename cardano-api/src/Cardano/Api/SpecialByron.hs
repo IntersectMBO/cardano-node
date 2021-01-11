@@ -37,7 +37,6 @@ import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerH
                      recoverVoteId, signProposal)
 import qualified Cardano.Chain.Update.Vote as ByronVote
 import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
-import qualified Cardano.Crypto.Signing as Byron
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
@@ -71,7 +70,7 @@ makeByronUpdateProposal
   -> SoftwareVersion
   -> SystemTag
   -> InstallerHash
-  -> ByronWitness
+  -> SomeByronSigningKey
   -> ByronProtocolParametersUpdate
   -> ByronUpdateProposal
 makeByronUpdateProposal nId pVer sVer sysTag insHash
@@ -92,7 +91,7 @@ makeByronUpdateProposal nId pVer sVer sysTag insHash
    metaData = M.singleton sysTag insHash
 
    noPassSigningKey :: SafeSigner
-   noPassSigningKey = noPassSafeSigner $ byronWitnessToSigningKey bWit
+   noPassSigningKey = noPassSafeSigner $ toByronSigningKey bWit
 
    protocolParamsUpdate :: ProtocolParametersUpdate
    protocolParamsUpdate = makeProtocolParametersUpdate paramsToUpdate
@@ -181,12 +180,12 @@ instance SerialiseAsRawBytes ByronVote where
 
 makeByronVote
   :: NetworkId
-  -> ByronWitness
+  -> SomeByronSigningKey
   -> ByronUpdateProposal
   -> Bool
   -> ByronVote
 makeByronVote nId sKey (ByronUpdateProposal proposal) yesOrNo =
-  let signingKey = byronWitnessToSigningKey sKey
+  let signingKey = toByronSigningKey sKey
       nonAnnotatedVote :: ByronVote.AVote ()
       nonAnnotatedVote = mkVote (toByronProtocolMagicId nId) signingKey (recoverUpId proposal) yesOrNo
       annotatedProposalId :: Binary.Annotated UpId ByteString
@@ -198,9 +197,3 @@ makeByronVote nId sKey (ByronUpdateProposal proposal) yesOrNo =
 
 toByronLedgertoByronVote :: ByronVote -> Mempool.GenTx ByronBlock
 toByronLedgertoByronVote (ByronVote vote) = Mempool.ByronUpdateVote (recoverVoteId vote) vote
-
-byronWitnessToSigningKey :: ByronWitness -> Byron.SigningKey
-byronWitnessToSigningKey bWit =
-  case bWit of
-    LegacyWitness (ByronSigningKeyLegacy sKey) -> sKey
-    NonLegacyWitness (ByronSigningKey sKey) -> sKey

@@ -25,7 +25,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
                      newExceptT)
 
 import           Cardano.Api
-import           Cardano.Api.Byron
+import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 

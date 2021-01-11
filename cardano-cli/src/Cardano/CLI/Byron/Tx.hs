@@ -43,9 +43,9 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (Dege
 
 import           Cardano.Api (LocalNodeConnectInfo (..), NetworkId, TxBody, Witness,
                      makeByronTransaction, submitTxToNodeLocal)
-import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra, ByronWitness (..),
-                     NodeConsensusMode (ByronMode), Tx (..), TxIn, TxOut (..),
-                     VerificationKey (..), fromByronTxIn, makeByronKeyWitness,
+import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra,
+                     NodeConsensusMode (ByronMode), SomeByronSigningKey (..), Tx (..), TxIn,
+                     TxOut (..), VerificationKey (..), fromByronTxIn, makeByronKeyWitness,
                      makeSignedTransaction)
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Environment
@@ -137,7 +137,7 @@ genesisUTxOTxIn gc vk genAddr =
 txSpendGenesisUTxOByronPBFT
   :: Genesis.Config
   -> NetworkId
-  -> ByronWitness
+  -> SomeByronSigningKey
   -> Address ByronAddr
   -> [TxOut ByronEra]
   -> Tx ByronEra
@@ -156,7 +156,7 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs =
 --   signed by the given key.
 txSpendUTxOByronPBFT
   :: NetworkId
-  -> ByronWitness
+  -> SomeByronSigningKey
   -> [TxIn]
   -> [TxOut ByronEra]
   -> Tx ByronEra
@@ -166,11 +166,11 @@ txSpendUTxOByronPBFT nId sk txIn outs =
       Right txBody -> let bWit = fromByronWitness sk nId txBody
                       in makeSignedTransaction [bWit] txBody
 
-fromByronWitness :: ByronWitness -> NetworkId -> TxBody ByronEra -> Witness ByronEra
+fromByronWitness :: SomeByronSigningKey -> NetworkId -> TxBody ByronEra -> Witness ByronEra
 fromByronWitness bw nId txBody =
   case bw of
-    LegacyWitness sk -> makeByronKeyWitness nId txBody sk
-    NonLegacyWitness sk' -> makeByronKeyWitness nId txBody sk'
+    AByronSigningKeyLegacy sk -> makeByronKeyWitness nId txBody sk
+    AByronSigningKey sk' -> makeByronKeyWitness nId txBody sk'
 
 -- | Submit a transaction to a node specified by topology info.
 nodeSubmitTx

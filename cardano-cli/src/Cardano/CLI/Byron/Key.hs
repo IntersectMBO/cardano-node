@@ -6,7 +6,6 @@ module Cardano.CLI.Byron.Key
   , NewSigningKeyFile(..)
   , NewVerificationKeyFile(..)
   , VerificationKeyFile(..)
-  , keygen
   , prettyPublicKey
   , readByronSigningKey
   , readPaymentVerificationKey
@@ -41,11 +40,14 @@ data ByronKeyFailure
   | LegacySigningKeyDeserialisationFailed !FilePath
   | SigningKeyDeserialisationFailed !FilePath
   | VerificationKeyDeserialisationFailed !FilePath !Text
+  | CannotMigrateFromNonLegacySigningKey !FilePath
   deriving Show
 
 renderByronKeyFailure :: ByronKeyFailure -> Text
 renderByronKeyFailure err =
   case err of
+    CannotMigrateFromNonLegacySigningKey fp ->
+      "Migrate from non-legacy Byron key unnecessary: " <> textShow fp
     ReadSigningKeyFailure sKeyFp readErr ->
       "Error reading signing key at: " <> textShow sKeyFp <> " Error: " <> textShow readErr
     ReadVerificationKeyFailure vKeyFp readErr ->
@@ -74,23 +76,23 @@ prettyPublicKey (ByronVerificationKey vk) =
            "\n   public key (hex): "% Crypto.fullVerificationKeyHexF)
     (Common.addressHash vk) vk vk
 
-byronWitnessToVerKey :: ByronWitness -> VerificationKey ByronKey
-byronWitnessToVerKey (LegacyWitness sKeyLeg) = castVerificationKey $ getVerificationKey sKeyLeg
-byronWitnessToVerKey (NonLegacyWitness sKeyNonLeg) = getVerificationKey sKeyNonLeg
+byronWitnessToVerKey :: SomeByronSigningKey -> VerificationKey ByronKey
+byronWitnessToVerKey (AByronSigningKeyLegacy sKeyLeg) = castVerificationKey $ getVerificationKey sKeyLeg
+byronWitnessToVerKey (AByronSigningKey sKeyNonLeg) = getVerificationKey sKeyNonLeg
 
 -- TODO:  we need to support password-protected secrets.
 -- | Read signing key from a file.
-readByronSigningKey :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronKeyFailure IO ByronWitness
+readByronSigningKey :: ByronKeyFormat -> SigningKeyFile -> ExceptT ByronKeyFailure IO SomeByronSigningKey
 readByronSigningKey bKeyFormat (SigningKeyFile fp) = do
   sK <- handleIOExceptT (ReadSigningKeyFailure fp . T.pack . displayException) $ SB.readFile fp
   case bKeyFormat of
     LegacyByronKeyFormat ->
       case deserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) sK of
-        Just legKey -> right $ LegacyWitness legKey
+        Just legKey -> right $ AByronSigningKeyLegacy legKey
         Nothing -> left $ LegacySigningKeyDeserialisationFailed fp
     NonLegacyByronKeyFormat ->
       case deserialiseFromRawBytes (AsSigningKey AsByronKey) sK of
-        Just nonLegSKey -> right $ NonLegacyWitness nonLegSKey
+        Just nonLegSKey -> right $ AByronSigningKey nonLegSKey
         Nothing -> left $ SigningKeyDeserialisationFailed fp
 
 -- | Read verification key from a file.  Throw an error if the file can't be read
@@ -102,8 +104,4 @@ readPaymentVerificationKey (VerificationKeyFile fp) = do
   let eVk = hoistEither . Crypto.parseFullVerificationKey . fromString $ UTF8.toString vkB
   -- Convert error to 'CliError'
   firstExceptT (VerificationKeyDeserialisationFailed fp . T.pack . show) eVk
-
--- | Generate a cryptographically random signing key.
-keygen :: IO (SigningKey ByronKey)
-keygen = generateSigningKey AsByronKey
 

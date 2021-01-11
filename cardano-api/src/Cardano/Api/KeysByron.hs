@@ -26,7 +26,8 @@ module Cardano.Api.KeysByron (
     IsByronKey(..),
     ByronKeyFormat(..),
 
-    ByronWitness(..),
+    SomeByronSigningKey(..),
+    toByronSigningKey
   ) where
 
 import           Cardano.Prelude (cborError, toCborError)
@@ -79,10 +80,17 @@ class IsByronKey key where
 
 data ByronKeyFormat key where
   ByronLegacyKeyFormat :: ByronKeyFormat ByronKeyLegacy
-  ByronNonLegacyKeyFormat :: ByronKeyFormat ByronKey
+  ByronModernKeyFormat :: ByronKeyFormat ByronKey
 
-data ByronWitness = LegacyWitness (SigningKey ByronKeyLegacy)
-                  | NonLegacyWitness (SigningKey ByronKey)
+data SomeByronSigningKey
+  = AByronSigningKeyLegacy (SigningKey ByronKeyLegacy)
+  | AByronSigningKey (SigningKey ByronKey)
+
+toByronSigningKey :: SomeByronSigningKey -> Byron.SigningKey
+toByronSigningKey bWit =
+  case bWit of
+    AByronSigningKeyLegacy (ByronSigningKeyLegacy sKey) -> sKey
+    AByronSigningKey (ByronSigningKey sKey) -> sKey
 
 --
 -- Byron key
@@ -176,7 +184,7 @@ instance CastVerificationKeyRole ByronKey PaymentKey where
                              -> VerificationKey PaymentExtendedKey)
 
 instance IsByronKey ByronKey where
-  byronKeyFormat = ByronNonLegacyKeyFormat
+  byronKeyFormat = ByronModernKeyFormat
 
 --
 -- Legacy Byron key

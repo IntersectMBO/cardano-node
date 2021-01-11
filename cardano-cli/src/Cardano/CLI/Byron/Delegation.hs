@@ -116,9 +116,9 @@ checkDlgCert cert magic issuerVK' delegateVK' =
 serialiseDelegationCert :: Dlg.Certificate -> ByteString
 serialiseDelegationCert = LB.toStrict . canonicalEncodePretty
 
-serialiseByronWitness :: ByronWitness -> ByteString
+serialiseByronWitness :: SomeByronSigningKey -> ByteString
 serialiseByronWitness sk =
   case sk of
-    LegacyWitness bSkey -> serialiseToRawBytes bSkey
-    NonLegacyWitness legBKey -> serialiseToRawBytes legBKey
+    AByronSigningKeyLegacy bSkey -> serialiseToRawBytes bSkey
+    AByronSigningKey legBKey -> serialiseToRawBytes legBKey
 
