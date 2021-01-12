@@ -44,11 +44,11 @@ mkNodeClientProtocol protocol =
         (EpochSlots 21600)
 
 data RunOpts = RunOpts
-    -- | Stop the test after given number of seconds. The chairman will
+  { -- | Stop the test after given number of seconds. The chairman will
     -- observe only for the given period of time, and check the consensus
     -- and progress conditions at the end.
     --
-  { caRunningTime :: !DiffTime
+    caRunningTime :: !DiffTime
     -- | Expect this amount of progress (chain growth) by the end of the test.
   , caMinProgress :: !BlockNo
   , caSocketPaths :: ![SocketPath]
