@@ -17,9 +17,10 @@ module Cardano.CLI.Byron.Genesis
 where
 
 import           Cardano.Prelude hiding (option, show, trace)
-import           Prelude (String, show)
+import           Prelude (String)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.Text.Lazy.Builder (toLazyText)
@@ -34,8 +35,9 @@ import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
 import           System.Directory (emptyPermissions, readable, setPermissions)
 #endif
-import           Cardano.Api (NetworkId)
-import           Cardano.Api.Byron (toByronRequiresNetworkMagic)
+import           Cardano.Api (Key (..), NetworkId)
+import           Cardano.Api.Byron (ByronKey, SerialiseAsRawBytes (..), SigningKey (..),
+                     toByronRequiresNetworkMagic)
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Delegation hiding (Map, epoch)
@@ -43,13 +45,11 @@ import           Cardano.Chain.Genesis (GeneratedSecrets (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as UTxO
 
-import           Cardano.Crypto (SigningKey (..))
 import qualified Cardano.Crypto as Crypto
 
 import           Cardano.CLI.Byron.Delegation
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types (GenesisFile (..))
 
 data ByronGenesisError
@@ -166,78 +166,64 @@ readGenesis (GenesisFile file) nw =
       Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
     }
 
---TODO: dumpGenesis needs refactoring.
 -- | Write out genesis into a directory that must not yet exist.  An error is
 -- thrown if the directory already exists, or the genesis has delegate keys that
 -- are not delegated to.
 dumpGenesis
-  :: ByronKeyFormat
-  -> NewDirectory
+  :: NewDirectory
   -> Genesis.GenesisData
   -> Genesis.GeneratedSecrets
   -> ExceptT ByronGenesisError IO ()
-dumpGenesis era (NewDirectory outDir) genesisData gs = do
+dumpGenesis (NewDirectory outDir) genesisData gs = do
   exists <- liftIO $ doesPathExist outDir
   if exists
   then left $ GenesisOutputDirAlreadyExists outDir
   else liftIO $ createDirectory outDir
-  liftIO $ LB.writeFile genesisJSONFile (serialiseGenesis genesisData)
+  liftIO $ LB.writeFile genesisJSONFile (canonicalEncodePretty genesisData)
 
-  dlgCerts <- mapM findDelegateCert $ gsRichSecrets gs
+  dlgCerts <- mapM findDelegateCert . map ByronSigningKey $ gsRichSecrets gs
 
   liftIO $ wOut "genesis-keys" "key"
-                (pure . first (ByronDelegationKeySerializationError
-                             . ByronDelegationKeyError)
-                      . serialiseSigningKey era)
-                (gsDlgIssuersSecrets gs)
+                serialiseToRawBytes
+                (map ByronSigningKey $ gsDlgIssuersSecrets gs)
   liftIO $ wOut "delegate-keys" "key"
-                (pure . first ByronDelegationKeySerializationError
-                      . serialiseDelegateKey era)
-                (gsRichSecrets gs)
+                serialiseToRawBytes
+                (map ByronSigningKey $ gsRichSecrets gs)
   liftIO $ wOut "poor-keys" "key"
-                (pure . first PoorKeyFailure
-                      . serialisePoorKey era)
-                (gsPoorSecrets gs)
-  liftIO $ wOut "delegation-cert" "json"
-                (pure . pure . serialiseDelegationCert)
-                dlgCerts
-  liftIO $ wOut "avvm-secrets" "secret"
-                (pure . printFakeAvvmSecrets)
-                (gsFakeAvvmSecrets gs)
+                serialiseToRawBytes
+                (map (ByronSigningKey . Genesis.poorSecretToKey) $ gsPoorSecrets gs)
+  liftIO $ wOut "delegation-cert" "json" serialiseDelegationCert dlgCerts
+  liftIO $ wOut "avvm-secrets" "secret" printFakeAvvmSecrets $ gsFakeAvvmSecrets gs
  where
   dlgCertMap :: Map Common.KeyHash Certificate
   dlgCertMap = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation genesisData
-  findDelegateCert :: SigningKey -> ExceptT ByronGenesisError IO Certificate
-  findDelegateCert sk =
-    case flip find (Map.elems dlgCertMap) . isCertForSK $ sk of
+
+  findDelegateCert :: SigningKey ByronKey -> ExceptT ByronGenesisError IO Certificate
+  findDelegateCert bSkey@(ByronSigningKey sk) =
+    case find (isCertForSK sk) (Map.elems dlgCertMap) of
       Nothing -> left . NoGenesisDelegationForKey
-                 . prettyPublicKey . Crypto.toVerification $ sk
+                 . prettyPublicKey $ getVerificationKey bSkey
       Just x  -> right x
+
   genesisJSONFile :: FilePath
   genesisJSONFile = outDir <> "/genesis.json"
 
-  printFakeAvvmSecrets :: Crypto.RedeemSigningKey -> Either ByronGenesisError LB.ByteString
-  printFakeAvvmSecrets rskey = Right . LB.fromStrict . encodeUtf8 . toStrict . toLazyText $ build rskey
+  printFakeAvvmSecrets :: Crypto.RedeemSigningKey -> ByteString
+  printFakeAvvmSecrets rskey = encodeUtf8 . toStrict . toLazyText $ build rskey
 
   -- Compare a given 'SigningKey' with a 'Certificate' 'VerificationKey'
-  isCertForSK :: SigningKey -> Certificate -> Bool
+  isCertForSK :: Crypto.SigningKey -> Certificate -> Bool
   isCertForSK sk cert = delegateVK cert == Crypto.toVerification sk
-  wOut :: String -> String -> (a -> IO (Either ByronGenesisError LB.ByteString)) -> [a] -> IO ()
+
+  wOut :: String -> String -> (a -> ByteString) -> [a] -> IO ()
   wOut = writeSecrets outDir
 
-
-serialiseGenesis :: Genesis.GenesisData -> LB.ByteString
-serialiseGenesis = canonicalEncodePretty
-
-writeSecrets :: FilePath -> String -> String -> (a -> IO (Either ByronGenesisError LB.ByteString)) -> [a] -> IO ()
+writeSecrets :: FilePath -> String -> String -> (a -> ByteString) -> [a] -> IO ()
 writeSecrets outDir prefix suffix secretOp xs =
   forM_ (zip xs [0::Int ..]) $
   \(secret, nr)-> do
     let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
-    result <- secretOp secret
-    case result of
-      Left cliError -> panic . toS $ show cliError
-      Right bs -> LB.writeFile filename bs
+    BS.writeFile filename $ secretOp secret
 #ifdef UNIX
     setFileMode    filename ownerReadMode
 #else

@@ -97,7 +97,7 @@ data DeserialiseInputResult a
   -- ^ Input successfully deserialised.
   | DeserialiseInputError !InputDecodeError
   -- ^ The provided data is of the expected format/encoding, but an error
-  -- occurred in deserializing it.
+  -- occurred in deserialising it.
   | DeserialiseInputErrorFormatMismatch
   -- ^ The provided data's formatting/encoding does not match that which was
   -- expected. This error is an indication that one could attempt to
@@ -388,7 +388,7 @@ data VerificationKeyTextOrFile
   | VktofVerificationKeyFile !VerificationKeyFile
   deriving (Eq, Show)
 
--- | An error in deserializing a 'VerificationKeyTextOrFile' to a
+-- | An error in deserialising a 'VerificationKeyTextOrFile' to a
 -- 'VerificationKey'.
 data VerificationKeyTextOrFileError
   = VerificationKeyTextError !InputDecodeError

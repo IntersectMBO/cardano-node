@@ -89,7 +89,7 @@ let
     cp ${./byron-params.json} ${stateDir}/byron-params.json
     START_TIME_SHELLEY=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="5 seconds")
     START_TIME=$(date +%s --date="$START_TIME_SHELLEY")
-    cardano-cli byron genesis genesis --protocol-magic 42 --k ${toString securityParam} --n-poor-addresses 0 --n-delegate-addresses ${toString numBft} --total-balance ${toString (1000000000000000 * numBft)} --byron-formats --delegate-share 1 --avvm-entry-count 0 --avvm-entry-balance 0 --protocol-parameters-file ${stateDir}/byron-params.json --genesis-output-dir ${stateDir}/byron --start-time "$START_TIME"
+    cardano-cli byron genesis genesis --protocol-magic 42 --k ${toString securityParam} --n-poor-addresses 0 --n-delegate-addresses ${toString numBft} --total-balance ${toString (1000000000000000 * numBft)} --delegate-share 1 --avvm-entry-count 0 --avvm-entry-balance 0 --protocol-parameters-file ${stateDir}/byron-params.json --genesis-output-dir ${stateDir}/byron --start-time "$START_TIME"
     mv ${stateDir}/byron-params.json ${stateDir}/byron/params.json
     jq -r '.securityParam = ${toString securityParam} | .updateQuorum = ${toString numBft}' < ${./genesis.spec.json} > ${stateDir}/shelley/genesis.spec.json
     cardano-cli genesis create --genesis-dir ${stateDir}/shelley --testnet-magic 42 --gen-genesis-keys 3 --start-time "$START_TIME_SHELLEY"

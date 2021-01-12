@@ -24,7 +24,6 @@ import           Data.Word
 import           Numeric.Natural
 
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.NetworkId (NetworkId, toByronProtocolMagicId)
 import           Cardano.Api.SerialiseRaw
@@ -38,6 +37,7 @@ import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerH
                      recoverVoteId, signProposal)
 import qualified Cardano.Chain.Update.Vote as ByronVote
 import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
+
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
 
@@ -70,11 +70,11 @@ makeByronUpdateProposal
   -> SoftwareVersion
   -> SystemTag
   -> InstallerHash
-  -> SigningKey ByronKey
+  -> SomeByronSigningKey
   -> ByronProtocolParametersUpdate
   -> ByronUpdateProposal
 makeByronUpdateProposal nId pVer sVer sysTag insHash
-                          (ByronSigningKey sKey) paramsToUpdate =
+                          bWit paramsToUpdate =
   let nonAnnotatedProposal :: AProposal ()
       nonAnnotatedProposal = signProposal (toByronProtocolMagicId nId) proposalBody noPassSigningKey
       annotatedPropBody :: Binary.Annotated ProposalBody ByteString
@@ -91,7 +91,7 @@ makeByronUpdateProposal nId pVer sVer sysTag insHash
    metaData = M.singleton sysTag insHash
 
    noPassSigningKey :: SafeSigner
-   noPassSigningKey = noPassSafeSigner sKey
+   noPassSigningKey = noPassSafeSigner $ toByronSigningKey bWit
 
    protocolParamsUpdate :: ProtocolParametersUpdate
    protocolParamsUpdate = makeProtocolParametersUpdate paramsToUpdate
@@ -180,13 +180,14 @@ instance SerialiseAsRawBytes ByronVote where
 
 makeByronVote
   :: NetworkId
-  -> SigningKey ByronKey
+  -> SomeByronSigningKey
   -> ByronUpdateProposal
   -> Bool
   -> ByronVote
-makeByronVote nId (ByronSigningKey sKey) (ByronUpdateProposal proposal) yesOrNo =
-  let nonAnnotatedVote :: ByronVote.AVote ()
-      nonAnnotatedVote = mkVote (toByronProtocolMagicId nId) sKey (recoverUpId proposal) yesOrNo
+makeByronVote nId sKey (ByronUpdateProposal proposal) yesOrNo =
+  let signingKey = toByronSigningKey sKey
+      nonAnnotatedVote :: ByronVote.AVote ()
+      nonAnnotatedVote = mkVote (toByronProtocolMagicId nId) signingKey (recoverUpId proposal) yesOrNo
       annotatedProposalId :: Binary.Annotated UpId ByteString
       annotatedProposalId = Binary.reAnnotate $ ByronVote.aProposalId nonAnnotatedVote
   in ByronVote
@@ -196,5 +197,3 @@ makeByronVote nId (ByronSigningKey sKey) (ByronUpdateProposal proposal) yesOrNo 
 
 toByronLedgertoByronVote :: ByronVote -> Mempool.GenTx ByronBlock
 toByronLedgertoByronVote (ByronVote vote) = Mempool.ByronUpdateVote (recoverVoteId vote) vote
-
-

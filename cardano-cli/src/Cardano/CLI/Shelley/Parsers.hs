@@ -1450,7 +1450,7 @@ pKesVerificationKey =
         Left err@(Bech32DeserialiseFromBytesError _) -> Left (displayError err)
         Left err@(Bech32WrongPrefix _ _) -> Left (displayError err)
 
-        -- The input was not valid Bech32. Attempt to deserialize it as hex.
+        -- The input was not valid Bech32. Attempt to deserialise it as hex.
         Left (Bech32DecodingError _) ->
           case deserialiseFromRawBytesHex asType (BSC.pack str) of
             Just res' -> Right res'

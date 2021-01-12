@@ -67,6 +67,7 @@ module Cardano.Api (
     -- ** Byron addresses
     makeByronAddress,
     ByronKey,
+    ByronKeyLegacy,
 
     -- ** Shelley addresses
     makeShelleyAddress,
@@ -193,6 +194,7 @@ module Cardano.Api (
     makeSignedTransaction,
     Witness,
     makeByronKeyWitness,
+    makeByronTransaction,
     ShelleyWitnessSigningKey(..),
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,

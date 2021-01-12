@@ -14,17 +14,15 @@ import           Cardano.Prelude
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
 
-import           Cardano.Api (NetworkId)
-import           Cardano.Api.Byron (ByronProtocolParametersUpdate (..))
-
+import           Cardano.Api (NetworkId, TxIn)
+import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra,
+                     ByronProtocolParametersUpdate (..), TxOut)
 
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
 import           Cardano.CLI.Byron.Tx
 import           Cardano.CLI.Types
 
-import           Cardano.Chain.Common (Address (..))
-import           Cardano.Chain.UTxO (TxIn (..), TxOut (..))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat)
 
 data ByronCommand =
@@ -36,15 +34,14 @@ data ByronCommand =
   | Genesis
         NewDirectory
         GenesisParameters
-        ByronKeyFormat
+
   | PrintGenesisHash
         GenesisFile
 
   --- Key Related Commands ---
   | Keygen
-        ByronKeyFormat
         NewSigningKeyFile
-        PasswordRequirement
+
   | ToVerification
         ByronKeyFormat
         SigningKeyFile
@@ -59,8 +56,6 @@ data ByronCommand =
         -- ^ Old ByronKeyFormat
         SigningKeyFile
         -- ^ Old key
-        ByronKeyFormat
-        -- ^ New ByronKeyFormat
         NewSigningKeyFile
         -- ^ New Key
 
@@ -87,9 +82,9 @@ data ByronCommand =
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
         -- ^ Signing key of genesis UTxO owner.
-        Address
+        (Address ByronAddr)
         -- ^ Genesis UTxO address.
-        (NonEmpty TxOut)
+        [TxOut ByronEra]
         -- ^ Tx output.
   | SpendUTxO
         NetworkId
@@ -98,9 +93,9 @@ data ByronCommand =
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
         -- ^ Signing key of Tx underwriter.
-        (NonEmpty TxIn)
+        [TxIn]
         -- ^ Inputs available for spending to the Tx underwriter's key.
-        (NonEmpty TxOut)
+        [TxOut ByronEra]
         -- ^ Genesis UTxO output Address.
 
   | GetTxId TxFile

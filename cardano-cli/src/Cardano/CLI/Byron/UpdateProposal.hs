@@ -13,23 +13,21 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 import           Control.Tracer (stdoutTracer, traceWith)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LB
 
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
                      SoftwareVersion (..), SystemTag (..))
-import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError, textShow)
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.Api (NetworkId, SerialiseAsRawBytes (..))
-
 import           Cardano.Api.Byron (AsType (AsByronUpdateProposal), ByronProtocolParametersUpdate,
-                     ByronUpdateProposal, SigningKey (..), makeByronUpdateProposal,
-                     toByronLedgerUpdateProposal)
+                     ByronUpdateProposal, makeByronUpdateProposal, toByronLedgerUpdateProposal)
+
 import           Cardano.CLI.Byron.Genesis (ByronGenesisError)
-import           Cardano.CLI.Byron.Key (ByronKeyFailure, readEraSigningKey)
+import           Cardano.CLI.Byron.Key (ByronKeyFailure, readByronSigningKey)
 import           Cardano.CLI.Byron.Tx (ByronTxError, nodeSubmitTx)
+import           Cardano.CLI.Helpers (HelpersError, ensureNewFileLBS, renderHelpersError, textShow)
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 
@@ -70,10 +68,10 @@ runProposalCreation
   -> ExceptT ByronUpdateProposalError IO ()
 runProposalCreation nw sKey@(SigningKeyFile sKeyfp) pVer sVer
                     sysTag insHash outputFp params = do
-  sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readEraSigningKey NonLegacyByronKeyFormat sKey
-  let proposal = makeByronUpdateProposal nw pVer sVer sysTag insHash (ByronSigningKey sK) params
+  sK <- firstExceptT (ReadSigningKeyFailure sKeyfp) $ readByronSigningKey NonLegacyByronKeyFormat sKey
+  let proposal = makeByronUpdateProposal nw pVer sVer sysTag insHash sK params
   firstExceptT ByronUpdateProposalWriteError $
-    ensureNewFileLBS outputFp . LB.fromStrict $ serialiseToRawBytes proposal
+    ensureNewFileLBS outputFp $ serialiseToRawBytes proposal
 
 readByronUpdateProposal :: FilePath -> ExceptT ByronUpdateProposalError IO ByronUpdateProposal
 readByronUpdateProposal fp = do

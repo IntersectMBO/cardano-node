@@ -31,7 +31,8 @@ import qualified Cardano.Crypto.Signing as Byron
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 
 import           Cardano.Api
-import           Cardano.Api.Byron
+import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
+import qualified Cardano.Api.Byron as ByronApi
 import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.Shelley
 
@@ -55,6 +56,7 @@ data ShelleyKeyCmdError
   | ShelleyKeyCmdWrongKeyTypeError
   | ShelleyKeyCmdCardanoAddressSigningKeyFileError
       !(FileError CardanoAddressSigningKeyConversionError)
+  | ShelleyKeyCmdNonLegacyKey !FilePath
   deriving Show
 
 renderShelleyKeyCmdError :: ShelleyKeyCmdError -> Text
@@ -70,6 +72,8 @@ renderShelleyKeyCmdError err =
                                    \when converting ITN BIP32 or Extended keys"
     ShelleyKeyCmdCardanoAddressSigningKeyFileError fileErr ->
       Text.pack (displayError fileErr)
+    ShelleyKeyCmdNonLegacyKey fp -> "Signing key at: " <> Text.pack fp <> " is not a legacy Byron signing key and should \
+                                    \ not need to be converted."
 
 runKeyCmd :: KeyCmd -> ExceptT ShelleyKeyCmdError IO ()
 runKeyCmd cmd =
@@ -332,15 +336,20 @@ convertByronSigningKey mPwd byronFormat convert
                        skeyPathOld
                        (OutputFile skeyPathNew) = do
 
-    sk@(Crypto.SigningKey xprv) <-
-      firstExceptT ShelleyKeyCmdByronKeyFailure
-        $ Byron.readEraSigningKey byronFormat skeyPathOld
 
-    unprotectedSk <- case mPwd of
-                       -- Change password to empty string
-                       Just pwd -> return . Crypto.SigningKey
-                                     $ Crypto.xPrvChangePass (encodeUtf8 pwd) (encodeUtf8 "") xprv
-                       Nothing -> return sk
+    sKey <- firstExceptT ShelleyKeyCmdByronKeyFailure
+              $ Byron.readByronSigningKey byronFormat skeyPathOld
+
+    -- Account for password protected legacy Byron keys
+    unprotectedSk <- case sKey of
+                       ByronApi.AByronSigningKeyLegacy (ByronSigningKeyLegacy sk@(Crypto.SigningKey xprv)) ->
+                         case mPwd of
+                           -- Change password to empty string
+                           Just pwd -> return . Crypto.SigningKey
+                                         $ Crypto.xPrvChangePass (encodeUtf8 pwd) (encodeUtf8 "") xprv
+                           Nothing -> return sk
+                       ByronApi.AByronSigningKey (ByronSigningKey sk) -> return sk
+
 
     let sk' :: SigningKey keyrole
         sk' = convert unprotectedSk
