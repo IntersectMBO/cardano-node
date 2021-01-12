@@ -43,6 +43,9 @@ module Cardano.Api.IPC (
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
+
+    -- *** Tip query
+    getLocalChainTip,
   ) where
 
 import           Prelude
@@ -53,33 +56,32 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 
 import           Control.Concurrent.STM
+import           Control.Monad (void)
 import           Control.Tracer (nullTracer)
 
-import qualified Ouroboros.Network.Block        as Net
-import qualified Ouroboros.Network.Mux          as Net
+import qualified Ouroboros.Network.Block as Net
+import qualified Ouroboros.Network.Mux as Net
+import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
+                     NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as Net
-import           Ouroboros.Network.NodeToClient
-                   (NodeToClientProtocols(..), NodeToClientVersionData(..))
-import qualified Ouroboros.Network.Protocol.ChainSync.Client         as Net.Sync
-import           Ouroboros.Network.Protocol.ChainSync.Client
-                   (ChainSyncClient(..))
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client   as Net.Query
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client
-                   (LocalStateQueryClient(..))
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type     as Net.Query
+import           Ouroboros.Network.Protocol.ChainSync.Client (ChainSyncClient (..))
+import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
+                     SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Client
-                   (LocalTxSubmissionClient(..), SubmitResult(..))
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
-import qualified Ouroboros.Consensus.Block                       as Consensus
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool      as Consensus
-import qualified Ouroboros.Consensus.Ledger.Query                as Consensus
-import qualified Ouroboros.Consensus.Network.NodeToClient        as Consensus
+import qualified Ouroboros.Consensus.Block as Consensus
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
+import qualified Ouroboros.Consensus.Network.NodeToClient as Consensus
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as Consensus
-import qualified Ouroboros.Consensus.Node.ProtocolInfo           as Consensus
-import qualified Ouroboros.Consensus.Node.Run                    as Consensus
-import qualified Ouroboros.Consensus.Cardano                     as Consensus
+import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
+import qualified Ouroboros.Consensus.Node.Run as Consensus
 
 import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
@@ -467,3 +469,39 @@ submitTxToNodeLocal connctInfo tx = do
         atomically $ putTMVar resultVar result
         pure (Net.Tx.SendMsgDone ())
 
+-- ----------------------------------------------------------------------------
+-- Get tip as 'ChainPoint'
+--
+
+
+getLocalChainTip :: LocalNodeConnectInfo mode -> IO ChainPoint
+getLocalChainTip localNodeConInfo = do
+    resultVar <- newEmptyTMVarIO
+    connectToLocalNode
+      localNodeConInfo
+      LocalNodeClientProtocols
+        { localChainSyncClient = Just $ chainSyncGetCurrentTip resultVar
+        , localTxSubmissionClient = Nothing
+        , localStateQueryClient = Nothing
+        }
+    atomically $ chainTipToChainPoint <$> takeTMVar resultVar
+
+chainSyncGetCurrentTip
+  :: forall mode. TMVar ChainTip
+  -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+chainSyncGetCurrentTip tipVar =
+  ChainSyncClient $ pure clientStIdle
+ where
+  clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
+  clientStIdle =
+    Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
+
+  clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+  clientStNext = Net.Sync.ClientStNext
+    { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
+        void $ atomically $ tryPutTMVar tipVar tip
+        pure $ Net.Sync.SendMsgDone ()
+    , Net.Sync.recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
+        void $ atomically $ tryPutTMVar tipVar tip
+        pure $ Net.Sync.SendMsgDone ()
+    }
