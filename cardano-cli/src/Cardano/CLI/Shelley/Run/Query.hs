@@ -121,30 +121,23 @@ runQueryProtocolParameters
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryProtocolParameters anyEra@(AnyCardanoEra era) anyCmodeParams@(AnyConsensusModeParams cModeParams) network mOutFile
-  | ShelleyBasedEra era' <- cardanoEraStyle era = do
-      SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
-                               readEnvSocketPath
-      eraInMode <- hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch anyEra anyCmodeParams) $ toEraInMode cModeParams era
+runQueryProtocolParameters anyEra@(AnyCardanoEra era) anyCmodeParams@(AnyConsensusModeParams cModeParams)
+                           network mOutFile = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr
+                           readEnvSocketPath
+  eraInMode <- hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch anyEra anyCmodeParams) $ toEraInMode cModeParams era
 
-      let localNodeConnInfo = NewIPC.LocalNodeConnectInfo
-                                { NewIPC.localConsensusModeParams = cModeParams
-                                , NewIPC.localNodeNetworkId = network
-                                , NewIPC.localNodeSocketPath = sockPath
-                                }
-          qInMode = NewIPC.QueryInEra eraInMode (NewIPC.QueryInShelleyBasedEra era' NewIPC.QueryProtocolParameters)
-      tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-      res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
-      case res of
-        Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
-        Right ePparams ->
-          case ePparams of
-            Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
-            Right pparams -> writeProtocolParameters mOutFile pparams
+  let localNodeConnInfo = NewIPC.LocalNodeConnectInfo cModeParams network sockPath
+      qInMode = NewIPC.createQueryInMode eraInMode NewIPC.QueryProtocolParameters
 
-  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
-                              ByronProtocolNotSupportedError)
-
+  tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
+  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+  case res of
+    Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
+    Right ePparams ->
+      case ePparams of
+        Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
+        Right pparams -> writeProtocolParameters mOutFile pparams
 
 writeProtocolParameters
   :: Maybe OutputFile
@@ -262,31 +255,24 @@ runQueryStakeAddressInfo
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryStakeAddressInfo anyEra@(AnyCardanoEra era) anyCmodeParams@(AnyConsensusModeParams cModeParams)
-                         (StakeAddress _ addr) network mOutFile
-  | ShelleyBasedEra era' <- cardanoEraStyle era = do
-      SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-      eraInMode <- hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch anyEra anyCmodeParams)
-                     $ toEraInMode cModeParams era
+                         (StakeAddress _ addr) network mOutFile = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  eraInMode <- hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch anyEra anyCmodeParams)
+                 $ toEraInMode cModeParams era
 
-      let localNodeConnInfo = NewIPC.LocalNodeConnectInfo
-                                { NewIPC.localConsensusModeParams = cModeParams
-                                , NewIPC.localNodeNetworkId = network
-                                , NewIPC.localNodeSocketPath = sockPath
-                                }
-          qInMode = NewIPC.QueryInEra eraInMode (NewIPC.QueryInShelleyBasedEra era'
-                      $ NewIPC.QueryStakeAddresses (Set.singleton $ fromShelleyStakeCredential addr) network)
+  let localNodeConnInfo = NewIPC.LocalNodeConnectInfo cModeParams network sockPath
+      qInMode = NewIPC.createQueryInMode
+                  eraInMode
+                  (NewIPC.QueryStakeAddresses (Set.singleton $ fromShelleyStakeCredential addr) network)
 
-      tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-      res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
-      case res of
-        Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
-        Right eDelegsAndRwds ->
-          case eDelegsAndRwds of
-            Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
-            Right delegsAndRewards -> writeStakeAddressInfo mOutFile $ DelegationsAndRewards delegsAndRewards
-
-  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
-                              ByronProtocolNotSupportedError)
+  tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
+  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+  case res of
+    Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
+    Right eDelegsAndRwds ->
+      case eDelegsAndRwds of
+        Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
+        Right delegsAndRewards -> writeStakeAddressInfo mOutFile $ DelegationsAndRewards delegsAndRewards
 
 
 -- -------------------------------------------------------------------------------------------------
@@ -432,40 +418,32 @@ runQueryStakeDistribution
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeDistribution anyEra@(AnyCardanoEra era) anyCmodeParams@(AnyConsensusModeParams cModeParams) network mOutFile
-  | ShelleyBasedEra era' <- cardanoEraStyle era = do
-      SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-      eraInMode <- hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch anyEra anyCmodeParams) $ toEraInMode cModeParams era
-      let localNodeConnInfo = NewIPC.LocalNodeConnectInfo
-                              { NewIPC.localConsensusModeParams = cModeParams
-                              , NewIPC.localNodeNetworkId = network
-                              , NewIPC.localNodeSocketPath = sockPath
-                              }
-          qInMode = NewIPC.QueryInEra eraInMode (NewIPC.QueryInShelleyBasedEra era' NewIPC.QueryStakeDistribution)
-      tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-      res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
-      case res of
-        Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
-        Right eStakeDist ->
-          case eStakeDist of
-            Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
-            Right stakeDist ->  writeStakeDistribution era' mOutFile stakeDist
+runQueryStakeDistribution anyEra@(AnyCardanoEra era) anyCmodeParams@(AnyConsensusModeParams cModeParams)
+                          network mOutFile = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  eraInMode <- hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch anyEra anyCmodeParams) $ toEraInMode cModeParams era
 
+  let localNodeConnInfo = NewIPC.LocalNodeConnectInfo cModeParams network sockPath
+      qInMode = NewIPC.createQueryInMode eraInMode NewIPC.QueryStakeDistribution
 
-  | otherwise = throwError (ShelleyQueryCmdLocalStateQueryError
-                              ByronProtocolNotSupportedError)
-
+  tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
+  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+  case res of
+    Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
+    Right eStakeDist ->
+      case eStakeDist of
+        Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
+        Right stakeDist ->  writeStakeDistribution mOutFile stakeDist
 
 writeStakeDistribution
-  :: ShelleyBasedEra era
-  -> Maybe OutputFile
+  :: Maybe OutputFile
   -> Map PoolId Rational
   -> ExceptT ShelleyQueryCmdError IO ()
-writeStakeDistribution _ (Just (OutputFile outFile)) stakeDistrib =
+writeStakeDistribution (Just (OutputFile outFile)) stakeDistrib =
   handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
     LBS.writeFile outFile (encodePretty stakeDistrib)
 
-writeStakeDistribution _ Nothing stakeDistrib =
+writeStakeDistribution Nothing stakeDistrib =
   liftIO $ printStakeDistribution stakeDistrib
 
 

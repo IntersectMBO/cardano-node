@@ -46,6 +46,9 @@ module Cardano.Api.IPC (
 
     -- *** Tip query
     getLocalChainTip,
+
+    -- *** Create query
+    createQueryInMode,
   ) where
 
 import           Prelude
