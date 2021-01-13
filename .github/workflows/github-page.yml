@@ -27,7 +27,7 @@ jobs:
         echo "CABAL_BUILDDIR=$CABAL_BUILDDIR" >> $GITHUB_ENV
 
     - name: Set cache version
-      run: echo "CACHE_VERSION=myfzgX7" >> $GITHUB_ENV
+      run: echo "CACHE_VERSION=UN37rUo" >> $GITHUB_ENV
 
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH

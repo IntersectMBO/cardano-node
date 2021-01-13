@@ -40,12 +40,22 @@ HADDOCK_OPTS=(
     --haddock-hyperlink-source
     --haddock-option "--show-all"
     --haddock-option "--use-unicode"
-    --haddock-option "--use-contents=\"../index.html\""
+    --disable-tests
   )
 
 # build documentation of all modules
 if [ ${REGENERATE} == "true" ]; then
-  cabal haddock "${HADDOCK_OPTS[@]}" cardano-api
+  cabal haddock "${HADDOCK_OPTS[@]}" \
+    cardano-api \
+    cardano-api-test \
+    cardano-cli \
+    cardano-config \
+    cardano-node \
+    hedgehog-extras \
+    exe:cardano-cli \
+    exe:cardano-node \
+    exe:cardano-node-chairman \
+    exe:cardano-testnet
 elif [ ${REGENERATE} != "false" ]; then
   cabal haddock "${HADDOCK_OPTS[@]}" ${REGENERATE}
 fi
@@ -67,7 +77,9 @@ done
 # --read-interface options
 interface_options () {
   for package in $(ls "${OUTPUT_DIR}"); do
-    echo "--read-interface=${package},${OUTPUT_DIR}/${package}/${package}.haddock"
+    if [ -f "${OUTPUT_DIR}/${package}/${package}.haddock" ]; then
+      echo "--read-interface=${package},${OUTPUT_DIR}/${package}/${package}.haddock"
+    fi
   done
 }
 
@@ -80,7 +92,6 @@ haddock \
   --gen-index \
   --gen-contents \
   --quickjump \
-  --prolog ./scripts/prolog \
   $(interface_options)
 
 # Assemble a toplevel `doc-index.json` from package level ones.
