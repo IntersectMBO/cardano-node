@@ -39,6 +39,7 @@ import           Cardano.Api.Byron
 import qualified Cardano.Api.IPC as NewIPC
 import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.Api.Modes (AnyConsensusMode (..), AnyConsensusModeParams (..), toEraInMode)
+import qualified Cardano.Api.Modes as Mode
 import           Cardano.Api.Protocol (Protocol, withlocalNodeConnectInfo)
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Shelley
@@ -106,8 +107,8 @@ runQueryCmd cmd =
   case cmd of
     QueryProtocolParameters era consensusModeParams network mOutFile ->
       runQueryProtocolParameters era consensusModeParams network mOutFile
-    QueryTip protocol network mOutFile ->
-      runQueryTip protocol network mOutFile
+    QueryTip consensusModeParams network mOutFile ->
+      runQueryTip consensusModeParams network mOutFile
     QueryStakeDistribution era consensusModeParams network mOutFile ->
       runQueryStakeDistribution era consensusModeParams network mOutFile
     QueryStakeAddressInfo era consensusModeParams addr network mOutFile ->
@@ -162,21 +163,21 @@ writeProtocolParameters mOutFile pparams =
         LBS.writeFile fpath (encodePretty pparams)
 
 runQueryTip
-  :: Protocol
+  :: AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryTip protocol network mOutFile = do
+runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-    output <-
-      firstExceptT ShelleyQueryCmdLocalStateQueryError $
-      withlocalNodeConnectInfo protocol network sockPath $ \connectInfo -> do
-        tip <- liftIO $ getLocalTip connectInfo
-        let output = case localNodeConsensusMode connectInfo of
-                       ByronMode{}   -> encodePretty tip
-                       ShelleyMode{} -> encodePretty tip
-                       CardanoMode{} -> encodePretty tip
-        return output
+    let localNodeConnInfo = NewIPC.LocalNodeConnectInfo cModeParams network sockPath
+
+    tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
+
+    let output = case NewIPC.localConsensusMode localNodeConnInfo of
+                   Mode.ByronMode   -> encodePretty tip
+                   Mode.ShelleyMode -> encodePretty tip
+                   Mode.CardanoMode -> encodePretty tip
+
     case mOutFile of
       Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
       Nothing                 -> liftIO $ LBS.putStrLn        output

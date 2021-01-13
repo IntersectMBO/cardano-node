@@ -41,34 +41,37 @@ module Cardano.Api.Block (
 
 import           Prelude
 
+import           Data.Aeson (ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
-import           Data.Foldable (Foldable(toList))
+import           Data.Foldable (Foldable (toList))
+import qualified Data.Text.Encoding as Text
 
-import           Cardano.Slotting.Block (BlockNo(..))
-import           Cardano.Slotting.Slot (SlotNo, EpochNo)
+import           Cardano.Slotting.Block (BlockNo)
+import           Cardano.Slotting.Slot (EpochNo, SlotNo)
 
 import qualified Ouroboros.Network.Block as Consensus
 
-import qualified Ouroboros.Consensus.Block               as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
-import qualified Ouroboros.Consensus.Byron.Ledger        as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger      as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block       as Consensus
-import qualified Ouroboros.Consensus.Cardano.ByronHFC    as Consensus
-import qualified Ouroboros.Consensus.Cardano.ShelleyHFC  as Consensus
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
+import qualified Ouroboros.Consensus.Block as Consensus
+import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
+import qualified Ouroboros.Consensus.Cardano.ShelleyHFC as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import qualified Cardano.Chain.Block as Byron
-import qualified Cardano.Chain.UTxO  as Byron
+import qualified Cardano.Chain.UTxO as Byron
 
 import qualified Shelley.Spec.Ledger.BlockChain as Shelley
 
 import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Tx
@@ -250,6 +253,13 @@ getBlockHeader (ByronBlock block)
 data ChainPoint = ChainPointAtGenesis
                 | ChainPoint !SlotNo !(Hash BlockHeader)
   deriving (Eq, Show)
+
+instance ToJSON ChainPoint where
+  toJSON ChainPointAtGenesis = Aeson.String "Tip is currently at genesis block"
+  toJSON (ChainPoint slot headerHash) =
+    object [ "Slot Number" .= slot
+           , "Slot Header Hash" .= Text.decodeUtf8 (serialiseToRawBytesHex headerHash)
+           ]
 
 
 toConsensusPointInMode :: ConsensusMode mode
