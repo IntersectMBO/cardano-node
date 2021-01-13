@@ -32,6 +32,7 @@ library
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
+                        Cardano.Api.Query
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.TxInMode
                         Cardano.Api.TxSubmit
@@ -62,7 +63,7 @@ library
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
 -- TODO: move here      Cardano.Api.ProtocolParameters
-                        Cardano.Api.Query
+-- TODO: move here      Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR

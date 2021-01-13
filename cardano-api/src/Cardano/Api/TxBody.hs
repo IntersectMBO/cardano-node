@@ -1,4 +1,5 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -95,6 +96,9 @@ module Cardano.Api.TxBody (
 
 import           Prelude
 
+import           Data.Aeson (ToJSON (..))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -106,7 +110,9 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.String (IsString)
+import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Generics
 
 import           Control.Monad (guard)
 
@@ -169,6 +175,8 @@ newtype TxId = TxId (Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody)
   deriving newtype (IsString)
                -- We use the Shelley representation and convert the Byron one
 
+deriving newtype instance ToJSON TxId
+
 instance HasTypeProxy TxId where
     data AsType TxId = AsTxId
     proxyToAsType _ = AsTxId
@@ -224,11 +232,16 @@ getTxId (ShelleyTxBody era tx _) =
 --
 
 data TxIn = TxIn TxId TxIx
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generic, Ord, Show)
+
+deriving instance ToJSON TxIn
+instance ToJSONKey TxIn where
+  toJSONKey = toJSONKeyText (\txIn -> Text.pack $ show txIn)
 
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
+  deriving newtype ToJSON
 
 fromByronTxIn :: Byron.TxIn -> TxIn
 fromByronTxIn (Byron.TxInUtxo txId index) =
@@ -255,8 +268,11 @@ fromShelleyTxIn (Shelley.TxIn txid txix) =
 -- Transaction outputs
 --
 
-data TxOut era = TxOut (AddressInEra era) (TxOutValue era)
+data TxOut era
+  = TxOut (AddressInEra era) (TxOutValue era)
+  deriving Generic
 
+deriving instance IsCardanoEra era => ToJSON (TxOut era)
 deriving instance Eq   (TxOut era)
 deriving instance Show (TxOut era)
 
@@ -330,6 +346,9 @@ data MultiAssetSupportedInEra era where
 deriving instance Eq   (MultiAssetSupportedInEra era)
 deriving instance Show (MultiAssetSupportedInEra era)
 
+instance ToJSON (MultiAssetSupportedInEra era) where
+  toJSON = Aeson.String . Text.pack . show
+
 -- | A representation of whether the era supports only ada transactions.
 --
 -- Prior to the Mary era only ada transactions are supported. Multi-assets are
@@ -346,6 +365,9 @@ data OnlyAdaSupportedInEra era where
 
 deriving instance Eq   (OnlyAdaSupportedInEra era)
 deriving instance Show (OnlyAdaSupportedInEra era)
+
+instance ToJSON (OnlyAdaSupportedInEra era) where
+  toJSON = Aeson.String . Text.pack . show
 
 multiAssetSupportedInEra :: CardanoEra era
                          -> Either (OnlyAdaSupportedInEra era)
@@ -589,7 +611,8 @@ data TxOutValue era where
 
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
-
+deriving instance ToJSON (TxOutValue era)
+deriving instance Generic (TxOutValue era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees
