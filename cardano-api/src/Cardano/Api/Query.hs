@@ -24,8 +24,9 @@ module Cardano.Api.Query (
     toConsensusQuery,
     fromConsensusQueryResult,
 
-    -- TODO: Move me
+    -- * Wrapper types used in queries
     LedgerState(..),
+    ProtocolState(..),
   ) where
 
 import           Data.Bifunctor (bimap)
@@ -131,20 +132,17 @@ data QueryInShelleyBasedEra era result where
        -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace,
                                       Map StakeCredential PoolId)
 
---     QueryPoolRanking
---       ::
---       -> QueryInShelleyBasedEra
+     -- TODO: Need to update ledger-specs dependency to access RewardProvenance
+     -- QueryPoolRanking
+     --   :: QueryInShelleyBasedEra era RewardProvenance
 
      QueryLedgerState
        :: QueryInShelleyBasedEra era (LedgerState era)
 
---     QueryProtocolState
---       :: QueryInShelleyBasedEra ProtocolState
---TODO: add support for these
+     QueryProtocolState
+       :: QueryInShelleyBasedEra era (ProtocolState era)
 
 deriving instance Show (QueryInShelleyBasedEra era result)
-
-newtype LedgerState era = LedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
 -- ----------------------------------------------------------------------------
 -- Wrapper types used in queries
@@ -156,6 +154,12 @@ newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
 
 newtype UTxO era = UTxO (Map TxIn (TxOut era))
+
+newtype LedgerState era
+  = LedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))
+
+newtype ProtocolState era
+  = ProtocolState (Serialised (Shelley.ChainDepState (Ledger.Crypto (ShelleyLedgerEra era))))
 
 toShelleyAddrSet :: CardanoEra era
                  -> Set AddressAny
@@ -289,6 +293,8 @@ toConsensusQueryShelleyBased erainmode (QueryStakeAddresses creds) =
 toConsensusQueryShelleyBased erainmode QueryLedgerState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugNewEpochState))
 
+toConsensusQueryShelleyBased erainmode QueryProtocolState =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugChainDepState))
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -441,6 +447,11 @@ fromConsensusQueryResultShelleyBased QueryStakeAddresses{} q' r' =
 fromConsensusQueryResultShelleyBased QueryLedgerState{} q' r' =
     case q' of
       Consensus.GetCBOR Consensus.DebugNewEpochState -> LedgerState r'
+      _                                              -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased QueryProtocolState q' r' =
+    case q' of
+      Consensus.GetCBOR Consensus.DebugChainDepState -> ProtocolState r'
       _                                              -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
