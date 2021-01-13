@@ -40,12 +40,22 @@ HADDOCK_OPTS=(
     --haddock-hyperlink-source
     --haddock-option "--show-all"
     --haddock-option "--use-unicode"
-    --haddock-option "--use-contents=\"../index.html\""
+    --disable-tests
   )
 
 # build documentation of all modules
 if [ ${REGENERATE} == "true" ]; then
-  cabal haddock "${HADDOCK_OPTS[@]}" cardano-api
+  cabal haddock "${HADDOCK_OPTS[@]}" \
+    cardano-api \
+    cardano-api-test \
+    cardano-cli \
+    cardano-config \
+    cardano-node \
+    hedgehog-extras \
+    exe:cardano-cli \
+    exe:cardano-node \
+    exe:cardano-node-chairman \
+    exe:cardano-testnet
 elif [ ${REGENERATE} != "false" ]; then
   cabal haddock "${HADDOCK_OPTS[@]}" ${REGENERATE}
 fi
@@ -55,16 +65,21 @@ if [[ !( -d ${OUTPUT_DIR} ) ]]; then
 fi
 
 # copy the new docs
-for noopt_dir in $(ls "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}"/noopt); do
-  dir="$(dirname "$noopt_dir")"
-  package=$(echo "${dir}" | sed 's/-[0-9]\+\(\.[0-9]\+\)*//')
-  cp -r "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}/${dir}/noopt/doc/html/${package}" ${OUTPUT_DIR}
+for noopt_dir in $(find "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}" -name noopt | grep -v /t/); do
+  for doc_index in $(find "${noopt_dir}" -name doc-index.html); do
+    package_dir="$(dirname "$doc_index")"
+    package="$(echo "$(basename "${package_dir}")" | sed 's/-[0-9]\+\(\.[0-9]\+\)*//')"
+    echo "Copying package: ${package}"
+    cp -r "${package_dir}" "${OUTPUT_DIR}"
+  done
 done
 
 # --read-interface options
 interface_options () {
   for package in $(ls "${OUTPUT_DIR}"); do
-    echo "--read-interface=${package},${OUTPUT_DIR}/${package}/${package}.haddock"
+    if [ -f "${OUTPUT_DIR}/${package}/${package}.haddock" ]; then
+      echo "--read-interface=${package},${OUTPUT_DIR}/${package}/${package}.haddock"
+    fi
   done
 }
 
@@ -77,7 +92,6 @@ haddock \
   --gen-index \
   --gen-contents \
   --quickjump \
-  --prolog ./scripts/prolog \
   $(interface_options)
 
 # Assemble a toplevel `doc-index.json` from package level ones.
