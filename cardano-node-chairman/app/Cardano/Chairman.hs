@@ -455,7 +455,7 @@ localInitiatorNetworkApplication
       versionedNodeToClientProtocols
         version
         versionData
-        (\_ _ -> protocols blockVersion))
+        (\_ _ -> protocols blockVersion version))
     (Map.toList (supportedNodeToClientVersions proxy))
   where
     proxy :: Proxy blk
@@ -465,8 +465,9 @@ localInitiatorNetworkApplication
 
     protocols
       :: BlockNodeToClientVersion blk
+      -> NodeToClientVersion
       -> NodeToClientProtocols InitiatorMode ByteString m () Void
-    protocols byronClientVersion  =
+    protocols byronClientVersion version =
       NodeToClientProtocols
       { localChainSyncProtocol =
           InitiatorProtocolOnly $
@@ -495,4 +496,4 @@ localInitiatorNetworkApplication
             , cTxSubmissionCodec
             , cStateQueryCodec
             } =
-          clientCodecs cfg byronClientVersion
+          clientCodecs cfg byronClientVersion version

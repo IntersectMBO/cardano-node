@@ -41,7 +41,7 @@ import           Cardano.BM.Backend.TraceForwarder (plugin)
 import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
-import           Cardano.BM.Data.Aggregated (Measurable(..))
+import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend (Backend, BackendKind)
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName)
 import qualified Cardano.BM.Observer.Monadic as Monadic
@@ -74,7 +74,7 @@ import qualified Shelley.Spec.Ledger.API as SL
 import           Cardano.Config.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Types
-import           Cardano.Tracing.OrphanInstances.Common()
+import           Cardano.Tracing.OrphanInstances.Common ()
 import           Paths_cardano_node (version)
 
 --------------------------------

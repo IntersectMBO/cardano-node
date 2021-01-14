@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 
 -- | Cardano eras, sometimes we have to distinguish them.
@@ -43,12 +43,12 @@ module Cardano.Api.Eras
 
 import           Prelude
 
-import           Data.Type.Equality (TestEquality(..), (:~:)(Refl))
+import           Data.Type.Equality ((:~:) (Refl), TestEquality (..))
 
 import           Cardano.Ledger.Era as Ledger (Crypto)
 
-import           Ouroboros.Consensus.Shelley.Eras as Ledger
-                   (StandardShelley, StandardAllegra, StandardMary, StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardCrypto,
+                     StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
 

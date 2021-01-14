@@ -214,15 +214,16 @@ mkVersionedProtocols networkid ptcl
             NodeToClientVersionData {
               networkMagic = toNetworkMagic networkid
             }
-            (\_connid _ctl -> protocols ptclBlockVersion))
+            (\_connid _ctl -> protocols ptclBlockVersion ptclVersion))
       (Map.toList (Consensus.supportedNodeToClientVersions proxy))
   where
     proxy :: Proxy block
     proxy = Proxy
 
     protocols :: Consensus.BlockNodeToClientVersion block
+              -> Consensus.NodeToClientVersion
               -> NodeToClientProtocols Net.InitiatorMode LBS.ByteString IO () Void
-    protocols ptclBlockVersion =
+    protocols ptclBlockVersion ptclVersion =
         NodeToClientProtocols {
           localChainSyncProtocol =
             Net.InitiatorProtocolOnly $
@@ -255,7 +256,7 @@ mkVersionedProtocols networkid ptcl
           Consensus.cChainSyncCodec,
           Consensus.cTxSubmissionCodec,
           Consensus.cStateQueryCodec
-        } = Consensus.clientCodecs codecConfig ptclBlockVersion
+        } = Consensus.clientCodecs codecConfig ptclBlockVersion ptclVersion
 
     codecConfig :: Consensus.CodecConfig block
     codecConfig = Consensus.pClientInfoCodecConfig
@@ -419,7 +420,7 @@ queryNodeLocalState connctInfo point query = do
                                          (QueryInMode mode) IO ()
     localStateQuerySingle resultVar =
       LocalStateQueryClient $ pure $
-        Net.Query.SendMsgAcquire point $
+        Net.Query.SendMsgAcquire (Just point) $
         Net.Query.ClientStAcquiring {
           Net.Query.recvMsgAcquired =
             Net.Query.SendMsgQuery query $
