@@ -277,7 +277,7 @@ data QueryCmd =
   | QueryStakeDistribution AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo AnyCardanoEra AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
   | QueryUTxO AnyCardanoEra AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
-  | QueryLedgerState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
+  | QueryLedgerState AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
   deriving Show
 

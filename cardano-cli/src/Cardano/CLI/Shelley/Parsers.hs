@@ -699,7 +699,11 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState <$> pCardanoEra <*> pProtocol <*> pNetworkId <*> pMaybeOutputFile
+    pQueryLedgerState = QueryLedgerState
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
+                          <*> pNetworkId
+                          <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
     pQueryProtocolState = QueryProtocolState
