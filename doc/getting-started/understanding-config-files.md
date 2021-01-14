@@ -263,7 +263,7 @@ It is also possible to have more fine grained control over filtering of trace ou
 ```json
 	  "options": {
 	    "mapBackends": {
-	      "cardano.node-metrics": [
+	      "cardano.node.metrics": [
 	        "EKGViewBK"
 	      ],
 	      "cardano.node.BlockFetchDecision.peers": [
@@ -328,9 +328,6 @@ It is also possible to have more fine grained control over filtering of trace ou
 
 	      "cardano.epoch-validation.utxo-stats": {
 	        "subtrace": "NoTrace"
-	      },
-	      "cardano.node-metrics": {
-	        "subtrace": "Neutral"
 	      },
 	      "cardano.node.metrics": {
 	        "subtrace": "Neutral"

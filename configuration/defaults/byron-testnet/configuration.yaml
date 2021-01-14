@@ -224,8 +224,6 @@ options:
       - EKGViewBK  
     # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
     # - TraceForwarderBK
-    cardano.node-metrics:
-      - EKGViewBK
     # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
     # cardano.node.release:
     #   - TraceForwarderBK

@@ -217,8 +217,6 @@ options:
       - EKGViewBK
     cardano.node.metrics:
       - EKGViewBK
-    cardano.node-metrics:
-      - EKGViewBK
 
   # This section is more expressive still, and needs to be properly documented.
   mapSubtrace:
