@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
@@ -81,6 +82,7 @@ import           Shelley.Spec.Ledger.STS.Rupd
 import           Shelley.Spec.Ledger.STS.Snap
 import           Shelley.Spec.Ledger.STS.Tick
 import           Shelley.Spec.Ledger.STS.Updn
+import           Shelley.Spec.Ledger.STS.Upec
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
 
@@ -112,6 +114,7 @@ instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (UTXOW era))
+         , ToObject (PredicateFailure (Core.EraRule "LEDGER" era))
          ) => ToObject (ApplyTxError era) where
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
@@ -158,6 +161,7 @@ instance ToObject HotKey.KESEvolutionError where
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (UTXOW era))
+         , ToObject (PredicateFailure (Core.EraRule "BBODY" era))
          ) => ToObject (ShelleyLedgerError era) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mkObject [ "kind" .= String "BBodyError"
@@ -221,8 +225,10 @@ instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
              ]
 
 instance ( ShelleyBasedEra era
-         , ToObject (PredicateFailure (UTXO era))
-         , ToObject (PredicateFailure (UTXOW era))
+         , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
+         , ToObject (PredicateFailure (Core.EraRule "BBODY" era))
+         , ToObject (PredicateFailure (Core.EraRule "TICK" era))
+         , ToObject (PredicateFailure (Core.EraRule "TICKN" era))
          ) => ToObject (ChainPredicateFailure era) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
@@ -247,6 +253,7 @@ instance ( ShelleyBasedEra era
                       \protocol version."
   toObject verb (BbodyFailure f) = toObject verb f
   toObject verb (TickFailure  f) = toObject verb f
+  toObject verb (TicknFailure  f) = toObject verb f
   toObject verb (PrtclFailure f) = toObject verb f
   toObject verb (PrtclSeqFailure f) = toObject verb f
 
@@ -270,6 +277,7 @@ instance ToObject (PrtlSeqFailure crypto) where
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (UTXOW era))
+         , ToObject (PredicateFailure (Core.EraRule "LEDGER" era))
          ) => ToObject (BbodyPredicateFailure era) where
   toObject _verb (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
@@ -287,6 +295,7 @@ instance ( ShelleyBasedEra era
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (UTXOW era))
+         , ToObject (PredicateFailure (Core.EraRule "LEDGER" era))
          ) => ToObject (LedgersPredicateFailure era) where
   toObject verb (LedgerFailure f) = toObject verb f
 
@@ -294,13 +303,17 @@ instance ( ShelleyBasedEra era
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (UTXOW era))
+         , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
+         , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          ) => ToObject (LedgerPredicateFailure era) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
 
-instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
-      => ToObject (UtxowPredicateFailure era) where
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (UTXO era))
+         , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
+         ) => ToObject (UtxowPredicateFailure era) where
   toObject _verb (InvalidWitnessesUTXOW wits) =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits
@@ -342,6 +355,8 @@ instance (ShelleyBasedEra era, ToObject (PredicateFailure (UTXO era)))
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.Delta (Core.Value era))
+         , ToJSON (Core.TxOut era)
+         , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
          )
       => ToObject (UtxoPredicateFailure era) where
   toObject _verb (BadInputsUTxO badInputs) =
@@ -429,6 +444,8 @@ instance ToJSON MA.ValidityInterval where
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.Delta (Core.Value era))
+         , ToJSON (Core.TxOut era)
+         , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
          ) => ToObject (MA.UtxoPredicateFailure era) where
   toObject _verb (MA.BadInputsUTxO badInputs) =
     mkObject [ "kind" .= String "BadInputsUTxO"
@@ -506,7 +523,9 @@ instance ToObject (PpupPredicateFailure era) where
              ]
 
 
-instance ShelleyBasedEra era => ToObject (DelegsPredicateFailure era) where
+instance ( ShelleyBasedEra era
+         , ToObject (PredicateFailure (Core.EraRule "DELPL" era))
+         ) => ToObject (DelegsPredicateFailure era) where
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
     mkObject [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool
@@ -518,7 +537,9 @@ instance ShelleyBasedEra era => ToObject (DelegsPredicateFailure era) where
   toObject verb (DelplFailure f) = toObject verb f
 
 
-instance ToObject (DelplPredicateFailure era) where
+instance ( ToObject (PredicateFailure (Core.EraRule "POOL" era))
+         , ToObject (PredicateFailure (Core.EraRule "DELEG" era))
+         ) => ToObject (DelplPredicateFailure era) where
   toObject verb (PoolFailure f) = toObject verb f
   toObject verb (DelegFailure f) = toObject verb f
 
@@ -616,14 +637,18 @@ instance ToObject (PoolPredicateFailure era) where
                     ]
 
 
-instance ToObject (TickPredicateFailure era) where
+instance ( ToObject (PredicateFailure (Core.EraRule "NEWEPOCH" era))
+         , ToObject (PredicateFailure (Core.EraRule "RUPD" era))
+         ) => ToObject (TickPredicateFailure era) where
   toObject verb (NewEpochFailure f) = toObject verb f
   toObject verb (RupdFailure f) = toObject verb f
 
 instance ToObject TicknPredicateFailure where
   toObject _verb x = case x of {} -- no constructors
 
-instance ToObject (NewEpochPredicateFailure era) where
+instance ( ToObject (PredicateFailure (Core.EraRule "EPOCH" era))
+         , ToObject (PredicateFailure (Core.EraRule "MIR" era))
+         ) => ToObject (NewEpochPredicateFailure era) where
   toObject verb (EpochFailure f) = toObject verb f
   toObject verb (MirFailure f) = toObject verb f
   toObject _verb (CorruptRewardUpdate update) =
@@ -631,10 +656,13 @@ instance ToObject (NewEpochPredicateFailure era) where
              , "update" .= String (show update) ]
 
 
-instance ToObject (EpochPredicateFailure era) where
+instance ( ToObject (PredicateFailure (Core.EraRule "POOLREAP" era))
+         , ToObject (PredicateFailure (Core.EraRule "SNAP" era))
+         , ToObject (PredicateFailure (Core.EraRule "UPEC" era))
+         ) => ToObject (EpochPredicateFailure era) where
   toObject verb (PoolReapFailure f) = toObject verb f
   toObject verb (SnapFailure f) = toObject verb f
-  toObject verb (NewPpFailure f) = toObject verb f
+  toObject verb (UpecFailure f) = toObject verb f
 
 
 instance ToObject (PoolreapPredicateFailure era) where
@@ -762,6 +790,13 @@ instance ToObject (OcertPredicateFailure crypto) where
 
 instance ToObject (UpdnPredicateFailure crypto) where
   toObject _verb x = case x of {} -- no constructors
+
+instance ToObject (UpecPredicateFailure era) where
+  toObject _verb (NewPpFailure (UnexpectedDepositPot totalOutstanding depositPot)) =
+    mkObject [ "kind" .= String "UnexpectedDepositPot"
+             , "totalOutstanding" .=  String (textShow totalOutstanding)
+             , "depositPot" .= String (textShow depositPot)
+             ]
 
 --------------------------------------------------------------------------------
 -- Helper functions

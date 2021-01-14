@@ -54,7 +54,6 @@ import           Ouroboros.Network.Block (Serialised)
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 
 import qualified Cardano.Ledger.Era as Ledger
-import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
@@ -173,20 +172,23 @@ toShelleyAddrSet era =
   . mapMaybe (anyAddressInEra era)
   . Set.toList
 
-fromShelleyUTxO :: ShelleyLedgerEra era ~ ledgerera
-                => IsShelleyBasedEra era
-                => Ledger.ShelleyBased ledgerera
-                => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
-                => Shelley.UTxO ledgerera -> UTxO era
-fromShelleyUTxO =
-    --TODO: write an appropriate property to show it is safe to use
-    -- Map.fromListAsc or to use Map.mapKeysMonotonic
-    UTxO
-  . Map.fromList
-  . map (bimap fromShelleyTxIn fromShelleyTxOut)
-  . Map.toList
-  . Shelley.unUTxO
 
+fromUTxO
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> Shelley.UTxO ledgerera
+  -> UTxO era
+fromUTxO eraConversion utxo =
+  case eraConversion of
+    ShelleyBasedEraShelley ->
+      let Shelley.UTxO sUtxo = utxo
+      in UTxO . Map.fromList . map (bimap fromShelleyTxIn fromShelleyTxOut) $ Map.toList sUtxo
+    ShelleyBasedEraAllegra ->
+      let Shelley.UTxO sUtxo = utxo
+      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraAllegra)) $ Map.toList sUtxo
+    ShelleyBasedEraMary ->
+      let Shelley.UTxO sUtxo = utxo
+      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraMary)) $ Map.toList sUtxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational
@@ -351,7 +353,7 @@ fromConsensusQueryResult (QueryInEra ShelleyEraInShelleyMode
                                      (QueryInShelleyBasedEra _era q)) q' r' =
     case (q', r') of
       (Consensus.DegenQuery q'', Consensus.DegenQueryResult r'') ->
-        Right (fromConsensusQueryResultShelleyBased q q'' r'')
+        Right (fromConsensusQueryResultShelleyBased ShelleyBasedEraShelley q q'' r'')
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra era _)) _ _ =
@@ -362,7 +364,7 @@ fromConsensusQueryResult (QueryInEra ShelleyEraInCardanoMode
     case q' of
       Consensus.QueryIfCurrentShelley q'' ->
         bimap fromConsensusEraMismatch
-              (fromConsensusQueryResultShelleyBased q q'')
+              (fromConsensusQueryResultShelleyBased ShelleyBasedEraShelley q q'')
               r'
       _ -> fromConsensusQueryResultMismatch
 
@@ -371,7 +373,7 @@ fromConsensusQueryResult (QueryInEra AllegraEraInCardanoMode
     case q' of
       Consensus.QueryIfCurrentAllegra q'' ->
         bimap fromConsensusEraMismatch
-              (fromConsensusQueryResultShelleyBased q q'')
+              (fromConsensusQueryResultShelleyBased ShelleyBasedEraAllegra q q'')
               r'
       _ -> fromConsensusQueryResultMismatch
 
@@ -380,7 +382,7 @@ fromConsensusQueryResult (QueryInEra MaryEraInCardanoMode
     case q' of
       Consensus.QueryIfCurrentMary q'' ->
         bimap fromConsensusEraMismatch
-              (fromConsensusQueryResultShelleyBased q q'')
+              (fromConsensusQueryResultShelleyBased ShelleyBasedEraMary q q'')
               r'
       _ -> fromConsensusQueryResultMismatch
 
@@ -388,55 +390,55 @@ fromConsensusQueryResult (QueryInEra MaryEraInCardanoMode
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.
      ShelleyLedgerEra era ~ ledgerera
-  => IsShelleyBasedEra era
   => Consensus.ShelleyBasedEra ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
-  => QueryInShelleyBasedEra era result
+  => ShelleyBasedEra era
+  -> QueryInShelleyBasedEra era result
   -> Consensus.Query (Consensus.ShelleyBlock ledgerera) result'
   -> result'
   -> result
-fromConsensusQueryResultShelleyBased QueryChainPoint q' point =
+fromConsensusQueryResultShelleyBased _ QueryChainPoint q' point =
     case q' of
       Consensus.GetLedgerTip -> fromConsensusPoint point
       _                      -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased QueryEpoch q' epoch =
+fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
     case q' of
       Consensus.GetEpochNo -> epoch
       _                    -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased QueryGenesisParameters q' r' =
+fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
     case q' of
       Consensus.GetGenesisConfig -> fromShelleyGenesis
                                       (Consensus.getCompactGenesis r')
       _                          -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased QueryProtocolParameters q' r' =
+fromConsensusQueryResultShelleyBased _ QueryProtocolParameters q' r' =
     case q' of
       Consensus.GetCurrentPParams -> fromShelleyPParams r'
       _                           -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased QueryProtocolParametersUpdate q' r' =
+fromConsensusQueryResultShelleyBased _ QueryProtocolParametersUpdate q' r' =
     case q' of
       Consensus.GetProposedPParamsUpdates -> fromShelleyProposedPPUpdates r'
       _                                   -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased QueryStakeDistribution q' r' =
+fromConsensusQueryResultShelleyBased _ QueryStakeDistribution q' r' =
     case q' of
       Consensus.GetStakeDistribution -> fromShelleyPoolDistr r'
       _                              -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased (QueryUTxO Nothing) q' utxo' =
+fromConsensusQueryResultShelleyBased shelleyBasedEra' (QueryUTxO Nothing) q' utxo' =
     case q' of
-      Consensus.GetUTxO -> fromShelleyUTxO utxo'
+      Consensus.GetUTxO -> fromUTxO shelleyBasedEra' utxo'
       _                 -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased (QueryUTxO Just{}) q' utxo' =
+fromConsensusQueryResultShelleyBased shelleyBasedEra' (QueryUTxO Just{}) q' utxo' =
     case q' of
-      Consensus.GetFilteredUTxO{} -> fromShelleyUTxO utxo'
+      Consensus.GetFilteredUTxO{} -> fromUTxO shelleyBasedEra' utxo'
       _                           -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased QueryStakeAddresses{} q' r' =
+fromConsensusQueryResultShelleyBased _ QueryStakeAddresses{} q' r' =
     case q' of
       Consensus.GetFilteredDelegationsAndRewardAccounts{}
         -> let (delegs, rwaccs) = r'
@@ -476,4 +478,3 @@ fromConsensusQueryResultMismatch =
 fromConsensusEraMismatch :: SListI xs
                          => Consensus.MismatchEraInfo xs -> EraMismatch
 fromConsensusEraMismatch = Consensus.mkEraMismatch
-
