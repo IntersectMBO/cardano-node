@@ -6,7 +6,7 @@ let
   profilesJSON = runCommand "profiles" { buildInputs = [ jq ]; } ''
     jq --null-input '
       include "profiles" { search: "${./.}" };
-      profiles("shelley"; null; null)
+      profiles("shelley"; null; null; [])
       ' > $out
   '';
 in
