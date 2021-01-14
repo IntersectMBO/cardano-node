@@ -320,9 +320,6 @@ It is also possible to have more fine grained control over filtering of trace ou
 	        "subtrace": "FilterTrace"
 	      },
 
-	      "cardano.epoch-validation.utxo-stats": {
-	        "subtrace": "NoTrace"
-	      },
 	      "cardano.node.metrics": {
 	        "subtrace": "Neutral"
 	      }

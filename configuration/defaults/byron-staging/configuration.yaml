@@ -252,10 +252,6 @@ options:
         - - tag: Contains
             contents: diff.RTS.gcNum.timed.
       subtrace: FilterTrace
-    'cardano.epoch-validation.utxo-stats':
-      # Change the `subtrace` value to `Neutral` in order to log
-      # `UTxO`-related messages during epoch validation.
-      subtrace: NoTrace
 
 # If 'TraceForwarderBK' is enabled, uncomment it to forward node's metrics
 # to remote socket '127.0.0.1:2997'.
