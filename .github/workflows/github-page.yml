@@ -93,6 +93,7 @@ jobs:
         path: ./haddocks
 
     - name: Deploy documentation to gh-pages 🚀
+      if: github.ref == 'refs/heads/master'
       run: |
         git fetch origin gh-pages:gh-pages
         git config --local user.email "$(git show --format="%aN" | head -n 1)"
