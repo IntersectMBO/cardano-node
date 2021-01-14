@@ -97,7 +97,7 @@ defaultBackends:
 # traceForwardTo:
 #   tag: RemotePipe
 #   contents: "logs/pipe"
-# 
+#
 # Example using Windows named pipes:
 # traceForwardTo:
 #   tag: RemotePipe
@@ -257,13 +257,8 @@ options:
     cardano.node.BlockFetchDecision.peers:
       - TraceForwarderBK
       - EKGViewBK
-    cardano.node.ChainDB.metrics:
-      - TraceForwarderBK
-      - EKGViewBK
     cardano.node.metrics:
       - TraceForwarderBK
-      - EKGViewBK  
-    cardano.node.Forge.metrics:
       - EKGViewBK
     cardano.node.release:
       - TraceForwarderBK

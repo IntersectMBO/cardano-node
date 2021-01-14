@@ -65,12 +65,6 @@ options:
       # `UTxO`-related messages during epoch validation.
       subtrace: NoTrace
   mapBackends:
-    cardano.node.ChainDB.metrics:
-      - EKGViewBK
-    cardano.node.metrics.Forge:
-      - EKGViewBK
-    cardano.node.metrics.Mempool:
-      - EKGViewBK
     cardano.node.metrics:
       - EKGViewBK
 # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.

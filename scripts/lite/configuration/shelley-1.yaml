@@ -243,13 +243,8 @@ options:
     cardano.node.BlockFetchDecision.peers:
       - TraceForwarderBK
       - EKGViewBK
-    cardano.node.ChainDB.metrics:
-      - TraceForwarderBK
-      - EKGViewBK
     cardano.node.metrics:
       - TraceForwarderBK
-      - EKGViewBK
-    cardano.node.Forge.metrics:
       - EKGViewBK
     cardano.node.release:
       - TraceForwarderBK

@@ -218,10 +218,8 @@ options:
   # an override and not an extension so anything matched here will not
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
-    cardano.node.ChainDB.metrics:
-      - EKGViewBK
     cardano.node.metrics:
-      - EKGViewBK  
+      - EKGViewBK
     # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
     # - TraceForwarderBK
     # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.

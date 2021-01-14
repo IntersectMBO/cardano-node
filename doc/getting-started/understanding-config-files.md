@@ -268,12 +268,6 @@ It is also possible to have more fine grained control over filtering of trace ou
 	      ],
 	      "cardano.node.BlockFetchDecision.peers": [
 	        "EKGViewBK"
-	      ],
-	      "cardano.node.ChainDB.metrics": [
-	        "EKGViewBK"
-	      ],
-	      "cardano.node.metrics": [
-	        "EKGViewBK"
 	      ]
 	    },
 	    "mapSubtrace": {
