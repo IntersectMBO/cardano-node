@@ -12,9 +12,11 @@ def profile_name($p):
 | era_defaults($p.era).generator   as   $generator_defaults
 | era_defaults($p.era).composition as $composition_defaults
   ## Genesis
-| [ "k\($p.genesis.n_pools)" ]
-  + may_attr("dense_pool_density";
-             $p.composition; $composition_defaults; 1; "ppn")
+| [ "k\($p.composition.n_pools)" ]
+  + if $p.composition.n_dense_hosts > 0
+    then may_attr("dense_pool_density";
+                  $p.composition; $composition_defaults; 1; "ppn")
+    else [] end
   + [ ($p.generator.epochs              | tostring) + "ep"
     , ($p.genesis.utxo       | . / 1000 | tostring) + "kU"
     , ($p.genesis.delegators | . / 1000 | tostring) + "kD"
@@ -32,10 +34,10 @@ def profile_name($p):
   | join("-");
 
 def add_derived_params:
-  (.future_offset //
-   if      .composition.n_hosts > 50 then 32
-   else if .composition.n_hosts == 3 then 3
-   else 10 end end)                          as $future_offset
+  (.genesis.genesis_future_offset //
+    if      .composition.n_hosts > 50 then "32 minutes"
+    else if .composition.n_hosts == 3 then "3 minutes"
+         else "10 minutes" end end)          as $future_offset
 | .composition                               as $compo
 | .genesis                                   as $gsis
 | .generator                                 as $gtor
@@ -60,7 +62,7 @@ def add_derived_params:
          , n_dense_pools:         $n_dense_pools
          }
      , genesis:
-         { genesis_future_offset: "\($future_offset) minutes"
+         { genesis_future_offset: $future_offset
          , delegators:            ($gsis.delegators // $n_pools)
          , pool_coin:             ($gsis.pools_balance / $n_pools | floor)
          , verbatim:

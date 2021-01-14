@@ -1,4 +1,4 @@
-def aux_profiles:
+def adhoc_profiles:
 [ { name: "short"
   , generator: { tx_count: 10000, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100 }
   }
@@ -30,7 +30,7 @@ def aux_profiles:
       , slotLength: 0.2
       , securityParam: 10
       }
-      , genesis_future_offset: "30 seconds"
+      , genesis_future_offset: "10 seconds"
     }
   }
 ];
