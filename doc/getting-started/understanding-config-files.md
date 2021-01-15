@@ -265,61 +265,9 @@ It is also possible to have more fine grained control over filtering of trace ou
 	    "mapBackends": {
 	      "cardano.node.metrics": [
 	        "EKGViewBK"
-	      ],
-	      "cardano.node.BlockFetchDecision.peers": [
-	        "EKGViewBK"
 	      ]
 	    },
 	    "mapSubtrace": {
-	      "benchmark": {
-	        "contents": [
-	          "GhcRtsStats",
-	          "MonotonicClock"
-	        ],
-	        "subtrace": "ObservableTrace"
-	      },
-	      "#ekgview": {
-	        "contents": [
-	          [
-	            {
-	              "contents": "cardano.epoch-validation.benchmark",
-	              "tag": "Contains"
-	            },
-	            [
-	              {
-	                "contents": ".monoclock.basic.",
-	                "tag": "Contains"
-	              }
-	            ]
-	          ],
-	          [
-	            {
-	              "contents": "cardano.epoch-validation.benchmark",
-	              "tag": "Contains"
-	            },
-	            [
-	              {
-	                "contents": "diff.RTS.cpuNs.timed.",
-	                "tag": "Contains"
-	              }
-	            ]
-	          ],
-	          [
-	            {
-	              "contents": "#ekgview.#aggregation.cardano.epoch-validation.benchmark",
-	              "tag": "StartsWith"
-	            },
-	            [
-	              {
-	                "contents": "diff.RTS.gcNum.timed.",
-	                "tag": "Contains"
-	              }
-	            ]
-	          ]
-	        ],
-	        "subtrace": "FilterTrace"
-	      },
-
 	      "cardano.node.metrics": {
 	        "subtrace": "Neutral"
 	      }
