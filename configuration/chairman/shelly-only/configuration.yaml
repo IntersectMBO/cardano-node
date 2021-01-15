@@ -52,7 +52,7 @@ ApplicationVersion: 1
 TurnOnLogging: True
 
 # Enable the collection of various OS metrics such as memory and CPU use.
-# These metrics are traced in the context name: 'cardano.node-metrics' and can
+# These metrics are traced in the context name: 'cardano.node.metrics' and can
 # be directed to the logs or monitoring backends.
 TurnOnLogMetrics: True
 
@@ -94,7 +94,7 @@ defaultBackends:
 # traceForwardTo:
 #   tag: RemotePipe
 #   contents: "logs/pipe"
-# 
+#
 # Example using Windows named pipes:
 # traceForwardTo:
 #   tag: RemotePipe
@@ -245,16 +245,8 @@ options:
   # an override and not an extension so anything matched here will not
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
-    cardano.node.BlockFetchDecision.peers:
-      - TraceForwarderBK
-      - EKGViewBK
-    cardano.node.ChainDB.metrics:
-      - TraceForwarderBK
-      - EKGViewBK
     cardano.node.metrics:
       - TraceForwarderBK
-      - EKGViewBK  
-    cardano.node.Forge.metrics:
       - EKGViewBK
     cardano.node.release:
       - TraceForwarderBK
@@ -269,7 +261,7 @@ options:
   # redirects traced values to a specific scribe which is identified by its
   # type and its name, separated by "::":
   mapScribes:
-    cardano.node-metrics:
+    cardano.node.metrics:
       - "FileSK::logs/mainnet.log"
 
   # apply a filter on message severity on messages in a specific named context.
@@ -281,4 +273,3 @@ options:
     cardano.node.TraceIpSubscription: Info
     cardano.node.TraceMux: Info
     cardano.node.Handshake: Debug
-

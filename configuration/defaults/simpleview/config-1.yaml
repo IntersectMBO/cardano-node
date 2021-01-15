@@ -44,41 +44,11 @@ defaultScribes:
 
 # more options which can be passed as key-value pairs:
 options:
-  mapSubtrace:
-    '#ekgview':
-      contents:
-      - - tag: Contains
-          contents: 'cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: .monoclock.basic.
-      - - tag: Contains
-          contents: 'cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.cpuNs.timed.
-      - - tag: StartsWith
-          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.gcNum.timed.
-      subtrace: FilterTrace
-    'cardano.epoch-validation.utxo-stats':
-      # Change the `subtrace` value to `Neutral` in order to log
-      # `UTxO`-related messages during epoch validation.
-      subtrace: NoTrace
   mapBackends:
-    cardano.node.ChainDB.metrics:
-      - EKGViewBK
-    cardano.node.metrics.Forge:
-      - EKGViewBK
-    cardano.node.metrics.Mempool:
-      - EKGViewBK
     cardano.node.metrics:
       - EKGViewBK
 # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
 #     - TraceForwarderBK
-    cardano.node.peers:
-      - EKGViewBK
-    cardano.node.BlockFetchDecision.peers:
-      - EKGViewBK
 # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
 #    cardano.node.release:
 #      - TraceForwarderBK

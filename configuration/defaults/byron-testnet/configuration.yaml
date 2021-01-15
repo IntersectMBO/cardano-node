@@ -218,14 +218,10 @@ options:
   # an override and not an extension so anything matched here will not
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
-    cardano.node.ChainDB.metrics:
-      - EKGViewBK
     cardano.node.metrics:
-      - EKGViewBK  
+      - EKGViewBK
     # Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
     # - TraceForwarderBK
-    cardano.node-metrics:
-      - EKGViewBK
     # Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
     # cardano.node.release:
     #   - TraceForwarderBK
@@ -233,33 +229,6 @@ options:
     #   - TraceForwarderBK
     # cardano.node.commit:
     #   - TraceForwarderBK
-
-  # This section is more expressive still, and needs to be properly documented.
-  mapSubtrace:
-    benchmark:
-      contents:
-        - GhcRtsStats
-        - MonotonicClock
-      subtrace: ObservableTrace
-    '#ekgview':
-      contents:
-      - - tag: Contains
-          contents: 'cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: .monoclock.basic.
-      - - tag: Contains
-          contents: 'cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.cpuNs.timed.
-      - - tag: StartsWith
-          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
-        - - tag: Contains
-            contents: diff.RTS.gcNum.timed.
-      subtrace: FilterTrace
-    'cardano.epoch-validation.utxo-stats':
-      # Change the `subtrace` value to `Neutral` in order to log
-      # `UTxO`-related messages during epoch validation.
-      subtrace: NoTrace
 
 # If 'TraceForwarderBK' is enabled, uncomment it to forward node's metrics
 # to remote socket '127.0.0.1:2997'.
