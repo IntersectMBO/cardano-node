@@ -400,7 +400,7 @@ traceChainMetrics tr = Tracer $ \ev ->
    doTrace :: ChainInformation -> IO ()
    doTrace ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
      -- TODO this is executed each time the chain changes. How cheap is it?
-     meta <- mkLOMeta Critical Confidential
+     meta <- mkLOMeta Critical Public
      let traceD :: Text -> Double -> IO ()
          traceD msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
          traceI :: Integral a => Text -> a -> IO ()
@@ -449,7 +449,7 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
     , Consensus.chainSyncServerHeaderTracer = tracerOnOff (traceChainSyncHeaderServer trSel) verb "ChainSyncHeaderServer" tr
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncHeaderServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
-        annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision $ appendName "BlockFetchDecision" tr
+        annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
     , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
@@ -878,9 +878,11 @@ teeTraceBlockFetchDecision
     -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
 teeTraceBlockFetchDecision verb eliding tr =
   Tracer $ \ev -> do
-    traceWith (teeTraceBlockFetchDecision' tr) ev
-    traceWith (teeTraceBlockFetchDecisionElide verb eliding tr) ev
-
+    traceWith (teeTraceBlockFetchDecision' meTr) ev
+    traceWith (teeTraceBlockFetchDecisionElide verb eliding bfdTr) ev
+ where
+   meTr  = appendName "metrics" tr
+   bfdTr = appendName "BlockFetchDecision" tr
 
 teeTraceBlockFetchDecision'
     :: Trace IO Text
@@ -888,8 +890,7 @@ teeTraceBlockFetchDecision'
 teeTraceBlockFetchDecision' tr =
     Tracer $ \(WithSeverity _ peers) -> do
       meta <- mkLOMeta Info Confidential
-      let tr' = appendName "peers" tr
-      traceNamedObject tr' (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
+      traceNamedObject tr (meta, LogValue "connectedPeers" . PureI $ fromIntegral $ length peers)
 
 teeTraceBlockFetchDecisionElide
     :: ( Eq peer
