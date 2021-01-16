@@ -292,7 +292,7 @@ renderQueryCmd cmd =
     QueryProtocolState {} -> "query protocol-state"
 
 data GovernanceCmd
-  = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Lovelace] OutputFile
+  = GovernanceMIRCertificate MIRPot [StakeAddress] [Lovelace] OutputFile
   | GovernanceGenesisKeyDelegationCertificate
       (VerificationKeyOrHashOrFile GenesisKey)
       (VerificationKeyOrHashOrFile GenesisDelegateKey)

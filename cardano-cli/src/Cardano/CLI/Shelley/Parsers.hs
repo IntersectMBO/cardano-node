@@ -68,7 +68,7 @@ parseShelleyCommands =
       , Opt.command "address"
           (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Payment address commands")
       , Opt.command "stake-address"
-          (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Stake address commands")
+          (Opt.info (StakeAddressCmd <$> pStakeAddressCmd) $ Opt.progDesc "Stake address commands")
       , Opt.command "key"
           (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Key utility commands")
       , Opt.command "transaction"
@@ -202,8 +202,8 @@ pScript = ScriptFile <$> Opt.strOption
   <> Opt.completer (Opt.bashCompleter "file")
   )
 
-pStakeAddress :: Parser StakeAddressCmd
-pStakeAddress =
+pStakeAddressCmd :: Parser StakeAddressCmd
+pStakeAddressCmd =
     asum
       [ subParser "key-gen"
           (Opt.info pStakeAddressKeyGen $ Opt.progDesc "Create a stake address key pair")
@@ -725,7 +725,7 @@ pGovernanceCmd =
     pMIRCertificate :: Parser GovernanceCmd
     pMIRCertificate = GovernanceMIRCertificate
                         <$> pMIRPot
-                        <*> some pStakeVerificationKeyFile
+                        <*> some pStakeAddress
                         <*> some pRewardAmt
                         <*> pOutputFile
 
@@ -1761,6 +1761,14 @@ pAddress =
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "A Cardano address"
+      )
+
+pStakeAddress :: Parser StakeAddress
+pStakeAddress =
+    Opt.option (readerFromAttoParser parseStakeAddress)
+      (  Opt.long "stake-address"
+      <> Opt.metavar "ADDRESS"
+      <> Opt.help "Target stake address (bech32 format)."
       )
 
 pStakeVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)

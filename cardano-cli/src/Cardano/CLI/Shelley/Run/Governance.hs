@@ -8,7 +8,7 @@ import           Cardano.Prelude
 
 import qualified Data.Text as Text
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, right)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
@@ -62,18 +62,18 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot
-  -> [VerificationKeyFile]
-  -- ^ Stake verification keys
-  -> [Lovelace]
-  -- ^ Reward amounts
+  -> [StakeAddress] -- ^ Stake addresses
+  -> [Lovelace]     -- ^ Corresponding reward amounts (same length)
   -> OutputFile
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceMIRCertificate mirPot vKeys rwdAmts (OutputFile oFp) = do
-    sCreds <- mapM readStakeKeyToCred vKeys
+runGovernanceMIRCertificate mirPot sAddrs rwdAmts (OutputFile oFp) = do
 
-    checkEqualKeyRewards vKeys rwdAmts
+    unless (length sAddrs == length rwdAmts) $
+      left $ ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
+               oFp (length sAddrs) (length rwdAmts)
 
-    let mirCert = makeMIRCertificate mirPot (zip sCreds rwdAmts)
+    let sCreds  = map stakeAddrToStakeCredential sAddrs
+        mirCert = makeMIRCertificate mirPot (zip sCreds rwdAmts)
 
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError
       . newExceptT
@@ -82,19 +82,10 @@ runGovernanceMIRCertificate mirPot vKeys rwdAmts (OutputFile oFp) = do
     mirCertDesc :: TextEnvelopeDescr
     mirCertDesc = "Move Instantaneous Rewards Certificate"
 
-    checkEqualKeyRewards :: [VerificationKeyFile] -> [Lovelace] -> ExceptT ShelleyGovernanceCmdError IO ()
-    checkEqualKeyRewards keys rwds = do
-       let numVKeys = length keys
-           numRwdAmts = length rwds
-       if numVKeys == numRwdAmts
-       then return () else left $ ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach oFp numVKeys numRwdAmts
-
-    readStakeKeyToCred :: VerificationKeyFile -> ExceptT ShelleyGovernanceCmdError IO StakeCredential
-    readStakeKeyToCred (VerificationKeyFile stVKey) = do
-      stakeVkey <- firstExceptT ShelleyGovernanceCmdTextEnvReadError
-        . newExceptT
-        $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stVKey
-      right . StakeCredentialByKey $ verificationKeyHash stakeVkey
+    --TODO: expose a pattern for StakeAddress that give us the StakeCredential
+    stakeAddrToStakeCredential :: StakeAddress -> StakeCredential
+    stakeAddrToStakeCredential (StakeAddress _ scred) =
+      fromShelleyStakeCredential scred
 
 runGovernanceGenesisKeyDelegationCertificate
   :: VerificationKeyOrHashOrFile GenesisKey
