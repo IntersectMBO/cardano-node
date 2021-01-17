@@ -273,9 +273,6 @@ nodeBasicInfo nc p nodeStartTime' = do
           Consensus.ProtocolShelley {} ->
             let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
             in getGenesisValues "Shelley" cfgShelley
-          Consensus.ProtocolMary {} ->
-            let DegenLedgerConfig cfgMary = Consensus.configLedger cfg
-            in getGenesisValues "Mary" cfgMary
           Consensus.ProtocolCardano {} ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron

@@ -60,6 +60,7 @@ type TraceMux = ("TraceMux" :: Symbol)
 type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
+type TraceTxSubmission2Protocol = ("TraceTxSubmission2Protocol" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -107,6 +108,7 @@ data TraceSelection
   , traceTxInbound :: OnOff TraceTxInbound
   , traceTxOutbound :: OnOff TraceTxOutbound
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
+  , traceTxSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
   } deriving (Eq, Show)
 
 
@@ -175,7 +177,9 @@ traceConfigParser v =
       txOutbound :: OnOff TraceTxOutbound
       txOutbound = OnOff False
       txSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
-      txSubmissionProtocol = OnOff False in
+      txSubmissionProtocol = OnOff False
+      txSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
+      txSubmission2Protocol = OnOff False in
 
   TracingOn <$> (TraceSelection
     <$> v .:? "TracingVerbosity" .!= NormalVerbosity
@@ -211,4 +215,5 @@ traceConfigParser v =
     <*> v .:? getName mux .!= mux
     <*> v .:? getName txInbound .!= txInbound
     <*> v .:? getName txOutbound .!= txOutbound
-    <*> v .:? getName txSubmissionProtocol .!= txSubmissionProtocol)
+    <*> v .:? getName txSubmissionProtocol .!= txSubmissionProtocol
+    <*> v .:? getName txSubmission2Protocol .!= txSubmission2Protocol)
