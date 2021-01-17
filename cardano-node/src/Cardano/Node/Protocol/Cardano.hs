@@ -21,7 +21,6 @@ module Cardano.Node.Protocol.Cardano
   ) where
 
 import           Prelude
-import           Cardano.Prelude (headMay)
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
@@ -168,7 +167,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
           shelleyBasedInitialNonce =
             Shelley.genesisHashToPraosNonce shelleyGenesisHash,
           shelleyBasedLeaderCredentials =
-            headMay shelleyLeaderCredentials
+            shelleyLeaderCredentials
         }
         Consensus.ProtocolParamsShelley {
           -- This is /not/ the Shelley protocol version. It is the protocol

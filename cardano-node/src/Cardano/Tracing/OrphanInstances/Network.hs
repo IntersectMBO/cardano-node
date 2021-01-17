@@ -33,7 +33,7 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                      TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
-import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
+import           Ouroboros.Network.Codec (AnyMessageAndAgency (..), PeerHasAgency (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -48,6 +48,9 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQu
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
 import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
+import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..),
+                     ClientHasAgency (..), ServerHasAgency (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                      SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
@@ -533,6 +536,63 @@ instance ToObject (AnyMessageAndAgency (ChainSync blk pt tip)) where
               , "agency" .= String (pack $ show stok)
               ]
 
+instance (Show txid, Show tx)
+      => ToObject (AnyMessageAndAgency (TxSubmission txid tx)) where
+  toObject _verb (AnyMessageAndAgency stok (MsgRequestTxs txids)) =
+    mkObject
+      [ "kind" .= String "MsgRequestTxs"
+      , "agency" .= String (pack $ show stok)
+      , "txIds" .= String (pack $ show txids)
+      ]
+  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxs txs)) =
+    mkObject
+      [ "kind" .= String "MsgReplyTxs"
+      , "agency" .= String (pack $ show stok)
+      , "txs" .= String (pack $ show txs)
+      ]
+  toObject _verb (AnyMessageAndAgency stok (MsgRequestTxIds _ _ _)) =
+    mkObject
+      [ "kind" .= String "MsgRequestTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
+  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxIds _)) =
+    mkObject
+      [ "kind" .= String "MsgReplyTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
+  toObject _verb (AnyMessageAndAgency stok MsgDone) =
+    mkObject
+      [ "kind" .= String "MsgDone"
+      , "agency" .= String (pack $ show stok)
+      ]
+  --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+  toObject _verb (AnyMessageAndAgency stok _) =
+    mkObject
+      [ "kind" .= String "MsgKThxBye"
+      , "agency" .= String (pack $ show stok)
+      ]
+
+instance (Show txid, Show tx)
+      => ToObject (AnyMessageAndAgency (TxSubmission2 txid tx)) where
+  toObject _verb (AnyMessageAndAgency
+                   -- we need this pattern match for GHC to recognise this
+                   -- function as total.
+                   (stok@(ClientAgency TokHello))
+                   MsgHello) =
+    mkObject
+      [ "kind" .= String "MsgHello"
+      , "agency" .= String (pack $ show stok)
+      ]
+  toObject verb (AnyMessageAndAgency
+                  (ClientAgency (TokClientTalk stok))
+                  (MsgTalk msg)) =
+    toObject verb (AnyMessageAndAgency (ClientAgency stok) msg)
+  toObject verb (AnyMessageAndAgency
+                  (ServerAgency (TokServerTalk stok))
+                  (MsgTalk msg)) =
+    toObject verb (AnyMessageAndAgency (ServerAgency stok) msg)
+
+
 instance ToObject (FetchDecision [Point header]) where
   toObject _verb (Left decline) =
     mkObject [ "kind" .= String "FetchDecision declined"
@@ -633,43 +693,6 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
     mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
              , "softLimit" .= show softLimit
              ]
-
-
-instance (Show txid, Show tx)
-      => ToObject (AnyMessageAndAgency (TxSubmission txid tx)) where
-  toObject _verb (AnyMessageAndAgency stok (MsgRequestTxs txids)) =
-    mkObject
-      [ "kind" .= String "MsgRequestTxs"
-      , "agency" .= String (pack $ show stok)
-      , "txIds" .= String (pack $ show txids)
-      ]
-  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxs txs)) =
-    mkObject
-      [ "kind" .= String "MsgReplyTxs"
-      , "agency" .= String (pack $ show stok)
-      , "txs" .= String (pack $ show txs)
-      ]
-  toObject _verb (AnyMessageAndAgency stok (MsgRequestTxIds _ _ _)) =
-    mkObject
-      [ "kind" .= String "MsgRequestTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxIds _)) =
-    mkObject
-      [ "kind" .= String "MsgReplyTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  toObject _verb (AnyMessageAndAgency stok MsgDone) =
-    mkObject
-      [ "kind" .= String "MsgDone"
-      , "agency" .= String (pack $ show stok)
-      ]
-  --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
-  toObject _verb (AnyMessageAndAgency stok _) =
-    mkObject
-      [ "kind" .= String "MsgKThxBye"
-      , "agency" .= String (pack $ show stok)
-      ]
 
 
 instance ConvertRawHash blk
