@@ -124,7 +124,6 @@ deriving newtype instance ToJSON (Ledger.Stake StandardCrypto)
 
 deriving anyclass instance ToJSON (Ledger.GenDelegs StandardCrypto)
 deriving anyclass instance ToJSON (Ledger.IndividualPoolStake StandardCrypto)
-deriving anyclass instance ToJSON (Ledger.BlocksMade StandardCrypto)
 
 deriving anyclass instance ToJSON (Ledger.ProposedPPUpdates StandardShelley)
 deriving anyclass instance ToJSON (Ledger.PPUPState StandardShelley)

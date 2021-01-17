@@ -327,6 +327,7 @@ mkTracers TracingOff _ _ =
       , NodeToNode.tBlockFetchTracer = nullTracer
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
       , NodeToNode.tTxSubmissionTracer = nullTracer
+      , NodeToNode.tTxSubmission2Tracer = nullTracer
       }
     , ipSubscriptionTracer = nullTracer
     , dnsSubscriptionTracer= nullTracer
@@ -865,6 +866,7 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol trSel) verb "BlockFetchProtocol" tr
   , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised trSel) "BlockFetchProtocolSerialised" tr
   , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
+  , NodeToNode.tTxSubmission2Tracer = tracerOnOff (traceTxSubmission2Protocol trSel) verb "TxSubmission2Protocol" tr
   }
 
 teeTraceBlockFetchDecision
