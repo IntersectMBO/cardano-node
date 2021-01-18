@@ -50,7 +50,6 @@ import           Prelude
 
 import           Cardano.Api
 import           Cardano.Api.Modes
-import           Cardano.Api.Protocol (Protocol)
 import           Cardano.Api.Shelley hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
@@ -278,7 +277,7 @@ data QueryCmd =
   | QueryStakeAddressInfo AnyCardanoEra AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
   | QueryUTxO AnyCardanoEra AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
   | QueryLedgerState AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryProtocolState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
+  | QueryProtocolState AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text

@@ -236,7 +236,7 @@ data TxIn = TxIn TxId TxIx
 
 deriving instance ToJSON TxIn
 instance ToJSONKey TxIn where
-  toJSONKey = toJSONKeyText (\txIn -> Text.pack $ show txIn)
+  toJSONKey = toJSONKeyText (Text.pack . show)
 
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
