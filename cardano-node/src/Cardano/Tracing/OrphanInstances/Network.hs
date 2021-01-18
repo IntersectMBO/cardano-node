@@ -577,7 +577,7 @@ instance (Show txid, Show tx)
   toObject _verb (AnyMessageAndAgency
                    -- we need this pattern match for GHC to recognise this
                    -- function as total.
-                   (stok@(ClientAgency TokHello))
+                   stok@(ClientAgency TokHello)
                    MsgHello) =
     mkObject
       [ "kind" .= String "MsgHello"
