@@ -174,7 +174,6 @@ source-repository-package
     typed-protocols
     typed-protocols-examples
     Win32-network
-    ouroboros-network-testing
 
 -- Needed for the Windows cabal constraint solver.
 max-backjumps: 10000

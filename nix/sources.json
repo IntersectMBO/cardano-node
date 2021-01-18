@@ -24,15 +24,15 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "haskell.nix": {
-        "branch": "master",
+        "branch": "hkm/fix-is-project-package",
         "description": "Alternative Haskell Infrastructure for Nixpkgs",
         "homepage": "https://input-output-hk.github.io/haskell.nix",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "7e49dd7f126210d8bfbde2dda93cf6d72d7b3e2e",
-        "sha256": "076jk9x5y1g37bn2afxrcijf1xf1yinljh8dbzv553i43l989k5n",
+        "rev": "85fa634c99ecee5c51da794814b51751d5363a10",
+        "sha256": "00xw262qfn7a1mw2hpmfngqh05dfm168v3f570l1w2aazil2dbxr",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/7e49dd7f126210d8bfbde2dda93cf6d72d7b3e2e.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/85fa634c99ecee5c51da794814b51751d5363a10.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "iohk-nix": {
