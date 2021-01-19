@@ -14,6 +14,7 @@ module Cardano.Api.Modes (
     ShelleyMode,
     CardanoMode,
     ConsensusMode(..),
+    AnyConsensusMode(..),
     ConsensusModeIsMultiEra(..),
 
     -- * The eras supported by each mode
@@ -38,7 +39,6 @@ module Cardano.Api.Modes (
 import           Prelude
 
 import           Data.SOP.Strict (K (K), NS (S, Z))
-import           Data.Type.Equality ((:~:) (Refl), TestEquality (..))
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -91,12 +91,6 @@ data AnyConsensusModeParams where
 
 deriving instance Show AnyConsensusModeParams
 
-instance Eq AnyConsensusModeParams where
-  AnyConsensusModeParams cMp1 == AnyConsensusModeParams cMp2 =
-    case testEquality cMp1 cMp2 of
-      Nothing -> False
-      Just Refl -> True
-
 -- | This GADT provides a value-level representation of all the consensus modes.
 -- This enables pattern matching on the era to allow them to be treated in a
 -- non-uniform way.
@@ -105,6 +99,14 @@ data ConsensusMode mode where
      ByronMode   :: ConsensusMode ByronMode
      ShelleyMode :: ConsensusMode ShelleyMode
      CardanoMode :: ConsensusMode CardanoMode
+
+
+deriving instance Show (ConsensusMode mode)
+
+data AnyConsensusMode where
+  AnyConsensusMode :: ConsensusMode mode -> AnyConsensusMode
+
+deriving instance Show AnyConsensusMode
 
 
 -- | The subset of consensus modes that consist of multiple eras. Some features
@@ -116,14 +118,14 @@ data ConsensusModeIsMultiEra mode where
 
 deriving instance Show (ConsensusModeIsMultiEra mode)
 
-toEraInMode :: ConsensusModeParams mode -> CardanoEra era -> Maybe (EraInMode era mode)
-toEraInMode (ByronModeParams _)   ByronEra   = Just ByronEraInByronMode
-toEraInMode ShelleyModeParams   ShelleyEra = Just ShelleyEraInShelleyMode
-toEraInMode (CardanoModeParams _) ByronEra   = Just ByronEraInCardanoMode
-toEraInMode (CardanoModeParams _) ShelleyEra = Just ShelleyEraInCardanoMode
-toEraInMode (CardanoModeParams _) AllegraEra = Just AllegraEraInCardanoMode
-toEraInMode (CardanoModeParams _) MaryEra    = Just MaryEraInCardanoMode
-toEraInMode _ _                              = Nothing
+toEraInMode :: CardanoEra era -> ConsensusMode mode -> Maybe (EraInMode era mode)
+toEraInMode ByronEra   ByronMode   = Just ByronEraInByronMode
+toEraInMode ShelleyEra ShelleyMode = Just ShelleyEraInShelleyMode
+toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
+toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
+toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
+toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
+toEraInMode _ _                    = Nothing
 
 
 -- | A representation of which 'CardanoEra's are included in each
@@ -194,13 +196,6 @@ data ConsensusModeParams mode where
        -> ConsensusModeParams CardanoMode
 
 deriving instance Show (ConsensusModeParams mode)
-
-instance TestEquality ConsensusModeParams where
-  testEquality (ByronModeParams _) (ByronModeParams _) = Just Refl
-  testEquality ShelleyModeParams ShelleyModeParams = Just Refl
-  testEquality (CardanoModeParams _) (CardanoModeParams _) = Just Refl
-  testEquality _ _ = Nothing
-
 
 -- ----------------------------------------------------------------------------
 -- Consensus conversion functions

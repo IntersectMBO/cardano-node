@@ -19,7 +19,6 @@ module Cardano.Api.Query (
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     UTxO(..),
-    createQueryInMode,
 
     -- * Internal conversion functions
     toConsensusQuery,
@@ -92,15 +91,6 @@ data QueryInMode mode result where
 --     QueryEraHistory :: QueryInMode mode EraHistory
 
 deriving instance Show (QueryInMode mode result)
-
-createQueryInMode :: EraInMode era mode
-                  -> QueryInShelleyBasedEra era result
-                  -> QueryInMode mode (Either EraMismatch result)
-createQueryInMode eraInMode' query =
-  case cardanoEraStyle $ eraInModeToEra eraInMode' of
-    LegacyByronEra -> error $ "Expecting shelley based era when trying to create query. \
-                              \Instead got: " <> show LegacyByronEra
-    ShelleyBasedEra era -> QueryInEra eraInMode' $ QueryInShelleyBasedEra era query
 
 data QueryInEra era result where
      QueryByronUpdateState :: QueryInEra ByronEra ByronUpdateState

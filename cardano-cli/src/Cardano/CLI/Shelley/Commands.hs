@@ -78,7 +78,7 @@ data ShelleyCommand
   | GovernanceCmd   GovernanceCmd
   | GenesisCmd      GenesisCmd
   | TextViewCmd     TextViewCmd
-  deriving (Eq, Show)
+  deriving Show
 
 renderShelleyCommand :: ShelleyCommand -> Text
 renderShelleyCommand sc =
@@ -104,7 +104,7 @@ data AddressCmd
       (Maybe OutputFile)
   | AddressBuildMultiSig ScriptFile NetworkId (Maybe OutputFile)
   | AddressInfo Text (Maybe OutputFile)
-  deriving (Eq, Show)
+  deriving Show
 
 
 renderAddressCmd :: AddressCmd -> Text
@@ -126,7 +126,7 @@ data StakeAddressCmd
       (VerificationKeyOrHashOrFile StakePoolKey)
       OutputFile
   | StakeKeyDeRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
-  deriving (Eq, Show)
+  deriving Show
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text
 renderStakeAddressCmd cmd =
@@ -147,7 +147,7 @@ data KeyCmd
   | KeyConvertITNExtendedToStakeKey SomeKeyFile OutputFile
   | KeyConvertITNBip32ToStakeKey SomeKeyFile OutputFile
   | KeyConvertCardanoAddressSigningKey CardanoAddressKeyType SigningKeyFile OutputFile
-  deriving (Eq, Show)
+  deriving Show
 
 renderKeyCmd :: KeyCmd -> Text
 renderKeyCmd cmd =
@@ -196,7 +196,7 @@ data TransactionCmd
       TxShelleyWitnessCount
       TxByronWitnessCount
   | TxGetTxId (Either TxBodyFile TxFile)
-  deriving (Eq, Show)
+  deriving Show
 
 renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =
@@ -218,7 +218,7 @@ data NodeCmd
   | NodeNewCounter ColdVerificationKeyOrFile Word OpCertCounterFile
   | NodeIssueOpCert (VerificationKeyOrFile KesKey) SigningKeyFile OpCertCounterFile
                     KESPeriod OutputFile
-  deriving (Eq, Show)
+  deriving Show
 
 renderNodeCmd :: NodeCmd -> Text
 renderNodeCmd cmd = do
@@ -261,7 +261,7 @@ data PoolCmd
       OutputFile
   | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
   | PoolMetadataHash PoolMetadataFile (Maybe OutputFile)
-  deriving (Eq, Show)
+  deriving Show
 
 renderPoolCmd :: PoolCmd -> Text
 renderPoolCmd cmd =
@@ -279,7 +279,7 @@ data QueryCmd =
   | QueryUTxO AnyCardanoEra Protocol QueryFilter NetworkId (Maybe OutputFile)
   | QueryLedgerState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
   | QueryProtocolState AnyCardanoEra Protocol NetworkId (Maybe OutputFile)
-  deriving (Eq, Show)
+  deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
 renderQueryCmd cmd =
@@ -302,7 +302,7 @@ data GovernanceCmd
   | GovernanceUpdateProposal OutputFile EpochNo
                              [VerificationKeyFile]
                              ProtocolParametersUpdate
-  deriving (Eq, Show)
+  deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text
 renderGovernanceCmd cmd =
@@ -313,7 +313,7 @@ renderGovernanceCmd cmd =
 
 data TextViewCmd
   = TextViewInfo !FilePath (Maybe OutputFile)
-  deriving (Eq, Show)
+  deriving Show
 
 
 renderTextViewCmd :: TextViewCmd -> Text
@@ -330,7 +330,7 @@ data GenesisCmd
   | GenesisTxIn VerificationKeyFile NetworkId (Maybe OutputFile)
   | GenesisAddr VerificationKeyFile NetworkId (Maybe OutputFile)
   | GenesisHashFile GenesisFile
-  deriving (Eq, Show)
+  deriving Show
 
 renderGenesisCmd :: GenesisCmd -> Text
 renderGenesisCmd cmd =
@@ -356,48 +356,48 @@ newtype ProtocolParamsFile
 
 newtype TxInCount
   = TxInCount Int
-  deriving (Eq, Show)
+  deriving Show
 
 newtype TxOutCount
   = TxOutCount Int
-  deriving (Eq, Show)
+  deriving Show
 
 newtype TxShelleyWitnessCount
   = TxShelleyWitnessCount Int
-  deriving (Eq, Show)
+  deriving Show
 
 newtype TxByronWitnessCount
   = TxByronWitnessCount Int
-  deriving (Eq, Show)
+  deriving Show
 
 newtype BlockId
   = BlockId String -- Probably not a String
-  deriving (Eq, Show)
+  deriving Show
 
 newtype GenesisKeyFile
   = GenesisKeyFile FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 data MetadataFile = MetadataFileJSON FilePath
                   | MetadataFileCBOR FilePath
 
-  deriving (Eq, Show)
+  deriving Show
 
 newtype OutputFile
   = OutputFile FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 newtype PoolId
   = PoolId String -- Probably not a String
-  deriving (Eq, Show)
+  deriving Show
 
 newtype PoolMetadataFile = PoolMetadataFile
   { unPoolMetadataFile :: FilePath }
-  deriving (Eq, Show)
+  deriving Show
 
 newtype GenesisDir
   = GenesisDir FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 -- | Either a verification or signing key, used for conversions and other
 -- commands that make sense for both.
@@ -405,23 +405,23 @@ newtype GenesisDir
 data SomeKeyFile
   = AVerificationKeyFile VerificationKeyFile
   | ASigningKeyFile SigningKeyFile
-  deriving (Eq, Show)
+  deriving Show
 
 data AddressKeyType
   = AddressKeyShelley
   | AddressKeyShelleyExtended
   | AddressKeyByron
-  deriving (Eq, Show)
+  deriving Show
 
 data ByronKeyType
   = ByronPaymentKey  ByronKeyFormat
   | ByronGenesisKey  ByronKeyFormat
   | ByronDelegateKey ByronKeyFormat
-  deriving (Eq, Show)
+  deriving Show
 
 data ByronKeyFormat = NonLegacyByronKeyFormat
                     | LegacyByronKeyFormat
-  deriving (Eq, Show)
+  deriving Show
 
 -- | The type of @cardano-address@ key.
 data CardanoAddressKeyType
@@ -429,32 +429,32 @@ data CardanoAddressKeyType
   | CardanoAddressShelleyStakeKey
   | CardanoAddressIcarusPaymentKey
   | CardanoAddressByronPaymentKey
-  deriving (Eq, Show)
+  deriving Show
 
 newtype OpCertCounterFile
   = OpCertCounterFile FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 newtype WitnessFile
   = WitnessFile FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 newtype TxBodyFile
   = TxBodyFile FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 newtype TxFile
   = TxFile FilePath
-  deriving (Eq, Show)
+  deriving Show
 
 -- | A raw verification key given in Base64, and decoded into a ByteString.
 newtype VerificationKeyBase64
   = VerificationKeyBase64 String
-  deriving (Eq, Show)
+  deriving Show
 
 -- | Data required to construct a witness.
 data WitnessSigningData
@@ -467,7 +467,7 @@ data WitnessSigningData
       -- If specified, both the network ID and derivation path are extracted
       -- from the address and used in the construction of the Byron witness.
   | ScriptWitnessSigningData !ScriptFile
-  deriving (Eq, Show)
+  deriving Show
 
 -- | Either a stake pool verification key, genesis delegate verification key,
 -- or a path to a cold verification key file.
@@ -480,4 +480,4 @@ data ColdVerificationKeyOrFile
   = ColdStakePoolVerificationKey !(VerificationKey StakePoolKey)
   | ColdGenesisDelegateVerificationKey !(VerificationKey GenesisDelegateKey)
   | ColdVerificationKeyFile !VerificationKeyFile
-  deriving (Eq, Show)
+  deriving Show

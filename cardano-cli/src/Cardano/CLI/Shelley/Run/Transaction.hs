@@ -60,8 +60,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdWriteFileError !(FileError ())
   | ShelleyTxCmdEraConsensusModeMismatch
       !FilePath
-      !AnyConsensusModeParams
-      !Text
+      !AnyConsensusMode
+      !AnyCardanoEra
       -- ^ Era
   | ShelleyTxCmdMetadataJsonParseError !FilePath !String
   | ShelleyTxCmdMetadataConversionError !FilePath !TxMetadataJsonError
@@ -157,16 +157,20 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdScriptLanguageNotSupportedInEra (AnyScriptLanguage lang) era ->
       "The script language " <> show lang <> " is not supported in the " <>
       renderEra era <> " era."
-    ShelleyTxCmdEraConsensusModeMismatch fp (AnyConsensusModeParams cModeParams) era ->
-      "Consensus mode and era mismatch whilst submitting transaction at: " <> Text.pack fp <>
-      " Consensus mode: "  <> show cModeParams <>
-      " Era: " <> era
+    ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
+       "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
+       ") is not supported in the " <> renderMode mode <> " consensus mode."
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
 renderEra (AnyCardanoEra ShelleyEra) = "Shelley"
 renderEra (AnyCardanoEra AllegraEra) = "Allegra"
 renderEra (AnyCardanoEra MaryEra)    = "Mary"
+
+renderMode :: AnyConsensusMode -> Text
+renderMode (AnyConsensusMode NewIPC.ByronMode) = "ByronMode"
+renderMode (AnyConsensusMode NewIPC.ShelleyMode) = "ShelleyMode"
+renderMode (AnyConsensusMode NewIPC.CardanoMode) = "CardanoMode"
 
 renderFeature :: TxFeature -> Text
 renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"
@@ -498,13 +502,14 @@ runTxSubmit
   -> NetworkId
   -> FilePath
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit anyCmode@(AnyConsensusModeParams cModeParams) network txFile = do
+runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
     SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
 
     InAnyCardanoEra era tx <- readFileTx txFile
+    let cMode = AnyConsensusMode $ NewIPC.consensusModeOnly cModeParams
     eraInMode <- hoistMaybe
-                   (ShelleyTxCmdEraConsensusModeMismatch txFile anyCmode (show era))
-                   (toEraInMode cModeParams era)
+                   (ShelleyTxCmdEraConsensusModeMismatch txFile cMode (AnyCardanoEra era))
+                   (toEraInMode era $ NewIPC.consensusModeOnly cModeParams)
     let txInMode = TxInMode tx eraInMode
         localNodeConnInfo = NewIPC.LocalNodeConnectInfo
                               { NewIPC.localConsensusModeParams = cModeParams
