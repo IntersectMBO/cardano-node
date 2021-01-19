@@ -73,8 +73,6 @@ answerQueryWithLedgerState protocol extLedgerState query = runIdentity $
         byronQuery
       Consensus.ProtocolShelley {} ->
         shelleyBasedQuery
-      Consensus.ProtocolMary {} ->
-        shelleyBasedQuery
       Consensus.ProtocolCardano {} ->
         HF.forwardCompatQuery
           answerQueryHelper

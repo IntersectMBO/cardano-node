@@ -606,7 +606,7 @@ queryStakeDistributionFromLocalState era connectInfo@LocalNodeConnectInfo{
 queryLocalLedgerState
   :: forall era ledgerera mode block.
      ShelleyLedgerEra era ~ ledgerera
-  => Ledger.ShelleyBased ledgerera
+  => Consensus.ShelleyBasedEra ledgerera
   => ShelleyBasedEra era
   -> LocalNodeConnectInfo mode block
   -> ExceptT ShelleyQueryCmdLocalStateQueryError IO
