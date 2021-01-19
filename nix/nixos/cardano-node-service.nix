@@ -330,7 +330,8 @@ in {
 
       profilingArgs = mkOption {
         type = types.listOf types.str;
-        default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-l" "-pocardano-node"];
+        default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
+          ++ lib.optional (cfg.eventlog) "-l";
           in if cfg.profiling == "time" then ["-P"] ++ commonProfilingArgs
             else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
             else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
