@@ -1,15 +1,19 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Blocks in the blockchain
 --
 module Cardano.Api.Block (
 
     -- * Blocks in the context of an era
-    Block(..),
+    Block(.., Block),
     BlockHeader,
 
     -- ** Blocks in the context of a consensus mode
@@ -39,6 +43,7 @@ import           Prelude
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
+import           Data.Foldable (Foldable(toList))
 
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (SlotNo, EpochNo)
@@ -53,13 +58,20 @@ import qualified Ouroboros.Consensus.Shelley.Ledger      as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block       as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC    as Consensus
 import qualified Ouroboros.Consensus.Cardano.ShelleyHFC  as Consensus
+import qualified Cardano.Crypto.Hash.Class
+import qualified Cardano.Crypto.Hashing
 
+import qualified Cardano.Chain.Block as Byron
+import qualified Cardano.Chain.UTxO  as Byron
+
+import qualified Shelley.Spec.Ledger.BlockChain as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Tx
 
 {-# ANN module ("HLint: ignore Use lambda" :: String) #-}
 
@@ -78,6 +90,14 @@ data Block era where
      ShelleyBlock :: ShelleyBasedEra era
                   -> Consensus.ShelleyBlock (ShelleyLedgerEra era)
                   -> Block era
+
+-- | A block consists of a header and a body containing transactions.
+--
+pattern Block :: BlockHeader -> [Tx era] -> Block era
+pattern Block header txs <- (getBlockHeaderAndTxs -> (header, txs))
+
+getBlockHeaderAndTxs :: Block era -> (BlockHeader, [Tx era])
+getBlockHeaderAndTxs block = (getBlockHeader block, getBlockTxs block)
 
 -- The GADT in the ShelleyBlock case requires a custom instance
 instance Show (Block era) where
@@ -105,6 +125,24 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
+getBlockTxs :: forall era . Block era -> [Tx era]
+getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
+    case byronBlockRaw of
+      Byron.ABOBBoundary{} -> [] -- no txs in EBBs
+      Byron.ABOBBlock Byron.ABlock {
+          Byron.blockBody =
+            Byron.ABody {
+              Byron.bodyTxPayload = Byron.ATxPayload txs
+            }
+        } -> map ByronTx txs
+getBlockTxs (ShelleyBlock shelleyEra Consensus.ShelleyBlock{Consensus.shelleyBlockRaw})
+  = case shelleyEra of
+      ShelleyBasedEraShelley -> go
+      ShelleyBasedEraAllegra -> go
+      ShelleyBasedEraMary    -> go
+  where
+    go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => [Tx era]
+    go = case shelleyBlockRaw of Shelley.Block _header (Shelley.TxSeq txs) -> [ShelleyTx shelleyEra x | x <- toList txs]
 
 -- ----------------------------------------------------------------------------
 -- Block in a consensus mode
@@ -156,7 +194,9 @@ fromConsensusBlock CardanoMode =
 -- Block headers
 --
 
-data BlockHeader
+data BlockHeader = BlockHeader !SlotNo
+                               !(Hash BlockHeader)
+                               !BlockNo
 
 -- | For now at least we use a fixed concrete hash type for all modes and era.
 -- The different eras do use different types, but it's all the same underlying
@@ -174,6 +214,33 @@ instance SerialiseAsRawBytes (Hash BlockHeader) where
 instance HasTypeProxy BlockHeader where
     data AsType BlockHeader = AsBlockHeader
     proxyToAsType _ = AsBlockHeader
+
+getBlockHeader :: forall era . Block era -> BlockHeader
+getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
+  ShelleyBasedEraShelley -> go
+  ShelleyBasedEraAllegra -> go
+  ShelleyBasedEraMary -> go
+  where
+    go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => BlockHeader
+    go = BlockHeader headerFieldSlot (HeaderHash hashSBS) headerFieldBlockNo
+      where
+        Consensus.HeaderFields {
+            Consensus.headerFieldHash
+              = Consensus.ShelleyHash (Shelley.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
+            Consensus.headerFieldSlot,
+            Consensus.headerFieldBlockNo
+          } = Consensus.getHeaderFields block
+getBlockHeader (ByronBlock block)
+  = BlockHeader
+      headerFieldSlot
+      (HeaderHash $ Cardano.Crypto.Hashing.abstractHashToShort byronHeaderHash)
+      headerFieldBlockNo
+  where
+    Consensus.HeaderFields {
+      Consensus.headerFieldHash = Consensus.ByronHash byronHeaderHash,
+      Consensus.headerFieldSlot,
+      Consensus.headerFieldBlockNo
+    } = Consensus.getHeaderFields block
 
 
 -- ----------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
@@ -18,7 +19,7 @@ module Cardano.Api.Tx (
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
-    Tx(..),
+    Tx(.., Tx),
     getTxBody,
     getTxWitnesses,
 
@@ -431,6 +432,14 @@ instance IsCardanoEra era => HasTextEnvelope (Witness era) where
         AllegraEra -> "TxWitness AllegraEra"
         MaryEra    -> "TxWitness MaryEra"
 
+
+pattern Tx :: TxBody era -> [Witness era] -> Tx era
+pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
+  where
+    Tx txbody ws = makeSignedTransaction ws txbody
+
+getTxBodyAndWitnesses :: Tx era -> (TxBody era, [Witness era])
+getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)
 
 getTxBody :: forall era. Tx era -> TxBody era
 getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
