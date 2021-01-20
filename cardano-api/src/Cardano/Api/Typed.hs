@@ -538,7 +538,8 @@ import           Ouroboros.Consensus.Ledger.Query (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient (Codecs' (..), clientCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
-                     SupportedNetworkProtocolVersion, supportedNodeToClientVersions)
+                     NodeToClientVersion, SupportedNetworkProtocolVersion,
+                     supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..))
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
@@ -738,7 +739,7 @@ connectToLocalNode LocalNodeConnectInfo {
                      NodeToClientVersionData {
                        networkMagic = toNetworkMagic network
                      }
-                     (\_conn _runOrStop -> protocols ptcl blockVersion))
+                     (\_conn _runOrStop -> protocols ptcl blockVersion version))
             (Map.toList (supportedNodeToClientVersions proxy)))
         path
   where
@@ -748,14 +749,15 @@ connectToLocalNode LocalNodeConnectInfo {
     protocols :: SerialiseNodeToClientConstraints block
               => ProtocolClient block (BlockProtocol block)
               -> BlockNodeToClientVersion block
+              -> NodeToClientVersion
               -> NodeToClientProtocols InitiatorMode LBS.ByteString IO () Void
-    protocols ptcl clientVersion =
+    protocols ptcl clientVersion nodeToClientVersion =
       let Codecs {
               cChainSyncCodec
             , cTxSubmissionCodec
             , cStateQueryCodec
             } = clientCodecs (pClientInfoCodecConfig (protocolClientInfo ptcl))
-                             clientVersion
+                             clientVersion nodeToClientVersion
 
           LocalNodeClientProtocols {
             localChainSyncClient,
@@ -823,7 +825,7 @@ queryNodeLocalState connctInfo pointAndQuery = do
       -> LocalStateQueryClient block (Point block) (Query block) IO ()
     localStateQuerySingle resultVar (point, query) =
       LocalStateQueryClient $ pure $
-        SendMsgAcquire point $
+        SendMsgAcquire (Just point) $
         ClientStAcquiring {
           recvMsgAcquired =
             SendMsgQuery query $

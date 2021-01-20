@@ -166,8 +166,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
           shelleyBasedGenesis = shelleyGenesis,
           shelleyBasedInitialNonce =
             Shelley.genesisHashToPraosNonce shelleyGenesisHash,
-          shelleyBasedLeaderCredentials =
-            shelleyLeaderCredentials
+          shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
         Consensus.ProtocolParamsShelley {
           -- This is /not/ the Shelley protocol version. It is the protocol

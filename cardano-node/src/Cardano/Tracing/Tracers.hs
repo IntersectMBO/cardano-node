@@ -75,8 +75,8 @@ import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecl
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
-import           Ouroboros.Network.Subscription
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
+import           Ouroboros.Network.Subscription
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB

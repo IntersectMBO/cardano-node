@@ -35,7 +35,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api
 import           Cardano.Api.Byron
 import           Cardano.Api.LocalChainSync (getLocalTip)
-import           Cardano.Api.Protocol
+import           Cardano.Api.Protocol (Protocol, withlocalNodeConnectInfo)
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
@@ -56,7 +56,6 @@ import           Ouroboros.Network.Block (Serialised (..), getTipPoint)
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
-import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
 import qualified Shelley.Spec.Ledger.Address as Ledger
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
@@ -69,8 +68,8 @@ import           Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Scripts ()
-import qualified Shelley.Spec.Ledger.TxBody as Ledger (TxId (..), TxIn (..), TxOut (..))
-import qualified Shelley.Spec.Ledger.UTxO as Ledger (UTxO (..))
+import qualified Shelley.Spec.Ledger.TxBody as Shelley (TxId (..), TxIn (..), TxOut (..))
+import qualified Shelley.Spec.Ledger.UTxO as Shelley (UTxO (..))
 
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
@@ -319,54 +318,84 @@ writeProtocolState mOutFile pstate =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty pstate)
 
-writeFilteredUTxOs :: forall era ledgerera.
-                      ( Consensus.ShelleyBasedEra ledgerera
-                      , ShelleyLedgerEra era ~ ledgerera
-                      , Ledger.Crypto ledgerera ~ StandardCrypto
-                      , ToJSON (Ledger.Value ledgerera)
-                      )
+writeFilteredUTxOs :: ShelleyLedgerEra era ~ ledgerera
                    => ShelleyBasedEra era
                    -> Maybe OutputFile
-                   -> Ledger.UTxO ledgerera
+                   -> Shelley.UTxO ledgerera
                    -> ExceptT ShelleyQueryCmdError IO ()
-writeFilteredUTxOs era mOutFile utxo =
+writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
     case mOutFile of
-      Nothing -> liftIO $ printFilteredUTxOs era utxo
+      Nothing -> liftIO $ printFilteredUTxOs shelleyBasedEra' utxo
       Just (OutputFile fpath) ->
-        handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $ LBS.writeFile fpath (encodePretty utxo)
+        case shelleyBasedEra' of
+          ShelleyBasedEraShelley -> writeUTxo fpath utxo
+          ShelleyBasedEraAllegra -> writeUTxo fpath utxo
+          ShelleyBasedEraMary -> writeUTxo fpath utxo
+ where
+   writeUTxo fpath utxo' =
+     handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
+       $ LBS.writeFile fpath (encodePretty utxo')
 
-printFilteredUTxOs :: forall era ledgerera.
-                      ( Ledger.ShelleyBased ledgerera
-                      , ShelleyLedgerEra era ~ ledgerera
-                      , Ledger.Crypto ledgerera ~ StandardCrypto
-                      )
-                   => ShelleyBasedEra era -> Ledger.UTxO ledgerera -> IO ()
-printFilteredUTxOs era (Ledger.UTxO utxo) = do
-    Text.putStrLn title
-    putStrLn $ replicate (Text.length title + 2) '-'
-    mapM_ printUtxo $ Map.toList utxo
-  where
-    title :: Text
-    title =
-      "                           TxHash                                 TxIx        Amount"
+printFilteredUTxOs :: ShelleyLedgerEra era ~ ledgerera => ShelleyBasedEra era -> Shelley.UTxO ledgerera -> IO ()
+printFilteredUTxOs shelleyBasedEra' utxo = do
+  Text.putStrLn title
+  putStrLn $ replicate (Text.length title + 2) '-'
+  case shelleyBasedEra' of
+    ShelleyBasedEraShelley ->
+      let Shelley.UTxO utxoMap = utxo
+      in mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxoMap
+    ShelleyBasedEraAllegra ->
+      let Shelley.UTxO utxoMap = utxo
+      in mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxoMap
+    ShelleyBasedEraMary    ->
+      let Shelley.UTxO utxoMap = utxo
+      in mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxoMap
+ where
+   title :: Text
+   title =
+     "                           TxHash                                 TxIx        Amount"
 
-    printUtxo :: (Ledger.TxIn StandardCrypto, Ledger.TxOut ledgerera) -> IO ()
-    printUtxo (Ledger.TxIn (Ledger.TxId txhash) txin , Ledger.TxOut _ value) =
-      Text.putStrLn $
-        mconcat
-          [ Text.decodeLatin1 (hashToBytesAsHex txhash)
-          , textShowN 6 txin
-          , "        " <> printableValue (convertToApiValue era value)
-          ]
+printUtxo
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (Shelley.TxIn StandardCrypto, Ledger.TxOut ledgerera)
+  -> IO ()
+printUtxo shelleyBasedEra' txInOutTuple =
+  case shelleyBasedEra' of
+    ShelleyBasedEraShelley ->
+      let (Shelley.TxIn (Shelley.TxId txhash) txin, Shelley.TxOut _ value) = txInOutTuple
+      in Text.putStrLn $
+           mconcat
+             [ Text.decodeLatin1 (hashToBytesAsHex txhash)
+             , textShowN 6 txin
+             , "        " <> printableValue (convertToApiValue shelleyBasedEra' value)
+             ]
+    ShelleyBasedEraAllegra ->
+      let (Shelley.TxIn (Shelley.TxId txhash) txin, Shelley.TxOut _ value) = txInOutTuple
+      in Text.putStrLn $
+           mconcat
+             [ Text.decodeLatin1 (hashToBytesAsHex txhash)
+             , textShowN 6 txin
+             , "        " <> printableValue (convertToApiValue shelleyBasedEra' value)
+             ]
+    ShelleyBasedEraMary ->
+      let (Shelley.TxIn (Shelley.TxId txhash) txin, Shelley.TxOut _ value) = txInOutTuple
+      in Text.putStrLn $
+           mconcat
+             [ Text.decodeLatin1 (hashToBytesAsHex txhash)
+             , textShowN 6 txin
+             , "        " <> printableValue (convertToApiValue shelleyBasedEra' value)
+             ]
+ where
+  textShowN :: Show a => Int -> a -> Text
+  textShowN len x =
+    let str = show x
+        slen = length str
+    in Text.pack $ replicate (max 1 (len - slen)) ' ' ++ str
 
-    textShowN :: Show a => Int -> a -> Text
-    textShowN len x =
-      let str = show x
-          slen = length str
-      in Text.pack $ replicate (max 1 (len - slen)) ' ' ++ str
+  printableValue :: Value -> Text
+  printableValue = renderValue defaultRenderValueOptions
 
-    printableValue :: Value -> Text
-    printableValue = renderValue defaultRenderValueOptions
 
 runQueryStakeDistribution
   :: AnyCardanoEra
@@ -441,7 +470,7 @@ queryUTxOFromLocalState
   => ShelleyBasedEra era
   -> QueryFilter
   -> LocalNodeConnectInfo mode block
-  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (Ledger.UTxO ledgerera)
+  -> ExceptT ShelleyQueryCmdLocalStateQueryError IO (Shelley.UTxO ledgerera)
 queryUTxOFromLocalState era qFilter
                         connectInfo@LocalNodeConnectInfo{
                           localNodeConsensusMode
@@ -474,7 +503,7 @@ queryUTxOFromLocalState era qFilter
   where
     applyUTxOFilter :: QueryFilter
                     -> Query (Consensus.ShelleyBlock ledgerera)
-                             (Ledger.UTxO ledgerera)
+                             (Shelley.UTxO ledgerera)
     applyUTxOFilter (FilterByAddress as) = Consensus.GetFilteredUTxO (toShelleyAddrs as)
     applyUTxOFilter NoFilter             = Consensus.GetUTxO
 
@@ -644,6 +673,10 @@ queryLocalLedgerState era connectInfo@LocalNodeConnectInfo{localNodeConsensusMod
   where
     -- If decode as a LedgerState fails we return the ByteString so we can do a generic
     -- CBOR decode.
+    --UsesTxOut era
+    decodeLedgerState
+      :: Serialised (NewEpochState ledgerera)
+      -> Either LBS.ByteString (NewEpochState ledgerera)
     decodeLedgerState (Serialised lbs) =
       first (const lbs) (decodeFull lbs)
 

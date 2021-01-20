@@ -19,14 +19,14 @@ import           Data.Time.Clock (UTCTime)
 -- Consensus
 import           Ouroboros.Consensus.Block (BlockProtocol, SlotNo)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
-import           Ouroboros.Consensus.Config (TopLevelConfig, configLedger, configBlock)
+import           Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configLedger)
 import           Ouroboros.Consensus.Config.SupportsNode (getSystemStart)
 import qualified Ouroboros.Consensus.HardFork.Combinator.Compat as HF
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
                      (HardForkLedgerConfig (DegenLedgerConfig))
 import qualified Ouroboros.Consensus.HardFork.History.Qry as HFI
-import qualified Ouroboros.Consensus.Ledger.Query as Consensus (answerQuery, Query)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerCfg (..), ExtLedgerState)
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus (Query, answerQuery)
 import           Ouroboros.Consensus.Node (RunNode)
 import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -42,8 +42,8 @@ import qualified Shelley.Spec.Ledger.API as SL
 -- Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
-import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as CanHardFork
+import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 
 import           Cardano.Tracing.Kernel
 

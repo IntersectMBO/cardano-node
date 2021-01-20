@@ -23,6 +23,7 @@ library
                         -- is fully integrated, or re-exported via the export
                         -- modules above
                         Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.Eras
                         Cardano.Api.LocalChainSync
                         Cardano.Api.Protocol
                         Cardano.Api.Protocol.Byron
@@ -46,7 +47,6 @@ library
                         Cardano.Api.Address
                         Cardano.Api.Block
                         Cardano.Api.Certificate
-                        Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees
                         Cardano.Api.Hash
