@@ -93,8 +93,10 @@ import           Cardano.Node.Configuration.Logging
 -- For tracing instances
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 
 import qualified Ouroboros.Network.Diffusion as ND
+import qualified Control.Concurrent.STM as STM
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
@@ -402,20 +404,26 @@ traceChainMetrics tr = Tracer $ \ev ->
    doTrace ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
      -- TODO this is executed each time the chain changes. How cheap is it?
      meta <- mkLOMeta Critical Public
-     let traceD :: Text -> Double -> IO ()
-         traceD msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
-         traceI :: Integral a => Text -> a -> IO ()
-         traceI msg i = traceNamedObject tr (meta, LogValue msg (PureI (fromIntegral i)))
 
-     traceD "density"     (fromRational density)
-     traceI "slotNum"     slots
-     traceI "blockNum"    blocks
-     traceI "slotInEpoch" slotInEpoch
-     traceI "epoch"       (unEpochNo epoch)
+     traceD tr meta "density"     (fromRational density)
+     traceI tr meta "slotNum"     slots
+     traceI tr meta "blockNum"    blocks
+     traceI tr meta "slotInEpoch" slotInEpoch
+     traceI tr meta "epoch"       (unEpochNo epoch)
+
+traceD :: Trace IO a -> LOMeta -> Text -> Double -> IO ()
+traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
+
+traceI :: Trace IO a -> LOMeta -> Text -> Word64 -> IO ()
+traceI tr meta msg i = traceNamedObject tr (meta, LogValue msg (PureI (fromIntegral i)))
 
 --------------------------------------------------------------------------------
 -- Consensus Tracers
 --------------------------------------------------------------------------------
+
+isRollForward :: TraceChainSyncServerEvent blk -> Bool
+isRollForward TraceChainSyncRollForward = True
+isRollForward _ = False
 
 mkConsensusTracers
   :: forall blk peer localPeer.
@@ -441,13 +449,23 @@ mkConsensusTracers
   -> ForgingStats
   -> IO (Consensus.Tracers' peer localPeer blk (Tracer IO))
 mkConsensusTracers trSel verb tr nodeKern fStats = do
+  let trmet = appendName "metrics" tr
+
   blockForgeOutcomeExtractor <- mkOutcomeExtractor
   elidedFetchDecision <- newstate  -- for eliding messages in FetchDecision tr
   forgeTracers <- mkForgeTracers
+  meta <- mkLOMeta Critical Public
+
+  headerMessageCount <- STM.newTVarIO 0
 
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
-    , Consensus.chainSyncServerHeaderTracer = tracerOnOff (traceChainSyncHeaderServer trSel) verb "ChainSyncHeaderServer" tr
+    , Consensus.chainSyncServerHeaderTracer = tracerOnOff' (traceChainSyncHeaderServer trSel) $
+        Tracer $ \ev -> do
+          traceWith (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr) ev
+          when (isRollForward ev) $ do
+            count <- STM.atomically $ STM.modifyTVar headerMessageCount (+1) >> STM.readTVar headerMessageCount
+            traceI trmet meta "served.header.count" count
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
