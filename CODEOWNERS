@@ -28,6 +28,7 @@ ci                                                            @devops
 configuration                                                 @devops
 nix                                                           @devops
 *.nix                                                         @devops
+flake.lock                                                    @devops
 bors.toml                                                     @devops
 cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops
 cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
