@@ -23,3 +23,16 @@ executable scan-blocks
                        ouroboros-network,
                        time,
   default-language:    Haskell2010
+
+executable scan-blocks-pipelined
+  main-is:             ScanBlocksPipelined.hs
+  other-modules:
+  build-depends:       base,
+                       cardano-api,
+                       cardano-ledger,
+                       cardano-slotting,
+                       filepath,
+                       ouroboros-network,
+                       time,
+                       typed-protocols,
+  default-language:    Haskell2010

@@ -1,14 +1,14 @@
 
-import Cardano.Api
+import           Cardano.Api
 import qualified Cardano.Api.IPC as IPC
 
 -- TODO: Export this via Cardano.Api
-import Ouroboros.Network.Protocol.ChainSync.Client
+import           Ouroboros.Network.Protocol.ChainSync.Client
 
-import Control.Monad (when)
-import System.Environment (getArgs)
-import System.FilePath ((</>))
-import Data.Time
+import           Control.Monad (when)
+import           Data.Time
+import           System.Environment (getArgs)
+import           System.FilePath ((</>))
 
 -- | Connects to a local cardano node, requests the blocks and prints out the
 -- number of transactions. To run this, you must first start a local node e.g.:
@@ -48,7 +48,7 @@ main = do
   protocols :: IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
   protocols =
       IPC.LocalNodeClientProtocols {
-        IPC.localChainSyncClient    = Just chainSyncClient,
+        IPC.localChainSyncClient    = IPC.LocalChainSyncClient chainSyncClient,
         IPC.localTxSubmissionClient = Nothing,
         IPC.localStateQueryClient   = Nothing
       }
