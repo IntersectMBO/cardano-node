@@ -25,20 +25,23 @@ let
       src = ../.;
   };
 
+  # It is important this matches in both calls to cabalProject or `cabal configure`
+  # will run twice.
+  cabalProjectLocal = ''
+    allow-newer: terminfo:base
+  '';
+
   projectPackages = lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
     (haskell-nix.cabalProject {
-      inherit src;
+      inherit src cabalProjectLocal;
       compiler-nix-name = compiler;
     }));
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
   pkgSet = haskell-nix.cabalProject ({
-    inherit src;
+    inherit src cabalProjectLocal;
     compiler-nix-name = compiler;
-    cabalProjectLocal = ''
-      allow-newer: terminfo:base
-    '';
     modules = [
       # Allow reinstallation of Win32
       ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isWindows {

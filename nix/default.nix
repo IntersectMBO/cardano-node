@@ -14,8 +14,7 @@ let
   nixpkgs = if (sources ? nixpkgs)
     then (builtins.trace "Not using IOHK default nixpkgs (use 'niv drop nixpkgs' to use default for better sharing)"
       sources.nixpkgs)
-    else (builtins.trace "Using IOHK default nixpkgs"
-      iohkNixMain.nixpkgs);
+    else iohkNixMain.nixpkgs;
 
   # for inclusion in pkgs:
   overlays =
