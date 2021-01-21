@@ -40,7 +40,8 @@
 
 with (import pkgs.iohkNix.release-lib) {
   inherit pkgs;
-  inherit supportedSystems supportedCrossSystems scrubJobs projectArgs;
+  supportedSystems = [ "x86_64-linux" ];
+  inherit supportedCrossSystems scrubJobs projectArgs;
   packageSet = import cardano-node;
   gitrev = cardano-node.rev;
 };
@@ -48,10 +49,18 @@ with (import pkgs.iohkNix.release-lib) {
 with pkgs.lib;
 
 let
+  darwinRelease = (import pkgs.iohkNix.release-lib) {
+    inherit pkgs;
+    supportedSystems = [ "x86_64-darwin" ];
+    supportedCrossSystems = [];
+    inherit scrubJobs projectArgs;
+    packageSet = import cardano-node;
+    gitrev = cardano-node.rev;
+  };
   makeScripts = cluster: let
     getScript = name: {
       x86_64-linux = (pkgsFor "x86_64-linux").scripts.${cluster}.${name};
-      x86_64-darwin = (pkgsFor "x86_64-darwin").scripts.${cluster}.${name};
+      x86_64-darwin = (darwinRelease.pkgsFor "x86_64-darwin").scripts.${cluster}.${name};
     };
   in {
     node = getScript "node";
@@ -125,11 +134,16 @@ let
 
   jobs = {
     inherit dockerImageArtifact;
-    native =
+    linux =
       let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
         if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
         (packagePlatforms project);
       in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
+    darwin =
+      let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
+        if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
+        (darwinRelease.packagePlatforms darwinRelease.project);
+      in (darwinRelease.mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
     musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterProject noMusl64Build));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
@@ -137,9 +151,9 @@ let
       inherit (pkgs.haskell-nix) hackageSrc stackageSrc;
     };
     cardano-node-macos = import ./nix/binary-release.nix {
-      inherit pkgs project;
+      inherit (darwinRelease) pkgs project;
       platform = "macos";
-      exes = filter (p: p.system == "x86_64-darwin") (collectJobs jobs.native.exes);
+      exes = filter (p: p.system == "x86_64-darwin") (collectJobs jobs.darwin.exes);
     };
     cardano-node-linux = import ./nix/binary-release.nix {
       inherit pkgs project;
@@ -154,10 +168,14 @@ let
       exes = collectJobs jobs.${mingwW64.config}.exes;
     };
   }) // extraBuilds // (mkRequiredJob (concatLists [
-      (collectJobs jobs.native.checks)
-      (collectJobs jobs.native.nixosTests)
-      (collectJobs jobs.native.benchmarks)
-      (collectJobs jobs.native.exes)
+      (collectJobs jobs.linux.checks)
+      (collectJobs jobs.darwin.checks)
+      (collectJobs jobs.linux.nixosTests)
+      (collectJobs jobs.darwin.nixosTests)
+      (collectJobs jobs.linux.benchmarks)
+      (collectJobs jobs.darwin.benchmarks)
+      (collectJobs jobs.linux.exes)
+      (collectJobs jobs.darwin.exes)
       (optional windowsBuild jobs.cardano-node-win64)
       (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
       (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" "launchpad" "allegra" ])

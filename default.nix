@@ -63,6 +63,8 @@ let
 
     inherit (haskellPackages.cardano-node.identifier) version;
 
+    inherit (haskellPackages.cardano-node.project) plan-nix;
+
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
 
     # `tests` are the test suites which have been built.
