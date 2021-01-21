@@ -14,10 +14,10 @@ import           Data.Word (Word64)
 import           Control.Applicative (some, (<|>))
 
 import           Text.Parsec as Parsec (notFollowedBy, try, (<?>))
-import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
+import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, satisfy, space, spaces, string)
 import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
 import           Text.Parsec.String (Parser)
-import           Text.ParserCombinators.Parsec.Combinator (many1)
+import           Text.ParserCombinators.Parsec.Combinator (eof, lookAhead, many1, manyTill)
 
 import           Cardano.Api
 
@@ -111,10 +111,15 @@ decimal = do
 
 -- | Asset name parser.
 assetName :: Parser AssetName
-assetName =
-    toAssetName <$> some alphaNum
+assetName = do
+   toAssetName <$> manyTill
+                     (satisfy Char.isAscii)
+                     (   (void . lookAhead $ char '+')
+                     <|> (void . lookAhead $ char '-')
+                     <|>  eof
+                     )
   where
-    toAssetName = AssetName . Text.encodeUtf8 . Text.pack
+    toAssetName = AssetName . Text.encodeUtf8 . Text.strip . Text.pack
 
 -- | Policy ID parser.
 policyId :: Parser PolicyId
@@ -154,7 +159,7 @@ assetId =
     fullAssetId :: PolicyId -> Parser AssetId
     fullAssetId polId = do
       _ <- period
-      aName <- assetName <?> "alphanumeric asset name"
+      aName <- assetName <?> "ASCII asset name"
       pure (AssetId polId aName)
 
     -- Parse a multi-asset ID that specifies a policy ID, but no asset name.

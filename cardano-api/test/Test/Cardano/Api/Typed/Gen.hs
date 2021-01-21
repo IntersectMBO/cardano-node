@@ -162,9 +162,13 @@ genAssetName =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
     [ (9, Gen.element ["", "a", "b", "c"])
-    , (1, AssetName <$> Gen.utf8 (Range.singleton  32) Gen.alphaNum)
-    , (1, AssetName <$> Gen.utf8 (Range.constant 1 31) Gen.alphaNum)
+    , (1, AssetName <$> Gen.utf8 (Range.singleton  32) (Gen.filter excludeChars Gen.ascii))
+    , (1, AssetName <$> Gen.utf8 (Range.constant 1 31) (Gen.filter excludeChars Gen.ascii))
     ]
+ where
+   -- Exclude control characters 0 - 32
+   excludeChars :: Char -> Bool
+   excludeChars c = c > '\x20' && c /= '-' && c /= '+'
 
 genPolicyId :: Gen PolicyId
 genPolicyId =
