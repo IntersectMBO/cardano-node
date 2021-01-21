@@ -1,5 +1,17 @@
 # Changelog for cardano-cli
 
+## 1.25.0 -- January 2020
+- Allow creating transactions with no outputs (#2223, #2226)
+- Improved error messages for syntax errors in out-of-range lovelace quantities
+  in transaction outputs (#2063, #2079)
+- Improved reference documentation for simple scripts and their use (#2165)
+- Refactoring in the Byron part of the CLI to make more extensive use of the
+  Cardano API and reduce the maintenance burden (#2103, #2228)
+- Remove support for changing the delegation from Genesis keys to operational
+  keys in the Byron era. This feature was never used on the mainnet during the
+  Byron era. (#2219)
+- Clearer usage information in the CLI `--help` output (#2203)
+
 ## 1.24.2 -- December 2020
 
 - Rename the flags `--lower-bound` and `--upper-bound` to be `--invalid-before`

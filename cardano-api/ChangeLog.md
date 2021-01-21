@@ -1,5 +1,17 @@
 # Changelog for cardano-api
 
+## 1.25.0 -- January 2020
+- New IPC modules for easier interaction with the node, including support for
+  all existing local state queries (#2230, #2238, #2263, #2277, #2286)
+- API support for Byron era update proposals and votes (#2209, #2271)
+- Make Cardano.Api the primary public module for the API.
+- API support for serialising multi-asset PolicyId and AssetName (#2270)
+- API for pretty-printing JSON output (#2103)
+- Improved tests for Byron era legacy key formats (#2259)
+- More precise error cases for tx outputs that are out of range (#2217)
+- Host up-to-date generated API documentation via github
+  https://input-output-hk.github.io/cardano-node/ (#2273, #2276, #2278)
+
 ## 1.24.2 -- December 2020
 
 None

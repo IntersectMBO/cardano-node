@@ -1,5 +1,85 @@
 # Changelog for cardano-node
 
+## 1.25.0 -- January 2020
+
+### node changes
+- All metrics now use a common name prefix `cardano.node.metrics`. This requires
+  a one-off change to the node configuration to route all metrics to the metrics
+  backend and not have them in the log files. This should reduce the number of
+  such changes in future. (#2281)
+- More detailed tracer output for protocol tracers (#2178)
+
+### consensus changes
+- Support in testnets for skipping initial eras. This makes it easier and
+  quicker to automate the setup of Cardano-mode testnets that start in later
+  eras, such as Allegra or Mary. This enables simplifications in the setup
+  for integration tests or benchmarks (#2811)
+- Improve the handling of the encoding of local IPC queries by older clients
+  that do not understand later hard forks. In future this should mean that
+  clients that do not understand a hard fork only fail at the time of the hard
+  fork itself, and not earlier when the update proposal is confirmed (#2818)
+- New query for rewards provenance. This is intended to help wallets explain
+  more details about rewards, and to help SPOs and users better understand how
+  pools' performance and ranking are calculated. This is not yet supported in
+  the CLI in this release. (#2830)
+- Support for using multiple leader credentials for the purpose of running
+  large scale benchmarks. It supported in testnets only, not mainnet (#2832)
+- Various internal improvements and refactoring (#2786, #2792, #2795, #2812)
+- Fix a non-critical unexpected thunk detected by the space leak tests (#2798)
+- Initial steps of an overhaul of the automated Ouroboros tests (#2835, #2837)
+- A first draft of a technical report on the design and the internals of the
+  Cardano consensus and storage layer (#2663, #2838, #2841, #2842, #2853)
+- Document the existing coding style conventions (#2829, #2834, #2836)
+- Fix the QueryAnytimeMary case for queries about the Mary era (#2891)
+
+### ledger changes
+- Fix the decoding of multi-asset values to match the specification and improve
+  the corresponding tests (#2049, #2050)
+- Enforce the size of multi-asset names, to match the specification (#2074)
+- Minor change to the ledger CDDL binary specification for the Mary era:
+  restrict the range of multi-asset values to -2^63..2^63-1 where previously
+  the allowed range was -2^64..2^64-1 (#2092)
+- Rename fields in the ledger's CDDL binary specification for clarity and
+  consistency, but no actual changes to the binary format (#2045)
+- Change the minimum ada UTxO value formula for multi-asset values to better
+  reflect the resource costs and to pass on savings (in the form of a lower
+  minimum ada UTxO value) for applications that use smaller asset bundles by
+  sharing policy ids or using shorter asset names (#2107)
+- Improvements to the size of the internal storage format of multi-asset values,
+  enabling a lower minimum ada UTxO value for multi-asset output values (#2083)
+- Restrict the maximum size of multi-asset output values (#2099)
+- Fix the conversion of Allegra era txs to Mary era txs (#2054)
+- Internal refactoring to simplify some of the types and make fewer types be
+  parametrised by the era, when they do not actually vary by era (#2038)
+- Internal support for rewards provenance to support a new node query (#2044,
+  #2075)
+- Improved test coverage (#2059, #2066, #2088, #2094, #2097, #2098)
+- Terminology change: the metadata section is renamed to "auxiliary data" to
+  distinguish it from the existing transaction metadata (#2052)
+- Extra documentation on native tokens (#2046)
+- Various internal improvements and refactoring (#2057, #2070, #2071, #2072,
+  #2072, #2078, #2081, #2086, #2090, #2091, #2096, #2103, #2106)
+- Progress on the new Alonzo era (#2022, #2055, #2061, #2062, #2067, #2077,
+  #2087, #2088, #2095)
+
+### network changes
+- Fix the transaction submission protocol handler to accept duplicate tx ids
+  properly. This was detected by automated testing. (#2718)
+- Internal infrastructure to support seeding the P2P graph construction from
+  the SPO relays registered on the chain, weighted by stake (#2535, #2536)
+- Introduce v6 of the node-to-node protocol where we reverse the initial agency
+  of the tx-submission protocol to match the others. This is preparation for
+  the P2P governor which requires the initial agency for mini-protocols to be
+  uniform (#2807)
+- Introduce v8 of the node-to-client protocol with an extension to the local
+  query protocol that allows acquiring the point at the node's current chain
+  tip, without having to provide that point explicitly. Using this simplifies
+  things for node clients for the common use case where the current tip is
+  needed, and eliminates a rare race condition (#2875)
+- Fix a resource leak for chain-sync clients (#2235, #2870, #2888)
+- Tracing improvements for the mux component (#2794)
+- Preparations for publishing io-sim as a public library (#2791)
+
 ## 1.24.2 -- December 2020
 
 ### node changes
@@ -60,7 +140,7 @@ None
   and Mary eras (#1994, #1999, #2009)
 - Improved serialised binary format for multi-asset values (#1979)
 - Add a compact in-memory storage format for multi-asset values (#1996)
-- Updates to the multi-asset formal specifiation (#2003)
+- Updates to the multi-asset formal specification (#2003)
 - Adjust how the major protocol version is handled for soft forks (#1998)
 - Extend more Shelley tests to cover the Allegra and Mary eras too (#1997,
   #2012, #2029)
