@@ -519,8 +519,6 @@ import           Control.Tracer (nullTracer)
 --
 -- Common types, consensus, network
 --
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
 import           Ouroboros.Network.Block (Point, Tip)
 import           Ouroboros.Network.Mux (MuxMode (InitiatorMode), MuxPeer (..),
@@ -575,7 +573,7 @@ import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 --
 -- Other config and common types
---
+import           Cardano.Api.Block
 import           Cardano.Api.Protocol.Byron (mkNodeClientProtocolByron)
 import           Cardano.Api.Protocol.Cardano (mkNodeClientProtocolCardano)
 import           Cardano.Api.Protocol.Shelley (mkNodeClientProtocolShelley)

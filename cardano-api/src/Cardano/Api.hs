@@ -121,6 +121,22 @@ module Cardano.Api (
     lovelaceToValue,
     valueToLovelace,
 
+    -- * Blocks
+
+    -- ** Blocks in the context of an era
+    Block(Block),
+    BlockHeader(..),
+
+    -- ** Points on the chain
+    ChainPoint,
+    EpochNo(..),
+
+    -- ** Tip of the chain
+    ChainTip(..),
+    BlockNo(..),
+
+    -- * Building transactions
+
     -- * Building transactions
     -- | Constructing and inspecting transactions
 
@@ -182,7 +198,7 @@ module Cardano.Api (
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
-    Tx,
+    Tx(Tx),
     getTxBody,
     getTxWitnesses,
 
@@ -426,4 +442,5 @@ module Cardano.Api (
     toNetworkMagic,
   ) where
 
+import           Cardano.Api.Block
 import           Cardano.Api.Typed
