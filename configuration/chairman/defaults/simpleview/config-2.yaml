@@ -108,10 +108,10 @@ TraceChainDb: True
 TraceChainSyncClient: False
 
 # Trace ChainSync server (blocks).
-TraceChainSyncBlockServer: False
+TraceChainSyncBlockServer: True
 
 # Trace ChainSync server (headers).
-TraceChainSyncHeaderServer: False
+TraceChainSyncHeaderServer: True
 
 # Trace ChainSync protocol messages.
 TraceChainSyncProtocol: True

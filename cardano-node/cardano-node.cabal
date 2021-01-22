@@ -46,6 +46,7 @@ library
                        Cardano.Node.Query
                        Cardano.Node.Parsers
                        Cardano.Node.Run
+                       Cardano.Node.STM
                        Cardano.Node.Types
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints

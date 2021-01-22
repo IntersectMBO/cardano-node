@@ -755,8 +755,21 @@ instance ToObject (AnyMessageAndAgency ps)
 
 
 instance ToObject (TraceTxSubmissionInbound txid tx) where
-  toObject _verb TraceTxSubmissionInbound =
-    mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
+  toObject _verb (TraceTxSubmissionCollected count) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionCollected"
+      , "count" .= toJSON count
+      ]
+  toObject _verb (TraceTxSubmissionAccepted count) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionAccepted"
+      , "count" .= toJSON count
+      ]
+  toObject _verb (TraceTxSubmissionRejected count) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionRejected"
+      , "count" .= toJSON count
+      ]
 
 
 instance (Show txid, Show tx)
