@@ -21,7 +21,6 @@ import           Cardano.Api.Modes
 import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Shelley
 
-import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
