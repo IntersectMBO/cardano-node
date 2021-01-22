@@ -932,8 +932,12 @@ readFileTxMetadata mapping (MetadataFileJSON fp) = do
     v  <- firstExceptT (ShelleyTxCmdMetadataJsonParseError fp) $
           hoistEither $
             Aeson.eitherDecode' bs
-    firstExceptT (ShelleyTxCmdMetadataConversionError fp) $ hoistEither $
+    txMetadata <- firstExceptT (ShelleyTxCmdMetadataConversionError fp) $ hoistEither $
       metadataFromJson mapping v
+    firstExceptT (ShelleyTxCmdMetaValidationError fp) $ hoistEither $ do
+        validateTxMetadata txMetadata
+        return txMetadata
+
 readFileTxMetadata _ (MetadataFileCBOR fp) = do
     bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
           BS.readFile fp
