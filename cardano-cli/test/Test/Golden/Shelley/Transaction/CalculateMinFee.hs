@@ -32,6 +32,6 @@ golden_shelleyTransactionCalculateMinFee = propertyOnce $ H.moduleWorkspace "tmp
 
   H.writeFile minFeeTxtFile minFeeTxt
 
-  H.assertFileOccurences 1 "2541502" minFeeTxtFile
+  H.assertFileOccurences 1 "5083100" minFeeTxtFile
   H.assertFileLines (== 1) minFeeTxtFile
   H.assertEndsWithSingleNewline minFeeTxtFile

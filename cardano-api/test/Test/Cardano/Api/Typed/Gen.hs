@@ -6,6 +6,8 @@
 module Test.Cardano.Api.Typed.Gen
   ( genAddressByron
   , genAddressShelley
+  , genMaybePraosNonce
+  , genProtocolParameters
   , genValueNestedRep
   , genValueNestedBundle
   , genByronKeyWitness
@@ -30,6 +32,7 @@ module Test.Cardano.Api.Typed.Gen
   , genVerificationKey
   ) where
 
+import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Typed
 
 import           Cardano.Prelude
@@ -626,3 +629,38 @@ genShelleyWitnessSigningKey =
 
 genSeed :: Int -> Gen Crypto.Seed
 genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
+
+genNat :: Gen Natural
+genNat = Gen.integral (Range.linear 0 10)
+
+genRational :: Gen Rational
+genRational = Gen.realFrac_ (Range.linearFrac 0 1)
+
+genEpochNo :: Gen EpochNo
+genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
+
+genMaybePraosNonce :: Gen (Maybe PraosNonce)
+genMaybePraosNonce =
+  Gen.maybe (makePraosNonce <$> Gen.bytes (Range.linear 0 32))
+
+genProtocolParameters :: Gen ProtocolParameters
+genProtocolParameters =
+  ProtocolParameters
+    <$> ((,) <$> genNat <*> genNat)
+    <*> genRational
+    <*> genMaybePraosNonce
+    <*> genNat
+    <*> genNat
+    <*> genNat
+    <*> genNat
+    <*> genNat
+    <*> genLovelace
+    <*> genLovelace
+    <*> genLovelace
+    <*> genLovelace
+    <*> genEpochNo
+    <*> genNat
+    <*> genRational
+    <*> genRational
+    <*> genRational
+

@@ -27,6 +27,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import qualified Cardano.Api.IPC as NewIPC
+import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Shelley
 import           Cardano.Api.TxInMode
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
@@ -34,7 +35,6 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
 
-import qualified Shelley.Spec.Ledger.PParams as Shelley
 --TODO: following import needed for orphan Eq Script instance
 import           Cardano.Ledger.ShelleyMA.TxBody ()
 import           Shelley.Spec.Ledger.Scripts ()
@@ -553,8 +553,8 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
     let tx = makeSignedTransaction [] txbody
         Lovelace fee = estimateTransactionFee
                              (fromMaybe Mainnet nw)
-                             (Shelley._minfeeB pparams) --TODO: do this better
-                             (Shelley._minfeeA pparams)
+                             (protocolParamTxFeeFixed pparams)
+                             (protocolParamTxFeePerByte pparams)
                              tx
                              nInputs nOutputs
                              nByronKeyWitnesses nShelleyKeyWitnesses
@@ -569,7 +569,7 @@ runTxCreatePolicyId (ScriptFile sFile) = do
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
 readProtocolParameters :: ProtocolParamsFile
-                       -> ExceptT ShelleyTxCmdError IO (Shelley.PParams StandardShelley)
+                       -> ExceptT ShelleyTxCmdError IO ProtocolParameters
 readProtocolParameters (ProtocolParamsFile fpath) = do
   pparams <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $

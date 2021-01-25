@@ -192,6 +192,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
+                        Test.Cardano.Api.Typed.JSON
                         Test.Cardano.Api.Typed.MultiSig.Allegra
                         Test.Cardano.Api.Typed.MultiSig.Mary
                         Test.Cardano.Api.Typed.MultiSig.Shelley
