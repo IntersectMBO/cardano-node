@@ -1,5 +1,21 @@
 # Changelog for cardano-node
 
+## 1.25.1 -- January 2020
+
+### node changes
+- Revert a change introduced between 1.24.2 and 1.25.0 to the TraceForwarderBK
+  monitoring output sink that was causing a resource leak for users of RTView.
+
+### consensus changes
+None
+
+### ledger changes
+None
+
+### network changes
+None
+
+
 ## 1.25.0 -- January 2020
 
 ### node changes

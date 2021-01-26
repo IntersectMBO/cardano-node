@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 1.25.1 -- January 2020
+
+None
+
 ## 1.25.0 -- January 2020
 - New IPC modules for easier interaction with the node, including support for
   all existing local state queries (#2230, #2238, #2263, #2277, #2286)
