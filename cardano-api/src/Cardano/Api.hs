@@ -21,6 +21,7 @@ module Cardano.Api (
     AnyCardanoEra(..),
     anyCardanoEra,
     InAnyCardanoEra(..),
+    EraInMode(..),
 
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
@@ -128,7 +129,7 @@ module Cardano.Api (
     BlockHeader(..),
 
     -- ** Points on the chain
-    ChainPoint,
+    ChainPoint(..),
     EpochNo(..),
 
     -- ** Tip of the chain
@@ -443,4 +444,5 @@ module Cardano.Api (
   ) where
 
 import           Cardano.Api.Block
+import           Cardano.Api.Modes (EraInMode(..))
 import           Cardano.Api.Typed
