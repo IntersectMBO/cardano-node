@@ -283,7 +283,7 @@ class CardanoCLIWrapper:
             "shelley",
             "transaction",
             "build-raw",
-            "--ttl",
+            "--invalid-hereafter",
             str(ttl),
             "--fee",
             str(fee),

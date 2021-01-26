@@ -19,7 +19,7 @@ golden_shelleyGenesisKeyGenUtxo = propertyOnce . H.moduleWorkspace "tmp" $ \temp
   utxoSigningKeyFile <- noteTempFile tempDir "utxo.skey"
 
   void $ execCardanoCLI
-    [ "shelley","genesis","key-gen-utxo"
+    [ "genesis","key-gen-utxo"
     , "--verification-key-file", utxoVerificationKeyFile
     , "--signing-key-file", utxoSigningKeyFile
     ]

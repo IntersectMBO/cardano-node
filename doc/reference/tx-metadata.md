@@ -7,17 +7,17 @@ Tx metadata is a valuable feature for developers who build applications and proc
 For example, tx metadata can be used to:
 
 + certify ownership and exchange of assets specifying asset owners in different time periods, transfer details, or asset value at the time of transfer
-+ certify documents and signatures, by using a public hash that proves the document’s existence 
++ certify documents and signatures, by using a public hash that proves the document’s existence
 
 Transactions can contain metadata whose hash is part of the body of the transaction. Because the metadata hash is in the tx body, this allows for integrity checking and authentication of the metadata.
 
 ## Metadata structure
 
-In the Cardano environment, the structure of the metadata is defined by a mapping from keys to values (key-value pairs) that combine details for multiple purposes into the same transaction. 
+In the Cardano environment, the structure of the metadata is defined by a mapping from keys to values (key-value pairs) that combine details for multiple purposes into the same transaction.
 
 *Metadata keys* act as a schema identifier that show what the metadata value is. Keys are unsigned integers limited in size up to 64 bits.
 
-The *metadata values* are simple terms, consisting of integers, text strings, byte strings, lists, and maps. Values are required to be structured, which makes it easier to be inspected and managed, particularly by scripts. 
+The *metadata values* are simple terms, consisting of integers, text strings, byte strings, lists, and maps. Values are required to be structured, which makes it easier to be inspected and managed, particularly by scripts.
 
 There is no limit on the number of key-value pairs (except the overall transaction size limit) or on individual structured values. However, there *is* a limit on the size of text strings and byte strings within the structured values, which is implemented to mitigate the problem of unpleasant or illegal content being posted to the blockchain.
 
@@ -47,7 +47,7 @@ To create a transaction with metadata, first ensure that you have installed the 
 
 To create a transaction with specified metadata, run this command:
 
-`cabal exec cardano-cli -- shelley transaction build-raw`
+`cabal exec cardano-cli -- transaction build-raw`
 
 Shelley transactions can be created with the following options:
 
@@ -65,7 +65,7 @@ Shelley transactions can be created with the following options:
                        	Filepath of the metadata file, in JSON format.
   --metadata-cbor-file FILE
                        	Filepath of the metadata, in raw CBOR format.
-  ```                      
+  ```
 
 ## Metadata schemas - mappings and formats
 

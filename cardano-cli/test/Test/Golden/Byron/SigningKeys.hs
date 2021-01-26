@@ -84,7 +84,6 @@ prop_migrate_legacy_to_nonlegacy_signingkeys =
 
     void $ execCardanoCLI
      [ "migrate-delegate-key-from"
-     , "--byron-legacy-formats"
      , "--from", legKeyFp
      , "--to", nonLegacyKeyFp
      ]

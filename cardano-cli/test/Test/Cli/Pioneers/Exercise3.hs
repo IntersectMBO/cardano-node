@@ -28,7 +28,7 @@ prop_createOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \te
 
   -- Create KES key pair
   void $ execCardanoCLI
-    [ "shelley","node","key-gen-KES"
+    [ "node","key-gen-KES"
     , "--verification-key-file", kesVerKey
     , "--signing-key-file", kesSignKey
     ]
@@ -37,7 +37,7 @@ prop_createOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \te
 
   -- Create cold key pair
   void $ execCardanoCLI
-    [ "shelley","node","key-gen"
+    [ "node","key-gen"
     , "--cold-verification-key-file", coldVerKey
     , "--cold-signing-key-file", coldSignKey
     , "--operational-certificate-issue-counter", operationalCertCounter
@@ -47,7 +47,7 @@ prop_createOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \te
 
   -- Create operational certificate
   void $ execCardanoCLI
-    [ "shelley","node","issue-op-cert"
+    [ "node","issue-op-cert"
     , "--kes-verification-key-file", kesVerKey
     , "--cold-signing-key-file", coldSignKey
     , "--operational-certificate-issue-counter", operationalCertCounter

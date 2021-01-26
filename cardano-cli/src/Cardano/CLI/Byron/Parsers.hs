@@ -106,7 +106,7 @@ parseByronCommands = asum
   ]
  where
    subParser :: String -> ParserInfo ByronCommand -> Parser ByronCommand
-   subParser name pInfo = Opt.subparser $ Opt.command name pInfo
+   subParser name pInfo = Opt.subparser $ Opt.command name pInfo <> Opt.metavar name
 
 pNodeCmdBackwardCompatible :: Parser NodeCmd
 pNodeCmdBackwardCompatible = Opt.subparser $ pNodeCmd <> Opt.internal
@@ -215,8 +215,7 @@ parseKeyRelatedValues =
             "migrate-delegate-key-from"
             "Migrate a delegate key from an older version."
             $ MigrateDelegateKeyFrom
-                <$> parseByronKeyFormat -- Old Byron key format
-                <*> parseSigningKeyFile "from" "Signing key file to migrate."
+                <$> parseSigningKeyFile "from" "Legacy signing key file to migrate."
                 <*> parseNewSigningKeyFile "to"
         ]
 

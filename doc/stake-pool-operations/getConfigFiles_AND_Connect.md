@@ -29,7 +29,7 @@ For Mainnet:
 
 Starting the node uses the command `cardano-node run` and a set of options.
 
-Get the complete list of available options with `cardano-node run --help`  
+Get the complete list of available options with `cardano-node run --help`
 
 	--topology FILEPATH             The path to a file describing the topology.
   	--database-path FILEPATH        Directory where the state is stored.
@@ -61,7 +61,7 @@ Many commands relay on the environment variable CARDANO_NODE_SOCKET_PATH:
 
 Check that the node is syncing by fetching the current tip. When syncing slotNo should be increasing.
 
-        cardano-cli shelley query tip --mainnet
+        cardano-cli query tip --mainnet
 
         {
         "blockNo": 36322,

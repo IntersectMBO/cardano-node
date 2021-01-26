@@ -25,7 +25,7 @@ golden_shelleyAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -
   void $ H.readFile addressVKeyFile
 
   stakingAddressText <- execCardanoCLI
-    [ "shelley","address","build"
+    [ "address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile
     , "--staking-verification-key-file", addressSKeyFile
@@ -40,7 +40,7 @@ golden_shelleyAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -
   void $ H.readFile addressSKeyFile
 
   enterpriseAddressText <- execCardanoCLI
-    [ "shelley","address","build"
+    [ "address","build"
     , "--testnet-magic", "14"
     , "--payment-verification-key-file", addressVKeyFile
     , "--staking-verification-key-file", addressSKeyFile

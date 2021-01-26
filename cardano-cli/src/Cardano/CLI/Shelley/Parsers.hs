@@ -74,7 +74,7 @@ parseShelleyCommands =
       , Opt.command "transaction"
           (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Transaction commands")
       , Opt.command "node"
-          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Node operaton commands")
+          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Node operation commands")
       , Opt.command "stake-pool"
           (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Stake pool commands")
       , Opt.command "query"

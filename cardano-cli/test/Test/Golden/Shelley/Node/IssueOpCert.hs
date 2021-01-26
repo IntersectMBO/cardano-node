@@ -31,7 +31,7 @@ golden_shelleyNodeIssueOpCert = propertyOnce . H.moduleWorkspace "tmp" $ \tempDi
   --        --verification-key-file cardano-cli/test/cli/node-issue-op-cert/data/node-kes.vkey \
   --        --signing-key-file /dev/null
   void $ execCardanoCLI
-    [ "shelley","node","issue-op-cert"
+    [ "node","issue-op-cert"
     , "--hot-kes-verification-key-file", hotKesVerificationKeyFile
     , "--cold-signing-key-file", coldSigningKeyFile
     , "--operational-certificate-issue-counter", operationalCertificateIssueCounterFile

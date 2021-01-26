@@ -6,14 +6,16 @@ Transactions vary in complexity, depending on their intended outcomes, but all t
 * Output - determine where the funds go to. An output is given by a payment address and an amount. A transaction can have multiple outputs.
 * Payment address - an address that can receive payments, This is the only type of addresses that can be specified in a transaction output.
 * Payment and stake key pairs - sets of files containing a public verification key and a private signing key.
-* Time-to-live (TTL) - represents a slot, or deadline by which a transaction must be submitted. The TTL is an absolute slot number, rather than a relative one, which means that the --ttl value should be greater than the current slot number. A transaction becomes invalid once its ttl expires.
+* Invalid-before - The slot that the transaction is valid from. This can only be specified in the Allegra era and onwards.
+* Invalid-hereafter - represents a slot, or deadline by which a transaction must be submitted. This is an absolute slot number, rather than a relative one, which means that the `--invalid-hereafter` value should be greater than the current slot number. A transaction becomes invalid at the invalid-hereafter slot.
+* Era - Transactions can differ between the eras (e.g have new features such as multi-assets) so we must specify the era we are currently in.
 
-To create a transaction we need to follow this process:
+To create a transaction in the shelley era we need to follow this process:
 
 * Get the protocol parameters
 * Draft the transaction
 * Calculate the fee
-* Define the time-to-live (TTL) for the transaction
+* Define the validity interval for the transaction
 * Build the transaction
 * Sign the transaction
 * Submit the transaction
@@ -22,7 +24,8 @@ To create a transaction we need to follow this process:
 
 Query and save the parameters in **protocol.json**
 
-    cardano-cli shelley query protocol-parameters \
+    cardano-cli query protocol-parameters \
+    --shelley-era \
     --mainnet \
     --out-file protocol.json
 
@@ -30,19 +33,20 @@ Query and save the parameters in **protocol.json**
 
 In the draft `tx-out`, `ttl` and `fee` can be zero. Later we use the `out-file` `tx.draft` to calculate the `fee`
 
-    cardano-cli shelley transaction build-raw \
-    --tx-in <TxHash>#<TxIx> \
+    cardano-cli transaction build-raw \
+    --shelley-era \
+    --tx-in <TxHash>#<TxIx> \<FutureSlot>
     --tx-out <Address>+<Lovelace> \
     --tx-out <Address>+0 \
-    --ttl 0 \
+    --invalid-hereafter 0
     --fee 0 \
     --out-file tx.draft
 
 **Calculate the fee**
 
-Use `tx.draft` as `tx-body-file`. **Witnesses** are the amount of keys that must sign the transaction.   
+Use `tx.draft` as `tx-body-file`. **Witnesses** are the amount of keys that must sign the transaction.
 
-    cardano-cli shelley transaction calculate-min-fee \
+    cardano-cli transaction calculate-min-fee \
     --tx-body-file tx.draft \
     --tx-in-count 1 \
     --tx-out-count 2 \
@@ -55,11 +59,11 @@ For example:
 
     > 167965
 
-**Determine the TTL**
+**Determine the validity interval**
 
-When building and submitting a transaction you need to check the current tip of the blockchain, for example, if the tip is slot 4000, you should set the TTL to (4000 + N slots), so that you have enough time to build and submit a transaction. Submitting a transaction with a TTL set in the past would result in a tx error.
+When building and submitting a transaction in the shelley era you need to check the current tip of the blockchain, for example, if the tip is slot 4000, you should set the invalid-hereafter to (4000 + N slots), so that you have enough time to build and submit a transaction. Submitting a transaction with a validity interval set in the past would result in a tx error.
 
-    cardano-cli shelley query tip --mainnet
+    cardano-cli query tip --mainnet
 
 Look for the value of `SlotNo`
 
@@ -71,18 +75,18 @@ Look for the value of `SlotNo`
 
 Therefore, if N = 200 slots
 
-    ttl = 369200 + 200
-    ttl = 369400
-    
+    invalid-hereafter = 369200 + 200
+    invalid-hereafter = 369400
+
 **Build the transaction**
 
 This time we include all the paramenters:
 
-    cardano-cli shelley transaction build-raw \
+    cardano-cli transaction build-raw \
     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
     --tx-out $(cat payment2.addr)+100000000 \
     --tx-out $(cat payment.addr)+999899832035 \
-    --ttl 369400 \
+    --invalid-hereafter 369400 \
     --fee 167965 \
     --out-file tx.raw
 
@@ -90,7 +94,7 @@ This time we include all the paramenters:
 
 A transaction must prove that it has the right to spend its inputs. In the most common case, this means that a transaction must be signed by the signing keys belonging to the payment addresses of the inputs. If a transaction contains certificates, it must additionally be signed by somebody with the right to issue those certificates. For example, a stake address registration certificate must be signed by the signing key of the corresponding stake key pair.
 
-    cardano-cli shelley transaction sign \
+    cardano-cli transaction sign \
     --tx-body-file tx.raw \
     --signing-key-file payment.skey \
     --mainnet \
@@ -98,6 +102,6 @@ A transaction must prove that it has the right to spend its inputs. In the most 
 
 **Submit**
 
-    cardano-cli shelley transaction submit \
+    cardano-cli transaction submit \
     --tx-file tx.signed \
     --mainnet

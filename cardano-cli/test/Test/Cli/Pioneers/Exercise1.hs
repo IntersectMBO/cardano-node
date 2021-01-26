@@ -23,7 +23,7 @@ prop_buildShelleyPaymentAddress = propertyOnce . H.moduleWorkspace "tmp" $ \temp
 
   -- Generate payment verification key
   void $ execCardanoCLI
-    [ "shelley","address","key-gen"
+    [ "address","key-gen"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]
@@ -32,7 +32,7 @@ prop_buildShelleyPaymentAddress = propertyOnce . H.moduleWorkspace "tmp" $ \temp
 
   -- Build shelley payment address
   void $ execCardanoCLI
-    [ "shelley", "address", "build"
+    [ "address", "build"
     , "--payment-verification-key-file", verKey
     , "--mainnet"
     ]
@@ -52,14 +52,14 @@ prop_buildShelleyStakeAddress = propertyOnce . H.moduleWorkspace "tmp" $ \tempDi
 
   -- Generate payment verification key
   void $ execCardanoCLI
-    [ "shelley","address","key-gen"
+    [ "address","key-gen"
     , "--verification-key-file", paymentVerKey
     , "--signing-key-file", paymentSignKey
     ]
 
   -- Generate stake verification key
   void $ execCardanoCLI
-    [ "shelley","stake-address","key-gen"
+    [ "stake-address","key-gen"
     , "--verification-key-file", stakeVerKey
     , "--signing-key-file", stakeSignKey
     ]
@@ -68,7 +68,7 @@ prop_buildShelleyStakeAddress = propertyOnce . H.moduleWorkspace "tmp" $ \tempDi
 
   -- Build shelley stake address
   void $ execCardanoCLI
-    [ "shelley", "address", "build"
+    [ "address", "build"
     , "--payment-verification-key-file", paymentVerKey
     , "--stake-verification-key-file", stakeVerKey
     , "--mainnet"

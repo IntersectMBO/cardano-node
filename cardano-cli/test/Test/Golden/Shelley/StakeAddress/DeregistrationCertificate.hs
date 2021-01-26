@@ -19,7 +19,7 @@ golden_shelleyStakeAddressDeregistrationCertificate = propertyOnce . H.moduleWor
   deregistrationCertFile <- noteTempFile tempDir "deregistrationCertFile"
 
   void $ execCardanoCLI
-    [ "shelley","stake-address","deregistration-certificate"
+    [ "stake-address","deregistration-certificate"
     , "--staking-verification-key-file", verificationKeyFile
     , "--out-file", deregistrationCertFile
     ]

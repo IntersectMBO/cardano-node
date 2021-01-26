@@ -7,7 +7,12 @@ ROOT="$(realpath "$(dirname "$0")/../..")"
 
 configuration="${ROOT}/scripts/lite/configuration"
 
-data_dir="$(mktemp).d"
+if [ "$1" == "" ];then
+   data_dir="$(mktemp).d"
+else
+   data_dir=$1
+fi
+
 mkdir -p "${data_dir}"
 
 # Generate shelley genesis spec
@@ -16,7 +21,7 @@ ARGSSPEC=(
   --testnet-magic 42
 )
 
-cabal run exe:cardano-cli -- shelley genesis create "${ARGSSPEC[@]}"
+cabal run exe:cardano-cli -- genesis create "${ARGSSPEC[@]}"
 
 OS=$(uname -s)
 
@@ -46,10 +51,10 @@ ARGS=(
   --testnet-magic 42
 )
 
-cabal run exe:cardano-cli -- shelley genesis create "${ARGS[@]}"
+cabal run exe:cardano-cli -- genesis create "${ARGS[@]}"
 
 # Compute genesis hash
-cabal run exe:cardano-cli -- shelley genesis hash --genesis "${data_dir}/genesis/genesis.json" | tail -1 > "${data_dir}"/genesis/GENHASH
+cabal run exe:cardano-cli -- genesis hash --genesis "${data_dir}/genesis/genesis.json" | tail -1 > "${data_dir}"/genesis/GENHASH
 
 # Ensure the node is built
 cabal run --no-stats cardano-node cardano-node --help >/dev/null || true
@@ -75,7 +80,7 @@ for i in 1 2 3; do
 
   # Generate a KES keys
   mkdir -p "${data_dir}/node-$i"
-  cabal run exe:cardano-cli -- shelley node key-gen-KES \
+  cabal run exe:cardano-cli -- node key-gen-KES \
     --verification-key-file "${data_dir}/node-$i/kes.vkey" \
     --signing-key-file      "${data_dir}/node-$i/kes.skey"
 
@@ -93,7 +98,7 @@ for i in 1 2 3; do
   chmod u+r "${data_dir}/node-$i/vrf.skey"
 
   # Issue an operational certificate:
-  cabal run exe:cardano-cli -- shelley node issue-op-cert \
+  cabal run exe:cardano-cli -- node issue-op-cert \
       --kes-period 0 \
       --kes-verification-key-file                  "${data_dir}/node-$i/kes.vkey"  \
       --cold-signing-key-file                      "${data_dir}/node-$i/hotkey.skey" \

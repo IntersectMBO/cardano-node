@@ -30,7 +30,7 @@ golden_shelleyGenesisDelegateKeys = propertyOnce . H.moduleWorkspace "tmp" $ \te
 
   -- Generate payment verification key
   void $ execCardanoCLI
-    [ "shelley","genesis","key-gen-delegate"
+    [ "genesis","key-gen-delegate"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     , "--operational-certificate-issue-counter-file", opCertCounter

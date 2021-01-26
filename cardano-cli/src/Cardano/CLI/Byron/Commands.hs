@@ -52,8 +52,6 @@ data ByronCommand =
         SigningKeyFile
 
   | MigrateDelegateKeyFrom
-        ByronKeyFormat
-        -- ^ Old ByronKeyFormat
         SigningKeyFile
         -- ^ Old key
         NewSigningKeyFile

@@ -19,7 +19,7 @@ golden_shelleyStakeAddressKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \tem
   signingKeyFile <- noteTempFile tempDir "kes.skey"
 
   void $ execCardanoCLI
-    [ "shelley","stake-address","key-gen"
+    [ "stake-address","key-gen"
     , "--verification-key-file", verificationKeyFile
     , "--signing-key-file", signingKeyFile
     ]

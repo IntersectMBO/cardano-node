@@ -25,7 +25,7 @@ golden_stakePoolMetadataHash = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
 
   -- Hash the stake pool metadata
   void $ execCardanoCLI
-    [ "shelley","stake-pool","metadata-hash"
+    [ "stake-pool","metadata-hash"
     , "--pool-metadata-file", stakePoolMetadataFile
     , "--out-file", outputStakePoolMetadataHashFp
     ]

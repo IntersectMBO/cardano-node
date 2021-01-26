@@ -28,7 +28,7 @@ golden_shelleyVRFKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
 
   -- Generate vrf verification key
   void $ execCardanoCLI
-    [ "shelley","node","key-gen-VRF"
+    [ "node","key-gen-VRF"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]

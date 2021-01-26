@@ -76,8 +76,8 @@ runByronClientCommand c =
     ValidateCBOR cborObject fp -> runValidateCBOR cborObject fp
     PrettyPrintCBOR fp -> runPrettyPrintCBOR fp
     PrettySigningKeyPublic bKeyFormat skF -> runPrettySigningKeyPublic bKeyFormat skF
-    MigrateDelegateKeyFrom oldKeyFormat oldKey nskf ->
-       runMigrateDelegateKeyFrom oldKeyFormat oldKey nskf
+    MigrateDelegateKeyFrom oldKey nskf ->
+       runMigrateDelegateKeyFrom oldKey nskf
     PrintGenesisHash genFp -> runPrintGenesisHash genFp
     PrintSigningKeyAddress bKeyFormat networkid skF -> runPrintSigningKeyAddress bKeyFormat networkid skF
     Keygen nskf -> runKeygen nskf
@@ -127,10 +127,12 @@ runPrettySigningKeyPublic bKeyFormat skF = do
   liftIO . putTextLn . prettyPublicKey $ byronWitnessToVerKey sK
 
 runMigrateDelegateKeyFrom
-        :: ByronKeyFormat -> SigningKeyFile -> NewSigningKeyFile
-        -> ExceptT ByronClientCmdError IO ()
-runMigrateDelegateKeyFrom oldKeyformat oldKey@(SigningKeyFile fp) (NewSigningKeyFile newKey) = do
-  sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey oldKeyformat oldKey
+  :: SigningKeyFile
+  -- ^ Legacy Byron signing key
+  -> NewSigningKeyFile
+  -> ExceptT ByronClientCmdError IO ()
+runMigrateDelegateKeyFrom oldKey@(SigningKeyFile fp) (NewSigningKeyFile newKey) = do
+  sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey LegacyByronKeyFormat oldKey
   migratedWitness <- case sk of
                        AByronSigningKeyLegacy (ByronSigningKeyLegacy sKey) ->
                          return . AByronSigningKey $ ByronSigningKey sKey
