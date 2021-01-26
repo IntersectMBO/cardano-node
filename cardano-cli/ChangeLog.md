@@ -1,5 +1,9 @@
 # Changelog for cardano-cli
 
+## 1.25.1 -- January 2020
+
+None
+
 ## 1.25.0 -- January 2020
 - Allow creating transactions with no outputs (#2223, #2226)
 - Improved error messages for syntax errors in out-of-range lovelace quantities
