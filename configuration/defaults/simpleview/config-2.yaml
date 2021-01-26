@@ -10,9 +10,6 @@ rotation:
 # these backends are initialized:
 setupBackends:
   - KatipBK
-# Uncomment it to enable trace forwarder backend, if the node should
-# forward metrics to an external process.
-# - TraceForwarderBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
@@ -47,15 +44,6 @@ options:
   mapBackends:
     cardano.node.metrics:
       - EKGViewBK
-# Uncomment it to send 'cardano.node.metrics' to 'TraceForwarderBK' as well.
-#     - TraceForwarderBK
-# Uncomment it to send node's release, version and commit to 'TraceForwarderBK'.
-#    cardano.node.release:
-#      - TraceForwarderBK
-#    cardano.node.version:
-#      - TraceForwarderBK
-#    cardano.node.commit:
-#      - TraceForwarderBK
 
 # Uncomment it to forward node's metrics to remote socket '127.0.0.1:2999'.
 # traceForwardTo:

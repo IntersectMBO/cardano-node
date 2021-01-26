@@ -42,7 +42,7 @@ import           Cardano.BM.Configuration (Configuration)
 import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Data.Aggregated (Measurable (..))
-import           Cardano.BM.Data.Backend (Backend, BackendKind)
+import           Cardano.BM.Data.Backend (Backend, BackendKind (..))
 import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName)
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
@@ -179,6 +179,12 @@ createLoggingLayer ver nodeConfig' p = do
 
      Config.getForwardTo logConfig >>= \forwardTo ->
        when (isJust forwardTo) $ do
+         -- Since the configuration contains 'traceForwardTo' section,
+         -- node's information (metrics/peers/errors) should be forwarded
+         -- to an external process (for example, RTView).
+
+         -- Activate TraceForwarder plugin (there is no need to add 'TraceForwarderBK'
+         -- to 'setupBackends' list).
          nodeStartTime <- getCurrentTime
          Cardano.BM.Backend.TraceForwarder.plugin logConfig
                                                   trace
@@ -186,6 +192,16 @@ createLoggingLayer ver nodeConfig' p = do
                                                   "forwarderMinSeverity"
                                                   (nodeBasicInfo nodeConfig p nodeStartTime)
            >>= loadPlugin switchBoard
+
+         -- Forward all the metrics/peers/errors to 'TraceForwarderBK' using 'mapBackends'.
+         -- If 'TraceForwarderBK' is already added in 'mapBackends' - ignore it.
+         let metricsLogger = "cardano.node.metrics" -- All metrics and peers info are here.
+             errorsLoggers = "cardano.node" -- All errors (messages with 'Warning+' severity) are here.
+
+         forM_ [metricsLogger, errorsLoggers] $ \loggerName ->
+           Config.getBackends logConfig loggerName >>= \backends ->
+             when (TraceForwarderBK `notElem` backends) $
+               Config.setBackends logConfig loggerName $ Just (TraceForwarderBK : backends)
 
      Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
        >>= loadPlugin switchBoard

@@ -255,17 +255,7 @@ options:
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
     cardano.node.metrics:
-      - TraceForwarderBK
       - EKGViewBK
-    cardano.node.release:
-      - TraceForwarderBK
-      - KatipBK
-    cardano.node.version:
-      - TraceForwarderBK
-      - KatipBK
-    cardano.node.commit:
-      - TraceForwarderBK
-      - KatipBK
 
   # redirects traced values to a specific scribe which is identified by its
   # type and its name, separated by "::":
