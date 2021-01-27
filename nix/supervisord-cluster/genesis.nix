@@ -31,17 +31,63 @@ rec {
     PATH=${path}
     rm -rf ${stateDir}
     mkdir -p ${stateDir}/{shelley,webserver}
+
+    system_start_epoch=$(date +%s --date="${genesis.genesis_future_offset}")
+    system_start_human=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date=@$system_start_epoch)
+
+    ## 1. Shelley Genesis:
     cp ${__toFile "node.json" (__toJSON baseEnvConfig.nodeConfig)} ${stateDir}/config.json
     cp ${writeText "genesis.spec.json" (__toJSON genesisSpec)} ${stateDir}/shelley/genesis.spec.json
     cardano-cli genesis create --genesis-dir ${stateDir}/shelley \
       ${toString
         (__trace "creating genesis for profile \"${name}\""
           cli_args.createSpec)}
-    jq -r --arg systemStart $(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="${genesis.genesis_future_offset}") \
+    jq -r --arg systemStart $system_start_human \
            '.systemStart = $systemStart |
             .initialFunds = ${__toJSON genesisSpec.initialFunds} |
             .updateQuorum = ${toString composition.n_bft_hosts}' \
     ${stateDir}/shelley/genesis.json | sponge ${stateDir}/shelley/genesis.json
+
+    ## 2. Byron Genesis:
+    cli_args=(
+        --genesis-output-dir         "${stateDir}/byron"
+        --protocol-parameters-file   "${stateDir}/byron-protocol-params.json"
+        --start-time                 $system_start_epoch
+        --k                          2160
+        --protocol-magic             42
+        --n-poor-addresses           10
+        --n-delegate-addresses       10
+        --total-balance              300000
+        --delegate-share             0.9
+        --avvm-entry-count           0
+        --avvm-entry-balance         0
+        )
+    jq '
+      { heavyDelThd:       "300000"
+      , maxBlockSize:      "641000"
+      , maxHeaderSize:     "200000"
+      , maxProposalSize:   "700"
+      , maxTxSize:         "4096"
+      , mpcThd:            "200000"
+      , scriptVersion:     0
+      , slotDuration:      "20000"
+      , softforkRule:
+        { initThd:         "900000"
+        , minThd:          "600000"
+        , thdDecrement:    "100000"
+        }
+      , txFeePolicy:
+        { multiplier:      "439460"
+        , summand:         "155381"
+        }
+      , unlockStakeEpoch:  "184467"
+      , updateImplicit:    "10000"
+      , updateProposalThd: "100000"
+      , updateVoteThd:     "100000"
+      }
+    ' --null-input > ${stateDir}/byron-protocol-params.json
+    cardano-cli byron genesis genesis ''${cli_args[@]}
+
     for i in {1..${toString composition.n_bft_hosts}}
     do
       mkdir -p "${stateDir}/nodes/node-bft$i"
@@ -179,7 +225,7 @@ rec {
         --out-file "${stateDir}/shelley/transfer-register-delegate-tx.txbody"
     FEE=$(cardano-cli transaction calculate-min-fee \
                 --testnet-magic ${toString genesis.network_magic} \
-                --protocol-params-file ${stateDir}/pparams.json \
+                --genesis ${stateDir}/shelley/genesis.json \
                 --tx-in-count 1 \
                 --tx-out-count ${toString (composition.n_pools + 1)} \
                 --witness-count ${toString (3 * composition.n_pools + 1)} \
@@ -197,6 +243,7 @@ rec {
       end) as $funds
     | $funds - ($fee|tonumber) - (.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit) + ${toString genesis.delegator_coin}) * ${toString composition.n_pools}' < ${stateDir}/shelley/genesis.json)
     cardano-cli transaction build-raw \
+        --${era}-era \
         --ttl 1000 \
         --fee "$FEE" \
         --tx-in $(cardano-cli genesis initial-txin \

@@ -18,7 +18,7 @@ let
   profiles = __fromJSON (__readFile profilesJSON);
 
   profile = lib.recursiveUpdate profiles."${profileName}" profileOverride;
-  inherit (profile) composition monetary;
+  inherit (profile) era composition monetary;
 
   profileDump = pkgs.writeText "profile-${profile.name}.json"
     (__toJSON profile);
@@ -142,7 +142,8 @@ let
     ${pkgs.python3Packages.supervisor}/bin/supervisord --config ${supervisorConfig} $@
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
     echo "Transfering genesis funds to pool owners, register pools and delegations"
-    cardano-cli transaction submit --shelley-mode \
+    cardano-cli transaction submit \
+      --cardano-mode \
       --tx-file ${stateDir}/shelley/transfer-register-delegate-tx.tx \
       --testnet-magic ${toString genesis.params.network_magic}
     sleep 5
