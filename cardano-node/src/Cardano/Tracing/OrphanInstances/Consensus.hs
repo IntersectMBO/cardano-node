@@ -128,11 +128,11 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.OpenedVolatileDB -> Info
     ChainDB.OpenedLgrDB -> Info
 
-  getSeverityAnnotation (ChainDB.TraceReaderEvent ev) = case ev of
-    ChainDB.NewReader {} -> Debug
-    ChainDB.ReaderNoLongerInMem {} -> Debug
-    ChainDB.ReaderSwitchToMem {} -> Debug
-    ChainDB.ReaderNewImmIterator {} -> Debug
+  getSeverityAnnotation (ChainDB.TraceFollowerEvent ev) = case ev of
+    ChainDB.NewFollower {} -> Debug
+    ChainDB.FollowerNoLongerInMem {} -> Debug
+    ChainDB.FollowerSwitchToMem {} -> Debug
+    ChainDB.FollowerNewImmIterator {} -> Debug
   getSeverityAnnotation (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.InitChainSelValidation {} -> Debug
   getSeverityAnnotation (ChainDB.TraceIteratorEvent ev) = case ev of
@@ -434,11 +434,11 @@ instance ( ConvertRawHash blk
           " and chunk " <> showT chunk
         ChainDB.OpenedVolatileDB ->  "Opened vol db"
         ChainDB.OpenedLgrDB ->  "Opened lgr db"
-      ChainDB.TraceReaderEvent ev -> case ev of
-        ChainDB.NewReader ->  "New reader was created"
-        ChainDB.ReaderNoLongerInMem _ ->  "ReaderNoLongerInMem"
-        ChainDB.ReaderSwitchToMem _ _ ->  "ReaderSwitchToMem"
-        ChainDB.ReaderNewImmIterator _ _ ->  "ReaderNewImmIterator"
+      ChainDB.TraceFollowerEvent ev -> case ev of
+        ChainDB.NewFollower ->  "New follower was created"
+        ChainDB.FollowerNoLongerInMem _ ->  "FollowerNoLongerInMem"
+        ChainDB.FollowerSwitchToMem _ _ ->  "FollowerSwitchToMem"
+        ChainDB.FollowerNewImmIterator _ _ ->  "FollowerNewImmIterator"
       ChainDB.TraceInitChainSelEvent ev -> case ev of
         ChainDB.InitChainSelValidation _ ->  "InitChainSelValidation"
       ChainDB.TraceIteratorEvent ev -> case ev of
@@ -768,15 +768,15 @@ instance ( ConvertRawHash blk
     ChainDB.OpenedLgrDB ->
       mkObject [ "kind" .= String "TraceOpenEvent.OpenedLgrDB" ]
 
-  toObject _verb (ChainDB.TraceReaderEvent ev) = case ev of
-    ChainDB.NewReader ->
-      mkObject [ "kind" .= String "TraceReaderEvent.NewReader" ]
-    ChainDB.ReaderNoLongerInMem _ ->
-      mkObject [ "kind" .= String "TraceReaderEvent.ReaderNoLongerInMem" ]
-    ChainDB.ReaderSwitchToMem _ _ ->
-      mkObject [ "kind" .= String "TraceReaderEvent.ReaderSwitchToMem" ]
-    ChainDB.ReaderNewImmIterator _ _ ->
-      mkObject [ "kind" .= String "TraceReaderEvent.ReaderNewImmIterator" ]
+  toObject _verb (ChainDB.TraceFollowerEvent ev) = case ev of
+    ChainDB.NewFollower ->
+      mkObject [ "kind" .= String "TraceFollowerEvent.NewFollower" ]
+    ChainDB.FollowerNoLongerInMem _ ->
+      mkObject [ "kind" .= String "TraceFollowerEvent.FollowerNoLongerInMem" ]
+    ChainDB.FollowerSwitchToMem _ _ ->
+      mkObject [ "kind" .= String "TraceFollowerEvent.FollowerSwitchToMem" ]
+    ChainDB.FollowerNewImmIterator _ _ ->
+      mkObject [ "kind" .= String "TraceFollowerEvent.FollowerNewImmIterator" ]
   toObject verb (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.InitChainSelValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt ->
