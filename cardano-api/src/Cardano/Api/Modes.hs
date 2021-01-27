@@ -14,6 +14,7 @@ module Cardano.Api.Modes (
     ShelleyMode,
     CardanoMode,
     ConsensusMode(..),
+    AnyConsensusMode(..),
     ConsensusModeIsMultiEra(..),
 
     -- * The eras supported by each mode
@@ -21,9 +22,11 @@ module Cardano.Api.Modes (
     eraInModeToEra,
     anyEraInModeToAnyEra,
     AnyEraInMode(..),
+    toEraInMode,
 
     -- * Connection paramaters for each mode
     ConsensusModeParams(..),
+    AnyConsensusModeParams(..),
     Byron.EpochSlots,
 
     -- * Conversions to and from types in the consensus library
@@ -35,20 +38,19 @@ module Cardano.Api.Modes (
 
 import           Prelude
 
-import           Data.SOP.Strict (NS(Z, S), K(K))
+import           Data.SOP.Strict (K (K), NS (S, Z))
 
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
-import           Ouroboros.Consensus.Shelley.Eras
-                   (StandardShelley, StandardAllegra, StandardMary)
-import qualified Ouroboros.Consensus.Cardano.Block      as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator as Consensus
-                   (EraIndex(..), eraIndexZero, eraIndexSucc)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import qualified Ouroboros.Consensus.Cardano.ByronHFC   as Consensus (ByronBlockHFC)
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHFC)
 import qualified Ouroboros.Consensus.Cardano.ShelleyHFC as Consensus (ShelleyBlockHFC)
+import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
+                     eraIndexZero)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
-import qualified Cardano.Chain.Slotting as Byron (EpochSlots(..))
+import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 
 import           Cardano.Api.Eras
 
@@ -84,6 +86,11 @@ data ShelleyMode
 --
 data CardanoMode
 
+data AnyConsensusModeParams where
+  AnyConsensusModeParams :: ConsensusModeParams mode -> AnyConsensusModeParams
+
+deriving instance Show AnyConsensusModeParams
+
 -- | This GADT provides a value-level representation of all the consensus modes.
 -- This enables pattern matching on the era to allow them to be treated in a
 -- non-uniform way.
@@ -94,6 +101,14 @@ data ConsensusMode mode where
      CardanoMode :: ConsensusMode CardanoMode
 
 
+deriving instance Show (ConsensusMode mode)
+
+data AnyConsensusMode where
+  AnyConsensusMode :: ConsensusMode mode -> AnyConsensusMode
+
+deriving instance Show AnyConsensusMode
+
+
 -- | The subset of consensus modes that consist of multiple eras. Some features
 -- are not supported in single-era modes (for exact compatibility with not
 -- using the hard fork combinatior at all).
@@ -102,6 +117,15 @@ data ConsensusModeIsMultiEra mode where
      CardanoModeIsMultiEra :: ConsensusModeIsMultiEra CardanoMode
 
 deriving instance Show (ConsensusModeIsMultiEra mode)
+
+toEraInMode :: CardanoEra era -> ConsensusMode mode -> Maybe (EraInMode era mode)
+toEraInMode ByronEra   ByronMode   = Just ByronEraInByronMode
+toEraInMode ShelleyEra ShelleyMode = Just ShelleyEraInShelleyMode
+toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
+toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
+toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
+toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
+toEraInMode _ _                    = Nothing
 
 
 -- | A representation of which 'CardanoEra's are included in each
@@ -171,6 +195,7 @@ data ConsensusModeParams mode where
        :: Byron.EpochSlots
        -> ConsensusModeParams CardanoMode
 
+deriving instance Show (ConsensusModeParams mode)
 
 -- ----------------------------------------------------------------------------
 -- Consensus conversion functions

@@ -10,6 +10,7 @@ import qualified Test.Cardano.Api.Metadata
 import qualified Test.Cardano.Api.Typed.Bech32
 import qualified Test.Cardano.Api.Typed.CBOR
 import qualified Test.Cardano.Api.Typed.Envelope
+import qualified Test.Cardano.Api.Typed.JSON
 import qualified Test.Cardano.Api.Typed.MultiSig.Allegra
 import qualified Test.Cardano.Api.Typed.MultiSig.Mary
 import qualified Test.Cardano.Api.Typed.RawBytes
@@ -31,6 +32,7 @@ tests =
     , Test.Cardano.Api.Typed.Bech32.tests
     , Test.Cardano.Api.Typed.CBOR.tests
     , Test.Cardano.Api.Typed.Envelope.tests
+    , Test.Cardano.Api.Typed.JSON.tests
     , Test.Cardano.Api.Typed.MultiSig.Allegra.tests
     , Test.Cardano.Api.Typed.MultiSig.Mary.tests
     , Test.Cardano.Api.Typed.RawBytes.tests

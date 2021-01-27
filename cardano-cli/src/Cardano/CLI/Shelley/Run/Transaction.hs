@@ -21,24 +21,26 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..))
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                     newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                     hoistMaybe, left, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
+import qualified Cardano.Api.IPC as NewIPC
+import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Shelley
+import           Cardano.Api.TxInMode
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
 
-import qualified Shelley.Spec.Ledger.PParams as Shelley
 --TODO: following import needed for orphan Eq Script instance
 import           Cardano.Ledger.ShelleyMA.TxBody ()
 import           Shelley.Spec.Ledger.Scripts ()
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
-import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..), HardForkApplyTxErr (..))
+import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 
@@ -47,8 +49,7 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAn
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
-import           Cardano.Api.Protocol
-import           Cardano.Api.TxSubmit
+import           Cardano.Api.Modes
 
 data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
@@ -57,12 +58,18 @@ data ShelleyTxCmdError
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
   | ShelleyTxCmdReadWitnessSigningDataError !ReadWitnessSigningDataError
   | ShelleyTxCmdWriteFileError !(FileError ())
+  | ShelleyTxCmdEraConsensusModeMismatch
+      !FilePath
+      !AnyConsensusMode
+      !AnyCardanoEra
+      -- ^ Era
   | ShelleyTxCmdMetadataJsonParseError !FilePath !String
   | ShelleyTxCmdMetadataConversionError !FilePath !TxMetadataJsonError
   | ShelleyTxCmdMetaValidationError !FilePath ![(Word64, TxMetadataRangeError)]
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
+  | ShelleyTxCmdTxSubmitError !Text
   | ShelleyTxCmdTxSubmitErrorByron !(ApplyTxErr ByronBlock)
   | ShelleyTxCmdTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
   | ShelleyTxCmdTxSubmitErrorAllegra !(ApplyTxErr (ShelleyBlock StandardAllegra))
@@ -108,6 +115,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> show fp
                                             <> " Error: " <> show decErr
+    ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
     ShelleyTxCmdTxSubmitErrorByron res ->
       "Error while submitting tx: " <> Text.pack (show res)
     ShelleyTxCmdTxSubmitErrorShelley res ->
@@ -149,12 +157,20 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdScriptLanguageNotSupportedInEra (AnyScriptLanguage lang) era ->
       "The script language " <> show lang <> " is not supported in the " <>
       renderEra era <> " era."
+    ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
+       "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
+       ") is not supported in the " <> renderMode mode <> " consensus mode."
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
 renderEra (AnyCardanoEra ShelleyEra) = "Shelley"
 renderEra (AnyCardanoEra AllegraEra) = "Allegra"
 renderEra (AnyCardanoEra MaryEra)    = "Mary"
+
+renderMode :: AnyConsensusMode -> Text
+renderMode (AnyConsensusMode NewIPC.ByronMode) = "ByronMode"
+renderMode (AnyConsensusMode NewIPC.ShelleyMode) = "ShelleyMode"
+renderMode (AnyConsensusMode NewIPC.CardanoMode) = "CardanoMode"
 
 renderFeature :: TxFeature -> Text
 renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"
@@ -183,8 +199,8 @@ runTransactionCmd cmd =
                     scriptFiles metadataFiles mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit protocol network txFp ->
-      runTxSubmit protocol network txFp
+    TxSubmit anyConensusModeParams network txFp ->
+      runTxSubmit anyConensusModeParams network txFp
     TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
@@ -480,57 +496,34 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
 -- Transaction submission
 --
 
-runTxSubmit :: Protocol -> NetworkId -> FilePath
-            -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit protocol network txFile = do
+
+runTxSubmit
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> FilePath
+  -> ExceptT ShelleyTxCmdError IO ()
+runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
     SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
 
     InAnyCardanoEra era tx <- readFileTx txFile
+    let cMode = AnyConsensusMode $ NewIPC.consensusModeOnly cModeParams
+    eraInMode <- hoistMaybe
+                   (ShelleyTxCmdEraConsensusModeMismatch txFile cMode (AnyCardanoEra era))
+                   (toEraInMode era $ NewIPC.consensusModeOnly cModeParams)
+    let txInMode = TxInMode tx eraInMode
+        localNodeConnInfo = NewIPC.LocalNodeConnectInfo
+                              { NewIPC.localConsensusModeParams = cModeParams
+                              , NewIPC.localNodeNetworkId = network
+                              , NewIPC.localNodeSocketPath = sockPath
+                              }
 
-    withlocalNodeConnectInfo protocol network sockPath $ \connectInfo ->
-      case (localNodeConsensusMode connectInfo, era) of
-        (ByronMode{}, ByronEra) -> do
-          result <- liftIO $ submitTx connectInfo (TxForByronMode tx)
-          case result of
-            TxSubmitSuccess -> return ()
-            TxSubmitFailureByronMode err ->
-              left (ShelleyTxCmdTxSubmitErrorByron err)
-
-        (ByronMode{}, _) ->
-          left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
-                   ledgerEraName = "Byron",
-                   otherEraName  = show era
-                 }
-
-        (ShelleyMode{}, ShelleyEra) -> do
-          result <- liftIO $ submitTx connectInfo (TxForShelleyMode tx)
-          case result of
-            TxSubmitSuccess -> return ()
-            TxSubmitFailureShelleyMode err ->
-              left (ShelleyTxCmdTxSubmitErrorShelley err)
-
-        (ShelleyMode{}, _) ->
-          left $ ShelleyTxCmdTxSubmitErrorEraMismatch EraMismatch {
-                   ledgerEraName = "Shelley",
-                   otherEraName  = show era
-                 }
-
-        (CardanoMode{}, _) -> do
-          result <- liftIO $ submitTx connectInfo
-                               (TxForCardanoMode (InAnyCardanoEra era tx))
-          case result of
-            TxSubmitSuccess -> return ()
-            TxSubmitFailureCardanoMode (ApplyTxErrByron err) ->
-              left (ShelleyTxCmdTxSubmitErrorByron err)
-            TxSubmitFailureCardanoMode (ApplyTxErrShelley err) ->
-              left (ShelleyTxCmdTxSubmitErrorShelley err)
-            TxSubmitFailureCardanoMode (ApplyTxErrAllegra err) ->
-              left (ShelleyTxCmdTxSubmitErrorAllegra err)
-            TxSubmitFailureCardanoMode (ApplyTxErrMary err) ->
-              left (ShelleyTxCmdTxSubmitErrorMary err)
-            TxSubmitFailureCardanoMode (ApplyTxErrWrongEra mismatch) ->
-              left (ShelleyTxCmdTxSubmitErrorEraMismatch mismatch)
-
+    res <- liftIO $ NewIPC.submitTxToNodeLocal localNodeConnInfo txInMode
+    case res of
+      NewIPC.SubmitSuccess -> liftIO $ putTextLn "Transaction successfully submitted."
+      NewIPC.SubmitFail reason ->
+        case reason of
+          TxValidationErrorInMode err _eraInMode -> left . ShelleyTxCmdTxSubmitError . Text.pack $ show err
+          TxValidationEraMismatch mismatchErr -> left $ ShelleyTxCmdTxSubmitErrorEraMismatch mismatchErr
 
 -- ----------------------------------------------------------------------------
 -- Transaction fee calculation
@@ -560,8 +553,8 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
     let tx = makeSignedTransaction [] txbody
         Lovelace fee = estimateTransactionFee
                              (fromMaybe Mainnet nw)
-                             (Shelley._minfeeB pparams) --TODO: do this better
-                             (Shelley._minfeeA pparams)
+                             (protocolParamTxFeeFixed pparams)
+                             (protocolParamTxFeePerByte pparams)
                              tx
                              nInputs nOutputs
                              nByronKeyWitnesses nShelleyKeyWitnesses
@@ -576,7 +569,7 @@ runTxCreatePolicyId (ScriptFile sFile) = do
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
 readProtocolParameters :: ProtocolParamsFile
-                       -> ExceptT ShelleyTxCmdError IO (Shelley.PParams StandardShelley)
+                       -> ExceptT ShelleyTxCmdError IO ProtocolParameters
 readProtocolParameters (ProtocolParamsFile fpath) = do
   pparams <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $

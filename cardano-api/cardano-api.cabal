@@ -25,12 +25,15 @@ library
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.Eras
                         Cardano.Api.LocalChainSync
+                        Cardano.Api.Modes
                         Cardano.Api.Protocol
+                        Cardano.Api.ProtocolParameters
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Shelley.Genesis
+                        Cardano.Api.TxInMode
                         Cardano.Api.TxSubmit
                         Cardano.Api.Typed
 
@@ -56,10 +59,9 @@ library
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysShelley
                         Cardano.Api.KeysPraos
-                        Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
-                        Cardano.Api.ProtocolParameters
+-- TODO: move here      Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.SerialiseBech32
@@ -71,7 +73,6 @@ library
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
-                        Cardano.Api.TxInMode
                         Cardano.Api.TxMetadata
                         Cardano.Api.Utils
                         Cardano.Api.Value
@@ -191,6 +192,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
+                        Test.Cardano.Api.Typed.JSON
                         Test.Cardano.Api.Typed.MultiSig.Allegra
                         Test.Cardano.Api.Typed.MultiSig.Mary
                         Test.Cardano.Api.Typed.MultiSig.Shelley

@@ -37,6 +37,7 @@ module Cardano.Api.KeysShelley (
 
 import           Prelude
 
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           Data.Maybe
@@ -1179,6 +1180,9 @@ instance SerialiseAsBech32 (Hash StakePoolKey) where
 
 instance ToJSON (Hash StakePoolKey) where
     toJSON = toJSON . serialiseToBech32
+
+instance ToJSONKey (Hash StakePoolKey) where
+  toJSONKey = toJSONKeyText serialiseToBech32
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
     textEnvelopeType _ = "StakePoolVerificationKey_"
