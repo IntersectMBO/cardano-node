@@ -36,7 +36,7 @@ import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Tracer
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
-import           Ouroboros.Consensus.Util.STM (onEachChange)
+import           Ouroboros.Consensus.Util.STM (Watcher(..), forkLinkedWatcher)
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo, pointSlot)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
@@ -173,10 +173,13 @@ maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry chaindb =
  where
   spawnSlotLimitTerminator :: SlotNo -> ShutdownDoorbell -> IO ()
   spawnSlotLimitTerminator maxSlot sd =
-    void $ onEachChange registry "slotLimitTerminator" identity Nothing
-      (pointSlot <$> ChainDB.getTipPoint chaindb) $
-        \case
+    void $ forkLinkedWatcher registry "slotLimitTerminator" Watcher {
+        wFingerprint = identity
+      , wInitial     = Nothing
+      , wNotify      = \case
           Origin -> pure ()
           At cur -> when (cur >= maxSlot) $
             triggerShutdown sd trace
             ("spawnSlotLimitTerminator: reached target " <> show cur)
+      , wReader      = pointSlot <$> ChainDB.getTipPoint chaindb
+      }
