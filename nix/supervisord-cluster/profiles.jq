@@ -1,13 +1,14 @@
-## Profiles are named bundles of parameters, classified into sections:
+## Profiles are named bundles of parameters, where parameters are
+## classified into sections:
 ##
 ##  - genesis
 ##  - generator
 ##  - node
 ##  - tolerances (ranges of acceptable properties, given above parameters)
 ##
-## When combined with cluster COMPOsition (an extract from topology) and
-## service parameters (non-crucial things like state directory, port ranges, etc),
-## profiles ought to completely specify cluster parameters,
+## When combined with cluster composition (an extract from topology, see the
+## definition below) and service parameters (non-crucial things like state directory,
+## port ranges, etc), profiles ought to completely specify cluster parameters,
 ## allowing genesis and all necessary configuration files to be generated.
 ##
 ## Profiles themselves are layered as follows:
@@ -26,7 +27,7 @@
 ## These generated profiles are assigned computed names, as per the
 ## profile_name() function in 'profiles/derived.jq'.
 ##
-## Composition must have the following structure:
+## Cluster composition must have the following structure:
 ##  { n_hosts:          INT
 ##  , n_bft_hosts:      INT
 ##  , n_singular_hosts: INT
@@ -34,9 +35,28 @@
 ##  }
 ##  ..where n_hosts must be equal to a sum of the rest.
 ##
+## Names of non-adhoc profiles are computed by the 'profile_name' function in
+## profiles/derived.jq, with era suffix appended, and have the following structure:
+##
+##   k${n_pools}
+##    -[${dense_pool_density}ppn]
+##    -${epochs}ep
+##    -${utxo}kU
+##    -${delegators}kD
+##    -[${tps}tps]
+##    -[${max_block_size}blk]
+##    -[${add_tx_size}b]
+##    -[${inputs_per_tx}i]
+##    -[${outputs_per_tx}o]
+##
+## ..where [] denote optionals, that are only included if the profile
+##   deviates from profile defaults.
+##
 ## Testable by:
 ##
-##   jq -n 'include "profiles" { search: "nix/supervisord-cluster" }; profiles("shelley"; { n_bft_hosts: 1, n_dense_hosts: 1, n_singular_hosts: 1, n_hosts: 3 }; null)'
+##   nix-build -A profiles       ## or simply:  make profiles
+##
+## ..which simply calls ./profiles.nix with {} params.
 ##
 
 include "topology"    { search: "profiles" };

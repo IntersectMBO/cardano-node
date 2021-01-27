@@ -6,15 +6,17 @@
 , stateDir ? "./state-cluster"
 , extraSupervisorConfig ? {}
 ##
-, profileName ? "default"
+, profileName ? "default-mary"
 , profileOverride ? {}
 , ...
 }:
 let
-  profiles = pkgs.callPackage ./profiles.nix
+  profilesJSON = pkgs.callPackage ./profiles.nix
     { inherit
       lib;
     };
+  profiles = __fromJSON (__readFile profilesJSON);
+
   profile = lib.recursiveUpdate profiles."${profileName}" profileOverride;
   inherit (profile) composition monetary;
 
@@ -33,7 +35,11 @@ let
       ;
     };
 
-  baseEnvConfig = pkgs.callPackage ./base-env.nix { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig; inherit stateDir; };
+  baseEnvConfig = pkgs.callPackage ./base-env.nix
+    { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig;
+      inherit stateDir;
+      inherit (profile) era;
+    };
   mkStartScript = envConfig: let
     systemdCompat.options = {
       systemd.services = lib.mkOption {};
@@ -154,4 +160,4 @@ let
     fi
   '';
 
-in { inherit baseEnvConfig start stop profile genesis; }
+in { inherit baseEnvConfig start stop profilesJSON profile genesis; }

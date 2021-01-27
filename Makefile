@@ -33,9 +33,8 @@ test-ghcid-nix: ## Run ghcid on test suites with Nix
 test-chairmans-cluster:
 	@scripts/chairmans-cluster/cluster-test.sh
 
-bench-profiles:
-	@jq --null-input 'include "nix/supervisord-cluster/profiles" { search: "${./.}" }; profiles("shelley"; null; null; [])'
-
+profiles:
+	@jq . $$(nix-build -A profiles)
 
 BENCH_REPEATS ?= 3
 BENCH_CONFIG ?= both

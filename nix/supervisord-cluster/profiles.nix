@@ -1,13 +1,19 @@
 { runCommand
 , jq
+, eras ?
+  [ "shelley"
+    "allegra"
+    "mary"
+  ]
 , ...
 }:
-let
-  profilesJSON = runCommand "profiles" { buildInputs = [ jq ]; } ''
-    jq --null-input '
+
+runCommand "cluster-profiles.json" { buildInputs = [ jq ]; } ''
+    jq --argjson eras '${__toJSON eras}' '
       include "profiles" { search: "${./.}" };
-      profiles("shelley"; null; null; [])
-      ' > $out
-  '';
-in
-  __fromJSON (__readFile profilesJSON)
+
+      $eras
+      | map(profiles(.; null; null; []))
+      | add
+      ' --null-input > $out
+  ''

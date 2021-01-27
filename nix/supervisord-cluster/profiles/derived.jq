@@ -33,6 +33,9 @@ def profile_name($p):
              $p.generator; $generator_defaults; 1; "o")
   | join("-");
 
+def profile_name_era_suffix($era):
+  "-\($era | (.[0:2] + .[-2:]))";
+
 def add_derived_params:
   (.genesis.genesis_future_offset //
     if      .composition.n_hosts > 50 then "32 minutes"
@@ -103,7 +106,10 @@ def add_derived_params:
 | . * $derived.common
     * ($derived[.era] // {})
 | . *
-    { name:     (.name // profile_name(.))
+    { name:     ( .era as $era
+                | (.name // profile_name(.))
+                | . + profile_name_era_suffix($era)
+                )
     , cli_args: profile_cli_args(.)
     }
 ;
