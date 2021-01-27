@@ -32,14 +32,15 @@ import qualified System.Process as IO (createPipeFd)
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..), severityNotice, trTransformer)
 import           Cardano.BM.Trace
+import           Cardano.Node.Clock
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Tracer
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
-import           Ouroboros.Consensus.Util.STM (onEachChange)
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo, pointSlot)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
+import           Ouroboros.Consensus.Util.STM (forkLinkedWatcher)
 
 -- | 'ShutdownFDs' mediate the graceful shutdown requests,
 -- either external or internal to the process.
@@ -170,13 +171,41 @@ maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry chaindb =
     (MaxSlotNo{}, _) -> panic
       "internal error: slot-limited shutdown requested, but no proper ShutdownFDs passed."
     _ -> pure ()
- where
-  spawnSlotLimitTerminator :: SlotNo -> ShutdownDoorbell -> IO ()
-  spawnSlotLimitTerminator maxSlot sd =
-    void $ onEachChange registry "slotLimitTerminator" identity Nothing
-      (pointSlot <$> ChainDB.getTipPoint chaindb) $
-        \case
-          Origin -> pure ()
-          At cur -> when (cur >= maxSlot) $
-            triggerShutdown sd trace
-            ("spawnSlotLimitTerminator: reached target " <> show cur)
+  where
+    spawnSlotLimitTerminator :: SlotNo -> ShutdownDoorbell -> IO ()
+    spawnSlotLimitTerminator maxSlot sd = do
+      clock <- new registry numTicks
+      let forkLinkedTickWatcher :: (Tick -> m ()) -> m ()
+          forkLinkedTickWatcher =
+                void
+              . forkLinkedWatcher registry "slotLimitTerminator"
+              . tickWatcher clock
+      void $ tickWatcher clock
+        (pointSlot <$> ChainDB.getTipPoint chaindb) $
+          \case
+            Origin -> pure ()
+            At cur -> when (cur >= maxSlot) $
+              triggerShutdown sd trace
+              ("spawnSlotLimitTerminator: reached target " <> show cur)
+
+    numTicks :: NumTicks
+    numTicks = sufficientTimeFor
+      [ lastTick clientUpdates
+      , lastTick serverUpdates
+      , startSyncingAt
+      ]
+
+-- | A schedule plans updates to a chain on certain times.
+--
+-- TODO Note that a schedule can't express delays between the messages sent
+-- over the chain sync protocol. Generating such delays may expose more (most
+-- likely concurrency-related) bugs.
+type Schedule a = Map Tick [ChainUpdate]
+
+-- | Return the last tick at which an update is planned, if no updates are
+-- planned, return 0.
+lastTick :: Schedule a -> Tick
+lastTick = fromMaybe (Tick 0) . maxKey
+  where
+    maxKey :: forall k v. Map k v -> Maybe k
+    maxKey = fmap (fst . fst) . Map.maxViewWithKey

@@ -32,7 +32,8 @@ library
 
   hs-source-dirs:      src
 
-  exposed-modules:     Cardano.Node.Configuration.Logging
+  exposed-modules:     Cardano.Node.Clock
+                       Cardano.Node.Configuration.Logging
                        Cardano.Node.Configuration.POM
                        Cardano.Node.Configuration.Topology
                        Cardano.Node.Handlers.Shutdown
@@ -111,6 +112,7 @@ library
                      , ouroboros-network
                      , ouroboros-network-framework
                      , process
+                     , random
                      , safe-exceptions
                      , scientific
                      , shelley-spec-ledger
