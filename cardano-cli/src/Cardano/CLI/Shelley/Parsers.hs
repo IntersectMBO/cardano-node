@@ -51,7 +51,6 @@ import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.String as Parsec
 
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 --

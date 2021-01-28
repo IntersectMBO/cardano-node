@@ -21,8 +21,7 @@ import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api hiding (UpdateProposal)
-import           Cardano.Api.Byron (SigningKey (..), SomeByronSigningKey (..), Tx (..),
-                     VerificationKey (..))
+import           Cardano.Api.Byron (SomeByronSigningKey (..), Tx (..), VerificationKey (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)

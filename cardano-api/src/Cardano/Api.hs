@@ -163,6 +163,7 @@ module Cardano.Api (
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
     SlotNo(..),
+    EpochSlots(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
     TxWithdrawals(..),

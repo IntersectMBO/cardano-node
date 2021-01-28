@@ -20,8 +20,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, ne
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Shelley.Spec.Ledger.OCert (KESPeriod)
-
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
                      readSigningKeyFileAnyOf, readVerificationKeyOrFile)

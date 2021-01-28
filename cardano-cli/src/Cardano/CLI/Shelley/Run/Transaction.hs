@@ -29,7 +29,6 @@ import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import qualified Cardano.Api.IPC as NewIPC
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Shelley
-import           Cardano.Api.TxInMode
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (sgProtocolParams)
 

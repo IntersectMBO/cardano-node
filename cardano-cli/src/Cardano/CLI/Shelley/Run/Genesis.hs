@@ -64,7 +64,6 @@ import qualified Shelley.Spec.Ledger.API as Ledger
 import qualified Shelley.Spec.Ledger.BaseTypes as Ledger
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Ledger.Era ()
