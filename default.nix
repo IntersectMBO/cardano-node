@@ -58,6 +58,9 @@ let
     inherit haskellPackages cardano-node cardano-cli db-converter cardano-ping
       scripts nixosTests environments dockerImage mkCluster bech32;
 
+    # so that eval time gc roots are cached (nix-tools stuff)
+    inherit (cardanoNodeHaskellPackages) roots;
+
     inherit (haskellPackages.cardano-node.identifier) version;
 
     exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewrite-static (collectComponents' "exes" haskellPackages);
