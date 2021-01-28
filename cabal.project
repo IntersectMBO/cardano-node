@@ -177,7 +177,6 @@ source-repository-package
 
 -- Needed for the Windows cabal constraint solver.
 max-backjumps: 10000
-reorder-goals: True
 
 constraints:
     hedgehog >= 1.0
