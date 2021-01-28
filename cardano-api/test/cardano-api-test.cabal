@@ -19,21 +19,21 @@ library
 
   build-depends:
                         base >=4.12 && <5
-                      , aeson
-                      , base16-bytestring
-                      , bytestring
-                      , cardano-api
-                      , cardano-binary
-                      , cardano-crypto-class
-                      , cardano-crypto-test
-                      , cardano-ledger-test
-                      , cardano-prelude
-                      , containers
-                      , hedgehog
-                      , shelley-spec-ledger
-                      , tasty
-                      , tasty-hedgehog
-                      , text
+                      , aeson                           >= 1.5.5.1
+                      , base16-bytestring               >= 1.0.1.0
+                      , bytestring                      >= 0.10.10.0
+                      , cardano-api                     >= 1.25.0
+                      , cardano-binary                  >= 1.5.0
+                      , cardano-crypto-class            >= 2.0.0
+                      , cardano-crypto-test             >= 1.3.0
+                      , cardano-ledger-test             >= 1.3.0
+                      , cardano-prelude                 >= 0.1.0.0
+                      , containers                      >= 0.6.2.1
+                      , hedgehog                        >= 1.0.4
+                      , shelley-spec-ledger             >= 0.1.0.0
+                      , tasty                           >= 1.4.0.2
+                      , tasty-hedgehog                  >= 1.0.0.2
+                      , text                            >= 1.2.3.2
 
   default-language:     Haskell2010
   default-extensions:   NoImplicitPrelude

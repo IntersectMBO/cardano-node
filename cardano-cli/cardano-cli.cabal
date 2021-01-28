@@ -168,10 +168,10 @@ test-suite cardano-cli-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
-                      , aeson
-                      , bech32 >= 1.1.0
-                      , bytestring
-                      , base16-bytestring
+                      , aeson                           >= 1.5.5.1
+                      , base16-bytestring               >= 1.0.1.0
+                      , bech32                          >= 1.1.0
+                      , bytestring                      >= 0.10.10.0
                       , cardano-api
                       , cardano-api-test
                       , cardano-cli
@@ -179,24 +179,24 @@ test-suite cardano-cli-test
                       , cardano-ledger-shelley-ma
                       , cardano-node
                       , cardano-prelude
-                      , containers
-                      , deepseq
-                      , directory
-                      , exceptions
-                      , hedgehog
-                      , hedgehog-extras
-                      , lifted-base
-                      , optparse-applicative
+                      , containers                      >= 0.6.2.1
+                      , deepseq                         >= 1.4.4.0
+                      , directory                       >= 1.3.6.0
+                      , exceptions                      >= 0.10.4
+                      , hedgehog                        >= 1.0.4
+                      , hedgehog-extras                 >= 0.1.0.0
+                      , lifted-base                     >= 0.2.3.12
+                      , optparse-applicative            >= 0.16.1.0
                       , ouroboros-consensus-shelley
-                      , parsec
-                      , process
+                      , parsec                          >= 3.1.14.0
+                      , process                         >= 1.6.9.0
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
-                      , temporary
-                      , text
-                      , time
-                      , transformers-except
-                      , unordered-containers
+                      , temporary                       >= 1.3
+                      , text                            >= 1.2.3.2
+                      , time                            >= 1.9.3
+                      , transformers-except             >= 0.1.1
+                      , unordered-containers            >= 0.2.13.0
 
   other-modules:        Test.Cli.FilePermissions
                         Test.Cli.ITN
@@ -226,30 +226,30 @@ test-suite cardano-cli-golden
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
-                      , aeson
-                      , bech32 >= 1.1.0
-                      , bytestring
-                      , base16-bytestring
+                      , aeson                           >= 1.5.5.1
+                      , base16-bytestring               >= 1.0.1.0
+                      , bech32                          >= 1.1.0
+                      , bytestring                      >= 0.10.10.0
                       , cardano-api
                       , cardano-cli
                       , cardano-crypto-wrapper
                       , cardano-ledger
                       , cardano-prelude
-                      , cborg
-                      , containers
-                      , deepseq
-                      , directory
-                      , exceptions
-                      , hedgehog
-                      , hedgehog-extras
-                      , lifted-base
-                      , optparse-applicative
-                      , process
-                      , temporary
-                      , text
-                      , time
-                      , transformers-except
-                      , unordered-containers
+                      , cborg                           >= 0.2.4.0
+                      , containers                      >= 0.6.2.1
+                      , deepseq                         >= 1.4.4.0
+                      , directory                       >= 1.3.6.0
+                      , exceptions                      >= 0.10.4
+                      , hedgehog                        >= 1.0.4
+                      , hedgehog-extras                 >= 0.1.0.0
+                      , lifted-base                     >= 0.2.3.12
+                      , optparse-applicative            >= 0.16.1.0
+                      , process                         >= 1.6.9.0
+                      , temporary                       >= 1.3
+                      , text                            >= 1.2.3.2
+                      , time                            >= 1.9.3
+                      , transformers-except             >= 0.1.1
+                      , unordered-containers            >= 0.2.13.0
 
   other-modules:        Test.Golden.Shelley
                         Test.Golden.Byron.SigningKeys

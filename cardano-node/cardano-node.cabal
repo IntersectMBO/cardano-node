@@ -163,23 +163,23 @@ executable cardano-node
                        -Wno-unticked-promoted-constructors
                        -rtsopts
   if arch(arm)
-    ghc-options:         "-with-rtsopts=-T -I0 -N1 -A16m"
+    ghc-options:        "-with-rtsopts=-T -I0 -N1 -A16m"
   else
-    ghc-options:         "-with-rtsopts=-T -I0 -N2 -A16m"
+    ghc-options:        "-with-rtsopts=-T -I0 -N2 -A16m"
 
-  other-modules:       Paths_cardano_node
+  other-modules:        Paths_cardano_node
 
-  build-depends:       base >=4.12 && <5
-                     , cardano-config
-                     , cardano-node
-                     , cardano-prelude
-                     , optparse-applicative
-                     , text
+  build-depends:        base >=4.12 && <5
+                      , cardano-config
+                      , cardano-node
+                      , cardano-prelude
+                      , optparse-applicative            >= 0.16.1.0
+                      , text                            >= 1.2.3.2
 
   if os(windows)
-     build-depends:    Win32
+     build-depends:     Win32
   else
-     build-depends:    unix
+     build-depends:     unix
 
 test-suite cardano-node-test
   hs-source-dirs:       test
@@ -191,9 +191,9 @@ test-suite cardano-node-test
 
   build-depends:
                         base >= 4.12 && < 5
-                      , aeson
-                      , async
-                      , bytestring
+                      , aeson                           >= 1.5.5.1
+                      , async                           >= 2.2.2
+                      , bytestring                      >= 0.10.10.0
                       , cardano-api
                       , cardano-config
                       , cardano-crypto-class
@@ -203,25 +203,25 @@ test-suite cardano-node-test
                       , cardano-prelude
                       , cardano-prelude-test
                       , cardano-slotting
-                      , containers
-                      , cryptonite
-                      , directory
-                      , hedgehog
-                      , hedgehog-corpus
-                      , iproute
-                      , mmorph
-                      , network
+                      , containers                      >= 0.6.2.1
+                      , cryptonite                      >= 0.27
+                      , directory                       >= 1.3.6.0
+                      , hedgehog                        >= 1.0.4
+                      , hedgehog-corpus                 >= 0.2.0
+                      , iproute                         >= 1.7.10
+                      , mmorph                          >= 1.1.3
+                      , network                         >= 3.1.2.1
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , ouroboros-network
-                      , process
-                      , random
-                      , resourcet
+                      , process                         >= 1.6.9.0
+                      , random                          >= 1.1
+                      , resourcet                       >= 1.2.4.2
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
-                      , temporary
-                      , time
-                      , unliftio
+                      , temporary                       >= 1.3
+                      , time                            >= 1.9.3
+                      , unliftio                        >= 0.2.13.1
 
   other-modules:        Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen

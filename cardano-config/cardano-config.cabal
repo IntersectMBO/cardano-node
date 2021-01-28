@@ -17,21 +17,21 @@ flag systemd
   manual:      False
 
 library
-  hs-source-dirs:      src
+  hs-source-dirs:       src
 
   if os(linux) && flag(systemd)
-    cpp-options:       -DSYSTEMD
-    build-depends:     lobemo-scribe-systemd
+    cpp-options:        -DSYSTEMD
+    build-depends:      lobemo-scribe-systemd
 
-  exposed-modules:     Cardano.Config.Git.Rev
-                       Cardano.Config.Git.RevFromGit
+  exposed-modules:      Cardano.Config.Git.Rev
+                        Cardano.Config.Git.RevFromGit
 
-  build-depends:       base >=4.12 && <5
-                     , cardano-prelude
-                     , file-embed
-                     , process
-                     , template-haskell
-                     , text
+  build-depends:        base >=4.12 && <5
+                      , cardano-prelude
+                      , file-embed                      >= 0.0.13.0
+                      , process                         >= 1.6.9.0
+                      , template-haskell                >= 2.14.0.0
+                      , text                            >= 1.2.3.2
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
