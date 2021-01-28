@@ -1000,6 +1000,14 @@ instance ConvertRawHash blk
                , "rolledBackBlock" .= String (renderPointForVerbosity verb pt)
                ]
 
+    TraceChainSyncRollForward point ->
+      mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncRollForward"
+               , "point" .= toObject verb point
+               ]
+    TraceChainSyncRollBackward point ->
+      mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncRollBackward"
+               , "point" .= toObject verb point
+               ]
 
 instance ( Show (ApplyTxErr blk), ToObject (ApplyTxErr blk), ToObject (GenTx blk),
            ToJSON (GenTxId blk)
