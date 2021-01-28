@@ -28,6 +28,8 @@ library
                         Cardano.Api.Modes
                         Cardano.Api.Orphans
                         Cardano.Api.ProtocolParameters
+                        --TODO: Remove all Cardano.Api.Protocol.x
+                        -- when new IPC is integrated with cardano-node-chairman
                         Cardano.Api.Protocol.Byron
                         Cardano.Api.Protocol.Cardano
                         Cardano.Api.Protocol.Shelley

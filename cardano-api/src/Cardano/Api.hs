@@ -448,6 +448,8 @@ module Cardano.Api (
     -- ** Conversions
     --TODO: arrange not to export these
     toNetworkMagic,
+    --TODO: Remove after updating cardano-node-chairman with new IPC
+    SomeNodeClientProtocol(..),
   ) where
 
 import           Cardano.Api.Address
@@ -478,3 +480,5 @@ import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
+--TODO: Remove after updating cardano-node-chairman with new IPC
+import           Cardano.Api.Protocol.Types
