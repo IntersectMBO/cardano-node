@@ -55,7 +55,7 @@ import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                      SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
                      WithIPList (..))
-import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound (..))
+import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound (..), ProcessedTxCount(..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
@@ -755,8 +755,17 @@ instance ToObject (AnyMessageAndAgency ps)
 
 
 instance ToObject (TraceTxSubmissionInbound txid tx) where
-  toObject _verb TraceTxSubmissionInbound =
-    mkObject [ "kind" .= String "TraceTxSubmissionInbound" ]
+  toObject _verb (TraceTxSubmissionCollected count) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionCollected"
+      , "count" .= toJSON count
+      ]
+  toObject _verb (TraceTxSubmissionProcessed processed) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionProcessed"
+      , "accepted" .= toJSON (ptxcAccepted processed)
+      , "rejected" .= toJSON (ptxcRejected processed)
+      ]
 
 
 instance (Show txid, Show tx)
