@@ -14,7 +14,7 @@ module Cardano.Api.Block (
 
     -- * Blocks in the context of an era
     Block(.., Block),
-    BlockHeader,
+    BlockHeader(..),
 
     -- ** Blocks in the context of a consensus mode
     BlockInMode(..),
@@ -22,8 +22,8 @@ module Cardano.Api.Block (
 
     -- * Points on the chain
     ChainPoint(..),
-    SlotNo,
-    EpochNo,
+    SlotNo(..),
+    EpochNo(..),
     toConsensusPoint,
     fromConsensusPoint,
     toConsensusPointInMode,
@@ -31,7 +31,7 @@ module Cardano.Api.Block (
 
     -- * Tip of the chain
     ChainTip(..),
-    BlockNo,
+    BlockNo(..),
     chainTipToChainPoint,
     fromConsensusTip,
 
@@ -45,7 +45,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (Foldable(toList))
 
-import           Cardano.Slotting.Block (BlockNo)
+import           Cardano.Slotting.Block (BlockNo(..))
 import           Cardano.Slotting.Slot (SlotNo, EpochNo)
 
 import qualified Ouroboros.Network.Block as Consensus

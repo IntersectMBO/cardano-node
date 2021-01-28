@@ -15,7 +15,6 @@
 -- | Node IPC protocols
 --
 module Cardano.Api.IPC (
-
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
     connectToLocalNode,
@@ -23,6 +22,15 @@ module Cardano.Api.IPC (
     localConsensusMode,
     LocalNodeClientProtocols(..),
     LocalNodeClientProtocolsInMode,
+
+    -- ** Modes
+    -- | TODO move to Cardano.Api
+    ByronMode,
+    ShelleyMode,
+    CardanoMode,
+    ConsensusModeParams(..),
+    EpochSlots(..),
+
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol

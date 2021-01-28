@@ -4,6 +4,7 @@ packages:
     cardano-api
     cardano-api/test
     cardano-cli
+    cardano-client-demo
     cardano-config
     cardano-node
     cardano-node-chairman

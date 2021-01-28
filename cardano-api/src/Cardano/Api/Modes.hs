@@ -27,7 +27,7 @@ module Cardano.Api.Modes (
     -- * Connection paramaters for each mode
     ConsensusModeParams(..),
     AnyConsensusModeParams(..),
-    Byron.EpochSlots,
+    Byron.EpochSlots(..),
 
     -- * Conversions to and from types in the consensus library
     ConsensusBlockForMode,
@@ -45,7 +45,7 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHFC)
 import qualified Ouroboros.Consensus.Cardano.ShelleyHFC as Consensus (ShelleyBlockHFC)
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
-                     eraIndexZero)
+                   eraIndexZero)
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
