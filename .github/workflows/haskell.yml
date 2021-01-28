@@ -17,7 +17,18 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v1
+    - name: Select optimal cabal version
+      run: |
+        case "$OS" in
+          Windows_NT)   echo "CABAL_VERSION=3.4.0.1-rc3"  >> $GITHUB_ENV;;
+          *)            echo "CABAL_VERSION=3.4.0.0-rc4"  >> $GITHUB_ENV;;
+        esac
+
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ env.CABAL_VERSION }}
 
     - name: Select build directory
       run: |
@@ -28,6 +39,8 @@ jobs:
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v2
 
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
@@ -61,25 +74,15 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: brew install libsodium
 
+    - name: Setup Github Scripts
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
+
     - name: Configure to use libsodium
       run: |
         cat >> cabal.project <<EOF
         package cardano-crypto-praos
           flags: -external-libsodium-vrf
         EOF
-
-    - name: Select optimal cabal version
-      run: |
-        case "$OS" in
-          Windows_NT)   echo "CABAL_VERSION=3.4.0.1-rc3"  >> $GITHUB_ENV;;
-          *)            echo "CABAL_VERSION=3.4.0.0-rc4"  >> $GITHUB_ENV;;
-        esac
-
-    - uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ env.CABAL_VERSION }}
 
     - name: Haskell versions
       run: |
@@ -96,10 +99,10 @@ jobs:
         sudo apt-get -y autoremove
 
     - name: Cabal update
-      run: cabal update
+      run: retry 2 cabal update
 
     - name: Cabal Configure
-      run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+      run: retry 2 cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - name: Record dependencies
       run: |
