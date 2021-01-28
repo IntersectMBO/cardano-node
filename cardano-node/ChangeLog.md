@@ -1,6 +1,6 @@
 # Changelog for cardano-node
 
-## 1.25.1 -- January 2020
+## 1.25.1 -- January 2021
 
 ### node changes
 - Revert a change introduced between 1.24.2 and 1.25.0 to the TraceForwarderBK
@@ -16,7 +16,7 @@ None
 None
 
 
-## 1.25.0 -- January 2020
+## 1.25.0 -- January 2021
 
 ### node changes
 - All metrics now use a common name prefix `cardano.node.metrics`. This requires
