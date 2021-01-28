@@ -18,39 +18,50 @@ executable scan-blocks
   main-is:             ScanBlocks.hs
   other-modules:
   build-depends:       base,
-                       cardano-api,
                        filepath,
-                       ouroboros-network,
                        time,
+
+                       cardano-api,
+
+                       ouroboros-network,
+
   default-language:    Haskell2010
 
 executable scan-blocks-pipelined
   main-is:             ScanBlocksPipelined.hs
   other-modules:
   build-depends:       base,
+                       filepath,
+                       time,
+
                        cardano-api,
                        cardano-ledger,
                        cardano-slotting,
                        filepath,
                        ouroboros-network,
-                       time,
                        typed-protocols,
+
   default-language:    Haskell2010
 
 executable cardano-client-demo-ledger-state
   main-is:             MainLedgerState.hs
-  other-modules:
+  other-modules:       NewApiStuff
   build-depends:       base,
+                       containers,
+                       filepath,
+                       mtl,
+                       time,
+
                        cardano-api,
                        cardano-binary,
                        cardano-crypto-wrapper,
                        cardano-ledger,
-                       containers,
-                       filepath,
-                       mtl,
                        ouroboros-network,
                        ouroboros-consensus,
                        ouroboros-consensus-byron,
-                       time,
+                       ouroboros-consensus-shelley,
                        typed-protocols,
+
   default-language:    Haskell2010
+  ghc-options:
+    -Wall
