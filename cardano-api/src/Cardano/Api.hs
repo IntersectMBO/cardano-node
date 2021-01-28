@@ -41,7 +41,7 @@ module Cardano.Api (
     -- $keys
     Key,
     VerificationKey,
-    SigningKey,
+    SigningKey(..),
     getVerificationKey,
     verificationKeyHash,
     castVerificationKey,
@@ -366,7 +366,7 @@ module Cardano.Api (
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
     -- *** Reading one of several key types
-    FromSomeType,
+    FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
     readFileTextEnvelopeAnyOf,
 
@@ -384,12 +384,12 @@ module Cardano.Api (
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
     LocalNodeConnectInfo(..),
-    NodeConsensusMode,
+    ConsensusMode,
+    ConsensusModeParams(..),
     LocalNodeClientProtocols,
     localChainSyncClient,
     localTxSubmissionClient,
     localStateQueryClient,
-    nullLocalNodeClientProtocols,
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
@@ -397,6 +397,9 @@ module Cardano.Api (
 
     -- *** Local tx submission
     LocalTxSubmissionClient,
+    EraInMode(..),
+    TxInMode(..),
+    TxValidationErrorInMode(..),
     runLocalTxSubmissionClient,
     submitTxToNodeLocal,
 
@@ -404,6 +407,9 @@ module Cardano.Api (
     LocalStateQueryClient,
     runLocalStateQueryClient,
     queryNodeLocalState,
+
+    -- *** Query local node chain tip
+    getLocalChainTip,
 
     -- * Node operation
     -- | Support for the steps needed to operate a node
@@ -443,5 +449,31 @@ module Cardano.Api (
     toNetworkMagic,
   ) where
 
+import           Cardano.Api.Address
 import           Cardano.Api.Block
-import           Cardano.Api.Typed
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Fees
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IPC
+import           Cardano.Api.Key
+import           Cardano.Api.KeysByron
+import           Cardano.Api.KeysPraos
+import           Cardano.Api.KeysShelley
+import           Cardano.Api.Modes
+import           Cardano.Api.NetworkId
+import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Value
