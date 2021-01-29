@@ -107,6 +107,8 @@ import qualified Control.Concurrent.STM as STM
 data Tracers peer localPeer blk = Tracers
   { -- | Trace the ChainDB
     chainDBTracer :: Tracer IO (ChainDB.TraceEvent blk)
+    -- | Consensus-specific counters.
+  , consensusCounters :: Consensus.Tracers IO peer localPeer blk
     -- | Consensus-specific tracers.
   , consensusTracers :: Consensus.Tracers IO peer localPeer blk
     -- | Tracers for the node-to-node protocols.
@@ -150,6 +152,7 @@ data ForgeTracers = ForgeTracers
 nullTracers :: Tracers peer localPeer blk
 nullTracers = Tracers
   { chainDBTracer = nullTracer
+  , consensusCounters = Consensus.nullTracers
   , consensusTracers = Consensus.nullTracers
   , nodeToClientTracers = NodeToClient.nullTracers
   , nodeToNodeTracers = NodeToNode.nullTracers
@@ -284,6 +287,7 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
         annotateSeverity $ teeTraceChainTip tOpts elidedChainDB
                              (appendName "ChainDB" tr) (appendName "metrics" tr)
+    , consensusCounters = consensusTracers -- TODO Duplication
     , consensusTracers = consensusTracers
     , nodeToClientTracers = nodeToClientTracers' trSel verb tr
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
@@ -302,25 +306,27 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
    verb :: TracingVerbosity
    verb = traceVerbosity trSel
 
-mkTracers TracingOff _ _ =
+mkTracers TracingOff _ _ = do
+  let consensusTracers = Consensus.Tracers
+        { Consensus.chainSyncClientTracer = nullTracer
+        , Consensus.chainSyncServerHeaderTracer = nullTracer
+        , Consensus.chainSyncServerBlockTracer = nullTracer
+        , Consensus.blockFetchDecisionTracer = nullTracer
+        , Consensus.blockFetchClientTracer = nullTracer
+        , Consensus.blockFetchServerTracer = nullTracer
+        , Consensus.forgeStateInfoTracer = nullTracer
+        , Consensus.txInboundTracer = nullTracer
+        , Consensus.txOutboundTracer = nullTracer
+        , Consensus.localTxSubmissionServerTracer = nullTracer
+        , Consensus.mempoolTracer = nullTracer
+        , Consensus.forgeTracer = nullTracer
+        , Consensus.blockchainTimeTracer = nullTracer
+        , Consensus.keepAliveClientTracer = nullTracer
+        }
   pure Tracers
     { chainDBTracer = nullTracer
-    , consensusTracers = Consensus.Tracers
-      { Consensus.chainSyncClientTracer = nullTracer
-      , Consensus.chainSyncServerHeaderTracer = nullTracer
-      , Consensus.chainSyncServerBlockTracer = nullTracer
-      , Consensus.blockFetchDecisionTracer = nullTracer
-      , Consensus.blockFetchClientTracer = nullTracer
-      , Consensus.blockFetchServerTracer = nullTracer
-      , Consensus.forgeStateInfoTracer = nullTracer
-      , Consensus.txInboundTracer = nullTracer
-      , Consensus.txOutboundTracer = nullTracer
-      , Consensus.localTxSubmissionServerTracer = nullTracer
-      , Consensus.mempoolTracer = nullTracer
-      , Consensus.forgeTracer = nullTracer
-      , Consensus.blockchainTimeTracer = nullTracer
-      , Consensus.keepAliveClientTracer = nullTracer
-      }
+    , consensusCounters = consensusTracers -- TODO Duplication
+    , consensusTracers = consensusTracers
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
       , NodeToClient.tTxSubmissionTracer = nullTracer
