@@ -63,7 +63,7 @@ main = do
         IPC.localNodeSocketPath      = socketPath
       }
 
-  protocols :: LedgerState ByronEra -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
+  protocols :: LedgerState -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
   protocols ledgerState =
       IPC.LocalNodeClientProtocols {
         IPC.localChainSyncClient    = Just (Right (chainSyncClient ledgerState)),
@@ -72,7 +72,7 @@ main = do
       }
 
 -- | Defines the client side of the chain sync protocol.
-chainSyncClient :: LedgerState ByronEra
+chainSyncClient :: LedgerState
                 -> ChainSyncClient
                      (IPC.BlockInMode IPC.CardanoMode)
                      ChainPoint
@@ -80,7 +80,7 @@ chainSyncClient :: LedgerState ByronEra
                      IO ()
 chainSyncClient initialLedgerState = ChainSyncClient $ clientStIdle Map.empty
   where
-      clientStIdle :: Map SlotNo (LedgerState ByronEra) -- Known Ledger states. Must be complete up to and including the most recently received Block's SlotNo.
+      clientStIdle :: Map SlotNo (LedgerState) -- Known Ledger states. Must be complete up to and including the most recently received Block's SlotNo.
                    -> IO (ClientStIdle (IPC.BlockInMode IPC.CardanoMode)
                                   ChainPoint ChainTip IO ())
       clientStIdle knownLedgerStates = do
@@ -94,7 +94,7 @@ chainSyncClient initialLedgerState = ChainSyncClient $ clientStIdle Map.empty
           -- going to stop when we hit the current chain tip.
           clientDone
 
-      clientStNext :: Map SlotNo (LedgerState ByronEra) -- ^ Known Ledger states. Must be complete up to the current BlockNo.
+      clientStNext :: Map SlotNo (LedgerState) -- ^ Known Ledger states. Must be complete up to the current BlockNo.
                    -> ClientStNext (IPC.BlockInMode IPC.CardanoMode)
                                   ChainPoint ChainTip IO ()
       clientStNext knownLedgerStates =
@@ -127,5 +127,5 @@ chainSyncClient initialLedgerState = ChainSyncClient $ clientStIdle Map.empty
           recvMsgRollBackward = \_ _ -> ChainSyncClient (pure (SendMsgDone ()))
         }
 
-      printLedgerState :: LedgerState ByronEra -> IO ()
+      printLedgerState :: LedgerState -> IO ()
       printLedgerState _ = putStrLn "TODO printLedgerState"

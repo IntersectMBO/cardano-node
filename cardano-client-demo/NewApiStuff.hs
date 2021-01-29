@@ -1,7 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -22,37 +26,55 @@ module NewApiStuff
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Block
 import qualified Cardano.Api.Block as Block
 import           Cardano.Api.Eras (ShelleyLedgerEra)
+import qualified Cardano.Crypto.Hash as Crypto
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BS
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+-- import qualified Shelley.Spec.Ledger.Genesis as Shelley
+import qualified Cardano.Api.IPC as IPC
 import qualified Cardano.Chain.Genesis as Genesis
+import qualified Cardano.Chain.Update
+import           Cardano.Crypto.Hash (ByteString)
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Control.Monad.Except
-import           Ouroboros.Consensus.Byron.Ledger.Block
+import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
+import qualified Ouroboros.Consensus.Cardano as Cardano
+import qualified Ouroboros.Consensus.Cardano.Block as Cardano
+import qualified Ouroboros.Consensus.Cardano.Node as Cardano
+import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Ledger.Abstract (tickThenApply)
 import qualified Ouroboros.Consensus.Ledger.Basics as Ledger
+import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
+import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
+import qualified Ouroboros.Consensus.Shelley.Protocol as Consensus
 
 --------------------------------------------------------------------------------
 -- TODO move this stuff to a new ledger state module in cardano-api and also
 -- export it from Cardano.Api
 --------------------------------------------------------------------------------
 
-data LedgerState era where
+data LedgerState = LedgerState
+  { lsConfig :: !(Ledger.ExtLedgerCfg (Cardano.HardForkBlock (Cardano.CardanoEras Cardano.StandardCrypto)))
+  , lsState :: !(Ledger.ExtLedgerState (Cardano.CardanoBlock Cardano.StandardCrypto))
+  }
 
-  ByronLedgerState
-    :: Genesis.Config
-    -> Ledger.LedgerState ByronBlock
-    -> LedgerState ByronEra
+data Config = Config
+  !Genesis.Config
+  -- !(Shelley.ShelleyGenesis StandardShelley)
+  -- !GenesisHashShelley
 
-  ShelleyLedgerState
-    :: Shelley.ShelleyLedgerConfig (ShelleyLedgerEra era)
-    -> ShelleyBasedEra era
-    -> Ledger.LedgerState (Shelley.ShelleyBlock (ShelleyLedgerEra era))
-    -> LedgerState era
-
--- TODO what do we wan to expose? Note that we already have some typed in
+-- TODO what do we want to expose? Note that we already have some typed in
 -- Cardano.Api.Query to handle UTxOs.
 --
 -- pattern LedgerState :: UTxO -> LedgerState ByronEra pattern LedgerState utxo
@@ -75,32 +97,22 @@ data LedgerState era where
 --     )
 --     -> utxo
 
-applyBlock :: forall era . LedgerState era -> Block era -> LedgerState era
-applyBlock ls apiBlock = case ls of
-  ByronLedgerState config byronLs -> case apiBlock of
-    Block.ByronBlock byronBlock -> ByronLedgerState config
-      $ either (error . show) id
-      $ runExcept
-      $ tickThenApply -- TODO validation check as is done in `Cardano.DbSync.LedgerState` `applyBlock`
-          config
-          byronBlock
-          byronLs
-    Block.ShelleyBlock _ _ -> undefined -- How do we apply a shelley block to a byron ledger state?
-  ShelleyLedgerState config lsEra shelleyLs -> case apiBlock of
-    Block.ByronBlock byronBlock -> undefined -- How do we apply a byron block to a shelley ledger state?
-    Block.ShelleyBlock blkEra shelleyBlock -> case lsEra of
-      ShelleyBasedEraMary -> undefined
-      ShelleyBasedEraShelley -> undefined
-      ShelleyBasedEraAllegra -> goShelley blkEra
-      where
-        goShelley :: (Shelley.ShelleyBasedEra (ShelleyLedgerEra era), IsShelleyBasedEra era) => ShelleyBasedEra era -> LedgerState era
-        goShelley era = ShelleyLedgerState config era
+applyBlock :: LedgerState -> Block era -> LedgerState
+applyBlock (LedgerState config extLS) block = case block of
+  ShelleyBlock shelleyEra shelleyBlock -> case shelleyEra of
+    ShelleyBasedEraShelley -> go (Cardano.BlockShelley shelleyBlock)
+    ShelleyBasedEraAllegra -> go (Cardano.BlockAllegra shelleyBlock)
+    ShelleyBasedEraMary -> go (Cardano.BlockMary shelleyBlock)
+  ByronBlock byronBlock -> go (Cardano.BlockByron byronBlock)
+  where
+    go :: Cardano.CardanoBlock Cardano.StandardCrypto -> LedgerState
+    go x = LedgerState config
             $ either (error . show) id
             $ runExcept
             $ tickThenApply -- TODO validation check as is done in `Cardano.DbSync.LedgerState` `applyBlock`
                 config
-                shelleyBlock
-                shelleyLs
+                x
+                extLS
 
   -- TODO Byron config
   --
@@ -150,29 +162,109 @@ applyBlock ls apiBlock = case ls of
   --
   --
 
+data GenesisError
+  = GenesisReadError !FilePath !Text
+  | GenesisHashMismatch !GenesisHashShelley !GenesisHashShelley -- actual, expected
+  | GenesisDecodeError !FilePath !Text
+
 -- | The easy way to get the initial ledger state. Adapte from `ouroboros-network/ouroboros-consensus-cardano/tools/db-analyser/Block/Byron.hs`
 initialLedgerState
   :: FilePath -- ^ The genesis config file. See `cardano-ledger-specs`'s `mainnet-genesis.json`.
   -- -> Maybe (Hash Raw)
   -> RequiresNetworkMagic
-  -> IO (LedgerState ByronEra)
+  -> ExceptT GenesisError IO LedgerState
 initialLedgerState configFile requiresNetworkMagic = do
-    let explicitGenesisHash = Nothing -- TODO make this a parameter?
+  let shellyGenesisFile :: FilePath
+      shellyGenesisFile = undefined
+  let explicitGenesisHash = Nothing -- TODO make this a parameter?
+
+
+  -- copied from readDbSyncNodeConfig / readCardanoGenesisConfig
+  undefined
+
+  -- Get the Shelley configuration
+  -- copied from readShelleyGenesisConfig
+  (shelleyGenesis, shelleyGenesisHash) <- do
+    -- copied from Cardano.DbSync.Config.Shelley.readGenesis
+    content <- handleIOExceptT (GenesisReadError shellyGenesisFile . Text.pack . show) $ BS.readFile shellyGenesisFile
+    let genesisHash = GenesisHashShelley (Crypto.hashWith id content)
+    -- TODO checkExpectedGenesisHash genesisHash
+    genesis <- firstExceptT (GenesisDecodeError shellyGenesisFile . Text.pack)
+                  . hoistEither
+                  $ Aeson.eitherDecodeStrict' @(Cardano.ShelleyGenesis Cardano.StandardShelley) content
+    return (genesis, genesisHash)
+
+  -- Get the Byron configuration
+  -- copied from readByronGenesisConfig
+  byronGenesis <- do
     genesisHash <- case explicitGenesisHash of
-      Nothing -> either (error . show) return =<< runExceptT
+      Nothing -> firstExceptT (GenesisReadError configFile . Text.pack . show)
         (Genesis.unGenesisHash . snd <$> Genesis.readGenesisData configFile)
       Just hash -> return hash
-    genesisConfig <- either (error . show) return =<< runExceptT
+    firstExceptT
+      (GenesisReadError configFile . Text.pack . show)
       (Genesis.mkConfigFromFile
         requiresNetworkMagic
         configFile
-        genesisHash)
-    return $ ByronLedgerState
-      genesisConfig
-      (Byron.initByronLedgerState
-                            genesisConfig
-                            Nothing -- don't override UTxO
+        genesisHash
       )
+
+
+  let -- See db-sync's `DbSyncNodeConfig`
+      dncPBftSignatureThreshold = undefined
+
+      dncByronProtocolVersion :: Cardano.Chain.Update.ProtocolVersion
+      dncByronProtocolVersion = undefined
+
+      dncByronSoftwareVersion = undefined
+      shelleyProtVer = Cardano.ProtVer
+                          (fromIntegral $ Cardano.Chain.Update.pvMajor dncByronProtocolVersion)
+                          (fromIntegral $ Cardano.Chain.Update.pvMinor dncByronProtocolVersion)
+      dncByronToShelley :: Cardano.ProtocolParamsTransition Byron.ByronBlock (Shelley.ShelleyBlock Cardano.StandardShelley)
+
+      -- TODO should these be loaded from a config file? See cardano-node/doc/getting-started/understanding-config-files.md
+      dncByronToShelley = Cardano.ProtocolParamsTransition $ Cardano.TriggerHardForkAtVersion 2
+      dncShelleyToAllegra = Cardano.ProtocolParamsTransition $ Cardano.TriggerHardForkAtVersion 3
+      dncAllegraToMary = Cardano.ProtocolParamsTransition $ Cardano.TriggerHardForkAtVersion 4
+
+      config = Ledger.ExtLedgerCfg
+        $ Consensus.pInfoConfig
+        $ Cardano.protocolInfo @IO
+        $ -- see cardano-db-sync/cardano-db-sync/src/Cardano/DbSync/Config/Cardano.hs `mkProtocolCardano`
+          Cardano.ProtocolCardano
+            Cardano.ProtocolParamsByron
+              { Cardano.byronGenesis = byronGenesis
+              , Cardano.byronPbftSignatureThreshold = Cardano.PBftSignatureThreshold <$> dncPBftSignatureThreshold
+              , Cardano.byronProtocolVersion = dncByronProtocolVersion
+              , Cardano.byronSoftwareVersion = dncByronSoftwareVersion
+              , Cardano.byronLeaderCredentials = Nothing
+              }
+            Cardano.ProtocolParamsShelleyBased
+              { Cardano.shelleyBasedGenesis = shelleyGenesis
+              , Cardano.shelleyBasedInitialNonce = Cardano.Nonce (Crypto.castHash . unGenesisHashShelley $ shelleyGenesisHash)
+              , Cardano.shelleyBasedLeaderCredentials = [] -- TODO is this correct?
+              }
+            Cardano.ProtocolParamsShelley
+              { Cardano.shelleyProtVer = shelleyProtVer
+              }
+            Cardano.ProtocolParamsAllegra
+              { Cardano.allegraProtVer = shelleyProtVer
+              }
+            Cardano.ProtocolParamsMary
+              { Cardano.maryProtVer = shelleyProtVer
+              }
+            dncByronToShelley
+            dncShelleyToAllegra
+            dncAllegraToMary
+  return (LedgerState config undefined)
+
+newtype GenesisHashByron = GenesisHashByron
+  { unGenesisHashByron :: Text
+  } deriving newtype (Eq, Show)
+
+newtype GenesisHashShelley = GenesisHashShelley
+  { unGenesisHashShelley :: Crypto.Hash Crypto.Blake2b_256 ByteString
+  } deriving newtype (Eq, Show)
 
 --Ouroboros.Consensus.Byron.Ledger.Ledger
 --
@@ -243,3 +335,28 @@ initialLedgerState configFile requiresNetworkMagic = do
 --     -- proposals.
 --     ByronTransitionInfo !(Map Update.ProtocolVersion BlockNo)
 --   deriving (Eq, Show, Generic, NoThunks)
+
+renderShelleyGenesisError :: GenesisError -> Text
+renderShelleyGenesisError sge =
+    case sge of
+      GenesisReadError fp err ->
+        mconcat
+          [ "There was an error reading the genesis file: ", Text.pack fp
+          , " Error: ", err
+          ]
+
+      GenesisHashMismatch actual expected ->
+        mconcat
+          [ "Wrong Shelley genesis file: the actual hash is ", renderHash actual
+          , ", but the expected Shelley genesis hash given in the node "
+          , "configuration file is ", renderHash expected, "."
+          ]
+
+      GenesisDecodeError fp err ->
+        mconcat
+          [ "There was an error parsing the genesis file: ", Text.pack fp
+          , " Error: ", err
+          ]
+  where
+    renderHash :: GenesisHashShelley -> Text
+    renderHash (GenesisHashShelley h) = Text.decodeUtf8 $ Base16.encode (Crypto.hashToBytes h)
