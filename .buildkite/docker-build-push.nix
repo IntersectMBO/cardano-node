@@ -47,6 +47,10 @@ in
     gitrev="${image.imageTag}"
 
     echo "Loading $fullrepo:$gitrev"
+    if [ ! -z "$event" ]
+    then
+      echo "Received GH Workflow event: $event"
+    fi
     docker load -i ${image}
 
     # If a release event, apply two tags to the image
@@ -64,6 +68,17 @@ in
       docker tag $fullrepo:$version $fullrepo:latest
       echo "Pushing $fullrepo:latest"
       docker push "$fullrepo:latest"
+
+    # GitHub workflows trigger on pushing a tag
+    elif [[ "$event" = push ]]; then
+      ref="''${GITHUB_REF:-}"
+      version="$(echo $ref | sed -e 's/refs\/tags\///')"
+
+      echo "Tagging with a version number: $fullrepo:$version"
+      docker tag $fullrepo:$gitrev $fullrepo:$version
+      echo "Pushing $fullrepo:$version"
+      docker push "$fullrepo:$version"
+
     # Every commit to master needs to be tagged with master
     elif [[ "$branch" = master ]]; then
       echo "Tagging as master"

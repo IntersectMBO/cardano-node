@@ -4,6 +4,9 @@ on:
   release:
     types:
       - published
+  push:
+    branches:
+      - refs/tags/*
 
 jobs:
     test-job:

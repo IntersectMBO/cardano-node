@@ -10,6 +10,7 @@ doc                          @docs-access
 README.*                     @docs-access
 
 .buildkite                   @devops
+.github                      @devops
 ci                           @devops
 configuration                @devops
 nix                          @devops
