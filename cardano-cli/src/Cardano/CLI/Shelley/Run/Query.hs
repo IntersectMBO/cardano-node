@@ -34,6 +34,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import qualified Control.State.Transition as STS
 
 import           Cardano.Api
+import           Cardano.Api.Block
 import           Cardano.Api.Byron
 import qualified Cardano.Api.IPC as NewIPC
 import           Cardano.Api.Modes (AnyConsensusMode (..), AnyConsensusModeParams (..), toEraInMode)
@@ -135,7 +136,7 @@ runQueryProtocolParameters anyEra@(AnyCardanoEra era) (AnyConsensusModeParams cM
                                         $ NewIPC.QueryInShelleyBasedEra sbe NewIPC.QueryProtocolParameters
 
   tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo (chainTipToChainPoint tip) qInMode
   case res of
     Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
     Right ePparams ->
@@ -198,7 +199,7 @@ runQueryUTxO anyEra@(AnyCardanoEra era) (AnyConsensusModeParams cModeParams)
   qInMode <- createQuery sbe eraInMode
 
   tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-  eUtxo <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+  eUtxo <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo (chainTipToChainPoint tip) qInMode
   case eUtxo of
     Left aF -> left $ ShelleyQueryCmdAcquireFailure aF
     Right eU -> case eU of
@@ -243,7 +244,7 @@ runQueryLedgerState anyEra@(AnyCardanoEra era) (AnyConsensusModeParams cModePara
                     $ NewIPC.QueryLedgerState
 
     tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-    res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+    res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo (chainTipToChainPoint tip) qInMode
     case res of
       Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
       Right eStakeDist ->
@@ -278,7 +279,7 @@ runQueryProtocolState anyEra@(AnyCardanoEra era) (AnyConsensusModeParams cModePa
 
 
     tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-    res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+    res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo (chainTipToChainPoint tip) qInMode
     case res of
       Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
       Right eStakeDist ->
@@ -319,7 +320,7 @@ runQueryStakeAddressInfo anyEra@(AnyCardanoEra era) (AnyConsensusModeParams cMod
 
 
   tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo (chainTipToChainPoint tip) qInMode
   case res of
     Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
     Right eDelegsAndRwds ->
@@ -509,7 +510,7 @@ runQueryStakeDistribution anyEra@(AnyCardanoEra era) (AnyConsensusModeParams cMo
                  in return $ NewIPC.QueryInEra eraInMode query
 
   tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
-  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo tip qInMode
+  res <- liftIO $ NewIPC.queryNodeLocalState localNodeConnInfo (chainTipToChainPoint tip) qInMode
   case res of
     Left acqFailure -> left $ ShelleyQueryCmdAcquireFailure acqFailure
     Right eStakeDist ->

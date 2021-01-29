@@ -254,13 +254,6 @@ data ChainPoint = ChainPointAtGenesis
                 | ChainPoint !SlotNo !(Hash BlockHeader)
   deriving (Eq, Show)
 
-instance ToJSON ChainPoint where
-  toJSON ChainPointAtGenesis = Aeson.String "Tip is currently at genesis block"
-  toJSON (ChainPoint slot headerHash) =
-    object [ "Slot Number" .= slot
-           , "Slot Header Hash" .= Text.decodeUtf8 (serialiseToRawBytesHex headerHash)
-           ]
-
 
 toConsensusPointInMode :: ConsensusMode mode
                        -> ChainPoint
@@ -335,6 +328,14 @@ fromConsensusPoint (Consensus.BlockPoint slot h) =
 data ChainTip = ChainTipAtGenesis
               | ChainTip !SlotNo !(Hash BlockHeader) !BlockNo
   deriving (Eq, Show)
+
+instance ToJSON ChainTip where
+  toJSON ChainTipAtGenesis = Aeson.String "Tip is currently at genesis block"
+  toJSON (ChainTip slot headerHash (Consensus.BlockNo bNum)) =
+    object [ "slotNo" .= slot
+           , "headerHash" .= Text.decodeUtf8 (serialiseToRawBytesHex headerHash)
+           , "blockNo" .= bNum
+           ]
 
 chainTipToChainPoint :: ChainTip -> ChainPoint
 chainTipToChainPoint ChainTipAtGenesis = ChainPointAtGenesis
