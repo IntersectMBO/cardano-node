@@ -52,6 +52,7 @@ module Cardano.Api.Shelley
     fromShelleyLovelace,
     toMaryValue,
     fromMaryValue,
+    calcMinimumDeposit,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.

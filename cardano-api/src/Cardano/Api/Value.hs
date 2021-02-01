@@ -21,6 +21,7 @@ module Cardano.Api.Value
   , valueToList
   , filterValue
   , negateValue
+  , calcMinimumDeposit
 
     -- ** Ada \/ Lovelace specifically
   , quantityToLovelace
@@ -66,6 +67,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
@@ -283,6 +285,11 @@ fromMaryValue (Mary.Value lovelace other) =
     fromMaryAssetName :: Mary.AssetName -> AssetName
     fromMaryAssetName (Mary.AssetName n) = AssetName n
 
+-- | Calculate cost of making a UTxO entry for a given 'Value' and
+-- mininimum UTxO value derived from the 'ProtocolParameters'
+calcMinimumDeposit :: Value -> Lovelace -> Lovelace
+calcMinimumDeposit v minUTxo =
+  fromShelleyLovelace $ Shelley.scaledMinDeposit (toMaryValue v) (toShelleyLovelace minUTxo)
 
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation
