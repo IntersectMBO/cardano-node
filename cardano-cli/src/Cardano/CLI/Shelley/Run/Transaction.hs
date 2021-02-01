@@ -31,6 +31,7 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Shelley
 import           Cardano.Api.TxInMode
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Node (sgProtocolParams)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
@@ -45,6 +46,9 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError(..),
+                                                  readShelleyGenesis,
+                                                  renderShelleyGenesisCmdError)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
@@ -80,6 +84,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdNotImplemented Text
   | ShelleyTxCmdWitnessEraMismatch AnyCardanoEra AnyCardanoEra WitnessFile
   | ShelleyTxCmdScriptLanguageNotSupportedInEra AnyScriptLanguage AnyCardanoEra
+  | ShelleyTxCmdGenesisCmdError !ShelleyGenesisCmdError
   deriving Show
 
 data SomeTxBodyError where
@@ -160,6 +165,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
        "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
        ") is not supported in the " <> renderMode mode <> " consensus mode."
+    ShelleyTxCmdGenesisCmdError e -> renderShelleyGenesisCmdError e
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -201,9 +207,9 @@ runTransactionCmd cmd =
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
       runTxSubmit anyConensusModeParams network txFp
-    TxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
+    TxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
-      runTxCalculateMinFee txbody mnw pParamsFile nInputs nOutputs
+      runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                            nShelleyKeyWitnesses nByronKeyWitnesses
     TxGetTxId txinfile ->
       runTxGetTxId txinfile
@@ -532,13 +538,17 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
 runTxCalculateMinFee
   :: TxBodyFile
   -> Maybe NetworkId
-  -> ProtocolParamsFile
+  -> Either GenesisFile ProtocolParamsFile
+     -- ^ We allow an appropriately forewarned user to obtain protocol params
+     --   directly from the genesis file, which allows them to avoid running
+     --   the node in case they would like to estimate the fee using the
+     --   blockchain's initial protocol parameters.
   -> TxInCount
   -> TxOutCount
   -> TxShelleyWitnessCount
   -> TxByronWitnessCount
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
+runTxCalculateMinFee (TxBodyFile txbodyFile) nw pGenesisOrParamsFile
                      (TxInCount nInputs) (TxOutCount nOutputs)
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
@@ -548,7 +558,13 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pParamsFile
           onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions"
       =<< readFileTxBody txbodyFile
 
-    pparams <- readProtocolParameters pParamsFile
+    pparams <-
+      either
+        (fmap (fromShelleyPParams . sgProtocolParams)
+         . firstExceptT ShelleyTxCmdGenesisCmdError
+         . flip readShelleyGenesis identity . unGenesisFile)
+        readProtocolParameters
+        pGenesisOrParamsFile
 
     let tx = makeSignedTransaction [] txbody
         Lovelace fee = estimateTransactionFee

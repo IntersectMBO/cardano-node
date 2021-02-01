@@ -190,7 +190,7 @@ data TransactionCmd
   | TxCalculateMinFee
       TxBodyFile
       (Maybe NetworkId)
-      ProtocolParamsFile
+      (Either GenesisFile ProtocolParamsFile)
       TxInCount
       TxOutCount
       TxShelleyWitnessCount
