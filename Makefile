@@ -36,6 +36,12 @@ test-chairmans-cluster:
 profiles:
 	@jq . $$(nix-build -A profiles)
 
+setup:
+	sed -ni '1,/--- 8< ---/ p' cabal.project
+
+cli node:
+	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
+
 BENCH_REPEATS ?= 3
 BENCH_CONFIG ?= both
 BENCH_TAG ?= HEAD
@@ -56,4 +62,7 @@ clean: clean-profile
 full-clean: clean
 	rm -rf db dist-newstyle .stack-work $(shell find . -name '*~' -or -name '*.swp')
 
-.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean
+cls:
+	echo -en "\ec"
+
+.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean cls
