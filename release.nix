@@ -24,6 +24,12 @@
 # The systems used for cross-compiling (default: linux)
 , supportedCrossSystems ? [ (builtins.head supportedSystems) ]
 
+# Build for linux
+, linuxBuild ? builtins.elem "x86_64-linux" supportedSystems
+
+# Build for macos
+, macosBuild ? builtins.elem "x86_64-darwin" supportedSystems
+
 # Cross compilation to Windows is currently only supported on linux.
 , windowsBuild ? builtins.elem "x86_64-linux" supportedCrossSystems
 
@@ -37,27 +43,41 @@
 , pkgs ? import ./nix { inherit sourcesOverride; }
 
 }:
-
-with (import pkgs.iohkNix.release-lib) {
-  inherit pkgs;
-  inherit supportedSystems supportedCrossSystems scrubJobs projectArgs;
-  packageSet = import cardano-node;
-  gitrev = cardano-node.rev;
-};
-
 with pkgs.lib;
 
 let
+  linuxRelease = (import pkgs.iohkNix.release-lib) {
+    inherit pkgs;
+    supportedSystems = [ "x86_64-linux" ];
+    supportedCrossSystems = filter (s: s == "x86_64-linux" && windowsBuild) supportedCrossSystems;
+    inherit scrubJobs projectArgs;
+    packageSet = import cardano-node;
+    gitrev = cardano-node.rev;
+  };
+  macosRelease = (import pkgs.iohkNix.release-lib) {
+    inherit pkgs;
+    supportedSystems = [ "x86_64-darwin" ];
+    supportedCrossSystems = filter (s: s == "x86_64-darwin" && windowsBuild) supportedCrossSystems;
+    inherit scrubJobs projectArgs;
+    packageSet = import cardano-node;
+    gitrev = cardano-node.rev;
+  };
+  windowsRelease = if (elem "x86_64-linux" supportedCrossSystems) then linuxRelease else macosRelease;
+  archs = filterAttrs (n: _: elem n supportedSystems) {
+    x86_64-linux = linuxRelease.pkgsFor "x86_64-linux";
+    x86_64-darwin = macosRelease.pkgsFor "x86_64-darwin";
+  };
   makeScripts = cluster: let
-    getScript = name: {
-      x86_64-linux = (pkgsFor "x86_64-linux").scripts.${cluster}.${name};
-      x86_64-darwin = (pkgsFor "x86_64-darwin").scripts.${cluster}.${name};
-    };
+    getScript = name: optionalAttrs linuxBuild {
+      x86_64-linux = archs.x86_64-linux.scripts.${cluster}.${name};
+    } // (optionalAttrs macosBuild {
+      x86_64-darwin = archs.x86_64-darwin.scripts.${cluster}.${name};
+    });
   in {
     node = getScript "node";
   };
   dockerImageArtifact = let
-    image = (pkgsFor (builtins.head  supportedSystems)).dockerImage;
+    image = archs.${builtins.head supportedSystems}.dockerImage;
     wrapImage = image: pkgs.runCommand "${image.name}-hydra" {} ''
       mkdir -pv $out/nix-support/
       cat <<EOF > $out/nix-support/hydra-build-products
@@ -68,7 +88,7 @@ let
   mkPins = inputs: pkgs.runCommand "ifd-pins" {} ''
     mkdir $out
     cd $out
-    ${lib.concatMapStringsSep "\n" (input: "ln -sv ${input.value} ${input.key}") (lib.attrValues (lib.mapAttrs (key: value: { inherit key value; }) inputs))}
+    ${concatMapStringsSep "\n" (input: "ln -sv ${input.value} ${input.key}") (attrValues (mapAttrs (key: value: { inherit key value; }) inputs))}
   '';
   makeRelease = cluster: {
     name = cluster;
@@ -76,18 +96,14 @@ let
       scripts = makeScripts cluster;
     };
   };
+
+  # Environments we want to build scripts for on hydra
+  environments = [ "mainnet" "testnet" "staging" "shelley_qa" "launchpad" "allegra" ];
+
   extraBuilds = {
     # Environments listed in Network Configuration page
     cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet launchpad allegra; };
-  } // (builtins.listToAttrs (map makeRelease [
-    # Environments we want to build scripts for on hydra
-    "mainnet"
-    "testnet"
-    "staging"
-    "shelley_qa"
-    "launchpad"
-    "allegra"
-  ]));
+  } // (builtins.listToAttrs (map makeRelease environments));
 
   # restrict supported systems to a subset where tests (if exist) are required to pass:
   testsSupportedSystems = intersectLists supportedSystems [ "x86_64-linux" "x86_64-darwin" ];
@@ -110,11 +126,11 @@ let
   noCrossBuild = [
     ["shell"] ["cardano-ping"] ["roots"]
   ] ++ onlyBuildOnDefaultSystem;
-  noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ]
+  noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ["plan-nix"] ]
     ++ noCrossBuild;
 
   # Remove build jobs for which cross compiling does not make sense.
-  filterProject = noBuildList: mapAttrsRecursiveCond (a: !(isDerivation a)) (path: value:
+  filterProject = noBuildList: project: mapAttrsRecursiveCond (a: !(isDerivation a)) (path: value:
     if (isDerivation value && (any (p: take (length p) path == p) noBuildList)) then null
     else value
   ) project;
@@ -125,47 +141,67 @@ let
 
   jobs = {
     inherit dockerImageArtifact;
-    native =
-      let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
-        if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
-        (packagePlatforms project);
-      in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
-    musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterProject noMusl64Build));
     ifd-pins = mkPins {
       inherit (sources) iohk-nix "haskell.nix";
       inherit nixpkgs;
       inherit (pkgs.haskell-nix) hackageSrc stackageSrc;
     };
+  } // (optionalAttrs linuxBuild (with linuxRelease; {
+    linux =
+      let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
+        if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
+        (packagePlatforms project);
+      in {
+        native = mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds);
+        # linux static builds:
+        musl64 = mapTestOnCross musl64 (packagePlatformsCross (filterProject noMusl64Build project));
+      };
+    cardano-node-linux = import ./nix/binary-release.nix {
+      inherit (linuxRelease) pkgs project;
+      platform = "linux";
+      exes = collectJobs jobs.linux.musl64.exes;
+    };
+  })) // (optionalAttrs macosBuild (with macosRelease; {
+    macos =
+      let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
+        if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
+        (packagePlatforms project);
+      in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
     cardano-node-macos = import ./nix/binary-release.nix {
       inherit pkgs project;
       platform = "macos";
-      exes = filter (p: p.system == "x86_64-darwin") (collectJobs jobs.native.exes);
+      exes = collectJobs jobs.macos.exes;
     };
-    cardano-node-linux = import ./nix/binary-release.nix {
-      inherit pkgs project;
-      platform = "linux";
-      exes = filter (p: p.system == "x86_64-linux") (collectJobs jobs.musl64.exes);
-    };
-  } // (optionalAttrs windowsBuild {
-    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross (filterProject noCrossBuild));
+  })) // (optionalAttrs windowsBuild (with windowsRelease; {
+    windows = mapTestOnCross mingwW64 (packagePlatformsCross (filterProject noCrossBuild project));
     cardano-node-win64 = import ./nix/binary-release.nix {
       inherit pkgs project;
       platform = "win64";
-      exes = collectJobs jobs.${mingwW64.config}.exes;
+      exes = collectJobs jobs.windows.exes;
     };
-  }) // extraBuilds // (mkRequiredJob (concatLists [
-      (collectJobs jobs.native.checks)
-      (collectJobs jobs.native.nixosTests)
-      (collectJobs jobs.native.benchmarks)
-      (collectJobs jobs.native.exes)
-      (optional windowsBuild jobs.cardano-node-win64)
-      (optionals windowsBuild (collectJobs jobs.${mingwW64.config}.checks))
-      (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) [ "mainnet" "testnet" "staging" "shelley_qa" "launchpad" "allegra" ])
-      [
-        jobs.cardano-node-linux
-        jobs.cardano-node-macos
-        jobs.dockerImageArtifact
-      ]
-    ]));
+  })) // extraBuilds // (linuxRelease.mkRequiredJob (concatLists [
+    # Linux builds:
+    (optionals linuxBuild (concatLists [
+      (collectJobs jobs.linux.native.checks)
+      (collectJobs jobs.linux.native.nixosTests)
+      (collectJobs jobs.linux.native.benchmarks)
+      (collectJobs jobs.linux.native.exes)
+      [ jobs.cardano-node-linux ]
+    ]))
+    # macOS builds:
+    (optionals macosBuild (concatLists [
+      (collectJobs jobs.macos.checks)
+      (collectJobs jobs.macos.nixosTests)
+      (collectJobs jobs.macos.benchmarks)
+      (collectJobs jobs.macos.exes)
+      [ jobs.cardano-node-macos ]
+    ]))
+    # Windows builds:
+    (optional windowsBuild jobs.cardano-node-win64)
+    (optionals windowsBuild (collectJobs jobs.windows.checks))
+    # Default system builds (linux on hydra):
+    (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) environments)
+    [ jobs.dockerImageArtifact ]
+  ]));
 
 in jobs
