@@ -6,15 +6,18 @@ module Cardano.Api.SerialiseRaw
   ( SerialiseAsRawBytes(..)
   , serialiseToRawBytesHex
   , deserialiseFromRawBytesHex
+  , serialiseToRawBytesHexText
   , UsingRawBytesHex(..)
   ) where
 
 import           Prelude
 
-import           Data.String (IsString(..))
-import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BSC
+import           Data.String (IsString (..))
+import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api.HasTypeProxy
 
@@ -27,6 +30,9 @@ class HasTypeProxy a => SerialiseAsRawBytes a where
 
 serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
 serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
+
+serialiseToRawBytesHexText :: SerialiseAsRawBytes a => a -> Text
+serialiseToRawBytesHexText = Text.decodeUtf8 . serialiseToRawBytesHex
 
 deserialiseFromRawBytesHex :: SerialiseAsRawBytes a
                            => AsType a -> ByteString -> Maybe a

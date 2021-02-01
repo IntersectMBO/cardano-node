@@ -347,6 +347,7 @@ module Cardano.Api (
     deserialiseFromRawBytes,
     serialiseToRawBytesHex,
     deserialiseFromRawBytesHex,
+    serialiseToRawBytesHexText,
 
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded

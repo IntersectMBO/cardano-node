@@ -20,15 +20,15 @@ module Cardano.Api.TxInMode (
 
 import           Prelude
 
-import           Data.SOP.Strict (NS(Z, S))
+import           Data.SOP.Strict (NS (S, Z))
 
-import qualified Ouroboros.Consensus.HardFork.Combinator    as Consensus
+import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch) 
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
-import qualified Ouroboros.Consensus.Byron.Ledger           as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger         as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block          as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes

@@ -100,7 +100,7 @@ instance Key ByronKey where
 
     newtype VerificationKey ByronKey =
            ByronVerificationKey Byron.VerificationKey
-      deriving stock (Eq)
+      deriving stock Eq
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKey)
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR

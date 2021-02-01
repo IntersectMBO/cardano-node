@@ -27,6 +27,7 @@ library
                         Cardano.Api.Eras
                         Cardano.Api.LocalChainSync
                         Cardano.Api.Modes
+                        Cardano.Api.Orphans
                         Cardano.Api.Protocol
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Protocol.Byron
@@ -123,6 +124,7 @@ library
                       , scientific
                       , serialise
                       , shelley-spec-ledger
+                      , small-steps
                       , stm
                       , text
                       , time

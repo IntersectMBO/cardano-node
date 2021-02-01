@@ -37,6 +37,7 @@ import           Ouroboros.Consensus.Cardano.Condense ()
 
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
+import           Cardano.Api.Orphans ()
 import           Cardano.Node.Types
 
 import           Cardano.Tracing.OrphanInstances.Byron ()

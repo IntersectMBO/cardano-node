@@ -24,8 +24,8 @@ import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
-                     VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
-                     deserialiseInput, renderInputDecodeError)
+                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
+                   deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
 import           Control.Monad.Fail (fail)
 import           Data.Attoparsec.Combinator ((<?>))
@@ -1541,7 +1541,7 @@ parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txid (TxIx txix)) =
   mconcat
-    [ Text.decodeUtf8 (serialiseToRawBytesHex txid)
+    [ serialiseToRawBytesHexText txid
     , "#"
     , Text.pack (show txix)
     ]

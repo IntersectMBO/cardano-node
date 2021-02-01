@@ -354,7 +354,7 @@ instance IsCardanoEra era => SerialiseAsRawBytes (AddressInEra era) where
     serialiseToRawBytes (AddressInEra ShelleyAddressInEra{} addr) =
       serialiseToRawBytes addr
 
-    deserialiseFromRawBytes _ bs = do
+    deserialiseFromRawBytes _ bs =
       anyAddressInEra cardanoEra =<< deserialiseFromRawBytes AsAddressAny bs
 
 instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where

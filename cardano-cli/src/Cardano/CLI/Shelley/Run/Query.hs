@@ -31,7 +31,6 @@ import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
-import qualified Control.State.Transition as STS
 
 import           Cardano.Api
 import           Cardano.Api.Block
@@ -53,7 +52,6 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
-import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
@@ -62,7 +60,6 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                      (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
-import qualified Shelley.Spec.Ledger.LedgerState as Ledger
 import           Shelley.Spec.Ledger.Scripts ()
 
 {- HLINT ignore "Reduce duplication" -}
@@ -92,8 +89,8 @@ renderShelleyQueryCmdError err =
       "Consensus mode and era mismatch. Consensus mode: " <> show cMode <>
       " Era: " <> show era
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
-      "An error mismatch occured. Specified query era: " <> queryEra <>
-      "Current ledger era: " <> ledgerEra
+      "\nAn error mismatch occured." <> "\nSpecified query era: " <> queryEra <>
+      "\nCurrent ledger era: " <> ledgerEra
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -166,10 +163,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
     tip <- liftIO $ NewIPC.getLocalChainTip localNodeConnInfo
 
-    let output = case NewIPC.localConsensusMode localNodeConnInfo of
-                   Mode.ByronMode   -> encodePretty tip
-                   Mode.ShelleyMode -> encodePretty tip
-                   Mode.CardanoMode -> encodePretty tip
+    let output = encodePretty tip
 
     case mOutFile of
       Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
@@ -368,14 +362,12 @@ writeStakeAddressInfo mOutFile delegsAndRewards =
 
 writeLedgerState :: forall era ledgerera.
                     ShelleyLedgerEra era ~ ledgerera
-                 => Ledger.UsesTxOut ledgerera
-                 => ToJSON (Ledger.NewEpochState ledgerera)
-                 => FromCBOR (STS.State (Ledger.EraRule "PPUP" ledgerera))
-                 => Ledger.ShelleyBased ledgerera
+                 => ToJSON (Query.LedgerState era)
+                 => FromCBOR (Query.LedgerState era)
                  => Maybe OutputFile
-                 -> Query.LedgerState era
+                 -> Query.SerialisedLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
-writeLedgerState mOutFile qState@(Query.LedgerState serLedgerState) =
+writeLedgerState mOutFile qState@(Query.SerialisedLedgerState serLedgerState) =
   case mOutFile of
     Nothing -> case decodeLedgerState qState of
                  Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
@@ -385,9 +377,10 @@ writeLedgerState mOutFile qState@(Query.LedgerState serLedgerState) =
         $ LBS.writeFile fpath $ unSerialised serLedgerState
  where
    decodeLedgerState
-     :: Query.LedgerState era
-     -> Either LBS.ByteString (Ledger.NewEpochState ledgerera)
-   decodeLedgerState (Query.LedgerState (Serialised ls)) = first (const ls) (decodeFull ls)
+     :: Query.SerialisedLedgerState era
+     -> Either LBS.ByteString (Query.LedgerState era)
+   decodeLedgerState (Query.SerialisedLedgerState (Serialised ls)) =
+     first (const ls) (decodeFull ls)
 
 
 writeProtocolState :: Crypto.Crypto StandardCrypto
@@ -589,9 +582,8 @@ obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> ((Ledger.ShelleyBased ledgerera
-      , ToJSON (Ledger.NewEpochState ledgerera)
-      , Ledger.UsesTxOut ledgerera
-      , FromCBOR (STS.State (Ledger.EraRule "PPUP" ledgerera))
+      , ToJSON (Query.LedgerState era)
+      , FromCBOR (Query.LedgerState era)
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f

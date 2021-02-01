@@ -23,7 +23,6 @@ import           Cardano.Prelude
 import           Data.Aeson (ToJSONKey (..), ToJSONKeyFunction (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
-import qualified Data.ByteString.Base16 as B16
 import qualified Data.HashMap.Strict as HMS
 import           Data.Scientific (Scientific)
 import qualified Data.Set as Set
@@ -51,7 +50,6 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Core
-import qualified Cardano.Ledger.Mary.Value as MA
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Cardano.Ledger.Torsor as Core
@@ -59,7 +57,6 @@ import qualified Cardano.Ledger.Torsor as Core
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import           Shelley.Spec.Ledger.Coin (DeltaCoin (..))
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
 import           Shelley.Spec.Ledger.STS.Bbody
@@ -408,29 +405,6 @@ instance ( ShelleyBasedEra era
              , "network" .= network
              , "addrs"   .= addrs
              ]
-
-instance ToJSON (MA.Value era) where
-  toJSON (MA.Value l ps) =
-    Aeson.object
-      [ "lovelace" .= toJSON l
-      , "policies" .= toJSON ps
-      ]
-
-instance ToJSON (MA.PolicyID era) where
-  toJSON (MA.PolicyID (ScriptHash h)) = Aeson.String (hashToTextAsHex h)
-
-instance ToJSONKey (MA.PolicyID era) where
-  toJSONKey = ToJSONKeyText render (Aeson.text . render)
-    where
-      render (MA.PolicyID (ScriptHash h)) = hashToTextAsHex h
-
-instance ToJSON MA.AssetName where
-  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . MA.assetName
-
-instance ToJSONKey MA.AssetName where
-  toJSONKey = ToJSONKeyText render (Aeson.text . render)
-    where
-      render = Text.decodeLatin1 . B16.encode . MA.assetName
 
 instance ToJSON MA.ValidityInterval where
   toJSON vi =
@@ -821,7 +795,7 @@ deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash c
 
 deriving instance Core.Crypto crypto => ToJSON (TxIn crypto)
 deriving newtype instance ToJSON (TxId crypto)
-deriving newtype instance ToJSON DeltaCoin
+
 instance Core.Crypto crypto => ToJSONKey (TxIn crypto) where
   toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
 
@@ -830,13 +804,6 @@ txInToText (TxIn (TxId txidHash) ix) =
   hashToText txidHash
     <> Text.pack "#"
     <> Text.pack (show ix)
-
-instance (ShelleyBasedEra era, ToJSON (Core.Value era)) => ToJSON (TxOut era) where
-  toJSON (TxOut addr amount) =
-    Aeson.object
-      [ "address" .= addr
-      , "amount" .= amount
-      ]
 
 hashToText :: Crypto.Hash crypto a -> Text
 hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex

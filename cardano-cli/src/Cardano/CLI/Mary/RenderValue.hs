@@ -19,7 +19,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api (AssetId (..), AssetName (..), PolicyId (..), Quantity, Value,
-                     serialiseToRawBytesHex, valueToList)
+                   serialiseToRawBytesHexText, valueToList)
 
 -- | Whether the ADA asset ID should be rendered.
 data RenderAdaAssetId
@@ -95,8 +95,7 @@ renderIndentation IndentTab = "\t"
 renderIndentation (IndentSpaces n) = Text.replicate n " "
 
 renderPolicyId :: PolicyId -> Text
-renderPolicyId (PolicyId scriptHash) =
-  Text.decodeUtf8 (serialiseToRawBytesHex scriptHash)
+renderPolicyId (PolicyId scriptHash) = serialiseToRawBytesHexText scriptHash
 
 renderAssetId :: RenderAdaAssetId -> AssetId -> Text
 renderAssetId RenderAdaAssetId AdaAssetId = "lovelace"
