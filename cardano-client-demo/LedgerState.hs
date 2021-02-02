@@ -47,7 +47,7 @@ main = do
   -- Get socket path from CLI argument.
   configFilePath : socketDir : _ <- getArgs
   let socketPath = socketDir </> "node.sock"
-  ledgerState <- initialLedgerState configFilePath RequiresMagic
+  ledgerState <- initialLedgerState configFilePath
 
   -- Connect to the node.
   putStrLn $ "Connecting to socket: " <> socketPath
@@ -66,7 +66,7 @@ main = do
   protocols :: LedgerState -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
   protocols ledgerState =
       IPC.LocalNodeClientProtocols {
-        IPC.localChainSyncClient    = Just (Right (chainSyncClient ledgerState)),
+        IPC.localChainSyncClient    = IPC.LocalChainSyncClient (chainSyncClient ledgerState),
         IPC.localTxSubmissionClient = Nothing,
         IPC.localStateQueryClient   = Nothing
       }

@@ -43,8 +43,8 @@ executable scan-blocks-pipelined
 
   default-language:    Haskell2010
 
-executable cardano-client-demo-ledger-state
-  main-is:             MainLedgerState.hs
+executable ledger-state
+  main-is:             LedgerState.hs
   other-modules:       NewApiStuff
   build-depends:       base,
                        aeson,
@@ -57,16 +57,19 @@ executable cardano-client-demo-ledger-state
                        time,
                        transformers-except,
 
+                       cryptonite,
                        cardano-api,
                        cardano-binary,
                        cardano-crypto-class,
                        cardano-crypto-wrapper,
                        cardano-ledger,
+                       cardano-node,
                        ouroboros-network,
                        ouroboros-consensus,
                        ouroboros-consensus-cardano,
                        ouroboros-consensus-byron,
                        ouroboros-consensus-shelley,
+                       shelley-spec-ledger,
                        typed-protocols,
 
   default-language:    Haskell2010
