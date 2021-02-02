@@ -43,6 +43,8 @@ import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
+import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined (TraceChainSyncClientReqRsp,
+                     TraceChainSyncClientTag (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
@@ -57,6 +59,7 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
                      WithIPList (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
+import           Ouroboros.Network.Util.TaggedObserve
 
 import qualified Ouroboros.Network.Diffusion as ND
 
@@ -145,6 +148,9 @@ instance HasPrivacyAnnotation (TraceKeepAliveClient remotePeer)
 instance HasSeverityAnnotation (TraceKeepAliveClient remotePeer) where
   getSeverityAnnotation _ = Info
 
+instance HasPrivacyAnnotation (TraceChainSyncClientReqRsp remotePeer)
+instance HasSeverityAnnotation (TraceChainSyncClientReqRsp remotePeer) where
+  getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
 instance HasSeverityAnnotation (WithAddr addr ErrorPolicyTrace) where
@@ -365,6 +371,12 @@ instance Show addr
       => HasTextFormatter (TraceKeepAliveClient addr) where
     formatText a _ = pack (show a)
 
+instance Show remotePeer => Transformable Text IO (TraceChainSyncClientReqRsp remotePeer) where
+  trTransformer = trStructuredText
+instance Show addr
+      => HasTextFormatter (TraceChainSyncClientReqRsp addr) where
+    formatText (TOEnd tag _ (Just delta))  _ = pack (show tag ++ " sample " ++ show delta)
+    formatText _ _ = ""
 
 instance Show addr => Transformable Text IO (WithAddr addr ErrorPolicyTrace) where
   trTransformer = trStructuredText
@@ -801,6 +813,22 @@ instance Show remotePeer => ToObject (TraceKeepAliveClient remotePeer) where
 
       dTime :: Time -> Double
       dTime (Time d) = realToFrac d
+
+instance Show remotePeer => ToObject (TraceChainSyncClientReqRsp remotePeer) where
+  toObject _verb (TOEnd (IntersectTag peer) _ (Just delta)) =
+    mkObject
+      [ "kind" .= String "TraceChainSyncClientReqRspIntersect"
+      , "peer" .= show peer
+      , "sample" .= delta
+      ]
+  toObject _verb (TOEnd (NextTag peer) _ (Just delta)) =
+    mkObject
+      [ "kind" .= String "TraceChainSyncClientReqRspNext"
+      , "peer" .= show peer
+      , "sample" .= delta
+      ]
+  toObject _verb _ = emptyObject
+
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
   toObject _verb (WithAddr addr ev) =
