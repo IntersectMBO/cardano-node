@@ -539,11 +539,19 @@ pTransaction =
     TxCalculateMinFee
       <$> pTxBodyFile Input
       <*> optional pNetworkId
-      <*> pProtocolParamsFile
+      <*> pProtocolParamsSourceSpec
       <*> pTxInCount
       <*> pTxOutCount
       <*> pTxShelleyWitnessCount
       <*> pTxByronWitnessCount
+
+  pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
+  pProtocolParamsSourceSpec =
+    ParamsFromGenesis <$>
+      pGenesisFile
+        "[TESTING] The genesis file to take initial protocol parameters from.  For test clusters only, since the parameters are going to be obsolete for production clusters."
+    <|>
+    ParamsFromFile <$> pProtocolParamsFile
 
   pTransactionId  :: Parser TransactionCmd
   pTransactionId = TxGetTxId <$> (Left  <$> pTxBodyFile Input
@@ -857,7 +865,7 @@ pGenesisCmd =
 
     pGenesisHash :: Parser GenesisCmd
     pGenesisHash =
-      GenesisHashFile <$> pGenesisFile
+      GenesisHashFile <$> pGenesisFile "The genesis file."
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -1197,13 +1205,13 @@ pEpochNoUpdateProp =
       <> Opt.help "The epoch number in which the update proposal is valid."
       )
 
-pGenesisFile :: Parser GenesisFile
-pGenesisFile =
+pGenesisFile :: String -> Parser GenesisFile
+pGenesisFile desc =
   GenesisFile <$>
     Opt.strOption
       (  Opt.long "genesis"
       <> Opt.metavar "FILE"
-      <> Opt.help "The genesis file."
+      <> Opt.help desc
       <> Opt.completer (Opt.bashCompleter "file")
       )
 

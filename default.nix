@@ -81,6 +81,8 @@ let
       };
     };
 
+    profiles = (mkCluster {}).profilesJSON;
+
     shell = import ./shell.nix {
       inherit pkgs;
       withHoogle = true;

@@ -6,17 +6,22 @@
 , stateDir ? "./state-cluster"
 , extraSupervisorConfig ? {}
 ##
-, profileName ? "default"
+, profileName ? "default-mary"
 , profileOverride ? {}
 , ...
 }:
 let
-  profiles = pkgs.callPackage ./profiles.nix
+  profilesJSON = pkgs.callPackage ./profiles.nix
     { inherit
       lib;
     };
+  profiles = __fromJSON (__readFile profilesJSON);
+
   profile = lib.recursiveUpdate profiles."${profileName}" profileOverride;
-  inherit (profile) composition monetary;
+  inherit (profile) era composition monetary;
+
+  profileDump = pkgs.writeText "profile-${profile.name}.json"
+    (__toJSON profile);
 
   ## This yields two attributes: 'params' and 'files'
   genesis = pkgs.callPackage ./genesis.nix
@@ -30,7 +35,11 @@ let
       ;
     };
 
-  baseEnvConfig = pkgs.callPackage ./base-env.nix { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig; inherit stateDir; };
+  baseEnvConfig = pkgs.callPackage ./base-env.nix
+    { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig;
+      inherit stateDir;
+      inherit (profile) era;
+    };
   mkStartScript = envConfig: let
     systemdCompat.options = {
       systemd.services = lib.mkOption {};
@@ -61,7 +70,7 @@ let
         addr = "127.0.0.1";
         port = p;
         valency = 1;
-      }) (lib.filter (p: p != selfPort) (lib.genList (i: basePort + i + 1) (composition.numBft + composition.numPools)));
+      }) (lib.filter (p: p != selfPort) (lib.genList (i: basePort + i + 1) (composition.n_bft_hosts + composition.n_pools)));
   };
   supervisorConfig = pkgs.writeText "supervisor.conf" (pkgs.commonLib.supervisord.writeSupervisorConfig ({
     supervisord = {
@@ -93,7 +102,7 @@ let
       stdout_logfile = "${stateDir}/bft${toString i}.stdout";
       stderr_logfile = "${stateDir}/bft${toString i}.stderr";
     }
-  ) (lib.genList (i: i + 1) composition.numBft))
+  ) (lib.genList (i: i + 1) composition.n_bft_hosts))
   // lib.listToAttrs (map (i:
     lib.nameValuePair "program:pool${toString i}" {
       command = let
@@ -104,7 +113,7 @@ let
           topology = __toFile "topology.yaml" (__toJSON (topologyFile port));
           socketPath = "${stateDir}/pool${toString i}.socket";
           dbPrefix = "db-pool${toString i}";
-          port = basePort + composition.numBft + i;
+          port = basePort + composition.n_bft_hosts + i;
           nodeConfigFile = "${stateDir}/config.json";
         };
         script = mkStartScript envConfig;
@@ -112,7 +121,7 @@ let
       stdout_logfile = "${stateDir}/pool${toString i}.stdout";
       stderr_logfile = "${stateDir}/pool${toString i}.stderr";
     }
-  ) (lib.genList (i: i + 1) composition.numPools))
+  ) (lib.genList (i: i + 1) composition.n_pools))
   // {
     "program:webserver" = {
       command = "${pkgs.python3}/bin/python -m http.server ${toString basePort}";
@@ -123,6 +132,7 @@ let
   path = lib.makeBinPath [ cardano-cli bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
 
   start = pkgs.writeScriptBin "start-cluster" ''
+    echo "Profile '${profile.name}' dump in: ${profileDump}"
     set -euo pipefail
     if [ -f ${stateDir}/supervisord.pid ]
     then
@@ -132,9 +142,10 @@ let
     ${pkgs.python3Packages.supervisor}/bin/supervisord --config ${supervisorConfig} $@
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
     echo "Transfering genesis funds to pool owners, register pools and delegations"
-    cardano-cli transaction submit --shelley-mode \
+    cardano-cli transaction submit \
+      --cardano-mode \
       --tx-file ${stateDir}/shelley/transfer-register-delegate-tx.tx \
-      --testnet-magic ${toString genesis.params.networkMagic}
+      --testnet-magic ${toString genesis.params.network_magic}
     sleep 5
     echo 'Cluster started. Run `stop-cluster` to stop'
   '';
@@ -150,4 +161,4 @@ let
     fi
   '';
 
-in { inherit baseEnvConfig start stop profile genesis; }
+in { inherit baseEnvConfig start stop profilesJSON profile genesis; }

@@ -8,7 +8,8 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.CLI.Shelley.Run.Genesis
-  ( ShelleyGenesisCmdError
+  ( ShelleyGenesisCmdError(..)
+  , readShelleyGenesis
   , renderShelleyGenesisCmdError
   , runGenesisCmd
   ) where
