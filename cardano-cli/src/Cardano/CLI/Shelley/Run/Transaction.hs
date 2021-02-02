@@ -538,17 +538,13 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
 runTxCalculateMinFee
   :: TxBodyFile
   -> Maybe NetworkId
-  -> Either GenesisFile ProtocolParamsFile
-     -- ^ We allow an appropriately forewarned user to obtain protocol params
-     --   directly from the genesis file, which allows them to avoid running
-     --   the node in case they would like to estimate the fee using the
-     --   blockchain's initial protocol parameters.
+  -> ProtocolParamsSourceSpec
   -> TxInCount
   -> TxOutCount
   -> TxShelleyWitnessCount
   -> TxByronWitnessCount
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinFee (TxBodyFile txbodyFile) nw pGenesisOrParamsFile
+runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
                      (TxInCount nInputs) (TxOutCount nOutputs)
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
@@ -559,12 +555,12 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw pGenesisOrParamsFile
       =<< readFileTxBody txbodyFile
 
     pparams <-
-      either
-        (fmap (fromShelleyPParams . sgProtocolParams)
-         . firstExceptT ShelleyTxCmdGenesisCmdError
-         . flip readShelleyGenesis identity . unGenesisFile)
-        readProtocolParameters
-        pGenesisOrParamsFile
+      case protocolParamsSourceSpec of
+        ParamsFromGenesis (GenesisFile f) ->
+          fromShelleyPParams . sgProtocolParams <$>
+            firstExceptT ShelleyTxCmdGenesisCmdError
+              (readShelleyGenesis f identity)
+        ParamsFromFile f -> readProtocolParameters f
 
     let tx = makeSignedTransaction [] txbody
         Lovelace fee = estimateTransactionFee

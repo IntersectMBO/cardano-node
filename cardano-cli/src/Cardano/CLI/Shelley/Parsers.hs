@@ -539,15 +539,19 @@ pTransaction =
     TxCalculateMinFee
       <$> pTxBodyFile Input
       <*> optional pNetworkId
-      <*> (Left <$>
-           pGenesisFile
-            "[TESTING] The genesis file to take initial protocol parameters from.  For test clusters only, since the parameters are going to be obsolete for production clusters."
-           <|>
-           Right <$> pProtocolParamsFile)
+      <*> pProtocolParamsSourceSpec
       <*> pTxInCount
       <*> pTxOutCount
       <*> pTxShelleyWitnessCount
       <*> pTxByronWitnessCount
+
+  pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
+  pProtocolParamsSourceSpec =
+    ParamsFromGenesis <$>
+      pGenesisFile
+        "[TESTING] The genesis file to take initial protocol parameters from.  For test clusters only, since the parameters are going to be obsolete for production clusters."
+    <|>
+    ParamsFromFile <$> pProtocolParamsFile
 
   pTransactionId  :: Parser TransactionCmd
   pTransactionId = TxGetTxId <$> (Left  <$> pTxBodyFile Input
