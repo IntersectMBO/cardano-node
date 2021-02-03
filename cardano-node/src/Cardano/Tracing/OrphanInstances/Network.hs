@@ -668,6 +668,10 @@ instance ToObject ND.DiffusionInitializationTracer where
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
+  toObject _verb (ND.DiffusionDebug message) = mkObject
+    [ "kind" .= String "DiffusionDebug"
+    , "path" .= String (pack message)
+    ]
 
 instance ToObject NtC.HandshakeTr where
   toObject _verb (WithMuxBearer b ev) =
