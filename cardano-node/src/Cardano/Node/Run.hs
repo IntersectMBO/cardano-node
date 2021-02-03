@@ -59,7 +59,7 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode,
-                     RunNodeArgs (..), StdRunNodeArgs (..))
+                     RunNodeArgs (..), StdRunNodeArgs (..), DebugMessage (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
