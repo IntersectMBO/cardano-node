@@ -4,19 +4,19 @@
 
 #### Prerequisites
 
-Set up your platform:
+To set up your platform you will need:
 
-You will need:
+* an x86 host \(AMD or Intel\)
+* a virtual machine or AWS instance with at least 2 cores
+* 4GB of RAM and at least 10GB of free disk space
+* a recent version of Linux
 
-* An x86 host \(AMD or Intel\), Virtual Machine or AWS instance with at least 2 cores, 4GB of RAM and at least 10GB of free disk space;
-* A recent version of Linux.
-
-The node can be built and run on other operating systems, including Windows and MacOSX, but there are performance advantages that mean that
-stake pool operators are recommended to use Linux.  If you are building on Windows, we recommend using WSL2 under Windows 10.  This provides a development and execution environment that is very similar to Ubuntu.
+The node can be built and run on other operating systems, including Windows and MacOSX, but as there are performance advantages with Linux, we recommended that 
+stake pool operators use Linux as their platform.  If you are building on Windows, we recommend using WSL2 under Windows 10, as this provides a development and execution environment that is very similar to Ubuntu.
 
 #### Install dependencies
 
-We need the following packages and tools on our Linux system to download the source code and build it:
+The following packages and tools are required on your Linux system to download the source code and build it:
 
 * the version control system `git`,
 * the `gcc` C-compiler,
@@ -29,13 +29,13 @@ We need the following packages and tools on our Linux system to download the sou
 * the Haskell build tool `cabal`,
 * the GHC Haskell compiler.
 
-In Redhat, Fedora and Centos
+In Redhat, Fedora and Centos:
 
     sudo yum update -y
     sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
     sudo yum install systemd-devel ncurses-devel ncurses-compat-libs -y
 
-For Debian/Ubuntu use the following instead:
+For Debian/Ubuntu, use the following instead:
 
 
     sudo apt-get update -y
@@ -51,7 +51,7 @@ If you are using a different flavor of Linux, you will need to use the package m
     mkdir -p ~/.local/bin
     mv cabal ~/.local/bin/
 
-Verify that ~/.local/bin is in your PATH
+Verify that ~/.local/bin is in your PATH:
 
     echo $PATH
 
@@ -59,15 +59,15 @@ If `~/.local/bin` is not in the PATH, you need to add the following line to  you
 
     export PATH="~/.local/bin:$PATH"
 
-and source the file
+and source the file:
 
     source .bashrc
 
-Update cabal
+Update cabal:
 
     cabal update
 
-Confirm that you installed cabal version `3.2.0.0`.
+Confirm that you installed cabal version `3.2.0.0`:
 
     cabal --version
 
