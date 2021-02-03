@@ -115,6 +115,35 @@ mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
           ProtVer 2 0
       }
 
+-- todo: this duplicates 'mkSomeConsensusProtocolShelley' and
+-- 'mkConsensusProtocolShelley'. I'm copying this for now to minimize changes
+-- in my branch.
+mkSomeConsensusProtocolPivo
+  :: NodeShelleyProtocolConfiguration
+  -> Maybe ProtocolFilepaths
+  -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
+mkSomeConsensusProtocolPivo nc files =
+  SomeConsensusProtocol <$> mkConsensusProtocolPivo
+  where
+    NodeShelleyProtocolConfiguration
+      { npcShelleyGenesisFile
+      , npcShelleyGenesisFileHash
+      } = nc
+    mkConsensusProtocolPivo = do
+      (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
+                                            npcShelleyGenesisFileHash
+      firstExceptT GenesisValidationFailure . hoistEither
+        $ validateGenesis genesis
+      leaderCredentials <- readLeaderCredentials files
+      return
+        $ Consensus.ProtocolShelley
+            Consensus.ProtocolParamsShelleyBased
+              { shelleyBasedGenesis = genesis
+              , shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash
+              , shelleyBasedLeaderCredentials = leaderCredentials
+              }
+            Consensus.ProtocolParamsShelley { pivoProtVer = ProtVer 3 0 }
+
 genesisHashToPraosNonce :: GenesisHash -> Nonce
 genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
 

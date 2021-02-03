@@ -259,6 +259,7 @@ newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
 data NodeProtocolConfiguration =
        NodeProtocolConfigurationByron   NodeByronProtocolConfiguration
      | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
+     | NodeProtocolConfigurationPivo NodeShelleyProtocolConfiguration
      | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
                                         NodeShelleyProtocolConfiguration
                                         NodeHardForkProtocolConfiguration
@@ -375,6 +376,10 @@ instance AdjustFilePaths NodeProtocolConfiguration where
   adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
     NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
+  adjustFilePaths f (NodeProtocolConfigurationPivo pc) =
+    NodeProtocolConfigurationPivo (adjustFilePaths f pc)
+
+
   adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pch) =
     NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                      (adjustFilePaths f pcs)
@@ -410,6 +415,9 @@ instance AdjustFilePaths (Last NodeProtocolConfiguration) where
   adjustFilePaths f (Last (Just (NodeProtocolConfigurationShelley pc))) =
     Last . Just $ NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
+  adjustFilePaths f (Last (Just (NodeProtocolConfigurationPivo pc))) =
+    Last . Just $ NodeProtocolConfigurationPivo (adjustFilePaths f pc)
+
   adjustFilePaths f (Last (Just (NodeProtocolConfigurationCardano pcb pcs pch))) =
     Last . Just $ NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                                    (adjustFilePaths f pcs)
@@ -426,6 +434,7 @@ protocolName :: Protocol -> String
 protocolName ByronProtocol   = "Byron"
 protocolName ShelleyProtocol = "Shelley"
 protocolName CardanoProtocol = "Byron; Shelley"
+protocolName PivoProtocol    = "Pivo"
 
 
 data VRFPrivateKeyFilePermissionError

@@ -38,7 +38,7 @@ The output is the transaction fee in lovelace:
 
     > 171485
 
-Registering the stake address, not only pay transaction fees, but also includes a _deposit_ (which you get back when deregister the key) as stated in the protocol parameters:
+Registering the stake address, not only pays transaction fees, but also includes a _deposit_ (which you get back when deregister the key) as stated in the protocol parameters:
 
 The deposit amount can be found in the `protocol.json` under `keyDeposit`, for example in Shelley Tesntet:
 

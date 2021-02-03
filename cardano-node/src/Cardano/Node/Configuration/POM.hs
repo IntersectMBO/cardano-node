@@ -146,6 +146,10 @@ instance FromJSON PartialNodeConfiguration where
             Last . Just  <$> (NodeProtocolConfigurationCardano <$> parseByronProtocol v
                                                                <*> parseShelleyProtocol v
                                                                <*> parseHardForkProtocol v)
+
+          PivoProtocol    ->
+            -- todo: I'm not sure if we can use this protocol configuration
+            Last . Just . NodeProtocolConfigurationShelley <$> parseShelleyProtocol v
       pure PartialNodeConfiguration {
              pncProtocolConfig = pncProtocolConfig'
            , pncSocketPath = pncSocketPath'
@@ -311,6 +315,7 @@ ncProtocol nc =
   case ncProtocolConfig nc of
     NodeProtocolConfigurationByron{}   -> ByronProtocol
     NodeProtocolConfigurationShelley{} -> ShelleyProtocol
+    NodeProtocolConfigurationPivo{}    -> PivoProtocol
     NodeProtocolConfigurationCardano{} -> CardanoProtocol
 
 pncProtocol :: PartialNodeConfiguration -> Either Text Protocol
@@ -319,6 +324,7 @@ pncProtocol pnc =
     Last Nothing -> Left "Node protocol configuration not found"
     Last (Just NodeProtocolConfigurationByron{})   -> Right ByronProtocol
     Last (Just NodeProtocolConfigurationShelley{}) -> Right ShelleyProtocol
+    Last (Just NodeProtocolConfigurationPivo{})    -> Right PivoProtocol
     Last (Just NodeProtocolConfigurationCardano{}) -> Right CardanoProtocol
 
 parseNodeConfigurationFP :: Maybe ConfigYamlFilePath -> IO PartialNodeConfiguration

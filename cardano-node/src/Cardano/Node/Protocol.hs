@@ -37,6 +37,10 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig, ncProtocolFiles} =
         firstExceptT ShelleyProtocolInstantiationError $
           mkSomeConsensusProtocolShelley config (Just ncProtocolFiles)
 
+      NodeProtocolConfigurationPivo config ->
+        firstExceptT ShelleyProtocolInstantiationError $
+          mkSomeConsensusProtocolPivo config (Just ncProtocolFiles)
+
       NodeProtocolConfigurationCardano byronConfig
                                        shelleyConfig
                                        hardForkConfig ->

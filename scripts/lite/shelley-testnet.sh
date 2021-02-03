@@ -14,6 +14,8 @@ else
 fi
 
 mkdir -p "${data_dir}"
+echo ${data_dir}
+sleep 3
 
 # Generate shelley genesis spec
 ARGSSPEC=(

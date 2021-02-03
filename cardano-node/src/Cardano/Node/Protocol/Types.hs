@@ -28,6 +28,10 @@ import           Cardano.Tracing.Metrics (HasKESMetricsData)
 data Protocol = ByronProtocol
               | ShelleyProtocol
               | CardanoProtocol
+              | PivoProtocol
+              -- ^ Protocol that runs the Priviledge update system prototype.
+              -- See
+              -- https://github.com/input-output-hk/decentralized-software-updates/
   deriving (Eq, Show, Generic)
 
 deriving instance NFData Protocol
@@ -41,6 +45,9 @@ instance FromJSON Protocol where
       "Byron" -> pure ByronProtocol
       "Shelley" -> pure ShelleyProtocol
       "Cardano" -> pure CardanoProtocol
+
+      -- Priviledge prototype
+      "Pivo" -> pure PivoProtocol
 
       -- The old names
       "RealPBFT" -> pure ByronProtocol
