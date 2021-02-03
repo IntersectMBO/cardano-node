@@ -49,7 +49,7 @@ The `node` command contains the following sub commands:
 * `key-gen-KES`: creates a key pair for a node KES operational key
 * `key-gen-VRF`: creates a key pair for a node VRF operational key
 * `key-hash-VRF`: creates a key hash for a node VRF operational key
-* `new-counter`: keeps track of the number of KES evolutions for a given operational certifiate hot key
+* `new-counter`: keeps track of the number of KES evolutions for a given operational certificate hot key
 * `issue-op-cert`: issues a node operational certificate
 
 *cardano-cli stake-pool*
