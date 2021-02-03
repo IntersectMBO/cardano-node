@@ -246,7 +246,8 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   withShutdownHandling nc trace $ \sfds ->
    Node.run
      RunNodeArgs
-       { rnTraceConsensus = consensusTracers nodeTracers
+       { rnTraceDebug     = contramap DebugMessage tracer
+       , rnTraceConsensus = consensusTracers nodeTracers
        , rnTraceNTN       = nodeToNodeTracers nodeTracers
        , rnTraceNTC       = nodeToClientTracers nodeTracers
        , rnProtocolInfo   = pInfo
