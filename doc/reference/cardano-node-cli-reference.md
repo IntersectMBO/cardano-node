@@ -21,7 +21,7 @@ The `address` command contains the following sub commands:
 * `key-gen`: creates a single address key pair
 * `key-hash`: prints the hash of an address to stdout
 * `build`: builds a payment address, with optional delegation to a stake address
-* `build-script`: builds token locking scripts
+* `build-script`: builds a token locking script
 * `info`: prints details about the address
 
 *cardano-cli stake-address*
@@ -34,11 +34,11 @@ The `stake-address` command contains the following sub commands:
 
 *cardano-cli transaction*
 The `transaction` command contains the following sub commands:
-* `build-raw`: builds a low-level transaction. Uses the era flags of--mint, --invalid-before/hereafter
+* `build-raw`: builds a low-level transaction (uses the --cardano-mode, --byron-mode, --shelley mode flags)
 * `sign`: signs the transaction
 * `assemble` : combines and assembles the transaction witness(es) with a transaction body to create a transaction
 * `witness`: witnesses a transaction
-* `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARANO_NODE_SOCKET_PATH environment variable. Uses the --cardano-mode, --byron-mode, --shelley mode flags.
+* `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARANO_NODE_SOCKET_PATH environment variable (uses the --cardano-mode, --byron-mode, --shelley mode flags)
 * `calculate-min-fee`: calculates the minimum fee for the transaction
 * `txid`: retrieves the transaction ID
 * `policyid`: retrieves the transaction ID
