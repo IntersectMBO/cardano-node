@@ -152,8 +152,8 @@ gatherConfiguredSockets tr meta NodeConfiguration { ncNodeIPv4Addr,
 
         (Nothing, Nothing)    -> pure Nothing
         (Nothing, Just [])    -> pure Nothing
-        (Just{},  Just (sock:_)) -> return (Just (ActualSocket sock))
-        (_, Just (_:_)) -> throwError ClashingPublicSocketGiven1
+        (Nothing,  Just (sock:_)) -> return (Just (ActualSocket sock))
+        (Just _, Just (_:_)) -> throwError ClashingPublicSocketGiven1
 
         (Just addr, _) ->
               fmap SocketInfo . head
@@ -169,8 +169,8 @@ gatherConfiguredSockets tr meta NodeConfiguration { ncNodeIPv4Addr,
       case (ncNodeIPv6Addr, ipv6Sockets) of
         (Nothing, Nothing)   -> pure Nothing
         (Nothing, Just [])   -> pure Nothing
-        (Just{},  Just (_:_)) -> throwError ClashingPublicSocketGiven2
-        (_, Just (sock:_)) -> return (Just (ActualSocket sock))
+        (Nothing,  Just (sock:_)) -> return (Just (ActualSocket sock))
+        (Just _, Just (_:_)) -> throwError ClashingPublicSocketGiven2
 
         (Just addr, _) ->
                 fmap SocketInfo . head
