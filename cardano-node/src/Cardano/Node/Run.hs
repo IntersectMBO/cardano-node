@@ -67,7 +67,7 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                     gatherConfiguredSockets, getSocketOrSocketInfoAddr)
+                     gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
@@ -189,16 +189,22 @@ handleSimpleNode
   -- otherwise the node won't actually start.
   -> IO ()
 handleSimpleNode p trace nodeTracers nc onKernel = do
+  meta <- mkLOMeta Notice Public
 
   let pInfo = Consensus.protocolInfo p
       tracer = toLogObject trace
 
   createTracers nc trace tracer
 
-  (publicIPv4SocketOrAddr
-    , publicIPv6SocketOrAddr
-    , localSocketOrPath) <- either throwIO return =<<
-                           runExceptT (gatherConfiguredSockets nc)
+  (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
+    result <- runExceptT (gatherConfiguredSockets nc)
+    case result of
+      Right triplet -> return triplet
+      Left error -> do
+        traceNamedObject
+          (appendName "error" trace)
+          (meta, LogMessage (Text.pack (renderSocketConfigError error)))
+        throwIO error
 
   dbPath <- canonDbPath nc
 
@@ -229,7 +235,6 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
 
-  meta <- mkLOMeta Notice Public
   traceNamedObject
     (appendName "addresses" trace)
     (meta, LogMessage . Text.pack . show $ catMaybes [ipv4, ipv6])
