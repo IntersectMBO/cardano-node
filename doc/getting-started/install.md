@@ -156,7 +156,7 @@ Build the node and CLI with `cabal`:
 
 Install the newly built node and CLI commands:
 
-    cabal install all --bindir ~/.local/bin
+    cabal install all --installdir ~/.local/bin
 
 If this doesn't work, you can manually copy the executable files to the `~/.local/bin` directory. Replace the place holder `<TAGGED VERSION>` with your targeted version:
 
