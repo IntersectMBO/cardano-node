@@ -51,6 +51,7 @@ let
     supervisord = {
       logfile = "${stateDir}/supervisord.log";
       pidfile = "${stateDir}/supervisord.pid";
+      strip_ansi = true;
     };
     supervisorctl = {};
     inet_http_server = {
