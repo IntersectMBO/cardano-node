@@ -64,6 +64,7 @@ executable ledger-state
                        cardano-crypto-wrapper,
                        cardano-ledger,
                        cardano-node,
+                       iohk-monitoring,
                        ouroboros-network,
                        ouroboros-consensus,
                        ouroboros-consensus-cardano,
