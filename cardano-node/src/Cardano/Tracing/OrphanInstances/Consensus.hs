@@ -65,6 +65,7 @@ import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
+import           Ouroboros.Consensus.Node (DebugMessage (..))
 
 {- HLINT ignore "Use const" -}
 {- HLINT ignore "Use record patterns" -}
@@ -226,6 +227,12 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => Transformable Text IO (TraceChainSyncClientEvent blk) where
   trTransformer = trStructured
 
+instance HasSeverityAnnotation DebugMessage where
+  getSeverityAnnotation _ = Info
+
+instance HasPrivacyAnnotation DebugMessage
+instance Transformable Text IO DebugMessage where
+  trTransformer = trStructured
 
 instance ConvertRawHash blk
       => Transformable Text IO (TraceChainSyncServerEvent blk) where
@@ -1165,3 +1172,10 @@ instance ( tx ~ GenTx blk
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mkObject [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
+
+instance ToObject DebugMessage where
+  toObject _ ev = case ev of
+    DebugMessage msg ->
+      mkObject [ "kind" .= String "DebugMessage"
+               , "text" .= String msg
+               ]

@@ -51,7 +51,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                      PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
                      makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Types
-import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
+import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..), OnOff(..))
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -59,7 +59,7 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
                      DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode,
-                     RunNodeArgs (..), StdRunNodeArgs (..), DebugMessage (..))
+                     RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -246,7 +246,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   withShutdownHandling nc trace $ \sfds ->
    Node.run
      RunNodeArgs
-       { rnTraceDebug     = contramap (\(DebugMessage text) -> text) tracer
+       { rnTraceDebug     = tracerOnOff (OnOff True) MinimalVerbosity "IpSubscription" trace
        , rnTraceConsensus = consensusTracers nodeTracers
        , rnTraceNTN       = nodeToNodeTracers nodeTracers
        , rnTraceNTC       = nodeToClientTracers nodeTracers

@@ -21,6 +21,7 @@ module Cardano.Tracing.Tracers
   , mkTracers
   , nullTracers
   , traceCounter
+  , tracerOnOff
   ) where
 
 import           Cardano.Prelude hiding (show)
