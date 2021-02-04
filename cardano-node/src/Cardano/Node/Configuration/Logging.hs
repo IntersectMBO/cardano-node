@@ -289,6 +289,10 @@ nodeBasicInfo nc p nodeStartTime' = do
           Consensus.ProtocolShelley {} ->
             let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
             in getGenesisValues "Shelley" cfgShelley
+          Consensus.ProtocolPivo {} ->
+            -- todo: is it ok to return the same value as in the 'ProtocolShelley' case?
+            let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
+            in getGenesisValues "Pivo" cfgShelley
           Consensus.ProtocolCardano {} ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron

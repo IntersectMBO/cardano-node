@@ -73,6 +73,10 @@ answerQueryWithLedgerState protocol extLedgerState query = runIdentity $
         byronQuery
       Consensus.ProtocolShelley {} ->
         shelleyBasedQuery
+      Consensus.ProtocolPivo {}    ->
+        -- todo: I'm not sure about whether I need to return the same value in
+        -- this case.
+        shelleyBasedQuery
       Consensus.ProtocolCardano {} ->
         HF.forwardCompatQuery
           answerQueryHelper
