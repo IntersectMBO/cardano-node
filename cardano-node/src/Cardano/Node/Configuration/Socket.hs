@@ -57,7 +57,8 @@ getSocketOrSocketInfoAddr (SocketInfo info)   =
 data SocketConfigError
     = NoPublicSocketGiven
     | NoLocalSocketGiven
-    | ClashingPublicSocketGiven
+    | ClashingPublicSocketGiven1
+    | ClashingPublicSocketGiven2
     | ClashingLocalSocketGiven
     | LocalSocketError FilePath IOException
     | GetAddrInfoError (Maybe NodeHostIPAddress) (Maybe PortNumber) IOException
@@ -77,7 +78,11 @@ renderSocketConfigError NoLocalSocketGiven =
  <> "path either in the config file, on the command line or via systemd socket "
  <> "activation."
 
-renderSocketConfigError ClashingPublicSocketGiven =
+renderSocketConfigError ClashingPublicSocketGiven1 =
+    "Configuration for the node's public socket supplied both by config/cli and "
+ <> "via systemd socket activation. Please use one or the other but not both."
+
+renderSocketConfigError ClashingPublicSocketGiven2 =
     "Configuration for the node's public socket supplied both by config/cli and "
  <> "via systemd socket activation. Please use one or the other but not both."
 
@@ -131,7 +136,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
         (Nothing, Nothing)    -> pure Nothing
         (Nothing, Just [])    -> pure Nothing
         (Just{},  Just (sock:_)) -> return (Just (ActualSocket sock))
-        (_, Just (_:_)) -> throwError ClashingPublicSocketGiven
+        (_, Just (_:_)) -> throwError ClashingPublicSocketGiven1
 
         (Just addr, _) ->
               fmap SocketInfo . head
@@ -146,7 +151,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
         (Nothing, Nothing)   -> pure Nothing
         (Nothing, Just [])   -> pure Nothing
         (Just{},  Just (sock:_)) -> return (Just (ActualSocket sock))
-        (_, Just (_:_)) -> throwError ClashingPublicSocketGiven
+        (_, Just (_:_)) -> throwError ClashingPublicSocketGiven2
 
         (Just addr, _) ->
                 fmap SocketInfo . head
