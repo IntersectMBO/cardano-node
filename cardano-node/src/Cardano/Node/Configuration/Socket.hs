@@ -150,8 +150,8 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
       case (ncNodeIPv6Addr, ipv6Sockets) of
         (Nothing, Nothing)   -> pure Nothing
         (Nothing, Just [])   -> pure Nothing
-        (Just{},  Just (sock:_)) -> return (Just (ActualSocket sock))
-        (_, Just (_:_)) -> throwError ClashingPublicSocketGiven2
+        (Just{},  Just (_:_)) -> throwError ClashingPublicSocketGiven2
+        (_, Just (sock:_)) -> return (Just (ActualSocket sock))
 
         (Just addr, _) ->
                 fmap SocketInfo . head
