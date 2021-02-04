@@ -2,6 +2,7 @@
 # It just takes the shell attribute from default.nix.
 { config ? {}
 , customConfig ? {}
+, autoStartCluster ? false
 , sourcesOverride ? {}
 , withHoogle ? true
 , pkgs ? import ./nix {
@@ -91,6 +92,11 @@ let
         * stop-cluster - stop a local development cluster
 
       "
+
+      ${lib.optionalString autoStartCluster ''
+      echo "Starting cluster (because 'auto-start-cluster' is true):"
+      start-cluster
+      ''}
     '';
   };
 
