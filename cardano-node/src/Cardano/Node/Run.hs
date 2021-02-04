@@ -195,15 +195,28 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   createTracers nc trace tracer
 
+  meta <- mkLOMeta Notice Public
+
+  traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 1")
+
   (publicIPv4SocketOrAddr
     , publicIPv6SocketOrAddr
     , localSocketOrPath) <- either throwIO return =<<
                            runExceptT (gatherConfiguredSockets nc)
 
+  traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 2")
+
   dbPath <- canonDbPath nc
 
+  traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 3")
+
   eitherTopology <- readTopologyFile nc
+  
+  traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 4")
+
   nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
+
+  traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 5")
 
   let diffusionTracers :: DiffusionTracers
       diffusionTracers = createDiffusionTracers nodeTracers
@@ -226,10 +239,14 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
           ipProducers
           dnsProducers
 
+  traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 6")
+
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
+
+  traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 7")
+
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
 
-  meta <- mkLOMeta Notice Public
   traceNamedObject
     (appendName "addresses" trace)
     (meta, LogMessage . Text.pack . show $ catMaybes [ipv4, ipv6])
