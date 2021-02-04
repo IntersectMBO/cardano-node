@@ -27,9 +27,11 @@ import           Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
 import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
+import           Data.Foldable
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Yaml as Yaml
 
 import qualified Cardano.Api.Block
 import qualified Cardano.BM.Configuration.Model as BM
@@ -42,8 +44,10 @@ import qualified Cardano.Crypto
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
+import           Control.Exception
 import           Control.Monad.Except
 import           Control.Monad.Trans.Except.Extra
+import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
 import           Data.Word
 import           GHC.Conc
 import qualified Ouroboros.Consensus.Byron.Ledger.Block
@@ -52,6 +56,7 @@ import qualified Ouroboros.Consensus.Cardano as C
 import qualified Ouroboros.Consensus.Cardano.Block
 import qualified Ouroboros.Consensus.Cardano.Block as C
 import qualified Ouroboros.Consensus.Cardano.CanHardFork
+import qualified Ouroboros.Consensus.Cardano.Node
 import qualified Ouroboros.Consensus.Config as C
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics
 import qualified Ouroboros.Consensus.Ledger.Extended as C
@@ -61,17 +66,180 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block
 import qualified Shelley.Spec.Ledger.BaseTypes
 import qualified Shelley.Spec.Ledger.Genesis
 import qualified Shelley.Spec.Ledger.PParams
+import           System.FilePath
 
 -- Bring it all together and make the initial ledger state
-initialLedgerState :: IO LedgerStateVar
-initialLedgerState = do
-  nodeConf <- error "TODO DbSyncNodeConfig"
-  genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig nodeConf)
+initialLedgerState
+  :: FilePath -- Path to the db-sync config file
+  -> IO LedgerStateVar
+initialLedgerState dbSyncConfFilePath = do
+  dbSyncConf <- readDbSyncNodeConfig (ConfigFile dbSyncConfFilePath)
+  genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
   initLedgerStateVar genConf
 
 --------------------------------------------------------------------------------
--- Everything below this is just coppied from db-sync
+-- Everything below this is just coppied from db-sync                         --
 --------------------------------------------------------------------------------
+
+newtype ConfigFile = ConfigFile
+  { unConfigFile :: FilePath
+  }
+
+readDbSyncNodeConfig :: ConfigFile -> IO DbSyncNodeConfig
+readDbSyncNodeConfig (ConfigFile fp) = do
+    pcfg <- adjustNodeFilePath . parseDbSyncPreConfig <$> readByteString fp "DbSync"
+    ncfg <- parseNodeConfig <$> readByteString (pcNodeConfigFilePath pcfg) "node"
+    coalesceConfig pcfg ncfg (mkAdjustPath pcfg)
+  where
+    parseDbSyncPreConfig :: ByteString -> DbSyncPreConfig
+    parseDbSyncPreConfig bs =
+      case Yaml.decodeEither' bs of
+      Left err -> error . Text.unpack $ "readDbSyncNodeConfig: Error parsing config: " <> textShow err
+      Right res -> res
+
+    adjustNodeFilePath :: DbSyncPreConfig -> DbSyncPreConfig
+    adjustNodeFilePath cfg =
+      cfg { pcNodeConfigFile = adjustNodeConfigFilePath (takeDirectory fp </>) (pcNodeConfigFile cfg) }
+
+
+adjustNodeConfigFilePath :: (FilePath -> FilePath) -> NodeConfigFile -> NodeConfigFile
+adjustNodeConfigFilePath f (NodeConfigFile p) = NodeConfigFile (f p)
+
+pcNodeConfigFilePath :: DbSyncPreConfig -> FilePath
+pcNodeConfigFilePath = unNodeConfigFile . pcNodeConfigFile
+
+data NodeConfig = NodeConfig
+  { ncProtocol :: !DbSyncProtocol
+  , ncPBftSignatureThreshold :: !(Maybe Double)
+  , ncByronGenesisFile :: !GenesisFile
+  , ncByronGenesisHash :: !GenesisHashByron
+  , ncShelleyGenesisFile :: !GenesisFile
+  , ncShelleyGenesisHash :: !GenesisHashShelley
+  , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
+  , ncByronSotfwareVersion :: !Cardano.Chain.Update.SoftwareVersion
+  , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
+
+  -- Shelley hardfok parameters
+  , ncShelleyHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+  , ncByronToShelley :: !ByronToShelley
+
+  -- Allegra hardfok parameters
+  , ncAllegraHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+  , ncShelleyToAllegra :: !ShelleyToAllegra
+
+  -- Mary hardfok parameters
+  , ncMaryHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+  , ncAllegraToMary :: !AllegraToMary
+  }
+
+
+instance FromJSON NodeConfig where
+  parseJSON v =
+      Aeson.withObject "NodeConfig" parse v
+    where
+      parse :: Object -> Data.Aeson.Types.Internal.Parser NodeConfig
+      parse o =
+        NodeConfig
+          <$> o .: "Protocol"
+          <*> o .:? "PBftSignatureThreshold"
+          <*> fmap GenesisFile (o .: "ByronGenesisFile")
+          <*> fmap GenesisHashByron (o .: "ByronGenesisHash")
+          <*> fmap GenesisFile (o .: "ShelleyGenesisFile")
+          <*> fmap GenesisHashShelley (o .: "ShelleyGenesisHash")
+          <*> o .: "RequiresNetworkMagic"
+          <*> parseByronSoftwareVersion o
+          <*> parseByronProtocolVersion o
+
+          <*> parseShelleyHardForkEpoch o
+          <*> (Ouroboros.Consensus.Cardano.Node.ProtocolParamsTransition <$> parseShelleyHardForkEpoch o)
+
+          <*> parseAllegraHardForkEpoch o
+          <*> (Ouroboros.Consensus.Cardano.Node.ProtocolParamsTransition <$> parseAllegraHardForkEpoch o)
+
+          <*> parseMaryHardForkEpoch o
+          <*> (Ouroboros.Consensus.Cardano.Node.ProtocolParamsTransition <$> parseMaryHardForkEpoch o)
+
+      parseByronProtocolVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.ProtocolVersion
+      parseByronProtocolVersion o =
+        Cardano.Chain.Update.ProtocolVersion
+          <$> o .: "LastKnownBlockVersion-Major"
+          <*> o .: "LastKnownBlockVersion-Minor"
+          <*> o .: "LastKnownBlockVersion-Alt"
+
+      parseByronSoftwareVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.SoftwareVersion
+      parseByronSoftwareVersion o =
+        Cardano.Chain.Update.SoftwareVersion
+          <$> fmap Cardano.Chain.Update.ApplicationName (o .: "ApplicationName")
+          <*> o .: "ApplicationVersion"
+
+      parseShelleyHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+      parseShelleyHardForkEpoch o =
+        asum
+          [ Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardForkAtEpoch <$> o .: "TestShelleyHardForkAtEpoch"
+          , pure $ Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardForkAtVersion 2 -- Mainnet default
+          ]
+
+      parseAllegraHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+      parseAllegraHardForkEpoch o =
+        asum
+          [ Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardForkAtEpoch <$> o .: "TestAllegraHardForkAtEpoch"
+          , pure $ Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardForkAtVersion 3 -- Mainnet default
+          ]
+
+      parseMaryHardForkEpoch :: Object -> Data.Aeson.Types.Internal.Parser Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+      parseMaryHardForkEpoch o =
+        asum
+          [ Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardForkAtEpoch <$> o .: "TestMaryHardForkAtEpoch"
+          , pure $ Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardForkAtVersion 4 -- Mainnet default
+          ]
+
+parseNodeConfig :: ByteString -> NodeConfig
+parseNodeConfig bs =
+  case Yaml.decodeEither' bs of
+    Left err -> error . Text.unpack $ "Error parsing node config: " <> textShow err
+    Right nc -> nc
+
+coalesceConfig
+    :: DbSyncPreConfig -> NodeConfig -> (FilePath -> FilePath)
+    -> IO DbSyncNodeConfig
+coalesceConfig pcfg ncfg adjustGenesisPath = do
+  lc <- BM.setupFromRepresentation $ pcLoggingConfig pcfg
+  pure $ DbSyncNodeConfig
+          { dncNetworkName = pcNetworkName pcfg
+          , dncLoggingConfig = lc
+          , dncNodeConfigFile = pcNodeConfigFile pcfg
+          , dncProtocol = ncProtocol ncfg
+          , dncRequiresNetworkMagic = ncRequiresNetworkMagic ncfg
+          , dncEnableLogging = pcEnableLogging pcfg
+          , dncEnableMetrics = pcEnableMetrics pcfg
+          , dncPBftSignatureThreshold = ncPBftSignatureThreshold ncfg
+          , dncByronGenesisFile = adjustGenesisFilePath adjustGenesisPath (ncByronGenesisFile ncfg)
+          , dncByronGenesisHash = ncByronGenesisHash ncfg
+          , dncShelleyGenesisFile = adjustGenesisFilePath adjustGenesisPath (ncShelleyGenesisFile ncfg)
+          , dncShelleyGenesisHash = ncShelleyGenesisHash ncfg
+          , dncByronSoftwareVersion = ncByronSotfwareVersion ncfg
+          , dncByronProtocolVersion = ncByronProtocolVersion ncfg
+
+          , dncShelleyHardFork = ncShelleyHardFork ncfg
+          , dncAllegraHardFork = ncAllegraHardFork ncfg
+          , dncMaryHardFork = ncMaryHardFork ncfg
+
+          , dncByronToShelley = ncByronToShelley ncfg
+          , dncShelleyToAllegra = ncShelleyToAllegra ncfg
+          , dncAllegraToMary = ncAllegraToMary ncfg
+          }
+
+adjustGenesisFilePath :: (FilePath -> FilePath) -> GenesisFile -> GenesisFile
+adjustGenesisFilePath f (GenesisFile p) = GenesisFile (f p)
+
+mkAdjustPath :: DbSyncPreConfig -> (FilePath -> FilePath)
+mkAdjustPath cfg fp = takeDirectory (pcNodeConfigFilePath cfg) </> fp
+
+readByteString :: FilePath -> Text -> IO ByteString
+readByteString fp cfgType =
+  catch (BS.readFile fp) $ \(_ :: IOException) ->
+    error . Text.unpack $ mconcat [ "Cannot find the ", cfgType, " configuration file at : ", Text.pack fp ]
+
 
 initLedgerStateVar :: GenesisConfig -> IO LedgerStateVar
 initLedgerStateVar genesisConfig =
@@ -132,6 +300,12 @@ data DbSyncProtocol
   = DbSyncProtocolCardano
   deriving Show
 
+instance FromJSON DbSyncProtocol where
+  parseJSON o =
+    case o of
+      String "Cardano" -> pure DbSyncProtocolCardano
+      x -> Data.Aeson.Types.Internal.typeMismatch "Protocol" x
+
 type ByronToShelley =
   C.ProtocolParamsTransition Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
     (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley)
@@ -153,6 +327,20 @@ data DbSyncPreConfig = DbSyncPreConfig
   , pcEnableLogging :: !Bool
   , pcEnableMetrics :: !Bool
   }
+
+instance FromJSON DbSyncPreConfig where
+  parseJSON o =
+    Aeson.withObject "top-level" parseGenDbSyncNodeConfig o
+
+
+parseGenDbSyncNodeConfig :: Object -> Data.Aeson.Types.Internal.Parser DbSyncPreConfig
+parseGenDbSyncNodeConfig o =
+  DbSyncPreConfig
+    <$> fmap NetworkName (o .: "NetworkName")
+    <*> parseJSON (Object o)
+    <*> fmap NodeConfigFile (o .: "NodeConfigFile")
+    <*> o .: "EnableLogging"
+    <*> o .: "EnableLogMetrics"
 
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath

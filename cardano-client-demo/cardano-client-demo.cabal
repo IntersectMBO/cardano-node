@@ -56,6 +56,7 @@ executable ledger-state
                        text,
                        time,
                        transformers-except,
+                       yaml,
 
                        cryptonite,
                        cardano-api,
