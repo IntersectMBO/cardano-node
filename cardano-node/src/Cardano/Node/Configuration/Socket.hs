@@ -33,7 +33,7 @@ import           System.Systemd.Daemon (getActivatedSockets)
 #endif
 
 
-
+import qualified System.IO as IO
 
 -- | Since we support systemd socket activation, we have to handle being
 -- given actual already-constructed sockets, or the info needed to make new
@@ -119,7 +119,11 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
                                             ncNodePortNumber,
                                             ncSocketPath } = do
 
+    liftIO $ IO.putStrLn "gatherConfiguredSockets: enter"
+
     systemDSockets <- liftIO getSystemdSockets
+
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: systemDSockets = " <> show systemDSockets
 
     -- Select the sockets or address for public node-to-node comms
     --
@@ -127,6 +131,9 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
         ipv4Sockets, ipv6Sockets :: Maybe [Socket]
         ipv4Sockets = (\(a, _, _) -> a) <$> systemDSockets
         ipv6Sockets = (\(_, a, _) -> a) <$> systemDSockets
+
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: ipv4Sockets = " <> show ipv4Sockets
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: ipv6Sockets = " <> show ipv6Sockets
 
     -- only when 'ncNodeIPv4Addr' is specified or an ipv4 socket is passed
     -- through socket activation
@@ -144,6 +151,8 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
                 (Just $ nodeHostIPv4AddressToIPAddress addr)
                 ncNodePortNumber
 
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: ipv4 = " <> show ipv4
+
     -- only when 'ncNodeIPv6Addr' is specified or an ipv6 socket is passed
     -- through socket activation
     ipv6 <-
@@ -158,6 +167,8 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
             <$> nodeAddressInfo
                   (Just $ nodeHostIPv6AddressToIPAddress addr)
                   ncNodePortNumber
+
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: ipv6 = " <> show ipv6
 
     -- When none of the addresses was given. We try resolve address passing
     -- only 'ncNodePortNumber'.
@@ -176,10 +187,15 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
             _ -> pure (ipv4, ipv6)
 
 
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: ipv4' = " <> show ipv4'
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: ipv6' = " <> show ipv6'
+
     -- Select the socket or path for local node-to-client comms
     --
     let unixSockets :: Maybe [Socket]
         unixSockets = (\(_, _, a) -> a) <$> systemDSockets
+
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: unixSockets = " <> show unixSockets
 
     -- only when 'ncSocketpath' is specified or a unix socket is passed through
     -- socket activation
@@ -194,6 +210,8 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
 
         (Just path, _) ->
           removeStaleLocalSocket path $> SocketInfo path
+
+    liftIO . IO.putStrLn $ "gatherConfiguredSockets: local = " <> show local
 
     return (ipv4', ipv6', local)
 
