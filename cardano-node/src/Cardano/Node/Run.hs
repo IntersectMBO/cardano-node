@@ -199,10 +199,13 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 1")
 
-  (publicIPv4SocketOrAddr
-    , publicIPv6SocketOrAddr
-    , localSocketOrPath) <- either throwIO return =<<
-                           runExceptT (gatherConfiguredSockets nc)
+  (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
+    result <- runExceptT (gatherConfiguredSockets nc)
+    case result of
+      Right v -> return v
+      Left e -> do
+        traceNamedObject (appendName "debugging" trace) (meta, LogMessage ("message error: " <> show e))
+        throwIO e
 
   traceNamedObject (appendName "debugging" trace) (meta, LogMessage "message 2")
 
