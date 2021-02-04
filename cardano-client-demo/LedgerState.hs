@@ -42,6 +42,9 @@ import           System.FilePath ((</>))
 import           Cardano.Chain.Common
 import           NewApiStuff
 
+
+type LedgerState = LedgerStateVar
+
 main :: IO ()
 main = do
   -- Get socket path from CLI argument.
