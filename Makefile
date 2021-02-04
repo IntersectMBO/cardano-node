@@ -36,8 +36,14 @@ test-chairmans-cluster:
 profiles:
 	@jq . $$(nix-build -A profiles)
 
+cluster-shell:
+	nix-shell --max-jobs 8 --cores 0 -A 'devops' --arg 'autoStartCluster' 'true'
+
 setup:
 	sed -ni '1,/--- 8< ---/ p' cabal.project
+
+restore:
+	git checkout HEAD cabal.project
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
