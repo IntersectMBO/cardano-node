@@ -57,7 +57,8 @@ getSocketOrSocketInfoAddr (SocketInfo info)   =
 data SocketConfigError
     = NoPublicSocketGiven
     | NoLocalSocketGiven
-    | ClashingPublicSocketGiven
+    | ClashingPublicIpv4SocketGiven
+    | ClashingPublicIpv6SocketGiven
     | ClashingLocalSocketGiven
     | LocalSocketError FilePath IOException
     | GetAddrInfoError (Maybe NodeHostIPAddress) (Maybe PortNumber) IOException
@@ -77,8 +78,12 @@ renderSocketConfigError NoLocalSocketGiven =
  <> "path either in the config file, on the command line or via systemd socket "
  <> "activation."
 
-renderSocketConfigError ClashingPublicSocketGiven =
-    "Configuration for the node's public socket supplied both by config/cli and "
+renderSocketConfigError ClashingPublicIpv4SocketGiven =
+    "Configuration for the node's public IPv4 socket supplied both by config/cli and "
+ <> "via systemd socket activation. Please use one or the other but not both."
+
+renderSocketConfigError ClashingPublicIpv6SocketGiven =
+    "Configuration for the node's public IPv6 socket supplied both by config/cli and "
  <> "via systemd socket activation. Please use one or the other but not both."
 
 renderSocketConfigError ClashingLocalSocketGiven =
@@ -130,10 +135,8 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
 
         (Nothing, Nothing)    -> pure Nothing
         (Nothing, Just [])    -> pure Nothing
-        (Just{},  Just (_:_)) -> throwError ClashingPublicSocketGiven
-
-        (_, Just (sock : _)) ->
-          return (Just (ActualSocket sock))
+        (Nothing,  Just (sock:_)) -> return (Just (ActualSocket sock))
+        (Just _, Just (_:_)) -> throwError ClashingPublicIpv4SocketGiven
 
         (Just addr, _) ->
               fmap SocketInfo . head
@@ -147,10 +150,8 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
       case (ncNodeIPv6Addr, ipv6Sockets) of
         (Nothing, Nothing)   -> pure Nothing
         (Nothing, Just [])   -> pure Nothing
-        (Just{}, Just (_:_)) -> throwError ClashingPublicSocketGiven
-
-        (_, Just (sock : _)) ->
-          return (Just (ActualSocket sock))
+        (Nothing,  Just (sock:_)) -> return (Just (ActualSocket sock))
+        (Just _, Just (_:_)) -> throwError ClashingPublicIpv6SocketGiven
 
         (Just addr, _) ->
                 fmap SocketInfo . head
