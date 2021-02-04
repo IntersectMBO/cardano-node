@@ -126,6 +126,11 @@ gatherConfiguredSockets tr meta NodeConfiguration { ncNodeIPv4Addr,
 
     liftIO $ traceNamedObject (appendName "debugging" tr) (meta, LogMessage "gatherConfiguredSockets: enter")
 
+    liftIO $ traceNamedObject (appendName "debugging" tr) (meta, LogMessage ("gatherConfiguredSockets: ncNodeIPv4Addr = " <> show ncNodeIPv4Addr))
+    liftIO $ traceNamedObject (appendName "debugging" tr) (meta, LogMessage ("gatherConfiguredSockets: ncNodeIPv6Addr = " <> show ncNodeIPv6Addr))
+    liftIO $ traceNamedObject (appendName "debugging" tr) (meta, LogMessage ("gatherConfiguredSockets: ncNodePortNumber = " <> show ncNodePortNumber))
+    liftIO $ traceNamedObject (appendName "debugging" tr) (meta, LogMessage ("gatherConfiguredSockets: ncSocketPath = " <> show ncSocketPath))
+
     systemDSockets <- liftIO getSystemdSockets
 
     liftIO $ traceNamedObject (appendName "debugging" tr) (meta, LogMessage ("gatherConfiguredSockets: systemDSockets = " <> show systemDSockets))
