@@ -202,7 +202,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   traceNamedObject (appendName "debugging" trace) (meta, LogMessage ("configuration: " <> show nc))
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
-    result <- runExceptT (gatherConfiguredSockets nc)
+    result <- runExceptT (gatherConfiguredSockets trace meta nc)
     case result of
       Right v -> return v
       Left e -> do
