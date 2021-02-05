@@ -21,9 +21,7 @@ steps:
 
   - label: 'Docker Image'
     command:
-      - "nix-build .buildkite/docker-build-push.nix --argstr dockerHubRepoName inputoutput/cardano-node -o docker-build-push"
-      - "./docker-build-push"
-    branches: master
+      - ".buildkite/release-docker-push.sh"
     agents:
       system: x86_64-linux
     soft_fail:
