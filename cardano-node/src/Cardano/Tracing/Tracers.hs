@@ -24,7 +24,7 @@ module Cardano.Tracing.Tracers
   ) where
 
 import           Cardano.Prelude hiding (show, atomically)
-import           Prelude (String, show)
+import           Prelude (String, show, read)
 
 import           GHC.Clock (getMonotonicTimeNSec)
 
@@ -41,7 +41,7 @@ import qualified Network.Socket as Socket (SockAddr)
 import           Control.Tracer
 import           Control.Tracer.Transformers
 
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
@@ -71,7 +71,7 @@ import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
                      blockNo, pointSlot, unBlockNo)
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..), TraceFetchClientState (..), ChainRange (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.DeltaQ
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -461,7 +461,7 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
-    , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
+    , Consensus.blockFetchClientTracer = blockFetchClientTracer trSel verb tr
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @ blk) trSel tr
@@ -827,6 +827,47 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
   where
     fsTracer :: Trace IO Text -> Tracer IO (Consensus.TraceLabelCreds (ForgeStateInfo blk))
     fsTracer tr = showTracing $ contramap Text.pack $ toLogObject tr
+
+blockFetchClientTracer
+  :: forall blk peer.
+      ( HasHeader blk
+      , Show peer
+      , Show (Header blk)
+      )
+  => TraceSelection
+  -> TracingVerbosity
+  -> Trace IO Text
+  -> Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk)))
+blockFetchClientTracer trSel verb tracer =
+  let textTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tracer in
+  Tracer $ bfTracer textTracer
+  where
+    bfTracer :: Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk)))
+             -> TraceLabelPeer peer (TraceFetchClientState (Header blk)) -> IO ()
+    bfTracer textTracer e@(TraceLabelPeer peer (CompletedFetchBatch (ChainRange p _) _ _ _)) = do
+      let metricsTr = appendName "metrics" tracer
+      now <- getCurrentTime
+
+      traceWith textTracer e
+
+      -- TODO: This is only valid for mainnet
+      let slot = case pointSlot p of
+                      Origin -> 0
+                      At s -> unSlotNo s
+          firstShelleySlot = 4492800
+          shelleyStart = read "2020-07-29 21:44:51 UTC" :: UTCTime
+          expectedSlotTime = addUTCTime (fromIntegral $ (slot) - firstShelleySlot) shelleyStart
+          slotDiff = diffUTCTime now expectedSlotTime
+
+      let logValue :: LOContent Text
+          logValue = LogValue "blockDelay" $ PureI
+                $ round $ slotDiff * 1000
+      printf "peer: %s blockfetch delay %s\n" (show peer) (show $ slotDiff)
+      meta <- mkLOMeta Critical Confidential
+      traceNamedObject metricsTr (meta, logValue)
+    bfTracer textTracer e = traceWith textTracer e
+
+
 
 chainSyncReqRspTracer
   :: forall peer.
