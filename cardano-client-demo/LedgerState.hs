@@ -7,56 +7,41 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -freduction-depth=0 #-}
 
-import           Cardano.Api (Block (..), BlockHeader (BlockHeader), BlockNo (BlockNo), ByronEra,
-                   ChainPoint (..), ChainSyncClient, ChainTip (ChainTip), EraInMode (..), Hash,
-                   NetworkId (Mainnet), SlotNo, TxOut (..))
 import qualified Cardano.Api.Block as Block
 import qualified Cardano.Api.IPC as IPC
-import           Cardano.Binary (Raw)
-import           Cardano.Chain.Block (BlockValidationMode (..))
-import qualified Cardano.Chain.Genesis as Genesis
-import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
-import           Cardano.Chain.UTxO (TxValidationMode (..))
-import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
-
--- TODO: Export this via Cardano.Api
-import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Network.TypedProtocol.Pipelined (N (..), Nat (..), natToInt, unsafeIntToNat)
-import           Ouroboros.Network.Protocol.ChainSync.Client
-
-import           Control.Monad (when)
-import           Control.Monad.Except
-import           Data.Kind
-import           Data.List (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
-import           Data.Proxy
-import           Data.Time
-import qualified GHC.TypeLits as GHC
+import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import           Ouroboros.Network.Protocol.ChainSync.Client
 import           System.Environment (getArgs)
 import           System.FilePath ((</>))
 
 
 -- TODO move this module into cardano-api
-import           Cardano.Chain.Common
+import           Cardano.Api
+import qualified Cardano.Api as Cardano.Api.Eras
+import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
+import           Control.Monad (when)
 import           NewApiStuff
+import qualified Ouroboros.Consensus.Cardano.Block
+import qualified Ouroboros.Consensus.Shelley.Eras
+import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
-
-type LedgerState = LedgerStateVar
 
 main :: IO ()
 main = do
   -- Get socket path from CLI argument.
   configFilePath : socketDir : _ <- getArgs
   let socketPath = socketDir </> "node.sock"
-  ledgerState <- initialLedgerState configFilePath
+  (Env env, ledgerState) <- initialLedgerState configFilePath
 
   -- Connect to the node.
   putStrLn $ "Connecting to socket: " <> socketPath
   IPC.connectToLocalNode
     (connectInfo socketPath)
-    (protocols ledgerState)
+    (protocols env ledgerState)
   where
   connectInfo :: FilePath -> IPC.LocalNodeConnectInfo IPC.CardanoMode
   connectInfo socketPath =
@@ -66,24 +51,37 @@ main = do
         IPC.localNodeSocketPath      = socketPath
       }
 
-  protocols :: LedgerState -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
-  protocols ledgerState =
+  protocols :: DbSyncEnv -> LedgerState -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
+  protocols env ledgerState =
       IPC.LocalNodeClientProtocols {
-        IPC.localChainSyncClient    = IPC.LocalChainSyncClient (chainSyncClient ledgerState),
+        IPC.localChainSyncClient    = IPC.LocalChainSyncClient (chainSyncClient env ledgerState),
         IPC.localTxSubmissionClient = Nothing,
         IPC.localStateQueryClient   = Nothing
       }
 
+-- TODO use the actual ?security parameter?
+k :: Int
+k = 1000
+
+type LedgerStateHistory = Seq (SlotNo, LedgerState)
+
+pushLedgerState :: LedgerStateHistory -> SlotNo -> LedgerState -> LedgerStateHistory
+pushLedgerState hist ix st = Seq.take k ((ix, st) Seq.:<| hist)
+
+rollBackLedgerStateHist :: LedgerStateHistory -> SlotNo -> LedgerStateHistory
+rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . fst) hist
+
 -- | Defines the client side of the chain sync protocol.
-chainSyncClient :: LedgerState
+chainSyncClient :: DbSyncEnv
+                -> LedgerState
                 -> ChainSyncClient
                      (IPC.BlockInMode IPC.CardanoMode)
                      ChainPoint
                      ChainTip
                      IO ()
-chainSyncClient initialLedgerState = ChainSyncClient $ clientStIdle Map.empty
+chainSyncClient env ledgerState0 = ChainSyncClient $ clientStIdle (Seq.singleton (0, ledgerState0)) -- TODO is the initial ledger state at slot 0?
   where
-      clientStIdle :: Map SlotNo (LedgerState) -- Known Ledger states. Must be complete up to and including the most recently received Block's SlotNo.
+      clientStIdle :: LedgerStateHistory -- Known Ledger states. Must be complete up to and including the most recently received Block's SlotNo.
                    -> IO (ClientStIdle (IPC.BlockInMode IPC.CardanoMode)
                                   ChainPoint ChainTip IO ())
       clientStIdle knownLedgerStates = do
@@ -97,25 +95,27 @@ chainSyncClient initialLedgerState = ChainSyncClient $ clientStIdle Map.empty
           -- going to stop when we hit the current chain tip.
           clientDone
 
-      clientStNext :: Map SlotNo (LedgerState) -- ^ Known Ledger states. Must be complete up to the current BlockNo.
+      clientStNext :: LedgerStateHistory -- ^ Known Ledger states. Must be complete up to the current BlockNo.
                    -> ClientStNext (IPC.BlockInMode IPC.CardanoMode)
                                   ChainPoint ChainTip IO ()
       clientStNext knownLedgerStates =
         ClientStNext {
-            recvMsgRollForward = \(IPC.BlockInMode block@(Block (BlockHeader slotNo _ blockNo@(BlockNo blockNoI)) _) era) _tip -> case era of
-              ByronEraInCardanoMode -> ChainSyncClient $ do
-                let prevLedgerState = maybe initialLedgerState snd  (Map.lookupLT slotNo knownLedgerStates)
-                    currLedgerState = applyBlock prevLedgerState block
-                    knownLedgerStates' = Map.insert slotNo currLedgerState knownLedgerStates
-                when (blockNoI `mod` 1000 == 0) $ do
-                  printLedgerState currLedgerState
-                clientStIdle knownLedgerStates'
+            recvMsgRollForward = \(IPC.BlockInMode block@(Block (BlockHeader slotNo _ blockNo@(BlockNo blockNoI)) _) era) _tip ->
+              let
+                newLedgerState = applyBlock env (fromMaybe (error "Impossible! Missing Ledger state") . fmap snd $ Seq.lookup 0 knownLedgerStates) block
+                knownLedgerStates' = pushLedgerState knownLedgerStates slotNo newLedgerState
+              in ChainSyncClient $ do
+                  case newLedgerState of
+                    LedgerStateShelley (Shelley.ShelleyLedgerState shelleyTipWO _ _) -> case shelleyTipWO of
+                      Origin -> putStrLn "."
+                      At (Shelley.ShelleyTip _ _ hash) -> print hash
+                    _ -> when (blockNoI `mod` 100 == 0) (print blockNoI)
+                  clientStIdle knownLedgerStates'
 
           , recvMsgRollBackward = \chainPoint _ -> ChainSyncClient $ do
                 let truncatedKnownLedgerStates = case chainPoint of
-                        ChainPointAtGenesis -> Map.empty
-                        ChainPoint slotNo _ -> case Map.splitLookup slotNo knownLedgerStates of
-                          (x, _, _) -> x
+                        ChainPointAtGenesis -> Seq.singleton (0, ledgerState0)
+                        ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
                 clientStIdle truncatedKnownLedgerStates
           }
 

@@ -18,9 +18,18 @@
 {-# OPTIONS_GHC -freduction-depth=0 #-}
 
 module NewApiStuff
-  ( LedgerStateVar(..)
+  ( LedgerState
+      ( ..
+      , LedgerStateByron
+      , LedgerStateShelley
+      , LedgerStateAllegra
+      , LedgerStateMary
+      )
+  , Env(..)
+  , DbSyncEnv
   , initialLedgerState
   , applyBlock
+  , LedgerStateSnapshot(..)
   )
   where
 
@@ -28,12 +37,14 @@ import           Control.Exception
 import           Control.Monad.Except
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
 import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
 import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
+import           Data.Functor.Identity (Identity (..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
@@ -42,10 +53,11 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word
 import qualified Data.Yaml as Yaml
-import           GHC.Conc
 import           GHC.Natural
 import           System.FilePath
 
+import qualified Cardano.Api.Block
+import qualified Cardano.Api.Eras
 import qualified Cardano.BM.Configuration.Model as BM
 import qualified Cardano.BM.Data.Configuration as BM
 import qualified Cardano.Chain.Genesis
@@ -60,8 +72,6 @@ import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Slotting.EpochInfo.API
 import qualified Cardano.Slotting.Slot
-import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
-import           Data.Functor.Identity (Identity (..))
 import qualified Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types
 import qualified Ouroboros.Consensus.Byron.Ledger.Block
@@ -100,16 +110,87 @@ import qualified Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.PParams
 import qualified Shelley.Spec.Ledger.STS.Tickn
 
+newtype Env = Env DbSyncEnv
+newtype LedgerState = LedgerState CardanoLedgerState
+
 -- Bring it all together and make the initial ledger state
 initialLedgerState
   :: FilePath -- Path to the db-sync config file
-  -> IO (DbSyncEnv, LedgerStateVar)
+  -> IO (Env, LedgerState)
 initialLedgerState dbSyncConfFilePath = do
   dbSyncConf <- readDbSyncNodeConfig (ConfigFile dbSyncConfFilePath)
   genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
   env <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
-  st0 <- initLedgerStateVar genConf
-  return (env, st0)
+  return (Env env, initLedgerStateVar genConf)
+
+applyBlock
+  :: DbSyncEnv
+  -> LedgerState
+  -> Cardano.Api.Block.Block era
+  -> LedgerState
+applyBlock env oldState block = let
+  cardanoBlock :: Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
+  cardanoBlock = case block of
+    Cardano.Api.Block.ByronBlock byronBlock -> Ouroboros.Consensus.Cardano.Block.BlockByron byronBlock
+    Cardano.Api.Block.ShelleyBlock blockEra shelleyBlock -> case blockEra of
+      Cardano.Api.Eras.ShelleyBasedEraShelley -> Ouroboros.Consensus.Cardano.Block.BlockShelley shelleyBlock
+      Cardano.Api.Eras.ShelleyBasedEraAllegra -> Ouroboros.Consensus.Cardano.Block.BlockAllegra shelleyBlock
+      Cardano.Api.Eras.ShelleyBasedEraMary    -> Ouroboros.Consensus.Cardano.Block.BlockMary shelleyBlock
+  LedgerStateSnapshot newState _ = applyBlock' env oldState cardanoBlock
+  in LedgerState newState
+
+pattern LedgerStateByron
+  :: Ouroboros.Consensus.Ledger.Basics.LedgerState Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
+  -> LedgerState
+pattern LedgerStateByron st <- LedgerState
+  (CardanoLedgerState
+    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+      (Ouroboros.Consensus.Cardano.Block.LedgerStateByron st)
+      _headSt
+    )
+    _config
+  )
+
+pattern LedgerStateShelley
+  :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.ShelleyEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
+  -> LedgerState
+pattern LedgerStateShelley st <- LedgerState
+  (CardanoLedgerState
+    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+      (Ouroboros.Consensus.Cardano.Block.LedgerStateShelley st)
+      _headSt
+    )
+    _config
+  )
+
+pattern LedgerStateAllegra
+  :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.AllegraEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
+  -> LedgerState
+pattern LedgerStateAllegra st <- LedgerState
+  (CardanoLedgerState
+    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+      (Ouroboros.Consensus.Cardano.Block.LedgerStateAllegra st)
+      _headSt
+    )
+    _config
+  )
+
+pattern LedgerStateMary
+  :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.MaryEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
+  -> LedgerState
+pattern LedgerStateMary st <- LedgerState
+  (CardanoLedgerState
+    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+      (Ouroboros.Consensus.Cardano.Block.LedgerStateMary st)
+      _headSt
+    )
+    _config
+  )
+
+{-# COMPLETE LedgerStateByron
+           , LedgerStateShelley
+           , LedgerStateAllegra
+           , LedgerStateMary #-}
 
 --------------------------------------------------------------------------------
 -- Everything below this is just coppied from db-sync                         --
@@ -305,9 +386,8 @@ readByteString fp cfgType =
     error . Text.unpack $ mconcat [ "Cannot find the ", cfgType, " configuration file at : ", Text.pack fp ]
 
 
-initLedgerStateVar :: GenesisConfig -> IO LedgerStateVar
-initLedgerStateVar genesisConfig =
-  fmap LedgerStateVar . newTVarIO $
+initLedgerStateVar :: GenesisConfig -> LedgerState
+initLedgerStateVar genesisConfig = LedgerState $
     CardanoLedgerState
       { clsState = Ouroboros.Consensus.Node.ProtocolInfo.pInfoInitLedger protocolInfo
       , clsConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig protocolInfo
@@ -320,9 +400,9 @@ data CardanoLedgerState = CardanoLedgerState
   , clsConfig :: !(C.TopLevelConfig (C.CardanoBlock C.StandardCrypto))
   }
 
-newtype LedgerStateVar = LedgerStateVar
-  { unLedgerStateVar :: TVar CardanoLedgerState
-  }
+-- newtype LedgerStateVar = LedgerStateVar
+--   { unLedgerStateVar :: TVar CardanoLedgerState
+--   }
 
 -- Usually only one constructor, but may have two when we are preparing for a HFC event.
 data GenesisConfig
@@ -864,27 +944,21 @@ data DbSyncEnv = DbSyncEnv
 -- The function 'tickThenReapply' does zero validation, so add minimal validation ('blockPrevHash'
 -- matches the tip hash of the 'LedgerState'). This was originally for debugging but the check is
 -- cheap enough to keep.
-applyBlock
+applyBlock'
   :: DbSyncEnv
-  -> LedgerStateVar
+  -> LedgerState
   -> Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
-  -> IO LedgerStateSnapshot
-applyBlock env (LedgerStateVar stateVar) blk =
-    -- 'LedgerStateVar' is just being used as a mutable variable. There should not ever
-    -- be any contention on this variable, so putting everything inside 'atomically'
-    -- is fine.
-    atomically $ do
-      oldState <- readTVar stateVar
-      let !newState = oldState { clsState = applyBlk (C.ExtLedgerCfg (clsConfig oldState)) blk (clsState oldState) }
-      writeTVar stateVar newState
-      pure $ LedgerStateSnapshot
-                { lssState = newState
-                , lssEpochUpdate =
-                    if ledgerEpochNo newState == ledgerEpochNo oldState + 1
-                      then ledgerEpochUpdate env (clsState newState)
-                             (ledgerRewardUpdate env (Ouroboros.Consensus.Ledger.Extended.ledgerState $ clsState oldState))
-                      else Nothing
-                }
+  -> LedgerStateSnapshot
+applyBlock' env (LedgerState oldState) blk =
+  let !newState = oldState { clsState = applyBlk (C.ExtLedgerCfg (clsConfig oldState)) blk (clsState oldState) }
+  in LedgerStateSnapshot
+            { lssState = newState
+            , lssEpochUpdate =
+                if ledgerEpochNo newState == ledgerEpochNo oldState + 1
+                  then ledgerEpochUpdate env (clsState newState)
+                          (ledgerRewardUpdate env (Ouroboros.Consensus.Ledger.Extended.ledgerState $ clsState oldState))
+                  else Nothing
+            }
   where
     applyBlk
         :: C.ExtLedgerCfg (C.CardanoBlock C.StandardCrypto) -> C.CardanoBlock C.StandardCrypto
