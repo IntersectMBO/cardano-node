@@ -149,7 +149,7 @@ instance FromJSON PartialNodeConfiguration where
 
           PivoProtocol    ->
             -- todo: I'm not sure if we can use this protocol configuration
-            Last . Just . NodeProtocolConfigurationShelley <$> parseShelleyProtocol v
+            Last . Just . NodeProtocolConfigurationPivo <$> parseShelleyProtocol v
       pure PartialNodeConfiguration {
              pncProtocolConfig = pncProtocolConfig'
            , pncSocketPath = pncSocketPath'

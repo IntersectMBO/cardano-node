@@ -64,6 +64,7 @@ library
                        Cardano.Tracing.OrphanInstances.HardFork
                        Cardano.Tracing.OrphanInstances.Network
                        Cardano.Tracing.OrphanInstances.Shelley
+                       Cardano.Tracing.OrphanInstances.Pivo
 
 
   other-modules:       Paths_cardano_node
@@ -83,6 +84,8 @@ library
                      , cardano-crypto-wrapper
                      , cardano-ledger
                      , cardano-ledger-shelley-ma
+                     , cardano-ledger-pivo
+                     , small-steps
                      , cardano-prelude
                      , cardano-slotting
                      , contra-tracer

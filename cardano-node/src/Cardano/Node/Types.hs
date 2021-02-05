@@ -432,7 +432,7 @@ instance AdjustFilePaths (Last SocketPath) where
 --
 protocolName :: Protocol -> String
 protocolName ByronProtocol   = "Byron"
-protocolName ShelleyProtocol = "Shelley"
+protocolName ShelleyProtocol = "Shelley XXXXXXXXXXXXXXXXXX"
 protocolName CardanoProtocol = "Byron; Shelley"
 protocolName PivoProtocol    = "Pivo"
 
