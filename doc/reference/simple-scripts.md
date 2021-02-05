@@ -64,8 +64,8 @@ addresses:
 
 + **Script credential** - a script credential is the hash of the script.
 
-  The transaction witness for a script credential is the script itself. There are no 
-  other inputs for the very simple script language introduced in the Shelley era. 
+  The transaction witness for a script credential is the script itself. There are no
+  other inputs for the very simple script language introduced in the Shelley era.
   Scripts in the Plutus language (once that is available) will require
   additional inputs which will also form part of the witness.
 
@@ -433,7 +433,7 @@ transaction body:
 
 ```bash
 cardano-cli transaction build-raw
-    --ttl 1000
+    --invalid-hereafter 1000
     --fee 0
     --tx-in utxoinput
     --tx-out "$(< script.addr) ${amount}"
@@ -470,7 +470,7 @@ will be "guarded" by the script.
 
 ```bash
 cardano-cli transaction build-raw \
-    --ttl 1000 \
+    --invalid-hereafter 1000 \
     --fee 0 \
     --tx-in (txin of script address)
     --tx-out yourspecifiedtxout \
@@ -533,7 +533,7 @@ with a particular key, but only after a certain time.
 It is important to understand the transaction validity interval and how that
 relates to the script: make sure you have read the time locking section above.
 
-Previously in Shelley we had a `--ttl` flag in the cli which was an upper bound
+Previously in Shelley we had a `--invalid-hereafter` flag in the cli which was an upper bound
 on when a transaction can be valid i.e the transaction was valid up until that
 slot number. This has been replaced with the `--invalid-before` and
 `--invalid-hereafter` flags as described below.
@@ -599,7 +599,7 @@ above this means >= 1000.
 
 ```bash
 cardano-cli transaction build-raw \
-    --ttl 1000 \
+    --invalid-hereafter 1000 \
     --invalid-before 1000\
     --fee 0 \
     --tx-in (txin of script address)
@@ -634,7 +634,7 @@ above this means <= 3000:
 
 ```bash
 cardano-cli transaction build-raw \
-    --ttl 1000 \
+    --invalid-hereafter 1000 \
     --invalid-hereafter 3000\
     --fee 0 \
     --tx-in (txin of script address)

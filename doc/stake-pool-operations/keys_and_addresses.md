@@ -10,7 +10,7 @@ In the Shelley era of Cardano, every stakeholder can have two sets of keys and a
 To generate a _payment key pair_:
 
 ```
-cardano-cli shelley address key-gen \
+cardano-cli address key-gen \
 --verification-key-file payment.vkey \
 --signing-key-file payment.skey
 ```
@@ -35,7 +35,7 @@ Where the `hex-here` is generated as `0x5880 | xprv | pub | chaincode`
 To generate a _stake key pair_ :
 
 ```
-cardano-cli shelley stake-address key-gen \
+cardano-cli stake-address key-gen \
 --verification-key-file stake.vkey \
 --signing-key-file stake.skey
 ```
@@ -43,7 +43,7 @@ cardano-cli shelley stake-address key-gen \
 When including both verification keys `payment.vkey` and `stake.vkey` to build the address, the resulting `payment address` is associated with this stake keys and address.
 
 ```
-cardano-cli shelley address build \
+cardano-cli address build \
 --payment-verification-key-file payment.vkey \
 --stake-verification-key-file stake.vkey \
 --out-file payment.addr \
@@ -54,7 +54,7 @@ cardano-cli shelley address build \
 To generate a `stake address`:
 
 ```
-cardano-cli shelley stake-address build \
+cardano-cli stake-address build \
 --stake-verification-key-file stake.vkey \
 --out-file stake.addr \
 --mainnet
@@ -69,7 +69,7 @@ This address __CAN'T__ receive payments but will receive the rewards from partic
 To query the balance of an address we need a running node and the environment variable `CARDANO_NODE_SOCKET_PATH` set to the path to the node.socket:
 
 ```
-cardano-cli shelley query utxo \
+cardano-cli query utxo \
 --address $(cat payment.addr) \
 --mainnet
 ```
@@ -78,4 +78,4 @@ cardano-cli shelley query utxo \
 --------------------------------------------------------------------------------------------
 ```
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead. 
+**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.

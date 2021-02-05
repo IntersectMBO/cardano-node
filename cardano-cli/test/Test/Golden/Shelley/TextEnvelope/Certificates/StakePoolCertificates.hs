@@ -39,7 +39,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \
 
   -- Create cold key pair
   void $ execCardanoCLI
-    [ "shelley","node","key-gen"
+    [ "node","key-gen"
     , "--cold-verification-key-file", coldVerKey
     , "--cold-signing-key-file", coldSignKey
     , "--operational-certificate-issue-counter", operationalCertCounter
@@ -49,7 +49,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \
 
   -- Generate stake key pair
   void $ execCardanoCLI
-    [ "shelley","stake-address","key-gen"
+    [ "stake-address","key-gen"
     , "--verification-key-file", poolRewardAccountAndOwnerVerKey
     , "--signing-key-file", poolRewardAccountSignKey
     ]
@@ -58,7 +58,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \
 
   -- Generate vrf verification key
   void $ execCardanoCLI
-    [ "shelley","node","key-gen-VRF"
+    [ "node","key-gen-VRF"
     , "--verification-key-file", vrfVerKey
     , "--signing-key-file", vrfSignKey
     ]
@@ -68,7 +68,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \
 
   -- Create stake pool registration certificate
   void $ execCardanoCLI
-    [ "shelley","stake-pool","registration-certificate"
+    [ "stake-pool","registration-certificate"
     , "--cold-verification-key-file", coldVerKey
     , "--vrf-verification-key-file", vrfVerKey
     , "--mainnet"
@@ -90,7 +90,7 @@ golden_shelleyStakePoolCertificates = propertyOnce . H.moduleWorkspace "tmp" $ \
 
   -- Create stake pool deregistration certificate
   void $ execCardanoCLI
-    [ "shelley", "stake-pool", "deregistration-certificate"
+    [ "stake-pool", "deregistration-certificate"
     , "--cold-verification-key-file", coldVerKey
     , "--epoch", "42"
     , "--out-file", deregistrationCertificate

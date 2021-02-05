@@ -29,7 +29,7 @@ golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
 
   -- Generate stake key pair
   void $ execCardanoCLI
-    [ "shelley","stake-address","key-gen"
+    [ "stake-address","key-gen"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]
@@ -38,7 +38,7 @@ golden_shelleyMIRCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
 
   -- Create MIR certificate
   void $ execCardanoCLI
-    [ "shelley","governance","create-mir-certificate"
+    [ "governance","create-mir-certificate"
     , "--reserves" --TODO: Should also do "--reserves"
     , "--stake-verification-key-file", verKey
     , "--reward", "1000"

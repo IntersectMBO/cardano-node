@@ -41,20 +41,20 @@ Create a directory on your local machine to store your keys:
 
 #### Generate __Cold__ Keys and a __Cold_counter__:
 
-    cardano-cli shelley node key-gen \
+    cardano-cli node key-gen \
     --cold-verification-key-file cold.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter-file cold.counter
 
 #### Generate VRF Key pair
 
-    cardano-cli shelley node key-gen-VRF \
+    cardano-cli node key-gen-VRF \
     --verification-key-file vrf.vkey \
     --signing-key-file vrf.skey
 
 #### Generate the KES Key pair
 
-    cardano-cli shelley node key-gen-KES \
+    cardano-cli node key-gen-KES \
     --verification-key-file kes.vkey \
     --signing-key-file kes.skey
 
@@ -67,7 +67,7 @@ We need to know the slots per KES period, we get it from the genesis file:
 
 Then we need the current tip of the blockchain:
 
-    cardano-cli shelley query tip --mainnet
+    cardano-cli query tip --mainnet
     {
     "blockNo": 36929,
     "headerHash": "44c2a2be237ea485c15bf2a50c12b4d2aabe6d4233cb1b2131efc080615a17d0",
@@ -81,7 +81,7 @@ Look for Tip `slotNo` value. In this example we are on slot 906528. So we have K
 
 To generate the certificate:
 
-    cardano-cli shelley node issue-op-cert \
+    cardano-cli node issue-op-cert \
     --kes-verification-key-file kes.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter cold.counter \
@@ -107,6 +107,6 @@ Log in to your server and verify that the files are there:
 
     ls pool-keys
 
-    > kes.skey  kes.vkey  node.cert  vrf.skey  vrf.vkey  
+    > kes.skey  kes.vkey  node.cert  vrf.skey  vrf.vkey
 
 Later on we will learn how to register our pool in the blockchain.

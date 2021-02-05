@@ -33,7 +33,7 @@ golden_shelleyOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ 
 
   -- Create KES key pair
   void $ execCardanoCLI
-    [ "shelley","node","key-gen-KES"
+    [ "node","key-gen-KES"
     , "--verification-key-file", kesVerKey
     , "--signing-key-file", kesSignKey
     ]
@@ -42,7 +42,7 @@ golden_shelleyOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ 
 
   -- Create cold key pair
   void $ execCardanoCLI
-    [ "shelley","node","key-gen"
+    [ "node","key-gen"
     , "--cold-verification-key-file", coldVerKey
     , "--cold-signing-key-file", coldSignKey
     , "--operational-certificate-issue-counter", operationalCertCounter
@@ -52,7 +52,7 @@ golden_shelleyOperationalCertificate = propertyOnce . H.moduleWorkspace "tmp" $ 
 
   -- Create operational certificate
   void $ execCardanoCLI
-    [ "shelley","node","issue-op-cert"
+    [ "node","issue-op-cert"
     , "--kes-verification-key-file", kesVerKey
     , "--cold-signing-key-file", coldSignKey
     , "--operational-certificate-issue-counter", operationalCertCounter

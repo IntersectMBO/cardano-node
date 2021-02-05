@@ -28,7 +28,7 @@ golden_shelleyExtendedPaymentKeys = propertyOnce . H.moduleWorkspace "tmp" $ \te
 
   -- Generate payment verification key
   void $ execCardanoCLI
-    [ "shelley","address","key-gen"
+    [ "address","key-gen"
     , "--extended-key"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey

@@ -20,7 +20,7 @@ golden_shelleyGenesisKeyGenDelegate = propertyOnce . H.moduleWorkspace "tmp" $ \
   operationalCertificateIssueCounterFile <- noteTempFile tempDir "op-cert.counter"
 
   void $ execCardanoCLI
-    [ "shelley","genesis","key-gen-delegate"
+    [ "genesis","key-gen-delegate"
     , "--verification-key-file", verificationKeyFile
     , "--signing-key-file", signingKeyFile
     , "--operational-certificate-issue-counter", operationalCertificateIssueCounterFile

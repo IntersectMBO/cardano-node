@@ -24,10 +24,10 @@ golden_shelleyTransactionBuild = propertyOnce $ H.moduleWorkspace "tmp" $ \tempD
   txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
   void $ execCardanoCLI
-    [ "shelley","transaction","build-raw"
+    [ "transaction","build-raw"
     , "--tx-in", txIn
     , "--tx-out", txOut
-    , "--ttl", "60"
+    , "--invalid-hereafter", "60"
     , "--fee", "12"
     , "--tx-body-file", txBodyOutFile
     ]

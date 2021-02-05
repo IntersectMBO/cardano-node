@@ -24,7 +24,7 @@ golden_shelleyTransactionAssembleWitness_AllMultiSig = propertyOnce $ H.moduleWo
   txBodyFile <- noteInputFile "test/data/golden/shelley/tx/txbody"
   allScriptWitnessFile <- noteInputFile "test/data/golden/shelley/witnesses/allScriptWitness"
   void $ execCardanoCLI
-    [ "shelley","transaction","sign-witness"
+    [ "transaction","sign-witness"
     , "--tx-body-file", txBodyFile
     , "--witness-file", allScriptWitnessFile
     , "--out-file", allWitnessTx
@@ -38,7 +38,7 @@ golden_shelleyTransactionAssembleWitness_AnyMultiSig = propertyOnce $ H.moduleWo
   txBodyFile <- noteInputFile "test/data/golden/shelley/tx/txbody"
   anyScriptWitnessFile <- noteInputFile "test/data/golden/shelley/witnesses/anyScriptWitness"
   void $ execCardanoCLI
-    [ "shelley","transaction","sign-witness"
+    [ "transaction","sign-witness"
     , "--tx-body-file", txBodyFile
     , "--witness-file", anyScriptWitnessFile
     , "--out-file", anyWitnessTx
@@ -52,7 +52,7 @@ golden_shelleyTransactionAssembleWitness_AtLeastMultiSig = propertyOnce $ H.modu
   txBodyFile <- noteInputFile "test/data/golden/shelley/tx/txbody"
   atLeastScriptWitnessFile <- noteInputFile "test/data/golden/shelley/witnesses/anyScriptWitness"
   void $ execCardanoCLI
-    [ "shelley","transaction","sign-witness"
+    [ "transaction","sign-witness"
     , "--tx-body-file", txBodyFile
     , "--witness-file", atLeastScriptWitnessFile
     , "--out-file", atLeastWitnessTx
@@ -66,7 +66,7 @@ golden_shelleyTransactionAssembleWitness_SigningKey = propertyOnce $ H.moduleWor
   txBodyFile <- noteInputFile "test/data/golden/shelley/tx/txbody"
   signingKeyWitnessFile <- noteInputFile "test/data/golden/shelley/witnesses/singleSigningKeyWitness"
   void $ execCardanoCLI
-    [ "shelley","transaction","sign-witness"
+    [ "transaction","sign-witness"
     , "--tx-body-file", txBodyFile
     , "--witness-file", signingKeyWitnessFile
     , "--witness-file", signingKeyWitnessFile

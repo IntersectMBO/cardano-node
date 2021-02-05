@@ -28,7 +28,7 @@ golden_shelleyKESKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
 
   -- Generate payment verification key
   void $ execCardanoCLI
-    [ "shelley","node","key-gen-KES"
+    [ "node","key-gen-KES"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]

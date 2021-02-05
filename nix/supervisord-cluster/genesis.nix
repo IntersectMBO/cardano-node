@@ -210,7 +210,7 @@ rec {
                     --verification-key-file ${stateDir}/shelley/genesis-utxo.vkey)
 
     cardano-cli transaction build-raw \
-        --ttl 1000 \
+        --invalid-hereafter 1000 \
         --fee 0 \
         --tx-in $(cardano-cli genesis initial-txin \
                     --testnet-magic ${toString genesis.network_magic} \
@@ -244,7 +244,7 @@ rec {
     | $funds - ($fee|tonumber) - (.protocolParams.poolDeposit + (2 * .protocolParams.keyDeposit) + ${toString genesis.delegator_coin}) * ${toString composition.n_pools}' < ${stateDir}/shelley/genesis.json)
     cardano-cli transaction build-raw \
         --${era}-era \
-        --ttl 1000 \
+        --invalid-hereafter 1000 \
         --fee "$FEE" \
         --tx-in $(cardano-cli genesis initial-txin \
                     --testnet-magic ${toString genesis.network_magic} \

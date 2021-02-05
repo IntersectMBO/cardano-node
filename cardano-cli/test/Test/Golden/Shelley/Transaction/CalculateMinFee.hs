@@ -20,7 +20,7 @@ golden_shelleyTransactionCalculateMinFee = propertyOnce $ H.moduleWorkspace "tmp
   minFeeTxtFile <- noteTempFile tempDir "min-fee.txt"
 
   minFeeTxt <- execCardanoCLI
-    [ "shelley","transaction","calculate-min-fee"
+    [ "transaction","calculate-min-fee"
     , "--tx-in-count", "32"
     , "--tx-out-count", "27"
     , "--byron-witness-count", "5"

@@ -20,7 +20,7 @@ golden_shelleyNodeKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> 
   opCertCounterFile <- noteTempFile tempDir "op-cert.counter"
 
   void $ execCardanoCLI
-    [ "shelley","node","key-gen"
+    [ "node","key-gen"
     , "--verification-key-file", verificationKeyFile
     , "--signing-key-file", signingKeyFile
     , "--operational-certificate-issue-counter", opCertCounterFile

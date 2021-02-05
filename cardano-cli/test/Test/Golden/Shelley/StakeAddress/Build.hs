@@ -19,7 +19,7 @@ golden_shelleyStakeAddressBuild = propertyOnce . H.moduleWorkspace "tmp" $ \_ ->
   goldenRewardAddressFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/reward_address"
 
   rewardAddress <- execCardanoCLI
-    [ "shelley","stake-address","build"
+    [ "stake-address","build"
     , "--mainnet"
     , "--staking-verification-key-file", verificationKeyFile
     ]

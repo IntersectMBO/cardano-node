@@ -15,50 +15,34 @@ $ cardano-cli --help
 cardano-cli - utility to support a variety of key operations (genesis
 generation, migration, pretty-printing..) for different system generations.
 
-Usage: cardano-cli (Byron specific commands | Shelley specific commands | 
-                     Miscellaneous commands)
+Usage: cardano-cli (Era based commands | Byron specific commands | Miscellaneous commands)
 
 Available options:
   --version                Show the cardano-cli version
   -h,--help                Show this help text
 
-Byron specific commands
-  byron                    Byron specific commands
-
-Shelley specific commands
-  shelley                  Shelley specific commands
-
-Miscellaneous commands
-  version                  Show the cardano-cli version
-```
-
-Shelley-specific commands
-
-```
-cardano-cli shelley --help
-Up to date
-Usage: cardano-cli shelley COMMAND
-  Shelley specific commands
-
-Available options:
-  -h,--help                Show this help text
-
-Available commands:
-  address                  Shelley payment address commands
-  stake-address            Shelley stake address commands
-  key                      Shelley key utility commands
-  transaction              Shelley transaction commands
-  node                     Shelley node operaton commands
-  stake-pool               Shelley stake pool commands
-  query                    Shelley node query commands. Will query the local
-                           node whose Unix domain socket is obtained from the
+Era based commands
+  address                  Payment address commands
+  stake-address            Stake address commands
+  key                      Key utility commands
+  transaction              Transaction commands
+  node                     Node operation commands
+  stake-pool               Stake pool commands
+  query                    Node query commands. Will query the local node whose
+                           Unix domain socket is obtained from the
                            CARDANO_NODE_SOCKET_PATH enviromnent variable.
-  genesis                  Shelley genesis block commands
-  governance               Shelley governance commands
+  genesis                  Genesis block commands
+  governance               Governance commands
   text-view                Commands for dealing with Shelley TextView files.
                            Transactions, addresses etc are stored on disk as
                            TextView files.
 
+Byron specific commands
+  byron                    Byron specific commands
+
+Miscellaneous commands
+  version                  Show the cardano-cli version
+```
 
 ```
 
@@ -66,9 +50,8 @@ Byron-specific commands
 
 ```
 cardano-cli byron --help
-Up to date
-Usage: cardano-cli byron (COMMAND | COMMAND | COMMAND | COMMAND | COMMAND | 
-                           COMMAND | COMMAND)
+Usage: cardano-cli byron (key | transaction | query | genesis | governance |
+                           miscellaneous)
   Byron specific commands
 
 Available options:
@@ -80,7 +63,6 @@ Available commands:
   query                    Byron node query commands.
   genesis                  Byron genesis block commands
   governance               Byron governance commands
-  delegation               Byron delegation commands
   miscellaneous            Byron miscellaneous commands
 ```
 
@@ -88,7 +70,7 @@ Available commands:
 
 ### Cabal
 
-Use [Cabal - Version 3.0](https://www.haskell.org/cabal/) to build and/or install this project:
+Use [Cabal - Version 3.2.0.0](https://www.haskell.org/cabal/) to build and/or install this project:
 
 ```
 $ cd cardano-cli

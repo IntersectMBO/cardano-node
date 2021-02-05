@@ -19,7 +19,7 @@ golden_shelleyGenesisKeyGenGenesis = propertyOnce . H.moduleWorkspace "tmp" $ \t
   signingKeyFile <- noteTempFile tempDir "key-gen.skey"
 
   void $ execCardanoCLI
-    [ "shelley","genesis","key-gen-genesis"
+    [ "genesis","key-gen-genesis"
     , "--verification-key-file", verificationKeyFile
     , "--signing-key-file", signingKeyFile
     ]

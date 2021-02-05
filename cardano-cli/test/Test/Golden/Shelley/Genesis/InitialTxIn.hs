@@ -20,7 +20,7 @@ golden_shelleyGenesisInitialTxIn = propertyOnce . H.moduleWorkspace "tmp" $ \tem
   utxoHashFile <- noteTempFile tempDir "utxo_hash"
 
   utxoHash <- execCardanoCLI
-    [ "shelley","genesis","initial-txin"
+    [ "genesis","initial-txin"
     , "--testnet-magic", "16"
     , "--verification-key-file", verificationKeyFile
     ]

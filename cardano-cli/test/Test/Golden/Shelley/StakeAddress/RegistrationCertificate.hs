@@ -19,7 +19,7 @@ golden_shelleyStakeAddressRegistrationCertificate = propertyOnce . H.moduleWorks
   registrationCertFile <- noteTempFile tempDir "registration.cert"
 
   void $ execCardanoCLI
-    [ "shelley","stake-address","registration-certificate"
+    [ "stake-address","registration-certificate"
     , "--staking-verification-key-file", keyGenStakingVerificationKeyFile
     , "--out-file", registrationCertFile
     ]

@@ -19,7 +19,7 @@ golden_shelleyNodeKeyGenKes = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir 
   signingKey <- noteTempFile tempDir "kes.skey"
 
   void $ execCardanoCLI
-    [ "shelley","node","key-gen-KES"
+    [ "node","key-gen-KES"
     , "--verification-key-file", verificationKey
     , "--signing-key-file", signingKey
     ]

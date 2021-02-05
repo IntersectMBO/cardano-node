@@ -140,7 +140,7 @@ The general synopsis is as follows:
 
 .. code-block:: console
 
-   Usage: cardano-cli (Byron specific commands | Shelley specific commands |  Miscellaneous commands)
+   Usage: cardano-cli (Era based commands | Byron specific commands | Miscellaneous commands)
 
 > NOTE: the exact invocation command depends on the environment.  If you have only built ``cardano-cli``, without installing it, then you have to prepend :code:`cabal run -- `
 before :code:`cardano-cli`.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention ``cardano-cli``.
@@ -151,14 +151,10 @@ All subcommands have help available.  For example:
 
 .. code-block:: console
 
-   cabal v2-run -- cardano-cli -- byron key migrate-delegate-key-from --help
+   cabal run -- cardano-cli -- byron key migrate-delegate-key-from --help
 
    cardano-cli -- byron key migrate-delegate-key-from
-   Usage: cardano-cli byron key migrate-delegate-key-from (--byron-legacy-formats |
-                                                            --byron-formats)
-                                                          --from FILEPATH
-                                                          (--byron-legacy-formats |
-                                                            --byron-formats)
+   Usage: cardano-cli byron key migrate-delegate-key-from --from FILEPATH
                                                           --to FILEPATH
      Migrate a delegate key from an older version.
 
@@ -167,8 +163,6 @@ All subcommands have help available.  For example:
      --byron-legacy-formats   Byron/cardano-sl formats and compatibility
      --byron-formats          Byron era formats and compatibility
      --from FILEPATH          Signing key file to migrate.
-     --byron-legacy-formats   Byron/cardano-sl formats and compatibility
-     --byron-formats          Byron era formats and compatibility
      --to FILEPATH            Non-existent file to write the signing key to.
      -h,--help                Show this help text
 
@@ -229,7 +223,7 @@ it needs to be migrated over, which is done by the ``migrate-delegate-key-from``
 .. code-block:: console
 
   $ cabal v2-run -- cardano-cli byron key migrate-delegate-key-from
-          --byron-legacy-formats --from key0.sk  --byron-formats --to key0Converted.sk
+          --from key0.sk --to key0Converted.sk
 
 Signing key queries
 -------------------
@@ -239,7 +233,7 @@ and ``signing-key-address`` subcommands (the latter requires the network magic):
 
 .. code-block:: console
 
-   $ cabal v2-run -- cardano-cli byron signing-key-public --byron-formats --secret key0.sk
+   $ cabal v2-run -- cardano-cli byron key signing-key-public --byron-formats --secret key0.sk
 
    public key hash: a2b1af0df8ca764876a45608fae36cf04400ed9f413de2e37d92ce04
    public key: sc4pa1pAriXO7IzMpByKo4cG90HCFD465Iad284uDYz06dHCqBwMHRukReQ90+TA/vQpj4L1YNaLHI7DS0Z2Vg==
@@ -303,8 +297,9 @@ You can query the tip of your local node via the ``get-tip`` command as follows
 
 1. Open `tmux`
 2. Run ``cabal build cardano-node``
-3. Run ``./scripts/benchmarking/shelley-testnet-live.sh``
-4. ``cabal exec cardano-cli -- get-tip --config configuration/defaults/liveview/config-0.yaml --socket-path socket/0``
+3. Run ``./scripts/lite/shelley-testnet.sh example``
+4. Run ``export CARDANO_NODE_SOCKET_PATH=/cardano-node/example/socket/node-1-socket
+4. ``cabal exec cardano-cli -- get-tip --testnet-magic 42``
 
 You will see output from stdout in this format:
 
@@ -325,21 +320,21 @@ A Byron update proposal can be created as follows:
 
 .. code-block:: console
 
-   cardano-cli -- byron node
+   cardano-cli -- byron governance
                   create-update-proposal
-                  --config NODE-CONFIGURATION
-                  --signing-key FILEPATH
-                  --protocol-version-major WORD16
-                  --protocol-version-minor WORD16
-                  --protocol-version-alt WORD8
-                  --application-name STRING
-                  --software-version-num WORD32
-                  --system-tag STRING
-                  --installer-hash HASH
-                  --filepath FILEPATH
+                    (--mainnet | --testnet-magic NATURAL)
+                    --signing-key FILEPATH
+                    --protocol-version-major WORD16
+                    --protocol-version-minor WORD16
+                    --protocol-version-alt WORD8
+                    --application-name STRING
+                    --software-version-num WORD32
+                    --system-tag STRING
+                    --installer-hash HASH
+                    --filepath FILEPATH
                   ..
 
-The mandatory arguments are ``config``, ``signing-key``, ``protocol-version-major``, ``protocol-version-minor``, ``protocol-version-alt``, ``application-name``, ``software-version-num``, ``system-tag``, ``installer-hash`` and ``filepath``.
+The mandatory arguments are ``--mainnet | --testnet-magic``, ``signing-key``, ``protocol-version-major``, ``protocol-version-minor``, ``protocol-version-alt``, ``application-name``, ``software-version-num``, ``system-tag``, ``installer-hash`` and ``filepath``.
 
 The remaining arguments are optional parameters you want to update in your update proposal.
 
@@ -357,13 +352,11 @@ Example:
 
 .. code-block:: console
 
-   cardano-cli -- byron node
+   cardano-cli -- byron governance
                submit-update-proposal
                --config configuration/defaults/mainnet/configuration.yaml
+               (--mainnet | --testnet-magic NATURAL)
                --filepath my-update-proposal
-               --socket-path socket/0
-
-The socket path  must either be specified as an argument (``--socket-path``) or specified in the supplied config file.
 
 See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
 for more deatils on update proposals.
@@ -378,8 +371,8 @@ Byron vote creation:
 
 .. code-block:: console
 
-   cabal exec cardano-cli -- byron node create-proposal-vote
-                          --config configuration/defaults/liveview/config-0.yaml
+   cabal exec cardano-cli -- byron governance create-proposal-vote
+                          (--mainnet | --testnet-magic NATURAL)
                           --signing-key configuration/defaults/liveview/genesis/delegate-keys.000.key
                           --proposal-filepath ProtocolUpdateProposalFile
                           --vote-yes
@@ -389,15 +382,14 @@ Byron vote submission:
 
 .. code-block:: console
 
-   cabal exec cardano-cli -- byron node submit-proposal-vote
-                          --config  configuration/defaults/liveview/config-0.yaml
+   cabal exec cardano-cli -- byron governance submit-proposal-vote
+                          (--mainnet | --testnet-magic NATURAL)
                           --filepath UpdateProposalVoteFile
-                          --socket-path socket/node-0-socket
 
 Development
 ===========
 
-run *ghcid* with: ``ghcid -c "cabal v2-repl exe:cardano-node --reorder-goals"``
+run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
 
 Testing
 ========

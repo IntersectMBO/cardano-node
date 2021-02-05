@@ -61,7 +61,7 @@ cardano-cli key convert-byron-key \
 # We'll include the update proposal
 
 cardano-cli transaction build-raw \
-            --ttl 100000 \
+            --invalid-hereafter 100000 \
             --fee 0 \
             --tx-in ${TXID0}#0\
             --tx-in ${TXID1}#0\

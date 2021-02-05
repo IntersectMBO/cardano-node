@@ -331,7 +331,7 @@ testnet testnetOptions H.Conf {..} = do
   H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
 
   void $ H.execCli
-    [ "shelley", "genesis", "create"
+    [ "genesis", "create"
     , "--testnet-magic", "42"
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--start-time", formatIso8601 startTime
@@ -355,7 +355,7 @@ testnet testnetOptions H.Conf {..} = do
 
   -- Now generate for real:
   void $ H.execCli
-    [ "shelley", "genesis", "create"
+    [ "genesis", "create"
     , "--testnet-magic", "42"
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--gen-genesis-keys", show @Int (numBftNodes testnetOptions)
@@ -377,14 +377,14 @@ testnet testnetOptions H.Conf {..} = do
   -- This was done already for the BFT nodes as part of the genesis creation
   forM_ poolNodes $ \node -> do
     void $ H.execCli
-      [ "shelley", "node", "key-gen"
+      [ "node", "key-gen"
       , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
       , "--cold-signing-key-file", tempAbsPath </> node </> "shelley/operator.skey"
       , "--operational-certificate-issue-counter-file", tempAbsPath </> node </> "shelley/operator.counter"
       ]
 
     void $ H.execCli
-      [ "shelley", "node", "key-gen-VRF"
+      [ "node", "key-gen-VRF"
       , "--verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
       , "--signing-key-file", tempAbsPath </> node </> "shelley/vrf.skey"
       ]
@@ -403,13 +403,13 @@ testnet testnetOptions H.Conf {..} = do
   -- Make hot keys and for all nodes
   forM_ allNodes $ \node -> do
     void $ H.execCli
-      [ "shelley", "node", "key-gen-KES"
+      [ "node", "key-gen-KES"
       , "--verification-key-file", tempAbsPath </> node </> "shelley/kes.vkey"
       , "--signing-key-file",      tempAbsPath </> node </> "shelley/kes.skey"
       ]
 
     void $ H.execCli
-      [ "shelley", "node", "issue-op-cert"
+      [ "node", "issue-op-cert"
       , "--kes-period", "0"
       , "--kes-verification-key-file", tempAbsPath </> node </> "shelley/kes.vkey"
       , "--cold-signing-key-file", tempAbsPath </> node </> "shelley/operator.skey"
@@ -434,21 +434,21 @@ testnet testnetOptions H.Conf {..} = do
   forM_ addrs $ \addr -> do
     -- Payment address keys
     void $ H.execCli
-      [ "shelley", "address", "key-gen"
+      [ "address", "key-gen"
       , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
       , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> ".skey"
       ]
 
     -- Stake address keys
     void $ H.execCli
-      [ "shelley", "stake-address", "key-gen"
+      [ "stake-address", "key-gen"
       , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.skey"
       ]
 
     -- Payment addresses
     void $ H.execCli
-      [ "shelley", "address", "build"
+      [ "address", "build"
       , "--payment-verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--testnet-magic", "42"
@@ -457,7 +457,7 @@ testnet testnetOptions H.Conf {..} = do
 
     -- Stake addresses
     void $ H.execCli
-      [ "shelley", "stake-address", "build"
+      [ "stake-address", "build"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--testnet-magic", "42"
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.addr"
@@ -465,7 +465,7 @@ testnet testnetOptions H.Conf {..} = do
 
     -- Stake addresses registration certs
     void $ H.execCli
-      [ "shelley", "stake-address", "registration-certificate"
+      [ "stake-address", "registration-certificate"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
@@ -474,7 +474,7 @@ testnet testnetOptions H.Conf {..} = do
   forM_ userPoolN $ \n -> do
     -- Stake address delegation certs
     void $ H.execCli
-      [ "shelley", "stake-address", "delegation-certificate"
+      [ "stake-address", "delegation-certificate"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/user" <> show @Int n <> "-stake.vkey"
       , "--cold-verification-key-file", tempAbsPath </> "node-pool" <> show @Int n </> "shelley/operator.vkey"
       , "--out-file", tempAbsPath </> "addresses/user" <> show @Int n <> "-stake.deleg.cert"
@@ -490,7 +490,7 @@ testnet testnetOptions H.Conf {..} = do
   -- Next is to make the stake pool registration cert
   forM_ poolNodes $ \node -> do
     H.execCli
-      [ "shelley", "stake-pool", "registration-certificate"
+      [ "stake-pool", "registration-certificate"
       , "--testnet-magic", "42"
       , "--pool-pledge", "0", "--pool-cost", "0", "--pool-margin", "0"
       , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
@@ -514,7 +514,7 @@ testnet testnetOptions H.Conf {..} = do
     --  3. register the user1 stake address
     --  4. delegate from the user1 stake address to the stake pool
     txIn <- H.noteShow . S.strip =<< H.execCli
-      [ "shelley", "genesis", "initial-txin"
+      [ "genesis", "initial-txin"
       , "--testnet-magic", "42"
       , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
       ]
@@ -524,8 +524,8 @@ testnet testnetOptions H.Conf {..} = do
     user1Addr <- H.readFile $ tempAbsPath </> "addresses/user1.addr"
 
     void $ H.execCli
-      [ "shelley", "transaction", "build-raw"
-      , "--ttl", "1000"
+      [ "transaction", "build-raw"
+      , "--invalid-hereafter", "1000"
       , "--fee", "0"
       , "--tx-in", txIn
       , "--tx-out",  user1Addr <> "+" <> show @Int maxSupply
@@ -538,10 +538,10 @@ testnet testnetOptions H.Conf {..} = do
 
   -- TODO: this will become the transaction to register the pool, etc.
   -- We'll need to pick the tx-in from the actual UTxO since it contains the txid,
-  -- we'll have to query this via cardano-cli shelley query utxo.
+  -- we'll have to query this via cardano-cli query utxo.
 
-  {-  cardano-cli shelley transaction build-raw \
-          --ttl 1000000 --fee 0 \
+  {-  cardano-cli transaction build-raw \
+          --invalid-hereafter 1000000 --fee 0 \
           --tx-in 67209bfcdf78f8cd86f649da75053a80fb9bb3fad68465554f9301c31b496c65#0 \
           --tx-out $(cat example/addresses/user1.addr)+450000000 \
           --certificate-file example/addresses/pool-owner1-stake.reg.cert \
@@ -551,12 +551,12 @@ testnet testnetOptions H.Conf {..} = do
           --out-file example/register-pool.txbody
   -}
 
-  {-  cardano-cli shelley address convert \
+  {-  cardano-cli address convert \
           --byron-key-file example/byron/payment-keys.000.key \
           --signing-key-file example/byron/payment-keys.000-converted.key
   -}
 
-  {-  cardano-cli shelley transaction sign \
+  {-  cardano-cli transaction sign \
           --tx-body-file example/register-pool.txbody \
           --testnet-magic 42 \
           --signing-key-file example/byron/payment-keys.000-converted.key \
@@ -567,7 +567,7 @@ testnet testnetOptions H.Conf {..} = do
           --out-file example/register-pool.tx
   -}
 
-  {-  cardano-cli shelley transaction submit \
+  {-  cardano-cli transaction submit \
           --tx-file example/register-pool.tx --testnet-magic 42
   -}
 
@@ -577,7 +577,7 @@ testnet testnetOptions H.Conf {..} = do
   -- 3. the pool1 owner key, due to the pool registration cert
   -- 3. the pool1 operator key, due to the pool registration cert
   void $ H.execCli
-    [ "shelley", "transaction", "sign"
+    [ "transaction", "sign"
     , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
     , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
     , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"

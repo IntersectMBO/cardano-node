@@ -269,7 +269,7 @@ echo "====================================================================="
 #  4. delegate from the user1 stake address to the stake pool
 
 $cardano_cli shelley transaction build-raw \
-    --ttl 1000 \
+    --invalid-hereafter 1000 \
     --fee 0 \
     --tx-in $($cardano_cli shelley genesis initial-txin \
                 --testnet-magic 42 \

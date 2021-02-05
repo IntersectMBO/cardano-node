@@ -22,7 +22,7 @@ Before we can create an operational certificate for our node, we need to figure 
 
 We check the current tip of the blockchain:
 
-    cardano-cli shelley query tip --mainnet
+    cardano-cli query tip --mainnet
 
     {
     "blockNo": 36914,
@@ -37,7 +37,7 @@ In this example, we are currently in slot 8520857, and we know from the genesis 
 
 With this we are able to generate an operational certificate for our stake pool:
 
-    cardano-cli shelley node issue-op-cert \
+    cardano-cli node issue-op-cert \
     --kes-verification-key-file kes.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter cold.counter \

@@ -59,7 +59,7 @@ golden_convertCardanoAddressByronSigningKey =
 
     -- Convert the `cardano-address` signing key
     void $ execCardanoCLI
-      [ "shelley","key","convert-cardano-address-key"
+      [ "key","convert-cardano-address-key"
       , "--byron-payment-key"
       , "--signing-key-file", signingKeyFp
       , "--out-file", convertedSigningKeyFp
@@ -96,7 +96,7 @@ golden_convertCardanoAddressIcarusSigningKey =
 
     -- Convert the `cardano-address` signing key
     void $ execCardanoCLI
-      [ "shelley","key","convert-cardano-address-key"
+      [ "key","convert-cardano-address-key"
       , "--icarus-payment-key"
       , "--signing-key-file", signingKeyFp
       , "--out-file", convertedSigningKeyFp
@@ -134,7 +134,7 @@ golden_convertCardanoAddressShelleyPaymentSigningKey =
 
     -- Convert the `cardano-address` signing key
     void $ execCardanoCLI
-      [ "shelley","key","convert-cardano-address-key"
+      [ "key","convert-cardano-address-key"
       , "--shelley-payment-key"
       , "--signing-key-file", signingKeyFp
       , "--out-file", convertedSigningKeyFp
@@ -172,7 +172,7 @@ golden_convertCardanoAddressShelleyStakeSigningKey =
 
     -- Convert the `cardano-address` signing key
     void $ execCardanoCLI
-      [ "shelley","key","convert-cardano-address-key"
+      [ "key","convert-cardano-address-key"
       , "--shelley-stake-key"
       , "--signing-key-file", signingKeyFp
       , "--out-file", convertedSigningKeyFp

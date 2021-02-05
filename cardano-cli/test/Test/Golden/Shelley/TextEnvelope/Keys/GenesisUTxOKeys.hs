@@ -28,7 +28,7 @@ golden_shelleyGenesisUTxOKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDi
 
   -- Generate payment verification key
   void $ execCardanoCLI
-    [ "shelley","genesis","key-gen-utxo"
+    [ "genesis","key-gen-utxo"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]

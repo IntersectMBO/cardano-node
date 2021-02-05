@@ -28,7 +28,7 @@ golden_shelleyStakeKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> d
 
   -- Generate stake key pair
   void $ execCardanoCLI
-    [ "shelley","stake-address","key-gen"
+    [ "stake-address","key-gen"
     , "--verification-key-file", verKey
     , "--signing-key-file", signKey
     ]

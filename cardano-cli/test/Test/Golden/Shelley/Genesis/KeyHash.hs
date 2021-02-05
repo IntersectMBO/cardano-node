@@ -20,7 +20,7 @@ golden_shelleyGenesisKeyHash = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir
   genesisVerificationKeyHashFile <- noteTempFile tempDir "key-hash.hex"
 
   genesisVerificationKeyHash <- execCardanoCLI
-    [ "shelley","genesis","key-hash"
+    [ "genesis","key-hash"
     , "--verification-key-file", referenceVerificationKey
     ]
 

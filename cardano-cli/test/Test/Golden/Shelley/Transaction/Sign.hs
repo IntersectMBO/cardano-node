@@ -27,7 +27,7 @@ golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDi
   -- Defaults to signing a Mainnet transaction
 
   void $ execCardanoCLI
-    [ "shelley","transaction","sign"
+    [ "transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
     , "--signing-key-file", initialUtxo1SigningKeyFile
@@ -40,7 +40,7 @@ golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDi
   -- Sign for a testnet with a testnet network magic of 11, but use two signing keys
 
   void $ execCardanoCLI
-    [ "shelley","transaction","sign"
+    [ "transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
     , "--signing-key-file", initialUtxo1SigningKeyFile
@@ -55,7 +55,7 @@ golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDi
   -- TODO: This needs to use an unsigned tx with a registration certificate
 
   void $ execCardanoCLI
-    [ "shelley","transaction","sign"
+    [ "transaction","sign"
     , "--mainnet"
     , "--tx-body-file", txBodyFile
     , "--signing-key-file", utxoSigningKeyFile

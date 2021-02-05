@@ -79,7 +79,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     -- Create the genesis json file and required keys
     void $ execCardanoCLI
-      [ "shelley","genesis","create"
+      [ "genesis","create"
       , "--testnet-magic", "12"
       , "--start-time", fmtStartTime
       , "--supply", fmtSupply
@@ -149,7 +149,7 @@ golden_shelleyGenesisCreate = propertyOnce $ do
 
     -- Create the genesis json file and required keys
     void $ execCardanoCLI
-        [ "shelley","genesis","create"
+        [ "genesis","create"
         , "--testnet-magic", "12"
         , "--start-time", fmtStartTime
         , "--supply", fmtSupply

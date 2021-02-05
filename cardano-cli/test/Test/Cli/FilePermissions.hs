@@ -27,7 +27,7 @@ prop_createVRFSigningKeyFilePermissions =
 
     -- Create VRF key pair
     void $ execCardanoCLI
-      [ "shelley", "node", "key-gen-VRF"
+      [ "node", "key-gen-VRF"
       , "--verification-key-file", vrfVerKey
       , "--signing-key-file", vrfSignKey
       ]

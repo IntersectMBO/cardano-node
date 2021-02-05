@@ -19,7 +19,7 @@ golden_shelleyAddressKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir 
   addressSKeyFile <- noteTempFile tempDir "address.skey"
 
   void $ execCardanoCLI
-    [ "shelley","address","key-gen"
+    [ "address","key-gen"
     , "--verification-key-file", addressVKeyFile
     , "--signing-key-file", addressSKeyFile
     ]
