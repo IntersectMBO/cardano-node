@@ -17,6 +17,7 @@ import           Cardano.Node.Types
 import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Shelley
+import           Cardano.Node.Protocol.Pivo (mkSomeConsensusProtocolPivo)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 ------------------------------------------------------------------------------

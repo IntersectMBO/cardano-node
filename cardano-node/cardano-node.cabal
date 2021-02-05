@@ -42,6 +42,7 @@ library
                        Cardano.Node.Protocol.Byron
                        Cardano.Node.Protocol.Cardano
                        Cardano.Node.Protocol.Shelley
+                       Cardano.Node.Protocol.Pivo
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Query
                        Cardano.Node.Parsers
