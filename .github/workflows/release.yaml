@@ -5,8 +5,8 @@ on:
     types:
       - published
   push:
-    branches:
-      - refs/tags/*
+    tags:
+      - '**'
 
 jobs:
     test-job:
