@@ -29,6 +29,7 @@ import Cardano.Node.Protocol.Shelley (ShelleyProtocolInstantiationError
                                      , readLeaderCredentials
                                      , genesisHashToPraosNonce
                                      )
+import Cardano.Tracing.OrphanInstances.Pivo ()
 
 
 -- todo: this duplicates 'mkSomeConsensusProtocolShelley' and
@@ -88,7 +89,7 @@ toPivoGenesis ShelleyGenesis { sgSystemStart
                              , sgSlotLength
                              , sgUpdateQuorum
                              , sgMaxLovelaceSupply
-                             , sgProtocolParams
+--                             , sgProtocolParams
                              , sgGenDelegs
                              , sgInitialFunds
                              , sgStaking
@@ -104,7 +105,7 @@ toPivoGenesis ShelleyGenesis { sgSystemStart
                              , sgSlotLength = sgSlotLength
                              , sgUpdateQuorum = sgUpdateQuorum
                              , sgMaxLovelaceSupply = sgMaxLovelaceSupply
-                             , sgProtocolParams = undefined
+                             , sgProtocolParams = panic "convert phantom types"
                                -- todo: add a function in the specs that
                                -- convert 'PParams era0' to 'PParams era1' for
                                -- any era.
