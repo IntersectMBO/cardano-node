@@ -1,0 +1,60 @@
+{
+    "activeSlotsCoeff": 0.1,
+    "protocolParams": {
+        "poolDeposit": 0,
+        "protocolVersion": {
+            "minor": 0,
+            "major": 0
+        },
+        "minUTxOValue": 0,
+        "decentralisationParam": 0.7,
+        "maxTxSize": 16384,
+        "minPoolCost": 0,
+        "minFeeA": 0,
+        "maxBlockBodySize": 65536,
+        "minFeeB": 0,
+        "eMax": 18,
+        "extraEntropy": {
+            "tag": "NeutralNonce"
+        },
+        "maxBlockHeaderSize": 1100,
+        "keyDeposit": 0,
+        "nOpt": 100,
+        "rho": 0,
+        "tau": 0,
+        "a0": 0
+    },
+    "genDelegs": {
+        "fee41d19701b4828b194b1b56686c122201912654d087e4f32dc2867": {
+            "delegate": "ebfddbfa85341b810a6c3b789df9142e20ec9745a80d35d7e7b32bc5",
+            "vrf": "4d838c0ec8e3e8e842d801dc4f7e64b12392dbde568d2b59dd88e321943bb283"
+        },
+        "323727d835346285fddd6c6386345b629f4f628e00e7a0f145bba1c2": {
+            "delegate": "460e0db39d15ea8efd16b4f73581dfca8f6d608baa757d845660a5a5",
+            "vrf": "e069e2f7d23bc95d365ff9c9ca09017263d986cb7be785c7424fe1c0467eeb3d"
+        },
+        "9d8bf89c8e4989abf050d8f95f6a2a872b05d87675da7328f947982f": {
+            "delegate": "a6d3e036801d6c3fe7d36b14868f6fc6e46bbecbf8a7673ee86554dd",
+            "vrf": "bb149271c8cd70f2f3d8026385d58ca8214a0de62769ab1a1762602dcb3cc360"
+        }
+    },
+    "updateQuorum": 5,
+    "networkId": "Testnet",
+    "initialFunds": {
+        "602870d06d151122c971ac7e60b289c1faf216fdf7a07d98b0d5ce5f27": 3000,
+        "6030e8d80fcf47f848476ea8125ee2408ebe7dc6ebcb6fb8d10cc9f612": 3000,
+        "608a3723890cb3a54eeb2ef501e571fc0d3250e5a7d00e398eb894d9f0": 3000
+    },
+    "maxLovelaceSupply": 9000,
+    "networkMagic": 42,
+    "epochLength": 1500,
+    "staking": {
+        "pools": {},
+        "stake": {}
+    },
+    "systemStart": "2021-02-05T17:52:35.638667287Z",
+    "slotsPerKESPeriod": 129600,
+    "slotLength": 1,
+    "maxKESEvolutions": 60,
+    "securityParam": 10
+}
