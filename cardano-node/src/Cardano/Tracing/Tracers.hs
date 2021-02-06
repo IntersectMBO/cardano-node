@@ -453,6 +453,7 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
   elidedFetchDecision <- newstate  -- for eliding messages in FetchDecision tr
   forgeTracers <- mkForgeTracers
   csReqRspTracer <- chainSyncReqRspTracer trSel verb tr
+  bfTracer <- blockFetchClientTracer trSel verb tr
 
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
@@ -461,7 +462,7 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
-    , Consensus.blockFetchClientTracer = blockFetchClientTracer trSel verb tr
+    , Consensus.blockFetchClientTracer = bfTracer
     , Consensus.blockFetchServerTracer = tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @ blk) trSel tr
@@ -837,14 +838,17 @@ blockFetchClientTracer
   => TraceSelection
   -> TracingVerbosity
   -> Trace IO Text
-  -> Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk)))
-blockFetchClientTracer trSel verb tracer =
-  let textTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tracer in
-  Tracer $ bfTracer textTracer
+  -> IO (Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk))))
+
+blockFetchClientTracer trSel verb tracer = do
+  lastSlotNoVar <-  newTVarIO 0
+  let textTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tracer
+  return $ Tracer $ bfTracer lastSlotNoVar textTracer
   where
-    bfTracer :: Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk)))
+    bfTracer :: StrictTVar IO Word64
+             -> Tracer IO (TraceLabelPeer peer (TraceFetchClientState (Header blk)))
              -> TraceLabelPeer peer (TraceFetchClientState (Header blk)) -> IO ()
-    bfTracer textTracer e@(TraceLabelPeer peer (CompletedFetchBatch (ChainRange p _) _ _ _)) = do
+    bfTracer lastSlotNoVar textTracer e@(TraceLabelPeer peer (CompletedFetchBatch (ChainRange p _) _ _ _)) = do
       let metricsTr = appendName "metrics" tracer
       now <- getCurrentTime
 
@@ -864,8 +868,16 @@ blockFetchClientTracer trSel verb tracer =
                 $ round $ slotDiff * 1000
       printf "peer: %s blockfetch delay %s\n" (show peer) (show $ slotDiff)
       meta <- mkLOMeta Critical Confidential
-      traceNamedObject metricsTr (meta, logValue)
-    bfTracer textTracer e = traceWith textTracer e
+      doLog <- atomically $ do
+          lastSlotNo <- readTVar lastSlotNoVar
+          if lastSlotNo < slot
+             then do
+                 writeTVar lastSlotNoVar slot
+                 return True
+             else return False
+      when doLog $
+        traceNamedObject metricsTr (meta, logValue)
+    bfTracer _ textTracer e = traceWith textTracer e
 
 
 
