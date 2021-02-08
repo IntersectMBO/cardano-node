@@ -58,8 +58,6 @@ import           System.FilePath
 
 import qualified Cardano.Api.Block
 import qualified Cardano.Api.Eras
-import qualified Cardano.BM.Configuration.Model as BM
-import qualified Cardano.BM.Data.Configuration as BM
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Genesis as Cardano.Chain.Genesis.Config
 import qualified Cardano.Chain.Genesis as Cardano.Chain.Genesis.Data
@@ -115,10 +113,10 @@ newtype LedgerState = LedgerState CardanoLedgerState
 
 -- Bring it all together and make the initial ledger state
 initialLedgerState
-  :: FilePath -- Path to the db-sync config file
+  :: FilePath -- Path to the node config file
   -> IO (Env, LedgerState)
 initialLedgerState dbSyncConfFilePath = do
-  dbSyncConf <- readDbSyncNodeConfig (ConfigFile dbSyncConfFilePath)
+  dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
   genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
   env <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
   return (Env env, initLedgerStateVar genConf)
@@ -219,43 +217,19 @@ genesisConfigToEnv
                 ]
         | otherwise ->
             Right $ DbSyncEnv
-                  { envProtocol = DbSyncProtocolCardano
-                  , envNetwork = Shelley.Spec.Ledger.Genesis.sgNetworkId (scConfig sCfg)
+                  { envNetwork = Shelley.Spec.Ledger.Genesis.sgNetworkId (scConfig sCfg)
                   , envNetworkMagic = Ouroboros.Network.Magic.NetworkMagic (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.Config.configProtocolMagicId bCfg)
                   , envSystemStart = Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart (Cardano.Chain.Genesis.Data.gdStartTime $ Cardano.Chain.Genesis.Config.configGenesisData bCfg)
                   -- , envLedgerStateDir = enpLedgerStateDir enp
                   }
 
-newtype ConfigFile = ConfigFile
-  { unConfigFile :: FilePath
-  }
-
-readDbSyncNodeConfig :: ConfigFile -> IO DbSyncNodeConfig
-readDbSyncNodeConfig (ConfigFile fp) = do
-    pcfg <- adjustNodeFilePath . parseDbSyncPreConfig <$> readByteString fp "DbSync"
-    ncfg <- parseNodeConfig <$> readByteString (pcNodeConfigFilePath pcfg) "node"
-    coalesceConfig pcfg ncfg (mkAdjustPath pcfg)
-  where
-    parseDbSyncPreConfig :: ByteString -> DbSyncPreConfig
-    parseDbSyncPreConfig bs =
-      case Yaml.decodeEither' bs of
-      Left err -> error . Text.unpack $ "readDbSyncNodeConfig: Error parsing config: " <> textShow err
-      Right res -> res
-
-    adjustNodeFilePath :: DbSyncPreConfig -> DbSyncPreConfig
-    adjustNodeFilePath cfg =
-      cfg { pcNodeConfigFile = adjustNodeConfigFilePath (takeDirectory fp </>) (pcNodeConfigFile cfg) }
-
-
-adjustNodeConfigFilePath :: (FilePath -> FilePath) -> NodeConfigFile -> NodeConfigFile
-adjustNodeConfigFilePath f (NodeConfigFile p) = NodeConfigFile (f p)
-
-pcNodeConfigFilePath :: DbSyncPreConfig -> FilePath
-pcNodeConfigFilePath = unNodeConfigFile . pcNodeConfigFile
+readDbSyncNodeConfig :: NodeConfigFile -> IO DbSyncNodeConfig
+readDbSyncNodeConfig (NodeConfigFile ncf) = do
+    ncfg <- parseNodeConfig <$> readByteString ncf "node"
+    coalesceConfig ncfg (mkAdjustPath ncf)
 
 data NodeConfig = NodeConfig
-  { ncProtocol :: !DbSyncProtocol
-  , ncPBftSignatureThreshold :: !(Maybe Double)
+  { ncPBftSignatureThreshold :: !(Maybe Double)
   , ncByronGenesisFile :: !GenesisFile
   , ncByronGenesisHash :: !GenesisHashByron
   , ncShelleyGenesisFile :: !GenesisFile
@@ -265,15 +239,12 @@ data NodeConfig = NodeConfig
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
 
   -- Shelley hardfok parameters
-  , ncShelleyHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
   , ncByronToShelley :: !ByronToShelley
 
   -- Allegra hardfok parameters
-  , ncAllegraHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
   , ncShelleyToAllegra :: !ShelleyToAllegra
 
   -- Mary hardfok parameters
-  , ncMaryHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
   , ncAllegraToMary :: !AllegraToMary
   }
 
@@ -285,8 +256,7 @@ instance FromJSON NodeConfig where
       parse :: Object -> Data.Aeson.Types.Internal.Parser NodeConfig
       parse o =
         NodeConfig
-          <$> o .: "Protocol"
-          <*> o .:? "PBftSignatureThreshold"
+          <$> o .:? "PBftSignatureThreshold"
           <*> fmap GenesisFile (o .: "ByronGenesisFile")
           <*> fmap GenesisHashByron (o .: "ByronGenesisHash")
           <*> fmap GenesisFile (o .: "ShelleyGenesisFile")
@@ -294,14 +264,8 @@ instance FromJSON NodeConfig where
           <*> o .: "RequiresNetworkMagic"
           <*> parseByronSoftwareVersion o
           <*> parseByronProtocolVersion o
-
-          <*> parseShelleyHardForkEpoch o
           <*> (Ouroboros.Consensus.Cardano.Node.ProtocolParamsTransition <$> parseShelleyHardForkEpoch o)
-
-          <*> parseAllegraHardForkEpoch o
           <*> (Ouroboros.Consensus.Cardano.Node.ProtocolParamsTransition <$> parseAllegraHardForkEpoch o)
-
-          <*> parseMaryHardForkEpoch o
           <*> (Ouroboros.Consensus.Cardano.Node.ProtocolParamsTransition <$> parseMaryHardForkEpoch o)
 
       parseByronProtocolVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.ProtocolVersion
@@ -345,10 +309,9 @@ parseNodeConfig bs =
     Right nc -> nc
 
 coalesceConfig
-    :: DbSyncPreConfig -> NodeConfig -> (FilePath -> FilePath)
+    :: NodeConfig -> (FilePath -> FilePath)
     -> IO DbSyncNodeConfig
-coalesceConfig pcfg ncfg adjustGenesisPath = do
-  lc <- BM.setupFromRepresentation $ pcLoggingConfig pcfg
+coalesceConfig ncfg adjustGenesisPath = do
   pure $ DbSyncNodeConfig
           {
           --   dncNetworkName = pcNetworkName pcfg
@@ -377,8 +340,8 @@ coalesceConfig pcfg ncfg adjustGenesisPath = do
 adjustGenesisFilePath :: (FilePath -> FilePath) -> GenesisFile -> GenesisFile
 adjustGenesisFilePath f (GenesisFile p) = GenesisFile (f p)
 
-mkAdjustPath :: DbSyncPreConfig -> (FilePath -> FilePath)
-mkAdjustPath cfg fp = takeDirectory (pcNodeConfigFilePath cfg) </> fp
+mkAdjustPath :: FilePath -> (FilePath -> FilePath)
+mkAdjustPath nodeConfigFilePath fp = takeDirectory nodeConfigFilePath </> fp
 
 readByteString :: FilePath -> Text -> IO ByteString
 readByteString fp cfgType =
@@ -438,17 +401,6 @@ data DbSyncNodeConfig = DbSyncNodeConfig
   , dncAllegraToMary :: !AllegraToMary
   }
 
--- May have other constructors when we are preparing for a HFC event.
-data DbSyncProtocol
-  = DbSyncProtocolCardano
-  deriving Show
-
-instance FromJSON DbSyncProtocol where
-  parseJSON o =
-    case o of
-      String "Cardano" -> pure DbSyncProtocolCardano
-      x -> Data.Aeson.Types.Internal.typeMismatch "Protocol" x
-
 type ByronToShelley =
   C.ProtocolParamsTransition Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
     (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley)
@@ -462,28 +414,6 @@ type AllegraToMary =
   C.ProtocolParamsTransition
     (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardAllegra)
     (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardMary)
-
-data DbSyncPreConfig = DbSyncPreConfig
-  { pcNetworkName :: !NetworkName
-  , pcLoggingConfig :: !BM.Representation
-  , pcNodeConfigFile :: !NodeConfigFile
-  , pcEnableLogging :: !Bool
-  , pcEnableMetrics :: !Bool
-  }
-
-instance FromJSON DbSyncPreConfig where
-  parseJSON o =
-    Aeson.withObject "top-level" parseGenDbSyncNodeConfig o
-
-
-parseGenDbSyncNodeConfig :: Object -> Data.Aeson.Types.Internal.Parser DbSyncPreConfig
-parseGenDbSyncNodeConfig o =
-  DbSyncPreConfig
-    <$> fmap NetworkName (o .: "NetworkName")
-    <*> parseJSON (Object o)
-    <*> fmap NodeConfigFile (o .: "NodeConfigFile")
-    <*> o .: "EnableLogging"
-    <*> o .: "EnableLogMetrics"
 
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath
@@ -931,8 +861,7 @@ data LedgerStateSnapshot = LedgerStateSnapshot
   }
 
 data DbSyncEnv = DbSyncEnv
-  { envProtocol :: !DbSyncProtocol
-  , envNetwork :: !Shelley.Spec.Ledger.BaseTypes.Network
+  { envNetwork :: !Shelley.Spec.Ledger.BaseTypes.Network
   , envNetworkMagic :: !Ouroboros.Network.Magic.NetworkMagic
   , envSystemStart :: !Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart
   -- , envLedgerStateDir :: !LedgerStateDir
