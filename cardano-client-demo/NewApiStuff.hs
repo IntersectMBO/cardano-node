@@ -107,7 +107,6 @@ import qualified Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.PParams
 import qualified Shelley.Spec.Ledger.STS.Tickn
 
-newtype LedgerState = LedgerState CardanoLedgerState
 
 -- Bring it all together and make the initial ledger state
 initialLedgerState
@@ -133,55 +132,47 @@ applyBlock env oldState block = let
       Cardano.Api.Eras.ShelleyBasedEraAllegra -> Ouroboros.Consensus.Cardano.Block.BlockAllegra shelleyBlock
       Cardano.Api.Eras.ShelleyBasedEraMary    -> Ouroboros.Consensus.Cardano.Block.BlockMary shelleyBlock
   LedgerStateSnapshot newState _ = applyBlock' env oldState cardanoBlock
-  in LedgerState newState
+  in newState
 
 pattern LedgerStateByron
   :: Ouroboros.Consensus.Ledger.Basics.LedgerState Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
   -> LedgerState
 pattern LedgerStateByron st <- LedgerState
-  (CardanoLedgerState
-    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
-      (Ouroboros.Consensus.Cardano.Block.LedgerStateByron st)
-      _headSt
-    )
-    _config
+  (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+    (Ouroboros.Consensus.Cardano.Block.LedgerStateByron st)
+    _headSt
   )
+  _config
 
 pattern LedgerStateShelley
   :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.ShelleyEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
   -> LedgerState
 pattern LedgerStateShelley st <- LedgerState
-  (CardanoLedgerState
-    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
-      (Ouroboros.Consensus.Cardano.Block.LedgerStateShelley st)
-      _headSt
-    )
-    _config
+  (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+    (Ouroboros.Consensus.Cardano.Block.LedgerStateShelley st)
+    _headSt
   )
+  _config
 
 pattern LedgerStateAllegra
   :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.AllegraEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
   -> LedgerState
 pattern LedgerStateAllegra st <- LedgerState
-  (CardanoLedgerState
-    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
-      (Ouroboros.Consensus.Cardano.Block.LedgerStateAllegra st)
-      _headSt
-    )
-    _config
+  (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+    (Ouroboros.Consensus.Cardano.Block.LedgerStateAllegra st)
+    _headSt
   )
+  _config
 
 pattern LedgerStateMary
   :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.MaryEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
   -> LedgerState
 pattern LedgerStateMary st <- LedgerState
-  (CardanoLedgerState
-    (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
-      (Ouroboros.Consensus.Cardano.Block.LedgerStateMary st)
-      _headSt
-    )
-    _config
+  (Ouroboros.Consensus.Ledger.Extended.ExtLedgerState
+    (Ouroboros.Consensus.Cardano.Block.LedgerStateMary st)
+    _headSt
   )
+  _config
 
 {-# COMPLETE LedgerStateByron
            , LedgerStateShelley
@@ -348,21 +339,20 @@ readByteString fp cfgType =
 
 
 initLedgerStateVar :: GenesisConfig -> LedgerState
-initLedgerStateVar genesisConfig = LedgerState $
-    CardanoLedgerState
-      { clsState = Ouroboros.Consensus.Node.ProtocolInfo.pInfoInitLedger protocolInfo
-      , clsConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig protocolInfo
-      }
+initLedgerStateVar genesisConfig = LedgerState
+  { clsState = Ouroboros.Consensus.Node.ProtocolInfo.pInfoInitLedger protocolInfo
+  , clsConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig protocolInfo
+  }
   where
     protocolInfo = mkProtocolInfoCardano genesisConfig
 
-data CardanoLedgerState = CardanoLedgerState
+data LedgerState = LedgerState
   { clsState :: !(C.ExtLedgerState (C.CardanoBlock C.StandardCrypto))
   , clsConfig :: !(C.TopLevelConfig (C.CardanoBlock C.StandardCrypto))
   }
 
 -- newtype LedgerStateVar = LedgerStateVar
---   { unLedgerStateVar :: TVar CardanoLedgerState
+--   { unLedgerStateVar :: TVar LedgerState
 --   }
 
 -- Usually only one constructor, but may have two when we are preparing for a HFC event.
@@ -854,7 +844,7 @@ toProtoParams params =
     }
 
 data LedgerStateSnapshot = LedgerStateSnapshot
-  { lssState :: !CardanoLedgerState
+  { lssState :: !LedgerState
   , lssEpochUpdate :: !(Maybe EpochUpdate) -- Only Just for a single block at the epoch boundary
   }
 
@@ -873,7 +863,7 @@ applyBlock'
   -> LedgerState
   -> Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
   -> LedgerStateSnapshot
-applyBlock' env (LedgerState oldState) blk =
+applyBlock' env oldState blk =
   let !newState = oldState { clsState = applyBlk (C.ExtLedgerCfg (clsConfig oldState)) blk (clsState oldState) }
   in LedgerStateSnapshot
             { lssState = newState
@@ -930,7 +920,7 @@ extractEpochNonce extLedgerState =
       . Ouroboros.Consensus.Shelley.Protocol.tpraosStateChainDepState
 
 
-ledgerEpochNo :: CardanoLedgerState -> Cardano.Slotting.Slot.EpochNo
+ledgerEpochNo :: LedgerState -> Cardano.Slotting.Slot.EpochNo
 ledgerEpochNo cls =
     case Ouroboros.Consensus.Ledger.Abstract.ledgerTipSlot (Ouroboros.Consensus.Ledger.Extended.ledgerState (clsState cls)) of
       Cardano.Slotting.Slot.Origin -> 0 -- An empty chain is in epoch 0
