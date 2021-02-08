@@ -18,7 +18,12 @@
 {-# OPTIONS_GHC -freduction-depth=0 #-}
 
 module NewApiStuff
-  ( LedgerState
+  ( -- * Initialization / Accumulation
+    initialLedgerState
+  , applyBlock
+
+    -- * Types
+  , LedgerState
       ( ..
       , LedgerStateByron
       , LedgerStateShelley
@@ -27,8 +32,6 @@ module NewApiStuff
       )
   , Env(..)
   , envSecurityParam
-  , initialLedgerState
-  , applyBlock
   )
   where
 

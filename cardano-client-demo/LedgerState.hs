@@ -56,7 +56,7 @@ main = do
 type LedgerStateHistory = Seq (SlotNo, LedgerState)
 
 pushLedgerState :: Env -> LedgerStateHistory -> SlotNo -> LedgerState -> LedgerStateHistory
-pushLedgerState env hist ix st = Seq.take (fromIntegral $ envSecurityParam env) ((ix, st) Seq.:<| hist)
+pushLedgerState env hist ix st = Seq.take (fromIntegral $ envSecurityParam env + 1) ((ix, st) Seq.:<| hist)
 
 rollBackLedgerStateHist :: LedgerStateHistory -> SlotNo -> LedgerStateHistory
 rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . fst) hist
