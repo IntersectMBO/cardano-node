@@ -26,7 +26,7 @@ module NewApiStuff
       , LedgerStateMary
       )
   , Env(..)
-  , DbSyncEnv
+  -- , DbSyncEnv
   , initialLedgerState
   , applyBlock
   , LedgerStateSnapshot(..)
@@ -124,11 +124,11 @@ initialLedgerState dbSyncConfFilePath = do
   return (Env env, initLedgerStateVar genConf)
 
 applyBlock
-  :: DbSyncEnv
+  :: Env
   -> LedgerState
   -> Cardano.Api.Block.Block era
   -> LedgerState
-applyBlock env oldState block = let
+applyBlock (Env env) oldState block = let
   cardanoBlock :: Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
   cardanoBlock = case block of
     Cardano.Api.Block.ByronBlock byronBlock -> Ouroboros.Consensus.Cardano.Block.BlockByron byronBlock

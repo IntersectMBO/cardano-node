@@ -35,7 +35,7 @@ main = do
   -- Get socket path from CLI argument.
   configFilePath : socketDir : _ <- getArgs
   let socketPath = socketDir </> "node.sock"
-  (Env env, ledgerState) <- initialLedgerState configFilePath
+  (env, ledgerState) <- initialLedgerState configFilePath
 
   -- Connect to the node.
   putStrLn $ "Connecting to socket: " <> socketPath
@@ -51,7 +51,7 @@ main = do
         IPC.localNodeSocketPath      = socketPath
       }
 
-  protocols :: DbSyncEnv -> LedgerState -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
+  protocols :: Env -> LedgerState -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
   protocols env ledgerState =
       IPC.LocalNodeClientProtocols {
         IPC.localChainSyncClient    = IPC.LocalChainSyncClient (chainSyncClient env ledgerState),
@@ -72,7 +72,7 @@ rollBackLedgerStateHist :: LedgerStateHistory -> SlotNo -> LedgerStateHistory
 rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . fst) hist
 
 -- | Defines the client side of the chain sync protocol.
-chainSyncClient :: DbSyncEnv
+chainSyncClient :: Env
                 -> LedgerState
                 -> ChainSyncClient
                      (IPC.BlockInMode IPC.CardanoMode)
