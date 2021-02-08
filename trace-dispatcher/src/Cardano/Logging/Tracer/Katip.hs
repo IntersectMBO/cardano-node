@@ -8,7 +8,6 @@ import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.STM
 import           Control.Monad (join, void, when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Control.Tracer
 import qualified Control.Tracer as T
 import qualified Control.Tracer.Arrow as TA
 import           Data.Foldable as FT
@@ -36,11 +35,11 @@ stdoutJsonKatipTracer = do
     pure $ withKatipLogEnv env katipTracer
 
 -- | Sets severities for the messages in this trace based on the selector function
-withKatipLogEnv :: Monad m => LogEnv -> Tracer m (LoggingContextKatip, a) -> Trace m a
+withKatipLogEnv :: Monad m => LogEnv -> T.Tracer m (LoggingContextKatip, a) -> Trace m a
 withKatipLogEnv le = T.contramap (\ (lc,v) -> (LoggingContextKatip lc le, v))
 
 --- | A standard Katip tracer
-katipTracer :: (MonadIO m, LogItem a) => Tracer m (LoggingContextKatip, a)
+katipTracer :: (MonadIO m, LogItem a) => T.Tracer m (LoggingContextKatip, a)
 katipTracer =  T.arrow $ T.emit $ uncurry output
   where
     output LoggingContextKatip {..} a =
