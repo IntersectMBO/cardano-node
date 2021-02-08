@@ -350,13 +350,13 @@ coalesceConfig
 coalesceConfig pcfg ncfg adjustGenesisPath = do
   lc <- BM.setupFromRepresentation $ pcLoggingConfig pcfg
   pure $ DbSyncNodeConfig
-          { dncNetworkName = pcNetworkName pcfg
-          , dncLoggingConfig = lc
-          , dncNodeConfigFile = pcNodeConfigFile pcfg
-          , dncProtocol = ncProtocol ncfg
-          , dncRequiresNetworkMagic = ncRequiresNetworkMagic ncfg
-          , dncEnableLogging = pcEnableLogging pcfg
-          , dncEnableMetrics = pcEnableMetrics pcfg
+          {
+          --   dncNetworkName = pcNetworkName pcfg
+          -- , dncLoggingConfig = lc
+          -- , dncNodeConfigFile = pcNodeConfigFile pcfg
+          dncRequiresNetworkMagic = ncRequiresNetworkMagic ncfg
+          -- , dncEnableLogging = pcEnableLogging pcfg
+          -- , dncEnableMetrics = pcEnableMetrics pcfg
           , dncPBftSignatureThreshold = ncPBftSignatureThreshold ncfg
           , dncByronGenesisFile = adjustGenesisFilePath adjustGenesisPath (ncByronGenesisFile ncfg)
           , dncByronGenesisHash = ncByronGenesisHash ncfg
@@ -365,9 +365,9 @@ coalesceConfig pcfg ncfg adjustGenesisPath = do
           , dncByronSoftwareVersion = ncByronSotfwareVersion ncfg
           , dncByronProtocolVersion = ncByronProtocolVersion ncfg
 
-          , dncShelleyHardFork = ncShelleyHardFork ncfg
-          , dncAllegraHardFork = ncAllegraHardFork ncfg
-          , dncMaryHardFork = ncMaryHardFork ncfg
+          -- , dncShelleyHardFork = ncShelleyHardFork ncfg
+          -- , dncAllegraHardFork = ncAllegraHardFork ncfg
+          -- , dncMaryHardFork = ncMaryHardFork ncfg
 
           , dncByronToShelley = ncByronToShelley ncfg
           , dncShelleyToAllegra = ncShelleyToAllegra ncfg
@@ -415,13 +415,12 @@ data ShelleyConfig = ShelleyConfig
 
 
 data DbSyncNodeConfig = DbSyncNodeConfig
-  { dncNetworkName :: !NetworkName
-  , dncLoggingConfig :: !BM.Configuration
-  , dncNodeConfigFile :: !NodeConfigFile
-  , dncProtocol :: !DbSyncProtocol
-  , dncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
-  , dncEnableLogging :: !Bool
-  , dncEnableMetrics :: !Bool
+  { --   dncNetworkName :: !NetworkName
+  -- , dncLoggingConfig :: !BM.Configuration
+  -- , dncNodeConfigFile :: !NodeConfigFile
+  dncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
+  -- , dncEnableLogging :: !Bool
+  -- , dncEnableMetrics :: !Bool
   , dncPBftSignatureThreshold :: !(Maybe Double)
   , dncByronGenesisFile :: !GenesisFile
   , dncByronGenesisHash :: !GenesisHashByron
@@ -430,9 +429,9 @@ data DbSyncNodeConfig = DbSyncNodeConfig
   , dncByronSoftwareVersion :: !Cardano.Chain.Update.SoftwareVersion
   , dncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
 
-  , dncShelleyHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
-  , dncAllegraHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
-  , dncMaryHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+  -- , dncShelleyHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+  -- , dncAllegraHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
+  -- , dncMaryHardFork :: !Ouroboros.Consensus.Cardano.CanHardFork.TriggerHardFork
 
   , dncByronToShelley :: !ByronToShelley
   , dncShelleyToAllegra :: !ShelleyToAllegra
@@ -573,9 +572,7 @@ readCardanoGenesisConfig
         :: DbSyncNodeConfig
         -> ExceptT DbSyncNodeError IO GenesisConfig
 readCardanoGenesisConfig enc =
-  case dncProtocol enc of
-    DbSyncProtocolCardano ->
-      GenesisCardano enc <$> readByronGenesisConfig enc <*> readShelleyGenesisConfig enc
+  GenesisCardano enc <$> readByronGenesisConfig enc <*> readShelleyGenesisConfig enc
 
 data DbSyncNodeError
   = NELookup !Text !LookupFail
