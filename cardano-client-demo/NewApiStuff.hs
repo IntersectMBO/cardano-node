@@ -58,8 +58,6 @@ import           System.FilePath
 import qualified Cardano.Api.Block
 import qualified Cardano.Api.Eras
 import qualified Cardano.Chain.Genesis
-import qualified Cardano.Chain.Genesis as Cardano.Chain.Genesis.Config
-import qualified Cardano.Chain.Genesis as Cardano.Chain.Genesis.Data
 import qualified Cardano.Chain.UTxO
 import qualified Cardano.Chain.Update
 import qualified Cardano.Crypto
@@ -192,23 +190,23 @@ genesisConfigToEnv
   genCfg =
     case genCfg of
       GenesisCardano _ bCfg sCfg
-        | Cardano.Crypto.ProtocolMagic.unProtocolMagicId (Cardano.Chain.Genesis.Config.configProtocolMagicId bCfg) /= Shelley.Spec.Ledger.Genesis.sgNetworkMagic (scConfig sCfg) ->
+        | Cardano.Crypto.ProtocolMagic.unProtocolMagicId (Cardano.Chain.Genesis.configProtocolMagicId bCfg) /= Shelley.Spec.Ledger.Genesis.sgNetworkMagic (scConfig sCfg) ->
             Left . NECardanoConfig $
               mconcat
-                [ "ProtocolMagicId ", textShow (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.Config.configProtocolMagicId bCfg)
+                [ "ProtocolMagicId ", textShow (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.configProtocolMagicId bCfg)
                 , " /= ", textShow (Shelley.Spec.Ledger.Genesis.sgNetworkMagic $ scConfig sCfg)
                 ]
-        | Cardano.Chain.Genesis.Data.gdStartTime (Cardano.Chain.Genesis.Config.configGenesisData bCfg) /= Shelley.Spec.Ledger.Genesis.sgSystemStart (scConfig sCfg) ->
+        | Cardano.Chain.Genesis.gdStartTime (Cardano.Chain.Genesis.configGenesisData bCfg) /= Shelley.Spec.Ledger.Genesis.sgSystemStart (scConfig sCfg) ->
             Left . NECardanoConfig $
               mconcat
-                [ "SystemStart ", textShow (Cardano.Chain.Genesis.Data.gdStartTime $ Cardano.Chain.Genesis.Config.configGenesisData bCfg)
+                [ "SystemStart ", textShow (Cardano.Chain.Genesis.gdStartTime $ Cardano.Chain.Genesis.configGenesisData bCfg)
                 , " /= ", textShow (Shelley.Spec.Ledger.Genesis.sgSystemStart $ scConfig sCfg)
                 ]
         | otherwise ->
             Right $ Env
                   { envNetwork = Shelley.Spec.Ledger.Genesis.sgNetworkId (scConfig sCfg)
-                  , envNetworkMagic = Ouroboros.Network.Magic.NetworkMagic (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.Config.configProtocolMagicId bCfg)
-                  , envSystemStart = Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart (Cardano.Chain.Genesis.Data.gdStartTime $ Cardano.Chain.Genesis.Config.configGenesisData bCfg)
+                  , envNetworkMagic = Ouroboros.Network.Magic.NetworkMagic (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.configProtocolMagicId bCfg)
+                  , envSystemStart = Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart (Cardano.Chain.Genesis.gdStartTime $ Cardano.Chain.Genesis.configGenesisData bCfg)
                   -- , envLedgerStateDir = enpLedgerStateDir enp
                   }
 
@@ -497,7 +495,7 @@ data DbSyncNodeError
   | NEError !Text
   | NEInvariant !Text !DbSyncInvariant
   | NEBlockMismatch !Word64 !ByteString !ByteString
-  | NEByronConfig !FilePath !Cardano.Chain.Genesis.Config.ConfigurationError
+  | NEByronConfig !FilePath !Cardano.Chain.Genesis.ConfigurationError
   | NEShelleyConfig !FilePath !Text
   | NECardanoConfig !Text
 
@@ -584,14 +582,14 @@ data DbSyncInvariant
 
 readByronGenesisConfig
         :: DbSyncNodeConfig
-        -> ExceptT DbSyncNodeError IO Cardano.Chain.Genesis.Config.Config
+        -> ExceptT DbSyncNodeError IO Cardano.Chain.Genesis.Config
 readByronGenesisConfig enc = do
   let file = unGenesisFile $ dncByronGenesisFile enc
   genHash <- firstExceptT NEError
                 . hoistEither
                 $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron $ dncByronGenesisHash enc)
   firstExceptT (NEByronConfig file)
-                $ Cardano.Chain.Genesis.Config.mkConfigFromFile (dncRequiresNetworkMagic enc) file genHash
+                $ Cardano.Chain.Genesis.mkConfigFromFile (dncRequiresNetworkMagic enc) file genHash
 
 
 readShelleyGenesisConfig
