@@ -26,7 +26,6 @@ module NewApiStuff
       , LedgerStateMary
       )
   , Env(..)
-  -- , DbSyncEnv
   , initialLedgerState
   , applyBlock
   , LedgerStateSnapshot(..)
@@ -108,7 +107,6 @@ import qualified Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.PParams
 import qualified Shelley.Spec.Ledger.STS.Tickn
 
-newtype Env = Env DbSyncEnv
 newtype LedgerState = LedgerState CardanoLedgerState
 
 -- Bring it all together and make the initial ledger state
@@ -119,14 +117,14 @@ initialLedgerState dbSyncConfFilePath = do
   dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
   genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
   env <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
-  return (Env env, initLedgerStateVar genConf)
+  return (env, initLedgerStateVar genConf)
 
 applyBlock
   :: Env
   -> LedgerState
   -> Cardano.Api.Block.Block era
   -> LedgerState
-applyBlock (Env env) oldState block = let
+applyBlock env oldState block = let
   cardanoBlock :: Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
   cardanoBlock = case block of
     Cardano.Api.Block.ByronBlock byronBlock -> Ouroboros.Consensus.Cardano.Block.BlockByron byronBlock
@@ -197,7 +195,7 @@ pattern LedgerStateMary st <- LedgerState
 genesisConfigToEnv ::
   -- DbSyncNodeParams ->
   GenesisConfig ->
-  Either DbSyncNodeError DbSyncEnv
+  Either DbSyncNodeError Env
 genesisConfigToEnv
   -- enp
   genCfg =
@@ -216,7 +214,7 @@ genesisConfigToEnv
                 , " /= ", textShow (Shelley.Spec.Ledger.Genesis.sgSystemStart $ scConfig sCfg)
                 ]
         | otherwise ->
-            Right $ DbSyncEnv
+            Right $ Env
                   { envNetwork = Shelley.Spec.Ledger.Genesis.sgNetworkId (scConfig sCfg)
                   , envNetworkMagic = Ouroboros.Network.Magic.NetworkMagic (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.Config.configProtocolMagicId bCfg)
                   , envSystemStart = Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart (Cardano.Chain.Genesis.Data.gdStartTime $ Cardano.Chain.Genesis.Config.configGenesisData bCfg)
@@ -711,7 +709,7 @@ data EpochUpdate = EpochUpdate
 
 
 allegraEpochUpdate
-  :: DbSyncEnv
+  :: Env
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardAllegra)
   -> Maybe Rewards
   -> Maybe Shelley.Spec.Ledger.BaseTypes.Nonce
@@ -724,7 +722,7 @@ allegraEpochUpdate env sls mRewards mNonce =
     , euNonce = fromMaybe Shelley.Spec.Ledger.BaseTypes.NeutralNonce mNonce
     }
 
-allegraStakeDist :: DbSyncEnv -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardAllegra) -> StakeDist
+allegraStakeDist :: Env -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardAllegra) -> StakeDist
 allegraStakeDist env
   = StakeDist
   . Map.mapKeys (toStakeCred env)
@@ -735,7 +733,7 @@ allegraStakeDist env
   . Shelley.Spec.Ledger.LedgerState.nesEs
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
 
-maryStakeDist :: DbSyncEnv -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardMary) -> StakeDist
+maryStakeDist :: Env -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardMary) -> StakeDist
 maryStakeDist env
   = StakeDist
   . Map.mapKeys (toStakeCred env)
@@ -746,7 +744,7 @@ maryStakeDist env
   . Shelley.Spec.Ledger.LedgerState.nesEs
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
 
-shelleyStakeDist :: DbSyncEnv -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley) -> StakeDist
+shelleyStakeDist :: Env -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley) -> StakeDist
 shelleyStakeDist env
   = StakeDist
   . Map.mapKeys (toStakeCred env)
@@ -758,7 +756,7 @@ shelleyStakeDist env
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
 
 allegraRewards
-  :: DbSyncEnv
+  :: Env
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardAllegra)
   -> Maybe Rewards
 allegraRewards env
@@ -768,7 +766,7 @@ allegraRewards env
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
 
 maryRewards
-  :: DbSyncEnv
+  :: Env
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardMary)
   -> Maybe Rewards
 maryRewards env
@@ -778,7 +776,7 @@ maryRewards env
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
 
 shelleyRewards
-  :: DbSyncEnv
+  :: Env
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley)
   -> Maybe Rewards
 shelleyRewards env
@@ -787,14 +785,14 @@ shelleyRewards env
   . Shelley.Spec.Ledger.LedgerState.nesRu
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
 
-toStakeCred :: DbSyncEnv -> Shelley.Spec.Ledger.Credential.Credential 'Shelley.Spec.Ledger.Keys.Staking era -> StakeCred
+toStakeCred :: Env -> Shelley.Spec.Ledger.Credential.Credential 'Shelley.Spec.Ledger.Keys.Staking era -> StakeCred
 toStakeCred env cred
   = StakeCred
   $ Shelley.Spec.Ledger.Address.serialiseRewardAcnt
   $ Shelley.Spec.Ledger.Address.RewardAcnt (envNetwork env) cred
 
 maryEpochUpdate
-  :: DbSyncEnv
+  :: Env
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardMary)
   -> Maybe Rewards
   -> Maybe Shelley.Spec.Ledger.BaseTypes.Nonce
@@ -808,7 +806,7 @@ maryEpochUpdate env sls mRewards mNonce =
     }
 
 shelleyEpochUpdate
-  :: DbSyncEnv
+  :: Env
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley)
   -> Maybe Rewards
   -> Maybe Shelley.Spec.Ledger.BaseTypes.Nonce -> EpochUpdate
@@ -860,7 +858,7 @@ data LedgerStateSnapshot = LedgerStateSnapshot
   , lssEpochUpdate :: !(Maybe EpochUpdate) -- Only Just for a single block at the epoch boundary
   }
 
-data DbSyncEnv = DbSyncEnv
+data Env = Env
   { envNetwork :: !Shelley.Spec.Ledger.BaseTypes.Network
   , envNetworkMagic :: !Ouroboros.Network.Magic.NetworkMagic
   , envSystemStart :: !Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart
@@ -871,7 +869,7 @@ data DbSyncEnv = DbSyncEnv
 -- matches the tip hash of the 'LedgerState'). This was originally for debugging but the check is
 -- cheap enough to keep.
 applyBlock'
-  :: DbSyncEnv
+  :: Env
   -> LedgerState
   -> Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
   -> LedgerStateSnapshot
@@ -897,7 +895,7 @@ applyBlock' env (LedgerState oldState) blk =
 
 -- This will return a 'Just' from the time the rewards are updated until the end of the
 -- epoch. It is 'Nothing' for the first block of a new epoch (which is slightly inconvenient).
-ledgerRewardUpdate :: DbSyncEnv -> Ouroboros.Consensus.Ledger.Basics.LedgerState (C.CardanoBlock C.StandardCrypto) -> Maybe Rewards
+ledgerRewardUpdate :: Env -> Ouroboros.Consensus.Ledger.Basics.LedgerState (C.CardanoBlock C.StandardCrypto) -> Maybe Rewards
 ledgerRewardUpdate env lsc =
     case lsc of
       Ouroboros.Consensus.Cardano.Block.LedgerStateByron _ -> Nothing -- This actually happens during the Byron era.
@@ -906,7 +904,7 @@ ledgerRewardUpdate env lsc =
       Ouroboros.Consensus.Cardano.Block.LedgerStateMary mls -> maryRewards env mls
 
 -- Create an EpochUpdate from the current epoch state and the rewards from the last epoch.
-ledgerEpochUpdate :: DbSyncEnv -> C.ExtLedgerState (C.CardanoBlock C.StandardCrypto) -> Maybe Rewards -> Maybe EpochUpdate
+ledgerEpochUpdate :: Env -> C.ExtLedgerState (C.CardanoBlock C.StandardCrypto) -> Maybe Rewards -> Maybe EpochUpdate
 ledgerEpochUpdate env els mRewards =
   case Ouroboros.Consensus.Ledger.Extended.ledgerState els of
     Ouroboros.Consensus.Cardano.Block.LedgerStateByron _ -> Nothing
