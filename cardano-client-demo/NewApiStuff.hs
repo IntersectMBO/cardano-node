@@ -25,7 +25,8 @@ module NewApiStuff
       , LedgerStateAllegra
       , LedgerStateMary
       )
-  , Env
+  , Env(..)
+  , envSecurityParam
   , initialLedgerState
   , applyBlock
   )
@@ -110,11 +111,15 @@ initialLedgerState
   :: FilePath
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> IO (Env, LedgerState)
+  -- ^ ( The environment
+  --   , The initial ledger state
+  --   )
 initialLedgerState dbSyncConfFilePath = do
   dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
   genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
   env <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
-  return (env, initLedgerStateVar genConf)
+  let ledgerState = initLedgerStateVar genConf
+  return (env, ledgerState)
 
 -- | Apply a single block to the current ledger state.
 -- TODO to what extent if any does this validate the block?
@@ -146,7 +151,6 @@ pattern LedgerStateByron st <- LedgerState
     (Ouroboros.Consensus.Cardano.Block.LedgerStateByron st)
     _headSt
   )
-  _config
 
 pattern LedgerStateShelley
   :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.ShelleyEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
@@ -156,7 +160,6 @@ pattern LedgerStateShelley st <- LedgerState
     (Ouroboros.Consensus.Cardano.Block.LedgerStateShelley st)
     _headSt
   )
-  _config
 
 pattern LedgerStateAllegra
   :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.AllegraEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
@@ -166,7 +169,6 @@ pattern LedgerStateAllegra st <- LedgerState
     (Ouroboros.Consensus.Cardano.Block.LedgerStateAllegra st)
     _headSt
   )
-  _config
 
 pattern LedgerStateMary
   :: Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock (Ouroboros.Consensus.Shelley.Eras.MaryEra Ouroboros.Consensus.Shelley.Eras.StandardCrypto))
@@ -176,7 +178,6 @@ pattern LedgerStateMary st <- LedgerState
     (Ouroboros.Consensus.Cardano.Block.LedgerStateMary st)
     _headSt
   )
-  _config
 
 {-# COMPLETE LedgerStateByron
            , LedgerStateShelley
@@ -213,7 +214,7 @@ genesisConfigToEnv
                   { envNetwork = Shelley.Spec.Ledger.Genesis.sgNetworkId (scConfig sCfg)
                   , envNetworkMagic = Ouroboros.Network.Magic.NetworkMagic (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.configProtocolMagicId bCfg)
                   , envSystemStart = Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart (Cardano.Chain.Genesis.gdStartTime $ Cardano.Chain.Genesis.configGenesisData bCfg)
-                  -- , envLedgerStateDir = enpLedgerStateDir enp
+                  , envConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig (mkProtocolInfoCardano genCfg)
                   }
 
 readDbSyncNodeConfig :: NodeConfigFile -> IO DbSyncNodeConfig
@@ -345,19 +346,13 @@ readByteString fp cfgType =
 initLedgerStateVar :: GenesisConfig -> LedgerState
 initLedgerStateVar genesisConfig = LedgerState
   { clsState = Ouroboros.Consensus.Node.ProtocolInfo.pInfoInitLedger protocolInfo
-  , clsConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig protocolInfo
   }
   where
     protocolInfo = mkProtocolInfoCardano genesisConfig
 
-data LedgerState = LedgerState
-  { clsState :: !(C.ExtLedgerState (C.CardanoBlock C.StandardCrypto))
-  , clsConfig :: !(C.TopLevelConfig (C.CardanoBlock C.StandardCrypto))
+newtype LedgerState = LedgerState
+  { clsState :: (C.ExtLedgerState (C.CardanoBlock C.StandardCrypto))
   }
-
--- newtype LedgerStateVar = LedgerStateVar
---   { unLedgerStateVar :: TVar LedgerState
---   }
 
 -- Usually only one constructor, but may have two when we are preparing for a HFC event.
 data GenesisConfig
@@ -856,8 +851,17 @@ data Env = Env
   { envNetwork :: !Shelley.Spec.Ledger.BaseTypes.Network
   , envNetworkMagic :: !Ouroboros.Network.Magic.NetworkMagic
   , envSystemStart :: !Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart
-  -- , envLedgerStateDir :: !LedgerStateDir
+  , envConfig :: !(C.TopLevelConfig (C.CardanoBlock C.StandardCrypto))
   }
+
+envSecurityParam :: Env -> Word64
+envSecurityParam env = k
+  where
+    C.SecurityParam k
+      = Ouroboros.Consensus.HardFork.Combinator.Basics.hardForkConsensusConfigK
+      $ C.topLevelConfigProtocol
+      $ envConfig env
+
 
 -- The function 'tickThenReapply' does zero validation, so add minimal validation ('blockPrevHash'
 -- matches the tip hash of the 'LedgerState'). This was originally for debugging but the check is
@@ -868,11 +872,11 @@ applyBlock'
   -> Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
   -> LedgerStateSnapshot
 applyBlock' env oldState blk =
-  let !newState = oldState { clsState = applyBlk (C.ExtLedgerCfg (clsConfig oldState)) blk (clsState oldState) }
+  let !newState = oldState { clsState = applyBlk (C.ExtLedgerCfg (envConfig env)) blk (clsState oldState) }
   in LedgerStateSnapshot
             { lssState = newState
             , lssEpochUpdate =
-                if ledgerEpochNo newState == ledgerEpochNo oldState + 1
+                if ledgerEpochNo env newState == ledgerEpochNo env oldState + 1
                   then ledgerEpochUpdate env (clsState newState)
                           (ledgerRewardUpdate env (Ouroboros.Consensus.Ledger.Extended.ledgerState $ clsState oldState))
                   else Nothing
@@ -924,15 +928,15 @@ extractEpochNonce extLedgerState =
       . Ouroboros.Consensus.Shelley.Protocol.tpraosStateChainDepState
 
 
-ledgerEpochNo :: LedgerState -> Cardano.Slotting.Slot.EpochNo
-ledgerEpochNo cls =
+ledgerEpochNo :: Env -> LedgerState -> Cardano.Slotting.Slot.EpochNo
+ledgerEpochNo env cls =
     case Ouroboros.Consensus.Ledger.Abstract.ledgerTipSlot (Ouroboros.Consensus.Ledger.Extended.ledgerState (clsState cls)) of
       Cardano.Slotting.Slot.Origin -> 0 -- An empty chain is in epoch 0
       Ouroboros.Consensus.Block.Abstract.NotOrigin slot -> runIdentity $ Cardano.Slotting.EpochInfo.API.epochInfoEpoch epochInfo slot
   where
     epochInfo :: Cardano.Slotting.EpochInfo.API.EpochInfo Identity
     epochInfo = Ouroboros.Consensus.HardFork.Combinator.State.epochInfoLedger
-      (Ouroboros.Consensus.Config.configLedger $ clsConfig cls)
+      (Ouroboros.Consensus.Config.configLedger $ envConfig env)
       (Ouroboros.Consensus.HardFork.Combinator.Basics.hardForkLedgerStatePerEra . Ouroboros.Consensus.Ledger.Extended.ledgerState $ clsState cls)
 
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from the block matches

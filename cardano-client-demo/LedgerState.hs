@@ -7,10 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -freduction-depth=0 #-}
 
-import qualified Cardano.Api.Block as Block
 import qualified Cardano.Api.IPC as IPC
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -21,12 +18,9 @@ import           System.FilePath ((</>))
 
 -- TODO move this module into cardano-api
 import           Cardano.Api
-import qualified Cardano.Api as Cardano.Api.Eras
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import           Control.Monad (when)
 import           NewApiStuff
-import qualified Ouroboros.Consensus.Cardano.Block
-import qualified Ouroboros.Consensus.Shelley.Eras
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
 
@@ -59,14 +53,10 @@ main = do
         IPC.localStateQueryClient   = Nothing
       }
 
--- TODO use the actual ?security parameter?
-k :: Int
-k = 1000
-
 type LedgerStateHistory = Seq (SlotNo, LedgerState)
 
-pushLedgerState :: LedgerStateHistory -> SlotNo -> LedgerState -> LedgerStateHistory
-pushLedgerState hist ix st = Seq.take k ((ix, st) Seq.:<| hist)
+pushLedgerState :: Env -> LedgerStateHistory -> SlotNo -> LedgerState -> LedgerStateHistory
+pushLedgerState env hist ix st = Seq.take (fromIntegral $ envSecurityParam env) ((ix, st) Seq.:<| hist)
 
 rollBackLedgerStateHist :: LedgerStateHistory -> SlotNo -> LedgerStateHistory
 rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . fst) hist
@@ -81,6 +71,7 @@ chainSyncClient :: Env
                      IO ()
 chainSyncClient env ledgerState0 = ChainSyncClient $ clientStIdle (Seq.singleton (0, ledgerState0)) -- TODO is the initial ledger state at slot 0?
   where
+      pushLedgerState' = pushLedgerState env
       clientStIdle :: LedgerStateHistory -- Known Ledger states. Must be complete up to and including the most recently received Block's SlotNo.
                    -> IO (ClientStIdle (IPC.BlockInMode IPC.CardanoMode)
                                   ChainPoint ChainTip IO ())
@@ -100,10 +91,10 @@ chainSyncClient env ledgerState0 = ChainSyncClient $ clientStIdle (Seq.singleton
                                   ChainPoint ChainTip IO ()
       clientStNext knownLedgerStates =
         ClientStNext {
-            recvMsgRollForward = \(IPC.BlockInMode block@(Block (BlockHeader slotNo _ blockNo@(BlockNo blockNoI)) _) era) _tip ->
+            recvMsgRollForward = \(IPC.BlockInMode block@(Block (BlockHeader slotNo _ (BlockNo blockNoI)) _) _era) _tip ->
               let
                 newLedgerState = applyBlock env (fromMaybe (error "Impossible! Missing Ledger state") . fmap snd $ Seq.lookup 0 knownLedgerStates) block
-                knownLedgerStates' = pushLedgerState knownLedgerStates slotNo newLedgerState
+                knownLedgerStates' = pushLedgerState' knownLedgerStates slotNo newLedgerState
               in ChainSyncClient $ do
                   case newLedgerState of
                     LedgerStateShelley (Shelley.ShelleyLedgerState shelleyTipWO _ _) -> case shelleyTipWO of
@@ -129,6 +120,3 @@ chainSyncClient env ledgerState0 = ChainSyncClient $ clientStIdle (Seq.singleton
           recvMsgRollForward  = \_ _ -> ChainSyncClient (pure (SendMsgDone ())),
           recvMsgRollBackward = \_ _ -> ChainSyncClient (pure (SendMsgDone ()))
         }
-
-      printLedgerState :: LedgerState -> IO ()
-      printLedgerState _ = putStrLn "TODO printLedgerState"
