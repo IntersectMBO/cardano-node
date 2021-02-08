@@ -1,13 +1,14 @@
-cabal-version:      2.4
-name:               trace-dispatcher
-version:            0.1.0.0
+cabal-version:        2.4
+name:                 trace-dispatcher
+version:              0.1.0.0
 
-synopsis: Package for development of simple and efficient tracers
-          based on the arrow based contra-tracer package
+synopsis:             Package for development of simple and efficient tracers
+                      based on the arrow based contra-tracer package
 author:               Juergen Nicklisch-Franken
 maintainer:           operations@iohk.io
 copyright:            2020 IOHK
 extra-source-files:   CHANGELOG.md
+                      README.md
                       doc/trace-dispatcher.md
 
 library
@@ -20,28 +21,28 @@ library
                       Control.Tracer
   default-language:   Haskell2010
   default-extensions: OverloadedStrings
-  build-depends:      base ^>=4.14.1.0
-                      , katip
-                      , text
-                      , time
+  build-depends:      base >=4.12 && <5
                       , aeson
-                      , hostname
-                      , unordered-containers
+                      , containers
                       , ekg
                       , ekg-core
-                      , containers
+                      , hostname
+                      , katip
                       , stm
+                      , text
+                      , time
+                      , unordered-containers
 
-executable tiny-tracer-examples
+executable trace-dispatcher-examples
     main-is:          Main.hs
     other-modules:    Examples.TestObjects
                       Examples.Aggregation
                       Examples.Trivial
-                      Examples.Routing
+                      Examples.Routing                      
     hs-source-dirs:   test
     default-language: Haskell2010
     default-extensions:  OverloadedStrings
-    build-depends:    base ^>=4.14.1.0
+    build-depends:    base >=4.12 && <5
                       , trace-dispatcher
                       , katip
                       , text

@@ -9,6 +9,7 @@ packages:
     cardano-node
     cardano-node-chairman
     hedgehog-extras
+    trace-dispatcher
 
 package cardano-api
   ghc-options: -Werror
@@ -33,6 +34,8 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
+package trace-dispatcher
+  ghc-options: -Werror
 -- ---------------------------------------------------------
 -- Disable all tests by default
 
@@ -80,6 +83,9 @@ package goblins
   tests: False
 
 package io-sim-classes
+  tests: False
+
+package trace-dispatcher
   tests: False
 
 -- ---------------------------------------------------------
