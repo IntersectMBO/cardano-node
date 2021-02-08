@@ -4,6 +4,7 @@ module Cardano.Node.Protocol.Pivo where
 
 import           Cardano.Prelude
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
+import           Data.Coerce (coerce)
 
 import           Shelley.Spec.Ledger.Genesis (validateGenesis)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -89,7 +90,7 @@ toPivoGenesis ShelleyGenesis { sgSystemStart
                              , sgSlotLength
                              , sgUpdateQuorum
                              , sgMaxLovelaceSupply
---                             , sgProtocolParams
+                             , sgProtocolParams
                              , sgGenDelegs
                              , sgInitialFunds
                              , sgStaking
@@ -105,12 +106,7 @@ toPivoGenesis ShelleyGenesis { sgSystemStart
                              , sgSlotLength = sgSlotLength
                              , sgUpdateQuorum = sgUpdateQuorum
                              , sgMaxLovelaceSupply = sgMaxLovelaceSupply
-                             , sgProtocolParams = panic "convert phantom types"
-                               -- todo: add a function in the specs that
-                               -- convert 'PParams era0' to 'PParams era1' for
-                               -- any era.
-                               --
-                               -- > ??? sgProtocolParams
+                             , sgProtocolParams = coerce sgProtocolParams
                              , sgGenDelegs = sgGenDelegs
                              , sgInitialFunds = sgInitialFunds
                              , sgStaking = sgStaking
