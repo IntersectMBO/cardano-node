@@ -52,7 +52,7 @@
         "pools": {},
         "stake": {}
     },
-    "systemStart": "2021-02-05T17:52:35.638667287Z",
+    "systemStart": "2021-02-08T11:32:35.638667287Z",
     "slotsPerKESPeriod": 129600,
     "slotLength": 1,
     "maxKESEvolutions": 60,
