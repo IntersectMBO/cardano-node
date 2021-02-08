@@ -28,7 +28,6 @@ module NewApiStuff
   , Env(..)
   , initialLedgerState
   , applyBlock
-  , LedgerStateSnapshot(..)
   )
   where
 
@@ -106,9 +105,10 @@ import qualified Shelley.Spec.Ledger.PParams
 import qualified Shelley.Spec.Ledger.STS.Tickn
 
 
--- Bring it all together and make the initial ledger state
+-- | Get the initial ledger state (and corresponding environment).
 initialLedgerState
-  :: FilePath -- Path to the node config file
+  :: FilePath
+  -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> IO (Env, LedgerState)
 initialLedgerState dbSyncConfFilePath = do
   dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
@@ -116,11 +116,17 @@ initialLedgerState dbSyncConfFilePath = do
   env <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
   return (env, initLedgerStateVar genConf)
 
+-- | Apply a single block to the current ledger state.
+-- TODO to what extent if any does this validate the block?
 applyBlock
   :: Env
+  -- ^ The environment returned by @initialLedgerState@
   -> LedgerState
+  -- ^ The current ledger state
   -> Cardano.Api.Block.Block era
+  -- ^ Some block to apply
   -> LedgerState
+  -- ^ The new ledger state.
 applyBlock env oldState block = let
   cardanoBlock :: Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
   cardanoBlock = case block of
