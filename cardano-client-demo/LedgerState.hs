@@ -30,19 +30,23 @@ main :: IO ()
 main = do
   -- Get socket path from CLI argument.
   configFilePath : socketPath : _ <- getArgs
-  () <- foldBlocks
+  blockCount <- foldBlocks
     configFilePath
     socketPath
-    ()
+    (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env
       ledgerState
       (IPC.BlockInMode (Block (BlockHeader _slotNo _blockHeaderHash (BlockNo blockNoI)) _transactions) _era)
-      () -> case ledgerState of
+      blockCount -> do
+        case ledgerState of
             LedgerStateShelley (Shelley.ShelleyLedgerState shelleyTipWO _ _) -> case shelleyTipWO of
               Origin -> putStrLn "."
               At (Shelley.ShelleyTip _ _ hash) -> print hash
             _ -> when (blockNoI `mod` 100 == 0) (print blockNoI)
+        return (blockCount + 1)
     )
+
+  putStrLn $ "Processed " ++ show blockCount ++ " blocks"
   return ()
 
 
