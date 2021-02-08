@@ -25,7 +25,7 @@ module NewApiStuff
       , LedgerStateAllegra
       , LedgerStateMary
       )
-  , Env(..)
+  , Env
   , initialLedgerState
   , applyBlock
   )
