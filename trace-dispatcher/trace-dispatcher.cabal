@@ -15,6 +15,7 @@ library
   hs-source-dirs:     src
   exposed-modules:    Cardano.Logging.Trace
                       Cardano.Logging.Tracer.Katip
+                      Cardano.Logging.Tracer.EKG
                       Cardano.Logging.Types
                       Cardano.Logging
                       Control.Tracer.Arrow
@@ -38,19 +39,20 @@ executable trace-dispatcher-examples
     other-modules:    Examples.TestObjects
                       Examples.Aggregation
                       Examples.Trivial
-                      Examples.Routing                      
+                      Examples.Routing
+                      Examples.EKG
     hs-source-dirs:   test
     default-language: Haskell2010
     default-extensions:  OverloadedStrings
     build-depends:    base >=4.12 && <5
-                      , trace-dispatcher
-                      , katip
-                      , text
-                      , time
                       , aeson
-                      , hostname
-                      , unordered-containers
+                      , containers
                       , ekg
                       , ekg-core
-                      , containers
+                      , hostname
+                      , katip
+                      , text
+                      , trace-dispatcher
+                      , time
                       , stm
+                      , unordered-containers
