@@ -1,8 +1,11 @@
 module Main where
 
 import           Examples.Aggregation
+import           Examples.EKG
 import           Examples.Routing
 import           Examples.Trivial
+
+
 
 main :: IO ()
 main = do
@@ -10,3 +13,4 @@ main = do
     test2
     testAggregation
     testRouting
+    testEKG

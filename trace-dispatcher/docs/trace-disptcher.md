@@ -271,9 +271,9 @@ For logging of measurements __EKG__ is used as a library and we will keep this s
 Katip has its own and very different approach to logging. Specially it needs a LogEnv to function, which is usually provided by the class Katip m.
 We design a different interface, which constructs the LogEnv when constructing the tracer.
 
-#### EPG
+#### EKG
 
-
+EKG has to phases: 1. A Counter, Gauge, Label or Distribution has to be registered for any value to be logged. 2. The actual value will be set. We can make the first step happen when we configure tracing, in which case all tracers with all measuring trace messages have to be known. Or we can register it lazily when first called, which means one extra lookup for every trace message which is sent to EKG.  
 
 #### Forwarder
 
