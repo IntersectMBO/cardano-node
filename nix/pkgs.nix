@@ -92,9 +92,9 @@ final: prev: with final;
 
   dockerImage = let
     defaultConfig = {
+      socketPath = "/ipc/node.socket";
       stateDir = "/data";
       dbPrefix = "db";
-      socketPath = "/ipc/node.socket";
     };
   in callPackage ./docker.nix {
     exe = "cardano-node";
@@ -102,6 +102,7 @@ final: prev: with final;
       inherit pkgs;
       customConfigs = [ defaultConfig customConfig ];
     };
+    customConfig = defaultConfig // customConfig;
     script = "node";
   };
 
@@ -115,6 +116,7 @@ final: prev: with final;
       inherit pkgs;
       customConfigs = [ defaultConfig customConfig ];
     };
+    customConfig = defaultConfig // customConfig;
     script = "submit-api";
   };
 

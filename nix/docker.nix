@@ -27,6 +27,7 @@
 { pkgs
 , commonLib
 , dockerTools
+, customConfig
 
 # The main contents of the image.
 , cardano-cli
@@ -78,28 +79,38 @@ let
       mkdir -m 0777 tmp
     '';
   };
+
   # Image with all iohk-nix network configs or utilizes a configuration volume mount
   # To choose a network, use `-e NETWORK testnet`
-    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: ''
-      elif [[ "$NETWORK" == "${env}" ]]; then
-        exec ${scripts.${script}}/bin/${exe}-${env}
-    '') scripts);
-  nodeDockerImage = let
-    entry-point = writeScriptBin "entry-point" ''
-      #!${runtimeShell}
-      if [[ -z "$NETWORK" ]]; then
-        exec ${pkgs.${exe}}/bin/${exe} $@
-      ${clusterStatements}
-      else
-        echo "Managed configuration for network "$NETWORK" does not exist"
-      fi
-    '';
-  in dockerTools.buildImage {
+  clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: ''
+    elif [[ "$NETWORK" == "${env}" ]]; then
+      exec ${scripts.${script}}/bin/${exe}-${env}
+  '') scripts);
+
+  entry-point = writeScriptBin "entry-point" ''
+    #!${runtimeShell}
+    if [[ -z "$NETWORK" ]]; then
+      exec ${pkgs.${exe}}/bin/${exe} $@
+    ${clusterStatements}
+    else
+      echo "Managed configuration for network "$NETWORK" does not exist"
+    fi
+  '';
+
+  # Remove the leading '/' and trailing basename
+  socketPath = customConfig.socketPath;
+  socketDir = lib.concatStringsSep "/" (builtins.filter (x: x != "")
+    (lib.splitString "/" (lib.removeSuffix (baseNameOf socketPath) socketPath)));
+
+  nodeDockerImage = dockerTools.buildImage {
     name = "${repoName}";
     fromImage = baseImage;
     tag = "${gitrev}";
     created = "now";   # Set creation date to build time. Breaks reproducibility
     contents = [ entry-point ];
+    extraCommands = ''
+      mkdir -p ${socketDir}
+    '';
     config = {
       EntryPoint = [ "${entry-point}/bin/entry-point" ];
     };
