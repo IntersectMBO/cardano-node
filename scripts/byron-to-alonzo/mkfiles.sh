@@ -67,6 +67,12 @@ case $UNAME in
                 DATE="date";;
 esac
 
+UNAME=$(uname -s) SED=
+case $UNAME in
+  Darwin )      SED="gsed";;
+  Linux )       SED="sed";;
+esac
+
 sprocket() {
   if [ "$UNAME" == "Windows_NT" ]; then
     # Named pipes names on Windows must have the structure: "\\.\pipe\PipeName"
@@ -87,7 +93,7 @@ fi
 
 # copy and tweak the configuration
 cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
-sed -i ${ROOT}/configuration.yaml \
+$SED -i ${ROOT}/configuration.yaml \
     -e 's/Protocol: RealPBFT/Protocol: Cardano/' \
     -e '/Protocol/ aPBftSignatureThreshold: 0.6' \
     -e 's/minSeverity: Info/minSeverity: Debug/' \
@@ -312,7 +318,7 @@ cp ../configuration/cardano/shelley_qa-alonzo-genesis.json shelley/genesis.alonz
 # We're going to use really quick epochs (300 seconds), by using short slots 0.2s
 # and K=10, but we'll keep long KES periods so we don't have to bother
 # cycling KES keys
-sed -i shelley/genesis.spec.json \
+$SED -i shelley/genesis.spec.json \
     -e 's/"slotLength": 1/"slotLength": 0.1/' \
     -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
@@ -634,7 +640,7 @@ if [ "$1" = "alonzo" ]; then
   echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
   echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
 
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
 
   # Copy the cost model
@@ -644,20 +650,20 @@ elif [ "$1" = "mary" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestMaryHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 4/'
   echo "Nodes will start in Mary era from epoch 0"
 
 elif [ "$1" = "allegra" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 3/'
   echo "Nodes will start in Allegra era from epoch 0"
 
 elif [ "$1" = "shelley" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  sed -i ${ROOT}/configuration.yaml \
+  $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 2/'
   echo "Nodes will start in Shelley era from epoch 0"
 
