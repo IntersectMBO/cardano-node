@@ -214,8 +214,7 @@ genesisConfigToEnv
                 ]
         | otherwise ->
             Right $ Env
-                  { envNetwork = Shelley.Spec.Ledger.Genesis.sgNetworkId (scConfig sCfg)
-                  , envConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig (mkProtocolInfoCardano genCfg)
+                  { envConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig (mkProtocolInfoCardano genCfg)
                   }
 
 readDbSyncNodeConfig :: NodeConfigFile -> IO DbSyncNodeConfig
@@ -683,8 +682,8 @@ data ProtoParams = ProtoParams
 newtype Rewards
   = Rewards { unRewards :: Map StakeCred Shelley.Spec.Ledger.Coin.Coin }
 
-newtype StakeCred
-  = StakeCred { unStakeCred :: ByteString }
+data StakeCred
+  = StakeCred { unStakeCred :: Shelley.Spec.Ledger.Credential.Credential 'Shelley.Spec.Ledger.Keys.Staking C.StandardCrypto }
   deriving (Eq, Ord)
 
 newtype StakeDist
@@ -715,7 +714,7 @@ allegraEpochUpdate env sls mRewards mNonce =
 allegraStakeDist :: Env -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardAllegra) -> StakeDist
 allegraStakeDist env
   = StakeDist
-  . Map.mapKeys (toStakeCred env)
+  . Map.mapKeys toStakeCred
   . Shelley.Spec.Ledger.EpochBoundary.unStake
   . Shelley.Spec.Ledger.EpochBoundary._stake
   . Shelley.Spec.Ledger.EpochBoundary._pstakeSet
@@ -726,7 +725,7 @@ allegraStakeDist env
 maryStakeDist :: Env -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardMary) -> StakeDist
 maryStakeDist env
   = StakeDist
-  . Map.mapKeys (toStakeCred env)
+  . Map.mapKeys toStakeCred
   . Shelley.Spec.Ledger.EpochBoundary.unStake
   . Shelley.Spec.Ledger.EpochBoundary._stake
   . Shelley.Spec.Ledger.EpochBoundary._pstakeSet
@@ -737,7 +736,7 @@ maryStakeDist env
 shelleyStakeDist :: Env -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley) -> StakeDist
 shelleyStakeDist env
   = StakeDist
-  . Map.mapKeys (toStakeCred env)
+  . Map.mapKeys toStakeCred
   . Shelley.Spec.Ledger.EpochBoundary.unStake
   . Shelley.Spec.Ledger.EpochBoundary._stake
   . Shelley.Spec.Ledger.EpochBoundary._pstakeSet
@@ -750,7 +749,7 @@ allegraRewards
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardAllegra)
   -> Maybe Rewards
 allegraRewards env
-  = fmap (Rewards . Map.mapKeys (toStakeCred env) . Shelley.Spec.Ledger.LedgerState.rs)
+  = fmap (Rewards . Map.mapKeys toStakeCred . Shelley.Spec.Ledger.LedgerState.rs)
   . Shelley.Spec.Ledger.BaseTypes.strictMaybeToMaybe
   . Shelley.Spec.Ledger.LedgerState.nesRu
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
@@ -760,7 +759,7 @@ maryRewards
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardMary)
   -> Maybe Rewards
 maryRewards env
-  = fmap (Rewards . Map.mapKeys (toStakeCred env) . Shelley.Spec.Ledger.LedgerState.rs)
+  = fmap (Rewards . Map.mapKeys toStakeCred . Shelley.Spec.Ledger.LedgerState.rs)
   . Shelley.Spec.Ledger.BaseTypes.strictMaybeToMaybe
   . Shelley.Spec.Ledger.LedgerState.nesRu
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
@@ -770,16 +769,13 @@ shelleyRewards
   -> Ouroboros.Consensus.Ledger.Basics.LedgerState (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley)
   -> Maybe Rewards
 shelleyRewards env
-  = fmap (Rewards . Map.mapKeys (toStakeCred env) . Shelley.Spec.Ledger.LedgerState.rs)
+  = fmap (Rewards . Map.mapKeys toStakeCred . Shelley.Spec.Ledger.LedgerState.rs)
   . Shelley.Spec.Ledger.BaseTypes.strictMaybeToMaybe
   . Shelley.Spec.Ledger.LedgerState.nesRu
   . Ouroboros.Consensus.Shelley.Ledger.Ledger.shelleyLedgerState
 
-toStakeCred :: Env -> Shelley.Spec.Ledger.Credential.Credential 'Shelley.Spec.Ledger.Keys.Staking era -> StakeCred
-toStakeCred env cred
-  = StakeCred
-  $ Shelley.Spec.Ledger.Address.serialiseRewardAcnt
-  $ Shelley.Spec.Ledger.Address.RewardAcnt (envNetwork env) cred
+toStakeCred :: Shelley.Spec.Ledger.Credential.Credential 'Shelley.Spec.Ledger.Keys.Staking C.StandardCrypto -> StakeCred
+toStakeCred = StakeCred
 
 maryEpochUpdate
   :: Env
@@ -848,9 +844,8 @@ data LedgerStateSnapshot = LedgerStateSnapshot
   , lssEpochUpdate :: !(Maybe EpochUpdate) -- Only Just for a single block at the epoch boundary
   }
 
-data Env = Env
-  { envNetwork :: !Shelley.Spec.Ledger.BaseTypes.Network
-  , envConfig :: !(C.TopLevelConfig (C.CardanoBlock C.StandardCrypto))
+newtype Env = Env
+  { envConfig :: (C.TopLevelConfig (C.CardanoBlock C.StandardCrypto))
   }
 
 envSecurityParam :: Env -> Word64
