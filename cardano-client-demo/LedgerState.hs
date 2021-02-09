@@ -12,7 +12,12 @@ import qualified Cardano.Api.IPC as IPC
 import           Data.Maybe (fromMaybe)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Ouroboros.Network.Protocol.ChainSync.Client
+import           Network.TypedProtocol.Pipelined (Nat (..))
+import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
+                   (ChainSyncClientPipelined (ChainSyncClientPipelined),
+                   ClientPipelinedStIdle (CollectResponse, SendMsgDone, SendMsgRequestNextPipelined),
+                   ClientStNext (..))
+import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 import           System.Environment (getArgs)
 
 
@@ -22,6 +27,7 @@ import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import           Control.Monad (when)
 import           Data.Foldable
 import           Data.IORef
+import           Data.Word
 import           NewApiStuff
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
@@ -49,7 +55,8 @@ main = do
   putStrLn $ "Processed " ++ show blockCount ++ " blocks"
   return ()
 
-
+-- Non-pipelined version took: 1h  0m  19s
+-- Pipelined version took:        46m  23s
 
 -- | Monadic fold over all blocks and ledger states.
 foldBlocks
@@ -59,7 +66,7 @@ foldBlocks
   -> FilePath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
   -> a
-  -- ^ Initial state
+  -- ^ The initial accumulator state.
   -> (Env -> LedgerState -> IPC.BlockInMode IPC.CardanoMode -> a -> IO a)
   -- ^ Accumulator function Takes:
   --  * Environment (this is a constant over the whole fold)
@@ -102,7 +109,7 @@ foldBlocks nodeConfigFilePath socketPath state0 accumulate = do
   protocols :: IORef a -> Env -> LedgerState -> IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
   protocols stateIORef env ledgerState =
       IPC.LocalNodeClientProtocols {
-        IPC.localChainSyncClient    = IPC.LocalChainSyncClient (chainSyncClient stateIORef env ledgerState),
+        IPC.localChainSyncClient    = IPC.LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef env ledgerState),
         IPC.localTxSubmissionClient = Nothing,
         IPC.localStateQueryClient   = Nothing
       }
@@ -123,66 +130,87 @@ foldBlocks nodeConfigFilePath socketPath state0 accumulate = do
   rollBackLedgerStateHist hist maxInc = Seq.dropWhileL ((> maxInc) . (\(x,_,_) -> x)) hist
 
   -- | Defines the client side of the chain sync protocol.
-  chainSyncClient :: IORef a
+  chainSyncClient :: Word32
+                  -- ^ The maximum number of concurrent requests.IORef a
+                  -> IORef a
                   -> Env
                   -> LedgerState
-                  -> ChainSyncClient
+                  -> ChainSyncClientPipelined
                       (IPC.BlockInMode IPC.CardanoMode)
                       ChainPoint
                       ChainTip
                       IO ()
-  chainSyncClient stateIORef env ledgerState0 = ChainSyncClient $ clientStIdle initialLedgerStateHistory -- TODO is the initial ledger state at slot 0?
+  chainSyncClient pipelineSize stateIORef env ledgerState0
+    = ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
     where
-        initialLedgerStateHistory = Seq.singleton (0, ledgerState0, Origin)
+        initialLedgerStateHistory = Seq.singleton (0, ledgerState0, Origin) -- TODO is the initial ledger state at slot 0?
 
         pushLedgerState' = pushLedgerState env
-        clientStIdle :: LedgerStateHistory -- Known Ledger states. Must be complete up to and including the most recently received Block's SlotNo.
-                    -> IO (ClientStIdle (IPC.BlockInMode IPC.CardanoMode)
-                                    ChainPoint ChainTip IO ())
-        clientStIdle knownLedgerStates = do
-          -- putStrLn "Chain Sync: requesting next"
-          return $ SendMsgRequestNext
-            -- There's more to get immediately
-            (clientStNext knownLedgerStates)
 
-            -- The node is asking us to wait. This is because we reached the
-            -- tip. We can certainly carry on here, but for this demo we are
-            -- going to stop when we hit the current chain tip.
-            clientDone
+        clientIdle_RequestMoreN
+          :: WithOrigin BlockNo
+          -> WithOrigin BlockNo
+          -> Nat n
+          -> LedgerStateHistory
+          -> ClientPipelinedStIdle n (IPC.BlockInMode IPC.CardanoMode) ChainPoint ChainTip IO ()
+        clientIdle_RequestMoreN clientTip serverTip n knownLedgerStates
+          = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
+              Collect -> case n of
+                Succ predN -> CollectResponse Nothing (clientNextN predN knownLedgerStates)
+              _ -> SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
 
-        clientStNext :: LedgerStateHistory -- ^ Known Ledger states. Must be complete up to the current BlockNo.
-                    -> ClientStNext (IPC.BlockInMode IPC.CardanoMode)
-                                    ChainPoint ChainTip IO ()
-        clientStNext knownLedgerStates =
+        clientNextN
+          :: Nat n
+          -> LedgerStateHistory
+          -> ClientStNext n (IPC.BlockInMode IPC.CardanoMode) ChainPoint ChainTip IO ()
+        clientNextN n knownLedgerStates =
           ClientStNext {
-              recvMsgRollForward = \blockInMode@(IPC.BlockInMode block@(Block (BlockHeader slotNo _ _) _) _era) _tip ->
-                let
-                  newLedgerState = applyBlock env (fromMaybe (error "Impossible! Missing Ledger state") . fmap (\(_,x,_) -> x) $ Seq.lookup 0 knownLedgerStates) block
-                  (knownLedgerStates', committedStates) = pushLedgerState' knownLedgerStates slotNo newLedgerState blockInMode
-                in ChainSyncClient $ do
-                    forM_ committedStates $ \(_, currLedgerState, currBlockMay) -> case currBlockMay of
-                        Origin -> return ()
-                        At currBlock -> do
-                          newState <- accumulate env currLedgerState currBlock =<< readIORef stateIORef
-                          writeIORef stateIORef newState
-                    clientStIdle knownLedgerStates'
-
-            , recvMsgRollBackward = \chainPoint _ -> ChainSyncClient $ do
-                  let truncatedKnownLedgerStates = case chainPoint of
-                          ChainPointAtGenesis -> initialLedgerStateHistory
-                          ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
-                  clientStIdle truncatedKnownLedgerStates
+              recvMsgRollForward = \blockInMode@(IPC.BlockInMode block@(Block (BlockHeader slotNo _ currBlockNo) _) _era) serverChainTip -> do
+                let newLedgerState = applyBlock env (fromMaybe (error "Impossible! Missing Ledger state") . fmap (\(_,x,_) -> x) $ Seq.lookup 0 knownLedgerStates) block
+                    (knownLedgerStates', committedStates) = pushLedgerState' knownLedgerStates slotNo newLedgerState blockInMode
+                    newClientTip = At currBlockNo
+                    newServerTip = fromChainTip serverChainTip
+                forM_ committedStates $ \(_, currLedgerState, currBlockMay) -> case currBlockMay of
+                    Origin -> return ()
+                    At currBlock -> do
+                      newState <- accumulate env currLedgerState currBlock =<< readIORef stateIORef
+                      writeIORef stateIORef newState
+                if newClientTip == newServerTip
+                  then  clientIdle_DoneN n
+                  else return (clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates')
+            , recvMsgRollBackward = \chainPoint serverChainTip -> do
+                putStrLn "Rollback"
+                let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
+                    newServerTip = fromChainTip serverChainTip
+                    truncatedKnownLedgerStates = case chainPoint of
+                        ChainPointAtGenesis -> initialLedgerStateHistory
+                        ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
+                return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
             }
 
-        -- We're still in the "Next" state here, but we've decided to stop
-        -- as soon as we get the reply, no matter which reply.
-        clientDone :: IO (ClientStNext (IPC.BlockInMode IPC.CardanoMode)
-                                    ChainPoint ChainTip IO ())
-        clientDone = do
-          putStrLn "Chain Sync: done!"
-          return $ ClientStNext {
-            recvMsgRollForward  = \_ _ -> ChainSyncClient (pure (SendMsgDone ())),
-            recvMsgRollBackward = \_ _ -> ChainSyncClient (pure (SendMsgDone ()))
-          }
+        clientIdle_DoneN
+          :: Nat n
+          -> IO (ClientPipelinedStIdle n (IPC.BlockInMode IPC.CardanoMode) ChainPoint ChainTip IO ())
+        clientIdle_DoneN n = case n of
+          Succ predN -> do
+            putStrLn "Chain Sync: done! (Ignoring remaining responses)"
+            return $ CollectResponse Nothing (clientNext_DoneN predN) -- Ignore remaining message responses
+          Zero -> do
+            putStrLn "Chain Sync: done!"
+            return $ SendMsgDone ()
+
+        clientNext_DoneN
+          :: Nat n
+          -> ClientStNext n (IPC.BlockInMode IPC.CardanoMode) ChainPoint ChainTip IO ()
+        clientNext_DoneN n =
+          ClientStNext {
+              recvMsgRollForward = \_ _ -> clientIdle_DoneN n
+            , recvMsgRollBackward = \_ _ -> clientIdle_DoneN n
+            }
+
+        fromChainTip :: ChainTip -> WithOrigin BlockNo
+        fromChainTip ct = case ct of
+          ChainTipAtGenesis -> Origin
+          ChainTip _ _ bno -> At bno
 
 type LedgerStateHistory = Seq (SlotNo, LedgerState, WithOrigin (IPC.BlockInMode IPC.CardanoMode))
