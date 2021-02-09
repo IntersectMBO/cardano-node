@@ -437,7 +437,7 @@ queryNodeLocalState connctInfo point query = do
       LocalStateQueryClient $ pure $
         Net.Query.SendMsgAcquire (Just point) $
         Net.Query.ClientStAcquiring {
-          Net.Query.recvMsgAcquired =
+          Net.Query.recvMsgAcquired = pure $
             Net.Query.SendMsgQuery query $
             Net.Query.ClientStQuerying {
               Net.Query.recvMsgResult = \result -> do
