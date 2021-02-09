@@ -113,6 +113,10 @@ module Cardano.Api (
     valueToList,
     filterValue,
     negateValue,
+    ValueNestedRep(..),
+    ValueNestedBundle(..),
+    valueToNestedRep,
+    valueFromNestedRep,
 
     -- ** Ada \/ Lovelace within multi-asset values
     quantityToLovelace,
@@ -134,6 +138,7 @@ module Cardano.Api (
     -- ** Tip of the chain
     ChainTip(..),
     BlockNo(..),
+    chainTipToChainPoint,
 
     -- * Building transactions
 
@@ -385,8 +390,13 @@ module Cardano.Api (
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
     LocalNodeConnectInfo(..),
+    AnyConsensusMode(..),
     ConsensusMode,
+    consensusModeOnly,
+    AnyConsensusModeParams(..),
     ConsensusModeParams(..),
+    EraInMode(..),
+    toEraInMode,
     LocalNodeClientProtocols,
     localChainSyncClient,
     localTxSubmissionClient,
@@ -395,18 +405,20 @@ module Cardano.Api (
 
     -- *** Chain sync protocol
     ChainSyncClient(..),
+    BlockInMode(..),
+    LocalNodeClientProtocolsInMode,
 
     -- *** Local tx submission
     LocalTxSubmissionClient,
-    EraInMode(..),
     TxInMode(..),
     TxValidationErrorInMode(..),
     runLocalTxSubmissionClient,
     submitTxToNodeLocal,
 
     -- *** Local state query
-    LocalStateQueryClient,
-    runLocalStateQueryClient,
+    LocalStateQueryClient(..),
+    QueryInMode(..),
+    QueryInEra(..),
     queryNodeLocalState,
 
     -- *** Query local node chain tip
@@ -458,8 +470,8 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Fees
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.IPC
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron

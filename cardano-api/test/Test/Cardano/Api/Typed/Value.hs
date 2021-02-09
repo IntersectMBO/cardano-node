@@ -10,7 +10,7 @@ import           Data.Aeson
 import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
 
-import           Cardano.Api.Value
+import           Cardano.Api.Shelley
 
 import           Hedgehog (Property, discover, forAll, property, tripping, (===))
 import           Test.Cardano.Api.Typed.Gen

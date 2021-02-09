@@ -6,6 +6,10 @@
 module Cardano.Api.Shelley
   ( module Cardano.Api,
 
+    -- * Genesis
+    ShelleyGenesis(..),
+    shelleyGenesisDefaults,
+
     -- * Cryptographic key interface
     -- $keys
     VerificationKey(..),
@@ -152,9 +156,18 @@ module Cardano.Api.Shelley
     -- ** Shelley based eras
     ShelleyLedgerEra,
 
+
+    -- ** Local State Query
+    QueryInShelleyBasedEra(..),
+    LedgerState(..),
+    ProtocolState(..),
+    SerialisedLedgerState(..),
+    UTxO(..),
+
     -- ** Conversions
     --TODO: arrange not to export these
     toShelleyNetwork,
+    fromShelleyPParams,
 
   ) where
 
@@ -168,7 +181,9 @@ import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query
 import           Cardano.Api.Script
+import           Cardano.Api.Shelley.Genesis
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody

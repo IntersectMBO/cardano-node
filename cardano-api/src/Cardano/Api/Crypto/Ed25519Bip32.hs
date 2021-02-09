@@ -23,7 +23,7 @@ import           Prelude (show)
 
 import           Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
 import qualified Data.ByteString as BS
-import           NoThunks.Class (NoThunks, InspectHeap (..))
+import           NoThunks.Class (InspectHeap (..), NoThunks)
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Wallet as CC

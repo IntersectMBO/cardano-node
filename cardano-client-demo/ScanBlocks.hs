@@ -1,14 +1,14 @@
 
-import Cardano.Api
-import qualified Cardano.Api.IPC as IPC
+import           Cardano.Api
+import           Cardano.Api.Shelley
 
 -- TODO: Export this via Cardano.Api
-import Ouroboros.Network.Protocol.ChainSync.Client
+import           Ouroboros.Network.Protocol.ChainSync.Client
 
-import Control.Monad (when)
-import System.Environment (getArgs)
-import System.FilePath ((</>))
-import Data.Time
+import           Control.Monad (when)
+import           Data.Time
+import           System.Environment (getArgs)
+import           System.FilePath ((</>))
 
 -- | Connects to a local cardano node, requests the blocks and prints out the
 -- number of transactions. To run this, you must first start a local node e.g.:
@@ -33,36 +33,36 @@ main = do
 
   -- Connect to the node.
   putStrLn $ "Connecting to socket: " <> socketPath
-  IPC.connectToLocalNode
+  connectToLocalNode
     (connectInfo socketPath)
     protocols
   where
-  connectInfo :: FilePath -> IPC.LocalNodeConnectInfo IPC.CardanoMode
+  connectInfo :: FilePath -> LocalNodeConnectInfo CardanoMode
   connectInfo socketPath =
-      IPC.LocalNodeConnectInfo {
-        IPC.localConsensusModeParams = IPC.CardanoModeParams (IPC.EpochSlots 21600),
-        IPC.localNodeNetworkId       = Mainnet,
-        IPC.localNodeSocketPath      = socketPath
+      LocalNodeConnectInfo {
+        localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
+        localNodeNetworkId       = Mainnet,
+        localNodeSocketPath      = socketPath
       }
 
-  protocols :: IPC.LocalNodeClientProtocolsInMode IPC.CardanoMode
+  protocols :: LocalNodeClientProtocolsInMode CardanoMode
   protocols =
-      IPC.LocalNodeClientProtocols {
-        IPC.localChainSyncClient    = Just chainSyncClient,
-        IPC.localTxSubmissionClient = Nothing,
-        IPC.localStateQueryClient   = Nothing
+      LocalNodeClientProtocols {
+        localChainSyncClient    = Just chainSyncClient,
+        localTxSubmissionClient = Nothing,
+        localStateQueryClient   = Nothing
       }
 
 -- | Defines the client side of the chain sync protocol.
 chainSyncClient :: ChainSyncClient
-                     (IPC.BlockInMode IPC.CardanoMode)
+                     (BlockInMode CardanoMode)
                      ChainPoint
                      ChainTip
                      IO ()
 chainSyncClient = ChainSyncClient $ do
   startTime <- getCurrentTime
   let
-    clientStIdle :: IO (ClientStIdle (IPC.BlockInMode IPC.CardanoMode)
+    clientStIdle :: IO (ClientStIdle (BlockInMode CardanoMode)
                                  ChainPoint ChainTip IO ())
     clientStIdle = do
       -- putStrLn "Chain Sync: requesting next"
@@ -75,11 +75,11 @@ chainSyncClient = ChainSyncClient $ do
         -- going to stop when we hit the current chain tip.
         clientDone
 
-    clientStNext :: ClientStNext (IPC.BlockInMode IPC.CardanoMode)
+    clientStNext :: ClientStNext (BlockInMode CardanoMode)
                                  ChainPoint ChainTip IO ()
     clientStNext =
       ClientStNext {
-          recvMsgRollForward = \(IPC.BlockInMode block@(Block (BlockHeader _ _ (BlockNo blockNo)) _) _) _tip ->
+          recvMsgRollForward = \(BlockInMode block@(Block (BlockHeader _ _ (BlockNo blockNo)) _) _) _tip ->
             ChainSyncClient $ do
               when (blockNo `mod` 1000 == 0) $ do
                 printBlock block
@@ -94,7 +94,7 @@ chainSyncClient = ChainSyncClient $ do
 
     -- We're still in the "Next" state here, but we've decided to stop
     -- as soon as we get the reply, no matter which reply.
-    clientDone :: IO (ClientStNext (IPC.BlockInMode IPC.CardanoMode)
+    clientDone :: IO (ClientStNext (BlockInMode CardanoMode)
                                  ChainPoint ChainTip IO ())
     clientDone = do
       putStrLn "Chain Sync: done!"

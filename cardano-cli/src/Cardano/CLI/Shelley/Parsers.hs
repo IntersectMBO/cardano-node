@@ -17,7 +17,6 @@ import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
 import           Cardano.Api
-import           Cardano.Api.Modes
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
@@ -666,7 +665,7 @@ pQueryCmd =
   where
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
-      QueryProtocolParameters
+      QueryProtocolParameters'
         <$> pCardanoEra
         <*> pConsensusModeParams
         <*> pNetworkId
@@ -680,7 +679,7 @@ pQueryCmd =
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
-      QueryUTxO
+      QueryUTxO'
         <$> pCardanoEra
         <*> pConsensusModeParams
         <*> pQueryFilter
@@ -689,7 +688,7 @@ pQueryCmd =
 
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
-      QueryStakeDistribution
+      QueryStakeDistribution'
         <$> pCardanoEra
         <*> pConsensusModeParams
         <*> pNetworkId
@@ -705,14 +704,14 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState
+    pQueryLedgerState = QueryLedgerState'
                           <$> pCardanoEra
                           <*> pConsensusModeParams
                           <*> pNetworkId
                           <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
-    pQueryProtocolState = QueryProtocolState
+    pQueryProtocolState = QueryProtocolState'
                             <$> pCardanoEra
                             <*> pConsensusModeParams
                             <*> pNetworkId

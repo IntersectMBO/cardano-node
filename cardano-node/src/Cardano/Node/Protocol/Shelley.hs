@@ -30,7 +30,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                     newExceptT)
+                   newExceptT)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
@@ -39,11 +39,11 @@ import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
-                     ProtocolParamsShelleyBased (..), ShelleyGenesis, TPraosLeaderCredentials (..))
+                   ProtocolParamsShelleyBased (..), TPraosLeaderCredentials (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto, TPraosCanBeLeader (..))
 
 import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
-                     validateGenesis)
+                   validateGenesis)
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 

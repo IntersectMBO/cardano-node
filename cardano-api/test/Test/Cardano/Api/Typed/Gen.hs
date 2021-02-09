@@ -35,7 +35,6 @@ module Test.Cardano.Api.Typed.Gen
 import           Cardano.Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
-import           Cardano.Api.Value
 
 import           Cardano.Prelude
 

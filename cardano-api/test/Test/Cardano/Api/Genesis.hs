@@ -9,6 +9,8 @@ module Test.Cardano.Api.Genesis
 
 import           Cardano.Prelude
 
+import           Cardano.Api.Shelley (ShelleyGenesis (..))
+
 import qualified Data.Map.Strict as Map
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
@@ -21,13 +23,10 @@ import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (Network (..), truncateUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Credential (Credential (..), PaymentCredential,
-                     StakeCredential, StakeReference (..))
+                   StakeCredential, StakeReference (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
-                     VerKeyVRF)
+                   VerKeyVRF)
 import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
-
-import           Cardano.Api.Shelley.Genesis
-
 
 exampleShelleyGenesis :: ShelleyGenesis StandardShelley
 exampleShelleyGenesis =
