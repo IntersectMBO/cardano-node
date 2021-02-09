@@ -36,6 +36,7 @@ let
     };
     customConfig' = defaultConfig // customConfig;
   in pkgs.callPackage ./nix/docker.nix {
+    customConfig = customConfig';
     inherit (packages) cardano-node cardano-cli;
     scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
   };
