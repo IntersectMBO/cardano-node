@@ -215,8 +215,6 @@ genesisConfigToEnv
         | otherwise ->
             Right $ Env
                   { envNetwork = Shelley.Spec.Ledger.Genesis.sgNetworkId (scConfig sCfg)
-                  , envNetworkMagic = Ouroboros.Network.Magic.NetworkMagic (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.configProtocolMagicId bCfg)
-                  , envSystemStart = Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart (Cardano.Chain.Genesis.gdStartTime $ Cardano.Chain.Genesis.configGenesisData bCfg)
                   , envConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig (mkProtocolInfoCardano genCfg)
                   }
 
@@ -852,8 +850,6 @@ data LedgerStateSnapshot = LedgerStateSnapshot
 
 data Env = Env
   { envNetwork :: !Shelley.Spec.Ledger.BaseTypes.Network
-  , envNetworkMagic :: !Ouroboros.Network.Magic.NetworkMagic
-  , envSystemStart :: !Ouroboros.Consensus.BlockchainTime.WallClock.Types.SystemStart
   , envConfig :: !(C.TopLevelConfig (C.CardanoBlock C.StandardCrypto))
   }
 
