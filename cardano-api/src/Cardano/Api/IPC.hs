@@ -487,7 +487,7 @@ submitTxToNodeLocal connctInfo tx = do
 --
 
 
-getLocalChainTip :: LocalNodeConnectInfo mode -> IO ChainPoint
+getLocalChainTip :: LocalNodeConnectInfo mode -> IO ChainTip
 getLocalChainTip localNodeConInfo = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -497,7 +497,7 @@ getLocalChainTip localNodeConInfo = do
         , localTxSubmissionClient = Nothing
         , localStateQueryClient = Nothing
         }
-    atomically $ chainTipToChainPoint <$> takeTMVar resultVar
+    atomically $ takeTMVar resultVar
 
 chainSyncGetCurrentTip
   :: forall mode. TMVar ChainTip

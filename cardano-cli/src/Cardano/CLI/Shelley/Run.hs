@@ -61,7 +61,7 @@ renderShelleyClientCmdError cmd err =
  where
    renderError :: ShelleyCommand -> (a -> Text) -> a -> Text
    renderError shelleyCmd renderer shelCliCmdErr =
-      mconcat [ "Shelley command failed: "
+      mconcat [ "Command failed: "
               , renderShelleyCommand shelleyCmd
               , "  Error: "
               , renderer shelCliCmdErr

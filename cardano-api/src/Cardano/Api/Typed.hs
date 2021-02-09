@@ -372,6 +372,7 @@ module Cardano.Api.Typed (
     deserialiseFromRawBytes,
     serialiseToRawBytesHex,
     deserialiseFromRawBytesHex,
+    serialiseToRawBytesHexText,
 
     -- ** Text envelope
     -- | Support for a envelope file format with text headers and a hex-encoded
@@ -522,11 +523,11 @@ import           Control.Tracer (nullTracer)
 -- TODO: it'd be nice if the network imports needed were a bit more coherent
 import           Ouroboros.Network.Block (Point, Tip)
 import           Ouroboros.Network.Mux (MuxMode (InitiatorMode), MuxPeer (..),
-                     RunMiniProtocol (InitiatorProtocolOnly))
+                   RunMiniProtocol (InitiatorProtocolOnly))
 import           Ouroboros.Network.NodeToClient (NetworkConnectTracers (..),
-                     NodeToClientProtocols (..), NodeToClientVersionData (..), chainSyncPeerNull,
-                     connectTo, foldMapVersions, localSnocket, localStateQueryPeerNull,
-                     localTxSubmissionPeerNull, versionedNodeToClientProtocols, withIOManager)
+                   NodeToClientProtocols (..), NodeToClientVersionData (..), chainSyncPeerNull,
+                   connectTo, foldMapVersions, localSnocket, localStateQueryPeerNull,
+                   localTxSubmissionPeerNull, versionedNodeToClientProtocols, withIOManager)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy)
 
 -- TODO: it'd be nice if the consensus imports needed were a bit more coherent
@@ -536,8 +537,8 @@ import           Ouroboros.Consensus.Ledger.Query (Query, ShowQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient (Codecs' (..), clientCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
-                     NodeToClientVersion, SupportedNetworkProtocolVersion,
-                     supportedNodeToClientVersions)
+                   NodeToClientVersion, SupportedNetworkProtocolVersion,
+                   supportedNodeToClientVersions)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..))
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToClientConstraints)
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
@@ -588,8 +589,8 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Fees
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysPraos

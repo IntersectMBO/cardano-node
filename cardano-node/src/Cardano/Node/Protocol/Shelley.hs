@@ -48,6 +48,7 @@ import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 
 import qualified Cardano.Api as Api (FileError (..))
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley hiding (FileError)
 
 

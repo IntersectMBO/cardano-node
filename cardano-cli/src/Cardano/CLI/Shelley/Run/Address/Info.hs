@@ -12,7 +12,6 @@ import           Data.Aeson (ToJSON (..), object, (.=))
 import           Data.Aeson.Encode.Pretty (encodePretty)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Text.Encoding as Text
 
 newtype ShelleyAddressInfoError = ShelleyAddressInvalid Text
   deriving Show
@@ -53,7 +52,7 @@ runAddressInfo addrTxt mOutputFp = do
               , aiEra = "byron"
               , aiEncoding = "base58"
               , aiAddress = addrTxt
-              , aiBase16 = asBase16 payaddr
+              , aiBase16 = serialiseToRawBytesHexText payaddr
               }
 
       Just (Left (AddressShelley payaddr)) ->
@@ -62,7 +61,7 @@ runAddressInfo addrTxt mOutputFp = do
               , aiEra = "shelley"
               , aiEncoding = "bech32"
               , aiAddress = addrTxt
-              , aiBase16 = asBase16 payaddr
+              , aiBase16 = serialiseToRawBytesHexText payaddr
               }
 
       Just (Right addr) ->
@@ -71,13 +70,10 @@ runAddressInfo addrTxt mOutputFp = do
           , aiEra = "shelley"
           , aiEncoding = "bech32"
           , aiAddress = addrTxt
-          , aiBase16 = asBase16 addr
+          , aiBase16 = serialiseToRawBytesHexText addr
           }
 
     case mOutputFp of
       Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath $ encodePretty addrInfo
       Nothing -> liftIO $ LBS.putStrLn $ encodePretty addrInfo
 
-  where
-    asBase16 :: SerialiseAsRawBytes a => a -> Text
-    asBase16 = Text.decodeUtf8 . serialiseToRawBytesHex

@@ -58,15 +58,15 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString(..))
+import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Chain.Common as Byron
 
-import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Shelley.Spec.Ledger.Coin as Shelley
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -334,7 +334,7 @@ instance ToJSON ValueNestedRep where
      toPair (ValueNestedBundle pid assets) = (renderPolicyId pid, toJSON assets)
 
      renderPolicyId :: PolicyId -> Text
-     renderPolicyId (PolicyId sh) = Text.decodeUtf8 (serialiseToRawBytesHex sh)
+     renderPolicyId (PolicyId sh) = serialiseToRawBytesHexText sh
 
 instance FromJSON ValueNestedRep where
   parseJSON =

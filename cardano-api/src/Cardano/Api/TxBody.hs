@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -95,6 +95,9 @@ module Cardano.Api.TxBody (
 
 import           Prelude
 
+import           Data.Aeson (ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -106,7 +109,10 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.String (IsString)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Generics
 
 import           Control.Monad (guard)
 
@@ -122,8 +128,8 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hashing as Byron
 
 import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
-import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
@@ -145,8 +151,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -168,6 +174,9 @@ newtype TxId = TxId (Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody)
   deriving stock (Eq, Ord, Show)
   deriving newtype (IsString)
                -- We use the Shelley representation and convert the Byron one
+
+instance ToJSON TxId where
+  toJSON = Aeson.String . serialiseToRawBytesHexText
 
 instance HasTypeProxy TxId where
     data AsType TxId = AsTxId
@@ -226,9 +235,21 @@ getTxId (ShelleyTxBody era tx _) =
 data TxIn = TxIn TxId TxIx
   deriving (Eq, Ord, Show)
 
+instance ToJSON TxIn where
+  toJSON txIn = Aeson.String $ renderTxIn txIn
+
+instance ToJSONKey TxIn where
+  toJSONKey = toJSONKeyText renderTxIn
+
+renderTxIn :: TxIn -> Text
+renderTxIn (TxIn txId (TxIx ix)) =
+  serialiseToRawBytesHexText txId <> "#" <> Text.pack (show ix)
+
+
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
+  deriving newtype ToJSON
 
 fromByronTxIn :: Byron.TxIn -> TxIn
 fromByronTxIn (Byron.TxInUtxo txId index) =
@@ -255,7 +276,35 @@ fromShelleyTxIn (Shelley.TxIn txid txix) =
 -- Transaction outputs
 --
 
-data TxOut era = TxOut (AddressInEra era) (TxOutValue era)
+data TxOut era
+  = TxOut (AddressInEra era) (TxOutValue era)
+  deriving Generic
+
+instance IsCardanoEra era => ToJSON (TxOut era) where
+  toJSON (TxOut (AddressInEra addrType addr) val) =
+    case addrType of
+      ByronAddressInAnyEra ->
+        let hexAddr = serialiseToRawBytesHexText addr
+        in object [ hexAddr .= toJSON val ]
+      ShelleyAddressInEra sbe ->
+        case sbe of
+          ShelleyBasedEraShelley ->
+            let hexAddr = serialiseToRawBytesHexText addr
+            in object [ "address" .= hexAddr
+                      , "value" .= toJSON val
+                      ]
+          ShelleyBasedEraAllegra ->
+            let hexAddr = serialiseToRawBytesHexText addr
+            in object [ "address" .= hexAddr
+                      , "value" .= toJSON val
+                      ]
+          ShelleyBasedEraMary ->
+            let hexAddr = serialiseToRawBytesHexText addr
+            in object [ "address" .= hexAddr
+                      , "value" .= toJSON val
+                      ]
+
+
 
 deriving instance Eq   (TxOut era)
 deriving instance Show (TxOut era)
@@ -329,6 +378,9 @@ data MultiAssetSupportedInEra era where
 
 deriving instance Eq   (MultiAssetSupportedInEra era)
 deriving instance Show (MultiAssetSupportedInEra era)
+
+instance ToJSON (MultiAssetSupportedInEra era) where
+  toJSON = Aeson.String . Text.pack . show
 
 -- | A representation of whether the era supports only ada transactions.
 --
@@ -589,7 +641,11 @@ data TxOutValue era where
 
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
+deriving instance Generic (TxOutValue era)
 
+instance ToJSON (TxOutValue era) where
+  toJSON (TxOutAdaOnly _ ll) = toJSON ll
+  toJSON (TxOutValue _ val) = toJSON val
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees

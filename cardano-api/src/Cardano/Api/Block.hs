@@ -41,28 +41,30 @@ module Cardano.Api.Block (
 
 import           Prelude
 
+import           Data.Aeson (ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
-import           Data.Foldable (Foldable(toList))
+import           Data.Foldable (Foldable (toList))
 
-import           Cardano.Slotting.Block (BlockNo(..))
-import           Cardano.Slotting.Slot (SlotNo, EpochNo)
+import           Cardano.Slotting.Block (BlockNo)
+import           Cardano.Slotting.Slot (EpochNo, SlotNo)
 
 import qualified Ouroboros.Network.Block as Consensus
 
-import qualified Ouroboros.Consensus.Block               as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
-import qualified Ouroboros.Consensus.Byron.Ledger        as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger      as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block       as Consensus
-import qualified Ouroboros.Consensus.Cardano.ByronHFC    as Consensus
-import qualified Ouroboros.Consensus.Cardano.ShelleyHFC  as Consensus
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
+import qualified Ouroboros.Consensus.Block as Consensus
+import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
+import qualified Ouroboros.Consensus.Cardano.ShelleyHFC as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import qualified Cardano.Chain.Block as Byron
-import qualified Cardano.Chain.UTxO  as Byron
+import qualified Cardano.Chain.UTxO as Byron
 
 import qualified Shelley.Spec.Ledger.BlockChain as Shelley
 
@@ -325,6 +327,14 @@ fromConsensusPoint (Consensus.BlockPoint slot h) =
 data ChainTip = ChainTipAtGenesis
               | ChainTip !SlotNo !(Hash BlockHeader) !BlockNo
   deriving (Eq, Show)
+
+instance ToJSON ChainTip where
+  toJSON ChainTipAtGenesis = Aeson.Null
+  toJSON (ChainTip slot headerHash (Consensus.BlockNo bNum)) =
+    object [ "slot" .= slot
+           , "hash" .= serialiseToRawBytesHexText headerHash
+           , "block" .= bNum
+           ]
 
 chainTipToChainPoint :: ChainTip -> ChainPoint
 chainTipToChainPoint ChainTipAtGenesis = ChainPointAtGenesis

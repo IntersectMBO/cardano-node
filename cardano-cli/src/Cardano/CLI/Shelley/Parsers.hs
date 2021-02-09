@@ -18,15 +18,14 @@ import           Prelude (String)
 
 import           Cardano.Api
 import           Cardano.Api.Modes
-import           Cardano.Api.Protocol (Protocol (..))
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
-                     VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
-                     deserialiseInput, renderInputDecodeError)
+                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
+                   deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
 import           Control.Monad.Fail (fail)
 import           Data.Attoparsec.Combinator ((<?>))
@@ -676,7 +675,7 @@ pQueryCmd =
 
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip
-                  <$> pProtocol
+                  <$> pConsensusModeParams
                   <*> pNetworkId
                   <*> pMaybeOutputFile
 
@@ -684,7 +683,7 @@ pQueryCmd =
     pQueryUTxO =
       QueryUTxO
         <$> pCardanoEra
-        <*> pProtocol
+        <*> pConsensusModeParams
         <*> pQueryFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
@@ -707,12 +706,16 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState <$> pCardanoEra <*> pProtocol <*> pNetworkId <*> pMaybeOutputFile
+    pQueryLedgerState = QueryLedgerState
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
+                          <*> pNetworkId
+                          <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
     pQueryProtocolState = QueryProtocolState
                             <$> pCardanoEra
-                            <*> pProtocol
+                            <*> pConsensusModeParams
                             <*> pNetworkId
                             <*> pMaybeOutputFile
 
@@ -1546,7 +1549,7 @@ parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txid (TxIx txix)) =
   mconcat
-    [ Text.decodeUtf8 (serialiseToRawBytesHex txid)
+    [ serialiseToRawBytesHexText txid
     , "#"
     , Text.pack (show txix)
     ]
@@ -2305,43 +2308,6 @@ pConsensusModeParams = asum
    pCardanoConsensusMode = AnyConsensusModeParams . CardanoModeParams <$> pEpochSlots
    pByronConsensusMode :: Parser AnyConsensusModeParams
    pByronConsensusMode = AnyConsensusModeParams . ByronModeParams <$> pEpochSlots
-
-pProtocol :: Parser Protocol
-pProtocol =
-    (  Opt.flag' ()
-        (  Opt.long "shelley-mode"
-        <> Opt.help "For talking to a node running in Shelley-only mode."
-        )
-    *> pShelleyMode
-    )
-  <|>
-    (  Opt.flag' ()
-        (  Opt.long "byron-mode"
-        <> Opt.help "For talking to a node running in Byron-only mode."
-        )
-    *> pByronMode
-    )
-  <|>
-    (  Opt.flag' ()
-        (  Opt.long "cardano-mode"
-        <> Opt.help "For talking to a node running in full Cardano mode (default)."
-        )
-    *> pCardanoMode
-    )
-  <|>
-    -- Default to the Cardano protocol.
-    pure
-      (CardanoProtocol
-        (EpochSlots defaultByronEpochSlots))
-  where
-    pByronMode :: Parser Protocol
-    pByronMode = ByronProtocol <$> pEpochSlots
-
-    pShelleyMode :: Parser Protocol
-    pShelleyMode = pure ShelleyProtocol
-
-    pCardanoMode :: Parser Protocol
-    pCardanoMode = CardanoProtocol <$> pEpochSlots
 
 defaultByronEpochSlots :: Word64
 defaultByronEpochSlots = 21600

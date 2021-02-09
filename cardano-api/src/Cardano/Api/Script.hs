@@ -66,7 +66,7 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Type.Equality (TestEquality(..), (:~:)(Refl))
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -93,8 +93,8 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
 import           Cardano.Api.Eras
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -728,7 +728,7 @@ instance ToJSON (ScriptInEra era) where
 instance ToJSON (SimpleScript lang) where
   toJSON (RequireSignature pKeyHash) =
     object [ "type"    .= String "sig"
-           , "keyHash" .= Text.decodeUtf8 (serialiseToRawBytesHex pKeyHash)
+           , "keyHash" .= serialiseToRawBytesHexText pKeyHash
            ]
   toJSON (RequireTimeBefore _ slot) =
     object [ "type" .= String "before"

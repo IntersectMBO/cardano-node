@@ -64,6 +64,8 @@ module Cardano.Api.Address (
 
 import           Prelude
 
+import           Data.Aeson (ToJSON (..))
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base58 as Base58
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
@@ -312,6 +314,9 @@ data AddressInEra era where
                   -> Address addrtype
                   -> AddressInEra era
 
+instance IsCardanoEra era => ToJSON (AddressInEra era) where
+  toJSON = Aeson.String . serialiseAddress
+
 instance Eq (AddressInEra era) where
   (==) (AddressInEra ByronAddressInAnyEra addr1)
        (AddressInEra ByronAddressInAnyEra addr2) = addr1 == addr2
@@ -349,7 +354,7 @@ instance IsCardanoEra era => SerialiseAsRawBytes (AddressInEra era) where
     serialiseToRawBytes (AddressInEra ShelleyAddressInEra{} addr) =
       serialiseToRawBytes addr
 
-    deserialiseFromRawBytes _ bs = do
+    deserialiseFromRawBytes _ bs =
       anyAddressInEra cardanoEra =<< deserialiseFromRawBytes AsAddressAny bs
 
 instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where

@@ -22,7 +22,7 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..))
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                     hoistMaybe, left, newExceptT)
+                   hoistMaybe, left, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
@@ -576,7 +576,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
   ScriptInAnyLang _ script <- firstExceptT ShelleyTxCmdReadJsonFileError $ readFileScriptInAnyLang sFile
-  liftIO $ putTextLn $ decodeUtf8 $ serialiseToRawBytesHex $ hashScript script
+  liftIO . putTextLn . serialiseToRawBytesHexText $ hashScript script
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
