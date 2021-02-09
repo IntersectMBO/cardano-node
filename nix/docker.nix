@@ -24,13 +24,15 @@
 #   docker run -v node-ipc:/ipc inputoutput/some-node-client
 ############################################################################
 
-{ iohkNix
+{ pkgs
+, iohkNix
 , commonLib
 , dockerTools
 
 # The main contents of the image.
 , cardano-node
 , cardano-cli
+, customConfig
 , scripts
 
 # Set gitrev to null, to ensure the version below is used
@@ -48,8 +50,6 @@
 , iputils
 , socat
 , utillinux
-, writeScriptBin
-, runtimeShell
 , lib
 
 , repoName ? "inputoutput/cardano-node"
@@ -78,34 +78,44 @@ let
       mkdir -m 0777 tmp
     '';
   };
-  # Image with all iohk-nix network configs or utilizes a configuration volume mount
+
+  # Generate pre-configured iohk-nix network configs
   # To choose a network, use `-e NETWORK testnet`
-    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: value: value) (commonLib.forEnvironments (env: ''
+  clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: value: value) (commonLib.forEnvironments (env: ''
       elif [[ "$NETWORK" == "${env.name}" ]]; then
         exec ${scripts.${env.name}.node}
     '')));
-  nodeDockerImage = let
-    entry-point = writeScriptBin "entry-point" ''
-      #!${runtimeShell}
-      if [[ -z "$NETWORK" ]]; then
-        exec ${cardano-node}/bin/cardano-node $@
-      ${clusterStatements}
-      else
-        echo "Managed configuration for network "$NETWORK" does not exist"
-      fi
-    '';
-    gitrev' = if (gitrev == null)
-      then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
-      else gitrev;
-  in dockerTools.buildImage {
+
+  entry-point = pkgs.writeShellScriptBin "entry-point" ''
+    if [[ -z "$NETWORK" ]]; then
+      exec ${cardano-node}/bin/cardano-node $@
+    ${clusterStatements}
+    else
+      echo "Managed configuration for network "$NETWORK" does not exist"
+    fi
+  '';
+
+  gitrev' = if (gitrev == null)
+    then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
+    else gitrev;
+
+  # Remove the leading '/' and trailing basename
+  socketPath = customConfig.socketPath;
+  socketDir = lib.concatStringsSep "/" (builtins.filter (x: x != "")
+    (lib.splitString "/" (lib.removeSuffix (baseNameOf socketPath) socketPath)));
+    
+in
+
+  dockerTools.buildImage {
     name = "${repoName}";
-    fromImage = baseImage;
     tag = "${gitrev'}";
+    fromImage = baseImage;
     created = "now";   # Set creation date to build time. Breaks reproducibility
     contents = [ entry-point ];
+    extraCommands = ''
+      mkdir -p ${socketDir}
+    '';
     config = {
       EntryPoint = [ "${entry-point}/bin/entry-point" ];
     };
-  };
-
-in nodeDockerImage
+  }
