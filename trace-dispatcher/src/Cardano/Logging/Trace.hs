@@ -1,6 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-
 module Cardano.Logging.Trace where
 
 import           Control.Monad (join)
@@ -107,25 +106,6 @@ foldTraceM' cata initial tr = do
         acc' <- cata acc v
         liftIO $ writeIORef ref acc'
         T.traceWith tr (lc, Folding acc'))
-
--- foldTrace
---   :: forall a acc m . MonadIO m
---   => (acc -> a -> acc)
---   -> acc
---   -> Trace m (Folding a acc)
---   -> Trace m a
--- foldTrace cata initial tr =
---   trace foldF
---     where
---       foldF (Emitting emits _noEmits) acc =
---         let x' = cata acc
---       foldF (Squelching     _       ) acc =           arr (const ())
---
--- trace :: (input -> feedback -> (output, feedback)) -> input -> output
--- trace f input = let (output, feedback) = f input feedback
---                 in output
-
-
 
 -- | Allows to route to different tracers,
 --   based on the message being processed.
