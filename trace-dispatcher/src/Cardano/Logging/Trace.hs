@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -67,8 +68,18 @@ withSeverity fs = T.contramap $
                           else (lc {lcSeverity = Just (fs e)}, Right e)
       (lc, Left  c) -> (lc, Left c)
 
+--- | Only processes messages further with a privacy greater then the given one
+filterTraceByPrivacy :: (Monad m) =>
+     Privacy
+  -> Trace m a
+  -> Trace m a
+filterTraceByPrivacy minPrivacy = filterTrace $
+    \(c, e) -> case lcPrivacy c of
+                        Just s  -> fromEnum s >= fromEnum minPrivacy
+                        Nothing -> True
+
 -- | Sets privacy for the messages in this trace
-setPrivacy :: Monad m => PrivacyAnnotation -> Trace m a -> Trace m a
+setPrivacy :: Monad m => Privacy -> Trace m a -> Trace m a
 setPrivacy p = T.contramap
   (\ (lc,v) -> if isJust (lcPrivacy lc)
                     then (lc,v)
@@ -92,7 +103,9 @@ foldTraceM cata initial tr = do
     mkTracer ref = T.emit $
       \case
         (lc, Right v) -> do
-          x' <- liftIO $ atomicModifyIORef' ref $ \x -> join (,) (cata x v)
+          x' <- liftIO $ atomicModifyIORef' ref $ \x ->
+            let ! accu = cata x v
+            in join (,) accu
           T.traceWith tr (lc, Right (Folding x'))
         (lc, Left c) -> do
           T.traceWith tr (lc, Left c)
@@ -113,8 +126,8 @@ foldTraceM' cata initial tr = do
     mkTracer ref = T.emit $
       \case
         (lc, Right v) -> do
-          acc <- liftIO $ readIORef ref
-          acc' <- cata acc v
+          acc    <- liftIO $ readIORef ref
+          ! acc' <- cata acc v
           liftIO $ writeIORef ref acc'
           T.traceWith tr (lc, Right (Folding acc'))
         (lc, Left c) -> do
