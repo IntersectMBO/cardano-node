@@ -377,12 +377,14 @@ configureTrace :: MonadIO m => Trace m a -> Configuration -> m (Trace m a)
 ```haskell
 -- *** General options:
 data ConfigOption = ConfigOption {
-    -- | Severity level for a message  
-    coSeverity    :: SeverityF
-    -- | Detail level for a message  
-  , coDetailLevel :: DetailLevel
+    -- | Severity level
+    coSeverity     :: SeverityF
+    -- | Detail level
+  , coDetailLevel  :: DetailLevel
+    -- | Privacy level
+  , coPrivacy      :: Privacy
     -- | Defined in messages per second
-  , coMaxFrequency :: Int
+  , coMaxFrequency :: Int  
 }
 
 data TraceConfiguration = TraceConfiguration {
