@@ -17,6 +17,7 @@ library
                       Cardano.Logging.Tracer.Katip
                       Cardano.Logging.Tracer.EKG
                       Cardano.Logging.Types
+                      Cardano.Logging.Configuration
                       Cardano.Logging
                       Control.Tracer.Arrow
                       Control.Tracer
