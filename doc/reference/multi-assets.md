@@ -21,7 +21,7 @@ First, generate the keys that you require witnesses from using the
 `cardano-cli address key-gen` command. Until the ledger is hard forked to Mary, we will
 use a simple script to generate the policy ID. 
 
-*Note that you will be able to use a Plutus script when it is available.*
+*Note that you will be able to use a Plutus script when it is available in the Mary era.*
 
 Then, construct a simple script in JSON syntax as described [here](./simple-scripts.md). 
 
