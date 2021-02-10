@@ -17,7 +17,7 @@ import           Prelude (String)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..))
 
@@ -47,6 +47,7 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAn
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..), readShelleyGenesis,
                    renderShelleyGenesisCmdError)
+import           Cardano.CLI.Shelley.Run.Pretty (prettyTx)
 import           Cardano.CLI.Types
 
 data ShelleyTxCmdError
@@ -205,14 +206,13 @@ runTransactionCmd cmd =
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                            nShelleyKeyWitnesses nByronKeyWitnesses
-    TxGetTxId txinfile ->
-      runTxGetTxId txinfile
+    TxGetTxId txinfile -> runTxGetTxId txinfile
+    TxView txinfile -> runTxView txinfile
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
     TxCreateWitness txBodyfile witSignData mbNw outFile ->
       runTxCreateWitness txBodyfile witSignData mbNw outFile
     TxAssembleTxBodyWitness txBodyFile witnessFile outFile ->
       runTxSignWitness txBodyFile witnessFile outFile
-
 
 -- ----------------------------------------------------------------------------
 -- Building transactions
@@ -773,16 +773,26 @@ mkShelleyBootstrapWitnesses mnw txBody =
   mapM (mkShelleyBootstrapWitness mnw txBody)
 
 
-runTxGetTxId :: Either TxBodyFile TxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxGetTxId :: InputTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId txfile = do
     InAnyCardanoEra _era txbody <-
       case txfile of
-        Left (TxBodyFile txbodyFile) -> readFileTxBody txbodyFile
-        Right (TxFile txFile) -> do
+        InputTxBodyFile (TxBodyFile txbodyFile) -> readFileTxBody txbodyFile
+        InputTxFile (TxFile txFile) -> do
           InAnyCardanoEra era tx <- readFileTx txFile
-          return (InAnyCardanoEra era (getTxBody tx))
+          return . InAnyCardanoEra era $ getTxBody tx
 
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
+
+runTxView :: InputTxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxView txfile = do
+  InAnyCardanoEra _era txbody <-
+    case txfile of
+      InputTxBodyFile (TxBodyFile txbodyFile) -> readFileTxBody txbodyFile
+      InputTxFile (TxFile txFile) -> do
+        InAnyCardanoEra era tx <- readFileTx txFile
+        return . InAnyCardanoEra era $ getTxBody tx
+  liftIO $ LBS.putStrLn $ prettyTx txbody
 
 runTxCreateWitness
   :: TxBodyFile

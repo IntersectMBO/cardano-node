@@ -54,6 +54,7 @@ library
                        Cardano.CLI.Shelley.Run.Key
                        Cardano.CLI.Shelley.Run.Node
                        Cardano.CLI.Shelley.Run.Pool
+                       Cardano.CLI.Shelley.Run.Pretty
                        Cardano.CLI.Shelley.Run.Query
                        Cardano.CLI.Shelley.Run.StakeAddress
                        Cardano.CLI.Shelley.Run.TextView
