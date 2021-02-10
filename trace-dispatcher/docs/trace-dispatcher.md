@@ -201,6 +201,20 @@ foldTrace :: forall a acc m .
   -> Trace m a
 ```
 
+### Identity of a message
+
+Requirements:
+
+1. Every message shall have a unique identity.
+2. We want to be able to document this with ease.
+3. Should make it possible for a human to locate the origin of a message.
+
+It can be defined by:
+
+1. Take constructor and type
+2. Use the concatenated name (namespace)
+3. (Add constructor and type to namespace)
+
 ### Plumbing
 
 Traces shall be routed through different transformations to tracers.
@@ -237,7 +251,6 @@ In the third example we unite two traces to one tracer, for which we trivially u
 ```haskell
 tracer1  = appendName "tracer1" exTracer
 tracer2  = appendName "tracer2" exTracer
-
 ```
 
 ### Formatting
@@ -248,40 +261,158 @@ One basic choice is the format, which can be either a __human readable__ text re
 
 This choice can be made by selecting different tracers, where one kind outputs text and the other JSON. So more details about this is given in the section about tracers.
 
-For the JSON representation it is currently possible to give different levels of __verbosity__, which can result in less slots printed when verbosity is not at highest level, or shortened versions of some printed values.
+For the JSON representation it is possible to give different levels of __DetailLevel__, which can result in less slots printed when verbosity is not at highest level, or shortened or missing versions of some printed values.
 
-The current system defines the verbosity levels:
+The system defines the detail levels:
 
 ```haskell
- MinimalVerbosity | NormalVerbosity | MaximalVerbosity.
+ DBrief | DRegular | DDetailed
 ```
-
-The verbosity is currently only used rarely in the Cardano node. E.g. LedgerDB.DiskSnapshot writes the whole snapshot to the log when given MaximalVerbosity and MinimalVerbosity suppresses some logs messages as a whole. As well MinimalVerbosity cuts the size of certain outputs to the length of 7 characters. These are degenerate cases, and I wonder if verbosity is currently really applied in a useful manner, specially as we treat a machine readable form, in which we then need parsers, which can adopt to the different verbosity representations.
-
-When we want to continue using different verbosities, we can use it in the serialization to JSON and get the desired verbosity from the configuration.
 
 ### Tracers
 
-For logging of text and JSON __Katip__ is used as backend library, and we will continue with this solution. Additional we have currently the possibilities to write to __systemd__ logs on Linux, to use the __graylog__ logging system and to __forward traces__.
+For logging of text and JSON _Katip_ is used as backend library, and we will continue with this solution. Additional we have currently the possibilities to write _systemd_ logs on Linux, to use the _graylog_ logging system and to _forward traces_.
 
-For logging of measurements __EKG__ is used as a library and we will keep this solution. Measurements are as well routed to __Prometheus__, this possibility shall be kept, but can be  implemented by forwarding the contents of EKG store.  
+For logging of measurements _EKG_ is used as a library and we will keep this solution. Measurements are as well routed to _Prometheus_, this possibility shall be kept, but can be  implemented by forwarding the contents of EKG store.
+
+<!-- Here is a list of all current backend kinds
+data BackendKind =
+AggregationBK
+| EditorBK
+| EKGViewBK
+| GraylogBK
+| KatipBK
+| LogBufferBK
+| MonitoringBK
+| TraceAcceptorBK
+| TraceForwarderBK
+| UserDefinedBK Text
+| SwitchboardBK
+deriving (Eq,Ord,Show,Read) -->
 
 #### Katip
 
-Katip has its own and very different approach to logging. Specially it needs a LogEnv to function, which is usually provided by the class Katip m.
-We design a different interface, which constructs the LogEnv when constructing the tracer.
+Katip has its own and very different approach to logging. Specially it needs a LogEnv to function, which is usually provided by the class Katip m. We design a different interface, which constructs the LogEnv when constructing the tracer.
+
+Katip makes use of the following Type classes. ToObject is used to serialize an object, and uses the ToJSON instance of Aeson as default.      
+
+```haskell
+class ToObject a where
+    toObject :: a -> A.Object
+    default toObject :: ToJSON a => a -> A.Object
+    toObject v = case toJSON v of
+      A.Object o -> o
+      _          -> mempty
+```
+
+The LogItem type class is used to fix what output should be produced for different verbosity levels:
+
+```haskell
+class ToObject a => LogItem a where
+    -- | List of keys in the JSON object that should be included in message.
+    payloadKeys :: Verbosity -> a -> PayloadSelection
+
+data PayloadSelection
+    = AllKeys
+    | SomeKeys [Text]
+    deriving (Show, Eq)
+
+```    
+Shall we keep this type classes or just require _ToJson_ and set the payload selection with a function?   
+
+```haskell
+stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+
+stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+```
 
 #### EKG
 
-EKG has to phases: 1. A Counter, Gauge, Label or Distribution has to be registered for any value to be logged. 2. The actual value will be set. We can make the first step happen when we configure tracing, in which case all tracers with all measuring trace messages have to be known. Or we can register it lazily when first called, which means one extra lookup for every trace message which is sent to EKG.  
+EKG has to phases: 1. A Counter, Gauge, Label or Distribution has to be registered for any value to be logged. 2. The actual value will be set. We can do the registration lazily when it first called. We have two variants depending if it gets initialized by a Store or a Server:
+
+```haskell
+ekgTracer :: MonadIO m => Metrics.Store -> m (Trace m Metric)
+
+ekgTracer' :: MonadIO m => Server -> m (Trace m Metric)
+
+data Metric = Integer Int | Double  | Label String
+```
+What types do we want to carry the Measurable data structure? EKG offers: Counter (simple incremental counter on integers), Gauge (integer valued), Label (displays strings) and Distribution (aggregates distribution for a double value).
+
+As well the concept of a Group of metrics is offered. This may work with configuration items.
 
 #### Forwarder
 
+#### Stdout
+
+#### Prometheus
 
 ### Configuration
 
+The configuration can be read from a YAML or JSON file.
+
+The system shall be reconfigurable. This can be done by changing the YAML file and then by calling reconfigureTracing in
+the Node CLI.
+
+The trace-dispatcher library code requires the allTraces function, which returns all traces which are used with traceWith.
+
+```haskell
+-- |
+allTraces :: [Trace]
+
+-- | The argument list all traces which are used with traceWith.
+--   The function configures the traces with the given configuration
+configureTraces :: MonadIO m => [Trace m a] -> Configuration -> m ()
+
+-- Aternatively
+-- | The function has to be called for all traces,
+--   which are used with traceWith.
+--   The function configures the traces with the given configuration
+--   The returned trace has to be
+
+configureTrace :: MonadIO m => Trace m a -> Configuration -> m (Trace m a)
+
+```  
+
+```haskell
+-- *** General options:
+data ConfigOption = ConfigOption {
+    -- | Severity level for a message  
+    coSeverity    :: SeverityF
+    -- | Detail level for a message  
+  , coDetailLevel :: DetailLevel
+    -- | Defined in messages per second
+  , coMaxFrequency :: Int
+}
+
+data TraceConfiguration = TraceConfiguration {
+  ,  tcDefaultOptions :: ConfigOption
+
+  ,  tcOptions :: Map Namespace ConfigOption
+
+  -- *** Forwarder:
+     -- Forward messages to the following address
+  ,  tcForwardTo :: RemoteAddr
+
+  -- *** Katip:
+  ,  tcDefaultScribe :: ScribeDefinition
+
+  ,  tcScribes :: Map TracerName -> ScribeDefinition
+
+  -- *** EKG:
+     -- | Port for EKG server
+  ,  tcPortEKG :: Int
+
+  -- *** Prometheus:
+    -- Host/port to bind Prometheus server at
+  ,  tcBindAddrPrometheus :: Maybe (String,Int)
+}
+```
+
+The current system has the notion of subtrace. We will drop this concept.
+
 ### Multithreaded Tracing  
 
-### Frequency Limiting
+### Frequency Limiting (Eliding Tracers)
 
-### Cardano Node Tracing Overview
+### Cardano Node Tracing
