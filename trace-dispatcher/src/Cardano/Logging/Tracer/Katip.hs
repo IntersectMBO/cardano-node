@@ -35,22 +35,25 @@ stdoutJsonKatipTracer = do
     pure $ withKatipLogEnv env katipTracer
 
 -- | Sets severities for the messages in this trace based on the selector function
-withKatipLogEnv :: Monad m => LogEnv -> T.Tracer m (LoggingContextKatip, a) -> Trace m a
-withKatipLogEnv le = T.contramap (\ (lc,v) -> (LoggingContextKatip lc le, v))
+withKatipLogEnv :: Monad m
+  => LogEnv
+  -> T.Tracer m (LoggingContextKatip, Either TraceConfig a)
+  -> Trace m a
+withKatipLogEnv le = T.contramap (\ (lc,e) -> (LoggingContextKatip lc le, e))
 
 --- | A standard Katip tracer
-katipTracer :: (MonadIO m, LogItem a) => T.Tracer m (LoggingContextKatip, a)
+katipTracer :: (MonadIO m, LogItem a)
+  => T.Tracer m (LoggingContextKatip, Either TraceConfig a)
 katipTracer =  T.arrow $ T.emit $ uncurry output
   where
-    output LoggingContextKatip {..} a =
+    output LoggingContextKatip {..} (Right a) =
                       logItem'
                           a
                           (Namespace (lcContext lk))
                           (fromMaybe InfoS (lcSeverity lk))
                           ""
                           lkLogEnv
-
-
+    output LoggingContextKatip {..} (Left a) = pure () -- TODO
 
 
 -------------------------------------------------------------------------------

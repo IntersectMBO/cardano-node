@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Trace where
@@ -10,13 +11,16 @@ import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef,
                      writeIORef)
 import           Data.Maybe (fromMaybe, isJust)
 import           Data.Text (Text)
-import           Katip (Katip, Severity (..))
+import           Katip (Severity (..))
 
 import           Cardano.Logging.Types
 
 -- | Adds a message object to a trace
 traceWith :: Monad m => Trace m a -> a -> m ()
-traceWith tr a = T.traceWith tr (emptyLoggingContext, a)
+traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
+
+configureTrace :: Monad m => Trace m a -> TraceConfig -> m ()
+configureTrace tr c = T.traceWith tr (emptyLoggingContext, Left c)
 
 --- | Don't process further if the result of the selector function
 ---   is False.
@@ -24,7 +28,10 @@ filterTrace :: (Monad m) =>
      ((LoggingContext, a) -> Bool)
   -> Trace m a
   -> Trace m a
-filterTrace ff = T.squelchUnless (\ (c, a) -> ff (c, a))
+filterTrace ff = T.squelchUnless $
+    \case
+      (lc, Right a) -> ff (lc, a)
+      (lc, Left  c) -> True
 
 --- | Only processes messages further with a severity equal or greater as the
 --- given one
@@ -32,31 +39,33 @@ filterTraceBySeverity :: (Monad m) =>
      SeverityF
   -> Trace m a
   -> Trace m a
-filterTraceBySeverity minSeverity = filterTrace
-  (\ (c, a) -> case lcSeverity c of
-                Just s  -> fromEnum s >= fromEnum minSeverity
-                Nothing -> True)
+filterTraceBySeverity minSeverity = filterTrace $
+    \(c, e) -> case lcSeverity c of
+                        Just s  -> fromEnum s >= fromEnum minSeverity
+                        Nothing -> True
 
 -- | Appends a name to the context.
 -- E.g. appendName "out" $ appendName "middle" $ appendName "in" tracer
 -- give the result: `in.middle.out`.
 appendName :: Monad m => Text -> Trace m a -> Trace m a
 appendName name = T.contramap
-  (\ (lc,v) -> (lc {lcContext = name : lcContext lc}, v))
+  (\ (lc,e) -> (lc {lcContext = name : lcContext lc}, e))
 
 -- | Sets severity for the messages in this trace
 setSeverity :: Monad m => Severity -> Trace m a -> Trace m a
 setSeverity s = T.contramap
-  (\ (lc,v) -> if isJust (lcSeverity lc)
-                    then (lc,v)
-                    else (lc {lcSeverity = Just s}, v))
+  (\ (lc,e) -> if isJust (lcSeverity lc)
+                    then (lc,e)
+                    else (lc {lcSeverity = Just s}, e))
 
 -- | Sets severities for the messages in this trace based on the selector function
 withSeverity :: Monad m => (a -> Severity) -> Trace m a -> Trace m a
-withSeverity fs = T.contramap
-  (\ (lc,v) -> if isJust (lcSeverity lc)
-                    then (lc,v)
-                    else (lc {lcSeverity = Just (fs v)}, v))
+withSeverity fs = T.contramap $
+    \case
+      (lc, Right e) -> if isJust (lcSeverity lc)
+                          then (lc, Right e)
+                          else (lc {lcSeverity = Just (fs e)}, Right e)
+      (lc, Left  c) -> (lc, Left c)
 
 -- | Sets privacy for the messages in this trace
 setPrivacy :: Monad m => PrivacyAnnotation -> Trace m a -> Trace m a
@@ -77,14 +86,16 @@ foldTraceM
   -> m (Trace m a)
 foldTraceM cata initial tr = do
   ref <- liftIO (newIORef initial)
-  let tr = mkTracer ref
-  pure (T.Tracer tr)
+  let trr = mkTracer ref
+  pure (T.Tracer trr)
  where
-    mkTracer :: IORef acc -> TA.Tracer m (LoggingContext, a) ()
-    mkTracer ref = T.emit
-      (\(lc,a) -> do
-        x' <- liftIO $ atomicModifyIORef' ref $ \x -> join (,) (cata x a)
-        T.traceWith tr (lc, Folding x'))
+    mkTracer ref = T.emit $
+      \case
+        (lc, Right v) -> do
+          x' <- liftIO $ atomicModifyIORef' ref $ \x -> join (,) (cata x v)
+          T.traceWith tr (lc, Right (Folding x'))
+        (lc, Left c) -> do
+          T.traceWith tr (lc, Left c)
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
@@ -96,22 +107,28 @@ foldTraceM'
   -> m (Trace m a)
 foldTraceM' cata initial tr = do
   ref <- liftIO (newIORef initial)
-  let tr = mkTracer ref
-  pure (T.arrow tr)
+  let trr = mkTracer ref
+  pure (T.arrow trr)
  where
-    mkTracer :: IORef acc -> TA.Tracer m (LoggingContext, a) ()
-    mkTracer ref = T.emit
-      (\(lc,v) -> do
-        acc <- liftIO $ readIORef ref
-        acc' <- cata acc v
-        liftIO $ writeIORef ref acc'
-        T.traceWith tr (lc, Folding acc'))
+    mkTracer ref = T.emit $
+      \case
+        (lc, Right v) -> do
+          acc <- liftIO $ readIORef ref
+          acc' <- cata acc v
+          liftIO $ writeIORef ref acc'
+          T.traceWith tr (lc, Right (Folding acc'))
+        (lc, Left c) -> do
+          T.traceWith tr (lc, Left c)
 
 -- | Allows to route to different tracers,
 --   based on the message being processed.
+--   The second argument shall mappend all tracers to one tracers for configuration
 routingTrace
   :: forall m a . Monad m
   => (a -> Trace m a)
   -> Trace m a
-routingTrace rf = T.arrow $
-  T.emit (\(lc,x) -> T.traceWith (rf x) (lc,x))
+  -> Trace m a
+routingTrace rf rc = T.arrow $ T.emit $
+    \case
+      (lc, Right x) -> T.traceWith (rf x) (lc, Right x)
+      (lc, Left  c) -> T.traceWith rc     (lc, Left  c)
