@@ -19,7 +19,7 @@ ekgTracer store = liftIO $ do
   registeredRef <- newIORef Map.empty
   pure $ T.arrow $ T.emit $ output registeredRef
     where
-      output registeredRef (LoggingContext{..}, v) = liftIO $ do
+      output registeredRef (LoggingContext{..}, Right v) = liftIO $ do
         registeredMap <- readIORef registeredRef
         let name = intercalate "." lcContext
         case Map.lookup name registeredMap of
@@ -29,13 +29,14 @@ ekgTracer store = liftIO $ do
             let registeredMap' = Map.insert name gauge registeredMap
             writeIORef registeredRef registeredMap'
             Gauge.set gauge (fromIntegral v)
+      output registeredRef (LoggingContext{..}, Left c) = pure () -- TODO
 
 ekgTracer' :: MonadIO m => Server -> m (Trace m Int)
 ekgTracer' store = liftIO $ do
   registeredRef <- newIORef Map.empty
   pure $ T.arrow $ T.emit $ output registeredRef
     where
-      output registeredRef (LoggingContext{..}, v) = liftIO $ do
+      output registeredRef (LoggingContext{..}, Right v) = liftIO $ do
         registeredMap <- readIORef registeredRef
         let name = intercalate "." lcContext
         case Map.lookup name registeredMap of
@@ -45,3 +46,4 @@ ekgTracer' store = liftIO $ do
             let registeredMap' = Map.insert name gauge registeredMap
             writeIORef registeredRef registeredMap'
             Gauge.set gauge (fromIntegral v)
+      output registeredRef (LoggingContext{..}, Left c) = pure () -- TODO

@@ -18,7 +18,7 @@ routingTracer1 :: (Monad m)
   => Trace m LO
   -> Trace m LO
   -> Trace m LO
-routingTracer1 t1 t2 = routingTrace routingf
+routingTracer1 t1 t2 = routingTrace routingf (t1 <> t2)
   where
     routingf LO1 {} = t1
     routingf LO2 {} = t2
