@@ -476,6 +476,8 @@ pTransaction =
         (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
     , subParser "txid"
         (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
+    , subParser "view" $
+        Opt.info pTransactionView $ Opt.progDesc "Print a transaction"
     ]
  where
   assembleInfo :: ParserInfo TransactionCmd
@@ -551,9 +553,10 @@ pTransaction =
     ParamsFromFile <$> pProtocolParamsFile
 
   pTransactionId  :: Parser TransactionCmd
-  pTransactionId = TxGetTxId <$> (Left  <$> pTxBodyFile Input
-                              <|> Right <$> pTxFile Input)
+  pTransactionId = TxGetTxId <$> pInputTxFile
 
+  pTransactionView :: Parser TransactionCmd
+  pTransactionView = TxView <$> pInputTxFile
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
@@ -1651,7 +1654,7 @@ pTxBodyFile fdir =
       (  Opt.strOption
            (  Opt.long optName
            <> Opt.metavar "FILE"
-           <> Opt.help (show fdir ++ " filepath of the TxBody.")
+           <> Opt.help (show fdir ++ " filepath of the JSON TxBody.")
            <> Opt.completer (Opt.bashCompleter "file")
            )
       <|>
@@ -1673,7 +1676,7 @@ pTxFile fdir =
       (  Opt.strOption
            (  Opt.long optName
            <> Opt.metavar "FILE"
-           <> Opt.help (show fdir ++ " filepath of the Tx.")
+           <> Opt.help (show fdir ++ " filepath of the JSON Tx.")
            <> Opt.completer (Opt.bashCompleter "file")
            )
       <|>
@@ -1687,6 +1690,10 @@ pTxFile fdir =
       case fdir of
         Input -> "tx-file"
         Output -> "out-file"
+
+pInputTxFile :: Parser InputTxFile
+pInputTxFile =
+  InputTxBodyFile <$> pTxBodyFile Input <|> InputTxFile <$> pTxFile Input
 
 pTxInCount :: Parser TxInCount
 pTxInCount =
@@ -2453,4 +2460,3 @@ readerFromParsecParser p =
 subParser :: String -> ParserInfo a -> Parser a
 subParser availableCommand pInfo =
   Opt.hsubparser $ Opt.command availableCommand pInfo <> Opt.metavar availableCommand
-

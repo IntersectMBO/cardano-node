@@ -35,6 +35,7 @@ module Cardano.CLI.Shelley.Commands
   , WitnessFile (..)
   , TxBodyFile (..)
   , TxFile (..)
+  , InputTxFile (..)
   , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
   , MetadataFile (..)
@@ -192,7 +193,11 @@ data TransactionCmd
       TxOutCount
       TxShelleyWitnessCount
       TxByronWitnessCount
-  | TxGetTxId (Either TxBodyFile TxFile)
+  | TxGetTxId InputTxFile
+  | TxView InputTxFile
+  deriving Show
+
+data InputTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
 
 data ProtocolParamsSourceSpec
@@ -217,6 +222,7 @@ renderTransactionCmd cmd =
     TxMintedPolicyId {} -> "transaction policyid"
     TxCalculateMinFee {} -> "transaction calculate-min-fee"
     TxGetTxId {} -> "transaction txid"
+    TxView {} -> "transaction view"
 
 data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile
