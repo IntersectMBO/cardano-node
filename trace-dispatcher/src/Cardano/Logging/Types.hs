@@ -8,14 +8,17 @@ import           Data.Map (Map)
 import           Data.Text (Text)
 import           Katip
 
-type Trace m a = Tracer m (LoggingContext, a)
+-- | Configurable tracer which carries a context while tracing
+type Trace m a = Tracer m (LoggingContext, Either TraceConfig a)
 
 data LoggingContext = LoggingContext {
     lcContext  :: [Text]
   , lcSeverity :: Maybe Severity
   , lcPrivacy  :: Maybe PrivacyAnnotation
-  , lcKatip    :: Maybe LogEnv
 }
+
+emptyLoggingContext :: LoggingContext
+emptyLoggingContext = LoggingContext [] Nothing Nothing
 
 data LoggingContextKatip = LoggingContextKatip {
     lk       :: LoggingContext
@@ -29,12 +32,9 @@ data DetailLevel =
     | DDetailed
     deriving (Show, Eq, Ord, Bounded, Enum)
 
-emptyLoggingContext :: LoggingContext
-emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
-
 data PrivacyAnnotation =
       Confidential -- confidential information - handle with care
-    | Public       -- indifferent - can be public.
+    | Public       -- can be public.
     deriving (Show, Eq, Ord, Bounded, Enum)
 
 data SeverityF
@@ -52,7 +52,7 @@ data SeverityF
 newtype Folding a b = Folding b
   deriving (ToObject)
 
--- Configuration options
+-- Configuration options for individual
 data ConfigOption = ConfigOption {
     -- | Severity level for a message
     coSeverity    :: SeverityF
@@ -60,8 +60,7 @@ data ConfigOption = ConfigOption {
   , coDetailLevel :: DetailLevel
 }
 
-
-data TraceConfiguration = TraceConfiguration {
+data TraceConfig = TraceConfig {
      -- | Options taken, if no more specific options are available
      tcDefaultOptions :: ConfigOption
      -- | Options specific to a certain namespace
