@@ -6,15 +6,17 @@ module Cardano.Logging.Types where
 import           Control.Tracer
 import           Data.Map (Map)
 import           Data.Text (Text)
-import           Katip
+import           Katip (LogEnv, Severity, ToObject)
+
+type Context = [Text]
 
 -- | Configurable tracer which carries a context while tracing
 type Trace m a = Tracer m (LoggingContext, Either TraceConfig a)
 
 data LoggingContext = LoggingContext {
-    lcContext  :: [Text]
+    lcContext  :: Context
   , lcSeverity :: Maybe Severity
-  , lcPrivacy  :: Maybe PrivacyAnnotation
+  , lcPrivacy  :: Maybe Privacy
 }
 
 emptyLoggingContext :: LoggingContext
@@ -32,7 +34,7 @@ data DetailLevel =
     | DDetailed
     deriving (Show, Eq, Ord, Bounded, Enum)
 
-data PrivacyAnnotation =
+data Privacy =
       Confidential -- confidential information - handle with care
     | Public       -- can be public.
     deriving (Show, Eq, Ord, Bounded, Enum)
@@ -54,17 +56,21 @@ newtype Folding a b = Folding b
 
 -- Configuration options for individual
 data ConfigOption = ConfigOption {
-    -- | Severity level for a message
-    coSeverity    :: SeverityF
-    -- | Detail level for a message
-  , coDetailLevel :: DetailLevel
+    -- | Severity level
+    coSeverity     :: SeverityF
+    -- | Detail level
+  , coDetailLevel  :: DetailLevel
+    -- | Privacy level
+  , coPrivacy      :: Privacy
+    -- | Defined in messages per second
+  , coMaxFrequency :: Int
 }
 
 data TraceConfig = TraceConfig {
      -- | Options taken, if no more specific options are available
      tcDefaultOptions :: ConfigOption
      -- | Options specific to a certain namespace
-  ,  tcOptions        :: Map Namespace ConfigOption
+  ,  tcOptions        :: Map Context ConfigOption
 
   --  Forwarder:
      -- Can their only be one forwarder? Use one of:
