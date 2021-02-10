@@ -26,7 +26,6 @@ module Cardano.Api.Byron
     TxOut(TxOut),
     TxIx(TxIx),
     Lovelace(Lovelace),
-    SlotNo(SlotNo),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -39,9 +38,6 @@ module Cardano.Api.Byron
       , WitnessByronAddress
       ),
 
-    -- *** Reading one of several key types
-    FromSomeType(..),
-
     -- * Errors
     Error(..),
     FileError(..),
@@ -50,12 +46,11 @@ module Cardano.Api.Byron
     LocalNodeConnectInfo(LocalNodeConnectInfo),
     ByronMode,
     CardanoMode,
-    NodeConsensusMode
+    ConsensusMode
       ( ByronMode
       , CardanoMode
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
-    withNodeProtocolClient,
 
     -- *** Chain sync protocol
     ChainSyncClient(..),
@@ -91,6 +86,11 @@ module Cardano.Api.Byron
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Address
+import           Cardano.Api.IPC
 import           Cardano.Api.KeysByron
+import           Cardano.Api.NetworkId
 import           Cardano.Api.SpecialByron
-import           Cardano.Api.Typed
+import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
+import           Cardano.Api.Value

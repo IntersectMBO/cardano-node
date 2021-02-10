@@ -6,6 +6,10 @@
 module Cardano.Api.Shelley
   ( module Cardano.Api,
 
+    -- * Genesis
+    ShelleyGenesis(..),
+    shelleyGenesisDefaults,
+
     -- * Cryptographic key interface
     -- $keys
     VerificationKey(..),
@@ -48,7 +52,6 @@ module Cardano.Api.Shelley
     fromShelleyLovelace,
     toMaryValue,
     fromMaryValue,
-    SlotNo(SlotNo),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -76,17 +79,13 @@ module Cardano.Api.Shelley
     makeShelleySignature,
     toShelleySigningKey,
 
-    -- *** Reading one of several key types
-    FromSomeType(..),
-
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
     toShelleyMetadata,
     fromShelleyMetadata,
 
-    -- * Protocol parameter updates
-    EpochNo(..),
-    NetworkMagic(..),
+    -- * Protocol parameters
+    ProtocolParameters(..),
 
     -- * Scripts
     toShelleyScript,
@@ -131,6 +130,7 @@ module Cardano.Api.Shelley
       , StakePoolRelayDnsARecord
       , StakePoolRelayDnsSrvRecord
       ),
+    EpochNo(..),
 
     -- ** Stake pool operator's keys
     StakePoolKey,
@@ -138,6 +138,7 @@ module Cardano.Api.Shelley
 
     -- ** KES keys
     KesKey,
+    KESPeriod(..),
 
     -- ** VRF keys
     VrfKey,
@@ -146,24 +147,45 @@ module Cardano.Api.Shelley
     LocalNodeConnectInfo(LocalNodeConnectInfo),
     ShelleyMode,
     CardanoMode,
-    NodeConsensusMode
+    ConsensusMode
       ( ShelleyMode
       , CardanoMode
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
-    withNodeProtocolClient,
 
     -- ** Shelley based eras
     ShelleyLedgerEra,
 
+
+    -- ** Local State Query
+    QueryInShelleyBasedEra(..),
+    LedgerState(..),
+    ProtocolState(..),
+    SerialisedLedgerState(..),
+    UTxO(..),
+
     -- ** Conversions
     --TODO: arrange not to export these
     toShelleyNetwork,
+    fromShelleyPParams,
 
   ) where
 
 import           Cardano.Api
 import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eras
+import           Cardano.Api.IPC
+import           Cardano.Api.KeysPraos
+import           Cardano.Api.KeysShelley
+import           Cardano.Api.NetworkId
+import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query
+import           Cardano.Api.Script
+import           Cardano.Api.Shelley.Genesis
+import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
-import           Cardano.Api.Typed
+import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value

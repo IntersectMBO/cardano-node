@@ -7,12 +7,10 @@ module Cardano.Chairman.Commands.Run
   ( cmdRun
   ) where
 
+import           Cardano.Api
 import           Cardano.Api.Protocol.Byron
 import           Cardano.Api.Protocol.Cardano
 import           Cardano.Api.Protocol.Shelley
-import           Cardano.Api.Protocol.Types
-import           Cardano.Api.Typed (NetworkMagic (..))
-import           Cardano.Chain.Slotting (EpochSlots (..))
 import           Cardano.Chairman (chairmanTest)
 import           Cardano.Node.Configuration.POM (parseNodeConfigurationFP, pncProtocol)
 import           Cardano.Node.Protocol.Types (Protocol (..))
@@ -22,7 +20,6 @@ import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (Tracer (..), stdoutTracer)
 import           Options.Applicative
 import           Ouroboros.Consensus.Cardano (SecurityParam (..))
-import           Ouroboros.Network.Block (BlockNo)
 
 import qualified Data.Time.Clock as DTC
 import qualified Options.Applicative as Opt

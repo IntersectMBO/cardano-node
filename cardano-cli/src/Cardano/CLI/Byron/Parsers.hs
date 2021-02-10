@@ -49,7 +49,7 @@ import           Cardano.Chain.Common (BlockCount (..), TxFeePolicy (..), TxSize
                      decodeAddressBase58, rationalToLovelacePortion)
 import qualified Cardano.Chain.Common as Byron
 import           Cardano.Chain.Genesis (FakeAvvmOptions (..), TestnetBalanceOptions (..))
-import           Cardano.Chain.Slotting (EpochNumber (..), EpochSlots (..), SlotNumber (..))
+import           Cardano.Chain.Slotting (EpochNumber (..), SlotNumber (..))
 import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..), NumSoftwareVersion,
                      ProtocolVersion (..), SoftforkRule (..), SoftwareVersion (..), SystemTag (..),
                      checkApplicationName, checkSystemTag)

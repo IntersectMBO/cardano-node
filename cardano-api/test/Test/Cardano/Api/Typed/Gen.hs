@@ -32,8 +32,9 @@ module Test.Cardano.Api.Typed.Gen
   , genVerificationKey
   ) where
 
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Typed
+import           Cardano.Api
+import           Cardano.Api.Byron
+import           Cardano.Api.Shelley
 
 import           Cardano.Prelude
 

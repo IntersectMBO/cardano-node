@@ -2,7 +2,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Byron.Query
   ( ByronQueryError(..)
@@ -13,18 +12,13 @@ module Cardano.CLI.Byron.Query
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import qualified Data.Text as Text
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api
-import           Cardano.Api.Byron (NodeConsensusMode (ByronMode))
-import           Cardano.Chain.Slotting (EpochSlots (..))
-import           Ouroboros.Consensus.Block (ConvertRawHash (..))
-import           Ouroboros.Network.Block
-
-import           Cardano.Api.LocalChainSync (getLocalTip)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Types (SocketPath (..))
-import           Cardano.Tracing.Render (renderHeaderHash, renderSlotNo)
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -48,19 +42,10 @@ runGetLocalNodeTip networkId = do
           LocalNodeConnectInfo {
             localNodeSocketPath    = sockPath,
             localNodeNetworkId     = networkId,
-            localNodeConsensusMode = ByronMode (EpochSlots 21600)
+            localConsensusModeParams = ByronModeParams (EpochSlots 21600)
           }
-    liftIO $ do
-      tip <- getLocalTip connctInfo
-      putTextLn (getTipOutput tip)
-  where
-    getTipOutput :: forall blk. ConvertRawHash blk => Tip blk -> Text
-    getTipOutput TipGenesis = "Current tip: genesis (origin)"
-    getTipOutput (Tip slotNo headerHash (BlockNo blkNo)) =
-      Text.unlines
-        [ "\n"
-        , "Current tip: "
-        , "Block hash: " <> renderHeaderHash (Proxy @blk) headerHash
-        , "Slot: " <> renderSlotNo slotNo
-        , "Block number: " <> show blkNo
-        ]
+
+    tip <- liftIO $ getLocalChainTip connctInfo
+    liftIO . putTextLn . Text.decodeUtf8 . LB.toStrict $ encodePretty tip
+
+

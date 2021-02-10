@@ -47,13 +47,12 @@ import           System.FilePath (takeExtension, takeExtensions, (</>))
 import           System.IO.Error (isDoesNotExistError)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                     newExceptT)
+                   newExceptT)
 
 import qualified Cardano.Crypto.Hash as Crypto
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-import           Cardano.Api.Shelley.Genesis
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
@@ -64,7 +63,6 @@ import qualified Shelley.Spec.Ledger.API as Ledger
 import qualified Shelley.Spec.Ledger.BaseTypes as Ledger
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Ledger.Era ()
@@ -75,10 +73,10 @@ import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 import           Cardano.CLI.Shelley.Run.Address
 import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderShelleyNodeCmdError,
-                     runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
+                   runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
 import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderShelleyPoolCmdError)
 import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdError (..),
-                     renderShelleyStakeAddressCmdError, runStakeAddressKeyGen)
+                   renderShelleyStakeAddressCmdError, runStakeAddressKeyGen)
 import           Cardano.CLI.Types
 
 {- HLINT ignore "Reduce duplication" -}

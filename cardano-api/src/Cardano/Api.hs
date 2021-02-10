@@ -41,7 +41,7 @@ module Cardano.Api (
     -- $keys
     Key,
     VerificationKey,
-    SigningKey,
+    SigningKey(..),
     getVerificationKey,
     verificationKeyHash,
     castVerificationKey,
@@ -113,6 +113,10 @@ module Cardano.Api (
     valueToList,
     filterValue,
     negateValue,
+    ValueNestedRep(..),
+    ValueNestedBundle(..),
+    valueToNestedRep,
+    valueFromNestedRep,
 
     -- ** Ada \/ Lovelace within multi-asset values
     quantityToLovelace,
@@ -134,6 +138,7 @@ module Cardano.Api (
     -- ** Tip of the chain
     ChainTip(..),
     BlockNo(..),
+    chainTipToChainPoint,
 
     -- * Building transactions
 
@@ -163,6 +168,7 @@ module Cardano.Api (
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
     SlotNo(..),
+    EpochSlots(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
     TxWithdrawals(..),
@@ -366,7 +372,7 @@ module Cardano.Api (
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
     -- *** Reading one of several key types
-    FromSomeType,
+    FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
     readFileTextEnvelopeAnyOf,
 
@@ -384,26 +390,39 @@ module Cardano.Api (
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
     LocalNodeConnectInfo(..),
-    NodeConsensusMode,
+    AnyConsensusMode(..),
+    ConsensusMode,
+    consensusModeOnly,
+    AnyConsensusModeParams(..),
+    ConsensusModeParams(..),
+    EraInMode(..),
+    toEraInMode,
     LocalNodeClientProtocols,
     localChainSyncClient,
     localTxSubmissionClient,
     localStateQueryClient,
-    nullLocalNodeClientProtocols,
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
     ChainSyncClient(..),
+    BlockInMode(..),
+    LocalNodeClientProtocolsInMode,
 
     -- *** Local tx submission
     LocalTxSubmissionClient,
+    TxInMode(..),
+    TxValidationErrorInMode(..),
     runLocalTxSubmissionClient,
     submitTxToNodeLocal,
 
     -- *** Local state query
-    LocalStateQueryClient,
-    runLocalStateQueryClient,
+    LocalStateQueryClient(..),
+    QueryInMode(..),
+    QueryInEra(..),
     queryNodeLocalState,
+
+    -- *** Query local node chain tip
+    getLocalChainTip,
 
     -- * Node operation
     -- | Support for the steps needed to operate a node
@@ -441,7 +460,37 @@ module Cardano.Api (
     -- ** Conversions
     --TODO: arrange not to export these
     toNetworkMagic,
+    --TODO: Remove after updating cardano-node-chairman with new IPC
+    SomeNodeClientProtocol(..),
   ) where
 
+import           Cardano.Api.Address
 import           Cardano.Api.Block
-import           Cardano.Api.Typed
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Fees
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
+import           Cardano.Api.IPC
+import           Cardano.Api.Key
+import           Cardano.Api.KeysByron
+import           Cardano.Api.KeysPraos
+import           Cardano.Api.KeysShelley
+import           Cardano.Api.Modes
+import           Cardano.Api.NetworkId
+import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Value
+--TODO: Remove after updating cardano-node-chairman with new IPC
+import           Cardano.Api.Protocol.Types

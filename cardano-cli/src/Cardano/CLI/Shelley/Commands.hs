@@ -49,17 +49,14 @@ module Cardano.CLI.Shelley.Commands
 import           Data.Text (Text)
 import           Prelude
 
-import           Cardano.Api
-import           Cardano.Api.Modes
 import           Cardano.Api.Shelley hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, VerificationKeyOrHashOrFile,
-                     VerificationKeyTextOrFile)
+                   VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
-import           Shelley.Spec.Ledger.OCert (KESPeriod)
 import           Shelley.Spec.Ledger.TxBody (MIRPot)
 --
 -- Shelley CLI command data types
@@ -283,25 +280,25 @@ renderPoolCmd cmd =
     PoolMetadataHash {} -> "stake-pool metadata-hash"
 
 data QueryCmd =
-    QueryProtocolParameters AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
+    QueryProtocolParameters' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo AnyCardanoEra AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO AnyCardanoEra AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
-  | QueryLedgerState AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryProtocolState AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryUTxO' AnyCardanoEra AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
+  | QueryLedgerState' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryProtocolState' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
 renderQueryCmd cmd =
   case cmd of
-    QueryProtocolParameters {} -> "query protocol-parameters "
+    QueryProtocolParameters' {} -> "query protocol-parameters "
     QueryTip {} -> "query tip"
-    QueryStakeDistribution {} -> "query stake-distribution"
+    QueryStakeDistribution' {} -> "query stake-distribution"
     QueryStakeAddressInfo {} -> "query stake-address-info"
-    QueryUTxO {} -> "query utxo"
-    QueryLedgerState {} -> "query ledger-state"
-    QueryProtocolState {} -> "query protocol-state"
+    QueryUTxO' {} -> "query utxo"
+    QueryLedgerState' {} -> "query ledger-state"
+    QueryProtocolState' {} -> "query protocol-state"
 
 data GovernanceCmd
   = GovernanceMIRCertificate MIRPot [VerificationKeyFile] [Lovelace] OutputFile

@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Byron.Tx
   ( ByronTxError(..)
@@ -27,39 +28,43 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text as Text
 import           Formatting (sformat, (%))
+
+import           Cardano.Api
 
 import qualified Cardano.Binary as Binary
 
 import qualified Cardano.Chain.Common as Common
 import           Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Slotting (EpochSlots (..))
 import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
-import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (GenTx (DegenGenTx))
-
-import           Cardano.Api (LocalNodeConnectInfo (..), NetworkId, TxBody, Witness,
-                     makeByronTransaction, submitTxToNodeLocal)
-import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra,
-                     NodeConsensusMode (ByronMode), SomeByronSigningKey (..), Tx (..), TxIn,
-                     TxOut (..), VerificationKey (..), fromByronTxIn, makeByronKeyWitness,
-                     makeSignedTransaction)
+import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Types (SocketPath (..))
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
+import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
 data ByronTxError
   = TxDeserialisationFailed !FilePath !Binary.DecoderError
+  | ByronTxSubmitError !Text
+  | ByronTxSubmitErrorEraMismatch !EraMismatch
   | EnvSocketError !EnvSocketError
   deriving Show
 
 renderByronTxError :: ByronTxError -> Text
 renderByronTxError err =
   case err of
+    ByronTxSubmitError res -> "Error while submitting tx: " <> res
+    ByronTxSubmitErrorEraMismatch EraMismatch{ledgerEraName, otherEraName} ->
+      "The era of the node and the tx do not match. " <>
+      "The node is running in the " <> ledgerEraName <>
+      " era, but the transaction is for the " <> otherEraName <> " era."
     TxDeserialisationFailed txFp decErr ->
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
@@ -181,12 +186,18 @@ nodeSubmitTx network gentx = do
     SocketPath socketPath <- firstExceptT EnvSocketError readEnvSocketPath
     let connctInfo =
           LocalNodeConnectInfo {
-            localNodeSocketPath    = socketPath,
-            localNodeNetworkId     = network,
-            localNodeConsensusMode = ByronMode (EpochSlots 21600)
+            localNodeSocketPath = socketPath,
+            localNodeNetworkId = network,
+            localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
           }
-    _res <- liftIO $ submitTxToNodeLocal connctInfo (DegenGenTx gentx)
-    --TODO: print failures
+    res <- liftIO $ submitTxToNodeLocal connctInfo (TxInByronSpecial gentx ByronEraInCardanoMode)
+    case res of
+      Net.Tx.SubmitSuccess -> liftIO $ putTextLn "Transaction successfully submitted."
+      Net.Tx.SubmitFail reason ->
+        case reason of
+          TxValidationErrorInMode err _eraInMode -> left . ByronTxSubmitError . Text.pack $ show err
+          TxValidationEraMismatch mismatchErr -> left $ ByronTxSubmitErrorEraMismatch mismatchErr
+
     return ()
 
 
