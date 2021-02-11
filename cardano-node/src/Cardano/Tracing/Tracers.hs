@@ -34,6 +34,8 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified System.Remote.Monitoring as EKG
+import qualified System.Metrics.Gauge as Gauge
+import qualified System.Metrics.Label as Label
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
@@ -396,7 +398,7 @@ traceChainMetrics
   :: forall blk. HasHeader (Header blk)
   => Maybe EKG.Server -> Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
 traceChainMetrics Nothing _ = nullTracer
-traceChainMetrics (Just _eKGServer) tr = Tracer $ \ev ->
+traceChainMetrics (Just eKGServer) _tr = Tracer $ \ev ->
   fromMaybe (pure ()) $
     doTrace <$> chainTipInformation ev
  where
@@ -412,17 +414,19 @@ traceChainMetrics (Just _eKGServer) tr = Tracer $ \ev ->
 
    doTrace :: ChainInformation -> IO ()
    doTrace ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
-     -- TODO this is executed each time the chain changes. How cheap is it?
-     meta <- mkLOMeta Critical Public
+     sendEKGDirectDouble  "cardano_node_metrics_density"     (fromRational density)
+     sendEKGDirectInt     "cardano_node_metrics_slotNum"     slots
+     sendEKGDirectInt     "cardano_node_metrics_blockNum"    blocks
+     sendEKGDirectInt     "cardano_node_metrics_slotInEpoch" slotInEpoch
+     sendEKGDirectInt     "cardano_node_metrics_epoch"       (unEpochNo epoch)
 
-     traceD tr meta "density"     (fromRational density)
-     traceI tr meta "slotNum"     slots
-     traceI tr meta "blockNum"    blocks
-     traceI tr meta "slotInEpoch" slotInEpoch
-     traceI tr meta "epoch"       (unEpochNo epoch)
+   sendEKGDirectInt :: Integral a => Text -> a -> IO ()
+   sendEKGDirectInt name val =
+     flip Gauge.set (fromIntegral val) =<< EKG.getGauge name eKGServer
 
-traceD :: Trace IO a -> LOMeta -> Text -> Double -> IO ()
-traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
+   sendEKGDirectDouble :: Text -> Double -> IO ()
+   sendEKGDirectDouble name val = do
+     flip Label.set (Text.pack (show val)) =<< EKG.getLabel name eKGServer
 
 traceI :: Integral i => Trace IO a -> LOMeta -> Text -> i -> IO ()
 traceI tr meta msg i = traceNamedObject tr (meta, LogValue msg (PureI (fromIntegral i)))
