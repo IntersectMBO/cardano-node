@@ -76,7 +76,6 @@ library
                      , byron-spec-ledger
                      , bytestring
                      , deepseq
-                     , ekg
                      , cardano-api
                      , cardano-config
                      , cardano-crypto-class
@@ -90,6 +89,8 @@ library
                      , containers
                      , directory
                      , dns
+                     , ekg
+                     , ekg-core
                      , filepath
                      , generic-data
                      , hedgehog-extras
