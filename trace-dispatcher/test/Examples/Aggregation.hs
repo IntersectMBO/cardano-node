@@ -50,6 +50,7 @@ testAggregation :: IO ()
 testAggregation = do
     simpleTracer  <- stdoutObjectKatipTracer
     tracer <- foldTraceM calculate emptyStats simpleTracer
+    configureTracers emptyTraceConfig [tracer]
     traceWith tracer (MDouble 1.0)
     traceWith tracer (MDouble 2.0)
     traceWith tracer (MDouble 0.5)

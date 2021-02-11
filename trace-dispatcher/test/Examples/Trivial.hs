@@ -15,7 +15,7 @@ import           Examples.TestObjects
 test1 :: IO ()
 test1 = do
     simpleTracer1 <- stdoutObjectKatipTracer
-    let simpleTracer1' = filterTraceBySeverity WarningF simpleTracer1
+    let simpleTracer1' = filterTraceBySeverity (Just WarningF) simpleTracer1
     let simpleTracerC1 = appendName "Outer1" simpleTracer1'
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setSeverity ErrorS
@@ -30,7 +30,7 @@ test2 :: IO ()
 test2 = do
     simpleTracer <- stdoutObjectKatipTracer
     let simpleTracer1  = withSeverity loSeverity
-                            (filterTraceBySeverity WarningF simpleTracer)
+                            (filterTraceBySeverity (Just WarningF) simpleTracer)
     let simpleTracerC1 = appendName "Outer1" simpleTracer1
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setPrivacy Confidential $ appendName "Inner2" simpleTracerC1
