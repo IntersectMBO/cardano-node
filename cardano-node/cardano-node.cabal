@@ -76,6 +76,7 @@ library
                      , byron-spec-ledger
                      , bytestring
                      , deepseq
+                     , ekg
                      , cardano-api
                      , cardano-config
                      , cardano-crypto-class

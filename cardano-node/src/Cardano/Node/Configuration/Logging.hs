@@ -31,6 +31,7 @@ import           Data.List (nub)
 import           Data.Text (pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
+import qualified System.Remote.Monitoring as EKG
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
@@ -109,6 +110,7 @@ data LoggingLayer = LoggingLayer
   , llConfiguration :: Configuration
   , llAddBackend :: Backend Text -> BackendKind -> IO ()
   , llSwitchboard :: Switchboard Text
+  , llEKGServer :: Maybe EKG.Server
   }
 
 --------------------------------
@@ -163,7 +165,9 @@ createLoggingLayer ver nodeConfig' p = do
   when loggingEnabled $ liftIO $
     loggingPreInit nodeConfig' logConfig switchBoard trace
 
-  pure $ mkLogLayer logConfig switchBoard trace
+  mEKGServer <- liftIO $ Switchboard.getSbEKGServer switchBoard
+
+  pure $ mkLogLayer logConfig switchBoard mEKGServer trace
  where
    loggingPreInit
      :: NodeConfiguration
@@ -217,8 +221,8 @@ createLoggingLayer ver nodeConfig' p = do
        -- Record node metrics, if configured
        startCapturingMetrics trace
 
-   mkLogLayer :: Configuration -> Switchboard Text -> Trace IO Text -> LoggingLayer
-   mkLogLayer logConfig switchBoard trace =
+   mkLogLayer :: Configuration -> Switchboard Text -> Maybe EKG.Server -> Trace IO Text -> LoggingLayer
+   mkLogLayer logConfig switchBoard mEKGServer trace =
      LoggingLayer
        { llBasicTrace = Trace.natTrace liftIO trace
        , llLogDebug = Trace.logDebug
@@ -235,6 +239,7 @@ createLoggingLayer ver nodeConfig' p = do
        , llConfiguration = logConfig
        , llAddBackend = Switchboard.addExternalBackend switchBoard
        , llSwitchboard = switchBoard
+       , llEKGServer = mEKGServer
        }
 
    startCapturingMetrics :: Trace IO Text -> IO ()
