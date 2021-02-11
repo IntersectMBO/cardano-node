@@ -4,14 +4,14 @@
 module Cardano.Logging.Types where
 
 import           Control.Tracer
-import           Data.Map (Map)
+import qualified Data.Map as Map
 import           Data.Text (Text)
 import           Katip (LogEnv, Severity, ToObject)
 
 type Context = [Text]
 
 -- | Configurable tracer which carries a context while tracing
-type Trace m a = Tracer m (LoggingContext, Either TraceConfig a)
+type Trace m a = Tracer m (LoggingContext, Either TraceControl a)
 
 data LoggingContext = LoggingContext {
     lcContext  :: Context
@@ -55,22 +55,19 @@ newtype Folding a b = Folding b
   deriving (ToObject)
 
 -- Configuration options for individual
-data ConfigOption = ConfigOption {
-    -- | Severity level
-    coSeverity     :: SeverityF
-    -- | Detail level
-  , coDetailLevel  :: DetailLevel
-    -- | Privacy level
-  , coPrivacy      :: Privacy
-    -- | Defined in messages per second
-  , coMaxFrequency :: Int
-}
+data ConfigOption =
+    -- | Severity level (default is WarningF)
+    CoSeverity SeverityF
+    -- | Detail level (Default is DRegular)
+  | CoDetailLevel DetailLevel
+    -- | Privacy level (Default is Public)
+  | CoPrivacy Privacy
+    -- | Defined in messages per second (Defaul is 10)
+  | CoMaxFrequency Int
 
 data TraceConfig = TraceConfig {
-     -- | Options taken, if no more specific options are available
-     tcDefaultOptions :: ConfigOption
      -- | Options specific to a certain namespace
-  ,  tcOptions        :: Map Context ConfigOption
+     tcOptions        :: Map.Map Context [ConfigOption]
 
   --  Forwarder:
      -- Can their only be one forwarder? Use one of:
@@ -95,3 +92,13 @@ data TraceConfig = TraceConfig {
     --  Host/port to bind Prometheus server at
 --  ,  tcBindAddrPrometheus :: Maybe (String,Int)
 }
+
+emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
+
+-- | When configuring a net of tracers, it should be run with Config on all
+-- entry points first, and then with Optimize. When reconfiguring it needs to
+-- run Reset followed by Config followed by Optimize
+data TraceControl =
+    Reset
+  | Config TraceConfig
+  | Optimize

@@ -37,13 +37,13 @@ stdoutJsonKatipTracer = do
 -- | Sets severities for the messages in this trace based on the selector function
 withKatipLogEnv :: Monad m
   => LogEnv
-  -> T.Tracer m (LoggingContextKatip, Either TraceConfig a)
+  -> T.Tracer m (LoggingContextKatip, Either TraceControl a)
   -> Trace m a
 withKatipLogEnv le = T.contramap (\ (lc,e) -> (LoggingContextKatip lc le, e))
 
 --- | A standard Katip tracer
 katipTracer :: (MonadIO m, LogItem a)
-  => T.Tracer m (LoggingContextKatip, Either TraceConfig a)
+  => T.Tracer m (LoggingContextKatip, Either TraceControl a)
 katipTracer =  T.arrow $ T.emit $ uncurry output
   where
     output LoggingContextKatip {..} (Right a) =
@@ -68,7 +68,7 @@ logItem'
     -> LogEnv
     -> m ()
 logItem' a ns sev msg le@LogEnv{..} = do
-    item <- liftIO $ (Item <$> pure _logEnvApp
+    item <- liftIO $ pure (Item _logEnvApp)
           <*> pure _logEnvEnv
           <*> pure sev
           <*> (mkThreadIdText <$> myThreadId)
@@ -78,7 +78,7 @@ logItem' a ns sev msg le@LogEnv{..} = do
           <*> pure msg
           <*> _logEnvTimer
           <*> pure (_logEnvApp <> ns)
-          <*> pure Nothing)
+          <*> pure Nothing
     logKatipItem' le item
 
 -- | Log already constructed 'Item'. This is the lowest level function that other log*

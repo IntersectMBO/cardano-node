@@ -16,12 +16,20 @@ import           Katip (Severity (..))
 
 import           Cardano.Logging.Types
 
+
+configureTracers :: Monad m => TraceConfig -> [Trace m a] -> m ()
+configureTracers config tracers = do
+    mapM_ (configureTrace Reset) tracers
+    mapM_ (configureTrace (Config config)) tracers
+    mapM_ (configureTrace Optimize) tracers
+  where
+    configureTrace :: Monad m => TraceControl -> Trace m a -> m ()
+    configureTrace c tr = T.traceWith tr (emptyLoggingContext, Left c)
+
 -- | Adds a message object to a trace
 traceWith :: Monad m => Trace m a -> a -> m ()
 traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
 
-configureTrace :: Monad m => Trace m a -> TraceConfig -> m ()
-configureTrace tr c = T.traceWith tr (emptyLoggingContext, Left c)
 
 --- | Don't process further if the result of the selector function
 ---   is False.
@@ -37,13 +45,15 @@ filterTrace ff = T.squelchUnless $
 --- | Only processes messages further with a severity equal or greater as the
 --- given one
 filterTraceBySeverity :: (Monad m) =>
-     SeverityF
+     Maybe SeverityF
   -> Trace m a
   -> Trace m a
-filterTraceBySeverity minSeverity = filterTrace $
+filterTraceBySeverity (Just minSeverity) = filterTrace $
     \(c, e) -> case lcSeverity c of
                         Just s  -> fromEnum s >= fromEnum minSeverity
                         Nothing -> True
+filterTraceBySeverity Nothing = id
+
 
 -- | Appends a name to the context.
 -- E.g. appendName "out" $ appendName "middle" $ appendName "in" tracer
@@ -70,13 +80,14 @@ withSeverity fs = T.contramap $
 
 --- | Only processes messages further with a privacy greater then the given one
 filterTraceByPrivacy :: (Monad m) =>
-     Privacy
+     Maybe Privacy
   -> Trace m a
   -> Trace m a
-filterTraceByPrivacy minPrivacy = filterTrace $
+filterTraceByPrivacy (Just minPrivacy) = filterTrace $
     \(c, e) -> case lcPrivacy c of
                         Just s  -> fromEnum s >= fromEnum minPrivacy
                         Nothing -> True
+filterTraceByPrivacy Nothing = id
 
 -- | Sets privacy for the messages in this trace
 setPrivacy :: Monad m => Privacy -> Trace m a -> Trace m a
@@ -133,9 +144,9 @@ foldTraceM' cata initial tr = do
         (lc, Left c) -> do
           T.traceWith tr (lc, Left c)
 
--- | Allows to route to different tracers,
---   based on the message being processed.
---   The second argument shall mappend all tracers to one tracers for configuration
+-- | Allows to route to different tracers, based on the message being processed.
+--   The second argument must mappend all possible tracers of the first
+--   argument to one tracer. This is required for the configuration!
 routingTrace
   :: forall m a . Monad m
   => (a -> Trace m a)
