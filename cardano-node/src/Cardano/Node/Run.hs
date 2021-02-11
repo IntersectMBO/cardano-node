@@ -113,7 +113,7 @@ runNode cmdPc = do
                      p
 
     loggingLayer <- case eLoggingLayer of
-                      Left err -> putTextLn (show err) >> exitFailure
+                      Left err  -> putTextLn (show err) >> exitFailure
                       Right res -> return res
 
     !trace <- setupTrace loggingLayer
@@ -125,7 +125,11 @@ runNode cmdPc = do
     -- Used for ledger queries and peer connection status.
     nodeKernelData :: NodeKernelData blk <- mkNodeKernelData
 
-    tracers <- mkTracers (ncTraceConfig nc) trace nodeKernelData
+    tracers <- mkTracers
+                 (ncTraceConfig nc)
+                 trace
+                 nodeKernelData
+                 (llEKGServer loggingLayer)
 
     Async.withAsync (handlePeersListSimple trace nodeKernelData)
         $ \_peerLogingThread ->

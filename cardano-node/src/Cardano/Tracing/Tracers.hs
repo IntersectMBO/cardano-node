@@ -33,6 +33,7 @@ import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
+import qualified System.Remote.Monitoring as EKG
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
@@ -274,16 +275,20 @@ mkTracers
   => TraceOptions
   -> Trace IO Text
   -> NodeKernelData blk
+  -> Maybe EKG.Server
   -> IO (Tracers peer localPeer blk)
-mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
+mkTracers tOpts@(TracingOn trSel) tr nodeKern mEKGServer = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
 
   pure Tracers
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
-        annotateSeverity $ teeTraceChainTip tOpts elidedChainDB
-                             (appendName "ChainDB" tr) (appendName "metrics" tr)
+        annotateSeverity $ teeTraceChainTip
+                             tOpts elidedChainDB
+                             mEKGServer
+                             (appendName "ChainDB" tr)
+                             (appendName "metrics" tr)
     , consensusTracers = consensusTracers
     , nodeToClientTracers = nodeToClientTracers' trSel verb tr
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
@@ -302,7 +307,7 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
    verb :: TracingVerbosity
    verb = traceVerbosity trSel
 
-mkTracers TracingOff _ _ =
+mkTracers TracingOff _ _ _ =
   pure Tracers
     { chainDBTracer = nullTracer
     , consensusTracers = Consensus.Tracers
@@ -359,14 +364,15 @@ teeTraceChainTip
      )
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
+  -> Maybe EKG.Server
   -> Trace IO Text
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip TracingOff _ _ _ = nullTracer
-teeTraceChainTip (TracingOn trSel) elided trTrc trMet =
+teeTraceChainTip TracingOff _ _ _ _ = nullTracer
+teeTraceChainTip (TracingOn trSel) elided mEKGServer trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
-    traceWith (ignoringSeverity (traceChainMetrics trMet)) ev
+    traceWith (ignoringSeverity (traceChainMetrics mEKGServer trMet)) ev
 
 teeTraceChainTipElide
   :: ( ConvertRawHash blk
@@ -388,8 +394,9 @@ ignoringSeverity tr = Tracer $ \(WithSeverity _ ev) -> traceWith tr ev
 
 traceChainMetrics
   :: forall blk. HasHeader (Header blk)
-  => Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
-traceChainMetrics tr = Tracer $ \ev ->
+  => Maybe EKG.Server -> Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
+traceChainMetrics Nothing _ = nullTracer
+traceChainMetrics (Just _eKGServer) tr = Tracer $ \ev ->
   fromMaybe (pure ()) $
     doTrace <$> chainTipInformation ev
  where
