@@ -6,13 +6,17 @@
 # NB - The last matching pattern takes precedence
 
 # /doc folder and README.* needs to be owned by @docs-access
-doc                          @docs-access
-README.*                     @docs-access
+doc                                                           @docs-access
+README.*                                                      @docs-access
 
-.buildkite                   @devops
-.github                      @devops
-ci                           @devops
-configuration                @devops
-nix                          @devops
-*.nix                        @devops
-bors.toml                    @devops
+.buildkite                                                    @devops
+.github                                                       @devops
+ci                                                            @devops
+configuration                                                 @devops
+nix                                                           @devops
+*.nix                                                         @devops
+bors.toml                                                     @devops
+cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops
+cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
+cardano-node/src/Cardano/Node/Configuration/Socket.hs         @devops
+cardano-node/src/Cardano/Node/Run.hs                          @devops
