@@ -129,7 +129,7 @@ runNode cmdPc = do
                  (ncTraceConfig nc)
                  trace
                  nodeKernelData
-                 (llEKGServer loggingLayer)
+                 (llEKGDirect loggingLayer)
 
     Async.withAsync (handlePeersListSimple trace nodeKernelData)
         $ \_peerLogingThread ->
