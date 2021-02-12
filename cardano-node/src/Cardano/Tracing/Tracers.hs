@@ -31,6 +31,8 @@ import           GHC.Clock (getMonotonicTimeNSec)
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
+import qualified Data.Map as SMap
+import           Data.IORef (readIORef, writeIORef)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified System.Remote.Monitoring as EKG
@@ -277,9 +279,9 @@ mkTracers
   => TraceOptions
   -> Trace IO Text
   -> NodeKernelData blk
-  -> Maybe EKG.Server
+  -> EKGDirect
   -> IO (Tracers peer localPeer blk)
-mkTracers tOpts@(TracingOn trSel) tr nodeKern mEKGServer = do
+mkTracers tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
@@ -288,7 +290,7 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern mEKGServer = do
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
         annotateSeverity $ teeTraceChainTip
                              tOpts elidedChainDB
-                             mEKGServer
+                             ekgDirect
                              (appendName "ChainDB" tr)
                              (appendName "metrics" tr)
     , consensusTracers = consensusTracers
@@ -366,15 +368,15 @@ teeTraceChainTip
      )
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
-  -> Maybe EKG.Server
+  -> EKGDirect
   -> Trace IO Text
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
 teeTraceChainTip TracingOff _ _ _ _ = nullTracer
-teeTraceChainTip (TracingOn trSel) elided mEKGServer trTrc trMet =
+teeTraceChainTip (TracingOn trSel) elided ekgDirect trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
-    traceWith (ignoringSeverity (traceChainMetrics mEKGServer trMet)) ev
+    traceWith (ignoringSeverity (traceChainMetrics ekgDirect trMet)) ev
 
 teeTraceChainTipElide
   :: ( ConvertRawHash blk
@@ -396,9 +398,8 @@ ignoringSeverity tr = Tracer $ \(WithSeverity _ ev) -> traceWith tr ev
 
 traceChainMetrics
   :: forall blk. HasHeader (Header blk)
-  => Maybe EKG.Server -> Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
-traceChainMetrics Nothing _ = nullTracer
-traceChainMetrics (Just eKGServer) _tr = Tracer $ \ev ->
+  => EKGDirect -> Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
+traceChainMetrics ekgDirect _tr = Tracer $ \ev ->
   fromMaybe (pure ()) $
     doTrace <$> chainTipInformation ev
  where
@@ -421,12 +422,26 @@ traceChainMetrics (Just eKGServer) _tr = Tracer $ \ev ->
      sendEKGDirectInt     "cardano_node_metrics_epoch"       (unEpochNo epoch)
 
    sendEKGDirectInt :: Integral a => Text -> a -> IO ()
-   sendEKGDirectInt name val =
-     flip Gauge.set (fromIntegral val) =<< EKG.getGauge name eKGServer
+   sendEKGDirectInt name val = do
+     registeredMap <- readIORef (ekgGauges ekgDirect)
+     case SMap.lookup name registeredMap of
+       Just gauge -> Gauge.set gauge (fromIntegral val)
+       Nothing -> do
+         gauge <- EKG.getGauge name (ekgServer ekgDirect)
+         let registeredMap' = SMap.insert name gauge registeredMap
+         writeIORef (ekgGauges ekgDirect) registeredMap'
+         Gauge.set gauge (fromIntegral val)
 
    sendEKGDirectDouble :: Text -> Double -> IO ()
    sendEKGDirectDouble name val = do
-     flip Label.set (Text.pack (show val)) =<< EKG.getLabel name eKGServer
+     registeredMap <- readIORef (ekgLabels ekgDirect)
+     case SMap.lookup name registeredMap of
+       Just label -> Label.set label (Text.pack (show val))
+       Nothing -> do
+         label <- EKG.getLabel name (ekgServer ekgDirect)
+         let registeredMap' = SMap.insert name label registeredMap
+         writeIORef (ekgLabels ekgDirect) registeredMap'
+         Label.set label (Text.pack (show val))
 
 traceI :: Integral i => Trace IO a -> LOMeta -> Text -> i -> IO ()
 traceI tr meta msg i = traceNamedObject tr (meta, LogValue msg (PureI (fromIntegral i)))
