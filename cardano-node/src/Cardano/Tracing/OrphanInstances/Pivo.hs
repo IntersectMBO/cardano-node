@@ -33,6 +33,7 @@ import qualified Cardano.Ledger.Torsor as Core
 import qualified Cardano.Ledger.Core as Core
 
 import qualified Cardano.Ledger.Pivo.Rules.Utxo as Pivo
+import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
 
 import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
 
@@ -99,6 +100,10 @@ instance (ShelleyBasedEra era
              , "outputs" .= badOutputs
              , "error" .= String "Too many asset ids in the tx output"
              ]
+
+instance ToObject (Pivo.Update.PredicateFailure era) where
+  toObject _verb _ =
+    mkObject [ "kind" .= String "NoFailure" ]
 
 --------------------------------------------------------------------------------
 -- Copied from Cardano.Tracing.OrphanInstances.Shelley to localize changes
