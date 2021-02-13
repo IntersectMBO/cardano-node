@@ -15,14 +15,17 @@ Get the protocol parameters and save them to `protocol.json` with:
 
 ```
 cardano-cli query protocol-parameters \
+  --mary-era \
   --mainnet \
   --out-file protocol.json
 ```
+Note: The era command does age over time as a new era comes. It's structure is --<ERANAME>-era e.g: --mary-era --shelley-era, --byron-era and so on. Current era 2021-02-12 (Mary).
 
 #### Get the transaction hash and index of the **UTXO** to spend:
 
 ```
 cardano-cli query utxo \
+  --mary-era
   --address $(cat payment.addr) \
   --mainnet
 ```
@@ -129,6 +132,7 @@ Sign the transaction with the signing key **payment.skey** and save the signed t
 We must give it some time to get incorporated into the blockchain, but eventually, we will see the effect:
 
     cardano-cli query utxo \
+        --mary-era
         --address $(cat payment.addr) \
         --mainnet
 
