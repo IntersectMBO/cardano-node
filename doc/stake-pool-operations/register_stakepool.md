@@ -39,7 +39,11 @@ Registering your stake pool requires:
       }
 
 
-Store the file in a url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ) You can use a GIST in github, make sure that the URL is less than 65 characters long.
+Store the file in a url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ) You can use a GIST in github to store the definition and git.io to make it short. Ensure that the URL is less than 65 characters long. 
+
+Example: 
+Gist-URL https://gist.githubusercontent.com/carloslodelar/38c7482070627092a427583cae8fa470/raw/7fddda4d258bf685d24ea3510fbde295b3920188/clrpool.json
+Git.IO-URL https://git.io/JJWdJ
 
 #### Get the hash of your metadata JSON file:
 
@@ -126,7 +130,7 @@ To submit the `pool registration certificate` and the `delegation certificates` 
 #### Calculate the fees
 
     cardano-cli transaction calculate-min-fee \
-    --tx-body-file tx.raw \
+    --tx-body-file tx.draft \
     --tx-in-count 1 \
     --tx-out-count 1 \
     --mainnet \
