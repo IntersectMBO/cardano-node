@@ -23,7 +23,7 @@ import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 
 import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.Metrics (HasKESMetricsData)
+import           Cardano.Tracing.Metrics (HasKESMetricsData, HasKESInfo)
 
 data Protocol = ByronProtocol
               | ShelleyProtocol
@@ -51,6 +51,7 @@ instance FromJSON Protocol where
 
 type SomeConsensusProtocolConstraints blk =
      ( HasKESMetricsData blk
+     , HasKESInfo blk
      , RunNode blk
      , TraceConstraints blk
      )

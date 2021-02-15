@@ -71,6 +71,7 @@ import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
@@ -105,6 +106,8 @@ import           Ouroboros.Network.TxSubmission.Inbound
 import qualified Ouroboros.Network.Diffusion as ND
 import qualified Cardano.Node.STM as STM
 import qualified Control.Concurrent.STM as STM
+
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
@@ -272,6 +275,7 @@ mkTracers
   :: forall peer localPeer blk.
      ( Consensus.RunNode blk
      , HasKESMetricsData blk
+     , HasKESInfo blk
      , TraceConstraints blk
      , Show peer, Eq peer
      , Show localPeer
@@ -492,6 +496,7 @@ mkConsensusTracers
      , ToObject (ForgeStateUpdateError blk)
      , Consensus.RunNode blk
      , HasKESMetricsData blk
+     , HasKESInfo blk
      , Show (Header blk)
      )
   => Maybe EKGDirect
@@ -713,12 +718,14 @@ teeForge' tr =
           LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
 
 forgeTracer
-  :: ( Consensus.RunNode blk
+  :: forall blk.
+     ( Consensus.RunNode blk
      , ToObject (CannotForge blk)
      , ToObject (LedgerErr (LedgerState blk))
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
+     , HasKESInfo blk
      )
   => TracingVerbosity
   -> Trace IO Text
@@ -734,6 +741,29 @@ forgeTracer verb tr forgeTracers fStats =
     traceWith (annotateSeverity
                  $ teeForge forgeTracers verb
                  $ appendName "Forge" tr) tlcev
+    traceKESInfoIfKESExpired ev
+ where
+  traceKESInfoIfKESExpired ev =
+    case ev of
+      Consensus.TraceForgeStateUpdateError _ reason ->
+        -- KES-key cannot be evolved, but anyway trace KES-values.
+        case getKESInfo (Proxy @blk) reason of
+          Nothing -> pure ()
+          Just kesInfo -> do
+            let logValues :: [LOContent a]
+                logValues =
+                  [ LogValue "operationalCertificateStartKESPeriod"
+                      $ PureI . fromIntegral . unKESPeriod . HotKey.kesStartPeriod $ kesInfo
+                  , LogValue "operationalCertificateExpiryKESPeriod"
+                      $ PureI . fromIntegral . unKESPeriod . HotKey.kesEndPeriod $ kesInfo
+                  , LogValue "currentKESPeriod"
+                      $ PureI 0
+                  , LogValue "remainingKESPeriods"
+                      $ PureI 0
+                  ]
+            meta <- mkLOMeta Critical Confidential
+            mapM_ (traceNamedObject (appendName "metrics" tr) . (meta,)) logValues
+      _ -> pure ()
 
 notifyBlockForging
   :: ForgingStats
