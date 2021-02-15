@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+#####################################################################
+#
+# Trap the SIGTERM signal
+#
+trapSIGTERM () {
+
+  PID="$!"
+  trap "sigtermHandler $PID" SIGTERM
+  
+  # Wait for the child process to terminate
+  wait $PID
+}
+
+# Signal the cardano-node with SIGINT for graceful shutdown
+#
+# The wait may return before the gracefull shutdown is done
+# Wait a little longer before we will kill everything
+
+sigtermHandler () {
+  echo "Signalling for shutdown ..."
+  kill -SIGINT $1
+  wait $1
+  sleep 2
+}
