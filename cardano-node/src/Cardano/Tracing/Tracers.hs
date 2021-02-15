@@ -503,8 +503,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
 
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
-    , Consensus.chainSyncServerHeaderTracer = tracerOnOff' (traceChainSyncHeaderServer trSel) $
-        Tracer $ \ev -> traceServedCount mbEKGDirect tHeadersServed ev
+    , Consensus.chainSyncServerHeaderTracer = Tracer $ \ev -> traceServedCount mbEKGDirect tHeadersServed ev
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
@@ -568,12 +567,13 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
        <*> counting (liftCounting staticMeta name "block-from-future" tr)
        <*> counting (liftCounting staticMeta name "slot-is-immutable" tr)
        <*> counting (liftCounting staticMeta name "node-is-leader" tr)
+
    traceServedCount :: Maybe EKGDirect -> STM.TVar Int -> TraceChainSyncServerEvent blk -> IO ()
    traceServedCount Nothing _ _ = pure ()
    traceServedCount (Just ekgDirect) tHeadersServed ev =
      when (isRollForward ev) $ do
        count <- STM.modifyReadTVarIO tHeadersServed (+1)
-       sendEKGDirectInt ekgDirect "cardano_node_served_header_count" count
+       sendEKGDirectInt ekgDirect "cardano.node.metrics.served_header_count" count
 
 traceLeadershipChecks ::
   forall blk
