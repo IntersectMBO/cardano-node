@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+if [[ -z $CARDANO_NODE_SOCKET_PATH ]]; then
+  export CARDANO_NODE_SOCKET_PATH="/opt/cardano/ipc/socket"
+fi
+
+exec /usr/local/bin/cardano-cli $@

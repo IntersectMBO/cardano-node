@@ -30,6 +30,7 @@
 
 # The main contents of the image.
 , cardano-cli
+, cardano-node
 , scripts
 
 # Set gitrev to null, to ensure the version below is used
@@ -78,34 +79,61 @@ let
       mkdir -m 0777 tmp
     '';
   };
+  clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
+    scriptBin = scripts.${script};
+  in ''
+    elif [[ "$NETWORK" == "${env}" ]]; then
+      exec ${scriptBin}/bin/${scriptBin.name} $@
+  '') scripts);
   # Image with all iohk-nix network configs or utilizes a configuration volume mount
   # To choose a network, use `-e NETWORK testnet`
-    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
-      scriptBin = scripts.${script};
-    in ''
-      elif [[ "$NETWORK" == "${env}" ]]; then
-        exec ${scriptBin}/bin/${scriptBin.name} $@
-    '') scripts);
-  nodeDockerImage = let
-    entry-point = writeScriptBin "entry-point" ''
-      #!${runtimeShell}
-      if [[ -z "$NETWORK" ]]; then
-        exec ${pkgs.${exe}}/bin/${exe} $@
-      ${clusterStatements}
-      else
-        echo "Managed configuration for network "$NETWORK" does not exist"
-      fi
-    '';
-  in dockerTools.buildImage {
+  runNetwork = pkgs.writeShellScriptBin "run-network" ''
+    if [[ -z "$NETWORK" ]]; then
+      echo "[Error] Cannot obtain NETWORK env variable"
+      exit 1
+    ${clusterStatements}
+    else
+      echo "[Error] Managed configuration for network "$NETWORK" does not exist"
+      exit 1
+    fi
+  '';
+
+  # The Docker context with static content
+  context = ./context;
+
+  # Mainnet configuration files used by the 'run' option
+  mainnetConfigs = builtins.filterSource
+    (path: type: type == "regular" && lib.hasPrefix "mainnet-" (baseNameOf path))
+    ../../configuration/cardano;
+
+in
+  dockerTools.buildImage {
     name = "${repoName}";
-    fromImage = baseImage;
     tag = "${gitrev}";
+    fromImage = baseImage;
     created = "now";   # Set creation date to build time. Breaks reproducibility
-    contents = [ entry-point ];
+    contents = [
+      pkgs.jq # Needed by topologyUpdater
+    ];
+
+    # May require system-features = kvm in /etc/nix/nix.conf
+    # https://discourse.nixos.org/t/cannot-build-docker-image/7445
+    # runAsRoot = '' ln -s ${cardano-node} bin/cardano-node '';
+
+    extraCommands = ''
+      mkdir -p opt/cardano/config
+      mkdir -p opt/cardano/data
+      mkdir -p opt/cardano/ipc
+      mkdir -p opt/cardano/logs
+      mkdir -p usr/local/bin
+      cp ${mainnetConfigs}/* opt/cardano/config
+      cp ${runNetwork}/bin/* usr/local/bin
+      cp ${context}/bin/* usr/local/bin
+      ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
+      ln -s ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+    '';
     config = {
-      EntryPoint = [ "${entry-point}/bin/entry-point" ];
+      EntryPoint = [ "entrypoint" ];
       StopSignal = "SIGINT";
     };
-  };
-
-in nodeDockerImage
+  }
