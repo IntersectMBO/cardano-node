@@ -279,7 +279,7 @@ mkTracers
   => TraceOptions
   -> Trace IO Text
   -> NodeKernelData blk
-  -> EKGDirect
+  -> Maybe EKGDirect
   -> IO (Tracers peer localPeer blk)
 mkTracers tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
   fStats <- mkForgingStats
@@ -368,7 +368,7 @@ teeTraceChainTip
      )
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
-  -> EKGDirect
+  -> Maybe EKGDirect
   -> Trace IO Text
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
@@ -398,10 +398,10 @@ ignoringSeverity tr = Tracer $ \(WithSeverity _ ev) -> traceWith tr ev
 
 traceChainMetrics
   :: forall blk. HasHeader (Header blk)
-  => EKGDirect -> Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
-traceChainMetrics ekgDirect _tr = Tracer $ \ev ->
-  fromMaybe (pure ()) $
-    doTrace <$> chainTipInformation ev
+  => Maybe EKGDirect -> Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
+traceChainMetrics Nothing _ = nullTracer
+traceChainMetrics (Just ekgDirect) _tr = Tracer $ \ev ->
+  fromMaybe (pure ()) $ doTrace <$> chainTipInformation ev
  where
    chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
    chainTipInformation = \case

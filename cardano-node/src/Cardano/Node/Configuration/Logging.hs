@@ -26,7 +26,6 @@ import           Cardano.Prelude hiding (trace)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
-import           GHC.Err (error)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import           Control.Tracer
 import           Data.IORef (IORef, newIORef)
@@ -116,7 +115,7 @@ data LoggingLayer = LoggingLayer
   , llConfiguration :: Configuration
   , llAddBackend :: Backend Text -> BackendKind -> IO ()
   , llSwitchboard :: Switchboard Text
-  , llEKGDirect :: EKGDirect
+  , llEKGDirect :: Maybe EKGDirect
   }
 
 data EKGDirect = EKGDirect
@@ -179,19 +178,18 @@ createLoggingLayer ver nodeConfig' p = do
 
   mEKGServer <- liftIO $ Switchboard.getSbEKGServer switchBoard
 
-  ekgDirect <- case mEKGServer of
-                  Nothing -> error
-                    "EKGDirect can't extract EKGServer from iohk-logging"
+  mbEkgDirect <- case mEKGServer of
+                  Nothing -> pure Nothing
                   Just sv -> do
                     refGauge <- liftIO $ newIORef (Map.empty)
                     refLabel <- liftIO $ newIORef (Map.empty)
-                    pure EKGDirect {
+                    pure $ Just EKGDirect {
                         ekgServer = sv
                       , ekgGauges = refGauge
                       , ekgLabels = refLabel
                       }
 
-  pure $ mkLogLayer logConfig switchBoard ekgDirect trace
+  pure $ mkLogLayer logConfig switchBoard mbEkgDirect trace
  where
    loggingPreInit
      :: NodeConfiguration
@@ -245,8 +243,8 @@ createLoggingLayer ver nodeConfig' p = do
        -- Record node metrics, if configured
        startCapturingMetrics trace
 
-   mkLogLayer :: Configuration -> Switchboard Text -> EKGDirect -> Trace IO Text -> LoggingLayer
-   mkLogLayer logConfig switchBoard ekgDirect trace =
+   mkLogLayer :: Configuration -> Switchboard Text -> Maybe EKGDirect -> Trace IO Text -> LoggingLayer
+   mkLogLayer logConfig switchBoard mbEkgDirect trace =
      LoggingLayer
        { llBasicTrace = Trace.natTrace liftIO trace
        , llLogDebug = Trace.logDebug
@@ -263,7 +261,7 @@ createLoggingLayer ver nodeConfig' p = do
        , llConfiguration = logConfig
        , llAddBackend = Switchboard.addExternalBackend switchBoard
        , llSwitchboard = switchBoard
-       , llEKGDirect = ekgDirect
+       , llEKGDirect = mbEkgDirect
        }
 
    startCapturingMetrics :: Trace IO Text -> IO ()
