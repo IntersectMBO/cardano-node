@@ -766,6 +766,20 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
       , "accepted" .= toJSON (ptxcAccepted processed)
       , "rejected" .= toJSON (ptxcRejected processed)
       ]
+  toObject _verb TraceTxInboundTerminated =
+    mkObject
+      [ "kind" .= String "TraceTxInboundTerminated"
+      ]
+  toObject _verb (TraceTxInboundCanRequestMoreTxs count) =
+    mkObject
+      [ "kind" .= String "TraceTxInboundCanRequestMoreTxs"
+      , "count" .= toJSON count
+      ]
+  toObject _verb (TraceTxInboundCannotRequestMoreTxs count) =
+    mkObject
+      [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
+      , "count" .= toJSON count
+      ]
 
 
 instance (Show txid, Show tx)

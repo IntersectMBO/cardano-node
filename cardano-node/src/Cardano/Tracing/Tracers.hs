@@ -502,6 +502,10 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
               traceI trmet meta "submissions.rejected.count" =<<
                 STM.modifyReadTVarIO tSubmissionsRejected (+ ptxcRejected processed)
 
+            TraceLabelPeer _ TraceTxInboundTerminated -> return ()
+            TraceLabelPeer _ (TraceTxInboundCanRequestMoreTxs _) -> return ()
+            TraceLabelPeer _ (TraceTxInboundCannotRequestMoreTxs _) -> return ()
+
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr fStats
