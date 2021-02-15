@@ -83,27 +83,39 @@ let
   # To choose a network, use `-e NETWORK testnet`
   clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: value: value) (commonLib.forEnvironments (env: ''
       elif [[ "$NETWORK" == "${env.name}" ]]; then
-        exec ${scripts.${env.name}.node}
+        ${scripts.${env.name}.node} &
+        trapSIGTERM
     '')));
 
-  entry-point = pkgs.writeShellScriptBin "entry-point" ''
+  runNetwork = pkgs.writeShellScriptBin "run-network" ''
+
+    source /usr/local/bin/proc-sigterm
+
+    # The IPC socket dir is not created on demand
+    mkdir -p `dirname ${customConfig.socketPath}`
+
     if [[ -z "$NETWORK" ]]; then
-      exec ${cardano-node}/bin/cardano-node $@
+      echo "[Error] Cannot obtain NETWORK env variable"
+      exit 1
     ${clusterStatements}
     else
-      echo "Managed configuration for network "$NETWORK" does not exist"
+      echo "[Error] Managed configuration for network "$NETWORK" does not exist"
+      exit 1
     fi
   '';
 
+  # The Docker context with static content
+  context = ./context;
+
+  # Mainnet configuration files used by the 'run' option
+  mainnetConfigs = builtins.filterSource
+    (path: type: type == "regular" && lib.hasPrefix "mainnet-" (baseNameOf path))
+    ../../configuration/cardano;
+
   gitrev' = if (gitrev == null)
-    then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
+    then buildPackages.commonLib.commitIdFromGitRepoOrZero ../../.git
     else gitrev;
 
-  # Remove the leading '/' and trailing basename
-  socketPath = customConfig.socketPath;
-  socketDir = lib.concatStringsSep "/" (builtins.filter (x: x != "")
-    (lib.splitString "/" (lib.removeSuffix (baseNameOf socketPath) socketPath)));
-    
 in
 
   dockerTools.buildImage {
@@ -111,11 +123,26 @@ in
     tag = "${gitrev'}";
     fromImage = baseImage;
     created = "now";   # Set creation date to build time. Breaks reproducibility
-    contents = [ entry-point ];
+    contents = [
+      # pkgs.vim
+    ];
+
+    # May require system-features = kvm in /etc/nix/nix.conf
+    # https://discourse.nixos.org/t/cannot-build-docker-image/7445
+    # runAsRoot = '' ln -s ${cardano-node} bin/cardano-node '';
+
     extraCommands = ''
-      mkdir -p ${socketDir}
+      mkdir -p opt/cardano/config
+      mkdir -p opt/cardano/data
+      mkdir -p opt/cardano/ipc
+      mkdir -p usr/local/bin
+      cp ${mainnetConfigs}/* opt/cardano/config
+      cp ${runNetwork}/bin/* usr/local/bin
+      cp ${context}/bin/* usr/local/bin
+      ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
+      ln -s ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
     '';
     config = {
-      EntryPoint = [ "${entry-point}/bin/entry-point" ];
+      EntryPoint = [ "entrypoint" ];
     };
   }
