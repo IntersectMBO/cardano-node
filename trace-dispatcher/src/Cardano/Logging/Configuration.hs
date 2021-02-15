@@ -9,12 +9,27 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map as Map
+import           Data.Maybe (catMaybes)
 import           Katip (Severity)
 
 import           Cardano.Logging.Trace (filterTraceByPrivacy,
                      filterTraceBySeverity)
 import           Cardano.Logging.Types
 
+-- | Filter a trace by severity and take the filter value from the config
+filterSeverityFromConfig :: (MonadIO m) =>
+     Trace m a
+  -> m (Trace m a)
+filterSeverityFromConfig = withConfig getSeverity filterTraceBySeverity
+
+-- | Filter a trace by severity and take the filter value from the config
+filterPrivacyFromConfig :: (MonadIO m) =>
+     Trace m a
+  -> m (Trace m a)
+filterPrivacyFromConfig = withConfig getPrivacy filterTraceByPrivacy
+
+-- | Take a selector function, and a function from trace to trace with
+--   this selector to make a trace transformer with a config value
 withConfig :: (MonadIO m, Eq b) =>
      (TraceConfig -> Context -> b)
   -> (Maybe b -> Trace m a -> Trace m a)
@@ -70,22 +85,39 @@ withConfig extract needsConfigFunc tr = do
         Right val -> error $ "Trace not reset before reconfiguration "
                             ++ show (lcContext lc)
 
-
-filterSeverityFromConfig :: (MonadIO m) =>
-     Trace m a
-  -> m (Trace m a)
-filterSeverityFromConfig = withConfig getSeverity filterTraceBySeverity
-
-filterPrivacyFromConfig :: (MonadIO m) =>
-     Trace m a
-  -> m (Trace m a)
-filterPrivacyFromConfig = withConfig getPrivacy filterTraceByPrivacy
-
+-- | If no severity can be found in the config, it is set to Warning
 getSeverity :: TraceConfig -> Context -> SeverityF
-getSeverity config context = undefined
+getSeverity config context =
+    case getOption severitySelector config context of
+      Just s  -> s
+      Nothing -> WarningF
+  where
+    severitySelector :: ConfigOption -> Maybe SeverityF
+    severitySelector (CoSeverity s) = Just s
+    severitySelector _              = Nothing
 
+-- | If no privacy can be found in the config, it is set to Public
 getPrivacy :: TraceConfig -> Context -> Privacy
-getPrivacy config context = undefined
+getPrivacy config context =
+  case getOption privacySelector config context of
+    Just s  -> s
+    Nothing -> Public
+  where
+    privacySelector :: ConfigOption -> Maybe Privacy
+    privacySelector (CoPrivacy s) = Just s
+    privacySelector _             = Nothing
 
-getOption :: TraceConfig -> Context -> ConfigOption
-getOption config context = undefined
+-- | Searches in the config to find an option
+getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> Context -> (Maybe a)
+getOption sel config [] =
+  case (Map.lookup [] (tcOptions config)) of
+    Nothing -> Nothing
+    Just options -> case catMaybes (map sel options) of
+                      []        -> Nothing
+                      (opt : _) -> Just opt
+getOption sel config context =
+  case (Map.lookup context (tcOptions config)) of
+    Nothing -> getOption sel config (tail context)
+    Just options -> case catMaybes (map sel options) of
+                      []        -> getOption sel config (tail context)
+                      (opt : _) -> Just opt
