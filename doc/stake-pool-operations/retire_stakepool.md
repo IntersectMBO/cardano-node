@@ -105,7 +105,7 @@ Build the raw transaction:
     --certificate-file pool.deregistration
 
 **Sign it with both the payment signing key and the cold signing key
-(the first signature is necessary because we are spending funds from `paymant.addr`,
+(the first signature is necessary because we are spending funds from `payment.addr`,
 the second because the certificate needs to be signed by the pool owner):**
 
     cardano-cli transaction sign \
