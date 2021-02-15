@@ -18,6 +18,7 @@ library
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
                         Cardano.Api.Shelley
+                        Cardano.Api.Pivo
 
                         Cardano.Api.Crypto.Ed25519Bip32
                         -- TODO: Eliminate in the future when
@@ -89,6 +90,7 @@ library
                       , cardano-crypto-wrapper
                       , cardano-ledger
                       , cardano-ledger-shelley-ma
+                      , cardano-ledger-pivo
                       , cardano-prelude
                       , cardano-slotting
                       , cborg

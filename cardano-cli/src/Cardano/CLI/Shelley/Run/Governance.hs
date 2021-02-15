@@ -12,6 +12,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExcept
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
+import           Cardano.Api.Pivo (DummyPivoEra)
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHashOrFile,
                      readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
@@ -19,6 +20,8 @@ import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
+
+import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
 
 
 data ShelleyGovernanceCmdError
@@ -59,6 +62,15 @@ runGovernanceCmd (GovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrf
   runGovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out
 runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp
+runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
+  where
+    runPivoCmd (SIP SIPNew)
+      = firstExceptT ShelleyGovernanceCmdTextEnvWriteError
+      $ newExceptT
+      $ writeFileTextEnvelope
+          outFile
+          Nothing
+          (Pivo.Update.Payload :: Pivo.Update.Payload DummyPivoEra)
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot

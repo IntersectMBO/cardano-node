@@ -729,6 +729,9 @@ pGovernanceCmd =
    , subParser "create-update-proposal"
        (Opt.info pUpdateProposal $
          Opt.progDesc "Create an update proposal")
+   , subParser "pivo"
+     (Opt.info pPivoCmd $
+       Opt.progDesc "Create a SIP update proposal")
    ]
   where
     pMIRCertificate :: Parser GovernanceCmd
@@ -763,6 +766,23 @@ pGovernanceCmd =
                         <*> pEpochNoUpdateProp
                         <*> some pGenesisVerificationKeyFile
                         <*> pShelleyProtocolParametersUpdate
+
+    pPivoCmd :: Parser GovernanceCmd
+    pPivoCmd = PivoCmd <$> parsePivoCmds <*> pOutputFile
+      where
+        parsePivoCmds
+          = Opt.hsubparser
+          $ mconcat [ cmdWithInfo "sip" pSIPCmd "SIP commands" ]
+          where
+            pSIPCmd = SIP <$> (Opt.hsubparser
+                           $ mconcat
+                               [pSIPNew])
+              where
+                pSIPNew = cmdWithInfo "new" (pure SIPNew) "Create a new SIP"
+
+cmdWithInfo :: String -> Parser a -> String -> Mod CommandFields a
+cmdWithInfo cmdName cmdParser cmdDesc =
+  Opt.command cmdName $ Opt.info cmdParser (Opt.progDesc cmdDesc)
 
 pRewardAmt :: Parser Lovelace
 pRewardAmt =
@@ -2453,4 +2473,3 @@ readerFromParsecParser p =
 subParser :: String -> ParserInfo a -> Parser a
 subParser availableCommand pInfo =
   Opt.hsubparser $ Opt.command availableCommand pInfo <> Opt.metavar availableCommand
-

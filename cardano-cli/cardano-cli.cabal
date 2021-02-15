@@ -84,6 +84,7 @@ library
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
                      , cardano-ledger
+                     , cardano-ledger-pivo
                      , cardano-ledger-shelley-ma
                      , cardano-node
                      , cardano-prelude
