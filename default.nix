@@ -35,7 +35,7 @@ let
       socketPath = "/ipc/node.socket";
     };
     customConfig' = defaultConfig // customConfig;
-  in pkgs.callPackage ./nix/docker.nix {
+  in pkgs.callPackage ./nix/docker {
     customConfig = customConfig';
     inherit (packages) cardano-node cardano-cli;
     scripts = callPackage ./nix/scripts.nix { customConfig = customConfig'; };
