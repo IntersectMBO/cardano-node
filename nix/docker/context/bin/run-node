@@ -1,0 +1,119 @@
+#!/bin/bash
+
+source /usr/local/bin/proc-sigterm
+
+echo "Running the cardano node ..."
+
+# Shift the first option by one index
+shift
+
+# Define a few defaults
+CARDANO_CONFIG_BASE="/opt/cardano/config"
+
+if [[ -z $CARDANO_CONFIG ]]; then
+  CARDANO_CONFIG="$CARDANO_CONFIG_BASE/mainnet-config.json"
+fi
+
+if [[ -z $CARDANO_TOPOLOGY ]]; then
+  CARDANO_TOPOLOGY="$CARDANO_CONFIG_BASE/mainnet-topology.json"
+fi
+
+if [[ -z $CARDANO_DATABASE_PATH ]]; then
+  CARDANO_DATABASE_PATH="/opt/cardano/data"
+fi
+
+if [[ -z $CARDANO_SOCKET_PATH ]]; then
+  CARDANO_SOCKET_PATH="/opt/cardano/ipc/socket"
+fi
+
+if [[ -z $CARDANO_BIND_ADDR ]]; then
+  CARDANO_BIND_ADDR="0.0.0.0"
+fi
+
+if [[ -z $CARDANO_PORT ]]; then
+  CARDANO_PORT=3001
+fi
+
+if [ -v $CARDANO_BLOCK_PRODUCER ]; then
+  CARDANO_BLOCK_PRODUCER=false
+fi
+
+#####################################################################
+#
+# Print run environment
+#
+printRunEnv () {
+
+  echo "CARDANO_BIND_ADDR=$CARDANO_BIND_ADDR"
+  echo "CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER"
+  echo "CARDANO_CONFIG=$CARDANO_CONFIG"
+  echo "CARDANO_DATABASE_PATH=$CARDANO_DATABASE_PATH"
+  echo "CARDANO_PORT=$CARDANO_PORT"
+  echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
+  echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
+
+  if [ "$CARDANO_BLOCK_PRODUCER" = true ]; then
+
+    if [ -v $CARDANO_SHELLEY_KES_KEY ]; then
+      CARDANO_SHELLEY_KES_KEY="$CARDANO_CONFIG_BASE/keys/kes.skey"
+    fi
+
+    if [ -v $CARDANO_SHELLEY_VRF_KEY ]; then
+      CARDANO_SHELLEY_VRF_KEY="$CARDANO_CONFIG_BASE/keys/vrf.skey"
+    fi
+
+    if [ -v $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE ]; then
+      CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE="$CARDANO_CONFIG_BASE/keys/node.cert"
+    fi
+
+    echo "CARDANO_SHELLEY_KES_KEY=$CARDANO_SHELLEY_KES_KEY"
+    echo "CARDANO_SHELLEY_VRF_KEY=$CARDANO_SHELLEY_VRF_KEY"
+    echo "CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=$CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE"
+  fi
+}
+
+# Override default values with explicit options
+options=($@)
+for i in "${!options[@]}"
+do
+    j=$((i + 1))
+    key=${options[i]}
+    val=${options[j]}
+    found=false
+
+    # echo "$i/$j: ${key} ${val}"
+
+    case ${key} in
+      --config) CARDANO_CONFIG=${val}; found=true;;
+      --topology) CARDANO_TOPOLOGY=${val}; found=true;;
+      --database-path) CARDANO_DATABASE_PATH=${val}; found=true;;
+      --socket-path) CARDANO_SOCKET_PATH=${val}; found=true;;
+      --host-addr) CARDANO_BIND_ADDR=${val}; found=true;;
+      --port) CARDANO_PORT=${val}; found=true;;
+    esac
+
+    if [[ $found == true ]]; then
+      options[i]="";
+      options[j]="";
+    fi
+done
+
+printRunEnv
+
+effopts=(--config $CARDANO_CONFIG \
+  --topology $CARDANO_TOPOLOGY \
+  --database-path $CARDANO_DATABASE_PATH \
+  --socket-path $CARDANO_SOCKET_PATH \
+  --host-addr $CARDANO_BIND_ADDR \
+  --port $CARDANO_PORT)
+
+effopts+=(${options[@]})
+
+echo "cardano-node run ${effopts[@]}"
+
+# The IPC socket dir is not created on demand
+mkdir -p `dirname $CARDANO_SOCKET_PATH`
+
+/usr/local/bin/cardano-node run ${effopts[@]} &
+
+trapSIGTERM
