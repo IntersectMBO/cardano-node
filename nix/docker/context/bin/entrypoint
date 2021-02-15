@@ -1,0 +1,20 @@
+#!/bin/env bash
+
+if [[ -n $NETWORK ]]; then
+
+  exec /usr/local/bin/run-network $@
+
+elif [[ $1 == "run" ]]; then
+
+  exec /usr/local/bin/run-node $@
+
+elif [[ $1 == "cli" ]]; then
+
+  exec /usr/local/bin/run-client $@
+
+else
+
+  echo "Nothing to do! Perhaps try [run|cli]"
+  exit 1
+
+fi

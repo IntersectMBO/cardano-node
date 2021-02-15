@@ -96,7 +96,7 @@ final: prev: with final;
       dbPrefix = "db";
       socketPath = "/ipc/node.socket";
     };
-  in callPackage ./docker.nix {
+  in callPackage ./docker {
     exe = "cardano-node";
     scripts = import ./scripts.nix {
       inherit pkgs;
@@ -109,7 +109,7 @@ final: prev: with final;
     defaultConfig = {
       socketPath = "/ipc/node.socket";
     };
-  in callPackage ./docker.nix {
+  in callPackage ./docker {
     exe = "cardano-submit-api";
     scripts = import ./scripts-submit-api.nix {
       inherit pkgs;
