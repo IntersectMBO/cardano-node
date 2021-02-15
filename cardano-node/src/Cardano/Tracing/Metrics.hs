@@ -17,6 +17,7 @@ module Cardano.Tracing.Metrics
   , MaxKESEvolutions (..)
   , OperationalCertStartKESPeriod (..)
   , HasKESMetricsData (..)
+  , HasKESInfo (..)
   , ForgingStats (..)
   , ForgeThreadStats (..)
   , mapForgingCurrentThreadStats
@@ -33,16 +34,15 @@ import           Control.Concurrent.STM
 import           Data.IORef (IORef, atomicModifyIORef', newIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP.Strict (All, hcmap, K (..), hcollapse)
-import           Ouroboros.Consensus.Block (ForgeStateInfo)
+import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.TypeFamilyWrappers (WrapForgeStateInfo (..))
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..))
+import           Ouroboros.Consensus.TypeFamilyWrappers (WrapForgeStateInfo (..), WrapForgeStateUpdateError (..))
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Node ()
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
-
 
 -- | KES-related data to be traced as metrics.
 data KESMetricsData
@@ -103,6 +103,27 @@ instance All HasKESMetricsData xs => HasKESMetricsData (HardForkBlock xs) where
              => WrapForgeStateInfo blk
              -> K KESMetricsData blk
       getOne = K . getKESMetricsData (Proxy @blk) . unwrapForgeStateInfo
+
+class HasKESInfo blk where
+  getKESInfo :: Proxy blk -> ForgeStateUpdateError blk -> Maybe HotKey.KESInfo
+  getKESInfo _ _ = Nothing
+
+instance HasKESInfo (ShelleyBlock era) where
+  getKESInfo _ (HotKey.KESCouldNotEvolve ki _) = Just ki
+  getKESInfo _ (HotKey.KESKeyAlreadyPoisoned ki _) = Just ki
+
+instance HasKESInfo ByronBlock
+
+instance All HasKESInfo xs => HasKESInfo (HardForkBlock xs) where
+  getKESInfo _ =
+      hcollapse
+    . hcmap (Proxy @HasKESInfo) getOne
+    . getOneEraForgeStateUpdateError
+   where
+    getOne :: forall blk. HasKESInfo blk
+           => WrapForgeStateUpdateError blk
+           -> K (Maybe HotKey.KESInfo) blk
+    getOne = K . getKESInfo (Proxy @blk) . unwrapForgeStateUpdateError
 
 -- | This structure stores counters of blockchain-related events,
 --   per individual forge thread.
