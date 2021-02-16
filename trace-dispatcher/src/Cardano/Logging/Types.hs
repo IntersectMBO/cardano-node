@@ -66,8 +66,10 @@ data ConfigOption =
   | CoMaxFrequency Int
 
 data TraceConfig = TraceConfig {
+    tcName :: Text
+
      -- | Options specific to a certain namespace
-     tcOptions        :: Map.Map Context [ConfigOption]
+  , tcOptions :: Map.Map Context [ConfigOption]
 
   --  Forwarder:
      -- Can their only be one forwarder? Use one of:
@@ -93,7 +95,7 @@ data TraceConfig = TraceConfig {
 --  ,  tcBindAddrPrometheus :: Maybe (String,Int)
 }
 
-emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
+emptyTraceConfig = TraceConfig {tcName = "", tcOptions = Map.empty}
 
 -- | When configuring a net of tracers, it should be run with Config on all
 -- entry points first, and then with Optimize. When reconfiguring it needs to
