@@ -182,6 +182,15 @@ data TransactionCmd
       [MetadataFile]
       (Maybe UpdateProposalFile)
       TxBodyFile
+  | PivoTxBuildRaw
+      [TxIn]
+      [TxOutAnyEra]
+      (Maybe SlotNo)
+      (Maybe Lovelace)
+      FilePath
+      -- ^ Path to the update payload. There is no need to wrap this up in a
+      -- newtype since it is the only file-path we use in this sub-command.
+      TxBodyFile
   | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
@@ -213,6 +222,7 @@ renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =
   case cmd of
     TxBuildRaw {} -> "transaction build-raw"
+    PivoTxBuildRaw {} -> "pivo transaction build-raw"
     TxSign {} -> "transaction sign"
     TxCreateWitness {} -> "transaction witness"
     TxAssembleTxBodyWitness {} -> "transaction sign-witness"

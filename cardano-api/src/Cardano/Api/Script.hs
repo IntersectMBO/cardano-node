@@ -455,6 +455,7 @@ instance IsShelleyBasedEra era => HasTextEnvelope (ScriptInEra era) where
         ShelleyBasedEraShelley -> "ScriptInEra ShelleyEra"
         ShelleyBasedEraAllegra -> "ScriptInEra AllegraEra"
         ShelleyBasedEraMary    -> "ScriptInEra MaryEra"
+        ShelleyBasedEraPivo    -> "ScriptInEra PivoEra"
 
 
 -- | Check if a given script language is supported in a given era, and if so
@@ -807,7 +808,6 @@ instance IsCardanoEra era => FromJSON (ScriptInEra era) where
               Just s' -> ScriptInEra SimpleScriptV1InMary
                                      (SimpleScript SimpleScriptV1 s')
 
-
 instance IsSimpleScriptLanguage lang => FromJSON (SimpleScript lang) where
   parseJSON = parseSimpleScript simpleScriptVersion
 
@@ -909,4 +909,3 @@ parsePaymentKeyHash txt =
     case deserialiseFromRawBytesHex (AsHash AsPaymentKey) (Text.encodeUtf8 txt) of
       Just payKeyHash -> return payKeyHash
       Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
-

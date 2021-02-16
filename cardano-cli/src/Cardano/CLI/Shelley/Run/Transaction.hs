@@ -35,6 +35,7 @@ import qualified Cardano.Binary as CBOR
 --TODO: following import needed for orphan Eq Script instance
 import           Cardano.Ledger.ShelleyMA.TxBody ()
 import           Shelley.Spec.Ledger.Scripts ()
+import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -197,6 +198,8 @@ runTransactionCmd cmd =
       runTxBuildRaw era txins txouts mLowBound mUpperBound
                     fee mValue certs wdrls metadataSchema
                     scriptFiles metadataFiles mUpProp out
+    PivoTxBuildRaw txins txouts mUpperBound mFee updatePayloadFile outFile ->
+      runPivoTxBuildRaw txins txouts mUpperBound mFee updatePayloadFile outFile
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
@@ -265,6 +268,25 @@ runTxBuildRaw (AnyCardanoEra era) txins txouts mLowerBound
 
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
+
+runPivoTxBuildRaw
+  :: [TxIn]
+  -> [TxOutAnyEra]
+  -> Maybe SlotNo
+  -> Maybe Lovelace
+  -> FilePath
+  -> TxBodyFile
+  -> ExceptT ShelleyTxCmdError IO ()
+runPivoTxBuildRaw txins txouts mUBound mFee updatePayloadFile (TxBodyFile outFile)
+  = do
+  vTxIns  <- validateTxIns txins
+  vTxouts <- validateTxOuts PivoEra txouts
+  vUBound <- validateTxValidityUpperBound PivoEra mUBound
+  vFee    <- validateTxFee mFee
+  vUpdate <- parseUpdatePayload updatePayloadFile
+  txBody  <- makePivoTransactionBody txins txouts vUBound vFee vUpdate
+  firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+    writeFileTextEnvelope outFile Nothing txBody
 
 
 -- ----------------------------------------------------------------------------
@@ -430,6 +452,10 @@ validateTxCertificates era certFiles =
                  | CertificateFile certFile <- certFiles ]
       return $ TxCertificates supported certs
 
+parseUpdatePayload
+  :: forall era
+  . FilePath -> ExceptT ShelleyTxCmdError IO (Pivo.Update.Payload era)
+parseUpdatePayload = undefined
 
 validateTxUpdateProposal :: CardanoEra era
                          -> Maybe UpdateProposalFile

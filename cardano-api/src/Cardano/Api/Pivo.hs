@@ -22,7 +22,7 @@ instance HasTypeProxy (Pivo.Update.Payload era) where
 instance Typeable era => SerialiseAsCBOR (Pivo.Update.Payload era)
 
 instance Typeable era => HasTextEnvelope (Pivo.Update.Payload era) where
-  textEnvelopeType _ = "UpdateProposalPivo"
+  textEnvelopeType _ = "Pivo update payload"
 
 data DummyPivoEra = DummyPivoEra
   deriving Typeable

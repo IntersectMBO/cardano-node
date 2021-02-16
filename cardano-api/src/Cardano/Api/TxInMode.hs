@@ -27,6 +27,7 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
@@ -147,6 +148,12 @@ instance Show (TxValidationError era) where
         . showsPrec 11 err
         )
 
+    showsPrec p (ShelleyTxValidationError ShelleyBasedEraPivo err) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxValidationError ShelleyBasedEraPivo "
+        . showsPrec 11 err
+        )
+
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.
@@ -200,4 +207,3 @@ fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrMary err) =
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrWrongEra err) =
     TxValidationEraMismatch err
-

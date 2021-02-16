@@ -127,6 +127,12 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
+    showsPrec p (ShelleyBlock ShelleyBasedEraPivo block) =
+      showParen (p >= 11)
+        ( showString "ShelleyBlock ShelleyBasedEraPivo "
+        . showsPrec 11 block
+        )
+
 getBlockTxs :: forall era . Block era -> [Tx era]
 getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
     case byronBlockRaw of
@@ -142,6 +148,7 @@ getBlockTxs (ShelleyBlock shelleyEra Consensus.ShelleyBlock{Consensus.shelleyBlo
       ShelleyBasedEraShelley -> go
       ShelleyBasedEraAllegra -> go
       ShelleyBasedEraMary    -> go
+      ShelleyBasedEraPivo    -> go
   where
     go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => [Tx era]
     go = case shelleyBlockRaw of Shelley.Block _header (Shelley.TxSeq txs) -> [ShelleyTx shelleyEra x | x <- toList txs]
@@ -222,6 +229,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
   ShelleyBasedEraShelley -> go
   ShelleyBasedEraAllegra -> go
   ShelleyBasedEraMary -> go
+  ShelleyBasedEraPivo -> go
   where
     go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => BlockHeader
     go = BlockHeader headerFieldSlot (HeaderHash hashSBS) headerFieldBlockNo
@@ -387,4 +395,3 @@ fromConsensusTip =
     conv TipGenesis                      = ChainTipAtGenesis
     conv (Tip slot (OneEraHash h) block) = ChainTip slot (HeaderHash h) block
 -}
-

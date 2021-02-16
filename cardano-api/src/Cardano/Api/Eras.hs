@@ -48,7 +48,7 @@ import           Data.Type.Equality ((:~:) (Refl), TestEquality (..))
 import           Cardano.Ledger.Era as Ledger (Crypto)
 
 import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardCrypto,
-                     StandardMary, StandardShelley)
+                     StandardMary, StandardShelley, StandardPivo)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -65,6 +65,7 @@ data AllegraEra
 -- | A type used as a tag to distinguish the Mary era.
 data MaryEra
 
+data PivoEra
 
 instance HasTypeProxy ByronEra where
     data AsType ByronEra = AsByronEra
@@ -81,6 +82,10 @@ instance HasTypeProxy AllegraEra where
 instance HasTypeProxy MaryEra where
     data AsType MaryEra = AsMaryEra
     proxyToAsType _ = AsMaryEra
+
+instance HasTypeProxy PivoEra where
+    data AsType PivoEra = AsPivoEra
+    proxyToAsType _ = AsPivoEra
 
 
 -- ----------------------------------------------------------------------------
@@ -165,7 +170,6 @@ instance IsCardanoEra AllegraEra where
 instance IsCardanoEra MaryEra where
    cardanoEra      = MaryEra
 
-
 data AnyCardanoEra where
      AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint
                    => CardanoEra era    -- and explicit value.
@@ -204,7 +208,6 @@ anyCardanoEra ShelleyEra = AnyCardanoEra ShelleyEra
 anyCardanoEra AllegraEra = AnyCardanoEra AllegraEra
 anyCardanoEra MaryEra    = AnyCardanoEra MaryEra
 
-
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
 -- us what era it is, but hides the era type. This is useful when the era is
 -- not statically known, for example when deserialising from a file.
@@ -232,6 +235,7 @@ data ShelleyBasedEra era where
      ShelleyBasedEraShelley :: ShelleyBasedEra ShelleyEra
      ShelleyBasedEraAllegra :: ShelleyBasedEra AllegraEra
      ShelleyBasedEraMary    :: ShelleyBasedEra MaryEra
+     ShelleyBasedEraPivo    :: ShelleyBasedEra PivoEra
 
 deriving instance Eq   (ShelleyBasedEra era)
 deriving instance Ord  (ShelleyBasedEra era)
@@ -253,7 +257,6 @@ instance IsShelleyBasedEra AllegraEra where
 
 instance IsShelleyBasedEra MaryEra where
    shelleyBasedEra = ShelleyBasedEraMary
-
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era
@@ -296,7 +299,6 @@ cardanoEraStyle ShelleyEra = ShelleyBasedEra ShelleyBasedEraShelley
 cardanoEraStyle AllegraEra = ShelleyBasedEra ShelleyBasedEraAllegra
 cardanoEraStyle MaryEra    = ShelleyBasedEra ShelleyBasedEraMary
 
-
 -- ----------------------------------------------------------------------------
 -- Conversion to Shelley ledger library types
 --
@@ -313,4 +315,4 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra ShelleyEra = Ledger.StandardShelley
   ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
   ShelleyLedgerEra MaryEra    = Ledger.StandardMary
-
+  ShelleyLedgerEra PivoEra    = Ledger.StandardPivo

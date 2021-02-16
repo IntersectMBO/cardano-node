@@ -455,6 +455,8 @@ pTransaction =
   asum
     [ subParser "build-raw"
         (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
+    , subParser "pivo-build-raw"
+        (Opt.info pPivoTransactionBuild $ Opt.progDesc "Build a transaction with pivo update payload.")
     , subParser "sign"
         (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
     , subParser "witness"
@@ -503,6 +505,23 @@ pTransaction =
                                  <*> many pMetadataFile
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
+
+  pPivoTransactionBuild :: Parser TransactionCmd
+  pPivoTransactionBuild = PivoTxBuildRaw <$> some pTxIn
+                                         <*> many pTxOut
+                                         <*> optional pInvalidHereafter
+                                         <*> optional pTxFee
+                                         <*> pUpdatePayloadPath
+                                         <*> pTxBodyFile Output
+    where
+      pUpdatePayloadPath
+        = Opt.strOption
+        (  Opt.long "update-payload-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the update payload."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
+
 
   pTransactionSign  :: Parser TransactionCmd
   pTransactionSign = TxSign <$> pTxBodyFile Input

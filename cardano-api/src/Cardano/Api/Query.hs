@@ -222,6 +222,9 @@ fromUTxO eraConversion utxo =
     ShelleyBasedEraMary ->
       let Shelley.UTxO sUtxo = utxo
       in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraMary)) $ Map.toList sUtxo
+    ShelleyBasedEraPivo ->
+      let Shelley.UTxO sUtxo = utxo
+      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraPivo)) $ Map.toList sUtxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational

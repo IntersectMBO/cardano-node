@@ -89,93 +89,94 @@ package io-sim-classes
 -- sed -ni '1,/--- 8< ---/ p' "$(git rev-parse --show-toplevel)"/cabal.project
 -- Please do not put any `source-repository-package` clause above this line.
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-base
-  tag: 4251c0bb6e4f443f00231d28f5f70d42876da055
-  --sha256: 02a61ymvx054pcdcgvg5qj9kpybiajg993nr22iqiya196jmgciv
-  subdir:
-    binary
-    binary/test
-    cardano-crypto-class
-    cardano-crypto-praos
-    cardano-crypto-tests
-    slotting
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/cardano-base
+--   tag: 4251c0bb6e4f443f00231d28f5f70d42876da055
+--   --sha256: 02a61ymvx054pcdcgvg5qj9kpybiajg993nr22iqiya196jmgciv
+--   subdir:
+--     binary
+--     binary/test
+--     cardano-crypto-class
+--     cardano-crypto-praos
+--     cardano-crypto-tests
+--     slotting
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-crypto
-  tag: f73079303f663e028288f9f4a9e08bcca39a923e
-  --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/cardano-crypto
+--   tag: f73079303f663e028288f9f4a9e08bcca39a923e
+--   --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: d59a74ed9273399384bdc0701f7736b4cf37f167
-  --sha256: 0r68mmargva52vynxvlni4dspylkpvnc38mvxcvami68cx4468id
-  subdir:
-    byron/chain/executable-spec
-    byron/crypto
-    byron/crypto/test
-    byron/ledger/executable-spec
-    byron/ledger/impl
-    byron/ledger/impl/test
-    semantics/executable-spec
-    semantics/small-steps-test
-    shelley/chain-and-ledger/dependencies/non-integer
-    shelley/chain-and-ledger/executable-spec
-    shelley/chain-and-ledger/shelley-spec-ledger-test
-    shelley-ma/impl
-    pivo
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/cardano-ledger-specs
+--   tag: d59a74ed9273399384bdc0701f7736b4cf37f167
+--   --sha256: 0r68mmargva52vynxvlni4dspylkpvnc38mvxcvami68cx4468id
+--   subdir:
+--     byron/chain/executable-spec
+--     byron/crypto
+--     byron/crypto/test
+--     byron/ledger/executable-spec
+--     byron/ledger/impl
+--     byron/ledger/impl/test
+--     semantics/executable-spec
+--     semantics/small-steps-test
+--     shelley/chain-and-ledger/dependencies/non-integer
+--     shelley/chain-and-ledger/executable-spec
+--     shelley/chain-and-ledger/shelley-spec-ledger-test
+--     shelley-ma/impl
+--     shelley-ma/shelley-ma-test
+--     pivo
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-prelude
-  tag: ee4e7b547a991876e6b05ba542f4e62909f4a571
-  --sha256: 0dg6ihgrn5mgqp95c4f11l6kh9k3y75lwfqf47hdp554w7wyvaw6
-  subdir:
-    cardano-prelude
-    cardano-prelude-test
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/cardano-prelude
+--   tag: ee4e7b547a991876e6b05ba542f4e62909f4a571
+--   --sha256: 0dg6ihgrn5mgqp95c4f11l6kh9k3y75lwfqf47hdp554w7wyvaw6
+--   subdir:
+--     cardano-prelude
+--     cardano-prelude-test
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/goblins
-  tag: cde90a2b27f79187ca8310b6549331e59595e7ba
-  --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/goblins
+--   tag: cde90a2b27f79187ca8310b6549331e59595e7ba
+--   --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: a89c38ed5825ba17ca79fddb85651007753d699d
-  --sha256: 0i4p3jbr9pxhklgbky2g7rfqhccvkqzph0ak5x8bb6kwp7c7b8wf
-  subdir:
-    contra-tracer
-    iohk-monitoring
-    plugins/backend-aggregation
-    plugins/backend-ekg
-    plugins/backend-monitoring
-    plugins/backend-trace-forwarder
-    plugins/scribe-systemd
-    tracer-transformers
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/iohk-monitoring-framework
+--   tag: a89c38ed5825ba17ca79fddb85651007753d699d
+--   --sha256: 0i4p3jbr9pxhklgbky2g7rfqhccvkqzph0ak5x8bb6kwp7c7b8wf
+--   subdir:
+--     contra-tracer
+--     iohk-monitoring
+--     plugins/backend-aggregation
+--     plugins/backend-ekg
+--     plugins/backend-monitoring
+--     plugins/backend-trace-forwarder
+--     plugins/scribe-systemd
+--     tracer-transformers
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 653f134ff7fd919e5d4bc141252468a88bde7a58
-  --sha256: 0m98vn96rydrqcqa0jx08wlbbibyai0bqnk6sggbf6wfh6wnkdm6
-  subdir:
-    io-sim
-    io-sim-classes
-    network-mux
-    ouroboros-consensus
-    ouroboros-consensus-byron
-    ouroboros-consensus-cardano
-    ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    typed-protocols
-    typed-protocols-examples
-    Win32-network
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/ouroboros-network
+--   tag: 9753bdcaf025c5c2da173d692347214aaee66ecd
+--   --sha256: 0yp9nmyil435qwq4bf4xdn6l7phkcvw957c992yz1p5visr46qw8
+--   subdir:
+--     io-sim
+--     io-sim-classes
+--     network-mux
+--     ouroboros-consensus
+--     ouroboros-consensus-byron
+--     ouroboros-consensus-cardano
+--     ouroboros-consensus-shelley
+--     ouroboros-network
+--     ouroboros-network-framework
+--     typed-protocols
+--     typed-protocols-examples
+--     Win32-network
 
 -- Needed for the Windows cabal constraint solver.
 max-backjumps: 10000

@@ -12,6 +12,7 @@ module Cardano.Api.Modes (
     -- * Consensus modes
     ByronMode,
     ShelleyMode,
+    PivoMode,
     CardanoMode,
     ConsensusMode(..),
     AnyConsensusMode(..),
@@ -77,6 +78,10 @@ data ByronMode
 -- consensus mode works. It may be replaced by other single-era modes in future.
 --
 data ShelleyMode
+
+-- | Pivo-only mode. At the moment the Pivo era is intended to be run in
+-- isolation.
+data PivoMode
 
 -- | The Cardano consensus mode consists of all the eras currently in use on
 -- the Cardano mainnet. This is currently: the 'ByronEra'; 'ShelleyEra',
@@ -279,4 +284,3 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
 
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (Z (K ())))))) =
       AnyEraInMode MaryEraInCardanoMode
-
