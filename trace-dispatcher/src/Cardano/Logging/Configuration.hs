@@ -9,7 +9,7 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map as Map
-import           Data.Maybe (catMaybes)
+import           Data.Maybe (catMaybes, mapMaybe, fromMaybe)
 import           Katip (Severity)
 
 import           Cardano.Logging.Trace (filterTraceByPrivacy,
@@ -88,9 +88,7 @@ withConfig extract needsConfigFunc tr = do
 -- | If no severity can be found in the config, it is set to Warning
 getSeverity :: TraceConfig -> Context -> SeverityF
 getSeverity config context =
-    case getOption severitySelector config context of
-      Just s  -> s
-      Nothing -> WarningF
+    fromMaybe WarningF (getOption severitySelector config context)
   where
     severitySelector :: ConfigOption -> Maybe SeverityF
     severitySelector (CoSeverity s) = Just s
@@ -99,25 +97,23 @@ getSeverity config context =
 -- | If no privacy can be found in the config, it is set to Public
 getPrivacy :: TraceConfig -> Context -> Privacy
 getPrivacy config context =
-  case getOption privacySelector config context of
-    Just s  -> s
-    Nothing -> Public
+  fromMaybe Public (getOption privacySelector config context)
   where
     privacySelector :: ConfigOption -> Maybe Privacy
     privacySelector (CoPrivacy s) = Just s
     privacySelector _             = Nothing
 
 -- | Searches in the config to find an option
-getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> Context -> (Maybe a)
+getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> Context -> Maybe a
 getOption sel config [] =
-  case (Map.lookup [] (tcOptions config)) of
+  case Map.lookup [] (tcOptions config) of
     Nothing -> Nothing
-    Just options -> case catMaybes (map sel options) of
+    Just options -> case mapMaybe sel options of
                       []        -> Nothing
                       (opt : _) -> Just opt
 getOption sel config context =
-  case (Map.lookup context (tcOptions config)) of
+  case Map.lookup context (tcOptions config) of
     Nothing -> getOption sel config (tail context)
-    Just options -> case catMaybes (map sel options) of
-                      []        -> getOption sel config (tail context)
+    Just options -> case mapMaybe sel options of
+                      []        -> getOption sel config (init context)
                       (opt : _) -> Just opt

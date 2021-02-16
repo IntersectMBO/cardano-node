@@ -1,9 +1,12 @@
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
+
 
 module Cardano.Logging.Trace where
 
+import           Control.Arrow
 import           Control.Monad (join)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
@@ -16,6 +19,9 @@ import           Katip (Severity (..))
 
 import           Cardano.Logging.Types
 
+-- | Adds a message object to a trace
+traceWith :: Monad m => Trace m a -> a -> m ()
+traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
 
 configureTracers :: Monad m => TraceConfig -> [Trace m a] -> m ()
 configureTracers config tracers = do
@@ -25,11 +31,6 @@ configureTracers config tracers = do
   where
     configureTrace :: Monad m => TraceControl -> Trace m a -> m ()
     configureTrace c tr = T.traceWith tr (emptyLoggingContext, Left c)
-
--- | Adds a message object to a trace
-traceWith :: Monad m => Trace m a -> a -> m ()
-traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
-
 
 --- | Don't process further if the result of the selector function
 ---   is False.
@@ -96,10 +97,10 @@ setPrivacy p = T.contramap
                     then (lc,v)
                     else (lc {lcPrivacy = Just p}, v))
 
+
 -- | Folds the cata function with acc over a.
 -- Uses an IORef to store the state
--- TODO: Build a foldTrace which uses something like an ArrowLoop for keeping
--- the state without using an IORef
+
 foldTraceM
   :: forall a acc m . MonadIO m
   => (acc -> a -> acc)
