@@ -181,8 +181,8 @@ createLoggingLayer ver nodeConfig' p = do
   mbEkgDirect <- case mEKGServer of
                   Nothing -> pure Nothing
                   Just sv -> do
-                    refGauge <- liftIO $ newIORef (Map.empty)
-                    refLabel <- liftIO $ newIORef (Map.empty)
+                    refGauge <- liftIO $ newIORef Map.empty
+                    refLabel <- liftIO $ newIORef Map.empty
                     pure $ Just EKGDirect {
                         ekgServer = sv
                       , ekgGauges = refGauge
