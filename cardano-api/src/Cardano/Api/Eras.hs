@@ -12,6 +12,7 @@ module Cardano.Api.Eras
   , ShelleyEra
   , AllegraEra
   , MaryEra
+  , PivoEra
   , CardanoEra(..)
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
@@ -138,6 +139,7 @@ data CardanoEra era where
      ShelleyEra :: CardanoEra ShelleyEra
      AllegraEra :: CardanoEra AllegraEra
      MaryEra    :: CardanoEra MaryEra
+     PivoEra    :: CardanoEra PivoEra
 
 deriving instance Eq   (CardanoEra era)
 deriving instance Ord  (CardanoEra era)
@@ -170,6 +172,9 @@ instance IsCardanoEra AllegraEra where
 instance IsCardanoEra MaryEra where
    cardanoEra      = MaryEra
 
+instance IsCardanoEra PivoEra where
+   cardanoEra      = PivoEra
+
 data AnyCardanoEra where
      AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint
                    => CardanoEra era    -- and explicit value.
@@ -188,12 +193,14 @@ instance Enum AnyCardanoEra where
     toEnum 1 = AnyCardanoEra ShelleyEra
     toEnum 2 = AnyCardanoEra AllegraEra
     toEnum 3 = AnyCardanoEra MaryEra
+    toEnum 4 = AnyCardanoEra PivoEra
     toEnum _ = error "AnyCardanoEra.toEnum: bad argument"
 
     fromEnum (AnyCardanoEra ByronEra)   = 0
     fromEnum (AnyCardanoEra ShelleyEra) = 1
     fromEnum (AnyCardanoEra AllegraEra) = 2
     fromEnum (AnyCardanoEra MaryEra)    = 3
+    fromEnum (AnyCardanoEra PivoEra)    = 4
 
 instance Bounded AnyCardanoEra where
     minBound = AnyCardanoEra ByronEra
@@ -207,6 +214,8 @@ anyCardanoEra ByronEra   = AnyCardanoEra ByronEra
 anyCardanoEra ShelleyEra = AnyCardanoEra ShelleyEra
 anyCardanoEra AllegraEra = AnyCardanoEra AllegraEra
 anyCardanoEra MaryEra    = AnyCardanoEra MaryEra
+anyCardanoEra PivoEra    = AnyCardanoEra PivoEra
+
 
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
 -- us what era it is, but hides the era type. This is useful when the era is
@@ -258,6 +267,9 @@ instance IsShelleyBasedEra AllegraEra where
 instance IsShelleyBasedEra MaryEra where
    shelleyBasedEra = ShelleyBasedEraMary
 
+instance IsShelleyBasedEra PivoEra where
+   shelleyBasedEra = ShelleyBasedEraPivo
+
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era
 -- is not statically known, for example when deserialising from a file.
@@ -298,6 +310,8 @@ cardanoEraStyle ByronEra   = LegacyByronEra
 cardanoEraStyle ShelleyEra = ShelleyBasedEra ShelleyBasedEraShelley
 cardanoEraStyle AllegraEra = ShelleyBasedEra ShelleyBasedEraAllegra
 cardanoEraStyle MaryEra    = ShelleyBasedEra ShelleyBasedEraMary
+cardanoEraStyle PivoEra    = ShelleyBasedEra ShelleyBasedEraPivo
+
 
 -- ----------------------------------------------------------------------------
 -- Conversion to Shelley ledger library types

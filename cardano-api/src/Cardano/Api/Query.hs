@@ -63,6 +63,7 @@ import           Cardano.Binary
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
+import Control.State.Transition as Transition
 
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
@@ -181,6 +182,7 @@ instance (Typeable era, Shelley.TransLedgerState FromCBOR (ShelleyLedgerEra era)
 instance ( IsShelleyBasedEra era
          , ShelleyLedgerEra era ~ ledgerera
          , Consensus.ShelleyBasedEra ledgerera
+         , ToJSON (Transition.State (Core.EraRule "PPUP" ledgerera))
          , ToJSON (Core.TxOut ledgerera)) => ToJSON (LedgerState era) where
   toJSON (LedgerState newEpochS) = object [ "lastEpoch" .= Shelley.nesEL newEpochS
                                           , "blocksBefore" .= Shelley.nesBprev newEpochS

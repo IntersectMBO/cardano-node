@@ -307,7 +307,11 @@ instance IsCardanoEra era => ToJSON (TxOut era) where
             in object [ "address" .= hexAddr
                       , "value" .= toJSON val
                       ]
-
+          ShelleyBasedEraPivo ->
+            let hexAddr = serialiseToRawBytesHexText addr
+            in object [ "address" .= hexAddr
+                      , "value" .= toJSON val
+                      ]
 
 
 deriving instance Eq   (TxOut era)

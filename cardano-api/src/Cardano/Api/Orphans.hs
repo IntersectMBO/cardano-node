@@ -34,6 +34,7 @@ import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
 import qualified Shelley.Spec.Ledger.Rewards as Shelley
+import Control.State.Transition as Transition
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -67,6 +68,7 @@ instance ToJSON Shelley.AccountState where
                                                ]
 
 instance ( Consensus.ShelleyBasedEra era
+         , ToJSON (Transition.State (Core.EraRule "PPUP" era))
          , ToJSON (Core.TxOut era)
          ) => ToJSON (Shelley.EpochState era) where
   toJSON eState = object [ "esAccountState" .= Shelley.esAccountState eState
@@ -78,6 +80,7 @@ instance ( Consensus.ShelleyBasedEra era
                          ]
 
 instance ( Consensus.ShelleyBasedEra era
+         , ToJSON (Transition.State (Core.EraRule "PPUP" era))
          , ToJSON (Core.TxOut era)
          ) => ToJSON (Shelley.LedgerState era) where
   toJSON lState = object [ "utxoState" .= Shelley._utxoState lState
@@ -85,6 +88,7 @@ instance ( Consensus.ShelleyBasedEra era
                          ]
 
 instance ( Consensus.ShelleyBasedEra era
+         , ToJSON (Transition.State (Core.EraRule "PPUP" era))
          , ToJSON (Core.TxOut era)
          ) => ToJSON (Shelley.UTxOState era) where
   toJSON utxoState = object [ "utxo" .= Shelley._utxo utxoState
@@ -242,4 +246,3 @@ instance ToJSON (Shelley.IndividualPoolStake crypto) where
     object [ "individualPoolStake" .= Shelley.individualPoolStake indivPoolStake
            , "individualPoolStakeVrf" .= Shelley.individualPoolStakeVrf indivPoolStake
            ]
-
