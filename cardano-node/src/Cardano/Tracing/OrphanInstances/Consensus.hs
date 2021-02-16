@@ -156,7 +156,7 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceFoundIntersection _ _ _) = Info
   getSeverityAnnotation (TraceRolledBack _) = Notice
   getSeverityAnnotation (TraceException _) = Warning
-  getSeverityAnnotation (TraceTermination _) = Warning
+  getSeverityAnnotation (TraceTermination _) = Notice
 
 
 instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
