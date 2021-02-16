@@ -4,6 +4,8 @@ import           Examples.Aggregation
 import           Examples.EKG
 import           Examples.Routing
 import           Examples.Trivial
+import           Examples.Configuration
+import           Cardano.Logging
 
 
 
@@ -13,4 +15,5 @@ main = do
     test2
     testAggregation
     testRouting
-    testEKG
+    testConfig
+--    testEKG

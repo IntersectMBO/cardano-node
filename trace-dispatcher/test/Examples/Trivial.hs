@@ -1,6 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
-
 module Examples.Trivial where
 
 import           Katip

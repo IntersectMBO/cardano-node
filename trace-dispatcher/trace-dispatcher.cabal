@@ -42,6 +42,7 @@ executable trace-dispatcher-examples
                       Examples.Trivial
                       Examples.Routing
                       Examples.EKG
+                      Examples.Configuration
     hs-source-dirs:   test
     default-language: Haskell2010
     default-extensions:  OverloadedStrings
