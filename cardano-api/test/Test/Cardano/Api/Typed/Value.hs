@@ -39,8 +39,7 @@ canonicalise :: ValueNestedRep -> ValueNestedRep
 canonicalise =
     ValueNestedRep
   . filter (not . isZeroOrEmpty)
-  . map filterZeros
-  . map (foldl1 mergeBundle)
+  . map (filterZeros . foldl1 mergeBundle)
   . groupBy samePolicyId
   . sort
   . (\(ValueNestedRep bundles) -> bundles)
@@ -68,9 +67,6 @@ canonicalise =
 
     isZeroOrEmpty (ValueNestedBundleAda q) = q == 0
     isZeroOrEmpty (ValueNestedBundle _ as) = Map.null as
-
-{-# ANN canonicalise "HLint: ignore Use map once" #-}
-
 
 -- -----------------------------------------------------------------------------
 

@@ -12,7 +12,141 @@ license-files:
 build-type:             Simple
 extra-source-files:     README.md, ChangeLog.md
 
+common base                         { build-depends: base                         >= 4.12 && < 5                }
+
+common cardano-api                  { build-depends: cardano-api                                                }
+common cardano-binary               { build-depends: cardano-binary                                             }
+common cardano-config               { build-depends: cardano-config                                             }
+common cardano-crypto               { build-depends: cardano-crypto                                             }
+common cardano-crypto-class         { build-depends: cardano-crypto-class                                       }
+common cardano-crypto-test          { build-depends: cardano-crypto-test                                        }
+common cardano-crypto-tests         { build-depends: cardano-crypto-tests                                       }
+common cardano-crypto-wrapper       { build-depends: cardano-crypto-wrapper                                     }
+common cardano-ledger               { build-depends: cardano-ledger                                             }
+common cardano-ledger-shelley-ma    { build-depends: cardano-ledger-shelley-ma                                  }
+common cardano-ledger-test          { build-depends: cardano-ledger-test                                        }
+common cardano-prelude              { build-depends: cardano-prelude                                            }
+common cardano-prelude-test         { build-depends: cardano-prelude-test                                       }
+common cardano-slotting             { build-depends: cardano-slotting                                           }
+common iohk-monitoring              { build-depends: iohk-monitoring                                            }
+common ouroboros-consensus          { build-depends: ouroboros-consensus                                        }
+common ouroboros-consensus-byron    { build-depends: ouroboros-consensus-byron                                  }
+common ouroboros-consensus-cardano  { build-depends: ouroboros-consensus-cardano                                }
+common ouroboros-consensus-shelley  { build-depends: ouroboros-consensus-shelley                                }
+common ouroboros-network            { build-depends: ouroboros-network                                          }
+common ouroboros-network-framework  { build-depends: ouroboros-network-framework                                }
+common shelley-spec-ledger          { build-depends: shelley-spec-ledger                                        }
+common shelley-spec-ledger-test     { build-depends: shelley-spec-ledger-test                                   }
+common small-steps                  { build-depends: small-steps                                                }
+common typed-protocols              { build-depends: typed-protocols                                            }
+common typed-protocols-examples     { build-depends: typed-protocols-examples                                   }
+
+common aeson                        { build-depends: aeson                        >= 1.5.5.1                    }
+common aeson-pretty                 { build-depends: aeson-pretty                 >= 0.8.8                      }
+common attoparsec                   { build-depends: attoparsec                   >= 0.13.2.4                   }
+common base16-bytestring            { build-depends: base16-bytestring            >= 1.0.1.0                    }
+common base58-bytestring            { build-depends: base58-bytestring            >= 0.1.0                      }
+common base64                       { build-depends: base64                       >= 0.4.2.2                    }
+common bech32                       { build-depends: bech32                       >= 1.1.0                      }
+common bytestring                   { build-depends: bytestring                   >= 0.10.12.0                  }
+common cborg                        { build-depends: cborg                        >= 0.2.4.0                    }
+common containers                   { build-depends: containers                   >= 0.6.2.1                    }
+common contra-tracer                { build-depends: contra-tracer                >= 0.1.0.0                    }
+common cryptonite                   { build-depends: cryptonite                   >= 0.27                       }
+common directory                    { build-depends: directory                    >= 1.3.6.0                    }
+common filepath                     { build-depends: filepath                     >= 1.4.2.1                    }
+common formatting                   { build-depends: formatting                   >= 6.3.7                      }
+common hedgehog                     { build-depends: hedgehog                     >= 1.0.4                      }
+common io-sim-classes               { build-depends: io-sim-classes               >= 0.2.0.0                    }
+common iproute                      { build-depends: iproute                      >= 1.7.10                     }
+common memory                       { build-depends: memory                       >= 0.15.0                     }
+common network                      { build-depends: network                      >= 3.1.2.1                    }
+common network-mux                  { build-depends: network-mux                  >= 0.1.0.0                    }
+common network-uri                  { build-depends: network-uri                  >= 2.6.3.0                    }
+common nothunks                     { build-depends: nothunks                     >= 0.1.2                      }
+common QuickCheck                   { build-depends: QuickCheck                   >= 2.14.2                     }
+common scientific                   { build-depends: scientific                   >= 0.3.6.2                    }
+common serialise                    { build-depends: serialise                    >= 0.2.3.0                    }
+common stm                          { build-depends: stm                          >= 2.5.0.0                    }
+common tasty                        { build-depends: tasty                        >= 1.4.0.2                    }
+common tasty-hedgehog               { build-depends: tasty-hedgehog               >= 1.0.0.2                    }
+common tasty-quickcheck             { build-depends: tasty-quickcheck             >= 0.10.1.2                   }
+common text                         { build-depends: text                         >= 1.2.3.1                    }
+common time                         { build-depends: time                         >= 1.9.3                      }
+common transformers                 { build-depends: transformers                 >= 0.5.6.2                    }
+common transformers-except          { build-depends: transformers-except          >= 0.1.1                      }
+common unordered-containers         { build-depends: unordered-containers         >= 0.2.13.0                   }
+common vector                       { build-depends: vector                       >= 0.12.1.2                   }
+
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+
+  if impl(ghc < 8.10)
+    ghc-options:        -Wno-incomplete-patterns
+
 library
+  import:               base, project-config
+                      , aeson
+                      , aeson-pretty
+                      , attoparsec
+                      , base16-bytestring
+                      , base58-bytestring
+                      , base64
+                      , bech32
+                      , bytestring
+                      , cardano-binary
+                      , cardano-config
+                      , cardano-crypto
+                      , cardano-crypto-class
+                      , cardano-crypto-wrapper
+                      , cardano-ledger
+                      , cardano-ledger-shelley-ma
+                      , cardano-prelude
+                      , cardano-slotting
+                      , cborg
+                      , contra-tracer
+                      , containers
+                      , cryptonite
+                      , directory
+                      , filepath
+                      , formatting
+                      , io-sim-classes
+                      , iohk-monitoring
+                      , iproute
+                      , memory
+                      , network
+                      , network-mux
+                      , network-uri
+                      , nothunks
+                      , ouroboros-consensus
+                      , ouroboros-consensus-byron
+                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus-shelley
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , scientific
+                      , serialise
+                      , shelley-spec-ledger
+                      , small-steps
+                      , stm
+                      , text
+                      , time
+                      , transformers
+                      , transformers-except
+                      , typed-protocols
+                      , typed-protocols-examples
+                      , unordered-containers
+                      , vector
+
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.Api
@@ -70,83 +204,8 @@ library
                         Cardano.Api.Utils
                         Cardano.Api.Value
 
-
-
-
-  build-depends:        base >=4.12 && <5
-                      , aeson
-                      , aeson-pretty
-                      , attoparsec
-                      , base16-bytestring >= 1.0
-                      , base58-bytestring
-                      , base64
-                      , bech32 >= 1.1.0
-                      , bytestring
-                      , cardano-binary
-                      , cardano-config
-                      , cardano-crypto
-                      , cardano-crypto-class
-                      , cardano-crypto-wrapper
-                      , cardano-ledger
-                      , cardano-ledger-shelley-ma
-                      , cardano-prelude
-                      , cardano-slotting
-                      , cborg
-                      , contra-tracer
-                      , containers
-                      , cryptonite
-                      , directory
-                      , filepath
-                      , formatting
-                      , io-sim-classes
-                      , iohk-monitoring
-                      , iproute
-                      , memory
-                      , network
-                      , network-mux
-                      , network-uri
-                      , nothunks
-                      , ouroboros-consensus
-                      , ouroboros-consensus-byron
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-shelley
-                      , ouroboros-network
-                      , ouroboros-network-framework
-                      , scientific
-                      , serialise
-                      , shelley-spec-ledger
-                      , small-steps
-                      , stm
-                      , text
-                      , time
-                      , transformers
-                      , transformers-except
-                      , typed-protocols
-                      , typed-protocols-examples
-                      , unordered-containers >= 0.2.11
-                      , vector
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-                        OverloadedStrings
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-
-  if impl(ghc < 8.10)
-    ghc-options:        -Wno-incomplete-patterns
-
 test-suite cardano-api-test
-  hs-source-dirs:       test
-  main-is:              cardano-api-test.hs
-  type:                 exitcode-stdio-1.0
-
-  build-depends:
-                        base >=4.12 && <5
+  import:               base, project-config
                       , aeson
                       , base16-bytestring
                       , bytestring
@@ -176,6 +235,9 @@ test-suite cardano-api-test
                       , text
                       , time
                       , unordered-containers
+  hs-source-dirs:       test
+  main-is:              cardano-api-test.hs
+  type:                 exitcode-stdio-1.0
 
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.Examples
@@ -196,13 +258,4 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Value
                         Test.Tasty.Hedgehog.Group
 
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
