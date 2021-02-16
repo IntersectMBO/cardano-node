@@ -9,8 +9,18 @@ let
   inherit (cfg.cardanoNodePkgs) commonLib cardano-node cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
   envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
-  mkScript = cfg: let
-    realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml" else cfg.nodeConfigFile;
+  mkScript = cfg: i: let
+    instanceConfig = cfg.nodeConfig // (optionalAttrs (cfg.nodeConfig ? hasEKG) {
+      hasEKG = cfg.nodeConfig.hasEKG + i;
+    }) // (optionalAttrs (cfg.nodeConfig ? hasPrometheus) {
+      hasPrometheus = map (n: if isInt n then n + i else n) cfg.nodeConfig.hasPrometheus;
+    });
+    realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml"
+      else if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
+      else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
+    topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON {
+      Producers = cfg.producers ++ (cfg.instanceProducers i);
+    });
     consensusParams = {
       RealPBFT = [
         "${lib.optionalString (cfg.signingKey != null)
@@ -39,15 +49,18 @@ let
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
       ];
     };
+    instanceDbPath = "${cfg.databasePath}${optionalString (i > 0) "-${toString i}"}";
     exec = "cardano-node run";
         cmd = builtins.filter (x: x != "") [
           "${cfg.package}/bin/${exec}"
           "--config ${realNodeConfigFile}"
-          "--database-path ${cfg.databasePath}"
-          "--topology ${cfg.topology}"
+          "--database-path ${instanceDbPath}"
+          "--topology ${topology}"
+        ] ++ (lib.optionals (!cfg.systemdSocketActivation) [
           "--host-addr ${cfg.hostAddr}"
           "--port ${toString cfg.port}"
-        ] ++ lib.optional (!cfg.systemdSocketActivation) "--socket-path ${cfg.socketPath}"
+          "--socket-path ${cfg.socketPath}"
+        ])
           ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
@@ -70,6 +83,10 @@ let
           ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
           ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
         ''}
+        # If exist copy state from existing instance instead of syncing from scratch:
+        if [[ (! -d ${instanceDbPath}) && (-d ${cfg.databasePath}) ]]; then
+          cp -a ${cfg.databasePath} ${instanceDbPath}
+        fi
         exec ${toString cmd}'';
 in {
   options = {
@@ -90,9 +107,16 @@ in {
           For details see https://fedoramagazine.org/systemd-template-unit-files/
         '';
       };
+      instances = mkOption {
+        type = types.int;
+        default = 1;
+        description = ''
+          Number of instance of the service to run.
+        '';
+      };
       script = mkOption {
         type = types.str;
-        default = mkScript cfg;
+        default = mkScript cfg 0;
       };
 
       profiling = mkOption {
@@ -290,14 +314,30 @@ in {
         '';
       };
 
-      topology = mkOption {
-        type = types.path;
-        default = commonLib.mkEdgeTopology {
-          inherit (cfg) port;
-          edgeNodes = [ envConfig.relaysNew ];
-        };
+      producers = mkOption {
+        default = [{
+          addr = envConfig.relaysNew;
+          port = envConfig.edgePort;
+          valency = 1;
+        }];
+        type = types.listOf types.attrs;
+        description = ''Static routes to peers.'';
+      };
+
+      instanceProducers = mkOption {
+        # activate type for nixos-21.03:
+        # type = types.functionTo (types.listOf types.attrs);
+        default = _: [];
         description = ''
-          Cluster topology
+          Static routes to peers, specific to a given instance (when multiple instances are used)
+        '';
+      };
+
+      topology = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = ''
+          Cluster topology. If not set `producers` array is used to generated topology file.
         '';
       };
 
@@ -308,8 +348,8 @@ in {
       };
 
       nodeConfigFile = mkOption {
-        type = types.str;
-        default = "${toFile "config-${toString cfg.nodeId}.json" (toJSON cfg.nodeConfig)}";
+        type = types.nullOr types.str;
+        default = null;
         description = ''Actual configuration file (shell expression).'';
       };
 
@@ -364,7 +404,11 @@ in {
     };
   };
 
-  config = mkIf cfg.enable ( let stateDirBase = "/var/lib/"; in {
+  config = mkIf cfg.enable ( let
+    stateDirBase = "/var/lib/";
+    genInstanceConf = f: listToAttrs (if cfg.instances > 1 && !cfg.instanced
+      then genList (i: let n = "${systemdServiceName}-${toString i}"; in nameValuePair n (f n i)) cfg.instances
+      else [ (nameValuePair systemdServiceName (f systemdServiceName 0)) ]); in {
     users.groups.cardano-node.gid = 10016;
     users.users.cardano-node = {
       description = "cardano-node node daemon user";
@@ -375,13 +419,13 @@ in {
     ## TODO:  use http://hackage.haskell.org/package/systemd for:
     ##   1. only declaring success after we perform meaningful init (local state recovery)
     ##   2. heartbeat & watchdog functionality
-    systemd.services."${systemdServiceName}" = {
-      description   = "cardano-node node service";
+    systemd.services = genInstanceConf (n: i: {
+      description   = "cardano-node node ${toString i} service";
       after         = [ "network-online.target" ]
-        ++ lib.optional cfg.systemdSocketActivation "${systemdServiceName}.socket";
-      requires = lib.mkIf cfg.systemdSocketActivation [ "${systemdServiceName}.socket" ];
+        ++ lib.optional cfg.systemdSocketActivation "${n}.socket";
+      requires = lib.mkIf cfg.systemdSocketActivation [ "${n}.socket" ];
       wants = [ "network-online.target" ];
-      script = cfg.script;
+      script = mkScript cfg i;
       serviceConfig = {
         User = "cardano-node";
         Group = "cardano-node";
@@ -395,20 +439,22 @@ in {
         # time to sleep before restarting a service
         RestartSec = 1;
       };
-    } // optionalAttrs (! cfg.instanced) {
+    } // optionalAttrs (!cfg.instanced) {
       wantedBy = [ "multi-user.target" ];
-    };
+    });
 
-    systemd.sockets."${systemdServiceName}" = lib.mkIf cfg.systemdSocketActivation {
-      description = "Socket of the ${systemdServiceName} service.";
+    systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation {
+      description = "Socket of the ${n} service.";
       wantedBy = [ "sockets.target" ];
       socketConfig = {
-        ListenStream = [ cfg.socketPath ];
+        ListenStream = [ "${cfg.hostAddr}:${toString cfg.port}" ]
+          ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}/node-${toString i}.socket")];
+        ReusePort = "yes";
         SocketMode = "0660";
         SocketUser = "cardano-node";
         SocketGroup = "cardano-node";
       };
-    };
+    });
 
     assertions = [
       {
