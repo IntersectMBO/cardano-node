@@ -31,7 +31,7 @@ filterPrivacyFromConfig = withConfig getPrivacy filterTraceByPrivacy
 -- | Take a selector function, and a function from trace to trace with
 --   this selector to make a trace transformer with a config value
 withConfig :: (MonadIO m, Eq b) =>
-     (TraceConfig -> Context -> b)
+     (TraceConfig -> Namespace -> b)
   -> (Maybe b -> Trace m a -> Trace m a)
   -> Trace m a
   -> m (Trace m a)
@@ -86,7 +86,7 @@ withConfig extract needsConfigFunc tr = do
                             ++ show (lcContext lc)
 
 -- | If no severity can be found in the config, it is set to Warning
-getSeverity :: TraceConfig -> Context -> SeverityF
+getSeverity :: TraceConfig -> Namespace -> SeverityF
 getSeverity config context =
     fromMaybe WarningF (getOption severitySelector config context)
   where
@@ -95,7 +95,7 @@ getSeverity config context =
     severitySelector _              = Nothing
 
 -- | If no privacy can be found in the config, it is set to Public
-getPrivacy :: TraceConfig -> Context -> Privacy
+getPrivacy :: TraceConfig -> Namespace -> Privacy
 getPrivacy config context =
   fromMaybe Public (getOption privacySelector config context)
   where
@@ -104,7 +104,7 @@ getPrivacy config context =
     privacySelector _             = Nothing
 
 -- | Searches in the config to find an option
-getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> Context -> Maybe a
+getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> Namespace -> Maybe a
 getOption sel config [] =
   case Map.lookup [] (tcOptions config) of
     Nothing -> Nothing
