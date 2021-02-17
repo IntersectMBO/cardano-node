@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Shelley.Parsers
@@ -17,10 +18,10 @@ import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley
+import           Cardano.Api.Shelley hiding (PlutusScriptPurpose (..))
 
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
-import           Cardano.CLI.Mary.ValueParser (parseValue)
+import           Cardano.CLI.Mary.ValueParser (parseValue, policyId)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
                    VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
@@ -154,7 +155,7 @@ pAddressCmd =
 
     pAddressBuildScript :: Parser AddressCmd
     pAddressBuildScript = AddressBuildMultiSig
-                            <$> pScript
+                            <$> pScriptFile
                             <*> pNetworkId
                             <*> pMaybeOutputFile
 
@@ -191,13 +192,121 @@ pPaymentVerificationKeyFile =
         )
     )
 
-pScript :: Parser ScriptFile
-pScript = ScriptFile <$> Opt.strOption
+pScriptFile :: Parser ScriptFile
+pScriptFile = ScriptFile <$> Opt.strOption
   (  Opt.long "script-file"
   <> Opt.metavar "FILE"
   <> Opt.help "Filepath of the script."
   <> Opt.completer (Opt.bashCompleter "file")
   )
+
+parseDatum :: Parser Datum
+parseDatum = Datum <$> Opt.strOption
+              (  Opt.long "datum-file"
+              <> Opt.metavar "FILE"
+              <> Opt.help "Filepath of the datum. The data passed is \
+                          \passed to a Plutus script which validates \
+                          \that the output is spent correctly"
+              <> Opt.completer (Opt.bashCompleter "file")
+              )
+
+pAnyScript :: Parser ScriptBundle
+pAnyScript = ScriptBundle
+               <$> pScriptFile
+               <*> optional pPlutusScriptRequirements
+
+  where
+    pPlutusScriptRequirements :: Parser PlutusScriptRequirements
+    pPlutusScriptRequirements = PlutusScriptRequirements
+                                  <$> pPlutusScriptType
+                                  <*> pExecutionUnits
+                                  <*> some parseFeeTxIn
+                                  <*> some pRedeemer
+                                  <*> optional parseDatum
+
+    pPlutusScriptType :: Parser PlutusScriptType
+    pPlutusScriptType =
+      pSpending <|> pMinting <|> pRewarding <|> pCertifying
+
+    pSpending :: Parser PlutusScriptType
+    pSpending = Spending <$> Opt.option (readerFromAttoParser parseTxInAny)
+                  (  Opt.long "spending"
+                  <> Opt.metavar "TX-IN"
+                  <> Opt.help "The transaction input that the non-native script will spend as\
+                              \ TxId#TxIx where TxId is the transaction hash and TxIx is the index."
+                  )
+
+    pMinting :: Parser PlutusScriptType
+    pMinting = Minting <$> Opt.option (readerFromParsecParser policyId)
+                 (  Opt.long "minting"
+                 <> Opt.metavar "POLICYID"
+                 <> Opt.help "The policy ID of the multi-asset that the non-native script will\
+                             \ mint/burn tokens of."
+                 )
+
+    pRewarding :: Parser PlutusScriptType
+    pRewarding = Rewarding <$> Opt.option (readerFromAttoParser parseStakeAddress)
+                  (  Opt.long "rewarding"
+                  <> Opt.metavar "STAKEADDR"
+                  <> Opt.help "The stake address that the non-native script will withdraw\
+                              \ rewards from."
+                  )
+
+    pCertifying :: Parser PlutusScriptType
+    pCertifying = Certifying <$> Opt.strOption
+                  (  Opt.long "certifying"
+                  <> Opt.metavar "FILE"
+                  <> Opt.help "Filepath of the delegation certifate that the non-native script\
+                              \ will certify."
+                  <> Opt.completer (Opt.bashCompleter "file")
+                  )
+
+    pExecutionUnits :: Parser ExecutionUnits
+    pExecutionUnits = ExecutionUnits <$> pMemory <*> pSteps
+
+    pMemory :: Parser Word64
+    pMemory = Opt.option (readerFromAttoParser $ parseWord64 "memory-required")
+      (  Opt.long "memory-required"
+      <> Opt.metavar "WORD64"
+      <> Opt.help "The required memory for the execution of the non-native script"
+      )
+
+    pSteps :: Parser Word64
+    pSteps = Opt.option (readerFromAttoParser $ parseWord64 "steps-required")
+      (  Opt.long "steps-required"
+      <> Opt.metavar "WORD64"
+      <> Opt.help "The required number of steps for the execution of the non-native script"
+      )
+
+    parseWord64 :: String -> Atto.Parser Word64
+    parseWord64 t = do
+      i <- Atto.decimal
+      if i > toInteger (maxBound :: Word64)
+      then fail $ show i <> " " <> t <> " exceeds the Word64 upper bound"
+      else return $ fromIntegral i
+
+    parseFeeTxIn :: Parser TxInAnyEra
+    parseFeeTxIn =
+      Opt.option (readerFromAttoParser parseFeeTxInAtto)
+        (  Opt.long "tx-in-fee"
+        <> Opt.metavar "TX-IN"
+        <> Opt.help "The tx input(s) to be used as fees for the Plutus script \
+                    \as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
+        )
+
+    parseFeeTxInAtto :: Atto.Parser TxInAnyEra
+    parseFeeTxInAtto = do
+      txId <- parseTxId
+      index <- Atto.char '#' *> parseTxIx
+      return $ TxInAnyEra txId index IsPlutusFee
+
+    pRedeemer :: Parser Redeemer
+    pRedeemer = Redeemer <$> Opt.strOption
+        (  Opt.long "redeemer-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "Filepath of the script redeemer."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
 
 pStakeAddress :: Parser StakeAddressCmd
 pStakeAddress =
@@ -501,7 +610,8 @@ pTransaction =
                                  <*> many pCertificateFile
                                  <*> many pWithdrawal
                                  <*> pTxMetadataJsonSchema
-                                 <*> many pScript
+                                 <*> many pAnyScript
+                                 <*> optional pProtocolParamsFile
                                  <*> many pMetadataFile
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
@@ -531,7 +641,7 @@ pTransaction =
                                 <*> pTxSubmitFile
 
   pTransactionPolicyId :: Parser TransactionCmd
-  pTransactionPolicyId = TxMintedPolicyId <$> pScript
+  pTransactionPolicyId = TxMintedPolicyId <$> pScriptFile
 
   pTransactionCalculateMinFee :: Parser TransactionCmd
   pTransactionCalculateMinFee =
@@ -1152,7 +1262,7 @@ pSomeWitnessSigningData =
         <*>
           optional pByronAddress
     <|>
-      ScriptWitnessSigningData <$> pScript
+      ScriptWitnessSigningData <$> pScriptFile
 
 pSigningKeyFile :: FileDirection -> Parser SigningKeyFile
 pSigningKeyFile fdir =
@@ -1179,7 +1289,7 @@ pWitnessSigningData =
       <*>
         optional pByronAddress
   <|>
-    ScriptWitnessSigningData <$> pScript
+    ScriptWitnessSigningData <$> pScriptFile
 
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =
