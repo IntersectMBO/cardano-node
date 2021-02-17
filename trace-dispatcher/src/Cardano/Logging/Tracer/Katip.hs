@@ -22,7 +22,7 @@ import           Katip.Core (ScribeHandle (..), WorkerMessage (..),
 import           Katip.Scribes.Handle (ioLogEnv)
 import           System.IO (stdout)
 
-import           Cardano.Logging.Types
+import           Cardano.Logging.Types hiding(Namespace)
 
 stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
 stdoutObjectKatipTracer = do

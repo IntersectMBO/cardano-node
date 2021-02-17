@@ -1,8 +1,8 @@
-# trace-dispatcher: Towards an efficient and simple logging solution for Cardano
+# trace-dispatcher: Towards an efficient and simple logging solution
 
-The current iohk-monitoring-framework should be replaced with something simpler. The current framework shall be replaced, because it consumes too much resources, and as such too much influences the system it is monitoring. As well the API should be simplified. And finally we are happy if we can offer a powerful and flexible solution for DevOps.
+The current iohk-monitoring-framework should be replaced with something simpler. The current framework shall be replaced, because it consumes too much resources, and as such too much influences the system it is monitoring. As well the API should be simplified. And finally we are happy if we can offer a powerful and flexible solution for DevOps and Stakeholders.
 
-We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say a __Trace__,  when we refer to the incoming side of a stream of messages. A __Trace__ receives messages, when the traceWith function gets called. We say a __Tracer__, when we refer to the outgoing side of a stream of messages. A __Tracer__ is doing something effect-full with the messages of some trace. So a Tracer is a backend that not only produces effects but also is always the end of the data flow. So you always have a trace as data source, which is then plumbed via transformers to one ore more tracers.
+We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The traceWith function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers and ends in one or more TraceOuts.
 
 ## General Interface
 
@@ -23,7 +23,7 @@ data TraceAddBlockEvent blk =
 
 In this sum type every constructor defines a message with a potential payload to be logged or monitored.
 
-To actually log such a message the central traceWith function will be called:
+To actually log such a message the important __traceWith__ function will be called:
 
 ```haskell
 traceWith exampleTracer (IgnoreBlockOlderThanK b)
@@ -38,33 +38,30 @@ DebugS | InfoS | NoticeS | WarningS | ErrorS | CriticalS | AlertS | EmergencyS
 
 ```
 
-In addition it exist the a severity type for filtering, which has an additional `Silence` constructor, which follows to `Emergency`, so that nullTracers are not needed.
+In addition it exist the a severity type for filtering, which has an additional `SilenceF` constructor, which follows to `EmergencyF`, so that nullTracers (TraceOut without effect) can be omitted.
 
-_Currently the severity is set by making TraceAddBlockEvent an instance of HasSeverityAnnotation. As well a WithSeverity type is used. In the new system the HasSeverityAnnotation typeclass and the WithSeverity wrapper type will be discontinued. Severity will be simply set by a function:_
+You use the following function to give a severity to messages:
 
 ```haskell
 setSeverity :: Monad m => Severity -> Trace m a -> Trace m a
-```  
+-- e.g.
+tracer = setSeverity NoticeS exampleTracer
+```
 
-You can use this function when you construct the tracer to set a standard severity:
-
-```haskell
-tracer = setSeverity NoticeS katipTracer
-```  
-
-Then you can specialize the severity when you actually call traceWith.
+If in the message flow setSeverity gets called multiple times, the first one wins, which is the one closer to TraceIn.
+In the following code the severity is set, when you actually call traceWith for a single message.
 
 ```haskell
 traceWith (setSeverity WarningS exampleTracer) (IgnoreBlockOlderThanK b)
 ```
-
-Or you can set severities for all messages of a type in a central place
-in a style like it is done currently with the following function.
+Or you can set severities for all messages of a type in a central place:
+in a style like it is done currently:
 
 ```haskell
 withSeverity :: Monad m => (a -> Severity) -> Trace m a -> Trace m a
-```
-The first call of setSeverity or withSeverity wins. If no severity is given InfoS is the default value.
+```  
+
+We repeat that the first call of setSeverity or withSeverity wins. If no severity is given InfoS is the default value.
 
 ### Privacy
 
@@ -73,7 +70,7 @@ Every message can have a privacy, which is one of:
 ```haskell
 Confidential | Public
 ```
-The changes are just in sync with Severity, we get rid of the type class HasPrivacyAnnotation and use the interface:
+The changes are just in sync with Severity, we get rid of the type class and use the interface:
 
 ```haskell
 setPrivacy :: Monad m => Privacy -> Trace m a -> Trace m a
@@ -81,10 +78,32 @@ withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
 ```
 The first call of setPrivacy or withPrivacy wins. Public is the default value.
 
+### Detail Level
+
+Furthermore it is possible to give different __DetailLevel__, which can result in less slots printed when the detail level is not at highest level, or shortened or missing versions of some printed values. We defines the detail levels:
+
+```haskell
+data DetailLevel = DBrief | DRegular | DDetailed
+```
+For setting this, the following functions can be used:
+
+```haskell
+setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
+withDetails :: Monad m => (a -> DetailLevel) -> Trace m a -> Trace m a
+```
+
+We explain in the section about type classes, how to specify wich detail levels display which information.
+
 ### Namespace
 
-Log items contain a named context or namespace, which should (uniquely?) identify them.
-The interface remains the same, as this names are set with appendName.
+Log items contain a namespace which is a concatenation of strings. Every message at a TraceOut should be uniquely identified by its namespace.
+
+The documentation will be ordered according to this scheme. And is should be made possible for a human to locate the origin of a problem this way.
+
+We could have used the constructor and type, which is a more technical approach,
+and is currently used in the machine readable format, but the logging framework will not use it.
+
+The interface remains the same, as names are set with appendName.
 
 ```haskell
 appendName :: Monad m => Text -> Trace m a -> Trace m a
@@ -93,16 +112,20 @@ appendName :: Monad m => Text -> Trace m a -> Trace m a
 Which when used like:
 
 ```haskell
-appendName "out" $ appendName "middle" $ appendName "in" tracer
+appendName "specific" $ appendName "middle" $ appendName "general" tracer
 ```
-gives the name: `in.middle.out`. (In the current logs, usually the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this name, so that the result looks like:
+gives the name: `general.middle.specific`. (So maybe we should rename this function, cause the result looks more like prepend). Usually the application name is then prepended to the result. In the current logs furthermore the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this namespace. We would like to change this, to make clear what the identifying name is, and to report this independently like:
 
-    [yupanqui-PC.in.middle.out.Info.379]
-The standard Kapi representation of the same is:     
+    [yupanqui-PC.cardano.general.middle.specific.Info.379]
+    ->
+    [cardano.general.middle.specific][Info][yupanqui-PC][ThreadId 379])
 
-    [in.middle.out][Info][yupanqui-PC][ThreadId 379])
-
-I like the second representation more, as it does not mix things which don't belong together, but the first is more compact.
+Since we require that every message has its unique name we offer the following convenience function:
+```haskell
+traceWith (appendName "ignoreBlockOlderThanK" exampleTracer) (IgnoreBlockOlderThanK b)
+-- Can be written as:
+traceNamed exampleTracer "ignoreBlockOlderThanK" (IgnoreBlockOlderThanK b)
+```
 
 ### Filtering
 
@@ -124,48 +147,78 @@ filterTrace :: (Monad m) =>
   -> Trace m a
 
 data LoggingContext = LoggingContext {
-    lcContext  :: [Text]
-  , lcSeverity :: Maybe Severity
-  , lcPrivacy  :: Maybe PrivacyAnnotation
-}   
+    lcContext     :: Namespace
+  , lcSeverity    :: Maybe Severity
+  , lcPrivacy     :: Maybe Privacy
+  , lcDetailLevel :: Maybe DetailLevel
+}
 ```
-
 So you can e.g. write a filter function, which only displays _Public_ messages:
 
 ```haskell
 filterTrace (\ (c, a) -> case lcPrivacy c of
                 Just s  -> s == Public
-                Nothing -> True)
+                Nothing -> True)   
+```
+We come back to filtering when we treat the _Configuration_, cause the configuration makes it possible to enable a fine grained control of which messages are filtered out and which are further processed based on the namespace.
+
+### Plumbing
+
+TraceIns shall be routed through different transformations to traceOuts.
+Here we treat the static implementation of this. Calling traceWith trace passes the message through the transformers to zero to n traceOuts.
+In the first example we route the trace to one of two tracers based on the constructor of the message.
+
+```haskell
+routingTrace :: forall m a . Monad m => (a -> Trace m a) -> Trace m a
+let resTrace = routingTrace routingf (tracer1 <> tracer2)
+  where
+    routingf LO1 {} = tracer1
+    routingf LO2 {} = tracer2
+```    
+The second argument must mappend all possible tracers of the first argument to one tracer. This is required for the configuration. We could have construct a more secure interface by having a map of values to tracers, but the ability for full pattern matching outweigh this disadvantage in our view.
+To send the message of a trace to different tracers depending on some criteria use the following function:
+In the second example we send the messages of one trace to two tracers simultaneously:
+
+```haskell
+let resTrace = tracer1 <> tracer2
+```
+To route one trace to multiple tracers simultaneously we use the fact that Tracer is an instance of Monoid and then use <> (formerly known as mappend), or mconcat for lists of tracers:
+
+```haskell
+(<>) :: Monoid m => m -> m -> m
+mconcat :: Monoid m => [m] -> m
 ```
 
-We come back to filtering when we treat the _Configuration_, cause the configuration shall make it possible to enable a fine grained control of which messages are filtered out and which are further processed.
+In the third example we unite two traces to one tracer, for which we trivially use the same tracer on the right side.
+
+```haskell
+tracer1  = appendName "tracer1" exTracer
+tracer2  = appendName "tracer2" exTracer
+```
 
 ### Aggregation
 
-Sometime it is desirable to aggregate information from multiple consecutive messages and pass this aggregated data further. As an example we want to log a measurement value together with the sum of all measurements that occurred so far.
+Sometime it is desirable to aggregate information from multiple consecutive messages and pass this aggregated data further.
 
-For this we define a _Measure_ type to hold a Double, a _Stats_ type to hold the the sum together with the measurement and a function to calculate new Stats from old Stats and Measure:
+As an example we want to log a measurement value together with the sum of all measurements that occurred so far. For this we define a _Measure_ type to hold a Double, a _Stats_ type to hold the the sum together with the measurement and a function to calculate new Stats from old Stats and Measure:
 
 ```haskell
-newtype Measure = MDouble Double
-
 data Stats = Stats {
     sMeasure :: Double,
     sSum     :: Double
     }
 
-calculate :: Stats -> Measure -> Stats
-calculate Stats{..} (MDouble val) = BaseStats val (sSum + val)    
+calculateS :: Stats -> Double -> Stats
+calculateS Stats{..} val = Stats val (sSum + val)    
 ```
 
 Then we can define the aggregation tracer with the procedure foldTraceM in the
 following way, and it will output the Stats:
 
 ```haskell
-  aggroTracer <- foldTraceM calculate (Stats 0.0 0.0) exTracer
+  aggroTracer <- foldTraceM calculateS (Stats 0.0 0.0) exTracer
   traceWith 1.1 aggroTracer -- measure: 1.1 sum: 1.1
   traceWith 2.0 aggroTracer -- measure: 2.0 sum: 3.1
-
 ```
 
 The procedure foldTraceM uses an IORef to hold the state, and has thus to be called in a monad stack, which contains the IO Monad.
@@ -181,118 +234,48 @@ foldTraceM :: forall a acc m . MonadIO m
 newtype Folding a acc = Folding acc  
 ```
 
-Another variant of this function calls the function in a monadic context, so that you e.g. can get the current time:
+Another variant of this function calls the aggregation function in a monadic context, so that you e.g. can get the current time:
 
 ```haskell
-foldTraceM' :: forall a acc m . MonadIO m
+foldMTraceM :: forall a acc m . MonadIO m
   => (acc -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
 ```
 
-I would like to find a function foldTrace, that omits the ioref and can thus be called pure:
+(I would like to find a function foldTrace, that omits the Ioref and can thus be called pure. Help is appreciated)
+
+### TraceOuts
+
+We offer different traceOuts (backends):
+
+* Forwarding
+* Katip
+* EKG
+* Prometheus (via EKG)
+* Stdout
+
+Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process. The only other possibility in the node will be a simple Stdout Tracer.  
+
+Katip is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a Katip tracer, which is configured for a human or machine readable configuration or to both.  
+
+EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded to Prometheus.
+
+Backends will be named and can be configured by a matching configuration from a configuration file. We will offer a bunch of functions to construct these traceOuts:
 
 ```haskell
-foldTrace :: forall a acc m .
-  => (acc -> a -> acc)
-  -> acc
-  -> Trace m (Folding a acc)
-  -> Trace m a
+stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => Text -> m (Trace m a)
+stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => Text -> m (Trace m a)
+ekgTracer  :: MonadIO m => Text -> Metrics.Store -> m (Trace m Metric)
+ekgTracer' :: MonadIO m => Text -> Server -> m (Trace m Metric)
 ```
 
-### Identity of a message
+### Typeclasses
 
-Requirements:
 
-1. Every message shall have a unique identity.
-2. We want to be able to document this with ease.
-3. Should make it possible for a human to locate the origin of a message.
 
-It can be defined by:
-
-1. Take constructor and type
-2. Use the concatenated name (namespace)
-3. (Add constructor and type to namespace)
-
-### Plumbing
-
-Traces shall be routed through different transformations to tracers.
-Here we treat the static implementation of this. As we said before: A trace is data source, which is then plumbed via transformers to one ore more tracers. Calling traceWith trace passes the object through the transformers to zero to n tracers.
-
-In the first example we route the trace to one of two tracers based on the constructor of the message.
-
-```haskell
-let resTrace = routingTrace routingf
-  where
-    routingf LO1 {} = tracer1
-    routingf LO2 {} = tracer2
-```    
-
-To send the message of a trace to different tracers depending on some criteria use the following function:
-
-```haskell
-routingTrace :: forall m a . Monad m => (a -> Trace m a) -> Trace m a
-```
-
-In the second example we send the messages of one trace to two tracers simultaneously:
-
-```haskell
-let resTrace = tracer1 <> tracer2
-```
-To route one trace to multiple tracers simultaneously we use the fact that Tracer is an instance of Monoid and then use <>, which is also known as mappend:
-
-```haskell
-(<>) :: Monoid m => m -> m -> m
-```
-
-In the third example we unite two traces to one tracer, for which we trivially use the same tracer on the right side.
-
-```haskell
-tracer1  = appendName "tracer1" exTracer
-tracer2  = appendName "tracer2" exTracer
-```
-
-### Formatting
-
-We have different kinds of formatting, and options which influence formatting.
-
-One basic choice is the format, which can be either a __human readable__ text representation or a __machine readable__ JSON representation.
-
-This choice can be made by selecting different tracers, where one kind outputs text and the other JSON. So more details about this is given in the section about tracers.
-
-For the JSON representation it is possible to give different levels of __DetailLevel__, which can result in less slots printed when verbosity is not at highest level, or shortened or missing versions of some printed values.
-
-The system defines the detail levels:
-
-```haskell
- DBrief | DRegular | DDetailed
-```
-
-### Tracers
-
-For logging of text and JSON _Katip_ is used as backend library, and we will continue with this solution. Additional we have currently the possibilities to write _systemd_ logs on Linux, to use the _graylog_ logging system and to _forward traces_.
-
-For logging of measurements _EKG_ is used as a library and we will keep this solution. Measurements are as well routed to _Prometheus_, this possibility shall be kept, but can be  implemented by forwarding the contents of EKG store.
-
-<!-- Here is a list of all current backend kinds
-data BackendKind =
-AggregationBK
-| EditorBK
-| EKGViewBK
-| GraylogBK
-| KatipBK
-| LogBufferBK
-| MonitoringBK
-| TraceAcceptorBK
-| TraceForwarderBK
-| UserDefinedBK Text
-| SwitchboardBK
-deriving (Eq,Ord,Show,Read) -->
-
-#### Katip
-
-Katip has its own and very different approach to logging. Specially it needs a LogEnv to function, which is usually provided by the class Katip m. We design a different interface, which constructs the LogEnv when constructing the tracer.
+Katip has its own and very different approach to logging. Specially it needs a LogEnv to function, which is usually provided by the class Katip m. We design a different interface, which constructs the LogEnv when constructing the Katip traceOut.
 
 Katip makes use of the following Type classes. ToObject is used to serialize an object, and uses the ToJSON instance of Aeson as default.      
 
@@ -316,36 +299,7 @@ data PayloadSelection
     = AllKeys
     | SomeKeys [Text]
     deriving (Show, Eq)
-
-```    
-Shall we keep this type classes or just require _ToJson_ and set the payload selection with a function?   
-
-```haskell
-stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
-
-stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
 ```
-
-#### EKG
-
-EKG has to phases: 1. A Counter, Gauge, Label or Distribution has to be registered for any value to be logged. 2. The actual value will be set. We can do the registration lazily when it first called. We have two variants depending if it gets initialized by a Store or a Server:
-
-```haskell
-ekgTracer :: MonadIO m => Metrics.Store -> m (Trace m Metric)
-
-ekgTracer' :: MonadIO m => Server -> m (Trace m Metric)
-
-data Metric = Integer Int | Double  | Label String
-```
-What types do we want to carry the Measurable data structure? EKG offers: Counter (simple incremental counter on integers), Gauge (integer valued), Label (displays strings) and Distribution (aggregates distribution for a double value).
-
-As well the concept of a Group of metrics is offered. This may work with configuration items.
-
-#### Forwarder
-
-#### Stdout
-
-#### Prometheus
 
 ### Configuration
 
@@ -413,8 +367,10 @@ data TraceConfiguration = TraceConfiguration {
 
 The current system has the notion of subtrace. We will drop this concept.
 
-### Multithreaded Tracing  
+### Documentation
 
 ### Frequency Limiting (Eliding Tracers)
 
 ### Cardano Node Tracing
+
+![Cardano Tracing Overview](./trace-and-metric-lifecycle.pdf)

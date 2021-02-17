@@ -4,35 +4,32 @@
 module Cardano.Logging.Types where
 
 import           Control.Tracer
+import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Text (Text)
 import           Katip (LogEnv, Severity, ToObject)
 
-type Context = [Text]
+type Namespace = [Text]
+type Selector  = [Text]
 
 -- | Configurable tracer which carries a context while tracing
 type Trace m a = Tracer m (LoggingContext, Either TraceControl a)
 
 data LoggingContext = LoggingContext {
-    lcContext  :: Context
-  , lcSeverity :: Maybe Severity
-  , lcPrivacy  :: Maybe Privacy
+    lcContext     :: Namespace
+  , lcSeverity    :: Maybe Severity
+  , lcPrivacy     :: Maybe Privacy
+  , lcDetails     :: Maybe DetailLevel
 }
 
-emptyLoggingContext :: LoggingContext
-emptyLoggingContext = LoggingContext [] Nothing Nothing
-
-data LoggingContextKatip = LoggingContextKatip {
-    lk       :: LoggingContext
-  , lkLogEnv :: LogEnv
-}
+data Form = HumanF | MachineF
 
 -- | Formerly known as verbosity
-data DetailLevel =
-      DBrief
-    | DRegular
-    | DDetailed
+data DetailLevel = DBrief | DRegular | DDetailed
     deriving (Show, Eq, Ord, Bounded, Enum)
+
+emptyLoggingContext :: LoggingContext
+emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
 
 data Privacy =
       Confidential -- confidential information - handle with care
@@ -59,7 +56,7 @@ data ConfigOption =
     -- | Severity level (default is WarningF)
     CoSeverity SeverityF
     -- | Detail level (Default is DRegular)
-  | CoDetailLevel DetailLevel
+  | CoDetail DetailLevel
     -- | Privacy level (Default is Public)
   | CoPrivacy Privacy
     -- | Defined in messages per second (Defaul is 10)
@@ -69,7 +66,7 @@ data TraceConfig = TraceConfig {
     tcName :: Text
 
      -- | Options specific to a certain namespace
-  , tcOptions :: Map.Map Context [ConfigOption]
+  , tcOptions :: Map.Map Namespace [ConfigOption]
 
   --  Forwarder:
      -- Can their only be one forwarder? Use one of:
@@ -104,3 +101,8 @@ data TraceControl =
     Reset
   | Config TraceConfig
   | Optimize
+
+data LoggingContextKatip = LoggingContextKatip {
+    lk       :: LoggingContext
+  , lkLogEnv :: LogEnv
+}

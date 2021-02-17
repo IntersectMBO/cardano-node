@@ -23,14 +23,9 @@ import           Cardano.Logging.Types
 traceWith :: Monad m => Trace m a -> a -> m ()
 traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
 
-configureTracers :: Monad m => TraceConfig -> [Trace m a] -> m ()
-configureTracers config tracers = do
-    mapM_ (configureTrace Reset) tracers
-    mapM_ (configureTrace (Config config)) tracers
-    mapM_ (configureTrace Optimize) tracers
-  where
-    configureTrace :: Monad m => TraceControl -> Trace m a -> m ()
-    configureTrace c tr = T.traceWith tr (emptyLoggingContext, Left c)
+-- | Convenience function for naming a message when tracing
+traceNamed :: Monad m => Trace m a -> Text -> a -> m ()
+traceNamed tr n = traceWith (appendName n tr)
 
 --- | Don't process further if the result of the selector function
 ---   is False.
@@ -51,14 +46,13 @@ filterTraceBySeverity :: (Monad m) =>
   -> Trace m a
 filterTraceBySeverity (Just minSeverity) = filterTrace $
     \(c, e) -> case lcSeverity c of
-                        Just s  -> fromEnum s >= fromEnum minSeverity
-                        Nothing -> True
+                  Just s  -> fromEnum s >= fromEnum minSeverity
+                  Nothing -> True
 filterTraceBySeverity Nothing = id
 
-
 -- | Appends a name to the context.
--- E.g. appendName "out" $ appendName "middle" $ appendName "in" tracer
--- give the result: `in.middle.out`.
+-- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
+-- give the result: `general.middle.specific`.
 appendName :: Monad m => Text -> Trace m a -> Trace m a
 appendName name = T.contramap
   (\ (lc,e) -> (lc {lcContext = name : lcContext lc}, e))
@@ -97,10 +91,33 @@ setPrivacy p = T.contramap
                     then (lc,v)
                     else (lc {lcPrivacy = Just p}, v))
 
+-- | Sets severities for the messages in this trace based on the selector function
+withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
+withPrivacy fs = T.contramap $
+    \case
+      (lc, Right e) -> if isJust (lcPrivacy lc)
+                          then (lc, Right e)
+                          else (lc {lcPrivacy = Just (fs e)}, Right e)
+      (lc, Left  c) -> (lc, Left c)
+
+-- | Sets detail level for the messages in this trace
+setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
+setDetails p = T.contramap
+  (\ (lc,v) -> if isJust (lcDetails lc)
+                    then (lc,v)
+                    else (lc {lcDetails = Just p}, v))
+
+-- | Sets severities for the messages in this trace based on the selector function
+withDetails :: Monad m => (a -> DetailLevel) -> Trace m a -> Trace m a
+withDetails fs = T.contramap $
+    \case
+      (lc, Right e) -> if isJust (lcDetails lc)
+                          then (lc, Right e)
+                          else (lc {lcDetails = Just (fs e)}, Right e)
+      (lc, Left  c) -> (lc, Left c)
 
 -- | Folds the cata function with acc over a.
 -- Uses an IORef to store the state
-
 foldTraceM
   :: forall a acc m . MonadIO m
   => (acc -> a -> acc)
@@ -124,13 +141,13 @@ foldTraceM cata initial tr = do
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
-foldTraceM'
+foldMTraceM
   :: forall a acc m . MonadIO m
   => (acc -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
-foldTraceM' cata initial tr = do
+foldMTraceM cata initial tr = do
   ref <- liftIO (newIORef initial)
   let trr = mkTracer ref
   pure (T.arrow trr)
@@ -157,3 +174,13 @@ routingTrace rf rc = T.arrow $ T.emit $
     \case
       (lc, Right x) -> T.traceWith (rf x) (lc, Right x)
       (lc, Left  c) -> T.traceWith rc     (lc, Left  c)
+
+
+configureTracers :: Monad m => TraceConfig -> [Trace m a] -> m ()
+configureTracers config tracers = do
+    mapM_ (configureTrace Reset) tracers
+    mapM_ (configureTrace (Config config)) tracers
+    mapM_ (configureTrace Optimize) tracers
+  where
+    configureTrace :: Monad m => TraceControl -> Trace m a -> m ()
+    configureTrace c tr = T.traceWith tr (emptyLoggingContext, Left c)
