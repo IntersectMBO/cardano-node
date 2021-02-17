@@ -5,8 +5,7 @@
 
 module Cardano.CLI.Shelley.Run.Pretty (prettyTx) where
 
-import           Cardano.Api
-                   (ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraMary, ShelleyBasedEraShelley))
+import           Cardano.Api (ShelleyBasedEra (..))
 import           Cardano.Api.Byron (TxBody (ByronTxBody))
 import           Cardano.Api.Shelley (TxBody (ShelleyTxBody))
 import           Cardano.CLI.Helpers (textShow)
@@ -97,6 +96,8 @@ prettyTx body0 =
           adHash
           mint =
             body
+    ShelleyTxBody ShelleyBasedEraAlonzo _body _aux -> panic "TODO"
+
 
 prettyValidityInterval :: ShelleyMA.ValidityInterval -> JSON.Value
 prettyValidityInterval
