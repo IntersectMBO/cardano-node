@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 
 
 module Examples.Aggregation where
@@ -26,34 +27,33 @@ data BaseStats = BaseStats {
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
 
-calculate :: BaseStats -> Measure -> BaseStats
-calculate BaseStats{..} (MDouble val) =
+deriving instance Generic Measurement
+deriving instance AE.ToJSON Measurement
+deriving instance ToObject Measurement
+
+instance LogItem Measurement where
+  payloadKeys _ _ = AllKeys
+
+instance LogItem BaseStats where
+  payloadKeys _ _ = AllKeys
+
+calculate :: BaseStats -> Measurement -> BaseStats
+calculate BaseStats{..} (DoubleM val) =
    BaseStats  val
               (min bsMin val)
               (max bsMax val)
               (1 + bsCount)
               (bsSum + val)
-
-newtype Measure = MDouble Double
-  deriving (Generic, ToObject, AE.ToJSON, Show)
-
-instance LogItem Measure where
-  payloadKeys _ _ = AllKeys
-
-instance LogItem a => LogItem (Folding a BaseStats) where
-  payloadKeys v (Folding a) = payloadKeys v a
-
-instance LogItem BaseStats where
-  payloadKeys _ _ = AllKeys
+calculate BaseStats{..} _ = error "impossssible"
 
 testAggregation :: IO ()
 testAggregation = do
     simpleTracer  <- stdoutObjectKatipTracer
     tracer <- foldTraceM calculate emptyStats simpleTracer
     configureTracers emptyTraceConfig [tracer]
-    traceWith tracer (MDouble 1.0)
-    traceWith tracer (MDouble 2.0)
-    traceWith tracer (MDouble 0.5)
+    traceWith tracer (DoubleM 1.0)
+    traceWith tracer (DoubleM 2.0)
+    traceWith tracer (DoubleM 0.5)
 
 
 {-}
