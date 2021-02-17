@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -17,6 +19,7 @@ module Cardano.Api.ProtocolParameters (
     -- * The updateable protocol paramaters
     ProtocolParameters(..),
     EpochNo,
+    UTxOCostPerByte(..),
 
     -- * Updates to the protocol paramaters
     ProtocolParametersUpdate(..),
@@ -51,6 +54,7 @@ import           Prelude
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -76,8 +80,9 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Api.Address
-import           Cardano.Api.Hash
+import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -99,7 +104,7 @@ import           Cardano.Api.Value
 --
 -- There are also paramaters fixed in the Genesis file. See 'GenesisParameters'.
 --
-data ProtocolParameters =
+data ProtocolParameters era =
      ProtocolParameters {
 
        -- | Protocol version, major and minor. Updating the major version is
@@ -210,12 +215,50 @@ data ProtocolParameters =
        --
        -- This is the \"tau\" incentives parameter from the design document.
        --
-       protocolParamTreasuryCut :: Rational
+       protocolParamTreasuryCut :: Rational,
+
+       -- | Cost in ada per byte of UTxO storage (instead of protocolParamMinUTxOValue)
+       protocolParamUTxOCostPerByte :: UTxOCostPerByte era
     }
   deriving (Eq, Generic, Show)
 
-instance FromJSON ProtocolParameters where
-  parseJSON = withObject "ProtocolParameters" $ \o -> do
+
+data UTxOCostPerByte era where
+  NoUTxOCostPerByte :: UTxOCostPerByte era
+  UTxOCostPerByte   :: UTxOCostPerByteSupportedInEra era
+                    -> Lovelace -> UTxOCostPerByte era
+
+deriving instance Eq (UTxOCostPerByte era)
+deriving instance Show (UTxOCostPerByte era)
+
+instance FromJSON (UTxOCostPerByte era ) where
+  parseJSON = error "TODO"
+
+data UTxOCostPerByteSupportedInEra era where
+  UTxOCostPerByteSupportedInAlonzo :: UTxOCostPerByteSupportedInEra era
+
+deriving instance Eq (UTxOCostPerByteSupportedInEra era)
+deriving instance Show (UTxOCostPerByteSupportedInEra era)
+
+--utxoCostPerByteSupportedInEra :: CardanoEra era
+--                              -> Maybe (UTxOCostPerByteSupportedInEra era)
+--utxoCostPerByteSupportedInEra ByronEra   = Nothing
+--utxoCostPerByteSupportedInEra ShelleyEra = Nothing
+--utxoCostPerByteSupportedInEra AllegraEra = Nothing
+--utxoCostPerByteSupportedInEra MaryEra    = Nothing
+--utxoCostPerByteSupportedInEra AlonzoEra  = Just UTxOCostPerByteSupportedInAlonzo
+
+
+
+instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
+  parseJSON = parseProtocolParameters cardanoEra
+
+
+
+parseProtocolParameters :: CardanoEra era -> Aeson.Value -> Aeson.Parser (ProtocolParameters era)
+parseProtocolParameters ByronEra = \_v -> fail "Protocol parameters are not supported in the Byron era."
+parseProtocolParameters ShelleyEra =
+         withObject "ProtocolParameters" $ \o -> do
                 v <- o .: "protocolVersion"
                 ProtocolParameters
                         <$> ((,) <$> v .: "major" <*> v .: "minor")
@@ -235,8 +278,75 @@ instance FromJSON ProtocolParameters where
                         <*> o .: "poolPledgeInfluence"
                         <*> o .: "monetaryExpansion"
                         <*> o .: "treasuryCut"
+                        <*> return NoUTxOCostPerByte
+parseProtocolParameters AllegraEra =
+         withObject "ProtocolParameters" $ \o -> do
+                v <- o .: "protocolVersion"
+                ProtocolParameters
+                        <$> ((,) <$> v .: "major" <*> v .: "minor")
+                        <*> o .: "decentralization"
+                        <*> o .: "extraPraosEntropy"
+                        <*> o .: "maxBlockHeaderSize"
+                        <*> o .: "maxBlockBodySize"
+                        <*> o .: "maxTxSize"
+                        <*> o .: "txFeeFixed"
+                        <*> o .: "txFeePerByte"
+                        <*> o .: "minUTxOValue"
+                        <*> o .: "stakeAddressDeposit"
+                        <*> o .: "stakePoolDeposit"
+                        <*> o .: "minPoolCost"
+                        <*> o .: "poolRetireMaxEpoch"
+                        <*> o .: "stakePoolTargetNum"
+                        <*> o .: "poolPledgeInfluence"
+                        <*> o .: "monetaryExpansion"
+                        <*> o .: "treasuryCut"
+                        <*> return NoUTxOCostPerByte
+parseProtocolParameters MaryEra =
+         withObject "ProtocolParameters" $ \o -> do
+                v <- o .: "protocolVersion"
+                ProtocolParameters
+                        <$> ((,) <$> v .: "major" <*> v .: "minor")
+                        <*> o .: "decentralization"
+                        <*> o .: "extraPraosEntropy"
+                        <*> o .: "maxBlockHeaderSize"
+                        <*> o .: "maxBlockBodySize"
+                        <*> o .: "maxTxSize"
+                        <*> o .: "txFeeFixed"
+                        <*> o .: "txFeePerByte"
+                        <*> o .: "minUTxOValue"
+                        <*> o .: "stakeAddressDeposit"
+                        <*> o .: "stakePoolDeposit"
+                        <*> o .: "minPoolCost"
+                        <*> o .: "poolRetireMaxEpoch"
+                        <*> o .: "stakePoolTargetNum"
+                        <*> o .: "poolPledgeInfluence"
+                        <*> o .: "monetaryExpansion"
+                        <*> o .: "treasuryCut"
+                        <*> return NoUTxOCostPerByte
+parseProtocolParameters AlonzoEra =
+         withObject "ProtocolParameters" $ \o -> do
+                v <- o .: "protocolVersion"
+                ProtocolParameters
+                        <$> ((,) <$> v .: "major" <*> v .: "minor")
+                        <*> o .: "decentralization"
+                        <*> o .: "extraPraosEntropy"
+                        <*> o .: "maxBlockHeaderSize"
+                        <*> o .: "maxBlockBodySize"
+                        <*> o .: "maxTxSize"
+                        <*> o .: "txFeeFixed"
+                        <*> o .: "txFeePerByte"
+                        <*> o .: "minUTxOValue" --TODO: Needs to be era dependent
+                        <*> o .: "stakeAddressDeposit"
+                        <*> o .: "stakePoolDeposit"
+                        <*> o .: "minPoolCost"
+                        <*> o .: "poolRetireMaxEpoch"
+                        <*> o .: "stakePoolTargetNum"
+                        <*> o .: "poolPledgeInfluence"
+                        <*> o .: "monetaryExpansion"
+                        <*> o .: "treasuryCut"
+                        <*> o .: "utxoCostPerByte"
 
-instance ToJSON ProtocolParameters where
+instance ToJSON (ProtocolParameters era) where
   toJSON pp = object [ "extraPraosEntropy" .= protocolParamExtraPraosEntropy pp
                      , "stakePoolTargetNum" .= protocolParamStakePoolTargetNum pp
                      , "poolRetireMaxEpoch" .= protocolParamPoolRetireMaxEpoch pp
@@ -496,7 +606,7 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 -- Genesis paramaters
 --
 
-data GenesisParameters =
+data GenesisParameters era =
      GenesisParameters {
 
        -- | The reference time the system started. The time of slot zero.
@@ -555,7 +665,7 @@ data GenesisParameters =
 
        -- | The initial values of the updateable 'ProtocolParameters'.
        --
-       protocolInitialUpdateableProtocolParameters :: ProtocolParameters
+       protocolInitialUpdateableProtocolParameters :: ProtocolParameters era
      }
 
 
@@ -696,52 +806,111 @@ fromShelleyPParamsUpdate
     }
 
 
-fromShelleyPParams :: Shelley.PParams ledgerera
-                   -> ProtocolParameters
 fromShelleyPParams
-    Shelley.PParams {
-      Shelley._minfeeA
-    , Shelley._minfeeB
-    , Shelley._maxBBSize
-    , Shelley._maxTxSize
-    , Shelley._maxBHSize
-    , Shelley._keyDeposit
-    , Shelley._poolDeposit
-    , Shelley._eMax
-    , Shelley._nOpt
-    , Shelley._a0
-    , Shelley._rho
-    , Shelley._tau
-    , Shelley._d
-    , Shelley._extraEntropy
-    , Shelley._protocolVersion
-    , Shelley._minUTxOValue
-    , Shelley._minPoolCost
-    } =
-    ProtocolParameters {
-      protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
-                                           _protocolVersion
-    , protocolParamDecentralization    = Shelley.unitIntervalToRational _d
-    , protocolParamExtraPraosEntropy   = fromPraosNonce _extraEntropy
-    , protocolParamMaxBlockHeaderSize  = _maxBHSize
-    , protocolParamMaxBlockBodySize    = _maxBBSize
-    , protocolParamMaxTxSize           = _maxTxSize
-    , protocolParamTxFeeFixed          = _minfeeB
-    , protocolParamTxFeePerByte        = _minfeeA
-    , protocolParamMinUTxOValue        = fromShelleyLovelace _minUTxOValue
-    , protocolParamStakeAddressDeposit = fromShelleyLovelace _keyDeposit
-    , protocolParamStakePoolDeposit    = fromShelleyLovelace _poolDeposit
-    , protocolParamMinPoolCost         = fromShelleyLovelace _minPoolCost
-    , protocolParamPoolRetireMaxEpoch  = _eMax
-    , protocolParamStakePoolTargetNum  = _nOpt
-    , protocolParamPoolPledgeInfluence = _a0
-    , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational _rho
-    , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
-    }
+  :: ShelleyBasedEra era
+  -> Shelley.PParams (ShelleyLedgerEra era)
+  -> ProtocolParameters era
+fromShelleyPParams shelleyBasedEra' pparams =
+  case shelleyBasedEra' of
+    ShelleyBasedEraShelley ->
+      ProtocolParameters
+        { protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
+                                               $ Shelley._protocolVersion pparams
+        , protocolParamDecentralization    = Shelley.unitIntervalToRational $ Shelley._d pparams
+        , protocolParamExtraPraosEntropy   = fromPraosNonce $ Shelley._extraEntropy pparams
+        , protocolParamMaxBlockHeaderSize  = Shelley._maxBHSize pparams
+        , protocolParamMaxBlockBodySize    = Shelley._maxBBSize pparams
+        , protocolParamMaxTxSize           = Shelley._maxTxSize pparams
+        , protocolParamTxFeeFixed          = Shelley._minfeeB pparams
+        , protocolParamTxFeePerByte        = Shelley._minfeeA pparams
+        , protocolParamMinUTxOValue        = fromShelleyLovelace $ Shelley._minUTxOValue pparams
+        , protocolParamStakeAddressDeposit = fromShelleyLovelace $ Shelley._keyDeposit pparams
+        , protocolParamStakePoolDeposit    = fromShelleyLovelace $ Shelley._poolDeposit pparams
+        , protocolParamMinPoolCost         = fromShelleyLovelace $ Shelley._minPoolCost pparams
+        , protocolParamPoolRetireMaxEpoch  = Shelley._eMax pparams
+        , protocolParamStakePoolTargetNum  = Shelley._nOpt pparams
+        , protocolParamPoolPledgeInfluence = Shelley._a0 pparams
+        , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational $ Shelley._rho pparams
+        , protocolParamTreasuryCut         = Shelley.unitIntervalToRational $ Shelley._tau pparams
+        , protocolParamUTxOCostPerByte     = NoUTxOCostPerByte
+        }
+
+    ShelleyBasedEraAllegra ->
+      ProtocolParameters
+        { protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
+                                               $ Shelley._protocolVersion pparams
+        , protocolParamDecentralization    = Shelley.unitIntervalToRational $ Shelley._d pparams
+        , protocolParamExtraPraosEntropy   = fromPraosNonce $ Shelley._extraEntropy pparams
+        , protocolParamMaxBlockHeaderSize  = Shelley._maxBHSize pparams
+        , protocolParamMaxBlockBodySize    = Shelley._maxBBSize pparams
+        , protocolParamMaxTxSize           = Shelley._maxTxSize pparams
+        , protocolParamTxFeeFixed          = Shelley._minfeeB pparams
+        , protocolParamTxFeePerByte        = Shelley._minfeeA pparams
+        , protocolParamMinUTxOValue        = fromShelleyLovelace $ Shelley._minUTxOValue pparams
+        , protocolParamStakeAddressDeposit = fromShelleyLovelace $ Shelley._keyDeposit pparams
+        , protocolParamStakePoolDeposit    = fromShelleyLovelace $ Shelley._poolDeposit pparams
+        , protocolParamMinPoolCost         = fromShelleyLovelace $ Shelley._minPoolCost pparams
+        , protocolParamPoolRetireMaxEpoch  = Shelley._eMax pparams
+        , protocolParamStakePoolTargetNum  = Shelley._nOpt pparams
+        , protocolParamPoolPledgeInfluence = Shelley._a0 pparams
+        , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational $ Shelley._rho pparams
+        , protocolParamTreasuryCut         = Shelley.unitIntervalToRational $ Shelley._tau pparams
+        , protocolParamUTxOCostPerByte     = NoUTxOCostPerByte
+        }
+    ShelleyBasedEraMary ->
+      ProtocolParameters
+        { protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
+                                               $ Shelley._protocolVersion pparams
+        , protocolParamDecentralization    = Shelley.unitIntervalToRational $ Shelley._d pparams
+        , protocolParamExtraPraosEntropy   = fromPraosNonce $ Shelley._extraEntropy pparams
+        , protocolParamMaxBlockHeaderSize  = Shelley._maxBHSize pparams
+        , protocolParamMaxBlockBodySize    = Shelley._maxBBSize pparams
+        , protocolParamMaxTxSize           = Shelley._maxTxSize pparams
+        , protocolParamTxFeeFixed          = Shelley._minfeeB pparams
+        , protocolParamTxFeePerByte        = Shelley._minfeeA pparams
+        , protocolParamMinUTxOValue        = fromShelleyLovelace $ Shelley._minUTxOValue pparams
+        , protocolParamStakeAddressDeposit = fromShelleyLovelace $ Shelley._keyDeposit pparams
+        , protocolParamStakePoolDeposit    = fromShelleyLovelace $ Shelley._poolDeposit pparams
+        , protocolParamMinPoolCost         = fromShelleyLovelace $ Shelley._minPoolCost pparams
+        , protocolParamPoolRetireMaxEpoch  = Shelley._eMax pparams
+        , protocolParamStakePoolTargetNum  = Shelley._nOpt pparams
+        , protocolParamPoolPledgeInfluence = Shelley._a0 pparams
+        , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational $ Shelley._rho pparams
+        , protocolParamTreasuryCut         = Shelley.unitIntervalToRational $ Shelley._tau pparams
+        , protocolParamUTxOCostPerByte     = NoUTxOCostPerByte
+        }
+    ShelleyBasedEraAlonzo ->
+            ProtocolParameters
+        { protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
+                                               $ Shelley._protocolVersion pparams
+        , protocolParamDecentralization    = Shelley.unitIntervalToRational $ Shelley._d pparams
+        , protocolParamExtraPraosEntropy   = fromPraosNonce $ Shelley._extraEntropy pparams
+        , protocolParamMaxBlockHeaderSize  = Shelley._maxBHSize pparams
+        , protocolParamMaxBlockBodySize    = Shelley._maxBBSize pparams
+        , protocolParamMaxTxSize           = Shelley._maxTxSize pparams
+        , protocolParamTxFeeFixed          = Shelley._minfeeB pparams
+        , protocolParamTxFeePerByte        = Shelley._minfeeA pparams
+        , protocolParamMinUTxOValue        = fromShelleyLovelace $ Shelley._minUTxOValue pparams
+        , protocolParamStakeAddressDeposit = fromShelleyLovelace $ Shelley._keyDeposit pparams
+        , protocolParamStakePoolDeposit    = fromShelleyLovelace $ Shelley._poolDeposit pparams
+        , protocolParamMinPoolCost         = fromShelleyLovelace $ Shelley._minPoolCost pparams
+        , protocolParamPoolRetireMaxEpoch  = Shelley._eMax pparams
+        , protocolParamStakePoolTargetNum  = Shelley._nOpt pparams
+        , protocolParamPoolPledgeInfluence = Shelley._a0 pparams
+        , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational $ Shelley._rho pparams
+        , protocolParamTreasuryCut         = Shelley.unitIntervalToRational $ Shelley._tau pparams
+        , protocolParamUTxOCostPerByte     = UTxOCostPerByte UTxOCostPerByteSupportedInAlonzo 0
+                                             -- TODO: Need updated ledger specs dep
+        }
 
 
-fromShelleyGenesis :: Shelley.ShelleyGenesis era -> GenesisParameters
+
 fromShelleyGenesis
+  :: ShelleyBasedEra era
+  -> Shelley.ShelleyGenesis (ShelleyLedgerEra era)
+  -> GenesisParameters era
+fromShelleyGenesis
+    sbe
     Shelley.ShelleyGenesis {
       Shelley.sgSystemStart
     , Shelley.sgNetworkMagic
@@ -772,7 +941,7 @@ fromShelleyGenesis
     , protocolParamUpdateQuorum           = fromIntegral sgUpdateQuorum
     , protocolParamMaxLovelaceSupply      = Lovelace
                                               (fromIntegral sgMaxLovelaceSupply)
-    , protocolInitialUpdateableProtocolParameters = fromShelleyPParams
+    , protocolInitialUpdateableProtocolParameters = fromShelleyPParams sbe
                                                       sgProtocolParams
     }
 
