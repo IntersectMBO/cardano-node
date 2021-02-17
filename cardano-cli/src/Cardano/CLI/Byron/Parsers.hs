@@ -43,20 +43,20 @@ import           Cardano.Binary (Annotated (..))
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Crypto.Hashing (hashRaw)
 import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..), ProtocolMagic,
-                     ProtocolMagicId (..))
+                   ProtocolMagicId (..))
 
 import           Cardano.Chain.Common (BlockCount (..), TxFeePolicy (..), TxSizeLinear (..),
-                     decodeAddressBase58, rationalToLovelacePortion)
+                   decodeAddressBase58, rationalToLovelacePortion)
 import qualified Cardano.Chain.Common as Byron
 import           Cardano.Chain.Genesis (FakeAvvmOptions (..), TestnetBalanceOptions (..))
 import           Cardano.Chain.Slotting (EpochNumber (..), SlotNumber (..))
 import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..), NumSoftwareVersion,
-                     ProtocolVersion (..), SoftforkRule (..), SoftwareVersion (..), SystemTag (..),
-                     checkApplicationName, checkSystemTag)
+                   ProtocolVersion (..), SoftforkRule (..), SoftwareVersion (..), SystemTag (..),
+                   checkApplicationName, checkSystemTag)
 
 import           Cardano.Api hiding (UpdateProposal)
 import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..), Lovelace (..),
-                     toByronLovelace)
+                   toByronLovelace)
 
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
@@ -260,7 +260,7 @@ parseTestnetBalanceOptions =
           "delegate-share"
           "Portion of stake owned by all delegates together."
 
-parseTxIn :: Parser TxIn
+parseTxIn :: Parser (TxIn ByronEra)
 parseTxIn =
   option
   (readerFromAttoParser parseTxInAtto)
@@ -268,10 +268,12 @@ parseTxIn =
     <> metavar "(TXID,INDEX)"
     <> help "Transaction input is a pair of an UTxO TxId and a zero-based output index."
 
-parseTxInAtto :: Atto.Parser TxIn
+parseTxInAtto :: Atto.Parser (TxIn ByronEra)
 parseTxInAtto =
-  TxIn <$> (Atto.char '(' *> parseTxIdAtto <* Atto.char ',')
-       <*> (parseTxIxAtto <* Atto.char ')')
+  TxIn
+    <$> (Atto.char '(' *> parseTxIdAtto <* Atto.char ',')
+    <*> (parseTxIxAtto <* Atto.char ')')
+    <*> return NotPlutusInput
 
 
 parseTxIdAtto :: Atto.Parser TxId

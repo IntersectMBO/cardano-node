@@ -12,11 +12,11 @@ module Cardano.CLI.Byron.Commands
 import           Cardano.Prelude
 
 import           Cardano.Chain.Update (InstallerHash (..), ProtocolVersion (..),
-                     SoftwareVersion (..), SystemTag (..))
+                   SoftwareVersion (..), SystemTag (..))
 
 import           Cardano.Api (NetworkId, TxIn)
 import           Cardano.Api.Byron (Address (..), ByronAddr, ByronEra,
-                     ByronProtocolParametersUpdate (..), TxOut)
+                   ByronProtocolParametersUpdate (..), TxOut)
 
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
@@ -91,7 +91,7 @@ data ByronCommand =
         -- ^ Filepath of the newly created transaction.
         SigningKeyFile
         -- ^ Signing key of Tx underwriter.
-        [TxIn]
+        [TxIn ByronEra]
         -- ^ Inputs available for spending to the Tx underwriter's key.
         [TxOut ByronEra]
         -- ^ Genesis UTxO output Address.
