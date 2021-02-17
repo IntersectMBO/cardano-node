@@ -26,7 +26,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
-import           Cardano.Api.Shelley
+import           Cardano.Api.Shelley hiding (PlutusScriptPurpose (..))
+import qualified Cardano.Api.Shelley as Api
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 
 --TODO: do this nicely via the API too:
@@ -74,12 +75,14 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxSubmitErrorAllegra !(ApplyTxErr (ShelleyBlock StandardAllegra))
   | ShelleyTxCmdTxSubmitErrorMary !(ApplyTxErr (ShelleyBlock StandardMary))
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
-  | ShelleyTxCmdTxFeatureMismatch AnyCardanoEra TxFeature
-  | ShelleyTxCmdTxBodyError SomeTxBodyError
-  | ShelleyTxCmdNotImplemented Text
-  | ShelleyTxCmdWitnessEraMismatch AnyCardanoEra AnyCardanoEra WitnessFile
+  | ShelleyTxCmdTxFeatureMismatch !AnyCardanoEra !TxFeature
+  | ShelleyTxCmdTxBodyError !SomeTxBodyError
+  | ShelleyTxCmdNotImplemented !Text
+  | ShelleyTxCmdWitnessEraMismatch !AnyCardanoEra !AnyCardanoEra !WitnessFile
   | ShelleyTxCmdScriptLanguageNotSupportedInEra AnyScriptLanguage AnyCardanoEra
   | ShelleyTxCmdGenesisCmdError !ShelleyGenesisCmdError
+  | ShelleyTxCmdPParamsNotSpecifiedPlutusScript
+  | ShelleyTxCmdPlutusScriptMissingFees ScriptFile
   deriving Show
 
 data SomeTxBodyError where
@@ -161,12 +164,17 @@ renderShelleyTxCmdError err =
        "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
        ") is not supported in the " <> renderMode mode <> " consensus mode."
     ShelleyTxCmdGenesisCmdError e -> renderShelleyGenesisCmdError e
+    ShelleyTxCmdPParamsNotSpecifiedPlutusScript ->
+      "The protocol parameters file was not specified with the Plutus script(s)."
+    ShelleyTxCmdPlutusScriptMissingFees (ScriptFile scriptFp) ->
+      "No script fees were specified for the Plutus script at: " <> Text.pack scriptFp
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
 renderEra (AnyCardanoEra ShelleyEra) = "Shelley"
 renderEra (AnyCardanoEra AllegraEra) = "Allegra"
 renderEra (AnyCardanoEra MaryEra)    = "Mary"
+renderEra (AnyCardanoEra AlonzoEra)  = "Alonzo"
 
 renderMode :: AnyConsensusMode -> Text
 renderMode (AnyConsensusMode ByronMode) = "ByronMode"
@@ -188,16 +196,18 @@ renderFeature TxFeatureMintValue            = "Asset minting"
 renderFeature TxFeatureMultiAssetOutputs    = "Multi-Asset outputs"
 renderFeature TxFeatureScriptWitnesses      = "Script witnesses"
 renderFeature TxFeatureShelleyKeys          = "Shelley keys"
+renderFeature TxFeatureWitnessPPData        = "WitnessPPData"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
     TxBuildRaw era txins txouts mValue mLowBound mUpperBound
-               fee certs wdrls metadataSchema scriptFiles
-               metadataFiles mUpProp out ->
+               fee certs wdrls metadataSchema scripts
+               mPparamsFile metadataFiles mUpProp out ->
       runTxBuildRaw era txins txouts mLowBound mUpperBound
                     fee mValue certs wdrls metadataSchema
-                    scriptFiles metadataFiles mUpProp out
+                    scripts mPparamsFile metadataFiles
+                    mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
@@ -220,7 +230,7 @@ runTransactionCmd cmd =
 
 runTxBuildRaw
   :: AnyCardanoEra
-  -> [TxIn]
+  -> [TxInAnyEra]
   -> [TxOutAnyEra]
   -> Maybe SlotNo
   -- ^ Tx lower bound
@@ -233,7 +243,8 @@ runTxBuildRaw
   -> [CertificateFile]
   -> [(StakeAddress, Lovelace)]
   -> TxMetadataJsonSchema
-  -> [ScriptFile]
+  -> [ScriptBundle]
+  -> Maybe ProtocolParamsFile
   -> [MetadataFile]
   -> Maybe UpdateProposalFile
   -> TxBodyFile
@@ -241,23 +252,29 @@ runTxBuildRaw
 runTxBuildRaw (AnyCardanoEra era) txins txouts mLowerBound
               mUpperBound mFee mValue
               certFiles withdrawals
-              metadataSchema scriptFiles
-              metadataFiles mUpdatePropFile
+              metadataSchema scripts
+              mParamsFile metadataFiles mUpdatePropFile
               (TxBodyFile fpath) = do
+
+    validatedPlutusFees <- validatePlutusFees era scripts
+
+    validatedTxIns <- validateTxIns era txins
 
     txBodyContent <-
       TxBodyContent
-        <$> validateTxIns  era txins
+        <$> return (validatedTxIns ++ validatedPlutusFees)
         <*> validateTxOuts era txouts
         <*> validateTxFee  era mFee
         <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
                  <*> validateTxValidityUpperBound era mUpperBound)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
-        <*> validateTxAuxScripts     era scriptFiles
+        <*> validateTxAuxScripts     era (map scriptBundleFile scripts)
         <*> validateTxWithdrawals    era withdrawals
-        <*> validateTxCertificates   era certFiles
+        <*> validateTxCertificates era certFiles
         <*> validateTxUpdateProposal era mUpdatePropFile
         <*> validateTxMintValue      era mValue
+        <*> validateTxExecutionUnits era scripts
+        <*> validateTxWitnessPPData era mParamsFile scripts
 
     txBody <-
       firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError) . hoistEither $
@@ -265,7 +282,6 @@ runTxBuildRaw (AnyCardanoEra era) txins txouts mLowerBound
 
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
-
 
 -- ----------------------------------------------------------------------------
 -- Transaction body validation and conversion
@@ -288,6 +304,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureMultiAssetOutputs
                | TxFeatureScriptWitnesses
                | TxFeatureShelleyKeys
+               | TxFeatureWitnessPPData
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -296,10 +313,33 @@ txFeatureMismatch :: CardanoEra era
 txFeatureMismatch era feature =
     left (ShelleyTxCmdTxFeatureMismatch (anyCardanoEra era) feature)
 
-validateTxIns :: CardanoEra era
-              -> [TxIn]
-              -> ExceptT ShelleyTxCmdError IO [TxIn]
-validateTxIns _ = return -- no validation or era-checking needed
+validatePlutusFees :: forall era.
+                      CardanoEra era
+                   -> [ScriptBundle]
+                   -> ExceptT ShelleyTxCmdError IO [TxIn era]
+validatePlutusFees era scripts = concat <$> mapM plutusFees scripts
+ where
+  plutusFees :: ScriptBundle
+             -> ExceptT ShelleyTxCmdError IO [TxIn era]
+  plutusFees (ScriptBundle _ mReq) =
+    case mReq of
+      Just req -> validateTxIns era $ plutusScriptTxIns req
+      Nothing -> return []
+
+validateTxIns :: forall era.
+                 CardanoEra era
+              -> [TxInAnyEra]
+              -> ExceptT ShelleyTxCmdError IO [TxIn era]
+validateTxIns era = mapM toTxIn
+  where
+    toTxIn :: TxInAnyEra -> ExceptT ShelleyTxCmdError IO (TxIn era)
+    toTxIn (TxInAnyEra txId xId tag) =
+      case plutusFeesSupportedInEra era of
+        Left _plutusNotSupported -> return $ TxIn txId xId NotPlutusInput
+        Right plutusInAlonzo ->
+          case tag of
+            IsPlutusFee -> return . TxIn txId xId $ PlutusInput plutusInAlonzo
+            IsNotPlutusFee -> return $ TxIn txId xId NotPlutusInput
 
 validateTxOuts :: forall era.
                   CardanoEra era
@@ -309,8 +349,9 @@ validateTxOuts era = mapM toTxOutInAnyEra
   where
     toTxOutInAnyEra :: TxOutAnyEra
                     -> ExceptT ShelleyTxCmdError IO (TxOut era)
-    toTxOutInAnyEra (TxOutAnyEra addr val) = TxOut <$> toAddressInAnyEra addr
-                                                   <*> toTxOutValueInAnyEra val
+    toTxOutInAnyEra (TxOutAnyEra addr val) =
+      TxOut <$> toAddressInAnyEra addr
+            <*> toTxOutValueInAnyEra val
 
     toAddressInAnyEra :: AddressAny -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
     toAddressInAnyEra addrAny =
@@ -404,6 +445,14 @@ validateTxAuxScripts era files =
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
       return (TxAuxScripts AuxScriptsInMaryEra scripts)
+    Just AuxScriptsInAlonzoEra -> do
+      scripts <- sequence
+        [ do script <- firstExceptT ShelleyTxCmdReadJsonFileError $
+                         readFileScriptInAnyLang file
+             validateScriptSupportedInEra era script
+        | ScriptFile file <- files ]
+      return (TxAuxScripts AuxScriptsInAlonzoEra scripts)
+
 
 validateTxWithdrawals :: CardanoEra era
                       -> [(StakeAddress, Lovelace)]
@@ -453,6 +502,89 @@ validateTxMintValue era (Just v) =
        Left _ -> txFeatureMismatch era TxFeatureMintValue
        Right supported -> return (TxMintValue supported v)
 
+
+validateTxExecutionUnits :: CardanoEra era
+                         -> [ScriptBundle]
+                         -> ExceptT ShelleyTxCmdError IO (TxExecutionUnits era)
+validateTxExecutionUnits era scripts =
+  case executionUnitsSupportedInEra era of
+    Just supported -> do
+      mExecUnits <- mapM getExecutionUnits scripts
+      let ExecutionUnits memory steps = mconcat $ catMaybes mExecUnits
+      return $ TxExecutionUnits supported memory steps
+    Nothing -> return TxExecutionUnitsNone
+ where
+  getExecutionUnits :: ScriptBundle
+                    -> ExceptT ShelleyTxCmdError IO (Maybe ExecutionUnits)
+  getExecutionUnits (ScriptBundle _ mReq) =
+    case mReq of
+      Just req -> return . Just $ plutusScriptExecutionUnits req
+      Nothing -> return Nothing
+
+validateTxWitnessPPData :: forall era. CardanoEra era
+                        -> Maybe ProtocolParamsFile
+                        -> [ScriptBundle]
+                        -> ExceptT ShelleyTxCmdError IO (TxWitnessPPData era)
+validateTxWitnessPPData _ _ [] = return TxWitnessPPDataNone
+validateTxWitnessPPData era mPParams scripts =
+  case filter isPlutusScript scripts of
+    [] -> return TxWitnessPPDataNone
+    plutusScripts -> case witnessPPDataSupportedInEra era of
+                       Just _supported ->
+                           case mPParams of
+                             Nothing -> left ShelleyTxCmdPParamsNotSpecifiedPlutusScript
+                             Just pParamsFile ->
+                               case cardanoEraStyle era of
+                                 LegacyByronEra -> txFeatureMismatch era TxFeatureWitnessPPData
+                                 ShelleyBasedEra _ -> do
+                                   pparams <- readProtocolParameters pParamsFile
+                                   toTxWitnessPPData pparams plutusScripts
+                       Nothing -> return TxWitnessPPDataNone
+ where
+   isPlutusScript :: ScriptBundle -> Bool
+   isPlutusScript (ScriptBundle _ (Just _)) = True
+   isPlutusScript _ = False
+
+   getPlutusScriptTypes :: [ScriptBundle] -> [PlutusScriptType]
+   getPlutusScriptTypes [] = []
+   getPlutusScriptTypes (ScriptBundle _ (Just req) : rest) = plutusScriptType req : getPlutusScriptTypes rest
+   getPlutusScriptTypes (ScriptBundle _ Nothing : rest) = getPlutusScriptTypes rest
+
+   toPlutusScriptPurpose :: PlutusScriptType
+                         -> ExceptT ShelleyTxCmdError IO (PlutusScriptPurpose era)
+   toPlutusScriptPurpose (Spending txin) = do
+     -- TODO: This can be pure
+     res <- validateTxIns era [txin]
+     case res of
+       [x] -> return $ Api.Spending x
+       _ -> panic "Impossible"
+   toPlutusScriptPurpose (Minting policyId) = return $ Api.Minting policyId
+   toPlutusScriptPurpose (Rewarding rewardAcct) = return $ Api.Rewarding rewardAcct
+   toPlutusScriptPurpose (Certifying certificate) = do
+    --TODO: This can be pure
+     res <- validateTxCertificates era [CertificateFile certificate]
+     case res of
+       TxCertificates _ [x] -> return $ Api.Certifying x
+       _ -> panic "impossible"
+
+   getScriptDatums :: [ScriptBundle] -> [Maybe ScriptDatum]
+   getScriptDatums [] = []
+   getScriptDatums (ScriptBundle _ (Just req) : rest) =
+     toScriptDatum (plutusScriptDatum req) : getScriptDatums rest
+   getScriptDatums (ScriptBundle _ Nothing : rest) =
+     getScriptDatums rest
+
+   toScriptDatum :: Maybe Datum -> Maybe ScriptDatum
+   toScriptDatum (Just (Datum _)) = Just (ScriptDatum ())
+   toScriptDatum Nothing = Nothing
+
+   toTxWitnessPPData :: ProtocolParameters era
+                     -> [ScriptBundle]
+                     -> ExceptT ShelleyTxCmdError IO (TxWitnessPPData era)
+   toTxWitnessPPData pParams scripts' = do
+     sPurposes <- mapM toPlutusScriptPurpose (getPlutusScriptTypes scripts')
+     let sDatums = getScriptDatums scripts'
+     return $ TxWitnessPPData pParams $ zip sPurposes sDatums
 
 -- ----------------------------------------------------------------------------
 -- Transaction signing
@@ -543,29 +675,46 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
 
-    InAnyShelleyBasedEra _era txbody <-
+    InAnyShelleyBasedEra sbe txbody <-
           --TODO: in principle we should be able to support Byron era txs too
           onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions"
       =<< readFileTxBody txbodyFile
+    case protocolParamsSourceSpec of
+      ParamsFromGenesis genFile -> do pparams <- getProtocolParametersFromGen genFile
+                                      let tx = makeSignedTransaction [] txbody
+                                          Lovelace fee = estimateTransactionFee
+                                                               (fromMaybe Mainnet nw)
+                                                               (protocolParamTxFeeFixed pparams)
+                                                               (protocolParamTxFeePerByte pparams)
+                                                               tx
+                                                               nInputs nOutputs
+                                                               nByronKeyWitnesses nShelleyKeyWitnesses
 
-    pparams <-
-      case protocolParamsSourceSpec of
-        ParamsFromGenesis (GenesisFile f) ->
-          fromShelleyPParams . sgProtocolParams <$>
-            firstExceptT ShelleyTxCmdGenesisCmdError
-              (readShelleyGenesis f identity)
-        ParamsFromFile f -> readProtocolParameters f
+                                      liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+      ParamsFromFile pParamFile -> do pparams <- getProtocolParametersFromFile sbe pParamFile
+                                      let tx = makeSignedTransaction [] txbody
+                                          Lovelace fee = estimateTransactionFee
+                                                               (fromMaybe Mainnet nw)
+                                                               (protocolParamTxFeeFixed pparams)
+                                                               (protocolParamTxFeePerByte pparams)
+                                                               tx
+                                                               nInputs nOutputs
+                                                               nByronKeyWitnesses nShelleyKeyWitnesses
 
-    let tx = makeSignedTransaction [] txbody
-        Lovelace fee = estimateTransactionFee
-                             (fromMaybe Mainnet nw)
-                             (protocolParamTxFeeFixed pparams)
-                             (protocolParamTxFeePerByte pparams)
-                             tx
-                             nInputs nOutputs
-                             nByronKeyWitnesses nShelleyKeyWitnesses
+                                      liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+ where
+  getProtocolParametersFromGen :: GenesisFile
+                               -> ExceptT ShelleyTxCmdError IO (ProtocolParameters ShelleyEra)
+  getProtocolParametersFromGen (GenesisFile f) =
+    fromShelleyPParams ShelleyBasedEraShelley . sgProtocolParams
+      <$> firstExceptT ShelleyTxCmdGenesisCmdError
+            (readShelleyGenesis f identity)
 
-    liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+  getProtocolParametersFromFile :: IsShelleyBasedEra era
+                                => ShelleyBasedEra era
+                                -> ProtocolParamsFile
+                                -> ExceptT ShelleyTxCmdError IO (ProtocolParameters era)
+  getProtocolParametersFromFile _ fp = readProtocolParameters fp
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
@@ -574,8 +723,9 @@ runTxCreatePolicyId (ScriptFile sFile) = do
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
-readProtocolParameters :: ProtocolParamsFile
-                       -> ExceptT ShelleyTxCmdError IO ProtocolParameters
+readProtocolParameters :: IsShelleyBasedEra era
+                       => ProtocolParamsFile
+                       -> ExceptT ShelleyTxCmdError IO (ProtocolParameters era)
 readProtocolParameters (ProtocolParamsFile fpath) = do
   pparams <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
