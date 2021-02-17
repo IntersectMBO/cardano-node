@@ -112,7 +112,9 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcTestAllegraHardForkAtEpoch,
                              npcTestAllegraHardForkAtVersion,
                              npcTestMaryHardForkAtEpoch,
-                             npcTestMaryHardForkAtVersion
+                             npcTestMaryHardForkAtVersion,
+                             npcTestAlonzoHardForkAtEpoch,
+                             npcTestAlonzoHardForkAtVersion
                            }
                            files = do
     byronGenesis <-
@@ -193,6 +195,14 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
           maryProtVer =
             ProtVer 4 0
         }
+        Consensus.ProtocolParamsAlonzo {
+          -- This is /not/ the Mary protocol version. It is the protocol
+          -- version that this node will declare that it understands, when it
+          -- is in the Mary era. Since Mary is currently the last known
+          -- protocol version then this is also the Mary protocol version.
+          alonzoProtVer =
+            ProtVer 4 0
+        }
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
         -- Byron to Shelley hard fork parameters
@@ -234,6 +244,14 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
             case npcTestMaryHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 4 fromIntegral npcTestMaryHardForkAtVersion)
+               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+        }
+        -- Mary to Alonzo hard fork parameters
+        Consensus.ProtocolParamsTransition {
+          transitionTrigger =
+            case npcTestAlonzoHardForkAtEpoch of
+               Nothing -> Consensus.TriggerHardForkAtVersion
+                            (maybe 5 fromIntegral npcTestAlonzoHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
 

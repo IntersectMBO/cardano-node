@@ -191,6 +191,9 @@ fromConsensusBlock CardanoMode =
         BlockInMode (ShelleyBlock ShelleyBasedEraMary b')
                      MaryEraInCardanoMode
 
+      Consensus.BlockAlonzo b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraMary b')
+                     AlonzoEraInCardanoMode
 
 -- ----------------------------------------------------------------------------
 -- Block headers

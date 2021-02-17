@@ -230,6 +230,9 @@ instance FromJSON PartialNodeConfiguration where
         npcTestMaryHardForkAtEpoch   <- v .:? "TestMaryHardForkAtEpoch"
         npcTestMaryHardForkAtVersion <- v .:? "TestMaryHardForkAtVersion"
 
+        npcTestAlonzoHardForkAtEpoch   <- v .:? "TestAlonzoHardForkAtEpoch"
+        npcTestAlonzoHardForkAtVersion <- v .:? "TestAlonzoHardForkAtVersion"
+
         pure NodeHardForkProtocolConfiguration {
                npcTestShelleyHardForkAtEpoch,
                npcTestShelleyHardForkAtVersion,
@@ -238,7 +241,10 @@ instance FromJSON PartialNodeConfiguration where
                npcTestAllegraHardForkAtVersion,
 
                npcTestMaryHardForkAtEpoch,
-               npcTestMaryHardForkAtVersion
+               npcTestMaryHardForkAtVersion,
+
+               npcTestAlonzoHardForkAtEpoch,
+               npcTestAlonzoHardForkAtVersion
              }
 
 -- | Default configuration is mainnet

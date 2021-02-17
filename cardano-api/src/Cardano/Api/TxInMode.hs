@@ -102,7 +102,10 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) MaryEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
-
+toConsensusGenTx (TxInMode (ShelleyTx _ tx) AlonzoEraInCardanoMode) =
+    Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))
+  where
+    tx' = Consensus.mkShelleyTx tx
 -- ----------------------------------------------------------------------------
 -- Transaction validation errors in the context of eras and consensus modes
 --
@@ -194,6 +197,11 @@ fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAllegra err) =
       AllegraEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrMary err) =
+    TxValidationErrorInMode
+      (ShelleyTxValidationError ShelleyBasedEraMary err)
+      MaryEraInCardanoMode
+
+fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAlonzo err) =
     TxValidationErrorInMode
       (ShelleyTxValidationError ShelleyBasedEraMary err)
       MaryEraInCardanoMode
