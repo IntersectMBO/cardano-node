@@ -147,6 +147,12 @@ instance Show (TxValidationError era) where
         . showsPrec 11 err
         )
 
+    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAlonzo err) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxValidationError ShelleyBasedEraAlonzo "
+        . showsPrec 11 err
+        )
+
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.

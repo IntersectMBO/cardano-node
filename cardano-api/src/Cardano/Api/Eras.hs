@@ -12,6 +12,7 @@ module Cardano.Api.Eras
   , ShelleyEra
   , AllegraEra
   , MaryEra
+  , AlonzoEra
   , CardanoEra(..)
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
@@ -43,12 +44,12 @@ module Cardano.Api.Eras
 
 import           Prelude
 
-import           Data.Type.Equality ((:~:) (Refl), TestEquality (..))
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Cardano.Ledger.Era as Ledger (Crypto)
 
 import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardCrypto,
-                     StandardMary, StandardShelley)
+                   StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -64,6 +65,9 @@ data AllegraEra
 
 -- | A type used as a tag to distinguish the Mary era.
 data MaryEra
+
+-- | A type used as a tag to distingush the Alonzo era.
+data AlonzoEra
 
 
 instance HasTypeProxy ByronEra where
@@ -82,7 +86,9 @@ instance HasTypeProxy MaryEra where
     data AsType MaryEra = AsMaryEra
     proxyToAsType _ = AsMaryEra
 
-
+instance HasTypeProxy AlonzoEra where
+    data AsType AlonzoEra = AsAlonzoEra
+    proxyToAsType _ = AsAlonzoEra
 -- ----------------------------------------------------------------------------
 -- Deprecated aliases
 --
@@ -133,6 +139,7 @@ data CardanoEra era where
      ShelleyEra :: CardanoEra ShelleyEra
      AllegraEra :: CardanoEra AllegraEra
      MaryEra    :: CardanoEra MaryEra
+     AlonzoEra  :: CardanoEra AlonzoEra
 
 deriving instance Eq   (CardanoEra era)
 deriving instance Ord  (CardanoEra era)
@@ -165,6 +172,8 @@ instance IsCardanoEra AllegraEra where
 instance IsCardanoEra MaryEra where
    cardanoEra      = MaryEra
 
+instance IsCardanoEra AlonzoEra where
+   cardanoEra      = AlonzoEra
 
 data AnyCardanoEra where
      AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint
@@ -184,12 +193,14 @@ instance Enum AnyCardanoEra where
     toEnum 1 = AnyCardanoEra ShelleyEra
     toEnum 2 = AnyCardanoEra AllegraEra
     toEnum 3 = AnyCardanoEra MaryEra
+    toEnum 4 = AnyCardanoEra AlonzoEra
     toEnum _ = error "AnyCardanoEra.toEnum: bad argument"
 
     fromEnum (AnyCardanoEra ByronEra)   = 0
     fromEnum (AnyCardanoEra ShelleyEra) = 1
     fromEnum (AnyCardanoEra AllegraEra) = 2
     fromEnum (AnyCardanoEra MaryEra)    = 3
+    fromEnum (AnyCardanoEra AlonzoEra)  = 4
 
 instance Bounded AnyCardanoEra where
     minBound = AnyCardanoEra ByronEra
@@ -203,7 +214,7 @@ anyCardanoEra ByronEra   = AnyCardanoEra ByronEra
 anyCardanoEra ShelleyEra = AnyCardanoEra ShelleyEra
 anyCardanoEra AllegraEra = AnyCardanoEra AllegraEra
 anyCardanoEra MaryEra    = AnyCardanoEra MaryEra
-
+anyCardanoEra AlonzoEra  = AnyCardanoEra AlonzoEra
 
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
 -- us what era it is, but hides the era type. This is useful when the era is
@@ -232,6 +243,7 @@ data ShelleyBasedEra era where
      ShelleyBasedEraShelley :: ShelleyBasedEra ShelleyEra
      ShelleyBasedEraAllegra :: ShelleyBasedEra AllegraEra
      ShelleyBasedEraMary    :: ShelleyBasedEra MaryEra
+     ShelleyBasedEraAlonzo  :: ShelleyBasedEra AlonzoEra
 
 deriving instance Eq   (ShelleyBasedEra era)
 deriving instance Ord  (ShelleyBasedEra era)
@@ -254,6 +266,8 @@ instance IsShelleyBasedEra AllegraEra where
 instance IsShelleyBasedEra MaryEra where
    shelleyBasedEra = ShelleyBasedEraMary
 
+instance IsShelleyBasedEra AlonzoEra where
+   shelleyBasedEra = ShelleyBasedEraAlonzo
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era
@@ -295,6 +309,7 @@ cardanoEraStyle ByronEra   = LegacyByronEra
 cardanoEraStyle ShelleyEra = ShelleyBasedEra ShelleyBasedEraShelley
 cardanoEraStyle AllegraEra = ShelleyBasedEra ShelleyBasedEraAllegra
 cardanoEraStyle MaryEra    = ShelleyBasedEra ShelleyBasedEraMary
+cardanoEraStyle AlonzoEra  = ShelleyBasedEra ShelleyBasedEraAlonzo
 
 
 -- ----------------------------------------------------------------------------
@@ -313,4 +328,5 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra ShelleyEra = Ledger.StandardShelley
   ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
   ShelleyLedgerEra MaryEra    = Ledger.StandardMary
+  ShelleyLedgerEra AlonzoEra  = Ledger.StandardMary --TODO: Use correct type when deps are updated
 

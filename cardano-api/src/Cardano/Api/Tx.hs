@@ -135,6 +135,7 @@ instance Eq (Tx era) where
         ShelleyBasedEraShelley -> txA == txB
         ShelleyBasedEraAllegra -> txA == txB
         ShelleyBasedEraMary    -> txA == txB
+        ShelleyBasedEraAlonzo  -> txA == txB
 
     (==) ByronTx{} (ShelleyTx era _) = case era of {}
 
@@ -160,6 +161,10 @@ instance Show (Tx era) where
         showString "ShelleyTx ShelleyBasedEraMary "
       . showsPrec 11 tx
 
+    showsPrec p (ShelleyTx ShelleyBasedEraAlonzo tx) =
+      showParen (p >= 11) $
+        showString "ShelleyTx ShelleyBasedEraAlonzo "
+      . showsPrec 11 tx
 
 instance HasTypeProxy era => HasTypeProxy (Tx era) where
     data AsType (Tx era) = AsTx (AsType era)
@@ -182,6 +187,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
         ShelleyBasedEraShelley -> serialiseShelleyBasedTx tx
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTx tx
         ShelleyBasedEraMary    -> serialiseShelleyBasedTx tx
+        ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTx tx
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -197,6 +203,8 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
                         (ShelleyTx ShelleyBasedEraAllegra) bs
         MaryEra    -> deserialiseShelleyBasedTx
                         (ShelleyTx ShelleyBasedEraMary) bs
+        AlonzoEra  -> deserialiseShelleyBasedTx
+                        (ShelleyTx ShelleyBasedEraAlonzo) bs
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
@@ -219,6 +227,7 @@ instance IsCardanoEra era => HasTextEnvelope (Tx era) where
         ShelleyEra -> "TxSignedShelley"
         AllegraEra -> "Tx AllegraEra"
         MaryEra    -> "Tx MaryEra"
+        AlonzoEra  -> "Tx AlonzoEra"
 
 
 data Witness era where
@@ -254,6 +263,7 @@ instance Eq (Witness era) where
         ShelleyBasedEraShelley -> wA == wB
         ShelleyBasedEraAllegra -> wA == wB
         ShelleyBasedEraMary    -> wA == wB
+        ShelleyBasedEraAlonzo  -> wA == wB
 
     (==) (ShelleyKeyWitness era wA)
          (ShelleyKeyWitness _   wB) =
@@ -261,6 +271,7 @@ instance Eq (Witness era) where
         ShelleyBasedEraShelley -> wA == wB
         ShelleyBasedEraAllegra -> wA == wB
         ShelleyBasedEraMary    -> wA == wB
+        ShelleyBasedEraAlonzo  -> wA == wB
 
     (==) (ShelleyScriptWitness era wA)
          (ShelleyScriptWitness _   wB) =
@@ -268,6 +279,7 @@ instance Eq (Witness era) where
         ShelleyBasedEraShelley -> wA == wB
         ShelleyBasedEraAllegra -> wA == wB
         ShelleyBasedEraMary    -> wA == wB
+        ShelleyBasedEraAlonzo  -> wA == wB
 
     (==) _ _ = False
 
@@ -295,6 +307,11 @@ instance Show (Witness era) where
         showString "ShelleyBootstrapWitness ShelleyBasedEraMary "
       . showsPrec 11 tx
 
+    showsPrec p (ShelleyBootstrapWitness ShelleyBasedEraAlonzo tx) =
+      showParen (p >= 11) $
+        showString "ShelleyBootstrapWitness ShelleyBasedEraAlonzo "
+      . showsPrec 11 tx
+
     showsPrec p (ShelleyKeyWitness ShelleyBasedEraShelley tx) =
       showParen (p >= 11) $
         showString "ShelleyKeyWitness ShelleyBasedEraShelley "
@@ -308,6 +325,11 @@ instance Show (Witness era) where
     showsPrec p (ShelleyKeyWitness ShelleyBasedEraMary tx) =
       showParen (p >= 11) $
         showString "ShelleyKeyWitness ShelleyBasedEraMary "
+      . showsPrec 11 tx
+
+    showsPrec p (ShelleyKeyWitness ShelleyBasedEraAlonzo tx) =
+      showParen (p >= 11) $
+        showString "ShelleyKeyWitness ShelleyBasedEraAlonzo "
       . showsPrec 11 tx
 
     showsPrec p (ShelleyScriptWitness ShelleyBasedEraShelley tx) =
@@ -325,6 +347,10 @@ instance Show (Witness era) where
         showString "ShelleyScriptWitness ShelleyBasedEraMary "
       . showsPrec 11 tx
 
+    showsPrec p (ShelleyScriptWitness ShelleyBasedEraAlonzo tx) =
+      showParen (p >= 11) $
+        showString "ShelleyScriptWitness ShelleyBasedEraAlonzo "
+      . showsPrec 11 tx
 
 instance HasTypeProxy era => HasTypeProxy (Witness era) where
     data AsType (Witness era) = AsWitness (AsType era)
@@ -348,6 +374,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Witness era) where
         ShelleyBasedEraShelley -> encodeShelleyBasedKeyWitness wit
         ShelleyBasedEraAllegra -> encodeShelleyBasedKeyWitness wit
         ShelleyBasedEraMary    -> encodeShelleyBasedKeyWitness wit
+        ShelleyBasedEraAlonzo  -> encodeShelleyBasedKeyWitness wit
 
     serialiseToCBOR (ShelleyBootstrapWitness era wit) =
       CBOR.serializeEncoding' $
@@ -355,6 +382,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Witness era) where
         ShelleyBasedEraShelley -> encodeShelleyBasedBootstrapWitness wit
         ShelleyBasedEraAllegra -> encodeShelleyBasedBootstrapWitness wit
         ShelleyBasedEraMary    -> encodeShelleyBasedBootstrapWitness wit
+        ShelleyBasedEraAlonzo  -> encodeShelleyBasedBootstrapWitness wit
 
     serialiseToCBOR (ShelleyScriptWitness era wit) =
       CBOR.serializeEncoding' $
@@ -362,6 +390,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Witness era) where
         ShelleyBasedEraShelley -> encodeShelleyBasedScriptWitness wit
         ShelleyBasedEraAllegra -> encodeShelleyBasedScriptWitness wit
         ShelleyBasedEraMary    -> encodeShelleyBasedScriptWitness wit
+        ShelleyBasedEraAlonzo  -> encodeShelleyBasedScriptWitness wit
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -372,6 +401,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Witness era) where
         ShelleyEra -> decodeShelleyBasedWitness ShelleyBasedEraShelley bs
         AllegraEra -> decodeShelleyBasedWitness ShelleyBasedEraAllegra bs
         MaryEra    -> decodeShelleyBasedWitness ShelleyBasedEraMary    bs
+        AlonzoEra  -> decodeShelleyBasedWitness ShelleyBasedEraAlonzo  bs
 
 
 encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
@@ -431,6 +461,7 @@ instance IsCardanoEra era => HasTextEnvelope (Witness era) where
         ShelleyEra -> "TxWitnessShelley"
         AllegraEra -> "TxWitness AllegraEra"
         MaryEra    -> "TxWitness MaryEra"
+        AlonzoEra  -> "TxWitness AlonzoEra"
 
 
 pattern Tx :: TxBody era -> [Witness era] -> Tx era
@@ -450,6 +481,7 @@ getTxBody (ShelleyTx era tx) =
       ShelleyBasedEraShelley -> getShelleyTxBody tx
       ShelleyBasedEraAllegra -> getShelleyTxBody tx
       ShelleyBasedEraMary    -> getShelleyTxBody tx
+      ShelleyBasedEraAlonzo  -> getShelleyTxBody tx
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
@@ -475,6 +507,7 @@ getTxWitnesses (ShelleyTx era tx) =
       ShelleyBasedEraShelley -> getShelleyTxWitnesses tx
       ShelleyBasedEraAllegra -> getShelleyTxWitnesses tx
       ShelleyBasedEraMary    -> getShelleyTxWitnesses tx
+      ShelleyBasedEraAlonzo  -> getShelleyTxWitnesses tx
   where
     getShelleyTxWitnesses :: forall ledgerera.
                              ShelleyLedgerEra era ~ ledgerera
@@ -510,6 +543,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txmetadata) =
       ShelleyBasedEraShelley -> makeShelleySignedTransaction txbody
       ShelleyBasedEraAllegra -> makeShelleySignedTransaction txbody
       ShelleyBasedEraMary    -> makeShelleySignedTransaction txbody
+      ShelleyBasedEraAlonzo  -> makeShelleySignedTransaction txbody
   where
     makeShelleySignedTransaction :: forall ledgerera.
                                     ShelleyLedgerEra era ~ ledgerera
@@ -591,6 +625,8 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _) sk =
       ShelleyBasedEraAllegra -> makeShelleyBasedBootstrapWitness era
                                   nwOrAddr txbody sk
       ShelleyBasedEraMary    -> makeShelleyBasedBootstrapWitness era
+                                  nwOrAddr txbody sk
+      ShelleyBasedEraAlonzo  -> makeShelleyBasedBootstrapWitness era
                                   nwOrAddr txbody sk
 
 makeShelleyBasedBootstrapWitness :: forall era ledgerera.
@@ -698,6 +734,7 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _) =
       ShelleyBasedEraShelley -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
+      ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
   where
     makeShelleyBasedKeyWitness :: forall ledgerera.
                                   Shelley.ShelleyBased ledgerera
