@@ -4,10 +4,28 @@
 module Cardano.Logging.Types where
 
 import           Control.Tracer
+import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Text (Text)
-import           Katip (LogEnv, Severity, ToObject)
+import           Katip (LogEnv, Severity, PayloadSelection(..), LogItem, ToObject)
+import           GHC.Generics
+
+class A.ToJSON a => Logging a where
+    toObject :: a -> A.Object
+    toObject v = case A.toJSON v of
+      A.Object o -> o
+      _          -> mempty
+    detailKeys :: DetailLevel -> a -> PayloadSelection
+    detailKeys _ _ = AllKeys
+    toMeasurement   :: a -> Maybe Measurement
+    toMeasurement _ = Nothing
+
+data Measurement
+    = IntM Int
+    | DoubleM Double
+    deriving (Show, Eq)
 
 type Namespace = [Text]
 type Selector  = [Text]
@@ -49,7 +67,7 @@ data SeverityF
   deriving (Eq, Ord, Show, Enum, Bounded)
 
 newtype Folding a b = Folding b
-  deriving (ToObject)
+  deriving (ToObject, LogItem)
 
 -- Configuration options for individual
 data ConfigOption =
