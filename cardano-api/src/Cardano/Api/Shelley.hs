@@ -86,6 +86,8 @@ module Cardano.Api.Shelley
 
     -- * Protocol parameters
     ProtocolParameters(..),
+    UTxOCostPerByte(..),
+
 
     -- * Scripts
     toShelleyScript,
@@ -95,6 +97,9 @@ module Cardano.Api.Shelley
     fromAllegraTimelock,
     toShelleyScriptHash,
     fromShelleyScriptHash,
+
+    -- ** Plutus script purpose
+    PlutusScriptPurpose(..),
 
     -- * Certificates
     Certificate (..),
