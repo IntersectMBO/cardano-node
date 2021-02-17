@@ -246,6 +246,11 @@ foldMTraceM :: forall a acc m . MonadIO m
 
 (I would like to find a function foldTrace, that omits the Ioref and can thus be called pure. Help is appreciated)
 
+### Frequency Limiting
+
+
+
+
 ### TraceOuts
 
 We offer different traceOuts (backends):
@@ -265,41 +270,38 @@ EKG is used for displaying measurements (Int and Double types). The contents of 
 Backends will be named and can be configured by a matching configuration from a configuration file. We will offer a bunch of functions to construct these traceOuts:
 
 ```haskell
-stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => Text -> m (Trace m a)
-stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => Text -> m (Trace m a)
-ekgTracer  :: MonadIO m => Text -> Metrics.Store -> m (Trace m Metric)
-ekgTracer' :: MonadIO m => Text -> Server -> m (Trace m Metric)
+stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+ekgTracer  :: MonadIO m => Metrics.Store -> m (Trace m Metric)
+ekgTracer' :: MonadIO m => Server -> m (Trace m Metric)
 ```
 
 ### Typeclasses
 
-
-
-Katip has its own and very different approach to logging. Specially it needs a LogEnv to function, which is usually provided by the class Katip m. We design a different interface, which constructs the LogEnv when constructing the Katip traceOut.
-
-Katip makes use of the following Type classes. ToObject is used to serialize an object, and uses the ToJSON instance of Aeson as default.      
+We want to limit the use type classes to the use for representation of messages. So we combine the current classes ToObject and LogObject (which are coming from Katip) together with a method to query a potential measurement representation for EKG. As you can derive a generic aeson instance, you can as well derive a default Logging instance.
 
 ```haskell
-class ToObject a where
+class Logging a where
     toObject :: a -> A.Object
     default toObject :: ToJSON a => a -> A.Object
-    toObject v = case toJSON v of
+    toObject v = case A.toJSON v of
       A.Object o -> o
       _          -> mempty
-```
-
-The LogItem type class is used to fix what output should be produced for different verbosity levels:
-
-```haskell
-class ToObject a => LogItem a where
-    -- | List of keys in the JSON object that should be included in message.
-    payloadKeys :: Verbosity -> a -> PayloadSelection
+    payloadKeys :: DetailLevel -> a -> PayloadSelection
+    toMeasurement :: a -> Maybe Measurement
+    toMeasurement _ = Nothing
 
 data PayloadSelection
     = AllKeys
     | SomeKeys [Text]
-    deriving (Show, Eq)
+    deriving (Show, Eq)      
+
+data Measurement
+    = IntM Int
+    | DoubleM Double
+    deriving (Show, Eq)      
 ```
+The trace-dispatcher library will then care for the various instances that e.g. Katip or other backends require.
 
 ### Configuration
 
@@ -369,8 +371,10 @@ The current system has the notion of subtrace. We will drop this concept.
 
 ### Documentation
 
-### Frequency Limiting (Eliding Tracers)
+
 
 ### Cardano Node Tracing
+
+
 
 ![Cardano Tracing Overview](./trace-and-metric-lifecycle.pdf)
