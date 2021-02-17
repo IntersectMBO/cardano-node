@@ -10,7 +10,7 @@ module Cardano.CLI.Shelley.Parsers
   , module Cardano.CLI.Shelley.Commands
 
     -- * Field parser and renderers
-  , parseTxIn
+  , parseTxInAny
   , renderTxIn
   ) where
 
@@ -1646,19 +1646,22 @@ pCardanoEra = asum
   , pure (AnyCardanoEra ShelleyEra)
   ]
 
-pTxIn :: Parser TxIn
+pTxIn :: Parser TxInAnyEra
 pTxIn =
-  Opt.option (readerFromAttoParser parseTxIn)
+  Opt.option (readerFromAttoParser parseTxInAny)
     (  Opt.long "tx-in"
     <> Opt.metavar "TX-IN"
     <> Opt.help "The input transaction as TxId#TxIx where TxId is the transaction hash and TxIx is the index."
     )
 
-parseTxIn :: Atto.Parser TxIn
-parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
+parseTxInAny :: Atto.Parser TxInAnyEra
+parseTxInAny = do
+  txId <- parseTxId
+  index <- Atto.char '#' *> parseTxIx
+  return $ TxInAnyEra txId index IsNotPlutusFee
 
-renderTxIn :: TxIn -> Text
-renderTxIn (TxIn txid (TxIx txix)) =
+renderTxIn :: TxIn era -> Text
+renderTxIn (TxIn txid (TxIx txix) _plutusFee) =
   mconcat
     [ serialiseToRawBytesHexText txid
     , "#"
@@ -1684,7 +1687,8 @@ pTxOut =
       -- TODO: Update the help text to describe the new syntax as well.
       <> Opt.help "The transaction output as Address+Lovelace where Address is \
                   \the Bech32-encoded address followed by the amount in \
-                  \Lovelace."
+                  \Lovelace. Optionally include a Datum if spending a txout locked by \
+                  \a non-native script (e.g Plutus Core)"
       )
 
 pMintMultiAsset :: Parser Value
