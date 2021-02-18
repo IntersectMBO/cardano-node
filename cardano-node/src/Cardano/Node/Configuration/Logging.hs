@@ -7,6 +7,7 @@
 
 module Cardano.Node.Configuration.Logging
   ( LoggingLayer (..)
+  , EKGDirect(..)
   , createLoggingLayer
   , nodeBasicInfo
   , shutdownLoggingLayer
@@ -28,9 +29,14 @@ import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import           Control.Tracer
 import           Data.List (nub)
+import qualified Data.Map as Map
 import           Data.Text (pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
+import qualified System.Remote.Monitoring as EKG
+import           System.Metrics.Gauge (Gauge)
+import           System.Metrics.Label (Label)
+import           System.Metrics.Counter (Counter)
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
@@ -109,6 +115,14 @@ data LoggingLayer = LoggingLayer
   , llConfiguration :: Configuration
   , llAddBackend :: Backend Text -> BackendKind -> IO ()
   , llSwitchboard :: Switchboard Text
+  , llEKGDirect :: Maybe EKGDirect
+  }
+
+data EKGDirect = EKGDirect
+  { ekgServer   :: EKG.Server
+  , ekgGauges   :: MVar (Map.Map Text Gauge)
+  , ekgLabels   :: MVar (Map.Map Text Label)
+  , ekgCounters :: MVar (Map.Map Text Counter)
   }
 
 --------------------------------
@@ -163,7 +177,22 @@ createLoggingLayer ver nodeConfig' p = do
   when loggingEnabled $ liftIO $
     loggingPreInit nodeConfig' logConfig switchBoard trace
 
-  pure $ mkLogLayer logConfig switchBoard trace
+  mEKGServer <- liftIO $ Switchboard.getSbEKGServer switchBoard
+
+  mbEkgDirect <- case mEKGServer of
+                  Nothing -> pure Nothing
+                  Just sv -> do
+                    refGauge   <- liftIO $ newMVar Map.empty
+                    refLabel   <- liftIO $ newMVar Map.empty
+                    refCounter <- liftIO $ newMVar Map.empty
+                    pure $ Just EKGDirect {
+                        ekgServer   = sv
+                      , ekgGauges   = refGauge
+                      , ekgLabels   = refLabel
+                      , ekgCounters = refCounter
+                      }
+
+  pure $ mkLogLayer logConfig switchBoard mbEkgDirect trace
  where
    loggingPreInit
      :: NodeConfiguration
@@ -217,8 +246,8 @@ createLoggingLayer ver nodeConfig' p = do
        -- Record node metrics, if configured
        startCapturingMetrics trace
 
-   mkLogLayer :: Configuration -> Switchboard Text -> Trace IO Text -> LoggingLayer
-   mkLogLayer logConfig switchBoard trace =
+   mkLogLayer :: Configuration -> Switchboard Text -> Maybe EKGDirect -> Trace IO Text -> LoggingLayer
+   mkLogLayer logConfig switchBoard mbEkgDirect trace =
      LoggingLayer
        { llBasicTrace = Trace.natTrace liftIO trace
        , llLogDebug = Trace.logDebug
@@ -235,6 +264,7 @@ createLoggingLayer ver nodeConfig' p = do
        , llConfiguration = logConfig
        , llAddBackend = Switchboard.addExternalBackend switchBoard
        , llSwitchboard = switchBoard
+       , llEKGDirect = mbEkgDirect
        }
 
    startCapturingMetrics :: Trace IO Text -> IO ()

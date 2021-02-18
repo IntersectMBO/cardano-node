@@ -31,8 +31,13 @@ import           GHC.Clock (getMonotonicTimeNSec)
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
+import qualified Data.Map as SMap
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
+import qualified System.Remote.Monitoring as EKG
+import qualified System.Metrics.Gauge as Gauge
+import qualified System.Metrics.Label as Label
+import qualified System.Metrics.Counter as Counter
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
@@ -274,16 +279,20 @@ mkTracers
   => TraceOptions
   -> Trace IO Text
   -> NodeKernelData blk
+  -> Maybe EKGDirect
   -> IO (Tracers peer localPeer blk)
-mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
+mkTracers tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
   fStats <- mkForgingStats
-  consensusTracers <- mkConsensusTracers trSel verb tr nodeKern fStats
+  consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
 
   pure Tracers
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
-        annotateSeverity $ teeTraceChainTip tOpts elidedChainDB
-                             (appendName "ChainDB" tr) (appendName "metrics" tr)
+        annotateSeverity $ teeTraceChainTip
+                             tOpts elidedChainDB
+                             ekgDirect
+                             (appendName "ChainDB" tr)
+                             (appendName "metrics" tr)
     , consensusTracers = consensusTracers
     , nodeToClientTracers = nodeToClientTracers' trSel verb tr
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
@@ -302,7 +311,7 @@ mkTracers tOpts@(TracingOn trSel) tr nodeKern = do
    verb :: TracingVerbosity
    verb = traceVerbosity trSel
 
-mkTracers TracingOff _ _ =
+mkTracers TracingOff _ _ _ =
   pure Tracers
     { chainDBTracer = nullTracer
     , consensusTracers = Consensus.Tracers
@@ -359,14 +368,15 @@ teeTraceChainTip
      )
   => TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
+  -> Maybe EKGDirect
   -> Trace IO Text
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip TracingOff _ _ _ = nullTracer
-teeTraceChainTip (TracingOn trSel) elided trTrc trMet =
+teeTraceChainTip TracingOff _ _ _ _ = nullTracer
+teeTraceChainTip (TracingOn trSel) elided ekgDirect trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
-    traceWith (ignoringSeverity (traceChainMetrics trMet)) ev
+    traceWith (ignoringSeverity (traceChainMetrics ekgDirect trMet)) ev
 
 teeTraceChainTipElide
   :: ( ConvertRawHash blk
@@ -388,10 +398,10 @@ ignoringSeverity tr = Tracer $ \(WithSeverity _ ev) -> traceWith tr ev
 
 traceChainMetrics
   :: forall blk. HasHeader (Header blk)
-  => Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
-traceChainMetrics tr = Tracer $ \ev ->
-  fromMaybe (pure ()) $
-    doTrace <$> chainTipInformation ev
+  => Maybe EKGDirect -> Trace IO Text -> Tracer IO (ChainDB.TraceEvent blk)
+traceChainMetrics Nothing _ = nullTracer
+traceChainMetrics (Just _ekgDirect) tr = Tracer $ \ev ->
+  fromMaybe (pure ()) $ doTrace <$> chainTipInformation ev
  where
    chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
    chainTipInformation = \case
@@ -419,6 +429,42 @@ traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
 
 traceI :: Integral i => Trace IO a -> LOMeta -> Text -> i -> IO ()
 traceI tr meta msg i = traceNamedObject tr (meta, LogValue msg (PureI (fromIntegral i)))
+
+sendEKGDirectCounter :: EKGDirect -> Text -> IO ()
+sendEKGDirectCounter ekgDirect name = do
+  modifyMVar_ (ekgCounters ekgDirect) $ \registeredMap -> do
+    case SMap.lookup name registeredMap of
+      Just counter -> do
+        Counter.inc counter
+        pure registeredMap
+      Nothing -> do
+        counter <- EKG.getCounter name (ekgServer ekgDirect)
+        Counter.inc counter
+        pure $ SMap.insert name counter registeredMap
+
+_sendEKGDirectInt :: Integral a => EKGDirect -> Text -> a -> IO ()
+_sendEKGDirectInt ekgDirect name val = do
+  modifyMVar_ (ekgGauges ekgDirect) $ \registeredMap -> do
+    case SMap.lookup name registeredMap of
+      Just gauge -> do
+        Gauge.set gauge (fromIntegral val)
+        pure registeredMap
+      Nothing -> do
+        gauge <- EKG.getGauge name (ekgServer ekgDirect)
+        Gauge.set gauge (fromIntegral val)
+        pure $ SMap.insert name gauge registeredMap
+
+_sendEKGDirectDouble :: EKGDirect -> Text -> Double -> IO ()
+_sendEKGDirectDouble ekgDirect name val = do
+  modifyMVar_ (ekgLabels ekgDirect) $ \registeredMap -> do
+    case SMap.lookup name registeredMap of
+      Just label -> do
+        Label.set label (Text.pack (show val))
+        pure registeredMap
+      Nothing -> do
+        label <- EKG.getLabel name (ekgServer ekgDirect)
+        Label.set label (Text.pack (show val))
+        pure $ SMap.insert name label registeredMap
 
 --------------------------------------------------------------------------------
 -- Consensus Tracers
@@ -448,13 +494,14 @@ mkConsensusTracers
      , HasKESMetricsData blk
      , Show (Header blk)
      )
-  => TraceSelection
+  => Maybe EKGDirect
+  -> TraceSelection
   -> TracingVerbosity
   -> Trace IO Text
   -> NodeKernelData blk
   -> ForgingStats
   -> IO (Consensus.Tracers' peer localPeer blk (Tracer IO))
-mkConsensusTracers trSel verb tr nodeKern fStats = do
+mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   let trmet = appendName "metrics" tr
 
   blockForgeOutcomeExtractor <- mkOutcomeExtractor
@@ -462,7 +509,6 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
   forgeTracers <- mkForgeTracers
   meta <- mkLOMeta Critical Public
 
-  tHeadersServed <- STM.newTVarIO @Int 0
   tBlocksServed <- STM.newTVarIO @Int 0
   tSubmissionsCollected <- STM.newTVarIO 0
   tSubmissionsAccepted <- STM.newTVarIO 0
@@ -470,12 +516,7 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
 
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
-    , Consensus.chainSyncServerHeaderTracer = tracerOnOff' (traceChainSyncHeaderServer trSel) $
-        Tracer $ \ev -> do
-          traceWith (annotateSeverity . toLogObject' verb $ appendName "ChainSyncHeaderServer" tr) ev
-          when (isRollForward ev) $
-            traceI trmet meta "served.header.count" =<<
-              STM.modifyReadTVarIO tHeadersServed (+1)
+    , Consensus.chainSyncServerHeaderTracer = Tracer $ \ev -> traceServedCount mbEKGDirect ev
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
@@ -543,6 +584,12 @@ mkConsensusTracers trSel verb tr nodeKern fStats = do
        <*> counting (liftCounting staticMeta name "block-from-future" tr)
        <*> counting (liftCounting staticMeta name "slot-is-immutable" tr)
        <*> counting (liftCounting staticMeta name "node-is-leader" tr)
+
+   traceServedCount :: Maybe EKGDirect -> TraceChainSyncServerEvent blk -> IO ()
+   traceServedCount Nothing _ = pure ()
+   traceServedCount (Just ekgDirect) ev =
+     when (isRollForward ev) $
+       sendEKGDirectCounter ekgDirect "cardano.node.metrics.served.header.counter.int"
 
 traceLeadershipChecks ::
   forall blk

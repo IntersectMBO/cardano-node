@@ -89,6 +89,8 @@ library
                      , containers
                      , directory
                      , dns
+                     , ekg
+                     , ekg-core
                      , filepath
                      , generic-data
                      , hedgehog-extras
