@@ -118,7 +118,7 @@ submitTx connectInfo byronOrShelleyTx =
         SubmitFail (TxValidationErrorInMode (ByronTxValidationError byronBlock) _eraInMode) ->
           Left (TxSubmitByronError byronBlock)
         SubmitFail (TxValidationErrorInMode (ShelleyTxValidationError era applyTxErr) _eraInMode) ->
-          Left (TxSubmitShelleyError applyTxErr)
+          Left (TxSubmitShelleyError _what_to_put_here_)
           
 
         SubmitFail _ {-(ApplyTxErrByron err)-} ->
