@@ -196,7 +196,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   createTracers nc trace tracer
 
-  (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
+  (publicIPSocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets nc)
     case result of
       Right triplet -> return triplet
@@ -225,19 +225,17 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
       diffusionArguments :: DiffusionArguments
       diffusionArguments =
         createDiffusionArguments
-          publicIPv4SocketOrAddr
-          publicIPv6SocketOrAddr
+          publicIPSocketOrAddr
           localSocketOrPath
           (ncDiffusionMode nc)
           ipProducers
           dnsProducers
 
-  ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
-  ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
+  ip <- traverse getSocketOrSocketInfoAddr publicIPSocketOrAddr
 
   traceNamedObject
     (appendName "addresses" trace)
-    (meta, LogMessage . Text.pack . show $ catMaybes [ipv4, ipv6])
+    (meta, LogMessage . Text.pack $ show ip)
   traceNamedObject
     (appendName "diffusion-mode" trace)
     (meta, LogMessage . Text.pack . show . ncDiffusionMode $ nc)
@@ -361,10 +359,7 @@ checkVRFFilePermissions vrfPrivKey = do
 
 createDiffusionArguments
   :: Maybe (SocketOrSocketInfo Socket AddrInfo)
-   -- ^ Either a socket bound to IPv4 address provided by systemd or IPv4
-   -- address to bind to for NodeToNode communication.
-  -> Maybe (SocketOrSocketInfo Socket AddrInfo)
-   -- ^ Either a socket bound to IPv6 address provided by systemd or IPv6
+   -- ^ Either a socket bound to IP address provided by systemd or IP
    -- address to bind to for NodeToNode communication.
   -> SocketOrSocketInfo Socket SocketPath
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
@@ -373,8 +368,7 @@ createDiffusionArguments
   -> IPSubscriptionTarget
   -> [DnsSubscriptionTarget]
   -> DiffusionArguments
-createDiffusionArguments publicIPv4SocketsOrAddrs
-                         publicIPv6SocketsOrAddrs
+createDiffusionArguments publicIPSocketsOrAddrs
                          localSocketOrPath
                          diffusionMode
                          ipProducers dnsProducers
@@ -382,8 +376,8 @@ createDiffusionArguments publicIPv4SocketsOrAddrs
   DiffusionArguments
     -- This is not elegant, but it will change once `coot/connection-manager` is
     -- merged into `ouroboros-networ`.
-    { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPv4SocketsOrAddrs
-    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPv6SocketsOrAddrs
+    { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
+    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
     , daLocalAddress = fmap unSocketPath
                      . eitherSocketOrSocketInfo
                      $ localSocketOrPath

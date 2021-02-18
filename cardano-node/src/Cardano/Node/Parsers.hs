@@ -46,8 +46,7 @@ nodeRunParser = do
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
 
   -- Node Address
-  nIPv4Address <- lastOption parseHostIPv4Addr
-  nIPv6Address <- lastOption parseHostIPv6Addr
+  nIPAddress   <- lastOption parseHostIPAddr
   nPortNumber  <- lastOption parsePort
 
   -- NodeConfiguration filepath
@@ -59,8 +58,7 @@ nodeRunParser = do
   shutdownOnSlotSynced <- lastOption parseShutdownOnSlotSynced
 
   pure $ PartialNodeConfiguration
-           { pncNodeIPv4Addr = nIPv4Address
-           , pncNodeIPv6Addr = nIPv6Address
+           { pncNodeIPAddr   = nIPAddress
            , pncNodePortNumber = nPortNumber
            , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
            , pncTopologyFile = TopologyFile <$> topFp
@@ -95,29 +93,18 @@ parseSocketPath helpMessage =
         <> metavar "FILEPATH"
     )
 
-parseHostIPv4Addr :: Parser NodeHostIPv4Address
-parseHostIPv4Addr =
-    option (eitherReader parseNodeHostIPv4Address) (
+parseHostIPAddr :: Parser NodeHostIPAddress
+parseHostIPAddr =
+    option (eitherReader parseNodeHostIPAddress) (
           long "host-addr"
-       <> metavar "IPV4"
-       <> help "An optional ipv4 address"
+       <> metavar "IPADDRESS"
+       <> help "An optional ipv4 or ipv6 address"
     )
 
-parseHostIPv6Addr :: Parser NodeHostIPv6Address
-parseHostIPv6Addr =
-    option (eitherReader parseNodeHostIPv6Address) (
-          long "host-ipv6-addr"
-       <> metavar "IPV6"
-       <> help "An optional ipv6 address"
-    )
-
-parseNodeHostIPv4Address :: String -> Either String NodeHostIPv4Address
-parseNodeHostIPv4Address str =
-   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostIPv4Address) $ readMaybe str
-
-parseNodeHostIPv6Address :: String -> Either String NodeHostIPv6Address
-parseNodeHostIPv6Address str =
-   maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostIPv6Address) $ readMaybe str
+parseNodeHostIPAddress :: String -> Either String NodeHostIPAddress
+parseNodeHostIPAddress str =
+  maybe (Left $ "Failed to parse: " ++ str) (Right . NodeHostIPAddress) $
+  readMaybe str
 
 parsePort :: Parser PortNumber
 parsePort =

@@ -112,10 +112,8 @@ renderSocketConfigError (GetAddrInfoError addr port ex) =
 gatherConfiguredSockets :: NodeConfiguration
                         -> ExceptT SocketConfigError IO
                                    (Maybe (SocketOrSocketInfo Socket AddrInfo),
-                                    Maybe (SocketOrSocketInfo Socket AddrInfo),
-                                           SocketOrSocketInfo Socket SocketPath)
-gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
-                                            ncNodeIPv6Addr,
+                                    SocketOrSocketInfo Socket SocketPath)
+gatherConfiguredSockets NodeConfiguration { ncNodeIPAddr,
                                             ncNodePortNumber,
                                             ncSocketPath } = do
 
@@ -131,45 +129,34 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
         firstIpv6Socket :: Maybe Socket
         firstIpv6Socket = join $ listToMaybe . (\(_, a, _) -> a) <$> systemDSockets
 
-    -- only when 'ncNodeIPv4Addr' is specified or an ipv4 socket is passed
+    -- only when 'ncNodeIPAddr' is specified or a socket is passed
     -- through socket activation
-    ipv4 <- case (ncNodeIPv4Addr, firstIpv4Socket) of
-      (Nothing, Nothing)    -> pure Nothing
-      (Nothing, Just sock)  -> return (Just (ActualSocket sock))
-      (Just _, Just _)      -> throwError ClashingPublicIpv4SocketGiven
-      (Just addr, Nothing)  ->
-            fmap SocketInfo . head
-        <$> nodeAddressInfo
-              (Just $ nodeHostIPv4AddressToIPAddress addr)
-              ncNodePortNumber
-
-    -- only when 'ncNodeIPv6Addr' is specified or an ipv6 socket is passed
-    -- through socket activation
-    ipv6 <- case (ncNodeIPv6Addr, firstIpv6Socket) of
-      (Nothing, Nothing)    -> pure Nothing
-      (Nothing, Just sock)  -> return (Just (ActualSocket sock))
-      (Just _, Just _)      -> throwError ClashingPublicIpv6SocketGiven
-      (Just addr, Nothing)  ->
-              fmap SocketInfo . head
-          <$> nodeAddressInfo
-                (Just $ nodeHostIPv6AddressToIPAddress addr)
-                ncNodePortNumber
+    ip <- case (ncNodeIPAddr, firstIpv6Socket, firstIpv4Socket) of
+      (Nothing, Nothing, Nothing)   -> pure Nothing
+      (Nothing, Just sock, _)       -> return (Just (ActualSocket sock))
+      (Nothing, Nothing, Just sock) -> return (Just (ActualSocket sock))
+      (Just _, Just _, _)           -> throwError ClashingPublicIpv6SocketGiven
+      (Just _, _, Just _)           -> throwError ClashingPublicIpv4SocketGiven
+      (Just addr, Nothing, Nothing) ->
+        fmap SocketInfo . head <$> nodeAddressInfo (Just addr) ncNodePortNumber
 
     -- When none of the addresses was given. We try resolve address passing
     -- only 'ncNodePortNumber'.
-    (ipv4', ipv6')
-      <- case (ipv4, ipv6) of
-            (Nothing, Nothing) -> do
-      
+    ip'
+      <- case ip of
+            Nothing -> do
+
               info <- nodeAddressInfo Nothing ncNodePortNumber
               let ipv4' = SocketInfo <$> find ((== AF_INET)  . addrFamily) info
                   ipv6' = SocketInfo <$> find ((== AF_INET6) . addrFamily) info
-              when (isNothing $ ipv4' <|> ipv6') $
-                throwError NoPublicSocketGiven
+              case ipv6' of
+                Just _ -> pure ipv6'
+                Nothing ->
+                  case ipv4' of
+                    Just _ -> pure ipv4'
+                    Nothing -> throwError NoPublicSocketGiven
 
-              pure (ipv4', ipv6')
-
-            _ -> pure (ipv4, ipv6)
+            _ -> pure ip
 
 
     -- Select the socket or path for local node-to-client comms
@@ -185,7 +172,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
       (Nothing, Just sock)  -> return (ActualSocket sock)
       (Just path, Nothing)  -> removeStaleLocalSocket path $> SocketInfo path
 
-    return (ipv4', ipv6', local)
+    return (ip', local)
 
 
 -- | Binding a local unix domain socket always expects to create it, and fails

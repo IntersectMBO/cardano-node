@@ -38,8 +38,7 @@ import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 data NodeConfiguration
   = NodeConfiguration
-      {  ncNodeIPv4Addr    :: !(Maybe NodeHostIPv4Address)
-      ,  ncNodeIPv6Addr    :: !(Maybe NodeHostIPv6Address)
+      {  ncNodeIPAddr      :: !(Maybe NodeHostIPAddress)
       ,  ncNodePortNumber  :: !(Maybe PortNumber)
           -- | Filepath of the configuration yaml file. This file determines
           -- all the configuration settings required for the cardano node
@@ -72,8 +71,7 @@ data NodeConfiguration
 
 data PartialNodeConfiguration
   = PartialNodeConfiguration
-      {  pncNodeIPv4Addr    :: !(Last NodeHostIPv4Address)
-      ,  pncNodeIPv6Addr    :: !(Last NodeHostIPv6Address)
+      {  pncNodeIPAddr      :: !(Last NodeHostIPAddress)
       ,  pncNodePortNumber  :: !(Last PortNumber)
          -- | Filepath of the configuration yaml file. This file determines
          -- all the configuration settings required for the cardano node
@@ -155,8 +153,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
            , pncLogMetrics = pncLogMetrics'
            , pncTraceConfig = pncTraceConfig'
-           , pncNodeIPv4Addr = mempty
-           , pncNodeIPv6Addr = mempty
+           , pncNodeIPAddr = mempty
            , pncNodePortNumber = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
@@ -251,8 +248,7 @@ defaultPartialNodeConfiguration =
     , pncSocketPath = mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
-    , pncNodeIPv4Addr = mempty
-    , pncNodeIPv6Addr = mempty
+    , pncNodeIPAddr = mempty
     , pncNodePortNumber = mempty
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
@@ -286,8 +282,7 @@ makeNodeConfiguration pnc = do
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   return $ NodeConfiguration
-             { ncNodeIPv4Addr = getLast $ pncNodeIPv4Addr pnc
-             , ncNodeIPv6Addr = getLast $ pncNodeIPv6Addr pnc
+             { ncNodeIPAddr = getLast $ pncNodeIPAddr pnc
              , ncNodePortNumber = getLast $ pncNodePortNumber pnc
              , ncConfigFile = configFile
              , ncTopologyFile = topologyFile
