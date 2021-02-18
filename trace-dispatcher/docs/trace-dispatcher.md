@@ -305,33 +305,26 @@ The trace-dispatcher library will then care for the various instances that e.g. 
 
 ### Configuration
 
-The configuration can be read from a YAML or JSON file.
+With the new system of configuration we have
 
-The system shall be reconfigurable. This can be done by changing the YAML file and then by calling reconfigureTracing in
-the Node CLI.
+1. fine-grained configure options based on namespaces (currently not for individual messages, but that can be changed).  
+2. reconfigurable at any time with with a call to configureTracers
+3. Optimized as config options are either fixed at configuration time if possible, but never require more then one simple lookup
+4. Requires the allTraces function, which returns all traces which are used with traceWith
 
-The trace-dispatcher library code requires the allTraces function, which returns all traces which are used with traceWith.
+This is implemented by running the trace network at configuration time.
+The configuration can be stored and read from a YAML or JSON file.
 
 ```haskell
--- |
+-- | Needs to list all traces which are used with traceWith.
 allTraces :: [Trace]
 
--- | The argument list all traces which are used with traceWith.
 --   The function configures the traces with the given configuration
 configureTraces :: MonadIO m => [Trace m a] -> Configuration -> m ()
+```
 
--- Aternatively
--- | The function has to be called for all traces,
---   which are used with traceWith.
---   The function configures the traces with the given configuration
---   The returned trace has to be
-
-configureTrace :: MonadIO m => Trace m a -> Configuration -> m (Trace m a)
-
-```  
-
+These are the options that can be configured based on a namespace:
 ```haskell
--- *** General options:
 data ConfigOption = ConfigOption {
     -- | Severity level
     coSeverity     :: SeverityF
@@ -339,35 +332,14 @@ data ConfigOption = ConfigOption {
   , coDetailLevel  :: DetailLevel
     -- | Privacy level
   , coPrivacy      :: Privacy
-    -- | Defined in messages per second
-  , coMaxFrequency :: Int  
 }
 
 data TraceConfiguration = TraceConfiguration {
-  ,  tcDefaultOptions :: ConfigOption
-
   ,  tcOptions :: Map Namespace ConfigOption
-
-  -- *** Forwarder:
-     -- Forward messages to the following address
-  ,  tcForwardTo :: RemoteAddr
-
-  -- *** Katip:
-  ,  tcDefaultScribe :: ScribeDefinition
-
-  ,  tcScribes :: Map TracerName -> ScribeDefinition
-
-  -- *** EKG:
-     -- | Port for EKG server
-  ,  tcPortEKG :: Int
-
-  -- *** Prometheus:
-    -- Host/port to bind Prometheus server at
-  ,  tcBindAddrPrometheus :: Maybe (String,Int)
+  , ...
 }
 ```
-
-The current system has the notion of subtrace. We will drop this concept.
+Many more configuration options e.g. for different backends will be added.
 
 ### Documentation
 
