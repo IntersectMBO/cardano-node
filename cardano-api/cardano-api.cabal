@@ -20,6 +20,9 @@ library
                         Cardano.Api.Shelley
 
                         Cardano.Api.Crypto.Ed25519Bip32
+
+                        Cardano.Api.IPC
+
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
                         -- in this modulde
@@ -35,6 +38,8 @@ library
                         Cardano.Api.TxBody
                         Cardano.Api.Modes
                         Cardano.Api.TxSubmit.Types
+                        Cardano.Api.TxInMode
+                        Cardano.Api.Eras
 
   other-modules:        Cardano.Api.TxSubmit.ErrorRender
 
@@ -42,12 +47,10 @@ library
                         Cardano.Api.Address
                         Cardano.Api.Block
                         Cardano.Api.Certificate
-                        Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
-                        Cardano.Api.IPC
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysShelley
@@ -66,7 +69,6 @@ library
                         Cardano.Api.SpecialByron
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
-                        Cardano.Api.TxInMode
                         Cardano.Api.TxMetadata
                         Cardano.Api.Utils
                         Cardano.Api.Value

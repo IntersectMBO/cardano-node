@@ -100,7 +100,7 @@ txSubmitPost trce metrics connectInfo txBytes = do
       <> textShow (B8.length txBytes)
       <> " bytes"
   case localNodeConsensusMode connectInfo of
-    ByronMode{} ->
+    0 {- ByronMode{} -} ->
       case deserialiseFromCBOR AsByronTx txBytes of
         Left err -> handleDeserialiseErr err
         Right tx -> do
