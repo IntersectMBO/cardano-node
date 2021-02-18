@@ -426,64 +426,88 @@ in {
     stateDirBase = "/var/lib/";
     genInstanceConf = f: listToAttrs (if cfg.instances > 1 && !cfg.instanced
       then genList (i: let n = "${systemdServiceName}-${toString i}"; in nameValuePair n (f n i)) cfg.instances
-      else [ (nameValuePair systemdServiceName (f systemdServiceName 0)) ]); in {
-    users.groups.cardano-node.gid = 10016;
-    users.users.cardano-node = {
-      description = "cardano-node node daemon user";
-      uid = 10016;
-      group = "cardano-node";
-    };
-
-    ## TODO:  use http://hackage.haskell.org/package/systemd for:
-    ##   1. only declaring success after we perform meaningful init (local state recovery)
-    ##   2. heartbeat & watchdog functionality
-    systemd.services = genInstanceConf (n: i: recursiveUpdate ({
-      description   = "cardano-node node ${toString i} service";
-      after         = [ "network-online.target" ]
-        ++ lib.optional cfg.systemdSocketActivation "${n}.socket";
-      requires = lib.mkIf cfg.systemdSocketActivation [ "${n}.socket" ];
-      wants = [ "network-online.target" ];
-      script = mkScript cfg i;
-      serviceConfig = {
-        User = "cardano-node";
-        Group = "cardano-node";
-        Restart = "always";
-        RuntimeDirectory = cfg.runtimeDir;
-        WorkingDirectory = cfg.stateDir;
-        # This assumes /var/lib/ is a prefix of cfg.stateDir.
-        # This is checked as an assertion below.
-        StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
-        NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
-        # time to sleep before restarting a service
-        RestartSec = 1;
-        KillSignal = "SIGINT";
+      else [ (nameValuePair systemdServiceName (f systemdServiceName 0)) ]); in lib.mkMerge [
+    {
+      users.groups.cardano-node.gid = 10016;
+      users.users.cardano-node = {
+        description = "cardano-node node daemon user";
+        uid = 10016;
+        group = "cardano-node";
       };
-    } // optionalAttrs (!cfg.instanced) {
-      wantedBy = [ "multi-user.target" ];
-    }) (cfg.extraServiceConfig n i));
 
-    systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation (recursiveUpdate {
-      description = "Socket of the ${n} service.";
-      wantedBy = [ "sockets.target" ];
-      socketConfig = {
-        ListenStream = [ "${cfg.hostAddr}:${toString cfg.port}" ]
-          ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}/node-${toString i}.socket")];
-        ReusePort = "yes";
-        SocketMode = "0660";
-        SocketUser = "cardano-node";
-        SocketGroup = "cardano-node";
+      ## TODO:  use http://hackage.haskell.org/package/systemd for:
+      ##   1. only declaring success after we perform meaningful init (local state recovery)
+      ##   2. heartbeat & watchdog functionality
+      systemd.services = genInstanceConf (n: i: recursiveUpdate {
+        description   = "cardano-node node ${toString i} service";
+        after         = [ "network-online.target" ]
+          ++ (optional cfg.systemdSocketActivation "${n}.socket")
+          ++ (optional (cfg.instances > 1) "cardano-node.service");
+        requires = optional cfg.systemdSocketActivation "${n}.socket"
+          ++ (optional (cfg.instances > 1) "cardano-node.service");
+        wants = [ "network-online.target" ];
+        wantedBy = mkIf (!cfg.instanced) [ "multi-user.target" ];
+        partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
+        script = mkScript cfg i;
+        serviceConfig = {
+          User = "cardano-node";
+          Group = "cardano-node";
+          Restart = "always";
+          RuntimeDirectory = cfg.runtimeDir;
+          WorkingDirectory = cfg.stateDir;
+          # This assumes /var/lib/ is a prefix of cfg.stateDir.
+          # This is checked as an assertion below.
+          StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
+          NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
+          # time to sleep before restarting a service
+          RestartSec = 1;
+          KillSignal = "SIGINT";
+        };
+      } (cfg.extraServiceConfig n i));
+
+      systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation (recursiveUpdate {
+        description = "Socket of the ${n} service.";
+        wantedBy = [ "sockets.target" ];
+        partOf = [ "${n}.service" ];
+        socketConfig = {
+          ListenStream = [ "${cfg.hostAddr}:${toString cfg.port}" ]
+            ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}/node-${toString i}.socket")];
+          ReusePort = "yes";
+          SocketMode = "0660";
+          SocketUser = "cardano-node";
+          SocketGroup = "cardano-node";
+        };
+      } (cfg.extraSocketConfig n i)));
+    }
+    {
+      # oneshot service start allows to easily control all instances at once.
+      systemd.services.cardano-node = lib.mkIf (cfg.instances > 1) {
+        description = "Control all ${toString cfg.instances} at once.";
+        enable  = true;
+        wants = genList (i: "cardano-node-${toString i}.service") cfg.instances;
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = "yes";
+          User = "cardano-node";
+          Group = "cardano-node";
+          ExecStart = "${pkgs.coreutils}/bin/echo Starting ${toString cfg.instances} cardano-node instances";
+          RuntimeDirectory = cfg.runtimeDir;
+          WorkingDirectory = cfg.stateDir;
+          StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
+        };
       };
-    } (cfg.extraSocketConfig n i)));
-
-    assertions = [
-      {
-        assertion = lib.hasPrefix stateDirBase cfg.stateDir;
-        message = "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
-      }
-      {
-        assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
-        message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
-      }
-    ];
-  });
+    }
+    {
+      assertions = [
+        {
+          assertion = lib.hasPrefix stateDirBase cfg.stateDir;
+          message = "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
+        }
+        {
+          assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
+          message = "Shelley Era: all of three [operationalCertificate kesKey vrfKey] options must be defined (or none of them).";
+        }
+      ];
+    }
+  ]);
 }
