@@ -171,8 +171,9 @@ renderEra (AnyCardanoEra MaryEra)    = "Mary"
 renderEra (AnyCardanoEra PivoEra)    = "Pivo"
 
 renderMode :: AnyConsensusMode -> Text
-renderMode (AnyConsensusMode ByronMode) = "ByronMode"
+renderMode (AnyConsensusMode ByronMode)   = "ByronMode"
 renderMode (AnyConsensusMode ShelleyMode) = "ShelleyMode"
+renderMode (AnyConsensusMode PivoMode)    = "PivoMode"
 renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 
 renderFeature :: TxFeature -> Text

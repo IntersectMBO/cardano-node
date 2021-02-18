@@ -149,6 +149,7 @@ module Cardano.Api.Shelley
     CardanoMode,
     ConsensusMode
       ( ShelleyMode
+      , PivoMode
       , CardanoMode
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
