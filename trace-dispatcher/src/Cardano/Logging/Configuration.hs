@@ -16,6 +16,16 @@ import           Cardano.Logging.Trace (filterTraceByPrivacy,
                      filterTraceBySeverity)
 import           Cardano.Logging.Types
 
+
+configureTracers :: Monad m => TraceConfig -> [Trace m a] -> m ()
+configureTracers config tracers = do
+    mapM_ (configureTrace Reset) tracers
+    mapM_ (configureTrace (Config config)) tracers
+    mapM_ (configureTrace Optimize) tracers
+  where
+    configureTrace :: Monad m => TraceControl -> Trace m a -> m ()
+    configureTrace c tr = T.traceWith tr (emptyLoggingContext, Left c)
+
 -- | Filter a trace by severity and take the filter value from the config
 filterSeverityFromConfig :: (MonadIO m) =>
      Trace m a
