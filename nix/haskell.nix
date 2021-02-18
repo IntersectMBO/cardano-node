@@ -174,7 +174,7 @@ let
         (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
     })
     {
-      packages.ghcOptions = "-g3";
+      ghcOptions = "-g3";
     }
     (lib.optionalAttrs profiling {
       enableLibraryProfiling = true;
