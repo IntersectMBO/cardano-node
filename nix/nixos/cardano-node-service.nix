@@ -289,6 +289,24 @@ in {
         description = ''Use systemd socket activation'';
       };
 
+      extraServiceConfig = mkOption {
+        # activate type for nixos-21.03:
+        # type = types.functionTo (types.listOf types.attrs);
+        default = n: i: {};
+        description = ''
+          Extra systemd service config, given service name and instance index.
+        '';
+      };
+
+      extraSocketConfig = mkOption {
+        # activate type for nixos-21.03:
+        # type = types.functionTo (types.listOf types.attrs);
+        default = n: i: {};
+        description = ''
+          Extra systemd socket config, given socket name and instance index.
+        '';
+      };
+
       dbPrefix = mkOption {
         type = types.str;
         default = "db-${cfg.environment}";
@@ -419,7 +437,7 @@ in {
     ## TODO:  use http://hackage.haskell.org/package/systemd for:
     ##   1. only declaring success after we perform meaningful init (local state recovery)
     ##   2. heartbeat & watchdog functionality
-    systemd.services = genInstanceConf (n: i: {
+    systemd.services = genInstanceConf (n: i: recursiveUpdate ({
       description   = "cardano-node node ${toString i} service";
       after         = [ "network-online.target" ]
         ++ lib.optional cfg.systemdSocketActivation "${n}.socket";
@@ -438,12 +456,13 @@ in {
         NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
         # time to sleep before restarting a service
         RestartSec = 1;
+        KillSignal = "SIGINT";
       };
     } // optionalAttrs (!cfg.instanced) {
       wantedBy = [ "multi-user.target" ];
-    });
+    }) (cfg.extraServiceConfig n i));
 
-    systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation {
+    systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation (recursiveUpdate {
       description = "Socket of the ${n} service.";
       wantedBy = [ "sockets.target" ];
       socketConfig = {
@@ -454,7 +473,7 @@ in {
         SocketUser = "cardano-node";
         SocketGroup = "cardano-node";
       };
-    });
+    } (cfg.extraSocketConfig n i)));
 
     assertions = [
       {
