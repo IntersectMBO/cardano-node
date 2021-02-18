@@ -1,0 +1,142 @@
+cabal-version: 2.2
+
+name:                   cardano-submit-api
+version:                3.1.2
+synopsis:               A web server that allows transactions to be POSTed to the cardano chain
+description:
+homepage:               https://github.com/input-output-hk/cardano-explorer
+bug-reports:            https://github.com/input-output-hk/cardano-explorer/issues
+license:                Apache-2.0
+license-file:           LICENSE
+author:                 IOHK Engineering Team
+maintainer:             operations@iohk.io
+copyright:              (c) 2019-2021 IOHK
+category:               Language
+build-type:             Simple
+extra-source-files:     CHANGELOG.md
+
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common cardano-api                  { build-depends: cardano-api                                                  }
+common cardano-submit-api           { build-depends: cardano-submit-api                                           }
+
+common aeson                        { build-depends: aeson                            >= 1.5.5.1                  }
+common async                        { build-depends: async                            >= 2.2.2                    }
+common base16-bytestring            { build-depends: base16-bytestring                >= 1.0.1.0                  }
+common bytestring                   { build-depends: bytestring                       >= 0.10.8.2                 }
+common cardano-binary               { build-depends: cardano-binary                   >= 1.5.0                    }
+common cardano-crypto-class         { build-depends: cardano-crypto-class             >= 2.0.0                    }
+common cardano-ledger               { build-depends: cardano-ledger                   >= 0.1.0.0                  }
+common cardano-ledger-shelley-ma    { build-depends: cardano-ledger-shelley-ma        >= 0.1.0.0                  }
+common cardano-prelude              { build-depends: cardano-prelude                  >= 0.1.0.0                  }
+common containers                   { build-depends: containers                       >= 0.6.2.1                  }
+common contra-tracer                { build-depends: contra-tracer                    >= 0.1.0.0                  }
+common formatting                   { build-depends: formatting                       >= 6.3.7                    }
+common http-media                   { build-depends: http-media                       >= 0.8.0.0                  }
+common iohk-monitoring              { build-depends: iohk-monitoring                  >= 0.1.10.1                 }
+common monad-logger                 { build-depends: monad-logger                     >= 0.3.36                   }
+common mtl                          { build-depends: mtl                              >= 2.2.2                    }
+common network                      { build-depends: network                          >= 3.1.2.1                  }
+common optparse-applicative         { build-depends: optparse-applicative             >= 0.16.1.0                 }
+common ouroboros-consensus          { build-depends: ouroboros-consensus              >= 0.1.0.0                  }
+common ouroboros-consensus-byron    { build-depends: ouroboros-consensus-byron        >= 0.1.0.0                  }
+common ouroboros-consensus-cardano  { build-depends: ouroboros-consensus-cardano      >= 0.1.0.0                  }
+common ouroboros-consensus-shelley  { build-depends: ouroboros-consensus-shelley      >= 0.1.0.0                  }
+common ouroboros-network            { build-depends: ouroboros-network                >= 0.1.0.0                  }
+common ouroboros-network-framework  { build-depends: ouroboros-network-framework      >= 0.1.0.0                  }
+common prometheus                   { build-depends: prometheus                       >= 2.2.2                    }
+common servant                      { build-depends: servant                          >= 0.18.2                   }
+common servant-server               { build-depends: servant-server                   >= 0.18.2                   }
+common shelley-spec-ledger          { build-depends: shelley-spec-ledger              >= 0.1.0.0                  }
+common streaming-commons            { build-depends: streaming-commons                >= 0.2.2.1                  }
+common text                         { build-depends: text                             >= 1.2.3.2                  }
+common transformers                 { build-depends: transformers                     >= 0.5.6.2                  }
+common warp                         { build-depends: warp                             >= 3.3.13                   }
+common yaml                         { build-depends: yaml                             >= 0.11.5.0                 }
+
+common project-config
+  default-language:     Haskell2010
+  ghc-options:          -Wall
+                        -fwarn-incomplete-patterns
+                        -fwarn-redundant-constraints
+                        -Wcompat
+                        -Werror
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-all-missed-specialisations
+                        -Wno-implicit-prelude
+                        -Wno-missing-import-lists
+                        -Wno-safe
+                        -Wno-unsafe
+                        
+library
+  import:               base, project-config
+                      , aeson
+                      , async
+                      , base16-bytestring
+                      , bytestring
+                      , cardano-api
+                      , cardano-binary
+                      , cardano-crypto-class
+                      , cardano-ledger
+                      , cardano-ledger-shelley-ma
+                      , cardano-prelude
+                      , containers
+                      , contra-tracer
+                      , formatting
+                      , http-media
+                      , iohk-monitoring
+                      , monad-logger
+                      , mtl
+                      , network
+                      , optparse-applicative
+                      , ouroboros-consensus
+                      , ouroboros-consensus-byron
+                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus-shelley
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , prometheus
+                      , servant
+                      , servant-server
+                      , shelley-spec-ledger
+                      , streaming-commons
+                      , text
+                      , text
+                      , transformers
+                      , warp
+                      , yaml
+
+  hs-source-dirs:       src
+
+  exposed-modules:      Cardano.TxSubmit
+
+  other-modules:        Cardano.TxSubmit.CLI.Parsers
+                      , Cardano.TxSubmit.CLI.Types
+                      , Cardano.TxSubmit.Config
+                      , Cardano.TxSubmit.ErrorRender
+                      , Cardano.TxSubmit.JsonOrphans
+                      , Cardano.TxSubmit.Metrics
+                      , Cardano.TxSubmit.Rest.Parsers
+                      , Cardano.TxSubmit.Rest.Types
+                      , Cardano.TxSubmit.Rest.Web
+                      , Cardano.TxSubmit.Tracing.ToObjectOrphans
+                      , Cardano.TxSubmit.Tx
+                      , Cardano.TxSubmit.Types
+                      , Cardano.TxSubmit.Util
+                      , Cardano.TxSubmit.Web
+
+executable cardano-submit-api
+  import:               base, project-config
+                      , cardano-submit-api
+                      , optparse-applicative
+  main-is:              Main.hs
+  hs-source-dirs:       app
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
+
+test-suite unit
+  import:               base, project-config
+                      , cardano-submit-api
+  type:                 exitcode-stdio-1.0
+  main-is:              test.hs
+  hs-source-dirs:       test
