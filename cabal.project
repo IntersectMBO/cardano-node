@@ -92,8 +92,8 @@ package io-sim-classes
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 4251c0bb6e4f443f00231d28f5f70d42876da055
-  --sha256: 02a61ymvx054pcdcgvg5qj9kpybiajg993nr22iqiya196jmgciv
+  tag: b364d925e0a72689ecba40dd1f4899f76170b894
+  --sha256: 0igb4gnzlwxy1h40vy5s1aysmaa04wypxn7sn67qy6din7ysmad3
   subdir:
     binary
     binary/test
@@ -177,7 +177,7 @@ source-repository-package
     Win32-network
 
 -- Needed for the Windows cabal constraint solver.
-max-backjumps: 10000
+max-backjumps: 100000
 
 constraints:
     hedgehog >= 1.0
