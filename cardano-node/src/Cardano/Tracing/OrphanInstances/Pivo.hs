@@ -39,7 +39,7 @@ import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
 
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-instance (ShelleyBasedEra era
+instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.Delta (Core.Value era))
          , ToJSON (Core.TxOut era)

@@ -149,6 +149,7 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
+import qualified Cardano.Ledger.Pivo.TxBody as Pivo
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -1101,7 +1102,30 @@ makePivoTransactionBody :: [TxIn]
                         -> Pivo.Update.Payload (ShelleyLedgerEra Cardano.Api.Eras.PivoEra)
                         -> Either (TxBodyError Cardano.Api.Eras.PivoEra)
                                   (TxBody Cardano.Api.Eras.PivoEra)
-makePivoTransactionBody = undefined
+makePivoTransactionBody txins txouts txValidityUpperBound fee updatePayload =
+  return $ ShelleyTxBody ShelleyBasedEraPivo txBody Nothing
+  where
+    txBody =
+      Pivo.TxBody
+        (Set.fromList (map toShelleyTxIn txins))                -- inputs
+        (Seq.fromList (map toShelleyTxOut txouts))               -- outputs
+        Seq.empty                        -- certs
+        (Shelley.Wdrl Map.empty)                        -- wdrls
+        (case fee of
+           TxFeeImplicit era'     -> case era' of {}
+           TxFeeExplicit _ amount -> toShelleyLovelace amount
+        )                                               -- txfee
+        ( Allegra.ValidityInterval
+          { Allegra.invalidBefore = SNothing
+          , Allegra.invalidHereafter =
+              case txValidityUpperBound of
+                TxValidityNoUpperBound _ -> SNothing
+                TxValidityUpperBound _ s -> SJust s
+          }
+        ) -- vldt
+        (SJust updatePayload)            -- update
+        SNothing                         -- adHash
+        mempty                           -- mint
 
 makeShelleyTransactionBody :: ShelleyBasedEra era
                            -> TxBodyContent era
