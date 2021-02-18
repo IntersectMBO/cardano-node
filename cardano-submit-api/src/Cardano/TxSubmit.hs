@@ -11,7 +11,7 @@ import           Cardano.BM.Trace (Trace, logInfo)
 import           Cardano.Prelude
 import           Cardano.TxSubmit.CLI.Parsers as X
 import           Cardano.TxSubmit.CLI.Types as X
-import           Cardano.TxSubmit.Config as X
+import           Cardano.TxSubmit.Config as Xq
 import           Cardano.TxSubmit.Metrics (registerMetricsServer)
 import           Cardano.TxSubmit.Tx as X
 import           Cardano.TxSubmit.Types as X

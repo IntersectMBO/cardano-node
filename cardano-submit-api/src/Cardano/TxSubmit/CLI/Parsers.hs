@@ -12,12 +12,9 @@ module Cardano.TxSubmit.CLI.Parsers
 
 import Cardano.Prelude
 
-import Cardano.Api.Protocol
-    ( Protocol (..) )
+import Cardano.Api.Modes
 import Cardano.Api
     ( NetworkId (..), NetworkMagic (..) )
-import Cardano.Chain.Slotting
-    ( EpochSlots (..) )
 import Cardano.TxSubmit.CLI.Types
     ( ConfigFile (..), SocketPath (..), TxSubmitNodeParams (..) )
 import Cardano.TxSubmit.Rest.Parsers
@@ -81,7 +78,7 @@ pNetworkId =
 -- exported. Once we export this parser from the appropriate module and update
 -- our `cardano-cli` dependency, we should remove this and import the parser
 -- from there.
-pProtocol :: Parser Protocol
+pProtocol :: Parser AnyConsensusModeParams
 pProtocol =
     (  Opt.flag' ()
         (  Opt.long "shelley-mode"
@@ -105,16 +102,16 @@ pProtocol =
     )
   <|>
     -- Default to the Cardano protocol.
-    pure (CardanoProtocol (EpochSlots defaultByronEpochSlots))
+    pure (AnyConsensusModeParams (CardanoModeParams (EpochSlots defaultByronEpochSlots)))
   where
-    pByron :: Parser Protocol
-    pByron = ByronProtocol <$> pEpochSlots
+    pByron :: Parser AnyConsensusModeParams
+    pByron = AnyConsensusModeParams . ByronModeParams <$> pEpochSlots
 
-    pShelley :: Parser Protocol
-    pShelley = pure ShelleyProtocol
+    pShelley :: Parser AnyConsensusModeParams
+    pShelley = pure (AnyConsensusModeParams ShelleyModeParams)
 
-    pCardano :: Parser Protocol
-    pCardano = CardanoProtocol <$> pEpochSlots
+    pCardano :: Parser AnyConsensusModeParams
+    pCardano = AnyConsensusModeParams . CardanoModeParams <$> pEpochSlots
 
     pEpochSlots :: Parser EpochSlots
     pEpochSlots =
