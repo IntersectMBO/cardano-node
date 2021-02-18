@@ -11,8 +11,6 @@ module Cardano.TxSubmit.Tx
 
 import Cardano.Prelude
 
-import Cardano.Api.TxSubmit hiding
-    ( submitTx )
 import Cardano.Api
     ( InAnyCardanoEra(InAnyCardanoEra),
       CardanoEra(ShelleyEra, ByronEra),
@@ -21,11 +19,7 @@ import Cardano.Api
       TxId,
       getTxId,
       Tx,
-      getTxBody,
-      LocalNodeConnectInfo(localNodeConsensusMode) )
-import Cardano.Api.Typed
-    ( NodeConsensusMode (..)
-    )
+      getTxBody)
 import Cardano.TxSubmit.ErrorRender
     ( renderApplyMempoolPayloadErr, renderEraMismatch )
 import Ouroboros.Consensus.Byron.Ledger
@@ -39,7 +33,6 @@ import Ouroboros.Consensus.Shelley.Ledger
 import Ouroboros.Consensus.Shelley.Protocol.Crypto
     ( StandardCrypto )
 
-import qualified Cardano.Api.TxSubmit as Api
 import qualified Cardano.Ledger.Allegra as LedgerA
 import qualified Cardano.Ledger.Mary as LedgerM
 import qualified Cardano.Ledger.Shelley as LedgerS

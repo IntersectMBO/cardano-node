@@ -33,9 +33,10 @@ library
 
                         -- TODO Review this.  Made public to compile cardano-rest
                         Cardano.Api.TxBody
+                        Cardano.Api.Modes
+                        Cardano.Api.TxSubmit.Types
 
   other-modules:        Cardano.Api.TxSubmit.ErrorRender
-                        Cardano.Api.TxSubmit.Types
 
                         -- Splitting up the big Typed module:
                         Cardano.Api.Address
@@ -51,7 +52,6 @@ library
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysShelley
                         Cardano.Api.KeysPraos
-                        Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.ProtocolParameters

@@ -16,8 +16,8 @@ import Cardano.TxSubmit.Tx
 import Cardano.TxSubmit.Types
 import Cardano.TxSubmit.Util
 
-import Cardano.Api.Protocol
-    ( Protocol (..), withlocalNodeConnectInfo )
+-- import Cardano.Api.Protocol
+--     ( Protocol (..), withlocalNodeConnectInfo )
 import Cardano.Api.TxBody ( TxId(..) )
 import Cardano.Api
     ( AsType(AsShelleyTx, AsByronTx),
