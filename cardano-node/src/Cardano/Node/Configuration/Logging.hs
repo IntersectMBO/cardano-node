@@ -28,7 +28,6 @@ import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import           Control.Tracer
-import           Data.IORef (IORef, newIORef)
 import           Data.List (nub)
 import qualified Data.Map as Map
 import           Data.Text (pack)
@@ -37,6 +36,7 @@ import           Data.Version (showVersion)
 import qualified System.Remote.Monitoring as EKG
 import           System.Metrics.Gauge (Gauge)
 import           System.Metrics.Label (Label)
+import           System.Metrics.Counter (Counter)
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
@@ -119,9 +119,10 @@ data LoggingLayer = LoggingLayer
   }
 
 data EKGDirect = EKGDirect
-  { ekgServer :: EKG.Server
-  , ekgGauges :: IORef (Map.Map Text Gauge)
-  , ekgLabels :: IORef (Map.Map Text Label)
+  { ekgServer   :: EKG.Server
+  , ekgGauges   :: MVar (Map.Map Text Gauge)
+  , ekgLabels   :: MVar (Map.Map Text Label)
+  , ekgCounters :: MVar (Map.Map Text Counter)
   }
 
 --------------------------------
@@ -181,12 +182,14 @@ createLoggingLayer ver nodeConfig' p = do
   mbEkgDirect <- case mEKGServer of
                   Nothing -> pure Nothing
                   Just sv -> do
-                    refGauge <- liftIO $ newIORef Map.empty
-                    refLabel <- liftIO $ newIORef Map.empty
+                    refGauge   <- liftIO $ newMVar Map.empty
+                    refLabel   <- liftIO $ newMVar Map.empty
+                    refCounter <- liftIO $ newMVar Map.empty
                     pure $ Just EKGDirect {
-                        ekgServer = sv
-                      , ekgGauges = refGauge
-                      , ekgLabels = refLabel
+                        ekgServer   = sv
+                      , ekgGauges   = refGauge
+                      , ekgLabels   = refLabel
+                      , ekgCounters = refCounter
                       }
 
   pure $ mkLogLayer logConfig switchBoard mbEkgDirect trace
