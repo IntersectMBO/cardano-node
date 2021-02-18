@@ -181,6 +181,12 @@ fromConsensusBlock ShelleyMode =
         BlockInMode (ShelleyBlock ShelleyBasedEraShelley b')
                      ShelleyEraInShelleyMode
 
+fromConsensusBlock PivoMode =
+    \b -> case b of
+      Consensus.DegenBlock b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraPivo b')
+                     PivoEraInPivoMode
+
 fromConsensusBlock CardanoMode =
     \b -> case b of
       Consensus.BlockByron b' ->
@@ -270,6 +276,7 @@ toConsensusPointInMode :: ConsensusMode mode
 -- HeaderHash block ~ OneEraHash xs
 toConsensusPointInMode ByronMode   = toConsensusPointHF
 toConsensusPointInMode ShelleyMode = toConsensusPointHF
+toConsensusPointInMode PivoMode    = toConsensusPointHF
 toConsensusPointInMode CardanoMode = toConsensusPointHF
 
 fromConsensusPointInMode :: ConsensusMode mode
@@ -277,6 +284,7 @@ fromConsensusPointInMode :: ConsensusMode mode
                          -> ChainPoint
 fromConsensusPointInMode ByronMode   = fromConsensusPointHF
 fromConsensusPointInMode ShelleyMode = fromConsensusPointHF
+fromConsensusPointInMode PivoMode    = fromConsensusPointHF
 fromConsensusPointInMode CardanoMode = fromConsensusPointHF
 
 
@@ -363,6 +371,14 @@ fromConsensusTip ByronMode = conv
 fromConsensusTip ShelleyMode = conv
   where
     conv :: Consensus.Tip (Consensus.ShelleyBlockHFC Consensus.StandardShelley)
+         -> ChainTip
+    conv Consensus.TipGenesis = ChainTipAtGenesis
+    conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =
+      ChainTip slot (HeaderHash h) block
+
+fromConsensusTip PivoMode = conv
+  where
+    conv :: Consensus.Tip (Consensus.ShelleyBlockHFC Consensus.StandardPivo)
          -> ChainTip
     conv Consensus.TipGenesis = ChainTipAtGenesis
     conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =

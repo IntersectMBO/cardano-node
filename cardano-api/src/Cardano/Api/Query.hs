@@ -281,6 +281,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
     case erainmode of
       ByronEraInByronMode     -> case era of {}
       ShelleyEraInShelleyMode -> toConsensusQueryShelleyBased erainmode q
+      PivoEraInPivoMode       -> toConsensusQueryShelleyBased erainmode q
       ByronEraInCardanoMode   -> case era of {}
       ShelleyEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
@@ -347,6 +348,7 @@ consensusQueryInEraInMode
   -> Consensus.Query modeblock result'
 consensusQueryInEraInMode ByronEraInByronMode     = Consensus.DegenQuery
 consensusQueryInEraInMode ShelleyEraInShelleyMode = Consensus.DegenQuery
+consensusQueryInEraInMode PivoEraInPivoMode       = Consensus.DegenQuery
 consensusQueryInEraInMode ByronEraInCardanoMode   = Consensus.QueryIfCurrentByron
 consensusQueryInEraInMode ShelleyEraInCardanoMode = Consensus.QueryIfCurrentShelley
 consensusQueryInEraInMode AllegraEraInCardanoMode = Consensus.QueryIfCurrentAllegra
@@ -392,6 +394,12 @@ fromConsensusQueryResult (QueryInEra ShelleyEraInShelleyMode
     case (q', r') of
       (Consensus.DegenQuery q'', Consensus.DegenQueryResult r'') ->
         Right (fromConsensusQueryResultShelleyBased ShelleyBasedEraShelley q q'' r'')
+
+fromConsensusQueryResult (QueryInEra PivoEraInPivoMode
+                                     (QueryInShelleyBasedEra _era q)) q' r' =
+    case (q', r') of
+      (Consensus.DegenQuery q'', Consensus.DegenQueryResult r'') ->
+        Right (fromConsensusQueryResultShelleyBased ShelleyBasedEraPivo q q'' r'')
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra era _)) _ _ =

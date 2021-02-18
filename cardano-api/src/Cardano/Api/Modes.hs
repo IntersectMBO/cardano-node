@@ -47,7 +47,7 @@ import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHF
 import qualified Ouroboros.Consensus.Cardano.ShelleyHFC as Consensus (ShelleyBlockHFC)
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
                    eraIndexZero)
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley, StandardPivo)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
@@ -103,6 +103,7 @@ deriving instance Show AnyConsensusModeParams
 data ConsensusMode mode where
      ByronMode   :: ConsensusMode ByronMode
      ShelleyMode :: ConsensusMode ShelleyMode
+     PivoMode    :: ConsensusMode PivoMode
      CardanoMode :: ConsensusMode CardanoMode
 
 
@@ -126,6 +127,7 @@ deriving instance Show (ConsensusModeIsMultiEra mode)
 toEraInMode :: CardanoEra era -> ConsensusMode mode -> Maybe (EraInMode era mode)
 toEraInMode ByronEra   ByronMode   = Just ByronEraInByronMode
 toEraInMode ShelleyEra ShelleyMode = Just ShelleyEraInShelleyMode
+toEraInMode PivoEra    PivoMode    = Just PivoEraInPivoMode
 toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
 toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
@@ -141,6 +143,8 @@ data EraInMode era mode where
 
      ShelleyEraInShelleyMode :: EraInMode ShelleyEra ShelleyMode
 
+     PivoEraInPivoMode       :: EraInMode PivoEra PivoMode
+
      ByronEraInCardanoMode   :: EraInMode ByronEra   CardanoMode
      ShelleyEraInCardanoMode :: EraInMode ShelleyEra CardanoMode
      AllegraEraInCardanoMode :: EraInMode AllegraEra CardanoMode
@@ -152,6 +156,7 @@ deriving instance Show (EraInMode era mode)
 eraInModeToEra :: EraInMode era mode -> CardanoEra era
 eraInModeToEra ByronEraInByronMode     = ByronEra
 eraInModeToEra ShelleyEraInShelleyMode = ShelleyEra
+eraInModeToEra PivoEraInPivoMode       = PivoEra
 eraInModeToEra ByronEraInCardanoMode   = ByronEra
 eraInModeToEra ShelleyEraInCardanoMode = ShelleyEra
 eraInModeToEra AllegraEraInCardanoMode = AllegraEra
@@ -169,6 +174,7 @@ anyEraInModeToAnyEra (AnyEraInMode erainmode) =
   case erainmode of
     ByronEraInByronMode     -> AnyCardanoEra ByronEra
     ShelleyEraInShelleyMode -> AnyCardanoEra ShelleyEra
+    PivoEraInPivoMode       -> AnyCardanoEra PivoEra
     ByronEraInCardanoMode   -> AnyCardanoEra ByronEra
     ShelleyEraInCardanoMode -> AnyCardanoEra ShelleyEra
     AllegraEraInCardanoMode -> AnyCardanoEra AllegraEra
@@ -212,13 +218,16 @@ deriving instance Show (ConsensusModeParams mode)
 type family ConsensusBlockForMode mode where
   ConsensusBlockForMode ByronMode   = Consensus.ByronBlockHFC
   ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC StandardShelley
+  ConsensusBlockForMode PivoMode = Consensus.ShelleyBlockHFC StandardPivo
   ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
+
 
 type family ConsensusBlockForEra era where
   ConsensusBlockForEra ByronEra   = Consensus.ByronBlock
   ConsensusBlockForEra ShelleyEra = Consensus.ShelleyBlock StandardShelley
   ConsensusBlockForEra AllegraEra = Consensus.ShelleyBlock StandardAllegra
   ConsensusBlockForEra MaryEra    = Consensus.ShelleyBlock StandardMary
+  ConsensusBlockForEra PivoEra    = Consensus.ShelleyBlock StandardPivo
 
 
 
@@ -240,6 +249,7 @@ toConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
                     -> Consensus.EraIndex xs
 toConsensusEraIndex ByronEraInByronMode     = eraIndex0
 toConsensusEraIndex ShelleyEraInShelleyMode = eraIndex0
+toConsensusEraIndex PivoEraInPivoMode       = eraIndex0
 
 toConsensusEraIndex ByronEraInCardanoMode   = eraIndex0
 toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
@@ -266,6 +276,14 @@ fromConsensusEraIndex ShelleyMode = fromShelleyEraIndex
                         -> AnyEraInMode ShelleyMode
     fromShelleyEraIndex (Consensus.EraIndex (Z (K ()))) =
       AnyEraInMode ShelleyEraInShelleyMode
+
+fromConsensusEraIndex PivoMode = fromShelleyEraIndex
+  where
+    fromShelleyEraIndex :: Consensus.EraIndex
+                             '[Consensus.ShelleyBlock StandardPivo]
+                        -> AnyEraInMode PivoMode
+    fromShelleyEraIndex (Consensus.EraIndex (Z (K ()))) =
+      AnyEraInMode PivoEraInPivoMode
 
 
 fromConsensusEraIndex CardanoMode = fromShelleyEraIndex

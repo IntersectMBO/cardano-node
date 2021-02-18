@@ -87,6 +87,11 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) ShelleyEraInShelleyMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
+toConsensusGenTx (TxInMode (ShelleyTx _ tx) PivoEraInPivoMode) =
+    Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))
+  where
+    tx' = Consensus.mkShelleyTx tx
+
 toConsensusGenTx (TxInMode (ShelleyTx _ tx) ShelleyEraInCardanoMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (Z tx')))
   where
@@ -183,6 +188,11 @@ fromConsensusApplyTxErr ShelleyMode (Consensus.DegenApplyTxErr err) =
     TxValidationErrorInMode
       (ShelleyTxValidationError ShelleyBasedEraShelley err)
       ShelleyEraInShelleyMode
+
+fromConsensusApplyTxErr PivoMode (Consensus.DegenApplyTxErr err) =
+    TxValidationErrorInMode
+      (ShelleyTxValidationError ShelleyBasedEraPivo err)
+      PivoEraInPivoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrByron err) =
     TxValidationErrorInMode
