@@ -28,6 +28,7 @@ import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import qualified Cardano.Api.Pivo as Api.Pivo
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
@@ -167,6 +168,7 @@ renderEra (AnyCardanoEra ByronEra)   = "Byron"
 renderEra (AnyCardanoEra ShelleyEra) = "Shelley"
 renderEra (AnyCardanoEra AllegraEra) = "Allegra"
 renderEra (AnyCardanoEra MaryEra)    = "Mary"
+renderEra (AnyCardanoEra PivoEra)    = "Pivo"
 
 renderMode :: AnyConsensusMode -> Text
 renderMode (AnyConsensusMode ByronMode) = "ByronMode"
@@ -279,12 +281,14 @@ runPivoTxBuildRaw
   -> ExceptT ShelleyTxCmdError IO ()
 runPivoTxBuildRaw txins txouts mUBound mFee updatePayloadFile (TxBodyFile outFile)
   = do
-  vTxIns  <- validateTxIns txins
-  vTxouts <- validateTxOuts PivoEra txouts
-  vUBound <- validateTxValidityUpperBound PivoEra mUBound
-  vFee    <- validateTxFee mFee
+  vTxIns  <- validateTxIns Cardano.Api.PivoEra txins
+  vTxouts <- validateTxOuts Cardano.Api.PivoEra txouts
+  vUBound <- validateTxValidityUpperBound Cardano.Api.PivoEra mUBound
+  vFee    <- validateTxFee Cardano.Api.PivoEra mFee
   vUpdate <- parseUpdatePayload updatePayloadFile
-  txBody  <- makePivoTransactionBody txins txouts vUBound vFee vUpdate
+  txBody  <-
+    firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError) . hoistEither $
+      makePivoTransactionBody vTxIns vTxouts vUBound vFee vUpdate
   firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
     writeFileTextEnvelope outFile Nothing txBody
 
@@ -453,9 +457,12 @@ validateTxCertificates era certFiles =
       return $ TxCertificates supported certs
 
 parseUpdatePayload
-  :: forall era
-  . FilePath -> ExceptT ShelleyTxCmdError IO (Pivo.Update.Payload era)
-parseUpdatePayload = undefined
+  :: FilePath
+  -> ExceptT ShelleyTxCmdError IO (Pivo.Update.Payload (ShelleyLedgerEra PivoEra))
+parseUpdatePayload file
+  = firstExceptT ShelleyTxCmdReadTextViewFileError
+  $ newExceptT
+  $ readFileTextEnvelope Api.Pivo.AsPivoUpdatePayload file
 
 validateTxUpdateProposal :: CardanoEra era
                          -> Maybe UpdateProposalFile

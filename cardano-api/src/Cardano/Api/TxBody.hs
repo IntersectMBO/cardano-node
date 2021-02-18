@@ -135,7 +135,7 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley, PivoEra)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
@@ -1094,13 +1094,13 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
       (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
              _) = case era of {}
 
-makePivoTransactionBody :: ShelleyBasedEra (PivoEra c)
-                        -> [TxIn]
-                        -> [TxOut (PivoEra c)]
-                        -> TxValidityUpperBound (PivoEra c)
-                        -> Maybe Lovelace
-                        -> Pivo.Update.Payload (PivoEra c)
-                        -> Either (TxBodyError (PivoEra c)) (TxBody (PivoEra c))
+makePivoTransactionBody :: [TxIn]
+                        -> [TxOut Cardano.Api.Eras.PivoEra]
+                        -> TxValidityUpperBound Cardano.Api.Eras.PivoEra
+                        -> TxFee Cardano.Api.Eras.PivoEra
+                        -> Pivo.Update.Payload (ShelleyLedgerEra Cardano.Api.Eras.PivoEra)
+                        -> Either (TxBodyError Cardano.Api.Eras.PivoEra)
+                                  (TxBody Cardano.Api.Eras.PivoEra)
 makePivoTransactionBody = undefined
 
 makeShelleyTransactionBody :: ShelleyBasedEra era

@@ -664,4 +664,3 @@ genProtocolParameters =
     <*> genRational
     <*> genRational
     <*> genRational
-

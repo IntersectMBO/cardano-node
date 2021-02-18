@@ -36,6 +36,9 @@ mkNodeClientProtocol protocol =
     ShelleyProtocol ->
       mkSomeNodeClientProtocolShelley
 
+    PivoProtocol ->
+      panic "This functionality is not implemented for Pivo"
+
     CardanoProtocol ->
       mkSomeNodeClientProtocolCardano
         (EpochSlots 21600)
