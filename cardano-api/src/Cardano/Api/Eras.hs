@@ -39,7 +39,7 @@ module Cardano.Api.Eras
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra,
-           AsByron,    AsShelley,    AsAllegra,    AsMary)
+           AsByron,    AsShelley,    AsAllegra,    AsMary, AsPivoEra)
   ) where
 
 import           Prelude
