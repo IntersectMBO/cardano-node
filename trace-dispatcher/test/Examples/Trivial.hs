@@ -16,13 +16,13 @@ test1 = do
     let simpleTracer1' = filterTraceBySeverity (Just WarningF) simpleTracer1
     let simpleTracerC1 = appendName "Outer1" simpleTracer1'
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
-    let simpleTracerC3 = setSeverity ErrorS
+    let simpleTracerC3 = setSeverity Error
                         $ setPrivacy Confidential
                             $ appendName "Inner2" simpleTracerC1
-    traceWith (setSeverity ErrorS simpleTracerC2) logObject1
-    traceWith (setSeverity WarningS simpleTracerC3) logObject2
+    traceWith (setSeverity Error simpleTracerC2) logObject1
+    traceWith (setSeverity Warning simpleTracerC3) logObject2
     traceWith simpleTracerC2 logObject3
-    traceWith (setSeverity CriticalS (appendName "Inner3" simpleTracerC3)) logObject4
+    traceWith (setSeverity Critical (appendName "Inner3" simpleTracerC3)) logObject4
 
 test2 :: IO ()
 test2 = do
@@ -33,11 +33,11 @@ test2 = do
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setPrivacy Confidential $ appendName "Inner2" simpleTracerC1
     traceWith simpleTracerC2 logObject1
-    traceWith (setSeverity CriticalS simpleTracerC3) logObject2
+    traceWith (setSeverity Critical simpleTracerC3) logObject2
     traceWith simpleTracerC2 logObject3
     traceWith (appendName "Inner3" simpleTracerC3) logObject4
     traceWith (appendName "cont1" $ appendName "cont2" $ appendName "cont3" simpleTracerC2) logObject1
 
-loSeverity :: LO -> Severity
-loSeverity LO1 {} = WarningS
-loSeverity LO2 {} = ErrorS
+loSeverity :: LO -> SeverityS
+loSeverity LO1 {} = Warning
+loSeverity LO2 {} = Error

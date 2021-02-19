@@ -16,7 +16,7 @@ import           Cardano.Logging.Trace (filterTraceByPrivacy,
                      filterTraceBySeverity)
 import           Cardano.Logging.Types
 
-
+-- | Call this function at initialisation, and later for reconfiguration
 configureTracers :: Monad m => TraceConfig -> [Trace m a] -> m ()
 configureTracers config tracers = do
     mapM_ (configureTrace Reset) tracers
@@ -30,22 +30,22 @@ configureTracers config tracers = do
 filterSeverityFromConfig :: (MonadIO m) =>
      Trace m a
   -> m (Trace m a)
-filterSeverityFromConfig = withConfig getSeverity filterTraceBySeverity
+filterSeverityFromConfig = withNamespaceConfig getSeverity filterTraceBySeverity
 
 -- | Filter a trace by severity and take the filter value from the config
 filterPrivacyFromConfig :: (MonadIO m) =>
      Trace m a
   -> m (Trace m a)
-filterPrivacyFromConfig = withConfig getPrivacy filterTraceByPrivacy
+filterPrivacyFromConfig = withNamespaceConfig getPrivacy filterTraceByPrivacy
 
 -- | Take a selector function, and a function from trace to trace with
 --   this selector to make a trace transformer with a config value
-withConfig :: (MonadIO m, Eq b) =>
+withNamespaceConfig :: (MonadIO m, Eq b) =>
      (TraceConfig -> Namespace -> b)
   -> (Maybe b -> Trace m a -> Trace m a)
   -> Trace m a
   -> m (Trace m a)
-withConfig extract needsConfigFunc tr = do
+withNamespaceConfig extract needsConfigFunc tr = do
     ref  <- liftIO (newIORef (Left Map.empty))
     pure $ T.arrow $ T.emit $ mkTrace ref
   where

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,6 +11,7 @@ import           Control.Monad (join, void, when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import qualified Control.Tracer.Arrow as TA
+import qualified Data.Aeson as AE
 import           Data.Foldable as FT
 import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef,
                      writeIORef)
@@ -22,14 +24,32 @@ import           Katip.Core (ScribeHandle (..), WorkerMessage (..),
 import           Katip.Scribes.Handle (ioLogEnv)
 import           System.IO (stdout)
 
-import           Cardano.Logging.Types hiding(Namespace)
+import qualified Cardano.Logging.Types as LT
 
-stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+data LoggingContextKatip = LoggingContextKatip {
+    lk       :: LT.LoggingContext
+  , lkLogEnv :: LogEnv
+}
+
+instance LogItem AE.Object where
+  payloadKeys _ _ = AllKeys
+
+asKatipSeverity :: LT.SeverityS -> Severity
+asKatipSeverity LT.Debug     = DebugS
+asKatipSeverity LT.Info      = InfoS
+asKatipSeverity LT.Notice    = NoticeS
+asKatipSeverity LT.Warning   = WarningS
+asKatipSeverity LT.Error     = ErrorS
+asKatipSeverity LT.Critical  = CriticalS
+asKatipSeverity LT.Alert     = AlertS
+asKatipSeverity LT.Emergency = EmergencyS
+
+stdoutObjectKatipTracer :: (MonadIO m, LT.Logging a) => m (LT.Trace m a)
 stdoutObjectKatipTracer = do
     env <- liftIO $ ioLogEnv (\ _ -> pure True) V3
     pure $ withKatipLogEnv env katipTracer
 
-stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+stdoutJsonKatipTracer :: (MonadIO m, LT.Logging a) => m (LT.Trace m a)
 stdoutJsonKatipTracer = do
     env <- liftIO $ ioLogEnvJson (\ _ -> pure True) V3
     pure $ withKatipLogEnv env katipTracer
@@ -37,20 +57,20 @@ stdoutJsonKatipTracer = do
 -- | Sets severities for the messages in this trace based on the selector function
 withKatipLogEnv :: Monad m
   => LogEnv
-  -> T.Tracer m (LoggingContextKatip, Either TraceControl a)
-  -> Trace m a
+  -> T.Tracer m (LoggingContextKatip, Either LT.TraceControl a)
+  -> LT.Trace m a
 withKatipLogEnv le = T.contramap (\ (lc,e) -> (LoggingContextKatip lc le, e))
 
 --- | A standard Katip tracer
-katipTracer :: (MonadIO m, LogItem a)
-  => T.Tracer m (LoggingContextKatip, Either TraceControl a)
+katipTracer :: (MonadIO m, LT.Logging a)
+  => T.Tracer m (LoggingContextKatip, Either LT.TraceControl a)
 katipTracer =  T.arrow $ T.emit $ uncurry output
   where
     output LoggingContextKatip {..} (Right a) =
                       logItem'
-                          a
-                          (Namespace (lcContext lk))
-                          (fromMaybe InfoS (lcSeverity lk))
+                          (LT.forMachine (fromMaybe LT.DRegular (LT.lcDetails lk)) a)
+                          (Namespace (LT.lcContext lk))
+                          (asKatipSeverity (fromMaybe LT.Info (LT.lcSeverity lk)))
                           ""
                           lkLogEnv
     output LoggingContextKatip {..} (Left a) = pure () -- TODO
