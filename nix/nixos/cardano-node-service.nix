@@ -290,20 +290,18 @@ in {
       };
 
       extraServiceConfig = mkOption {
-        # activate type for nixos-21.03:
-        # type = types.functionTo (types.listOf types.attrs);
-        default = n: i: {};
+        type = types.attrs;
+        default = {};
         description = ''
-          Extra systemd service config, given service name and instance index.
+          Extra systemd service config (apply to all instances).
         '';
       };
 
       extraSocketConfig = mkOption {
-        # activate type for nixos-21.03:
-        # type = types.functionTo (types.listOf types.attrs);
-        default = n: i: {};
+        type = types.attrs;
+        default = {};
         description = ''
-          Extra systemd socket config, given socket name and instance index.
+          Extra systemd socket config (apply to all instances).
         '';
       };
 
@@ -463,7 +461,7 @@ in {
           RestartSec = 1;
           KillSignal = "SIGINT";
         };
-      } (cfg.extraServiceConfig n i));
+      } cfg.extraServiceConfig);
 
       systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation (recursiveUpdate {
         description = "Socket of the ${n} service.";
@@ -477,7 +475,7 @@ in {
           SocketUser = "cardano-node";
           SocketGroup = "cardano-node";
         };
-      } (cfg.extraSocketConfig n i)));
+      } cfg.extraSocketConfig));
     }
     {
       # oneshot service start allows to easily control all instances at once.
