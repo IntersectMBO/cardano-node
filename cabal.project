@@ -10,6 +10,25 @@ packages:
     cardano-node-chairman
     hedgehog-extras
 
+    ../ouroboros-network/typed-protocols
+    ../ouroboros-network/typed-protocols-examples
+    ../ouroboros-network/ouroboros-network-testing
+    ../ouroboros-network/network-mux
+    ../ouroboros-network/ouroboros-network-framework
+    ../ouroboros-network/ouroboros-network
+    ../ouroboros-network/ouroboros-network-testing
+    ../ouroboros-network/ouroboros-consensus
+    ../ouroboros-network/ouroboros-consensus-byron
+    ../ouroboros-network/ouroboros-consensus-byronspec
+    ../ouroboros-network/ouroboros-consensus-cardano
+    ../ouroboros-network/ouroboros-consensus-mock
+    ../ouroboros-network/ouroboros-consensus-shelley
+    ../ouroboros-network/io-sim
+    ../ouroboros-network/io-sim-classes
+    ../ouroboros-network/ntp-client
+    ../ouroboros-network/Win32-network
+    ../ouroboros-network/cardano-client
+
 package cardano-api
   ghc-options: -Werror
 
@@ -156,25 +175,6 @@ source-repository-package
     plugins/backend-trace-forwarder
     plugins/scribe-systemd
     tracer-transformers
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 612270da8152972d1f7891e7f2c8ec60d30449f8
-  --sha256: 10ggxwvv4hnnb4gry0r0c3im7jcv6bxa4pgsfp5qvl1qqq99dlah
-  subdir:
-    io-sim
-    io-sim-classes
-    network-mux
-    ouroboros-consensus
-    ouroboros-consensus-byron
-    ouroboros-consensus-cardano
-    ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    typed-protocols
-    typed-protocols-examples
-    Win32-network
 
 -- Needed for the Windows cabal constraint solver.
 max-backjumps: 10000

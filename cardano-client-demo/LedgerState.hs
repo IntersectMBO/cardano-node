@@ -84,7 +84,7 @@ foldBlocks
   -> IO a
   -- ^ The final state
 foldBlocks nodeConfigFilePath socketPath state0 accumulate = do
-  (env, ledgerState) <- initialLedgerState nodeConfigFilePath
+  (env, ledgerState) <- initialLedgerState nodeConfigFilePath connectInfo
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.

@@ -33,9 +33,9 @@ import           Data.Bifunctor (bimap)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
+import           Data.SOP.Strict (SListI)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.SOP.Strict (SListI)
 import           Prelude
 
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
@@ -78,6 +78,9 @@ data QueryInMode mode result where
 
      QueryCurrentEra :: ConsensusModeIsMultiEra mode
                      -> QueryInMode mode AnyCardanoEra
+
+     QueryLedgerConfig :: ConsensusModeIsMultiEra mode
+                     -> QueryInMode mode (Consensus.HardForkLedgerConfig (Consensus.CardanoEras StandardCrypto))
 
      QueryInEra      :: EraInMode era mode
                      -> QueryInEra era result
@@ -234,6 +237,9 @@ toConsensusQuery :: forall mode block result.
 toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
     Some (Consensus.QueryHardFork Consensus.GetCurrentEra)
 
+toConsensusQuery (QueryLedgerConfig CardanoModeIsMultiEra) =
+    Some (Consensus.QueryHardFork Consensus.GetLedgerCfg)
+
 toConsensusQuery (QueryInEra ByronEraInByronMode QueryByronUpdateState) =
     Some (Consensus.DegenQuery Consensus.GetUpdateInterfaceState)
 
@@ -326,6 +332,10 @@ fromConsensusQueryResult :: forall mode block result result'.
                          -> Consensus.Query block result'
                          -> result'
                          -> result
+fromConsensusQueryResult (QueryLedgerConfig CardanoModeIsMultiEra) q' r' =
+    case q' of
+      Consensus.QueryHardFork Consensus.GetLedgerCfg -> r'
+      _ -> fromConsensusQueryResultMismatch
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
     case q' of
       Consensus.QueryHardFork Consensus.GetCurrentEra ->

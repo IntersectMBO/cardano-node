@@ -65,7 +65,6 @@ module Cardano.Api.IPC (
 
 import           Prelude
 
-import           Data.Kind (Type)
 import           Data.Void (Void)
 
 import qualified Data.ByteString.Lazy as LBS
@@ -410,41 +409,6 @@ convLocalChainSyncClientPipelined mode =
     (fromConsensusPointInMode mode)
     (fromConsensusBlock mode)
     (fromConsensusTip mode)
-
--- TODO move to Ouroboros.Network.Protocol.ChainSync.ClientPipelined
-mapChainSyncClientPipelined :: forall header header' point point' tip tip' (m :: Type -> Type) a.
-  Functor m =>
-  (point -> point')
-  -> (point' -> point)
-  -> (header' -> header)
-  -> (tip' -> tip)
-  -> ChainSyncClientPipelined header point tip m a
-  -> ChainSyncClientPipelined header' point' tip' m a
-mapChainSyncClientPipelined toPoint' toPoint toHeader toTip (ChainSyncClientPipelined mInitialIdleClient)
-  = ChainSyncClientPipelined (goIdle <$> mInitialIdleClient)
-  where
-    goIdle :: ClientPipelinedStIdle n header point tip  m a
-           -> ClientPipelinedStIdle n header' point' tip'  m a
-    goIdle client = case client of
-      SendMsgRequestNext next mNext -> SendMsgRequestNext (goNext next) (goNext <$> mNext)
-      SendMsgRequestNextPipelined idle -> SendMsgRequestNextPipelined (goIdle idle)
-      SendMsgFindIntersect points inter -> SendMsgFindIntersect (toPoint' <$> points) (goIntersect inter)
-      CollectResponse idleMay next -> CollectResponse (goIdle <$> idleMay) (goNext next)
-      SendMsgDone a -> SendMsgDone a
-
-    goNext :: ClientStNext n header point tip  m a
-           -> ClientStNext n header' point' tip'  m a
-    goNext ClientStNext{ recvMsgRollForward, recvMsgRollBackward } = ClientStNext
-      { recvMsgRollForward = \header' tip' -> goIdle <$> recvMsgRollForward (toHeader header') (toTip tip')
-      , recvMsgRollBackward = \point' tip' -> goIdle <$> recvMsgRollBackward (toPoint point') (toTip tip')
-      }
-
-    goIntersect :: ClientPipelinedStIntersect header point tip m a
-                -> ClientPipelinedStIntersect header' point' tip' m a
-    goIntersect ClientPipelinedStIntersect{ recvMsgIntersectFound, recvMsgIntersectNotFound } = ClientPipelinedStIntersect
-      { recvMsgIntersectFound = \point' tip' -> goIdle <$> recvMsgIntersectFound (toPoint point') (toTip tip')
-      , recvMsgIntersectNotFound = \tip' -> goIdle <$> recvMsgIntersectNotFound (toTip tip')
-      }
 
 convLocalTxSubmissionClient
   :: forall mode block m a.

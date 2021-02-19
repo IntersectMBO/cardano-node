@@ -54,6 +54,8 @@ import           System.FilePath
 
 import qualified Cardano.Api.Block
 import qualified Cardano.Api.Eras
+import qualified Cardano.Api.IPC as Api
+import qualified Cardano.Api.Modes as Api
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.UTxO
 import qualified Cardano.Chain.Update
@@ -92,17 +94,33 @@ import qualified Shelley.Spec.Ledger.PParams
 
 -- | Get the initial ledger state (and corresponding environment).
 initialLedgerState
-  :: FilePath
+  :: FilePath -- TODO remove in favour of node queries
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
+  -> Api.LocalNodeConnectInfo Api.CardanoMode
   -> IO (Env, LedgerState)
   -- ^ ( The environment
   --   , The initial ledger state
   --   )
-initialLedgerState dbSyncConfFilePath = do
+initialLedgerState dbSyncConfFilePath localNodeConnectInfo = do
+  -- Configuration
+  ledgerConfig <-
+    either (error . show) id
+    <$> Api.queryNodeLocalState
+          localNodeConnectInfo
+          Cardano.Api.Block.ChainPointAtGenesis
+          (Api.QueryLedgerConfig Api.CardanoModeIsMultiEra)
+  -- TODO use query for protocol config
+  -- protocolConfig <-
+  --   either (error . show) id
+  --   <$> undefined
+
+  -- Initial Ledger State
   dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
   genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
-  env <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
+  Env _ protocolConfig <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
+  let env = Env ledgerConfig protocolConfig
   let ledgerState = initLedgerStateVar genConf
+
   return (env, ledgerState)
 
 -- | Apply a single block to the current ledger state.
