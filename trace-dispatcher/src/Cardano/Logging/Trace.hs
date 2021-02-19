@@ -15,16 +15,15 @@ import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef,
                      writeIORef)
 import           Data.Maybe (fromMaybe, isJust)
 import           Data.Text (Text)
-import           Katip (Severity (..))
 
 import           Cardano.Logging.Types
 
 -- | Adds a message object to a trace
-traceWith :: Monad m => Trace m a -> a -> m ()
+traceWith :: (Monad m) => Trace m a -> a -> m ()
 traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
 
 -- | Convenience function for naming a message when tracing
-traceNamed :: Monad m => Trace m a -> Text -> a -> m ()
+traceNamed :: (Monad m) => Trace m a -> Text -> a -> m ()
 traceNamed tr n = traceWith (appendName n tr)
 
 --- | Don't process further if the result of the selector function
@@ -58,14 +57,14 @@ appendName name = T.contramap
   (\ (lc,e) -> (lc {lcContext = name : lcContext lc}, e))
 
 -- | Sets severity for the messages in this trace
-setSeverity :: Monad m => Severity -> Trace m a -> Trace m a
+setSeverity :: Monad m => SeverityS -> Trace m a -> Trace m a
 setSeverity s = T.contramap
   (\ (lc,e) -> if isJust (lcSeverity lc)
                     then (lc,e)
                     else (lc {lcSeverity = Just s}, e))
 
 -- | Sets severities for the messages in this trace based on the selector function
-withSeverity :: Monad m => (a -> Severity) -> Trace m a -> Trace m a
+withSeverity :: Monad m => (a -> SeverityS) -> Trace m a -> Trace m a
 withSeverity fs = T.contramap $
     \case
       (lc, Right e) -> if isJust (lcSeverity lc)
@@ -174,13 +173,3 @@ routingTrace rf rc = T.arrow $ T.emit $
     \case
       (lc, Right x) -> T.traceWith (rf x) (lc, Right x)
       (lc, Left  c) -> T.traceWith rc     (lc, Left  c)
-
-
-configureTracers :: Monad m => TraceConfig -> [Trace m a] -> m ()
-configureTracers config tracers = do
-    mapM_ (configureTrace Reset) tracers
-    mapM_ (configureTrace (Config config)) tracers
-    mapM_ (configureTrace Optimize) tracers
-  where
-    configureTrace :: Monad m => TraceControl -> Trace m a -> m ()
-    configureTrace c tr = T.traceWith tr (emptyLoggingContext, Left c)
