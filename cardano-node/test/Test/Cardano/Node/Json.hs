@@ -13,20 +13,6 @@ import qualified Hedgehog
 
 import           Test.Cardano.Node.Gen
 
-prop_roundtrip_NodeIPv4Address_JSON :: Property
-prop_roundtrip_NodeIPv4Address_JSON =
-  Hedgehog.property $ do
-    na <- Hedgehog.forAll genNodeIPv4Address
-    Hedgehog.tripping na toJSON fromJSON
-    Hedgehog.tripping na encode decode
-
-prop_roundtrip_NodeIPv6Address_JSON :: Property
-prop_roundtrip_NodeIPv6Address_JSON =
-  Hedgehog.property $ do
-    na <- Hedgehog.forAll genNodeIPv6Address
-    Hedgehog.tripping na toJSON fromJSON
-    Hedgehog.tripping na encode decode
-
 prop_roundtrip_NodeIPAddress_JSON :: Property
 prop_roundtrip_NodeIPAddress_JSON =
   Hedgehog.property $ do

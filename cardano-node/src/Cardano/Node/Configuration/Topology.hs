@@ -4,8 +4,6 @@ module Cardano.Node.Configuration.Topology
   ( TopologyError(..)
   , NetworkTopology(..)
   , NodeHostIPAddress(..)
-  , NodeHostIPv4Address(..)
-  , NodeHostIPv6Address(..)
   , NodeSetup(..)
   , RemoteAddress(..)
   , nodeAddressToSockAddr
@@ -86,8 +84,7 @@ instance ToJSON RemoteAddress where
 
 data NodeSetup = NodeSetup
   { nodeId :: !Word64
-  , nodeIPv4Address :: !(Maybe NodeIPv4Address)
-  , nodeIPv6Address :: !(Maybe NodeIPv6Address)
+  , nodeIPAddress :: !(Maybe NodeIPAddress)
   , producers :: ![RemoteAddress]
   } deriving (Eq, Show)
 
@@ -95,16 +92,14 @@ instance FromJSON NodeSetup where
   parseJSON = withObject "NodeSetup" $ \o ->
                 NodeSetup
                   <$> o .: "nodeId"
-                  <*> o .: "nodeIPv4Address"
-                  <*> o .: "nodeIPv6Address"
+                  <*> o .: "nodeIPAddress"
                   <*> o .: "producers"
 
 instance ToJSON NodeSetup where
   toJSON ns =
     object
       [ "nodeId" .= nodeId ns
-      , "nodeIPv4Address" .= nodeIPv4Address ns
-      , "nodeIPv6Address" .= nodeIPv6Address ns
+      , "nodeIPAddress" .= nodeIPAddress ns
       , "producers" .= producers ns
       ]
 
