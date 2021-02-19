@@ -59,14 +59,14 @@ Many commands relay on the environment variable CARDANO_NODE_SOCKET_PATH:
 
     export CARDANO_NODE_SOCKET_PATH=path/to/db/node.socket
 
-Check that the node is syncing by fetching the current tip. When syncing slotNo should be increasing.
+Check that the node is syncing by fetching the current tip. When syncing slot should be increasing.
 
         cardano-cli query tip --mainnet
 
         {
-        "blockNo": 36322,
-        "headerHash": "3f1bea22be21452415851ae670f4bac9340471cb7f2f6a664fac56d7f60dbaad",
-        "slotNo": 888561
+            "hash": "3f1bea22be21452415851ae670f4bac9340471cb7f2f6a664fac56d7f60dbaad",
+            "block": 36322,
+            "slot": 888561
         }
 
 **Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.
