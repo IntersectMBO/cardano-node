@@ -8,3 +8,4 @@ TAGS
 *.dyn_o
 *.dyn_hi
 stack.yaml.lock
+*.pdf
