@@ -11,7 +11,7 @@ This library consists just of simple combinators and requires the messages just 
 Logging and Monitoring is done in a typed fashion. The basic API consists of defining Tracers which are tracing the variants of a sum type:
 
 ```haskell
-exampleTracer :: Tracer IO (TraceAddBlockEvent blk)
+exampleTracer :: Trace IO (TraceAddBlockEvent blk)
 ```
 In this example `TraceAddBlockEvent blk` is the sum type, which
 is defined with the code, that should be traced:
@@ -347,7 +347,7 @@ We offer different traceOuts (backends):
 
 Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process. The only other possibility in the node will be a simple Stdout Tracer.  
 
-Katip is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a Katip tracer, which is configured for a human or machine readable configuration or to both.  
+Katip is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ object or JSON representation. This choice is made by sending the message either to a Katip tracer, which is configured for a human or machine readable configuration or to both.  
 
 EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded to Prometheus.
 
