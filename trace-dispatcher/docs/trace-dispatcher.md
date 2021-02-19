@@ -1,8 +1,10 @@
-# trace-dispatcher: Towards an efficient and simple logging solution
+# trace-dispatcher: An efficient, simple and flexible logging solution
 
-The current iohk-monitoring-framework should be replaced with something simpler. The current framework shall be replaced, because it consumes too much resources, and as such too much influences the system it is monitoring. As well the API should be simplified. And finally we are happy if we can offer a powerful and flexible solution for DevOps and Stakeholders.
+The current iohk-monitoring-framework should be replaced with something simpler. The current framework shall be replaced, because it consumes too much resources, and as such too much influences the system it is monitoring.
 
-We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The traceWith function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers and ends in one or more TraceOuts.
+We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The `traceWith` function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers and ends in one or more TraceOuts.
+
+This library consists just of simple combinators and requires the messages just to implement one typeclass for formatting called `Logging`. It can be reconfigured at runtime with one procedure call. However to work properly it puts the burden on the user to provide a default object for any message as is described in the section on configuration and documentation. This library build upon the arrow based contravariant tracer library contra-tracer.
 
 ## General Interface
 
@@ -23,7 +25,7 @@ data TraceAddBlockEvent blk =
 
 In this sum type every constructor defines a message with a potential payload to be logged or monitored.
 
-To actually log such a message the important __traceWith__ function will be called:
+To actually log such a message the central __traceWith__ function must be called:
 
 ```haskell
 traceWith exampleTracer (IgnoreBlockOlderThanK b)
@@ -34,8 +36,7 @@ traceWith exampleTracer (IgnoreBlockOlderThanK b)
 Every message can have a severity, which is one of:
 
 ```haskell
-DebugS | InfoS | NoticeS | WarningS | ErrorS | CriticalS | AlertS | EmergencyS
-
+Debug | Info | Notice | Warning | Error | Critical | Alert | Emergency
 ```
 
 In addition it exist the a severity type for filtering, which has an additional `SilenceF` constructor, which follows to `EmergencyF`, so that nullTracers (TraceOut without effect) can be omitted.
@@ -43,7 +44,7 @@ In addition it exist the a severity type for filtering, which has an additional 
 You use the following function to give a severity to messages:
 
 ```haskell
-setSeverity :: Monad m => Severity -> Trace m a -> Trace m a
+setSeverity :: Monad m => SeverityS -> Trace m a -> Trace m a
 -- e.g.
 tracer = setSeverity NoticeS exampleTracer
 ```
@@ -52,16 +53,16 @@ If in the message flow setSeverity gets called multiple times, the first one win
 In the following code the severity is set, when you actually call traceWith for a single message.
 
 ```haskell
-traceWith (setSeverity WarningS exampleTracer) (IgnoreBlockOlderThanK b)
+traceWith (setSeverity Warning exampleTracer) (IgnoreBlockOlderThanK b)
 ```
 Or you can set severities for all messages of a type in a central place:
 in a style like it is done currently:
 
 ```haskell
-withSeverity :: Monad m => (a -> Severity) -> Trace m a -> Trace m a
+withSeverity :: Monad m => (a -> SeverityS) -> Trace m a -> Trace m a
 ```  
 
-We repeat that the first call of setSeverity or withSeverity wins. If no severity is given InfoS is the default value.
+If no severity is given Info is the default value.
 
 ### Privacy
 
@@ -70,7 +71,7 @@ Every message can have a privacy, which is one of:
 ```haskell
 Confidential | Public
 ```
-The changes are just in sync with Severity, we get rid of the type class and use the interface:
+The mechanism is the same as with Severity, we use the interface:
 
 ```haskell
 setPrivacy :: Monad m => Privacy -> Trace m a -> Trace m a
@@ -96,14 +97,12 @@ We explain in the section about type classes, how to specify wich detail levels 
 
 ### Namespace
 
-Log items contain a namespace which is a concatenation of strings. Every message at a TraceOut should be uniquely identified by its namespace.
+Messages contain a __Namespace__ which is a list of Text. Every message at a TraceOut must be uniquely identified by its Namespace!
+We could have used the constructor and type, which is a more technical approach, but this logging library uses the Namespace as message identifier.
 
-The documentation will be ordered according to this scheme. And is should be made possible for a human to locate the origin of a problem this way.
+The documentation will be ordered according to this scheme, and it should be possible for a human to locate the origin of a message in this way.
 
-We could have used the constructor and type, which is a more technical approach,
-and is currently used in the machine readable format, but the logging framework will not use it.
-
-The interface remains the same, as names are set with appendName.
+The interface uses the (already known) appendName function:
 
 ```haskell
 appendName :: Monad m => Text -> Trace m a -> Trace m a
@@ -114,17 +113,20 @@ Which when used like:
 ```haskell
 appendName "specific" $ appendName "middle" $ appendName "general" tracer
 ```
-gives the name: `general.middle.specific`. (So maybe we should rename this function, cause the result looks more like prepend). Usually the application name is then prepended to the result. In the current logs furthermore the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this namespace. We would like to change this, to make clear what the identifying name is, and to report this independently like:
+gives the name: `general.middle.specific`. Usually the application name is then prepended to the result.
+
+In the current representation furthermore the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this namespace. We would like to change this, to make clear what the identifying name is, and to report this independently like:
 
     [yupanqui-PC.cardano.general.middle.specific.Info.379]
     ->
     [cardano.general.middle.specific][Info][yupanqui-PC][ThreadId 379])
 
 Since we require that every message has its unique name we offer the following convenience function:
+
 ```haskell
-traceWith (appendName "ignoreBlockOlderThanK" exampleTracer) (IgnoreBlockOlderThanK b)
--- Can be written as:
-traceNamed exampleTracer "ignoreBlockOlderThanK" (IgnoreBlockOlderThanK b)
+traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
+-- Can be shortened as:
+traceNamed exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
 ```
 
 ### Filtering
@@ -249,78 +251,58 @@ foldMTraceM :: forall a acc m . MonadIO m
 ### Frequency Limiting
 
 
+### Formatting
 
+We want to limit the use type classes, so we only use one type class for the formatting of messages.
 
-### TraceOuts
+* The `forMachine` method is used for a machine readable representation, which can be different depending on the detail level.
+  It's default implementation false back to the toJson method of Aeson
 
-We offer different traceOuts (backends):
+* the `forHuman` method shall represent the message in human readble Form.  
+  It's default implementation false back to the humanise method of Humanise
 
-* Forwarding
-* Katip
-* EKG
-* Prometheus (via EKG)
-* Stdout
-
-Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process. The only other possibility in the node will be a simple Stdout Tracer.  
-
-Katip is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a Katip tracer, which is configured for a human or machine readable configuration or to both.  
-
-EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded to Prometheus.
-
-Backends will be named and can be configured by a matching configuration from a configuration file. We will offer a bunch of functions to construct these traceOuts:
-
-```haskell
-stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
-stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
-ekgTracer  :: MonadIO m => Metrics.Store -> m (Trace m Metric)
-ekgTracer' :: MonadIO m => Server -> m (Trace m Metric)
-```
-
-### Typeclasses
-
-We want to limit the use type classes to the use for representation of messages. So we combine the current classes ToObject and LogObject (which are coming from Katip) together with a method to query a potential measurement representation for EKG. As you can derive a generic aeson instance, you can as well derive a default Logging instance.
+* the `asMetrics` method shall represent the message as 0 to n metrics.  
+  It's default implementation assumes no metrics. If a text is given it is
+  appended as last element to the namespace.
 
 ```haskell
 class Logging a where
-    toObject :: a -> A.Object
-    default toObject :: ToJSON a => a -> A.Object
-    toObject v = case A.toJSON v of
-      A.Object o -> o
-      _          -> mempty
-    payloadKeys :: DetailLevel -> a -> PayloadSelection
-    toMeasurement :: a -> Maybe Measurement
-    toMeasurement _ = Nothing
+  forMachine :: DetailLevel -> a -> A.Object
+  default forMachine :: A.ToJSON a => DetailLevel -> a -> A.Object
+  forMachine _ v = case A.toJSON v of
+    A.Object o     -> o
+    s@(A.String _) -> HM.singleton "string" s
+    _              -> mempty
+  forHuman :: a -> Text
+  default forHuman :: Humanise a =>  a -> Text
+  forHuman v = humanise v
+  asMetrics :: a -> [Metric]
+  asMetrics v = []
 
-data PayloadSelection
-    = AllKeys
-    | SomeKeys [Text]
-    deriving (Show, Eq)      
-
-data Measurement
-    = IntM Int
-    | DoubleM Double
-    deriving (Show, Eq)      
+data Metric
+    = IntM (Maybe Text) Int
+    | DoubleM (Maybe Text) Double
+    deriving (Show, Eq)     
 ```
-The trace-dispatcher library will then care for the various instances that e.g. Katip or other backends require.
 
 ### Configuration
 
 With the new system of configuration we have
 
-1. fine-grained configure options based on namespaces (currently not for individual messages, but that can be changed).  
+1. fine-grained configure options based on namespaces up to individual messages  
 2. reconfigurable at any time with with a call to configureTracers
-3. Optimized as config options are either fixed at configuration time if possible, but never require more then one simple lookup
-4. Requires the allTraces function, which returns all traces which are used with traceWith
+3. Optimized as config options are either fixed at configuration time if possible, but never require more then one lookup
+4. Requires for any tracer of type a to get a list of prototypes for all messages and all entry points for this kind of object
 
 This is implemented by running the trace network at configuration time.
 The configuration can be stored and read from a YAML or JSON file.
 
 ```haskell
--- | Needs to list all traces which are used with traceWith.
-allTraces :: [Trace]
+-- | Needs to list all traces which are used with traceWith for type a.
+allTraces :: [Trace m a]
 
 --   The function configures the traces with the given configuration
-configureTraces :: MonadIO m => [Trace m a] -> Configuration -> m ()
+configureTraces :: MonadIO m => [Trace m a] -> [a] -> Configuration -> m ()
 ```
 
 These are the options that can be configured based on a namespace:
@@ -343,10 +325,37 @@ Many more configuration options e.g. for different backends will be added.
 
 ### Documentation
 
+To document you have to give a list of example messages with a comment added which is used for documentation:
 
+```haskell
+traceAddBlockEventComments :: [Commented (TraceAddBlockEvent blk)]
+traceAddBlockEventComments = [
+    comment "ignore them bro" (IgnoreBlockOlderThanK (RealPoint 1 1))
+  , comment "ignore them too" (IgnoreBlockAlreadyInVolatileDB (RealPoint 1 1))
+  ...
+]
+```
 
-### Cardano Node Tracing
+### TraceOuts
 
+We offer different traceOuts (backends):
 
+* Forwarding
+* Katip
+* EKG (and Prometheus via EKG)
+* Stdout
 
-![Cardano Tracing Overview](./trace-and-metric-lifecycle.pdf)
+Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process. The only other possibility in the node will be a simple Stdout Tracer.  
+
+Katip is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a Katip tracer, which is configured for a human or machine readable configuration or to both.  
+
+EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded to Prometheus.
+
+Backends can be configured by a matching configuration from a configuration file. We will offer a bunch of functions to construct these traceOuts:
+
+```haskell
+stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+ekgTracer  :: MonadIO m => Metrics.Store -> m (Trace m Metric)
+ekgTracer' :: MonadIO m => Server -> m (Trace m Metric)
+```

@@ -2,10 +2,10 @@ module Examples.Configuration where
 
 import           Control.Monad (liftM)
 import           Control.Monad.IO.Class
-import           Katip
-import           Katip.Scribes.Handle (ioLogEnv)
 import qualified Data.Map as Map
 import           Data.Text (Text)
+import           Katip
+import           Katip.Scribes.Handle (ioLogEnv)
 
 import           Cardano.Logging
 import           Examples.TestObjects
@@ -22,8 +22,7 @@ tracer2  = fmap
 
 config1 :: TraceConfig
 config1 = TraceConfig {
-    tcName = "Config1"
-  , tcOptions = Map.fromList
+    tcOptions = Map.fromList
           [([], [CoSeverity SilenceF]),
           (["tracer1"], [CoSeverity ErrorF]),
           (["tracer2"], [CoSeverity CriticalF]),
@@ -32,8 +31,7 @@ config1 = TraceConfig {
 
 config2 :: TraceConfig
 config2 = TraceConfig {
-    tcName = "Config2"
-  , tcOptions = Map.fromList [([], [CoSeverity InfoF]),
+    tcOptions = Map.fromList [([], [CoSeverity InfoF]),
           (["tracer2"], [CoSeverity WarningF]),
           (["tracer2","bubble"], [CoSeverity WarningF])]
     }
@@ -44,21 +42,21 @@ testConfig' tc = do
     t2 <- tracer2
     let bubbleTracer = appendName "bubble" t2
     configureTracers tc [t1, t2, bubbleTracer]
-    traceWith (setSeverity CriticalS t1) (LO2 "Now setting config")
+    traceWith (setSeverity Critical t1) (LO2 "Now setting config")
     traceWith
-      (setSeverity ErrorS t1)
+      (setSeverity Error t1)
       (LO2 "1: show with config1 and config2")
     traceWith
-      (setSeverity InfoS t1)
+      (setSeverity Info t1)
       (LO2 "2: show not with config1 but with config2")
     traceWith
-      (setSeverity NoticeS bubbleTracer)
+      (setSeverity Notice bubbleTracer)
       (LO2 "3: show with config1 but not with config2")
     traceWith
-      (setSeverity WarningS t2)
+      (setSeverity Warning t2)
       (LO2 "4: show not with config1 but with config2")
     traceWith
-      (setSeverity InfoS t2)
+      (setSeverity Info t2)
       (LO2 "5: never show")
 
 testConfig = do
