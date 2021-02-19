@@ -2327,6 +2327,10 @@ pConsensusModeParams = asum
       (  Opt.long "shelley-mode"
       <> Opt.help "For talking to a node running in Shelley-only mode."
       )
+  , Opt.flag' (AnyConsensusModeParams PivoModeParams)
+      (  Opt.long "pivo-mode"
+      <> Opt.help "For talking to a node running in Pivo-only mode."
+      )
   , Opt.flag' ()
       (  Opt.long "byron-mode"
       <> Opt.help "For talking to a node running in Byron-only mode."

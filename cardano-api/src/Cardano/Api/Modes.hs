@@ -202,6 +202,9 @@ data ConsensusModeParams mode where
      ShelleyModeParams
        :: ConsensusModeParams ShelleyMode
 
+     PivoModeParams
+       :: ConsensusModeParams PivoMode
+
      CardanoModeParams
        :: Byron.EpochSlots
        -> ConsensusModeParams CardanoMode

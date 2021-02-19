@@ -157,6 +157,7 @@ consensusModeOnly :: ConsensusModeParams mode
                   -> ConsensusMode       mode
 consensusModeOnly ByronModeParams{}   = ByronMode
 consensusModeOnly ShelleyModeParams{} = ShelleyMode
+consensusModeOnly PivoModeParams {}   = PivoMode
 consensusModeOnly CardanoModeParams{} = CardanoMode
 
 
@@ -330,6 +331,11 @@ mkLocalNodeClientParams modeparams clients =
         LocalNodeClientParams
           Consensus.ProtocolClientShelley
           (convLocalNodeClientProtocols ShelleyMode clients)
+
+      PivoModeParams ->
+        LocalNodeClientParams
+          Consensus.ProtocolClientPivo
+          (convLocalNodeClientProtocols PivoMode clients)
 
       CardanoModeParams epochSlots ->
         LocalNodeClientParams
