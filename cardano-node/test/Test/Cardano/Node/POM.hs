@@ -50,8 +50,7 @@ testPartialYamlConfig =
     , pncLoggingSwitch = Last $ Just True
     , pncLogMetrics = Last $ Just True
     , pncTraceConfig = Last $ Just TracingOff
-    , pncNodeIPv4Addr = mempty
-    , pncNodeIPv6Addr = mempty
+    , pncNodeIPAddr = mempty
     , pncNodePortNumber = mempty
     , pncConfigFile = mempty
     , pncTopologyFile = mempty
@@ -67,8 +66,7 @@ testPartialYamlConfig =
 testPartialCliConfig :: PartialNodeConfiguration
 testPartialCliConfig =
   PartialNodeConfiguration
-    { pncNodeIPv4Addr = mempty
-    , pncNodeIPv6Addr = mempty
+    { pncNodeIPAddr = mempty
     , pncNodePortNumber = mempty
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
@@ -91,8 +89,7 @@ testPartialCliConfig =
 expectedConfig :: NodeConfiguration
 expectedConfig =
   NodeConfiguration
-    { ncNodeIPv4Addr = Nothing
-    , ncNodeIPv6Addr = Nothing
+    { ncNodeIPAddr = Nothing
     , ncNodePortNumber = Nothing
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
