@@ -16,6 +16,7 @@ module Cardano.Node.Run
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (String)
+import qualified Prelude
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
@@ -37,7 +38,7 @@ import           System.Win32.File
 #endif
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                     mkLOMeta)
+                   mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -46,10 +47,10 @@ import           Paths_cardano_node (version)
 import qualified Cardano.Crypto.Libsodium as Crypto
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
-                     createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
+                   createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                     PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
-                     makeNodeConfiguration, parseNodeConfigurationFP)
+                   PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
+                   makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
@@ -58,8 +59,8 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode,
-                     RunNodeArgs (..), StdRunNodeArgs (..))
+                   DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
+                   StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -67,7 +68,7 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                     gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
+                   gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
@@ -376,8 +377,8 @@ createDiffusionArguments publicIPSocketsOrAddrs
   DiffusionArguments
     -- This is not elegant, but it will change once `coot/connection-manager` is
     -- merged into `ouroboros-networ`.
-    { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
-    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
+    { daIPv4Address = Prelude.error $ show $ eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
+    , daIPv6Address = Prelude.error $ show $ eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
     , daLocalAddress = fmap unSocketPath
                      . eitherSocketOrSocketInfo
                      $ localSocketOrPath
