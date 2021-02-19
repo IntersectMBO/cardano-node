@@ -16,7 +16,6 @@ module Cardano.Node.Run
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
 import           Prelude (String)
-import qualified Prelude
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
@@ -377,8 +376,8 @@ createDiffusionArguments publicIPSocketsOrAddrs
   DiffusionArguments
     -- This is not elegant, but it will change once `coot/connection-manager` is
     -- merged into `ouroboros-networ`.
-    { daIPv4Address = Prelude.error $ show $ eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
-    , daIPv6Address = Prelude.error $ show $ eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
+    { daIPv4Address = Nothing
+    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPSocketsOrAddrs
     , daLocalAddress = fmap unSocketPath
                      . eitherSocketOrSocketInfo
                      $ localSocketOrPath
