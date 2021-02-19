@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,7 +7,6 @@
 
 
 module Examples.Aggregation where
-
 
 import qualified Data.Aeson as AE
 import           GHC.Generics (Generic)
@@ -24,36 +23,33 @@ data BaseStats = BaseStats {
     bsSum     :: Double
     } deriving (Generic, ToObject, AE.ToJSON, Show)
 
+
+instance Logging BaseStats where
+  forMachine _ _ = mempty
+  forHuman _ = ""
+  asMetrics BaseStats {..} =
+    [ DoubleM (Just "measure") bsMeasure
+    , DoubleM (Just "sum") bsSum]
+
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
 
-deriving instance Generic Measurement
-deriving instance AE.ToJSON Measurement
-deriving instance ToObject Measurement
-
-instance LogItem Measurement where
-  payloadKeys _ _ = AllKeys
-
-instance LogItem BaseStats where
-  payloadKeys _ _ = AllKeys
-
-calculate :: BaseStats -> Measurement -> BaseStats
-calculate BaseStats{..} (DoubleM val) =
+calculate :: BaseStats -> Double -> BaseStats
+calculate BaseStats{..} val =
    BaseStats  val
               (min bsMin val)
               (max bsMax val)
               (1 + bsCount)
               (bsSum + val)
-calculate BaseStats{..} _ = error "impossssible"
 
 testAggregation :: IO ()
 testAggregation = do
     simpleTracer  <- stdoutObjectKatipTracer
     tracer <- foldTraceM calculate emptyStats simpleTracer
     configureTracers emptyTraceConfig [tracer]
-    traceWith tracer (DoubleM 1.0)
-    traceWith tracer (DoubleM 2.0)
-    traceWith tracer (DoubleM 0.5)
+    traceWith tracer 1.0
+    traceWith tracer 2.0
+    traceWith tracer 0.5
 
 
 {-}
