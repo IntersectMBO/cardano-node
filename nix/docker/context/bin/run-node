@@ -26,6 +26,10 @@ if [[ -z $CARDANO_SOCKET_PATH ]]; then
   CARDANO_SOCKET_PATH="/opt/cardano/ipc/socket"
 fi
 
+if [[ -z $CARDANO_LOG_DIR ]]; then
+  CARDANO_LOG_DIR="/opt/cardano/logs"
+fi
+
 if [[ -z $CARDANO_BIND_ADDR ]]; then
   CARDANO_BIND_ADDR="0.0.0.0"
 fi
@@ -34,8 +38,28 @@ if [[ -z $CARDANO_PORT ]]; then
   CARDANO_PORT=3001
 fi
 
-if [ -v $CARDANO_BLOCK_PRODUCER ]; then
+if [[ -z $CARDANO_BLOCK_PRODUCER ]]; then
   CARDANO_BLOCK_PRODUCER=false
+fi
+
+if [[ -z $CARDANO_UPDATE_TOPOLOGY ]]; then
+  CARDANO_UPDATE_TOPOLOGY=false
+fi
+
+if [[ -z $EKG_HOST ]]; then
+  EKG_HOST="127.0.0.1"
+fi
+
+if [[ -z $EKG_PORT ]]; then
+  EKG_PORT=12788
+fi
+
+if [[ -z $EKG_TIMEOUT ]]; then
+  EKG_TIMEOUT=3
+fi
+
+if [[ -z $MAX_PEERS ]]; then
+  MAX_PEERS=15
 fi
 
 #####################################################################
@@ -48,9 +72,11 @@ printRunEnv () {
   echo "CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER"
   echo "CARDANO_CONFIG=$CARDANO_CONFIG"
   echo "CARDANO_DATABASE_PATH=$CARDANO_DATABASE_PATH"
+  echo "CARDANO_LOG_DIR=$CARDANO_LOG_DIR"
   echo "CARDANO_PORT=$CARDANO_PORT"
   echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
   echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
+  echo "CARDANO_UPDATE_TOPOLOGY=$CARDANO_UPDATE_TOPOLOGY"
 
   if [ "$CARDANO_BLOCK_PRODUCER" = true ]; then
 
@@ -72,6 +98,85 @@ printRunEnv () {
   fi
 }
 
+#####################################################################
+#
+# Write root env file
+#
+writeRootEnv () {
+
+cat << EOF > /usr/local/bin/env
+#!/usr/bin/env bash
+
+# Docker run ENV vars
+CARDANO_CONFIG="$CARDANO_CONFIG"
+CARDANO_TOPOLOGY="$CARDANO_TOPOLOGY"
+CARDANO_BIND_ADDR="$CARDANO_BIND_ADDR"
+CARDANO_PORT=$CARDANO_PORT
+CARDANO_DATABASE_PATH="$CARDANO_DATABASE_PATH"
+CARDANO_SOCKET_PATH="$CARDANO_SOCKET_PATH"
+CARDANO_LOG_DIR="$CARDANO_LOG_DIR"
+
+CARDANO_PUBLIC_IP="$CARDANO_PUBLIC_IP"
+CARDANO_CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
+
+CARDANO_UPDATE_TOPOLOGY=$CARDANO_UPDATE_TOPOLOGY
+CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
+
+# Mapping for topologyUpdater
+CNODE_HOSTNAME="$CARDANO_PUBLIC_IP"
+CNODE_PORT=$CARDANO_PORT
+CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
+GENESIS_JSON="$CARDANO_CONFIG_BASE/mainnet-shelley-genesis.json"
+TOPOLOGY="$CARDANO_TOPOLOGY"
+LOG_DIR="$CARDANO_LOG_DIR"
+EKG_HOST="$EKG_HOST"
+EKG_PORT=$EKG_PORT
+EKG_TIMEOUT=$EKG_TIMEOUT
+MAX_PEERS=$MAX_PEERS
+EOF
+}
+
+#####################################################################
+#
+# Run the relay node in the background
+#
+runRelayNode () {
+
+  effopts=(--config $CARDANO_CONFIG \
+    --topology $CARDANO_TOPOLOGY \
+    --database-path $CARDANO_DATABASE_PATH \
+    --socket-path $CARDANO_SOCKET_PATH \
+    --host-addr $CARDANO_BIND_ADDR \
+    --port $CARDANO_PORT)
+
+  effopts+=(${options[@]})
+
+  echo "cardano-node run ${effopts[@]}"
+  cardano-node run ${effopts[@]} &
+}
+
+#####################################################################
+#
+# Run the block producer in the background
+#
+runBlockProducerNode () {
+
+  effopts=(--config $CARDANO_CONFIG \
+    --topology $CARDANO_TOPOLOGY \
+    --database-path $CARDANO_DATABASE_PATH \
+    --socket-path $CARDANO_SOCKET_PATH \
+    --host-addr $CARDANO_BIND_ADDR \
+    --port $CARDANO_PORT \
+    --shelley-kes-key $CARDANO_SHELLEY_KES_KEY \
+    --shelley-vrf-key $CARDANO_SHELLEY_VRF_KEY \
+    --shelley-operational-certificate $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE)
+
+  effopts+=(${options[@]})
+
+  echo "cardano-node run ${effopts[@]}"
+  cardano-node run ${effopts[@]} &
+}
+
 # Override default values with explicit options
 options=($@)
 for i in "${!options[@]}"
@@ -90,6 +195,9 @@ do
       --socket-path) CARDANO_SOCKET_PATH=${val}; found=true;;
       --host-addr) CARDANO_BIND_ADDR=${val}; found=true;;
       --port) CARDANO_PORT=${val}; found=true;;
+      --shelley-kes-key) CARDANO_SHELLEY_KES_KEY=${val}; found=true;;
+      --shelley-vrf-key) CARDANO_SHELLEY_VRF_KEY=${val}; found=true;;
+      --shelley-operational-certificate) CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=${val}; found=true;;
     esac
 
     if [[ $found == true ]]; then
@@ -99,21 +207,22 @@ do
 done
 
 printRunEnv
-
-effopts=(--config $CARDANO_CONFIG \
-  --topology $CARDANO_TOPOLOGY \
-  --database-path $CARDANO_DATABASE_PATH \
-  --socket-path $CARDANO_SOCKET_PATH \
-  --host-addr $CARDANO_BIND_ADDR \
-  --port $CARDANO_PORT)
-
-effopts+=(${options[@]})
-
-echo "cardano-node run ${effopts[@]}"
+writeRootEnv
 
 # The IPC socket dir is not created on demand
 mkdir -p `dirname $CARDANO_SOCKET_PATH`
 
-/usr/local/bin/cardano-node run ${effopts[@]} &
+if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
+
+  runBlockProducerNode
+
+else
+
+  if [[ $CARDANO_UPDATE_TOPOLOGY == true ]]; then
+    topologyUpdate -l &
+  fi
+
+  runRelayNode
+fi
 
 trapSIGTERM
