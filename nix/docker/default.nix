@@ -114,6 +114,7 @@ in
     fromImage = baseImage;
     created = "now";   # Set creation date to build time. Breaks reproducibility
     contents = [
+      pkgs.jq # Needed by topologyUpdater
     ];
 
     # May require system-features = kvm in /etc/nix/nix.conf

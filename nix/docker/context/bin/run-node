@@ -40,6 +40,26 @@ if [[ -z $CARDANO_BLOCK_PRODUCER ]]; then
   CARDANO_BLOCK_PRODUCER=false
 fi
 
+if [[ -z $CARDANO_UPDATE_TOPOLOGY ]]; then
+  CARDANO_UPDATE_TOPOLOGY=false
+fi
+
+if [[ -z $EKG_HOST ]]; then
+  EKG_HOST="127.0.0.1"
+fi
+
+if [[ -z $EKG_PORT ]]; then
+  EKG_PORT=12788
+fi
+
+if [[ -z $EKG_TIMEOUT ]]; then
+  EKG_TIMEOUT=3
+fi
+
+if [[ -z $MAX_PEERS ]]; then
+  MAX_PEERS=15
+fi
+
 #####################################################################
 #
 # Print run environment
@@ -54,6 +74,7 @@ printRunEnv () {
   echo "CARDANO_PORT=$CARDANO_PORT"
   echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
   echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
+  echo "CARDANO_UPDATE_TOPOLOGY=$CARDANO_UPDATE_TOPOLOGY"
 
   if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
 
@@ -96,6 +117,10 @@ CARDANO_LOG_DIR="$CARDANO_LOG_DIR"
 CARDANO_PUBLIC_IP="$CARDANO_PUBLIC_IP"
 CARDANO_CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
 
+<<<<<<< HEAD
+=======
+CARDANO_UPDATE_TOPOLOGY=$CARDANO_UPDATE_TOPOLOGY
+>>>>>>> [#2362] Add topology update functionality to Docker image
 CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
 
 # Mapping for topologyUpdater
@@ -105,6 +130,13 @@ CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
 GENESIS_JSON="$CARDANO_CONFIG_BASE/mainnet-shelley-genesis.json"
 TOPOLOGY="$CARDANO_TOPOLOGY"
 LOG_DIR="$CARDANO_LOG_DIR"
+<<<<<<< HEAD
+=======
+EKG_HOST="$EKG_HOST"
+EKG_PORT=$EKG_PORT
+EKG_TIMEOUT=$EKG_TIMEOUT
+MAX_PEERS=$MAX_PEERS
+>>>>>>> [#2362] Add topology update functionality to Docker image
 EOF
 }
 

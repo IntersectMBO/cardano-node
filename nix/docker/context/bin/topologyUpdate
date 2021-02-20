@@ -1,0 +1,174 @@
+#!/bin/bash
+# shellcheck disable=SC2086,SC2034
+# shellcheck source=/dev/null
+
+# This is borrowed from https://github.com/cardano-community/guild-operators
+# and mainly just removes the auto-update of the script itself
+#
+# i.e. we want a stable/known version of this script
+#
+# Also, this is hopefully only a temporary thing until
+# the node can take care about it's p2p2 updates itself
+
+PARENT="$(dirname $0)"
+
+######################################
+# User Variables - Change as desired #
+######################################
+
+#CNODE_HOSTNAME="CHANGE ME"  # (Optional) Must resolve to the IP you are requesting from
+#CUSTOM_PEERS="None"         # Additional custom peers to (IP:port[:valency]) to add to your target topology.json
+                             # eg: "10.0.0.1:3001|10.0.0.2:3002|relays.mydomain.com:3003:3"
+
+CNODE_VALENCY=1             # (Optional) for multi-IP hostnames
+MAX_PEERS=15                # Maximum number of peers to return on successful fetch
+
+if [[ ! -f ${PARENT}/env ]]; then
+  echo "[Error] Generated env file missing: ${PARENT}/env"
+  echo "This is a mandatory prerequisite\n"
+  exit 1
+fi
+
+# source generated env variables
+if ! source ${PARENT}/env offline; then
+  echo "[Error] Cannot source: ${PARENT}/env"
+  exit 1;
+fi
+
+# NetworkMagic extracted from the genesis file
+NWMAGIC=$(jq -r .networkMagic < ${GENESIS_JSON})
+
+# Installed by pkgs.cacert
+# https://curl.se/docs/sslcerts.html
+export CURL_CA_BUNDLE="/etc/ssl/certs/ca-bundle.crt"
+
+######################################
+# Do NOT modify code below           #
+######################################
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [-f] [-p] [-l]
+Topology Updater - Build topology with community pools
+
+-f    Disable fetch of a fresh topology file
+-p    Disable node alive push to Topology Updater API
+-l    Enable an endless topology update loop (one call per hour)
+
+EOF
+  exit 1
+}
+
+TU_FETCH='Y'
+TU_PUSH='Y'
+LOOP='N'
+
+while getopts :fpl opt; do
+  case ${opt} in
+    f ) TU_FETCH='N' ;;
+    p ) TU_PUSH='N' ;;
+    l ) LOOP='Y' ;;
+    \? ) usage ;;
+  esac
+done
+shift $((OPTIND -1))
+
+if [[ ${CNODE_HOSTNAME} != "" ]]; then
+  T_HOSTNAME="&hostname=${CNODE_HOSTNAME}"
+else
+  T_HOSTNAME=''
+fi
+
+if [[ ${CUSTOM_PEERS} != "" ]]; then
+  CUSTOM_PEERS_PARAM="&customPeers=${CUSTOM_PEERS}"
+fi
+
+#####################################################################
+#
+# Fetch the current block number from the EKG endpoint
+#
+fetchBlockNumber () {
+
+  fail_cnt=0
+  while ! blockNo=$(curl -s -m ${EKG_TIMEOUT} -H 'Accept: application/json' "http://${EKG_HOST}:${EKG_PORT}/" 2>/dev/null | jq -er '.cardano.node.metrics.blockNum.int.val //0' ); do
+    ((fail_cnt++))
+    if [[ ${fail_cnt} -eq 5 ]]; then echo "5 consecutive EKG queries failed, aborting!"; exit 1; fi
+    echo "(${fail_cnt}/5) Failed to grab blockNum from node EKG metrics, sleeping for 30s before retrying..."
+    sleep 30
+  done
+}
+
+#####################################################################
+#
+# Push the node config info to the topology endpoint
+#
+# If you run your node in IPv4/IPv6 dual stack network configuration and want announced the
+# IPv4 address only please add the -4 parameter to the curl command below  (curl -4 -s ...)
+pushNodeInfo () {
+
+  if [[ ${TU_PUSH} = "Y" ]]; then
+
+      echo "[`date +'%Y-%m-%d %H:%M:%S %Z'`] Updating topology ..."
+
+      fetchBlockNumber
+
+      echo "curl -s -f https://api.clio.one/htopology/v1/?port=${CNODE_PORT}&blockNo=${blockNo}&valency=${CNODE_VALENCY}&magic=${NWMAGIC}${T_HOSTNAME}"
+      curl -s -f "https://api.clio.one/htopology/v1/?port=${CNODE_PORT}&blockNo=${blockNo}&valency=${CNODE_VALENCY}&magic=${NWMAGIC}${T_HOSTNAME}" | \
+        tee -a ${LOG_DIR}/topologyUpdateResult
+  else
+
+    echo "[Warning] Topology update push disabled"
+  fi
+}
+
+#####################################################################
+#
+# Fetch the next topology update
+#
+fetchTopology () {
+
+  if [[ ${TU_FETCH} = "Y" ]]; then
+
+    echo "curl -s -f https://api.clio.one/htopology/v1/fetch/?max=${MAX_PEERS}&magic=${NWMAGIC}${CUSTOM_PEERS_PARAM}"
+    curl -s -f -o ${TOPOLOGY}.tmp "https://api.clio.one/htopology/v1/fetch/?max=${MAX_PEERS}&magic=${NWMAGIC}${CUSTOM_PEERS_PARAM}" \
+      && mv ${TOPOLOGY}.tmp ${TOPOLOGY} && cat ${TOPOLOGY}
+  else
+
+    echo "[Warning] Topology update fetch disabled"
+  fi
+}
+
+##########################################################################################################################################
+#
+# Run a single topology update cycle
+#
+if [[ ${LOOP} = "N" ]]; then
+
+    pushNodeInfo
+    fetchTopology
+    exit 0
+fi
+
+##########################################################################################################################################
+#
+# Run an endless topology update loop
+#
+
+MIN=`date +"%-M"`
+INITIAL_WAIT=10
+MIN=$(($MIN + $INITIAL_WAIT))
+if (( $MIN > 59 )); then MIN=$(($MIN - 60)); fi
+
+CRONJOB="$MIN * * * * root topologyUpdate"
+echo "Topology update: $CRONJOB"
+
+echo "Initially waiting for ${INITIAL_WAIT} minutes ..."
+sleep $(($INITIAL_WAIT * 60))
+
+while true; do
+  pushNodeInfo
+  fetchTopology
+  sleep 3600
+done
+
+echo "[Warning] Exiting topology update loop"
