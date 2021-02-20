@@ -39,7 +39,8 @@ cardano-node run \
 2. Run -e NETWORK=mainnet and check graceful shutdown SIGTERM with --detach
 3. Run without -e NETWORK and check graceful shutdown SIGINT with -it
 4. Run without -e NETWORK and check graceful shutdown SIGTERM with --detach
-5. Check cardano-cli access
+5. Run with -e CARDANO_UPDATE_TOPOLOGY and check cron job
+6. Check cardano-cli access
 
 ### Run with NETWORK
 
@@ -91,11 +92,29 @@ docker run --detach \
 
 docker logs -f relay
 ```
+### Run with -e CARDANO_UPDATE_TOPOLOGY
+
+```
+docker rm -f relay
+docker run --detach \
+  --name=relay \
+  -p 3001:3001 \
+  -e CARDANO_UPDATE_TOPOLOGY=true \
+  -e CARDANO_PUBLIC_IP="35.239.139.180" \
+  -e CARDANO_CUSTOM_PEERS="relay01.astorpool.net:3001" \
+  -v shelley-data:/opt/cardano/data \
+  -v shelley-ipc:/opt/cardano/ipc \
+  inputoutput/cardano-node:dev run
+
+docker logs -f relay
+```
 
 ### Check cardano-cli
 
 ```
-docker run --rm -it \
+alias cardano-cli="docker run --rm -it \
   -v node-ipc:/opt/cardano/ipc \
-  inputoutput/cardano-node:dev cli query tip --mainnet
+  inputoutput/cardano-node:dev"
+
+cardano-cli query tip --mainnet
 ```

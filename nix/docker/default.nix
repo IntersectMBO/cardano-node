@@ -121,6 +121,7 @@ in
     fromImage = baseImage;
     created = "now";   # Set creation date to build time. Breaks reproducibility
     contents = [
+      pkgs.jq # Needed by topologyUpdater
     ];
 
     # May require system-features = kvm in /etc/nix/nix.conf
@@ -131,6 +132,7 @@ in
       mkdir -p opt/cardano/config
       mkdir -p opt/cardano/data
       mkdir -p opt/cardano/ipc
+      mkdir -p opt/cardano/logs
       mkdir -p usr/local/bin
       cp ${mainnetConfigs}/* opt/cardano/config
       cp ${runNetwork}/bin/* usr/local/bin
