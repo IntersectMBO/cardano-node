@@ -4,6 +4,7 @@ The [Nix Package Manager][nix] can be installed on most Linux distributions by d
 running the installation script:
 ```
 curl -L https://nixos.org/nix/install > install-nix.sh
+chmod +x install-nix.sh
 ./install-nix.sh
 ```
 and following the directions.
