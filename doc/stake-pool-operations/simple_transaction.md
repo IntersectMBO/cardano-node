@@ -86,12 +86,12 @@ Query the tip of the blockchain:
 
     cardano-cli query tip --mainnet
 
-Look for the value of `unSlotNo`
+Look for the value of `slot`
 
     {
-        "blockNo": 16829,
-        "headerHash": "3e6f59b10d605e7f59ba8383cb0ddcd42480ddcc0a85d41bad1e4648eb5465ad",
-        "slotNo": 369200
+        "hash": "3e6f59b10d605e7f59ba8383cb0ddcd42480ddcc0a85d41bad1e4648eb5465ad",
+        "block": 16829,
+        "slot": 369200
     }
 
 Calculate your TTL, for example:  369215 + 200 slots = 369400
