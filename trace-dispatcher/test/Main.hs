@@ -1,11 +1,11 @@
 module Main where
 
+import           Cardano.Logging
 import           Examples.Aggregation
+import           Examples.Configuration
 import           Examples.EKG
 import           Examples.Routing
 import           Examples.Trivial
-import           Examples.Configuration
-import           Cardano.Logging
 
 
 
@@ -16,4 +16,4 @@ main = do
     testAggregation
     testRouting
     testConfig
---    testEKG
+    testEKG

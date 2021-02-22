@@ -18,6 +18,7 @@ library
                       Cardano.Logging.Tracer.EKG
                       Cardano.Logging.Types
                       Cardano.Logging.Configuration
+                      Cardano.Logging.FrequencyLimiter
                       Cardano.Logging
                       Control.Tracer.Arrow
                       Control.Tracer
@@ -30,6 +31,7 @@ library
                       , ekg-core
                       , hostname
                       , katip
+                      , random
                       , stm
                       , text
                       , time
@@ -53,6 +55,7 @@ executable trace-dispatcher-examples
                       , ekg-core
                       , hostname
                       , katip
+                      , random                      
                       , text
                       , trace-dispatcher
                       , time
