@@ -37,6 +37,23 @@ filterTrace ff = T.squelchUnless $
       (lc, Right a) -> ff (lc, a)
       (lc, Left  c) -> True
 
+--- | Just keep the Just values and forget about the Nothings
+filterTraceMaybe :: Monad m =>
+     Trace m a
+  -> Trace m (Maybe a)
+filterTraceMaybe tr =
+  T.squelchUnless
+    (\case
+      (lc, Right (Just a)) -> True
+      (lc, Right Nothing)  -> False
+      (lc, Left  c) -> True)
+    (T.contramap
+        (\case
+          (lc, Right (Just a)) -> (lc, Right a)
+          (lc, Right Nothing)  -> error "filterTraceMaybe: impossible"
+          (lc, Left  c) -> (lc, Left  c))
+        tr)
+
 --- | Only processes messages further with a severity equal or greater as the
 --- given one
 filterTraceBySeverity :: (Monad m) =>
