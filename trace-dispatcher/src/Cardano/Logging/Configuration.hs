@@ -9,7 +9,7 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map as Map
-import           Data.Maybe (catMaybes, mapMaybe, fromMaybe)
+import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import           Katip (Severity)
 
 import           Cardano.Logging.Trace (filterTraceByPrivacy,
