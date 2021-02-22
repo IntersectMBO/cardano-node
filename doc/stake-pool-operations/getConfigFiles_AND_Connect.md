@@ -55,7 +55,7 @@ To start a passive node:
 
 **Replace x.x.x.x with your public IP and indicate the correct paths to the required files.**
 
-Many commands relay on the environment variable CARDANO_NODE_SOCKET_PATH:
+Many commands rely on the environment variable CARDANO_NODE_SOCKET_PATH:
 
     export CARDANO_NODE_SOCKET_PATH=path/to/db/node.socket
 
