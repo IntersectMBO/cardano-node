@@ -53,6 +53,7 @@ module Cardano.Api.IPC (
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
+    queryNodeLocalStateNoTip,
 
     -- *** Tip query
     getLocalChainTip,
@@ -453,7 +454,20 @@ queryNodeLocalState :: forall mode result.
                     -> ChainPoint
                     -> QueryInMode mode result
                     -> IO (Either Net.Query.AcquireFailure result)
-queryNodeLocalState connctInfo point query = do
+queryNodeLocalState connctInfo point query = queryNodeLocalState' connctInfo (Just point) query
+
+queryNodeLocalStateNoTip :: forall mode result.
+                       LocalNodeConnectInfo mode
+                    -> QueryInMode mode result
+                    -> IO (Either Net.Query.AcquireFailure result)
+queryNodeLocalStateNoTip connctInfo query = queryNodeLocalState' connctInfo Nothing query
+
+queryNodeLocalState' :: forall mode result.
+                        LocalNodeConnectInfo mode
+                     -> Maybe ChainPoint
+                     -> QueryInMode mode result
+                     -> IO (Either Net.Query.AcquireFailure result)
+queryNodeLocalState' connctInfo pointMay query = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
       connctInfo
@@ -470,7 +484,7 @@ queryNodeLocalState connctInfo point query = do
                                          (QueryInMode mode) IO ()
     localStateQuerySingle resultVar =
       LocalStateQueryClient $ pure $
-        Net.Query.SendMsgAcquire (Just point) $
+        Net.Query.SendMsgAcquire pointMay $
         Net.Query.ClientStAcquiring {
           Net.Query.recvMsgAcquired =
             Net.Query.SendMsgQuery query $

@@ -34,6 +34,7 @@ module NewApiStuff
   )
   where
 
+import           Codec.Serialise
 import           Control.Exception
 import           Control.Monad.Except
 import           Control.Monad.Trans.Except.Extra
@@ -43,6 +44,7 @@ import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
 import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.Text (Text)
@@ -102,22 +104,22 @@ initialLedgerState
   --   , The initial ledger state
   --   )
 initialLedgerState dbSyncConfFilePath localNodeConnectInfo = do
-  -- Configuration
-  ledgerConfig <-
-    either (error . show) id
-    <$> Api.queryNodeLocalState
-          localNodeConnectInfo
-          Cardano.Api.Block.ChainPointAtGenesis
-          (Api.QueryLedgerConfig Api.CardanoModeIsMultiEra)
-  -- TODO use query for protocol config
-  -- protocolConfig <-
-  --   either (error . show) id
-  --   <$> undefined
 
   -- Initial Ledger State
   dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
   genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
   Env _ protocolConfig <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
+
+  -- Configuration
+  ledgerConfig <-
+    either (error . show) id
+    <$> Api.queryNodeLocalStateNoTip
+          localNodeConnectInfo
+          (Api.QueryLedgerConfig Api.CardanoModeIsMultiEra)
+  -- TODO use query for protocol config
+  -- protocolConfig <-
+  --   either (error . show) id
+  --   <$> undefined
   let env = Env ledgerConfig protocolConfig
   let ledgerState = initLedgerStateVar genConf
 

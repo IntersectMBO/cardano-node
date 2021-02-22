@@ -75,6 +75,7 @@ executable ledger-state
                        ouroboros-consensus-shelley,
                        shelley-spec-ledger,
                        typed-protocols,
+                       serialise,
 
   default-language:    Haskell2010
   ghc-options:
