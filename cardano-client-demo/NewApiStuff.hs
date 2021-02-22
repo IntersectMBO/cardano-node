@@ -34,7 +34,6 @@ module NewApiStuff
   )
   where
 
-import           Codec.Serialise
 import           Control.Exception
 import           Control.Monad.Except
 import           Control.Monad.Trans.Except.Extra
@@ -44,7 +43,6 @@ import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
 import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.Text (Text)
@@ -65,7 +63,6 @@ import qualified Cardano.Crypto
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
-import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Slotting.Slot
 import qualified Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.Byron.Ledger.Block
@@ -75,7 +72,6 @@ import qualified Ouroboros.Consensus.Cardano.Block
 import qualified Ouroboros.Consensus.Cardano.Block as C
 import qualified Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Cardano.Node
-import qualified Ouroboros.Consensus.Config as C
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics
 import qualified Ouroboros.Consensus.Ledger.Abstract
@@ -108,7 +104,6 @@ initialLedgerState dbSyncConfFilePath localNodeConnectInfo = do
   -- Initial Ledger State
   dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
   genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
-  Env _ protocolConfig <- either (error . Text.unpack . renderDbSyncNodeError) return (genesisConfigToEnv genConf)
 
   -- Configuration
   ledgerConfig <-
@@ -116,11 +111,14 @@ initialLedgerState dbSyncConfFilePath localNodeConnectInfo = do
     <$> Api.queryNodeLocalStateNoTip
           localNodeConnectInfo
           (Api.QueryLedgerConfig Api.CardanoModeIsMultiEra)
-  -- TODO use query for protocol config
-  -- protocolConfig <-
-  --   either (error . show) id
-  --   <$> undefined
-  let env = Env ledgerConfig protocolConfig
+
+  consensusConfig <-
+    either (error . show) id
+    <$> Api.queryNodeLocalStateNoTip
+          localNodeConnectInfo
+          (Api.QueryConsensusConfig Api.CardanoModeIsMultiEra)
+
+  let env = Env ledgerConfig consensusConfig
   let ledgerState = initLedgerStateVar genConf
 
   return (env, ledgerState)
@@ -175,36 +173,6 @@ pattern LedgerStateMary st <- LedgerState  (C.LedgerStateMary st)
 --------------------------------------------------------------------------------
 -- Everything below this is just coppied from db-sync                         --
 --------------------------------------------------------------------------------
-
-genesisConfigToEnv ::
-  -- DbSyncNodeParams ->
-  GenesisConfig ->
-  Either DbSyncNodeError Env
-genesisConfigToEnv
-  -- enp
-  genCfg =
-    case genCfg of
-      GenesisCardano _ bCfg sCfg
-        | Cardano.Crypto.ProtocolMagic.unProtocolMagicId (Cardano.Chain.Genesis.configProtocolMagicId bCfg) /= Shelley.Spec.Ledger.Genesis.sgNetworkMagic (scConfig sCfg) ->
-            Left . NECardanoConfig $
-              mconcat
-                [ "ProtocolMagicId ", textShow (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.configProtocolMagicId bCfg)
-                , " /= ", textShow (Shelley.Spec.Ledger.Genesis.sgNetworkMagic $ scConfig sCfg)
-                ]
-        | Cardano.Chain.Genesis.gdStartTime (Cardano.Chain.Genesis.configGenesisData bCfg) /= Shelley.Spec.Ledger.Genesis.sgSystemStart (scConfig sCfg) ->
-            Left . NECardanoConfig $
-              mconcat
-                [ "SystemStart ", textShow (Cardano.Chain.Genesis.gdStartTime $ Cardano.Chain.Genesis.configGenesisData bCfg)
-                , " /= ", textShow (Shelley.Spec.Ledger.Genesis.sgSystemStart $ scConfig sCfg)
-                ]
-        | otherwise ->
-            let
-              topLevelConfig = Ouroboros.Consensus.Node.ProtocolInfo.pInfoConfig (mkProtocolInfoCardano genCfg)
-            in
-            Right $ Env
-                  { envLedgerConfig = C.topLevelConfigLedger topLevelConfig
-                  , envProtocolConfig = C.topLevelConfigProtocol topLevelConfig
-                  }
 
 readDbSyncNodeConfig :: NodeConfigFile -> IO DbSyncNodeConfig
 readDbSyncNodeConfig (NodeConfigFile ncf) = do
@@ -651,7 +619,7 @@ renderShelleyGenesisError sge =
     renderHash (GenesisHashShelley h) = Text.decodeUtf8 $ Base16.encode (Cardano.Crypto.Hash.Class.hashToBytes h)
 
 data StakeCred
-  = StakeCred { unStakeCred :: Shelley.Spec.Ledger.Credential.Credential 'Shelley.Spec.Ledger.Keys.Staking C.StandardCrypto }
+  = StakeCred (Shelley.Spec.Ledger.Credential.Credential 'Shelley.Spec.Ledger.Keys.Staking C.StandardCrypto)
   deriving (Eq, Ord)
 
 data Env = Env

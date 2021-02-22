@@ -82,6 +82,9 @@ data QueryInMode mode result where
      QueryLedgerConfig :: ConsensusModeIsMultiEra mode
                      -> QueryInMode mode (Consensus.HardForkLedgerConfig (Consensus.CardanoEras StandardCrypto))
 
+     QueryConsensusConfig :: ConsensusModeIsMultiEra mode
+                     -> QueryInMode mode (Consensus.ConsensusConfig (Consensus.HardForkProtocol (Consensus.CardanoEras StandardCrypto)))
+
      QueryInEra      :: EraInMode era mode
                      -> QueryInEra era result
                      -> QueryInMode mode (Either EraMismatch result)
@@ -240,6 +243,9 @@ toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
 toConsensusQuery (QueryLedgerConfig CardanoModeIsMultiEra) =
     Some (Consensus.QueryHardFork Consensus.GetLedgerCfg)
 
+toConsensusQuery (QueryConsensusConfig CardanoModeIsMultiEra) =
+    Some (Consensus.QueryHardFork Consensus.GetConsensusCfg)
+
 toConsensusQuery (QueryInEra ByronEraInByronMode QueryByronUpdateState) =
     Some (Consensus.DegenQuery Consensus.GetUpdateInterfaceState)
 
@@ -336,6 +342,12 @@ fromConsensusQueryResult (QueryLedgerConfig CardanoModeIsMultiEra) q' r' =
     case q' of
       Consensus.QueryHardFork Consensus.GetLedgerCfg -> r'
       _ -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResult (QueryConsensusConfig CardanoModeIsMultiEra) q' r' =
+    case q' of
+      Consensus.QueryHardFork Consensus.GetConsensusCfg -> r'
+      _ -> fromConsensusQueryResultMismatch
+
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
     case q' of
       Consensus.QueryHardFork Consensus.GetCurrentEra ->
