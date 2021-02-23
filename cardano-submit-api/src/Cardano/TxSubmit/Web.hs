@@ -78,9 +78,9 @@ runTxSubmitServer
   -> NetworkId
   -> SocketPath
   -> IO ()
-runTxSubmitServer trce metrics webserverConfig protocol networkId (SocketPath sockPath) = do
+runTxSubmitServer trce metrics webserverConfig protocol networkId socketPath = do
   logException trce "tx-submit-webapi." $
-    Web.runSettings (toWarpSettings webserverConfig) undefined -- (withlocalNodeConnectInfo protocol networkId sockPath $ txSubmitApp trce metrics networkId)
+    Web.runSettings (toWarpSettings webserverConfig) $ txSubmitApp trce metrics undefined networkId socketPath
   logInfo trce "txSubmitApp: exiting"
 
 txSubmitApp
@@ -88,13 +88,14 @@ txSubmitApp
   -> TxSubmitMetrics
   -> AnyConsensusModeParams
   -> NetworkId
+  -> SocketPath
   -> Application
-txSubmitApp trce metrics connectInfo networkId =
+txSubmitApp trce metrics connectInfo networkId socketPath =
     Servant.serve (Proxy :: Proxy TxSubmitApi) (toServant handlers)
   where
     handlers :: TxSubmitApiRecord (AsServerT Handler)
     handlers = TxSubmitApiRecord
-      { _txSubmitPost = txSubmitPost trce metrics connectInfo networkId
+      { _txSubmitPost = txSubmitPost trce metrics connectInfo networkId socketPath
       }
 
 -- | Read the node socket path from the environment.
@@ -146,11 +147,11 @@ txSubmitPost
   -> TxSubmitMetrics
   -> AnyConsensusModeParams
   -> NetworkId
+  -> SocketPath
   -> ByteString
   -> Handler TxId
-txSubmitPost trce metrics (AnyConsensusModeParams cModeParams) networkId txBytes = handle $ do
+txSubmitPost trce metrics (AnyConsensusModeParams cModeParams) networkId (SocketPath socketPath) txBytes = handle $ do
     let txFile = "blah" -- TODO fix this
-    SocketPath sockPath <- firstExceptT TxCmdSocketEnvError readEnvSocketPath
 
     InAnyCardanoEra era tx <- readFileTx txFile -- TODO fix this
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
@@ -161,7 +162,7 @@ txSubmitPost trce metrics (AnyConsensusModeParams cModeParams) networkId txBytes
         localNodeConnInfo = LocalNodeConnectInfo
                               { localConsensusModeParams = cModeParams
                               , localNodeNetworkId = networkId
-                              , localNodeSocketPath = sockPath
+                              , localNodeSocketPath = socketPath
                               }
 
     res <- liftIO $ submitTxToNodeLocal localNodeConnInfo txInMode
