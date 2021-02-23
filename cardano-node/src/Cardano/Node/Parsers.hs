@@ -72,6 +72,7 @@ nodeRunParser = do
            , pncSocketPath   = socketFp
            , pncDiffusionMode = mempty
            , pncSnapshotInterval = snapshotInterval
+           , pncTestEnableDevelopmentNetworkProtocols = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
              , byronKeyFile
