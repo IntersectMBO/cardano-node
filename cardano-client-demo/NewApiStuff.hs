@@ -64,16 +64,22 @@ import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Slotting.Slot
+import           Data.SOP.Strict
 import qualified Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.Byron.Ledger.Block
+import qualified Ouroboros.Consensus.Byron.Ledger.Ledger
 import qualified Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as C
 import qualified Ouroboros.Consensus.Cardano.Block
 import qualified Ouroboros.Consensus.Cardano.Block as C
 import qualified Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Cardano.Node
+import qualified Ouroboros.Consensus.HardFork.Combinator
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics
+import qualified Ouroboros.Consensus.HardFork.Combinator.State.Types
+import qualified Ouroboros.Consensus.HardFork.Combinator.Util.Telescope
+import qualified Ouroboros.Consensus.HardFork.History.Summary
 import qualified Ouroboros.Consensus.Ledger.Abstract
 import qualified Ouroboros.Consensus.Ledger.Basics
 import qualified Ouroboros.Consensus.Ledger.Extended as C
@@ -92,19 +98,12 @@ import qualified Shelley.Spec.Ledger.PParams
 
 -- | Get the initial ledger state (and corresponding environment).
 initialLedgerState
-  :: FilePath -- TODO remove in favour of node queries
-  -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  -> Api.LocalNodeConnectInfo Api.CardanoMode
+  :: Api.LocalNodeConnectInfo Api.CardanoMode
   -> IO (Env, LedgerState)
   -- ^ ( The environment
   --   , The initial ledger state
   --   )
-initialLedgerState dbSyncConfFilePath localNodeConnectInfo = do
-
-  -- Initial Ledger State
-  dbSyncConf <- readDbSyncNodeConfig (NodeConfigFile dbSyncConfFilePath)
-  genConf <- fmap (either (error . Text.unpack . renderDbSyncNodeError) id) $ runExceptT (readCardanoGenesisConfig dbSyncConf)
-
+initialLedgerState localNodeConnectInfo = do
   -- Configuration
   ledgerConfig <-
     either (error . show) id
@@ -119,7 +118,7 @@ initialLedgerState dbSyncConfFilePath localNodeConnectInfo = do
           (Api.QueryConsensusConfig Api.CardanoModeIsMultiEra)
 
   let env = Env ledgerConfig consensusConfig
-  let ledgerState = initLedgerStateVar genConf
+  let ledgerState = initialByronLedgerStateToLedgerState (initialByronLedgerState ledgerConfig)
 
   return (env, ledgerState)
 
@@ -169,6 +168,34 @@ pattern LedgerStateMary st <- LedgerState  (C.LedgerStateMary st)
            , LedgerStateShelley
            , LedgerStateAllegra
            , LedgerStateMary #-}
+
+--------------------------------------------------------------------------------
+-- My own additions                                                           --
+--------------------------------------------------------------------------------
+
+initialByronLedgerState
+  :: Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkLedgerConfig (Ouroboros.Consensus.Cardano.Block.CardanoEras Ouroboros.Consensus.Shelley.Eras.StandardCrypto)
+  -> Ouroboros.Consensus.Ledger.Basics.LedgerState Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
+initialByronLedgerState
+  Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkLedgerConfig {
+    hardForkLedgerConfigPerEra = Ouroboros.Consensus.HardFork.Combinator.AcrossEras.PerEraLedgerConfig
+      (Ouroboros.Consensus.HardFork.Combinator.WrapPartialLedgerConfig (Ouroboros.Consensus.Cardano.CanHardFork.ByronPartialLedgerConfig byronLedgerConfig _) :* _)
+  }
+  = Ouroboros.Consensus.Byron.Ledger.Ledger.initByronLedgerState
+      byronLedgerConfig
+      Nothing
+
+initialByronLedgerStateToLedgerState
+  :: Ouroboros.Consensus.Ledger.Basics.LedgerState Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
+  -> LedgerState
+initialByronLedgerStateToLedgerState byronState
+  = LedgerState
+    $ Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkLedgerState
+      $ Ouroboros.Consensus.HardFork.Combinator.HardForkState
+        $ Ouroboros.Consensus.HardFork.Combinator.Util.Telescope.TZ
+          $ Ouroboros.Consensus.HardFork.Combinator.State.Types.Current
+              Ouroboros.Consensus.HardFork.History.Summary.initBound
+              byronState
 
 --------------------------------------------------------------------------------
 -- Everything below this is just coppied from db-sync                         --
@@ -348,7 +375,8 @@ data DbSyncNodeConfig = DbSyncNodeConfig
   }
 
 type ByronToShelley =
-  C.ProtocolParamsTransition Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
+  C.ProtocolParamsTransition
+    Ouroboros.Consensus.Byron.Ledger.Block.ByronBlock
     (Ouroboros.Consensus.Shelley.Ledger.Block.ShelleyBlock Ouroboros.Consensus.Shelley.Eras.StandardShelley)
 
 type ShelleyToAllegra =

@@ -35,9 +35,8 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 main :: IO ()
 main = do
   -- Get socket path from CLI argument.
-  configFilePath : socketPath : _ <- getArgs
+  socketPath : _ <- getArgs
   blockCount <- foldBlocks
-    configFilePath
     socketPath
     (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env
@@ -62,8 +61,6 @@ main = do
 foldBlocks
   :: forall a.
   FilePath
-  -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  -> FilePath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
   -> a
   -- ^ The initial accumulator state.
@@ -83,8 +80,8 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> IO a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath state0 accumulate = do
-  (env, ledgerState) <- initialLedgerState nodeConfigFilePath connectInfo
+foldBlocks socketPath state0 accumulate = do
+  (env, ledgerState) <- initialLedgerState connectInfo
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
