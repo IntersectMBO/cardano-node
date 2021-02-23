@@ -8,15 +8,18 @@ module Cardano.TxSubmit.Types
   , TxSubmitApiRecord (..)
   , TxSubmitWebApiError (..)
   , TxSubmitPort (..)
+  , EnvSocketError(..)
+  , TxCmdError(..)
   , renderTxSubmitWebApiError
   ) where
 
 import Cardano.Api
-    ( TxId )
+    ( TxId, AnyCardanoEra, FileError, TextEnvelopeError )
 import Cardano.Binary
     ( DecoderError )
 import Cardano.TxSubmit.Tx
-    ( TxSubmitError, renderTxSubmitError )
+    (
+    )
 import Data.Aeson
     ( ToJSON (..), Value (..) )
 import Data.ByteString.Char8
@@ -40,6 +43,8 @@ import Servant
     )
 import Servant.API.Generic
     ( (:-), ToServantApi )
+import Cardano.Api.Modes
+import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
 
@@ -52,14 +57,30 @@ data TxSubmitWebApiError
   | TxSubmitEmpty
   | TxSubmitDecodeFail !DecoderError
   | TxSubmitBadTx !Text
-  | TxSubmitFail !TxSubmitError
-  deriving Eq
+  | TxSubmitFail TxCmdError
+
+newtype EnvSocketError = CliEnvVarLookup Text deriving (Eq, Show)
+
+data TxCmdError
+  = TxCmdSocketEnvError EnvSocketError
+  | TxCmdEraConsensusModeMismatch
+      !FilePath
+      !AnyConsensusMode
+      !AnyCardanoEra
+      -- ^ Era
+  | TxCmdReadTextViewFileError !(FileError TextEnvelopeError)
+  | TxCmdTxSubmitError !Text
+  | TxCmdTxSubmitErrorEraMismatch !EraMismatch
+
 
 instance ToJSON TxSubmitWebApiError where
   toJSON = convertJson
 
 convertJson :: TxSubmitWebApiError -> Value
 convertJson = String . renderTxSubmitWebApiError
+
+renderTxCmdError :: TxCmdError -> Text
+renderTxCmdError _ = "cmd error"
 
 renderTxSubmitWebApiError :: TxSubmitWebApiError -> Text
 renderTxSubmitWebApiError st =
@@ -68,7 +89,7 @@ renderTxSubmitWebApiError st =
     TxSubmitEmpty -> "Provided transaction has zero length"
     TxSubmitDecodeFail err -> sformat build err
     TxSubmitBadTx tt -> mconcat ["Transactions of type '", tt, "' not supported"]
-    TxSubmitFail err -> renderTxSubmitError err
+    TxSubmitFail err -> renderTxCmdError err
 
 -- | Servant API which provides access to tx submission webapi
 type TxSubmitApi

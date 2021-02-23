@@ -51,6 +51,7 @@ common shelley-spec-ledger          { build-depends: shelley-spec-ledger        
 common streaming-commons            { build-depends: streaming-commons                >= 0.2.2.1                  }
 common text                         { build-depends: text                             >= 1.2.3.2                  }
 common transformers                 { build-depends: transformers                     >= 0.5.6.2                  }
+common transformers-except          { build-depends: transformers-except              >= 0.1.1                    }
 common warp                         { build-depends: warp                             >= 3.3.13                   }
 common yaml                         { build-depends: yaml                             >= 0.11.5.0                 }
 
@@ -102,8 +103,8 @@ library
                       , shelley-spec-ledger
                       , streaming-commons
                       , text
-                      , text
                       , transformers
+                      , transformers-except
                       , warp
                       , yaml
 
