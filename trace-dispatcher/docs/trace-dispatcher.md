@@ -2,7 +2,7 @@
 
 The current iohk-monitoring-framework should be replaced with something simpler. The current framework shall be replaced, because it consumes too much resources, and as such too much influences the system it is monitoring.
 
-We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The `traceWith` function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers and ends in one or more TraceOuts.
+We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The `traceWith` function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers, which are implemented via contravariant functions and ends in one or more TraceOuts.
 
 This library consists just of simple combinators and requires the messages just to implement one typeclass for formatting called `Logging`. It can be reconfigured at runtime with one procedure call. However, to work properly it puts the burden on the user to provide a default object for any message as is described in the section on configuration and documentation. This library build upon the arrow based contravariant tracer library contra-tracer.
 
@@ -273,9 +273,11 @@ class Logging a where
     A.Object o     -> o
     s@(A.String _) -> HM.singleton "string" s
     _              -> mempty
+
   forHuman :: a -> Text
   default forHuman :: Humanise a =>  a -> Text
   forHuman v = humanise v
+
   asMetrics :: a -> [Metric]
   asMetrics v = []
 
