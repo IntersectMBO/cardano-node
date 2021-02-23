@@ -290,16 +290,24 @@ in {
       };
 
       extraServiceConfig = mkOption {
-        type = types.attrs;
-        default = {};
+        # activate type for nixos-21.03:
+        type = types.unspecified # types.functionTo (types.listOf types.attrs);
+          // {
+            merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
+          };
+        default = i: {};
         description = ''
           Extra systemd service config (apply to all instances).
         '';
       };
 
       extraSocketConfig = mkOption {
-        type = types.attrs;
-        default = {};
+        # activate type for nixos-21.03:
+        type = types.unspecified # types.functionTo (types.listOf types.attrs);
+          // {
+            merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
+          };
+        default = i: {};
         description = ''
           Extra systemd socket config (apply to all instances).
         '';
@@ -358,7 +366,9 @@ in {
       };
 
       nodeConfig = mkOption {
-        type = types.attrs;
+        type = types.attrs // {
+          merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
+        };
         default = envConfig.nodeConfig;
         description = ''Internal representation of the config.'';
       };
@@ -461,7 +471,7 @@ in {
           RestartSec = 1;
           KillSignal = "SIGINT";
         };
-      } cfg.extraServiceConfig);
+      } (cfg.extraServiceConfig i));
 
       systemd.sockets = genInstanceConf (n: i: lib.mkIf cfg.systemdSocketActivation (recursiveUpdate {
         description = "Socket of the ${n} service.";
@@ -475,7 +485,7 @@ in {
           SocketUser = "cardano-node";
           SocketGroup = "cardano-node";
         };
-      } cfg.extraSocketConfig));
+      } (cfg.extraSocketConfig i)));
     }
     {
       # oneshot service start allows to easily control all instances at once.
