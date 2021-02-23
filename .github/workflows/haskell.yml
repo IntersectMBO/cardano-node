@@ -21,7 +21,7 @@ jobs:
       run: |
         case "$OS" in
           Windows_NT)   echo "CABAL_VERSION=3.4.0.1-rc3"  >> $GITHUB_ENV;;
-          *)            echo "CABAL_VERSION=3.4.0.0-rc4"  >> $GITHUB_ENV;;
+          *)            echo "CABAL_VERSION=3.4.0.0"      >> $GITHUB_ENV;;
         esac
 
     - uses: haskell/actions/setup@v1
