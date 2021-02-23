@@ -108,39 +108,32 @@ readEnvSocketPath =
     envName :: String
     envName = "CARDANO_NODE_SOCKET_PATH"
 
+readByteStringTextEnvelopeAnyOf2
+  :: [FromSomeType HasTextEnvelope b]
+  -> ByteString
+  -> ExceptT TextEnvelopeError IO b
+readByteStringTextEnvelopeAnyOf2 types content = hoistEither $ do
+  te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
+  deserialiseFromTextEnvelopeAnyOf types te
 
-readFileTextEnvelopeAnyOf2 :: [FromSomeType HasTextEnvelope b]
-                          -> FilePath
-                          -> IO (Either (FileError TextEnvelopeError) b)
-readFileTextEnvelopeAnyOf2 types path =
-    runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ BS.readFile path
-      firstExceptT (FileError path) $ hoistEither $ do
-        te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelopeAnyOf types te
-
-readFileInAnyCardanoEra
+readByteStringInAnyCardanoEra
   :: ( HasTextEnvelope (thing ByronEra)
      , HasTextEnvelope (thing ShelleyEra)
      , HasTextEnvelope (thing AllegraEra)
      , HasTextEnvelope (thing MaryEra)
      )
   => (forall era. AsType era -> AsType (thing era))
-  -> FilePath
-  -> ExceptT TxCmdError IO (InAnyCardanoEra thing)
-readFileInAnyCardanoEra asThing file =
-    firstExceptT TxCmdReadTextViewFileError
-  . newExceptT
-  $ readFileTextEnvelopeAnyOf2
-      [ FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
-      , FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
-      , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
-      , FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
-      ]
-      file
+  -> ByteString
+  -> ExceptT TextEnvelopeError IO (InAnyCardanoEra thing)
+readByteStringInAnyCardanoEra asThing = readByteStringTextEnvelopeAnyOf2
+  [ FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
+  , FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
+  , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
+  , FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
+  ]
 
-readFileTx :: FilePath -> ExceptT TxCmdError IO (InAnyCardanoEra Tx)
-readFileTx = readFileInAnyCardanoEra AsTx
+readByteStringTx :: ByteString -> ExceptT TxCmdError IO (InAnyCardanoEra Tx)
+readByteStringTx bs = firstExceptT TxCmdTxReadError $ readByteStringInAnyCardanoEra AsTx bs
 
 txSubmitPost
   :: Trace IO Text
@@ -151,12 +144,10 @@ txSubmitPost
   -> ByteString
   -> Handler TxId
 txSubmitPost trce metrics (AnyConsensusModeParams cModeParams) networkId (SocketPath socketPath) txBytes = handle $ do
-    let txFile = "blah" -- TODO fix this
-
-    InAnyCardanoEra era tx <- readFileTx txFile -- TODO fix this
+    InAnyCardanoEra era tx <- readByteStringTx txBytes
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
     eraInMode <- hoistMaybe
-                   (TxCmdEraConsensusModeMismatch txFile cMode (AnyCardanoEra era))
+                   (TxCmdEraConsensusModeMismatch cMode (AnyCardanoEra era))
                    (toEraInMode era $ consensusModeOnly cModeParams)
     let txInMode = TxInMode tx eraInMode
         localNodeConnInfo = LocalNodeConnectInfo
@@ -169,7 +160,7 @@ txSubmitPost trce metrics (AnyConsensusModeParams cModeParams) networkId (Socket
     case res of
       Net.Tx.SubmitSuccess -> do
         liftIO $ putTextLn "Transaction successfully submitted."
-        return $ getTxId (getTxBody tx) -- TODO return actual transaction id
+        return $ getTxId (getTxBody tx)
       Net.Tx.SubmitFail reason ->
         case reason of
           TxValidationErrorInMode err _eraInMode -> left . TxCmdTxSubmitError . T.pack $ show err

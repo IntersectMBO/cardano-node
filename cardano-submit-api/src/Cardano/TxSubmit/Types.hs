@@ -14,7 +14,7 @@ module Cardano.TxSubmit.Types
   ) where
 
 import Cardano.Api
-    ( TxId, AnyCardanoEra, FileError, TextEnvelopeError )
+    ( TxId, AnyCardanoEra, TextEnvelopeError )
 import Cardano.Binary
     ( DecoderError )
 import Cardano.TxSubmit.Tx
@@ -64,11 +64,10 @@ newtype EnvSocketError = CliEnvVarLookup Text deriving (Eq, Show)
 data TxCmdError
   = TxCmdSocketEnvError EnvSocketError
   | TxCmdEraConsensusModeMismatch
-      !FilePath
       !AnyConsensusMode
       !AnyCardanoEra
       -- ^ Era
-  | TxCmdReadTextViewFileError !(FileError TextEnvelopeError)
+  | TxCmdTxReadError !TextEnvelopeError
   | TxCmdTxSubmitError !Text
   | TxCmdTxSubmitErrorEraMismatch !EraMismatch
 
