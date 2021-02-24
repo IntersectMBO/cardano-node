@@ -4,6 +4,7 @@
 , baseEnvConfig
 , basePort
 , profile
+, useCabalRun
   ## Last-moment overrides:
 , extraSupervisorConfig
 }:
@@ -25,7 +26,9 @@ let
           ## topology wtf?
           inherit (envConfig) operationalCertificate kesKey vrfKey topology nodeConfig nodeConfigFile port dbPrefix socketPath;
           inherit stateDir;
-        };
+        } // lib.optionalAttrs useCabalRun
+          { executable = "cabal run exe:cardano-node --";
+          };
       };
     in lib.evalModules {
       prefix = [];

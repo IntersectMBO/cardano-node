@@ -1,10 +1,10 @@
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
 { config ? {}
-, customConfig ? {}
 , autoStartCluster ? false
 , sourcesOverride ? {}
 , withHoogle ? true
+, customConfig ? {}
 , pkgs ? import ./nix {
     inherit config sourcesOverride;
   }
@@ -16,8 +16,12 @@ let
   # NOTE: due to some cabal limitation,
   #  you have to remove all `source-repository-package` entries from cabal.project
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
+  clusterCabal = mkCluster (customConfig // { useCabalRun = true; });
+  clusterNix   = mkCluster (customConfig // { useCabalRun = false; });
   shell = cardanoNodeHaskellPackages.shellFor {
     name = "cabal-dev-shell";
+
+    inherit withHoogle;
 
     packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
 
@@ -36,18 +40,26 @@ let
       sqlite-interactive
       tmux
       pkgs.git
+      clusterCabal.start
+      clusterCabal.stop
     ];
 
     # Prevents cabal from choosing alternate plans, so that
     # *all* dependencies are provided by Nix.
     exactDeps = true;
 
-    inherit withHoogle;
+    shellHook = ''
+      echo "Setting 'cabal.project' for local builds.."
+      make setup
+      function atexit() {
+          echo "Reverting 'cabal.project' to the index version.."
+          make restore
+      }
+      trap atexit EXIT
+    '';
   };
 
-  devops = let
-    cluster = mkCluster customConfig;
-  in
+  devops =
     stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
@@ -58,8 +70,8 @@ let
       cardano-node
       python3Packages.supervisor
       python3Packages.ipython
-      cluster.start
-      cluster.stop
+      clusterNix.start
+      clusterNix.stop
       cardanolib-py
     ];
     shellHook = ''
@@ -71,7 +83,7 @@ let
       source <(cardano-node --bash-completion-script cardano-node)
 
       # Socket path default to first BFT node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$PWD/${cluster.baseEnvConfig.stateDir}/bft1.socket
+      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.baseEnvConfig.stateDir}/bft1.socket
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
         export CARDANO_NODE_SOCKET_PATH="$PWD/state-node-${customConfig.network}/node.socket"

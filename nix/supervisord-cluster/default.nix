@@ -5,6 +5,7 @@
 , basePort ? 30000
 , stateDir ? "./state-cluster"
 , extraSupervisorConfig ? {}
+, useCabalRun ? false
 ##
 , profileName ? "default-mary"
 , profileOverride ? {}
@@ -29,6 +30,11 @@ let
       inherit (profile) era;
     };
 
+  cardanoExes = pkgs.callPackage ./cardano-exes.nix
+    { inherit (pkgs) cabal-install cardano-node cardano-cli;
+      inherit lib stateDir useCabalRun;
+    };
+
   ## This yields two attributes: 'params' and 'files'
   genesis = pkgs.callPackage ./genesis.nix
     { inherit
@@ -36,9 +42,10 @@ let
       stateDir
       baseEnvConfig
       basePort
-      profile;
+      profile
+      cardanoExes;
       path = lib.makeBinPath
-        [ cardano-cli bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
+        [ bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
     };
 
   supervisorConfig = pkgs.callPackage ./supervisor.nix
@@ -48,11 +55,19 @@ let
       stateDir
       baseEnvConfig
       basePort
-      profile
-      extraSupervisorConfig;
+      extraSupervisorConfig
+      useCabalRun
+      profile;
     };
 
   start = pkgs.writeScriptBin "start-cluster" ''
+    while test $# -gt 0
+    do case "$1" in
+        --trace | --debug ) set -x;;
+        * ) break;; esac; shift; done
+
+    ${cardanoExes}
+
     echo "Profile '${profile.name}' dump in: ${profileDump}"
     set -euo pipefail
     if [ -f ${stateDir}/supervisord.pid ]
@@ -63,13 +78,23 @@ let
     ${pkgs.python3Packages.supervisor}/bin/supervisord \
         --config ${__trace "supervisorConfig: ${supervisorConfig} "
                    supervisorConfig} $@
+
+    if test ! -v "CARDANO_NODE_SOCKET_PATH"
+    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/bft1.socket; fi
+
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
     echo "Transfering genesis funds to pool owners, register pools and delegations"
-    cardano-cli transaction submit \
+    cli transaction submit \
       --cardano-mode \
       --tx-file ${stateDir}/shelley/transfer-register-delegate-tx.tx \
       --testnet-magic ${toString genesis.params.network_magic}
     sleep 5
+
+    echo 'Recording node pids..'
+    ${pkgs.psmisc}/bin/pstree -Ap $(cat ${stateDir}/supervisord.pid) |
+    grep 'cabal.*cardano-node' |
+    sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/' \
+      > ${stateDir}/cardano-node.pids
     echo 'Cluster started. Run `stop-cluster` to stop'
   '';
   stop = pkgs.writeScriptBin "stop-cluster" ''
@@ -77,7 +102,7 @@ let
     ${pkgs.python3Packages.supervisor}/bin/supervisorctl stop all
     if [ -f ${stateDir}/supervisord.pid ]
     then
-      kill $(<${stateDir}/supervisord.pid)
+      kill $(<${stateDir}/supervisord.pid) $(<${stateDir}/cardano-node.pids)
       echo "Cluster terminated!"
     else
       echo "Cluster is not running!"
