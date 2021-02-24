@@ -3,20 +3,17 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-
 module Cardano.Logging.FrequencyLimiter where
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import           Data.Text (Text, unpack)
--- import           Data.Time (UTCTime, diffUTCTime, getCurrentTime,
---                      nominalDiffTimeToSeconds)
 import           Data.Time.Clock.System
 import           Debug.Trace
 import           GHC.Generics
-import           System.Random
 
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
@@ -56,7 +53,7 @@ data FrequencyRec a = FrequencyRec {
 -- Finally it sends a StopLimiting message on the ltracer and traces all
 -- messages on the vtracer again.
 limitFrequency
-  :: forall a acc m . MonadIO m
+  :: forall a acc m . (MonadIO m, MonadUnliftIO m)
   => Double   -- messages per second
   -> Text     -- name of this limiter
   -> Trace m a -- the limited trace
@@ -77,7 +74,7 @@ limitFrequency nMsgPerSecond limiterName vtracer ltracer = do
 
     cata :: FrequencyRec a -> a -> m (FrequencyRec a)
     cata fs@FrequencyRec {..} message = do
-      timeNow <- systemTimeToSeconds <$> liftIO getSystemTime
+      timeNow <- liftIO $ systemTimeToSeconds <$> getSystemTime
       let realTimeBetweenMsgs = timeNow - frLastTime
       let canoTimeBetweenMsgs = 1.0 / nMsgPerSecond
       let diffTimeBetweenMsgs = realTimeBetweenMsgs - canoTimeBetweenMsgs
