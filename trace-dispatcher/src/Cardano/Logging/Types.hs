@@ -1,4 +1,5 @@
 {-# LANGUAGE DefaultSignatures          #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
@@ -15,10 +16,6 @@ import           Data.Text (Text)
 import           GHC.Generics
 
 
-class Humanise a where
-  -- | Give a human readable representation for object a
-  humanise :: a -> Text
-
 -- | Every message needs this to define how to represent it
 class Logging a where
   -- | Machine readable representation with the possibility to represent
@@ -32,10 +29,8 @@ class Logging a where
     _              -> mempty
 
   -- | Human readable representation.
-  -- Falls back to Humanise in the default representation
   forHuman :: a -> Text
-  default forHuman :: Humanise a =>  a -> Text
-  forHuman v = humanise v
+  forHuman v = ""
 
   -- | Metrics representation.
   -- No metrics by default
@@ -49,7 +44,7 @@ data Metric
   -- | A double metric.
   -- If a text is given it is appended as last element to the namespace
     | DoubleM (Maybe Text) Double
-    deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 type Namespace = [Text]
 type Selector  = [Text]
@@ -62,21 +57,21 @@ data LoggingContext = LoggingContext {
     lcContext  :: Namespace
   , lcSeverity :: Maybe SeverityS
   , lcPrivacy  :: Maybe Privacy
-  , lcDetails  :: Maybe DetailLevel
-}
+  , lcDetails  :: Maybe DetailLevel}
+  deriving (Show, Eq, Generic)
 
 emptyLoggingContext :: LoggingContext
 emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
 
 -- | Formerly known as verbosity
 data DetailLevel = DBrief | DRegular | DDetailed
-    deriving (Show, Eq, Ord, Bounded, Enum)
+    deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
 -- | Privacy of a message
 data Privacy =
       Public                    -- ^ can be public.
     | Confidential              -- ^ confidential information - handle with care
-    deriving (Show, Eq, Ord, Bounded, Enum)
+    deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
 -- | Severity of a message
 data SeverityS
@@ -88,7 +83,7 @@ data SeverityS
     | Critical                -- ^ Severe situations
     | Alert                   -- ^ Take immediate action
     | Emergency               -- ^ System is unusable
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
 -- | Severity for a filter
 data SeverityF
@@ -101,8 +96,7 @@ data SeverityF
     | AlertF                   -- ^ Take immediate action
     | EmergencyF               -- ^ System is unusable
     | SilenceF                 -- ^ Don't show anything
-  deriving (Eq, Ord, Show, Enum, Bounded)
-
+  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
 -- Configuration options for individual namespace elements
 data ConfigOption =
@@ -112,6 +106,7 @@ data ConfigOption =
   | CoDetail DetailLevel
     -- | Privacy level (Default is Public)
   | CoPrivacy Privacy
+  deriving (Eq, Ord, Show, Generic)
 
 data TraceConfig = TraceConfig {
 
@@ -141,6 +136,7 @@ data TraceConfig = TraceConfig {
     --  Host/port to bind Prometheus server at
 --  ,  tcBindAddrPrometheus :: Maybe (String,Int)
 }
+  deriving (Eq, Ord, Show, Generic)
 
 emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
 
@@ -159,3 +155,27 @@ instance Logging b => Logging (Folding a b) where
   forMachine v (Folding b) =  forMachine v b
   forHuman (Folding b)     =  forHuman b
   asMetrics (Folding b)    =  asMetrics b
+
+instance A.ToJSON Metric where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON LoggingContext where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON DetailLevel where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON Privacy where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON SeverityS where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON SeverityF where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON ConfigOption where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON TraceConfig where
+    toEncoding = A.genericToEncoding A.defaultOptions
