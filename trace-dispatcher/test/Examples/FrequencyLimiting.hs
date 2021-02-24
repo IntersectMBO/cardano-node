@@ -20,12 +20,12 @@ data LOX = LOS LO | LOL LimitingMessage
 tracer1 :: MonadIO m => m (Trace m LO)
 tracer1  = do
   t1      <- fmap (appendName "tracer1") stdoutObjectKatipTracer
-  limitFrequency 30 "one every 2 seconds" (cmap LOS t1) (cmap LOL t1)
+  limitFrequency 5 "5 messages per second" (cmap LOS t1) (cmap LOL t1)
 
 tracer2 :: MonadIO m => m (Trace m LO)
 tracer2  = do
   t2      <- fmap (appendName "tracer2") stdoutJsonKatipTracer
-  limitFrequency 15 "one every four seconds" (cmap LOS t2) (cmap LOL t2)
+  limitFrequency 15 "15 messages per second" (cmap LOS t2) (cmap LOL t2)
 
 repeated :: Trace IO LO -> Int -> Int -> IO ()
 repeated _ 0 _ = pure ()
@@ -39,6 +39,6 @@ testLimiting = do
   t1 <- tracer1
   t2 <- tracer2
   let t = t1 <> t2
-  repeated t 1000 10000 --wait 100 per second
-  repeated t 100 100000 --wait 10 per second
-  repeated t 30  200000 -- wait 5 per second
+  repeated t 1000 10000 -- 100 messages per second
+  repeated t 20 1000000 -- 1  message per second
+  repeated t 300 100000 -- 10  message per second
