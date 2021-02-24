@@ -57,6 +57,11 @@ let
           ./scripts/cabal-inside-nix-shell.sh --restore
       }
       trap atexit EXIT
+
+      ${lib.optionalString autoStartCluster ''
+      echo "Starting cluster (because 'auto-start-cluster' is true):"
+      start-cluster
+      ''}
     '';
   };
 
