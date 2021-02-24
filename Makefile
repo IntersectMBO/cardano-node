@@ -39,10 +39,10 @@ profiles:
 cluster-shell:
 	nix-shell --max-jobs 8 --cores 0 -A 'devops' --arg 'autoStartCluster' 'true'
 
-setup:
+cabal-setup setup:
 	sed -ni '1,/--- 8< ---/ p' cabal.project
 
-restore:
+cabal-restore restore:
 	git checkout HEAD cabal.project
 
 cli node:
