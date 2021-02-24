@@ -9,9 +9,6 @@ import           System.Remote.Monitoring (forkServer)
 instance Logging Int where
   asMetrics i = [IntM Nothing i]
 
-instance Humanise Int where
-  humanise i = (pack . show) i
-
 testEKG :: IO ()
 testEKG = do
     server <- forkServer "localhost" 8000
