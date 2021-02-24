@@ -39,6 +39,7 @@ import qualified Data.ByteArray
 import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Short as BSS
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -48,6 +49,7 @@ import qualified Cardano.Api.Block
 import qualified Cardano.Api.Eras
 import qualified Cardano.Api.IPC as Api
 import qualified Cardano.Api.Modes as Api
+import qualified Cardano.Chain.Genesis
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Slotting.Slot
@@ -94,6 +96,22 @@ initialLedgerState localNodeConnectInfo = do
     <$> Api.queryNodeLocalStateNoTip
           localNodeConnectInfo
           (Api.QueryConsensusConfig Api.CardanoModeIsMultiEra)
+
+  Prelude.putStrLn "****"
+  Prelude.putStrLn $ "gdAvvmDistr size: " <> show
+    (let
+        Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkLedgerConfig {
+            hardForkLedgerConfigPerEra = Ouroboros.Consensus.HardFork.Combinator.AcrossEras.PerEraLedgerConfig
+              (Ouroboros.Consensus.HardFork.Combinator.WrapPartialLedgerConfig (Ouroboros.Consensus.Cardano.CanHardFork.ByronPartialLedgerConfig byronLedgerConfig _) :* _)
+          }
+          = ledgerConfig
+      in  Map.size
+            $ Cardano.Chain.Genesis.unGenesisAvvmBalances
+            $ Cardano.Chain.Genesis.gdAvvmDistr
+            $ Cardano.Chain.Genesis.configGenesisData
+            $ byronLedgerConfig
+    )
+  Prelude.putStrLn "****"
 
   let env = Env ledgerConfig consensusConfig
   let ledgerState = initialByronLedgerStateToLedgerState (initialByronLedgerState ledgerConfig)
