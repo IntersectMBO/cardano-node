@@ -26,6 +26,13 @@ traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
 traceNamed :: (Monad m) => Trace m a -> Text -> a -> m ()
 traceNamed tr n = traceWith (appendName n tr)
 
+-- | Contramap lifted to Trace
+cmap :: Monad m => (a -> b) -> Trace m b -> Trace m a
+cmap f = T.contramap
+          (\case
+            (lc, Right a) -> (lc, Right (f a))
+            (lc, Left  c) -> (lc, Left  c))
+
 --- | Don't process further if the result of the selector function
 ---   is False.
 filterTrace :: (Monad m) =>
@@ -37,7 +44,7 @@ filterTrace ff = T.squelchUnless $
       (lc, Right a) -> ff (lc, a)
       (lc, Left  c) -> True
 
---- | Just keep the Just values and forget about the Nothings
+--- | Keep the Just values and forget about the Nothings
 filterTraceMaybe :: Monad m =>
      Trace m a
   -> Trace m (Maybe a)

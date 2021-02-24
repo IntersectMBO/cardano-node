@@ -2,8 +2,12 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-
-module Cardano.Logging.Configuration where
+module Cardano.Logging.Configuration
+  ( configureTracers
+  , withNamespaceConfig
+  , filterSeverityFromConfig
+  , filterPrivacyFromConfig
+  ) where
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
@@ -25,18 +29,6 @@ configureTracers config tracers = do
   where
     configureTrace :: Monad m => TraceControl -> Trace m a -> m ()
     configureTrace c tr = T.traceWith tr (emptyLoggingContext, Left c)
-
--- | Filter a trace by severity and take the filter value from the config
-filterSeverityFromConfig :: (MonadIO m) =>
-     Trace m a
-  -> m (Trace m a)
-filterSeverityFromConfig = withNamespaceConfig getSeverity filterTraceBySeverity
-
--- | Filter a trace by severity and take the filter value from the config
-filterPrivacyFromConfig :: (MonadIO m) =>
-     Trace m a
-  -> m (Trace m a)
-filterPrivacyFromConfig = withNamespaceConfig getPrivacy filterTraceByPrivacy
 
 -- | Take a selector function, and a function from trace to trace with
 --   this selector to make a trace transformer with a config value
@@ -94,6 +86,21 @@ withNamespaceConfig extract needsConfigFunc tr = do
             _ -> T.traceWith (needsConfigFunc Nothing tr) (lc, Left Optimize)
         Right val -> error $ "Trace not reset before reconfiguration "
                             ++ show (lcContext lc)
+
+-- | Filter a trace by severity and take the filter value from the config
+filterSeverityFromConfig :: (MonadIO m) =>
+     Trace m a
+  -> m (Trace m a)
+filterSeverityFromConfig = withNamespaceConfig getSeverity filterTraceBySeverity
+
+-- | Filter a trace by severity and take the filter value from the config
+filterPrivacyFromConfig :: (MonadIO m) =>
+     Trace m a
+  -> m (Trace m a)
+filterPrivacyFromConfig = withNamespaceConfig getPrivacy filterTraceByPrivacy
+
+--------------------------------------------------------
+-- Internal
 
 -- | If no severity can be found in the config, it is set to Warning
 getSeverity :: TraceConfig -> Namespace -> SeverityF
