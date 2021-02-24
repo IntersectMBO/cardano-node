@@ -48,11 +48,13 @@ def add_derived_params:
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
 | ($epoch_duration * $gtor.epochs)           as $duration
 | (if $compo.dense_pool_density > 1
-   then $compo.n_singular_hosts
-   else $compo.n_singular_hosts + $compo.n_dense_hosts
-   end)                                      as $n_singular_pools
-| ($compo.n_dense_hosts * $compo.dense_pool_density)
-                                             as $n_dense_pools
+   then { singular:  $compo.n_singular_hosts
+        , dense:     $compo.n_dense_hosts }
+   else { singular: ($compo.n_singular_hosts + $compo.n_dense_hosts)
+        , dense:     0 }
+   end)                                      as $hosts
+| $hosts.singular                            as $n_singular_pools
+| ($hosts.dense * $compo.dense_pool_density) as $n_dense_pools
 | ($n_singular_pools + $n_dense_pools)       as $n_pools
 
 ## Note how derivations come in phases, too:
@@ -60,8 +62,11 @@ def add_derived_params:
 | (## First derivation:
    { common:
      { composition:
-         { n_pools:               $n_pools
+         { n_hosts:               ($compo.n_bft_hosts + $hosts.singular + $hosts.dense)
+         , n_pools:               $n_pools
+         , n_singular_hosts:      $hosts.singular
          , n_singular_pools:      $n_singular_pools
+         , n_dense_hosts:         $hosts.dense
          , n_dense_pools:         $n_dense_pools
          }
      , genesis:

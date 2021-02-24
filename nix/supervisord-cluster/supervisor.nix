@@ -23,8 +23,7 @@ let
       extra = {
         services.cardano-node = {
           enable = true;
-          ## topology wtf?
-          inherit (envConfig) operationalCertificate kesKey vrfKey topology nodeConfig nodeConfigFile port dbPrefix socketPath;
+          inherit (envConfig) operationalCertificate kesKey topology vrfKey nodeConfig nodeConfigFile port dbPrefix socketPath;
           inherit stateDir;
         } // lib.optionalAttrs useCabalRun
           { executable = "cabal run exe:cardano-node --";
@@ -39,15 +38,6 @@ let
     #!${pkgs.stdenv.shell}
     ${eval.config.services.cardano-node.script}
   '';
-
-  topologyFile = selfPort: {
-    Producers = map (p:
-      {
-        addr = "127.0.0.1";
-        port = p;
-        valency = 1;
-      }) (lib.filter (p: p != selfPort) (lib.genList (i: basePort + i + 1) (composition.n_bft_hosts + composition.n_pools)));
-  };
 
   config =
   (pkgs.commonLib.supervisord.writeSupervisorConfig ({
@@ -66,11 +56,12 @@ let
   } // lib.listToAttrs (map (i:
     lib.nameValuePair "program:bft${toString i}" {
       command = let
+        index = i - 1;
         envConfig = baseEnvConfig // rec {
           operationalCertificate = "${stateDir}/nodes/node-bft${toString i}/op.cert";
           kesKey = "${stateDir}/nodes/node-bft${toString i}/kes.skey";
           vrfKey = "${stateDir}/nodes/node-bft${toString i}/vrf.skey";
-          topology = __toFile "topology.yaml" (__toJSON (topologyFile port));
+          topology = "${stateDir}/topologies/node-${toString index}.json";
           socketPath = "${stateDir}/bft${toString i}.socket";
           dbPrefix = "db-bft${toString i}";
           port = basePort + i;
@@ -85,11 +76,12 @@ let
   // lib.listToAttrs (map (i:
     lib.nameValuePair "program:pool${toString i}" {
       command = let
+        index = composition.n_bft_hosts + i - 1;
         envConfig = baseEnvConfig // rec {
           operationalCertificate = "${stateDir}/nodes/node-pool${toString i}/op.cert";
           kesKey = "${stateDir}/nodes/node-pool${toString i}/kes.skey";
           vrfKey = "${stateDir}/nodes/node-pool${toString i}/vrf.skey";
-          topology = __toFile "topology.yaml" (__toJSON (topologyFile port));
+          topology = "${stateDir}/topologies/node-${toString index}.json";
           socketPath = "${stateDir}/pool${toString i}.socket";
           dbPrefix = "db-pool${toString i}";
           port = basePort + composition.n_bft_hosts + i;
