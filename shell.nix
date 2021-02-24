@@ -50,10 +50,10 @@ let
 
     shellHook = ''
       echo "Setting 'cabal.project' for local builds.."
-      make setup
+      make cabal-setup
       function atexit() {
           echo "Reverting 'cabal.project' to the index version.."
-          make restore
+          make cabal-restore
       }
       trap atexit EXIT
     '';
