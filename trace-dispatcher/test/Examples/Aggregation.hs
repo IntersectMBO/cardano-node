@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE RecordWildCards     #-}
@@ -8,7 +7,7 @@
 
 module Examples.Aggregation where
 
-import qualified Data.Aeson as AE
+import qualified Data.Aeson as A
 import           GHC.Generics (Generic)
 import           Katip
 import           Katip.Scribes.Handle (ioLogEnv)
@@ -21,12 +20,12 @@ data BaseStats = BaseStats {
     bsMax     :: Double,
     bsCount   :: Int,
     bsSum     :: Double
-    } deriving (Generic, ToObject, AE.ToJSON, Show)
+    } deriving (Eq, Ord, Show, Generic)
 
+instance A.ToJSON BaseStats where
+    toEncoding = A.genericToEncoding A.defaultOptions
 
 instance Logging BaseStats where
-  forMachine _ _ = mempty
-  forHuman _ = ""
   asMetrics BaseStats {..} =
     [ DoubleM (Just "measure") bsMeasure
     , DoubleM (Just "sum") bsSum]

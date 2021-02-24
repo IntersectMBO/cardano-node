@@ -45,6 +45,7 @@ executable trace-dispatcher-examples
                       Examples.Routing
                       Examples.EKG
                       Examples.Configuration
+                      Examples.FrequencyLimiting
     hs-source-dirs:   test
     default-language: Haskell2010
     default-extensions:  OverloadedStrings
@@ -55,7 +56,7 @@ executable trace-dispatcher-examples
                       , ekg-core
                       , hostname
                       , katip
-                      , random                      
+                      , random
                       , text
                       , trace-dispatcher
                       , time
