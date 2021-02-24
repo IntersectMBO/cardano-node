@@ -31,10 +31,11 @@ library
                       , ekg-core
                       , hostname
                       , katip
-                      , random
                       , stm
                       , text
                       , time
+                      , unliftio
+                      , unliftio-core
                       , unordered-containers
 
 executable trace-dispatcher-examples
@@ -56,9 +57,10 @@ executable trace-dispatcher-examples
                       , ekg-core
                       , hostname
                       , katip
-                      , random
                       , text
                       , trace-dispatcher
                       , time
+                      , unliftio
+                      , unliftio-core
                       , stm
                       , unordered-containers
