@@ -7,6 +7,7 @@ module Examples.FrequencyLimiting where
 import           Control.Concurrent
 import           Control.Monad (liftM)
 import           Control.Monad.IO.Class
+import           Control.Monad.IO.Unlift
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import           GHC.Generics
@@ -17,12 +18,12 @@ import           Examples.TestObjects
 data LOX = LOS LO | LOL LimitingMessage
  deriving (Logging, Generic, A.ToJSON)
 
-tracer1 :: MonadIO m => m (Trace m LO)
+tracer1 :: (MonadIO m, MonadUnliftIO m) => m (Trace m LO)
 tracer1  = do
   t1      <- fmap (appendName "tracer1") stdoutObjectKatipTracer
   limitFrequency 5 "5 messages per second" (cmap LOS t1) (cmap LOL t1)
 
-tracer2 :: MonadIO m => m (Trace m LO)
+tracer2 :: (MonadIO m, MonadUnliftIO m) => m (Trace m LO)
 tracer2  = do
   t2      <- fmap (appendName "tracer2") stdoutJsonKatipTracer
   limitFrequency 15 "15 messages per second" (cmap LOS t2) (cmap LOL t2)

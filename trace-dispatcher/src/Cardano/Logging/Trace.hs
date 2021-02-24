@@ -9,12 +9,12 @@ module Cardano.Logging.Trace where
 import           Control.Arrow
 import           Control.Monad (join)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import qualified Control.Tracer.Arrow as TA
-import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef,
-                     writeIORef)
 import           Data.Maybe (fromMaybe, isJust)
 import           Data.Text (Text)
+import           UnliftIO.MVar
 
 import           Cardano.Logging.Types
 
@@ -140,24 +140,24 @@ withDetails fs = T.contramap $
       (lc, Left  c) -> (lc, Left c)
 
 -- | Folds the cata function with acc over a.
--- Uses an IORef to store the state
+-- Uses an MVar to store the state
 foldTraceM
-  :: forall a acc m . MonadIO m
+  :: forall a acc m . (MonadUnliftIO m, MonadIO m)
   => (acc -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
 foldTraceM cata initial tr = do
-  ref <- liftIO (newIORef initial)
+  ref <- liftIO (newMVar initial)
   let trr = mkTracer ref
   pure (T.Tracer trr)
  where
     mkTracer ref = T.emit $
       \case
         (lc, Right v) -> do
-          x' <- liftIO $ atomicModifyIORef' ref $ \x ->
+          x' <- modifyMVar ref $ \x ->
             let ! accu = cata x v
-            in join (,) accu
+            in pure $ join (,) accu
           T.traceWith tr (lc, Right (Folding x'))
         (lc, Left c) -> do
           T.traceWith tr (lc, Left c)
@@ -165,23 +165,23 @@ foldTraceM cata initial tr = do
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
 foldMTraceM
-  :: forall a acc m . MonadIO m
+  :: forall a acc m . (MonadUnliftIO m, MonadIO m)
   => (acc -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
 foldMTraceM cata initial tr = do
-  ref <- liftIO (newIORef initial)
+  ref <- liftIO (newMVar initial)
   let trr = mkTracer ref
   pure (T.arrow trr)
  where
     mkTracer ref = T.emit $
       \case
         (lc, Right v) -> do
-          acc    <- liftIO $ readIORef ref
-          ! acc' <- cata acc v
-          liftIO $ writeIORef ref acc'
-          T.traceWith tr (lc, Right (Folding acc'))
+          x' <- modifyMVar ref $ \x -> do
+            ! accu <- cata x v
+            pure $ join (,) accu
+          T.traceWith tr (lc, Right (Folding x'))
         (lc, Left c) -> do
           T.traceWith tr (lc, Left c)
 
