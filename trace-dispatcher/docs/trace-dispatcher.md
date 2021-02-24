@@ -250,6 +250,33 @@ foldMTraceM :: forall a acc m . MonadIO m
 
 ### Frequency Limiting
 
+The current framework has the concept of eliding tracers, which have the
+ability to suppress repeated messages when they are equal in some way.  
+We hope to replace this concept with frequency limited tracers, which
+more or less randomly suppress messages when the number of messages exceeds
+a certain threshold, which can be specified.
+
+Our argument for this concept is that it consumes much less resources, as the
+storage and comparison between objects can be resource intensive.
+
+The frequency limiter itself emits a message when its start to suppress messages,
+and reports if limiting stops together with the number of suppressed messages.
+
+A limiter is given a name to identify its activity.
+
+```haskell
+limitFrequency
+  :: forall a acc m . MonadIO m
+  => Double   -- messages per second
+  -> Text     -- name of this limiter
+  -> Trace m a -- the limited trace
+  -> Trace m LimitingMessage -- a trace emitting the messages of the limiter
+  -> m (Trace m a) -- the original trace
+
+data LimitingMessage =
+    StartLimiting    {name :: Text}
+  | StopLimiting     {name :: Text, suppressed :: Int}
+```
 
 ### Formatting
 
@@ -275,8 +302,8 @@ class Logging a where
     _              -> mempty
 
   forHuman :: a -> Text
-  default forHuman :: Humanise a =>  a -> Text
-  forHuman v = humanise v
+  default forHuman :: a -> Text
+  forHuman v = ""
 
   asMetrics :: a -> [Metric]
   asMetrics v = []
