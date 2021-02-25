@@ -2,9 +2,21 @@
 
 The current iohk-monitoring-framework should be replaced with something simpler. The current framework shall be replaced, because it consumes too much resources, and as such too much influences the system it is monitoring.
 
-We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The `traceWith` function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers, which are implemented via contravariant functions and ends in one or more TraceOuts.
+We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The `traceWith` function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers, which are implemented via contravariant functions, and end in one or more TraceOuts.
 
-This library consists just of simple combinators and requires the messages just to implement one typeclass for formatting called `Logging`. It can be reconfigured at runtime with one procedure call. However, to work properly it puts the burden on the user to provide a default object for any message as is described in the section on configuration and documentation. This library build upon the arrow based contravariant tracer library contra-tracer.
+This library requires:
+
+* the messages have to implement the typeclass `Logging` for formatting
+* the developer shall document all messages
+* the developer has to provide a default object for any message (used for configuration and documentation)
+
+This library offers:
+
+* It can be reconfigured at runtime with one procedure call
+* The tracers are optimized for efficiency at configuration time
+* It builds documentation for messages combined with it's parameters and if desired even with the configuration data
+
+This library is build upon the arrow based contravariant tracer library __contra-tracer__.
 
 ## General Interface
 
@@ -171,7 +183,7 @@ Here we treat the static implementation of this. Calling traceWith trace passes 
 In the first example we route the trace to one of two tracers based on the constructor of the message.
 
 ```haskell
-routingTrace :: forall m a . Monad m => (a -> Trace m a) -> Trace m a
+routingTrace :: Monad m => (a -> Trace m a) -> Trace m a
 let resTrace = routingTrace routingf (tracer1 <> tracer2)
   where
     routingf LO1 {} = tracer1
@@ -223,11 +235,11 @@ following way, and it will output the Stats:
   traceWith 2.0 aggroTracer -- measure: 2.0 sum: 3.1
 ```
 
-The procedure foldTraceM uses an IORef to hold the state, and has thus to be called in a monad stack, which contains the IO Monad.
+The procedure foldTraceM uses an MVar to hold the state, and has thus to be called in a monad stack, which contains the IO Monad.
 
 ```haskell
 -- | Folds the function with state b over messages a in the trace.
-foldTraceM :: forall a acc m . MonadIO m
+foldTraceM :: MonadIO m
   => (acc -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
@@ -246,36 +258,29 @@ foldMTraceM :: forall a acc m . MonadIO m
   -> m (Trace m a)
 ```
 
-(I would like to find a function foldTrace, that omits the Ioref and can thus be called pure. Help is appreciated)
+(I would like to find a function foldTrace, that omits the MVar and can thus be called pure. Help is appreciated)
 
 ### Frequency Limiting
 
 The current framework has the concept of eliding tracers, which have the
-ability to suppress repeated messages when they are equal in some way.  
-We hope to replace this concept with frequency limited tracers, which
-more or less randomly suppress messages when the number of messages exceeds
-a certain threshold, which can be specified.
+ability to suppress repeated messages when they are equal in some way. We hope to replace this concept with frequency limited tracers, which more or less randomly suppress messages when the number of messages exceeds a certain threshold, which can be specified. The argument for this concept is that it consumes less resources, as the storage and comparison between objects can be resource intensive.
 
-Our argument for this concept is that it consumes much less resources, as the
-storage and comparison between objects can be resource intensive.
-
-The frequency limiter itself emits a message when its start to suppress messages,
-and reports if limiting stops together with the number of suppressed messages.
+The frequency limiter itself emits a message when its start to suppress messages, and reports if limiting stops together with the number of suppressed messages.
 
 A limiter is given a name to identify its activity.
 
 ```haskell
 limitFrequency
-  :: forall a acc m . MonadIO m
-  => Double   -- messages per second
-  -> Text     -- name of this limiter
-  -> Trace m a -- the limited trace
-  -> Trace m LimitingMessage -- a trace emitting the messages of the limiter
-  -> m (Trace m a) -- the original trace
+  :: MonadIO m
+  => Double                  -- ^ messages per second
+  -> Text                    -- ^ name of this limiter
+  -> Trace m a               -- ^ the limited trace
+  -> Trace m LimitingMessage -- ^ a trace emitting the messages of the limiter
+  -> m (Trace m a)           -- ^ the original trace
 
 data LimitingMessage =
-    StartLimiting    {name :: Text}
-  | StopLimiting     {name :: Text, suppressed :: Int}
+    StartLimiting Text
+  | StopLimiting  Text Int
 ```
 
 ### Formatting
@@ -285,8 +290,7 @@ We want to limit the use type classes, so we only use one type class for the for
 * The `forMachine` method is used for a machine readable representation, which can be different depending on the detail level.
   It's default implementation false back to the toJson method of Aeson
 
-* the `forHuman` method shall represent the message in human readble Form.  
-  It's default implementation false back to the humanise method of Humanise
+* the `forHuman` method shall represent the message in human readable form.  
 
 * the `asMetrics` method shall represent the message as 0 to n metrics.  
   It's default implementation assumes no metrics. If a text is given it is
@@ -302,7 +306,6 @@ class Logging a where
     _              -> mempty
 
   forHuman :: a -> Text
-  default forHuman :: a -> Text
   forHuman v = ""
 
   asMetrics :: a -> [Metric]
@@ -316,7 +319,7 @@ data Metric
 
 ### Configuration
 
-With the new system of configuration we have
+With the new system of configuration we have:
 
 1. fine-grained configure options based on namespaces up to individual messages  
 2. reconfigurable at any time with with a call to configureTracers
@@ -350,7 +353,7 @@ data TraceConfiguration = TraceConfiguration {
   , ...
 }
 ```
-Many more configuration options e.g. for different backends will be added.
+Many more configuration options e.g. for different transformers and traceOuts and will be added.
 
 ### Documentation
 
