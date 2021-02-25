@@ -20,16 +20,16 @@ For the transaction draft, --tx.out, --invalid-hereafter and --fee can be set to
     --tx-out $(cat payment.addr)+0 \
     --invalid-hereafter 0 \
     --fee 0 \
-    --out-file tx.raw \
+    --out-file tx.draft \
     --certificate-file stake.cert
 
 #### Calculate fees
 
     cardano-cli transaction calculate-min-fee \
-    --tx-body-file tx.raw \
+    --tx-body-file tx.draft \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --witness-count 1 \
+    --witness-count 2 \
     --byron-witness-count 0 \
     --mainnet \
     --protocol-params-file protocol.json
@@ -40,7 +40,7 @@ The output is the transaction fee in lovelace:
 
 Registering the stake address, not only pay transaction fees, but also includes a _deposit_ (which you get back when deregister the key) as stated in the protocol parameters:
 
-The deposit amount can be found in the `protocol.json` under `keyDeposit`, for example in Shelley Tesntet:
+The deposit amount can be found in the `protocol.json` under `keyDeposit`, for example in Shelley Mainnet:
 
     ...
     "keyDeposit": 2000000,
@@ -50,17 +50,18 @@ Query the UTXO of the address that pays for the transaction and deposit:
 
     cardano-cli query utxo \
         --address $(cat payment.addr) \
-        --mainnet
+        --mainnet \
+        --allegra-era
 
-    >                            TxHash                                 TxIx        Lovelace
+    >                            TxHash                                 TxIx      Amount
     > ----------------------------------------------------------------------------------------
-    > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1      1000000000
+    > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1      1000000000 lovelace
 
 #### Calculate the change to send back to payment address after including the deposit
 
     expr 1000000000 - 171485 - 2000000
 
-    > 999428515
+    > 997828515
 
 #### Submit the certificate with a transaction:
 

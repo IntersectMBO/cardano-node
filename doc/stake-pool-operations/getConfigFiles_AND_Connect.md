@@ -64,9 +64,9 @@ Check that the node is syncing by fetching the current tip. When syncing slotNo 
         cardano-cli query tip --mainnet
 
         {
-        "blockNo": 36322,
-        "headerHash": "3f1bea22be21452415851ae670f4bac9340471cb7f2f6a664fac56d7f60dbaad",
-        "slotNo": 888561
+            "blockNo": 36322,
+            "headerHash": "3f1bea22be21452415851ae670f4bac9340471cb7f2f6a664fac56d7f60dbaad",
+            "slotNo": 888561
         }
 
 **Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.

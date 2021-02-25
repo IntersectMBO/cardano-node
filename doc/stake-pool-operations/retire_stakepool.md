@@ -10,55 +10,61 @@ The deregistration certificate contains the _epoch_ in which we want to retire t
 So we first need to figure out the current epoch. The number of _slots per epoch_ is recorded in the genesis file, and we can get it with
 
     cat mainnet-shelley-genesis.json | grep epoch
-    > "epochLength": 21600,
+    > "epochLength": 432000,
 
-So one epoch lasts for 21600 slots. We get the current slot by querying the tip:
+So one epoch lasts for 432000 slots. We get the current slot by querying the tip:
 
     export CARDANO_NODE_SOCKET_PATH=relay-db/node-socket
     cardano-cli query tip --mainnet
 
-    > Tip (SlotNo {unSlotNo = 856232}) ...
+    {
+        "blockNo": 5361172,
+        "headerHash": "cdd3d9075d22a52f0a8e5d92a6c76e6982a2a1036fd4ce8732f70d89bb778a67",
+        "slotNo": 22141376
+    }
+
 
 This gives us
 
-    expr 856232 / 21600
-    > 39
+    expr 22141376 / 432000
+    > 51
 
-So we are currently in epoch 39.
+So we are currently in epoch 51.
 
 We can look up `eMax` by querying the current protocol parameters:
 
     cardano-cli query protocol-parameters \
     --mainnet \
+    --allegra-era \
     --out-file protocol.json
 
     cat protocol.json | grep eMax
-    > "eMax": 100,
+    > "eMax": 18,
 
-This means the earliest epoch for retirement is 40 (one in the future), and the latest is 139 (current epoch plus `eMax`).
+This means the earliest epoch for retirement is 52 (one in the future), and the latest is 69 (current epoch plus `eMax`).
 
-So for example, we can decide to retire in epoch 41.
+So for example, we can decide to retire in epoch 53.
 
 #### Create deregistration certificate
 
-**WARNING** This involves the __cold keys__. Take the necessary precautions to not to expose your cold keys to the internet.
+**WARNING** This involves the __cold keys__. Take the necessary precautions to not expose your cold keys to the internet.
 
-Create the deregistration certificate and save it as `pool.deregistration`:
+Create the deregistration certificate and save it as `pool-deregistration.cert`:
 
     cardano-cli stake-pool deregistration-certificate \
     --cold-verification-key-file cold.vkey \
-    --epoch 41 \
-    --out-file pool.deregistration
+    --epoch 53 \
+    --out-file pool-deregistration.cert
 
 #### Draft the transaction
 
     cardano-cli transaction build-raw \
-    --tx-in <UTXO>#<TxIx> \
+    --tx-in <TxHash>#<TxIx> \
     --tx-out $(cat payment.addr)+0 \
     --invalid-hereafter 0 \
     --fee 0 \
     --out-file tx.draft \
-    --certificate-file pool.deregistration
+    --certificate-file pool-deregistration.cert
 
 #### Calculate the fees:
 
@@ -66,7 +72,7 @@ Create the deregistration certificate and save it as `pool.deregistration`:
     --tx-body-file tx.draft \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --witness-count 1 \
+    --witness-count 2 \
     --byron-witness-count 0 \
     --mainnet \
     --protocol-params-file protocol.json
@@ -79,13 +85,14 @@ We query our address for a suitable UTxO to use as input:
 
     cardano-cli query utxo \
     --address $(cat payment.addr) \
-    --mainnet
+    --mainnet \
+    --allegra-era
 
 
 
-           TxHash             TxIx        Lovelace
+           TxHash             TxIx      Amount
     ------------------------------------------------
-    9db6cf...                    0      999999267766
+    9db6cf...                    0      999999267766 lovelace
 
 We calculate our change:
 
@@ -102,7 +109,7 @@ Build the raw transaction:
     --invalid-hereafter 860000 \
     --fee 171309 \
     --out-file tx.raw \
-    --certificate-file pool.deregistration
+    --certificate-file pool-deregistration.cert
 
 **Sign it with both the payment signing key and the cold signing key
 (the first signature is necessary because we are spending funds from `paymant.addr`,
@@ -121,6 +128,6 @@ And submit to the blockchain:
     --tx-file tx.signed \
     --mainnet
 
-The pool will retire at the end of epoch 40.
+The pool will retire at the end of epoch 52.
 
-If we change our mind, we can create and submit a new registration certificate before epoch 41, which will then overrule the deregistration certificate.
+If we change our mind, we can create and submit a new registration certificate before epoch 53, which will then overrule the deregistration certificate.

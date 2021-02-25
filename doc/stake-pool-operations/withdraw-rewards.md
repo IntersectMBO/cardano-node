@@ -5,6 +5,7 @@
 
     cardano-cli query stake-address-info \
     --mainnet \
+    --allegra-era \
     --address $(cat stake.addr)
 
     [
@@ -20,31 +21,31 @@
 
 You'll withdraw rewards into a payment.addr wich will pay for the transaction fees.
 
-    cardano-cli query utxo --mainnet --address $(cat payment.addr)
+    cardano-cli query utxo --mainnet --allegra-era --address $(cat payment.addr)
 
-                               TxHash                                 TxIx        Lovelace
+                               TxHash                                 TxIx         Amount
     ----------------------------------------------------------------------------------------
-    a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527     1         194054070
+    a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527     1         194054070 lovelace
 
 ### Draft the withdraw transaction to transfer the rewards to a payment.addr
 
     cardano-cli transaction build-raw \
     --tx-in a82f8d2a85cde39118a894306ad7a85ba40af221406064a56bdd9b3c61153527#1 \
-    --tx-out $(cat payment.addr)+743882981 \
-    --withdrawal $(cat stake.addr)+550000000 \
+    --tx-out $(cat payment.addr)+0 \
+    --withdrawal $(cat stake.addr)+0 \
     --invalid-hereafter 0 \
     --fee 0 \
-    --out-file withdraw_rewards.raw
+    --out-file withdraw_rewards.draft
 
 ### Calculate transaction fees
 
     cardano-cli transaction calculate-min-fee \
-    --mainnet \
-    --tx-body-file withdraw_rewards.raw  \
+    --tx-body-file withdraw_rewards.draft  \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --witness-count 1 \
+    --witness-count 2 \
     --byron-witness-count 0 \
+    --mainnet \
     --protocol-params-file protocol.json
 
    > 171089
@@ -65,12 +66,12 @@ You'll withdraw rewards into a payment.addr wich will pay for the transaction fe
 ### Sign and submit the transactions
 
     cardano-cli transaction sign \
-    --mainnet \
     --tx-body-file withdraw_rewards.raw  \
     --signing-key-file payment.skey \
     --signing-key-file stake.skey \
+    --mainnet \
     --out-file withdraw_rewards.signed
 
     cardano-cli transaction submit \
-    --mainnet \
-    --tx-file withdraw_rewards.signed
+    --tx-file withdraw_rewards.signed \
+    --mainnet

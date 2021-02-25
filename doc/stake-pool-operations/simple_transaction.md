@@ -16,6 +16,7 @@ Get the protocol parameters and save them to `protocol.json` with:
 ```
 cardano-cli query protocol-parameters \
   --mainnet \
+  --allegra-era \
   --out-file protocol.json
 ```
 
@@ -24,20 +25,21 @@ cardano-cli query protocol-parameters \
 ```
 cardano-cli query utxo \
   --address $(cat payment.addr) \
-  --mainnet
+  --mainnet \
+  --allegra-era
 ```
 
 ```
-                            TxHash                                 TxIx        Lovelace
+                            TxHash                                 TxIx        Amount
 ----------------------------------------------------------------------------------------
-4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99     4         20000000
+4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99     4         20000000 lovelace
 ```
 
 #### Draft the transaction
 
 Create a draft for the transaction and save it in tx.draft
 
-Note that for `--tx-in` we use the following syntax: `TxId#TxIx` where `TxId` is the transaction hash and `TxIx` is the index; for `--tx-out` we use: `TxOut+Lovelace` where `TxOut` is the hex encoded address followed by the amount in `Lovelace`. For the transaction draft --tx-out, --invalid-hereafter and --fee can be set to zero.
+Note that for `--tx-in` we use the following syntax: `TxHash#TxIx` where `TxHash` is the transaction hash and `TxIx` is the index; for `--tx-out` we use: `TxOut+Lovelace` where `TxOut` is the hex encoded address followed by the amount in `Lovelace`. For the transaction draft --tx-out, --invalid-hereafter and --fee can be set to zero.
 
     cardano-cli transaction build-raw \
     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
@@ -80,13 +82,13 @@ For example, if we send 10 ADA from a UTxO containing 20 ADA, the change to send
 
 #### Determine the TTL (time to Live) for the transaction
 
-To build the transaction we need to specify the **TTL (Time to live)**, this is the slot height limit for our transaction to be included in a block, if it is not in a block by that slot the transaction will be cancelled. So TTL = slotNo + N slots. Where N is the amount of slots you want to add to give the transaction a window to be included in a block.
+To build the transaction we need to specify the **TTL (Time to live)**, this is the slot height limit for our transaction to be included in a block, if it is not in a block by that slot the transaction will be cancelled. So TTL = slot + N slots. Where N is the amount of slots you want to add to give the transaction a window to be included in a block.
 
 Query the tip of the blockchain:
 
     cardano-cli query tip --mainnet
 
-Look for the value of `unSlotNo`
+Look for the value of `slotNo`
 
     {
         "blockNo": 16829,
@@ -94,7 +96,7 @@ Look for the value of `unSlotNo`
         "slotNo": 369200
     }
 
-Calculate your TTL, for example:  369215 + 200 slots = 369400
+Calculate your TTL, for example:  369200 + 200 slots = 369400
 
 #### Build the transaction
 
@@ -130,19 +132,21 @@ We must give it some time to get incorporated into the blockchain, but eventuall
 
     cardano-cli query utxo \
         --address $(cat payment.addr) \
-        --mainnet
+        --mainnet \
+        --allegra-era
 
-    >                            TxHash                                 TxIx        Lovelace
+    >                            TxHash                                 TxIx         Amount
     > ----------------------------------------------------------------------------------------
-    > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1         9832035
+    > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     1         9832035 lovelace
 
     cardano-cli query utxo \
         --address $(cat payment2.addr) \
-        --mainnet
+        --mainnet \
+        --allegra-era
 
-    >                            TxHash                                 TxIx        Lovelace
+    >                            TxHash                                 TxIx         Amount
     > ----------------------------------------------------------------------------------------
-    > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     0         10000000
+    > b64ae44e1195b04663ab863b62337e626c65b0c9855a9fbb9ef4458f81a6f5ee     0         10000000 lovelace
 
 
 **Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.
