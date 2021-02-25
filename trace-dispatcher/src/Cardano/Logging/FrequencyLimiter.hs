@@ -30,14 +30,17 @@ instance A.ToJSON LimitingMessage where
     toEncoding = A.genericToEncoding A.defaultOptions
 
 data FrequencyRec a = FrequencyRec {
-    frMessage    :: Maybe a   -- ^ The message to pass
-  , frLastTime   :: Double    -- ^ The time since the last message did pass in seconds
-  , frBonusMalus :: Double    -- ^ A value between 1.0, meaning few messages come through
-                              --   and if active stop limiting and -1.0, meaning to much
-                              --   messages pass and if not active start limiting
-  , frActive     :: Maybe (Int, Double)
+    frMessage  :: Maybe a   -- ^ The message to pass
+  , frLastTime :: Double    -- ^ The time since the last message did arrive in seconds
+  , frBudget   :: Double    -- ^ A budget which is used to decide when to start limiting
+                              --   and stop limiting. When messages arrive in shorter frquency then
+                              --   by the given thresholdFrequency budget is spend, and if they
+                              --   arrive in a longer period budget is earned.
+                              --   A value between 1.0 and -1.0. If -1.0 is reached start limiting,
+                              --   and if 1.0 is reached stop limiting.
+  , frActive   :: Maybe (Int, Double)
                               -- ^ Just is active and carries the number
-                              -- of suppressed messages and the time of last send message
+                              --   of suppressed messages and the time of last send message
 } deriving (Show)
 
 -- | Limits the frequency of messages to nMsg which is given per minute.
@@ -59,7 +62,7 @@ limitFrequency
   -> Trace m a -- the limited trace
   -> Trace m LimitingMessage -- the limiters messages
   -> m (Trace m a) -- the original trace
-limitFrequency nMsgPerSecond limiterName vtracer ltracer = do
+limitFrequency thresholdFrequency limiterName vtracer ltracer = do
     timeNow <- systemTimeToSeconds <$> liftIO getSystemTime
     foldMTraceM
       cata
@@ -74,64 +77,64 @@ limitFrequency nMsgPerSecond limiterName vtracer ltracer = do
 
     cata :: FrequencyRec a -> a -> m (FrequencyRec a)
     cata fs@FrequencyRec {..} message = do
-      timeNow <- liftIO $ system TimeToSeconds <$> getSystemTime
-      let realTimeBetweenMsgs = timeNow - frLastTime
-      let canoTimeBetweenMsgs = 1.0 / nMsgPerSecond
-      let diffTimeBetweenMsgs = realTimeBetweenMsgs - canoTimeBetweenMsgs
+      timeNow <- liftIO $ systemTimeToSeconds <$> getSystemTime
+      let elapsedTime      = timeNow - frLastTime
+      let thresholdPeriod  = 1.0 / thresholdFrequency
+      let rawSpendReward   = elapsedTime - thresholdPeriod
                                     -- negative if too short, positive if longer
-      let diffTimeNormalized  = diffTimeBetweenMsgs / canoTimeBetweenMsgs
-      let bonusMalusAdd       = min 0.5 (max (-0.5) diffTimeNormalized)
-      let newBonusMalus       = min 1.0 (max (-1.0) (bonusMalusAdd + frBonusMalus))
-      -- trace ("realTimeBetweenMsgs " ++ show realTimeBetweenMsgs
-      --        ++ " canoTimeBetweenMsgs " ++ show canoTimeBetweenMsgs
-      --        ++ " diffTimeBetweenMsgs " ++ show diffTimeBetweenMsgs
-      --        ++ " diffTimeNormalized "  ++ show diffTimeNormalized
-      --        ++ " bonusMalusAdd "       ++ show bonusMalusAdd
-      --        ++ " newBonusMalus "       ++ show newBonusMalus) $
+      let normaSpendReward = rawSpendReward * thresholdFrequency -- TODO not really normalized
+      let spendReward      = min 0.5 (max (-0.5) normaSpendReward)
+      let newBudget        = min 1.0 (max (-1.0) (spendReward + frBudget))
+      -- trace ("elapsedTime " ++ show elapsedTime
+      --        ++ " thresholdPeriod " ++ show thresholdPeriod
+      --        ++ " rawSpendReward " ++ show rawSpendReward
+      --        ++ " normaSpendReward "  ++ show normaSpendReward
+      --        ++ " spendReward "       ++ show spendReward
+      --        ++ " newBudget "       ++ show newBudget $
       case frActive of
         Nothing -> -- not active
-          if bonusMalusAdd + frBonusMalus <= -1.0
+          if spendReward + frBudget <= -1.0
             then do  -- start limiting
               traceWith
                 (setSeverity Info ltracer)
                 (StartLimiting limiterName)
               pure fs  { frMessage     = Just message
                        , frLastTime    = timeNow
-                       , frBonusMalus  = newBonusMalus
+                       , frBudget      = newBudget
                        , frActive      = Just (0, timeNow)
                        }
             else  -- continue without limiting
               pure fs  { frMessage     = Just message
                        , frLastTime    = timeNow
-                       , frBonusMalus  = newBonusMalus
+                       , frBudget      = newBudget
                        }
         Just (nSuppressed, lastTimeSend) -> -- is active
-          if bonusMalusAdd + frBonusMalus >= 1.0
+          if spendReward + frBudget >= 1.0
             then do -- stop limiting
               traceWith
                 (setSeverity Info ltracer)
                 (StopLimiting limiterName nSuppressed)
               pure fs  { frMessage     = Just message
                        , frLastTime    = timeNow
-                       , frBonusMalus  = newBonusMalus
+                       , frBudget      = newBudget
                        , frActive      = Nothing
                        }
             else
-              let realTimeBetweenMsgs2 = timeNow - lastTimeSend
+              let lastPeriod = timeNow - lastTimeSend
               in
               -- trace ("realTimeBetweenMsgs2 " ++ show realTimeBetweenMsgs2
               --           ++ " canoTimeBetweenMsgs " ++ show canoTimeBetweenMsgs) $
-                  if realTimeBetweenMsgs2 > canoTimeBetweenMsgs
+                  if lastPeriod > thresholdPeriod
                     then -- send
                       pure fs  { frMessage     = Just message
                                , frLastTime    = timeNow
-                               , frBonusMalus  = newBonusMalus
+                               , frBudget      = newBudget
                                , frActive      = Just (nSuppressed, timeNow)
                                }
                     else  -- suppress
                       pure fs  { frMessage     = Nothing
                                , frLastTime    = timeNow
-                               , frBonusMalus  = newBonusMalus
+                               , frBudget      = newBudget
                                , frActive      = Just (nSuppressed + 1, lastTimeSend)
                                }
 

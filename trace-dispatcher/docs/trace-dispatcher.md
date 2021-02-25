@@ -321,13 +321,12 @@ data Metric
 
 With the new system of configuration we have:
 
-1. fine-grained configure options based on namespaces up to individual messages  
-2. reconfigurable at any time with with a call to configureTracers
-3. Optimized as config options are either fixed at configuration time if possible, but never require more then one lookup
+1. Fine-grained configure options based on _namespaces_ up to individual messages  
+2. Reconfigurable at any time with a call to _configureTracers_
+3. Optimized, as configuration options are either fixed at configuration time if possible, but never require more then one lookup
 4. Requires for any tracer of type a to get a list of prototypes for all messages and all entry points for this kind of object
 
 This is implemented by running the trace network at configuration time.
-The configuration can be stored and read from a YAML or JSON file.
 
 ```haskell
 -- | Needs to list all traces which are used with traceWith for type a.
