@@ -1107,14 +1107,14 @@ makePivoTransactionBody txins txouts txValidityUpperBound fee updatePayload =
   where
     txBody =
       Pivo.TxBody
-        (Set.fromList (map toShelleyTxIn txins))                -- inputs
-        (Seq.fromList (map toShelleyTxOut txouts))               -- outputs
-        Seq.empty                        -- certs
-        (Shelley.Wdrl Map.empty)                        -- wdrls
+        (Set.fromList (map toShelleyTxIn txins))              -- inputs
+        (Seq.fromList (map toShelleyTxOut txouts))            -- outputs
+        Seq.empty                                             -- certs
+        (Shelley.Wdrl Map.empty)                              -- wdrls
         (case fee of
            TxFeeImplicit era'     -> case era' of {}
            TxFeeExplicit _ amount -> toShelleyLovelace amount
-        )                                               -- txfee
+        )                                                     -- txfee
         ( Allegra.ValidityInterval
           { Allegra.invalidBefore = SNothing
           , Allegra.invalidHereafter =
@@ -1122,10 +1122,10 @@ makePivoTransactionBody txins txouts txValidityUpperBound fee updatePayload =
                 TxValidityNoUpperBound _ -> SNothing
                 TxValidityUpperBound _ s -> SJust s
           }
-        ) -- vldt
-        (SJust updatePayload)            -- update
-        SNothing                         -- adHash
-        mempty                           -- mint
+        )                                                     -- vldt
+        (SJust updatePayload)                                 -- update
+        SNothing                                              -- adHash
+        mempty                                                -- mint
 
 makeShelleyTransactionBody :: ShelleyBasedEra era
                            -> TxBodyContent era

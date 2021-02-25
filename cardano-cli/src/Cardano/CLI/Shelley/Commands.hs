@@ -330,7 +330,11 @@ data PivoCmd
   = SIP SIPCmd
   deriving Show
 
-data SIPCmd = SIPNew
+data SIPCmd
+  = SIPNew
+    { sipAuthorKeyFile :: VerificationKeyFile
+    , proposalText     :: Text
+    }
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text

@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Cardano.CLI.Shelley.Run.Governance
   ( ShelleyGovernanceCmdError
   , renderShelleyGovernanceError
@@ -7,21 +9,27 @@ module Cardano.CLI.Shelley.Run.Governance
 import           Cardano.Prelude
 
 import qualified Data.Text as Text
+import Data.Sequence.Strict (singleton)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, right)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-import           Cardano.Api.Pivo (DummyPivoEra)
+import           Cardano.Api.Pivo ()
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHashOrFile,
-                     readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
+                      VerificationKeyOrFile (VerificationKeyFilePath),
+                     readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile, readVerificationKeyOrFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
+import qualified Cardano.Ledger.Pivo.Update.Payload.SIP as SIP
+
+import qualified Shelley.Spec.Ledger.Keys as Shelley.Keys
+import Ouroboros.Consensus.Shelley.Eras (StandardPivo)
 
 
 data ShelleyGovernanceCmdError
@@ -64,13 +72,24 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp
 runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
   where
-    runPivoCmd (SIP SIPNew)
-      = firstExceptT ShelleyGovernanceCmdTextEnvWriteError
-      $ newExceptT
-      $ writeFileTextEnvelope
-          outFile
-          Nothing
-          (Pivo.Update.Payload :: Pivo.Update.Payload DummyPivoEra)
+    runPivoCmd (SIP SIPNew {sipAuthorKeyFile, proposalText}) = do
+      StakeVerificationKey (Shelley.Keys.VKey vk)
+        <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
+         $ readVerificationKeyOrFile AsStakeKey
+         $ VerificationKeyFilePath sipAuthorKeyFile
+      let sip = SIP.mkSubmission vk anySalt proposalText
+            where
+              anySalt = 92 -- At the moment we do not support specifying the
+                           -- salt via command line.
+      firstExceptT ShelleyGovernanceCmdTextEnvWriteError
+        $ newExceptT
+        $ writeFileTextEnvelope
+            outFile
+            Nothing
+            (Pivo.Update.Payload
+               { Pivo.Update.sipSubmissions = singleton sip }
+             :: Pivo.Update.Payload StandardPivo
+            )
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot

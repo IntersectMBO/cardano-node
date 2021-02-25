@@ -5,6 +5,8 @@ module Cardano.Api.Pivo where
 
 import Data.Typeable (Typeable)
 
+import Cardano.Ledger.Era (Era)
+
 import           Cardano.Api.SerialiseTextEnvelope (HasTextEnvelope, textEnvelopeType)
 import           Cardano.Api.HasTypeProxy (HasTypeProxy (AsType), proxyToAsType)
 import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR)
@@ -19,9 +21,9 @@ instance HasTypeProxy (Pivo.Update.Payload era) where
   data AsType (Pivo.Update.Payload era) = AsPivoUpdatePayload
   proxyToAsType _ = AsPivoUpdatePayload
 
-instance Typeable era => SerialiseAsCBOR (Pivo.Update.Payload era)
+instance (Typeable era, Era era) => SerialiseAsCBOR (Pivo.Update.Payload era)
 
-instance Typeable era => HasTextEnvelope (Pivo.Update.Payload era) where
+instance (Typeable era, Era era) => HasTextEnvelope (Pivo.Update.Payload era) where
   textEnvelopeType _ = "Pivo update payload"
 
 data DummyPivoEra = DummyPivoEra
