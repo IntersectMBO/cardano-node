@@ -35,7 +35,7 @@ We can look up `eMax` by querying the current protocol parameters:
 
     cardano-cli query protocol-parameters \
     --mainnet \
-    --allegra-era \
+    --mary-era \
     --out-file protocol.json
 
     cat protocol.json | grep eMax
@@ -86,7 +86,7 @@ We query our address for a suitable UTxO to use as input:
     cardano-cli query utxo \
     --address $(cat payment.addr) \
     --mainnet \
-    --allegra-era
+    --mary-era
 
 
 

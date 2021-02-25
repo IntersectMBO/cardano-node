@@ -51,7 +51,7 @@ Query the UTXO of the address that pays for the transaction and deposit:
     cardano-cli query utxo \
         --address $(cat payment.addr) \
         --mainnet \
-        --allegra-era
+        --mary-era
 
     >                            TxHash                                 TxIx      Amount
     > ----------------------------------------------------------------------------------------

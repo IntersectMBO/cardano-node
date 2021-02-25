@@ -183,4 +183,4 @@ Get Pool ID
 
 Check for the presence of your poolID in the network ledger state, with:
 
-    cardano-cli query ledger-state --mainnet --allegra-era | grep publicKey | grep <poolId>
+    cardano-cli query ledger-state --mainnet --mary-era | grep publicKey | grep <poolId>
