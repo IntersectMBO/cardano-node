@@ -74,7 +74,7 @@ limitFrequency nMsgPerSecond limiterName vtracer ltracer = do
 
     cata :: FrequencyRec a -> a -> m (FrequencyRec a)
     cata fs@FrequencyRec {..} message = do
-      timeNow <- liftIO $ systemTimeToSeconds <$> getSystemTime
+      timeNow <- liftIO $ system TimeToSeconds <$> getSystemTime
       let realTimeBetweenMsgs = timeNow - frLastTime
       let canoTimeBetweenMsgs = 1.0 / nMsgPerSecond
       let diffTimeBetweenMsgs = realTimeBetweenMsgs - canoTimeBetweenMsgs
@@ -89,7 +89,7 @@ limitFrequency nMsgPerSecond limiterName vtracer ltracer = do
       --        ++ " bonusMalusAdd "       ++ show bonusMalusAdd
       --        ++ " newBonusMalus "       ++ show newBonusMalus) $
       case frActive of
-        Nothing ->
+        Nothing -> -- not active
           if bonusMalusAdd + frBonusMalus <= -1.0
             then do  -- start limiting
               traceWith
@@ -105,7 +105,7 @@ limitFrequency nMsgPerSecond limiterName vtracer ltracer = do
                        , frLastTime    = timeNow
                        , frBonusMalus  = newBonusMalus
                        }
-        Just (nSuppressed, lastTimeSend) ->
+        Just (nSuppressed, lastTimeSend) -> -- is active
           if bonusMalusAdd + frBonusMalus >= 1.0
             then do -- stop limiting
               traceWith
