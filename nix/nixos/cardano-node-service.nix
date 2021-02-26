@@ -84,8 +84,11 @@ let
           ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
         ''}
         # If exist copy state from existing instance instead of syncing from scratch:
-        if [[ (! -d ${instanceDbPath}) && (-d ${cfg.databasePath}) ]]; then
-          cp -a ${cfg.databasePath} ${instanceDbPath}
+        if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath} ]; then
+          echo "Copying existing immutable db from ${instanceDbPath}"
+          mkdir -p ${instanceDbPath}
+          cp -a ${cfg.databasePath}/immutable ${instanceDbPath}/
+          cp -a ${cfg.databasePath}/protocolMagicId ${instanceDbPath}/
         fi
         exec ${toString cmd}'';
 in {
