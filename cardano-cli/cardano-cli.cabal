@@ -84,7 +84,7 @@ library
                      , cardano-crypto
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
-                     , cardano-ledger
+                     , cardano-ledger-byron
                      , cardano-ledger-shelley-ma
                      , cardano-node
                      , cardano-prelude
@@ -233,7 +233,7 @@ test-suite cardano-cli-golden
                       , cardano-api
                       , cardano-cli
                       , cardano-crypto-wrapper
-                      , cardano-ledger
+                      , cardano-ledger-byron
                       , cardano-prelude
                       , cborg
                       , containers
