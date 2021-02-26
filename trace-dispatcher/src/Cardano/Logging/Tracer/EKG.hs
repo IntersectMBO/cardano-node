@@ -21,11 +21,11 @@ ekgTracer storeOrServer = liftIO $ do
     registeredLabels <- newIORef Map.empty
     pure $ T.arrow $ T.emit $ output registeredGauges registeredLabels
   where
-    output registeredGauges registeredLabels (LoggingContext{..}, Right v) =
+    output registeredGauges registeredLabels (LoggingContext{..}, Nothing, v) =
       case asMetrics v of
         [] -> pure ()
         l  -> liftIO $ mapM_ (setIt registeredGauges registeredLabels lcContext) l
-    output _ _ (LoggingContext{..}, Left c) = pure ()
+    output _ _ (LoggingContext{..}, Just c, v) = pure ()
     setIt registeredGauges _registeredLabels namespace (IntM mbText theInt) = do
       registeredMap <- readIORef registeredGauges
       let name = case mbText of

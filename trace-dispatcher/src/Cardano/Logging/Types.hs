@@ -1,6 +1,8 @@
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
 
@@ -50,14 +52,15 @@ type Namespace = [Text]
 type Selector  = [Text]
 
 -- | Tracer comes from the contra-tracer package and carries a context here
-type Trace m a = Tracer m (LoggingContext, Either TraceControl a)
+type Trace m a = Tracer m (LoggingContext, Maybe TraceControl, a)
 
 -- | Context of a message
 data LoggingContext = LoggingContext {
     lcContext  :: Namespace
   , lcSeverity :: Maybe SeverityS
   , lcPrivacy  :: Maybe Privacy
-  , lcDetails  :: Maybe DetailLevel}
+  , lcDetails  :: Maybe DetailLevel
+  }
   deriving (Show, Eq, Generic)
 
 emptyLoggingContext :: LoggingContext
@@ -65,13 +68,13 @@ emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
 
 -- | Formerly known as verbosity
 data DetailLevel = DBrief | DRegular | DDetailed
-    deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
 -- | Privacy of a message
 data Privacy =
       Public                    -- ^ can be public.
     | Confidential              -- ^ confidential information - handle with care
-    deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
 -- | Severity of a message
 data SeverityS
@@ -143,10 +146,39 @@ emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
 -- | When configuring a net of tracers, it should be run with Config on all
 -- entry points first, and then with Optimize. When reconfiguring it needs to
 -- run Reset followed by Config followed by Optimize
-data TraceControl =
-    Reset
-  | Config TraceConfig
-  | Optimize
+data TraceControl where
+    Reset :: TraceControl
+    Config :: TraceConfig -> TraceControl
+    Optimize :: TraceControl
+    Document :: DocCollector -> TraceControl
+  deriving(Eq, Show, Generic)
+
+data Documented a = Documented {
+  dDoc    :: Text,
+  dObject :: a}
+
+document :: Logging a => Text -> a -> Documented a
+document = Documented
+
+data DocCollector = DocCollector {
+    cDoc       :: Text
+  , cContext   :: [Namespace]
+  , cSeverity  :: [SeverityS]
+  , cPrivacy   :: [Privacy]
+  , cDetails   :: [DetailLevel]
+  , cBackends  :: [Backend]
+  , ccSeverity :: [SeverityS]
+  , ccPrivacy  :: [Privacy]
+  , ccDetails  :: [DetailLevel]
+} deriving(Eq, Show, Generic)
+
+emptyCollector :: DocCollector
+emptyCollector = DocCollector "" [] [] [] [] [] [] [] []
+
+data Backend =
+    KatipBackend {bName :: Text}
+  | EKGBackend {bName :: Text}
+  deriving(Eq, Show, Generic)
 
 -- | Type for a Fold
 newtype Folding a b = Folding b
@@ -160,6 +192,15 @@ instance A.ToJSON Metric where
     toEncoding = A.genericToEncoding A.defaultOptions
 
 instance A.ToJSON LoggingContext where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON TraceControl where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON DocCollector where
+    toEncoding = A.genericToEncoding A.defaultOptions
+
+instance A.ToJSON Backend where
     toEncoding = A.genericToEncoding A.defaultOptions
 
 instance A.ToJSON DetailLevel where
