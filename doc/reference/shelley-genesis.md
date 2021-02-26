@@ -995,14 +995,14 @@ using use the genesis delegate keys we created earlier.
 $ cardano-cli node issue-op-cert \
     --kes-verification-key-file example/node1/kes.vkey \
     --cold-signing-key-file example/delegate-keys/delegate1.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate1.counter \
+    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert1.counter \
     --kes-period 0 \
     --out-file example/node1/cert
 
 $ cardano-cli node issue-op-cert \
     --kes-verification-key-file example/node2/kes.vkey \
     --cold-signing-key-file example/delegate-keys/delegate2.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate2.counter \
+    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert2.counter \
     --kes-period 0 \
     --out-file example/node2/cert
 ```
