@@ -31,6 +31,7 @@ golden_shelleyTransactionAllMultiSigWitness = propertyOnce $ H.moduleWorkspace "
   -- Create tx body file
   void $ execCardanoCLI
     [ "transaction","build-raw"
+    , "--shelley-era"
     , "--tx-in", txIn
     , "--tx-out", txOut
     , "--invalid-hereafter", "60"
@@ -64,6 +65,7 @@ golden_shelleyTransactionAnyMultiSigWitness = propertyOnce $ H.moduleWorkspace "
   -- Create tx body file
   void $ execCardanoCLI
     [ "transaction","build-raw"
+    , "--shelley-era"
     , "--tx-in", txIn
     , "--tx-out", txOut
     , "--invalid-hereafter", "60"
@@ -92,6 +94,7 @@ golden_shelleyTransactionAtLeastMultiSigWitness = propertyOnce $ H.moduleWorkspa
   -- Create tx body file
   void $ execCardanoCLI
     [ "transaction","build-raw"
+    , "--shelley-era"
     , "--tx-in", txIn
     , "--tx-out", txOut
     , "--invalid-hereafter", "60"
@@ -120,6 +123,7 @@ golden_shelleyTransactionSigningKeyWitness = propertyOnce $ H.moduleWorkspace "t
   -- Create tx body file
   void $ execCardanoCLI
     [ "transaction","build-raw"
+    , "--shelley-era"
     , "--tx-in", txIn
     , "--tx-out", txOut
     , "--invalid-hereafter", "60"
