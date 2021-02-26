@@ -80,7 +80,7 @@ library
                      , cardano-config
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
-                     , cardano-ledger
+                     , cardano-ledger-byron
                      , cardano-ledger-shelley-ma
                      , cardano-prelude
                      , cardano-slotting

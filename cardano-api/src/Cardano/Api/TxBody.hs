@@ -131,6 +131,7 @@ import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
@@ -192,15 +193,15 @@ toByronTxId (TxId h) =
 
 toShelleyTxId :: TxId -> Shelley.TxId StandardCrypto
 toShelleyTxId (TxId h) =
-    Shelley.TxId (Crypto.castHash h)
+    Shelley.TxId (SafeHash.unsafeMakeSafeHash (Crypto.castHash h))
 
 fromShelleyTxId :: Shelley.TxId StandardCrypto -> TxId
 fromShelleyTxId (Shelley.TxId h) =
-    TxId (Crypto.castHash h)
+    TxId (Crypto.castHash (SafeHash.extractHash h))
 
 -- | Calculate the transaction identifier for a 'TxBody'.
 --
-getTxId :: TxBody era -> TxId
+getTxId :: forall era. TxBody era -> TxId
 getTxId (ByronTxBody tx) =
     TxId
   . fromMaybe impossible
@@ -218,14 +219,14 @@ getTxId (ShelleyTxBody era tx _) =
       ShelleyBasedEraAllegra -> getTxIdShelley tx
       ShelleyBasedEraMary    -> getTxIdShelley tx
   where
-    getTxIdShelley :: Ledger.Crypto ledgerera ~ StandardCrypto
-                   => Ledger.UsesTxBody ledgerera
-                   => Ledger.TxBody ledgerera -> TxId
+    getTxIdShelley :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+                   => Ledger.UsesTxBody (ShelleyLedgerEra era)
+                   => Ledger.TxBody (ShelleyLedgerEra era) -> TxId
     getTxIdShelley =
         TxId
       . Crypto.castHash
-      . (\(Shelley.TxId txhash) -> txhash)
-      . Shelley.txid
+      . (\(Shelley.TxId txhash) -> SafeHash.extractHash txhash)
+      . (Shelley.txid @(ShelleyLedgerEra era))
 
 
 -- ----------------------------------------------------------------------------
