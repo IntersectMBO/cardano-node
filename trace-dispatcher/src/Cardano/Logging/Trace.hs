@@ -20,7 +20,7 @@ import           Cardano.Logging.Types
 
 -- | Adds a message object to a trace
 traceWith :: (Monad m) => Trace m a -> a -> m ()
-traceWith tr a = T.traceWith tr (emptyLoggingContext, Right a)
+traceWith tr a = T.traceWith tr (emptyLoggingContext, Nothing, a)
 
 -- | Convenience function for naming a message when tracing
 traceNamed :: (Monad m) => Trace m a -> Text -> a -> m ()
@@ -30,19 +30,17 @@ traceNamed tr n = traceWith (appendName n tr)
 cmap :: Monad m => (a -> b) -> Trace m b -> Trace m a
 cmap f = T.contramap
           (\case
-            (lc, Right a) -> (lc, Right (f a))
-            (lc, Left  c) -> (lc, Left  c))
+            (lc, mbC, a) -> (lc, mbC, f a))
 
 --- | Don't process further if the result of the selector function
 ---   is False.
 filterTrace :: (Monad m) =>
-     ((LoggingContext, a) -> Bool)
+     ((LoggingContext, Maybe TraceControl, a) -> Bool)
   -> Trace m a
   -> Trace m a
 filterTrace ff = T.squelchUnless $
     \case
-      (lc, Right a) -> ff (lc, a)
-      (lc, Left  c) -> True
+      (lc, mbC, a) -> ff (lc, mbC, a)
 
 --- | Keep the Just values and forget about the Nothings
 filterTraceMaybe :: Monad m =>
@@ -51,24 +49,22 @@ filterTraceMaybe :: Monad m =>
 filterTraceMaybe tr =
   T.squelchUnless
     (\case
-      (lc, Right (Just a)) -> True
-      (lc, Right Nothing)  -> False
-      (lc, Left  c) -> True)
+      (lc, mbC, Just a)  -> True
+      (lc, mbC, Nothing) -> False)
     (T.contramap
         (\case
-          (lc, Right (Just a)) -> (lc, Right a)
-          (lc, Right Nothing)  -> error "filterTraceMaybe: impossible"
-          (lc, Left  c) -> (lc, Left  c))
+          (lc, mbC, Just a)   -> (lc, mbC, a)
+          (lc, mbC, Nothing)  -> error "filterTraceMaybe: impossible")
         tr)
 
 --- | Only processes messages further with a severity equal or greater as the
 --- given one
-filterTraceBySeverity :: (Monad m) =>
+filterTraceBySeverity :: Monad m =>
      Maybe SeverityF
   -> Trace m a
   -> Trace m a
 filterTraceBySeverity (Just minSeverity) = filterTrace $
-    \(c, e) -> case lcSeverity c of
+    \(c, _, e) -> case lcSeverity c of
                   Just s  -> fromEnum s >= fromEnum minSeverity
                   Nothing -> True
 filterTraceBySeverity Nothing = id
@@ -78,23 +74,22 @@ filterTraceBySeverity Nothing = id
 -- give the result: `general.middle.specific`.
 appendName :: Monad m => Text -> Trace m a -> Trace m a
 appendName name = T.contramap
-  (\ (lc,e) -> (lc {lcContext = name : lcContext lc}, e))
+  (\ (lc, mbC, e) -> (lc {lcContext = name : lcContext lc}, mbC, e))
 
 -- | Sets severity for the messages in this trace
 setSeverity :: Monad m => SeverityS -> Trace m a -> Trace m a
 setSeverity s = T.contramap
-  (\ (lc,e) -> if isJust (lcSeverity lc)
-                    then (lc,e)
-                    else (lc {lcSeverity = Just s}, e))
+  (\ (lc, mbC, e) -> if isJust (lcSeverity lc)
+                        then (lc, mbC, e)
+                        else (lc {lcSeverity = Just s}, mbC, e))
 
 -- | Sets severities for the messages in this trace based on the selector function
 withSeverity :: Monad m => (a -> SeverityS) -> Trace m a -> Trace m a
 withSeverity fs = T.contramap $
     \case
-      (lc, Right e) -> if isJust (lcSeverity lc)
-                          then (lc, Right e)
-                          else (lc {lcSeverity = Just (fs e)}, Right e)
-      (lc, Left  c) -> (lc, Left c)
+      (lc, mbC, e) -> if isJust (lcSeverity lc)
+                          then (lc, mbC, e)
+                          else (lc {lcSeverity = Just (fs e)}, mbC, e)
 
 --- | Only processes messages further with a privacy greater then the given one
 filterTraceByPrivacy :: (Monad m) =>
@@ -102,7 +97,7 @@ filterTraceByPrivacy :: (Monad m) =>
   -> Trace m a
   -> Trace m a
 filterTraceByPrivacy (Just minPrivacy) = filterTrace $
-    \(c, e) -> case lcPrivacy c of
+    \(c, mbC, e) -> case lcPrivacy c of
                         Just s  -> fromEnum s >= fromEnum minPrivacy
                         Nothing -> True
 filterTraceByPrivacy Nothing = id
@@ -110,34 +105,32 @@ filterTraceByPrivacy Nothing = id
 -- | Sets privacy for the messages in this trace
 setPrivacy :: Monad m => Privacy -> Trace m a -> Trace m a
 setPrivacy p = T.contramap
-  (\ (lc,v) -> if isJust (lcPrivacy lc)
-                    then (lc,v)
-                    else (lc {lcPrivacy = Just p}, v))
+  (\ (lc, mbC, v) -> if isJust (lcPrivacy lc)
+                    then (lc, mbC, v)
+                    else (lc {lcPrivacy = Just p}, mbC, v))
 
 -- | Sets severities for the messages in this trace based on the selector function
 withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
 withPrivacy fs = T.contramap $
     \case
-      (lc, Right e) -> if isJust (lcPrivacy lc)
-                          then (lc, Right e)
-                          else (lc {lcPrivacy = Just (fs e)}, Right e)
-      (lc, Left  c) -> (lc, Left c)
+      (lc, mbC, e) -> if isJust (lcPrivacy lc)
+                          then (lc, mbC, e)
+                          else (lc {lcPrivacy = Just (fs e)}, mbC, e)
 
 -- | Sets detail level for the messages in this trace
 setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
 setDetails p = T.contramap
-  (\ (lc,v) -> if isJust (lcDetails lc)
-                    then (lc,v)
-                    else (lc {lcDetails = Just p}, v))
+  (\ (lc, mbC, v) -> if isJust (lcDetails lc)
+                    then (lc, mbC, v)
+                    else (lc {lcDetails = Just p}, mbC, v))
 
 -- | Sets severities for the messages in this trace based on the selector function
 withDetails :: Monad m => (a -> DetailLevel) -> Trace m a -> Trace m a
 withDetails fs = T.contramap $
     \case
-      (lc, Right e) -> if isJust (lcDetails lc)
-                          then (lc, Right e)
-                          else (lc {lcDetails = Just (fs e)}, Right e)
-      (lc, Left  c) -> (lc, Left c)
+      (lc, mbC, e) -> if isJust (lcDetails lc)
+                          then (lc, mbC, e)
+                          else (lc {lcDetails = Just (fs e)}, mbC, e)
 
 -- | Folds the cata function with acc over a.
 -- Uses an MVar to store the state
@@ -154,13 +147,11 @@ foldTraceM cata initial tr = do
  where
     mkTracer ref = T.emit $
       \case
-        (lc, Right v) -> do
+        (lc, mbC, v) -> do
           x' <- modifyMVar ref $ \x ->
             let ! accu = cata x v
             in pure $ join (,) accu
-          T.traceWith tr (lc, Right (Folding x'))
-        (lc, Left c) -> do
-          T.traceWith tr (lc, Left c)
+          T.traceWith tr (lc, mbC, Folding x')
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
@@ -177,13 +168,11 @@ foldMTraceM cata initial tr = do
  where
     mkTracer ref = T.emit $
       \case
-        (lc, Right v) -> do
+        (lc, mbC, v) -> do
           x' <- modifyMVar ref $ \x -> do
             ! accu <- cata x v
             pure $ join (,) accu
-          T.traceWith tr (lc, Right (Folding x'))
-        (lc, Left c) -> do
-          T.traceWith tr (lc, Left c)
+          T.traceWith tr (lc, mbC, Folding x')
 
 -- | Allows to route to different tracers, based on the message being processed.
 --   The second argument must mappend all possible tracers of the first
@@ -192,8 +181,6 @@ routingTrace
   :: forall m a . Monad m
   => (a -> Trace m a)
   -> Trace m a
-  -> Trace m a
-routingTrace rf rc = T.arrow $ T.emit $
+routingTrace rf = T.arrow $ T.emit $
     \case
-      (lc, Right x) -> T.traceWith (rf x) (lc, Right x)
-      (lc, Left  c) -> T.traceWith rc     (lc, Left  c)
+      (lc, mbC, x) -> T.traceWith (rf x) (lc, mbC, x)
