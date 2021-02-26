@@ -461,7 +461,7 @@ in {
           User = "cardano-node";
           Group = "cardano-node";
           Restart = "always";
-          RuntimeDirectory = cfg.runtimeDir;
+          RuntimeDirectory = if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}";
           WorkingDirectory = cfg.stateDir;
           # This assumes /var/lib/ is a prefix of cfg.stateDir.
           # This is checked as an assertion below.
@@ -479,7 +479,7 @@ in {
         partOf = [ "${n}.service" ];
         socketConfig = {
           ListenStream = [ "${cfg.hostAddr}:${toString cfg.port}" ]
-            ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}/node-${toString i}.socket")];
+            ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}-${toString i}/node.socket")];
           ReusePort = "yes";
           SocketMode = "0660";
           SocketUser = "cardano-node";
@@ -499,7 +499,6 @@ in {
           User = "cardano-node";
           Group = "cardano-node";
           ExecStart = "${pkgs.coreutils}/bin/echo Starting ${toString cfg.instances} cardano-node instances";
-          RuntimeDirectory = cfg.runtimeDir;
           WorkingDirectory = cfg.stateDir;
           StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
         };
