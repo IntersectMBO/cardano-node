@@ -57,23 +57,27 @@ stdoutJsonKatipTracer = do
 -- | Sets severities for the messages in this trace based on the selector function
 withKatipLogEnv :: Monad m
   => LogEnv
-  -> T.Tracer m (LoggingContextKatip, Either LT.TraceControl a)
+  -> T.Tracer m (LoggingContextKatip, Maybe LT.TraceControl, a)
   -> LT.Trace m a
-withKatipLogEnv le = T.contramap (\ (lc,e) -> (LoggingContextKatip lc le, e))
+withKatipLogEnv le = T.contramap (\ (lc,mbC, e) -> (LoggingContextKatip lc le, mbC, e))
+
+-- | Converts a curried function to a function on a triple.
+uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
+uncurry3 f ~(a,b,c) = f a b c
 
 --- | A standard Katip tracer
 katipTracer :: (MonadIO m, LT.Logging a)
-  => T.Tracer m (LoggingContextKatip, Either LT.TraceControl a)
-katipTracer =  T.arrow $ T.emit $ uncurry output
+  => T.Tracer m (LoggingContextKatip, Maybe LT.TraceControl, a)
+katipTracer =  T.arrow $ T.emit $ uncurry3 output
   where
-    output LoggingContextKatip {..} (Right a) =
+    output LoggingContextKatip {..} Nothing a =
                       logItem'
                           (LT.forMachine (fromMaybe LT.DRegular (LT.lcDetails lk)) a)
                           (Namespace (LT.lcContext lk))
                           (asKatipSeverity (fromMaybe LT.Info (LT.lcSeverity lk)))
                           ""
                           lkLogEnv
-    output LoggingContextKatip {..} (Left a) = pure () -- TODO
+    output LoggingContextKatip {..} (Just c) a = pure () -- TODO
 
 
 -------------------------------------------------------------------------------

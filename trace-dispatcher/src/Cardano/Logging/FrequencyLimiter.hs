@@ -19,9 +19,9 @@ import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 
 data LimitingMessage =
-    StartLimiting    {name :: Text}
+    StartLimiting    {lmName :: Text}
     -- ^ This message indicates the start of frequency limiting
-  | StopLimiting     {name :: Text, suppressed :: Int}
+  | StopLimiting     {lmName :: Text, suppressed :: Int}
     -- ^ This message indicates the stop of frequency limiting,
     -- and gives the number of messages that has been suppressed
   deriving (Eq, Ord, Show, Generic)
@@ -65,23 +65,21 @@ limitFrequency
 limitFrequency thresholdFrequency limiterName vtracer ltracer = do
     timeNow <- systemTimeToSeconds <$> liftIO getSystemTime
     foldMTraceM
-      cata
+      (cata (1.0 / thresholdFrequency))
       (FrequencyRec Nothing  timeNow 0.0 Nothing)
       (T.contramap prepare (filterTraceMaybe vtracer))
   where
     prepare ::
-         (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
-      -> (LoggingContext, Either TraceControl (Maybe a))
-    prepare (lc, Left c)                            = (lc, Left c)
-    prepare (lc, Right (Folding FrequencyRec {..})) = (lc, Right frMessage)
+         (LoggingContext, Maybe TraceControl, Folding a (FrequencyRec a))
+      -> (LoggingContext, Maybe TraceControl, Maybe a)
+    prepare (lc, mbC, Folding FrequencyRec {..}) = (lc, mbC, frMessage)
 
-    cata :: FrequencyRec a -> a -> m (FrequencyRec a)
-    cata fs@FrequencyRec {..} message = do
+    cata :: Double -> FrequencyRec a -> a -> m (FrequencyRec a)
+    cata thresholdPeriod fs@FrequencyRec {..} message = do
       timeNow <- liftIO $ systemTimeToSeconds <$> getSystemTime
       let elapsedTime      = timeNow - frLastTime
-      let thresholdPeriod  = 1.0 / thresholdFrequency
       let rawSpendReward   = elapsedTime - thresholdPeriod
-                                    -- negative if too short, positive if longer
+                                    -- negative if shorter, positive if longer
       let normaSpendReward = rawSpendReward * thresholdFrequency -- TODO not really normalized
       let spendReward      = min 0.5 (max (-0.5) normaSpendReward)
       let newBudget        = min 1.0 (max (-1.0) (spendReward + frBudget))
@@ -122,8 +120,8 @@ limitFrequency thresholdFrequency limiterName vtracer ltracer = do
             else
               let lastPeriod = timeNow - lastTimeSend
               in
-              -- trace ("realTimeBetweenMsgs2 " ++ show realTimeBetweenMsgs2
-              --           ++ " canoTimeBetweenMsgs " ++ show canoTimeBetweenMsgs) $
+              -- trace ("lastPeriod " ++ show lastPeriod
+              --        ++ " thresholdPeriod " ++ show thresholdPeriod) $
                   if lastPeriod > thresholdPeriod
                     then -- send
                       pure fs  { frMessage     = Just message
