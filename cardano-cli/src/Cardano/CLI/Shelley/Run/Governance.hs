@@ -9,7 +9,7 @@ module Cardano.CLI.Shelley.Run.Governance
 import           Cardano.Prelude
 
 import qualified Data.Text as Text
-import Data.Sequence.Strict (singleton)
+import Data.Sequence.Strict (singleton, StrictSeq (Empty))
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, right)
 
@@ -87,7 +87,29 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
             outFile
             Nothing
             (Pivo.Update.Payload
-               { Pivo.Update.sipSubmissions = singleton sip }
+               { Pivo.Update.sipSubmissions = singleton sip
+               , Pivo.Update.sipRevelations = Empty
+               }
+             :: Pivo.Update.Payload StandardPivo
+            )
+    runPivoCmd (SIP SIPReveal {sipRevelatorKeyFile, revealedProposalText}) = do
+      StakeVerificationKey (Shelley.Keys.VKey vk)
+        <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
+         $ readVerificationKeyOrFile AsStakeKey
+         $ VerificationKeyFilePath sipRevelatorKeyFile
+      let revelation = SIP.mkRevelation vk anySalt revealedProposalText
+            where
+              anySalt = 92 -- At the moment we do not support specifying the
+                           -- salt via command line.
+      firstExceptT ShelleyGovernanceCmdTextEnvWriteError
+        $ newExceptT
+        $ writeFileTextEnvelope
+            outFile
+            Nothing
+            (Pivo.Update.Payload
+               { Pivo.Update.sipSubmissions = Empty
+               , Pivo.Update.sipRevelations = singleton revelation
+               }
              :: Pivo.Update.Payload StandardPivo
             )
 

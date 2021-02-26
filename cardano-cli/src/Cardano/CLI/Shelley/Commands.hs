@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- In the prototype we would like to make use of named field puns.
+{-# OPTIONS_GHC -Wno-partial-fields #-}
 -- | Shelley CLI command types
 module Cardano.CLI.Shelley.Commands
   ( -- * CLI command types
@@ -334,6 +336,10 @@ data SIPCmd
   = SIPNew
     { sipAuthorKeyFile :: VerificationKeyFile
     , proposalText     :: Text
+    }
+  | SIPReveal
+    { sipRevelatorKeyFile  :: VerificationKeyFile
+    , revealedProposalText :: Text
     }
   deriving Show
 
