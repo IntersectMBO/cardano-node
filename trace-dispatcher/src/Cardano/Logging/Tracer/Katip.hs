@@ -59,7 +59,10 @@ withKatipLogEnv :: Monad m
   => LogEnv
   -> T.Tracer m (LoggingContextKatip, Maybe LT.TraceControl, a)
   -> LT.Trace m a
-withKatipLogEnv le = T.contramap (\ (lc,mbC, e) -> (LoggingContextKatip lc le, mbC, e))
+withKatipLogEnv le tr =
+  LT.Trace $
+    T.contramap (\ (lc,mbC, e) -> (LoggingContextKatip lc le, mbC, e))
+    tr
 
 -- | Converts a curried function to a function on a triple.
 uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
