@@ -27,8 +27,8 @@ configureTracers config tracers objects = do
     mapM_ (configureAllTrace (Config config)) tracers
     mapM_ (configureTrace Optimize) tracers
   where
-    configureTrace c tr = T.traceWith tr (emptyLoggingContext, Just c, head objects)
-    configureAllTrace c tr =
+    configureTrace c (Trace tr) = T.traceWith tr (emptyLoggingContext, Just c, head objects)
+    configureAllTrace c (Trace tr) =
       mapM (\ m -> T.traceWith tr (emptyLoggingContext, Just c, m)) objects
 
 -- | Take a selector function, and a function from trace to trace with
@@ -40,21 +40,23 @@ withNamespaceConfig :: (MonadIO m, Eq b) =>
   -> m (Trace m a)
 withNamespaceConfig extract needsConfigFunc tr = do
     ref  <- liftIO (newIORef (Left Map.empty))
-    pure $ T.arrow $ T.emit $ mkTrace ref
+    pure $ Trace $ T.arrow $ T.emit $ mkTrace ref
   where
     mkTrace ref (lc, Nothing, a) = do
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
-        Right val -> T.traceWith (needsConfigFunc (Just val) tr) (lc, Nothing, a)
+        Right val ->
+          T.traceWith
+            (unpackTrace $ needsConfigFunc (Just val) tr) (lc, Nothing, a)
         Left map -> case Map.lookup (lcContext lc) map of
                       Just val -> T.traceWith
-                                    (needsConfigFunc (Just val) tr)
+                                    (unpackTrace $ needsConfigFunc (Just val) tr)
                                     (lc, Nothing, a)
                       Nothing  -> error $ "Unconfigured trace with context "
                                         ++ show (lcContext lc)
     mkTrace ref (lc, Just Reset, a) = do
       liftIO $ writeIORef ref (Left Map.empty)
-      T.traceWith (needsConfigFunc Nothing tr) (lc, Just Reset, a)
+      T.traceWith (unpackTrace $ needsConfigFunc Nothing tr) (lc, Just Reset, a)
     mkTrace ref (lc, Just (Config c), m) = do
       let ! val = extract c (lcContext lc)
       eitherConf <- liftIO $ readIORef ref
@@ -63,10 +65,14 @@ withNamespaceConfig extract needsConfigFunc tr = do
           case Map.lookup (lcContext lc) map of
             Nothing -> do
               liftIO $ writeIORef ref $ Left (Map.insert (lcContext lc) val map)
-              T.traceWith (needsConfigFunc (Just val) tr) (lc, Just (Config c), m)
+              T.traceWith
+                (unpackTrace $ needsConfigFunc (Just val) tr)
+                (lc, Just (Config c), m)
             Just v  -> do
               if v == val
-                then T.traceWith (needsConfigFunc (Just val) tr) (lc, Just (Config c), m)
+                then T.traceWith
+                      (unpackTrace $ needsConfigFunc (Just val) tr)
+                      (lc, Just (Config c), m)
                 else error $ "Inconsistent trace configuration with context "
                                   ++ show (lcContext lc)
         Right val -> error $ "Trace not reset before reconfiguration "
@@ -82,9 +88,13 @@ withNamespaceConfig extract needsConfigFunc tr = do
                   case Map.elems cmap of
                     [val] -> do
                       liftIO $ writeIORef ref $ Right val
-                      T.traceWith (needsConfigFunc (Just val) tr) (lc, Just Optimize, m)
+                      T.traceWith
+                        (unpackTrace $ needsConfigFunc (Just val) tr)
+                        (lc, Just Optimize, m)
                     _   -> error "Cardano.Logging.Configuration>>withConfig: Impossible"
-            _ -> T.traceWith (needsConfigFunc Nothing tr) (lc, Just Optimize, m)
+            _ -> T.traceWith
+                  (unpackTrace $ needsConfigFunc Nothing tr)
+                  (lc, Just Optimize, m)
         Right val -> error $ "Trace not reset before reconfiguration "
                             ++ show (lcContext lc)
 

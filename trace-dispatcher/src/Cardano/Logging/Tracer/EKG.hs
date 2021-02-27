@@ -19,7 +19,7 @@ ekgTracer :: (Logging a, MonadIO m) => Either Metrics.Store Server-> m (Trace m 
 ekgTracer storeOrServer = liftIO $ do
     registeredGauges <- newIORef Map.empty
     registeredLabels <- newIORef Map.empty
-    pure $ T.arrow $ T.emit $ output registeredGauges registeredLabels
+    pure $ Trace $ T.arrow $ T.emit $ output registeredGauges registeredLabels
   where
     output registeredGauges registeredLabels (LoggingContext{..}, Nothing, v) =
       case asMetrics v of
