@@ -83,4 +83,24 @@ in
          loopback_node_topology_from_nixops_topology($topology[0]; $i)
         ' "''${args[@]}" > "${stateDir}/topologies/node-$i.json"
   done
+
+  ## 3. Generate the observer topology, which is fully connected:
+  #
+  args=( --slurpfile topology "${stateDir}/topology-nixops.json"
+         --null-input
+       )
+  jq 'def loopback_observer_topology_from_nixops_topology($topo):
+        [range(0; $topo.coreNodes | length)] as $prod_indices
+      | { Producers:
+          ( $prod_indices
+          | map
+            ({ addr:    "127.0.0.1"
+             , port:    (${toString localPortBase} + .)
+             , valency: 1
+             }
+            ))
+        };
+
+      loopback_observer_topology_from_nixops_topology($topology[0])
+     ' "''${args[@]}" > "${stateDir}/topologies/observer.json"
 ''
