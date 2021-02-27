@@ -2,13 +2,16 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
+
 
 
 module Cardano.Logging.Types where
 
 import           Control.Tracer
+import qualified Control.Tracer as T
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import qualified Data.HashMap.Strict as HM
@@ -52,7 +55,13 @@ type Namespace = [Text]
 type Selector  = [Text]
 
 -- | Tracer comes from the contra-tracer package and carries a context here
-type Trace m a = Tracer m (LoggingContext, Maybe TraceControl, a)
+newtype Trace m a = Trace {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
+
+-- | Contramap lifted to Trace
+instance Monad m => Contravariant (Trace m) where
+--  contravariant :: Monad m => (a -> b) -> Trace m b -> Trace m a
+  contramap f (Trace tr) = Trace $
+    T.contramap (\case (lc, mbC, a) -> (lc, mbC, f a)) tr
 
 -- | Context of a message
 data LoggingContext = LoggingContext {
@@ -155,7 +164,8 @@ data TraceControl where
 
 data Documented a = Documented {
   dDoc    :: Text,
-  dObject :: a}
+  dObject :: a
+}
 
 document :: Logging a => Text -> a -> Documented a
 document = Documented
@@ -176,8 +186,8 @@ emptyCollector :: DocCollector
 emptyCollector = DocCollector "" [] [] [] [] [] [] [] []
 
 data Backend =
-    KatipBackend {bName :: Text}
-  | EKGBackend {bName :: Text}
+    KatipBackend Text
+  | EKGBackend Text
   deriving(Eq, Show, Generic)
 
 -- | Type for a Fold
