@@ -23,11 +23,15 @@ let
       extra = {
         services.cardano-node = {
           enable = true;
-          inherit (envConfig) operationalCertificate kesKey topology vrfKey nodeConfig nodeConfigFile port dbPrefix socketPath;
+          inherit (envConfig) topology nodeConfig nodeConfigFile port dbPrefix socketPath;
           inherit stateDir;
-        } // lib.optionalAttrs useCabalRun
-          { executable = "cabal run exe:cardano-node --";
-          };
+        }
+        // lib.optionalAttrs (__hasAttr "vrfKey" envConfig)
+        { inherit (envConfig) operationalCertificate kesKey vrfKey;
+        }
+        // lib.optionalAttrs useCabalRun
+        { executable = "cabal run exe:cardano-node --";
+        };
       };
     in lib.evalModules {
       prefix = [];
@@ -93,6 +97,22 @@ let
       stderr_logfile = "${stateDir}/pool${toString i}.stderr";
     }
   ) (lib.genList (i: i + 1) composition.n_pools))
+  // lib.listToAttrs ([(
+    lib.nameValuePair "program:observer" {
+      command = let
+        envConfig = baseEnvConfig // rec {
+          topology = "${stateDir}/topologies/observer.json";
+          socketPath = "${stateDir}/observer.socket";
+          dbPrefix = "db-observer";
+          port = basePort + composition.n_hosts + 1;
+          nodeConfigFile = "${stateDir}/config.json";
+        };
+        script = mkStartScript envConfig;
+      in "${script}";
+      stdout_logfile = "${stateDir}/observer.stdout";
+      stderr_logfile = "${stateDir}/observer.stderr";
+    }
+  )])
   // {
     "program:webserver" = {
       command = "${pkgs.python3}/bin/python -m http.server ${toString basePort}";
