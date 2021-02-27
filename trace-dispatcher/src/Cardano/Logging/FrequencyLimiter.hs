@@ -10,6 +10,7 @@ import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
+import           Data.Functor.Contravariant
 import           Data.Text (Text, unpack)
 import           Data.Time.Clock.System
 import           Debug.Trace
@@ -67,7 +68,7 @@ limitFrequency thresholdFrequency limiterName vtracer ltracer = do
     foldMTraceM
       (cata (1.0 / thresholdFrequency))
       (FrequencyRec Nothing  timeNow 0.0 Nothing)
-      (T.contramap prepare (filterTraceMaybe vtracer))
+      (Trace $ T.contramap prepare (unpackTrace (filterTraceMaybe vtracer)))
   where
     prepare ::
          (LoggingContext, Maybe TraceControl, Folding a (FrequencyRec a))
