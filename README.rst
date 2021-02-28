@@ -29,7 +29,7 @@ Network Configuration, Genesis and Topology Files
 
 The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html>`_
 
-How to build
+How to Build
 ============
 
 Documentation for building the node can be found `here <https://docs.cardano.org/projects/cardano-node/en/latest/getting-started/install.html>`_.
