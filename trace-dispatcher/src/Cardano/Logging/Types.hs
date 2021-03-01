@@ -22,7 +22,7 @@ import           GHC.Generics
 
 
 -- | Every message needs this to define how to represent it
-class Logging a where
+class LogFormatting a where
   -- | Machine readable representation with the possibility to represent
   -- with different details based on the detail level.
   -- Falls back to ToJson of Aeson in the default representation
@@ -42,17 +42,24 @@ class Logging a where
   asMetrics :: a -> [Metric]
   asMetrics v = []
 
--- ||| Alternatively:
-data Representation a = Representation {
-    machineRep :: DetailLevel -> a -> A.Object
-  , humanRep   :: a -> Text
-  , metricsRep :: a -> [Metric]
-}
+-- -- ||| Alternatively:
+-- data LogFormatter a = LogFormatter {
+--     -- | Machine readable representation with the possibility of representation
+--     -- with different detail levels.
+--     -- Can use ToJson of Aeson as default
+--     machineRep :: DetailLevel -> a -> A.Object
+--   , -- | Human readable representation.
+--     -- An empty String represents no representation
+--     humanRep   :: a -> Text
+--   , -- | Metrics representation.
+--     -- May be empty, meaning no metrics
+--     metricsRep :: a -> [Metric]
+-- }
 
 data Metric
   -- | An integer metric.
   -- If a text is given it is appended as last element to the namespace
-    = IntM (Maybe Text) Int
+    = IntM (Maybe Text) Integer
   -- | A double metric.
   -- If a text is given it is appended as last element to the namespace
     | DoubleM (Maybe Text) Double
@@ -68,7 +75,7 @@ data LoggingContext = LoggingContext {
   , lcPrivacy  :: Maybe Privacy
   , lcDetails  :: Maybe DetailLevel
   }
-  deriving (Show, Eq, Generic)
+  deriving (Eq, Show, Generic)
 
 -- | Tracer comes from the contra-tracer package and carries a context and maybe a trace
 -- control object
@@ -178,13 +185,11 @@ data TraceControl where
     Document :: DocCollector -> TraceControl
   deriving(Eq, Show, Generic)
 
-data Documented a = Documented {
-  dDoc    :: Text,
-  dObject :: a
-}
-
-document :: Logging a => Text -> a -> Documented a
-document = Documented
+-- Document all log messages by providing a list of (prototye, documentation) pairs
+-- for all constructors. Because it is not enforced by the type system, it is very
+-- important to provide a complete list, as the prototypes are used as well for documentation.
+-- If you don't want to add an item for documentation enter an empty text.
+newtype Documented a = Documented [(a,Text)]
 
 data DocCollector = DocCollector {
     cDoc       :: Text
@@ -209,7 +214,7 @@ data Backend =
 -- | Type for a Fold
 newtype Folding a b = Folding b
 
-instance Logging b => Logging (Folding a b) where
+instance LogFormatting b => LogFormatting (Folding a b) where
   forMachine v (Folding b) =  forMachine v b
   forHuman (Folding b)     =  forHuman b
   asMetrics (Folding b)    =  asMetrics b

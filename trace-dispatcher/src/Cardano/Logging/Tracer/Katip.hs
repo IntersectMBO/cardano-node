@@ -44,12 +44,12 @@ asKatipSeverity LT.Critical  = CriticalS
 asKatipSeverity LT.Alert     = AlertS
 asKatipSeverity LT.Emergency = EmergencyS
 
-stdoutObjectKatipTracer :: (MonadIO m, LT.Logging a) => m (LT.Trace m a)
+stdoutObjectKatipTracer :: (MonadIO m, LT.LogFormatting a) => m (LT.Trace m a)
 stdoutObjectKatipTracer = do
     env <- liftIO $ ioLogEnv (\ _ -> pure True) V3
     pure $ withKatipLogEnv env katipTracer
 
-stdoutJsonKatipTracer :: (MonadIO m, LT.Logging a) => m (LT.Trace m a)
+stdoutJsonKatipTracer :: (MonadIO m, LT.LogFormatting a) => m (LT.Trace m a)
 stdoutJsonKatipTracer = do
     env <- liftIO $ ioLogEnvJson (\ _ -> pure True) V3
     pure $ withKatipLogEnv env katipTracer
@@ -69,7 +69,7 @@ uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
 uncurry3 f ~(a,b,c) = f a b c
 
 --- | A standard Katip tracer
-katipTracer :: (MonadIO m, LT.Logging a)
+katipTracer :: (MonadIO m, LT.LogFormatting a)
   => T.Tracer m (LoggingContextKatip, Maybe LT.TraceControl, a)
 katipTracer =  T.arrow $ T.emit $ uncurry3 output
   where
