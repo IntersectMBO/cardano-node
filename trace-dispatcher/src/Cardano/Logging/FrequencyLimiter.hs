@@ -3,7 +3,10 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.FrequencyLimiter where
+module Cardano.Logging.FrequencyLimiter (
+  limitFrequency,
+  LimitingMessage(..)
+)where
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift
@@ -20,13 +23,14 @@ import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 
 data LimitingMessage =
-    StartLimiting    {lmName :: Text}
+    StartLimiting Text
     -- ^ This message indicates the start of frequency limiting
-  | StopLimiting     {lmName :: Text, suppressed :: Int}
+  | StopLimiting Text Int
     -- ^ This message indicates the stop of frequency limiting,
     -- and gives the number of messages that has been suppressed
   deriving (Eq, Ord, Show, Generic)
 
+-- TODO Needs handwritten instance
 instance A.ToJSON LimitingMessage where
     toEncoding = A.genericToEncoding A.defaultOptions
 
