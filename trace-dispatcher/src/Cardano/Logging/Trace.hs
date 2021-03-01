@@ -34,6 +34,8 @@ filterTrace :: (Monad m) =>
   -> Trace m a
 filterTrace ff (Trace tr) = Trace $ T.squelchUnless
     (\case
+      (lc, Just Reset, a) -> True
+      (lc, Just Optimize, a) -> True
       (lc, mbC, a) -> ff (lc, mbC, a))
       tr
 
@@ -60,7 +62,10 @@ filterTraceBySeverity :: Monad m =>
   -> Trace m a
 filterTraceBySeverity (Just minSeverity) =
     filterTrace $
-      \(c, _, e) -> case lcSeverity c of
+      \case
+        (lc, Just Reset, a) -> True
+        (lc, Just Optimize, a) -> True
+        (c, _, e) -> case lcSeverity c of
                     Just s  -> fromEnum s >= fromEnum minSeverity
                     Nothing -> True
 filterTraceBySeverity Nothing = id
@@ -98,7 +103,10 @@ filterTraceByPrivacy :: (Monad m) =>
   -> Trace m a
   -> Trace m a
 filterTraceByPrivacy (Just minPrivacy) = filterTrace $
-    \(c, mbC, e) -> case lcPrivacy c of
+    \case
+      (lc, Just Reset, a) -> True
+      (lc, Just Optimize, a) -> True
+      (c, mbC, e) -> case lcPrivacy c of
                         Just s  -> fromEnum s >= fromEnum minPrivacy
                         Nothing -> True
 filterTraceByPrivacy Nothing = id
@@ -155,8 +163,7 @@ foldTraceM cata initial (Trace tr) = do
   pure $ Trace (T.Tracer trr)
  where
     mkTracer ref = T.emit $
-      \case
-        (lc, mbC, v) -> do
+      \ (lc, mbC, v) -> do
           x' <- modifyMVar ref $ \x ->
             let ! accu = cata x v
             in pure $ join (,) accu
@@ -176,8 +183,7 @@ foldMTraceM cata initial (Trace tr) = do
   pure $ Trace (T.arrow trr)
  where
     mkTracer ref = T.emit $
-      \case
-        (lc, mbC, v) -> do
+      \ (lc, mbC, v) -> do
           x' <- modifyMVar ref $ \x -> do
             ! accu <- cata x v
             pure $ join (,) accu
@@ -190,6 +196,9 @@ routingTrace
   :: forall m a . Monad m
   => (a -> Trace m a)
   -> Trace m a
-routingTrace rf = Trace $ T.arrow $ T.emit $
+  -> Trace m a
+routingTrace rf rc = Trace $ T.arrow $ T.emit $
     \case
-      (lc, mbC, x) -> T.traceWith (unpackTrace (rf x)) (lc, mbC, x)
+      (lc, Just Reset, a) -> T.traceWith (unpackTrace rc) (lc, Just Reset, a)
+      (lc, Just Optimize, a) -> T.traceWith (unpackTrace rc) (lc, Just Optimize, a)
+      (lc, mbC, a) -> T.traceWith (unpackTrace (rf a)) (lc, mbC, a)
