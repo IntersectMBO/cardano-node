@@ -28,6 +28,8 @@
 , iohkNix
 , commonLib
 , dockerTools
+, buildPackages
+, lib
 
 # The main contents of the image.
 , cardano-node
@@ -38,20 +40,6 @@
 # Set gitrev to null, to ensure the version below is used
 , gitrev ? null
 
-# Other things to include in the image.
-, bashInteractive
-, buildPackages
-, cacert
-, coreutils
-, curl
-, glibcLocales
-, iana-etc
-, iproute
-, iputils
-, socat
-, utillinux
-, lib
-
 , repoName ? "inputoutput/cardano-node"
 }:
 
@@ -61,17 +49,18 @@ let
   baseImage = dockerTools.buildImage {
     name = "${repoName}-env";
     contents = [
-      cardano-cli       # Provide cardano-cli capability
-      bashInteractive   # Provide the BASH shell
-      cacert            # X.509 certificates of public CA's
-      coreutils         # Basic utilities expected in GNU OS's
-      curl              # CLI tool for transferring files via URLs
-      glibcLocales      # Locale information for the GNU C Library
-      iana-etc          # IANA protocol and port number assignments
-      iproute           # Utilities for controlling TCP/IP networking
-      iputils           # Useful utilities for Linux networking
-      socat             # Utility for bidirectional data transfer
-      utillinux         # System utilities for Linux
+      cardano-cli            # Provide cardano-cli capability
+      pkgs.bashInteractive   # Provide the BASH shell
+      pkgs.cacert            # X.509 certificates of public CA's
+      pkgs.coreutils         # Basic utilities expected in GNU OS's
+      pkgs.curl              # CLI tool for transferring files via URLs
+      pkgs.glibcLocales      # Locale information for the GNU C Library
+      pkgs.iana-etc          # IANA protocol and port number assignments
+      pkgs.iproute           # Utilities for controlling TCP/IP networking
+      pkgs.iputils           # Useful utilities for Linux networking
+      pkgs.netcat            # Utility for network discovery and security auditing
+      pkgs.socat             # Utility for bidirectional data transfer
+      pkgs.utillinux         # System utilities for Linux
     ];
     # set up /tmp (override with TMPDIR variable)
     extraCommands = ''
@@ -89,7 +78,7 @@ let
 
   runNetwork = pkgs.writeShellScriptBin "run-network" ''
 
-    source /usr/local/bin/proc-sigterm
+    source /usr/local/bin/functions
 
     # The IPC socket dir is not created on demand
     mkdir -p `dirname ${customConfig.socketPath}`
@@ -119,10 +108,14 @@ let
 in
 
   dockerTools.buildImage {
+
     name = "${repoName}";
     tag = "${gitrev'}";
+
     fromImage = baseImage;
+
     created = "now";   # Set creation date to build time. Breaks reproducibility
+
     contents = [
       pkgs.jq # Needed by topologyUpdater
     ];
@@ -132,18 +125,30 @@ in
     # runAsRoot = '' ln -s ${cardano-node} bin/cardano-node '';
 
     extraCommands = ''
+
+      mkdir -p usr/local/bin
       mkdir -p opt/cardano/config
       mkdir -p opt/cardano/data
       mkdir -p opt/cardano/ipc
       mkdir -p opt/cardano/logs
-      mkdir -p usr/local/bin
-      cp ${mainnetConfigs}/* opt/cardano/config
-      cp ${runNetwork}/bin/* usr/local/bin
+
+      # Entrypoint and helper scripts
       cp ${context}/bin/* usr/local/bin
+      cp ${runNetwork}/bin/* usr/local/bin
+
+      # Node configurations
+      cp ${mainnetConfigs}/* opt/cardano/config
+
+      # Create links for executables
       ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -s ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
     '';
+
     config = {
-      EntryPoint = [ "entrypoint" ];
+      Env = [
+        # Export the default socket path for use by the cli
+        "CARDANO_NODE_SOCKET_PATH=/opt/cardano/ipc/socket"
+      ];
+      Entrypoint = [ "entrypoint" ];
     };
   }

@@ -1,0 +1,190 @@
+#
+# NAMESPACE=cardano
+# kubectl create namespace $NAMESPACE
+#
+
+# GCE Storage Class
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cardano-standard-rwo
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-standard
+  fstype: ext4
+  replication-type: none
+
+# Relay ###############################################################################################################
+
+# Relay Volume Claim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: relay-data
+  labels:
+    app: cardano
+    pvc: relay-data
+spec:
+  storageClassName: cardano-standard-rwo
+  accessModes: [ ReadWriteOnce ]
+  resources:
+    requests:
+      storage: 10G
+
+# Relay Pod
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: relay
+  labels:
+    app: cardano
+    pod: relay
+spec:
+  containers:
+  - name: relay
+    image: inputoutput/cardano-node:dev
+    imagePullPolicy: Always
+    env:
+    - name: CARDANO_PUBLIC_IP
+      valueFrom:
+        configMapKeyRef:
+          name: relaycfg
+          key:  publicIP
+    - name: CARDANO_TOPOLOGY
+      valueFrom:
+        configMapKeyRef:
+          name: relaycfg
+          key:  topology
+    - name: CARDANO_CUSTOM_PEERS
+      valueFrom:
+        configMapKeyRef:
+          name: relaycfg
+          key:  customPeers
+    - name: CARDANO_UPDATE_TOPOLOGY
+      value: "true"
+    args: [ "run" ]
+    ports:
+      - containerPort: 3001
+    volumeMounts:
+    - name: datavol
+      mountPath: /opt/cardano/data
+  nodeSelector:
+    nodeType: relay
+  volumes:
+  - name: datavol
+    persistentVolumeClaim:
+      claimName: relay-data
+
+# Relay TCP Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: relay-np
+  labels:
+    app: cardano
+spec:
+  type: NodePort
+  selector:
+    app: cardano
+    pod: relay
+  ports:
+  - name: tcp
+    port: 3001
+    nodePort: 30010
+
+# Relay TCP Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: relay-clip
+  labels:
+    app: cardano
+spec:
+  clusterIP: 10.3.240.100
+  selector:
+    app: cardano
+    pod: relay
+  ports:
+  - name: tcp
+    port: 3001
+
+# Block Producer ######################################################################################################
+
+# Block Producer Volume Claim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bprod-data
+  labels:
+    app: cardano
+    pvc: bprod-data
+spec:
+  storageClassName: cardano-standard-rwo
+  accessModes: [ ReadWriteOnce ]
+  resources:
+    requests:
+      storage: 10G
+
+# Block Producer Pod
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bprod
+  labels:
+    app: cardano
+    pod: bprod
+spec:
+  containers:
+  - name: bprod
+    image: inputoutput/cardano-node:dev
+    imagePullPolicy: Always
+    env:
+    - name: CARDANO_TOPOLOGY
+      valueFrom:
+        configMapKeyRef:
+          name: bprodcfg
+          key:  topology
+    - name: CARDANO_BLOCK_PRODUCER
+      value: "true"
+    args: [ "run" ]
+    ports:
+    - containerPort: 3001
+    volumeMounts:
+    - name: datavol
+      mountPath: /opt/cardano/data
+    - name: keys
+      # This path is processed by /usr/local/bin/run-node
+      mountPath: /var/cardano/secret/keys
+  nodeSelector:
+    nodeType: bprod
+  volumes:
+  - name: datavol
+    persistentVolumeClaim:
+      claimName: bprod-data
+  - name: keys
+    secret:
+      secretName: nodekeys
+
+# Block Producer TCP Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bprod-clip
+  labels:
+    app: cardano
+spec:
+  clusterIP: 10.3.240.200
+  selector:
+    app: cardano
+    pod: bprod
+  ports:
+  - name: tcp
+    port: 3001
