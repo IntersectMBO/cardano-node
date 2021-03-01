@@ -797,6 +797,7 @@ pGovernanceCmd =
                            $ mconcat
                                [ pSIPNew
                                , pSIPReveal
+                               , pSIPVote
                                ])
               where
                 pSIPNew = cmdWithInfo "new" pSIPNewOpts "Create a new SIP"
@@ -813,7 +814,9 @@ pGovernanceCmd =
                                 <> Opt.metavar "PROPOSAL_TEXT"
                                 <> Opt.help "Some text describing the proposal"
                                 )
-
+                pSIPVote = cmdWithInfo "vote" pOpts "Vote for an SIP"
+                  where
+                    pOpts = SIPVote <$> pStakeVerificationKeyFile <*> pPropText
 
 cmdWithInfo :: String -> Parser a -> String -> Mod CommandFields a
 cmdWithInfo cmdName cmdParser cmdDesc =

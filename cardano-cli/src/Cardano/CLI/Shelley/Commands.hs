@@ -341,6 +341,10 @@ data SIPCmd
     { sipRevelatorKeyFile  :: VerificationKeyFile
     , revealedProposalText :: Text
     }
+  | SIPVote
+    { sipVoterKeyFile   :: VerificationKeyFile
+    , votedProposalText :: Text
+    }
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text

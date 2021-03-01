@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Shelley.Run.Governance
   ( ShelleyGovernanceCmdError
@@ -89,6 +90,7 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
             (Pivo.Update.Payload
                { Pivo.Update.sipSubmissions = singleton sip
                , Pivo.Update.sipRevelations = Empty
+               , Pivo.Update.sipVotes       = Empty
                }
              :: Pivo.Update.Payload StandardPivo
             )
@@ -109,9 +111,32 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
             (Pivo.Update.Payload
                { Pivo.Update.sipSubmissions = Empty
                , Pivo.Update.sipRevelations = singleton revelation
+               , Pivo.Update.sipVotes       = Empty
                }
              :: Pivo.Update.Payload StandardPivo
             )
+    runPivoCmd (SIP SIPVote {sipVoterKeyFile, votedProposalText}) = do
+      vk <- readUpdateKeyFile sipVoterKeyFile
+      returnPayload $
+        Pivo.Update.Payload
+          { Pivo.Update.sipSubmissions = Empty
+          , Pivo.Update.sipRevelations = Empty
+          , Pivo.Update.sipVotes       = singleton
+                                       $ SIP.mkVote @StandardPivo
+                                           vk
+                                           votedProposalText
+                                           SIP.For
+          }
+    readUpdateKeyFile keyFile = do
+      StakeVerificationKey (Shelley.Keys.VKey vk)
+        <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
+         $ readVerificationKeyOrFile AsStakeKey
+         $ VerificationKeyFilePath keyFile
+      return $! vk
+    returnPayload updatePayload =
+      firstExceptT ShelleyGovernanceCmdTextEnvWriteError
+        $ newExceptT
+        $ writeFileTextEnvelope outFile Nothing updatePayload
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot
