@@ -1,6 +1,7 @@
 #!/bin/bash
 
-source /usr/local/bin/proc-sigterm
+scriptDir=$(dirname $0)
+source $scriptDir/functions
 
 echo "Running the cardano node ..."
 
@@ -62,35 +63,73 @@ if [[ -z $MAX_PEERS ]]; then
   MAX_PEERS=15
 fi
 
+# Process CARDANO_CONFIG as JSON value
+isJsonValue "$CARDANO_CONFIG"
+if [[ $return = true ]]; then
+  TARGET_FILE="/var/cardano/config/mainnet-config.json"
+  echo "Generating $TARGET_FILE ..."
+  mkdir -p `dirname $TARGET_FILE` \
+    && echo $CARDANO_CONFIG > $TARGET_FILE \
+    && CARDANO_CONFIG=$TARGET_FILE
+fi
+
+# Process CARDANO_TOPOLOGY as JSON value
+isJsonValue "$CARDANO_TOPOLOGY"
+if [[ $return = true ]]; then
+  TARGET_FILE="/var/cardano/config/mainnet-topology.json"
+  echo "Generating $TARGET_FILE ..."
+  mkdir -p `dirname $TARGET_FILE` \
+    && echo $CARDANO_TOPOLOGY > $TARGET_FILE \
+    && CARDANO_TOPOLOGY=$TARGET_FILE
+fi
+
 #####################################################################
 #
 # Print run environment
 #
 printRunEnv () {
 
-  echo "CARDANO_BIND_ADDR=$CARDANO_BIND_ADDR"
-  echo "CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER"
   echo "CARDANO_CONFIG=$CARDANO_CONFIG"
-  echo "CARDANO_DATABASE_PATH=$CARDANO_DATABASE_PATH"
-  echo "CARDANO_LOG_DIR=$CARDANO_LOG_DIR"
-  echo "CARDANO_PORT=$CARDANO_PORT"
-  echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
   echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
+  echo "CARDANO_BIND_ADDR=$CARDANO_BIND_ADDR"
+  echo "CARDANO_PORT=$CARDANO_PORT"
+  echo "CARDANO_DATABASE_PATH=$CARDANO_DATABASE_PATH"
+  echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
+  echo "CARDANO_LOG_DIR=$CARDANO_LOG_DIR"
+  echo "CARDANO_PUBLIC_IP=$CARDANO_PUBLIC_IP"
+  echo "CARDANO_CUSTOM_PEERS=$CARDANO_CUSTOM_PEERS"
   echo "CARDANO_UPDATE_TOPOLOGY=$CARDANO_UPDATE_TOPOLOGY"
+  echo "CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER"
 
   if [ "$CARDANO_BLOCK_PRODUCER" = true ]; then
 
-    if [ -v $CARDANO_SHELLEY_KES_KEY ]; then
-      CARDANO_SHELLEY_KES_KEY="$CARDANO_CONFIG_BASE/keys/kes.skey"
+    if [ -z $CARDANO_SHELLEY_KES_KEY ]; then
+      CARDANO_SHELLEY_KES_KEY="/var/cardano/config/keys/kes.skey"
     fi
 
-    if [ -v $CARDANO_SHELLEY_VRF_KEY ]; then
-      CARDANO_SHELLEY_VRF_KEY="$CARDANO_CONFIG_BASE/keys/vrf.skey"
+    if [ -z $CARDANO_SHELLEY_VRF_KEY ]; then
+      CARDANO_SHELLEY_VRF_KEY="/var/cardano/config/keys/vrf.skey"
     fi
 
-    if [ -v $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE ]; then
-      CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE="$CARDANO_CONFIG_BASE/keys/node.cert"
+    if [ -z $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE ]; then
+      CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE="/var/cardano/config/keys/node.cert"
     fi
+
+    # Kubernetes maps sectrets to a read-only file system with public access
+    # VRF private key file at: /var/cardano/config/keys/vrf.skey has "other" file permissions.
+
+    copySecretFile() {
+      SOURCE_FILE=$1; TARGET_FILE=$2
+      if [[ ! -f $TARGET_FILE && -f $SOURCE_FILE ]]; then
+        mkdir -p `dirname $TARGET_FILE`
+        cp $SOURCE_FILE $TARGET_FILE
+      fi
+      chmod 600 $TARGET_FILE
+    }
+
+    copySecretFile /var/cardano/secret/keys/kes.skey $CARDANO_SHELLEY_KES_KEY
+    copySecretFile /var/cardano/secret/keys/vrf.skey $CARDANO_SHELLEY_VRF_KEY
+    copySecretFile /var/cardano/secret/keys/node.cert $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE
 
     echo "CARDANO_SHELLEY_KES_KEY=$CARDANO_SHELLEY_KES_KEY"
     echo "CARDANO_SHELLEY_VRF_KEY=$CARDANO_SHELLEY_VRF_KEY"
@@ -115,10 +154,8 @@ CARDANO_PORT=$CARDANO_PORT
 CARDANO_DATABASE_PATH="$CARDANO_DATABASE_PATH"
 CARDANO_SOCKET_PATH="$CARDANO_SOCKET_PATH"
 CARDANO_LOG_DIR="$CARDANO_LOG_DIR"
-
 CARDANO_PUBLIC_IP="$CARDANO_PUBLIC_IP"
 CARDANO_CUSTOM_PEERS="$CARDANO_CUSTOM_PEERS"
-
 CARDANO_UPDATE_TOPOLOGY=$CARDANO_UPDATE_TOPOLOGY
 CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER
 
@@ -133,6 +170,14 @@ EKG_HOST="$EKG_HOST"
 EKG_PORT=$EKG_PORT
 EKG_TIMEOUT=$EKG_TIMEOUT
 MAX_PEERS=$MAX_PEERS
+
+# Mapping for gLiveView
+CCLI="cardano-cli"
+CNODE_PORT=$CARDANO_PORT
+CONFIG="$CARDANO_CONFIG"
+TOPOLOGY="$CARDANO_TOPOLOGY"
+SOCKET="$CARDANO_SOCKET_PATH"
+LOG_DIR="$CARDANO_LOG_DIR"
 EOF
 }
 
@@ -211,6 +256,9 @@ writeRootEnv
 
 # The IPC socket dir is not created on demand
 mkdir -p `dirname $CARDANO_SOCKET_PATH`
+
+# Removing a potentialy existing lost+found directory
+rm -rf $CARDANO_DATABASE_PATH/lost+found
 
 if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
 

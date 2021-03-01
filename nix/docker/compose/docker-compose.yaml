@@ -1,0 +1,80 @@
+
+# Networks ############################################################################################################
+
+networks:
+  cardano:
+    name: cardano
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/24
+
+# Services ############################################################################################################
+
+services:
+
+  # Relay -------------------------------------------------------------------------------------------------------------
+
+  relay:
+    container_name: compose_relay
+    image: inputoutput/cardano-node:dev
+    ports:
+      - "3001:3001"
+    networks:
+      cardano:
+        ipv4_address: 172.28.0.2
+    environment:
+      CARDANO_TOPOLOGY: '{
+          "Producers": [
+            {
+              "addr": "relays-new.cardano-mainnet.iohk.io",
+              "port": 3001,
+              "valency": 1
+            },
+            {
+              "addr": "172.28.0.3",
+              "port": 3001,
+              "valency": 1
+            }
+          ]
+        }'
+      CARDANO_CUSTOM_PEERS: "172.28.0.3:3001"
+      CARDANO_UPDATE_TOPOLOGY: "true"
+    command: "run"
+    volumes:
+      - relay-data:/opt/cardano/data
+
+  # Block Producer ----------------------------------------------------------------------------------------------------
+
+  bprod:
+    container_name: compose_bprod
+    image: inputoutput/cardano-node:dev
+    expose:
+      - "3001"
+    networks:
+      cardano:
+        ipv4_address: 172.28.0.3
+    environment:
+      CARDANO_TOPOLOGY: '{
+          "Producers": [
+            {
+              "addr": "172.28.0.2",
+              "port": 3001,
+              "valency": 1
+            }
+          ]
+        }'
+      CARDANO_BLOCK_PRODUCER: "true"
+    command: "run"
+    depends_on: [ "relay" ]
+    volumes:
+      - bprod-keys:/var/cardano/config/keys
+      - bprod-data:/opt/cardano/data
+
+# Volumes #############################################################################################################
+
+volumes:
+  relay-data:
+  bprod-data:
+  bprod-keys:
+    external: true

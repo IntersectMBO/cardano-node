@@ -4,7 +4,7 @@
 shift
 
 if [[ -z $CARDANO_NODE_SOCKET_PATH ]]; then
-  export CARDANO_NODE_SOCKET_PATH="/opt/cardano/ipc/socket"
+  export CARDANO_NODE_SOCKET_PATH="$CARDANO_SOCKET_PATH"
 fi
 
 /usr/local/bin/cardano-cli $@

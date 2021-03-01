@@ -8,13 +8,13 @@ elif [[ $1 == "run" ]]; then
 
   exec /usr/local/bin/run-node $@
 
-elif [[ $1 == "cli" ]]; then
+elif [[ $1 == "cardano-cli" ]]; then
 
-  exec /usr/local/bin/run-client $@
+  exec /usr/local/bin/run-cli $@
 
 else
 
-  echo "Nothing to do! Perhaps try [run|cli]"
+  echo "Nothing to do! Perhaps try [run|cardano-cli]"
   exit 1
 
 fi
