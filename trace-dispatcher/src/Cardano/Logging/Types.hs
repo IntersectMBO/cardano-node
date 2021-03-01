@@ -42,6 +42,13 @@ class Logging a where
   asMetrics :: a -> [Metric]
   asMetrics v = []
 
+-- ||| Alternatively:
+data Representation a = Representation {
+    machineRep :: DetailLevel -> a -> A.Object
+  , humanRep   :: a -> Text
+  , metricsRep :: a -> [Metric]
+}
+
 data Metric
   -- | An integer metric.
   -- If a text is given it is appended as last element to the namespace
@@ -54,15 +61,6 @@ data Metric
 type Namespace = [Text]
 type Selector  = [Text]
 
--- | Tracer comes from the contra-tracer package and carries a context here
-newtype Trace m a = Trace {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
-
--- | Contramap lifted to Trace
-instance Monad m => Contravariant (Trace m) where
---  contravariant :: Monad m => (a -> b) -> Trace m b -> Trace m a
-  contramap f (Trace tr) = Trace $
-    T.contramap (\case (lc, mbC, a) -> (lc, mbC, f a)) tr
-
 -- | Context of a message
 data LoggingContext = LoggingContext {
     lcContext  :: Namespace
@@ -71,6 +69,24 @@ data LoggingContext = LoggingContext {
   , lcDetails  :: Maybe DetailLevel
   }
   deriving (Show, Eq, Generic)
+
+-- | Tracer comes from the contra-tracer package and carries a context and maybe a trace
+-- control object
+newtype Trace m a = Trace {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
+
+-- | Contramap lifted to Trace
+instance Monad m => Contravariant (Trace m) where
+--  contravariant :: Monad m => (a -> b) -> Trace m b -> Trace m a
+    contramap f (Trace tr) = Trace $
+      T.contramap (\ (lc, mbC, a) -> (lc, mbC, f a)) tr
+
+-- | @tr1 <> tr2@ will run @tr1@ and then @tr2@ with the same input.
+instance Monad m => Semigroup (Trace m a) where
+  Trace a1 <> Trace a2 = Trace (a1 <> a2)
+
+instance Monad m => Monoid (Trace m a) where
+    mappend = (<>)
+    mempty  = Trace T.nullTracer
 
 emptyLoggingContext :: LoggingContext
 emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
