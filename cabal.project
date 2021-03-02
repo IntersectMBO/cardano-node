@@ -58,6 +58,9 @@ package cardano-node-chairman
 package byron-spec-ledger
   tests: False
 
+package iohk-monitoring
+  tests: False
+
 package ouroboros-consensus-test
   tests: False
 
