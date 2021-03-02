@@ -19,10 +19,10 @@ test1 = do
     let simpleTracerC3 = setSeverity Error
                         $ setPrivacy Confidential
                             $ appendName "Inner2" simpleTracerC1
-    traceWith (setSeverity Error simpleTracerC2) logObject1
-    traceWith (setSeverity Warning simpleTracerC3) logObject2
-    traceWith simpleTracerC2 logObject3
-    traceWith (setSeverity Critical (appendName "Inner3" simpleTracerC3)) logObject4
+    traceWith (setSeverity Error simpleTracerC2) message1
+    traceWith (setSeverity Warning simpleTracerC3) message2
+    traceWith simpleTracerC2 message3
+    traceWith (setSeverity Critical (appendName "Inner3" simpleTracerC3)) message4
 
 test2 :: IO ()
 test2 = do
@@ -32,12 +32,13 @@ test2 = do
     let simpleTracerC1 = appendName "Outer1" simpleTracer1
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setPrivacy Confidential $ appendName "Inner2" simpleTracerC1
-    traceWith simpleTracerC2 logObject1
-    traceWith (setSeverity Critical simpleTracerC3) logObject2
-    traceWith simpleTracerC2 logObject3
-    traceWith (appendName "Inner3" simpleTracerC3) logObject4
-    traceWith (appendName "cont1" $ appendName "cont2" $ appendName "cont3" simpleTracerC2) logObject1
+    traceWith simpleTracerC2 message1
+    traceWith (setSeverity Critical simpleTracerC3) message2
+    traceWith simpleTracerC2 message3
+    traceWith (appendName "Inner3" simpleTracerC3) message4
+    traceWith (appendName "cont1" $ appendName "cont2" $ appendName "cont3" simpleTracerC2) message1
 
-loSeverity :: LO -> SeverityS
-loSeverity LO1 {} = Warning
-loSeverity LO2 {} = Error
+loSeverity :: TraceForgeEvent LogBlock -> SeverityS
+loSeverity TraceStartLeadershipCheck {} = Warning
+loSeverity TraceSlotIsImmutable {}      = Error
+loSeverity TraceBlockFromFuture {}      = Error

@@ -75,11 +75,14 @@ instance AE.ToJSON BlockNo where
     toEncoding = AE.genericToEncoding AE.defaultOptions
 
 data LogBlock = LogBlock
+  deriving(Eq, Ord, Show, StandardHash)
+
 type family HeaderHash b :: Type
+
 type instance HeaderHash LogBlock = LogHash
 
 newtype LogHash = LogHash { unLogHash :: Word64 }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON LogHash where
     toEncoding = AE.genericToEncoding AE.defaultOptions
@@ -94,7 +97,7 @@ data TraceForgeEvent blk
   | TraceBlockFromFuture SlotNo SlotNo
   deriving (Eq, Show, Generic)
 
-instance StandardHash LogBlock => LogFormatting (TraceForgeEvent LogBlock) where
+instance Show LogBlock => LogFormatting (TraceForgeEvent LogBlock) where
   forHuman (TraceStartLeadershipCheck slotNo) = pack $
     printf
       "Checking for leadership in slot %u"
@@ -163,7 +166,7 @@ traceForgeEventDocu = Documented [
       \ImmutableDB.\n\
       \\n\
       \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>")
-  , (TraceSlotIsImmutable (SlotNo 1) (Point Origin) (BlockNo 1),
+  , (TraceBlockFromFuture (SlotNo 1) (SlotNo 1),
     "Leadership check failed: the current chain contains a block from a slot\n\
     \/after/ the current slot\n\
     \\n\
@@ -183,6 +186,19 @@ withSeverityTraceForgeEvent = withSeverity (\case
     TraceSlotIsImmutable {}      -> Error
     TraceBlockFromFuture {}      -> Error
   )
+
+message1 :: TraceForgeEvent LogBlock
+message1 = TraceStartLeadershipCheck (SlotNo 1001)
+
+message2 :: TraceForgeEvent LogBlock
+message2 = TraceSlotIsImmutable (SlotNo 3333) (Point Origin) (BlockNo 1)
+
+message3 :: TraceForgeEvent LogBlock
+message3 = TraceBlockFromFuture (SlotNo 4400) (SlotNo 300)
+
+message4 :: TraceForgeEvent LogBlock
+message4 = TraceStartLeadershipCheck (SlotNo 2002)
+
 
 
   -- \(WithSeverity sev (Consensus.TraceLabelCreds creds event)) ->
