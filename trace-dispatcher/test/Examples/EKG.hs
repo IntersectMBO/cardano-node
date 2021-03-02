@@ -6,13 +6,17 @@ import           Control.Monad (liftM)
 import           Data.Text (pack)
 import           System.Remote.Monitoring (forkServer)
 
-instance Logging Int where
-  asMetrics i = [IntM Nothing i]
+instance LogFormatting Int where
+  asMetrics i = [IntM Nothing (fromIntegral i)]
+
+countDocumented :: Documented Int
+countDocumented = Documented [(0,"count")]
 
 testEKG :: IO ()
 testEKG = do
     server <- forkServer "localhost" 8000
     tracer <- ekgTracer (Right server)
+    configureTracers emptyTraceConfig countDocumented [tracer]
     loop (appendName "ekg1" tracer) 1
   where
     loop :: Trace IO Int -> Int -> IO ()

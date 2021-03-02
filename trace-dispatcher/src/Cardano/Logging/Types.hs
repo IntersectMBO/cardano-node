@@ -25,15 +25,12 @@ import           GHC.Generics
 class LogFormatting a where
   -- | Machine readable representation with the possibility to represent
   -- with different details based on the detail level.
-  -- Falls back to ToJson of Aeson in the default representation
+  -- No machine readable representation as default
   forMachine :: DetailLevel -> a -> A.Object
-  default forMachine :: A.ToJSON a => DetailLevel -> a -> A.Object
-  forMachine _ v = case A.toJSON v of
-    A.Object o     -> o
-    s@(A.String _) -> HM.singleton "string" s
-    _              -> mempty
+  forMachine _ v = mempty
 
   -- | Human readable representation.
+  -- No human representation is represented by the empty text and is the default
   forHuman :: a -> Text
   forHuman v = ""
 
@@ -42,20 +39,6 @@ class LogFormatting a where
   asMetrics :: a -> [Metric]
   asMetrics v = []
 
--- -- ||| Alternatively:
--- data LogFormatter a = LogFormatter {
---     -- | Machine readable representation with the possibility of representation
---     -- with different detail levels.
---     -- Can use ToJson of Aeson as default
---     machineRep :: DetailLevel -> a -> A.Object
---   , -- | Human readable representation.
---     -- An empty String represents no representation
---     humanRep   :: a -> Text
---   , -- | Metrics representation.
---     -- May be empty, meaning no metrics
---     metricsRep :: a -> [Metric]
--- }
-
 data Metric
   -- | An integer metric.
   -- If a text is given it is appended as last element to the namespace
@@ -63,9 +46,18 @@ data Metric
   -- | A double metric.
   -- If a text is given it is appended as last element to the namespace
     | DoubleM (Maybe Text) Double
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq)
+
+-- Document all log messages by providing a list of (prototye, documentation) pairs
+-- for all constructors. Because it is not enforced by the type system, it is very
+-- important to provide a complete list, as the prototypes are used as well for documentation.
+-- If you don't want to add an item for documentation enter an empty text.
+newtype Documented a = Documented [(a,Text)]
+
+-------------------------------------------------------------------
 
 type Namespace = [Text]
+
 type Selector  = [Text]
 
 -- | Context of a message
@@ -74,16 +66,18 @@ data LoggingContext = LoggingContext {
   , lcSeverity :: Maybe SeverityS
   , lcPrivacy  :: Maybe Privacy
   , lcDetails  :: Maybe DetailLevel
-  }
-  deriving (Eq, Show, Generic)
+  } deriving (Eq, Show)
+
+emptyLoggingContext :: LoggingContext
+emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
 
 -- | Tracer comes from the contra-tracer package and carries a context and maybe a trace
 -- control object
-newtype Trace m a = Trace {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
+newtype Trace m a = Trace
+  {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
 
 -- | Contramap lifted to Trace
 instance Monad m => Contravariant (Trace m) where
---  contravariant :: Monad m => (a -> b) -> Trace m b -> Trace m a
     contramap f (Trace tr) = Trace $
       T.contramap (\ (lc, mbC, a) -> (lc, mbC, f a)) tr
 
@@ -94,9 +88,6 @@ instance Monad m => Semigroup (Trace m a) where
 instance Monad m => Monoid (Trace m a) where
     mappend = (<>)
     mempty  = Trace T.nullTracer
-
-emptyLoggingContext :: LoggingContext
-emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
 
 -- | Formerly known as verbosity
 data DetailLevel = DBrief | DRegular | DDetailed
@@ -183,13 +174,7 @@ data TraceControl where
     Config :: TraceConfig -> TraceControl
     Optimize :: TraceControl
     Document :: DocCollector -> TraceControl
-  deriving(Eq, Show, Generic)
-
--- Document all log messages by providing a list of (prototye, documentation) pairs
--- for all constructors. Because it is not enforced by the type system, it is very
--- important to provide a complete list, as the prototypes are used as well for documentation.
--- If you don't want to add an item for documentation enter an empty text.
-newtype Documented a = Documented [(a,Text)]
+  deriving(Eq, Show)
 
 data DocCollector = DocCollector {
     cDoc       :: Text
@@ -198,10 +183,10 @@ data DocCollector = DocCollector {
   , cPrivacy   :: [Privacy]
   , cDetails   :: [DetailLevel]
   , cBackends  :: [Backend]
-  , ccSeverity :: [SeverityS]
+  , ccSeverity :: [SeverityF]
   , ccPrivacy  :: [Privacy]
   , ccDetails  :: [DetailLevel]
-} deriving(Eq, Show, Generic)
+} deriving(Eq, Show)
 
 emptyCollector :: DocCollector
 emptyCollector = DocCollector "" [] [] [] [] [] [] [] []
@@ -218,21 +203,6 @@ instance LogFormatting b => LogFormatting (Folding a b) where
   forMachine v (Folding b) =  forMachine v b
   forHuman (Folding b)     =  forHuman b
   asMetrics (Folding b)    =  asMetrics b
-
-instance A.ToJSON Metric where
-    toEncoding = A.genericToEncoding A.defaultOptions
-
-instance A.ToJSON LoggingContext where
-    toEncoding = A.genericToEncoding A.defaultOptions
-
-instance A.ToJSON TraceControl where
-    toEncoding = A.genericToEncoding A.defaultOptions
-
-instance A.ToJSON DocCollector where
-    toEncoding = A.genericToEncoding A.defaultOptions
-
-instance A.ToJSON Backend where
-    toEncoding = A.genericToEncoding A.defaultOptions
 
 instance A.ToJSON DetailLevel where
     toEncoding = A.genericToEncoding A.defaultOptions
