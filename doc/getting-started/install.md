@@ -1,22 +1,22 @@
 # Installing the node from source
 
-> The **latest** version of the node may be downloaded from [cardano-node GitHub Releases](https://github.com/input-output-hk/cardano-node/releases)
+The **latest** version of the node may be downloaded from the [cardano-node GitHub Releases](https://github.com/input-output-hk/cardano-node/releases) page.
 
 #### Prerequisites
 
-Set up your platform:
+To set up your platform, you will need:
 
-You will need:
+* An x86 host \(AMD or Intel\)
+* A virtual machine or AWS instance with at least 2 cores
+* 8GB of RAM and at least 10GB of free disk space
+* A recent version of Linux
 
-* An x86 host \(AMD or Intel\), Virtual Machine or AWS instance with at least 2 cores, 4GB of RAM and at least 10GB of free disk space;
-* A recent version of Linux.
+**Note** The node can be built and run on other operating systems, including Windows and MacOSX, but we recommend that
+stake pool operators use Linux to take advantage of the associated performance advantages. If you are building on Windows, we recommend using WSL2 under Windows 10 as this provides a development and execution environment that is very similar to Ubuntu.
 
-The node can be built and run on other operating systems, including Windows and MacOSX, but there are performance advantages that mean that
-stake pool operators are recommended to use Linux.  If you are building on Windows, we recommend using WSL2 under Windows 10.  This provides a development and execution environment that is very similar to Ubuntu.
+#### Installation dependencies
 
-#### Install dependencies
-
-We need the following packages and tools on our Linux system to download the source code and build it:
+To download the source code and build it, you need the following packages and tools on your Linux system:
 
 * the version control system `git`,
 * the `gcc` C-compiler,
@@ -29,7 +29,7 @@ We need the following packages and tools on our Linux system to download the sou
 * the Haskell build tool `cabal`,
 * the GHC Haskell compiler.
 
-In Redhat, Fedora and Centos
+In Redhat, Fedora, and Centos:
 
     sudo yum update -y
     sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
@@ -37,13 +37,12 @@ In Redhat, Fedora and Centos
 
 For Debian/Ubuntu use the following instead:
 
-
     sudo apt-get update -y
     sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf -y
 
-If you are using a different flavor of Linux, you will need to use the package manager suitable for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.  On MacOSX, use the Homebrew (`brew`) installer.
+If you are using a different flavor of Linux, you will need to use the correct package manager for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.  On MacOSX, use the Homebrew (`brew`) installer.
 
-#### Download, unpack, install and update Cabal:
+#### Downloading, unpacking, installing, and updating Cabal:
 
     wget https://downloads.haskell.org/~cabal/cabal-install-3.2.0.0/cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
     tar -xf cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
@@ -71,10 +70,10 @@ Confirm that you installed cabal version `3.2.0.0`.
 
     cabal --version
 
-**Note:** We no longer provide supported `stack` or `nix` installer packages. We recommend `cabal` instead.
+**Note:** We no longer provide supported `stack` or `nix` installer packages. We recommend using `cabal` instead.
 
 
-#### Download and install GHC:
+#### Downloading and installing the GHC compiler:
 
 Create a working directory for your builds:
 
@@ -90,16 +89,16 @@ Create a working directory for your builds:
     ./configure
     sudo make install
 
-This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions.
+This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing). If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions.
 
-#### Install Libsodium
+#### Installing Libsodium
 
 Create a working directory for your builds:
 
     mkdir -p ~/src
     cd ~/src
 
-Download and install libsodium
+Download and install libsodium:
 
     git clone https://github.com/input-output-hk/libsodium
     cd libsodium
@@ -109,12 +108,12 @@ Download and install libsodium
     make
     sudo make install
 
-Add the following to your .bashrc file and source it.
+Add the following to your .bashrc file and source it:
 
     export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
     export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-#### Download the source code for cardano-node
+#### Downloading the source code for cardano-node
 
 Create a working directory for your builds:
 
@@ -136,7 +135,7 @@ Checkout the latest version of cardano-node (choose the tag with the highest ver
     git tag
     git checkout tags/<TAGGED VERSION>
 
-#### Configure the build options
+#### Configuring the build options
 
 We explicitly use the GHC version that we installed earlier.  This avoids defaulting to a system version of GHC that might be older than the one you have installed.
 
@@ -148,7 +147,7 @@ Update the local project file to use the VRF library that you installed earlier.
     echo "  flags: -external-libsodium-vrf" >>  cabal.project.local
 
 
-#### Build and install the node
+#### Building and installing the node
 
 Build the node and CLI with `cabal`:
 
