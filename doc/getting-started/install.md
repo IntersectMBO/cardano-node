@@ -89,7 +89,7 @@ Create a working directory for your builds:
     ./configure
     sudo make install
 
-This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing). If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions.
+This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions. Note that using a newer version than the one specified may produce compilation errors.
 
 #### Installing Libsodium
 
