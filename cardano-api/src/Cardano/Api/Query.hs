@@ -66,6 +66,8 @@ import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
+import qualified Shelley.Spec.Ledger.PParams as Shelley
+import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
@@ -181,6 +183,8 @@ instance (Typeable era, Shelley.TransLedgerState FromCBOR (ShelleyLedgerEra era)
 instance ( IsShelleyBasedEra era
          , ShelleyLedgerEra era ~ ledgerera
          , Consensus.ShelleyBasedEra ledgerera
+         , ToJSON (Core.PParams ledgerera)
+         , ToJSON (Shelley.PParamsDelta ledgerera)
          , ToJSON (Core.TxOut ledgerera)) => ToJSON (LedgerState era) where
   toJSON (LedgerState newEpochS) = object [ "lastEpoch" .= Shelley.nesEL newEpochS
                                           , "blocksBefore" .= Shelley.nesBprev newEpochS
@@ -423,6 +427,8 @@ fromConsensusQueryResult (QueryInEra MaryEraInCardanoMode
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.
      ShelleyLedgerEra era ~ ledgerera
+  => Shelley.PParams ledgerera ~ Core.PParams ledgerera
+  => Shelley.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
   => Consensus.ShelleyBasedEra ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
   => ShelleyBasedEra era

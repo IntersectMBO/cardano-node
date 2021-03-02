@@ -17,6 +17,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.Map.Strict as Map
+import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -25,14 +26,17 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Cardano.Ledger.SafeHash as SafeHash
+import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import           Cardano.Slotting.Slot (SlotNo (..))
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Shelley.Spec.Ledger.API as Shelley
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import qualified Shelley.Spec.Ledger.Rewards as Shelley
 
 -- Orphan instances involved in the JSON output of the API queries.
@@ -68,6 +72,8 @@ instance ToJSON Shelley.AccountState where
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
+         , ToJSON (Core.PParams era)
+         , ToJSON (Shelley.PParamsDelta era)
          ) => ToJSON (Shelley.EpochState era) where
   toJSON eState = object [ "esAccountState" .= Shelley.esAccountState eState
                          , "esSnapshots" .= Shelley.esSnapshots eState
@@ -79,6 +85,7 @@ instance ( Consensus.ShelleyBasedEra era
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
+         , ToJSON (Shelley.PParamsDelta era)
          ) => ToJSON (Shelley.LedgerState era) where
   toJSON lState = object [ "utxoState" .= Shelley._utxoState lState
                          , "delegationState" .= Shelley._delegationState lState
@@ -86,6 +93,7 @@ instance ( Consensus.ShelleyBasedEra era
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
+         , ToJSON (Shelley.PParamsDelta era)
          ) => ToJSON (Shelley.UTxOState era) where
   toJSON utxoState = object [ "utxo" .= Shelley._utxo utxoState
                             , "deposited" .= Shelley._deposited utxoState
@@ -93,34 +101,42 @@ instance ( Consensus.ShelleyBasedEra era
                             , "ppups" .= Shelley._ppups utxoState
                             ]
 
-instance ToJSON (Shelley.PPUPState era) where
+instance ( ToJSON (Shelley.PParamsDelta era)
+         , Shelley.UsesPParams era
+         ) => ToJSON (Shelley.PPUPState era) where
   toJSON ppUpState = object [ "proposals" .= Shelley.proposals ppUpState
                             , "futureProposals" .= Shelley.futureProposals ppUpState
                             ]
 
-instance ToJSON (Shelley.ProposedPPUpdates era) where
+instance ( ToJSON (Shelley.PParamsDelta era)
+         , Shelley.UsesPParams era
+         ) => ToJSON (Shelley.ProposedPPUpdates era) where
   toJSON (Shelley.ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates
 
-instance ToJSON (Shelley.PParams' StrictMaybe era) where
-  toJSON pparams =
-    object [ "minfeeA" .= Shelley._minfeeA pparams
-           , "minfeeB" .= Shelley._minfeeB pparams
-           , "maxBBSize" .= Shelley._maxBBSize pparams
-           , "maxTxSize" .= Shelley._maxTxSize pparams
-           , "maxBHSize" .= Shelley._maxBHSize pparams
-           , "keyDeposit" .= Shelley._keyDeposit pparams
-           , "poolDeposit" .= Shelley._poolDeposit pparams
-           , "eMax" .= Shelley._eMax pparams
-           , "nOpt" .= Shelley._nOpt pparams
-           , "a0" .= Shelley._a0 pparams
-           , "rho" .= Shelley._rho pparams
-           , "tau" .= Shelley._tau pparams
-           , "d" .= Shelley._d pparams
-           , "extraEntropy" .= Shelley._extraEntropy pparams
-           , "protocolVersion" .= Shelley._protocolVersion pparams
-           , "minUTxOValue" .= Shelley._minUTxOValue pparams
-           , "minPoolCost" .= Shelley._minPoolCost pparams
-           ]
+instance ToJSON (PParamsUpdate era) where
+  toJSON pp =
+    Aeson.object $
+        [ "minFeeA"               .= x | x <- mbfield (Shelley._minfeeA pp) ]
+     ++ [ "minFeeB"               .= x | x <- mbfield (Shelley._minfeeB pp) ]
+     ++ [ "maxBlockBodySize"      .= x | x <- mbfield (Shelley._maxBBSize pp) ]
+     ++ [ "maxTxSize"             .= x | x <- mbfield (Shelley._maxTxSize pp) ]
+     ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (Shelley._maxBHSize pp) ]
+     ++ [ "keyDeposit"            .= x | x <- mbfield (Shelley._keyDeposit pp) ]
+     ++ [ "poolDeposit"           .= x | x <- mbfield (Shelley._poolDeposit pp) ]
+     ++ [ "eMax"                  .= x | x <- mbfield (Shelley._eMax pp) ]
+     ++ [ "nOpt"                  .= x | x <- mbfield (Shelley._nOpt pp) ]
+     ++ [ "a0" .= (fromRational x :: Scientific)
+                                       | x <- mbfield (Shelley._a0 pp) ]
+     ++ [ "rho"                   .= x | x <- mbfield (Shelley._rho pp) ]
+     ++ [ "tau"                   .= x | x <- mbfield (Shelley._tau pp) ]
+     ++ [ "decentralisationParam" .= x | x <- mbfield (Shelley._d pp) ]
+     ++ [ "extraEntropy"          .= x | x <- mbfield (Shelley._extraEntropy pp) ]
+     ++ [ "protocolVersion"       .= x | x <- mbfield (Shelley._protocolVersion pp) ]
+     ++ [ "minUTxOValue"          .= x | x <- mbfield (Shelley._minUTxOValue pp) ]
+     ++ [ "minPoolCost"           .= x | x <- mbfield (Shelley._minPoolCost pp) ]
+    where
+      mbfield SNothing  = []
+      mbfield (SJust x) = [x]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
   toJSON dpState = object [ "dstate" .= Shelley._dstate dpState
@@ -191,7 +207,7 @@ instance Crypto.Crypto crypto => ToJSONKey (Shelley.TxIn crypto) where
 
 txInToText :: Crypto.Crypto crypto => Shelley.TxIn crypto -> Text
 txInToText (Shelley.TxIn (Shelley.TxId txidHash) ix) =
-  hashToText txidHash
+  hashToText (SafeHash.extractHash txidHash)
     <> Text.pack "#"
     <> Text.pack (show ix)
 
@@ -242,4 +258,18 @@ instance ToJSON (Shelley.IndividualPoolStake crypto) where
     object [ "individualPoolStake" .= Shelley.individualPoolStake indivPoolStake
            , "individualPoolStakeVrf" .= Shelley.individualPoolStakeVrf indivPoolStake
            ]
+
+instance ToJSON (Shelley.Reward crypto) where
+  toJSON reward =
+     object [ "rewardType" .= Shelley.rewardType reward
+            , "rewardPool" .= Shelley.rewardPool reward
+            , "rewardAmount" .= Shelley.rewardAmount reward
+            ]
+
+instance ToJSON Shelley.RewardType where
+  toJSON Shelley.MemberReward = "MemberReward"
+  toJSON Shelley.LeaderReward = "LeaderReward"
+
+instance ToJSON (SafeHash.SafeHash c a) where
+  toJSON = toJSON . SafeHash.extractHash
 

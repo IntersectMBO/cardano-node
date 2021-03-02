@@ -14,6 +14,7 @@ import           Data.SOP.Strict
 
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
+import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.HardFork.Combinator
@@ -36,7 +37,7 @@ instance ConvertTxId ByronBlock where
 
 instance ConvertTxId (ShelleyBlock c) where
   txIdToRawBytes (ShelleyTxId txId) =
-    Crypto.hashToBytes . Shelley._unTxId $ txId
+    Crypto.hashToBytes . Ledger.extractHash . Shelley._unTxId $ txId
 
 instance All ConvertTxId xs
       => ConvertTxId (HardForkBlock xs) where

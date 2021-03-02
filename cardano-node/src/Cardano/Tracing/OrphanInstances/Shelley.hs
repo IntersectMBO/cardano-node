@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE EmptyCase #-}
@@ -20,21 +19,16 @@ module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (ToJSONKey (..), ToJSONKeyFunction (..))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.HashMap.Strict as HMS
-import           Data.Scientific (Scientific)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 
+import           Cardano.Api.Orphans ()
 
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
-
-import           Cardano.Crypto.Hash.Class as Crypto
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
@@ -50,14 +44,13 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Core
+import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
-import qualified Cardano.Ledger.Torsor as Core
 
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
@@ -165,19 +158,23 @@ instance ( ShelleyBasedEra era
              , "failures" .= map (toObject verb) fs
              ]
 
-instance ShelleyBasedEra era => ToObject (ShelleyLedgerUpdate era) where
+instance ( ShelleyBasedEra era
+         , ToJSON (Shelley.PParamsDelta era)
+         ) => ToObject (ShelleyLedgerUpdate era) where
   toObject verb (ShelleyUpdatedProtocolUpdates updates) =
     mkObject [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
              , "updates" .= map (toObject verb) updates
              ]
 
-instance ToObject (ProtocolUpdate crypto) where
+instance ToJSON (Shelley.PParamsDelta era)
+         => ToObject (ProtocolUpdate era) where
   toObject verb ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
     mkObject [ "proposal" .= toObject verb protocolUpdateProposal
              , "state"    .= toObject verb protocolUpdateState
              ]
 
-instance ToObject (UpdateProposal crypto) where
+instance ToJSON (Shelley.PParamsDelta era)
+         => ToObject (UpdateProposal era) where
   toObject _verb UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
     mkObject [ "params"  .= proposalParams
              , "version" .= proposalVersion
@@ -189,31 +186,6 @@ instance ToObject (UpdateState crypto) where
     mkObject [ "proposal"      .= proposalVotes
              , "reachedQuorum" .= proposalReachedQuorum
              ]
-
-instance ToJSON (PParamsUpdate era) where
-  toJSON pp =
-    Aeson.object $
-        [ "minFeeA"               .= x | x <- mbfield (_minfeeA pp) ]
-     ++ [ "minFeeB"               .= x | x <- mbfield (_minfeeB pp) ]
-     ++ [ "maxBlockBodySize"      .= x | x <- mbfield (_maxBBSize pp) ]
-     ++ [ "maxTxSize"             .= x | x <- mbfield (_maxTxSize pp) ]
-     ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (_maxBHSize pp) ]
-     ++ [ "keyDeposit"            .= x | x <- mbfield (_keyDeposit pp) ]
-     ++ [ "poolDeposit"           .= x | x <- mbfield (_poolDeposit pp) ]
-     ++ [ "eMax"                  .= x | x <- mbfield (_eMax pp) ]
-     ++ [ "nOpt"                  .= x | x <- mbfield (_nOpt pp) ]
-     ++ [ "a0" .= (fromRational x :: Scientific)
-                                       | x <- mbfield (_a0 pp) ]
-     ++ [ "rho"                   .= x | x <- mbfield (_rho pp) ]
-     ++ [ "tau"                   .= x | x <- mbfield (_tau pp) ]
-     ++ [ "decentralisationParam" .= x | x <- mbfield (_d pp) ]
-     ++ [ "extraEntropy"          .= x | x <- mbfield (_extraEntropy pp) ]
-     ++ [ "protocolVersion"       .= x | x <- mbfield (_protocolVersion pp) ]
-     ++ [ "minUTxOValue"          .= x | x <- mbfield (_minUTxOValue pp) ]
-     ++ [ "minPoolCost"           .= x | x <- mbfield (_minPoolCost pp) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
 
 instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
   toObject verb (ChainTransitionError fs) =
@@ -351,7 +323,6 @@ instance ( ShelleyBasedEra era
 
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
-         , ToJSON (Core.Delta (Core.Value era))
          , ToJSON (Core.TxOut era)
          , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
          )
@@ -417,7 +388,6 @@ instance ToJSON MA.ValidityInterval where
 
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
-         , ToJSON (Core.Delta (Core.Value era))
          , ToJSON (Core.TxOut era)
          , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
          ) => ToObject (MA.UtxoPredicateFailure era) where
@@ -793,17 +763,4 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
 
-deriving instance Core.Crypto crypto => ToJSON (TxIn crypto)
 deriving newtype instance ToJSON (TxId crypto)
-
-instance Core.Crypto crypto => ToJSONKey (TxIn crypto) where
-  toJSONKey = ToJSONKeyText txInToText (Aeson.text . txInToText)
-
-txInToText :: Core.Crypto crypto => TxIn crypto -> Text
-txInToText (TxIn (TxId txidHash) ix) =
-  hashToText txidHash
-    <> Text.pack "#"
-    <> Text.pack (show ix)
-
-hashToText :: Crypto.Hash crypto a -> Text
-hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex

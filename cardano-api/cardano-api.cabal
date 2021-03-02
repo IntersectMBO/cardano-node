@@ -87,7 +87,7 @@ library
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-ledger
+                      , cardano-ledger-byron
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-slotting
@@ -157,7 +157,7 @@ test-suite cardano-api-test
                       , cardano-crypto-test
                       , cardano-crypto-tests
                       , cardano-crypto-wrapper
-                      , cardano-ledger-test
+                      , cardano-ledger-byron-test
                       , cardano-prelude
                       , cardano-prelude-test
                       , cardano-slotting

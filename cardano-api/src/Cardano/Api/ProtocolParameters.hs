@@ -66,6 +66,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -563,19 +564,26 @@ data GenesisParameters =
 -- Conversion functions
 --
 
-toShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
+toShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
+                   , Shelley.PParamsDelta ledgerera
+                     ~ Shelley.PParamsUpdate ledgerera
+                   )
                 => UpdateProposal -> Shelley.Update ledgerera
 toShelleyUpdate (UpdateProposal ppup epochno) =
     Shelley.Update (toShelleyProposedPPUpdates ppup) epochno
 
 
-toShelleyProposedPPUpdates :: Ledger.Crypto ledgerera ~ StandardCrypto
-                           => Map (Hash GenesisKey) ProtocolParametersUpdate
-                           -> Shelley.ProposedPPUpdates ledgerera
+toShelleyProposedPPUpdates :: forall ledgerera.
+                              ( Ledger.Crypto ledgerera ~ StandardCrypto
+                              , Shelley.PParamsDelta ledgerera
+                                ~ Shelley.PParamsUpdate ledgerera
+                              )
+                            => Map (Hash GenesisKey) ProtocolParametersUpdate
+                            -> Shelley.ProposedPPUpdates ledgerera
 toShelleyProposedPPUpdates =
     Shelley.ProposedPPUpdates
   . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
-  . Map.map toShelleyPParamsUpdate
+  . Map.map (toShelleyPParamsUpdate @ledgerera)
 
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
@@ -629,13 +637,19 @@ toShelleyPParamsUpdate
                                    maybeToStrictMaybe protocolUpdateMinPoolCost
     }
 
-fromShelleyUpdate :: Ledger.Crypto ledgerera ~ StandardCrypto
+fromShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
+                     , Shelley.PParamsDelta ledgerera
+                       ~ Shelley.PParamsUpdate ledgerera
+                     )
                   => Shelley.Update ledgerera -> UpdateProposal
 fromShelleyUpdate (Shelley.Update ppup epochno) =
     UpdateProposal (fromShelleyProposedPPUpdates ppup) epochno
 
 
-fromShelleyProposedPPUpdates :: Ledger.Crypto ledgerera ~ StandardCrypto
+fromShelleyProposedPPUpdates :: ( Ledger.Crypto ledgerera ~ StandardCrypto
+                                , Shelley.PParamsDelta ledgerera
+                                  ~ Shelley.PParamsUpdate ledgerera
+                                )
                              => Shelley.ProposedPPUpdates ledgerera
                              -> Map (Hash GenesisKey) ProtocolParametersUpdate
 fromShelleyProposedPPUpdates =
