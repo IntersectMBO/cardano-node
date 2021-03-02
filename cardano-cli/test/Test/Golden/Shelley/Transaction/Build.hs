@@ -25,6 +25,7 @@ golden_shelleyTransactionBuild = propertyOnce $ H.moduleWorkspace "tmp" $ \tempD
 
   void $ execCardanoCLI
     [ "transaction","build-raw"
+    , "--shelley-era"
     , "--tx-in", txIn
     , "--tx-out", txOut
     , "--invalid-hereafter", "60"
