@@ -34,7 +34,8 @@ Get the complete list of available options with `cardano-node run --help`
 	--topology FILEPATH             The path to a file describing the topology.
   	--database-path FILEPATH        Directory where the state is stored.
   	--socket-path FILEPATH          Path to a cardano-node socket
-  	--host-addr HOST-NAME           Optionally limit node to one ipv6 or ipv4 address
+  	--host-addr IP-ADDRESS          Optionally limit node to one IPv4 address
+  	--host-ipv6-addr IP-ADDRESS     Optionally limit node to one IPv6 address
   	--port PORT                     The port number
   	--config NODE-CONFIGURATION     Configuration file for the cardano-node
   	--validate-db                   Validate all on-disk database files
