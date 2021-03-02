@@ -2,6 +2,8 @@ module Examples.Configuration where
 
 import           Control.Monad (liftM)
 import           Control.Monad.IO.Class
+import qualified Data.Aeson as AE
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as Map
 import           Data.Text (Text)
 import           Katip
@@ -10,12 +12,27 @@ import           Katip.Scribes.Handle (ioLogEnv)
 import           Cardano.Logging
 import           Examples.TestObjects
 
-tracer1 :: MonadIO m => m (Trace m LO)
+newtype TestMessage = TestMessage Text
+  deriving Show
+
+instance LogFormatting TestMessage where
+  forHuman (TestMessage text)         = text
+  forMachine _verb (TestMessage text) =
+         HM.fromList
+           [ "kind" AE..= AE.String "TestMessage"
+           , "text" AE..= AE.String text
+           ]
+
+testMessageDocumented = Documented [
+  (TestMessage "dummy", "just a text")
+  ]
+
+tracer1 :: MonadIO m => m (Trace m TestMessage)
 tracer1  = fmap
             (appendName "tracer1")
             (filterSeverityFromConfig =<< stdoutJsonKatipTracer)
 
-tracer2 :: MonadIO m => m (Trace m LO)
+tracer2 :: MonadIO m => m (Trace m TestMessage)
 tracer2  = fmap
             (appendName "tracer2")
             (filterSeverityFromConfig =<< stdoutObjectKatipTracer)
@@ -41,23 +58,23 @@ testConfig' tc = do
     t1 <- tracer1
     t2 <- tracer2
     let bubbleTracer = appendName "bubble" t2
-    configureTracers tc [t1, t2, bubbleTracer]
-    traceWith (setSeverity Critical t1) (LO2 "Now setting config")
+    configureTracers tc testMessageDocumented [t1, t2, bubbleTracer]
+    traceWith (setSeverity Critical t1) (TestMessage "Now setting config")
     traceWith
       (setSeverity Error t1)
-      (LO2 "1: show with config1 and config2")
+      (TestMessage "1: show with config1 and config2")
     traceWith
       (setSeverity Info t1)
-      (LO2 "2: show not with config1 but with config2")
+      (TestMessage "2: show not with config1 but with config2")
     traceWith
       (setSeverity Notice bubbleTracer)
-      (LO2 "3: show with config1 but not with config2")
+      (TestMessage "3: show with config1 but not with config2")
     traceWith
       (setSeverity Warning t2)
-      (LO2 "4: show not with config1 but with config2")
+      (TestMessage "4: show not with config1 but with config2")
     traceWith
       (setSeverity Info t2)
-      (LO2 "5: never show")
+      (TestMessage "5: never show")
 
 testConfig = do
   t1 <- tracer1

@@ -10,28 +10,29 @@ import           Control.Monad.IO.Class
 import           Control.Monad.IO.Unlift
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
+import           Data.Functor.Contravariant (Contravariant (..))
 import           GHC.Generics
 
 import           Cardano.Logging
 import           Examples.TestObjects
 
-data LOX = LOS LO | LOL LimitingMessage
- deriving (Logging, Generic, A.ToJSON)
+data LOX = LOS (TraceForgeEvent LogBlock) | LOL LimitingMessage
+ deriving (LogFormatting, Generic)
 
-tracer1 :: (MonadIO m, MonadUnliftIO m) => m (Trace m LO)
+tracer1 :: (MonadIO m, MonadUnliftIO m) => m (Trace m (TraceForgeEvent LogBlock))
 tracer1  = do
   t1      <- fmap (appendName "tracer1") stdoutObjectKatipTracer
-  limitFrequency 5 "5 messages per second" (cmap LOS t1) (cmap LOL t1)
+  limitFrequency 5 "5 messages per second" (contramap LOS t1) (contramap LOL t1)
 
-tracer2 :: (MonadIO m, MonadUnliftIO m) => m (Trace m LO)
+tracer2 :: (MonadIO m, MonadUnliftIO m) => m (Trace m (TraceForgeEvent LogBlock))
 tracer2  = do
   t2      <- fmap (appendName "tracer2") stdoutJsonKatipTracer
-  limitFrequency 15 "15 messages per second" (cmap LOS t2) (cmap LOL t2)
+  limitFrequency 15 "15 messages per second" (contramap LOS t2) (contramap LOL t2)
 
-repeated :: Trace IO LO -> Int -> Int -> IO ()
+repeated :: Trace IO (TraceForgeEvent LogBlock) -> Int -> Int -> IO ()
 repeated _ 0 _ = pure ()
 repeated t n d = do
-  traceWith t (LO1 n)
+  traceWith t (TraceStartLeadershipCheck (SlotNo (fromIntegral n)))
   threadDelay d
   repeated t (n-1) d
 

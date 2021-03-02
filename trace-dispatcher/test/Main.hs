@@ -12,10 +12,10 @@ import           Examples.Trivial
 
 main :: IO ()
 main = do
-    -- test1
-    -- test2
-    -- testAggregation
-    -- testRouting
-    -- testConfig
+    test1
+    test2
+    testAggregation
+    testRouting
+    testConfig
     -- testEKG
-    testLimiting
+    -- testLimiting
