@@ -25,10 +25,14 @@ data BaseStats = BaseStats {
 instance A.ToJSON BaseStats where
     toEncoding = A.genericToEncoding A.defaultOptions
 
-instance Logging BaseStats where
+instance LogFormatting BaseStats where
   asMetrics BaseStats {..} =
     [ DoubleM (Just "measure") bsMeasure
     , DoubleM (Just "sum") bsSum]
+
+baseStatsDocumented :: Documented Double
+baseStatsDocumented =
+  Documented [(0.0,"Measure"), (0.0,"Sum")]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
@@ -45,7 +49,7 @@ testAggregation :: IO ()
 testAggregation = do
     simpleTracer  <- stdoutObjectKatipTracer
     tracer <- foldTraceM calculate emptyStats simpleTracer
-    configureTracers emptyTraceConfig [tracer]
+    configureTracers emptyTraceConfig baseStatsDocumented [tracer]
     traceWith tracer 1.0
     traceWith tracer 2.0
     traceWith tracer 0.5

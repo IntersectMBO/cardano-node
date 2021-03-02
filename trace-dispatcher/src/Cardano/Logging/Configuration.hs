@@ -21,15 +21,18 @@ import           Cardano.Logging.Trace (filterTraceByPrivacy,
 import           Cardano.Logging.Types
 
 -- | Call this function at initialisation, and later for reconfiguration
-configureTracers :: Monad m => TraceConfig -> [Trace m a] -> [a] -> m ()
-configureTracers config tracers objects = do
+configureTracers :: Monad m => TraceConfig -> Documented a -> [Trace m a]-> m ()
+configureTracers config (Documented documented) tracers = do
     mapM_ (configureTrace Reset) tracers
     mapM_ (configureAllTrace (Config config)) tracers
     mapM_ (configureTrace Optimize) tracers
   where
-    configureTrace c (Trace tr) = T.traceWith tr (emptyLoggingContext, Just c, head objects)
+    configureTrace c (Trace tr) =
+      T.traceWith tr (emptyLoggingContext, Just c, fst (head documented))
     configureAllTrace c (Trace tr) =
-      mapM (\ m -> T.traceWith tr (emptyLoggingContext, Just c, m)) objects
+      mapM
+        ((\ m -> T.traceWith tr (emptyLoggingContext, Just c, m)) . fst)
+        documented
 
 -- | Take a selector function, and a function from trace to trace with
 --   this selector to make a trace transformer with a config value
