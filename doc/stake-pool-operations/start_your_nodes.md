@@ -6,9 +6,11 @@ Start a __relay node__ with:
     --topology mainnet-topology.json \
     --database-path /db \
     --socket-path /db/node.socket \
-    --host-addr <PUBLIC IP> \
+    --host-addr <PUBLIC IPv4 ADDRESS> \
     --port <PORT> \
     --config mainnet-config.json
+
+Note: Use `--host-ipv6-addr` for IPv6 address.
 
 Start a __block producing__ node with:
 

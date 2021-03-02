@@ -71,7 +71,9 @@ The general synopsis is as follows:
                            [--shelley-kes-key FILEPATH]
                            [--shelley-vrf-key FILEPATH]
                            [--shelley-operational-certificate FILEPATH]
-                           [[--host-addr HOST-NAME] [--port PORT]]
+                           [--host-addr IPV4-ADDRESS]
+                           [--host-ipv6-addr IPV6-ADDRESS]
+                           [--port PORT]
                            [--config NODE-CONFIGURATION] [--validate-db]
      Run the node.
 
@@ -93,7 +95,9 @@ The general synopsis is as follows:
 
 * ``--socket-path`` - Path to the socket file.
 
-* ``--host-addr`` - Optionally specify your node's IPv4 or IPv6 address.
+* ``--host-addr`` - Optionally specify your node's IPv4 address.
+
+* ``--host-ipv6-addr`` - Optionally specify your node's IPv6 address.
 
 * ``--port`` - Specify which port to assign to the node.
 
