@@ -12,7 +12,7 @@ import           Examples.TestObjects
 --   for every path element
 test1 :: IO ()
 test1 = do
-    simpleTracer1 <- stdoutObjectKatipTracer
+    simpleTracer1 <- stdoutHumanKatipTracer
     let simpleTracer1' = filterTraceBySeverity (Just WarningF) simpleTracer1
     let simpleTracerC1 = appendName "Outer1" simpleTracer1'
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
@@ -26,7 +26,7 @@ test1 = do
 
 test2 :: IO ()
 test2 = do
-    simpleTracer <- stdoutObjectKatipTracer
+    simpleTracer <- stdoutHumanKatipTracer
     let simpleTracer1  = withSeverity loSeverity
                             (filterTraceBySeverity (Just WarningF) simpleTracer)
     let simpleTracerC1 = appendName "Outer1" simpleTracer1

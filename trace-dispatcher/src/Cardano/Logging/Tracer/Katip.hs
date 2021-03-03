@@ -17,7 +17,8 @@ import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef,
                      writeIORef)
 import qualified Data.Map.Strict as M
 import           Data.Maybe (fromMaybe, isJust)
-import           Data.Text (Text)
+import           Data.String
+import           Data.Text (Text, unpack)
 import           Katip
 import           Katip.Core (ScribeHandle (..), WorkerMessage (..),
                      mkThreadIdText, tryWriteTBQueue)
@@ -25,6 +26,7 @@ import           Katip.Scribes.Handle (ioLogEnv)
 import           System.IO (stdout)
 
 import qualified Cardano.Logging.Types as LT
+import qualified Data.HashMap.Strict as HM
 
 data LoggingContextKatip = LoggingContextKatip {
     lk       :: LT.LoggingContext
@@ -54,6 +56,12 @@ stdoutJsonKatipTracer = do
     env <- liftIO $ ioLogEnvJson (\ _ -> pure True) V3
     pure $ withKatipLogEnv env katipTracer
 
+stdoutHumanKatipTracer :: (MonadIO m, LT.LogFormatting a) => m (LT.Trace m a)
+stdoutHumanKatipTracer = do
+    env <- liftIO $ ioLogEnv (\ _ -> pure True) V3
+    pure $ withKatipLogEnv env katipTracerHuman
+
+
 -- | Sets severities for the messages in this trace based on the selector function
 withKatipLogEnv :: Monad m
   => LogEnv
@@ -82,6 +90,20 @@ katipTracer =  T.arrow $ T.emit $ uncurry3 output
                           lkLogEnv
     output LoggingContextKatip {..} (Just c) a = pure () -- TODO
 
+
+--- | A standard Katip tracer
+katipTracerHuman :: (MonadIO m, LT.LogFormatting a)
+  => T.Tracer m (LoggingContextKatip, Maybe LT.TraceControl, a)
+katipTracerHuman =  T.arrow $ T.emit $ uncurry3 output
+  where
+    output LoggingContextKatip {..} Nothing a =
+                      logItem'
+                          ()
+                          (Namespace (LT.lcContext lk))
+                          (asKatipSeverity (fromMaybe LT.Info (LT.lcSeverity lk)))
+                          (fromString (unpack (LT.forHuman a)))
+                          lkLogEnv
+    output LoggingContextKatip {..} (Just c) a = pure () -- TODO
 
 -------------------------------------------------------------------------------
 -- | Log with everything, including a source code location. This is

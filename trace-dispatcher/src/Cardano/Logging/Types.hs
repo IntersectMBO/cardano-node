@@ -15,6 +15,7 @@ import qualified Control.Tracer as T
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import qualified Data.HashMap.Strict as HM
+import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Text (Text)
@@ -173,8 +174,8 @@ data TraceControl where
     Reset :: TraceControl
     Config :: TraceConfig -> TraceControl
     Optimize :: TraceControl
-    Document :: DocCollector -> TraceControl
-  deriving(Eq, Show)
+    Document :: IORef DocCollector -> TraceControl
+  deriving Eq
 
 data DocCollector = DocCollector {
     cDoc       :: Text
