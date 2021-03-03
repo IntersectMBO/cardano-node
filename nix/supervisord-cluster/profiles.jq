@@ -28,12 +28,10 @@
 ## profile_name() function in 'profiles/derived.jq'.
 ##
 ## Cluster composition must have the following structure:
-##  { n_hosts:          INT
-##  , n_bft_hosts:      INT
+##  { n_bft_hosts:      INT
 ##  , n_singular_hosts: INT
 ##  , n_dense_hosts:    INT
 ##  }
-##  ..where n_hosts must be equal to a sum of the rest.
 ##
 ## Names of non-adhoc profiles are computed by the 'profile_name' function in
 ## profiles/derived.jq, with era suffix appended, and have the following structure:

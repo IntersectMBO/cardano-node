@@ -9,7 +9,6 @@ def era_defaults($era):
   ## Cluster topology and composition:
   , composition:
     { locations:                      ["LO"]
-    , n_hosts:                        3
     , n_bft_hosts:                    1
     , n_singular_hosts:               1
     , n_dense_hosts:                  1

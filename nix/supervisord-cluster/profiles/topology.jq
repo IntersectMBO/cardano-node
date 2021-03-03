@@ -17,8 +17,7 @@ def topology_composition($topo):
   | ($pools | map (select (. == 1))) as $singular_pools
   | ($pools | map (select (.  > 1))) as $dense_pools
   | ($singular_pools | length)       as $n_singular_hosts
-  | { n_hosts:          $n_hosts
-    , n_bft_hosts:      ($bfts  | length)
+  | { n_bft_hosts:      ($bfts           | length)
     , n_singular_hosts: ($singular_pools | length)
     , n_dense_hosts:    ($dense_pools    | length)
     };
