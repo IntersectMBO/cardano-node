@@ -30,12 +30,12 @@ testMessageDocumented = Documented [
 tracer1 :: MonadIO m => m (Trace m TestMessage)
 tracer1  = fmap
             (appendName "tracer1")
-            (filterSeverityFromConfig =<< stdoutJsonKatipTracer)
+            (filterSeverityFromConfig =<< stdoutHumanKatipTracer)
 
 tracer2 :: MonadIO m => m (Trace m TestMessage)
 tracer2  = fmap
             (appendName "tracer2")
-            (filterSeverityFromConfig =<< stdoutObjectKatipTracer)
+            (filterSeverityFromConfig =<< stdoutHumanKatipTracer)
 
 config1 :: TraceConfig
 config1 = TraceConfig {
