@@ -21,6 +21,7 @@ import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.HashMap.Strict as HMS
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -91,8 +92,8 @@ runQueryCmd cmd =
   case cmd of
     QueryProtocolParameters' era consensusModeParams network mOutFile ->
       runQueryProtocolParameters era consensusModeParams network mOutFile
-    QueryTip consensusModeParams network mOutFile ->
-      runQueryTip consensusModeParams network mOutFile
+    QueryTip era consensusModeParams network mOutFile ->
+      runQueryTip era consensusModeParams network mOutFile
     QueryStakeDistribution' era consensusModeParams network mOutFile ->
       runQueryStakeDistribution era consensusModeParams network mOutFile
     QueryStakeAddressInfo era consensusModeParams addr network mOutFile ->
@@ -147,21 +148,56 @@ writeProtocolParameters mOutFile pparams =
         LBS.writeFile fpath (encodePretty pparams)
 
 runQueryTip
-  :: AnyConsensusModeParams
+  :: AnyCardanoEra
+  -> AnyConsensusModeParams
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
+runQueryTip (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) network mOutFile = do
     SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
     let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
-
     tip <- liftIO $ getLocalChainTip localNodeConnInfo
 
-    let output = encodePretty tip
+    let consensusMode = consensusModeOnly cModeParams
+
+    mEpoch <- mEpochQuery consensusMode tip localNodeConnInfo
+
+    let output = encodePretty . toObject mEpoch $ toJSON tip
 
     case mOutFile of
       Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
       Nothing                 -> liftIO $ LBS.putStrLn        output
+ where
+   mEpochQuery
+     :: ConsensusMode mode
+     -> ChainTip
+     -> LocalNodeConnectInfo mode
+     -> ExceptT ShelleyQueryCmdError IO (Maybe EpochNo)
+   mEpochQuery cMode tip' lNodeConnInfo =
+     case toEraInMode era cMode of
+       Nothing -> return Nothing
+       Just eraInMode ->
+         case cardanoEraStyle era of
+           LegacyByronEra -> return Nothing
+           ShelleyBasedEra sbe -> do
+             let epochQuery = QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryEpoch
+                 cPoint = chainTipToChainPoint tip'
+             eResult <- liftIO $ queryNodeLocalState lNodeConnInfo cPoint epochQuery
+             case eResult of
+               Left _acqFail -> return Nothing
+               Right eNum -> case eNum of
+                               Left _eraMismatch -> return Nothing
+                               Right epochNum -> return $ Just epochNum
+
+   toObject :: Maybe EpochNo -> Aeson.Value -> Aeson.Value
+   toObject (Just e) (Aeson.Object obj) =
+     Aeson.Object $ obj <> HMS.fromList ["epoch" .= toJSON e]
+   toObject Nothing (Aeson.Object obj) =
+     Aeson.Object $ obj <> HMS.fromList ["epoch" .= Aeson.Null]
+   toObject _ _ = Aeson.Null
+
+
+
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
@@ -187,6 +223,7 @@ runQueryUTxO anyEra@(AnyCardanoEra era) (AnyConsensusModeParams cModeParams)
   qInMode <- createQuery sbe eraInMode
 
   tip <- liftIO $ getLocalChainTip localNodeConnInfo
+
   eUtxo <- liftIO $ queryNodeLocalState localNodeConnInfo (chainTipToChainPoint tip) qInMode
   case eUtxo of
     Left aF -> left $ ShelleyQueryCmdAcquireFailure aF

@@ -54,7 +54,7 @@ module Cardano.Api.IPC (
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
-    -- *** Tip query
+    -- *** Common queries
     getLocalChainTip,
 
     -- *** Helpers
@@ -544,3 +544,4 @@ chainSyncGetCurrentTip tipVar =
         void $ atomically $ tryPutTMVar tipVar tip
         pure $ Net.Sync.SendMsgDone ()
     }
+

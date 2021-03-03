@@ -676,7 +676,8 @@ pQueryCmd =
 
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip
-                  <$> pConsensusModeParams
+                  <$> pCardanoEra
+                  <*> pConsensusModeParams
                   <*> pNetworkId
                   <*> pMaybeOutputFile
 
