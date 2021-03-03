@@ -19,8 +19,8 @@ library
                       Cardano.Logging.Types
                       Cardano.Logging.Configuration
                       Cardano.Logging.FrequencyLimiter
-                      Cardano.Logging
                       Cardano.Logging.DocuGenerator
+                      Cardano.Logging
                       Control.Tracer.Arrow
                       Control.Tracer
   default-language:   Haskell2010

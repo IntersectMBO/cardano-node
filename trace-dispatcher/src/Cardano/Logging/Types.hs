@@ -51,15 +51,13 @@ data Metric
 
 -- Document all log messages by providing a list of (prototye, documentation) pairs
 -- for all constructors. Because it is not enforced by the type system, it is very
--- important to provide a complete list, as the prototypes are used as well for documentation.
+-- important to provide a complete list, as the prototypes are used as well for configuration.
 -- If you don't want to add an item for documentation enter an empty text.
 newtype Documented a = Documented [(a,Text)]
 
 -------------------------------------------------------------------
-
+-- A unique identifier for every message, composed of text
 type Namespace = [Text]
-
-type Selector  = [Text]
 
 -- | Context of a message
 data LoggingContext = LoggingContext {
@@ -94,7 +92,7 @@ instance Monad m => Monoid (Trace m a) where
 data DetailLevel = DBrief | DRegular | DDetailed
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
--- | Privacy of a message
+-- | Privacy of a message. Default is Public
 data Privacy =
       Public                    -- ^ can be public.
     | Confidential              -- ^ confidential information - handle with care
@@ -171,26 +169,29 @@ emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
 -- entry points first, and then with Optimize. When reconfiguring it needs to
 -- run Reset followed by Config followed by Optimize
 data TraceControl where
-    Reset :: TraceControl
-    Config :: TraceConfig -> TraceControl
-    Optimize :: TraceControl
-    Document :: IORef DocCollector -> TraceControl
-  deriving Eq
+    Reset     :: TraceControl
+    Config    :: TraceConfig -> TraceControl
+    Optimize  :: TraceControl
+    Document  :: Int -> Text -> DocCollector -> TraceControl
 
-data DocCollector = DocCollector {
-    cDoc       :: Text
-  , cContext   :: [Namespace]
-  , cSeverity  :: [SeverityS]
-  , cPrivacy   :: [Privacy]
-  , cDetails   :: [DetailLevel]
-  , cBackends  :: [Backend]
-  , ccSeverity :: [SeverityF]
-  , ccPrivacy  :: [Privacy]
-  , ccDetails  :: [DetailLevel]
+data LogFormat = Human | Machine | Measures
+  deriving (Eq, Ord, Show)
+
+newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
+
+data LogDoc = LogDoc {
+    ldDoc       :: Text
+  , ldNamespace :: [Namespace]
+  , ldSeverity  :: [SeverityS]
+  , ldPrivacy   :: [Privacy]
+  , ldDetails   :: [DetailLevel]
+  , ldBackends  :: [(Backend, LogFormat)]
+--  , ldConfSeverity :: SeverityF
+--  , ldConfPrivacy  :: Privacy
 } deriving(Eq, Show)
 
-emptyCollector :: DocCollector
-emptyCollector = DocCollector "" [] [] [] [] [] [] [] []
+emptyLogDoc :: Text -> LogDoc
+emptyLogDoc d = LogDoc d [] [] [] [] []
 
 data Backend =
     KatipBackend Text
