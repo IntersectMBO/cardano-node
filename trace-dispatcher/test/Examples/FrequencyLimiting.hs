@@ -21,7 +21,7 @@ data LOX = LOS (TraceForgeEvent LogBlock) | LOL LimitingMessage
 
 tracer1 :: (MonadIO m, MonadUnliftIO m) => m (Trace m (TraceForgeEvent LogBlock))
 tracer1  = do
-  t1      <- fmap (appendName "tracer1") stdoutObjectKatipTracer
+  t1      <- fmap (appendName "tracer1") stdoutHumanKatipTracer
   limitFrequency 5 "5 messages per second" (contramap LOS t1) (contramap LOL t1)
 
 tracer2 :: (MonadIO m, MonadUnliftIO m) => m (Trace m (TraceForgeEvent LogBlock))
