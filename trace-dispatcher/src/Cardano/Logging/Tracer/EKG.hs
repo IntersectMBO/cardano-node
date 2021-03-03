@@ -4,7 +4,9 @@
 
 module Cardano.Logging.Tracer.EKG where
 
+import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
+
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
@@ -25,7 +27,9 @@ ekgTracer storeOrServer = liftIO $ do
       case asMetrics v of
         [] -> pure ()
         l  -> liftIO $ mapM_ (setIt registeredGauges registeredLabels lcNamespace) l
+    output _ _ p@(_, Just Document {}, _)      = docIt (EKGBackend "") Measures p
     output _ _ (LoggingContext{..}, Just c, v) = pure ()
+
     setIt registeredGauges _registeredLabels namespace (IntM mbText theInt) = do
       registeredMap <- readIORef registeredGauges
       let name = case mbText of

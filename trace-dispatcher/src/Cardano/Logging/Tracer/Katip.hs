@@ -25,6 +25,7 @@ import           Katip.Core (ScribeHandle (..), WorkerMessage (..),
 import           Katip.Scribes.Handle (ioLogEnv)
 import           System.IO (stdout)
 
+import qualified Cardano.Logging.DocuGenerator as LT
 import qualified Cardano.Logging.Types as LT
 import qualified Data.HashMap.Strict as HM
 
@@ -87,8 +88,9 @@ katipTracer =  T.arrow $ T.emit $ uncurry3 output
                           (asKatipSeverity (fromMaybe LT.Info (LT.lcSeverity lk)))
                           ""
                           lkLogEnv
-    output LoggingContextKatip {..} (Just c) a = pure () -- TODO
-
+    output LoggingContextKatip {..} (Just c@LT.Document {}) a =
+      LT.docIt (LT.KatipBackend "") LT.Machine (lk, Just c, a)
+    output LoggingContextKatip {..} _ a = pure ()
 
 --- | A standard Katip tracer
 katipTracerHuman :: (MonadIO m, LT.LogFormatting a)
@@ -102,7 +104,9 @@ katipTracerHuman =  T.arrow $ T.emit $ uncurry3 output
                           (asKatipSeverity (fromMaybe LT.Info (LT.lcSeverity lk)))
                           (fromString (unpack (LT.forHuman a)))
                           lkLogEnv
-    output LoggingContextKatip {..} (Just c) a = pure () -- TODO
+    output LoggingContextKatip {..} (Just c@LT.Document {}) a =
+      LT.docIt (LT.KatipBackend "") LT.Human (lk, Just c, a)
+    output LoggingContextKatip {..} _ a = pure ()
 
 -------------------------------------------------------------------------------
 -- | Log with everything, including a source code location. This is
