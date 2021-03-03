@@ -16,6 +16,7 @@ result*
 /launch-*
 stack.yaml.lock
 
+/.cache
 /db
 /db-[0-9]
 /logs

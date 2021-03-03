@@ -3,6 +3,7 @@
 , bech32
 , basePort ? 30000
 , stateDir ? "./state-cluster"
+, cacheDir ? "./.cache"
 , extraSupervisorConfig ? {}
 , useCabalRun ? false
 ##
@@ -45,7 +46,7 @@ let
   mkGenesisBash = pkgs.callPackage ./genesis.nix
     { inherit
       lib
-      stateDir
+      cacheDir stateDir
       baseEnvConfig
       basePort
       profile;
@@ -72,6 +73,8 @@ let
     do case "$1" in
         --trace | --debug ) set -x;;
         * ) break;; esac; shift; done
+
+    mkdir -p ${cacheDir}
 
     if [ -f ${stateDir}/supervisord.pid ]
     then

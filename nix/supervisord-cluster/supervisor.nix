@@ -62,9 +62,9 @@ let
       command = let
         index = i - 1;
         envConfig = baseEnvConfig // rec {
-          operationalCertificate = "${stateDir}/nodes/node-bft${toString i}/op.cert";
-          kesKey = "${stateDir}/nodes/node-bft${toString i}/kes.skey";
-          vrfKey = "${stateDir}/nodes/node-bft${toString i}/vrf.skey";
+          operationalCertificate = "${stateDir}/shelley/nodes/node-bft${toString i}/op.cert";
+          kesKey = "${stateDir}/shelley/nodes/node-bft${toString i}/kes.skey";
+          vrfKey = "${stateDir}/shelley/nodes/node-bft${toString i}/vrf.skey";
           topology = "${stateDir}/topologies/node-${toString index}.json";
           socketPath = "${stateDir}/bft${toString i}.socket";
           dbPrefix = "db-bft${toString i}";
@@ -82,9 +82,9 @@ let
       command = let
         index = composition.n_bft_hosts + i - 1;
         envConfig = baseEnvConfig // rec {
-          operationalCertificate = "${stateDir}/nodes/node-pool${toString i}/op.cert";
-          kesKey = "${stateDir}/nodes/node-pool${toString i}/kes.skey";
-          vrfKey = "${stateDir}/nodes/node-pool${toString i}/vrf.skey";
+          operationalCertificate = "${stateDir}/shelley/nodes/node-pool${toString i}/op.cert";
+          kesKey = "${stateDir}/shelley/nodes/node-pool${toString i}/kes.skey";
+          vrfKey = "${stateDir}/shelley/nodes/node-pool${toString i}/vrf.skey";
           topology = "${stateDir}/topologies/node-${toString index}.json";
           socketPath = "${stateDir}/pool${toString i}.socket";
           dbPrefix = "db-pool${toString i}";
@@ -116,7 +116,7 @@ let
   // {
     "program:webserver" = {
       command = "${pkgs.python3}/bin/python -m http.server ${toString basePort}";
-      directory = "${stateDir}/webserver";
+      directory = "${stateDir}/shelley/webserver";
     };
 
   } // extraSupervisorConfig));
