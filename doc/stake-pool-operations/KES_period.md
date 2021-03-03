@@ -25,9 +25,9 @@ We check the current tip of the blockchain:
     cardano-cli query tip --mainnet
 
     {
-    "blockNo": 36914,
-    "headerHash": "58df595137e71c0fa65edc99add11704b00e5f163475bd804e4bd59c126bfc9b",
-    "slotNo": 8520857
+        "blockNo": 36914,
+        "headerHash": "58df595137e71c0fa65edc99add11704b00e5f163475bd804e4bd59c126bfc9b",
+        "slotNo": 8520857
     }
 
 In this example, we are currently in slot 8520857, and we know from the genesis file that one period lasts for 129600 slots. So we calculate the current period by

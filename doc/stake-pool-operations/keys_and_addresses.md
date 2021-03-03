@@ -71,10 +71,11 @@ To query the balance of an address we need a running node and the environment va
 ```
 cardano-cli query utxo \
 --address $(cat payment.addr) \
---mainnet
+--mainnet \
+--mary-era
 ```
 ```
-                            TxHash                                 TxIx        Lovelace
+                            TxHash                                 TxIx        Amount
 --------------------------------------------------------------------------------------------
 ```
 
