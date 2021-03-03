@@ -11,7 +11,7 @@ import           Examples.TestObjects
 
 tracer1 :: (LogFormatting (TraceForgeEvent blk), MonadIO m) =>
   m (Trace m (TraceForgeEvent blk))
-tracer1  = fmap (appendName "tracer1") stdoutObjectKatipTracer
+tracer1  = fmap (appendName "tracer1") stdoutHumanKatipTracer
 
 tracer2 :: (LogFormatting (TraceForgeEvent blk), MonadIO m) =>
   m (Trace m (TraceForgeEvent blk))
