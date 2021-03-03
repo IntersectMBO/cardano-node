@@ -24,7 +24,7 @@ ekgTracer storeOrServer = liftIO $ do
     output registeredGauges registeredLabels (LoggingContext{..}, Nothing, v) =
       case asMetrics v of
         [] -> pure ()
-        l  -> liftIO $ mapM_ (setIt registeredGauges registeredLabels lcContext) l
+        l  -> liftIO $ mapM_ (setIt registeredGauges registeredLabels lcNamespace) l
     output _ _ (LoggingContext{..}, Just c, v) = pure ()
     setIt registeredGauges _registeredLabels namespace (IntM mbText theInt) = do
       registeredMap <- readIORef registeredGauges

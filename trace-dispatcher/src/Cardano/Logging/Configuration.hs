@@ -51,23 +51,23 @@ withNamespaceConfig extract needsConfigFunc tr = do
         Right val ->
           T.traceWith
             (unpackTrace $ needsConfigFunc (Just val) tr) (lc, Nothing, a)
-        Left map -> case Map.lookup (lcContext lc) map of
+        Left map -> case Map.lookup (lcNamespace lc) map of
                       Just val -> T.traceWith
                                     (unpackTrace $ needsConfigFunc (Just val) tr)
                                     (lc, Nothing, a)
                       Nothing  -> error $ "Unconfigured trace with context "
-                                        ++ show (lcContext lc)
+                                        ++ show (lcNamespace lc)
     mkTrace ref (lc, Just Reset, a) = do
       liftIO $ writeIORef ref (Left Map.empty)
       T.traceWith (unpackTrace $ needsConfigFunc Nothing tr) (lc, Just Reset, a)
     mkTrace ref (lc, Just (Config c), m) = do
-      let ! val = extract c (lcContext lc)
+      let ! val = extract c (lcNamespace lc)
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Left map ->
-          case Map.lookup (lcContext lc) map of
+          case Map.lookup (lcNamespace lc) map of
             Nothing -> do
-              liftIO $ writeIORef ref $ Left (Map.insert (lcContext lc) val map)
+              liftIO $ writeIORef ref $ Left (Map.insert (lcNamespace lc) val map)
               T.traceWith
                 (unpackTrace $ needsConfigFunc (Just val) tr)
                 (lc, Just (Config c), m)
@@ -77,9 +77,9 @@ withNamespaceConfig extract needsConfigFunc tr = do
                       (unpackTrace $ needsConfigFunc (Just val) tr)
                       (lc, Just (Config c), m)
                 else error $ "Inconsistent trace configuration with context "
-                                  ++ show (lcContext lc)
+                                  ++ show (lcNamespace lc)
         Right val -> error $ "Trace not reset before reconfiguration "
-                            ++ show (lcContext lc)
+                            ++ show (lcNamespace lc)
     mkTrace ref (lc, Just Optimize, m) = do
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
@@ -99,7 +99,7 @@ withNamespaceConfig extract needsConfigFunc tr = do
                   (unpackTrace $ needsConfigFunc Nothing tr)
                   (lc, Just Optimize, m)
         Right val -> error $ "Trace not reset before reconfiguration "
-                            ++ show (lcContext lc)
+                            ++ show (lcNamespace lc)
 
 -- | Filter a trace by severity and take the filter value from the config
 filterSeverityFromConfig :: (MonadIO m) =>
