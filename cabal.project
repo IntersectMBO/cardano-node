@@ -1,4 +1,4 @@
-index-state: 2021-01-10T00:00:00Z
+index-state: 2021-02-24T00:00:00Z
 
 packages:
     cardano-api
@@ -95,8 +95,8 @@ package io-sim-classes
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 4251c0bb6e4f443f00231d28f5f70d42876da055
-  --sha256: 02a61ymvx054pcdcgvg5qj9kpybiajg993nr22iqiya196jmgciv
+  tag: 101e7752cf4b23fd0b411736f523b8f6c43f6bc2
+  --sha256: 04qnq9a3mhfqsisln2sygfm0xkkvj8f8hdzxm1qn2ss0mfsfzx8y
   subdir:
     binary
     binary/test

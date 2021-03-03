@@ -133,6 +133,8 @@ data ForgingStats
   { fsTxsProcessedNum :: !(IORef Int)
     -- ^ Transactions removed from mempool.
   , fsState           :: !(TVar (Map ThreadId (TVar ForgeThreadStats)))
+  , fsBlocksUncoupled :: !(TVar Int64)
+    -- ^ Blocks forged since last restart not on the current chain
   }
 
 -- | Per-forging-thread statistics.
@@ -156,6 +158,7 @@ mkForgingStats =
   ForgingStats
     <$> newIORef 0
     <*> newTVarIO mempty
+    <*> newTVarIO 0
 
 mapForgingStatsTxsProcessed ::
      ForgingStats
