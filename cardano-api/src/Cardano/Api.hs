@@ -420,7 +420,7 @@ module Cardano.Api (
     QueryInEra(..),
     queryNodeLocalState,
 
-    -- *** Query local node chain tip
+    -- *** Common queries
     getLocalChainTip,
 
     -- * Node operation

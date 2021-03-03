@@ -7,26 +7,17 @@ To retire a pool we need to:
 
 The deregistration certificate contains the _epoch_ in which we want to retire the pool. This epoch must be _after_ the current epoch and _not later than_ `eMax` epochs in the future, where `eMax` is a protocol parameter.
 
-So we first need to figure out the current epoch. Provided we are in the shelley mode we can use the following calculation.
+So we first need to figure out the current epoch. The simplest way to get the current epoch is via the `tip` command:
 
-The number of _slots per epoch_ is recorded in the genesis file, and we can get it with
-
-    cat mainnet-shelley-genesis.json | grep epoch
-    > "epochLength": 21600,
-
-So one epoch lasts for 21600 slots. We get the current slot by querying the tip:
-
-    export CARDANO_NODE_SOCKET_PATH=relay-db/node-socket
-    cardano-cli query tip --mainnet
-
-    > Tip (SlotNo {unSlotNo = 856232}) ...
-
-This gives us
-
-    expr 856232 / 21600
-    > 39
-
-So we are currently in epoch 39.
+```bash
+> cardano-cli query tip --testnet-magic 42 --mary-era --cardano-mode
+{
+  "epoch": 51,
+  "hash": "19fdfc54e7a1e2fb7ff45254a6aa0aa88ea7a80de4b48297924c9abf353f9cb7",
+  "slot": 21592,
+  "block": 1123022
+}
+```
 
 You can also get the current epoch if you are monitoring a node with [EKG](../logging-monitoring/ekg.md):
 

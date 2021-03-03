@@ -108,6 +108,7 @@ library
                       , time
                       , transformers-except
                       , utf8-string
+                      , unordered-containers
                       , vector
 
   default-language:    Haskell2010
