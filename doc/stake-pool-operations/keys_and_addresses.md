@@ -14,7 +14,7 @@ cardano-cli address key-gen \
 --verification-key-file payment.vkey \
 --signing-key-file payment.skey
 ```
-This creates two files (`payment.vkey` and `payment.skey`), one containing the _public verification key_, one the _private signing key_.
+This creates two files `payment.vkey` (the _public verification key_) and `payment.skey` (the _private signing key_).
 
 #### Legacy key
 
@@ -40,7 +40,7 @@ cardano-cli stake-address key-gen \
 --signing-key-file stake.skey
 ```
 #### Payment address
-When including both verification keys `payment.vkey` and `stake.vkey` to build the address, the resulting `payment address` is associated with this stake keys and address.
+Both verification keys (`payment.vkey` and `stake.vkey`) are used to build the address and the resulting `payment address` is associated with these keys.
 
 ```
 cardano-cli address build \
@@ -66,7 +66,7 @@ This address __CAN'T__ receive payments but will receive the rewards from partic
 
 > NOTE: Ensure that your node has synced to the current block height which can be checked at [explorer.cardano.org](https://explorer.cardano.org). If it is not, you may see an error referring to the Byron Era.
 
-To query the balance of an address we need a running node and the environment variable `CARDANO_NODE_SOCKET_PATH` set to the path to the node.socket:
+To query the balance of an address we need a running node and the environment variable `CARDANO_NODE_SOCKET_PATH` set to the path of the node.socket:
 
 ```
 cardano-cli query utxo \
