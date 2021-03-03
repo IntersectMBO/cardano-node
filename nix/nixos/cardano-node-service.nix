@@ -518,6 +518,7 @@ in {
           SocketMode = "0660";
           SocketUser = "cardano-node";
           SocketGroup = "cardano-node";
+          FreeBind = "yes";
         };
       } (cfg.extraSocketConfig i)));
     }
