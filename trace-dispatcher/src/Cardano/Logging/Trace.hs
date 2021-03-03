@@ -76,7 +76,7 @@ filterTraceBySeverity Nothing = id
 appendName :: Monad m => Text -> Trace m a -> Trace m a
 appendName name (Trace tr) = Trace $
     T.contramap
-      (\ (lc, mbC, e) -> (lc {lcContext = name : lcContext lc}, mbC, e))
+      (\ (lc, mbC, e) -> (lc {lcNamespace = name : lcNamespace lc}, mbC, e))
       tr
 
 -- | Sets severity for the messages in this trace
