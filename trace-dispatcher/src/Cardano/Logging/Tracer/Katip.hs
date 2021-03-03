@@ -61,7 +61,6 @@ stdoutHumanKatipTracer = do
     env <- liftIO $ ioLogEnv (\ _ -> pure True) V3
     pure $ withKatipLogEnv env katipTracerHuman
 
-
 -- | Sets severities for the messages in this trace based on the selector function
 withKatipLogEnv :: Monad m
   => LogEnv
@@ -84,7 +83,7 @@ katipTracer =  T.arrow $ T.emit $ uncurry3 output
     output LoggingContextKatip {..} Nothing a =
                       logItem'
                           (LT.forMachine (fromMaybe LT.DRegular (LT.lcDetails lk)) a)
-                          (Namespace (LT.lcContext lk))
+                          (Namespace (LT.lcNamespace lk))
                           (asKatipSeverity (fromMaybe LT.Info (LT.lcSeverity lk)))
                           ""
                           lkLogEnv
@@ -99,7 +98,7 @@ katipTracerHuman =  T.arrow $ T.emit $ uncurry3 output
     output LoggingContextKatip {..} Nothing a =
                       logItem'
                           ()
-                          (Namespace (LT.lcContext lk))
+                          (Namespace (LT.lcNamespace lk))
                           (asKatipSeverity (fromMaybe LT.Info (LT.lcSeverity lk)))
                           (fromString (unpack (LT.forHuman a)))
                           lkLogEnv
