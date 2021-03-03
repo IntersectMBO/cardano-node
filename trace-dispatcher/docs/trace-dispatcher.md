@@ -161,7 +161,7 @@ filterTrace :: (Monad m) =>
   -> Trace m a
 
 data LoggingContext = LoggingContext {
-    lcContext     :: Namespace
+    lcNamespace     :: Namespace
   , lcSeverity    :: Maybe Severity
   , lcPrivacy     :: Maybe Privacy
   , lcDetailLevel :: Maybe DetailLevel
