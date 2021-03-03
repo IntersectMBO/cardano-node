@@ -11,46 +11,15 @@
 }:
 
 with profile;
-''
-    PATH=$PATH:${path}
-    mkdir -p ${stateDir}/{shelley,webserver}
 
-    cat <<EOF
-    Generating genesis for ${name}:
-      - BFT hosts:        ${toString composition.n_bft_hosts}
-      - pool hosts:       ${toString (composition.n_hosts - composition.n_bft_hosts)}
-      - pools:            ${toString composition.n_pools}, of them:
-        - dense:          ${toString composition.n_dense_pools}, at ${toString composition.dense_pool_density} density in ${toString composition.n_dense_hosts} hosts
-        - regular:        ${toString composition.n_singular_pools}
-    EOF
-
+let
+  decideSystemStart =
+    ''
     system_start_epoch=$(date +%s --date="${genesis.genesis_future_offset}")
     system_start_human=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date=@$system_start_epoch)
-    ## 0. Shelley Genesis spec:
-    cli genesis create --genesis-dir ${stateDir}/shelley/ \
-        ${toString cli_args.createSpec}
-
-    ## 1. Insert the verbatim part from the profile:
-    jq -r --argjson genesisVerb '${__toJSON genesis.verbatim}' \
-           '. * $genesisVerb' \
-           ${stateDir}/shelley/genesis.spec.json |
-    sponge ${stateDir}/shelley/genesis.spec.json
-
-    ## 2. Shelley Genesis:
-    cp ${__toFile "node.json" (__toJSON baseEnvConfig.nodeConfig)} ${stateDir}/config.json
-    cli genesis create --genesis-dir ${stateDir}/shelley \
-      ${toString
-        (__trace "creating genesis for profile \"${name}\""
-          cli_args.createSpec)}
-    jq -r --arg     systemStart $system_start_human \
-          --slurpfile genesisSpec ${stateDir}/shelley/genesis.spec.json \
-           '.systemStart = $systemStart |
-            .initialFunds = $genesisSpec[0].initialFunds |
-            .updateQuorum = ${toString composition.n_bft_hosts}' \
-           ${stateDir}/shelley/genesis.json |
-    sponge ${stateDir}/shelley/genesis.json
-
-    ## 3. Byron Genesis:
+    '';;
+  byronGenesis =
+    ''
     cli_args=(
         --genesis-output-dir         "${stateDir}/byron"
         --protocol-parameters-file   "${stateDir}/byron-protocol-params.json"
@@ -89,8 +58,36 @@ with profile;
       }
     ' --null-input > ${stateDir}/byron-protocol-params.json
     cli byron genesis genesis ''${cli_args[@]}
-
-    ## 4. Generate BFT credentials
+    '';;
+  shelleyGenesisSpec =
+    ''
+    cli genesis create --genesis-dir ${stateDir}/shelley/ \
+        ${toString cli_args.createSpec}
+    '';
+  shelleyGenesisVerbatim =
+    ''
+    jq -r --argjson genesisVerb '${__toJSON genesis.verbatim}' \
+           '. * $genesisVerb' \
+           ${stateDir}/shelley/genesis.spec.json |
+    sponge ${stateDir}/shelley/genesis.spec.json
+    '';
+  shelleyGenesisIncremental =
+    ''
+    cp ${__toFile "node.json" (__toJSON baseEnvConfig.nodeConfig)} ${stateDir}/config.json
+    cli genesis create --genesis-dir ${stateDir}/shelley \
+      ${toString
+        (__trace "creating genesis for profile \"${name}\""
+          cli_args.createSpec)}
+    jq -r --arg     systemStart $system_start_human \
+          --slurpfile genesisSpec ${stateDir}/shelley/genesis.spec.json \
+           '.systemStart = $systemStart |
+            .initialFunds = $genesisSpec[0].initialFunds |
+            .updateQuorum = ${toString composition.n_bft_hosts}' \
+           ${stateDir}/shelley/genesis.json |
+    sponge ${stateDir}/shelley/genesis.json
+    '';
+  bftCredentials =
+    ''
     for i in {1..${toString composition.n_bft_hosts}}
     do
       mkdir -p "${stateDir}/nodes/node-bft$i"
@@ -108,8 +105,9 @@ with profile;
       BFT_PORT=$(("${toString basePort}" + $i))
       echo "$BFT_PORT" > "${stateDir}/nodes/node-bft$i/port"
     done
-
-    ## 5. Generate pool credentials
+    '';
+  poolCredentials =
+    ''
     for i in {1..${toString composition.n_pools}}
     do
       mkdir -p "${stateDir}/nodes/node-pool$i"
@@ -200,13 +198,14 @@ with profile;
         --out-file "${stateDir}/nodes/node-pool$i/register.cert"
 
     done
-
-    # Copy genesis-utxo key to ${stateDir}/shelley
-
+    '';
+  hardcodedDefaultUtxoCredentials =
+    ''
     cp ${./genesis-utxo.vkey} ${stateDir}/shelley/genesis-utxo.vkey
     cp ${./genesis-utxo.skey} ${stateDir}/shelley/genesis-utxo.skey
-
-    ## 6. Tranfer funds, register pools and delegations, all in one big transaction:
+    '';
+  buildIncrementalPoolRegistrationTx =
+    ''
     jq .protocolParams < ${stateDir}/shelley/genesis.json > ${stateDir}/pparams.json
 
     TXIN_ADDR=$(cli genesis initial-addr \
@@ -271,5 +270,32 @@ with profile;
       --testnet-magic ${toString genesis.network_magic} \
       --tx-body-file  "${stateDir}/shelley/transfer-register-delegate-tx.txbody" \
       --out-file      "${stateDir}/shelley/transfer-register-delegate-tx.tx"
+    '';
+in
+''
+    PATH=$PATH:${path}
+    mkdir -p ${stateDir}/{shelley,webserver}
 
+    cat <<EOF
+    Generating genesis for ${name}:
+      - BFT hosts:        ${toString composition.n_bft_hosts}
+      - pool hosts:       ${toString (composition.n_hosts - composition.n_bft_hosts)}
+      - pools:            ${toString composition.n_pools}, of them:
+        - dense:          ${toString composition.n_dense_pools}, at ${toString composition.dense_pool_density} density in ${toString composition.n_dense_hosts} hosts
+        - regular:        ${toString composition.n_singular_pools}
+    EOF
+
+    ${decideSystemStart}
+
+    ${byronGenesis}
+
+    ${shelleyGenesisSpec}
+    ${shelleyGenesisVerbatim}
+    ${shelleyGenesisIncremental}
+
+    ${bftCredentials}
+    ${poolCredentials}
+    ${hardcodedDefaultUtxoCredentials}
+
+    ${buildIncrementalPoolRegistrationTx}
 ''
