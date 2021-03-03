@@ -3,6 +3,7 @@ module Cardano.Logging (
   ) where
 
 import           Cardano.Logging.Configuration as X
+import           Cardano.Logging.DocuGenerator as X
 import           Cardano.Logging.FrequencyLimiter as X
 import           Cardano.Logging.Trace as X
 import           Cardano.Logging.Tracer.EKG as X
