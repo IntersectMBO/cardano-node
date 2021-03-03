@@ -63,10 +63,10 @@ type Selector  = [Text]
 
 -- | Context of a message
 data LoggingContext = LoggingContext {
-    lcContext  :: Namespace
-  , lcSeverity :: Maybe SeverityS
-  , lcPrivacy  :: Maybe Privacy
-  , lcDetails  :: Maybe DetailLevel
+    lcNamespace :: Namespace
+  , lcSeverity  :: Maybe SeverityS
+  , lcPrivacy   :: Maybe Privacy
+  , lcDetails   :: Maybe DetailLevel
   } deriving (Eq, Show)
 
 emptyLoggingContext :: LoggingContext
