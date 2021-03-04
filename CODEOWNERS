@@ -23,6 +23,8 @@ doc                                                           @olgahryniuk
 README.*                                                      @olgahryniuk
 cardano-cli/README.md                                         @olgahryniuk
 
+nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
+
 .buildkite                                                    @devops
 .github                                                       @devops
 ci                                                            @devops
