@@ -35,7 +35,7 @@ In Redhat, Fedora, and Centos:
     sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
     sudo yum install systemd-devel ncurses-devel ncurses-compat-libs -y
 
-For Debian/Ubuntu use the following instead:
+For Debian/Ubuntu, use the following instead:
 
     sudo apt-get update -y
     sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf -y
@@ -44,13 +44,13 @@ If you are using a different flavor of Linux, you will need to use the correct p
 
 #### Downloading, unpacking, installing, and updating Cabal:
 
-    wget https://downloads.haskell.org/~cabal/cabal-install-3.2.0.0/cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
-    tar -xf cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz
-    rm cabal-install-3.2.0.0-x86_64-unknown-linux.tar.xz cabal.sig
+    Download the relevant `cabal-install` (version 3.4.0.0) binary from https://www.haskell.org/cabal/download.html
+    tar -xf cabal-install-3.4.0.0-xxxxxx.tar.xz
+    rm cabal-install-3.4.0.0-xxxxxx.tar.xz
     mkdir -p ~/.local/bin
     mv cabal ~/.local/bin/
 
-Verify that ~/.local/bin is in your PATH
+Verify that ~/.local/bin is in your PATH:
 
     echo $PATH
 
@@ -58,15 +58,15 @@ If `~/.local/bin` is not in the PATH, you need to add the following line to  you
 
     export PATH="~/.local/bin:$PATH"
 
-and source the file
+and source the file:
 
     source .bashrc
 
-Update cabal
+Update cabal:
 
     cabal update
 
-Confirm that you installed cabal version `3.2.0.0`.
+Confirm that you installed cabal version `3.4.0.0`:
 
     cabal --version
 
