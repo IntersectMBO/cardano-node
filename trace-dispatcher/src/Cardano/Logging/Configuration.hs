@@ -28,10 +28,10 @@ configureTracers config (Documented documented) tracers = do
     mapM_ (configureTrace Optimize) tracers
   where
     configureTrace c (Trace tr) =
-      T.traceWith tr (emptyLoggingContext, Just c, fst (head documented))
+      T.traceWith tr (emptyLoggingContext, Just c, dmPrototype (head documented))
     configureAllTrace c (Trace tr) =
       mapM
-        ((\ m -> T.traceWith tr (emptyLoggingContext, Just c, m)) . fst)
+        ((\ m -> T.traceWith tr (emptyLoggingContext, Just c, m)) . dmPrototype)
         documented
 
 -- | Take a selector function, and a function from trace to trace with
