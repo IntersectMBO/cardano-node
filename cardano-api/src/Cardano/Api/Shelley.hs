@@ -170,6 +170,8 @@ module Cardano.Api.Shelley
     toShelleyNetwork,
     fromShelleyPParams,
 
+    decodeLedgerState,
+
   ) where
 
 import           Cardano.Api

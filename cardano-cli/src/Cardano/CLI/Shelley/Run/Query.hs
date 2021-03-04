@@ -43,12 +43,14 @@ import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
 
-import           Cardano.Binary (decodeFull)
+import           Cardano.Binary (decodeFull, decodeFullDecoder)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
+
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -356,25 +358,25 @@ writeStakeAddressInfo mOutFile delegsAndRewards =
 
 writeLedgerState :: forall era ledgerera.
                     ShelleyLedgerEra era ~ ledgerera
+                 => Consensus.ShelleyBasedEra ledgerera
                  => ToJSON (LedgerState era)
-                 => FromCBOR (LedgerState era)
                  => Maybe OutputFile
                  -> SerialisedLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
   case mOutFile of
-    Nothing -> case decodeLedgerState qState of
+    Nothing -> case decodeLedgerState' qState of
                  Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-                 Right ledgerState -> liftIO . LBS.putStrLn $ encodePretty ledgerState
+                 Right ledgerState -> liftIO . LBS.putStrLn . encodePretty $ ledgerState
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath $ unSerialised serLedgerState
  where
-   decodeLedgerState
+   decodeLedgerState'
      :: SerialisedLedgerState era
      -> Either LBS.ByteString (LedgerState era)
-   decodeLedgerState (SerialisedLedgerState (Serialised ls)) =
-     first (const ls) (decodeFull ls)
+   decodeLedgerState' (SerialisedLedgerState (Serialised ls)) =
+     first (const ls) (decodeFullDecoder "LedgerState" decodeLedgerState ls)
 
 
 writeProtocolState :: Crypto.Crypto StandardCrypto
@@ -577,7 +579,7 @@ obtainLedgerEraClassConstraints
   => ShelleyBasedEra era
   -> ((Ledger.ShelleyBased ledgerera
       , ToJSON (LedgerState era)
-      , FromCBOR (LedgerState era)
+      , Consensus.ShelleyBasedEra  ledgerera
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f

@@ -73,7 +73,7 @@ runGovernanceMIRCertificate mirPot sAddrs rwdAmts (OutputFile oFp) = do
                oFp (length sAddrs) (length rwdAmts)
 
     let sCreds  = map stakeAddrToStakeCredential sAddrs
-        mirCert = makeMIRCertificate mirPot (zip sCreds rwdAmts)
+        mirCert = makeMIRCertificate mirPot (StakeAddressesMIR $ zip sCreds rwdAmts)
 
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError
       . newExceptT

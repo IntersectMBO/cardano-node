@@ -546,6 +546,23 @@ instance ToObject (DelegPredicateFailure era) where
     mkObject [ "kind" .= String "DuplicateGenesisVRFDELEG"
              , "keyHash" .= vrfKeyHash
              ]
+  toObject _verb MIRTransferNotCurrentlyAllowed =
+    mkObject [ "kind" .= String "MIRTransferNotCurrentlyAllowed"
+             ]
+  toObject _verb MIRNegativesNotCurrentlyAllowed =
+    mkObject [ "kind" .= String "MIRNegativesNotCurrentlyAllowed"
+             ]
+  toObject _verb (InsufficientForTransferDELEG mirpot attempted available) =
+    mkObject [ "kind" .= String "DuplicateGenesisVRFDELEG"
+             , "pot" .= String (case mirpot of
+                                  ReservesMIR -> "Reserves"
+                                  TreasuryMIR -> "Treasury")
+             , "attempted" .= attempted
+             , "available" .= available
+             ]
+  toObject _verb MIRProducesNegativeUpdate =
+    mkObject [ "kind" .= String "MIRProducesNegativeUpdate"
+             ]
 
 
 instance ToObject (PoolPredicateFailure era) where
