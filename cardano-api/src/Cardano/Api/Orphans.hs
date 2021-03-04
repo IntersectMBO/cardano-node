@@ -38,6 +38,7 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import qualified Shelley.Spec.Ledger.Rewards as Shelley
+import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -246,6 +247,10 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.RewardUpdate crypto) where
                           , "deltaF" .= Shelley.deltaF rUpdate
                           , "nonMyopic" .= Shelley.nonMyopic rUpdate
                           ]
+
+instance Crypto.Crypto crypto => ToJSON (Shelley.PulsingRewUpdate crypto) where
+  toJSON (Shelley.Pulsing _ _) = Aeson.Null
+  toJSON (Shelley.Complete ru) = toJSON ru
 
 instance ToJSON Shelley.DeltaCoin where
   toJSON (Shelley.DeltaCoin i) = toJSON i
