@@ -10,7 +10,7 @@ instance LogFormatting Int where
   asMetrics i = [IntM Nothing (fromIntegral i)]
 
 countDocumented :: Documented Int
-countDocumented = Documented [(0,"count")]
+countDocumented = Documented [DocMsg 0 "count" "count"]
 
 testEKG :: IO ()
 testEKG = do

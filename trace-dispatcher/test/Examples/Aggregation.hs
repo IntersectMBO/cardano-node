@@ -32,7 +32,7 @@ instance LogFormatting BaseStats where
 
 baseStatsDocumented :: Documented Double
 baseStatsDocumented =
-  Documented [(0.0,"Measure"), (0.0,"Sum")]
+  Documented [DocMsg 0.0 "Measure" "Measure", DocMsg 0.0 "Sum" "Sum"]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
