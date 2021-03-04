@@ -60,6 +60,13 @@ jobs:
         cat ./cabal.project.local.github-pages >> ./cabal.project.local
         cat ./cabal.project.local
 
+    - name: Disable reorder goals on MacOS and Linux
+      # Avoid reorder goals for platforms that don't need it because re-order goals can take up to 10 minutes
+      if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
+      run: |
+        cat cabal.project | sed 's|reorder-goals: True|reorder-goals: False|g' > cabal.project.tmp
+        mv cabal.project.tmp cabal.project
+
     - name: Cabal Configure
       run: cabal configure --builddir="$CABAL_BUILDDIR" --write-ghc-environment-files=always
 
