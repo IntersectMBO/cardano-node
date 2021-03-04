@@ -399,7 +399,7 @@ in {
       };
 
       topology = mkOption {
-        type = types.nullOr types.path;
+        type = types.nullOr (types.either types.str types.path);
         default = null;
         description = ''
           Cluster topology. If not set `producers` array is used to generated topology file.
