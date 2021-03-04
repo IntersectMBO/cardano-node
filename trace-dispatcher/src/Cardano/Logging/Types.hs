@@ -53,7 +53,13 @@ data Metric
 -- for all constructors. Because it is not enforced by the type system, it is very
 -- important to provide a complete list, as the prototypes are used as well for configuration.
 -- If you don't want to add an item for documentation enter an empty text.
-newtype Documented a = Documented [(a,Text)]
+newtype Documented a = Documented [DocMsg a]
+
+data DocMsg a = DocMsg {
+    dmPrototype :: a
+  , dmName      :: Text
+  , dmMarkdown  :: Text
+}
 
 -------------------------------------------------------------------
 -- A unique identifier for every message, composed of text

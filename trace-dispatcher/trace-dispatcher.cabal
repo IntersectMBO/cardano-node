@@ -48,6 +48,7 @@ executable trace-dispatcher-examples
                       Examples.EKG
                       Examples.Configuration
                       Examples.FrequencyLimiting
+                      Examples.Documentation
     hs-source-dirs:   test
     default-language: Haskell2010
     default-extensions:  OverloadedStrings
