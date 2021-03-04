@@ -5,6 +5,9 @@
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
 
+# Release manager added for notification on dependency updates
+cabal.project                                                 @LaurenceIO
+
 # /doc folder and README.* needs to be owned by @docs-access
 doc                                                           @docs-access
 README.*                                                      @docs-access
