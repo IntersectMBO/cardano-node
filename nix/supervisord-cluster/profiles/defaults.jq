@@ -17,7 +17,10 @@ def era_defaults($era):
 
   , genesis:
     ## Trivia
-    { network_magic:                 42
+    { network_magic:                  42
+
+    ## Incrementality
+    , single_shot:                    true
 
     ## UTxO & delegation
     , total_balance:                  900000000000000
