@@ -97,7 +97,7 @@ let
     echo "genesis cache $genesis_cache_hit_desc:  $genesis_cache_id"
 
     if test -z "$genesis_cache_hit"
-    then echo "generating genesis due to miss:  $genesis_cache_id @$genesis_cache_path"
+    then echo "generating genesis due to cache miss:  $genesis_cache_id @$genesis_cache_path"
          mkdir -p "$genesis_cache_path"
 
          ${shelleyGenesisSpec                 "$genesis_cache_path"}
@@ -364,7 +364,7 @@ in
       - BFT hosts:        ${toString composition.n_bft_hosts}
       - pool hosts:       ${toString (composition.n_hosts - composition.n_bft_hosts)}
       - pools:            ${toString composition.n_pools}, of them:
-        - dense:          ${toString composition.n_dense_pools}, at ${toString composition.dense_pool_density} density in ${toString composition.n_dense_hosts} hosts
-        - regular:        ${toString composition.n_singular_pools}
+        - regular:          ${toString composition.n_singular_pools}
+        - dense:            ${toString composition.n_dense_pools}, at ${toString composition.dense_pool_density} density in ${toString composition.n_dense_hosts} hosts
     EOF
 ''
