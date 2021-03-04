@@ -5,27 +5,33 @@
 
 module Cardano.Logging.DocuGenerator where
 
-
-import           Data.Text (Text)
-
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
-import           Data.IORef (IORef, modifyIORef, newIORef, writeIORef)
+import           Data.Aeson.Text (encodeToLazyText)
+import           Data.IORef (IORef, modifyIORef, newIORef, readIORef,
+                     writeIORef)
+import           Data.List (intersperse, nub, sortBy)
 import qualified Data.Map as Map
+import           Data.Text (Text)
+import           Data.Text.Internal.Builder (toLazyText)
+import           Data.Text.Lazy (toStrict)
+import           Data.Text.Lazy.Builder (Builder, fromString, fromText,
+                     singleton)
 
 documentTracers :: MonadIO m => Documented a -> [Trace m a] -> m DocCollector
 documentTracers (Documented documented) tracers = do
-    let docIdx = zip documented [1..]
+    let docIdx = zip documented [0..]
     coll <- fmap DocCollector (liftIO $ newIORef Map.empty)
     mapM_ (docTrace docIdx coll) tracers
     pure coll
   where
     docTrace docIdx docColl (Trace tr) =
       mapM_
-        (\ ((m,mdText), idx) -> do
-          T.traceWith tr (emptyLoggingContext, Just (Document idx mdText docColl), m))
+        (\ (DocMsg {..}, idx) -> do
+          T.traceWith tr (emptyLoggingContext {lcNamespace = [dmName]},
+                          Just (Document idx dmMarkdown docColl), dmPrototype))
         docIdx
 
 docIt :: MonadIO m =>
@@ -54,3 +60,136 @@ docIt backend logFormat (LoggingContext {..},
                         Just e  -> e
                         Nothing -> emptyLogDoc mdText))
         docMap)
+
+documentMarkdown :: (LogFormatting a, MonadIO m) =>
+     Documented a
+  -> [Trace m a]
+  -> m Text
+documentMarkdown (Documented documented) tracers = do
+    DocCollector docRef <- documentTracers (Documented documented) tracers
+    items <- fmap Map.toList (liftIO (readIORef docRef))
+    let sortedItems = sortBy
+                        (\ (_,l) (_,r) -> compare (ldNamespace l) (ldNamespace r))
+                        items
+        builders     = map documentItem sortedItems
+    pure $ toStrict
+            $ toLazyText
+              $ mconcat
+                $ intersperse (fromText "\n\n") builders
+  where
+    documentItem :: (Int, LogDoc) -> Builder
+    documentItem (idx, ld@LogDoc {..}) = mconcat $ intersperse (fromText "\n\n")
+      [ namespacesBuilder (nub ldNamespace)
+      , representationBuilder (documented `listIndex` idx)
+      , propertiesBuilder ld
+      , backendsBuilder (nub ldBackends)
+      , betweenLines (fromText ldDoc)
+      ]
+
+    namespacesBuilder :: [Namespace] -> Builder
+    namespacesBuilder [ns] = namespaceBuilder ns
+    namespacesBuilder []   = fromText "__Warning__: Namespace missing"
+    namespacesBuilder nsl  =
+      mconcat (intersperse (singleton '\n')(map namespaceBuilder nsl))
+        <> fromText "Warning: Mutiple Namespaces"
+
+    namespaceBuilder :: Namespace -> Builder
+    namespaceBuilder ns = fromText "### " <>
+      mconcat (intersperse (singleton '.') (map fromText ns))
+
+    representationBuilder :: LogFormatting a => Maybe (DocMsg a) -> Builder
+    representationBuilder Nothing = mempty
+    representationBuilder (Just DocMsg {..}) = mconcat
+      $ intersperse (singleton '\n')
+        [case forHuman dmPrototype of
+          "" -> mempty
+          t  -> fromText "For human : " <> asCode (fromText t)
+        , let r1 = forMachine DBrief dmPrototype
+              r2 = forMachine DRegular dmPrototype
+              r3 = forMachine DDetailed dmPrototype
+          in if r1 == mempty && r2 == mempty && r3 == mempty
+            then mempty
+              else if r1 == r2 && r2 == r3
+                then fromText "For machine : "
+                      <> asCode (fromText (toStrict (encodeToLazyText r1)))
+                else if r1 == r2
+                  then fromText "For machine regular: "
+                        <> asCode (fromText (toStrict (encodeToLazyText r2)))
+                        <> fromText "\nFor machine detailed: "
+                        <> asCode (fromText (toStrict (encodeToLazyText r3)))
+                  else if r2 == r3
+                    then fromText "For machine brief: "
+                          <> asCode (fromText (toStrict (encodeToLazyText r1)))
+                          <> fromText "\nFor machine regular: "
+                          <> asCode (fromText (toStrict (encodeToLazyText r2)))
+                    else fromText "For machine brief: "
+                          <> asCode (fromText (toStrict (encodeToLazyText r1)))
+                          <> fromText "\nFor machine regular: "
+                          <> asCode (fromText (toStrict (encodeToLazyText r2)))
+                          <> fromText "\nFor machine detailed: "
+                          <> asCode (fromText (toStrict (encodeToLazyText r3)))
+        , case asMetrics dmPrototype of
+            [] -> mempty
+            l -> mconcat
+                  (intersperse (singleton '\n')
+                    (map
+                      (\case
+                        (IntM mbT i) -> fromText "Integer metrics: "
+                          <> case mbT of
+                              Nothing -> mempty
+                              Just n -> asCode (fromText n <> singleton ' '
+                                        <> fromString (show i))
+                        (DoubleM mbT i) -> fromText "Double metrics: "
+                          <> case mbT of
+                              Nothing -> mempty
+                              Just n -> asCode (fromText n <> singleton ' '
+                                        <> fromString (show i)))
+                      l))
+        ]
+
+    propertiesBuilder :: LogDoc -> Builder
+    propertiesBuilder LogDoc {..} =
+        case nub ldSeverity of
+          []  -> fromText "Severity:   " <> asCode (fromString (show Info))
+          [s] -> fromText "Severity:   " <> asCode (fromString (show s))
+          l   -> fromText "Severities: "
+                  <> mconcat (intersperse (singleton ',')
+                        (map (asCode . fromString . show) l))
+      <>
+        case nub ldPrivacy of
+          []  -> fromText " Privacy:    " <> asCode (fromString (show Public))
+          [p] -> fromText " Privacy:    " <> asCode (fromString (show p))
+          l   -> fromText " Privacies:  "
+                  <> mconcat (intersperse (singleton ',')
+                        (map (asCode . fromString . show) l))
+      <>
+        case nub ldDetails of
+          []  -> fromText " Details:    " <> asCode (fromString (show DRegular))
+          [d] -> fromText " Details:    " <> asCode (fromString (show d))
+          l   -> fromText " Details:    "
+                  <> mconcat (intersperse (singleton ',')
+                        (map (asCode . fromString . show) l))
+
+    backendsBuilder :: [(Backend, LogFormat)] -> Builder
+    backendsBuilder [] = fromText "No backends found"
+    backendsBuilder l  = fromText "Backends: "
+                          <> mconcat (intersperse (fromText ", ")
+                                (map backendFormatToText l))
+
+    backendFormatToText :: (Backend, LogFormat) -> Builder
+    backendFormatToText (be,lf) = asCode (fromString (show be))
+                            <> fromText " Format: "
+                            <> asCode (fromString (show lf))
+
+
+asCode :: Builder -> Builder
+asCode b = singleton '`' <> b <> singleton '`'
+
+betweenLines :: Builder -> Builder
+betweenLines b = fromText "\n***\n" <> b <> fromText "\n***\n"
+
+
+listIndex :: [a] -> Int -> Maybe a
+listIndex l i = if i >= length l
+                  then Nothing
+                  else Just (l !! i)
