@@ -11,6 +11,7 @@
 , profileOverride ? {}
 , ...
 }:
+with lib;
 let
   profilesJSON = pkgs.callPackage ./profiles.nix
     { inherit
@@ -18,14 +19,14 @@ let
     };
   profiles = __fromJSON (__readFile profilesJSON);
 
-  profile = lib.recursiveUpdate profiles."${profileName}" profileOverride;
+  profile = recursiveUpdate profiles."${profileName}" profileOverride;
   inherit (profile) era composition monetary;
 
   profileDump = pkgs.writeText "profile-${profile.name}.json"
     (__toJSON profile);
 
-  mkTopologyBash = pkgs.callPackage ./topology.nix
-    { inherit stateDir;
+  topology = pkgs.callPackage ./topology.nix
+    { inherit lib stateDir;
       inherit (pkgs) graphviz;
       inherit (profile) composition;
       localPortBase = basePort;
@@ -50,20 +51,26 @@ let
       baseEnvConfig
       basePort
       profile;
-      path = lib.makeBinPath
+      path = makeBinPath
         [ bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
     };
 
-  supervisorConfig = pkgs.callPackage ./supervisor.nix
-    { inherit
-      pkgs
-      lib
-      stateDir
-      baseEnvConfig
-      basePort
-      extraSupervisorConfig
-      useCabalRun
-      profile;
+  node-setups = pkgs.callPackage ./node-setups.nix
+    { inherit (topology) nodeSpecs;
+      inherit
+        pkgs lib stateDir
+        baseEnvConfig
+        basePort
+        useCabalRun;
+    };
+
+  supervisorConf = pkgs.callPackage ./supervisor-conf.nix
+    { inherit (topology) nodeSpecs;
+      inherit (node-setups) nodeSetups;
+      inherit
+        pkgs lib stateDir
+        basePort
+        extraSupervisorConfig;
     };
 
   start = pkgs.writeScriptBin "start-cluster" ''
@@ -84,19 +91,34 @@ let
 
     ${defCardanoExesBash}
 
-    ${mkTopologyBash}
+    ${topology.mkTopologyBash}
 
     ${mkGenesisBash}
 
     echo "Profile '${profile.name}' dump in: ${profileDump}"
-    echo "Topology in: ${stateDir}/topology.json"
+
+    ${__concatStringsSep "\n"
+      (flip mapAttrsToList node-setups.nodeSetups
+        (name: nodeSetup:
+          ''
+          cp ${__toFile "${name}.json"
+            (__toJSON nodeSetup.nodeConfig)} \
+             ${stateDir}/${name}.config.json
+
+          cp ${__toFile "${name}.json"
+                (__toJSON
+                   (removeAttrs nodeSetup.envConfig
+                      ["override" "overrideDerivation"]))} \
+             ${stateDir}/${name}.env.json
+          ''
+        ))}
 
     ${pkgs.python3Packages.supervisor}/bin/supervisord \
-        --config ${__trace "supervisorConfig: ${supervisorConfig} "
-                   supervisorConfig} $@
+        --config ${__trace "supervisorConfig: ${supervisorConf} "
+                   supervisorConf} $@
 
     if test ! -v "CARDANO_NODE_SOCKET_PATH"
-    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/bft0.socket; fi
+    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/node-0.socket; fi
 
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
     echo "Transfering genesis funds to pool owners, register pools and delegations"

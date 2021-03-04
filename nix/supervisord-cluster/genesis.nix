@@ -100,13 +100,22 @@ let
     then echo "generating genesis due to cache miss:  $genesis_cache_id @$genesis_cache_path"
          mkdir -p "$genesis_cache_path"
 
-         ${shelleyGenesisSpec                 "$genesis_cache_path"}
-         ${shelleyGenesisVerbatim             "$genesis_cache_path"}
-         ${shelleyGenesisIncremental          "$genesis_cache_path"}
-         ${bftCredentialsIncremental          "$genesis_cache_path"}
-         ${poolCredentialsIncremental         "$genesis_cache_path"}
-         ${hardcodedDefaultUtxoCredentials    "$genesis_cache_path"}
-         ${buildIncrementalPoolRegistrationTx "$genesis_cache_path"}
+         ${if genesis.single_shot
+           then
+             ''
+             echo "Single-shot genesis not supported yet."
+             exit 1
+             ''
+           else
+             ''
+             ${shelleyGenesisSpec                 "$genesis_cache_path"}
+             ${shelleyGenesisVerbatim             "$genesis_cache_path"}
+             ${shelleyGenesisIncremental          "$genesis_cache_path"}
+             ${bftCredentialsIncremental          "$genesis_cache_path"}
+             ${poolCredentialsIncremental         "$genesis_cache_path"}
+             ${hardcodedDefaultUtxoCredentials    "$genesis_cache_path"}
+             ${buildIncrementalPoolRegistrationTx "$genesis_cache_path"}
+             ''}
 
          cat <<<$genesis_cache_params > "$genesis_cache_path"/cache.params
          cat <<<$genesis_cache_id     > "$genesis_cache_path"/cache.params.id
@@ -161,20 +170,20 @@ let
     ''
     for i in {0..${toString (composition.n_bft_hosts - 1)}}
     do
-      mkdir -p "${dir}/nodes/node-bft$i"
-      ln -s "../../delegate-keys/delegate$((i+1)).vrf.skey" "${dir}/nodes/node-bft$i/vrf.skey"
-      ln -s "../../delegate-keys/delegate$((i+1)).vrf.vkey" "${dir}/nodes/node-bft$i/vrf.vkey"
+      mkdir -p "${dir}/nodes/node-$i"
+      ln -s "../../delegate-keys/delegate$((i+1)).vrf.skey" "${dir}/nodes/node-$i/vrf.skey"
+      ln -s "../../delegate-keys/delegate$((i+1)).vrf.vkey" "${dir}/nodes/node-$i/vrf.vkey"
       cli node key-gen-KES \
-        --verification-key-file "${dir}/nodes/node-bft$i/kes.vkey" \
-        --signing-key-file "${dir}/nodes/node-bft$i/kes.skey"
+        --verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
+        --signing-key-file "${dir}/nodes/node-$i/kes.skey"
       cli node issue-op-cert \
         --kes-period 0 \
         --cold-signing-key-file "${dir}/delegate-keys/delegate$((i+1)).skey" \
-        --kes-verification-key-file "${dir}/nodes/node-bft$i/kes.vkey" \
+        --kes-verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
         --operational-certificate-issue-counter-file "${dir}/delegate-keys/delegate$((i+1)).counter" \
-        --out-file "${dir}/nodes/node-bft$i/op.cert"
+        --out-file "${dir}/nodes/node-$i/op.cert"
       BFT_PORT=$(("${toString basePort}" + $i))
-      echo "$BFT_PORT" > "${dir}/nodes/node-bft$i/port"
+      echo "$BFT_PORT" > "${dir}/nodes/node-$i/port"
     done
     '';
   poolCredentialsIncremental =
@@ -182,60 +191,60 @@ let
     ''
     for i in {${toString composition.n_bft_hosts}..${toString (composition.n_bft_hosts + composition.n_pool_hosts - 1)}}
     do
-      mkdir -p "${dir}/nodes/node-pool$i"
+      mkdir -p "${dir}/nodes/node-$i"
       echo "Generating Pool $i Secrets"
       cli address key-gen \
-        --signing-key-file "${dir}/nodes/node-pool$i/owner-utxo.skey" \
-        --verification-key-file "${dir}/nodes/node-pool$i/owner-utxo.vkey"
+        --signing-key-file "${dir}/nodes/node-$i/owner-utxo.skey" \
+        --verification-key-file "${dir}/nodes/node-$i/owner-utxo.vkey"
       cli stake-address key-gen \
-        --signing-key-file "${dir}/nodes/node-pool$i/owner-stake.skey" \
-        --verification-key-file "${dir}/nodes/node-pool$i/owner-stake.vkey"
+        --signing-key-file "${dir}/nodes/node-$i/owner-stake.skey" \
+        --verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey"
       # Payment addresses
       cli address build \
-        --payment-verification-key-file "${dir}/nodes/node-pool$i/owner-utxo.vkey" \
-        --stake-verification-key-file "${dir}/nodes/node-pool$i/owner-stake.vkey" \
+        --payment-verification-key-file "${dir}/nodes/node-$i/owner-utxo.vkey" \
+        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
         --testnet-magic ${toString genesis.network_magic} \
-        --out-file "${dir}/nodes/node-pool$i/owner.addr"
+        --out-file "${dir}/nodes/node-$i/owner.addr"
       # Stake addresses
       cli stake-address build \
-        --stake-verification-key-file "${dir}/nodes/node-pool$i/owner-stake.vkey" \
+        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
         --testnet-magic ${toString genesis.network_magic} \
-        --out-file "${dir}/nodes/node-pool$i/owner-stake.addr"
+        --out-file "${dir}/nodes/node-$i/owner-stake.addr"
       # Stake addresses registration certs
       cli stake-address registration-certificate \
-        --stake-verification-key-file "${dir}/nodes/node-pool$i/owner-stake.vkey" \
-        --out-file "${dir}/nodes/node-pool$i/stake.reg.cert"
+        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
+        --out-file "${dir}/nodes/node-$i/stake.reg.cert"
 
       cli stake-address key-gen \
-        --signing-key-file "${dir}/nodes/node-pool$i/reward.skey" \
-        --verification-key-file "${dir}/nodes/node-pool$i/reward.vkey"
+        --signing-key-file "${dir}/nodes/node-$i/reward.skey" \
+        --verification-key-file "${dir}/nodes/node-$i/reward.vkey"
       # Stake reward addresses registration certs
       cli stake-address registration-certificate \
-        --stake-verification-key-file "${dir}/nodes/node-pool$i/reward.vkey" \
-        --out-file "${dir}/nodes/node-pool$i/stake-reward.reg.cert"
+        --stake-verification-key-file "${dir}/nodes/node-$i/reward.vkey" \
+        --out-file "${dir}/nodes/node-$i/stake-reward.reg.cert"
       cli node key-gen \
-        --cold-verification-key-file "${dir}/nodes/node-pool$i/cold.vkey" \
-        --cold-signing-key-file "${dir}/nodes/node-pool$i/cold.skey" \
-        --operational-certificate-issue-counter-file "${dir}/nodes/node-pool$i/cold.counter"
+        --cold-verification-key-file "${dir}/nodes/node-$i/cold.vkey" \
+        --cold-signing-key-file "${dir}/nodes/node-$i/cold.skey" \
+        --operational-certificate-issue-counter-file "${dir}/nodes/node-$i/cold.counter"
       cli node key-gen-KES \
-        --verification-key-file "${dir}/nodes/node-pool$i/kes.vkey" \
-        --signing-key-file "${dir}/nodes/node-pool$i/kes.skey"
+        --verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
+        --signing-key-file "${dir}/nodes/node-$i/kes.skey"
       cli node key-gen-VRF \
-        --verification-key-file "${dir}/nodes/node-pool$i/vrf.vkey" \
-        --signing-key-file "${dir}/nodes/node-pool$i/vrf.skey"
+        --verification-key-file "${dir}/nodes/node-$i/vrf.vkey" \
+        --signing-key-file "${dir}/nodes/node-$i/vrf.skey"
 
       # Stake address delegation certs
       cli stake-address delegation-certificate \
-        --stake-verification-key-file "${dir}/nodes/node-pool$i/owner-stake.vkey" \
-        --cold-verification-key-file  "${dir}/nodes/node-pool$i/cold.vkey" \
-        --out-file "${dir}/nodes/node-pool$i/owner-stake.deleg.cert"
+        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
+        --cold-verification-key-file  "${dir}/nodes/node-$i/cold.vkey" \
+        --out-file "${dir}/nodes/node-$i/owner-stake.deleg.cert"
 
       cli node issue-op-cert \
         --kes-period 0 \
-        --cold-signing-key-file "${dir}/nodes/node-pool$i/cold.skey" \
-        --kes-verification-key-file "${dir}/nodes/node-pool$i/kes.vkey" \
-        --operational-certificate-issue-counter-file "${dir}/nodes/node-pool$i/cold.counter" \
-        --out-file "${dir}/nodes/node-pool$i/op.cert"
+        --cold-signing-key-file "${dir}/nodes/node-$i/cold.skey" \
+        --kes-verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
+        --operational-certificate-issue-counter-file "${dir}/nodes/node-$i/cold.counter" \
+        --out-file "${dir}/nodes/node-$i/op.cert"
 
       echo "Generating Pool $i Metadata"
       mkdir -p "${dir}/webserver"
@@ -250,25 +259,25 @@ let
       METADATA_HASH=$(cli stake-pool metadata-hash --pool-metadata-file "${dir}/webserver/pool$i.json")
       POOL_IP="127.0.0.1"
       POOL_PORT=$(("${toString basePort}" + "${toString composition.n_bft_hosts}" + $i))
-      echo "$POOL_PORT" > "${dir}/nodes/node-pool$i/port"
+      echo "$POOL_PORT" > "${dir}/nodes/node-$i/port"
       POOL_PLEDGE=${toString genesis.pool_coin}
-      echo $POOL_PLEDGE > "${dir}/nodes/node-pool$i/pledge"
+      echo $POOL_PLEDGE > "${dir}/nodes/node-$i/pledge"
       POOL_MARGIN_NUM=$(( $RANDOM % 10 + 1))
 
       cli stake-pool registration-certificate \
-        --cold-verification-key-file "${dir}/nodes/node-pool$i/cold.vkey" \
-        --vrf-verification-key-file "${dir}/nodes/node-pool$i/vrf.vkey" \
+        --cold-verification-key-file "${dir}/nodes/node-$i/cold.vkey" \
+        --vrf-verification-key-file "${dir}/nodes/node-$i/vrf.vkey" \
         --pool-pledge "$POOL_PLEDGE" \
         --pool-margin "$(jq -n $POOL_MARGIN_NUM/10)" \
         --pool-cost "$(($RANDOM % 100000000))" \
-        --pool-reward-account-verification-key-file "${dir}/nodes/node-pool$i/reward.vkey" \
-        --pool-owner-stake-verification-key-file "${dir}/nodes/node-pool$i/owner-stake.vkey" \
+        --pool-reward-account-verification-key-file "${dir}/nodes/node-$i/reward.vkey" \
+        --pool-owner-stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
         --metadata-url "$METADATA_URL" \
         --metadata-hash "$METADATA_HASH" \
         --pool-relay-port "$POOL_PORT" \
         --pool-relay-ipv4 "127.0.0.1" \
         --testnet-magic ${toString genesis.network_magic} \
-        --out-file "${dir}/nodes/node-pool$i/register.cert"
+        --out-file "${dir}/nodes/node-$i/register.cert"
 
     done
     '';
@@ -295,11 +304,11 @@ let
                     --verification-key-file ${dir}/genesis-utxo.vkey) \
         --tx-out "$TXIN_ADDR+0" \
         ${lib.concatMapStringsSep "" (i: ''
-          --tx-out $(cat "${dir}/nodes/node-pool${toString i}/owner.addr")+${toString genesis.delegator_coin} \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/stake.reg.cert" \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/stake-reward.reg.cert" \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/register.cert" \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + composition.n_bft_hosts) composition.n_pool_hosts)}
+          --tx-out $(cat "${dir}/nodes/node-${toString i}/owner.addr")+${toString genesis.delegator_coin} \
+          --certificate-file "${dir}/nodes/node-${toString i}/stake.reg.cert" \
+          --certificate-file "${dir}/nodes/node-${toString i}/stake-reward.reg.cert" \
+          --certificate-file "${dir}/nodes/node-${toString i}/register.cert" \
+          --certificate-file "${dir}/nodes/node-${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + composition.n_bft_hosts) composition.n_pool_hosts)}
         --out-file "${dir}/transfer-register-delegate-tx.txbody"
     FEE=$(cli transaction calculate-min-fee \
                 --testnet-magic ${toString genesis.network_magic} \
@@ -329,19 +338,19 @@ let
                     --verification-key-file ${dir}/genesis-utxo.vkey) \
         --tx-out "$TXIN_ADDR+$TXOUT_AMOUNT" \
         ${lib.concatMapStringsSep "" (i: ''
-          --tx-out $(cat "${dir}/nodes/node-pool${toString i}/owner.addr")+${toString genesis.delegator_coin} \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/stake.reg.cert" \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/stake-reward.reg.cert" \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/register.cert" \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) composition.n_pools)}
+          --tx-out $(cat "${dir}/nodes/node-${toString i}/owner.addr")+${toString genesis.delegator_coin} \
+          --certificate-file "${dir}/nodes/node-${toString i}/stake.reg.cert" \
+          --certificate-file "${dir}/nodes/node-${toString i}/stake-reward.reg.cert" \
+          --certificate-file "${dir}/nodes/node-${toString i}/register.cert" \
+          --certificate-file "${dir}/nodes/node-${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) composition.n_pools)}
         --out-file "${dir}/transfer-register-delegate-tx.txbody"
 
     cli transaction sign \
       --signing-key-file ${dir}/genesis-utxo.skey \
       ${lib.concatMapStringsSep "" (i: ''
-        --signing-key-file "${dir}/nodes/node-pool${toString i}/owner-stake.skey" \
-        --signing-key-file "${dir}/nodes/node-pool${toString i}/reward.skey" \
-        --signing-key-file "${dir}/nodes/node-pool${toString i}/cold.skey" \'') (lib.genList (i: i + 1) composition.n_pools)}
+        --signing-key-file "${dir}/nodes/node-${toString i}/owner-stake.skey" \
+        --signing-key-file "${dir}/nodes/node-${toString i}/reward.skey" \
+        --signing-key-file "${dir}/nodes/node-${toString i}/cold.skey" \'') (lib.genList (i: i + 1) composition.n_pools)}
       --testnet-magic ${toString genesis.network_magic} \
       --tx-body-file  "${dir}/transfer-register-delegate-tx.txbody" \
       --out-file      "${dir}/transfer-register-delegate-tx.tx"
@@ -350,8 +359,6 @@ in
 ''
     PATH=$PATH:${path}
     mkdir -p ${genesisCacheDir}
-
-    cp ${__toFile "node.json" (__toJSON baseEnvConfig.nodeConfig)} ${stateDir}/config.json
 
     ${decideSystemStart}
 

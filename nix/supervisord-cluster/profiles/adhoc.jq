@@ -32,6 +32,7 @@ def adhoc_profiles:
       }
       , genesis_future_offset: "10 seconds"
       , utxo:                  0
+      , single_shot:           false
     }
   }
 ];

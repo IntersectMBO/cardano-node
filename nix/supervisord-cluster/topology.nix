@@ -1,9 +1,10 @@
-{ stateDir
+{ lib
+, stateDir
 , graphviz
 , composition
 , localPortBase
 }:
-with composition;
+with composition; with lib;
 let
   # metadata = {
   #   inherit benchmarkingProfileName benchmarkingProfile benchmarkingTopology;
@@ -19,8 +20,41 @@ let
       }) cfg.producers;
   });
 in
+{
+  ## TODO: derive from topology, instead of building a parallel structure.
+  nodeSpecs = lib.listToAttrs
+    ((flip genList composition.n_bft_hosts)
+     (n: let i = n; in
+         lib.nameValuePair "node-${toString i}"
+           { name = "node-${toString i}";
+             kind = "bft";
+             port = localPortBase + i;
+             isProducer = true;
+             inherit i;
+           })
+       ++
+     (flip genList composition.n_pool_hosts)
+     (n: let i = n + composition.n_bft_hosts; in
+         lib.nameValuePair "node-${toString i}"
+           { name = "node-${toString i}";
+             kind = "pool";
+             port = localPortBase + i;
+             isProducer = true;
+             inherit i;
+           })
+       ++
+     (flip genList 1)
+     (n: let i = n + composition.n_bft_hosts + composition.n_pool_hosts; in
+         lib.nameValuePair "node-${toString i}"
+           { name = "node-${toString i}";
+             kind = "observer";
+             port = localPortBase + i;
+             isProducer = false;
+             inherit i;
+           }));
 
-''
+  mkTopologyBash =
+    ''
   mkdir -p "${stateDir}/topologies"
 
   ## 0. Generate the overall topology, in the 'cardano-ops'/nixops style:
@@ -102,5 +136,6 @@ in
         };
 
       loopback_observer_topology_from_nixops_topology($topology[0])
-     ' "''${args[@]}" > "${stateDir}/topologies/observer.json"
-''
+     ' "''${args[@]}" > "${stateDir}/topologies/node-${toString n_hosts}.json"
+    '';
+}
