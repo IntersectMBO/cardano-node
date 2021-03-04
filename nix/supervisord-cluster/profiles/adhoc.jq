@@ -31,6 +31,7 @@ def adhoc_profiles:
       , securityParam: 10
       }
       , genesis_future_offset: "10 seconds"
+      , utxo:                  0
     }
   }
 ];
