@@ -38,8 +38,8 @@ let
 
   baseEnvConfig = pkgs.callPackage ./base-env.nix
     { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig;
-      inherit stateDir;
       inherit (profile) era;
+      inherit stateDir lib;
     };
 
   ## This yields two attributes: 'params' and 'files'
@@ -77,9 +77,9 @@ let
     mkdir -p ${cacheDir}
 
     if [ -f ${stateDir}/supervisord.pid ]
-    then
-      echo "Cluster already running. Please run `stop-cluster` first!"
-    fi
+    then echo "Cluster already running. Please run 'stop-cluster' first!"
+         exit 1; fi
+
     rm -rf ${stateDir}
 
     ${defCardanoExesBash}
@@ -96,7 +96,7 @@ let
                    supervisorConfig} $@
 
     if test ! -v "CARDANO_NODE_SOCKET_PATH"
-    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/bft1.socket; fi
+    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/bft0.socket; fi
 
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
     echo "Transfering genesis funds to pool owners, register pools and delegations"
@@ -120,6 +120,7 @@ let
     then
       kill $(<${stateDir}/supervisord.pid) $(<${stateDir}/cardano-node.pids)
       echo "Cluster terminated!"
+      rm -f ${stateDir}/supervisord.pid ${stateDir}/cardano-node.pids
     else
       echo "Cluster is not running!"
     fi

@@ -36,6 +36,7 @@ let
       pkgconfig
       profiteur
       profiterole
+      python3Packages.supervisor
       ghc-prof-flamegraph
       sqlite-interactive
       tmux
@@ -89,7 +90,7 @@ let
       source <(cardano-node --bash-completion-script cardano-node)
 
       # Socket path default to first BFT node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.baseEnvConfig.stateDir}/bft1.socket
+      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.baseEnvConfig.stateDir}/bft0.socket
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
         export CARDANO_NODE_SOCKET_PATH="$PWD/state-node-${customConfig.network}/node.socket"

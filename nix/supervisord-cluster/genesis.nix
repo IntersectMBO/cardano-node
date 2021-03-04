@@ -159,19 +159,19 @@ let
   bftCredentialsIncremental =
     dir:
     ''
-    for i in {1..${toString composition.n_bft_hosts}}
+    for i in {0..${toString (composition.n_bft_hosts - 1)}}
     do
       mkdir -p "${dir}/nodes/node-bft$i"
-      ln -s "../../delegate-keys/delegate$i.vrf.skey" "${dir}/nodes/node-bft$i/vrf.skey"
-      ln -s "../../delegate-keys/delegate$i.vrf.vkey" "${dir}/nodes/node-bft$i/vrf.vkey"
+      ln -s "../../delegate-keys/delegate$((i+1)).vrf.skey" "${dir}/nodes/node-bft$i/vrf.skey"
+      ln -s "../../delegate-keys/delegate$((i+1)).vrf.vkey" "${dir}/nodes/node-bft$i/vrf.vkey"
       cli node key-gen-KES \
         --verification-key-file "${dir}/nodes/node-bft$i/kes.vkey" \
         --signing-key-file "${dir}/nodes/node-bft$i/kes.skey"
       cli node issue-op-cert \
         --kes-period 0 \
-        --cold-signing-key-file "${dir}/delegate-keys/delegate$i.skey" \
+        --cold-signing-key-file "${dir}/delegate-keys/delegate$((i+1)).skey" \
         --kes-verification-key-file "${dir}/nodes/node-bft$i/kes.vkey" \
-        --operational-certificate-issue-counter-file "${dir}/delegate-keys/delegate$i.counter" \
+        --operational-certificate-issue-counter-file "${dir}/delegate-keys/delegate$((i+1)).counter" \
         --out-file "${dir}/nodes/node-bft$i/op.cert"
       BFT_PORT=$(("${toString basePort}" + $i))
       echo "$BFT_PORT" > "${dir}/nodes/node-bft$i/port"
@@ -180,7 +180,7 @@ let
   poolCredentialsIncremental =
     dir:
     ''
-    for i in {1..${toString composition.n_pools}}
+    for i in {${toString composition.n_bft_hosts}..${toString (composition.n_bft_hosts + composition.n_pool_hosts - 1)}}
     do
       mkdir -p "${dir}/nodes/node-pool$i"
       echo "Generating Pool $i Secrets"
@@ -299,7 +299,7 @@ let
           --certificate-file "${dir}/nodes/node-pool${toString i}/stake.reg.cert" \
           --certificate-file "${dir}/nodes/node-pool${toString i}/stake-reward.reg.cert" \
           --certificate-file "${dir}/nodes/node-pool${toString i}/register.cert" \
-          --certificate-file "${dir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + 1) composition.n_pools)}
+          --certificate-file "${dir}/nodes/node-pool${toString i}/owner-stake.deleg.cert" \'') (lib.genList (i: i + composition.n_bft_hosts) composition.n_pool_hosts)}
         --out-file "${dir}/transfer-register-delegate-tx.txbody"
     FEE=$(cli transaction calculate-min-fee \
                 --testnet-magic ${toString genesis.network_magic} \

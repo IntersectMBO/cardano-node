@@ -68,6 +68,7 @@ def add_derived_params:
          , n_singular_pools:      $n_singular_pools
          , n_dense_hosts:         $hosts.dense
          , n_dense_pools:         $n_dense_pools
+         , n_pool_hosts:          ($hosts.singular + $hosts.dense)
          }
      , genesis:
          { genesis_future_offset: $future_offset

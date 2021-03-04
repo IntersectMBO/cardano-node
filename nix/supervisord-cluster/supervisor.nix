@@ -60,12 +60,11 @@ let
   } // lib.listToAttrs (map (i:
     lib.nameValuePair "program:bft${toString i}" {
       command = let
-        index = i - 1;
         envConfig = baseEnvConfig // rec {
           operationalCertificate = "${stateDir}/shelley/nodes/node-bft${toString i}/op.cert";
           kesKey = "${stateDir}/shelley/nodes/node-bft${toString i}/kes.skey";
           vrfKey = "${stateDir}/shelley/nodes/node-bft${toString i}/vrf.skey";
-          topology = "${stateDir}/topologies/node-${toString index}.json";
+          topology = "${stateDir}/topologies/node-${toString i}.json";
           socketPath = "${stateDir}/bft${toString i}.socket";
           dbPrefix = "db-bft${toString i}";
           port = basePort + i;
@@ -76,19 +75,18 @@ let
       stdout_logfile = "${stateDir}/bft${toString i}.stdout";
       stderr_logfile = "${stateDir}/bft${toString i}.stderr";
     }
-  ) (lib.genList (i: i + 1) composition.n_bft_hosts))
+  ) (lib.genList (i: i) composition.n_bft_hosts))
   // lib.listToAttrs (map (i:
     lib.nameValuePair "program:pool${toString i}" {
       command = let
-        index = composition.n_bft_hosts + i - 1;
         envConfig = baseEnvConfig // rec {
           operationalCertificate = "${stateDir}/shelley/nodes/node-pool${toString i}/op.cert";
           kesKey = "${stateDir}/shelley/nodes/node-pool${toString i}/kes.skey";
           vrfKey = "${stateDir}/shelley/nodes/node-pool${toString i}/vrf.skey";
-          topology = "${stateDir}/topologies/node-${toString index}.json";
+          topology = "${stateDir}/topologies/node-${toString i}.json";
           socketPath = "${stateDir}/pool${toString i}.socket";
           dbPrefix = "db-pool${toString i}";
-          port = basePort + composition.n_bft_hosts + i;
+          port = basePort + i;
           nodeConfigFile = "${stateDir}/config.json";
         };
         script = mkStartScript envConfig;
@@ -96,7 +94,7 @@ let
       stdout_logfile = "${stateDir}/pool${toString i}.stdout";
       stderr_logfile = "${stateDir}/pool${toString i}.stderr";
     }
-  ) (lib.genList (i: i + 1) composition.n_pools))
+  ) (lib.genList (i: i + composition.n_bft_hosts) composition.n_pool_hosts))
   // lib.listToAttrs ([(
     lib.nameValuePair "program:observer" {
       command = let
@@ -115,7 +113,7 @@ let
   )])
   // {
     "program:webserver" = {
-      command = "${pkgs.python3}/bin/python -m http.server ${toString basePort}";
+      command = "${pkgs.python3}/bin/python -m http.server ${toString (basePort - 1)}";
       directory = "${stateDir}/shelley/webserver";
     };
 
