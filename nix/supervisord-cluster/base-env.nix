@@ -1,4 +1,5 @@
-{ defaultLogConfig
+{ lib
+, defaultLogConfig
 , stateDir
 , era
 }:
@@ -19,6 +20,16 @@ rec {
     LastKnownBlockVersion-Major = 0;
     LastKnownBlockVersion-Minor = 0;
     LastKnownBlockVersion-Alt = 0;
+
+    setupScribes =
+      [
+        {
+          scKind     = "StdoutSK";
+          scName     = "stdout";
+          scFormat   = "ScJson";
+          scRotation = null;
+        }
+      ];
   } // ({
     shelley =
       { TestShelleyHardForkAtEpoch = 0;
@@ -33,6 +44,6 @@ rec {
         TestMaryHardForkAtEpoch    = 0;
       };
   }).${era};
-  nodeConfig = networkConfig // defaultLogConfig;
+  nodeConfig = lib.recursiveUpdate defaultLogConfig networkConfig;
   consensusProtocol = networkConfig.Protocol;
 }
