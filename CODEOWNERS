@@ -9,6 +9,17 @@
 doc                                                           @docs-access
 README.*                                                      @docs-access
 
+# Technical writers
+doc                                                           @fsancheziohk
+README.*                                                      @fsancheziohk
+cardano-cli/README.md                                         @fsancheziohk
+doc                                                           @nahern
+README.*                                                      @nahern
+cardano-cli/README.md                                         @nahern
+doc                                                           @olgahryniuk
+README.*                                                      @olgahryniuk
+cardano-cli/README.md                                         @olgahryniuk
+
 .buildkite                                                    @devops
 .github                                                       @devops
 ci                                                            @devops
