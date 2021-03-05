@@ -17,9 +17,8 @@ library
   other-modules:        Test.Cardano.Api.Metadata
                         Test.Tasty.Hedgehog.Group
 
-  build-depends:
-                        base >=4.12 && <5
-                      , aeson
+  build-depends:        base              >= 4.12       &&  < 5
+                      , aeson             >= 1.5.6.0
                       , base16-bytestring
                       , bytestring
                       , cardano-api

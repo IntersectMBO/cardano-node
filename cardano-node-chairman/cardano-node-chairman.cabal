@@ -39,8 +39,8 @@ executable cardano-node-chairman
                         -rtsopts
                         "-with-rtsopts=-T"
                         -Wno-unticked-promoted-constructors
-  build-depends:        base >=4.12 && <5
-                      , aeson
+  build-depends:        base              >= 4.12       &&  < 5
+                      , aeson             >= 1.5.6.0
                       , async
                       , bytestring
                       , call-stack
@@ -97,8 +97,8 @@ test-suite chairman-tests
   if !os(windows)
       build-depends:    unix
 
-  build-depends:        base >= 4.12 && < 5
-                      , aeson
+  build-depends:        base              >= 4.12       &&  < 5
+                      , aeson             >= 1.5.6.0
                       , async
                       , call-stack
                       , containers
@@ -149,8 +149,8 @@ executable cardano-testnet
   if !os(windows)
       build-depends:    unix
 
-  build-depends:        base >= 4.12 && < 5
-                      , aeson
+  build-depends:        base              >= 4.12       &&  < 5
+                      , aeson             >= 1.5.6.0
                       , ansi-terminal
                       , async
                       , call-stack

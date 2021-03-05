@@ -1,7 +1,7 @@
 # our packages overlay
 pkgs: _: with pkgs;
   let
-    compiler = config.haskellNix.compiler or "ghc8102";
+    compiler = config.haskellNix.compiler or "ghc8104";
   in {
   cardanoNodeHaskellPackages = import ./haskell.nix {
     inherit compiler

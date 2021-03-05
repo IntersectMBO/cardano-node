@@ -12,8 +12,9 @@ build-type:             Simple
 
 library
   hs-source-dirs:       src
-  build-depends:        base >= 4.12 && < 5
-                      , aeson
+  build-depends:        base              >= 4.12 && < 5
+                      , aeson             >= 1.5.6.0
+                      , aeson-pretty      >= 0.8.5
                       , async
                       , bytestring
                       , deepseq
@@ -36,7 +37,8 @@ library
                       , unliftio
                       , unordered-containers
                       , Win32-network
-  exposed-modules:      Hedgehog.Extras.Internal.Cli
+  exposed-modules:      Hedgehog.Extras.Aeson
+                        Hedgehog.Extras.Internal.Cli
                         Hedgehog.Extras.Internal.Plan
                         Hedgehog.Extras.Internal.Test.Integration
                         Hedgehog.Extras.Stock.Aeson

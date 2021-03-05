@@ -6,30 +6,28 @@ module Test.Cardano.Api.Typed.MultiSig.Allegra
 
 import           Cardano.Prelude
 
+import           Cardano.Api
 import           Data.Aeson
 import           Hedgehog (Property, discover)
-import qualified Hedgehog as H
+import           Test.Cardano.Api.Examples
+import           Test.Cardano.Api.Typed.Gen
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 
-import           Cardano.Api
-
-import           Test.Cardano.Api.Examples
-import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Prelude (goldenTestJSONPretty)
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Aeson as H
 
 prop_golden_AllMultiSig :: Property
 prop_golden_AllMultiSig =
-  goldenTestJSONPretty exampleAllAllegra "test/Golden/MultiSig/Allegra/all"
+  H.goldenTestJsonValuePretty exampleAllAllegra "test/Golden/MultiSig/Allegra/all"
 
 prop_golden_AnyMultiSig :: Property
 prop_golden_AnyMultiSig =
-  goldenTestJSONPretty exampleAnyAllegra "test/Golden/MultiSig/Allegra/any"
+  H.goldenTestJsonValuePretty exampleAnyAllegra "test/Golden/MultiSig/Allegra/any"
 
 prop_golden_MofNMultiSig :: Property
 prop_golden_MofNMultiSig =
-  goldenTestJSONPretty exampleMofNAllegra "test/Golden/MultiSig/Allegra/atleast"
-
+  H.goldenTestJsonValuePretty exampleMofNAllegra "test/Golden/MultiSig/Allegra/atleast"
 
 prop_roundtrip_AllegraMultiSigScript_JSON :: Property
 prop_roundtrip_AllegraMultiSigScript_JSON =
