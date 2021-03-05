@@ -28,12 +28,12 @@ import           Prelude (String, show)
 
 import           GHC.Clock (getMonotonicTimeNSec)
 
+import           Control.Monad.Class.MonadTime
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Map as SMap
 import qualified Data.Text as Text
-import           Data.Time (UTCTime)
 import qualified System.Remote.Monitoring as EKG
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
@@ -81,8 +81,11 @@ import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecl
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
+import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined (
+                     TraceChainSyncClientReqRsp, TraceChainSyncClientTag (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
 import           Ouroboros.Network.Subscription
+import           Ouroboros.Network.Util.TaggedObserve
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
@@ -320,6 +323,7 @@ mkTracers TracingOff _ _ _ =
     { chainDBTracer = nullTracer
     , consensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer = nullTracer
+      , Consensus.chainSyncReqRspTracer = nullTracer
       , Consensus.chainSyncServerHeaderTracer = nullTracer
       , Consensus.chainSyncServerBlockTracer = nullTracer
       , Consensus.blockFetchDecisionTracer = nullTracer
@@ -458,8 +462,8 @@ _sendEKGDirectInt ekgDirect name val = do
         Gauge.set gauge (fromIntegral val)
         pure $ SMap.insert name gauge registeredMap
 
-_sendEKGDirectDouble :: EKGDirect -> Text -> Double -> IO ()
-_sendEKGDirectDouble ekgDirect name val = do
+sendEKGDirectDouble :: EKGDirect -> Text -> Double -> IO ()
+sendEKGDirectDouble ekgDirect name val = do
   modifyMVar_ (ekgLabels ekgDirect) $ \registeredMap -> do
     case SMap.lookup name registeredMap of
       Just label -> do
@@ -521,6 +525,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
 
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
+    , Consensus.chainSyncReqRspTracer = chainSyncReqRspTracer mbEKGDirect $ tracerOnOff (traceChainSyncReqRsp trSel) verb "ChainSyncReqRsp" tr
     , Consensus.chainSyncServerHeaderTracer = Tracer $ \ev -> traceServedCount mbEKGDirect ev
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
@@ -804,6 +809,41 @@ notifyBlockForging fStats tr = Tracer $ \case
       traceCounter "slotsMissedNum" tr x
   _ -> pure ()
 
+
+
+--------------------------------------------------------------------------------
+-- ChainSync Tracers
+--------------------------------------------------------------------------------
+chainSyncReqRspTracer
+  :: forall peer. ()
+  => Maybe EKGDirect
+  -> Tracer IO (TraceChainSyncClientReqRsp peer)
+  -> Tracer IO (TraceChainSyncClientReqRsp peer)
+chainSyncReqRspTracer mbEKGDirect tracer = Tracer csTracer
+
+  where
+    csTracer :: TraceChainSyncClientReqRsp peer -> IO ()
+    csTracer (TOStart (NextTag _) _) = return ()
+    csTracer (TOStart (IntersectTag _) _) = return ()
+    csTracer (TOEnd _ _ Nothing) = return ()
+    csTracer e@(TOEnd (IntersectTag _) endTime (Just delta)) = do
+
+      traceWith tracer e
+      traceMetric mbEKGDirect "cardano.node.metrics.chainreqrsp.intersect.s" endTime delta
+    csTracer e@(TOEnd (NextTag _) endTime (Just delta)) = do
+
+      traceWith tracer e
+      traceMetric mbEKGDirect "cardano.node.metrics.chainreqrsp.next.s" endTime delta
+
+    traceMetric
+      :: Maybe EKGDirect
+      -> Text
+      -> Time
+      -> DiffTime
+      -> IO ()
+    traceMetric Nothing _ _ _ = return ()
+    traceMetric (Just ekgDirect) name _ delta =
+      sendEKGDirectDouble ekgDirect name $ realToFrac delta
 
 --------------------------------------------------------------------------------
 -- Mempool Tracers
