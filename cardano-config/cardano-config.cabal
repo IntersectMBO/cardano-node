@@ -26,12 +26,12 @@ library
   exposed-modules:     Cardano.Config.Git.Rev
                        Cardano.Config.Git.RevFromGit
 
-  build-depends:       base >=4.12 && <5
-                     , cardano-prelude
-                     , file-embed
-                     , process
-                     , template-haskell
-                     , text
+  build-depends:        base              >= 4.12       &&  < 5
+                      , cardano-prelude
+                      , file-embed
+                      , process
+                      , template-haskell
+                      , text
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

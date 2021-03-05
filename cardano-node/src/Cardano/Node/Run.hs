@@ -125,11 +125,14 @@ runNode cmdPc = do
     -- Used for ledger queries and peer connection status.
     nodeKernelData :: NodeKernelData blk <- mkNodeKernelData
 
+    let ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
+
     tracers <- mkTracers
-                 (ncTraceConfig nc)
-                 trace
-                 nodeKernelData
-                 (llEKGDirect loggingLayer)
+                (Consensus.configBlock cfg)
+                (ncTraceConfig nc)
+                trace
+                nodeKernelData
+                (llEKGDirect loggingLayer)
 
     Async.withAsync (handlePeersListSimple trace nodeKernelData)
         $ \_peerLogingThread ->

@@ -69,63 +69,62 @@ library
                        Cardano.Node.Configuration.Socket
                        Cardano.Tracing.MicroBenchmarking
 
-  build-depends:       aeson
-                     , async
-                     , base >=4.12 && <5
-                     , base16-bytestring
-                     , byron-spec-ledger
-                     , bytestring
-                     , deepseq
-                     , cardano-api
-                     , cardano-config
-                     , cardano-crypto-class
-                     , cardano-crypto-wrapper
-                     , cardano-ledger-byron
-                     , cardano-ledger-shelley-ma
-                     , cardano-prelude
-                     , cardano-slotting
-                     , contra-tracer
-                     , cborg >= 0.2.4 && < 0.3
-                     , containers
-                     , directory
-                     , dns
-                     , ekg
-                     , ekg-core
-                     , filepath
-                     , generic-data
-                     , hedgehog-extras
-                     , hostname
-                     , iproute
-                     , io-sim-classes
-                     , iohk-monitoring
-                     , lobemo-backend-aggregation
-                     , lobemo-backend-ekg
-                     , lobemo-backend-monitoring
-                     , lobemo-backend-trace-forwarder
-                     , network
-                     , network-mux
-                     , nothunks
-                     , optparse-applicative
-                     , ouroboros-consensus
-                     , ouroboros-consensus-byron
-                     , ouroboros-consensus-cardano
-                     , ouroboros-consensus-shelley
-                     , ouroboros-network
-                     , ouroboros-network-framework
-                     , process
-                     , safe-exceptions
-                     , scientific
-                     , shelley-spec-ledger
-                     , stm
-                     , strict-concurrency
-                     , text
-                     , time
-                     , tracer-transformers
-                     , transformers
-                     , transformers-except
-                     , unordered-containers
-                     , yaml
-
+  build-depends:        base              >= 4.12       &&  < 5
+                      , aeson             >= 1.5.6.0
+                      , async
+                      , base16-bytestring
+                      , byron-spec-ledger
+                      , bytestring
+                      , deepseq
+                      , cardano-api
+                      , cardano-config
+                      , cardano-crypto-class
+                      , cardano-crypto-wrapper
+                      , cardano-ledger-byron
+                      , cardano-ledger-shelley-ma
+                      , cardano-prelude
+                      , cardano-slotting
+                      , contra-tracer
+                      , cborg >= 0.2.4 && < 0.3
+                      , containers
+                      , directory
+                      , dns
+                      , ekg
+                      , ekg-core
+                      , filepath
+                      , generic-data
+                      , hedgehog-extras
+                      , hostname
+                      , iproute
+                      , io-sim-classes
+                      , iohk-monitoring
+                      , lobemo-backend-aggregation
+                      , lobemo-backend-ekg
+                      , lobemo-backend-monitoring
+                      , lobemo-backend-trace-forwarder
+                      , network
+                      , network-mux
+                      , nothunks
+                      , optparse-applicative
+                      , ouroboros-consensus
+                      , ouroboros-consensus-byron
+                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus-shelley
+                      , ouroboros-network
+                      , ouroboros-network-framework
+                      , process
+                      , safe-exceptions
+                      , scientific
+                      , shelley-spec-ledger
+                      , stm
+                      , strict-concurrency
+                      , text
+                      , time
+                      , tracer-transformers
+                      , transformers
+                      , transformers-except
+                      , unordered-containers
+                      , yaml
 
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
@@ -169,12 +168,12 @@ executable cardano-node
 
   other-modules:       Paths_cardano_node
 
-  build-depends:       base >=4.12 && <5
-                     , cardano-config
-                     , cardano-node
-                     , cardano-prelude
-                     , optparse-applicative
-                     , text
+  build-depends:        base              >= 4.12       &&  < 5
+                      , cardano-config
+                      , cardano-node
+                      , cardano-prelude
+                      , optparse-applicative
+                      , text
 
   if os(windows)
      build-depends:    Win32
@@ -189,9 +188,8 @@ test-suite cardano-node-test
   if !os(windows)
       build-depends:     unix
 
-  build-depends:
-                        base >= 4.12 && < 5
-                      , aeson
+  build-depends:        base              >= 4.12       &&  < 5
+                      , aeson             >= 1.5.6.0
                       , async
                       , bytestring
                       , cardano-api
