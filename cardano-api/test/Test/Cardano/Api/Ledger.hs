@@ -7,34 +7,28 @@ module Test.Cardano.Api.Ledger
   ) where
 
 import           Cardano.Prelude
-
-import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
-
 import           Hedgehog (Property, discover)
-import qualified Hedgehog
-import           Test.Tasty (TestTree)
-
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-
-import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
-
+import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Test.Cardano.Api.Genesis
-import           Test.Cardano.Prelude
+import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
+import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Aeson as H
 
 prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSONPretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
+prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at
 -- least once.
 prop_roundtrip_Address_CBOR :: Property
-prop_roundtrip_Address_CBOR =
+prop_roundtrip_Address_CBOR = H.property $ do
   -- If this fails, FundPair and ShelleyGenesis can also fail.
-  Hedgehog.property $ do
-    addr <- Hedgehog.forAll (genAddress @StandardCrypto)
-    Hedgehog.tripping addr serialiseAddr deserialiseAddr
+  addr <- H.forAll (genAddress @StandardCrypto)
+  H.tripping addr serialiseAddr deserialiseAddr
 
 -- -----------------------------------------------------------------------------
 
