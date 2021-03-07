@@ -39,7 +39,7 @@ services:
           ]
         }'
       CARDANO_CUSTOM_PEERS: "172.28.0.3:3001"
-      CARDANO_UPDATE_TOPOLOGY: "true"
+      CARDANO_UPDATE_TOPOLOGY: "false"
     command: "run"
     volumes:
       - relay-data:/opt/cardano/data

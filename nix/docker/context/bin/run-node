@@ -65,7 +65,7 @@ fi
 
 # Process CARDANO_CONFIG as JSON value
 isJsonValue "$CARDANO_CONFIG"
-if [[ $return = true ]]; then
+if [[ $return == true ]]; then
   TARGET_FILE="/var/cardano/config/mainnet-config.json"
   echo "Generating $TARGET_FILE ..."
   mkdir -p `dirname $TARGET_FILE` \
@@ -75,7 +75,7 @@ fi
 
 # Process CARDANO_TOPOLOGY as JSON value
 isJsonValue "$CARDANO_TOPOLOGY"
-if [[ $return = true ]]; then
+if [[ $return == true ]]; then
   TARGET_FILE="/var/cardano/config/mainnet-topology.json"
   echo "Generating $TARGET_FILE ..."
   mkdir -p `dirname $TARGET_FILE` \
@@ -101,17 +101,17 @@ printRunEnv () {
   echo "CARDANO_UPDATE_TOPOLOGY=$CARDANO_UPDATE_TOPOLOGY"
   echo "CARDANO_BLOCK_PRODUCER=$CARDANO_BLOCK_PRODUCER"
 
-  if [ "$CARDANO_BLOCK_PRODUCER" = true ]; then
+  if [[ $CARDANO_BLOCK_PRODUCER == true ]]; then
 
-    if [ -z $CARDANO_SHELLEY_KES_KEY ]; then
+    if [[ -z $CARDANO_SHELLEY_KES_KEY ]]; then
       CARDANO_SHELLEY_KES_KEY="/var/cardano/config/keys/kes.skey"
     fi
 
-    if [ -z $CARDANO_SHELLEY_VRF_KEY ]; then
+    if [[ -z $CARDANO_SHELLEY_VRF_KEY ]]; then
       CARDANO_SHELLEY_VRF_KEY="/var/cardano/config/keys/vrf.skey"
     fi
 
-    if [ -z $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE ]; then
+    if [[ -z $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE ]]; then
       CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE="/var/cardano/config/keys/node.cert"
     fi
 

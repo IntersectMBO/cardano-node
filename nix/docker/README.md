@@ -1,4 +1,20 @@
 
+# Introduction
+
+In this document we show various ways to run Cardano in Container Runtime Environments.
+
+Use cases we cover include ...
+
+* A plain Docker setup, which also runs on a Raspberry Pi
+* Everything in one script with Docker Compose
+* Advanced enterprise setup with Kubernetes
+
+All of this is part of a larger effort to [Provide high quality multiarch docker image and k8s support](https://github.com/input-output-hk/cardano-node/issues/2360)
+for Cardano.
+
+While this is a technical digest of how things work, much more user friendly documentaion
+is provided in the [gitbook](https://tdiesler.gitbook.io/cardano/v/iohk/).
+
 # Running on Plain Docker
 
 ## Build Cardano Node Image
@@ -20,22 +36,14 @@ fi
 
 # Bash into the node to look around
 docker run --rm -it --entrypoint=bash \
-  -v shelley-data:/opt/cardano/data \
+  -v node-data:/opt/cardano/data \
   inputoutput/cardano-node:dev
-
-cardano-node run \
-  --config /opt/cardano/config/mainnet-config.json \
-  --topology /opt/cardano/config/mainnet-topology.json \
-  --socket-path /opt/cardano/ipc/socket \
-  --database-path /opt/cardano/data \
-  --host-addr 0.0.0.0 \
-  --port 3001
 ```
 
 ## Populating the Data Volume
 
 ```
-docker run --name=tmp -v shelley-data:/data centos
+docker run --name=tmp -v node-data:/data centos
 docker cp ~/data/protocolMagicId tmp:/data
 docker cp ~/data/immutable tmp:/data
 docker cp ~/data/ledger tmp:/data
@@ -55,7 +63,7 @@ docker rm -f relay
 docker run --rm -it \
   -p 3001:3001 \
   -e NETWORK=mainnet \
-  -v shelley-data:/data/db \
+  -v node-data:/data/db \
   inputoutput/cardano-node:dev
 ```
 
@@ -67,7 +75,7 @@ docker run --detach \
   --name=relay \
   -p 3001:3001 \
   -e NETWORK=mainnet \
-  -v shelley-data:/data/db \
+  -v node-data:/data/db \
   inputoutput/cardano-node:dev
 
 docker logs -f relay
@@ -81,7 +89,7 @@ Check graceful shutdown SIGINT with -it
 docker rm -f relay
 docker run --rm -it \
   -p 3001:3001 \
-  -v shelley-data:/opt/cardano/data \
+  -v node-data:/opt/cardano/data \
   inputoutput/cardano-node:dev run
 ```
 
@@ -92,8 +100,8 @@ docker rm -f relay
 docker run --detach \
   --name=relay \
   -p 3001:3001 \
-  -v shelley-data:/opt/cardano/data \
-  -v shelley-ipc:/opt/cardano/ipc \
+  -v node-data:/opt/cardano/data \
+  -v node-ipc:/opt/cardano/ipc \
   inputoutput/cardano-node:dev run
 
 docker logs -f relay
@@ -107,8 +115,8 @@ docker run --detach \
   --name=relay \
   -p 3001:3001 \
   -e CARDANO_UPDATE_TOPOLOGY=true \
-  -v shelley-data:/opt/cardano/data \
-  -v shelley-ipc:/opt/cardano/ipc \
+  -v node-data:/opt/cardano/data \
+  -v node-ipc:/opt/cardano/ipc \
   inputoutput/cardano-node:dev run
 
 docker logs -f relay
@@ -138,7 +146,7 @@ docker run --detach \
   --name=relay \
   -p 3001:3001 \
   -e CARDANO_TOPOLOGY="$CUSTOM_TOPOLOGY" \
-  -v shelley-data:/opt/cardano/data \
+  -v node-data:/opt/cardano/data \
   inputoutput/cardano-node:dev run
 
 docker logs -f relay
@@ -148,7 +156,7 @@ docker logs -f relay
 
 ```
 alias cardano-cli="docker run --rm -it \
-  -v shelley-ipc:/opt/cardano/ipc \
+  -v node-ipc:/opt/cardano/ipc \
   inputoutput/cardano-node:dev cardano-cli"
 
 cardano-cli query tip --mainnet

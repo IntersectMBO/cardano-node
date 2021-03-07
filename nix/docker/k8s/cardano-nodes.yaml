@@ -64,7 +64,7 @@ spec:
           name: relaycfg
           key:  customPeers
     - name: CARDANO_UPDATE_TOPOLOGY
-      value: "true"
+      value: "false"
     args: [ "run" ]
     ports:
       - containerPort: 3001
