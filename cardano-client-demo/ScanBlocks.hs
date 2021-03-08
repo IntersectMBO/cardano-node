@@ -23,7 +23,7 @@ import           System.FilePath ((</>))
 --
 -- Then run this with the path to the directory containing node.sock:
 --
---     $ cabal run cardano-client-demo:cardano-client-demo -- db
+--     $ cabal run cardano-client-demo:scan-blocks -- db
 --
 main :: IO ()
 main = do
@@ -48,7 +48,7 @@ main = do
   protocols :: LocalNodeClientProtocolsInMode CardanoMode
   protocols =
       LocalNodeClientProtocols {
-        localChainSyncClient    = Just chainSyncClient,
+        localChainSyncClient    = LocalChainSyncClient chainSyncClient,
         localTxSubmissionClient = Nothing,
         localStateQueryClient   = Nothing
       }

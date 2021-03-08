@@ -147,10 +147,8 @@ module Cardano.Api.Shelley
     -- ** Low level protocol interaction with a Cardano node
     LocalNodeConnectInfo(LocalNodeConnectInfo),
     ShelleyMode,
-    CardanoMode,
     ConsensusMode
       ( ShelleyMode
-      , CardanoMode
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
 

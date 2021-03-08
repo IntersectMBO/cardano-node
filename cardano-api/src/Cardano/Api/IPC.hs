@@ -21,6 +21,7 @@ module Cardano.Api.IPC (
     LocalNodeConnectInfo(..),
     localConsensusMode,
     LocalNodeClientProtocols(..),
+    LocalChainSyncClient(..),
     LocalNodeClientProtocolsInMode,
 
     -- ** Modes
@@ -35,6 +36,7 @@ module Cardano.Api.IPC (
 
     -- *** Chain sync protocol
     ChainSyncClient(..),
+    ChainSyncClientPipelined(..),
     BlockInMode(..),
 
     -- *** Local tx submission
@@ -75,15 +77,15 @@ import           Control.Tracer (nullTracer)
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
-                     NodeToClientVersionData (..))
+                   NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as Net
-import           Ouroboros.Network.Protocol.ChainSync.Client (ChainSyncClient (..))
-import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
+import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
+import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
-                     SubmitResult (..))
+                   SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
@@ -111,7 +113,7 @@ import           Cardano.Api.TxInMode
 data LocalNodeClientProtocols block point tip tx txerr query m =
      LocalNodeClientProtocols {
        localChainSyncClient
-         :: Maybe (ChainSyncClient         block point tip   m ())
+         :: LocalChainSyncClient block point tip m
 
      , localTxSubmissionClient
          :: Maybe (LocalTxSubmissionClient tx txerr          m ())
@@ -119,6 +121,11 @@ data LocalNodeClientProtocols block point tip tx txerr query m =
      , localStateQueryClient
          :: Maybe (LocalStateQueryClient   block point query m ())
      }
+
+data LocalChainSyncClient block point tip m
+  = NoLocalChainSyncClient
+  | LocalChainSyncClientPipelined (ChainSyncClientPipelined block point tip   m ())
+  | LocalChainSyncClient          (ChainSyncClient          block point tip   m ())
 
 -- public, exported
 type LocalNodeClientProtocolsInMode mode =
@@ -241,13 +248,19 @@ mkVersionedProtocols networkid ptcl
     protocols ptclBlockVersion ptclVersion =
         NodeToClientProtocols {
           localChainSyncProtocol =
-            Net.InitiatorProtocolOnly $
-              Net.MuxPeer
-                nullTracer
-                cChainSyncCodec
-                (maybe Net.chainSyncPeerNull
-                       Net.Sync.chainSyncClientPeer
-                       localChainSyncClient)
+            Net.InitiatorProtocolOnly $ case localChainSyncClient of
+              NoLocalChainSyncClient
+                -> Net.MuxPeer nullTracer cChainSyncCodec Net.chainSyncPeerNull
+              LocalChainSyncClient client
+                -> Net.MuxPeer
+                      nullTracer
+                      cChainSyncCodec
+                      (Net.Sync.chainSyncClientPeer client)
+              LocalChainSyncClientPipelined clientPipelined
+                -> Net.MuxPeerPipelined
+                      nullTracer
+                      cChainSyncCodec
+                      (Net.SyncP.chainSyncClientPeerPipelined clientPipelined)
 
         , localTxSubmissionProtocol =
             Net.InitiatorProtocolOnly $
@@ -349,8 +362,10 @@ convLocalNodeClientProtocols
       localStateQueryClient
     } =
     LocalNodeClientProtocols {
-      localChainSyncClient    = convLocalChainSyncClient mode <$>
-                                  localChainSyncClient,
+      localChainSyncClient    = case localChainSyncClient of
+        NoLocalChainSyncClient -> NoLocalChainSyncClient
+        LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined mode clientPipelined
+        LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient mode client,
 
       localTxSubmissionClient = convLocalTxSubmissionClient mode <$>
                                   localTxSubmissionClient,
@@ -366,7 +381,6 @@ convLocalChainSyncClient
   => ConsensusMode mode
   -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip m a
   -> ChainSyncClient block (Net.Point block) (Net.Tip block) m a
-
 convLocalChainSyncClient mode =
     Net.Sync.mapChainSyncClient
       (toConsensusPointInMode mode)
@@ -374,6 +388,18 @@ convLocalChainSyncClient mode =
       (fromConsensusBlock mode)
       (fromConsensusTip mode)
 
+convLocalChainSyncClientPipelined
+  :: forall mode block m a.
+     (ConsensusBlockForMode mode ~ block, Functor m)
+  => ConsensusMode mode
+  -> ChainSyncClientPipelined (BlockInMode mode) ChainPoint ChainTip m a
+  -> ChainSyncClientPipelined block (Net.Point block) (Net.Tip block) m a
+convLocalChainSyncClientPipelined mode =
+  mapChainSyncClientPipelined
+    (toConsensusPointInMode mode)
+    (fromConsensusPointInMode mode)
+    (fromConsensusBlock mode)
+    (fromConsensusTip mode)
 
 convLocalTxSubmissionClient
   :: forall mode block m a.
@@ -423,7 +449,7 @@ queryNodeLocalState connctInfo point query = do
     connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
-        localChainSyncClient    = Nothing,
+        localChainSyncClient    = NoLocalChainSyncClient,
         localTxSubmissionClient = Nothing,
         localStateQueryClient   = Just (localStateQuerySingle resultVar)
       }
@@ -464,7 +490,7 @@ submitTxToNodeLocal connctInfo tx = do
     connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
-        localChainSyncClient    = Nothing,
+        localChainSyncClient    = NoLocalChainSyncClient,
         localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar),
         localStateQueryClient   = Nothing
 
@@ -493,7 +519,7 @@ getLocalChainTip localNodeConInfo = do
     connectToLocalNode
       localNodeConInfo
       LocalNodeClientProtocols
-        { localChainSyncClient = Just $ chainSyncGetCurrentTip resultVar
+        { localChainSyncClient = LocalChainSyncClient $ chainSyncGetCurrentTip resultVar
         , localTxSubmissionClient = Nothing
         , localStateQueryClient = Nothing
         }
