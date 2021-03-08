@@ -33,3 +33,37 @@ executable scan-blocks-pipelined
                        filepath,
                        time,
   default-language:    Haskell2010
+
+executable ledger-state
+  main-is:             LedgerState.hs
+  build-depends:       base,
+                       aeson,
+                       base16-bytestring,
+                       bytestring,
+                       containers,
+                       filepath,
+                       memory,
+                       mtl,
+                       text,
+                       time,
+                       transformers-except,
+                       yaml,
+
+                       cryptonite,
+                       cardano-api,
+                       cardano-binary,
+                       cardano-crypto-class,
+                       cardano-crypto-wrapper,
+                       cardano-ledger-byron,
+                       cardano-node,
+                       cardano-slotting,
+                       iohk-monitoring,
+                       ouroboros-network,
+                       ouroboros-consensus,
+                       ouroboros-consensus-cardano,
+                       ouroboros-consensus-byron,
+                       ouroboros-consensus-shelley,
+                       shelley-spec-ledger,
+                       typed-protocols,
+
+  default-language:    Haskell2010

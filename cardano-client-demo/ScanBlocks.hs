@@ -25,7 +25,7 @@ import           System.FilePath ((</>))
 --
 main :: IO ()
 main = do
-  -- Get cocket path from CLI argument.
+  -- Get socket path from CLI argument.
   socketDir:_ <- getArgs
   let socketPath = socketDir </> "node.sock"
 

@@ -55,6 +55,8 @@ library
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
 
+                        Cardano.Api.NewApiStuff
+
   other-modules:        
                         -- Splitting up the big Typed module:
                         Cardano.Api.Address
@@ -117,6 +119,7 @@ library
                       , formatting
                       , iproute
                       , memory
+                      , mtl
                       , network
                       , nothunks
                       , ouroboros-consensus
@@ -136,6 +139,7 @@ library
                       , typed-protocols
                       , unordered-containers >= 0.2.11
                       , vector
+                      , yaml
 
 test-suite cardano-api-test
   import:               base, project-config

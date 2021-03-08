@@ -132,7 +132,7 @@ module Cardano.Api (
     BlockHeader(..),
 
     -- ** Points on the chain
-    ChainPoint,
+    ChainPoint(..),
     EpochNo(..),
 
     -- ** Tip of the chain

@@ -182,6 +182,10 @@ source-repository-package
     typed-protocols-examples
     Win32-network
 
+-- Needed for the Windows cabal constraint solver.
+max-backjumps: 10000
+reorder-goals: False
+
 constraints:
     hedgehog >= 1.0
   , bimap >= 0.4.0
