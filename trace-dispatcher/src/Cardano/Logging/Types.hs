@@ -21,7 +21,6 @@ import qualified Data.Map as Map
 import           Data.Text (Text)
 import           GHC.Generics
 
-
 -- | Every message needs this to define how to represent it
 class LogFormatting a where
   -- | Machine readable representation with the possibility to represent
@@ -49,12 +48,14 @@ data Metric
     | DoubleM (Maybe Text) Double
   deriving (Show, Eq)
 
--- Document all log messages by providing a list of (prototye, documentation) pairs
--- for all constructors. Because it is not enforced by the type system, it is very
+-- Document all log messages by providing a list of DocMsgs for all constructors.
+-- Because it is not enforced by the type system, it is very
 -- important to provide a complete list, as the prototypes are used as well for configuration.
 -- If you don't want to add an item for documentation enter an empty text.
-newtype Documented a = Documented [DocMsg a]
+newtype Documented a = Documented {undoc :: [DocMsg a]}
 
+-- | Document a message by giving a prototype, its most special name in the namespace
+-- and a comment in markdown format
 data DocMsg a = DocMsg {
     dmPrototype :: a
   , dmName      :: Text
@@ -82,6 +83,7 @@ newtype Trace m a = Trace
   {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
 
 -- | Contramap lifted to Trace
+-- If you carry a typed formatter a with the TODO
 instance Monad m => Contravariant (Trace m) where
     contramap f (Trace tr) = Trace $
       T.contramap (\ (lc, mbC, a) -> (lc, mbC, f a)) tr

@@ -37,10 +37,13 @@ data TraceAddBlockEvent blk =
 
 In this sum type every constructor defines a message with a potential payload to be logged or monitored.
 
-To actually log such a message the central __traceWith__ function must be called:
+To actually log such a message the __trace__ or __traceWith__ function must be called, where the trace
+function gives a special name to this message in the context of the namespace:
 
 ```haskell
-traceWith exampleTracer (IgnoreBlockOlderThanK b)
+trace exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK p)
+
+traceWith exampleTracer (IgnoreBlockOlderThanK p)
 ```
 
 ### Severity
@@ -133,12 +136,12 @@ In the current representation furthermore the _Hostname_ is prepended and the _S
     ->
     [cardano.general.middle.specific][Info][yupanqui-PC][ThreadId 379])
 
-Since we require that every message has its unique name we offer the following convenience function:
+Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
 
 ```haskell
 traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
 -- Can be shortened as:
-traceNamed exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
+trace exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
 ```
 
 ### Filtering
@@ -288,22 +291,19 @@ data LimitingMessage =
 We want to limit the use type classes, so we only use one type class for the formatting of messages.
 
 * The `forMachine` method is used for a machine readable representation, which can be different depending on the detail level.
-  It's default implementation false back to the toJson method of Aeson
+  It's default implementation assumes no machine representation
 
-* the `forHuman` method shall represent the message in human readable form.  
+* the `forHuman` method shall represent the message in human readable form.
+  It's default implementation assumes no representation for humans   
 
 * the `asMetrics` method shall represent the message as 0 to n metrics.  
   It's default implementation assumes no metrics. If a text is given it is
   appended as last element to the namespace.
 
 ```haskell
-class Logging a where
+class LogFormatting a where
   forMachine :: DetailLevel -> a -> A.Object
-  default forMachine :: A.ToJSON a => DetailLevel -> a -> A.Object
-  forMachine _ v = case A.toJSON v of
-    A.Object o     -> o
-    s@(A.String _) -> HM.singleton "string" s
-    _              -> mempty
+  forMachine _ v = mempty
 
   forHuman :: a -> Text
   forHuman v = ""
@@ -356,15 +356,32 @@ Many more configuration options e.g. for different transformers and traceOuts an
 
 ### Documentation
 
-To document you have to give a list of example messages with a comment added which is used for documentation:
+This library requires that all messages are document by providing a `Documented a`, which consists of a list of `DocMsg`. A DocMsg for a message is constructed by giving:
+
+* a prototype of the message
+* the most special name of the message in the namespace
+* the documentation for the message in markdown format
+
+Because it is not enforced by the type system, it is very important to provide a complete list, as the prototypes are used as well for configuration.
 
 ```haskell
-traceAddBlockEventComments :: [Commented (TraceAddBlockEvent blk)]
-traceAddBlockEventComments = [
-    comment "ignore them bro" (IgnoreBlockOlderThanK (RealPoint 1 1))
-  , comment "ignore them too" (IgnoreBlockAlreadyInVolatileDB (RealPoint 1 1))
-  ...
-]
+newtype Documented a = Documented {undoc :: [DocMsg a]}
+
+data DocMsg a = DocMsg {
+    dmPrototype :: a
+  , dmName      :: Text
+  , dmMarkdown  :: Text
+}
+```
+
+To build the documentation first call `documentMarkdown` with the Documented type and all the tracers that are called. Do this for all message types you need, and then call `buildersToText` with the appended lists.
+
+```haskell
+  b1 <- documentMarkdown traceForgeEventDocu [t1, t2]
+  b2 <- documentMarkdown .. ..
+  ..
+  bn <- documentMarkdown .. ..  
+  T.writeFile "Docu.md" (buildersToText (b1 ++ b2 ++ ... ++ bn))
 ```
 
 ### TraceOuts
