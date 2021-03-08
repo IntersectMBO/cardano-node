@@ -76,8 +76,6 @@ library
                       , binary
                       , bytestring
                       , base16-bytestring >= 1.0
-                      , base58-bytestring
-                      , canonical-json    >= 0.6 && < 0.7
                       , cardano-api
                       , cardano-binary
                       , cardano-config
@@ -86,9 +84,7 @@ library
                       , cardano-crypto-wrapper
                       , cardano-ledger-byron
                       , cardano-ledger-shelley-ma
-                      , cardano-node
                       , cardano-prelude
-                      , cardano-slotting
                       , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
                       , containers
@@ -96,32 +92,22 @@ library
                       , directory
                       , filepath
                       , formatting
-                      , io-sim-classes
                       , iproute
-                      , memory
                       , network
-                      , network-mux
-                      , network-uri
                       , optparse-applicative
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-shelley
                       , ouroboros-network
-                      , primitive
                       , parsec
-                      , process
-                      , scientific
                       , shelley-spec-ledger
                       , small-steps
                       , split
                       , text
                       , time
-                      , transformers
                       , transformers-except
-                      , ouroboros-network-framework
                       , utf8-string
-                      , unordered-containers
                       , vector
 
   default-language:    Haskell2010
@@ -153,12 +139,9 @@ executable cardano-cli
 
   build-depends:        base              >= 4.12       &&  < 5
                       , cardano-cli
-                      , cardano-config
                       , cardano-crypto-class
                       , cardano-prelude
-                      , directory
                       , optparse-applicative
-                      , text
                       , transformers-except
   default-extensions:  NoImplicitPrelude
 
@@ -168,35 +151,20 @@ test-suite cardano-cli-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
                       , bech32 >= 1.1.0
                       , bytestring
                       , base16-bytestring
                       , cardano-api
                       , cardano-api-test
                       , cardano-cli
-                      , cardano-crypto-class
-                      , cardano-ledger-shelley-ma
                       , cardano-node
                       , cardano-prelude
-                      , containers
-                      , deepseq
                       , directory
                       , exceptions
                       , hedgehog
                       , hedgehog-extras
-                      , lifted-base
-                      , optparse-applicative
-                      , ouroboros-consensus-shelley
                       , parsec
-                      , process
-                      , shelley-spec-ledger
-                      , shelley-spec-ledger-test
-                      , temporary
                       , text
-                      , time
-                      , transformers-except
-                      , unordered-containers
 
   other-modules:        Test.Cli.FilePermissions
                         Test.Cli.ITN
@@ -227,9 +195,7 @@ test-suite cardano-cli-golden
 
   build-depends:        base              >= 4.12       &&  < 5
                       , aeson             >= 1.5.6.0
-                      , bech32 >= 1.1.0
                       , bytestring
-                      , base16-bytestring
                       , cardano-api
                       , cardano-cli
                       , cardano-crypto-wrapper
@@ -237,18 +203,12 @@ test-suite cardano-cli-golden
                       , cardano-prelude
                       , cborg
                       , containers
-                      , deepseq
                       , directory
                       , exceptions
                       , hedgehog
                       , hedgehog-extras
-                      , lifted-base
-                      , optparse-applicative
-                      , process
-                      , temporary
                       , text
                       , time
-                      , transformers-except
                       , unordered-containers
 
   other-modules:        Test.Golden.Shelley
