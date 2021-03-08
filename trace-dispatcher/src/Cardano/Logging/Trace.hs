@@ -18,13 +18,14 @@ import           UnliftIO.MVar
 
 import           Cardano.Logging.Types
 
+-- | Convenience function for tracing a message with a name
+--   As the simple name suggest, this should be the standard function
+trace :: (Monad m) => Trace m a -> Text -> a -> m ()
+trace tr n = traceWith (appendName n tr)
+
 -- | Adds a message object to a trace
 traceWith :: (Monad m) => Trace m a -> a -> m ()
 traceWith (Trace tr) a = T.traceWith tr (emptyLoggingContext, Nothing, a)
-
--- | Convenience function for naming a message when tracing
-traceNamed :: (Monad m) => Trace m a -> Text -> a -> m ()
-traceNamed tr n = traceWith (appendName n tr)
 
 --- | Don't process further if the result of the selector function
 ---   is False.
