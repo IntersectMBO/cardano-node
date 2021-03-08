@@ -393,7 +393,7 @@ We offer different traceOuts (backends):
 * EKG (and Prometheus via EKG)
 * Stdout
 
-Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process. The only other possibility in the node will be a simple Stdout Tracer.  
+Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process. The only other possibility in the node will be a simple Stdout Tracer and an EKG store.  
 
 Katip is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ object or JSON representation. This choice is made by sending the message either to a Katip tracer, which is configured for a human or machine readable configuration or to both.  
 
