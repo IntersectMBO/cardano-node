@@ -79,11 +79,9 @@ library
                       , attoparsec
                       , base16-bytestring >= 1.0
                       , base58-bytestring
-                      , base64
                       , bech32 >= 1.1.0
                       , bytestring
                       , cardano-binary
-                      , cardano-config
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -98,13 +96,9 @@ library
                       , directory
                       , filepath
                       , formatting
-                      , io-sim-classes
-                      , iohk-monitoring
                       , iproute
                       , memory
                       , network
-                      , network-mux
-                      , network-uri
                       , nothunks
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
@@ -113,7 +107,6 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , scientific
-                      , serialise
                       , shelley-spec-ledger
                       , small-steps
                       , stm
@@ -121,8 +114,6 @@ library
                       , time
                       , transformers
                       , transformers-except
-                      , typed-protocols
-                      , typed-protocols-examples
                       , unordered-containers >= 0.2.11
                       , vector
 
@@ -155,18 +146,15 @@ test-suite cardano-api-test
                       , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-crypto-tests
-                      , cardano-crypto-wrapper
                       , cardano-ledger-byron-test
                       , cardano-prelude
                       , cardano-prelude-test
                       , cardano-slotting
                       , containers
-                      , cryptonite
                       , hedgehog
                       , hedgehog-extras
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
-                      , ouroboros-network
                       , QuickCheck
                       , shelley-spec-ledger
                       , shelley-spec-ledger-test
@@ -175,7 +163,6 @@ test-suite cardano-api-test
                       , tasty-quickcheck
                       , text
                       , time
-                      , unordered-containers
 
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.Examples
