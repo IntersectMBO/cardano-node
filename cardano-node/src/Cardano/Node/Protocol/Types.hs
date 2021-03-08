@@ -3,13 +3,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTSyntax #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Node.Protocol.Types
   ( Protocol(..)
   , SomeConsensusProtocol(..)
-  , SomeConsensusProtocolConstraints
   ) where
 
 import           Cardano.Prelude
@@ -18,9 +17,7 @@ import           Control.Monad.Fail (fail)
 import           Data.Aeson
 import           NoThunks.Class (NoThunks)
 
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
-import           Ouroboros.Consensus.Node.Run (RunNode)
+import qualified Cardano.Api.Protocol.Types as Cardano
 
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESMetricsData, HasKESInfo)
@@ -49,16 +46,15 @@ instance FromJSON Protocol where
       _ -> fail $ "Parsing of Protocol failed. "
                 <> show str <> " is not a valid protocol"
 
-type SomeConsensusProtocolConstraints blk =
-     ( HasKESMetricsData blk
-     , HasKESInfo blk
-     , RunNode blk
-     , TraceConstraints blk
-     )
 
 
 data SomeConsensusProtocol where
 
-     SomeConsensusProtocol :: SomeConsensusProtocolConstraints blk
-                           => Consensus.Protocol IO blk (BlockProtocol blk)
+     SomeConsensusProtocol :: forall blk. ( Cardano.Protocol IO blk
+                                          , HasKESMetricsData blk
+                                          , HasKESInfo blk
+                                          , TraceConstraints blk
+                                          )
+                           => Cardano.BlockType blk
+                           -> Cardano.ProtocolInfoArgs IO blk
                            -> SomeConsensusProtocol

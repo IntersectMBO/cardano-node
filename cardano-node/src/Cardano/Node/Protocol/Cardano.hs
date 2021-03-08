@@ -6,14 +6,7 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Protocol.Cardano
-  (
-    -- * Protocol exposing the specific type
-    -- | Use this when you need the specific instance
-    mkConsensusProtocolCardano
-
-    -- * Protocols hiding the specific type
-    -- | Use this when you want to handle protocols generically
-  , mkSomeConsensusProtocolCardano
+  ( mkSomeConsensusProtocolCardano
 
     -- * Errors
   , CardanoProtocolInstantiationError(..)
@@ -28,16 +21,15 @@ import qualified Data.Text as T
 
 import qualified Cardano.Chain.Update as Byron
 
-import           Ouroboros.Consensus.Cardano hiding (Protocol)
+import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
 import           Ouroboros.Consensus.Cardano.Condense ()
 
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
-
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Protocol.Types
 import           Cardano.Node.Types
 
 import           Cardano.Tracing.OrphanInstances.Byron ()
@@ -70,28 +62,7 @@ mkSomeConsensusProtocolCardano
   -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
-mkSomeConsensusProtocolCardano ncb ncs nch files =
-
-    -- Applying the SomeConsensusProtocol here is a check that
-    -- the type of mkConsensusProtocolCardano fits all the class
-    -- constraints we need to run the protocol.
-    SomeConsensusProtocol
-      <$> mkConsensusProtocolCardano ncb ncs nch files
-
-
--- | Instantiate 'Consensus.Protocol' for Byron specifically.
---
--- Use this when you need to run the consensus with this specific protocol.
---
-mkConsensusProtocolCardano
-  :: NodeByronProtocolConfiguration
-  -> NodeShelleyProtocolConfiguration
-  -> NodeHardForkProtocolConfiguration
-  -> Maybe ProtocolFilepaths
-  -> ExceptT CardanoProtocolInstantiationError IO
-             (Consensus.Protocol IO (CardanoBlock StandardCrypto)
-                                    ProtocolCardano)
-mkConsensusProtocolCardano NodeByronProtocolConfiguration {
+mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcByronGenesisFile,
                              npcByronGenesisFileHash,
                              npcByronReqNetworkMagic,
@@ -137,7 +108,7 @@ mkConsensusProtocolCardano NodeByronProtocolConfiguration {
     --TODO: all these protocol versions below are confusing and unnecessary.
     -- It could and should all be automated and these config entries eliminated.
     return $!
-      Consensus.ProtocolCardano
+      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
           byronPbftSignatureThreshold =

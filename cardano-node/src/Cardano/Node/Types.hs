@@ -404,16 +404,9 @@ instance AdjustFilePaths a => AdjustFilePaths (Maybe a) where
 
 instance AdjustFilePaths (Last NodeProtocolConfiguration) where
 
-  adjustFilePaths f (Last (Just (NodeProtocolConfigurationByron pc))) =
-    Last . Just $ NodeProtocolConfigurationByron (adjustFilePaths f pc)
+  adjustFilePaths f (Last (Just npc)) =
+    Last . Just $ adjustFilePaths f npc
 
-  adjustFilePaths f (Last (Just (NodeProtocolConfigurationShelley pc))) =
-    Last . Just $ NodeProtocolConfigurationShelley (adjustFilePaths f pc)
-
-  adjustFilePaths f (Last (Just (NodeProtocolConfigurationCardano pcb pcs pch))) =
-    Last . Just $ NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
-                                                   (adjustFilePaths f pcs)
-                                                   pch
   adjustFilePaths _ (Last Nothing) = Last Nothing
 
 instance AdjustFilePaths (Last SocketPath) where

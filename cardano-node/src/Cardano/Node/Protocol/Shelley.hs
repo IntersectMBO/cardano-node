@@ -3,14 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Protocol.Shelley
-  (
-    -- * Protocol exposing the specific type
-    -- | Use this when you need the specific instance
-    mkConsensusProtocolShelley
-
-    -- * Protocols hiding the specific type
-    -- | Use this when you want to handle protocols generically
-  , mkSomeConsensusProtocolShelley
+  ( mkSomeConsensusProtocolShelley
 
     -- * Errors
   , ShelleyProtocolInstantiationError(..)
@@ -35,7 +28,6 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import           Ouroboros.Consensus.Cardano.ShelleyHFC
 
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
@@ -49,6 +41,7 @@ import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 
 import qualified Cardano.Api as Api (FileError (..))
 import           Cardano.Api.Orphans ()
+import qualified Cardano.Api.Protocol.Types as Protocol
 import           Cardano.Api.Shelley hiding (FileError)
 
 
@@ -70,40 +63,21 @@ import           Cardano.Node.Protocol.Types
 --
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
---
 mkSomeConsensusProtocolShelley
   :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
-mkSomeConsensusProtocolShelley nc files =
-
-    -- Applying the SomeConsensusProtocol here is a check that
-    -- the type of mkConsensusProtocolShelley fits all the class
-    -- constraints we need to run the protocol.
-    SomeConsensusProtocol <$> mkConsensusProtocolShelley nc files
-
-
--- | Instantiate 'Consensus.Protocol' for Shelley specifically.
---
--- Use this when you need to run the consensus with this specific protocol.
---
-mkConsensusProtocolShelley
-  :: NodeShelleyProtocolConfiguration
-  -> Maybe ProtocolFilepaths
-  -> ExceptT ShelleyProtocolInstantiationError IO
-             (Consensus.Protocol IO (ShelleyBlockHFC StandardShelley)
-                                 Consensus.ProtocolShelley)
-mkConsensusProtocolShelley NodeShelleyProtocolConfiguration {
-                            npcShelleyGenesisFile,
-                            npcShelleyGenesisFileHash
-                          }
+mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
+                                  npcShelleyGenesisFile,
+                                  npcShelleyGenesisFileHash
+                                }
                           files = do
     (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
                                           npcShelleyGenesisFileHash
     firstExceptT GenesisValidationFailure . hoistEither $ validateGenesis genesis
     leaderCredentials <- readLeaderCredentials files
 
-    return $ Consensus.ProtocolShelley
+    return $ SomeConsensusProtocol Protocol.ShelleyBlockType $ Protocol.ProtocolInfoArgsShelley
       Consensus.ProtocolParamsShelleyBased {
         shelleyBasedGenesis = genesis,
         shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,

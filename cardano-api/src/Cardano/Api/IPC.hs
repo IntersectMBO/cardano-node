@@ -93,7 +93,6 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified Ouroboros.Consensus.Block as Consensus
-import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Network.NodeToClient as Consensus
@@ -105,6 +104,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Query
 import           Cardano.Api.TxInMode
 
@@ -201,16 +201,11 @@ connectToLocalNode LocalNodeConnectInfo {
 
 
 mkVersionedProtocols :: forall block.
-                        (Consensus.SerialiseNodeToClientConstraints block,
-                         Consensus.SupportedNetworkProtocolVersion block,
-                         ShowProxy block,
-                         ShowProxy (Consensus.ApplyTxErr block),
-                         ShowProxy (Consensus.GenTx block),
-                         ShowProxy (Consensus.Query block),
-                         Consensus.ShowQuery (Consensus.Query block))
+                        ( Consensus.ShowQuery (Consensus.Query block),
+                          ProtocolClient block
+                        )
                      => NetworkId
-                     -> Consensus.ProtocolClient block
-                          (Consensus.BlockProtocol block)
+                     -> ProtocolClientInfoArgs block
                      -> LocalNodeClientProtocolsForBlock block
                      -> Net.Versions
                           Net.NodeToClientVersion
@@ -288,7 +283,7 @@ mkVersionedProtocols networkid ptcl
 
     codecConfig :: Consensus.CodecConfig block
     codecConfig = Consensus.pClientInfoCodecConfig
-                    (Consensus.protocolClientInfo ptcl)
+                    (protocolClientInfo ptcl)
 
 
 -- | This type defines the boundary between the mode-parametrised style used in
@@ -308,8 +303,10 @@ data LocalNodeClientParams where
            Consensus.SupportedNetworkProtocolVersion block,
            ShowProxy block, ShowProxy (Consensus.ApplyTxErr block),
            ShowProxy (Consensus.GenTx block), ShowProxy (Consensus.Query block),
-           Consensus.ShowQuery (Consensus.Query block))
-       => Consensus.ProtocolClient block (Consensus.BlockProtocol block)
+           Consensus.ShowQuery (Consensus.Query block),
+           ProtocolClient block
+           )
+       => ProtocolClientInfoArgs block
        -> LocalNodeClientProtocolsForBlock block
        -> LocalNodeClientParams
 
@@ -343,7 +340,7 @@ mkLocalNodeClientParams :: forall mode block.
                         -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =
     -- For each of the possible consensus modes we pick the concrete block type
-    -- (by picking the appropriate 'Consensus.ProtocolClient' value).
+    -- (by picking the appropriate 'ProtocolClient' value).
     --
     -- Though it is not immediately visible, this point where we use
     -- 'LocalNodeClientParams' is also where we pick up the necessary class
@@ -356,17 +353,17 @@ mkLocalNodeClientParams modeparams clients =
     case modeparams of
       ByronModeParams epochSlots ->
         LocalNodeClientParams
-          (Consensus.ProtocolClientByron epochSlots)
+          (ProtocolClientInfoArgsByron epochSlots)
           (convLocalNodeClientProtocols ByronMode clients)
 
       ShelleyModeParams ->
         LocalNodeClientParams
-          Consensus.ProtocolClientShelley
+          ProtocolClientInfoArgsShelley
           (convLocalNodeClientProtocols ShelleyMode clients)
 
       CardanoModeParams epochSlots ->
         LocalNodeClientParams
-          (Consensus.ProtocolClientCardano epochSlots)
+          (ProtocolClientInfoArgsCardano epochSlots)
           (convLocalNodeClientProtocols CardanoMode clients)
 
 

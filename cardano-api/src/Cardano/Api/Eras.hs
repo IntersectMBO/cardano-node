@@ -185,22 +185,6 @@ instance Eq AnyCardanoEra where
         Nothing   -> False
         Just Refl -> True -- since no constructors share types
 
-instance Enum AnyCardanoEra where
-    toEnum 0 = AnyCardanoEra ByronEra
-    toEnum 1 = AnyCardanoEra ShelleyEra
-    toEnum 2 = AnyCardanoEra AllegraEra
-    toEnum 3 = AnyCardanoEra MaryEra
-    toEnum _ = error "AnyCardanoEra.toEnum: bad argument"
-
-    fromEnum (AnyCardanoEra ByronEra)   = 0
-    fromEnum (AnyCardanoEra ShelleyEra) = 1
-    fromEnum (AnyCardanoEra AllegraEra) = 2
-    fromEnum (AnyCardanoEra MaryEra)    = 3
-
-instance Bounded AnyCardanoEra where
-    minBound = AnyCardanoEra ByronEra
-    maxBound = AnyCardanoEra MaryEra
-
 instance ToJSON AnyCardanoEra where
    toJSON (AnyCardanoEra era) = toJSON era
 
