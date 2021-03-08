@@ -61,21 +61,24 @@ docIt backend logFormat (LoggingContext {..},
                         Nothing -> emptyLogDoc mdText))
         docMap)
 
+buildersToText :: [(Namespace, Builder)] -> Text
+buildersToText builderList =
+  let sortedBuilders = sortBy (\ (l,_) (r,_) -> compare l r) builderList
+  in toStrict $ toLazyText
+      $ mconcat
+        $ intersperse (fromText "\n\n") (map snd sortedBuilders)
+
 documentMarkdown :: (LogFormatting a, MonadIO m) =>
      Documented a
   -> [Trace m a]
-  -> m Text
+  -> m [(Namespace, Builder)]
 documentMarkdown (Documented documented) tracers = do
     DocCollector docRef <- documentTracers (Documented documented) tracers
     items <- fmap Map.toList (liftIO (readIORef docRef))
     let sortedItems = sortBy
                         (\ (_,l) (_,r) -> compare (ldNamespace l) (ldNamespace r))
                         items
-        builders     = map documentItem sortedItems
-    pure $ toStrict
-            $ toLazyText
-              $ mconcat
-                $ intersperse (fromText "\n\n") builders
+    pure $ map (\(i, ld) -> (head (ldNamespace ld), documentItem (i, ld))) sortedItems
   where
     documentItem :: (Int, LogDoc) -> Builder
     documentItem (idx, ld@LogDoc {..}) = mconcat $ intersperse (fromText "\n\n")
@@ -103,30 +106,30 @@ documentMarkdown (Documented documented) tracers = do
       $ intersperse (singleton '\n')
         [case forHuman dmPrototype of
           "" -> mempty
-          t  -> fromText "For human : " <> asCode (fromText t)
+          t  -> fromText "For human:\n" <> asCode (fromText t)
         , let r1 = forMachine DBrief dmPrototype
               r2 = forMachine DRegular dmPrototype
               r3 = forMachine DDetailed dmPrototype
           in if r1 == mempty && r2 == mempty && r3 == mempty
             then mempty
               else if r1 == r2 && r2 == r3
-                then fromText "For machine : "
+                then fromText "For machine:\n"
                       <> asCode (fromText (toStrict (encodeToLazyText r1)))
                 else if r1 == r2
-                  then fromText "For machine regular: "
+                  then fromText "For machine regular:\n"
                         <> asCode (fromText (toStrict (encodeToLazyText r2)))
                         <> fromText "\nFor machine detailed: "
                         <> asCode (fromText (toStrict (encodeToLazyText r3)))
                   else if r2 == r3
-                    then fromText "For machine brief: "
+                    then fromText "For machine brief:\n"
                           <> asCode (fromText (toStrict (encodeToLazyText r1)))
-                          <> fromText "\nFor machine regular: "
+                          <> fromText "\nFor machine regular:\n"
                           <> asCode (fromText (toStrict (encodeToLazyText r2)))
-                    else fromText "For machine brief: "
+                    else fromText "For machine brief:\n"
                           <> asCode (fromText (toStrict (encodeToLazyText r1)))
-                          <> fromText "\nFor machine regular: "
+                          <> fromText "\nFor machine regular:\n"
                           <> asCode (fromText (toStrict (encodeToLazyText r2)))
-                          <> fromText "\nFor machine detailed: "
+                          <> fromText "\nFor machine detailed:\n"
                           <> asCode (fromText (toStrict (encodeToLazyText r3)))
         , case asMetrics dmPrototype of
             [] -> mempty
@@ -134,12 +137,12 @@ documentMarkdown (Documented documented) tracers = do
                   (intersperse (singleton '\n')
                     (map
                       (\case
-                        (IntM mbT i) -> fromText "Integer metrics: "
+                        (IntM mbT i) -> fromText "Integer metrics:\n"
                           <> case mbT of
                               Nothing -> mempty
                               Just n -> asCode (fromText n <> singleton ' '
                                         <> fromString (show i))
-                        (DoubleM mbT i) -> fromText "Double metrics: "
+                        (DoubleM mbT i) -> fromText "Double metrics:\n"
                           <> case mbT of
                               Nothing -> mempty
                               Just n -> asCode (fromText n <> singleton ' '
@@ -150,23 +153,23 @@ documentMarkdown (Documented documented) tracers = do
     propertiesBuilder :: LogDoc -> Builder
     propertiesBuilder LogDoc {..} =
         case nub ldSeverity of
-          []  -> fromText "Severity:   " <> asCode (fromString (show Info))
-          [s] -> fromText "Severity:   " <> asCode (fromString (show s))
-          l   -> fromText "Severities: "
+          []  -> fromText "> Severity:   " <> asCode (fromString (show Info))
+          [s] -> fromText "> Severity:   " <> asCode (fromString (show s))
+          l   -> fromText "> Severities: "
                   <> mconcat (intersperse (singleton ',')
                         (map (asCode . fromString . show) l))
       <>
         case nub ldPrivacy of
-          []  -> fromText " Privacy:    " <> asCode (fromString (show Public))
-          [p] -> fromText " Privacy:    " <> asCode (fromString (show p))
-          l   -> fromText " Privacies:  "
+          []  -> fromText "\nPrivacy:   " <> asCode (fromString (show Public))
+          [p] -> fromText "\nPrivacy:   " <> asCode (fromString (show p))
+          l   -> fromText "\nPrivacies: "
                   <> mconcat (intersperse (singleton ',')
                         (map (asCode . fromString . show) l))
       <>
         case nub ldDetails of
-          []  -> fromText " Details:    " <> asCode (fromString (show DRegular))
-          [d] -> fromText " Details:    " <> asCode (fromString (show d))
-          l   -> fromText " Details:    "
+          []  -> fromText "\nDetails:   " <> asCode (fromString (show DRegular))
+          [d] -> fromText "\nDetails:   " <> asCode (fromString (show d))
+          l   -> fromText "\nDetails:   "
                   <> mconcat (intersperse (singleton ',')
                         (map (asCode . fromString . show) l))
 
@@ -178,7 +181,7 @@ documentMarkdown (Documented documented) tracers = do
 
     backendFormatToText :: (Backend, LogFormat) -> Builder
     backendFormatToText (be,lf) = asCode (fromString (show be))
-                            <> fromText " Format: "
+                            <> fromText " / "
                             <> asCode (fromString (show lf))
 
 
