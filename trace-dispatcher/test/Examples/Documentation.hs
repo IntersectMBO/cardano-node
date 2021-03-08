@@ -29,5 +29,5 @@ docTracer = do
   t2 <-fmap (withSeverityTraceForgeEvent
                 . appendName "node"
                 . appendName "cardano") tracer2
-  t <- documentMarkdown traceForgeEventDocu [t1, t2]
-  T.writeFile "/home/yupanqui/IOHK/Testdocu.md" t
+  bl <- documentMarkdown traceForgeEventDocu [t1, t2]
+  T.writeFile "/home/yupanqui/IOHK/Testdocu.md" (buildersToText bl)
