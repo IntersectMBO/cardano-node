@@ -3,7 +3,8 @@ def profile_cli_args($p):
   { createSpec:
     [ "--supply",                  $p.genesis.total_balance
     , "--testnet-magic",           $p.genesis.network_magic
-     , "--gen-genesis-keys",       $p.composition.n_bft_hosts
+    , "--gen-genesis-keys",        $p.composition.n_bft_hosts
+    , "--gen-utxo-keys",           1
     ]
  , createFinalIncremental:
     ([ "--supply",                 ($p.genesis.total_balance -

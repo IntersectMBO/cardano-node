@@ -100,16 +100,32 @@ let
     then echo "generating genesis due to cache miss:  $genesis_cache_id @$genesis_cache_path"
          mkdir -p "$genesis_cache_path"
 
+         ${shelleyGenesisSpec                 "$genesis_cache_path"}
+         ${shelleyGenesisVerbatim             "$genesis_cache_path"}
+
          ${if genesis.single_shot
            then
              ''
              echo "Single-shot genesis not supported yet."
              exit 1
              ''
+           else if genesis.utxo > 0
+                   || genesis.delegators > composition.n_pools
+                   || composition.n_dense_hosts > 0
+           then
+             ''
+             cat <<EOF
+             Incremental (non single-shot) genesis does not support advanced features like:
+               - stuffed UTxO
+               - dense pools, and
+               - extra delegators
+
+             Please use a profile with single_shot = true.
+             EOF
+             exit 1
+             ''
            else
              ''
-             ${shelleyGenesisSpec                 "$genesis_cache_path"}
-             ${shelleyGenesisVerbatim             "$genesis_cache_path"}
              ${shelleyGenesisIncremental          "$genesis_cache_path"}
              ${bftCredentialsIncremental          "$genesis_cache_path"}
              ${poolCredentialsIncremental         "$genesis_cache_path"}
