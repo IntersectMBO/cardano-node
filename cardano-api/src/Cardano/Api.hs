@@ -393,6 +393,7 @@ module Cardano.Api (
     AnyConsensusMode(..),
     ConsensusMode(CardanoMode),
     consensusModeOnly,
+    ConsensusModeIsMultiEra(..),
     AnyConsensusModeParams(..),
     ConsensusModeParams(..),
     EraInMode(..),

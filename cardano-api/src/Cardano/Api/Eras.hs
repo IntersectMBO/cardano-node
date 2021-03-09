@@ -43,12 +43,12 @@ module Cardano.Api.Eras
 
 import           Prelude
 
-import           Data.Type.Equality ((:~:) (Refl), TestEquality (..))
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Cardano.Ledger.Era as Ledger (Crypto)
 
 import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardCrypto,
-                     StandardMary, StandardShelley)
+                   StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -64,7 +64,6 @@ data AllegraEra
 
 -- | A type used as a tag to distinguish the Mary era.
 data MaryEra
-
 
 instance HasTypeProxy ByronEra where
     data AsType ByronEra = AsByronEra
