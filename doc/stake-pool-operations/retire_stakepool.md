@@ -7,7 +7,7 @@ To retire a pool we need to:
 
 The deregistration certificate contains the _epoch_ in which we want to retire the pool. This epoch must be _after_ the current epoch and _not later than_ `eMax` epochs in the future, where `eMax` is a protocol parameter.
 
-So we first need to figure out the current epoch. The simplest way to get the current epoch is via the `tip` command:
+First, you need to figure out the current epoch. The simplest way to get the current epoch is to use the `tip` command:
 
 ```bash
 > cardano-cli query tip --testnet-magic 42 --mary-era --cardano-mode
@@ -40,7 +40,7 @@ We can look up `eMax` by querying the current protocol parameters:
 
 This means the earliest epoch for retirement is 52 (one in the future), and the latest is 69 (current epoch plus `eMax`).
 
-So for example, we can decide to retire in epoch 53.
+For example, we can decide to retire in epoch 53.
 
 #### Create deregistration certificate
 
