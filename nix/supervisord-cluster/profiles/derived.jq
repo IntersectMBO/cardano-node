@@ -31,6 +31,9 @@ def profile_name($p):
              $p.generator; $generator_defaults; 1; "i")
   + may_attr("outputs_per_tx";
              $p.generator; $generator_defaults; 1; "o")
+  + if $p.composition.with_observer | not
+    then ["nobs"]
+    else [] end
   | join("-");
 
 def profile_name_era_suffix($era):
@@ -75,6 +78,7 @@ def add_derived_params:
          , delegators:            ($gsis.delegators // $n_pools)
          , pool_coin:             ($gsis.pools_balance / $n_pools | floor)
          , verbatim:
+           ## TODO: duplication
            { protocolParams:
              { activeSlotsCoeff:           $gsis.active_slots_coeff
              , epochLength:                $gsis.epoch_length

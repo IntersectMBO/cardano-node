@@ -63,9 +63,9 @@ let
            socketPath     = "${stateDir}/${name}.socket";
            topology       = "${stateDir}/topologies/${name}.json";
          } // optionalAttrs isProducer {
-           operationalCertificate = "${stateDir}/shelley/nodes/${name}/op.cert";
-           kesKey                 = "${stateDir}/shelley/nodes/${name}/kes.skey";
-           vrfKey                 = "${stateDir}/shelley/nodes/${name}/vrf.skey";
+           operationalCertificate = "${stateDir}/shelley/node-keys/node${toString i}.opcert";
+           kesKey                 = "${stateDir}/shelley/node-keys/node-kes${toString i}.skey";
+           vrfKey                 = "${stateDir}/shelley/node-keys/node-vrf${toString i}.skey";
          });
 
   ##
@@ -74,8 +74,6 @@ let
   envConfigNodeSetup =
     mapNodeService
       (envConfig: nodeService:
-        traceValFn
-          (x: "envConfigNodeSetup: mapped to attrset with keys: ${toString (attrNames x)}")
         {
           inherit envConfig;
           inherit (nodeService) nodeConfig;

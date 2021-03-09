@@ -2,13 +2,15 @@
 , runCommand
 , writeText
 ##
-, path
 , cacheDir
 , stateDir
 , baseEnvConfig
 , basePort
 ##
 , profile
+, profileJSONFile
+## As derived from profile:
+, topologyNixopsFile
 }:
 
 with profile;
@@ -62,32 +64,163 @@ let
     cli byron genesis genesis ''${cli_args[@]}
     '';
 
-  genesisCacheDir = "${cacheDir}/genesis";
+  genesisCacheDir = "${cacheDir}/cardano-genesis";
+
+  shelleyGenesisCommon =
+    path:
+    ''
+    msg() {
+        echo "$*" >&2
+    }
+
+    fail() {
+	      msg "$*"
+	      exit 1
+    }
+    jqtest() {
+        jq --exit-status "$@" > /dev/null
+    }
+    __KEY_ROOT=
+    key_depl() {
+        local type=$1 kind=$2 id=$3
+        case "$kind" in
+                bulk )     suffix='.creds';;
+                cert )     suffix='.cert';;
+                count )    suffix='.counter';;
+                none )     suffix=;;
+                sig )      suffix='.skey';;
+                ver )      suffix='.vkey';;
+                * )        fail "key_depl: unknown key kind: '$kind'";; esac
+        case "$type" in
+                bulk )     stem=node-keys/bulk''${id};;
+                cold )     stem=node-keys/cold/operator''${id};;
+                opcert )   stem=node-keys/node''${id}.opcert;;
+                KES )      stem=node-keys/node-kes''${id};;
+                VRF )      stem=node-keys/node-vrf''${id};;
+                * )        fail "key_depl: unknown key type: '$type'";; esac
+        echo "$__KEY_ROOT"/$stem$suffix
+    }
+    key_genesis() {
+        local type=$1 kind=$2 id=$3
+        case "$kind" in
+                bulk )     suffix='.creds';;
+                cert )     suffix='.cert';;
+                count )    suffix='.counter';;
+                none )     suffix=;;
+                sig )      suffix='.skey';;
+                ver )      suffix='.vkey';;
+                * )        fail "key_genesis: unknown key kind: '$kind'";; esac
+        case "$type" in
+                bulk )     stem=pools/bulk''${id};;
+                cold )     stem=pools/cold''${id};;
+                opcert )   stem=pools/opcert''${id};;
+                KES )      stem=pools/kes''${id};;
+                VRF )      stem=pools/vrf''${id};;
+                deleg )    stem=delegate-keys/delegate''${id};;
+                delegCert )stem=delegate-keys/opcert''${id};;
+                delegKES ) stem=delegate-keys/delegate''${id}.kes;;
+                delegVRF ) stem=delegate-keys/delegate''${id}.vrf;;
+                * )        fail "key_genesis: unknown key type: '$type'";; esac
+        echo "$__KEY_ROOT"/$stem$suffix
+    }
+    genesis_remap_key_names() {
+        local ids_pool_map=$1
+        local ids
+
+        set -e
+
+        __KEY_ROOT=${path}
+
+        ids=($(jq 'keys
+                  | join(" ")
+                  ' -cr <<<$ids_pool_map))
+        local bid=1 pid=1 did=1 ## (B)FT, (P)ool, (D)ense pool
+        for id in ''${ids[*]}
+        do
+            mkdir -p "${path}"/node-keys/cold
+
+            #### cold keys (do not copy to production system)
+            if   jqtest ".genesis.dense_pool_density > 1" ${profileJSONFile} &&
+                 jqtest ".[\"$id\"]  > 1" <<<$ids_pool_map
+            then ## Dense/bulk pool
+               echo "genesis:  bulk pool $did -> node-$id"
+               cp -f $(key_genesis bulk      bulk $did) $(key_depl bulk   bulk $id)
+               did=$((did + 1))
+            elif jqtest ".[\"$id\"] != 0" <<<$ids_pool_map
+            then ## Singular pool
+               echo "genesis:  pool $pid -> node-$id"
+               cp -f $(key_genesis cold       sig $pid) $(key_depl cold    sig $id)
+               cp -f $(key_genesis cold       ver $pid) $(key_depl cold    ver $id)
+               cp -f $(key_genesis opcert    cert $pid) $(key_depl opcert none $id)
+               cp -f $(key_genesis opcert   count $pid) $(key_depl cold  count $id)
+               cp -f $(key_genesis KES        sig $pid) $(key_depl KES     sig $id)
+               cp -f $(key_genesis KES        ver $pid) $(key_depl KES     ver $id)
+               cp -f $(key_genesis VRF        sig $pid) $(key_depl VRF     sig $id)
+               cp -f $(key_genesis VRF        ver $pid) $(key_depl VRF     ver $id)
+               pid=$((pid + 1))
+            else ## BFT node
+               echo "genesis:  BFT $bid -> node-$id"
+               cp -f $(key_genesis deleg      sig $bid) $(key_depl cold    sig $id)
+               cp -f $(key_genesis deleg      ver $bid) $(key_depl cold    ver $id)
+               cp -f $(key_genesis delegCert cert $bid) $(key_depl opcert none $id)
+               cp -f $(key_genesis deleg    count $bid) $(key_depl cold  count $id)
+               cp -f $(key_genesis delegKES   sig $bid) $(key_depl KES     sig $id)
+               cp -f $(key_genesis delegKES   ver $bid) $(key_depl KES     ver $id)
+               cp -f $(key_genesis delegVRF   sig $bid) $(key_depl VRF     sig $id)
+               cp -f $(key_genesis delegVRF   ver $bid) $(key_depl VRF     ver $id)
+               bid=$((bid + 1))
+            fi
+        done
+    }
+
+    topology_id_pool_density_map() {
+            local topology_file=''${1:-}
+
+            nix-instantiate --strict --eval \
+              -E '__toJSON (__listToAttrs
+                            (map (x: { name = toString x.nodeId;
+                                      value = if (x.pools or 0) == null then 0 else x.pools or 0; })
+                                 (__fromJSON (__readFile '"''${topology_file}"')).coreNodes))' |
+              sed 's_\\__g; s_^"__; s_"$__'
+    }
+
+    ids_pool_map=$(topology_id_pool_density_map "${topologyNixopsFile}")
+    echo "genesis: id-pool map:  $ids_pool_map"
+
+    cli genesis create --genesis-dir ${path}/ \
+        ${toString cli_args.createSpec}
+
+    jq -r --argjson genesisVerb '${__toJSON genesis.verbatim}' '
+        . * $genesisVerb
+        '  ${path}/genesis.spec.json |
+    sponge ${path}/genesis.spec.json
+    '';
 
   shelleyGenesis =
-    p: ## profile
     ''
     ## Determine the genesis cache entry:
 
+    profile_json='${__toJSON profile}'
+
     genesis_cache_params=$(jq '.genesis * .composition |
                               del(.active_slots_coeff) |
+                              del(.byron) |
                               del(.epoch_length) |
-                              del(.parameter_k) |
-                              del(.slot_duration) |
-                              del(.max_block_size) |
-                              del(.max_tx_size) |
-                              del(.verbatim) |
                               del(.era) |
                               del(.genesis_future_offset) |
-                              del(.byron) |
-                              del(.locations)
-                             ' --sort-keys <<<'${__toJSON p}')
+                              del(.locations) |
+                              del(.max_block_size) |
+                              del(.max_tx_size) |
+                              del(.parameter_k) |
+                              del(.slot_duration) |
+                              del(.with_observer)
+                             ' --sort-keys <<<$profile_json)
 
     genesis_params_hash=$(echo "$genesis_cache_params" | sha1sum | cut -c-7)
-    genesis_cache_id=$(jq <<<'${__toJSON p}' \
+    genesis_cache_id=$(jq <<<$profile_json \
        '"k\(.composition.n_pools)-d\(.composition.dense_pool_density)-\(.genesis.delegators / 1000)kD-\(.genesis.utxo / 1000)kU-\($params_hash)"
        ' --arg params_hash "$genesis_params_hash" --raw-output)
-    genesis_cache_path="${genesisCacheDir}/$genesis_cache_id"
+    eval genesis_cache_path="${genesisCacheDir}/$genesis_cache_id"
 
     ## Handle genesis cache hit/miss:
 
@@ -96,18 +229,24 @@ let
     else genesis_cache_hit=;  genesis_cache_hit_desc='miss'; fi
     echo "genesis cache $genesis_cache_hit_desc:  $genesis_cache_id"
 
-    if test -z "$genesis_cache_hit"
-    then echo "generating genesis due to cache miss:  $genesis_cache_id @$genesis_cache_path"
+    regenesis_causes=()
+    if   test -z "$genesis_cache_hit"
+    then regenesis_causes+=(cache-miss)
+    elif test -v __REWRITE_GENESIS_CACHE
+    then regenesis_causes+=(__REWRITE_GENESIS_CACHE-env-var-defined)
+    fi
+
+    if test -n "''${regenesis_causes[*]}"
+    then echo "generating genesis due to ''${regenesis_causes[*]}:  $genesis_cache_id @$genesis_cache_path"
          mkdir -p "$genesis_cache_path"
 
-         ${shelleyGenesisSpec                 "$genesis_cache_path"}
-         ${shelleyGenesisVerbatim             "$genesis_cache_path"}
+         ${shelleyGenesisCommon   "$genesis_cache_path"}
 
          ${if genesis.single_shot
            then
              ''
-             echo "Single-shot genesis not supported yet."
-             exit 1
+             ${shelleyGenesisSingleshot "$genesis_cache_path"}
+             genesis_remap_key_names "$ids_pool_map"
              ''
            else if genesis.utxo > 0
                    || genesis.delegators > composition.n_pools
@@ -127,6 +266,8 @@ let
            else
              ''
              ${shelleyGenesisIncremental          "$genesis_cache_path"}
+             genesis_remap_key_names "$ids_pool_map"
+
              ${bftCredentialsIncremental          "$genesis_cache_path"}
              ${poolCredentialsIncremental         "$genesis_cache_path"}
              ${hardcodedDefaultUtxoCredentials    "$genesis_cache_path"}
@@ -142,27 +283,43 @@ let
     rm -f                                     ${stateDir}/shelley
     ln -s "$(realpath "$genesis_cache_path")" ${stateDir}/shelley
 
+    ${updateGenesisCacheEntry "${stateDir}/shelley/genesis.json" profileJSONFile}
+    '';
+
+  updateGenesisCacheEntry =
+    genesisFile: profileFile:
+    ''
     ## Update start time:
 
     start_time=$(date --iso-8601=s --date="now + ${genesis.genesis_future_offset}" --utc | cut -c-19)
-    jq '. // { systemStart: "''${start_time}Z" }
-       ' ${stateDir}/shelley/genesis.json |
-    sponge ${stateDir}/genesis.json
+
+    ## TODO: duplication
+    jq ' $prof[0] as $p
+       | . *
+       { systemStart:                $start_time
+       , activeSlotsCoeff:           $p.genesis.active_slots_coeff
+       , epochLength:                $p.genesis.epoch_length
+       , maxTxSize:                  $p.genesis.max_tx_size
+       , securityParam:              $p.genesis.parameter_k
+       , slotLength:                 $p.genesis.slot_duration
+       , protocolParams:
+         { "decentralisationParam":  $p.genesis.decentralisation_param
+         , "maxBlockBodySize":       $p.genesis.max_block_size
+         }
+       }' --slurpfile prof          ${profileFile}  \
+          --arg       start_time "''${start_time}Z" \
+           ${genesisFile} |
+    sponge ${genesisFile}
     '';
 
-  shelleyGenesisSpec =
+  shelleyGenesisSingleshot =
     dir:
     ''
-    cli genesis create --genesis-dir ${dir}/ ${toString cli_args.createSpec}
-    '';
-
-  shelleyGenesisVerbatim =
-    dir:
-    ''
-    jq -r --argjson genesisVerb '${__toJSON genesis.verbatim}' \
-           '. * $genesisVerb' \
-           ${dir}/genesis.spec.json |
-    sponge ${dir}/genesis.spec.json
+    params=(--genesis-dir      "${dir}"
+            ${toString cli_args.createFinalBulk}
+           )
+    ## update genesis from template
+    cli genesis create-staked "''${params[@]}"
     '';
 
   shelleyGenesisIncremental =
@@ -184,83 +341,85 @@ let
   bftCredentialsIncremental =
     dir:
     ''
+    mkdir -p "${dir}/nodes"
+
     for i in {0..${toString (composition.n_bft_hosts - 1)}}
     do
-      mkdir -p "${dir}/nodes/node-$i"
-      ln -s "../../delegate-keys/delegate$((i+1)).vrf.skey" "${dir}/nodes/node-$i/vrf.skey"
-      ln -s "../../delegate-keys/delegate$((i+1)).vrf.vkey" "${dir}/nodes/node-$i/vrf.vkey"
       cli node key-gen-KES \
-        --verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
-        --signing-key-file "${dir}/nodes/node-$i/kes.skey"
+        --verification-key-file     "${dir}/node-keys/node-kes$i.vkey" \
+        --signing-key-file          "${dir}/node-keys/node-kes$i.skey"
       cli node issue-op-cert \
         --kes-period 0 \
-        --cold-signing-key-file "${dir}/delegate-keys/delegate$((i+1)).skey" \
-        --kes-verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
-        --operational-certificate-issue-counter-file "${dir}/delegate-keys/delegate$((i+1)).counter" \
-        --out-file "${dir}/nodes/node-$i/op.cert"
+        --cold-signing-key-file     "${dir}/delegate-keys/delegate$((i+1)).skey" \
+        --kes-verification-key-file "${dir}/node-keys/node-kes$i.vkey" \
+        --operational-certificate-issue-counter-file \
+                                    "${dir}/delegate-keys/delegate$((i+1)).counter" \
+        --out-file                  "${dir}/node-keys/node$i.opcert"
       BFT_PORT=$(("${toString basePort}" + $i))
-      echo "$BFT_PORT" > "${dir}/nodes/node-$i/port"
+      echo "$BFT_PORT" > "${dir}/nodes/node-$i.port"
     done
     '';
   poolCredentialsIncremental =
     dir:
     ''
+    mkdir -p "${dir}/nodes"
+
     for i in {${toString composition.n_bft_hosts}..${toString (composition.n_bft_hosts + composition.n_pool_hosts - 1)}}
     do
-      mkdir -p "${dir}/nodes/node-$i"
       echo "Generating Pool $i Secrets"
       cli address key-gen \
-        --signing-key-file "${dir}/nodes/node-$i/owner-utxo.skey" \
-        --verification-key-file "${dir}/nodes/node-$i/owner-utxo.vkey"
+        --signing-key-file              "${dir}/node-keys/owner-utxo.skey" \
+        --verification-key-file         "${dir}/node-keys/owner-utxo.vkey"
       cli stake-address key-gen \
-        --signing-key-file "${dir}/nodes/node-$i/owner-stake.skey" \
-        --verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey"
+        --signing-key-file              "${dir}/node-keys/owner-stake.skey" \
+        --verification-key-file         "${dir}/node-keys/owner-stake.vkey"
       # Payment addresses
       cli address build \
-        --payment-verification-key-file "${dir}/nodes/node-$i/owner-utxo.vkey" \
-        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
+        --payment-verification-key-file "${dir}/node-keys/owner-utxo.vkey" \
+        --stake-verification-key-file   "${dir}/node-keys/owner-stake.vkey" \
         --testnet-magic ${toString genesis.network_magic} \
-        --out-file "${dir}/nodes/node-$i/owner.addr"
+        --out-file                      "${dir}/node-keys/owner.addr"
       # Stake addresses
       cli stake-address build \
-        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
-        --testnet-magic ${toString genesis.network_magic} \
-        --out-file "${dir}/nodes/node-$i/owner-stake.addr"
+        --stake-verification-key-file   "${dir}/node-keys/owner-stake.vkey" \
+        --testnet-magic  ${toString genesis.network_magic} \
+        --out-file "                     ${dir}/nodes/node-$i/owner-stake.addr"
       # Stake addresses registration certs
       cli stake-address registration-certificate \
-        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
-        --out-file "${dir}/nodes/node-$i/stake.reg.cert"
+        --stake-verification-key-file "  ${dir}/nodes/node-$i/owner-stake.vkey" \
+        --out-file                      "${dir}/nodes/node-$i/stake.reg.cert"
 
       cli stake-address key-gen \
-        --signing-key-file "${dir}/nodes/node-$i/reward.skey" \
-        --verification-key-file "${dir}/nodes/node-$i/reward.vkey"
+        --signing-key-file              "${dir}/nodes/node-$i/reward.skey" \
+        --verification-key-file         "${dir}/nodes/node-$i/reward.vkey"
       # Stake reward addresses registration certs
       cli stake-address registration-certificate \
-        --stake-verification-key-file "${dir}/nodes/node-$i/reward.vkey" \
-        --out-file "${dir}/nodes/node-$i/stake-reward.reg.cert"
+        --stake-verification-key-file   "${dir}/nodes/node-$i/reward.vkey" \
+        --out-file                      "${dir}/nodes/node-$i/stake-reward.reg.cert"
       cli node key-gen \
-        --cold-verification-key-file "${dir}/nodes/node-$i/cold.vkey" \
-        --cold-signing-key-file "${dir}/nodes/node-$i/cold.skey" \
+        --cold-verification-key-file    "${dir}/nodes/node-$i/cold.vkey" \
+        --cold-signing-key-file         "${dir}/nodes/node-$i/cold.skey" \
         --operational-certificate-issue-counter-file "${dir}/nodes/node-$i/cold.counter"
       cli node key-gen-KES \
-        --verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
-        --signing-key-file "${dir}/nodes/node-$i/kes.skey"
+        --verification-key-file         "${dir}/nodes/node-$i/kes.vkey" \
+        --signing-key-file              "${dir}/nodes/node-$i/kes.skey"
       cli node key-gen-VRF \
-        --verification-key-file "${dir}/nodes/node-$i/vrf.vkey" \
-        --signing-key-file "${dir}/nodes/node-$i/vrf.skey"
+        --verification-key-file         "${dir}/nodes/node-$i/vrf.vkey" \
+        --signing-key-file              "${dir}/nodes/node-$i/vrf.skey"
 
       # Stake address delegation certs
       cli stake-address delegation-certificate \
-        --stake-verification-key-file "${dir}/nodes/node-$i/owner-stake.vkey" \
-        --cold-verification-key-file  "${dir}/nodes/node-$i/cold.vkey" \
-        --out-file "${dir}/nodes/node-$i/owner-stake.deleg.cert"
+        --stake-verification-key-file   "${dir}/nodes/node-$i/owner-stake.vkey" \
+        --cold-verification-key-file    "${dir}/nodes/node-$i/cold.vkey" \
+        --out-file                      "${dir}/nodes/node-$i/owner-stake.deleg.cert"
 
       cli node issue-op-cert \
         --kes-period 0 \
-        --cold-signing-key-file "${dir}/nodes/node-$i/cold.skey" \
-        --kes-verification-key-file "${dir}/nodes/node-$i/kes.vkey" \
-        --operational-certificate-issue-counter-file "${dir}/nodes/node-$i/cold.counter" \
-        --out-file "${dir}/nodes/node-$i/op.cert"
+        --cold-signing-key-file         "${dir}/nodes/node-$i/cold.skey" \
+        --kes-verification-key-file     "${dir}/nodes/node-$i/kes.vkey" \
+        --operational-certificate-issue-counter-file \
+                                        "${dir}/nodes/node-$i/cold.counter" \
+        --out-file                      "${dir}/nodes/node-$i/op.cert"
 
       echo "Generating Pool $i Metadata"
       mkdir -p "${dir}/webserver"
@@ -275,9 +434,9 @@ let
       METADATA_HASH=$(cli stake-pool metadata-hash --pool-metadata-file "${dir}/webserver/pool$i.json")
       POOL_IP="127.0.0.1"
       POOL_PORT=$(("${toString basePort}" + "${toString composition.n_bft_hosts}" + $i))
-      echo "$POOL_PORT" > "${dir}/nodes/node-$i/port"
+      echo "$POOL_PORT" > "${dir}/nodes/node-$i.port"
       POOL_PLEDGE=${toString genesis.pool_coin}
-      echo $POOL_PLEDGE > "${dir}/nodes/node-$i/pledge"
+      echo $POOL_PLEDGE > "${dir}/nodes/node-$i.pledge"
       POOL_MARGIN_NUM=$(( $RANDOM % 10 + 1))
 
       cli stake-pool registration-certificate \
@@ -373,14 +532,13 @@ let
     '';
 in
 ''
-    PATH=$PATH:${path}
     mkdir -p ${genesisCacheDir}
 
     ${decideSystemStart}
 
     ${byronGenesis}
 
-    ${shelleyGenesis profile}
+    ${shelleyGenesis}
 
     cat <<EOF
     Generated genesis for ${name} (cache id $genesis_cache_id):

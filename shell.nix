@@ -4,7 +4,8 @@
 , autoStartCluster ? false
 , sourcesOverride ? {}
 , withHoogle ? true
-, customConfig ? {}
+, clusterProfile ? "default-mary"
+, customConfig ? { profileName = clusterProfile; }
 , pkgs ? import ./nix {
     inherit config sourcesOverride;
   }
@@ -16,8 +17,8 @@ let
   # NOTE: due to some cabal limitation,
   #  you have to remove all `source-repository-package` entries from cabal.project
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
-  clusterCabal = mkCluster (customConfig // { useCabalRun = true; });
-  clusterNix   = mkCluster (customConfig // { useCabalRun = false; });
+  clusterCabal = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = true; });
+  clusterNix   = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = false; });
   shell = cardanoNodeHaskellPackages.shellFor {
     name = "cabal-dev-shell";
 
