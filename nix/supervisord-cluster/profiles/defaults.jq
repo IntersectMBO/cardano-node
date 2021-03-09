@@ -13,6 +13,7 @@ def era_defaults($era):
     , n_singular_hosts:               1
     , n_dense_hosts:                  1
     , dense_pool_density:             1
+    , with_observer:                  true
     }
 
   , genesis:
@@ -42,7 +43,6 @@ def era_defaults($era):
       { protocolParams:
         { poolDeposit: 500000000
         , keyDeposit: 400000
-        , nOpt: 10
         , rho: 0.0022
         , tau: 0.05
         , a0: 0.3
