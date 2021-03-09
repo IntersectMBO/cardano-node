@@ -1,9 +1,7 @@
 
 import           Cardano.Api
+import           Cardano.Api.ChainSync.Client
 import           Cardano.Api.Shelley
-
--- TODO: Export this via Cardano.Api
-import           Ouroboros.Network.Protocol.ChainSync.Client
 
 import           Control.Monad (when)
 import           Data.Time

@@ -4,18 +4,9 @@
 {-# OPTIONS_GHC -freduction-depth=0 #-}
 
 import           Cardano.Api
+import           Cardano.Api.ChainSync.ClientPipelined
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
-
--- TODO: Export this via cardano-api. Do we want to export the pipelined and
--- non-pipelined stuff from different modules, or instead resolve the name
--- clashes?
 import           Cardano.Slotting.Slot
-import           Network.TypedProtocol.Pipelined (N (..), Nat (..), natToInt, unsafeIntToNat)
-import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
-                   (ChainSyncClientPipelined (ChainSyncClientPipelined),
-                   ClientPipelinedStIdle (CollectResponse, SendMsgDone, SendMsgRequestNextPipelined),
-                   ClientStNext (..))
-import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
 import           Control.Monad (when)
 import           Data.Kind
