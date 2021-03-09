@@ -43,6 +43,7 @@ module Cardano.Api.Eras
 
 import           Prelude
 
+import           Data.Aeson (ToJSON, toJSON)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Cardano.Ledger.Era as Ledger (Crypto)
@@ -136,6 +137,12 @@ data CardanoEra era where
 deriving instance Eq   (CardanoEra era)
 deriving instance Ord  (CardanoEra era)
 deriving instance Show (CardanoEra era)
+
+instance ToJSON (CardanoEra era) where
+   toJSON ByronEra   = "Byron"
+   toJSON ShelleyEra = "Shelley"
+   toJSON AllegraEra = "Allegra"
+   toJSON MaryEra    = "Mary"
 
 instance TestEquality CardanoEra where
     testEquality ByronEra   ByronEra   = Just Refl
@@ -312,4 +319,3 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra ShelleyEra = Ledger.StandardShelley
   ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
   ShelleyLedgerEra MaryEra    = Ledger.StandardMary
-

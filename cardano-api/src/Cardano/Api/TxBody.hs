@@ -159,6 +159,7 @@ import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Script
+import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
@@ -292,20 +293,20 @@ instance IsCardanoEra era => ToJSON (TxOut era) where
       ShelleyAddressInEra sbe ->
         case sbe of
           ShelleyBasedEraShelley ->
-            let hexAddr = serialiseToRawBytesHexText addr
-            in object [ "address" .= hexAddr
-                      , "value" .= toJSON val
-                      ]
+            object
+              [ "address" .= serialiseToBech32 addr
+              , "value" .= toJSON val
+              ]
           ShelleyBasedEraAllegra ->
-            let hexAddr = serialiseToRawBytesHexText addr
-            in object [ "address" .= hexAddr
-                      , "value" .= toJSON val
-                      ]
+            object
+              [ "address" .= serialiseToBech32 addr
+              , "value" .= toJSON val
+              ]
           ShelleyBasedEraMary ->
-            let hexAddr = serialiseToRawBytesHexText addr
-            in object [ "address" .= hexAddr
-                      , "value" .= toJSON val
-                      ]
+            object
+              [ "address" .= serialiseToBech32 addr
+              , "value" .= toJSON val
+              ]
 
 
 

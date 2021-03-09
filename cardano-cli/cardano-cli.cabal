@@ -137,6 +137,7 @@ library
                       , utf8-string
                       , unordered-containers
                       , vector
+                      , yaml
 
 executable cardano-cli
   import:               base, project-config
@@ -208,6 +209,7 @@ test-suite cardano-cli-golden
                       , text
                       , time
                       , unordered-containers
+  build-tool-depends:   cardano-cli:cardano-cli
 
   other-modules:        Test.Golden.Shelley
                         Test.Golden.Byron.SigningKeys
@@ -259,6 +261,7 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.Transaction.CalculateMinFee
                         Test.Golden.Shelley.Transaction.CreateWitness
                         Test.Golden.Shelley.Transaction.Sign
+                        Test.Golden.TxView
                         Test.Golden.Version
                         Test.OptParse
 
