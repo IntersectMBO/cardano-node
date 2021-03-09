@@ -42,7 +42,7 @@ import qualified System.Metrics.Counter as Counter
 import           Control.Tracer
 import           Control.Tracer.Transformers
 
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
@@ -73,7 +73,7 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
                      blockNo, pointSlot, unBlockNo)
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..), TraceFetchClientState(..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
@@ -462,8 +462,8 @@ _sendEKGDirectInt ekgDirect name val = do
         Gauge.set gauge (fromIntegral val)
         pure $ SMap.insert name gauge registeredMap
 
-_sendEKGDirectDouble :: EKGDirect -> Text -> Double -> IO ()
-_sendEKGDirectDouble ekgDirect name val = do
+sendEKGDirectDouble :: EKGDirect -> Text -> Double -> IO ()
+sendEKGDirectDouble ekgDirect name val = do
   modifyMVar_ (ekgLabels ekgDirect) $ \registeredMap -> do
     case SMap.lookup name registeredMap of
       Just label -> do
@@ -521,6 +521,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   tSubmissionsCollected <- STM.newTVarIO 0
   tSubmissionsAccepted <- STM.newTVarIO 0
   tSubmissionsRejected <- STM.newTVarIO 0
+  tLastSlotNo <- STM.newTVarIO $ SlotNo 0
 
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
@@ -528,7 +529,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
-    , Consensus.blockFetchClientTracer = tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
+    , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tLastSlotNo $
+        tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = tracerOnOff' (traceBlockFetchServer trSel) $
         Tracer $ \ev -> do
           traceWith (annotateSeverity . toLogObject' verb $ appendName "BlockFetchServer" tr) ev
@@ -594,6 +596,36 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
    traceServedCount (Just ekgDirect) ev =
      when (isRollForward ev) $
        sendEKGDirectCounter ekgDirect "cardano.node.metrics.served.header.counter.int"
+
+traceBlockFetchClientMetrics
+  :: forall blk remotePeer.
+     ( )
+  => Maybe EKGDirect
+  -> STM.TVar SlotNo
+  -> Tracer IO (TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)))
+  -> Tracer IO (TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)))
+traceBlockFetchClientMetrics Nothing _ tracer = tracer
+traceBlockFetchClientMetrics (Just ekgDirect) lastSlotNoVar tracer = Tracer $ bfTracer
+
+  where
+    bfTracer :: TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)) -> IO ()
+    bfTracer e@(TraceLabelPeer _ (CompletedBlockFetch p _ _ _ delay)) = do
+      traceWith tracer e
+      let slotNo = case pointSlot p of
+                        Origin -> SlotNo 0 -- We don't care
+                        At s   -> s
+      fresh <- atomically $ do
+          lastSlotNo <- STM.readTVar lastSlotNoVar
+          if lastSlotNo < slotNo
+             then do
+                 STM.writeTVar lastSlotNoVar slotNo
+                 return True
+             else return False
+      when fresh $
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.s"
+            $ realToFrac delay
+    bfTracer e =
+      traceWith tracer e
 
 traceLeadershipChecks ::
   forall blk
