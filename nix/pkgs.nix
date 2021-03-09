@@ -67,7 +67,6 @@ pkgs: _: with pkgs;
   inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
 
   mkCluster = callPackage ./supervisord-cluster;
-  hfcCluster = callPackage ./supervisord-cluster/hfc {};
   cardanolib-py = callPackage ./cardanolib-py {};
 
   clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };

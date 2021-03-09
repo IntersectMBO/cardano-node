@@ -36,8 +36,14 @@ test-chairmans-cluster:
 profiles:
 	@jq . $$(nix-build -A profiles)
 
-setup:
-	sed -ni '1,/--- 8< ---/ p' cabal.project
+cluster-shell:
+	nix-shell --max-jobs 8 --cores 0 -A 'devops' --arg 'autoStartCluster' 'true'
+
+cabal-setup setup:
+	./scripts/cabal-inside-nix-shell.sh
+
+cabal-restore restore:
+	./scripts/cabal-inside-nix-shell.sh --restore
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
@@ -65,4 +71,4 @@ full-clean: clean
 cls:
 	echo -en "\ec"
 
-.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean cls
+.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean cls cabal-setup setup cabal-restore restore

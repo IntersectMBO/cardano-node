@@ -87,9 +87,10 @@ package io-sim-classes
 
 -- ---------------------------------------------------------
 
--- The two following one-liners will restore / cut off the remainder of this file (for nix-shell users):
--- git checkout HEAD "$(git rev-parse --show-toplevel)"/cabal.project
--- sed -ni '1,/--- 8< ---/ p' "$(git rev-parse --show-toplevel)"/cabal.project
+-- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
+-- scripts/cabal-inside-nix-shell.sh
+-- scripts/cabal-inside-nix-shell.sh --restore
+-- --------------------------- 8< --------------------------
 -- Please do not put any `source-repository-package` clause above this line.
 
 source-repository-package

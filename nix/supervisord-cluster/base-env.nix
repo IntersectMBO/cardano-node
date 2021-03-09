@@ -1,5 +1,4 @@
-{
-  defaultLogConfig
+{ defaultLogConfig
 , stateDir
 , era
 }:

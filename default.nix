@@ -81,7 +81,7 @@ let
       };
     };
 
-    profiles = (mkCluster {}).profilesJSON;
+    profiles = (mkCluster customConfig).profilesJSON;
 
     shell = import ./shell.nix {
       inherit pkgs;

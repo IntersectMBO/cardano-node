@@ -8,8 +8,8 @@
 , ...
 }:
 
-runCommand "cluster-profiles.json" { buildInputs = [ jq ]; } ''
-    jq --argjson eras '${__toJSON eras}' '
+runCommand "cluster-profiles.json" {} ''
+    ${jq}/bin/jq --argjson eras '${__toJSON eras}' '
       include "profiles" { search: "${./.}" };
 
       $eras
