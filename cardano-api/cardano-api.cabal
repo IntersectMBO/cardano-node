@@ -18,6 +18,8 @@ library
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
                         Cardano.Api.Shelley
+                        Cardano.Api.ChainSync.Client
+                        Cardano.Api.ChainSync.ClientPipelined
 
                         Cardano.Api.Crypto.Ed25519Bip32
                         -- TODO: Eliminate in the future when
@@ -114,6 +116,7 @@ library
                       , time
                       , transformers
                       , transformers-except
+                      , typed-protocols
                       , unordered-containers >= 0.2.11
                       , vector
 

@@ -403,7 +403,10 @@ module Cardano.Api (
 --  connectToRemoteNode,
 
     -- *** Chain sync protocol
+    -- | To construct a @ChainSyncClient@ see @Cardano.Api.Client@ or
+    -- @Cardano.Api.ClientPipelined@.
     ChainSyncClient(..),
+    ChainSyncClientPipelined(..),
     BlockInMode(..),
     LocalNodeClientProtocolsInMode,
 
