@@ -30,7 +30,6 @@ import           Data.Time.Format.ISO8601 (FormatExtension (BasicFormat),
 import           GHC.Conc (ThreadId)
 import           Network.HostName (getHostName)
 
-
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
 import qualified Control.Tracer as T
@@ -45,78 +44,29 @@ data StandardTracerState a =  StandardTracerState {
   , stTarget  :: LogTarget
 }
 
-emptyStandardTracerState :: Text -> StandardTracerState a
-emptyStandardTracerState name = StandardTracerState Nothing LogStdout
+emptyStandardTracerState :: StandardTracerState a
+emptyStandardTracerState = StandardTracerState Nothing LogStdout
 
 standardMachineTracer :: forall a m. (MonadIO m, LogFormatting a)
   => Text
   -> Maybe (DetailLevel -> a -> AE.Object)
   -> m (Trace m a)
 standardMachineTracer tracerName mbFormatter = do
-    stateRef <- liftIO $ newIORef (emptyStandardTracerState tracerName)
-    hostname <- liftIO getHostName
-    pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output stateRef hostname)
-  where
-    output ::
-         IORef (StandardTracerState a)
-      -> String
-      -> LoggingContext
-      -> Maybe TraceControl
-      -> a
-      -> m ()
-    output stateRef _ LoggingContext {..} (Just Reset) a = liftIO $ do
-      st <- readIORef stateRef
-      case stRunning st of
-        Nothing -> initLogging stateRef
-        Just _  -> pure ()
-    output stateRef hostName lc@LoggingContext {..} Nothing a = liftIO $ do
-      st  <- readIORef stateRef
-      case stRunning st of
-        Just (inChannel, _, _) -> do
-          msg <- formatMachine mbFormatter (stTarget st == LogStdout) lc hostName a
-          writeChan inChannel msg
-        Nothing                -> pure ()
-    output _ _ lk (Just c@Document {}) a =
-       docIt (StandardBackend tracerName) Machine (lk, Just c, a)
-    output stateRef _ LoggingContext {..} _ a = pure ()
-
-formatMachine :: LogFormatting a =>
-     Maybe (DetailLevel -> a -> AE.Object)
-  -> Bool
-  -> LoggingContext
-  -> String
-  -> a
-  -> IO Text
-formatMachine mbFormatter withColor LoggingContext {..} hostname obj = do
-  thid <- myThreadId
-  time <- getCurrentTime
-  let severity = fromMaybe Info lcSeverity
-      tid      = fromMaybe ((pack . show) thid)
-                    ((stripPrefix "ThreadId " . pack . show) thid)
-      ns       = colorBySeverity
-                    withColor
-                    severity
-                    $ mconcat (intersperse (singleton '.')
-                      (fromString hostname : map fromText lcNamespace
-                      <> [fromString (show severity) , fromText tid] ))
-      ts       = fromString $ formatTime defaultTimeLocale "%F %T" time
-      payload  = case mbFormatter of
-                  Just form -> form (fromMaybe DRegular lcDetails) obj
-                  Nothing   -> forMachine (fromMaybe DRegular lcDetails) obj
-      pb       = fromText $ decodeUtf8 $ BS.toStrict $ AE.encode payload
-  pure $ toStrict
-          $ toLazyText
-            $ mconcat (map squareBrackets [ns, ts]) <> pb
-  where
-    squareBrackets :: Builder -> Builder
-    squareBrackets b = TB.singleton '[' <> b <> TB.singleton ']'
+    standardTracer tracerName (formatMachine mbFormatter)
 
 standardHumanTracer :: forall a m. (MonadIO m, LogFormatting a)
   => Text
   -> Maybe (a -> Text)
   -> m (Trace m a)
-standardHumanTracer tracerName mbFormatter = do
-    stateRef <- liftIO $ newIORef (emptyStandardTracerState tracerName)
+standardHumanTracer tracerName mbFormatter =
+  standardTracer tracerName $ \ _ -> formatHuman mbFormatter
+
+standardTracer :: forall a m. (MonadIO m, LogFormatting a)
+  => Text
+  -> (Maybe DetailLevel -> a -> Text)
+  -> m (Trace m a)
+standardTracer tracerName formatter = do
+    stateRef <- liftIO $ newIORef emptyStandardTracerState
     hostname <- liftIO getHostName
     pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output stateRef hostname)
   where
@@ -136,7 +86,11 @@ standardHumanTracer tracerName mbFormatter = do
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> do
-          msg <- formatHuman mbFormatter (stTarget st == LogStdout) lc hostName a
+          msg <- formatIt
+                    (stTarget st == LogStdout)
+                    lc
+                    hostName
+                    (formatter lcDetails a)
           writeChan inChannel msg
         Nothing                -> pure ()
     output _ _ lk (Just c@Document {}) a =
@@ -145,12 +99,30 @@ standardHumanTracer tracerName mbFormatter = do
 
 formatHuman :: LogFormatting a =>
      Maybe (a -> Text)
-  -> Bool
+  -> a
+  -> Text
+formatHuman (Just f) msg = f msg
+formatHuman Nothing msg  = forHuman msg
+
+formatMachine :: LogFormatting a =>
+     Maybe (DetailLevel -> a ->AE.Object)
+  -> Maybe DetailLevel
+  -> a
+  -> Text
+formatMachine (Just f) dl msg =
+  let obj = f (fromMaybe DRegular dl) msg
+  in decodeUtf8 $ BS.toStrict $ AE.encode obj
+formatMachine Nothing dl msg  =
+  let obj = forMachine (fromMaybe DRegular dl) msg
+  in decodeUtf8 $ BS.toStrict $ AE.encode obj
+
+formatIt ::
+     Bool
   -> LoggingContext
   -> String
-  -> a
+  -> Text
   -> IO Text
-formatHuman mbFormatter withColor LoggingContext {..} hostname obj = do
+formatIt withColor LoggingContext {..} hostname txt = do
   thid <- myThreadId
   time <- getCurrentTime
   let severity = fromMaybe Info lcSeverity
@@ -163,13 +135,9 @@ formatHuman mbFormatter withColor LoggingContext {..} hostname obj = do
                       (fromString hostname : map fromText lcNamespace
                       <> [fromString (show severity) , fromText tid] ))
       ts       = fromString $ formatTime defaultTimeLocale "%F %T" time
-      payload  = case mbFormatter of
-                  Just form -> form obj
-                  Nothing   -> forHuman obj
-      pb       = fromText $ decodeUtf8 $ BS.toStrict $ AE.encode payload
   pure $ toStrict
           $ toLazyText
-            $ mconcat (map squareBrackets [ns, ts]) <> pb
+            $ mconcat (map squareBrackets [ns, ts]) <> singleton ' ' <> fromText txt
   where
     squareBrackets :: Builder -> Builder
     squareBrackets b = TB.singleton '[' <> b <> TB.singleton ']'
