@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Examples.Configuration where
 
 import           Control.Monad (liftM)
@@ -27,15 +29,13 @@ testMessageDocumented = Documented [
   DocMsg (TestMessage "dummy") "text" "just a text"
   ]
 
-tracer1 :: MonadIO m => m (Trace m TestMessage)
-tracer1  = fmap
-            (appendName "tracer1")
-            (filterSeverityFromConfig =<< stdoutHumanKatipTracer)
 
-tracer2 :: MonadIO m => m (Trace m TestMessage)
-tracer2  = fmap
-            (appendName "tracer2")
-            (filterSeverityFromConfig =<< stdoutHumanKatipTracer)
+tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage)
+tracers  = do
+  t0 <- standardHumanTracer "stdout" Nothing
+  t1 <- appendName "tracer1" <$> filterSeverityFromConfig t0
+  t2 <- appendName "tracer2" <$> filterSeverityFromConfig t0
+  pure (t1, t2)
 
 config1 :: TraceConfig
 config1 = TraceConfig {
@@ -53,12 +53,10 @@ config2 = TraceConfig {
           (["tracer2","bubble"], [CoSeverity WarningF])]
     }
 
-testConfig' :: TraceConfig -> IO ()
-testConfig' tc = do
-    t1 <- tracer1
-    t2 <- tracer2
+testConfig' :: MonadIO m => TraceConfig -> Trace m TestMessage -> Trace m TestMessage -> m ()
+testConfig' tc t1 t2 = do
     let bubbleTracer = appendName "bubble" t2
-    configureTracers tc testMessageDocumented [t1, t2, bubbleTracer]
+    configureTracers tc testMessageDocumented [t1, t2]
     traceWith (setSeverity Critical t1) (TestMessage "Now setting config")
     traceWith
       (setSeverity Error t1)
@@ -76,10 +74,11 @@ testConfig' tc = do
       (setSeverity Info t2)
       (TestMessage "5: never show")
 
+testConfig :: IO ()
 testConfig = do
-  t1 <- tracer1
-  testConfig' config1
-  testConfig' config2
+  (t1, t2) <- tracers
+  testConfig' config1 t1 t2
+  testConfig' config2 t1 t2
 
 {-
 >>> config1
