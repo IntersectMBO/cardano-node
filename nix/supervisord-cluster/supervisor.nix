@@ -23,12 +23,15 @@ let
       extra = {
         services.cardano-node = {
           enable = true;
-          ## topology wtf?
-          inherit (envConfig) operationalCertificate kesKey vrfKey topology nodeConfig nodeConfigFile port dbPrefix socketPath;
+          inherit (envConfig) topology nodeConfig nodeConfigFile port dbPrefix socketPath;
           inherit stateDir;
-        } // lib.optionalAttrs useCabalRun
-          { executable = "cabal run exe:cardano-node --";
-          };
+        }
+        // lib.optionalAttrs (__hasAttr "vrfKey" envConfig)
+        { inherit (envConfig) operationalCertificate kesKey vrfKey;
+        }
+        // lib.optionalAttrs useCabalRun
+        { executable = "cabal run exe:cardano-node --";
+        };
       };
     in lib.evalModules {
       prefix = [];
@@ -39,15 +42,6 @@ let
     #!${pkgs.stdenv.shell}
     ${eval.config.services.cardano-node.script}
   '';
-
-  topologyFile = selfPort: {
-    Producers = map (p:
-      {
-        addr = "127.0.0.1";
-        port = p;
-        valency = 1;
-      }) (lib.filter (p: p != selfPort) (lib.genList (i: basePort + i + 1) (composition.n_bft_hosts + composition.n_pools)));
-  };
 
   config =
   (pkgs.commonLib.supervisord.writeSupervisorConfig ({
@@ -66,11 +60,12 @@ let
   } // lib.listToAttrs (map (i:
     lib.nameValuePair "program:bft${toString i}" {
       command = let
+        index = i - 1;
         envConfig = baseEnvConfig // rec {
           operationalCertificate = "${stateDir}/nodes/node-bft${toString i}/op.cert";
           kesKey = "${stateDir}/nodes/node-bft${toString i}/kes.skey";
           vrfKey = "${stateDir}/nodes/node-bft${toString i}/vrf.skey";
-          topology = __toFile "topology.yaml" (__toJSON (topologyFile port));
+          topology = "${stateDir}/topologies/node-${toString index}.json";
           socketPath = "${stateDir}/bft${toString i}.socket";
           dbPrefix = "db-bft${toString i}";
           port = basePort + i;
@@ -85,11 +80,12 @@ let
   // lib.listToAttrs (map (i:
     lib.nameValuePair "program:pool${toString i}" {
       command = let
+        index = composition.n_bft_hosts + i - 1;
         envConfig = baseEnvConfig // rec {
           operationalCertificate = "${stateDir}/nodes/node-pool${toString i}/op.cert";
           kesKey = "${stateDir}/nodes/node-pool${toString i}/kes.skey";
           vrfKey = "${stateDir}/nodes/node-pool${toString i}/vrf.skey";
-          topology = __toFile "topology.yaml" (__toJSON (topologyFile port));
+          topology = "${stateDir}/topologies/node-${toString index}.json";
           socketPath = "${stateDir}/pool${toString i}.socket";
           dbPrefix = "db-pool${toString i}";
           port = basePort + composition.n_bft_hosts + i;
@@ -101,6 +97,22 @@ let
       stderr_logfile = "${stateDir}/pool${toString i}.stderr";
     }
   ) (lib.genList (i: i + 1) composition.n_pools))
+  // lib.listToAttrs ([(
+    lib.nameValuePair "program:observer" {
+      command = let
+        envConfig = baseEnvConfig // rec {
+          topology = "${stateDir}/topologies/observer.json";
+          socketPath = "${stateDir}/observer.socket";
+          dbPrefix = "db-observer";
+          port = basePort + composition.n_hosts + 1;
+          nodeConfigFile = "${stateDir}/config.json";
+        };
+        script = mkStartScript envConfig;
+      in "${script}";
+      stdout_logfile = "${stateDir}/observer.stdout";
+      stderr_logfile = "${stateDir}/observer.stderr";
+    }
+  )])
   // {
     "program:webserver" = {
       command = "${pkgs.python3}/bin/python -m http.server ${toString basePort}";

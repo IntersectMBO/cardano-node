@@ -4,6 +4,7 @@
 , cabal-install
 , cardano-cli
 , cardano-node
+, cardano-topology
 }@args:
 with lib;
 let
@@ -27,16 +28,22 @@ function node() {
   ${runner "node"} "$@"
 }
 
+function topology() {
+  ${runner "topology"} "$@"
+}
+
 ${optionalString useCabalRun
   ''
   echo 'Prebuilding executables with Cabal..'
   ${cabal-install}/bin/cabal build exe:cardano-cli
   ${cabal-install}/bin/cabal build exe:cardano-node
+  ${cabal-install}/bin/cabal build exe:cardano-topology
   ''}
 ${optionalString (!useCabalRun)
   ''
   echo 'Nix-supplied executables are:'
   echo '${cardano-node}/bin/cardano-node'
   echo '${cardano-cli}/bin/cardano-cli'
+  echo '${cardano-topology}/bin/cardano-topology'
   ''}
 ''
