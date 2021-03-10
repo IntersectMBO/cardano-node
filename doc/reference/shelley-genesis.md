@@ -1142,9 +1142,7 @@ we expect. We'll need a third terminal.
 We'll start with querying the node to see the current set of protocol parameters.
 ```bash
 $ cardano-cli query protocol-parameters
-Usage: cardano-cli query protocol-parameters [--byron-era | --shelley-era |
-                                               --allegra-era | --mary-era]
-                                             [--shelley-mode | --byron-mode
+Usage: cardano-cli query protocol-parameters [--shelley-mode | --byron-mode
                                                [--epoch-slots NATURAL] |
                                                --cardano-mode
                                                [--epoch-slots NATURAL]]
@@ -1154,10 +1152,6 @@ Usage: cardano-cli query protocol-parameters [--byron-era | --shelley-era |
   Get the node's current protocol parameters
 
 Available options:
-  --byron-era              Specify the Byron era
-  --shelley-era            Specify the Shelley era (default)
-  --allegra-era            Specify the Allegra era
-  --mary-era               Specify the Mary era
   --shelley-mode           For talking to a node running in Shelley-only mode.
   --byron-mode             For talking to a node running in Byron-only mode.
   --epoch-slots NATURAL    The number of slots per epoch for the Byron era.
@@ -1238,9 +1232,7 @@ address.
 
 ```bash
 $ cardano-cli query utxo
-Usage: cardano-cli query utxo [--byron-era | --shelley-era | --allegra-era |
-                                --mary-era]
-                              [--shelley-mode | --byron-mode
+Usage: cardano-cli query utxo [--shelley-mode | --byron-mode
                                 [--epoch-slots NATURAL] |
                                 --cardano-mode [--epoch-slots NATURAL]]
                               [(--address ADDRESS)]
@@ -1249,10 +1241,6 @@ Usage: cardano-cli query utxo [--byron-era | --shelley-era | --allegra-era |
   Get the node's current UTxO with the option of filtering by address(es)
 
 Available options:
-  --byron-era              Specify the Byron era
-  --shelley-era            Specify the Shelley era (default)
-  --allegra-era            Specify the Allegra era
-  --mary-era               Specify the Mary era
   --shelley-mode           For talking to a node running in Shelley-only mode.
   --byron-mode             For talking to a node running in Byron-only mode.
   --epoch-slots NATURAL    The number of slots per epoch for the Byron era.

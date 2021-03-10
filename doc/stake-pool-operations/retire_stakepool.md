@@ -10,7 +10,7 @@ The deregistration certificate contains the _epoch_ in which we want to retire t
 First, you need to figure out the current epoch. The simplest way to get the current epoch is to use the `tip` command:
 
 ```bash
-> cardano-cli query tip --testnet-magic 42 --mary-era --cardano-mode
+> cardano-cli query tip --testnet-magic 42 --cardano-mode
 {
   "epoch": 51,
   "hash": "19fdfc54e7a1e2fb7ff45254a6aa0aa88ea7a80de4b48297924c9abf353f9cb7",
@@ -32,7 +32,6 @@ We can look up `eMax` by querying the current protocol parameters:
 
     cardano-cli query protocol-parameters \
     --mainnet \
-    --mary-era \
     --out-file protocol.json
 
     cat protocol.json | grep eMax
@@ -82,8 +81,7 @@ We query our address for a suitable UTxO to use as input:
 
     cardano-cli query utxo \
     --address $(cat payment.addr) \
-    --mainnet \
-    --mary-era
+    --mainnet
 
 
 

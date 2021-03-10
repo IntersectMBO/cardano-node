@@ -16,7 +16,6 @@ Get the protocol parameters and save them to `protocol.json` with:
 ```
 cardano-cli query protocol-parameters \
   --mainnet \
-  --mary-era \
   --out-file protocol.json
 ```
 
@@ -25,8 +24,7 @@ cardano-cli query protocol-parameters \
 ```
 cardano-cli query utxo \
   --address $(cat payment.addr) \
-  --mainnet \
-  --mary-era
+  --mainnet
 ```
 
 ```
@@ -132,8 +130,7 @@ We must give it some time to get incorporated into the blockchain, but eventuall
 
     cardano-cli query utxo \
         --address $(cat payment.addr) \
-        --mainnet \
-        --mary-era
+        --mainnet
 
     >                            TxHash                                 TxIx         Amount
     > ----------------------------------------------------------------------------------------
@@ -141,8 +138,7 @@ We must give it some time to get incorporated into the blockchain, but eventuall
 
     cardano-cli query utxo \
         --address $(cat payment2.addr) \
-        --mainnet \
-        --mary-era
+        --mainnet
 
     >                            TxHash                                 TxIx         Amount
     > ----------------------------------------------------------------------------------------
