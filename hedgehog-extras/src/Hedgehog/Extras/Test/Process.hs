@@ -5,12 +5,16 @@
 module Hedgehog.Extras.Test.Process
   ( createProcess
   , execFlex
+  , execFlex'
   , procFlex
   , getProjectBase
   , waitForProcess
   , maybeWaitForProcess
   , getPid
   , waitSecondsForProcess
+
+  , ExecConfig(..)
+  , defaultExecConfig
   ) where
 
 import           Control.Monad
@@ -51,6 +55,15 @@ import qualified System.Environment as IO
 import qualified System.Exit as IO
 import qualified System.IO.Unsafe as IO
 import qualified System.Process as IO
+
+newtype ExecConfig = ExecConfig
+  { execConfigEnv :: Maybe [(String, String)]
+  } deriving (Eq, Show)
+
+defaultExecConfig :: ExecConfig
+defaultExecConfig = ExecConfig
+  { execConfigEnv = Nothing
+  }
 
 planJsonFile :: String
 planJsonFile = IO.unsafePerformIO $ do
@@ -105,8 +118,17 @@ execFlex
   -> String
   -> [String]
   -> m String
-execFlex pkgBin envBin arguments = GHC.withFrozenCallStack $ do
-  cp <- procFlex pkgBin envBin arguments
+execFlex = execFlex' defaultExecConfig
+
+execFlex'
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => ExecConfig
+  -> String
+  -> String
+  -> [String]
+  -> m String
+execFlex' execConfig pkgBin envBin arguments = GHC.withFrozenCallStack $ do
+  cp <- procFlex' execConfig pkgBin envBin arguments
   H.annotate . ("Command: " <>) $ case IO.cmdspec cp of
     IO.ShellCommand cmd -> cmd
     IO.RawCommand cmd args -> cmd <> " " <> L.unwords args
@@ -207,11 +229,28 @@ procFlex
   -- ^ Arguments to the CLI command
   -> m CreateProcess
   -- ^ Captured stdout
-procFlex pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
+procFlex = procFlex' defaultExecConfig
+
+procFlex'
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => ExecConfig
+  -> String
+  -- ^ Cabal package name corresponding to the executable
+  -> String
+  -- ^ Environment variable pointing to the binary to run
+  -> [String]
+  -- ^ Arguments to the CLI command
+  -> m CreateProcess
+  -- ^ Captured stdout
+procFlex' execConfig pkg binaryEnv arguments = GHC.withFrozenCallStack . H.evalM $ do
   maybeEnvBin <- liftIO $ IO.lookupEnv binaryEnv
-  case maybeEnvBin of
+  cp <- case maybeEnvBin of
     Just envBin -> return $ IO.proc envBin arguments
     Nothing -> procDist pkg arguments
+  return cp
+    { IO.env = execConfigEnv execConfig
+    }
+
 
 -- | Compute the project base.  This will be based on either the "CARDANO_NODE_SRC"
 -- environment variable or the parent directory.  Both should point to the
