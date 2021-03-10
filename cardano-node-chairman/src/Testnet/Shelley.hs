@@ -40,6 +40,7 @@ import           GHC.Float
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.FilePath.Posix ((</>))
+import           Text.Read
 import           Text.Show
 
 import qualified Control.Concurrent as IO
@@ -73,6 +74,12 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 
+data ForkPoint
+  = AtVersion Int
+  | AtEpoch Int
+  | NoFork
+  deriving (Show, Eq, Read)
+
 data TestnetOptions = TestnetOptions
   { numPraosNodes :: Int
   , numPoolNodes :: Int
@@ -81,6 +88,8 @@ data TestnetOptions = TestnetOptions
   , epochLength :: Int
   , slotLength :: Double
   , maxLovelaceSupply :: Integer
+  , forkPointAllegra :: ForkPoint
+  , forkPointMary :: ForkPoint
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -92,6 +101,8 @@ defaultTestnetOptions = TestnetOptions
   , epochLength = 1000
   , slotLength = 0.2
   , maxLovelaceSupply = 1000000000
+  , forkPointAllegra = NoFork
+  , forkPointMary = NoFork
   }
 
 ifaceAddress :: String
@@ -131,9 +142,21 @@ testnet testnetOptions H.Conf {..} = do
   let poolAddrs = ("pool-owner" <>) <$> poolNodesN
   let addrs = userAddrs <> poolAddrs
 
-  H.copyFile
-    (base </> "configuration/chairman/shelley-only/configuration.yaml")
-    (tempAbsPath </> "configuration.yaml")
+  forkMethodAllegra <- H.noteShow $ case forkPointAllegra testnetOptions of
+    AtVersion n -> ["TestAllegraHardForkAtVersion: " <> show @Int n]
+    AtEpoch n -> ["TestAllegraHardForkAtEpoch: " <> show @Int n]
+    NoFork -> []
+
+  forkMethodMary <- H.noteShow $ case forkPointMary testnetOptions of
+    AtVersion n -> ["TestMaryHardForkAtVersion: " <> show @Int n]
+    AtEpoch n -> ["TestMaryHardForkAtEpoch: " <> show @Int n]
+    NoFork -> []
+
+  let forkMethods = forkMethodAllegra <> forkMethodMary
+
+  H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
+    <&> L.unlines . (<> forkMethods) . L.lines
+    >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   -- Set up our template
   void $ H.execCli

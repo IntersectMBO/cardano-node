@@ -14,6 +14,7 @@ import           Options.Applicative
 import           System.IO (IO)
 import           Testnet.Run (runTestnet)
 import           Testnet.Shelley
+import           Text.Read (readEither)
 import           Text.Show
 
 import qualified Options.Applicative as OA
@@ -73,6 +74,20 @@ optsTestnet = TestnetOptions
       <>  OA.metavar "INTEGER"
       <>  OA.showDefault
       <>  OA.value (maxLovelaceSupply defaultTestnetOptions)
+      )
+  <*> OA.option (OA.eitherReader readEither)
+      (   OA.long "fork-point-allegra"
+      <>  OA.help "Fork Point for Allegra.  Valid values are: 'AtVersion <n>' and 'AtEpoch <n>'"
+      <>  OA.metavar "FORKPOINT"
+      <>  OA.showDefault
+      <>  OA.value (forkPointAllegra defaultTestnetOptions)
+      )
+  <*> OA.option (OA.eitherReader readEither)
+      (   OA.long "fork-point-mary"
+      <>  OA.help "Fork Point for Mary.  Valid values are: 'AtVersion <n>' and 'AtEpoch <n>'"
+      <>  OA.metavar "FORKPOINT"
+      <>  OA.showDefault
+      <>  OA.value (forkPointMary defaultTestnetOptions)
       )
 
 optsShelley :: Parser ShelleyOptions

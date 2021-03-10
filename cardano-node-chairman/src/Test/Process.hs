@@ -1,5 +1,6 @@
 module Test.Process
   ( execCli
+  , execCli'
   , procCli
   , procNode
   , procChairman
@@ -21,7 +22,14 @@ execCli
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => [String]
   -> m String
-execCli = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI"
+execCli = execCli' H.defaultExecConfig
+
+execCli'
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => H.ExecConfig
+  -> [String]
+  -> m String
+execCli' execConfig = GHC.withFrozenCallStack $ H.execFlex' execConfig "cardano-cli" "CARDANO_CLI"
 
 -- | Create a 'CreateProcess' describing how to start the cardano-cli process
 -- and an argument list.

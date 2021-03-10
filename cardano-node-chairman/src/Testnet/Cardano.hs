@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds -Wno-unused-matches #-}
@@ -75,6 +76,7 @@ import qualified Testnet.Conf as H
 data ForkPoint
   = AtVersion Int
   | AtEpoch Int
+  | NoFork
   deriving (Show, Eq, Read)
 
 data TestnetOptions = TestnetOptions
@@ -166,14 +168,17 @@ testnet testnetOptions H.Conf {..} = do
   forkMethodShelley <- H.noteShow $ case forkPointShelley testnetOptions of
     AtVersion n -> ["TestShelleyHardForkAtVersion: " <> show @Int n]
     AtEpoch n -> ["TestShelleyHardForkAtEpoch: " <> show @Int n]
+    NoFork -> []
 
   forkMethodAllegra <- H.noteShow $ case forkPointAllegra testnetOptions of
     AtVersion n -> ["TestAllegraHardForkAtVersion: " <> show @Int n]
     AtEpoch n -> ["TestAllegraHardForkAtEpoch: " <> show @Int n]
+    NoFork -> []
 
   forkMethodMary <- H.noteShow $ case forkPointMary testnetOptions of
     AtVersion n -> ["TestMaryHardForkAtVersion: " <> show @Int n]
     AtEpoch n -> ["TestMaryHardForkAtEpoch: " <> show @Int n]
+    NoFork -> []
 
   let forkMethods = forkMethodShelley <> forkMethodAllegra <> forkMethodMary
 
@@ -262,14 +267,14 @@ testnet testnetOptions H.Conf {..} = do
 
     H.execCli
       [ "signing-key-address"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--secret", tempAbsPath </> "byron/payment-keys.00" <> show @Int (n - 1) <> ".key"
       ] >>= H.writeFile (tempAbsPath </> "byron/address-00" <> show @Int (n - 1))
 
     -- Write Genesis addresses to files
     H.execCli
       [ "signing-key-address"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--secret", tempAbsPath </> "byron/genesis-keys.00" <> show @Int (n - 1) <> ".key"
       ] >>= H.writeFile (tempAbsPath </> "byron/genesis-address-00" <> show @Int (n - 1))
 
@@ -282,7 +287,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "issue-genesis-utxo-expenditure"
       , "--genesis-json", tempAbsPath </> "byron/genesis.json"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--tx", tempAbsPath </> "tx0.tx"
       , "--wallet-key", tempAbsPath </> "byron/delegate-keys.000.key"
       , "--rich-addr-from", richAddrFrom
@@ -293,7 +298,7 @@ testnet testnetOptions H.Conf {..} = do
   void $ H.execCli
     [ "byron", "governance", "create-update-proposal"
     , "--filepath", tempAbsPath </> "update-proposal"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
     , "--protocol-version-major", "1"
     , "--protocol-version-minor", "0"
@@ -308,7 +313,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "byron", "governance", "create-proposal-vote"
       , "--proposal-filepath", tempAbsPath </> "update-proposal"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
       , "--vote-yes"
       , "--output-filepath", tempAbsPath </> "update-vote.00" <> show @Int (n - 1)
@@ -317,7 +322,7 @@ testnet testnetOptions H.Conf {..} = do
   void $ H.execCli
     [ "byron", "governance", "create-update-proposal"
     , "--filepath", tempAbsPath </> "update-proposal-1"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--signing-key", tempAbsPath </> "byron/delegate-keys.000.key"
     , "--protocol-version-major", "2"
     , "--protocol-version-minor", "0"
@@ -332,7 +337,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "byron", "governance", "create-proposal-vote"
       , "--proposal-filepath", tempAbsPath </> "update-proposal-1"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--signing-key", tempAbsPath </> "byron/delegate-keys.00" <> show @Int (n - 1) <> ".key"
       , "--vote-yes"
       , "--output-filepath", tempAbsPath </> "update-vote-1.00" <> show @Int (n - 1)
@@ -346,7 +351,7 @@ testnet testnetOptions H.Conf {..} = do
 
   void $ H.execCli
     [ "genesis", "create"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--start-time", formatIso8601 startTime
     ]
@@ -370,7 +375,7 @@ testnet testnetOptions H.Conf {..} = do
   -- Now generate for real:
   void $ H.execCli
     [ "genesis", "create"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath </> "shelley"
     , "--gen-genesis-keys", show @Int (numBftNodes testnetOptions)
     , "--start-time", formatIso8601 startTime
@@ -465,7 +470,7 @@ testnet testnetOptions H.Conf {..} = do
       [ "address", "build"
       , "--payment-verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> ".addr"
       ]
 
@@ -473,7 +478,7 @@ testnet testnetOptions H.Conf {..} = do
     void $ H.execCli
       [ "stake-address", "build"
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.addr"
       ]
 
@@ -505,7 +510,7 @@ testnet testnetOptions H.Conf {..} = do
   forM_ poolNodes $ \node -> do
     H.execCli
       [ "stake-pool", "registration-certificate"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--pool-pledge", "0", "--pool-cost", "0", "--pool-margin", "0"
       , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
       , "--vrf-verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
@@ -529,7 +534,7 @@ testnet testnetOptions H.Conf {..} = do
     --  4. delegate from the user1 stake address to the stake pool
     txIn <- H.noteShow . S.strip =<< H.execCli
       [ "genesis", "initial-txin"
-      , "--testnet-magic", "42"
+      , "--testnet-magic", show @Int testnetMagic
       , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
       ]
 
@@ -550,41 +555,6 @@ testnet testnetOptions H.Conf {..} = do
       , "--out-file", tempAbsPath </> "tx1.txbody"
       ]
 
-  -- TODO: this will become the transaction to register the pool, etc.
-  -- We'll need to pick the tx-in from the actual UTxO since it contains the txid,
-  -- we'll have to query this via cardano-cli query utxo.
-
-  {-  cardano-cli transaction build-raw \
-          --invalid-hereafter 1000000 --fee 0 \
-          --tx-in 67209bfcdf78f8cd86f649da75053a80fb9bb3fad68465554f9301c31b496c65#0 \
-          --tx-out $(cat example/addresses/user1.addr)+450000000 \
-          --certificate-file example/addresses/pool-owner1-stake.reg.cert \
-          --certificate-file example/node-pool1/registration.cert \
-          --certificate-file example/addresses/user1-stake.reg.cert \
-          --certificate-file example/addresses/user1-stake.deleg.cert \
-          --out-file example/register-pool.txbody
-  -}
-
-  {-  cardano-cli address convert \
-          --byron-key-file example/byron/payment-keys.000.key \
-          --signing-key-file example/byron/payment-keys.000-converted.key
-  -}
-
-  {-  cardano-cli transaction sign \
-          --tx-body-file example/register-pool.txbody \
-          --testnet-magic 42 \
-          --signing-key-file example/byron/payment-keys.000-converted.key \
-          --signing-key-file example/shelley/utxo-keys/utxo1.skey \
-          --signing-key-file example/addresses/user1-stake.skey \
-          --signing-key-file example/node-pool1/owner.skey \
-          --signing-key-file example/node-pool1/shelley/operator.skey \
-          --out-file example/register-pool.tx
-  -}
-
-  {-  cardano-cli transaction submit \
-          --tx-file example/register-pool.tx --testnet-magic 42
-  -}
-
   -- So we'll need to sign this with a bunch of keys:
   -- 1. the initial utxo spending key, for the funds
   -- 2. the user1 stake address key, due to the delegatation cert
@@ -596,7 +566,7 @@ testnet testnetOptions H.Conf {..} = do
     , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
     , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
     , "--signing-key-file", tempAbsPath </> "node-pool1/shelley/operator.skey"
-    , "--testnet-magic", "42"
+    , "--testnet-magic", show @Int testnetMagic
     , "--tx-body-file", tempAbsPath </> "tx1.txbody"
     , "--out-file", tempAbsPath </> "tx1.tx"
     ]
@@ -706,6 +676,59 @@ testnet testnetOptions H.Conf {..} = do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     H.assertByDeadlineIO deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
     H.assertByDeadlineIO deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+
+  -- TODO: this will become the transaction to register the pool, etc.
+  -- We'll need to pick the tx-in from the actual UTxO since it contains the txid,
+  -- we'll have to query this via cardano-cli query utxo.
+
+  user1Addr <- H.readFile $ tempAbsPath </> "addresses/user1.addr"
+
+  void $ H.execCli
+    [ "transaction", "build-raw"
+    , "--invalid-hereafter", "1000000"
+    , "--fee", "0"
+    , "--tx-in", "67209bfcdf78f8cd86f649da75053a80fb9bb3fad68465554f9301c31b496c65#0"
+    , "--tx-out", user1Addr <> "+450000000"
+    , "--certificate-file", tempAbsPath </> "addresses/pool-owner1-stake.reg.cert"
+    , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
+    , "--certificate-file", tempAbsPath </> "addresses/user1-stake.reg.cert"
+    , "--certificate-file", tempAbsPath </> "addresses/user1-stake.deleg.cert"
+    , "--out-file", tempAbsPath </> "register-pool.txbody"
+    ]
+
+  H.cat $ tempAbsPath </> "register-pool.txbody"
+
+  void $ H.execCli
+    [ "key", "convert-byron-key"
+    , "--byron-signing-key-file", tempAbsPath </> "byron/payment-keys.000.key"
+    , "--out-file", tempAbsPath </> "byron/payment-keys.000-converted.key"
+    , "--byron-payment-key-type"
+    ]
+
+  void $ H.execCli
+    [ "transaction", "sign"
+    , "--tx-body-file", tempAbsPath </> "register-pool.txbody"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--signing-key-file", tempAbsPath </> "byron/payment-keys.000-converted.key"
+    , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
+    , "--signing-key-file", tempAbsPath </> "addresses/user1-stake.skey"
+    , "--signing-key-file", tempAbsPath </> "node-pool1/owner.skey"
+    , "--signing-key-file", tempAbsPath </> "node-pool1/shelley/operator.skey"
+    , "--out-file", tempAbsPath </> "register-pool.tx"
+    ]
+
+  sprocketSystemNames <- forM allNodes $ \node -> do
+    H.noteShow . IO.sprocketSystemName $ Sprocket tempBaseAbsPath (socketDir </> node)
+
+  cliEnv <- H.noteShow $ H.defaultExecConfig
+    { H.execConfigEnv = Just $ ("CARDANO_NODE_SOCKET_PATH", ) <$> L.take 1 sprocketSystemNames
+    }
+
+  -- void $ H.execCli' cliEnv
+  --   [ "transaction", "submit"
+  --   , "--tx-file", tempAbsPath </> "register-pool.tx"
+  --   , "--testnet-magic", show @Int testnetMagic
+  --   ]
 
   H.noteShowIO_ DTC.getCurrentTime
 
