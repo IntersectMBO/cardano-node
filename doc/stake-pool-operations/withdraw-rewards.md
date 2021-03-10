@@ -5,7 +5,6 @@
 
     cardano-cli query stake-address-info \
     --mainnet \
-    --mary-era \
     --address $(cat stake.addr)
 
     [
@@ -21,7 +20,7 @@
 
 You'll withdraw rewards into a payment.addr wich will pay for the transaction fees.
 
-    cardano-cli query utxo --mainnet --mary-era --address $(cat payment.addr)
+    cardano-cli query utxo --mainnet --address $(cat payment.addr)
 
                                TxHash                                 TxIx         Amount
     ----------------------------------------------------------------------------------------
