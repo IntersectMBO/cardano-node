@@ -58,8 +58,8 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
-import qualified System.Info as OS
 import qualified System.IO as IO
+import qualified System.Info as OS
 #ifdef UNIX
 import           System.Posix.Files
 #endif
@@ -132,7 +132,7 @@ testnet testnetOptions H.Conf {..} = do
   let addrs = userAddrs <> poolAddrs
 
   H.copyFile
-    (base </> "configuration/chairman/shelly-only/configuration.yaml")
+    (base </> "configuration/chairman/shelley-only/configuration.yaml")
     (tempAbsPath </> "configuration.yaml")
 
   -- Set up our template
