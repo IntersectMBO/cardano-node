@@ -204,6 +204,7 @@ emptyLogDoc d = LogDoc d [] [] [] [] []
 data Backend =
     KatipBackend Text
   | EKGBackend Text
+  | StandardBackend Text
   deriving(Eq, Show, Generic)
 
 -- | Type for a Fold
