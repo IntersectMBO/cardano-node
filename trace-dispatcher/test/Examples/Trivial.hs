@@ -5,6 +5,7 @@ import           Katip
 import           Katip.Scribes.Handle (ioLogEnv)
 
 import           Cardano.Logging
+import           Examples.Configuration (testMessageDocumented)
 import           Examples.TestObjects
 
 
@@ -12,7 +13,8 @@ import           Examples.TestObjects
 --   for every path element
 test1 :: IO ()
 test1 = do
-    simpleTracer1 <- stdoutHumanKatipTracer
+    simpleTracer1 <- standardMachineTracer "simpleTracer1" Nothing
+    configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer1]
     let simpleTracer1' = filterTraceBySeverity (Just WarningF) simpleTracer1
     let simpleTracerC1 = appendName "Outer1" simpleTracer1'
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
@@ -26,7 +28,8 @@ test1 = do
 
 test2 :: IO ()
 test2 = do
-    simpleTracer <- stdoutHumanKatipTracer
+    simpleTracer <- standardHumanTracer "simpleTracer2" Nothing
+    configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
     let simpleTracer1  = withSeverity loSeverity
                             (filterTraceBySeverity (Just WarningF) simpleTracer)
     let simpleTracerC1 = appendName "Outer1" simpleTracer1

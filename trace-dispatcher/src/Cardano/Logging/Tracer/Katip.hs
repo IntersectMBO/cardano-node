@@ -3,7 +3,11 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.Tracer.Katip where
+module Cardano.Logging.Tracer.Katip (
+    stdoutObjectKatipTracer
+  , stdoutJsonKatipTracer
+  , stdoutHumanKatipTracer
+) where
 
 import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.STM
