@@ -370,7 +370,7 @@ renderLocalStateQueryError lsqErr =
       "The attempted local state query does not support the Byron protocol."
     ShelleyProtocolEraMismatch ->
         "The Shelley protocol mode can only be used with the Shelley era, "
-     <> "i.e. with --shelley-mode use --shelly-era flag"
+     <> "i.e. with --shelley-mode use --shelley-era flag"
 
 writeStakeAddressInfo
   :: Maybe OutputFile
