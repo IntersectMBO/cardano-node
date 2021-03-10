@@ -9,7 +9,7 @@
 #define UNIX
 #endif
 
-module Testnet.ByronShelley
+module Testnet.Cardano
   ( ForkPoint(..)
   , TestnetOptions(..)
   , defaultTestnetOptions

@@ -273,4 +273,3 @@ options:
     cardano.node.TraceMux: Info
     cardano.node.Handshake: Debug
 
-TestShelleyHardForkAtEpoch: 1
