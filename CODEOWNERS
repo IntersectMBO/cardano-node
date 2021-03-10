@@ -1,3 +1,8 @@
+# Technical writers
+doc                                                           @fsancheziohk @nahern @olgahryniuk
+README.*                                                      @fsancheziohk @nahern @olgahryniuk
+cardano-cli/README.md                                         @fsancheziohk @nahern @olgahryniuk
+
 # General reviewers per PR
 #                       David          Duncan   Jordan     Erik   John
 *                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy
@@ -12,16 +17,6 @@ cabal.project                                                 @LaurenceIO
 doc                                                           @docs-access
 README.*                                                      @docs-access
 
-# Technical writers
-doc                                                           @fsancheziohk
-README.*                                                      @fsancheziohk
-cardano-cli/README.md                                         @fsancheziohk
-doc                                                           @nahern
-README.*                                                      @nahern
-cardano-cli/README.md                                         @nahern
-doc                                                           @olgahryniuk
-README.*                                                      @olgahryniuk
-cardano-cli/README.md                                         @olgahryniuk
 
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
 
