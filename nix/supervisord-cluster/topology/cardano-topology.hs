@@ -1,6 +1,3 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -p "haskellPackages.ghcWithPackages (pkgs: with pkgs; [aeson graphviz optparse-applicative split])" -i runhaskell
-
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -110,7 +107,7 @@ mkTopology TopoParams{..} =
          , mpools = tpIdPools id
          , ..}
    specIds = [0..(tpSize - 1)]
-   specLocs = take tpSize $ cycle $ tpLocations
+   specLocs = take tpSize $ cycle tpLocations
 
 main :: IO ()
 main = do
@@ -221,11 +218,11 @@ writeDot topo f =
 
 toGV :: [Spec] -> ([(String, Spec)], [(String, String, String)])
 toGV xs =
-  (,) ((\s@Spec{..} -> (("node-" <> show id), s)) <$> xs)
+  (,) ((\s@Spec{..} -> ("node-" <> show id, s)) <$> xs)
       (concat $
-       (\Spec{..} -> (("node-" <> show id, , "")
-                       . ("node-" <>)
-                       . show <$> links)) <$> xs)
+       (\Spec{..} -> ("node-" <> show id, , "")
+                     . ("node-" <>)
+                     . show <$> links) <$> xs)
 
 --- * Aux
 ---
