@@ -24,6 +24,8 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHas
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
+import Cardano.Ledger.Era (Era)
+
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
@@ -78,10 +80,7 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
         <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
          $ readVerificationKeyOrFile AsStakeKey
          $ VerificationKeyFilePath sipAuthorKeyFile
-      let sip = SIP.mkSubmission vk anySalt proposalText
-            where
-              anySalt = 92 -- At the moment we do not support specifying the
-                           -- salt via command line.
+      let sip = SIP.mkSubmission vk constSalt (mkProposal proposalText)
       firstExceptT ShelleyGovernanceCmdTextEnvWriteError
         $ newExceptT
         $ writeFileTextEnvelope
@@ -99,10 +98,7 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
         <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
          $ readVerificationKeyOrFile AsStakeKey
          $ VerificationKeyFilePath sipRevelatorKeyFile
-      let revelation = SIP.mkRevelation vk anySalt revealedProposalText
-            where
-              anySalt = 92 -- At the moment we do not support specifying the
-                           -- salt via command line.
+      let revelation = SIP.mkRevelation vk constSalt (mkProposal revealedProposalText)
       firstExceptT ShelleyGovernanceCmdTextEnvWriteError
         $ newExceptT
         $ writeFileTextEnvelope
@@ -124,7 +120,7 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
           , Pivo.Update.sipVotes       = singleton
                                        $ SIP.mkVote @StandardPivo
                                            vk
-                                           votedProposalText
+                                           (SIP._id (mkProposal votedProposalText))
                                            SIP.For
           }
     readUpdateKeyFile keyFile = do
@@ -137,6 +133,23 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
       firstExceptT ShelleyGovernanceCmdTextEnvWriteError
         $ newExceptT
         $ writeFileTextEnvelope outFile Nothing updatePayload
+
+-- | Make an ad-hoc proposal using the given proposal text.
+mkProposal
+  :: Era era
+  => Text -> SIP.Proposal era
+mkProposal text = SIP.mkProposal text votingPeriodDuration
+  where
+    -- todo: add support for specifying the voting period
+    -- duration through the command line.
+    votingPeriodDuration = 600
+    -- We chose the security parameter to be 10, and the active
+    -- slot coefficient to be 0.1, so the stabilityWindow becomes
+    -- 3 * 10 / 0.1 = 300
+
+-- todo: add support for specifying the salt through the command line.
+constSalt :: Int
+constSalt = 84
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot

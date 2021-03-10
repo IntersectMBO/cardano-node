@@ -54,7 +54,7 @@
     },
     "systemStart": "2021-02-08T11:32:35.638667287Z",
     "slotsPerKESPeriod": 129600,
-    "slotLength": 1,
+    "slotLength": 0.2,
     "maxKESEvolutions": 60,
     "securityParam": 10
 }
