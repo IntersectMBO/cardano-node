@@ -65,7 +65,7 @@ withNamespaceConfig extract needsConfigFunc tr = do
                 Nothing  -> T.traceWith
                               (unpackTrace $ needsConfigFunc (Just v) tr)
                               (lc, Nothing, a)
-
+        Left (cmap, Nothing) -> error "Missing configuration"
     mkTrace ref (lc, Just Reset, a) = do
       liftIO $ writeIORef ref (Left (Map.empty, Nothing))
       T.traceWith (unpackTrace $ needsConfigFunc Nothing tr) (lc, Just Reset, a)
