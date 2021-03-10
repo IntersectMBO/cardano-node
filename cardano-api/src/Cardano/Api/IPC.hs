@@ -49,6 +49,7 @@ module Cardano.Api.IPC (
 
     -- *** Local state query
     LocalStateQueryClient(..),
+    AcquireFailure(..),
     QueryInMode(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
@@ -74,6 +75,7 @@ import           Control.Concurrent.STM
 import           Control.Monad (void)
 import           Control.Tracer (nullTracer)
 
+
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
@@ -83,6 +85,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
                    SubmitResult (..))
@@ -110,6 +113,13 @@ import           Cardano.Api.TxInMode
 -- The types for the client side of the node-to-client IPC protocols
 --
 
+-- | The protocols we can use with a local node. Use in conjunction with
+-- 'connectToLocalNode'.
+--
+-- These protocols use the types from the rest of this API. The conversion
+-- to\/from the types used by the underlying wire formats is handled by
+-- 'connectToLocalNode'.
+--
 data LocalNodeClientProtocols block point tip tx txerr query m =
      LocalNodeClientProtocols {
        localChainSyncClient
@@ -136,17 +146,6 @@ type LocalNodeClientProtocolsInMode mode =
          (TxInMode mode)
          (TxValidationErrorInMode mode)
          (QueryInMode mode)
-         IO
-
--- internal, consensus
-type LocalNodeClientProtocolsForBlock block =
-       LocalNodeClientProtocols
-         block
-         (Consensus.Point block)
-         (Net.Tip block)
-         (Consensus.GenTx block)
-         (Consensus.ApplyTxErr block)
-         (Consensus.Query block)
          IO
 
 data LocalNodeConnectInfo mode =
@@ -221,10 +220,10 @@ mkVersionedProtocols :: forall block.
                              Net.LocalAddress
                              LBS.ByteString IO () Void)
 mkVersionedProtocols networkid ptcl
-                     LocalNodeClientProtocols {
-                       localChainSyncClient,
-                       localTxSubmissionClient,
-                       localStateQueryClient
+                     LocalNodeClientProtocolsForBlock {
+                       localChainSyncClientForBlock,
+                       localTxSubmissionClientForBlock,
+                       localStateQueryClientForBlock
                      } =
      --TODO: really we should construct specific combinations of
      -- protocols for the versions we know about, with different protocol
@@ -248,7 +247,7 @@ mkVersionedProtocols networkid ptcl
     protocols ptclBlockVersion ptclVersion =
         NodeToClientProtocols {
           localChainSyncProtocol =
-            Net.InitiatorProtocolOnly $ case localChainSyncClient of
+            Net.InitiatorProtocolOnly $ case localChainSyncClientForBlock of
               NoLocalChainSyncClient
                 -> Net.MuxPeer nullTracer cChainSyncCodec Net.chainSyncPeerNull
               LocalChainSyncClient client
@@ -268,7 +267,8 @@ mkVersionedProtocols networkid ptcl
                 nullTracer
                 cTxSubmissionCodec
                 (maybe Net.localTxSubmissionPeerNull
-                       Net.Tx.localTxSubmissionClientPeer localTxSubmissionClient)
+                       Net.Tx.localTxSubmissionClientPeer
+                       localTxSubmissionClientForBlock)
 
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
@@ -277,7 +277,7 @@ mkVersionedProtocols networkid ptcl
                 cStateQueryCodec
                 (maybe Net.localStateQueryPeerNull
                        Net.Query.localStateQueryClientPeer
-                       localStateQueryClient)
+                       localStateQueryClientForBlock)
         }
       where
         Consensus.Codecs {
@@ -312,6 +312,26 @@ data LocalNodeClientParams where
        => Consensus.ProtocolClient block (Consensus.BlockProtocol block)
        -> LocalNodeClientProtocolsForBlock block
        -> LocalNodeClientParams
+
+data LocalNodeClientProtocolsForBlock block =
+     LocalNodeClientProtocolsForBlock {
+       localChainSyncClientForBlock
+         :: LocalChainSyncClient  block
+                                  (Consensus.Point block)
+                                  (Net.Tip         block)
+                                   IO
+
+     , localStateQueryClientForBlock
+         :: Maybe (LocalStateQueryClient  block
+                                         (Consensus.Point block)
+                                         (Consensus.Query block)
+                                          IO ())
+
+     , localTxSubmissionClientForBlock
+         :: Maybe (LocalTxSubmissionClient (Consensus.GenTx      block)
+                                           (Consensus.ApplyTxErr block)
+                                            IO ())
+     }
 
 
 -- | Convert from the mode-parametrised style to the block-parametrised style.
@@ -349,6 +369,7 @@ mkLocalNodeClientParams modeparams clients =
           (Consensus.ProtocolClientCardano epochSlots)
           (convLocalNodeClientProtocols CardanoMode clients)
 
+
 convLocalNodeClientProtocols :: forall mode block.
                                 ConsensusBlockForMode mode ~ block
                              => ConsensusMode mode
@@ -361,17 +382,17 @@ convLocalNodeClientProtocols
       localTxSubmissionClient,
       localStateQueryClient
     } =
-    LocalNodeClientProtocols {
-      localChainSyncClient    = case localChainSyncClient of
+    LocalNodeClientProtocolsForBlock {
+      localChainSyncClientForBlock    = case localChainSyncClient of
         NoLocalChainSyncClient -> NoLocalChainSyncClient
         LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined mode clientPipelined
         LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient mode client,
 
-      localTxSubmissionClient = convLocalTxSubmissionClient mode <$>
-                                  localTxSubmissionClient,
+      localTxSubmissionClientForBlock = convLocalTxSubmissionClient mode <$>
+                                          localTxSubmissionClient,
 
-      localStateQueryClient   = convLocalStateQueryClient mode <$>
-                                  localStateQueryClient
+      localStateQueryClientForBlock   = convLocalStateQueryClient mode <$>
+                                          localStateQueryClient
     }
 
 
@@ -441,44 +462,82 @@ convLocalStateQueryClient mode =
 --
 queryNodeLocalState :: forall mode result.
                        LocalNodeConnectInfo mode
-                    -> ChainPoint
+                    -> Maybe ChainPoint
                     -> QueryInMode mode result
                     -> IO (Either Net.Query.AcquireFailure result)
-queryNodeLocalState connctInfo point query = do
+queryNodeLocalState connctInfo mpoint query = do
+    pointVar  <- maybe newEmptyTMVarIO newTMVarIO mpoint
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
-        localChainSyncClient    = NoLocalChainSyncClient,
-        localTxSubmissionClient = Nothing,
-        localStateQueryClient   = Just (localStateQuerySingle resultVar)
+        localChainSyncClient    = case mpoint of
+                                    Nothing -> LocalChainSyncClient
+                                                 $ getChainPoint pointVar resultVar
+                                    Just{}  -> NoLocalChainSyncClient,
+        localStateQueryClient   = Just (singleQuery pointVar resultVar),
+        localTxSubmissionClient = Nothing
       }
     atomically (takeTMVar resultVar)
   where
-    localStateQuerySingle
-      :: TMVar (Either Net.Query.AcquireFailure result)
+    -- Retry until the local node query protocol
+    -- has returned its result
+    waitOnQuery :: TMVar ChainPoint
+                -> TMVar (Either AcquireFailure result)
+                -> ChainTip -> IO ()
+    waitOnQuery pVar qVar t = do
+      atomically $ putTMVar pVar (chainTipToChainPoint t)
+      atomically $ isEmptyTMVar qVar >>= check . not
+    -- If we were not supplied with a chain point then we'll find out using
+    -- the chain sync protocol.
+    -- TODO: this would be easier if the query protocol supported an implicit
+    -- tip point directly.
+    getChainPoint
+      :: TMVar ChainPoint
+      -> TMVar (Either AcquireFailure result)
+      -> Net.Sync.ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+    getChainPoint pointVar' queryResultVar =
+      Net.Sync.ChainSyncClient $ do
+        pure $
+          Net.Sync.SendMsgRequestNext next (pure next)
+      where
+        next :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+        next = Net.Sync.ClientStNext {
+                 Net.Sync.recvMsgRollForward = \_blk tip ->
+                   Net.Sync.ChainSyncClient $ do
+                     waitOnQuery pointVar' queryResultVar tip
+                     pure $ Net.Sync.SendMsgDone (),
+
+                 Net.Sync.recvMsgRollBackward = \_point tip ->
+                   Net.Sync.ChainSyncClient $ do
+                     waitOnQuery pointVar' queryResultVar tip
+                     pure $ Net.Sync.SendMsgDone ()
+               }
+
+    singleQuery
+      :: TMVar ChainPoint
+      -> TMVar (Either Net.Query.AcquireFailure result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
-    localStateQuerySingle resultVar =
-      LocalStateQueryClient $ pure $
+    singleQuery pointVar' resultVar' =
+      LocalStateQueryClient $ do
+      point <- atomically $ takeTMVar pointVar'
+      pure $
         Net.Query.SendMsgAcquire (Just point) $
-        Net.Query.ClientStAcquiring {
-          Net.Query.recvMsgAcquired = pure $
-            Net.Query.SendMsgQuery query $
-            Net.Query.ClientStQuerying {
-              Net.Query.recvMsgResult = \result -> do
-                --TODO: return the result via the SendMsgDone rather than
-                -- writing into an mvar
-                atomically $ putTMVar resultVar (Right result)
-                pure $ Net.Query.SendMsgRelease $
-                  pure $ Net.Query.SendMsgDone ()
-            }
-        , Net.Query.recvMsgFailure = \failure -> do
-            --TODO: return the result via the SendMsgDone rather than
-            -- writing into an mvar
-            atomically $ putTMVar resultVar (Left failure)
-            pure $ Net.Query.SendMsgDone ()
-        }
+        Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired =
+              pure $ Net.Query.SendMsgQuery query $
+                Net.Query.ClientStQuerying
+                  { Net.Query.recvMsgResult = \result -> do
+                    atomically $ putTMVar resultVar' (Right result)
+
+                    pure $ Net.Query.SendMsgRelease $
+                      pure $ Net.Query.SendMsgDone ()
+                  }
+          , Net.Query.recvMsgFailure = \failure -> do
+              atomically $ putTMVar resultVar' (Left failure)
+              pure $ Net.Query.SendMsgDone ()
+          }
 
 
 submitTxToNodeLocal :: forall mode.
