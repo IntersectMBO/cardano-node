@@ -286,7 +286,9 @@ instance IsCardanoEra era => ToJSON (TxOut era) where
     case addrType of
       ByronAddressInAnyEra ->
         let hexAddr = serialiseToRawBytesHexText addr
-        in object [ hexAddr .= toJSON val ]
+        in object [ "address" .= hexAddr
+                  , "value" .= toJSON val
+                  ]
       ShelleyAddressInEra sbe ->
         case sbe of
           ShelleyBasedEraShelley ->
