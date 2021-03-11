@@ -1586,6 +1586,10 @@ pCardanoEra = asum
       (  Opt.long "mary-era"
       <> Opt.help "Specify the Mary era"
       )
+  , Opt.flag' (AnyCardanoEra PivoEra)
+      (  Opt.long "pivo-era"
+      <> Opt.help "Specify the Pivo era era"
+      )
 
     -- Default for now:
   , pure (AnyCardanoEra ShelleyEra)
