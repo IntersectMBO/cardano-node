@@ -137,6 +137,7 @@ data Tracers peer localPeer blk = Tracers
   , acceptPolicyTracer :: Tracer IO NtN.AcceptConnectionsPolicyTrace
     -- | Trace the Mux
   , muxTracer :: Tracer IO (WithMuxBearer peer MuxTrace)
+  , muxLocalTracer :: Tracer IO (WithMuxBearer localPeer MuxTrace)
   , handshakeTracer :: Tracer IO NtN.HandshakeTr
   , localHandshakeTracer :: Tracer IO NtC.HandshakeTr
   , diffusionInitializationTracer :: Tracer IO ND.DiffusionInitializationTracer
@@ -170,6 +171,7 @@ nullTracers = Tracers
   , localErrorPolicyTracer = nullTracer
   , acceptPolicyTracer = nullTracer
   , muxTracer = nullTracer
+  , muxLocalTracer = nullTracer
   , handshakeTracer = nullTracer
   , localHandshakeTracer = nullTracer
   , diffusionInitializationTracer = nullTracer
@@ -312,6 +314,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
     , localErrorPolicyTracer = tracerOnOff (traceLocalErrorPolicy trSel) verb "LocalErrorPolicy" tr
     , acceptPolicyTracer = tracerOnOff (traceAcceptPolicy trSel) verb "AcceptPolicy" tr
     , muxTracer = tracerOnOff (traceMux trSel) verb "Mux" tr
+    , muxLocalTracer = tracerOnOff (traceLocalMux trSel) verb "MuxLocal" tr
     , handshakeTracer = tracerOnOff (traceHandshake trSel) verb "Handshake" tr
     , localHandshakeTracer = tracerOnOff (traceLocalHandshake trSel) verb "LocalHandshake" tr
     , diffusionInitializationTracer = tracerOnOff (traceDiffusionInitialization trSel) verb "DiffusionInitializationTracer" tr
@@ -359,6 +362,7 @@ mkTracers _ TracingOff _ _ _ =
     , localErrorPolicyTracer = nullTracer
     , acceptPolicyTracer = nullTracer
     , muxTracer = nullTracer
+    , muxLocalTracer = nullTracer
     , handshakeTracer = nullTracer
     , localHandshakeTracer = nullTracer
     , diffusionInitializationTracer = nullTracer
