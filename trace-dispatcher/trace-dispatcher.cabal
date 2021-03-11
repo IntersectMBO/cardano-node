@@ -17,6 +17,7 @@ library
                       Cardano.Logging.Tracer.Katip
                       Cardano.Logging.Tracer.EKG
                       Cardano.Logging.Tracer.StandardLogger
+                      Cardano.Logging.Tracer.Formatting
                       Cardano.Logging.Types
                       Cardano.Logging.Configuration
                       Cardano.Logging.FrequencyLimiter
@@ -41,6 +42,15 @@ library
                       , unliftio
                       , unliftio-core
                       , unordered-containers
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+                       -Wpartial-fields
+                       -Widentities
+                       -Wredundant-constraints
+                       -Wmissing-export-lists
+                       -Wno-incomplete-patterns
 
 executable trace-dispatcher-examples
     main-is:          Main.hs

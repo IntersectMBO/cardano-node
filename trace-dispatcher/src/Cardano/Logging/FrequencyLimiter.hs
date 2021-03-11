@@ -8,15 +8,11 @@ module Cardano.Logging.FrequencyLimiter (
   LimitingMessage(..)
 )where
 
-import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import qualified Data.Aeson as A
-import qualified Data.Aeson.Types as A
-import           Data.Functor.Contravariant
-import           Data.Text (Text, unpack)
+import           Data.Text (Text)
 import           Data.Time.Clock.System
-import           Debug.Trace
 import           GHC.Generics
 
 import           Cardano.Logging.Trace
@@ -61,7 +57,7 @@ data FrequencyRec a = FrequencyRec {
 -- Finally it sends a StopLimiting message on the ltracer and traces all
 -- messages on the vtracer again.
 limitFrequency
-  :: forall a acc m . (MonadIO m, MonadUnliftIO m)
+  :: forall a m . (MonadIO m, MonadUnliftIO m)
   => Double   -- messages per second
   -> Text     -- name of this limiter
   -> Trace m a -- the limited trace

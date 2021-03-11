@@ -8,13 +8,34 @@
 
 
 
-module Cardano.Logging.Types where
+module Cardano.Logging.Types (
+    LogFormatting(..)
+  , Metric(..)
+  , Documented(..)
+  , DocMsg(..)
+  , LoggingContext(..)
+  , emptyLoggingContext
+  , Trace(..)
+  , Namespace
+  , DetailLevel(..)
+  , Privacy(..)
+  , SeverityS(..)
+  , SeverityF(..)
+  , ConfigOption(..)
+  , TraceConfig(..)
+  , emptyTraceConfig
+  , LogFormat(..)
+  , TraceControl(..)
+  , DocCollector(..)
+  , LogDoc(..)
+  , emptyLogDoc
+  , Backend(..)
+  , Folding(..)
+) where
 
 import           Control.Tracer
 import qualified Control.Tracer as T
 import qualified Data.Aeson as A
-import qualified Data.Aeson.Types as A
-import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -27,17 +48,17 @@ class LogFormatting a where
   -- with different details based on the detail level.
   -- No machine readable representation as default
   forMachine :: DetailLevel -> a -> A.Object
-  forMachine _ v = mempty
+  forMachine _ _v = mempty
 
   -- | Human readable representation.
   -- No human representation is represented by the empty text and is the default
   forHuman :: a -> Text
-  forHuman v = ""
+  forHuman _v = ""
 
   -- | Metrics representation.
   -- No metrics by default
   asMetrics :: a -> [Metric]
-  asMetrics v = []
+  asMetrics _v = []
 
 data Metric
   -- | An integer metric.
@@ -131,6 +152,9 @@ data SeverityF
     | SilenceF                 -- ^ Don't show anything
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
+data LogFormat = Human | Machine | Measures
+  deriving (Eq, Ord, Show)
+
 -- Configuration options for individual namespace elements
 data ConfigOption =
     -- | Severity level for a filter (default is WarningF)
@@ -171,6 +195,7 @@ data TraceConfig = TraceConfig {
 }
   deriving (Eq, Ord, Show, Generic)
 
+emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
 
 -- | When configuring a net of tracers, it should be run with Config on all
@@ -181,9 +206,6 @@ data TraceControl where
     Config    :: TraceConfig -> TraceControl
     Optimize  :: TraceControl
     Document  :: Int -> Text -> DocCollector -> TraceControl
-
-data LogFormat = Human | Machine | Measures
-  deriving (Eq, Ord, Show)
 
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 
