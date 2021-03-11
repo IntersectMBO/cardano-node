@@ -3,6 +3,9 @@ doc                                                           @fsancheziohk @nah
 README.*                                                      @fsancheziohk @nahern @olgahryniuk
 cardano-cli/README.md                                         @fsancheziohk @nahern @olgahryniuk
 
+# Release manager added for notification on dependency updates
+cabal.project                                                 @LaurenceIO
+
 # General reviewers per PR
 #                       David          Duncan   Jordan     Erik   John
 *                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy
@@ -10,8 +13,7 @@ cardano-cli/README.md                                         @fsancheziohk @nah
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
 
-# Release manager added for notification on dependency updates
-cabal.project                                                 @LaurenceIO
+
 
 # /doc folder and README.* needs to be owned by @docs-access
 doc                                                           @docs-access
