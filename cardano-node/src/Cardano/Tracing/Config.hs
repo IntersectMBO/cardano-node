@@ -57,6 +57,7 @@ type TraceLocalTxSubmissionServer = ("TraceLocalTxSubmissionServer" :: Symbol)
 type TraceLocalStateQueryProtocol = ("TraceLocalStateQueryProtocol" :: Symbol)
 type TraceMempool = ("TraceMempool" :: Symbol)
 type TraceMux = ("TraceMux" :: Symbol)
+type TraceLocalMux = ("TraceLocalMux" :: Symbol)
 type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
@@ -105,6 +106,7 @@ data TraceSelection
   , traceLocalTxSubmissionServer :: OnOff TraceLocalTxSubmissionServer
   , traceMempool :: OnOff TraceMempool
   , traceMux :: OnOff TraceMux
+  , traceLocalMux :: OnOff TraceLocalMux
   , traceTxInbound :: OnOff TraceTxInbound
   , traceTxOutbound :: OnOff TraceTxOutbound
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
@@ -172,6 +174,8 @@ traceConfigParser v =
       mempool = OnOff True
       mux :: OnOff TraceMux
       mux = OnOff True
+      localMux :: OnOff TraceLocalMux
+      localMux = OnOff False
       txInbound :: OnOff TraceTxInbound
       txInbound = OnOff False
       txOutbound :: OnOff TraceTxOutbound
@@ -213,6 +217,7 @@ traceConfigParser v =
     <*> v .:? getName localTxSubmissionServer .!= localTxSubmissionServer
     <*> v .:? getName mempool .!= mempool
     <*> v .:? getName mux .!= mux
+    <*> v .:? getName localMux .!= localMux
     <*> v .:? getName txInbound .!= txInbound
     <*> v .:? getName txOutbound .!= txOutbound
     <*> v .:? getName txSubmissionProtocol .!= txSubmissionProtocol
