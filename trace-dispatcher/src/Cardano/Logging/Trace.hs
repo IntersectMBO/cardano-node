@@ -4,15 +4,31 @@
 {-# LANGUAGE TypeFamilies        #-}
 
 
-module Cardano.Logging.Trace where
+module Cardano.Logging.Trace (
+    trace
+  , traceWith
+  , filterTrace
+  , filterTraceMaybe
+  , filterTraceBySeverity
+  , appendName
+  , setSeverity
+  , withSeverity
+  , filterTraceByPrivacy
+  , setPrivacy
+  , withPrivacy
+  , setDetails
+  , withDetails
+  , foldTraceM
+  , foldMTraceM
+  , routingTrace
+)
 
-import           Control.Arrow
+where
+
 import           Control.Monad (join)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
-import qualified Control.Tracer.Arrow as TA
-import           Data.Maybe (fromMaybe, isJust)
+import           Data.Maybe (isJust)
 import           Data.Text (Text)
 import           UnliftIO.MVar
 
@@ -35,9 +51,9 @@ filterTrace :: (Monad m) =>
   -> Trace m a
 filterTrace ff (Trace tr) = Trace $ T.squelchUnless
     (\case
-      (lc, Just Reset, a) -> True
-      (lc, Just Optimize, a) -> True
-      (lc, mbC, a) -> ff (lc, mbC, a))
+      (_lc, Just Reset, _a)     -> True
+      (_lc, Just Optimize, _a)  -> True
+      (lc, mbC, a)              -> ff (lc, mbC, a))
       tr
 
 --- | Keep the Just values and forget about the Nothings
@@ -47,12 +63,12 @@ filterTraceMaybe :: Monad m =>
 filterTraceMaybe (Trace tr) = Trace $
     T.squelchUnless
       (\case
-        (lc, mbC, Just a)  -> True
-        (lc, mbC, Nothing) -> False)
+        (_lc, _mbC, Just _a) -> True
+        (_lc, _mbC, Nothing) -> False)
       (T.contramap
           (\case
-            (lc, mbC, Just a)   -> (lc, mbC, a)
-            (lc, mbC, Nothing)  -> error "filterTraceMaybe: impossible")
+            (lc, mbC, Just a)     -> (lc, mbC, a)
+            (_lc, _mbC, Nothing)  -> error "filterTraceMaybe: impossible")
           tr)
 
 --- | Only processes messages further with a severity equal or greater as the
@@ -64,11 +80,12 @@ filterTraceBySeverity :: Monad m =>
 filterTraceBySeverity (Just minSeverity) =
     filterTrace $
       \case
-        (lc, Just Reset, a) -> True
-        (lc, Just Optimize, a) -> True
-        (c, _, e) -> case lcSeverity c of
-                    Just s  -> fromEnum s >= fromEnum minSeverity
-                    Nothing -> True
+        (_lc, Just Reset, _a)     -> True
+        (_lc, Just Optimize, _a)  -> True
+        (c, _, _e)                ->
+          case lcSeverity c of
+            Just s  -> fromEnum s >= fromEnum minSeverity
+            Nothing -> True
 filterTraceBySeverity Nothing = id
 
 -- | Appends a name to the context.
@@ -106,11 +123,12 @@ filterTraceByPrivacy :: (Monad m) =>
   -> Trace m a
 filterTraceByPrivacy (Just minPrivacy) = filterTrace $
     \case
-      (lc, Just Reset, a) -> True
-      (lc, Just Optimize, a) -> True
-      (c, mbC, e) -> case lcPrivacy c of
-                        Just s  -> fromEnum s >= fromEnum minPrivacy
-                        Nothing -> True
+      (_lc, Just Reset, _a)     -> True
+      (_lc, Just Optimize, _a)  -> True
+      (c, _mbC, _e) ->
+        case lcPrivacy c of
+          Just s  -> fromEnum s >= fromEnum minPrivacy
+          Nothing -> True
 filterTraceByPrivacy Nothing = id
 
 -- | Sets privacy for the messages in this trace
@@ -154,7 +172,7 @@ withDetails fs (Trace tr) = Trace $
 -- | Folds the cata function with acc over a.
 -- Uses an MVar to store the state
 foldTraceM
-  :: forall a acc m . (MonadUnliftIO m, MonadIO m)
+  :: forall a acc m . (MonadUnliftIO m)
   => (acc -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
@@ -174,7 +192,7 @@ foldTraceM cata initial (Trace tr) = do
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
 foldMTraceM
-  :: forall a acc m . (MonadUnliftIO m, MonadIO m)
+  :: forall a acc m . (MonadUnliftIO m)
   => (acc -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
