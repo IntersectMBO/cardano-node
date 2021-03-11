@@ -2,19 +2,19 @@
 
 The current iohk-monitoring-framework should be replaced with something simpler. The current framework shall be replaced, because it consumes too much resources, and as such too much influences the system it is monitoring.
 
-We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The `traceWith` function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is always the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers, which are implemented via contravariant functions, and end in one or more TraceOuts.
+We call everything that shall be logged or monitored a __Message__ in this context, and are aware that this message can carry a payload, so it is not just a String. We say __TraceIn__, when we refer to the incoming side of a stream of messages while we say __TraceOut__ when we refer to the outgoing side. The `traceWith` function is called on a TraceIn. A TraceOut is doing something effect-full with the messages. So a TraceOut is a backend that not only produces effects but also is the end of the data flow. We say __Trace__ for a stream of messages, that originates at some TraceIn, is then plumbed via transformers, which are implemented via contravariant functions, and end in one or more TraceOuts.
 
 This library requires:
 
-* the messages have to implement the typeclass `Logging` for formatting
+* the messages have to be instances of the typeclass `LogFormatting`
 * the developer shall document all messages
-* the developer has to provide a default object for any message (used for configuration and documentation)
+* the documentation has to provide a default object for any message
 
 This library offers:
 
 * It can be reconfigured at runtime with one procedure call
 * The tracers are optimized for efficiency at configuration time
-* It builds documentation for messages combined with it's parameters and if desired even with the configuration data
+* It can build documentation for all messages combined with it's parameters
 
 This library is build upon the arrow based contravariant tracer library __contra-tracer__.
 
@@ -53,8 +53,9 @@ Every message can have a severity, which is one of:
 ```haskell
 Debug | Info | Notice | Warning | Error | Critical | Alert | Emergency
 ```
+(Remark: I would personally reduce the number of levels to 5: __Debug | Info | Warning | Error | Critical__ )
 
-In addition it exist the a severity type for filtering, which has an additional `SilenceF` constructor, which follows to `EmergencyF`, so that nullTracers (TraceOut without effect) can be omitted.
+In addition it exist the a severity type for filtering, which has an additional `SilenceF` constructor, which follows to `EmergencyF`, so that nullTracers (TraceOut without effect) don't need to be used.
 
 You use the following function to give a severity to messages:
 
@@ -64,11 +65,10 @@ setSeverity :: Monad m => SeverityS -> Trace m a -> Trace m a
 tracer = setSeverity NoticeS exampleTracer
 ```
 
-If in the message flow setSeverity gets called multiple times, the first one wins, which is the one closer to TraceIn.
-In the following code the severity is set, when you actually call traceWith for a single message.
+If in the message flow setSeverity gets called multiple times, the first one wins, which is the one closer to TraceIn. In the following code the severity is set, when you actually call traceWith for a single message.
 
 ```haskell
-traceWith (setSeverity Warning exampleTracer) (IgnoreBlockOlderThanK b)
+trace (setSeverity Warning exampleTracer) "ignoreBlock" (IgnoreBlockOlderThanK b)
 ```
 Or you can set severities for all messages of a type in a central place:
 in a style like it is done currently:
@@ -108,12 +108,11 @@ setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
 withDetails :: Monad m => (a -> DetailLevel) -> Trace m a -> Trace m a
 ```
 
-We explain in the section about type classes, how to specify wich detail levels display which information.
+We explain in the section about formatting, how to specify wich detail levels display which information.
 
 ### Namespace
 
-Messages contain a __Namespace__ which is a list of Text. Every message at a TraceOut must be uniquely identified by its Namespace!
-We could have used the constructor and type, which is a more technical approach, but this logging library uses the Namespace as message identifier.
+Messages contain a __Namespace__ which is a list of Text. *Every message at a TraceOut must be uniquely identified by its Namespace!* We could have used the constructor and type, which is a more technical approach, but this logging library uses the Namespace as message identifier.
 
 The documentation will be ordered according to this scheme, and it should be possible for a human to locate the origin of a message in this way.
 
@@ -130,18 +129,18 @@ appendName "specific" $ appendName "middle" $ appendName "general" tracer
 ```
 gives the name: `general.middle.specific`. Usually the application name is then prepended to the result.
 
-In the current representation furthermore the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this namespace. We would like to change this, to make clear what the identifying name is, and to report this independently like:
+In the current representation furthermore the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this namespace. I would like to change this, to make clear what the identifying name is:
 
-    [yupanqui-PC.cardano.general.middle.specific.Info.379]
+    [deus-x-machina.cardano.general.middle.specific.Info.379]
     ->
-    [cardano.general.middle.specific][Info][yupanqui-PC][ThreadId 379])
+    [deus-x-machina:cardano.general.middle.specific:Info.379]
 
 Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
 
 ```haskell
-traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
--- Can be shortened as:
 trace exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
+-- instead of:
+traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
 ```
 
 ### Filtering
@@ -164,7 +163,7 @@ filterTrace :: (Monad m) =>
   -> Trace m a
 
 data LoggingContext = LoggingContext {
-    lcNamespace     :: Namespace
+    lcNamespace   :: Namespace
   , lcSeverity    :: Maybe Severity
   , lcPrivacy     :: Maybe Privacy
   , lcDetailLevel :: Maybe DetailLevel
@@ -177,13 +176,12 @@ filterTrace (\ (c, a) -> case lcPrivacy c of
                 Just s  -> s == Public
                 Nothing -> True)   
 ```
-We come back to filtering when we treat the _Configuration_, cause the configuration makes it possible to enable a fine grained control of which messages are filtered out and which are further processed based on the namespace.
+We come back to filtering when we treat the _Configuration_, cause the configuration makes it possible to enable a fine grained control of which messages are filtered out and which are further processed based on the Namespace.
 
 ### Plumbing
 
-TraceIns shall be routed through different transformations to traceOuts.
-Here we treat the static implementation of this. Calling traceWith trace passes the message through the transformers to zero to n traceOuts.
-In the first example we route the trace to one of two tracers based on the constructor of the message.
+TraceIns shall be routed through different transformations to traceOuts. Calling *trace* passes the message through the transformers to zero to n traceOuts.
+To send the message of a trace to different tracers depending on some criteria use the following function:
 
 ```haskell
 routingTrace :: Monad m => (a -> Trace m a) -> Trace m a
@@ -193,8 +191,7 @@ let resTrace = routingTrace routingf (tracer1 <> tracer2)
     routingf LO2 {} = tracer2
 ```    
 The second argument must mappend all possible tracers of the first argument to one tracer. This is required for the configuration. We could have construct a more secure interface by having a map of values to tracers, but the ability for full pattern matching outweigh this disadvantage in our view.
-To send the message of a trace to different tracers depending on some criteria use the following function:
-In the second example we send the messages of one trace to two tracers simultaneously:
+In the following example we send the messages of one trace to two tracers simultaneously:
 
 ```haskell
 let resTrace = tracer1 <> tracer2
@@ -317,6 +314,8 @@ data Metric
     deriving (Show, Eq)     
 ```
 
+For additional flexibility traceOuts may add the possibility to give a formatting function, which is then used instead of the method of the typeclass.
+
 ### Configuration
 
 With the new system of configuration we have:
@@ -329,11 +328,8 @@ With the new system of configuration we have:
 This is implemented by running the trace network at configuration time.
 
 ```haskell
--- | Needs to list all traces which are used with traceWith for type a.
-allTraces :: [Trace m a]
-
 --   The function configures the traces with the given configuration
-configureTraces :: MonadIO m => [Trace m a] -> [a] -> Configuration -> m ()
+configureTracers :: Monad m => TraceConfig -> Documented a -> [Trace m a]-> m ()
 ```
 
 These are the options that can be configured based on a namespace:
@@ -352,17 +348,17 @@ data TraceConfiguration = TraceConfiguration {
   , ...
 }
 ```
-Many more configuration options e.g. for different transformers and traceOuts and will be added.
+More configuration options e.g. for different transformers and traceOuts can be added by this mechanism.
 
 ### Documentation
 
-This library requires that all messages are document by providing a `Documented a`, which consists of a list of `DocMsg`. A DocMsg for a message is constructed by giving:
+This library requires that all messages of a type `a` are document by providing a `Documented a`, which consists of a list of `DocMsg`. A DocMsg is constructed by giving:
 
 * a prototype of the message
 * the most special name of the message in the namespace
 * the documentation for the message in markdown format
 
-Because it is not enforced by the type system, it is very important to provide a complete list, as the prototypes are used as well for configuration.
+*Because it is not enforced by the type system, it is very important to provide a complete list, as the prototypes are used as well for configuration*.
 
 ```haskell
 newtype Documented a = Documented {undoc :: [DocMsg a]}
@@ -381,29 +377,68 @@ To build the documentation first call `documentMarkdown` with the Documented typ
   b2 <- documentMarkdown .. ..
   ..
   bn <- documentMarkdown .. ..  
-  T.writeFile "Docu.md" (buildersToText (b1 ++ b2 ++ ... ++ bn))
+  writeFile "Docu.md" (buildersToText (b1 ++ b2 ++ ... ++ bn))
 ```
+
+The generated documentation for a simple message my look like this:
+
+> #### cardano.node.StartLeadershipCheck
+>   For human:
+>   `Checking for leadership in slot 1`
+>   For machine:
+>   `{"kind":"TraceStartLeadershipCheck","slot":1}`
+>   Integer metrics:
+>   `aboutToLeadSlotLast 1`
+>
+>   > Severity:   `Info`
+>   Privacy:   `Public`
+>   Details:   `DRegular`
+>
+>   Backends: `KatipBackend ""` / `Machine`, `KatipBackend ""` / `Human`
+>
+>   ***
+>   Start of the leadership check
+>
+>   We record the current slot number.
+>   ***
+
 
 ### TraceOuts
 
-We offer different traceOuts (backends):
+We currently offer the following traceOuts (backends):
 
-* Forwarding
-* Katip
-* EKG (and Prometheus via EKG)
-* Stdout
+* StandardTracer (writes to stdout or a file)
+* EKG (for metrics)
+* Katip (may be removed)
 
-Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process. The only other possibility in the node will be a simple Stdout Tracer and an EKG store.  
+We will add
 
-Katip is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ object or JSON representation. This choice is made by sending the message either to a Katip tracer, which is configured for a human or machine readable configuration or to both.  
+* Forwarding (forwards the messages to another process or machine)
+
+Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process.  
+
+StandardTracer is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a StandardTracer tracer, which is configured for a human or machine readable configuration or to both.  
 
 EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded to Prometheus.
 
 Backends can be configured by a matching configuration from a configuration file. We will offer a bunch of functions to construct these traceOuts:
 
 ```haskell
-stdoutObjectKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
-stdoutJsonKatipTracer :: (MonadIO m, LogItem a) => m (Trace m a)
+standardMachineTracer :: forall a m. (MonadIO m, LogFormatting a)
+  => Text
+  -> Maybe (DetailLevel -> a -> AE.Object)
+  -> m (Trace m a)
+
+standardHumanTracer :: forall a m. (MonadIO m, LogFormatting a)
+  => Text
+  -> Maybe (a -> Text)
+  -> m (Trace m a)
+
 ekgTracer  :: MonadIO m => Metrics.Store -> m (Trace m Metric)
+
 ekgTracer' :: MonadIO m => Server -> m (Trace m Metric)
+
+stdoutHumanKatipTracer :: (MonadIO m, LogFormatting a) => m (Trace m a)
+
+stdoutJsonKatipTracer :: (MonadIO m, LogFormatting a) => m (Trace m a)
 ```
