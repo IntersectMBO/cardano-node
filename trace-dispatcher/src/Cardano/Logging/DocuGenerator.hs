@@ -3,15 +3,17 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.DocuGenerator where
+module Cardano.Logging.DocuGenerator (
+    docIt
+  , documentMarkdown
+  , buildersToText
+) where
 
-import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.Aeson.Text (encodeToLazyText)
-import           Data.IORef (IORef, modifyIORef, newIORef, readIORef,
-                     writeIORef)
+import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (intersperse, nub, sortBy)
 import qualified Data.Map as Map
 import           Data.Text (Text)
@@ -40,7 +42,7 @@ docIt :: MonadIO m =>
   -> (LoggingContext, Maybe TraceControl, a)
   -> m ()
 docIt backend logFormat (LoggingContext {..},
-  Just (Document idx mdText (DocCollector docRef)), msg) = do
+  Just (Document idx mdText (DocCollector docRef)), _msg) = do
   liftIO $ modifyIORef docRef (\ docMap ->
       Map.insert
         idx

@@ -2,16 +2,18 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.Tracer.EKG where
+module Cardano.Logging.Tracer.EKG (
+  ekgTracer
+) where
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import           Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text, intercalate, pack)
+import           Data.Text (intercalate, pack)
 import qualified System.Metrics as Metrics
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
@@ -28,7 +30,7 @@ ekgTracer storeOrServer = liftIO $ do
         [] -> pure ()
         l  -> liftIO $ mapM_ (setIt registeredGauges registeredLabels lcNamespace) l
     output _ _ p@(_, Just Document {}, _)      = docIt (EKGBackend "") Measures p
-    output _ _ (LoggingContext{..}, Just c, v) = pure ()
+    output _ _ (LoggingContext{}, Just _c, _v) = pure ()
 
     setIt registeredGauges _registeredLabels namespace (IntM mbText theInt) = do
       registeredMap <- readIORef registeredGauges

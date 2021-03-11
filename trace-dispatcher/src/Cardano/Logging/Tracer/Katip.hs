@@ -3,6 +3,8 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-orphans  #-}
+
 module Cardano.Logging.Tracer.Katip (
     stdoutObjectKatipTracer
   , stdoutJsonKatipTracer
@@ -11,18 +13,15 @@ module Cardano.Logging.Tracer.Katip (
 
 import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.STM
-import           Control.Monad (join, void, when)
+import           Control.Monad (void, when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
-import qualified Control.Tracer.Arrow as TA
 import qualified Data.Aeson as AE
 import           Data.Foldable as FT
-import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef,
-                     writeIORef)
 import qualified Data.Map.Strict as M
-import           Data.Maybe (fromMaybe, isJust)
+import           Data.Maybe (fromMaybe)
 import           Data.String
-import           Data.Text (Text, unpack)
+import           Data.Text (unpack)
 import           Katip
 import           Katip.Core (ScribeHandle (..), WorkerMessage (..),
                      mkThreadIdText, tryWriteTBQueue)
@@ -31,7 +30,6 @@ import           System.IO (stdout)
 
 import qualified Cardano.Logging.DocuGenerator as LT
 import qualified Cardano.Logging.Types as LT
-import qualified Data.HashMap.Strict as HM
 
 data LoggingContextKatip = LoggingContextKatip {
     lk       :: LT.LoggingContext
@@ -94,7 +92,7 @@ katipTracer =  T.arrow $ T.emit $ uncurry3 output
                           lkLogEnv
     output LoggingContextKatip {..} (Just c@LT.Document {}) a =
       LT.docIt (LT.KatipBackend "") LT.Machine (lk, Just c, a)
-    output LoggingContextKatip {..} _ a = pure ()
+    output LoggingContextKatip {} _ _a = pure ()
 
 --- | A standard Katip tracer
 katipTracerHuman :: (MonadIO m, LT.LogFormatting a)
@@ -110,7 +108,7 @@ katipTracerHuman =  T.arrow $ T.emit $ uncurry3 output
                           lkLogEnv
     output LoggingContextKatip {..} (Just c@LT.Document {}) a =
       LT.docIt (LT.KatipBackend "") LT.Human (lk, Just c, a)
-    output LoggingContextKatip {..} _ a = pure ()
+    output LoggingContextKatip {} _ _a = pure ()
 
 -------------------------------------------------------------------------------
 -- | Log with everything, including a source code location. This is
