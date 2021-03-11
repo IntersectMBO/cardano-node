@@ -46,6 +46,7 @@ submit_update_transaction() {
 
     submit_transaction \
         $initial_addr \
+        $initial_addr \
         pivo-build-raw \
         "--update-payload-file $update_file" \
         "$signing_args" \
@@ -56,6 +57,7 @@ submit_update_transaction() {
 #
 #   submit_transaction \
 #     initial_addr \
+#     change_addr \
 #     tx_building_cmd \
 #     tx_building_args \
 #     signing_args \
@@ -63,9 +65,10 @@ submit_update_transaction() {
 #
 # submits a transaction where:
 #
-# - initial_addr is the address where the funds are going to be taken from. The
-#   change of the transaction is sent back to this address. Furthermore, this
-#   functions assumes a fee of 0.
+# - initial_addr is the address where the funds are going to be taken from.
+# - This functions assumes a fee of 0.
+#
+# - change_addr is the address where the change of the transaction is sent.
 #
 # - tx_building_cmd is the command to be used to build the transaction.
 #   Examples of such commands include: build-raw and pivo-build-raw
@@ -83,15 +86,17 @@ submit_update_transaction() {
 #   to include the '--' symbols when specifying a mode!
 submit_transaction() {
     initial_addr=$1
-    tx_building_cmd=$2
-    tx_building_args=$3
-    signing_args=$4
-    tx_submission_mode=$5
+    change_addr=$2
+    tx_building_cmd=$3
+    tx_building_args=$4
+    signing_args=$5
+    tx_submission_mode=$6
 
     TX_INFO=/tmp/tx-info.json
     $CLI -- query utxo --testnet-magic 42 --shelley-mode \
           --address $(cat $initial_addr) \
           --out-file $TX_INFO
+    cat $TX_INFO
     BALANCE=`jq '.[].value' $TX_INFO | xargs printf '%.0f\n'`
     TX_IN=`grep -oP '"\K[^"]+' -m 1 $TX_INFO | head -1 | tr -d '\n'`
     # This script assumes the fee to be 0. We might want to check the protocol
@@ -105,7 +110,7 @@ submit_transaction() {
     TTL=1000000
     $CLI -- transaction $tx_building_cmd \
           --tx-in $TX_IN \
-          --tx-out $(cat $initial_addr)+$CHANGE \
+          --tx-out $(cat $change_addr)+$CHANGE \
           --invalid-hereafter $TTL \
           --fee $FEE \
           $tx_building_args \
@@ -138,27 +143,35 @@ $CLI -- genesis initial-addr \
 register_stakepool(){
     # Path where the stake keys should be created
     stake_key=$1
+    # Path where the payment address should be stored
+    payment_addr=$2
     # Utxo key used to:
     #
     # - pay for the transaction fees
     # - create a payment address together with the stake key.
-    utxo_key=$2
+    utxo_key=$3
     # Address used to pay for the transaction fees. The change will be sent
     # back to this address.
-    utxo_addr=$3
+    utxo_addr=$4
+    # File containing the pool metadata
+    metadata_file=$5
+    # VRF key to associate to the cold keys
+    vrf_key=$6
 
+    ##
+    ## Stake address registration
+    ##
     # Create the stake key files
     $CLI -- stake-address key-gen \
           --verification-key-file $stake_key.vkey \
           --signing-key-file $stake_key.skey
 
-    PAYMENT_ADDR=payment.addr
     # Use these keys to create a payment address. This key should have funds
     # associated to it if we want the stakepool to have stake delegated to it.
     $CLI -- address build \
           --payment-verification-key-file $utxo_key.vkey \
           --stake-verification-key-file $stake_key.vkey \
-          --out-file $PAYMENT_ADDR \
+          --out-file $payment_addr \
           --testnet-magic 42
 
     # Create an address registration certificate, which will be submitted to
@@ -169,23 +182,94 @@ register_stakepool(){
 
     submit_transaction \
         $utxo_addr \
+        $utxo_addr \
         build-raw \
         "--certificate-file $stake_key.cert" \
         "--signing-key-file $utxo_key.skey --signing-key-file $stake_key.skey" \
         --shelley-mode
+
+    ##
+    ## Stake pool registration
+    ##
+    # Get the hash of the file:
+    METADATA_HASH=`$CLI -- stake-pool metadata-hash --pool-metadata-file $metadata_file`
+
+    # Generate cold keys
+    COLD=cold
+    $CLI -- node key-gen \
+            --cold-verification-key-file $COLD.vkey \
+            --cold-signing-key-file $COLD.skey \
+            --operational-certificate-issue-counter-file $COLD.counter
+
+    # Create a pool registration certificate
+    # Pledge amount in Lovelace
+    PLEDGE=1000000
+    # Pool cost per-epoch in Lovelace
+    COST=1000
+    # Pool cost per epoch in percentage
+    MARGIN=0.1
+    POOL_REGISTRATION_CERT=pool-registration.cert
+    # Create the registration certificate
+    $CLI -- stake-pool registration-certificate \
+            --cold-verification-key-file $COLD.vkey \
+            --vrf-verification-key-file $vrf_key.vkey \
+            --pool-pledge $PLEDGE \
+            --pool-cost $COST \
+            --pool-margin $MARGIN \
+            --pool-reward-account-verification-key-file $stake_key.vkey \
+            --pool-owner-stake-verification-key-file $stake_key.vkey \
+            --testnet-magic 42 \
+            --metadata-url file://$metadata_file \
+            --metadata-hash $METADATA_HASH \
+            --out-file $POOL_REGISTRATION_CERT
+
+    # Create a delegation certificate between the stake key and the cold key
+    DELEGATION_CERT=delegation.cert
+    $CLI -- stake-address delegation-certificate \
+            --stake-verification-key-file $stake_key.vkey \
+            --cold-verification-key-file $COLD.vkey \
+            --out-file $DELEGATION_CERT
+
+    # Finally submit the transaction
+    sleep 5
+    submit_transaction \
+        $utxo_addr \
+        $payment_addr \
+        build-raw \
+        "--certificate-file $POOL_REGISTRATION_CERT --certificate-file $DELEGATION_CERT" \
+        "--signing-key-file $utxo_key.skey --signing-key-file $stake_key.skey --signing-key-file $COLD.skey " \
+        --shelley-mode
 }
 
-# Stake key that will submit the proposal
+##
+## Stake keys for submitting proposals and voting on them.
+##
 PROPOSING_KEY=proposing_key
 VOTING_KEY1=proposing_key # For simplicity the proposing key is also a voting key
 VOTING_KEY2=voting_key2
 VOTING_KEY3=voting_key3
 # So the voting key 'i' is associated with the utxo key 'i'.
 
+##
+## Stake pool metadata
+##
+for i in 1 2 3; do
+    echo "{
+      \"name\": \"PriviPool ${i}\",
+      \"description\": \"Priviledge Pool ${i}\",
+      \"ticker\": \"PP${i}\",
+      \"homepage\": \"https://ppp${i}\"
+    }" > "pool${i}_metadata.json"
+done
+
+UTXO1=$data_dir/genesis/utxo-keys/utxo1
 register_stakepool \
     $PROPOSING_KEY \
-    $data_dir/genesis/utxo-keys/utxo1 \
-    $INITIAL_ADDR
+    payment1.addr \
+    $UTXO1 \
+    $INITIAL_ADDR \
+    pool1_metadata.json \
+    $data_dir/node-1/vrf
 
 UTXO2=$data_dir/genesis/utxo-keys/utxo2
 UTXO2_ADDR=UTXO2_ADDR
@@ -194,8 +278,11 @@ $CLI -- genesis initial-addr \
           --verification-key-file $UTXO2.vkey > $UTXO2_ADDR
 register_stakepool \
     $VOTING_KEY2 \
+    payment2.addr \
     $UTXO2 \
-    $UTXO2_ADDR
+    $UTXO2_ADDR \
+    pool2_metadata.json \
+    $data_dir/node-2/vrf
 
 UTXO3_ADDR=UTXO3_ADDR
 UTXO3=$data_dir/genesis/utxo-keys/utxo3
@@ -204,22 +291,25 @@ $CLI -- genesis initial-addr \
           --verification-key-file $UTXO3.vkey > $UTXO3_ADDR
 register_stakepool \
     $VOTING_KEY3 \
+    payment3.addr \
     $UTXO3 \
-    $UTXO3_ADDR
+    $UTXO3_ADDR \
+    pool3_metadata.json \
+    $data_dir/node-3/vrf
 
-exit 0 # Work in progress
 ################################################################################
 ## Submit the proposal
 ################################################################################
 UPDATE_FILE=update.payload
 $CLI -- governance pivo sip new \
-     --stake-verification-key-file $STAKE.vkey \
+     --stake-verification-key-file $PROPOSING_KEY.vkey \
      --proposal-text "hello world!" \
      --out-file $UPDATE_FILE
+# Note that PROPOSING_KEY is associated to payment1.addr
 submit_update_transaction \
-    $INITIAL_ADDR \
+    payment1.addr \
     $UPDATE_FILE \
-    "--signing-key-file $UTXO.skey --signing-key-file $STAKE.skey"
+    "--signing-key-file $UTXO1.skey --signing-key-file $PROPOSING_KEY.skey"
 rm $UPDATE_FILE
 ################################################################################
 ## Reveal the proposal
@@ -253,13 +343,13 @@ sleep 65
 
 UPDATE_FILE=update.payload
 $CLI -- governance pivo sip reveal \
-     --stake-verification-key-file $STAKE.vkey \
+     --stake-verification-key-file $PROPOSING_KEY.vkey \
      --proposal-text "hello world!" \
      --out-file $UPDATE_FILE
 submit_update_transaction \
-    $INITIAL_ADDR \
+    payment1.addr \
     $UPDATE_FILE \
-    "--signing-key-file $UTXO.skey" # Note that we do not need to sign with the
+    "--signing-key-file $UTXO1.skey" # Note that we do not need to sign with the
                                     # staking key
 rm $UPDATE_FILE
 ################################################################################
@@ -269,11 +359,11 @@ rm $UPDATE_FILE
 # voting period is open.
 sleep 65
 $CLI -- governance pivo sip vote \
-          --stake-verification-key-file $STAKE.vkey \
+          --stake-verification-key-file $VOTING_KEY1.vkey \
           --proposal-text "hello world!" \
           --out-file $UPDATE_FILE
 submit_update_transaction \
-    $INITIAL_ADDR \
+    payment1.addr \
     $UPDATE_FILE \
-    "--signing-key-file $UTXO.skey --signing-key-file $STAKE.skey"
+    "--signing-key-file $UTXO1.skey --signing-key-file $VOTING_KEY1.skey"
 rm $UPDATE_FILE
