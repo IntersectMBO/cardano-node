@@ -55,6 +55,50 @@ submit_update_transaction() {
     update_file=$2
     signing_args=$3
 
+    submit_transaction \
+        $initial_addr \
+        pivo-build-raw \
+        "--update-payload-file $update_file" \
+        "$signing_args" \
+        --pivo-mode
+}
+
+# Procedure
+#
+#   submit_transaction \
+#     initial_addr \
+#     tx_building_cmd \
+#     tx_building_args \
+#     signing_args \
+#     tx_submission_mode
+#
+# submits a transaction where:
+#
+# - initial_addr is the address where the funds are going to be taken from. The
+#   change of the transaction is sent back to this address. Furthermore, this
+#   functions assumes a fee of 0.
+#
+# - tx_building_cmd is the command to be used to build the transaction.
+#   Examples of such commands include: build-raw and pivo-build-raw
+#
+# - tx_building_args are the arguments to be used when buildng the transaction.
+#   Examples of such arguments include update payload file, or certificate
+#   files.
+#
+# - signing_args are the arguments to be passed to the transaction sign
+#   command. This argument can be used to pass the signing keys of the
+#   transaction.
+#
+# - tx_submission_mode is the mode used when submitting the transaction.
+#   Examples of the available modes are --pivo-mode or --shelley-mode. Remember
+#   to include the '--' symbols when specifying a mode!
+submit_transaction() {
+    initial_addr=$1
+    tx_building_cmd=$2
+    tx_building_args=$3
+    signing_args=$4
+    tx_submission_mode=$5
+
     TX_INFO=/tmp/tx-info.json
     $CLI -- query utxo --testnet-magic 42 --shelley-mode \
           --address $(cat $initial_addr) \
@@ -70,12 +114,12 @@ submit_update_transaction() {
     TX_FILE=tx.raw
     # We use a large time-to-live to keep the script simple.
     TTL=1000000
-    $CLI -- transaction pivo-build-raw \
+    $CLI -- transaction $tx_building_cmd \
           --tx-in $TX_IN \
-          --tx-out $(cat $INITIAL_ADDR)+$CHANGE \
+          --tx-out $(cat $initial_addr)+$CHANGE \
           --invalid-hereafter $TTL \
           --fee $FEE \
-          --update-payload-file $update_file \
+          $tx_building_args \
           --out-file $TX_FILE
 
     SIGNED_TX_FILE=tx.signed
@@ -90,7 +134,7 @@ submit_update_transaction() {
     $CLI -- transaction submit \
           --tx-file $SIGNED_TX_FILE \
           --testnet-magic 42 \
-          --pivo-mode
+          $tx_submission_mode
 }
 
 # Location of the initial address file used to get the funds from.
