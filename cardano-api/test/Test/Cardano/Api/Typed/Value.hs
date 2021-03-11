@@ -18,6 +18,8 @@ import           Test.Cardano.Api.Typed.Gen
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 
+{- HLINT ignore "Use map once" -}
+
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
   property $ do v <- forAll genValueDefault
@@ -68,9 +70,6 @@ canonicalise =
 
     isZeroOrEmpty (ValueNestedBundleAda q) = q == 0
     isZeroOrEmpty (ValueNestedBundle _ as) = Map.null as
-
-{-# ANN canonicalise "HLint: ignore Use map once" #-}
-
 
 -- -----------------------------------------------------------------------------
 

@@ -1,75 +1,102 @@
 cabal-version: 2.4
 
-name:                  cardano-cli
-version:               1.25.0
-description:           The Cardano command-line interface.
-author:                IOHK
-maintainer:            operations@iohk.io
-license:               Apache-2.0
-license-files:
-  LICENSE
-  NOTICE
-build-type:            Simple
-extra-source-files:    README.md
+name:                   cardano-cli
+version:                1.25.0
+description:            The Cardano command-line interface.
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+extra-source-files:     README.md
 
 Flag unexpected_thunks
   Description:   Turn on unexpected thunks checks
   Default:       False
 
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:     Haskell2010
+
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+
+  if impl(ghc >= 8.10)
+    ghc-options:        -Wunused-packages
+
+common maybe-unix
+  if !os(windows)
+     build-depends:    unix
+
+common maybe-Win32
+  if os(windows)
+     build-depends:    Win32
+
 library
+  import:               base, project-config
+                      , maybe-unix
+                      , maybe-Win32
 
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
 
-  hs-source-dirs:      src
+  hs-source-dirs:       src
 
-  exposed-modules:     Cardano.CLI.Helpers
-                       Cardano.CLI.Parsers
-                       Cardano.CLI.Run
-                       Cardano.CLI.Types
+  exposed-modules:      Cardano.CLI.Helpers
+                        Cardano.CLI.Parsers
+                        Cardano.CLI.Run
+                        Cardano.CLI.Types
 
-                       Cardano.CLI.Environment
+                        Cardano.CLI.Environment
 
-                       Cardano.CLI.Byron.Commands
-                       Cardano.CLI.Byron.Parsers
-                       Cardano.CLI.Byron.Run
-                       Cardano.CLI.Byron.Delegation
-                       Cardano.CLI.Byron.Genesis
-                       Cardano.CLI.Byron.Key
-                       Cardano.CLI.Byron.Legacy
-                       Cardano.CLI.Byron.Tx
-                       Cardano.CLI.Byron.Query
-                       Cardano.CLI.Byron.UpdateProposal
-                       Cardano.CLI.Byron.Vote
+                        Cardano.CLI.Byron.Commands
+                        Cardano.CLI.Byron.Parsers
+                        Cardano.CLI.Byron.Run
+                        Cardano.CLI.Byron.Delegation
+                        Cardano.CLI.Byron.Genesis
+                        Cardano.CLI.Byron.Key
+                        Cardano.CLI.Byron.Legacy
+                        Cardano.CLI.Byron.Tx
+                        Cardano.CLI.Byron.Query
+                        Cardano.CLI.Byron.UpdateProposal
+                        Cardano.CLI.Byron.Vote
 
-                       Cardano.CLI.Shelley.Commands
-                       Cardano.CLI.Shelley.Key
-                       Cardano.CLI.Shelley.Orphans
-                       Cardano.CLI.Shelley.Parsers
-                       Cardano.CLI.Shelley.Run
-                       Cardano.CLI.Shelley.Run.Address
-                       Cardano.CLI.Shelley.Run.Address.Info
-                       Cardano.CLI.Shelley.Run.Genesis
-                       Cardano.CLI.Shelley.Run.Governance
-                       Cardano.CLI.Shelley.Run.Key
-                       Cardano.CLI.Shelley.Run.Node
-                       Cardano.CLI.Shelley.Run.Pool
-                       Cardano.CLI.Shelley.Run.Pretty
-                       Cardano.CLI.Shelley.Run.Query
-                       Cardano.CLI.Shelley.Run.StakeAddress
-                       Cardano.CLI.Shelley.Run.TextView
-                       Cardano.CLI.Shelley.Run.Transaction
+                        Cardano.CLI.Shelley.Commands
+                        Cardano.CLI.Shelley.Key
+                        Cardano.CLI.Shelley.Orphans
+                        Cardano.CLI.Shelley.Parsers
+                        Cardano.CLI.Shelley.Run
+                        Cardano.CLI.Shelley.Run.Address
+                        Cardano.CLI.Shelley.Run.Address.Info
+                        Cardano.CLI.Shelley.Run.Genesis
+                        Cardano.CLI.Shelley.Run.Governance
+                        Cardano.CLI.Shelley.Run.Key
+                        Cardano.CLI.Shelley.Run.Node
+                        Cardano.CLI.Shelley.Run.Pool
+                        Cardano.CLI.Shelley.Run.Pretty
+                        Cardano.CLI.Shelley.Run.Query
+                        Cardano.CLI.Shelley.Run.StakeAddress
+                        Cardano.CLI.Shelley.Run.TextView
+                        Cardano.CLI.Shelley.Run.Transaction
 
-                       Cardano.CLI.Mary.RenderValue
-                       Cardano.CLI.Mary.TxOutParser
-                       Cardano.CLI.Mary.ValueParser
+                        Cardano.CLI.Mary.RenderValue
+                        Cardano.CLI.Mary.TxOutParser
+                        Cardano.CLI.Mary.ValueParser
 
-                       Cardano.CLI.TopHandler
+                        Cardano.CLI.TopHandler
 
-  other-modules:       Paths_cardano_cli
+  other-modules:        Paths_cardano_cli
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
                       , attoparsec
                       , bech32            >= 1.1.0
@@ -111,48 +138,27 @@ library
                       , unordered-containers
                       , vector
 
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                       OverloadedStrings
-
-  ghc-options:         -Wall
-                       -Wincomplete-record-updates
-                       -Wincomplete-uni-patterns
-                       -Wredundant-constraints
-                       -Wpartial-fields
-                       -Wcompat
-
-  if os(windows)
-     build-depends:    Win32
-  else
-     build-depends:    unix
-
 executable cardano-cli
-  hs-source-dirs:      app
-  main-is:             cardano-cli.hs
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -rtsopts
-                       "-with-rtsopts=-T"
-  if !os(windows)
-     build-depends:    unix
+  import:               base, project-config
+                      , maybe-unix
+  hs-source-dirs:       app
+  main-is:              cardano-cli.hs
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-T"
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , cardano-cli
+  build-depends:        cardano-cli
                       , cardano-crypto-class
                       , cardano-prelude
                       , optparse-applicative
                       , transformers-except
-  default-extensions:  NoImplicitPrelude
 
 test-suite cardano-cli-test
+  import:               base, project-config
+
   hs-source-dirs:       test
   main-is:              cardano-cli-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , bech32 >= 1.1.0
+  build-depends:        bech32            >= 1.1.0
                       , bytestring
                       , base16-bytestring
                       , cardano-api
@@ -160,7 +166,6 @@ test-suite cardano-cli-test
                       , cardano-cli
                       , cardano-node
                       , cardano-prelude
-                      , directory
                       , exceptions
                       , hedgehog
                       , hedgehog-extras
@@ -178,24 +183,16 @@ test-suite cardano-cli-test
                         Test.Cli.Pioneers.Exercise6
                         Test.OptParse
 
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
 test-suite cardano-cli-golden
+  import:               base, project-config
+
   hs-source-dirs:       test
   main-is:              cardano-cli-golden.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , bytestring
                       , cardano-api
                       , cardano-cli
@@ -265,13 +262,4 @@ test-suite cardano-cli-golden
                         Test.Golden.Version
                         Test.OptParse
 
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

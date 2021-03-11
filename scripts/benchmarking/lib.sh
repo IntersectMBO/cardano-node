@@ -5,7 +5,7 @@
 ## TODO:  debug the spectacular failure this causes..
 # set -e
 
-. "${__COMMON_SRCROOT}/scripts/lib-nix.sh"
+. "${__COMMON_SRCROOT}/scripts/benchmarking/lib-nix.sh"
 
 ##
 ## This depends on the setup done by scripts/common.sh

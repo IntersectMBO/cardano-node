@@ -8,6 +8,7 @@ packages:
     cardano-config
     cardano-node
     cardano-node-chairman
+    cardano-submit-api
     hedgehog-extras
     nix/supervisord-cluster/topology
 

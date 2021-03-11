@@ -6,22 +6,44 @@ description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
-license-files:
-  LICENSE
-  NOTICE
+license-files:          LICENSE
+                        NOTICE
 build-type:             Simple
 extra-source-files:     README.md, ChangeLog.md
 
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+
+  if impl(ghc >= 8.10)
+    ghc-options:        -Wunused-packages
+
+  if impl(ghc < 8.10)
+    ghc-options:        -Wno-incomplete-patterns
+
+
 library
+  import:               base, project-config
+
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
+                        Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.Shelley
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
 
-                        Cardano.Api.Crypto.Ed25519Bip32
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
                         -- in this modulde
@@ -33,10 +55,7 @@ library
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
 
-
-  other-modules:        Cardano.Api.TxSubmit.ErrorRender
-                        Cardano.Api.TxSubmit.Types
-
+  other-modules:        
                         -- Splitting up the big Typed module:
                         Cardano.Api.Address
                         Cardano.Api.Block
@@ -49,8 +68,8 @@ library
                         Cardano.Api.IPC
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
-                        Cardano.Api.KeysShelley
                         Cardano.Api.KeysPraos
+                        Cardano.Api.KeysShelley
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
@@ -69,14 +88,12 @@ library
                         Cardano.Api.TxBody
                         Cardano.Api.TxInMode
                         Cardano.Api.TxMetadata
+                        Cardano.Api.TxSubmit.ErrorRender
+                        Cardano.Api.TxSubmit.Types
                         Cardano.Api.Utils
                         Cardano.Api.Value
 
-
-
-
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
                       , attoparsec
                       , base16-bytestring >= 1.0
@@ -120,27 +137,13 @@ library
                       , unordered-containers >= 0.2.11
                       , vector
 
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-                        OverloadedStrings
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-
-  if impl(ghc < 8.10)
-    ghc-options:        -Wno-incomplete-patterns
-
 test-suite cardano-api-test
+  import:               base, project-config
   hs-source-dirs:       test
   main-is:              cardano-api-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , base16-bytestring
                       , bytestring
                       , cardano-api
@@ -186,13 +189,4 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Value
                         Test.Tasty.Hedgehog.Group
 
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
