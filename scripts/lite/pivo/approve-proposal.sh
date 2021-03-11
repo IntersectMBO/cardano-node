@@ -39,17 +39,6 @@ export CARDANO_NODE_SOCKET_PATH=$data_dir/socket/node-1-socket
 # spent from.
 UTXO=$data_dir/genesis/utxo-keys/utxo1
 
-# Create a staking key pair that will be used for sumitting proposals and
-# voting on it.
-#
-# TODO: we will need to register these keys and transfer funds to them so that
-# they have voting power.
-# Create a staking key-pair
-STAKE=stake
-$CLI -- stake-address key-gen \
-          --verification-key-file $STAKE.vkey \
-          --signing-key-file $STAKE.skey
-
 submit_update_transaction() {
     initial_addr=$1
     update_file=$2
@@ -143,6 +132,82 @@ $CLI -- genesis initial-addr \
           --testnet-magic 42 \
           --verification-key-file $UTXO.vkey > $INITIAL_ADDR
 
+################################################################################
+## Register the stakepools
+################################################################################
+register_stakepool(){
+    # Path where the stake keys should be created
+    stake_key=$1
+    # Utxo key used to:
+    #
+    # - pay for the transaction fees
+    # - create a payment address together with the stake key.
+    utxo_key=$2
+    # Address used to pay for the transaction fees. The change will be sent
+    # back to this address.
+    utxo_addr=$3
+
+    # Create the stake key files
+    $CLI -- stake-address key-gen \
+          --verification-key-file $stake_key.vkey \
+          --signing-key-file $stake_key.skey
+
+    PAYMENT_ADDR=payment.addr
+    # Use these keys to create a payment address. This key should have funds
+    # associated to it if we want the stakepool to have stake delegated to it.
+    $CLI -- address build \
+          --payment-verification-key-file $utxo_key.vkey \
+          --stake-verification-key-file $stake_key.vkey \
+          --out-file $PAYMENT_ADDR \
+          --testnet-magic 42
+
+    # Create an address registration certificate, which will be submitted to
+    # the blockchain.
+    $CLI -- stake-address registration-certificate \
+          --stake-verification-key-file $stake_key.vkey \
+          --out-file $stake_key.cert
+
+    submit_transaction \
+        $utxo_addr \
+        build-raw \
+        "--certificate-file $stake_key.cert" \
+        "--signing-key-file $utxo_key.skey --signing-key-file $stake_key.skey" \
+        --shelley-mode
+}
+
+# Stake key that will submit the proposal
+PROPOSING_KEY=proposing_key
+VOTING_KEY1=proposing_key # For simplicity the proposing key is also a voting key
+VOTING_KEY2=voting_key2
+VOTING_KEY3=voting_key3
+# So the voting key 'i' is associated with the utxo key 'i'.
+
+register_stakepool \
+    $PROPOSING_KEY \
+    $data_dir/genesis/utxo-keys/utxo1 \
+    $INITIAL_ADDR
+
+UTXO2=$data_dir/genesis/utxo-keys/utxo2
+UTXO2_ADDR=UTXO2_ADDR
+$CLI -- genesis initial-addr \
+          --testnet-magic 42 \
+          --verification-key-file $UTXO2.vkey > $UTXO2_ADDR
+register_stakepool \
+    $VOTING_KEY2 \
+    $UTXO2 \
+    $UTXO2_ADDR
+
+UTXO3_ADDR=UTXO3_ADDR
+UTXO3=$data_dir/genesis/utxo-keys/utxo3
+$CLI -- genesis initial-addr \
+          --testnet-magic 42 \
+          --verification-key-file $UTXO3.vkey > $UTXO3_ADDR
+register_stakepool \
+    $VOTING_KEY3 \
+    $UTXO3 \
+    $UTXO3_ADDR
+
+exit 0 # Work in progress
 ################################################################################
 ## Submit the proposal
 ################################################################################
