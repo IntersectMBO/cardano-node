@@ -28,11 +28,8 @@ case $OS in
 esac
 
 
-# We're going to use really quick epochs (300 seconds), by using short slots 1s
-# and K=10, but we'll keep long KES periods so we don't have to bother
-# cycling KES keys
 $SED -i ${data_dir}/genesis/genesis.spec.json \
-    -e 's/"slotLength": 1/"slotLength": 1/' \
+    -e 's/"slotLength": 1/"slotLength": 0.2/' \
     -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
     -e 's/"epochLength": 432000/"epochLength": 1500/' \
