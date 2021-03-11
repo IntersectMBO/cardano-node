@@ -3,13 +3,14 @@ module Cardano.Api.TxSubmit.Types
   ( NodeApiEnv (..)
   , SocketPath (..)
   , TxSubmitStatus (..)
+  , ApplyMempoolPayloadErr(..)
   , renderTxSubmitStatus
   , textShow
   ) where
 
 import           Cardano.Api.TxSubmit.ErrorRender
 import           Cardano.Binary (DecoderError)
-import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr)
+import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr(..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as Utxo
 

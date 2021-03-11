@@ -6,12 +6,33 @@ description:            Library for utilities used in testing the Cardano API.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
-license-files:
-  LICENSE
-  NOTICE
+license-files:          LICENSE
+                        NOTICE
 build-type:             Simple
 
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+  ghc-options:          -Wall
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wredundant-constraints
+                        -Wpartial-fields
+                        -Wcompat
+
+  if impl(ghc >= 8.10)
+    ghc-options:        -Wunused-packages
+
+  if impl(ghc < 8.10)
+    ghc-options:        -Wno-incomplete-patterns
+
 library
+  import:               base, project-config
+
   exposed-modules:      Test.Cardano.Api.Typed.Gen
 
   other-modules:        Test.Cardano.Api.Metadata
@@ -33,17 +54,3 @@ library
                       , tasty
                       , tasty-hedgehog
                       , text
-
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-                        OverloadedStrings
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-
-  if impl(ghc < 8.10)
-    ghc-options:        -Wno-incomplete-patterns

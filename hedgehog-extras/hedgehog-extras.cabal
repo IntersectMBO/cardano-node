@@ -10,7 +10,28 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common maybe-Win32-network
+  if os(windows)
+     build-depends:     Win32-network
+
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+
+  if impl(ghc >= 8.10)
+    ghc-options:        -Wunused-packages
+
 library
+  import:               base, project-config
+                      , maybe-Win32-network
   hs-source-dirs:       src
   build-depends:        base              >= 4.12 && < 5
                       , aeson             >= 1.5.6.0
@@ -27,7 +48,6 @@ library
                       , network
                       , filepath
                       , process
-                      , random
                       , resourcet
                       , stm
                       , temporary
@@ -36,7 +56,6 @@ library
                       , transformers
                       , unliftio
                       , unordered-containers
-                      , Win32-network
   exposed-modules:      Hedgehog.Extras.Aeson
                         Hedgehog.Extras.Internal.Cli
                         Hedgehog.Extras.Internal.Plan
@@ -58,11 +77,3 @@ library
                         Hedgehog.Extras.Test.MonadAssertion
                         Hedgehog.Extras.Test.Network
                         Hedgehog.Extras.Test.Process
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat

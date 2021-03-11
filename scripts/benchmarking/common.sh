@@ -3,8 +3,8 @@
 ## Don't ask, the story is too sad -- function env sharing & tmux involved.
 set -o allexport
 
-__COMMON_SRCROOT=${__COMMON_SRCROOT:-"$(realpath $(dirname "$0")/..)"}
-. "${__COMMON_SRCROOT}/scripts/lib.sh" "${__COMMON_SRCROOT}"
+__COMMON_SRCROOT=${__COMMON_SRCROOT:-"$(realpath $(dirname "$0")/../..)"}
+. "${__COMMON_SRCROOT}/scripts/benchmarking/lib.sh" "${__COMMON_SRCROOT}"
 
 usage() {
         cat <<EOF
