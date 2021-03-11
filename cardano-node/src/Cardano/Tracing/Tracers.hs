@@ -33,7 +33,7 @@ import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Map as SMap
 import qualified Data.Text as Text
-import           Data.Time (UTCTime)
+import           Data.Time (UTCTime, NominalDiffTime)
 import qualified System.Remote.Monitoring as EKG
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
@@ -557,7 +557,10 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   tSubmissionsCollected <- STM.newTVarIO 0
   tSubmissionsAccepted <- STM.newTVarIO 0
   tSubmissionsRejected <- STM.newTVarIO 0
-  tLastSlotNo <- STM.newTVarIO $ SlotNo 0
+  tBlockDelayM <- STM.newTVarIO SMap.empty
+  tBlockDelayCDF1s <- STM.newTVarIO 0
+  tBlockDelayCDF2s <- STM.newTVarIO 0
+  tBlockDelayCDF5s <- STM.newTVarIO 0
 
   pure Consensus.Tracers
     { Consensus.chainSyncClientTracer = tracerOnOff (traceChainSyncClient trSel) verb "ChainSyncClient" tr
@@ -565,8 +568,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.chainSyncServerBlockTracer = tracerOnOff (traceChainSyncBlockServer trSel) verb "ChainSyncBlockServer" tr
     , Consensus.blockFetchDecisionTracer = tracerOnOff' (traceBlockFetchDecisions trSel) $
         annotateSeverity $ teeTraceBlockFetchDecision verb elidedFetchDecision tr
-    , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tLastSlotNo $
-        tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
+    , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
+        tBlockDelayCDF1s tBlockDelayCDF2s tBlockDelayCDF5s $
+            tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = tracerOnOff' (traceBlockFetchServer trSel) $
         Tracer $ \ev -> do
           traceWith (annotateSeverity . toLogObject' verb $ appendName "BlockFetchServer" tr) ev
@@ -641,29 +645,76 @@ traceBlockFetchClientMetrics
   :: forall blk remotePeer.
      ( )
   => Maybe EKGDirect
-  -> STM.TVar SlotNo
+  -> STM.TVar (SMap.Map SlotNo NominalDiffTime)
+  -> STM.TVar Int64
+  -> STM.TVar Int64
+  -> STM.TVar Int64
   -> Tracer IO (TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)))
   -> Tracer IO (TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)))
-traceBlockFetchClientMetrics Nothing _ tracer = tracer
-traceBlockFetchClientMetrics (Just ekgDirect) lastSlotNoVar tracer = Tracer $ bfTracer
+traceBlockFetchClientMetrics Nothing _ _ _ _ tracer = tracer
+traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf2sVar cdf5sVar tracer = Tracer bfTracer
 
   where
+
+    -- We track the cdf for 1s, 2s and 5s.
+    updateCDFCounter :: NominalDiffTime -> Int -> Int64 -> STM (Double, Double, Double)
+    updateCDFCounter delay size step = do
+
+      when (delay < 1) $ do
+        STM.modifyTVar' cdf1sVar (+ step)
+      when (delay < 2) $ do
+        STM.modifyTVar' cdf2sVar (+ step)
+      when (delay < 5) $ do
+        STM.modifyTVar' cdf5sVar (+ step)
+
+      cdf1s <- STM.readTVar cdf1sVar
+      cdf2s <- STM.readTVar cdf2sVar
+      cdf5s <- STM.readTVar cdf5sVar
+      return (fromIntegral cdf1s / fromIntegral size, fromIntegral cdf2s / fromIntegral size,
+              fromIntegral cdf5s / fromIntegral size)
+
+
     bfTracer :: TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)) -> IO ()
     bfTracer e@(TraceLabelPeer _ (CompletedBlockFetch p _ _ _ delay)) = do
       traceWith tracer e
-      let slotNo = case pointSlot p of
-                        Origin -> SlotNo 0 -- We don't care
-                        At s   -> s
-      fresh <- atomically $ do
-          lastSlotNo <- STM.readTVar lastSlotNoVar
-          if lastSlotNo < slotNo
-             then do
-                 STM.writeTVar lastSlotNoVar slotNo
-                 return True
-             else return False
-      when fresh $
-        sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.s"
-            $ realToFrac delay
+      case pointSlot p of
+        Origin -> return () -- Nothing to do.
+        At slotNo -> do
+          (fresh, cdf1s, cdf2s, cdf5s) <- atomically $ do
+              slotMap <- STM.readTVar slotMapVar
+              case SMap.lookup slotNo slotMap of
+                   Nothing -> do
+                     let slotMap' = SMap.insert slotNo delay slotMap
+                     if SMap.size slotMap' > 1080 -- TODO k/2, should come from config file
+                        then
+                            let ((minSlotNo, minDelay), slotMap'') = SMap.deleteFindMin slotMap' in
+                            if minSlotNo == slotNo
+                               then return (False, 0, 0, 0) -- Nothing to do
+                               else do
+                                   _ <- updateCDFCounter minDelay (SMap.size slotMap'') (-1)
+                                   (cdf1s, cdf2s, cdf5s) <- updateCDFCounter delay
+                                       (SMap.size slotMap'') 1
+                                   STM.writeTVar slotMapVar slotMap''
+                                   return (True, cdf1s, cdf2s, cdf5s)
+                        else do
+                          (cdf1s, cdf2s, cdf5s) <- updateCDFCounter delay (SMap.size slotMap') 1
+                          STM.writeTVar slotMapVar slotMap'
+                          return (True, cdf1s, cdf2s, cdf5s)
+
+                   Just _ -> return (False, 0, 0, 0) -- dupe, we only track the first
+
+          when fresh $ do
+            sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.s"
+                $ realToFrac delay
+            sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.cdf1s"
+               cdf1s
+            sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.cdf2s"
+               cdf2s
+            sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.cdf5s"
+               cdf5s
+            when (delay > 5) $
+              sendEKGDirectCounter ekgDirect "cardano.node.metrics.blockfetchclient.lateblocks"
+
     bfTracer e =
       traceWith tracer e
 
