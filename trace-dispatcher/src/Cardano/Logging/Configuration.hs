@@ -14,9 +14,7 @@ import qualified Control.Tracer as T
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
 import qualified Data.Map as Map
-import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
-import           Katip (Severity)
-
+import           Data.Maybe (fromMaybe, mapMaybe)
 
 import           Cardano.Logging.Trace (filterTraceByPrivacy,
                      filterTraceBySeverity)
@@ -38,7 +36,7 @@ configureTracers config (Documented documented) tracers = do
 
 -- | Take a selector function, and a function from trace to trace with
 --   this selector to make a trace transformer with a config value
-withNamespaceConfig :: forall m a b. (MonadIO m, Eq b, Ord b) =>
+withNamespaceConfig :: forall m a b. (MonadIO m, Ord b) =>
      (TraceConfig -> Namespace -> b)
   -> (Maybe b -> Trace m a -> Trace m a)
   -> Trace m a
@@ -47,8 +45,8 @@ withNamespaceConfig extract needsConfigFunc tr = do
     ref  <- liftIO (newIORef (Left (Map.empty, Nothing)))
     pure $ Trace $ T.arrow $ T.emit $ mkTrace ref
   where
-    mkTrace :: MonadIO m
-      => IORef (Either (Map.Map Namespace b, Maybe b) b)
+    mkTrace ::
+         IORef (Either (Map.Map Namespace b, Maybe b) b)
       -> (LoggingContext, Maybe TraceControl, a)
       -> m ()
     mkTrace ref (lc, Nothing, a) = do
@@ -65,7 +63,7 @@ withNamespaceConfig extract needsConfigFunc tr = do
                 Nothing  -> T.traceWith
                               (unpackTrace $ needsConfigFunc (Just v) tr)
                               (lc, Nothing, a)
-        Left (cmap, Nothing) -> error "Missing configuration"
+        Left (_cmap, Nothing) -> error "Missing configuration"
     mkTrace ref (lc, Just Reset, a) = do
       liftIO $ writeIORef ref (Left (Map.empty, Nothing))
       T.traceWith (unpackTrace $ needsConfigFunc Nothing tr) (lc, Just Reset, a)
@@ -90,9 +88,9 @@ withNamespaceConfig extract needsConfigFunc tr = do
                       (lc, Just (Config c), m)
                 else error $ "Inconsistent trace configuration with context "
                                   ++ show (lcNamespace lc)
-        Right val -> error $ "Trace not reset before reconfiguration (1)"
+        Right _val -> error $ "Trace not reset before reconfiguration (1)"
                             ++ show (lcNamespace lc)
-        Left (cmap, Just v) -> error $ "Trace not reset before reconfiguration (2)"
+        Left (_cmap, Just _v) -> error $ "Trace not reset before reconfiguration (2)"
                             ++ show (lcNamespace lc)
 
     mkTrace ref (lc, Just Optimize, m) = do
@@ -110,12 +108,12 @@ withNamespaceConfig extract needsConfigFunc tr = do
                         (unpackTrace $ needsConfigFunc (Just val) tr)
                         (lc, Just Optimize, m)
                     _   -> error "Cardano.Logging.Configuration>>withConfig: Impossible"
-            n ->  let eles = nub $ Map.elems cmap
+            _n -> let eles = nub $ Map.elems cmap
                       decidingDict =
                         foldl
-                            (\acc e -> Map.insertWith (\o _ -> o + 1) e 1 acc)
+                            (\acc e -> Map.insertWith (\o _ -> o + 1 :: Integer) e 1 acc)
                             Map.empty eles
-                      (mostCommon,_) = maximumBy (\(_, n) (_, m) -> compare n m)
+                      (mostCommon,_) = maximumBy (\(_, n') (_, m') -> compare n' m')
                                                  (Map.assocs decidingDict)
                       newmap = Map.filter (/= mostCommon) cmap
                   in do
@@ -123,10 +121,10 @@ withNamespaceConfig extract needsConfigFunc tr = do
                     T.traceWith
                       (unpackTrace $ needsConfigFunc Nothing tr)
                       (lc, Just Optimize, m)
-        Right val -> T.traceWith
+        Right _val -> T.traceWith
                         (unpackTrace $ needsConfigFunc Nothing tr)
                         (lc, Just Optimize, m)
-        Left (cmap, Just v) ->
+        Left (_cmap, Just _v) ->
                     T.traceWith
                         (unpackTrace $ needsConfigFunc Nothing tr)
                         (lc, Just Optimize, m)

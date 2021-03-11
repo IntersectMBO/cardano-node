@@ -7,31 +7,21 @@ module Cardano.Logging.Tracer.StandardLogger (
   , standardHumanTracer
 ) where
 
-import           Control.Concurrent (forkIO, myThreadId)
+import           Control.Concurrent (forkIO)
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Monad (forever, void)
+import           Control.Monad (forever)
 import           Control.Monad.IO.Class
 import qualified Data.Aeson as AE
-import qualified Data.ByteString.Lazy as BS
 import           Data.IORef (IORef, modifyIORef, newIORef, readIORef)
-import           Data.List (intersperse)
-import           Data.Maybe (fromMaybe)
-import           Data.Text (Text, pack, stripPrefix)
-import qualified Data.Text.Array as TA
-import           Data.Text.Encoding (decodeUtf8)
+import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
-import           Data.Text.Lazy (toStrict)
-import           Data.Text.Lazy.Builder as TB
-import           Data.Time (UTCTime (..), defaultTimeLocale, formatTime,
-                     getCurrentTime)
-import           Data.Time.Format.ISO8601 (FormatExtension (BasicFormat),
-                     calendarFormat, dayAndTimeFormat, formatShow, iso8601Show,
-                     timeOfDayFormat)
 import           GHC.Conc (ThreadId)
 import           Network.HostName (getHostName)
 
 import           Cardano.Logging.DocuGenerator
+import           Cardano.Logging.Tracer.Formatting
 import           Cardano.Logging.Types
+
 import qualified Control.Tracer as T
 
 -- | Do we log to stdout or to a file?
@@ -61,7 +51,7 @@ standardHumanTracer :: forall a m. (MonadIO m, LogFormatting a)
 standardHumanTracer tracerName mbFormatter =
   standardTracer tracerName $ \ _ -> formatHuman mbFormatter
 
-standardTracer :: forall a m. (MonadIO m, LogFormatting a)
+standardTracer :: forall a m. (MonadIO m)
   => Text
   -> (Maybe DetailLevel -> a -> Text)
   -> m (Trace m a)
@@ -77,7 +67,7 @@ standardTracer tracerName formatter = do
       -> Maybe TraceControl
       -> a
       -> m ()
-    output stateRef _ LoggingContext {..} (Just Reset) a = liftIO $ do
+    output stateRef _ LoggingContext {} (Just Reset) _a = liftIO $ do
       st <- readIORef stateRef
       case stRunning st of
         Nothing -> initLogging stateRef
@@ -95,71 +85,7 @@ standardTracer tracerName formatter = do
         Nothing                -> pure ()
     output _ _ lk (Just c@Document {}) a =
        docIt (StandardBackend tracerName) Machine (lk, Just c, a)
-    output stateRef _ LoggingContext {..} _ a = pure ()
-
-formatHuman :: LogFormatting a =>
-     Maybe (a -> Text)
-  -> a
-  -> Text
-formatHuman (Just f) msg = f msg
-formatHuman Nothing msg  = forHuman msg
-
-formatMachine :: LogFormatting a =>
-     Maybe (DetailLevel -> a ->AE.Object)
-  -> Maybe DetailLevel
-  -> a
-  -> Text
-formatMachine (Just f) dl msg =
-  let obj = f (fromMaybe DRegular dl) msg
-  in decodeUtf8 $ BS.toStrict $ AE.encode obj
-formatMachine Nothing dl msg  =
-  let obj = forMachine (fromMaybe DRegular dl) msg
-  in decodeUtf8 $ BS.toStrict $ AE.encode obj
-
-formatIt ::
-     Bool
-  -> LoggingContext
-  -> String
-  -> Text
-  -> IO Text
-formatIt withColor LoggingContext {..} hostname txt = do
-  thid <- myThreadId
-  time <- getCurrentTime
-  let severity = fromMaybe Info lcSeverity
-      tid      = fromMaybe ((pack . show) thid)
-                    ((stripPrefix "ThreadId " . pack . show) thid)
-      ns       = colorBySeverity
-                    withColor
-                    severity
-                    $ mconcat (intersperse (singleton '.')
-                      (fromString hostname : map fromText lcNamespace
-                      <> [fromString (show severity) , fromText tid] ))
-      ts       = fromString $ formatTime defaultTimeLocale "%F %T" time
-  pure $ toStrict
-          $ toLazyText
-            $ mconcat (map squareBrackets [ns, ts]) <> singleton ' ' <> fromText txt
-  where
-    squareBrackets :: Builder -> Builder
-    squareBrackets b = TB.singleton '[' <> b <> TB.singleton ']'
-
-
--- | Color a text message based on `Severity`. `Error` and more severe errors
--- are colored red, `Warning` is colored yellow, and all other messages are
--- rendered in the default color.
-colorBySeverity :: Bool -> SeverityS -> Builder -> Builder
-colorBySeverity withColor severity msg = case severity of
-  Emergency -> red msg
-  Alert     -> red msg
-  Critical  -> red msg
-  Error     -> red msg
-  Warning   -> yellow msg
-  _         -> msg
-  where
-    red = colorize "31"
-    yellow = colorize "33"
-    colorize c s
-      | withColor = "\ESC["<> c <> "m" <> s <> "\ESC[0m"
-      | otherwise = s
+    output _stateRef _ LoggingContext {} _ _a = pure ()
 
 initLogging :: IORef (StandardTracerState a) -> IO ()
 initLogging stateRef = do
