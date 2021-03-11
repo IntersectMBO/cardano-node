@@ -81,3 +81,12 @@ executable trace-dispatcher-examples
                       , unliftio-core
                       , stm
                       , unordered-containers
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+                       -Wpartial-fields
+                       -Widentities
+                       -Wredundant-constraints
+                       -Wmissing-export-lists
+                       -Wno-incomplete-patterns
