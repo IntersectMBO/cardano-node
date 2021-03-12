@@ -473,6 +473,7 @@ in {
 
   config = mkIf cfg.enable ( let
     stateDirBase = "/var/lib/";
+    runDirBase = "/run/";
     genInstanceConf = f: listToAttrs (if cfg.instances > 1 && !cfg.instanced
       then genList (i: let n = "${systemdServiceName}-${toString i}"; in nameValuePair n (f n i)) cfg.instances
       else [ (nameValuePair systemdServiceName (f systemdServiceName 0)) ]); in lib.mkMerge [
@@ -502,7 +503,8 @@ in {
           User = "cardano-node";
           Group = "cardano-node";
           Restart = "always";
-          RuntimeDirectory = if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}";
+          RuntimeDirectory = lib.mkIf (!cfg.systemdSocketActivation)
+            (lib.removePrefix runDirBase (if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}"));
           WorkingDirectory = cfg.stateDir;
           # This assumes /var/lib/ is a prefix of cfg.stateDir.
           # This is checked as an assertion below.
@@ -522,6 +524,8 @@ in {
           ListenStream = [ "${cfg.hostAddr}:${toString (if cfg.shareIpv4port then cfg.port else cfg.port + i)}" ]
             ++ optional (cfg.ipv6HostAddr != null) "[${cfg.ipv6HostAddr}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
             ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}-${toString i}/node.socket")];
+          RuntimeDirectory = lib.removePrefix runDirBase
+            (if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}");
           ReusePort = "yes";
           SocketMode = "0660";
           SocketUser = "cardano-node";
