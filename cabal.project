@@ -111,8 +111,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 99e2f2e32ebfca3291fa523ddcae14c8cbb48fa0
-  --sha256: 0fy8y7cp10ls8p3zs2fqzqpd41vri6z0imhyif5wa9bi2rp57i3z
+  tag: 24270a4150aafc08b234c474d1cdd575f0e55ea2
+  --sha256: 1q8kbg45vilfc8cx1hqicab70b0fskh74fxqf9xdjkmnfn6ynb6k
   subdir:
     byron/chain/executable-spec
     byron/crypto
@@ -126,6 +126,21 @@ source-repository-package
     shelley/chain-and-ledger/executable-spec
     shelley/chain-and-ledger/shelley-spec-ledger-test
     shelley-ma/impl
+    shelley-ma/shelley-ma-test
+    pivo
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/decentralized-software-updates
+  tag: c515878a15e89cb4a8749159a66a5ef82102a188
+  --sha256: 10sjj3ld1zisj3gjx9a4f4vm37983g6jnvf3rrgv0ccn73cxcp9b
+  subdir: executable-spec
+
+source-repository-package
+  type: git
+  location: https://github.com/nomeata/haskell-successors
+  tag: a19dc93508e822e11be991df58b5755a3e12e793
+  --sha256: 04rj7l4rd3nbdk0j51jv75iz0x56jb0ny1332lxaxsiak3a8niy6
 
 source-repository-package
   type: git
@@ -160,8 +175,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 96cf17bcc6ea4ef455a19430313ce17d476d62b5
-  --sha256: 00xp605lb8qp1jhp43mg7818x8yzn2rnsd18qcy5721yj4q675nz
+  tag: 011a3ad10750aa5634564b07c8f95d3b6829d8eb
+  --sha256: 0vd81mddr7ifs6qvfk9kw6xmzp28py4yxmvz9bi5b3w9grgghhia
   subdir:
     io-sim
     io-sim-classes
@@ -175,10 +190,6 @@ source-repository-package
     typed-protocols
     typed-protocols-examples
     Win32-network
-
--- Needed for the Windows cabal constraint solver.
-max-backjumps: 10000
-reorder-goals: True
 
 constraints:
     hedgehog >= 1.0
