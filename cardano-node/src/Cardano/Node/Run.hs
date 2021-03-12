@@ -265,13 +265,14 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
            onKernel nodeKernel
        }
      StdRunNodeArgs
-       { srnBfcMaxConcurrencyBulkSync = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-       , srnBfcMaxConcurrencyDeadline = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-       , srcChainDbValidateOverride   = ncValidateDB nc
-       , srnDatabasePath              = dbPath
-       , srnDiffusionArguments        = diffusionArguments
-       , srnDiffusionTracers          = diffusionTracers
-       , srnTraceChainDB              = chainDBTracer nodeTracers
+       { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+       , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+       , srnChainDbValidateOverride     = ncValidateDB nc
+       , srnDatabasePath                = dbPath
+       , srnDiffusionArguments          = diffusionArguments
+       , srnDiffusionTracers            = diffusionTracers
+       , srnEnableInDevelopmentVersions = False -- TODO get this value from the node configuration
+       , srnTraceChainDB                = chainDBTracer nodeTracers
        }
  where
   createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk
@@ -388,7 +389,8 @@ createDiffusionArguments publicIPv4SocketsOrAddrs
     -- merged into `ouroboros-networ`.
     { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPv4SocketsOrAddrs
     , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPv6SocketsOrAddrs
-    , daLocalAddress = fmap unSocketPath
+    , daLocalAddress = Just -- TODO allow expressing the Nothing case in the config
+                     .  fmap unSocketPath
                      . eitherSocketOrSocketInfo
                      $ localSocketOrPath
     , daIpProducers  = ipProducers
