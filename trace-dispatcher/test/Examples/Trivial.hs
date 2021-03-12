@@ -1,11 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Examples.Trivial where
+module Examples.Trivial (
+    test1
+  , test2
+) where
 
-import           Katip
-import           Katip.Scribes.Handle (ioLogEnv)
 
 import           Cardano.Logging
-import           Examples.Configuration (testMessageDocumented)
 import           Examples.TestObjects
 
 

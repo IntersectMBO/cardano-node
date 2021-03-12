@@ -12,7 +12,17 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 
-module Examples.TestObjects where
+module Examples.TestObjects (
+    traceForgeEventDocu
+  , TraceForgeEvent(..)
+  , LogBlock
+  , SlotNo(..)
+  , withSeverityTraceForgeEvent
+  , message1
+  , message2
+  , message3
+  , message4
+) where
 
 import           Cardano.Logging
 import qualified Data.Aeson as AE
@@ -97,7 +107,7 @@ data TraceForgeEvent blk
   | TraceBlockFromFuture SlotNo SlotNo
   deriving (Eq, Show, Generic)
 
-instance Show LogBlock => LogFormatting (TraceForgeEvent LogBlock) where
+instance LogFormatting (TraceForgeEvent LogBlock) where
   forHuman (TraceStartLeadershipCheck slotNo) = pack $
     printf
       "Checking for leadership in slot %u"
@@ -120,7 +130,7 @@ instance Show LogBlock => LogFormatting (TraceForgeEvent LogBlock) where
       [ "kind" AE..= AE.String "TraceStartLeadershipCheck"
       , "slot" AE..= AE.toJSON (unSlotNo slotNo)
       ]
-  forMachine verb (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
+  forMachine _verb (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
     HM.fromList
       [ "kind" AE..= AE.String "TraceSlotIsImmutable"
       , "slot" AE..= AE.toJSON (unSlotNo slotNo)
