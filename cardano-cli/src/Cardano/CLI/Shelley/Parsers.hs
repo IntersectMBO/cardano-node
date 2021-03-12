@@ -791,7 +791,9 @@ pGovernanceCmd =
       where
         parsePivoCmds
           = Opt.hsubparser
-          $ mconcat [ cmdWithInfo "sip" pSIPCmd "SIP commands" ]
+          $ mconcat [ cmdWithInfo "sip" pSIPCmd "SIP commands"
+                    , cmdWithInfo "imp" pIMPCmd "Implementation commands"
+                    ]
           where
             pSIPCmd = SIP <$> (Opt.hsubparser
                            $ mconcat
@@ -808,15 +810,45 @@ pGovernanceCmd =
                   where
                     pOpts =
                       SIPReveal <$> pStakeVerificationKeyFile <*> pPropText
-                pPropText =   Text.pack
-                          <$> Opt.strOption
-                                (  Opt.long "proposal-text"
-                                <> Opt.metavar "PROPOSAL_TEXT"
-                                <> Opt.help "Some text describing the proposal"
-                                )
                 pSIPVote = cmdWithInfo "vote" pOpts "Vote for an SIP"
                   where
                     pOpts = SIPVote <$> pStakeVerificationKeyFile <*> pPropText
+            pPropText
+              =   Text.pack
+              <$> Opt.strOption
+                  (  Opt.long "proposal-text"
+                  <> Opt.metavar "PROPOSAL_TEXT"
+                  <> Opt.help "Some text describing the proposal"
+                  )
+            pIMPCmd = IMP <$> ( Opt.hsubparser
+                              $ mconcat
+                               [ pIMPCommit
+                               -- , pIMPReveal
+                               -- , pIMPVote
+                               ])
+              where
+                pIMPCommit =
+                  cmdWithInfo
+                    "commit"
+                    pIMPCommitOpts
+                    "Create an implementation commit"
+                  where
+                    pIMPCommitOpts =
+                      -- For the purposes of the prototype we will assume the
+                      -- implementation supersedes the protocol zero. In an
+                      -- actual implementation we should be able to specify the
+                      -- proposal id (hash), and version we are superseding.
+                      IMPCommit <$> pStakeVerificationKeyFile
+                                <*> pPropText
+                                <*> pImplVer
+                pImplVer =
+                  Opt.option
+                    Opt.auto
+                    (  Opt.long "implementation-version"
+                    <> Opt.metavar "IMPL_VERSION"
+                    <> Opt.help "Version the protocol implements"
+                    )
+
 
 cmdWithInfo :: String -> Parser a -> String -> Mod CommandFields a
 cmdWithInfo cmdName cmdParser cmdDesc =

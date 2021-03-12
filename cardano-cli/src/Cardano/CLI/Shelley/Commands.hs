@@ -21,6 +21,7 @@ module Cardano.CLI.Shelley.Commands
   -- ** Pivo subcommands
   , PivoCmd (..)
   , SIPCmd (..)
+  , IMPCmd (..)
 
     -- * CLI flag types
   , AddressKeyType (..)
@@ -330,21 +331,30 @@ data GovernanceCmd
 
 data PivoCmd
   = SIP SIPCmd
+  | IMP IMPCmd
   deriving Show
 
 data SIPCmd
   = SIPNew
-    { sipAuthorKeyFile :: VerificationKeyFile
-    , proposalText     :: Text
-    }
+      { sipAuthorKeyFile :: VerificationKeyFile
+      , proposalText     :: Text
+      }
   | SIPReveal
-    { sipRevelatorKeyFile  :: VerificationKeyFile
-    , revealedProposalText :: Text
-    }
+      { sipRevelatorKeyFile  :: VerificationKeyFile
+      , revealedProposalText :: Text
+      }
   | SIPVote
-    { sipVoterKeyFile   :: VerificationKeyFile
-    , votedProposalText :: Text
-    }
+      { sipVoterKeyFile   :: VerificationKeyFile
+      , votedProposalText :: Text
+      }
+  deriving Show
+
+data IMPCmd
+  = IMPCommit
+      { impCommiterKeyFile :: VerificationKeyFile
+      , impCommitSIPText   :: Text
+      , impCommitVersion   :: Word
+      }
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text

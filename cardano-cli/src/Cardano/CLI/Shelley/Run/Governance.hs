@@ -30,6 +30,7 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
 import qualified Cardano.Ledger.Pivo.Update.Payload.SIP as SIP
+import qualified Cardano.Ledger.Pivo.Update.Payload.Implementation as IMP
 
 import qualified Shelley.Spec.Ledger.Keys as Shelley.Keys
 import Ouroboros.Consensus.Shelley.Eras (StandardPivo)
@@ -86,10 +87,14 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
         $ writeFileTextEnvelope
             outFile
             Nothing
+            -- todo: define a monoid instance for the payload
             (Pivo.Update.Payload
                { Pivo.Update.sipSubmissions = singleton sip
                , Pivo.Update.sipRevelations = Empty
                , Pivo.Update.sipVotes       = Empty
+               , Pivo.Update.impSubmissions = Empty
+               , Pivo.Update.impRevelations = Empty
+               , Pivo.Update.impVotes       = Empty
                }
              :: Pivo.Update.Payload StandardPivo
             )
@@ -108,6 +113,9 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
                { Pivo.Update.sipSubmissions = Empty
                , Pivo.Update.sipRevelations = singleton revelation
                , Pivo.Update.sipVotes       = Empty
+               , Pivo.Update.impSubmissions = Empty
+               , Pivo.Update.impRevelations = Empty
+               , Pivo.Update.impVotes       = Empty
                }
              :: Pivo.Update.Payload StandardPivo
             )
@@ -122,6 +130,27 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
                                            vk
                                            (SIP._id (mkProposal votedProposalText))
                                            SIP.For
+          , Pivo.Update.impSubmissions = Empty
+          , Pivo.Update.impRevelations = Empty
+          , Pivo.Update.impVotes       = Empty
+          }
+    runPivoCmd (IMP IMPCommit {impCommiterKeyFile, impCommitSIPText, impCommitVersion}) = do
+      vk <- readUpdateKeyFile impCommiterKeyFile
+      let submission = IMP.mkSubmission @StandardPivo vk constSalt implementation
+            where
+              implementation =
+                IMP.mkImplementation (SIP.unProposalId $ SIP._id proposal) 300 protocol
+                where
+                  proposal = mkProposal impCommitSIPText
+                  protocol = IMP.mkProtocol impCommitVersion IMP.protocolZero
+      returnPayload $
+        Pivo.Update.Payload
+          { Pivo.Update.sipSubmissions = Empty
+          , Pivo.Update.sipRevelations = Empty
+          , Pivo.Update.sipVotes       = Empty
+          , Pivo.Update.impSubmissions = singleton submission
+          , Pivo.Update.impRevelations = Empty
+          , Pivo.Update.impVotes       = Empty
           }
     readUpdateKeyFile keyFile = do
       StakeVerificationKey (Shelley.Keys.VKey vk)
