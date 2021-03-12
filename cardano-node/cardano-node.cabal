@@ -1,27 +1,62 @@
 cabal-version: 2.4
 
-name:                  cardano-node
-version:               1.25.0
-description:           The cardano full node
-author:                IOHK
-maintainer:            operations@iohk.io
-license:               Apache-2.0
-license-files:
-  LICENSE
-  NOTICE
-build-type:            Simple
-extra-source-files:    ChangeLog.md
+name:                   cardano-node
+version:                1.25.0
+description:            The cardano full node
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+extra-source-files:     ChangeLog.md
 
 Flag unexpected_thunks
-  Description:   Turn on unexpected thunks checks
-  Default:       False
+  Description:    Turn on unexpected thunks checks
+  Default:        False
 
 flag systemd
-  description: Enable systemd support
-  default:     True
-  manual:      False
+  description:    Enable systemd support
+  default:        True
+  manual:         False
+
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:     Haskell2010
+
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
+                        -Wpartial-fields
+                        -Wredundant-constraints
+
+  if impl(ghc >= 8.10)
+    ghc-options:        -Wunused-packages
+
+  -- Pattern match checking has improved since 8.6.5. GHC now considers more
+  -- pattern matches as redundant than before, so disable this warning for older
+  -- versions of GHC that still consider them incomplete.
+  if impl(ghc < 8.10)
+    ghc-options:        -Wno-incomplete-patterns
+
+common maybe-Win32
+  if os(windows)
+    build-depends:      Win32
+
+common maybe-unix
+  if !os(windows)
+    build-depends:      unix
 
 library
+  import:               base, project-config
+                      , maybe-unix
+                      , maybe-Win32
   if flag(unexpected_thunks)
     cpp-options: -DUNEXPECTED_THUNKS
 
@@ -64,16 +99,13 @@ library
                        Cardano.Tracing.OrphanInstances.Network
                        Cardano.Tracing.OrphanInstances.Shelley
 
-
   other-modules:       Paths_cardano_node
                        Cardano.Node.Configuration.Socket
                        Cardano.Tracing.MicroBenchmarking
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , async
                       , base16-bytestring
-                      , byron-spec-ledger
                       , bytestring
                       , deepseq
                       , cardano-api
@@ -93,7 +125,6 @@ library
                       , ekg-core
                       , filepath
                       , generic-data
-                      , hedgehog-extras
                       , hostname
                       , iproute
                       , io-sim-classes
@@ -117,7 +148,6 @@ library
                       , scientific
                       , shelley-spec-ledger
                       , stm
-                      , strict-concurrency
                       , text
                       , time
                       , tracer-transformers
@@ -126,113 +156,46 @@ library
                       , unordered-containers
                       , yaml
 
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                       OverloadedStrings
-
-  ghc-options:         -Wall
-                       -Wincomplete-record-updates
-                       -Wincomplete-uni-patterns
-                       -Wredundant-constraints
-                       -Wpartial-fields
-                       -Wcompat
-
-  -- Pattern match checking has improved since 8.6.5. GHC now considers more
-  -- pattern matches as redundant than before, so disable this warning for older
-  -- versions of GHC that still consider them incomplete.
-  if impl(ghc < 8.10)
-    ghc-options:       -Wno-incomplete-patterns
-
-  if os(windows)
-    build-depends:    Win32
-  else
-    build-depends:     unix
-
 executable cardano-node
-  hs-source-dirs:      app
-  main-is:             cardano-node.hs
-  default-language:    Haskell2010
-  ghc-options:         -threaded
-                       -Wall
-                       -Wincomplete-record-updates
-                       -Wincomplete-uni-patterns
-                       -Wredundant-constraints
-                       -Wpartial-fields
-                       -Wcompat
-                       -Wno-unticked-promoted-constructors
-                       -rtsopts
+  import:               base, project-config
+  hs-source-dirs:       app
+  main-is:              cardano-node.hs
+  ghc-options:          -threaded
+                        -rtsopts
   if arch(arm)
-    ghc-options:         "-with-rtsopts=-T -I0 -N1 -A16m"
+    ghc-options:        "-with-rtsopts=-T -I0 -N1 -A16m"
   else
-    ghc-options:         "-with-rtsopts=-T -I0 -N2 -A16m"
+    ghc-options:        "-with-rtsopts=-T -I0 -N2 -A16m"
 
-  other-modules:       Paths_cardano_node
+  other-modules:        Paths_cardano_node
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , cardano-config
+  build-depends:        cardano-config
                       , cardano-node
                       , cardano-prelude
                       , optparse-applicative
                       , text
 
-  if os(windows)
-     build-depends:    Win32
-  else
-     build-depends:    unix
-
 test-suite cardano-node-test
+  import:               base, project-config
+                      , maybe-unix
   hs-source-dirs:       test
   main-is:              cardano-node-test.hs
   type:                 exitcode-stdio-1.0
 
-  if !os(windows)
-      build-depends:     unix
-
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
-                      , async
-                      , bytestring
+  build-depends:        aeson             >= 1.5.6.0
                       , cardano-api
-                      , cardano-config
-                      , cardano-crypto-class
-                      , cardano-crypto-test
-                      , cardano-crypto-wrapper
                       , cardano-node
                       , cardano-prelude
-                      , cardano-prelude-test
                       , cardano-slotting
-                      , containers
-                      , cryptonite
                       , directory
                       , hedgehog
                       , hedgehog-corpus
                       , iproute
-                      , mmorph
-                      , network
-                      , ouroboros-consensus
-                      , ouroboros-consensus-shelley
                       , ouroboros-network
-                      , process
-                      , random
-                      , resourcet
-                      , shelley-spec-ledger
-                      , shelley-spec-ledger-test
-                      , temporary
-                      , time
-                      , unliftio
 
   other-modules:        Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
 
-  default-language:     Haskell2010
-  default-extensions:   NoImplicitPrelude
-
-  ghc-options:          -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

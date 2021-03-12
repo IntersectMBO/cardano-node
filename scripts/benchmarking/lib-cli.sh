@@ -60,7 +60,7 @@ genesis() {
                 --real-pbft
                 --secret-seed                  "${not_so_secret}"
         )
-        run_quiet cardano-cli cardano-cli genesis "${ARGS[@]}"
+        run_quiet cardano-cli cardano-cli byron genesis genesis "${ARGS[@]}"
 
         # move new genesis to configuration
         local GENHASH=$(run_quiet cardano-cli cardano-cli print-genesis-hash --genesis-json "${tmpdir}/genesis.json" | tail -1)

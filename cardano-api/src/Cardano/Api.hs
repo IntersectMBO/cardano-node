@@ -152,7 +152,7 @@ module Cardano.Api (
     TxBodyError(..),
 
     -- ** Transaction Ids
-    TxId,
+    TxId(..),
     getTxId,
 
     -- ** Transaction inputs
