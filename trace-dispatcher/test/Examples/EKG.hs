@@ -1,9 +1,11 @@
-module Examples.EKG where
+{-# OPTIONS_GHC -Wno-orphans  #-}
+
+module Examples.EKG (
+  testEKG
+) where
 
 import           Cardano.Logging
 import           Control.Concurrent
-import           Control.Monad (liftM)
-import           Data.Text (pack)
 import           System.Remote.Monitoring (forkServer)
 
 instance LogFormatting Int where

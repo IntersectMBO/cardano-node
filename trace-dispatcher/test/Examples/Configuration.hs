@@ -1,18 +1,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Examples.Configuration where
+module Examples.Configuration (
+    testConfig
+  , testMessageDocumented
+) where
 
-import           Control.Monad (liftM)
 import           Control.Monad.IO.Class
 import qualified Data.Aeson as AE
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as Map
 import           Data.Text (Text)
-import           Katip
-import           Katip.Scribes.Handle (ioLogEnv)
 
 import           Cardano.Logging
-import           Examples.TestObjects
 
 newtype TestMessage = TestMessage Text
   deriving Show
@@ -25,10 +24,10 @@ instance LogFormatting TestMessage where
            , "text" AE..= AE.String text
            ]
 
+testMessageDocumented :: Documented TestMessage
 testMessageDocumented = Documented [
   DocMsg (TestMessage "dummy") "text" "just a text"
   ]
-
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage)
 tracers  = do
@@ -79,22 +78,3 @@ testConfig = do
   (t1, t2) <- tracers
   testConfig' config1 t1 t2
   testConfig' config2 t1 t2
-
-{-
->>> config1
-{"at":"2021-02-16T14:15:15.351679768Z","env":"io","ns":["io","tracer1"],"data":{"tag":"LO2","comment":"Now setting config"},"app":["io"],"msg":"","pid":"5127","loc":null,"host":"yupanqui-PC","sev":"Critical","thread":"126"}
-
-{"at":"2021-02-16T14:15:15.351679768Z","env":"io","ns":["io","tracer1"],"data":{"tag":"LO2","comment":"1: show with config1 and config2"},"app":["io"],"msg":"","pid":"5127","loc":null,"host":"yupanqui-PC","sev":"Error","thread":"126"}
-
-[2021-02-16 14:15:15][io.tracer2.bubble][Notice][yupanqui-PC][PID 5127][ThreadId 126][tag:LO2][comment:3: show with config1 but not with config2]
-
->>> config2
-{"at":"2021-02-16T14:15:15.352147647Z","env":"io","ns":["io","tracer1"],"data":{"tag":"LO2","comment":"Now setting config"},"app":["io"],"msg":"","pid":"5127","loc":null,"host":"yupanqui-PC","sev":"Critical","thread":"126"}
-
-{"at":"2021-02-16T14:15:15.352147647Z","env":"io","ns":["io","tracer1"],"data":{"tag":"LO2","comment":"1: show with config1 and config2"},"app":["io"],"msg":"","pid":"5127","loc":null,"host":"yupanqui-PC","sev":"Error","thread":"126"}
-
-{"at":"2021-02-16T14:15:15.352147647Z","env":"io","ns":["io","tracer1"],"data":{"tag":"LO2","comment":"2: show not with config1 but with config2"},"app":["io"],"msg":"","pid":"5127","loc":null,"host":"yupanqui-PC","sev":"Info","thread":"126"}
-
-[2021-02-16 14:15:15][io.tracer2][Warning][yupanqui-PC][PID 5127][ThreadId 126][tag:LO2][comment:4: show not with config1 but with config2]
-
--}

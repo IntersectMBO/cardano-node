@@ -1,16 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Examples.Documentation where
+module Examples.Documentation (
+  docTracer
+) where
 
-import           Control.Monad (liftM)
 import           Control.Monad.IO.Class
-import           Data.IORef (readIORef)
-import           Data.Map
 import qualified Data.Text.IO as T
-import           Katip
-import           Katip.Scribes.Handle (ioLogEnv)
 
 import           Cardano.Logging
-import           Data.Text (Text)
 import           Examples.TestObjects
 
 tracer1 :: (LogFormatting (TraceForgeEvent blk), MonadIO m) =>
