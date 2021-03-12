@@ -73,7 +73,7 @@ runGovernanceMIRCertificate mirPot sAddrs rwdAmts (OutputFile oFp) = do
                oFp (length sAddrs) (length rwdAmts)
 
     let sCreds  = map stakeAddrToStakeCredential sAddrs
-        mirCert = makeMIRCertificate mirPot (zip sCreds rwdAmts)
+        mirCert = makeMIRCertificate mirPot (StakeAddressesMIR $ zip sCreds rwdAmts)
 
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError
       . newExceptT
@@ -86,6 +86,9 @@ runGovernanceMIRCertificate mirPot sAddrs rwdAmts (OutputFile oFp) = do
     stakeAddrToStakeCredential :: StakeAddress -> StakeCredential
     stakeAddrToStakeCredential (StakeAddress _ scred) =
       fromShelleyStakeCredential scred
+
+-- TODO runGovernanceMIRCertificate does not cover the case where a MIR certificate
+-- transfers lovelace from one pot to the opposite pot.
 
 runGovernanceGenesisKeyDelegationCertificate
   :: VerificationKeyOrHashOrFile GenesisKey

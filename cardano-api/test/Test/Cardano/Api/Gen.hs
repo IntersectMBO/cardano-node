@@ -18,7 +18,7 @@ import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-genMetadata :: Gen Metadata
+genMetadata :: Gen (Metadata era)
 genMetadata = do
   numberOfIndicies <- Gen.integral (Range.linear 1 15)
   let indexes = map (\i -> fromIntegral i :: Word64) [1..numberOfIndicies]

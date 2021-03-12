@@ -24,6 +24,7 @@ module Cardano.Api.Certificate (
     -- * Special certificates
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
+    MIRTarget (..),
 
     -- * Internal conversion functions
     toShelleyCertificate,
@@ -56,6 +57,7 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 import           Shelley.Spec.Ledger.BaseTypes
                    (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import qualified Shelley.Spec.Ledger.Coin as Shelley (toDeltaCoin)
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 
@@ -90,7 +92,7 @@ data Certificate =
    | GenesisKeyDelegationCertificate (Hash GenesisKey)
                                      (Hash GenesisDelegateKey)
                                      (Hash VrfKey)
-   | MIRCertificate MIRPot [(StakeCredential, Lovelace)]
+   | MIRCertificate MIRPot MIRTarget
 
   deriving stock (Eq, Show)
   deriving anyclass SerialiseAsCBOR
@@ -116,6 +118,23 @@ instance HasTextEnvelope Certificate where
       GenesisKeyDelegationCertificate{}       -> "Genesis key delegation"
       MIRCertificate{}                        -> "MIR"
 
+-- | The 'MIRTarget' determines the target of a 'MIRCertificate'.
+-- A 'MIRCertificate' moves lovelace from either the reserves or the treasury
+-- to either a collection of stake credentials or to the other pot.
+data MIRTarget =
+
+     -- | Use 'StakeAddressesMIR' to make the target of a 'MIRCertificate'
+     -- a mapping of stake credentials to lovelace.
+     StakeAddressesMIR [(StakeCredential, Lovelace)]
+
+     -- | Use 'SendToOppositePotMIR' to make the target of a 'MIRCertificate'
+     -- the opposite pot. Specifically, if the 'MIRPot' in a 'MIRCertificate'
+     -- is 'ReservesMIR', then using 'SendToOppositePotMIR' will transfer
+     -- lovelace from the reserves to the treasury. Otherwise, if it is
+     -- 'TreasuryMIR', then using 'SendToOppositePotMIR' will transfer
+     -- lovelace from the treasury to the reserves.
+   | SendToOppositePotMIR Lovelace
+  deriving stock (Eq, Show)
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
@@ -186,7 +205,7 @@ makeGenesisKeyDelegationCertificate :: Hash GenesisKey
                                     -> Certificate
 makeGenesisKeyDelegationCertificate = GenesisKeyDelegationCertificate
 
-makeMIRCertificate :: MIRPot -> [(StakeCredential, Lovelace)] -> Certificate
+makeMIRCertificate :: MIRPot -> MIRTarget -> Certificate
 makeMIRCertificate = MIRCertificate
 
 
@@ -235,13 +254,19 @@ toShelleyCertificate (GenesisKeyDelegationCertificate
         delegatekh
         vrfkh
 
-toShelleyCertificate (MIRCertificate mirpot amounts) =
+toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
     Shelley.DCertMir $
       Shelley.MIRCert
         mirpot
-        (Map.fromListWith (<>)
-           [ (toShelleyStakeCredential sc, toShelleyLovelace v)
+        (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
+           [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
            | (sc, v) <- amounts ])
+
+toShelleyCertificate (MIRCertificate mirpot (SendToOppositePotMIR amount)) =
+    Shelley.DCertMir $
+      Shelley.MIRCert
+        mirpot
+        (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
 
 
 fromShelleyCertificate :: Shelley.DCert StandardCrypto -> Certificate
@@ -275,11 +300,20 @@ fromShelleyCertificate (Shelley.DCertGenesis
       (GenesisDelegateKeyHash delegatekh)
       (VrfKeyHash             vrfkh)
 
-fromShelleyCertificate (Shelley.DCertMir (Shelley.MIRCert mirpot amounts)) =
+fromShelleyCertificate (Shelley.DCertMir
+                         (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) =
     MIRCertificate
       mirpot
-      [ (fromShelleyStakeCredential sc, fromShelleyLovelace v)
-      | (sc, v) <- Map.toList amounts ]
+      (StakeAddressesMIR
+        [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
+        | (sc, v) <- Map.toList amounts ]
+      )
+
+fromShelleyCertificate (Shelley.DCertMir
+                         (Shelley.MIRCert mirpot (Shelley.SendToOppositePotMIR amount))) =
+    MIRCertificate
+      mirpot
+      (SendToOppositePotMIR $ fromShelleyLovelace amount)
 
 
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams StandardCrypto

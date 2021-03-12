@@ -449,6 +449,7 @@ module Cardano.Api (
     -- transaction for special operations.
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
+    MIRTarget (..),
 
     -- * Protocol parameter updates
     UpdateProposal(..),

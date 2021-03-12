@@ -40,6 +40,7 @@ module Cardano.Api.Value
   , toByronLovelace
   , toShelleyLovelace
   , fromShelleyLovelace
+  , fromShelleyDeltaLovelace
   , toMaryValue
   , fromMaryValue
 
@@ -104,6 +105,9 @@ toShelleyLovelace (Lovelace l) = Shelley.Coin l
 
 fromShelleyLovelace :: Shelley.Coin -> Lovelace
 fromShelleyLovelace (Shelley.Coin l) = Lovelace l
+
+fromShelleyDeltaLovelace :: Shelley.DeltaCoin -> Lovelace
+fromShelleyDeltaLovelace (Shelley.DeltaCoin d) = Lovelace d
 
 
 -- ----------------------------------------------------------------------------
