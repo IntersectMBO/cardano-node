@@ -1,16 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Examples.Routing where
 
-import           Control.Monad (liftM)
+module Examples.Routing (
+  testRouting
+) where
+
 import           Control.Monad.IO.Class
-import           Data.IORef (readIORef)
-import           Data.Map
-import qualified Data.Text.IO as T
-import           Katip
-import           Katip.Scribes.Handle (ioLogEnv)
 
 import           Cardano.Logging
-import           Data.Text (Text)
 import           Examples.TestObjects
 
 tracer1 :: (LogFormatting (TraceForgeEvent blk), MonadIO m) =>
@@ -42,5 +38,5 @@ testRouting = do
     t2 <- tracer2
     configureTracers emptyTraceConfig traceForgeEventDocu [t1, t2]
     traceWith (routingTracer1 t1 t2) message1
-    traceWith (routingTracer1 t1 t2) message2
+    traceWith (routingTracer2 t1 t2) message2
     traceWith (t1 <> t2) message3

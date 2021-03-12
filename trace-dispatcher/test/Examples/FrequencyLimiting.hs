@@ -2,14 +2,13 @@
 {-# LANGUAGE DeriveGeneric  #-}
 
 
-module Examples.FrequencyLimiting where
+module Examples.FrequencyLimiting (
+  testLimiting
+) where
 
 import           Control.Concurrent
-import           Control.Monad (liftM)
 import           Control.Monad.IO.Class
 import           Control.Monad.IO.Unlift
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Types as A
 import           Data.Functor.Contravariant (Contravariant (..))
 import           GHC.Generics
 
