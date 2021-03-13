@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -52,6 +51,7 @@ import           Prelude
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Scientific (Scientific)
@@ -62,6 +62,7 @@ import           Numeric.Natural
 
 import           Control.Monad
 
+import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 
@@ -466,7 +467,6 @@ data UpdateProposal =
        !(Map (Hash GenesisKey) ProtocolParametersUpdate)
        !EpochNo
     deriving stock (Eq, Show)
-    deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy UpdateProposal where
     data AsType UpdateProposal = AsUpdateProposal
@@ -475,13 +475,11 @@ instance HasTypeProxy UpdateProposal where
 instance HasTextEnvelope UpdateProposal where
     textEnvelopeType _ = "UpdateProposalShelley"
 
-instance ToCBOR UpdateProposal where
-    toCBOR = toCBOR . toShelleyUpdate @StandardShelley
-    -- We have to pick a monomorphic era type for the serialisation. We use the
-    -- Shelley era. This makes no difference since era type is phantom.
-
-instance FromCBOR UpdateProposal where
-    fromCBOR = fromShelleyUpdate @StandardShelley <$> fromCBOR
+instance SerialiseAsCBOR UpdateProposal where
+    serialiseToCBOR = CBOR.serializeEncoding' . toCBOR . toShelleyUpdate @StandardShelley
+    deserialiseFromCBOR _ bs =
+      fromShelleyUpdate @StandardShelley <$>
+        CBOR.decodeAnnotator "UpdateProposal" fromCBOR (LBS.fromStrict bs)
 
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
