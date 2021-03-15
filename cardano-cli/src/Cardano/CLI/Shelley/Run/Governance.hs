@@ -136,20 +136,28 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
           }
     runPivoCmd (IMP IMPCommit {impCommiterKeyFile, impCommitSIPText, impCommitVersion}) = do
       vk <- readUpdateKeyFile impCommiterKeyFile
-      let submission = IMP.mkSubmission @StandardPivo vk constSalt implementation
-            where
-              implementation =
-                IMP.mkImplementation (SIP.unProposalId $ SIP._id proposal) 300 protocol
-                where
-                  proposal = mkProposal impCommitSIPText
-                  protocol = IMP.mkProtocol impCommitVersion IMP.protocolZero
       returnPayload $
         Pivo.Update.Payload
           { Pivo.Update.sipSubmissions = Empty
           , Pivo.Update.sipRevelations = Empty
           , Pivo.Update.sipVotes       = Empty
-          , Pivo.Update.impSubmissions = singleton submission
+          , Pivo.Update.impSubmissions =
+              singleton $ IMP.mkSubmission @StandardPivo vk constSalt
+                        $ mkImplementation impCommitSIPText impCommitVersion
           , Pivo.Update.impRevelations = Empty
+          , Pivo.Update.impVotes       = Empty
+          }
+    runPivoCmd (IMP IMPReveal {impRevelatorKeyFile, impRevelationSIPText, impRevelationVersion}) = do
+      vk <- readUpdateKeyFile impRevelatorKeyFile
+      returnPayload $
+        Pivo.Update.Payload
+          { Pivo.Update.sipSubmissions = Empty
+          , Pivo.Update.sipRevelations = Empty
+          , Pivo.Update.sipVotes       = Empty
+          , Pivo.Update.impSubmissions = Empty
+          , Pivo.Update.impRevelations =
+              singleton $ IMP.mkRevelation @StandardPivo vk constSalt
+                        $ mkImplementation impRevelationSIPText impRevelationVersion
           , Pivo.Update.impVotes       = Empty
           }
     readUpdateKeyFile keyFile = do
@@ -167,18 +175,31 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
 mkProposal
   :: Era era
   => Text -> SIP.Proposal era
-mkProposal text = SIP.mkProposal text votingPeriodDuration
-  where
-    -- todo: add support for specifying the voting period
-    -- duration through the command line.
-    votingPeriodDuration = 600
-    -- We chose the security parameter to be 10, and the active
-    -- slot coefficient to be 0.1, so the stabilityWindow becomes
-    -- 3 * 10 / 0.1 = 300
+mkProposal text = SIP.mkProposal text constVotingPeriodDuration
 
 -- todo: add support for specifying the salt through the command line.
 constSalt :: Int
 constSalt = 84
+
+-- todo: add support for specifying the voting period duration through the
+-- command line.
+constVotingPeriodDuration :: SlotNo
+constVotingPeriodDuration = 600
+  -- fixme: this is fragile as it depends on the protocol global constants.
+  --
+  -- We chose the security parameter to be 10, and the active
+  -- slot coefficient to be 0.1, so the stabilityWindow becomes
+  -- 3 * 10 / 0.1 = 300
+
+mkImplementation
+  :: Era era
+  => Text -> Word -> IMP.Implementation era
+mkImplementation sipText impVersion =
+  IMP.mkImplementation
+    (SIP.unProposalId $ SIP._id proposal) constVotingPeriodDuration protocol
+  where
+    proposal = mkProposal sipText
+    protocol = IMP.mkProtocol impVersion IMP.protocolZero
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot

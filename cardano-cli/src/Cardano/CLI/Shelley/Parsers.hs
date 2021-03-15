@@ -823,7 +823,7 @@ pGovernanceCmd =
             pIMPCmd = IMP <$> ( Opt.hsubparser
                               $ mconcat
                                [ pIMPCommit
-                               -- , pIMPReveal
+                               , pIMPReveal
                                -- , pIMPVote
                                ])
               where
@@ -840,8 +840,18 @@ pGovernanceCmd =
                       -- proposal id (hash), and version we are superseding.
                       IMPCommit <$> pStakeVerificationKeyFile
                                 <*> pPropText
-                                <*> pImplVer
-                pImplVer =
+                                <*> pImpVer
+                pIMPReveal =
+                  cmdWithInfo
+                    "reveal"
+                    pIMPRevealOpts
+                    "Create an implementation reveal"
+                  where
+                    pIMPRevealOpts =
+                      IMPReveal <$> pStakeVerificationKeyFile
+                                <*> pPropText
+                                <*> pImpVer
+                pImpVer =
                   Opt.option
                     Opt.auto
                     (  Opt.long "implementation-version"

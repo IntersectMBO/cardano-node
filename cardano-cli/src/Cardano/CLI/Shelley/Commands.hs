@@ -355,6 +355,11 @@ data IMPCmd
       , impCommitSIPText   :: Text
       , impCommitVersion   :: Word
       }
+  | IMPReveal
+      { impRevelatorKeyFile  :: VerificationKeyFile
+      , impRevelationSIPText :: Text
+      , impRevelationVersion :: Word
+      }
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text
