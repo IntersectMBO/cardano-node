@@ -1,5 +1,13 @@
 # Changelog for cardano-api
 
+## 1.26.0 -- March 2020
+- Added a demo for the use of cardano-client. This is an API to allow writing
+  programs to interact with the cardano node. (#2295, #2303)
+- Removed code pertaining to the old IPC API (#2319)
+- When querying the NodeLocalState, make the query point optional, and use the
+  chain tip when not specified. (#2241)
+- Various internal improvements and refactoring (#2349, #2458)
+
 ## 1.25.0 -- January 2020
 - New IPC modules for easier interaction with the node, including support for
   all existing local state queries (#2230, #2238, #2263, #2277, #2286)
