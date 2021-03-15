@@ -54,8 +54,29 @@ let
         baseEnvConfig
         ({ nodeConfig =
              {
-               hasEKG         =                30100 + i;
-               hasPrometheus  = [ "127.0.0.1" (30200 + i) ];
+               hasEKG           =                30100 + i;
+               hasPrometheus    = [ "127.0.0.1" (30200 + i) ];
+
+               TracingVerbosity = "NormalVerbosity";
+               minSeverity      = "Debug";
+
+               TraceMempool     = true;
+               TraceTxInbound   = true;
+
+               defaultScribes = [
+                 [ "StdoutSK" "stdout" ]
+               ];
+               setupScribes = [
+                 {
+                   scKind     = "StdoutSK";
+                   scName     = "stdout";
+                   scFormat   = "ScJson"; }
+               ];
+               options = {
+                 mapBackends = {
+                   "cardano.node.resources" = [ "KatipBK" ];
+                 };
+               };
              };
            dbPrefix       = "db-${name}";
            nodeConfigFile = "${stateDir}/${name}.config.json";
