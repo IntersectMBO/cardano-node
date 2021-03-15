@@ -101,7 +101,6 @@ library
 
   other-modules:       Paths_cardano_node
                        Cardano.Node.Configuration.Socket
-                       Cardano.Tracing.MicroBenchmarking
 
   build-depends:        aeson             >= 1.5.6.0
                       , async

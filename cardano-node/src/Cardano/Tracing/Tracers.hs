@@ -92,7 +92,6 @@ import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Metrics
-import           Cardano.Tracing.MicroBenchmarking
 import           Cardano.Tracing.Queries
 
 import           Cardano.Node.Configuration.Logging
@@ -525,7 +524,6 @@ mkConsensusTracers
 mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   let trmet = appendName "metrics" tr
 
-  blockForgeOutcomeExtractor <- mkOutcomeExtractor
   elidedFetchDecision <- newstate  -- for eliding messages in FetchDecision tr
   forgeTracers <- mkForgeTracers
   meta <- mkLOMeta Critical Public
@@ -572,14 +570,10 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr fStats
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
-        Tracer $ \tlcev@(Consensus.TraceLabelCreds _ ev) -> do
+        Tracer $ \tlcev@Consensus.TraceLabelCreds{} -> do
           traceWith (annotateSeverity
                      $ traceLeadershipChecks forgeTracers nodeKern verb tr) tlcev
           traceWith (forgeTracer verb tr forgeTracers fStats) tlcev
-          -- Don't track credentials in ForgeTime.
-          traceWith (blockForgeOutcomeExtractor
-                    $ toLogObject' verb
-                    $ appendName "ForgeTime" tr) ev
 
     , Consensus.blockchainTimeTracer = tracerOnOff' (traceBlockchainTime trSel) $
         Tracer $ \ev ->
@@ -751,7 +745,6 @@ forgeTracer
 forgeTracer verb tr forgeTracers fStats =
   Tracer $ \tlcev@(Consensus.TraceLabelCreds _ ev) -> do
     -- Ignoring the credentials label for measurement and counters:
-    traceWith (measureTxsEnd tr) ev
     traceWith (notifyBlockForging fStats tr) ev
     -- Consensus tracer -- here we track the label:
     traceWith (annotateSeverity
@@ -868,7 +861,6 @@ mempoolTracer
 mempoolTracer tc tracer fStats = Tracer $ \ev -> do
     traceWith (mempoolMetricsTraceTransformer tracer) ev
     traceWith (notifyTxsProcessed fStats tracer) ev
-    traceWith (measureTxsStart tracer) ev
     let tr = appendName "Mempool" tracer
     traceWith (mpTracer tc tr) ev
 
