@@ -387,3 +387,34 @@ submit_update_transaction \
     $UPDATE_FILE \
     "--signing-key-file $UTXO3.skey --signing-key-file $VOTING_KEY3.skey"
 rm $UPDATE_FILE
+################################################################################
+## Submit an implementation commit
+################################################################################
+UPDATE_FILE=update.payload
+$CLI -- governance pivo imp commit \
+      --stake-verification-key-file $PROPOSING_KEY.vkey \
+      --proposal-text "hello world!" \
+      --implementation-version 77 \
+      --out-file $UPDATE_FILE
+submit_update_transaction \
+    payment1.addr \
+    $UPDATE_FILE \
+    "--signing-key-file $UTXO1.skey --signing-key-file $PROPOSING_KEY.skey"
+rm $UPDATE_FILE
+################################################################################
+## Reveal the implementation commit
+################################################################################
+# todo: We need to wait till the SIP vote period ends, so that votes are
+# tallied. A superior alternative is to query the ledger state till the state
+# of the SIP is set to approved.
+UPDATE_FILE=update.payload
+$CLI -- governance pivo imp reveal \
+      --stake-verification-key-file $PROPOSING_KEY.vkey \
+      --proposal-text "hello world!" \
+      --implementation-version 77 \
+      --out-file $UPDATE_FILE
+submit_update_transaction \
+    payment1.addr \
+    $UPDATE_FILE \
+    "--signing-key-file $UTXO1.skey --signing-key-file $PROPOSING_KEY.skey"
+rm $UPDATE_FILE
