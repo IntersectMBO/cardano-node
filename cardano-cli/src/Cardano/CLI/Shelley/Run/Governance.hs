@@ -160,6 +160,21 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
                         $ mkImplementation impRevelationSIPText impRevelationVersion
           , Pivo.Update.impVotes       = Empty
           }
+    runPivoCmd (IMP IMPVote {impVoterKeyFile, impVotedSIPText, impVotedVersion}) = do
+      vk <- readUpdateKeyFile impVoterKeyFile
+      returnPayload $
+        Pivo.Update.Payload
+          { Pivo.Update.sipSubmissions = Empty
+          , Pivo.Update.sipRevelations = Empty
+          , Pivo.Update.sipVotes       = Empty
+          , Pivo.Update.impSubmissions = Empty
+          , Pivo.Update.impRevelations = Empty
+          , Pivo.Update.impVotes       =
+              singleton $ IMP.mkVote @StandardPivo
+                            vk
+                            (SIP._id $ mkImplementation impVotedSIPText impVotedVersion)
+                            SIP.For
+          }
     readUpdateKeyFile keyFile = do
       StakeVerificationKey (Shelley.Keys.VKey vk)
         <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT

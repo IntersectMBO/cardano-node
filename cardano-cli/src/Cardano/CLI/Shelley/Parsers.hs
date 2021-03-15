@@ -824,7 +824,7 @@ pGovernanceCmd =
                               $ mconcat
                                [ pIMPCommit
                                , pIMPReveal
-                               -- , pIMPVote
+                               , pIMPVote
                                ])
               where
                 pIMPCommit =
@@ -849,6 +849,16 @@ pGovernanceCmd =
                   where
                     pIMPRevealOpts =
                       IMPReveal <$> pStakeVerificationKeyFile
+                                <*> pPropText
+                                <*> pImpVer
+                pIMPVote =
+                  cmdWithInfo
+                    "vote"
+                    pIMPVoteOpts
+                    "Create a vote for an implementation"
+                    where
+                      pIMPVoteOpts =
+                        IMPVote <$> pStakeVerificationKeyFile
                                 <*> pPropText
                                 <*> pImpVer
                 pImpVer =

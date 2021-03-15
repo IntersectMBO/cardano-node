@@ -360,6 +360,11 @@ data IMPCmd
       , impRevelationSIPText :: Text
       , impRevelationVersion :: Word
       }
+  | IMPVote
+      { impVoterKeyFile :: VerificationKeyFile
+      , impVotedSIPText :: Text
+      , impVotedVersion :: Word
+      }
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text
