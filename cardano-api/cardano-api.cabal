@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                   cardano-api
-version:                1.25.0
+version:                1.26.0
 description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -55,7 +55,7 @@ library
                         Cardano.Api.Protocol.Shelley
                         Cardano.Api.Protocol.Types
 
-  other-modules:        
+  other-modules:
                         -- Splitting up the big Typed module:
                         Cardano.Api.Address
                         Cardano.Api.Block

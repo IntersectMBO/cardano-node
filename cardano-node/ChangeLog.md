@@ -1,6 +1,79 @@
 # Changelog for cardano-node
 
-## 1.25.0 -- January 2020
+## 1.26.0 -- March 2021
+
+### node changes
+- Expanded documentation for Windows builds (#1993, #2231)
+- Other expanded and updated documentation (#2308, #2334, #2342, #2347, #2429,
+  #2431, #2432, #2434, #2435, #2442)
+- Simplified configuration for working with RTView (#2303)
+- Prototype reporting metrics to EKG directly, rather than via the switchboard.
+  (#2355)
+- Multiple improvements to the configuration when running cardano-node as a
+  Nixos service. (#2374, #2384, #2389, #2404, #2418, #2424, #2436, #2443, #2483)
+- KES metrics are now traced even when the KES key has expired. This should make
+  it easier for users to detect whether they have an expired KES key. (#2373)
+- Add a metric to display the number of forged blocks "lost" due to switching to
+  an alternative fork. (#2321)
+- Various internal improvements and refactoring (#2331, #2481)
+- Set a flag which enables early return of memory to the OS. This should help in
+  accurate reporting of memory consumption. (#2493, #2495)
+
+### consensus changes
+- Add some additional tracing infrastructure (#2874)
+- Add an automated test for forking from Allegra to Mary eras (#2915)
+- Continued work on the technical report of the consensus and storate layer
+  (#2939, #2943)
+- Add the ability to query a node to determine whether it issued a block. This
+  supports the "blocks lost due to switching" metric mentioned in the node
+  changes above. (#2930)
+- Support disabling the maximum known versions for network protocols. This is to
+  allow QA and benchmarking teams to evaluate new versions of networking
+  protocols. (#2947)
+- Add the ability to query for the time a block was forged (this is a very
+  fragile feature, only to be used for metrics) (#2988)
+- Various internal improvements and refactoring (#2872, #2899, #2900)
+
+### ledger changes
+- Update the calculation of rewards to be done progressively, spreading the
+  additional CPU load across a number of days. This should resolve the slowdown
+  4k/f slots into the epoch which has been seen by a number of node operators.
+  (#2142, #2183)
+- Introduce the `SafeHash` abstraction which governs what types can be safely
+  hashed. This is important since we do not require a canonical representation
+  for submitted data (#2104, #2134)
+- Changed the aggregation of rewards, such that we store more data about reward
+  provenance. This makes it easier for downstream applications to show e.g.
+  where rewards come from. (#2117, #2123, #2164)
+- Fixed a performance regression in the Allegra and Mary eras. This resulted in
+  node slowdown when validating failed transactions. (#2144)
+- Fixed a subtle bug in reward computations, where the wrong amount of money
+  would be added to the treasury (#2136).
+- Updates to the Alonzo formal specification (#2108)
+- A lot of work on implementing the upcoming Alonzo era (#2124, #2127, #2148,
+  #2161, #2165, #2166, #2169, #2170)
+- Add the ability for MIR certificates to transfer money from the reserves
+  to/from the treasury. This will be used to support Catalyst funding. (#2146)
+- Various internal improvements and refactoring (#2115, #2177)
+
+### network changes
+- Various changes to support P2P (#2526, #2911, #2921)
+- The `LocalStQuery` and `ChainSync` protocols now allow for additional effects
+  to take place once the client has acquired a connection. This should allow for
+  additional pipelining in clients such as the wallet. (#2896)
+- Various tracing improvements:
+  - Trace termination of mini-protocols (#2924)
+  - Additional tracing of transaction submission (#2924)
+- Remove some code for old and deprecated APIs (#2934)
+- Some additional support for `cardano-client`, an API to write tools for
+  interacting with the node (#2916)
+- Allow configuring the timeouts for protocol handshakes. This should serve to
+  mitigate a potential attack where handshakes are begun but not concluded,
+  occupying resources on the node. (#2990)
+- Various internal improvements and refactoring (#2876, #2922, #2929, #2940,
+  #2956, #2958, #2960)
+
+## 1.25.0 -- January 2021
 
 ### node changes
 - All metrics now use a common name prefix `cardano.node.metrics`. This requires
