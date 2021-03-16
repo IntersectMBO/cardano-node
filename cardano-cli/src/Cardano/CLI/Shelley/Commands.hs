@@ -307,7 +307,12 @@ renderQueryCmd cmd =
     QueryProtocolState' {} -> "query protocol-state"
 
 data GovernanceCmd
-  = GovernanceMIRCertificate MIRPot [StakeAddress] [Lovelace] OutputFile
+  = GovernanceMIRPayStakeAddressesCertificate
+      MIRPot
+      [StakeAddress]
+      [Lovelace]
+      OutputFile
+  | GovernanceMIRTransfer Lovelace OutputFile TransferDirection
   | GovernanceGenesisKeyDelegationCertificate
       (VerificationKeyOrHashOrFile GenesisKey)
       (VerificationKeyOrHashOrFile GenesisDelegateKey)
@@ -322,7 +327,9 @@ renderGovernanceCmd :: GovernanceCmd -> Text
 renderGovernanceCmd cmd =
   case cmd of
     GovernanceGenesisKeyDelegationCertificate {} -> "governance create-genesis-key-delegation-certificate"
-    GovernanceMIRCertificate {} -> "governance create-mir-certificate"
+    GovernanceMIRPayStakeAddressesCertificate {} -> "governance create-mir-certificate stake-addresses"
+    GovernanceMIRTransfer _ _ TransferToTreasury -> "governance create-mir-certificate transfer-to-treasury"
+    GovernanceMIRTransfer _ _ TransferToReserves -> "governance create-mir-certificate transfer-to-reserves"
     GovernanceUpdateProposal {} -> "governance create-update-proposal"
 
 data TextViewCmd

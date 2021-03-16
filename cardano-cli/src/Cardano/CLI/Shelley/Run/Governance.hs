@@ -14,7 +14,7 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrHashOrFile,
-                     readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
+                   readVerificationKeyOrHashOrFile, readVerificationKeyOrHashOrTextEnvFile)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Types
 
@@ -53,20 +53,22 @@ renderShelleyGovernanceError err =
 
 
 runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceCmd (GovernanceMIRCertificate mirpot vKeys rewards out) =
-  runGovernanceMIRCertificate mirpot vKeys rewards out
+runGovernanceCmd (GovernanceMIRPayStakeAddressesCertificate mirpot vKeys rewards out) =
+  runGovernanceMIRCertificatePayStakeAddrs mirpot vKeys rewards out
+runGovernanceCmd (GovernanceMIRTransfer amt out direction) =
+  runGovernanceMIRCertificateTransfer amt out direction
 runGovernanceCmd (GovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out) =
   runGovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out
 runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp
 
-runGovernanceMIRCertificate
+runGovernanceMIRCertificatePayStakeAddrs
   :: Shelley.MIRPot
   -> [StakeAddress] -- ^ Stake addresses
   -> [Lovelace]     -- ^ Corresponding reward amounts (same length)
   -> OutputFile
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceMIRCertificate mirPot sAddrs rwdAmts (OutputFile oFp) = do
+runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) = do
 
     unless (length sAddrs == length rwdAmts) $
       left $ ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
@@ -87,8 +89,26 @@ runGovernanceMIRCertificate mirPot sAddrs rwdAmts (OutputFile oFp) = do
     stakeAddrToStakeCredential (StakeAddress _ scred) =
       fromShelleyStakeCredential scred
 
--- TODO runGovernanceMIRCertificate does not cover the case where a MIR certificate
--- transfers lovelace from one pot to the opposite pot.
+runGovernanceMIRCertificateTransfer
+  :: Lovelace
+  -> OutputFile
+  -> TransferDirection
+  -> ExceptT ShelleyGovernanceCmdError IO ()
+runGovernanceMIRCertificateTransfer ll (OutputFile oFp) direction = do
+  mirCert <- case direction of
+                 TransferToReserves ->
+                   return . makeMIRCertificate Shelley.TreasuryMIR $ SendToReservesMIR ll
+                 TransferToTreasury ->
+                   return . makeMIRCertificate Shelley.ReservesMIR $ SendToTreasuryMIR ll
+
+  firstExceptT ShelleyGovernanceCmdTextEnvWriteError
+    . newExceptT
+    $ writeFileTextEnvelope oFp (Just $ mirCertDesc direction) mirCert
+ where
+  mirCertDesc :: TransferDirection -> TextEnvelopeDescr
+  mirCertDesc TransferToTreasury = "MIR Certificate Send To Treasury"
+  mirCertDesc TransferToReserves = "MIR Certificate Send To Reserves"
+
 
 runGovernanceGenesisKeyDelegationCertificate
   :: VerificationKeyOrHashOrFile GenesisKey

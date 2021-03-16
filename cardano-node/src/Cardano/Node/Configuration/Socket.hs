@@ -16,8 +16,8 @@ import           Prelude (String)
 import qualified Prelude
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Network.Socket (Family (AF_INET, AF_INET6), AddrInfo (..),
-                     AddrInfoFlag (..), Socket, SocketType (..))
+import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (AF_INET, AF_INET6),
+                   Socket, SocketType (..))
 import qualified Network.Socket as Socket
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
@@ -113,7 +113,7 @@ gatherConfiguredSockets :: NodeConfiguration
                         -> ExceptT SocketConfigError IO
                                    (Maybe (SocketOrSocketInfo Socket AddrInfo),
                                     Maybe (SocketOrSocketInfo Socket AddrInfo),
-                                           SocketOrSocketInfo Socket SocketPath)
+                                    Maybe (SocketOrSocketInfo Socket SocketPath))
 gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
                                             ncNodeIPv6Addr,
                                             ncNodePortNumber,
@@ -160,7 +160,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
     (ipv4', ipv6')
       <- case (ipv4, ipv6) of
             (Nothing, Nothing) -> do
-      
+
               info <- nodeAddressInfo Nothing ncNodePortNumber
               let ipv4' = SocketInfo <$> find ((== AF_INET)  . addrFamily) info
                   ipv6' = SocketInfo <$> find ((== AF_INET6) . addrFamily) info
@@ -180,10 +180,10 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
     -- only when 'ncSocketpath' is specified or a unix socket is passed through
     -- socket activation
     local <- case (ncSocketPath, firstUnixSocket) of
-      (Nothing, Nothing)    -> throwError NoLocalSocketGiven
+      (Nothing, Nothing)    -> return Nothing
       (Just _, Just _)      -> throwError ClashingLocalSocketGiven
-      (Nothing, Just sock)  -> return (ActualSocket sock)
-      (Just path, Nothing)  -> removeStaleLocalSocket path $> SocketInfo path
+      (Nothing, Just sock)  -> return . Just $ ActualSocket sock
+      (Just path, Nothing)  -> removeStaleLocalSocket path $> Just (SocketInfo path)
 
     return (ipv4', ipv6', local)
 

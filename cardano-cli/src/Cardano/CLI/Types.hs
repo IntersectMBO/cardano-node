@@ -12,6 +12,7 @@ module Cardano.CLI.Types
   , SigningKeyOrScriptFile (..)
   , SocketPath (..)
   , ScriptFile (..)
+  , TransferDirection(..)
   , TxOutAnyEra (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
@@ -82,6 +83,10 @@ newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
 data SigningKeyOrScriptFile = ScriptFileForWitness FilePath
                             | SigningKeyFileForWitness FilePath
                             deriving (Eq, Show)
+
+-- | Determines the direction in which the MIR certificate will transfer ADA.
+data TransferDirection = TransferToReserves | TransferToTreasury
+                         deriving Show
 
 -- | A TxOut value that is the superset of possibilities for any era: any
 -- address type and allowing multi-asset values. This is used as the type for
