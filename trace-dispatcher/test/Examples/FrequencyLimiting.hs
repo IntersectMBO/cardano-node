@@ -7,8 +7,6 @@ module Examples.FrequencyLimiting (
 ) where
 
 import           Control.Concurrent
-import           Control.Monad.IO.Class
-import           Control.Monad.IO.Unlift
 import           Data.Functor.Contravariant (Contravariant (..))
 import           GHC.Generics
 
@@ -17,16 +15,6 @@ import           Examples.TestObjects
 
 data LOX = LOS (TraceForgeEvent LogBlock) | LOL LimitingMessage
  deriving (LogFormatting, Generic)
-
-tracer1 :: (MonadIO m, MonadUnliftIO m) => m (Trace m (TraceForgeEvent LogBlock))
-tracer1  = do
-  t1      <- fmap (appendName "tracer1") stdoutHumanKatipTracer
-  limitFrequency 5 "5 messages per second" (contramap LOS t1) (contramap LOL t1)
-
-tracer2 :: (MonadIO m, MonadUnliftIO m) => m (Trace m (TraceForgeEvent LogBlock))
-tracer2  = do
-  t2      <- fmap (appendName "tracer2") stdoutJsonKatipTracer
-  limitFrequency 15 "15 messages per second" (contramap LOS t2) (contramap LOL t2)
 
 repeated :: Trace IO (TraceForgeEvent LogBlock) -> Int -> Int -> IO ()
 repeated _ 0 _ = pure ()
@@ -37,8 +25,12 @@ repeated t n d = do
 
 testLimiting :: IO ()
 testLimiting = do
-  t1 <- tracer1
-  t2 <- tracer2
+  t0 <- standardTracer "stdout"
+  tf <- humanFormatter True "cardano" t0
+  t1 <- (\tt -> limitFrequency 5 "5 messages per second" (contramap LOS tt) (contramap LOL tt))
+              (appendName "tracer1" tf)
+  t2 <- (\tt -> limitFrequency 15 "15 messages per second" (contramap LOS tt) (contramap LOL tt))
+              (appendName "tracer2" tf)
   let t = t1 <> t2
   repeated t 1000 10000 -- 100 messages per second
   repeated t 20 1000000 -- 1  message per second

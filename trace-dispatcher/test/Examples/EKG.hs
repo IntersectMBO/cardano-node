@@ -18,14 +18,15 @@ testEKG :: IO ()
 testEKG = do
     server <- forkServer "localhost" 8000
     tracer <- ekgTracer (Right server)
-    configureTracers emptyTraceConfig countDocumented [tracer]
-    loop (appendName "ekg1" tracer) 1
+    formattedTracer <- metricsFormatter tracer
+    configureTracers emptyTraceConfig countDocumented [formattedTracer]
+    loop (appendName "ekg1" formattedTracer) 1
   where
     loop :: Trace IO Int -> Int -> IO ()
-    loop tracer count = do
+    loop tr count = do
       if count == 1000
         then pure ()
         else do
-          traceWith (appendName "count" tracer) count
+          traceWith (appendName "count" tr) count
           threadDelay 100000
-          loop tracer (count + 1)
+          loop tr (count + 1)

@@ -24,7 +24,7 @@ module Cardano.Logging.Types (
   , ConfigOption(..)
   , TraceConfig(..)
   , emptyTraceConfig
-  , LogFormat(..)
+  , FormattedMessage(..)
   , TraceControl(..)
   , DocCollector(..)
   , LogDoc(..)
@@ -152,8 +152,8 @@ data SeverityF
     | SilenceF                 -- ^ Don't show anything
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
-data LogFormat = Human | Machine | Measures
-  deriving (Eq, Ord, Show)
+data FormattedMessage = Human Text | Machine Text | Metrics [Metric]
+  deriving (Eq, Show)
 
 -- Configuration options for individual namespace elements
 data ConfigOption =
@@ -178,12 +178,6 @@ data TraceConfig = TraceConfig {
 
      --  Forward messages to the following address
 --  ,  tcForwardTo :: Map TracerName RemoteAddr
-
-  --  ** Katip:
-
---  ,  tcDefaultScribe :: ScribeDefinition
-
---  ,  tcScripes :: Map TracerName -> ScribeDefinition
 
   --  EKG:
      --  Port for EKG server
@@ -215,7 +209,7 @@ data LogDoc = LogDoc {
   , ldSeverity  :: [SeverityS]
   , ldPrivacy   :: [Privacy]
   , ldDetails   :: [DetailLevel]
-  , ldBackends  :: [(Backend, LogFormat)]
+  , ldBackends  :: [(Backend, FormattedMessage)]
 --  , ldConfSeverity :: SeverityF
 --  , ldConfPrivacy  :: Privacy
 } deriving(Eq, Show)
@@ -224,8 +218,7 @@ emptyLogDoc :: Text -> LogDoc
 emptyLogDoc d = LogDoc d [] [] [] [] []
 
 data Backend =
-    KatipBackend Text
-  | EKGBackend Text
+    EKGBackend Text
   | StandardBackend Text
   deriving(Eq, Show, Generic)
 

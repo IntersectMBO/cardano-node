@@ -2,24 +2,20 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.Tracer.StandardLogger (
-    standardMachineTracer
-  , standardHumanTracer
+module Cardano.Logging.Tracer.StandardTracer (
+    standardTracer
 ) where
 
 import           Control.Concurrent (forkIO)
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad (forever)
 import           Control.Monad.IO.Class
-import qualified Data.Aeson as AE
 import           Data.IORef (IORef, modifyIORef, newIORef, readIORef)
 import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import           GHC.Conc (ThreadId)
-import           Network.HostName (getHostName)
 
 import           Cardano.Logging.DocuGenerator
-import           Cardano.Logging.Tracer.Formatting
 import           Cardano.Logging.Types
 
 import qualified Control.Tracer as T
@@ -37,55 +33,39 @@ data StandardTracerState a =  StandardTracerState {
 emptyStandardTracerState :: StandardTracerState a
 emptyStandardTracerState = StandardTracerState Nothing LogStdout
 
-standardMachineTracer :: forall a m. (MonadIO m, LogFormatting a)
+standardTracer :: forall m. (MonadIO m)
   => Text
-  -> Maybe (DetailLevel -> a -> AE.Object)
-  -> m (Trace m a)
-standardMachineTracer tracerName mbFormatter = do
-    standardTracer tracerName (formatMachine mbFormatter)
-
-standardHumanTracer :: forall a m. (MonadIO m, LogFormatting a)
-  => Text
-  -> Maybe (a -> Text)
-  -> m (Trace m a)
-standardHumanTracer tracerName mbFormatter =
-  standardTracer tracerName $ \ _ -> formatHuman mbFormatter
-
-standardTracer :: forall a m. (MonadIO m)
-  => Text
-  -> (Maybe DetailLevel -> a -> Text)
-  -> m (Trace m a)
-standardTracer tracerName formatter = do
+  -> m (Trace m FormattedMessage)
+standardTracer tracerName = do
     stateRef <- liftIO $ newIORef emptyStandardTracerState
-    hostname <- liftIO getHostName
-    pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output stateRef hostname)
+    pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output stateRef)
   where
     output ::
          IORef (StandardTracerState a)
-      -> String
       -> LoggingContext
       -> Maybe TraceControl
-      -> a
+      -> FormattedMessage
       -> m ()
-    output stateRef _ LoggingContext {} (Just Reset) _a = liftIO $ do
+    output stateRef LoggingContext {} Nothing (Human msg) = liftIO $ do
+      st  <- readIORef stateRef
+      case stRunning st of
+        Just (inChannel, _, _) -> writeChan inChannel msg
+        Nothing                -> pure ()
+    output stateRef LoggingContext {} Nothing (Machine msg) = liftIO $ do
+      st  <- readIORef stateRef
+      case stRunning st of
+        Just (inChannel, _, _) -> writeChan inChannel msg
+        Nothing                -> pure ()
+    output stateRef LoggingContext {} (Just Reset) _msg = liftIO $ do
       st <- readIORef stateRef
       case stRunning st of
         Nothing -> initLogging stateRef
         Just _  -> pure ()
-    output stateRef hostName lc@LoggingContext {..} Nothing a = liftIO $ do
-      st  <- readIORef stateRef
-      case stRunning st of
-        Just (inChannel, _, _) -> do
-          msg <- formatIt
-                    (stTarget st == LogStdout)
-                    lc
-                    hostName
-                    (formatter lcDetails a)
-          writeChan inChannel msg
-        Nothing                -> pure ()
-    output _ _ lk (Just c@Document {}) a =
-       docIt (StandardBackend tracerName) Machine (lk, Just c, a)
-    output _stateRef _ LoggingContext {} _ _a = pure ()
+    output _ lk (Just c@Document {}) (Human msg) =
+       docIt (StandardBackend tracerName) (Human "") (lk, Just c, msg)
+    output _ lk (Just c@Document {}) (Machine msg) =
+       docIt (StandardBackend tracerName) (Machine "") (lk, Just c, msg)
+    output _stateRef LoggingContext {} _ _a = pure ()
 
 initLogging :: IORef (StandardTracerState a) -> IO ()
 initLogging stateRef = do

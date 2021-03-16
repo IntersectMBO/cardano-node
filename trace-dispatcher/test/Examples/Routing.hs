@@ -4,18 +4,8 @@ module Examples.Routing (
   testRouting
 ) where
 
-import           Control.Monad.IO.Class
-
 import           Cardano.Logging
 import           Examples.TestObjects
-
-tracer1 :: (LogFormatting (TraceForgeEvent blk), MonadIO m) =>
-  m (Trace m (TraceForgeEvent blk))
-tracer1  = fmap (appendName "tracer1") (standardHumanTracer "t1" Nothing)
-
-tracer2 :: (LogFormatting (TraceForgeEvent blk), MonadIO m) =>
-  m (Trace m (TraceForgeEvent blk))
-tracer2  = fmap (appendName "tracer2") (standardMachineTracer "t2" Nothing)
 
 routingTracer1 :: (Monad m)
   => Trace m (TraceForgeEvent LogBlock)
@@ -34,8 +24,10 @@ routingTracer2 t1 t2 = t1 <> t2
 
 testRouting :: IO ()
 testRouting = do
-    t1 <- tracer1
-    t2 <- tracer2
+    t <- standardTracer "stdout"
+    tf <- machineFormatter DRegular "cardano" t
+    let t1 = appendName "tracer1" tf
+    let t2 = appendName "tracer1" tf
     configureTracers emptyTraceConfig traceForgeEventDocu [t1, t2]
     traceWith (routingTracer1 t1 t2) message1
     traceWith (routingTracer2 t1 t2) message2
