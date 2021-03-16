@@ -30,14 +30,16 @@ data StandardTracerState a =  StandardTracerState {
   , stTarget  :: LogTarget
 }
 
-emptyStandardTracerState :: StandardTracerState a
-emptyStandardTracerState = StandardTracerState Nothing LogStdout
+emptyStandardTracerState :: Maybe FilePath -> StandardTracerState a
+emptyStandardTracerState Nothing   = StandardTracerState Nothing LogStdout
+emptyStandardTracerState (Just fp) = StandardTracerState Nothing (LogFile fp)
+
 
 standardTracer :: forall m. (MonadIO m)
-  => Text
+  => Maybe FilePath
   -> m (Trace m FormattedMessage)
-standardTracer tracerName = do
-    stateRef <- liftIO $ newIORef emptyStandardTracerState
+standardTracer mbFilePath = do
+    stateRef <- liftIO $ newIORef (emptyStandardTracerState mbFilePath)
     pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output stateRef)
   where
     output ::
@@ -62,9 +64,9 @@ standardTracer tracerName = do
         Nothing -> initLogging stateRef
         Just _  -> pure ()
     output _ lk (Just c@Document {}) (Human msg) =
-       docIt (StandardBackend tracerName) (Human "") (lk, Just c, msg)
+       docIt (StandardBackend mbFilePath) (Human "") (lk, Just c, msg)
     output _ lk (Just c@Document {}) (Machine msg) =
-       docIt (StandardBackend tracerName) (Machine "") (lk, Just c, msg)
+       docIt (StandardBackend mbFilePath) (Machine "") (lk, Just c, msg)
     output _stateRef LoggingContext {} _ _a = pure ()
 
 initLogging :: IORef (StandardTracerState a) -> IO ()

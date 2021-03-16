@@ -28,7 +28,7 @@ ekgTracer storeOrServer = liftIO $ do
     output registeredGauges registeredLabels (LoggingContext{..}, Nothing, Metrics m) =
       liftIO $ mapM_ (setIt registeredGauges registeredLabels lcNamespace) m
     output _ _ p@(_, Just Document {}, Metrics m) =
-      docIt (EKGBackend "") (Metrics m) p
+      docIt EKGBackend (Metrics m) p
     output _ _ (LoggingContext{}, Just _c, _v) =
       pure ()
 
