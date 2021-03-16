@@ -19,18 +19,18 @@ import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import           System.Remote.Monitoring (Server, getGauge, getLabel)
 
-ekgTracer :: (LogFormatting a, MonadIO m) => Either Metrics.Store Server-> m (Trace m a)
+ekgTracer :: MonadIO m => Either Metrics.Store Server-> m (Trace m FormattedMessage)
 ekgTracer storeOrServer = liftIO $ do
     registeredGauges <- newIORef Map.empty
     registeredLabels <- newIORef Map.empty
     pure $ Trace $ T.arrow $ T.emit $ output registeredGauges registeredLabels
   where
-    output registeredGauges registeredLabels (LoggingContext{..}, Nothing, v) =
-      case asMetrics v of
-        [] -> pure ()
-        l  -> liftIO $ mapM_ (setIt registeredGauges registeredLabels lcNamespace) l
-    output _ _ p@(_, Just Document {}, _)      = docIt (EKGBackend "") Measures p
-    output _ _ (LoggingContext{}, Just _c, _v) = pure ()
+    output registeredGauges registeredLabels (LoggingContext{..}, Nothing, Metrics m) =
+      liftIO $ mapM_ (setIt registeredGauges registeredLabels lcNamespace) m
+    output _ _ p@(_, Just Document {}, Metrics m) =
+      docIt (EKGBackend "") (Metrics m) p
+    output _ _ (LoggingContext{}, Just _c, _v) =
+      pure ()
 
     setIt registeredGauges _registeredLabels namespace (IntM mbText theInt) = do
       registeredMap <- readIORef registeredGauges

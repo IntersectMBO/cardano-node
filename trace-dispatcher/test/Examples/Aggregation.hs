@@ -50,8 +50,9 @@ calculate BaseStats{..} val =
 
 testAggregation :: IO ()
 testAggregation = do
-    simpleTracer  <- stdoutObjectKatipTracer
-    tracer <- foldTraceM calculate emptyStats simpleTracer
+    simpleTracer  <- standardTracer "stdout"
+    formTracer <- humanFormatter True "cardano" simpleTracer
+    tracer <- foldTraceM calculate emptyStats formTracer
     configureTracers emptyTraceConfig baseStatsDocumented [tracer]
     traceWith tracer 1.0
     traceWith tracer 2.0

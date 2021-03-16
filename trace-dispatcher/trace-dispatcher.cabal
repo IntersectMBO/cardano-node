@@ -13,16 +13,15 @@ extra-source-files:   CHANGELOG.md
 
 library
   hs-source-dirs:     src
-  exposed-modules:    Cardano.Logging.Trace
-                      Cardano.Logging.Tracer.Katip
-                      Cardano.Logging.Tracer.EKG
-                      Cardano.Logging.Tracer.StandardLogger
-                      Cardano.Logging.Tracer.Formatting
+  exposed-modules:    Cardano.Logging
                       Cardano.Logging.Types
+                      Cardano.Logging.Trace
                       Cardano.Logging.Configuration
-                      Cardano.Logging.FrequencyLimiter
                       Cardano.Logging.DocuGenerator
-                      Cardano.Logging
+                      Cardano.Logging.Formatter
+                      Cardano.Logging.FrequencyLimiter
+                      Cardano.Logging.Tracer.EKG
+                      Cardano.Logging.Tracer.StandardTracer
                       Control.Tracer.Arrow
                       Control.Tracer
   default-language:   Haskell2010
@@ -34,7 +33,6 @@ library
                       , ekg
                       , ekg-core
                       , hostname
-                      , katip
                       , stm
                       , text
                       , time
@@ -72,7 +70,6 @@ executable trace-dispatcher-examples
                       , ekg
                       , ekg-core
                       , hostname
-                      , katip
                       , text
                       , trace-dispatcher
                       , time
