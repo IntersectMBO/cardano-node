@@ -218,8 +218,8 @@ emptyLogDoc :: Text -> LogDoc
 emptyLogDoc d = LogDoc d [] [] [] [] []
 
 data Backend =
-    EKGBackend Text
-  | StandardBackend Text
+    EKGBackend
+  | StandardBackend (Maybe FilePath)
   deriving(Eq, Show, Generic)
 
 -- | Type for a Fold
