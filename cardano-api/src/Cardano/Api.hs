@@ -465,6 +465,9 @@ module Cardano.Api (
     toNetworkMagic,
     --TODO: Remove after updating cardano-node-chairman with new IPC
     SomeNodeClientProtocol(..),
+
+    -- * Time
+    -- TODO all the stuff from the Time module
   ) where
 
 import           Cardano.Api.Address
