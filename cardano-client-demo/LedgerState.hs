@@ -31,33 +31,69 @@ import           Data.IORef
 import           Data.Word
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Shelley.Spec.Ledger.API as Ledger
+import qualified Shelley.Spec.Ledger.Rewards as Ledger
+import qualified Shelley.Spec.Ledger.RewardUpdate as Ledger
+
 
 main :: IO ()
 main = do
   -- Get socket path from CLI argument.
   configFilePath : socketPath : _ <- getArgs
-  blockCount <- foldBlocks
+  rewardUpdatesByEpoch <- foldBlocks
     configFilePath
     socketPath
     True -- enable validation?
-    (0 :: Int) -- We just use a count of the blocks as the current state
+    mempty
     (\_env
-      !ledgerState
-      (BlockInMode (Block (BlockHeader _slotNo _blockHeaderHash (BlockNo blockNoI)) _transactions) _era)
-      blockCount -> do
+      ledgerState
+      _blockInMode
+      rewardUpdatesByEpoch ->
         case ledgerState of
-            LedgerStateShelley (Shelley.ShelleyLedgerState shelleyTipWO _ _) -> case shelleyTipWO of
-              Origin -> putStrLn "."
-              At (Shelley.ShelleyTip _ _ hash) -> print hash
-            _ -> when (blockNoI `mod` 100 == 0) (print blockNoI)
-        return (blockCount + 1)
+            LedgerStateShelley (Shelley.ShelleyLedgerState _ ls _) -> return (update ls rewardUpdatesByEpoch)
+            _                                                      -> return rewardUpdatesByEpoch
     )
 
-  putStrLn $ "Processed " ++ show blockCount ++ " blocks"
+  let correctAggregation = Set.foldr ((<>) . Ledger.rewardAmount) mempty
+      incorrectAggregation s = if Set.null s then mempty else (Ledger.rewardAmount . Set.findMin) s
+      pairwisePlus (a, b) (c, d) = (a<>c, b<>d)
+      allShelleyRewards =
+        Map.foldr
+          (Map.unionWith pairwisePlus)
+          mempty
+          (Map.map
+            (Map.map (\s -> (correctAggregation s, incorrectAggregation s)) . Ledger.rs)
+            rewardUpdatesByEpoch
+          )
+      isDeficient (correct, incorrect) = correct /= incorrect
+      deficientShelleyRewards = Map.filter isDeficient allShelleyRewards
+
+      displayCredential (Ledger.KeyHashObj (Ledger.KeyHash kh)) = "keyhash," <> show kh
+      displayCredential (Ledger.ScriptHashObj (Ledger.ScriptHash sh)) = "scripthash," <> show sh
+      dispReport (cred, (Ledger.Coin correct, Ledger.Coin incorrect)) =
+        displayCredential cred
+          <> ","
+          <> show (correct - incorrect)
+          <> ","
+          <> show correct
+          <> ","
+          <> show incorrect
+
+  putStr "type,hash,difference,proper,received\n"
+  mapM_ putStrLn $ fmap dispReport $ Map.toList deficientShelleyRewards
   return ()
 
--- Non-pipelined version took: 1h  0m  19s
--- Pipelined version took:        46m  23s
+  where
+    update ls rs =
+      if Ledger.nesEL ls `Map.member` rs
+      -- If we have already obtained this epoch's reward update
+        then rs
+        else case Ledger.nesRu ls of
+               Ledger.SJust (Ledger.Complete ru) -> Map.insert (Ledger.nesEL ls) ru rs
+               _ -> rs
+
 
 -- | Monadic fold over all blocks and ledger states.
 foldBlocks
@@ -95,7 +131,7 @@ foldBlocks nodeConfigFilePath socketPath enableValidation state0 accumulate = do
   stateIORef <- newIORef state0
 
   -- Connect to the node.
-  putStrLn $ "Connecting to socket: " <> socketPath
+  --putStrLn $ "Connecting to socket: " <> socketPath
   connectToLocalNode
     connectInfo
     (protocols stateIORef env ledgerState)
@@ -183,7 +219,7 @@ foldBlocks nodeConfigFilePath socketPath enableValidation state0 accumulate = do
                   then  clientIdle_DoneN n
                   else return (clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates')
             , recvMsgRollBackward = \chainPoint serverChainTip -> do
-                putStrLn "Rollback"
+                --putStrLn "Rollback"
                 let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
                     newServerTip = fromChainTip serverChainTip
                     truncatedKnownLedgerStates = case chainPoint of
@@ -197,10 +233,10 @@ foldBlocks nodeConfigFilePath socketPath enableValidation state0 accumulate = do
           -> IO (ClientPipelinedStIdle n (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
         clientIdle_DoneN n = case n of
           Succ predN -> do
-            putStrLn "Chain Sync: done! (Ignoring remaining responses)"
+            --putStrLn "Chain Sync: done! (Ignoring remaining responses)"
             return $ CollectResponse Nothing (clientNext_DoneN predN) -- Ignore remaining message responses
           Zero -> do
-            putStrLn "Chain Sync: done!"
+            --putStrLn "Chain Sync: done!"
             return $ SendMsgDone ()
 
         clientNext_DoneN
