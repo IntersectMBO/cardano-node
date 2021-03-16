@@ -162,10 +162,14 @@ executable cardano-node
   main-is:              cardano-node.hs
   ghc-options:          -threaded
                         -rtsopts
+
+  ghc-options:          "-with-rtsopts=-T -I0 -N1 -A16m"
   if arch(arm)
-    ghc-options:        "-with-rtsopts=-T -I0 -N1 -A16m --disable-delayed-os-memory-return"
+    ghc-options:        "-with-rtsopts=-N1"
   else
-    ghc-options:        "-with-rtsopts=-T -I0 -N2 -A16m --disable-delayed-os-memory-return"
+    ghc-options:        "-with-rtsopts=-N2"
+  if impl(ghc >= 8.10)
+    ghc-options:        "-with-rtsopts=--disable-delayed-os-memory-return"
 
   other-modules:        Paths_cardano_node
 
