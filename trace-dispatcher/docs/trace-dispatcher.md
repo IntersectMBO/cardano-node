@@ -441,10 +441,10 @@ The generated documentation for a simple message my look like this:
 >   `aboutToLeadSlotLast 1`
 >
 >   > Severity:   `Info`
->
->   Privacy:   `Public`
->
->   Details:   `DRegular`
+>   >
+>   >   Privacy:   `Public`
+>   >
+>   >   Details:   `DRegular`
 >
 >   Backends: `KatipBackend ""` / `Machine`, `KatipBackend ""` / `Human`
 >
