@@ -314,7 +314,61 @@ data Metric
     deriving (Show, Eq)     
 ```
 
-For additional flexibility traceOuts may add the possibility to give a formatting function, which is then used instead of the method of the typeclass.
+The standard formatters, transforms a stream of messages of a, where a is an instance of _LogFormatter_ to a stream of _FormattedMessages_.
+
+```haskell
+data FormattedMessage = Human Text | Machine Text | Metrics [Metric]
+```
+
+The human formatter takes a Bool argument, which tells if color codes for stdout output shall be inserted, and an argument which is the app name, which gets prepended to the namespace, while the machineFormatter has as arguments the desired detail level and as well the application name. The metricas formatter takes no extra arguments:
+
+```haskell
+humanFormatter
+  :: (LogFormatting a, MonadIO m)
+  => Bool
+  -> Text
+  -> Trace m FormattedMessage
+  -> m (Trace m a)
+
+machineFormatter
+  :: (LogFormatting a, MonadIO m)
+  => DetailLevel
+  -> Text
+  -> Trace m FormattedMessage
+  -> m (Trace m a)
+
+metricsFormatter
+  :: (LogFormatting a, MonadIO m)
+  => Trace m FormattedMessage
+  -> m (Trace m a)  
+```
+
+### TraceOuts
+
+We currently offer the following traceOuts (backends):
+
+* StandardTracer (writes to stdout or a file)
+  StandardTracer is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a StandardTracer tracer, which is configured for a human or machine readable configuration or to both.  
+
+* EKG (for metrics)
+  EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded by the ekg-forward package.
+
+We will add
+
+* Forwarding (forwards the messages to another process or machine).
+  Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process.  
+
+Here is the interface to construct these tracers. The standard tracer may take a file path. It is disallowed to construct multiple tracers which writes to stdout or the same file. Doing this will result in crumbled output.
+
+```haskell
+standardTracer :: MonadIO m
+  => Maybe FilePath
+  -> m (Trace m FormattedMessage)
+
+ekgTracer :: MonadIO m
+  => Either Metrics.Store Server
+  -> m (Trace m FormattedMessage)
+```
 
 ### Configuration
 
@@ -401,44 +455,3 @@ The generated documentation for a simple message my look like this:
 >
 >   We record the current slot number.
 >   ***
-
-
-### TraceOuts
-
-We currently offer the following traceOuts (backends):
-
-* StandardTracer (writes to stdout or a file)
-* EKG (for metrics)
-* Katip (may be removed)
-
-We will add
-
-* Forwarding (forwards the messages to another process or machine)
-
-Since we want to get rid of any resource hungry computation in the node process, the most important backend in the actual node will be the Forwarding tracer, which forwards traces to a special logging process.  
-
-StandardTracer is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a StandardTracer tracer, which is configured for a human or machine readable configuration or to both.  
-
-EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded to Prometheus.
-
-Backends can be configured by a matching configuration from a configuration file. We will offer a bunch of functions to construct these traceOuts:
-
-```haskell
-standardMachineTracer :: forall a m. (MonadIO m, LogFormatting a)
-  => Text
-  -> Maybe (DetailLevel -> a -> AE.Object)
-  -> m (Trace m a)
-
-standardHumanTracer :: forall a m. (MonadIO m, LogFormatting a)
-  => Text
-  -> Maybe (a -> Text)
-  -> m (Trace m a)
-
-ekgTracer  :: MonadIO m => Metrics.Store -> m (Trace m Metric)
-
-ekgTracer' :: MonadIO m => Server -> m (Trace m Metric)
-
-stdoutHumanKatipTracer :: (MonadIO m, LogFormatting a) => m (Trace m a)
-
-stdoutJsonKatipTracer :: (MonadIO m, LogFormatting a) => m (Trace m a)
-```
