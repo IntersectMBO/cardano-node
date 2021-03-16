@@ -13,10 +13,11 @@ import           Examples.TestObjects
 --   for every path element
 test1 :: IO ()
 test1 = do
-    simpleTracer1 <- standardMachineTracer "simpleTracer1" Nothing
-    configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer1]
-    let simpleTracer1' = filterTraceBySeverity (Just WarningF) simpleTracer1
-    let simpleTracerC1 = appendName "Outer1" simpleTracer1'
+    stdoutTracer <- standardTracer "stdout"
+    simpleTracer <- machineFormatter DRegular "cardano" stdoutTracer
+    configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
+    let simpleTracer1 = filterTraceBySeverity (Just WarningF) simpleTracer
+    let simpleTracerC1 = appendName "Outer1" simpleTracer1
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setSeverity Error
                         $ setPrivacy Confidential
@@ -28,7 +29,8 @@ test1 = do
 
 test2 :: IO ()
 test2 = do
-    simpleTracer <- standardHumanTracer "simpleTracer2" Nothing
+    stdoutTracer <- standardTracer "stdout"
+    simpleTracer <- humanFormatter True "cardano" stdoutTracer
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
     let simpleTracer1  = withSeverity loSeverity
                             (filterTraceBySeverity (Just WarningF) simpleTracer)

@@ -38,15 +38,15 @@ documentTracers (Documented documented) tracers = do
 
 docIt :: MonadIO m =>
      Backend
-  -> LogFormat
+  -> FormattedMessage
   -> (LoggingContext, Maybe TraceControl, a)
   -> m ()
-docIt backend logFormat (LoggingContext {..},
+docIt backend formattedMessage (LoggingContext {..},
   Just (Document idx mdText (DocCollector docRef)), _msg) = do
   liftIO $ modifyIORef docRef (\ docMap ->
       Map.insert
         idx
-        ((\e -> e { ldBackends  = (backend, logFormat) : ldBackends e
+        ((\e -> e { ldBackends  = (backend, formattedMessage) : ldBackends e
                   , ldNamespace = lcNamespace : ldNamespace e
                   , ldSeverity  = case lcSeverity of
                                     Nothing -> ldSeverity e
@@ -175,17 +175,22 @@ documentMarkdown (Documented documented) tracers = do
                   <> mconcat (intersperse (singleton ',')
                         (map (asCode . fromString . show) l))
 
-    backendsBuilder :: [(Backend, LogFormat)] -> Builder
+    backendsBuilder :: [(Backend, FormattedMessage)] -> Builder
     backendsBuilder [] = fromText "No backends found"
     backendsBuilder l  = fromText "Backends: "
                           <> mconcat (intersperse (fromText ", ")
                                 (map backendFormatToText l))
 
-    backendFormatToText :: (Backend, LogFormat) -> Builder
-    backendFormatToText (be,lf) = asCode (fromString (show be))
+    backendFormatToText :: (Backend, FormattedMessage) -> Builder
+    backendFormatToText (be, Metrics _) = asCode (fromString (show be))
                             <> fromText " / "
-                            <> asCode (fromString (show lf))
-
+                            <> asCode "Metrics"
+    backendFormatToText (be, Human _) = asCode (fromString (show be))
+                            <> fromText " / "
+                            <> asCode "Human"
+    backendFormatToText (be, Machine _) = asCode (fromString (show be))
+                            <> fromText " / "
+                            <> asCode "Machine"
 
 asCode :: Builder -> Builder
 asCode b = singleton '`' <> b <> singleton '`'
