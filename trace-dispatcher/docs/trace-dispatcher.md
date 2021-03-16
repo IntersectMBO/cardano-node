@@ -127,13 +127,10 @@ Which when used like:
 ```haskell
 appendName "specific" $ appendName "middle" $ appendName "general" tracer
 ```
-gives the name: `general.middle.specific`. Usually the application name is then prepended to the result.
-
-In the current representation furthermore the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this namespace. I would like to change this, to make clear what the identifying name is:
+gives the name: `general.middle.specific`. Usually the application name is then prepended to the result by the formatter.
+For the human formatter furthermore the _Hostname_ is prepended and the _Severity_ and _ThreadId_ is appended to this namespace.
 
     [deus-x-machina.cardano.general.middle.specific.Info.379]
-    ->
-    [deus-x-machina:cardano.general.middle.specific:Info.379]
 
 Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
 
@@ -152,7 +149,7 @@ This can be done by calling the function filterTraceBySeverity, which only proce
 ```haskell
 let filteredTracer = filterTraceBySeverity WarningF exampleTracer
 ```
-A more general filter function is offered, which gives access to the object and a `LoggingContext`, which contains the name, the severity and privacy:
+A more general filter function is offered, which gives access to the object and a `LoggingContext`, which contains the namespace, the severity, the privacy and the detailLevel:
 
 ```haskell
 --- | Don't process further if the result of the selector function
@@ -323,22 +320,19 @@ data FormattedMessage = Human Text | Machine Text | Metrics [Metric]
 The human formatter takes a Bool argument, which tells if color codes for stdout output shall be inserted, and an argument which is the app name, which gets prepended to the namespace, while the machineFormatter has as arguments the desired detail level and as well the application name. The metricas formatter takes no extra arguments:
 
 ```haskell
-humanFormatter
-  :: (LogFormatting a, MonadIO m)
+humanFormatter :: (LogFormatting a, MonadIO m)
   => Bool
   -> Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
 
-machineFormatter
-  :: (LogFormatting a, MonadIO m)
+machineFormatter :: (LogFormatting a, MonadIO m)
   => DetailLevel
   -> Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
 
-metricsFormatter
-  :: (LogFormatting a, MonadIO m)
+metricsFormatter :: (LogFormatting a, MonadIO m)
   => Trace m FormattedMessage
   -> m (Trace m a)  
 ```
@@ -348,7 +342,7 @@ metricsFormatter
 We currently offer the following traceOuts (backends):
 
 * StandardTracer (writes to stdout or a file)
-  StandardTracer is used for for writing human and machine readable log files. One basic choice is between a __human readable__ text representation, or a __machine readable__ JSON representation. This choice is made by sending the message either to a StandardTracer tracer, which is configured for a human or machine readable configuration or to both.  
+  StandardTracer is used for for writing human and machine readable log files.
 
 * EKG (for metrics)
   EKG is used for displaying measurements (Int and Double types). The contents of the EKG store can be forwarded by the ekg-forward package.
@@ -439,13 +433,17 @@ The generated documentation for a simple message my look like this:
 > #### cardano.node.StartLeadershipCheck
 >   For human:
 >   `Checking for leadership in slot 1`
+>
 >   For machine:
 >   `{"kind":"TraceStartLeadershipCheck","slot":1}`
+>
 >   Integer metrics:
 >   `aboutToLeadSlotLast 1`
 >
 >   > Severity:   `Info`
+>
 >   Privacy:   `Public`
+>
 >   Details:   `DRegular`
 >
 >   Backends: `KatipBackend ""` / `Machine`, `KatipBackend ""` / `Human`
