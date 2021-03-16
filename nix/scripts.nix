@@ -40,7 +40,8 @@ let
       extraArgs = [];
       profiling = "none";
       asserts = false;
-      rtsArgs = [];
+      rtsArgs = [ "-N2" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
+      ipv6HostAddr = null;
     } // (builtins.removeAttrs envConfig ["nodeConfig"]);
 
     nodeConfig = (envConfig.nodeConfig or environments.mainnet.nodeConfig)
