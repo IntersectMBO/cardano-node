@@ -269,7 +269,7 @@ in {
 
       ipv6HostAddr = mkOption {
         type = types.nullOr types.str;
-        default = "::1";
+        default = null;
         description = ''
           The ipv6 host address to bind to. Set to null to disable.
         '';
