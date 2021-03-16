@@ -54,7 +54,7 @@ playground $ cardano-submit-api --config submit-api-config.yaml --socket-path no
 In another terminal, find out how much ADA is in your user 1 payment address:
 
 ```bash
-playground $ CARDANO_NODE_SOCKET_PATH=node.socket cardano-cli query utxo --address $(cat user-1-payment.addr)  --testnet-magic 1097911063
+playground $ CARDANO_NODE_SOCKET_PATH=node.socket cardano-cli query utxo --address $(cat user-1-payment.addr)  --testnet-magic $(cat magic.flag)
                            TxHash                                 TxIx        Amount
 --------------------------------------------------------------------------------------
 8a3d63d4d95f669ef62570f2936ad50d2cfad399e04808ca21474e70b11987ee     0        97640000 lovelace
@@ -108,7 +108,7 @@ The string returned is the new transaction hash.
 You can check your user 2 payment address has received the funds by querying the following:
 
 ```bash
-CARDANO_NODE_SOCKET_PATH=node.socket cardano-cli query utxo --address $(cat testnet-user-2-payment.addr)  --testnet-magic 1097911063
+CARDANO_NODE_SOCKET_PATH=node.socket cardano-cli query utxo --address $(cat testnet-user-2-payment.addr)  --testnet-magic $(cat magic.flag)
                            TxHash                                 TxIx        Amount
 --------------------------------------------------------------------------------------
 24e12cf8937db7fc95a39ca7780a5a1cb425ee53321d730254d661cc96be572f     1        1000000 lovelace
