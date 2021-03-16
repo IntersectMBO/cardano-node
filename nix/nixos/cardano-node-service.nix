@@ -269,7 +269,7 @@ in {
 
       ipv6HostAddr = mkOption {
         type = types.nullOr types.str;
-        default = "::1";
+        default = null;
         description = ''
           The ipv6 host address to bind to. Set to null to disable.
         '';
@@ -428,7 +428,7 @@ in {
 
       rtsArgs = mkOption {
         type = types.listOf types.str;
-        default = [];
+        default = [ "-N2" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
         apply = args: if (args != [] || cfg.profilingArgs != []) then
           ["+RTS"] ++ cfg.profilingArgs ++ args ++ ["-RTS"]
           else [];
