@@ -456,3 +456,38 @@ submit_update_transaction \
     $UPDATE_FILE \
     "--signing-key-file $UTXO3.skey --signing-key-file $VOTING_KEY3.skey"
 rm $UPDATE_FILE
+################################################################################
+## Endorse the implementation
+################################################################################
+echo "********************************************************************************"
+echo "Waiting till the end of the voting period is stable"
+echo "********************************************************************************"
+sleep 180
+
+UPDATE_FILE=update.payload
+$CLI -- governance pivo endorse \
+      --stake-verification-key-file $VOTING_KEY1.vkey \
+      --implementation-version 77 \
+      --out-file $UPDATE_FILE
+submit_update_transaction \
+    payment1.addr \
+    $UPDATE_FILE \
+    "--signing-key-file $UTXO1.skey --signing-key-file $VOTING_KEY1.skey"
+
+$CLI -- governance pivo endorse \
+      --stake-verification-key-file $VOTING_KEY2.vkey \
+      --implementation-version 77 \
+      --out-file $UPDATE_FILE
+submit_update_transaction \
+    payment2.addr \
+    $UPDATE_FILE \
+    "--signing-key-file $UTXO2.skey --signing-key-file $VOTING_KEY2.skey"
+
+$CLI -- governance pivo endorse \
+      --stake-verification-key-file $VOTING_KEY3.vkey \
+      --implementation-version 77 \
+      --out-file $UPDATE_FILE
+submit_update_transaction \
+    payment3.addr \
+    $UPDATE_FILE \
+    "--signing-key-file $UTXO3.skey --signing-key-file $VOTING_KEY3.skey"

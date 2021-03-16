@@ -793,6 +793,7 @@ pGovernanceCmd =
           = Opt.hsubparser
           $ mconcat [ cmdWithInfo "sip" pSIPCmd "SIP commands"
                     , cmdWithInfo "imp" pIMPCmd "Implementation commands"
+                    , cmdWithInfo "endorse" pEndorsement "Create an endorsement"
                     ]
           where
             pSIPCmd = SIP <$> (Opt.hsubparser
@@ -861,13 +862,18 @@ pGovernanceCmd =
                         IMPVote <$> pStakeVerificationKeyFile
                                 <*> pPropText
                                 <*> pImpVer
-                pImpVer =
-                  Opt.option
-                    Opt.auto
-                    (  Opt.long "implementation-version"
-                    <> Opt.metavar "IMPL_VERSION"
-                    <> Opt.help "Version the protocol implements"
-                    )
+            pEndorsement =
+              END <$> ( ENDCmd <$> pStakeVerificationKeyFile
+                               <*> pImpVer
+                      )
+            pImpVer =
+              Opt.option
+                Opt.auto
+                  (  Opt.long "implementation-version"
+                  <> Opt.metavar "IMPL_VERSION"
+                  <> Opt.help "Version the protocol implements"
+                  )
+
 
 
 cmdWithInfo :: String -> Parser a -> String -> Mod CommandFields a

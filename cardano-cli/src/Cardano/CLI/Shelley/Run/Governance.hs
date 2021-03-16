@@ -10,7 +10,7 @@ module Cardano.CLI.Shelley.Run.Governance
 import           Cardano.Prelude
 
 import qualified Data.Text as Text
-import Data.Sequence.Strict (singleton, StrictSeq (Empty))
+import Data.Sequence.Strict (singleton)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, right)
 
@@ -76,29 +76,23 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp
 runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
   where
-    runPivoCmd (SIP SIPNew {sipAuthorKeyFile, proposalText}) = do
+    runPivoCmd (SIP SIPNew { sipAuthorKeyFile, proposalText }) = do
       StakeVerificationKey (Shelley.Keys.VKey vk)
         <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
          $ readVerificationKeyOrFile AsStakeKey
          $ VerificationKeyFilePath sipAuthorKeyFile
       let sip = SIP.mkSubmission vk constSalt (mkProposal proposalText)
+      -- todo: use 'returnPayload' instead.
       firstExceptT ShelleyGovernanceCmdTextEnvWriteError
         $ newExceptT
         $ writeFileTextEnvelope
             outFile
             Nothing
-            -- todo: define a monoid instance for the payload
-            (Pivo.Update.Payload
-               { Pivo.Update.sipSubmissions = singleton sip
-               , Pivo.Update.sipRevelations = Empty
-               , Pivo.Update.sipVotes       = Empty
-               , Pivo.Update.impSubmissions = Empty
-               , Pivo.Update.impRevelations = Empty
-               , Pivo.Update.impVotes       = Empty
-               }
+            (mempty
+               { Pivo.Update.sipSubmissions = singleton sip }
              :: Pivo.Update.Payload StandardPivo
             )
-    runPivoCmd (SIP SIPReveal {sipRevelatorKeyFile, revealedProposalText}) = do
+    runPivoCmd (SIP SIPReveal { sipRevelatorKeyFile, revealedProposalText }) = do
       StakeVerificationKey (Shelley.Keys.VKey vk)
         <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
          $ readVerificationKeyOrFile AsStakeKey
@@ -109,71 +103,53 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
         $ writeFileTextEnvelope
             outFile
             Nothing
-            (Pivo.Update.Payload
-               { Pivo.Update.sipSubmissions = Empty
-               , Pivo.Update.sipRevelations = singleton revelation
-               , Pivo.Update.sipVotes       = Empty
-               , Pivo.Update.impSubmissions = Empty
-               , Pivo.Update.impRevelations = Empty
-               , Pivo.Update.impVotes       = Empty
-               }
+            (mempty
+               { Pivo.Update.sipRevelations = singleton revelation }
              :: Pivo.Update.Payload StandardPivo
             )
-    runPivoCmd (SIP SIPVote {sipVoterKeyFile, votedProposalText}) = do
+    runPivoCmd (SIP SIPVote { sipVoterKeyFile, votedProposalText }) = do
       vk <- readUpdateKeyFile sipVoterKeyFile
       returnPayload $
-        Pivo.Update.Payload
-          { Pivo.Update.sipSubmissions = Empty
-          , Pivo.Update.sipRevelations = Empty
-          , Pivo.Update.sipVotes       = singleton
+        mempty
+          { Pivo.Update.sipVotes       = singleton
                                        $ SIP.mkVote @StandardPivo
                                            vk
                                            (SIP._id (mkProposal votedProposalText))
                                            SIP.For
-          , Pivo.Update.impSubmissions = Empty
-          , Pivo.Update.impRevelations = Empty
-          , Pivo.Update.impVotes       = Empty
           }
-    runPivoCmd (IMP IMPCommit {impCommiterKeyFile, impCommitSIPText, impCommitVersion}) = do
+    runPivoCmd (IMP IMPCommit { impCommiterKeyFile, impCommitSIPText, impCommitVersion }) = do
       vk <- readUpdateKeyFile impCommiterKeyFile
       returnPayload $
-        Pivo.Update.Payload
-          { Pivo.Update.sipSubmissions = Empty
-          , Pivo.Update.sipRevelations = Empty
-          , Pivo.Update.sipVotes       = Empty
-          , Pivo.Update.impSubmissions =
+        mempty
+          { Pivo.Update.impSubmissions =
               singleton $ IMP.mkSubmission @StandardPivo vk constSalt
                         $ mkImplementation impCommitSIPText impCommitVersion
-          , Pivo.Update.impRevelations = Empty
-          , Pivo.Update.impVotes       = Empty
           }
-    runPivoCmd (IMP IMPReveal {impRevelatorKeyFile, impRevelationSIPText, impRevelationVersion}) = do
+    runPivoCmd (IMP IMPReveal { impRevelatorKeyFile, impRevelationSIPText, impRevelationVersion }) = do
       vk <- readUpdateKeyFile impRevelatorKeyFile
       returnPayload $
-        Pivo.Update.Payload
-          { Pivo.Update.sipSubmissions = Empty
-          , Pivo.Update.sipRevelations = Empty
-          , Pivo.Update.sipVotes       = Empty
-          , Pivo.Update.impSubmissions = Empty
-          , Pivo.Update.impRevelations =
+        mempty
+          { Pivo.Update.impRevelations =
               singleton $ IMP.mkRevelation @StandardPivo vk constSalt
                         $ mkImplementation impRevelationSIPText impRevelationVersion
-          , Pivo.Update.impVotes       = Empty
           }
-    runPivoCmd (IMP IMPVote {impVoterKeyFile, impVotedSIPText, impVotedVersion}) = do
+    runPivoCmd (IMP IMPVote { impVoterKeyFile, impVotedSIPText, impVotedVersion }) = do
       vk <- readUpdateKeyFile impVoterKeyFile
       returnPayload $
-        Pivo.Update.Payload
-          { Pivo.Update.sipSubmissions = Empty
-          , Pivo.Update.sipRevelations = Empty
-          , Pivo.Update.sipVotes       = Empty
-          , Pivo.Update.impSubmissions = Empty
-          , Pivo.Update.impRevelations = Empty
-          , Pivo.Update.impVotes       =
+        mempty
+          { Pivo.Update.impVotes       =
               singleton $ IMP.mkVote @StandardPivo
                             vk
                             (SIP._id $ mkImplementation impVotedSIPText impVotedVersion)
                             SIP.For
+          }
+    runPivoCmd (END ENDCmd { endorserKeyFile, endorsedVersion }) = do
+      vk <- readUpdateKeyFile endorserKeyFile
+      returnPayload $
+        mempty
+          { Pivo.Update.endorsements =
+              singleton $ IMP.mkEndorsement @StandardPivo vk endorsedVersion
+
           }
     readUpdateKeyFile keyFile = do
       StakeVerificationKey (Shelley.Keys.VKey vk)

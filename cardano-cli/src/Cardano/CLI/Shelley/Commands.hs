@@ -22,6 +22,7 @@ module Cardano.CLI.Shelley.Commands
   , PivoCmd (..)
   , SIPCmd (..)
   , IMPCmd (..)
+  , ENDCmd (..)
 
     -- * CLI flag types
   , AddressKeyType (..)
@@ -332,6 +333,7 @@ data GovernanceCmd
 data PivoCmd
   = SIP SIPCmd
   | IMP IMPCmd
+  | END ENDCmd
   deriving Show
 
 data SIPCmd
@@ -364,6 +366,13 @@ data IMPCmd
       { impVoterKeyFile :: VerificationKeyFile
       , impVotedSIPText :: Text
       , impVotedVersion :: Word
+      }
+  deriving Show
+
+data ENDCmd
+  = ENDCmd
+      { endorserKeyFile :: VerificationKeyFile
+      , endorsedVersion :: Word
       }
   deriving Show
 
