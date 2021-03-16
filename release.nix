@@ -98,11 +98,11 @@ let
   };
 
   # Environments we want to build scripts for on hydra
-  environments = [ "mainnet" "testnet" "staging" "shelley_qa" "launchpad" "allegra" ];
+  environments = [ "mainnet" "testnet" "staging" "shelley_qa" ];
 
   extraBuilds = {
     # Environments listed in Network Configuration page
-    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet launchpad allegra; };
+    cardano-deployment = pkgs.iohkNix.cardanoLib.mkConfigHtml { inherit (pkgs.iohkNix.cardanoLib.environments) mainnet testnet; };
   } // (builtins.listToAttrs (map makeRelease environments));
 
   # restrict supported systems to a subset where tests (if exist) are required to pass:
