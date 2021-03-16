@@ -116,7 +116,7 @@ parseNodeHostIPv4Address str =
   maybe
     (Left $
       "Failed to parse: " ++ str ++
-      ". Use --host-ipv6-addr to specify IPv6 adddress")
+      ". Use --host-addr to specify IPv4 adddress")
     (Right . NodeHostIPv4Address)
     (readMaybe str)
 
@@ -125,7 +125,7 @@ parseNodeHostIPv6Address str =
   maybe
     (Left $
       "Failed to parse: " ++ str ++
-      ". Use --host-addr to specify IPv4 adddress")
+      ". Use --host-ipv6-addr to specify IPv6 adddress")
     (Right . NodeHostIPv6Address)
     (readMaybe str)
 
