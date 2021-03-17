@@ -117,31 +117,20 @@ deserialiseFromTextEnvelopeAnyOf te ts = foldr (<!>) defaultError (fmap (deseria
     defaultError = Left (TextEnvelopeDecodeError DecoderErrorVoid)
 
 readByteStringTextEnvelopeAnyOf2
-  :: [FromSomeType SerialiseAsCBOR b]
-  -> ByteString
+  :: ByteString
+  -> [FromSomeType SerialiseAsCBOR b]
   -> ExceptT DecodeCBORError IO b
-readByteStringTextEnvelopeAnyOf2 types content = hoistEither $ do
+readByteStringTextEnvelopeAnyOf2 content types = hoistEither $ do
   te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
   deserialiseFromTextEnvelopeAnyOf te types
 
-readByteStringInAnyCardanoEra
-  :: ( SerialiseAsCBOR (thing ByronEra)
-     , SerialiseAsCBOR (thing ShelleyEra)
-     , SerialiseAsCBOR (thing AllegraEra)
-     , SerialiseAsCBOR (thing MaryEra)
-     )
-  => (forall era. AsType era -> AsType (thing era))
-  -> ByteString
-  -> ExceptT DecodeCBORError IO (InAnyCardanoEra thing)
-readByteStringInAnyCardanoEra asThing = readByteStringTextEnvelopeAnyOf2
-  [ FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
-  , FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
-  , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
-  , FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
-  ]
-
 readByteStringTx :: ByteString -> ExceptT TxCmdError IO (InAnyCardanoEra Tx)
-readByteStringTx bs = firstExceptT TxCmdTxReadError $ readByteStringInAnyCardanoEra AsTx bs
+readByteStringTx bs = firstExceptT TxCmdTxReadError $ readByteStringTextEnvelopeAnyOf2 bs
+  [ FromSomeType (AsTx AsByronEra)   (InAnyCardanoEra ByronEra)
+  , FromSomeType (AsTx AsShelleyEra) (InAnyCardanoEra ShelleyEra)
+  , FromSomeType (AsTx AsAllegraEra) (InAnyCardanoEra AllegraEra)
+  , FromSomeType (AsTx AsMaryEra)    (InAnyCardanoEra MaryEra)
+  ]
 
 txSubmitPost
   :: Trace IO Text
