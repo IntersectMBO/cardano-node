@@ -1,6 +1,27 @@
 # Changelog for cardano-cli
 
-## 1.25.0 -- January 2020
+## 1.26.0 -- March 2021
+- Add three new queries to the CLI, exposing functionality already present in
+  the API:
+  - Protocol parameters
+  - Stake distribution
+  - Individual stake addresses
+  (#2275, #2290)
+- Fix the rendering of Byron-era `TxOut`s to be consistent with the rendering for
+  Shelley-era addresses. (#2472)
+- Add the ability to calculate the minimum deposit needed for a transaction to
+  the CLI, given a value. (#2325)
+- Add `cardano-cli transaction view`, which allows for pretty-printing details
+  about a serialised transaction. (#2348)
+- When constructing MIR certificates, the CLI now takes stake addresses rather
+  than stake certificates. These are strictly more general and can be deduced
+  from the certificates.
+- Make the Mary era the default era in the CLI (#2415)
+- Migrate the `cardano-submit-api` tool from `cardano-rest`. (#2370)
+- The 'tip' query now additionally returns the epoch at the tip (#2440)
+- Various internal improvements and refactoring (#2458)
+
+## 1.25.0 -- January 2021
 - Allow creating transactions with no outputs (#2223, #2226)
 - Improved error messages for syntax errors in out-of-range lovelace quantities
   in transaction outputs (#2063, #2079)
