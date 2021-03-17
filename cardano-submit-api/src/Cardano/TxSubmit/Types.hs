@@ -10,7 +10,7 @@ module Cardano.TxSubmit.Types
   , TxSubmitPort (..)
   , EnvSocketError(..)
   , TxCmdError(..)
-  , DecodeCBORError(..)
+  , RawCborDecodeError(..)
   , renderTxSubmitWebApiError
   , renderTxCmdError
   ) where
@@ -35,18 +35,11 @@ newtype TxSubmitPort = TxSubmitPort Int
 
 -- | The errors that the pure 'TextEnvelope' parsing\/decoding functions can return.
 --
-data DecodeCBORError
-  = TextEnvelopeTypeError
-  | TextEnvelopeDecodeError !DecoderError
-  | TextEnvelopeAesonDecodeError !String
+newtype RawCborDecodeError = RawCborDecodeError DecoderError
   deriving (Eq, Show)
 
-instance Error DecodeCBORError where
-  displayError tee =
-    case tee of
-      TextEnvelopeTypeError -> "TextEnvelope type error: "
-      TextEnvelopeAesonDecodeError decErr -> "TextEnvelope aeson decode error: " <> decErr
-      TextEnvelopeDecodeError decErr -> "TextEnvelope decode error: " <> show decErr
+instance Error RawCborDecodeError where
+  displayError (RawCborDecodeError decErr) = "TextEnvelope decode error: " <> show decErr
 
 -- | An error that can occur in the transaction submission web API.
 data TxSubmitWebApiError
@@ -61,7 +54,7 @@ newtype EnvSocketError = CliEnvVarLookup Text deriving (Eq, Show)
 data TxCmdError
   = TxCmdSocketEnvError EnvSocketError
   | TxCmdEraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
-  | TxCmdTxReadError !DecodeCBORError
+  | TxCmdTxReadError !RawCborDecodeError
   | TxCmdTxSubmitError !Text
   | TxCmdTxSubmitErrorEraMismatch !EraMismatch
 
