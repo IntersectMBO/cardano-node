@@ -163,7 +163,7 @@ executable cardano-node
   ghc-options:          -threaded
                         -rtsopts
 
-  ghc-options:          "-with-rtsopts=-T -I0 -N1 -A16m"
+  ghc-options:          "-with-rtsopts=-T -I0 -A16m"
   if arch(arm)
     ghc-options:        "-with-rtsopts=-N1"
   else
