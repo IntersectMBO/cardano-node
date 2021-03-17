@@ -10,11 +10,12 @@ module Cardano.TxSubmit.Types
   , TxSubmitPort (..)
   , EnvSocketError(..)
   , TxCmdError(..)
+  , RawCborDecodeError(..)
   , renderTxSubmitWebApiError
   , renderTxCmdError
   ) where
 
-import           Cardano.Api (AnyCardanoEra, AnyConsensusMode (..), TextEnvelopeError, TxId)
+import           Cardano.Api (AnyCardanoEra, AnyConsensusMode (..), Error (..), TxId)
 import           Cardano.Binary (DecoderError)
 import           Cardano.TxSubmit.Util (textShow)
 import           Data.Aeson (ToJSON (..), Value (..))
@@ -29,8 +30,17 @@ import           Servant (Accept (..), JSON, MimeRender (..), MimeUnrender (..),
 import           Servant.API.Generic (ToServantApi, (:-))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.List as L
 
 newtype TxSubmitPort = TxSubmitPort Int
+
+-- | The errors that the raw CBOR transaction parsing\/decoding functions can return.
+--
+newtype RawCborDecodeError = RawCborDecodeError [DecoderError]
+  deriving (Eq, Show)
+
+instance Error RawCborDecodeError where
+  displayError (RawCborDecodeError decodeErrors) = "RawCborDecodeError decode error: \n" <> L.intercalate "  \n" (fmap show decodeErrors)
 
 -- | An error that can occur in the transaction submission web API.
 data TxSubmitWebApiError
@@ -45,7 +55,7 @@ newtype EnvSocketError = CliEnvVarLookup Text deriving (Eq, Show)
 data TxCmdError
   = TxCmdSocketEnvError EnvSocketError
   | TxCmdEraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
-  | TxCmdTxReadError !TextEnvelopeError
+  | TxCmdTxReadError !RawCborDecodeError
   | TxCmdTxSubmitError !Text
   | TxCmdTxSubmitErrorEraMismatch !EraMismatch
 
