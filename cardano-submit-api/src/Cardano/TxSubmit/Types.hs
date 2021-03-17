@@ -20,6 +20,7 @@ import           Cardano.Binary (DecoderError)
 import           Cardano.TxSubmit.Util (textShow)
 import           Data.Aeson (ToJSON (..), Value (..))
 import           Data.ByteString.Char8 (ByteString)
+import           Data.List.NonEmpty (NonEmpty)
 import           Data.Text (Text)
 import           Formatting (build, sformat)
 import           GHC.Generics (Generic)
@@ -30,16 +31,18 @@ import           Servant (Accept (..), JSON, MimeRender (..), MimeUnrender (..),
 import           Servant.API.Generic (ToServantApi, (:-))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.List as L
+import qualified Data.List.NonEmpty as NEL
 
 newtype TxSubmitPort = TxSubmitPort Int
 
 -- | The errors that the pure 'TextEnvelope' parsing\/decoding functions can return.
 --
-newtype RawCborDecodeError = RawCborDecodeError DecoderError
+newtype RawCborDecodeError = RawCborDecodeError (NonEmpty DecoderError)
   deriving (Eq, Show)
 
 instance Error RawCborDecodeError where
-  displayError (RawCborDecodeError decErr) = "TextEnvelope decode error: " <> show decErr
+  displayError (RawCborDecodeError decodeErrors) = "TextEnvelope decode error: \n" <> L.intercalate "  \n" (fmap show (NEL.toList decodeErrors))
 
 -- | An error that can occur in the transaction submission web API.
 data TxSubmitWebApiError

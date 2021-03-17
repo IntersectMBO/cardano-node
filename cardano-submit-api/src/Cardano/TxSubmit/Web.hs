@@ -36,10 +36,11 @@ import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    hoistMaybe, left, newExceptT)
 import           Data.Aeson (ToJSON (..))
-import           Data.Bifunctor (first)
+import           Data.Bifunctor (first, second)
 import           Data.ByteString.Char8 (ByteString)
-import           Data.Either (rights)
+import           Data.Either (isRight, lefts, partitionEithers, rights)
 import           Data.Functor.Alt ((<!>))
+import           Data.Maybe (listToMaybe)
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -55,6 +56,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Char as Char
 import qualified Data.List as L
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
@@ -104,17 +106,21 @@ readEnvSocketPath =
 deserialiseOne :: forall b. ()
   => FromSomeType SerialiseAsCBOR b
   -> ByteString
-  -> Either RawCborDecodeError b
-deserialiseOne (FromSomeType ttoken f) bs = first RawCborDecodeError $ f <$> deserialiseFromCBOR ttoken bs
+  -> Either DecoderError b
+deserialiseOne (FromSomeType ttoken f) bs = f <$> deserialiseFromCBOR ttoken bs
 
 deserialiseAnyOf :: forall b. ()
   => [FromSomeType SerialiseAsCBOR b]
   -> ByteString
   -> Either RawCborDecodeError b
-deserialiseAnyOf ts te = foldr (<!>) defaultError (fmap (`deserialiseOne` te) ts)
+deserialiseAnyOf ts te = let (es, as) = partitionEithers results in maybe (errors es) Right (listToMaybe as)
   where
-    defaultError :: Either RawCborDecodeError b
-    defaultError = Left (RawCborDecodeError DecoderErrorVoid)
+    results = fmap (`deserialiseOne` te) ts
+
+    errors :: [DecoderError] -> Either RawCborDecodeError b
+    errors es = case NEL.nonEmpty es of
+      Just fs -> Left (RawCborDecodeError fs)
+      Nothing -> Left (RawCborDecodeError (pure DecoderErrorVoid)) -- Should never hapen
 
 readByteStringTx :: ByteString -> ExceptT TxCmdError IO (InAnyCardanoEra Tx)
 readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyOf
