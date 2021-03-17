@@ -25,7 +25,6 @@ To create a transaction in the shelley era we need to follow this process:
 Query and save the parameters in **protocol.json**
 
     cardano-cli query protocol-parameters \
-    --shelley-era \
     --mainnet \
     --out-file protocol.json
 

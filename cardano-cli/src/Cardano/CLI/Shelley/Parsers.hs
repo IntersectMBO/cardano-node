@@ -669,23 +669,20 @@ pQueryCmd =
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters'
-        <$> pCardanoEra
-        <*> pConsensusModeParams
+        <$> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip
-                  <$> pCardanoEra
-                  <*> pConsensusModeParams
+                  <$> pConsensusModeParams
                   <*> pNetworkId
                   <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO'
-        <$> pCardanoEra
-        <*> pConsensusModeParams
+        <$> pConsensusModeParams
         <*> pQueryFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
@@ -693,31 +690,27 @@ pQueryCmd =
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution'
-        <$> pCardanoEra
-        <*> pConsensusModeParams
+        <$> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
-        <$> pCardanoEra
-        <*> pConsensusModeParams
+        <$> pConsensusModeParams
         <*> pFilterByStakeAddress
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
     pQueryLedgerState = QueryLedgerState'
-                          <$> pCardanoEra
-                          <*> pConsensusModeParams
+                          <$> pConsensusModeParams
                           <*> pNetworkId
                           <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
     pQueryProtocolState = QueryProtocolState'
-                            <$> pCardanoEra
-                            <*> pConsensusModeParams
+                            <$> pConsensusModeParams
                             <*> pNetworkId
                             <*> pMaybeOutputFile
 

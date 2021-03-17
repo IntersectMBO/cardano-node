@@ -286,13 +286,13 @@ renderPoolCmd cmd =
     PoolMetadataHash {} -> "stake-pool metadata-hash"
 
 data QueryCmd =
-    QueryProtocolParameters' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryTip AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeDistribution' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryStakeAddressInfo AnyCardanoEra AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO' AnyCardanoEra AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
-  | QueryLedgerState' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
-  | QueryProtocolState' AnyCardanoEra AnyConsensusModeParams NetworkId (Maybe OutputFile)
+    QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
+  | QueryUTxO' AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
+  | QueryLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text

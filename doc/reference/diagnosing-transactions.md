@@ -24,7 +24,6 @@ f5296e996940b1c81f781594293d423b4250a454f5832b0740a923f74460d34
 **Solution**: Make sure that you are using a correct UTXO. You can query this with:
 
 ```$ cardano-cli query utxo \
- --shelley-era \
  --address $(cat payment.addr) \
  --mainnet
 ```
@@ -32,7 +31,6 @@ f5296e996940b1c81f781594293d423b4250a454f5832b0740a923f74460d34
 **Problem**: ExpiredUTxO
 
 ```$ cardano-cli transaction submit \
-> --shelley-era \
 > --tx-file tx001.signed \
 > --mainnet
 ```
@@ -48,7 +46,6 @@ Build a new transaction with a invalid-hereafter higher than Current Slot. As a 
 **Problem**: ValueNotConservedUTxO
 
 ```$ cardano-cli transaction submit \
-> --shelley-era \
 > --tx-file tx001.signed \
 > --mainnet
 ```
@@ -62,7 +59,6 @@ Build a new transaction with a invalid-hereafter higher than Current Slot. As a 
 **Problem**: BadInputsUTxO
 
 ```$ cardano-cli transaction submit \
---shelley-era \
 --tx-file tx001.signed \
 --mainnet
 ```
@@ -73,7 +69,6 @@ Build a new transaction with a invalid-hereafter higher than Current Slot. As a 
 **Solution**: Verify the UTXO transaction index using:
 
 ```$ cardano-cli query utxo \
- --shelley-era \
  --address $(cat payment.addr) \
  --mainnet
 ```
