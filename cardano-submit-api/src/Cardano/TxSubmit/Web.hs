@@ -22,7 +22,7 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra),
                    TxValidationErrorInMode (TxValidationEraMismatch, TxValidationErrorInMode),
                    consensusModeOnly, getTxBody, getTxId, submitTxToNodeLocal, toEraInMode)
 import           Cardano.BM.Trace (Trace, logInfo)
-import           Cardano.Binary (DecoderError)
+import           Cardano.Binary (DecoderError (..))
 import           Cardano.TxSubmit.CLI.Types (SocketPath (SocketPath))
 import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
@@ -39,6 +39,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Data.Aeson (ToJSON (..))
 import           Data.Bifunctor (first)
 import           Data.ByteString.Char8 (ByteString)
+import           Data.Either (rights)
+import           Data.Functor.Alt ((<!>))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -100,25 +102,20 @@ readEnvSocketPath =
     envName :: String
     envName = "CARDANO_NODE_SOCKET_PATH"
 
-
+deserialiseOne :: forall b. ()
+  => TextEnvelope
+  -> FromSomeType HasTextEnvelope b
+  -> Either TextEnvelopeError b
+deserialiseOne te (FromSomeType ttoken f) = first TextEnvelopeDecodeError $ f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
 
 deserialiseFromTextEnvelopeAnyOf :: forall b. ()
-  => [FromSomeType HasTextEnvelope b]
-  -> TextEnvelope
+  => TextEnvelope
+  -> [FromSomeType HasTextEnvelope b]
   -> Either TextEnvelopeError b
-deserialiseFromTextEnvelopeAnyOf types te =
-    case L.find matching types of
-      Nothing -> Left (TextEnvelopeTypeError expectedTypes actualType)
-      Just (FromSomeType ttoken f) -> first TextEnvelopeDecodeError $ f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
+deserialiseFromTextEnvelopeAnyOf te ts = foldr (<!>) defaultError (fmap (deserialiseOne te) ts)
   where
-    actualType :: TextEnvelopeType
-    actualType = teType te
-
-    expectedTypes :: [TextEnvelopeType]
-    expectedTypes = [ textEnvelopeType ttoken | FromSomeType ttoken _f <- types ]
-
-    matching :: FromSomeType HasTextEnvelope b -> Bool
-    matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
+    defaultError :: Either TextEnvelopeError b
+    defaultError = Left (TextEnvelopeDecodeError DecoderErrorVoid)
 
 readByteStringTextEnvelopeAnyOf2
   :: [FromSomeType HasTextEnvelope b]
@@ -126,7 +123,7 @@ readByteStringTextEnvelopeAnyOf2
   -> ExceptT TextEnvelopeError IO b
 readByteStringTextEnvelopeAnyOf2 types content = hoistEither $ do
   te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-  deserialiseFromTextEnvelopeAnyOf types te
+  deserialiseFromTextEnvelopeAnyOf te types
 
 readByteStringInAnyCardanoEra
   :: ( HasTextEnvelope (thing ByronEra)

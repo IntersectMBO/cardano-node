@@ -36,6 +36,7 @@ common ouroboros-consensus-cardano  { build-depends: ouroboros-consensus-cardano
 common ouroboros-network            { build-depends: ouroboros-network                >= 0.1.0.0                  }
 common prometheus                   { build-depends: prometheus                       >= 2.2.2                    }
 common protolude                    { build-depends: protolude                        >= 0.3.0                    }
+common semigroupoids                { build-depends: semigroupoids                    >= 5.3.5                    }
 common servant                      { build-depends: servant                          >= 0.18.2                   }
 common servant-server               { build-depends: servant-server                   >= 0.18.2                   }
 common streaming-commons            { build-depends: streaming-commons                >= 0.2.2.1                  }
@@ -82,6 +83,7 @@ library
                       , ouroboros-network
                       , prometheus
                       , protolude
+                      , semigroupoids
                       , servant
                       , servant-server
                       , streaming-commons
