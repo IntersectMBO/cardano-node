@@ -14,8 +14,7 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra),
                    AnyConsensusMode (AnyConsensusMode), AnyConsensusModeParams (..),
                    AsType (AsAllegraEra, AsByronEra, AsMaryEra, AsShelleyEra, AsTx), ByronEra,
                    CardanoEra (AllegraEra, ByronEra, MaryEra, ShelleyEra), Error (..),
-                   FromSomeType (..), HasTextEnvelope (..), HasTypeProxy (AsType),
-                   InAnyCardanoEra (..),
+                   FromSomeType (..), HasTypeProxy (AsType), InAnyCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
                    MaryEra, NetworkId, SerialiseAsCBOR (..), ShelleyEra, TextEnvelope (..),
                    TextEnvelopeType (..), ToJSON, Tx, TxId (..), TxInMode (TxInMode),
@@ -104,13 +103,13 @@ readEnvSocketPath =
 
 deserialiseOne :: forall b. ()
   => TextEnvelope
-  -> FromSomeType HasTextEnvelope b
+  -> FromSomeType SerialiseAsCBOR b
   -> Either DecodeCBORError b
 deserialiseOne te (FromSomeType ttoken f) = first TextEnvelopeDecodeError $ f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
 
 deserialiseFromTextEnvelopeAnyOf :: forall b. ()
   => TextEnvelope
-  -> [FromSomeType HasTextEnvelope b]
+  -> [FromSomeType SerialiseAsCBOR b]
   -> Either DecodeCBORError b
 deserialiseFromTextEnvelopeAnyOf te ts = foldr (<!>) defaultError (fmap (deserialiseOne te) ts)
   where
@@ -118,7 +117,7 @@ deserialiseFromTextEnvelopeAnyOf te ts = foldr (<!>) defaultError (fmap (deseria
     defaultError = Left (TextEnvelopeDecodeError DecoderErrorVoid)
 
 readByteStringTextEnvelopeAnyOf2
-  :: [FromSomeType HasTextEnvelope b]
+  :: [FromSomeType SerialiseAsCBOR b]
   -> ByteString
   -> ExceptT DecodeCBORError IO b
 readByteStringTextEnvelopeAnyOf2 types content = hoistEither $ do
@@ -126,10 +125,10 @@ readByteStringTextEnvelopeAnyOf2 types content = hoistEither $ do
   deserialiseFromTextEnvelopeAnyOf te types
 
 readByteStringInAnyCardanoEra
-  :: ( HasTextEnvelope (thing ByronEra)
-     , HasTextEnvelope (thing ShelleyEra)
-     , HasTextEnvelope (thing AllegraEra)
-     , HasTextEnvelope (thing MaryEra)
+  :: ( SerialiseAsCBOR (thing ByronEra)
+     , SerialiseAsCBOR (thing ShelleyEra)
+     , SerialiseAsCBOR (thing AllegraEra)
+     , SerialiseAsCBOR (thing MaryEra)
      )
   => (forall era. AsType era -> AsType (thing era))
   -> ByteString
