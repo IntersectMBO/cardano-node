@@ -13,12 +13,12 @@ module Cardano.TxSubmit.Web
 import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra),
                    AnyConsensusMode (AnyConsensusMode), AnyConsensusModeParams (..),
                    AsType (AsAllegraEra, AsByronEra, AsMaryEra, AsShelleyEra, AsTx), ByronEra,
-                   CardanoEra (AllegraEra, ByronEra, MaryEra, ShelleyEra), FromSomeType (..),
-                   HasTextEnvelope (..), HasTypeProxy (AsType), InAnyCardanoEra (..),
+                   CardanoEra (AllegraEra, ByronEra, MaryEra, ShelleyEra), Error (..),
+                   FromSomeType (..), HasTextEnvelope (..), HasTypeProxy (AsType),
+                   InAnyCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
                    MaryEra, NetworkId, SerialiseAsCBOR (..), ShelleyEra, TextEnvelope (..),
-                   TextEnvelopeError (..), TextEnvelopeType, ToJSON, Tx, TxId (..),
-                   TxInMode (TxInMode),
+                   TextEnvelopeType (..), ToJSON, Tx, TxId (..), TxInMode (TxInMode),
                    TxValidationErrorInMode (TxValidationEraMismatch, TxValidationErrorInMode),
                    consensusModeOnly, getTxBody, getTxId, submitTxToNodeLocal, toEraInMode)
 import           Cardano.BM.Trace (Trace, logInfo)
@@ -26,7 +26,7 @@ import           Cardano.Binary (DecoderError (..))
 import           Cardano.TxSubmit.CLI.Types (SocketPath (SocketPath))
 import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
-import           Cardano.TxSubmit.Types (EnvSocketError (..),
+import           Cardano.TxSubmit.Types (DecodeCBORError (..), EnvSocketError (..),
                    TxCmdError (TxCmdEraConsensusModeMismatch, TxCmdTxReadError, TxCmdTxSubmitError, TxCmdTxSubmitErrorEraMismatch),
                    TxSubmitApi, TxSubmitApiRecord (..), TxSubmitWebApiError (TxSubmitFail),
                    renderTxCmdError)
@@ -105,22 +105,22 @@ readEnvSocketPath =
 deserialiseOne :: forall b. ()
   => TextEnvelope
   -> FromSomeType HasTextEnvelope b
-  -> Either TextEnvelopeError b
+  -> Either DecodeCBORError b
 deserialiseOne te (FromSomeType ttoken f) = first TextEnvelopeDecodeError $ f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
 
 deserialiseFromTextEnvelopeAnyOf :: forall b. ()
   => TextEnvelope
   -> [FromSomeType HasTextEnvelope b]
-  -> Either TextEnvelopeError b
+  -> Either DecodeCBORError b
 deserialiseFromTextEnvelopeAnyOf te ts = foldr (<!>) defaultError (fmap (deserialiseOne te) ts)
   where
-    defaultError :: Either TextEnvelopeError b
+    defaultError :: Either DecodeCBORError b
     defaultError = Left (TextEnvelopeDecodeError DecoderErrorVoid)
 
 readByteStringTextEnvelopeAnyOf2
   :: [FromSomeType HasTextEnvelope b]
   -> ByteString
-  -> ExceptT TextEnvelopeError IO b
+  -> ExceptT DecodeCBORError IO b
 readByteStringTextEnvelopeAnyOf2 types content = hoistEither $ do
   te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
   deserialiseFromTextEnvelopeAnyOf te types
@@ -133,7 +133,7 @@ readByteStringInAnyCardanoEra
      )
   => (forall era. AsType era -> AsType (thing era))
   -> ByteString
-  -> ExceptT TextEnvelopeError IO (InAnyCardanoEra thing)
+  -> ExceptT DecodeCBORError IO (InAnyCardanoEra thing)
 readByteStringInAnyCardanoEra asThing = readByteStringTextEnvelopeAnyOf2
   [ FromSomeType (asThing AsByronEra)   (InAnyCardanoEra ByronEra)
   , FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)

@@ -360,7 +360,7 @@ module Cardano.Api (
     -- binary payload.
     HasTextEnvelope(..),
     TextEnvelope(..),
-    TextEnvelopeType,
+    TextEnvelopeType(..),
     TextEnvelopeDescr,
     TextEnvelopeError(..),
     textEnvelopeRawCBOR,
