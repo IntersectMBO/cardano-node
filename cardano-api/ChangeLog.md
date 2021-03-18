@@ -4,6 +4,8 @@
 - Added a demo for the use of cardano-client. This is an API to allow writing
   programs to interact with the cardano node. (#2295, #2303)
 - Removed code pertaining to the old IPC API (#2319)
+- Add the ability to calculate the minimum deposit needed for a transaction to
+  the API, given a value. (#2325)
 - When querying the NodeLocalState, make the query point optional, and use the
   chain tip when not specified. (#2241)
 - Various internal improvements and refactoring (#2349, #2458)
