@@ -9,8 +9,6 @@
   (#2275, #2290)
 - Fix the rendering of Byron-era `TxOut`s to be consistent with the rendering for
   Shelley-era addresses. (#2472)
-- Add the ability to calculate the minimum deposit needed for a transaction to
-  the CLI, given a value. (#2325)
 - Add `cardano-cli transaction view`, which allows for pretty-printing details
   about a serialised transaction. (#2348)
 - When constructing MIR certificates, the CLI now takes stake addresses rather
