@@ -26,6 +26,7 @@ import           Cardano.Node.Orphans ()
 data TraceOptions
   = TracingOff
   | TracingOn TraceSelection
+  | TracingOnNew TraceSelection
   deriving (Eq, Show)
 
 type TraceAcceptPolicy = ("TraceAcceptPolicy" :: Symbol)
@@ -185,7 +186,7 @@ traceConfigParser v =
       txSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
       txSubmission2Protocol = OnOff False in
 
-  TracingOn <$> (TraceSelection
+  TracingOnNew <$> (TraceSelection
     <$> v .:? "TracingVerbosity" .!= NormalVerbosity
     -- Per-trace toggles, alpha-sorted.
     <*> v .:? getName acceptPolicy .!= acceptPolicy
