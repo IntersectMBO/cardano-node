@@ -145,6 +145,7 @@ library
                       , text
                       , time
                       , tracer-transformers
+                      , trace-dispatcher
                       , transformers
                       , transformers-except
                       , unordered-containers
