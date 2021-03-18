@@ -15,7 +15,7 @@ category:               Language
 build-type:             Simple
 extra-source-files:     CHANGELOG.md
 
-common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+common base                         { build-depends: base                             >= 4.14       && < 4.15     }
 
 common cardano-api                  { build-depends: cardano-api                                                  }
 common cardano-submit-api           { build-depends: cardano-submit-api                                           }
