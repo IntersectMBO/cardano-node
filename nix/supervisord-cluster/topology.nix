@@ -55,6 +55,8 @@ in
              inherit i;
            }));
 
+  topologyPdf = "${stateDir}/topology.pdf";
+
   mkTopologyBash =
     ''
   mkdir -p "${stateDir}/topologies"

@@ -89,16 +89,24 @@ let
 
     if [ -f ${stateDir}/supervisord.pid ]
     then echo "Cluster already running. Please run 'stop-cluster' first!"
-         exit 1
-    else cat <<EOF
+         exit 1; fi
+
+    cat <<EOF
 Starting cluster:
-  - profile:      ${profile.name}
-  - profile JSON: ${profileJSONFile}
-  - state dir:    ${stateDir}
-  - topology:     ${topologyNixopsFile}
+  - state dir:       ${stateDir}
+  - topology:        ${topologyNixopsFile}, ${topology.topologyPdf}
+  - node port base:  ${toString basePort}
+  - EKG URLs:        http://localhost:${toString (node-setups.nodeIndexToEkgPort 0)}/
+  - Prometheus URLs: http://localhost:${toString (node-setups.nodeIndexToPrometheusPort 0)}/metrics
+  - profile JSON:    ${profileJSONFile}
 
 EOF
-    fi
+
+    ${pkgs.jq}/bin/jq '
+      include "profiles/derived" { search: "${./.}" };
+
+      profile_pretty_describe(.)
+      ' ${profileJSONFile} --raw-output
 
     rm -rf ${stateDir}
 
@@ -108,8 +116,6 @@ EOF
     ${topology.mkTopologyBash}
 
     ${mkGenesisBash}
-
-    echo "Profile '${profile.name}' dump in: ${profileJSONFile}"
 
     ${__concatStringsSep "\n"
       (flip mapAttrsToList node-setups.nodeSetups

@@ -45,6 +45,9 @@ let
     };
     in f envConfig eval.config.services.cardano-node;
 
+  nodeIndexToEkgPort        = i: basePort + 100 + i;
+  nodeIndexToPrometheusPort = i: basePort + 200 + i;
+
   ##
   ## nodeSpecEnvConfig :: NodeSpec -> EnvConfig
   ##
@@ -54,8 +57,8 @@ let
         baseEnvConfig
         ({ nodeConfig =
              {
-               hasEKG           =                30100 + i;
-               hasPrometheus    = [ "127.0.0.1" (30200 + i) ];
+               hasEKG           = nodeIndexToEkgPort i;
+               hasPrometheus    = [ "127.0.0.1" (nodeIndexToPrometheusPort i) ];
 
                TracingVerbosity = "NormalVerbosity";
                minSeverity      = "Debug";
@@ -115,4 +118,5 @@ let
 in
 {
   inherit nodeSetups;
+  inherit nodeIndexToEkgPort nodeIndexToPrometheusPort;
 }
