@@ -227,7 +227,7 @@ let
     if test -f "$genesis_cache_path"/cache.params.id
     then genesis_cache_hit=t; genesis_cache_hit_desc='hit'
     else genesis_cache_hit=;  genesis_cache_hit_desc='miss'; fi
-    echo "genesis cache $genesis_cache_hit_desc:  $genesis_cache_id"
+    echo "Genesis cache $genesis_cache_hit_desc:  $genesis_cache_id"
 
     regenesis_causes=()
     if   test -z "$genesis_cache_hit"
@@ -237,7 +237,7 @@ let
     fi
 
     if test -n "''${regenesis_causes[*]}"
-    then echo "generating genesis due to ''${regenesis_causes[*]}:  $genesis_cache_id @$genesis_cache_path"
+    then echo "..generating genesis due to ''${regenesis_causes[*]}:  $genesis_cache_id @$genesis_cache_path"
          rm -rf "$genesis_cache_path"/{*-keys,pools,nodes,*.json,*.params}
          mkdir -p "$genesis_cache_path"
 
@@ -321,12 +321,5 @@ in
 
     ${shelleyGenesis}
 
-    cat <<EOF
-    Generated genesis for ${name} (cache id $genesis_cache_id):
-      - BFT hosts:        ${toString composition.n_bft_hosts}
-      - pool hosts:       ${toString (composition.n_hosts - composition.n_bft_hosts)}
-      - pools:            ${toString composition.n_pools}, of them:
-        - regular:          ${toString composition.n_singular_pools}
-        - dense:            ${toString composition.n_dense_pools}, at ${toString composition.dense_pool_density} density in ${toString composition.n_dense_hosts} hosts
-    EOF
+    echo "Generated genesis for ${name} (cache id $genesis_cache_id)"
 ''
