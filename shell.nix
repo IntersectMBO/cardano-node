@@ -29,6 +29,7 @@ let
     # These programs will be available inside the nix-shell.
     buildInputs = with haskellPackages; [
       cabal-install
+      cardano-ping
       ghcid
       hlint
       weeder
