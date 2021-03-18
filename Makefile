@@ -34,10 +34,22 @@ test-chairmans-cluster:
 	@scripts/chairmans-cluster/cluster-test.sh
 
 profiles:
-	@jq . $$(nix-build -A profiles)
+	@jq .    $$(nix-build -A profiles)
+
+profile-names:
+	@jq keys $$(nix-build -A profiles)
+
+CLUSTER_PROFILE    = default-mary
+CLUSTER_ARGS_EXTRA =
 
 cluster-shell:
-	nix-shell --max-jobs 8 --cores 0 -A 'devops' --arg 'autoStartCluster' 'true'
+	nix-shell --max-jobs 8 --cores 0 --command 'start-cluster; return' --argstr clusterProfile ${CLUSTER_PROFILE} --command 'start-cluster ${CLUSTER_ARGS_EXTRA}; return'
+
+cluster-shell-trace:             CLUSTER_ARGS_EXTRA = --trace
+large-state-cluster-shell-trace: CLUSTER_ARGS_EXTRA = --trace
+large-state-cluster-shell:       CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
+large-state-cluster-shell-trace: CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
+cluster-shell-trace large-state-cluster-shell large-state-cluster-shell-trace: cluster-shell
 
 cabal-setup setup:
 	./scripts/cabal-inside-nix-shell.sh

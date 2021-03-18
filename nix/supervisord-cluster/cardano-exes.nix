@@ -35,9 +35,9 @@ function topology() {
 ${optionalString useCabalRun
   ''
   echo 'Prebuilding executables with Cabal..'
-  ${cabal-install}/bin/cabal build exe:cardano-cli
-  ${cabal-install}/bin/cabal build exe:cardano-node
-  ${cabal-install}/bin/cabal build exe:cardano-topology
+  ${cabal-install}/bin/cabal -v0 build exe:cardano-cli
+  ${cabal-install}/bin/cabal -v0 build exe:cardano-node
+  ${cabal-install}/bin/cabal -v0 build exe:cardano-topology
   ''}
 ${optionalString (!useCabalRun)
   ''

@@ -4,7 +4,8 @@
 , autoStartCluster ? false
 , sourcesOverride ? {}
 , withHoogle ? true
-, customConfig ? {}
+, clusterProfile ? "default-mary"
+, customConfig ? { profileName = clusterProfile; }
 , pkgs ? import ./nix {
     inherit config sourcesOverride;
   }
@@ -16,8 +17,8 @@ let
   # NOTE: due to some cabal limitation,
   #  you have to remove all `source-repository-package` entries from cabal.project
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
-  clusterCabal = mkCluster (customConfig // { useCabalRun = true; });
-  clusterNix   = mkCluster (customConfig // { useCabalRun = false; });
+  clusterCabal = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = true; });
+  clusterNix   = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = false; });
   shell = cardanoNodeHaskellPackages.shellFor {
     name = "cabal-dev-shell";
 
@@ -28,6 +29,7 @@ let
     # These programs will be available inside the nix-shell.
     buildInputs = with haskellPackages; [
       cabal-install
+      cardano-ping
       ghcid
       hlint
       weeder
@@ -36,6 +38,7 @@ let
       pkgconfig
       profiteur
       profiterole
+      python3Packages.supervisor
       ghc-prof-flamegraph
       sqlite-interactive
       tmux
@@ -89,7 +92,7 @@ let
       source <(cardano-node --bash-completion-script cardano-node)
 
       # Socket path default to first BFT node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.baseEnvConfig.stateDir}/bft1.socket
+      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.baseEnvConfig.stateDir}/bft0.socket
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
         export CARDANO_NODE_SOCKET_PATH="$PWD/state-node-${customConfig.network}/node.socket"

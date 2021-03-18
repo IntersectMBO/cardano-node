@@ -31,6 +31,9 @@ def profile_name($p):
              $p.generator; $generator_defaults; 1; "i")
   + may_attr("outputs_per_tx";
              $p.generator; $generator_defaults; 1; "o")
+  + if $p.composition.with_observer | not
+    then ["nobs"]
+    else [] end
   | join("-");
 
 def profile_name_era_suffix($era):
@@ -68,12 +71,14 @@ def add_derived_params:
          , n_singular_pools:      $n_singular_pools
          , n_dense_hosts:         $hosts.dense
          , n_dense_pools:         $n_dense_pools
+         , n_pool_hosts:          ($hosts.singular + $hosts.dense)
          }
      , genesis:
          { genesis_future_offset: $future_offset
          , delegators:            ($gsis.delegators // $n_pools)
          , pool_coin:             ($gsis.pools_balance / $n_pools | floor)
          , verbatim:
+           ## TODO: duplication
            { protocolParams:
              { activeSlotsCoeff:           $gsis.active_slots_coeff
              , epochLength:                $gsis.epoch_length
@@ -118,3 +123,20 @@ def add_derived_params:
     , cli_args: profile_cli_args(.)
     }
 ;
+
+def profile_pretty_describe($p):
+  [ "Profile: \($p.name)"
+  , "  - era:                \($p.era)"
+  , "  - epoch slots:        \($p.genesis.epoch_length)"
+  , "  - slot duration:      \($p.genesis.slot_duration)"
+  , "  - k:                  \($p.genesis.parameter_k)"
+  , "  - active slots coeff: \($p.genesis.active_slots_coeff)"
+  , "  - hosts:              \($p.composition.n_hosts)"
+  , "  - pools:              \($p.composition.n_pools)"
+  , "    - normal:             \($p.composition.n_singular_pools)"
+  , "    - dense:              \($p.composition.n_dense_pools)"
+  , "  - UTxO:               \($p.genesis.utxo)"
+  , "  - delegators:         \($p.genesis.delegators)"
+  , ""
+  ]
+  | join("\n");

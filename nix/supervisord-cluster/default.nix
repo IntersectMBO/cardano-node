@@ -3,6 +3,7 @@
 , bech32
 , basePort ? 30000
 , stateDir ? "./state-cluster"
+, cacheDir ? "~/.cache"
 , extraSupervisorConfig ? {}
 , useCabalRun ? false
 ##
@@ -10,21 +11,26 @@
 , profileOverride ? {}
 , ...
 }:
+with lib;
 let
+  path = makeBinPath
+    [ bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
+
   profilesJSON = pkgs.callPackage ./profiles.nix
     { inherit
       lib;
     };
   profiles = __fromJSON (__readFile profilesJSON);
 
-  profile = lib.recursiveUpdate profiles."${profileName}" profileOverride;
+  profile = recursiveUpdate profiles."${__trace profileName profileName}" profileOverride;
   inherit (profile) era composition monetary;
 
-  profileDump = pkgs.writeText "profile-${profile.name}.json"
+  profileJSONFile = pkgs.writeText "profile-${profile.name}.json"
     (__toJSON profile);
 
-  mkTopologyBash = pkgs.callPackage ./topology.nix
-    { inherit stateDir;
+  topologyNixopsFile = "${stateDir}/topology-nixops.json";
+  topology = pkgs.callPackage ./topology.nix
+    { inherit lib stateDir topologyNixopsFile;
       inherit (pkgs) graphviz;
       inherit (profile) composition;
       localPortBase = basePort;
@@ -37,32 +43,38 @@ let
 
   baseEnvConfig = pkgs.callPackage ./base-env.nix
     { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig;
-      inherit stateDir;
       inherit (profile) era;
+      inherit stateDir lib;
     };
 
   ## This yields two attributes: 'params' and 'files'
   mkGenesisBash = pkgs.callPackage ./genesis.nix
     { inherit
       lib
-      stateDir
+      cacheDir stateDir
       baseEnvConfig
       basePort
-      profile;
-      path = lib.makeBinPath
-        [ bech32 pkgs.jq pkgs.gnused pkgs.coreutils pkgs.bash pkgs.moreutils ];
+      profile
+      profileJSONFile;
+      topologyNixopsFile = "${stateDir}/topology-nixops.json";
     };
 
-  supervisorConfig = pkgs.callPackage ./supervisor.nix
-    { inherit
-      pkgs
-      lib
-      stateDir
-      baseEnvConfig
-      basePort
-      extraSupervisorConfig
-      useCabalRun
-      profile;
+  node-setups = pkgs.callPackage ./node-setups.nix
+    { inherit (topology) nodeSpecs;
+      inherit
+        pkgs lib stateDir
+        baseEnvConfig
+        basePort
+        useCabalRun;
+    };
+
+  supervisorConf = pkgs.callPackage ./supervisor-conf.nix
+    { inherit (topology) nodeSpecs;
+      inherit (node-setups) nodeSetups;
+      inherit
+        pkgs lib stateDir
+        basePort
+        extraSupervisorConfig;
     };
 
   start = pkgs.writeScriptBin "start-cluster" ''
@@ -73,41 +85,80 @@ let
         --trace | --debug ) set -x;;
         * ) break;; esac; shift; done
 
+    mkdir -p ${cacheDir}
+
     if [ -f ${stateDir}/supervisord.pid ]
-    then
-      echo "Cluster already running. Please run `stop-cluster` first!"
-    fi
+    then echo "Cluster already running. Please run 'stop-cluster' first!"
+         exit 1; fi
+
+    cat <<EOF
+Starting cluster:
+  - state dir:       ${stateDir}
+  - topology:        ${topologyNixopsFile}, ${topology.topologyPdf}
+  - node port base:  ${toString basePort}
+  - EKG URLs:        http://localhost:${toString (node-setups.nodeIndexToEkgPort 0)}/
+  - Prometheus URLs: http://localhost:${toString (node-setups.nodeIndexToPrometheusPort 0)}/metrics
+  - profile JSON:    ${profileJSONFile}
+
+EOF
+
+    ${pkgs.jq}/bin/jq '
+      include "profiles/derived" { search: "${./.}" };
+
+      profile_pretty_describe(.)
+      ' ${profileJSONFile} --raw-output
+
     rm -rf ${stateDir}
 
+    PATH=$PATH:${path}
     ${defCardanoExesBash}
 
-    ${mkTopologyBash}
+    ${topology.mkTopologyBash}
 
     ${mkGenesisBash}
 
-    echo "Profile '${profile.name}' dump in: ${profileDump}"
-    echo "Topology in: ${stateDir}/topology.json"
+    ${__concatStringsSep "\n"
+      (flip mapAttrsToList node-setups.nodeSetups
+        (name: nodeSetup:
+          ''
+          jq . ${__toFile "${name}.json"
+            (__toJSON nodeSetup.nodeConfig)} > \
+             ${stateDir}/${name}.config.json
+
+          jq . ${__toFile "${name}.json"
+                (__toJSON
+                   (removeAttrs nodeSetup.envConfig
+                      ["override" "overrideDerivation"]))} > \
+             ${stateDir}/${name}.env.json
+          ''
+        ))}
 
     ${pkgs.python3Packages.supervisor}/bin/supervisord \
-        --config ${__trace "supervisorConfig: ${supervisorConfig} "
-                   supervisorConfig} $@
+        --config ${__trace "supervisorConfig: ${supervisorConf} "
+                   supervisorConf} $@
 
+    ## Wait for socket activation:
+    #
     if test ! -v "CARDANO_NODE_SOCKET_PATH"
-    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/bft1.socket; fi
-
+    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/node-0.socket; fi
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
-    echo "Transfering genesis funds to pool owners, register pools and delegations"
-    cli transaction submit \
-      --cardano-mode \
-      --tx-file ${stateDir}/shelley/transfer-register-delegate-tx.tx \
-      --testnet-magic ${toString profile.genesis.network_magic}
-    sleep 5
 
     echo 'Recording node pids..'
     ${pkgs.psmisc}/bin/pstree -Ap $(cat ${stateDir}/supervisord.pid) |
     grep 'cabal.*cardano-node' |
     sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/' \
       > ${stateDir}/cardano-node.pids
+
+    ${optionalString (!profile.genesis.single_shot)
+     ''
+      echo "Transfering genesis funds to pool owners, register pools and delegations"
+      cli transaction submit \
+        --cardano-mode \
+        --tx-file ${stateDir}/shelley/transfer-register-delegate-tx.tx \
+        --testnet-magic ${toString profile.genesis.network_magic}
+      sleep 5
+     ''}
+
     echo 'Cluster started. Run `stop-cluster` to stop'
   '';
   stop = pkgs.writeScriptBin "stop-cluster" ''
@@ -117,6 +168,7 @@ let
     then
       kill $(<${stateDir}/supervisord.pid) $(<${stateDir}/cardano-node.pids)
       echo "Cluster terminated!"
+      rm -f ${stateDir}/supervisord.pid ${stateDir}/cardano-node.pids
     else
       echo "Cluster is not running!"
     fi

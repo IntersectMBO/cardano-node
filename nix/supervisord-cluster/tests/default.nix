@@ -17,7 +17,7 @@
   # If any command in start-cluster, stop-cluster or cluster-commands exits
   # with a status other than 0, the cluster will fail the test
   mkClusterTest = name: testScript: pkgs.runCommand name { buildInputs = clusterDeps ++ pythonDeps; } ''
-    export CARDANO_NODE_SOCKET_PATH=${stateDir}/bft1.socket
+    export CARDANO_NODE_SOCKET_PATH=${stateDir}/bft0.socket
     start-cluster
     export NETWORK_MAGIC=$(jq .networkMagic < ${stateDir}/shelley/genesis.json)
     cp ${testScript} script.py

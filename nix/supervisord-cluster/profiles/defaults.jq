@@ -9,23 +9,27 @@ def era_defaults($era):
   ## Cluster topology and composition:
   , composition:
     { locations:                      ["LO"]
-    , n_hosts:                        3
     , n_bft_hosts:                    1
     , n_singular_hosts:               1
     , n_dense_hosts:                  1
     , dense_pool_density:             1
+    , with_observer:                  true
     }
 
   , genesis:
     ## Trivia
-    { network_magic:                 42
+    { network_magic:                  42
+
+    ## Incrementality
+    , single_shot:                    true
 
     ## UTxO & delegation
     , total_balance:                  900000000000000
     , pools_balance:                  800000000000000
     , utxo:                           1000000
+    , decentralisation_param:         0
 
-    ## Blockchain time & block        density
+    ## Blockchain time & block density
     , active_slots_coeff:             0.05
     , epoch_length:                   2200   # Ought to be at least (10 * k / f).
     , parameter_k:                    10
@@ -40,13 +44,12 @@ def era_defaults($era):
       { protocolParams:
         { poolDeposit: 500000000
         , keyDeposit: 400000
-        , nOpt: 10
         , rho: 0.0022
         , tau: 0.05
         , a0: 0.3
         , minFeeA: 44
         , minFeeB: 155381
-        , decentralisationParam: 0.8
+        , decentralisationParam: 0
         }
       }
     }
@@ -76,23 +79,16 @@ def era_defaults($era):
   }
 
 , shelley:
-  { genesis:
-    { decentralisation_param:         0.5
-    }
-  , tolerances:
+  { tolerances:
     { maximum_missed_slots:           0
     }
   }
 
 , allegra:
-  { genesis:
-    { decentralisation_param:         0.5
-    }
+  {
   }
 
 , mary:
-  { genesis:
-    { decentralisation_param:         0.5
-    }
+  {
   }
 } | (.common * .[$era]);
