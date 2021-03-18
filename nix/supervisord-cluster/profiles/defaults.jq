@@ -27,8 +27,9 @@ def era_defaults($era):
     , total_balance:                  900000000000000
     , pools_balance:                  800000000000000
     , utxo:                           1000000
+    , decentralisation_param:         0
 
-    ## Blockchain time & block        density
+    ## Blockchain time & block density
     , active_slots_coeff:             0.05
     , epoch_length:                   2200   # Ought to be at least (10 * k / f).
     , parameter_k:                    10
@@ -48,7 +49,7 @@ def era_defaults($era):
         , a0: 0.3
         , minFeeA: 44
         , minFeeB: 155381
-        , decentralisationParam: 0.8
+        , decentralisationParam: 0
         }
       }
     }
@@ -78,23 +79,16 @@ def era_defaults($era):
   }
 
 , shelley:
-  { genesis:
-    { decentralisation_param:         0.5
-    }
-  , tolerances:
+  { tolerances:
     { maximum_missed_slots:           0
     }
   }
 
 , allegra:
-  { genesis:
-    { decentralisation_param:         0.5
-    }
+  {
   }
 
 , mary:
-  { genesis:
-    { decentralisation_param:         0.5
-    }
+  {
   }
 } | (.common * .[$era]);
