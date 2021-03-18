@@ -28,7 +28,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 import           Cardano.Slotting.Slot (SlotNo (..))
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Shelley.Spec.Ledger.API as Shelley
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
+--import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe)
 import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
@@ -105,26 +105,26 @@ instance ToJSON (Shelley.PPUPState era) where
 instance ToJSON (Shelley.ProposedPPUpdates era) where
   toJSON (Shelley.ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates
 
-instance ToJSON (Shelley.PParams' StrictMaybe era) where
-  toJSON pparams =
-    object [ "minfeeA" .= Shelley._minfeeA pparams
-           , "minfeeB" .= Shelley._minfeeB pparams
-           , "maxBBSize" .= Shelley._maxBBSize pparams
-           , "maxTxSize" .= Shelley._maxTxSize pparams
-           , "maxBHSize" .= Shelley._maxBHSize pparams
-           , "keyDeposit" .= Shelley._keyDeposit pparams
-           , "poolDeposit" .= Shelley._poolDeposit pparams
-           , "eMax" .= Shelley._eMax pparams
-           , "nOpt" .= Shelley._nOpt pparams
-           , "a0" .= Shelley._a0 pparams
-           , "rho" .= Shelley._rho pparams
-           , "tau" .= Shelley._tau pparams
-           , "d" .= Shelley._d pparams
-           , "extraEntropy" .= Shelley._extraEntropy pparams
-           , "protocolVersion" .= Shelley._protocolVersion pparams
-           , "minUTxOValue" .= Shelley._minUTxOValue pparams
-           , "minPoolCost" .= Shelley._minPoolCost pparams
-           ]
+-- instance ToJSON (Shelley.PParams' StrictMaybe era) where
+--   toJSON pparams =
+--     object [ "minfeeA" .= Shelley._minfeeA pparams
+--            , "minfeeB" .= Shelley._minfeeB pparams
+--            , "maxBBSize" .= Shelley._maxBBSize pparams
+--            , "maxTxSize" .= Shelley._maxTxSize pparams
+--            , "maxBHSize" .= Shelley._maxBHSize pparams
+--            , "keyDeposit" .= Shelley._keyDeposit pparams
+--            , "poolDeposit" .= Shelley._poolDeposit pparams
+--            , "eMax" .= Shelley._eMax pparams
+--            , "nOpt" .= Shelley._nOpt pparams
+--            , "a0" .= Shelley._a0 pparams
+--            , "rho" .= Shelley._rho pparams
+--            , "tau" .= Shelley._tau pparams
+--            , "d" .= Shelley._d pparams
+--            , "extraEntropy" .= Shelley._extraEntropy pparams
+--            , "protocolVersion" .= Shelley._protocolVersion pparams
+--            , "minUTxOValue" .= Shelley._minUTxOValue pparams
+--            , "minPoolCost" .= Shelley._minPoolCost pparams
+--            ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
   toJSON dpState = object [ "dstate" .= Shelley._dstate dpState

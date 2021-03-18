@@ -55,6 +55,7 @@ module Cardano.CLI.Shelley.Commands
 
 import           Data.Text (Text)
 import           Prelude
+import           Numeric.Natural (Natural)
 
 import           Cardano.Api.Shelley hiding (PoolId)
 
@@ -356,16 +357,19 @@ data IMPCmd
       { impCommiterKeyFile :: VerificationKeyFile
       , impCommitSIPText   :: Text
       , impCommitVersion   :: Word
+      , impCommitNewBBSize :: Maybe Natural
       }
   | IMPReveal
       { impRevelatorKeyFile  :: VerificationKeyFile
       , impRevelationSIPText :: Text
       , impRevelationVersion :: Word
+      , impRevealNewBBSize   :: Maybe Natural
       }
   | IMPVote
       { impVoterKeyFile :: VerificationKeyFile
       , impVotedSIPText :: Text
       , impVotedVersion :: Word
+      , impVoteNewBBSize :: Maybe Natural
       }
   deriving Show
 

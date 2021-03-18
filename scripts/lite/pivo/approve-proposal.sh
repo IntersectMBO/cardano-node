@@ -396,6 +396,7 @@ $CLI -- governance pivo imp commit \
       --stake-verification-key-file $PROPOSING_KEY.vkey \
       --proposal-text "hello world!" \
       --implementation-version 77 \
+      --new-bb-size 131072
       --out-file $UPDATE_FILE
 submit_update_transaction \
     payment1.addr \
@@ -414,6 +415,7 @@ $CLI -- governance pivo imp reveal \
       --stake-verification-key-file $PROPOSING_KEY.vkey \
       --proposal-text "hello world!" \
       --implementation-version 77 \
+      --new-bb-size 131072
       --out-file $UPDATE_FILE
 submit_update_transaction \
     payment1.addr \
@@ -430,6 +432,7 @@ $CLI -- governance pivo imp vote \
       --stake-verification-key-file $VOTING_KEY1.vkey \
       --proposal-text "hello world!" \
       --implementation-version 77 \
+      --new-bb-size 131072
       --out-file $UPDATE_FILE
 submit_update_transaction \
     payment1.addr \
@@ -440,6 +443,7 @@ $CLI -- governance pivo imp vote \
       --stake-verification-key-file $VOTING_KEY2.vkey \
       --proposal-text "hello world!" \
       --implementation-version 77 \
+      --new-bb-size 131072
       --out-file $UPDATE_FILE
 submit_update_transaction \
     payment2.addr \
@@ -450,6 +454,7 @@ $CLI -- governance pivo imp vote \
       --stake-verification-key-file $VOTING_KEY3.vkey \
       --proposal-text "hello world!" \
       --implementation-version 77 \
+      --new-bb-size 131072
       --out-file $UPDATE_FILE
 submit_update_transaction \
     payment3.addr \

@@ -26,6 +26,8 @@ import           Cardano.CLI.Types
 
 import Cardano.Ledger.Era (Era)
 
+import Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
+import Shelley.Spec.Ledger.PParams (PParamsUpdate, emptyPParamsUpdate, _maxBBSize)
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
@@ -117,30 +119,33 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
                                            (SIP._id (mkProposal votedProposalText))
                                            SIP.For
           }
-    runPivoCmd (IMP IMPCommit { impCommiterKeyFile, impCommitSIPText, impCommitVersion }) = do
+    runPivoCmd (IMP IMPCommit { impCommiterKeyFile, impCommitSIPText, impCommitVersion, impCommitNewBBSize }) = do
       vk <- readUpdateKeyFile impCommiterKeyFile
+      let ppUpdate = emptyPParamsUpdate { _maxBBSize = maybeToStrictMaybe impCommitNewBBSize }
       returnPayload $
         mempty
           { Pivo.Update.impSubmissions =
               singleton $ IMP.mkSubmission @StandardPivo vk constSalt
-                        $ mkImplementation impCommitSIPText impCommitVersion
+                        $ mkImplementation impCommitSIPText impCommitVersion ppUpdate
           }
-    runPivoCmd (IMP IMPReveal { impRevelatorKeyFile, impRevelationSIPText, impRevelationVersion }) = do
+    runPivoCmd (IMP IMPReveal { impRevelatorKeyFile, impRevelationSIPText, impRevelationVersion, impRevealNewBBSize }) = do
       vk <- readUpdateKeyFile impRevelatorKeyFile
+      let ppUpdate = emptyPParamsUpdate { _maxBBSize = maybeToStrictMaybe impRevealNewBBSize }
       returnPayload $
         mempty
           { Pivo.Update.impRevelations =
               singleton $ IMP.mkRevelation @StandardPivo vk constSalt
-                        $ mkImplementation impRevelationSIPText impRevelationVersion
+                        $ mkImplementation impRevelationSIPText impRevelationVersion ppUpdate
           }
-    runPivoCmd (IMP IMPVote { impVoterKeyFile, impVotedSIPText, impVotedVersion }) = do
+    runPivoCmd (IMP IMPVote { impVoterKeyFile, impVotedSIPText, impVotedVersion, impVoteNewBBSize }) = do
       vk <- readUpdateKeyFile impVoterKeyFile
+      let ppUpdate = emptyPParamsUpdate { _maxBBSize = maybeToStrictMaybe impVoteNewBBSize }
       returnPayload $
         mempty
           { Pivo.Update.impVotes       =
               singleton $ IMP.mkVote @StandardPivo
                             vk
-                            (SIP._id $ mkImplementation impVotedSIPText impVotedVersion)
+                            (SIP._id $ mkImplementation impVotedSIPText impVotedVersion ppUpdate)
                             SIP.For
           }
     runPivoCmd (END ENDCmd { endorserKeyFile, endorsedVersion }) = do
@@ -184,13 +189,13 @@ constVotingPeriodDuration = 600
 
 mkImplementation
   :: Era era
-  => Text -> Word -> IMP.Implementation era
-mkImplementation sipText impVersion =
+  => Text -> Word -> PParamsUpdate era -> IMP.Implementation era
+mkImplementation sipText impVersion ppUpdate =
   IMP.mkImplementation
     (SIP.unProposalId $ SIP._id proposal) constVotingPeriodDuration protocol
   where
     proposal = mkProposal sipText
-    protocol = IMP.mkProtocol impVersion IMP.protocolZero
+    protocol = IMP.mkProtocol impVersion IMP.protocolZero ppUpdate
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot

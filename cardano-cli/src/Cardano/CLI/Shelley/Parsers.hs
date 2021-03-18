@@ -842,6 +842,7 @@ pGovernanceCmd =
                       IMPCommit <$> pStakeVerificationKeyFile
                                 <*> pPropText
                                 <*> pImpVer
+                                <*> pNewBBSize
                 pIMPReveal =
                   cmdWithInfo
                     "reveal"
@@ -852,6 +853,7 @@ pGovernanceCmd =
                       IMPReveal <$> pStakeVerificationKeyFile
                                 <*> pPropText
                                 <*> pImpVer
+                                <*> pNewBBSize
                 pIMPVote =
                   cmdWithInfo
                     "vote"
@@ -862,6 +864,15 @@ pGovernanceCmd =
                         IMPVote <$> pStakeVerificationKeyFile
                                 <*> pPropText
                                 <*> pImpVer
+                                <*> pNewBBSize
+                pNewBBSize = optional $
+                  Opt.option
+                    Opt.auto
+                      (  Opt.long "new-bb-size"
+                      <> Opt.metavar "SIZE"
+                      <> Opt.help "New block body size"
+                      )
+
             pEndorsement =
               END <$> ( ENDCmd <$> pStakeVerificationKeyFile
                                <*> pImpVer

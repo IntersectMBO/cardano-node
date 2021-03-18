@@ -24,7 +24,7 @@ import           Data.Aeson (ToJSONKey (..), ToJSONKeyFunction (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.HashMap.Strict as HMS
-import           Data.Scientific (Scientific)
+--import           Data.Scientific (Scientific)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -57,7 +57,7 @@ import qualified Cardano.Ledger.Torsor as Core
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
+--import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
@@ -190,30 +190,30 @@ instance ToObject (UpdateState crypto) where
              , "reachedQuorum" .= proposalReachedQuorum
              ]
 
-instance ToJSON (PParamsUpdate era) where
-  toJSON pp =
-    Aeson.object $
-        [ "minFeeA"               .= x | x <- mbfield (_minfeeA pp) ]
-     ++ [ "minFeeB"               .= x | x <- mbfield (_minfeeB pp) ]
-     ++ [ "maxBlockBodySize"      .= x | x <- mbfield (_maxBBSize pp) ]
-     ++ [ "maxTxSize"             .= x | x <- mbfield (_maxTxSize pp) ]
-     ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (_maxBHSize pp) ]
-     ++ [ "keyDeposit"            .= x | x <- mbfield (_keyDeposit pp) ]
-     ++ [ "poolDeposit"           .= x | x <- mbfield (_poolDeposit pp) ]
-     ++ [ "eMax"                  .= x | x <- mbfield (_eMax pp) ]
-     ++ [ "nOpt"                  .= x | x <- mbfield (_nOpt pp) ]
-     ++ [ "a0" .= (fromRational x :: Scientific)
-                                       | x <- mbfield (_a0 pp) ]
-     ++ [ "rho"                   .= x | x <- mbfield (_rho pp) ]
-     ++ [ "tau"                   .= x | x <- mbfield (_tau pp) ]
-     ++ [ "decentralisationParam" .= x | x <- mbfield (_d pp) ]
-     ++ [ "extraEntropy"          .= x | x <- mbfield (_extraEntropy pp) ]
-     ++ [ "protocolVersion"       .= x | x <- mbfield (_protocolVersion pp) ]
-     ++ [ "minUTxOValue"          .= x | x <- mbfield (_minUTxOValue pp) ]
-     ++ [ "minPoolCost"           .= x | x <- mbfield (_minPoolCost pp) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
+-- instance ToJSON (PParamsUpdate era) where
+--   toJSON pp =
+--     Aeson.object $
+--         [ "minFeeA"               .= x | x <- mbfield (_minfeeA pp) ]
+--      ++ [ "minFeeB"               .= x | x <- mbfield (_minfeeB pp) ]
+--      ++ [ "maxBlockBodySize"      .= x | x <- mbfield (_maxBBSize pp) ]
+--      ++ [ "maxTxSize"             .= x | x <- mbfield (_maxTxSize pp) ]
+--      ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (_maxBHSize pp) ]
+--      ++ [ "keyDeposit"            .= x | x <- mbfield (_keyDeposit pp) ]
+--      ++ [ "poolDeposit"           .= x | x <- mbfield (_poolDeposit pp) ]
+--      ++ [ "eMax"                  .= x | x <- mbfield (_eMax pp) ]
+--      ++ [ "nOpt"                  .= x | x <- mbfield (_nOpt pp) ]
+--      ++ [ "a0" .= (fromRational x :: Scientific)
+--                                        | x <- mbfield (_a0 pp) ]
+--      ++ [ "rho"                   .= x | x <- mbfield (_rho pp) ]
+--      ++ [ "tau"                   .= x | x <- mbfield (_tau pp) ]
+--      ++ [ "decentralisationParam" .= x | x <- mbfield (_d pp) ]
+--      ++ [ "extraEntropy"          .= x | x <- mbfield (_extraEntropy pp) ]
+--      ++ [ "protocolVersion"       .= x | x <- mbfield (_protocolVersion pp) ]
+--      ++ [ "minUTxOValue"          .= x | x <- mbfield (_minUTxOValue pp) ]
+--      ++ [ "minPoolCost"           .= x | x <- mbfield (_minPoolCost pp) ]
+--     where
+--       mbfield SNothing  = []
+--       mbfield (SJust x) = [x]
 
 instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
   toObject verb (ChainTransitionError fs) =
