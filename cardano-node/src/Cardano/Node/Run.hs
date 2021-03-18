@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 #if !defined(mingw32_HOST_OS)
@@ -20,7 +21,7 @@ import           Prelude (String)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
-import           Control.Tracer
+import "contra-tracer" Control.Tracer
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import           Data.Time.Clock (getCurrentTime)

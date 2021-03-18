@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -27,7 +28,7 @@ import           Cardano.Prelude hiding (trace)
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
-import           Control.Tracer
+import "contra-tracer" Control.Tracer
 import           Data.List (nub)
 import qualified Data.Map as Map
 import           Data.Text (pack)

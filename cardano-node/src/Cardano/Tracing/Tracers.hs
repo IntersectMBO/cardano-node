@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -42,7 +43,7 @@ import qualified System.Remote.Monitoring as EKG
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
 
-import           Control.Tracer
+import "contra-tracer" Control.Tracer
 import           Control.Tracer.Transformers
 
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
