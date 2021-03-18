@@ -302,7 +302,9 @@ mkTracers _ TracingOnNew{} _ _ _ = do
     [trL2]
 
   pure Tracers
-    { chainDBTracer = Tracer $ L2.traceWith trL2
+    { chainDBTracer = Tracer
+        (L2.traceWith (trL2 :: L2.Trace IO (ChainDB.TraceEvent blk))
+          :: ChainDB.TraceEvent blk -> IO ())
 
     , consensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer = nullTracer
