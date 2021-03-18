@@ -10,7 +10,7 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 
-common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+common base                         { build-depends: base                             >= 4.14       && < 4.15     }
 
 common project-config
   default-language:     Haskell2010
@@ -64,8 +64,7 @@ executable cardano-node-chairman
   ghc-options:          -threaded
                         -rtsopts
                         "-with-rtsopts=-T"
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , bytestring
                       , cardano-api
                       , cardano-config
@@ -104,8 +103,7 @@ test-suite chairman-tests
 
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , containers
                       , directory
                       , exceptions
@@ -144,8 +142,7 @@ executable cardano-testnet
 
   main-is:              Main.hs
 
-  build-depends:        base              >= 4.12       &&  < 5
-                      , aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 1.5.6.0
                       , ansi-terminal
                       , cardano-config
                       , containers
