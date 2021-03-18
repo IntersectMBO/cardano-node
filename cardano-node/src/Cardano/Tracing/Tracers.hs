@@ -387,6 +387,7 @@ teeTraceChainTip
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
 teeTraceChainTip _ _ TracingOff _ _ _ _ = nullTracer
+teeTraceChainTip _ _ TracingOnNew{} _ _ _ _ = nullTracer
 teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
