@@ -96,10 +96,16 @@ playground $ cardano-cli transaction sign \
   --out-file tx.signed
 ```
 
+Extract the CBOR binary from the signed transaction:
+
+```bash
+playground $ xxd -r -p <<< $(jq .cborHex tx.signed) > tx.signed.cbor
+```
+
 Submit the signed transaction using curl:
 
 ```bash
-playground $ curl --header "Content-Type: application/cbor" -X POST http://localhost:8090/api/submit/tx --data-binary @tx.signed
+playground $ curl --header "Content-Type: application/cbor" -X POST http://localhost:8090/api/submit/tx --data-binary @tx.signed.cbor
 "8a3d63d4d95f669ef62570f2936ad50d2cfad399e04808ca21474e70b11987ee"%
 ```
 
