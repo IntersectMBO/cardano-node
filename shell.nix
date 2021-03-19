@@ -43,6 +43,11 @@ let
       sqlite-interactive
       tmux
       pkgs.git
+    ]
+    ## Local cluster not available on Darwin,
+    ## because psmisc fails to build on Big Sur.
+    ++ lib.optionals (!stdenv.isDarwin)
+    [
       clusterCabal.start
       clusterCabal.stop
     ];
