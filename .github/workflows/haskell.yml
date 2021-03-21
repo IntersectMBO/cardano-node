@@ -105,14 +105,12 @@ jobs:
       run: |
         cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
 
-    - uses: actions/cache@v2
+    - uses: action-works/cabal-cache@v1
       name: Cache cabal store
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-        restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
+        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        key-prefix: CwBTpnRd
+        dist-dir: ${{ env.CABAL_BUILDDIR }}
 
     - name: Install dependencies
       run: retry 2 cabal build all --only-dependencies
