@@ -148,9 +148,16 @@ instance FromJSON PartialNodeConfiguration where
       pncMaxConcurrencyDeadline <- Last <$> v .:? "MaxConcurrencyDeadline"
 
       -- Logging parameters
-      pncLoggingSwitch <- Last . Just <$> v .:? "TurnOnLogging" .!= True
-      pncLogMetrics    <- Last        <$> v .:? "TurnOnLogMetrics"
-      pncTraceConfig   <- Last . Just <$> traceConfigParser v
+      pncLoggingSwitch   <- Last . Just <$> v .:? "TurnOnLogging" .!= True
+      pncLogMetrics      <- Last        <$> v .:? "TurnOnLogMetrics"
+      useTraceDispatcher <- Last        <$> v .:? "UseTraceDispatcher" .!= False
+      pncTraceConfig     <- if pncLoggingSwitch'
+                            then Last . Just <$>
+                                 traceConfigParser v
+                                 (if useTraceDispatcher
+                                  then TraceDispatcher
+                                  else TracingOn)
+                            else return . Last $ Just TracingOff
 
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= ByronProtocol
