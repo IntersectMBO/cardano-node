@@ -134,11 +134,11 @@ Scripts
 
 Please see ``scripts/README.md`` for information on the various scripts.
 
-`cardano-cli`
+``cardano-cli``
 ===============
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
-Usage documentation can be found at `cardano-cli/README.md`.
+Usage documentation can be found at ``cardano-cli/README.md``.
 
 The general synopsis is as follows:
 
@@ -146,9 +146,9 @@ The general synopsis is as follows:
 
    Usage: cardano-cli (Era based commands | Byron specific commands | Miscellaneous commands)
 
-> NOTE: the exact invocation command depends on the environment.  If you've built `cardano-cli` but did not install it, you should instead use `cabal run -- cardano-cli`.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention `cardano-cli`.
+> NOTE: the exact invocation command depends on the environment.  If you've built ``cardano-cli`` but did not install it, you should instead use ``cabal run -- cardano-cli``.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention ``cardano-cli``.
 
-The subcommands are subdivided in groups, and their full list can be seen in the output of `cardano-cli --help`.
+The subcommands are subdivided in groups, and their full list can be seen in the output of ``cardano-cli --help``.
 
 All subcommands have help available.  For example:
 
