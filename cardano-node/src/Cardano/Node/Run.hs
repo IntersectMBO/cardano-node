@@ -163,7 +163,7 @@ logTracingVerbosity nc tracer =
         NormalVerbosity -> traceWith tracer "tracing verbosity = normal verbosity "
         MinimalVerbosity -> traceWith tracer "tracing verbosity = minimal verbosity "
         MaximalVerbosity -> traceWith tracer "tracing verbosity = maximal verbosity "
-    TracingOnNew traceConf ->
+    TraceDispatcher traceConf ->
       case traceVerbosity traceConf of
         NormalVerbosity -> traceWith tracer "tracing verbosity = normal verbosity "
         MinimalVerbosity -> traceWith tracer "tracing verbosity = minimal verbosity "
