@@ -57,6 +57,8 @@ let
         baseEnvConfig
         ({ nodeConfig =
              {
+               UseTraceDispatcher = true;
+
                hasEKG           = nodeIndexToEkgPort i;
                hasPrometheus    = [ "127.0.0.1" (nodeIndexToPrometheusPort i) ];
 
