@@ -293,7 +293,7 @@ mkTracers
   -> NodeKernelData blk
   -> Maybe EKGDirect
   -> IO (Tracers peer localPeer blk)
-mkTracers _ TracingOnNew{} _ _ _ = do
+mkTracers _ TraceDispatcher{} _ _ _ = do
 
   trBaseL2 <- L2.standardTracer Nothing
   trL2 <- L2.machineFormatter L2.DRegular "cardano" trBaseL2
@@ -446,7 +446,7 @@ teeTraceChainTip
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
 teeTraceChainTip _ _ TracingOff _ _ _ _ = nullTracer
-teeTraceChainTip _ _ TracingOnNew{} _ _ _ _ = nullTracer
+teeTraceChainTip _ _ TraceDispatcher{} _ _ _ _ = nullTracer
 teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
