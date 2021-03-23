@@ -53,6 +53,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                      makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
+import           Cardano.TraceDispatcher.Tracers (mkDispatchTracers)
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -128,7 +129,7 @@ runNode cmdPc = do
 
     let ProtocolInfo{ pInfoConfig = cfg } = Consensus.protocolInfo p
 
-    tracers <- mkTracers
+    tracers <- mkDispatchTracers
                 (Consensus.configBlock cfg)
                 (ncTraceConfig nc)
                 trace
