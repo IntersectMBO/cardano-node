@@ -89,8 +89,6 @@ import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
-import qualified Cardano.Logging as L2
-
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
@@ -99,6 +97,7 @@ import           Cardano.Tracing.Metrics
 import           Cardano.Tracing.Queries
 
 import           Cardano.Node.Configuration.Logging
+
 -- For tracing instances
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
@@ -274,8 +273,6 @@ instance (StandardHash header, Eq peer) => ElidingTracer
           traceWith (toLogObject' tverb tr) ev
       return (Just ev, count + 1)
 
-instance L2.LogFormatting (ChainDB.TraceEvent blk) where
-
 -- | Tracers for all system components.
 --
 mkTracers
@@ -293,61 +290,6 @@ mkTracers
   -> NodeKernelData blk
   -> Maybe EKGDirect
   -> IO (Tracers peer localPeer blk)
-mkTracers _ TraceDispatcher{} _ _ _ = do
-
-  trBaseL2 <- L2.standardTracer Nothing
-  trL2 <- L2.machineFormatter L2.DRegular "cardano" trBaseL2
-  L2.configureTracers L2.emptyTraceConfig
-    (L2.Documented [])
-    [trL2]
-
-  pure Tracers
-    { chainDBTracer = Tracer
-        (L2.traceWith (trL2 :: L2.Trace IO (ChainDB.TraceEvent blk))
-          :: ChainDB.TraceEvent blk -> IO ())
-
-    , consensusTracers = Consensus.Tracers
-      { Consensus.chainSyncClientTracer = nullTracer
-      , Consensus.chainSyncServerHeaderTracer = nullTracer
-      , Consensus.chainSyncServerBlockTracer = nullTracer
-      , Consensus.blockFetchDecisionTracer = nullTracer
-      , Consensus.blockFetchClientTracer = nullTracer
-      , Consensus.blockFetchServerTracer = nullTracer
-      , Consensus.forgeStateInfoTracer = nullTracer
-      , Consensus.txInboundTracer = nullTracer
-      , Consensus.txOutboundTracer = nullTracer
-      , Consensus.localTxSubmissionServerTracer = nullTracer
-      , Consensus.mempoolTracer = nullTracer
-      , Consensus.forgeTracer = nullTracer
-      , Consensus.blockchainTimeTracer = nullTracer
-      , Consensus.keepAliveClientTracer = nullTracer
-      }
-    , nodeToClientTracers = NodeToClient.Tracers
-      { NodeToClient.tChainSyncTracer = nullTracer
-      , NodeToClient.tTxSubmissionTracer = nullTracer
-      , NodeToClient.tStateQueryTracer = nullTracer
-      }
-    , nodeToNodeTracers = NodeToNode.Tracers
-      { NodeToNode.tChainSyncTracer = nullTracer
-      , NodeToNode.tChainSyncSerialisedTracer = nullTracer
-      , NodeToNode.tBlockFetchTracer = nullTracer
-      , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
-      , NodeToNode.tTxSubmissionTracer = nullTracer
-      , NodeToNode.tTxSubmission2Tracer = nullTracer
-      }
-    , ipSubscriptionTracer = nullTracer
-    , dnsSubscriptionTracer= nullTracer
-    , dnsResolverTracer = nullTracer
-    , errorPolicyTracer = nullTracer
-    , localErrorPolicyTracer = nullTracer
-    , acceptPolicyTracer = nullTracer
-    , muxTracer = nullTracer
-    , muxLocalTracer = nullTracer
-    , handshakeTracer = nullTracer
-    , localHandshakeTracer = nullTracer
-    , diffusionInitializationTracer = nullTracer
-    }
-
 mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
@@ -381,7 +323,8 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
    verb :: TracingVerbosity
    verb = traceVerbosity trSel
 
-mkTracers _ TracingOff _ _ _ =
+-- otherwise tracing off
+mkTracers _ _ _ _ _ =
   pure Tracers
     { chainDBTracer = nullTracer
     , consensusTracers = Consensus.Tracers

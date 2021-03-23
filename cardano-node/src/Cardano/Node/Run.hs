@@ -54,6 +54,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
+import           Cardano.TraceDispatcher.Tracers (mkDispatchTracers)
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESMetricsData (..), HasKESInfo (..))
 
@@ -153,6 +154,22 @@ runNode cmdPc = do
 
     case p of
       SomeConsensusProtocol _ runP -> handleNodeWithTracers runP
+
+    tracers <- mkDispatchTracers
+                (Consensus.configBlock cfg)
+                (ncTraceConfig nc)
+                trace
+                nodeKernelData
+                (llEKGDirect loggingLayer)
+
+    Async.withAsync (handlePeersListSimple trace nodeKernelData)
+        $ \_peerLogingThread ->
+          -- We ignore peer loging thread if it dies, but it will be killed
+          -- when 'handleSimpleNode' terminates.
+          handleSimpleNode p trace tracers nc (setNodeKernel nodeKernelData)
+          `finally`
+          shutdownLoggingLayer loggingLayer
+
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
 logTracingVerbosity nc tracer =

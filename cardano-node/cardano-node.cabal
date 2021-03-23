@@ -75,6 +75,9 @@ library
                        Cardano.Node.Run
                        Cardano.Node.STM
                        Cardano.Node.Types
+                       Cardano.TraceDispatcher.Tracers
+                       Cardano.TraceDispatcher.OrphanInstances.Consensus
+                       Cardano.TraceDispatcher.Render
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
                        Cardano.Tracing.ConvertTxId
