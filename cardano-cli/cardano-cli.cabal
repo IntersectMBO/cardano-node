@@ -172,6 +172,8 @@ test-suite cardano-cli-test
                       , parsec
                       , text
 
+  build-tool-depends:   cardano-cli:cardano-cli
+
   other-modules:        Test.Cli.FilePermissions
                         Test.Cli.ITN
                         Test.Cli.MultiAssetParsing
