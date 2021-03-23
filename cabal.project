@@ -10,6 +10,7 @@ packages:
     cardano-node-chairman
     cardano-submit-api
     nix/workbench/cardano-topology
+    trace-forward
 
 package cardano-api
   ghc-options: -Werror
@@ -50,6 +51,9 @@ package cardano-node
   tests: True
 
 package cardano-node-chairman
+  tests: True
+
+package trace-forward
   tests: True
 
 -- The following is needed because Nix is doing something crazy.
