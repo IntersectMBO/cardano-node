@@ -1,7 +1,11 @@
 {-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeApplications #-}
+
 
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -10,28 +14,58 @@ module Cardano.TraceDispatcher.OrphanInstances.Consensus (
   ) where
 
 import qualified Data.Aeson as A
+import           Data.Aeson (Value(String), (.=), toJSON)
 import           Data.HashMap.Strict (insertWith)
 import qualified Data.Text as Text
 
-import           Cardano.Logging
-import           Cardano.Prelude
-import           Cardano.TraceDispatcher.Render
-import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.OrphanInstances.Network ()
+import Cardano.Logging
+    ( DetailLevel(DDetailed), LogFormatting(..), mkObject )
+import Cardano.Prelude
+    ( (++),
+      ($),
+      Eq((==)),
+      Foldable(null),
+      Semigroup((<>)),
+      Monoid(mempty),
+      Maybe(Nothing, Just),
+      Text,
+      Category((.)),
+      Proxy(Proxy),
+      not,
+      map, Show, show )
+import Cardano.TraceDispatcher.Render
+    ( renderRealPoint,
+      renderRealPointAsPhrase,
+      renderPointForDetails,
+      renderPoint,
+      renderPointAsPhrase,
+      renderHeaderHashForDetails,
+      condenseT,
+      showT )
+import           Cardano.TraceDispatcher.OrphanInstances.Network ()
 
-import           Ouroboros.Consensus.Block
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), InspectLedger)
-import           Ouroboros.Consensus.Ledger.SupportsProtocol (
-                     LedgerSupportsProtocol)
+import Ouroboros.Consensus.Block
+    ( BlockNo(BlockNo),
+      SlotNo(unSlotNo),
+      HasHeader,
+      Header,
+      StandardHash,
+      ConvertRawHash,
+      Point,
+      pointSlot,
+      headerPoint,
+      realPointHash,
+      realPointSlot,
+      RealPoint )
+import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
+                     LedgerEvent (..), LedgerUpdate, LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
+                     (LedgerSupportsProtocol)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import           Ouroboros.Consensus.Util.Condense
+import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Consensus.Cardano as PBFT
 
-condenseT :: Condense a => a -> Text
-condenseT = Text.pack . condense
-
-showT :: Show a => a -> Text
-showT = Text.pack . show
 
 addedHdrsNewChain :: HasHeader (Header blk)
   => AF.AnchoredFragment (Header blk)
@@ -44,22 +78,34 @@ addedHdrsNewChain fro to_ =
    Nothing -> [] -- No sense to do validation here.
 
 kindContext :: Text -> A.Object -> A.Object
-kindContext toAdd obj = insertWith f "kind" (String toAdd) obj
+kindContext toAdd = insertWith f "kind" (String toAdd)
   where
     f (String new) (String old) = String (new <> "." <> old)
     f (String new) _            = String new
     f _ o                       = o
 
 
-instance LogFormatting (Header blk) where
-instance LogFormatting (LedgerEvent blk) where
-instance LogFormatting (RealPoint blk) where
-instance LogFormatting SlotNo where
+-- instance LogFormatting (Header blk) where
+
+
+instance ConvertRawHash blk
+      => LogFormatting (RealPoint blk) where
+  forMachine dtal p = mkObject
+        [ "kind" .= String "Point"
+        , "slot" .= unSlotNo (realPointSlot p)
+        , "hash" .= renderHeaderHashForDetails (Proxy @blk) dtal (realPointHash p) ]
+
+
+instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
+      => LogFormatting (LedgerEvent blk) where
+  forMachine dtal = \case
+    LedgerUpdate  update  -> forMachine dtal update
+    LedgerWarning warning -> forMachine dtal warning
+
 
 instance (  LogFormatting (Header blk)
           , LogFormatting (LedgerEvent blk)
           , LogFormatting (RealPoint blk)
-          , LogFormatting SlotNo
           , ConvertRawHash blk
           , ConvertRawHash (Header blk)
           , HasHeader (Header blk)
@@ -109,7 +155,6 @@ instance (  LogFormatting (Header blk)
 
 instance ( LogFormatting (Header blk)
          , LogFormatting (LedgerEvent blk)
-         , LogFormatting SlotNo
          , LogFormatting (RealPoint blk)
          , ConvertRawHash blk
          , ConvertRawHash (Header blk)
@@ -144,18 +189,6 @@ instance ( LogFormatting (Header blk)
       "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
-
-  -- forHuman (ChainDB.TraceLedgerReplayEvent ev) = forHuman ev'
-  -- forHuman (ChainDB.TraceLedgerEvent ev) = forHuman ev'
-  -- forHuman (ChainDB.TraceCopyToImmutableDBEvent ev = forHuman ev'
-  -- forHuman (ChainDB.TraceGCEvent ev) = forHuman ev'
-  -- forHuman (ChainDB.TraceOpenEvent ev) = forHuman ev'
-  -- forHuman (ChainDB.TraceFollowerEvent ev) = forHuman ev'
-  -- forHuman (ChainDB.TraceInitChainSelEvent ev) = forHuman ev'
-  -- forHuman (ChainDB.TraceIteratorEvent ev) = forHuman ev'
-  -- forHuman (ChainDB.TraceImmutableDBEvent ev) = "TraceImmutableDBEvent"
-  -- forHuman (ChainDB.TraceVolatileDBEvent ev) = "TraceVolatileDBEvent"
-
 
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mkObject [ "kind" .= String "IgnoreBlockOlderThanK"
@@ -319,46 +352,54 @@ instance ( HasHeader (Header blk)
         renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
         Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
 
+instance ConvertRawHash blk
+          => LogFormatting (LedgerDB.TraceReplayEvent blk (Point blk)) where
+  forHuman (LedgerDB.ReplayFromGenesis _replayTo) =
+      "Replaying ledger from genesis"
+  forHuman (LedgerDB.ReplayFromSnapshot snap tip' _replayTo) =
+      "Replaying ledger from snapshot " <> showT snap <> " at " <>
+        renderRealPointAsPhrase tip'
+  forHuman (LedgerDB.ReplayedBlock pt _ledgerEvents replayTo) =
+      "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
 
+instance ( StandardHash blk
+         , ConvertRawHash blk)
+         => LogFormatting (LedgerDB.TraceEvent blk) where
+  forHuman (LedgerDB.TookSnapshot snap pt) =
+      "Took ledger snapshot " <> showT snap <>
+        " at " <> renderRealPointAsPhrase pt
+  forHuman (LedgerDB.DeletedSnapshot snap) =
+      "Deleted old snapshot " <> showT snap
+  forHuman (LedgerDB.InvalidSnapshot snap failure) =
+      "Invalid snapshot " <> showT snap <> showT failure
 
+instance ConvertRawHash blk
+          => LogFormatting (ChainDB.TraceCopyToImmutableDBEvent blk) where
+  forHuman (ChainDB.CopiedBlockToImmutableDB pt) =
+      "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
+  forHuman  ChainDB.NoBlocksToCopyToImmutableDB  =
+      "There are no blocks to copy to the ImmutableDB"
 
-      --   LedgerDB.ReplayFromGenesis _replayTo ->
-      --     "Replaying ledger from genesis"
-      --   LedgerDB.ReplayFromSnapshot snap tip' _replayTo ->
-      --     "Replaying ledger from snapshot " <> showT snap <> " at " <>
-      --       renderRealPointAsPhrase tip'
-      --   LedgerDB.ReplayedBlock pt _ledgerEvents replayTo ->
-      --     "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
+instance LogFormatting (ChainDB.TraceGCEvent blk) where
+  forHuman (ChainDB.PerformedGC slot) =
+      "Performed a garbage collection for " <> condenseT slot
+  forHuman (ChainDB.ScheduledGC slot _difft) =
+      "Scheduled a garbage collection for " <> condenseT slot
 
-      --   LedgerDB.TookSnapshot snap pt ->
-      --     "Took ledger snapshot " <> showT snap <>
-      --     " at " <> renderRealPointAsPhrase pt
-      --   LedgerDB.DeletedSnapshot snap ->
-      --     "Deleted old snapshot " <> showT snap
-      --   LedgerDB.InvalidSnapshot snap failure ->
-      --     "Invalid snapshot " <> showT snap <> showT failure
+instance ConvertRawHash blk
+          => LogFormatting (ChainDB.TraceOpenEvent blk) where
+  forHuman (ChainDB.OpenedDB immTip tip') =
+          "Opened db with immutable tip at " <> renderPointAsPhrase immTip <>
+          " and tip " <> renderPointAsPhrase tip'
+  forHuman (ChainDB.ClosedDB immTip tip') =
+          "Closed db with immutable tip at " <> renderPointAsPhrase immTip <>
+          " and tip " <> renderPointAsPhrase tip'
+  forHuman (ChainDB.OpenedImmutableDB immTip chunk) =
+          "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
+          " and chunk " <> showT chunk
+  forHuman ChainDB.OpenedVolatileDB = "Opened vol db"
+  forHuman ChainDB.OpenedLgrDB = "Opened lgr db"
 
-      --   ChainDB.CopiedBlockToImmutableDB pt ->
-      --     "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
-      --   ChainDB.NoBlocksToCopyToImmutableDB ->
-      --     "There are no blocks to copy to the ImmutableDB"
-
-      --   ChainDB.PerformedGC slot ->
-      --     "Performed a garbage collection for " <> condenseT slot
-      --   ChainDB.ScheduledGC slot _difft ->
-      --     "Scheduled a garbage collection for " <> condenseT slot
-
-      --   ChainDB.OpenedDB immTip tip' ->
-      --     "Opened db with immutable tip at " <> renderPointAsPhrase immTip <>
-      --     " and tip " <> renderPointAsPhrase tip'
-      --   ChainDB.ClosedDB immTip tip' ->
-      --     "Closed db with immutable tip at " <> renderPointAsPhrase immTip <>
-      --     " and tip " <> renderPointAsPhrase tip'
-      --   ChainDB.OpenedImmutableDB immTip chunk ->
-      --     "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
-      --     " and chunk " <> showT chunk
-      --   ChainDB.OpenedVolatileDB ->  "Opened vol db"
-      --   ChainDB.OpenedLgrDB ->  "Opened lgr db"
 
       --   ChainDB.NewFollower ->  "New follower was created"
       --   ChainDB.FollowerNoLongerInMem _ ->  "FollowerNoLongerInMem"
@@ -367,33 +408,75 @@ instance ( HasHeader (Header blk)
 
       --   ChainDB.InitChainSelValidation _ ->  "InitChainSelValidation"
 
-      --   ChainDB.UnknownRangeRequested ev' ->
-      --     case ev' of
-      --       ChainDB.MissingBlock realPt ->
-      --         "The block at the given point was not found in the ChainDB."
-      --         <> renderRealPoint realPt
-      --       ChainDB.ForkTooOld streamFrom ->
-      --         "The requested range forks off too far in the past"
-      --         <> showT streamFrom
-      --   ChainDB.BlockMissingFromVolatileDB realPt ->
-      --     "This block is no longer in the VolatileDB because it has been garbage\
-      --      \ collected. It might now be in the ImmutableDB if it was part of the\
-      --      \ current chain. Block: " <> renderRealPoint realPt
-      --   ChainDB.StreamFromImmutableDB sFrom sTo ->
-      --     "Stream only from the ImmutableDB. StreamFrom:" <> showT sFrom <>
-      --     " StreamTo: " <> showT sTo
-      --   ChainDB.StreamFromBoth sFrom sTo pts ->
-      --     "Stream from both the VolatileDB and the ImmutableDB."
-      --     <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
-      --     <> " Points: " <> showT (map renderRealPoint pts)
-      --   ChainDB.StreamFromVolatileDB sFrom sTo pts ->
-      --     "Stream only from the VolatileDB."
-      --     <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
-      --     <> " Points: " <> showT (map renderRealPoint pts)
-      --   ChainDB.BlockWasCopiedToImmutableDB pt ->
-      --     "This block has been garbage collected from the VolatileDB is now\
-      --     \ found and streamed from the ImmutableDB. Block: " <> renderRealPoint pt
-      --   ChainDB.BlockGCedFromVolatileDB pt ->
-      --     "This block no longer in the VolatileDB and isn't in the ImmutableDB\
-      --     \ either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
-      --   ChainDB.SwitchBackToVolatileDB ->  "SwitchBackToVolatileDB"
+instance  ( StandardHash blk
+          , ConvertRawHash blk
+          ) => LogFormatting (ChainDB.TraceIteratorEvent blk) where
+  forHuman (ChainDB.UnknownRangeRequested ev') = forHuman ev'
+  forHuman (ChainDB.BlockMissingFromVolatileDB realPt) =
+      "This block is no longer in the VolatileDB because it has been garbage\
+         \ collected. It might now be in the ImmutableDB if it was part of the\
+         \ current chain. Block: " <> renderRealPoint realPt
+  forHuman (ChainDB.StreamFromImmutableDB sFrom sTo) =
+      "Stream only from the ImmutableDB. StreamFrom:" <> showT sFrom <>
+        " StreamTo: " <> showT sTo
+  forHuman (ChainDB.StreamFromBoth sFrom sTo pts) =
+      "Stream from both the VolatileDB and the ImmutableDB."
+        <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
+        <> " Points: " <> showT (map renderRealPoint pts)
+  forHuman (ChainDB.StreamFromVolatileDB sFrom sTo pts) =
+      "Stream only from the VolatileDB."
+        <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
+        <> " Points: " <> showT (map renderRealPoint pts)
+  forHuman (ChainDB.BlockWasCopiedToImmutableDB pt) =
+      "This block has been garbage collected from the VolatileDB is now\
+        \ found and streamed from the ImmutableDB. Block: " <> renderRealPoint pt
+  forHuman (ChainDB.BlockGCedFromVolatileDB pt) =
+      "This block no longer in the VolatileDB and isn't in the ImmutableDB\
+        \ either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
+  forHuman ChainDB.SwitchBackToVolatileDB = "SwitchBackToVolatileDB"
+
+instance  ( StandardHash blk
+          , ConvertRawHash blk
+          ) => LogFormatting (ChainDB.UnknownRange blk) where
+  forHuman (ChainDB.MissingBlock realPt) =
+      "The block at the given point was not found in the ChainDB."
+        <> renderRealPoint realPt
+  forHuman (ChainDB.ForkTooOld streamFrom) =
+      "The requested range forks off too far in the past"
+        <> showT streamFrom
+
+instance (Show (PBFT.PBftVerKeyHash c))
+      => LogFormatting (PBFT.PBftValidationErr c) where
+  forMachine _dtal (PBFT.PBftInvalidSignature text) =
+    mkObject
+      [ "kind" .= String "PBftInvalidSignature"
+      , "error" .= String text
+      ]
+  forMachine _dtal (PBFT.PBftNotGenesisDelegate vkhash _ledgerView) =
+    mkObject
+      [ "kind" .= String "PBftNotGenesisDelegate"
+      , "vk" .= String (Text.pack $ show vkhash)
+      ]
+  forMachine _dtal (PBFT.PBftExceededSignThreshold vkhash numForged) =
+    mkObject
+      [ "kind" .= String "PBftExceededSignThreshold"
+      , "vk" .= String (Text.pack $ show vkhash)
+      , "numForged" .= String (Text.pack (show numForged))
+      ]
+  forMachine _dtal PBFT.PBftInvalidSlot =
+    mkObject
+      [ "kind" .= String "PBftInvalidSlot"
+      ]
+
+instance (Show (PBFT.PBftVerKeyHash c))
+      => LogFormatting (PBFT.PBftCannotForge c) where
+  forMachine _dtal (PBFT.PBftCannotForgeInvalidDelegation vkhash) =
+    mkObject
+      [ "kind" .= String "PBftCannotForgeInvalidDelegation"
+      , "vk" .= String (Text.pack $ show vkhash)
+      ]
+  forMachine _dtal (PBFT.PBftCannotForgeThresholdExceeded numForged) =
+    mkObject
+      [ "kind" .= String "PBftCannotForgeThresholdExceeded"
+      , "numForged" .= numForged
+      ]

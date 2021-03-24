@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
@@ -8,14 +8,16 @@ module Cardano.TraceDispatcher.Render
   -- renderBlockOrEBB
   -- , renderChunkNo
        renderHeaderHash
-  -- , renderHeaderHashForDetails
+     , renderHeaderHashForDetails
   -- , renderChainHash
   -- , renderTipBlockNo
   -- , renderTipHash
+     , condenseT
+     , showT
      , renderPoint
      , renderPointAsPhrase
      , renderPointForDetails
-  -- , renderRealPoint
+     , renderRealPoint
      , renderRealPointAsPhrase
      , renderSlotNo
   -- , renderTip
@@ -33,16 +35,27 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.Logging
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..),
+                     WithOrigin (..))
 import           Cardano.Tracing.ConvertTxId (ConvertTxId (..))
-import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
+import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..),
+                     RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId)
-import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..))
-import           Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types (BlockOrEBB (..))
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
-import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHash, Tip, getTipPoint)
+import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal
+                     (ChunkNo (..))
+import           Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types
+                     (BlockOrEBB (..))
+import           Ouroboros.Consensus.Util.Condense (Condense, condense)
+import           Ouroboros.Network.Block (ChainHash (..), HeaderHash,
+                     StandardHash, Tip, getTipPoint)
 
+condenseT :: Condense a => a -> Text
+condenseT = Text.pack . condense
+
+showT :: Show a => a -> Text
+showT = Text.pack . show
 
 -- renderBlockOrEBB :: BlockOrEBB -> Text
 -- renderBlockOrEBB (Block slotNo) = "Block at " <> renderSlotNo slotNo
@@ -77,16 +90,16 @@ import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHa
 renderSlotNo :: SlotNo -> Text
 renderSlotNo = Text.pack . show . unSlotNo
 
--- renderRealPoint
---   :: forall blk.
---      ConvertRawHash blk
---   => RealPoint blk
---   -> Text
--- renderRealPoint (RealPoint slotNo headerHash) =
---   renderHeaderHash (Proxy @blk) headerHash
---     <> "@"
---     <> renderSlotNo slotNo
---
+renderRealPoint
+  :: forall blk.
+     ConvertRawHash blk
+  => RealPoint blk
+  -> Text
+renderRealPoint (RealPoint slotNo headerHash) =
+  renderHeaderHash (Proxy @blk) headerHash
+    <> "@"
+    <> renderSlotNo slotNo
+
 -- | Render a short phrase describing a 'RealPoint'.
 -- e.g. "62292d753b2ee7e903095bc5f10b03cf4209f456ea08f55308e0aaab4350dda4 at
 -- slot 39920"
@@ -160,6 +173,6 @@ renderHeaderHash p = Text.decodeLatin1 . B16.encode . toRawHash p
 trimHashTextForDetails :: DetailLevel -> Text -> Text
 trimHashTextForDetails dtal =
   case dtal of
-    DBrief -> Text.take 7
-    DRegular -> id
+    DBrief    -> Text.take 7
+    DRegular  -> id
     DDetailed -> id
