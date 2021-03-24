@@ -193,6 +193,12 @@ source-repository-package
     typed-protocols
     typed-protocols-examples
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: aa2315f2684e043ff4e970b65cbac1a8be7c2016
+  --sha256: 1dp9m4llkg8dplb0yhskgfvc271s9pzn7kd860px1qjhqqxmvz9i
+
 constraints:
     hedgehog >= 1.0
   , bimap >= 0.4.0

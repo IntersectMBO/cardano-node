@@ -3,6 +3,8 @@
 
 module Trace.Forward.Network.Forwarder
   ( connectToAcceptor
+  -- | Export this function for Mux purpose.
+  , forwardLogObjects
   ) where
 
 import           Codec.CBOR.Term (Term)
