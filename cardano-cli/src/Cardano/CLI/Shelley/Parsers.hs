@@ -664,25 +664,32 @@ pQueryCmd =
         (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
     , subParser "protocol-state"
         (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node (Ledger.ChainDepState -- advanced command)")
+    , subParser "stake-snapshot"
+        (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the stake snapshot for a pool (mark,set,go,total -- advanced command)")
+    , subParser "pool-params"
+        (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
     ]
   where
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters'
-        <$> pConsensusModeParams
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
     pQueryTip = QueryTip
-                  <$> pConsensusModeParams
+                  <$> pCardanoEra
+                  <*> pConsensusModeParams
                   <*> pNetworkId
                   <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
       QueryUTxO'
-        <$> pConsensusModeParams
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pQueryFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
@@ -690,29 +697,48 @@ pQueryCmd =
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution'
-        <$> pConsensusModeParams
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
-        <$> pConsensusModeParams
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pFilterByStakeAddress
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
     pQueryLedgerState = QueryLedgerState'
-                          <$> pConsensusModeParams
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
                           <*> pNetworkId
                           <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
     pQueryProtocolState = QueryProtocolState'
-                            <$> pConsensusModeParams
+                            <$> pCardanoEra
+                            <*> pConsensusModeParams
                             <*> pNetworkId
                             <*> pMaybeOutputFile
+
+    pQueryStakeSnapshot :: Parser QueryCmd
+    pQueryStakeSnapshot = QueryStakeSnapshot'
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
+                          <*> pNetworkId
+                          <*> pStakePoolVerificationKeyHash
+
+    pQueryPoolParams :: Parser QueryCmd
+    pQueryPoolParams = QueryPoolParams'
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
+                          <*> pNetworkId
+                          <*> pStakePoolVerificationKeyHash
+
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
@@ -1488,6 +1514,19 @@ pNetworkId =
       (  Opt.long "mainnet"
       <> Opt.help "Use the mainnet magic id."
       )
+
+{-
+pPoolId :: Parser PoolId
+pPoolId =
+  pMainnet <|> fmap Testnet pTestnetMagic
+ where
+   pMainnet :: Parser NetworkId
+   pMainnet =
+    Opt.flag' Mainnet
+      (  Opt.long "mainnet"
+      <> Opt.help "Use the mainnet magic id."
+      )
+-}
 
 pTestnetMagic :: Parser NetworkMagic
 pTestnetMagic =
