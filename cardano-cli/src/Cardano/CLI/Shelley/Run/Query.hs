@@ -24,6 +24,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.HashMap.Strict as HMS
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -45,9 +46,10 @@ import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
 
 import           Cardano.Binary (decodeFull)
-import           Cardano.Crypto.Hash (hashToBytesAsHex)
+import           Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytesAsHex)
 
 import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
@@ -55,6 +57,10 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                    (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
+import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.EpochBoundary
+import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
+import           Shelley.Spec.Ledger.LedgerState hiding (LedgerState, _delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 
 {- HLINT ignore "Reduce duplication" -}
@@ -68,6 +74,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdAcquireFailure !AcquireFailure
   | ShelleyQueryCmdEraConsensusModeMismatch !AnyCardanoEra !AnyConsensusMode
   | ShelleyQueryCmdByronEra
+  | ShelleyQueryCmdPoolIdError (Hash StakePoolKey)
   | ShelleyQueryCmdEraMismatch !EraMismatch
   deriving Show
 
@@ -80,6 +87,7 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
     ShelleyQueryCmdAcquireFailure aqFail -> Text.pack $ show aqFail
     ShelleyQueryCmdByronEra -> "This query cannot be used for the Byron era"
+    ShelleyQueryCmdPoolIdError poolId -> "The pool id does not exist: " <> show poolId
     ShelleyQueryCmdEraConsensusModeMismatch (AnyCardanoEra era) (AnyConsensusMode cMode) ->
       "Consensus mode and era mismatch. Consensus mode: " <> show cMode <>
       " Era: " <> show era
@@ -100,6 +108,10 @@ runQueryCmd cmd =
       runQueryStakeAddressInfo consensusModeParams addr network mOutFile
     QueryLedgerState' consensusModeParams network mOutFile ->
       runQueryLedgerState consensusModeParams network mOutFile
+    QueryStakeSnapshot' consensusModeParams network poolid ->
+      runQueryStakeSnapshot consensusModeParams network poolid
+    QueryPoolParams' consensusModeParams network poolid ->
+      runQueryPoolParams consensusModeParams network poolid
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
     QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
@@ -233,6 +245,71 @@ runQueryUTxO (AnyConsensusModeParams cModeParams)
   maybeFiltered :: QueryFilter -> Maybe (Set AddressAny)
   maybeFiltered (FilterByAddress as) = Just as
   maybeFiltered NoFilter = Nothing
+
+
+-- | Query the current and future parameters for a stake pool, including the retirement date.
+-- Any of these may be empty (in which case a null will be displayed).
+--
+
+runQueryPoolParams
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> Hash StakePoolKey
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryPoolParams (AnyConsensusModeParams cModeParams)
+                    network poolid = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
+  let cMode = consensusModeOnly cModeParams
+  sbe <- getSbe $ cardanoEraStyle era
+
+  case toEraInMode era cMode of
+    Just eInMode -> do
+      let qInMode = QueryInEra eInMode
+                      . QueryInShelleyBasedEra sbe
+                      $ QueryLedgerState
+      result <- executeQuery
+                  era
+                  cModeParams
+                  localNodeConnInfo
+                  qInMode
+      obtainLedgerEraClassConstraints sbe (writePoolParams poolid) result
+    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+
+
+-- | Obtain stake snapshot information for a pool, plus information about the total active stake.
+-- This information can be used for leader slot calculation, for example, and has been requested by SPOs.
+-- Obtaining the information directly is significantly more time and memory efficient than using a full ledger state dump.
+--
+
+runQueryStakeSnapshot
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> Hash StakePoolKey
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryStakeSnapshot (AnyConsensusModeParams cModeParams)
+                    network poolid = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
+  let cMode = consensusModeOnly cModeParams
+  sbe <- getSbe $ cardanoEraStyle era
+
+  case toEraInMode era cMode of
+    Just eInMode -> do
+      let qInMode = QueryInEra eInMode
+                      . QueryInShelleyBasedEra sbe
+                      $ QueryLedgerState
+      result <- executeQuery
+                  era
+                  cModeParams
+                  localNodeConnInfo
+                  qInMode
+      obtainLedgerEraClassConstraints sbe (writeStakeSnapshot poolid) result
+    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
 
 
 runQueryLedgerState
@@ -375,13 +452,112 @@ writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath $ unSerialised serLedgerState
- where
-   decodeLedgerState
-     :: SerialisedLedgerState era
-     -> Either LBS.ByteString (LedgerState era)
-   decodeLedgerState (SerialisedLedgerState (Serialised ls)) =
-     first (const ls) (decodeFull ls)
 
+writeStakeSnapshot :: forall era ledgerera.
+                      ShelleyLedgerEra era ~ ledgerera
+                   => Era.Era ledgerera
+                   => FromCBOR (LedgerState era)
+                   => Hash StakePoolKey
+                   -> SerialisedLedgerState era
+                   -> ExceptT ShelleyQueryCmdError IO ()
+
+writeStakeSnapshot poolId qState =
+  case decodeLedgerState qState of
+    Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+    Right ledgerState ->
+      if isNothing maybehk then
+        left $ ShelleyQueryCmdPoolIdError poolId
+      else
+        liftIO . LBS.putStrLn $ encodePretty $
+          Stakes { markpool = markStake
+                 , setpool = setStake
+                 , gopool = goStake
+                 , marktot = markTotal
+                 , settot = setTotal
+                 , gotot = goTotal
+                 }
+      where
+        -- Ledger State
+        (LedgerState snapshot) = ledgerState
+
+        -- The three stake snapshots, obtained from the ledger state
+        (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
+
+
+        -- Calculate the three pool and active stake values for the given pool
+        markStake =  getPoolStake hk markS
+        setStake = getPoolStake hk setS
+        goStake = getPoolStake hk goS
+
+        markTotal = getAllStake markS
+        setTotal = getAllStake setS
+        goTotal = getAllStake goS
+
+        -- Convert the hash string into a KeyHash for use by the ledger
+        maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
+        hk = KeyHash $ fromJust maybehk
+
+        -- Sum all the stake that is held by the pool
+        getPoolStake :: KeyHash Shelley.Spec.Ledger.Keys.StakePool crypto
+                     -> SnapShot crypto
+                     -> Integer
+        getPoolStake hash ss = pStake
+          where
+            Coin pStake = fold s
+            (Stake s) = poolStake hash (_delegations ss) (_stake ss)
+
+        -- Sum the active stake from a snapshot
+        getAllStake :: SnapShot crypto
+                    -> Integer
+        getAllStake (SnapShot stake _ _) = activeStake
+          where
+            Coin activeStake = fold . unStake $ stake
+
+-- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
+--   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
+writePoolParams :: forall era ledgerera.
+                   ShelleyLedgerEra era ~ ledgerera
+                => FromCBOR (LedgerState era)
+                => Crypto.Crypto (Era.Crypto ledgerera)
+                => Hash StakePoolKey
+                -> SerialisedLedgerState era
+                -> ExceptT ShelleyQueryCmdError IO ()
+writePoolParams poolId qState =
+  case decodeLedgerState qState of
+    Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+    Right ledgerState ->
+      if isNothing maybehk then
+        left $ ShelleyQueryCmdPoolIdError poolId
+      else
+        liftIO . LBS.putStrLn $  encodePretty $ Params poolparams fpoolparams retiring
+      where
+        (LedgerState snapshot)  = ledgerState
+
+        -- pool state
+        ps = _pstate $ _delegationState $ esLState $ nesEs snapshot
+
+        -- Convert the hash string into a KeyHash for use by the ledger
+        maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
+        hk = KeyHash $ fromJust maybehk
+
+        -- pool parameters
+        poolparams = getPoolParams hk $ _pParams ps
+        fpoolparams = getPoolParams hk $ _fPParams ps
+        retiring = getPoolParams hk $ _retiring ps
+
+
+        getPoolParams :: KeyHash StakePool (Era.Crypto ledgerera)
+                      -> Map (KeyHash StakePool (Era.Crypto ledgerera)) params
+                      -> Maybe params
+        getPoolParams poolid poolparammap = Map.lookup poolid poolparammap
+
+decodeLedgerState ::
+  forall era.
+     FromCBOR (LedgerState era)
+  => SerialisedLedgerState era
+  -> Either LBS.ByteString (LedgerState era)
+decodeLedgerState (SerialisedLedgerState (Serialised ls)) =
+  first (const ls) (decodeFull ls)
 
 writeProtocolState :: Crypto.Crypto StandardCrypto
                    => Maybe OutputFile

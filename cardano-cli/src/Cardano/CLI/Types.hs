@@ -16,16 +16,23 @@ module Cardano.CLI.Types
   , TxOutAnyEra (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
+  , Stakes (..)
+  , Params (..)
   ) where
 
 import           Cardano.Prelude
 
+import           Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 
 import qualified Cardano.Chain.Slotting as Byron
 
 import           Cardano.Api
+
+import qualified Cardano.Ledger.Crypto as Crypto
+
+import           Shelley.Spec.Ledger.TxBody (PoolParams (..))
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc
@@ -62,6 +69,42 @@ data QueryFilter
   = FilterByAddress !(Set AddressAny)
   | NoFilter
   deriving (Eq, Show)
+
+-- | This data structure is used to allow nicely formatted output within the query stake-snapshot command.
+-- "markpool", "setpool", "gopool" are the three ledger state stake snapshots (most recent to least recent)
+-- go is the snapshot that is used for the current epoch, set will be used in the next epoch,
+-- mark for the epoch after that.  "marktot", "setttot", "gotot" record the total active stake for each snapshot
+-- This information can be used by community tools to calculate upcoming leader schedules
+data Stakes =  Stakes {
+      markpool, setpool, gopool :: Integer,
+      marktot, settot, gotot :: Integer
+    } deriving Show
+
+-- | Pretty printing for stake information
+instance ToJSON Stakes where
+  toJSON (Stakes m s g mt st gt) =
+    object [ "poolStakeMark" .= m, "poolStakeSet" .= s, "poolStakeGo" .= g,
+             "activeStakeMark" .= mt, "activeStakeSet" .= st, "activeStakeGo" .= gt ]
+
+  toEncoding  (Stakes m s g mt st gt) =
+    pairs ( "poolStakeMark" .= m <> "poolStakeSet" .= s <> "poolStakeGo" .= g <>
+            "activeStakeMark" .= mt <> "activeStakeSet" .= st <> "activeStakeGo" .= gt )
+
+-- | This data structure is used to allow nicely formatted output in the query pool-params command.
+-- params are the current pool parameter settings, futureparams are new parameters, retiringEpoch is the
+-- epoch that has been set for pool retirement.  Any of these may be Nothing
+data Params crypto =  Params {
+  poolparameters, futurepoolparameters :: Maybe (PoolParams crypto),
+  retiringEpoch :: Maybe EpochNo
+  } deriving Show
+
+-- | Pretty printing for pool parameters
+instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
+  toJSON (Params p fp r) =
+    object ["poolParams" .= p, "futurePoolParams" .= fp, "retiring" .= r]
+
+  toEncoding (Params p fp r) =
+    pairs ("poolParams" .= p <> "futurePoolParams" .= fp <> "retiring" .= r)
 
 newtype SigningKeyFile = SigningKeyFile
   { unSigningKeyFile :: FilePath }

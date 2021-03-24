@@ -67,6 +67,8 @@ The `query` command contains the following sub commands:
 * `ledger-state` (advanced):  dumps the current state of the node (a raw dump of `Ledger.NewEpochState`)
 * `stake-address-info`: Get the current delegations and reward accounts filtered by stake address.
 * `stake-distribution`: Get the node's current aggregated stake distribution
+* 'stake-snapshot': Get the stake snapshot information for a stake pool (advanced)
+* 'pool-params': Get the current and future parameters for a stake pool (advanced)
 
 *cardano-cli governance*
 The `governance` command contains the following sub commands:
