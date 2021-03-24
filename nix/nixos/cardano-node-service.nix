@@ -36,6 +36,14 @@ let
         "${lib.optionalString (cfg.operationalCertificate != null)
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
       ];
+      Pivo = [
+        "${lib.optionalString (cfg.vrfKey != null)
+          "--shelley-vrf-key ${cfg.vrfKey}"}"
+        "${lib.optionalString (cfg.kesKey != null)
+          "--shelley-kes-key ${cfg.kesKey}"}"
+        "${lib.optionalString (cfg.operationalCertificate != null)
+          "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
+      ];
       Cardano = [
         "${lib.optionalString (cfg.signingKey != null)
           "--signing-key ${cfg.signingKey}"}"
