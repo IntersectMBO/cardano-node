@@ -101,6 +101,59 @@ executable demo-acceptor
                        -rtsopts
                        -with-rtsopts=-T
 
+executable demo-forwarder-mux
+  hs-source-dirs:      demo/mux
+  main-is:             forwarder.hs
+  other-modules:       Network.Forwarder
+  build-depends:         async
+                       , base
+                       , bytestring
+                       , cborg
+                       , contra-tracer
+                       , ekg-core
+                       , ekg-forward
+                       , iohk-monitoring
+                       , network
+                       , ouroboros-network-framework
+                       , stm
+                       , trace-forward
+                       , text
+                       , time
+
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-T
+
+executable demo-acceptor-mux
+  hs-source-dirs:      demo/mux
+  main-is:             acceptor.hs
+  other-modules:       Network.Acceptor
+  build-depends:         async
+                       , base
+                       , bytestring
+                       , cborg
+                       , contra-tracer
+                       , ekg-core
+                       , ekg-forward
+                       , network
+                       , ouroboros-network-framework
+                       , stm
+                       , trace-forward
+                       , text
+                       , time
+
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-T
+
+
+
+
+
 test-suite trace-forward-test
   import:              common-options
   type:                exitcode-stdio-1.0

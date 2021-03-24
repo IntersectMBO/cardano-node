@@ -3,6 +3,8 @@
 
 module Trace.Forward.Network.Acceptor
   ( listenToForwarder
+  -- | Export this function for Mux purpose.
+  , acceptLogObjects
   ) where
 
 import           Codec.CBOR.Term (Term)
