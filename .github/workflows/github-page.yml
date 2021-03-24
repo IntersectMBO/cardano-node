@@ -4,6 +4,8 @@ on: [push]
 
 jobs:
   build:
+    environment: cabal-cache
+
     runs-on: ${{ matrix.os }}
 
     defaults:
@@ -68,17 +70,43 @@ jobs:
       run: |
         cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
 
-    - uses: actions/cache@v2
-      name: Cache cabal store
+    - name: Restore cabal cache
+      uses: haskell-works/cabal-cache-action@v1
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
+        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
+        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-        restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
+        args: |
+          sync-from-archive \
+            --build-path    "$CABAL_BUILDDIR" \
+            --threads       "$BINARY_CACHE_THREADS" \
+            --archive-uri   "$BINARY_CACHE_URI" \
+            --region        "$BINARY_CACHE_REGION" \
+            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
 
     - name: Install dependencies
       run: cabal build all --only-dependencies
+
+    - name: Save cabal cache
+      uses: haskell-works/cabal-cache-action@v1
+      if: ${{ always() }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
+        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
+        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
+      with:
+        args: |
+          sync-to-archive \
+            --build-path    "$CABAL_BUILDDIR" \
+            --threads       "$BINARY_CACHE_THREADS" \
+            --archive-uri   "$BINARY_CACHE_URI" \
+            --region        "$BINARY_CACHE_REGION" \
+            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
 
     - name: Build Haddock documentation 🔧
       run: ./scripts/haddocs.sh ./haddocks true
@@ -86,6 +114,28 @@ jobs:
     - name: View HTML files
       run: |
         find "dist-newstyle/build" -name '*.html' | xargs grep html
+
+    - name: Save cabal cache
+      uses: haskell-works/cabal-cache-action@v1
+      if: ${{ always() }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        BINARY_CACHE_THREADS: ${{ secrets.BINARY_CACHE_THREADS }}
+        BINARY_CACHE_REGION: ${{ secrets.BINARY_CACHE_REGION }}
+        BINARY_CACHE_URI: ${{ secrets.BINARY_CACHE_URI }}
+      with:
+        args: |
+          sync-to-archive \
+            --build-path    "$CABAL_BUILDDIR" \
+            --threads       "$BINARY_CACHE_THREADS" \
+            --archive-uri   "$BINARY_CACHE_URI" \
+            --region        "$BINARY_CACHE_REGION" \
+            --store-path    "${{ steps.setup-haskell.outputs.cabal-store }}"
+
+    - name: View HTML files
+      run: |
+        find "$CABAL_BUILDDIR/build" -name '*.html' | xargs grep html
 
     - name: Upload documentation
       uses: actions/upload-artifact@v2
