@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
@@ -11,48 +13,44 @@ module Cardano.CLI.Shelley.Parsers
   , renderTxIn
   ) where
 
+import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
-import           Cardano.Prelude hiding (option)
 
+import           Cardano.Api
+import           Cardano.Api.Shelley
+
+import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
+import           Cardano.CLI.Mary.ValueParser (parseValue)
+import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
+                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
+                   deserialiseInput, renderInputDecodeError)
+import           Cardano.CLI.Types
 import           Control.Monad.Fail (fail)
+import           Data.Attoparsec.Combinator ((<?>))
+import           Data.Time.Clock (UTCTime)
+import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
+import           Network.Socket (PortNumber)
+import           Options.Applicative hiding (str)
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Char as Char
 import qualified Data.IP as IP
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Time.Clock (UTCTime)
-import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
-import           Options.Applicative (Parser)
-import qualified Options.Applicative as Opt
+
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
-
-import           Network.Socket (PortNumber)
-import           Network.URI (URI, parseURI)
-
-import           Cardano.Chain.Slotting (EpochSlots(..))
-import           Cardano.Slotting.Slot (SlotNo(..))
-
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-import           Ouroboros.Consensus.Cardano (SecurityParam (..))
+import qualified Options.Applicative as Opt
+import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.Error as Parsec
+import qualified Text.Parsec.String as Parsec
 
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-import qualified Shelley.Spec.Ledger.TxData as Shelley
-
-import           Cardano.Api.Protocol (Protocol (..))
-import           Cardano.Api.Typed hiding (PoolId)
-
-import           Cardano.Slotting.Slot (EpochNo (..))
-
-import           Cardano.Config.Types (CertificateFile (..), SigningKeyFile(..),
-                   UpdateProposalFile (..))
-import           Cardano.Config.Parsers (parseNodeAddress)
-
-import           Cardano.CLI.Shelley.Commands
-
-import qualified Cardano.Crypto.Hash as Crypto
-                   (Blake2b_256, Hash (..), hashFromBytesAsHex)
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 --
 -- Shelley CLI command parsers
@@ -60,35 +58,33 @@ import qualified Cardano.Crypto.Hash as Crypto
 
 parseShelleyCommands :: Parser ShelleyCommand
 parseShelleyCommands =
-  Opt.subparser $
+  Opt.hsubparser $
     mconcat
-      [ Opt.command "address"
-          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Shelley payment address commands")
+      [ Opt.metavar "Era based commands"
+      , Opt.commandGroup "Era based commands"
+      , Opt.command "address"
+          (Opt.info (AddressCmd <$> pAddressCmd) $ Opt.progDesc "Payment address commands")
       , Opt.command "stake-address"
-          (Opt.info (StakeAddressCmd <$> pStakeAddress) $ Opt.progDesc "Shelley stake address commands")
+          (Opt.info (StakeAddressCmd <$> pStakeAddressCmd) $ Opt.progDesc "Stake address commands")
       , Opt.command "key"
-          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Shelley key utility commands")
+          (Opt.info (KeyCmd <$> pKeyCmd) $ Opt.progDesc "Key utility commands")
       , Opt.command "transaction"
-          (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Shelley transaction commands")
+          (Opt.info (TransactionCmd <$> pTransaction) $ Opt.progDesc "Transaction commands")
       , Opt.command "node"
-          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Shelley node operaton commands")
+          (Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Node operation commands")
       , Opt.command "stake-pool"
-          (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Shelley stake pool commands")
+          (Opt.info (PoolCmd <$> pPoolCmd) $ Opt.progDesc "Stake pool commands")
       , Opt.command "query"
           (Opt.info (QueryCmd <$> pQueryCmd) . Opt.progDesc $
              mconcat
-               [ "Shelley node query commands. Will query the local node whose Unix domain socket "
+               [ "Node query commands. Will query the local node whose Unix domain socket "
                , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
                ]
             )
-      , Opt.command "block"
-          (Opt.info (BlockCmd <$> pBlockCmd) $ Opt.progDesc "Shelley block commands")
-      , Opt.command "system"
-          (Opt.info (SystemCmd <$> pSystemCmd) $ Opt.progDesc "Shelley system commands")
       , Opt.command "genesis"
-          (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Shelley genesis block commands")
+          (Opt.info (GenesisCmd <$> pGenesisCmd) $ Opt.progDesc "Genesis block commands")
       , Opt.command "governance"
-          (Opt.info (GovernanceCmd <$> pGovernanceCmd) $ Opt.progDesc "Shelley governance commands")
+          (Opt.info (GovernanceCmd <$> pGovernanceCmd) $ Opt.progDesc "Governance commands")
       , Opt.command "text-view"
           (Opt.info (TextViewCmd <$> pTextViewCmd) . Opt.progDesc $
              mconcat
@@ -101,13 +97,12 @@ parseShelleyCommands =
 
 pTextViewCmd :: Parser TextViewCmd
 pTextViewCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "decode-cbor"
-          (Opt.info (TextViewInfo <$> pCBORInFile <*> pMaybeOutputFile)
-            $ Opt.progDesc "Print a TextView file as decoded CBOR."
-            )
-      ]
+  asum
+    [ subParser "decode-cbor"
+        (Opt.info (TextViewInfo <$> pCBORInFile <*> pMaybeOutputFile)
+          $ Opt.progDesc "Print a TextView file as decoded CBOR."
+          )
+    ]
 
 pCBORInFile :: Parser FilePath
 pCBORInFile =
@@ -125,19 +120,18 @@ pCBORInFile =
 
 pAddressCmd :: Parser AddressCmd
 pAddressCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen"
-          (Opt.info pAddressKeyGen $ Opt.progDesc "Create an address key pair.")
-      , Opt.command "key-hash"
-          (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key.")
-      , Opt.command "build"
-          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
-      , Opt.command "build-multisig"
-          (Opt.info pAddressBuildMultiSig $ Opt.progDesc "Build a Shelley payment multi-sig address.")
-      , Opt.command "info"
-          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
-      ]
+   asum
+     [ subParser "key-gen"
+         (Opt.info pAddressKeyGen $ Opt.progDesc "Create an address key pair.")
+     , subParser "key-hash"
+         (Opt.info pAddressKeyHash $ Opt.progDesc "Print the hash of an address key.")
+     , subParser "build"
+         (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
+     , subParser "build-script"
+         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address.")
+     , subParser "info"
+         (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
+     ]
   where
     pAddressKeyGen :: Parser AddressCmd
     pAddressKeyGen = AddressKeyGen <$> pAddressKeyType
@@ -145,22 +139,41 @@ pAddressCmd =
                                    <*> pSigningKeyFile Output
 
     pAddressKeyHash :: Parser AddressCmd
-    pAddressKeyHash = AddressKeyHash <$> pPaymentVerificationKeyFile <*> pMaybeOutputFile
+    pAddressKeyHash =
+      AddressKeyHash
+        <$> pPaymentVerificationKeyTextOrFile
+        <*> pMaybeOutputFile
 
     pAddressBuild :: Parser AddressCmd
     pAddressBuild =
       AddressBuild
-        <$> pPaymentVerificationKeyFile
-        <*> Opt.optional pStakeVerificationKeyFile
+        <$> pPaymentVerificationKeyTextOrFile
+        <*> Opt.optional pStakeVerificationKeyOrFile
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-
-    pAddressBuildMultiSig :: Parser AddressCmd
-    pAddressBuildMultiSig = pure AddressBuildMultiSig
+    pAddressBuildScript :: Parser AddressCmd
+    pAddressBuildScript = AddressBuildMultiSig
+                            <$> pScript
+                            <*> pNetworkId
+                            <*> pMaybeOutputFile
 
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
+
+pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
+pPaymentVerificationKeyTextOrFile =
+  VktofVerificationKeyText <$> pPaymentVerificationKeyText
+    <|> VktofVerificationKeyFile <$> pPaymentVerificationKeyFile
+
+pPaymentVerificationKeyText :: Parser Text
+pPaymentVerificationKeyText =
+  Text.pack <$>
+    Opt.strOption
+      (  Opt.long "payment-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Payment verification key (Bech32-encoded)"
+      )
 
 pPaymentVerificationKeyFile :: Parser VerificationKeyFile
 pPaymentVerificationKeyFile =
@@ -178,28 +191,28 @@ pPaymentVerificationKeyFile =
         )
     )
 
+pScript :: Parser ScriptFile
+pScript = ScriptFile <$> Opt.strOption
+  (  Opt.long "script-file"
+  <> Opt.metavar "FILE"
+  <> Opt.help "Filepath of the script."
+  <> Opt.completer (Opt.bashCompleter "file")
+  )
 
-pStakeAddress :: Parser StakeAddressCmd
-pStakeAddress =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen"
+pStakeAddressCmd :: Parser StakeAddressCmd
+pStakeAddressCmd =
+    asum
+      [ subParser "key-gen"
           (Opt.info pStakeAddressKeyGen $ Opt.progDesc "Create a stake address key pair")
-      , Opt.command "build"
+      , subParser "build"
           (Opt.info pStakeAddressBuild $ Opt.progDesc "Build a stake address")
-      , Opt.command "key-hash"
+      , subParser "key-hash"
           (Opt.info pStakeAddressKeyHash $ Opt.progDesc "Print the hash of a stake address key.")
-      , Opt.command "register"
-          (Opt.info pStakeAddressRegister $ Opt.progDesc "Register a stake address")
-      , Opt.command "delegate"
-          (Opt.info pStakeAddressDelegate $ Opt.progDesc "Delegate from a stake address to a stake pool")
-      , Opt.command "de-register"
-          (Opt.info pStakeAddressDeRegister $ Opt.progDesc "De-register a stake address")
-      , Opt.command "registration-certificate"
+      , subParser "registration-certificate"
           (Opt.info pStakeAddressRegistrationCert $ Opt.progDesc "Create a stake address registration certificate")
-      , Opt.command "deregistration-certificate"
+      , subParser "deregistration-certificate"
           (Opt.info pStakeAddressDeregistrationCert $ Opt.progDesc "Create a stake address deregistration certificate")
-      , Opt.command "delegation-certificate"
+      , subParser "delegation-certificate"
           (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
       ]
   where
@@ -209,81 +222,71 @@ pStakeAddress =
                             <*> pSigningKeyFile Output
 
     pStakeAddressKeyHash :: Parser StakeAddressCmd
-    pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyFile <*> pMaybeOutputFile
+    pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyOrFile <*> pMaybeOutputFile
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyFile
+    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyOrFile
                                            <*> pNetworkId
                                            <*> pMaybeOutputFile
 
-    pStakeAddressRegister :: Parser StakeAddressCmd
-    pStakeAddressRegister = StakeKeyRegister <$> pPrivKeyFile <*> parseNodeAddress
-
-    pStakeAddressDelegate :: Parser StakeAddressCmd
-    pStakeAddressDelegate =
-      StakeKeyDelegate <$> pPrivKeyFile <*> pPoolId <*> pDelegationFee <*> parseNodeAddress
-
-    pStakeAddressDeRegister :: Parser StakeAddressCmd
-    pStakeAddressDeRegister = StakeKeyDeRegister <$> pPrivKeyFile <*> parseNodeAddress
-
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
     pStakeAddressRegistrationCert = StakeKeyRegistrationCert
-                                      <$> pStakeVerificationKeyFile
+                                      <$> pStakeVerificationKeyOrFile
                                       <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
     pStakeAddressDeregistrationCert = StakeKeyDeRegistrationCert
-                                        <$> pStakeVerificationKeyFile
+                                        <$> pStakeVerificationKeyOrFile
                                         <*> pOutputFile
 
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
     pStakeAddressDelegationCert = StakeKeyDelegationCert
-                                    <$> pStakeVerificationKeyFile
-                                    <*> pStakePoolVerificationKeyHashOrFile
+                                    <$> pStakeVerificationKeyOrFile
+                                    <*> pStakePoolVerificationKeyOrHashOrFile
                                     <*> pOutputFile
-
-pDelegationFee :: Parser Lovelace
-pDelegationFee =
-  Lovelace <$>
-    Opt.option Opt.auto
-      (  Opt.long "delegation-fee"
-      <> Opt.metavar "LOVELACE"
-      <> Opt.help "The delegation fee in Lovelace."
-      )
 
 pKeyCmd :: Parser KeyCmd
 pKeyCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "verification-key" $
-          Opt.info pKeyGetVerificationKey $
-            Opt.progDesc $ "Get a verification key from a signing key. This "
-                        ++ " supports all key types."
-
-      , Opt.command "non-extended-key" $
-          Opt.info pKeyNonExtendedKey $
-            Opt.progDesc $ "Get a non-extended verification key from an "
-                        ++ "extended verification key. This supports all "
-                        ++ "extended key types."
-
-      , Opt.command "convert-byron-key" $
-          Opt.info pKeyConvertByronKey $
-            Opt.progDesc $ "Convert a Byron payment, genesis or genesis "
-                        ++ "delegate key (signing or verification) to a "
-                        ++ "corresponding Shelley-format key."
-
-      , Opt.command "convert-byron-genesis-vkey" $
-          Opt.info pKeyConvertByronGenesisVKey $
-            Opt.progDesc $ "Convert a Base64-encoded Byron genesis "
-                        ++ "verification key to a Shelley genesis "
-                        ++ "verification key"
-
-      , Opt.command "convert-itn-key" $
-          Opt.info pKeyConvertITNKey $
-            Opt.progDesc $ "Convert an Incentivized Testnet (ITN) non-extended "
-                        ++ "signing or verification key to a corresponding "
-                        ++ "Shelley stake key"
-      ]
+  asum
+    [ subParser "verification-key" $
+        Opt.info pKeyGetVerificationKey $
+          Opt.progDesc $ "Get a verification key from a signing key. This "
+                      ++ " supports all key types."
+    , subParser "non-extended-key" $
+        Opt.info pKeyNonExtendedKey $
+          Opt.progDesc $ "Get a non-extended verification key from an "
+                      ++ "extended verification key. This supports all "
+                      ++ "extended key types."
+    , subParser "convert-byron-key" $
+        Opt.info pKeyConvertByronKey $
+          Opt.progDesc $ "Convert a Byron payment, genesis or genesis "
+                      ++ "delegate key (signing or verification) to a "
+                      ++ "corresponding Shelley-format key."
+    , subParser "convert-byron-genesis-vkey" $
+        Opt.info pKeyConvertByronGenesisVKey $
+          Opt.progDesc $ "Convert a Base64-encoded Byron genesis "
+                      ++ "verification key to a Shelley genesis "
+                      ++ "verification key"
+    , subParser "convert-itn-key" $
+        Opt.info pKeyConvertITNKey $
+          Opt.progDesc $ "Convert an Incentivized Testnet (ITN) non-extended "
+                      ++ "(Ed25519) signing or verification key to a "
+                      ++ "corresponding Shelley stake key"
+    , subParser "convert-itn-extended-key" $
+        Opt.info pKeyConvertITNExtendedKey $
+          Opt.progDesc $ "Convert an Incentivized Testnet (ITN) extended "
+                      ++ "(Ed25519Extended) signing key to a corresponding "
+                      ++ "Shelley stake signing key"
+    , subParser "convert-itn-bip32-key" $
+        Opt.info pKeyConvertITNBip32Key $
+          Opt.progDesc $ "Convert an Incentivized Testnet (ITN) BIP32 "
+                      ++ "(Ed25519Bip32) signing key to a corresponding "
+                      ++ "Shelley stake signing key"
+    , subParser "convert-cardano-address-key" $
+        Opt.info pKeyConvertCardanoAddressSigningKey $
+          Opt.progDesc $ "Convert a cardano-address extended signing key "
+                      ++ "to a corresponding Shelley-format key."
+    ]
   where
     pKeyGetVerificationKey :: Parser KeyCmd
     pKeyGetVerificationKey =
@@ -300,9 +303,17 @@ pKeyCmd =
     pKeyConvertByronKey :: Parser KeyCmd
     pKeyConvertByronKey =
       KeyConvertByronKey
-        <$> pByronKeyType
+        <$> optional pPassword
+        <*> pByronKeyType
         <*> pByronKeyFile
         <*> pOutputFile
+
+    pPassword :: Parser Text
+    pPassword = Opt.strOption
+                  (  Opt.long "password"
+                  <> Opt.metavar "TEXT"
+                  <> Opt.help "Password for signing key (if applicable)."
+                  )
 
     pByronKeyType :: Parser ByronKeyType
     pByronKeyType =
@@ -342,7 +353,7 @@ pKeyCmd =
         Opt.strOption
           (  Opt.long "byron-signing-key-file"
           <> Opt.metavar "FILE"
-          <> Opt.help ("Input filepath of the Byron-format signing key.")
+          <> Opt.help "Input filepath of the Byron-format signing key."
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
@@ -352,7 +363,7 @@ pKeyCmd =
         Opt.strOption
           (  Opt.long "byron-verification-key-file"
           <> Opt.metavar "FILE"
-          <> Opt.help ("Input filepath of the Byron-format verification key.")
+          <> Opt.help "Input filepath of the Byron-format verification key."
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
@@ -375,6 +386,18 @@ pKeyCmd =
     pKeyConvertITNKey =
       KeyConvertITNStakeKey
         <$> pITNKeyFIle
+        <*> pOutputFile
+
+    pKeyConvertITNExtendedKey :: Parser KeyCmd
+    pKeyConvertITNExtendedKey =
+      KeyConvertITNExtendedToStakeKey
+        <$> pITNSigningKeyFile
+        <*> pOutputFile
+
+    pKeyConvertITNBip32Key :: Parser KeyCmd
+    pKeyConvertITNBip32Key =
+      KeyConvertITNBip32ToStakeKey
+        <$> pITNSigningKeyFile
         <*> pOutputFile
 
     pITNKeyFIle :: Parser SomeKeyFile
@@ -401,108 +424,163 @@ pKeyCmd =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
+    pKeyConvertCardanoAddressSigningKey :: Parser KeyCmd
+    pKeyConvertCardanoAddressSigningKey =
+      KeyConvertCardanoAddressSigningKey
+        <$> pCardanoAddressKeyType
+        <*> pSigningKeyFile Input
+        <*> pOutputFile
+
+    pCardanoAddressKeyType :: Parser CardanoAddressKeyType
+    pCardanoAddressKeyType =
+          Opt.flag' CardanoAddressShelleyPaymentKey
+            (  Opt.long "shelley-payment-key"
+            <> Opt.help "Use a Shelley-era extended payment key."
+            )
+      <|> Opt.flag' CardanoAddressShelleyStakeKey
+            (  Opt.long "shelley-stake-key"
+            <> Opt.help "Use a Shelley-era extended stake key."
+            )
+      <|> Opt.flag' CardanoAddressIcarusPaymentKey
+            (  Opt.long "icarus-payment-key"
+            <> Opt.help "Use a Byron-era extended payment key formatted in the Icarus style."
+            )
+      <|> Opt.flag' CardanoAddressByronPaymentKey
+            (  Opt.long "byron-payment-key"
+            <> Opt.help "Use a Byron-era extended payment key formatted in the deprecated Byron style."
+            )
+
 pTransaction :: Parser TransactionCmd
 pTransaction =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "build-raw"
-          (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
-      , Opt.command "sign"
-          (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
-      , Opt.command "witness"
-          (Opt.info pTransactionWitness $ Opt.progDesc "Witness a transaction")
-      , Opt.command "sign-witness"
-          (Opt.info pTransactionSignWit $ Opt.progDesc "Sign and witness a transaction")
-      , Opt.command "check"
-          (Opt.info pTransactionCheck $ Opt.progDesc "Check a transaction")
-      , Opt.command "submit"
-          (Opt.info pTransactionSubmit . Opt.progDesc $
-             mconcat
-               [ "Submit a transaction to the local node whose Unix domain socket "
-               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
-               ]
-            )
-      , Opt.command "calculate-min-fee"
-          (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calulate the min fee for a transaction")
-      , Opt.command "txid"
-          (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
-      ]
-  where
-    pTransactionBuild :: Parser TransactionCmd
-    pTransactionBuild = TxBuildRaw <$> some pTxIn
-                                   <*> some pTxOut
-                                   <*> pTxTTL
-                                   <*> pTxFee
-                                   <*> many pCertificateFile
-                                   <*> many pWithdrawal
-                                   <*> many pMetaDataFile
-                                   <*> optional pUpdateProposalFile
-                                   <*> pTxBodyFile Output
+  asum
+    [ subParser "build-raw"
+        (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
+    , subParser "sign"
+        (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
+    , subParser "witness"
+        (Opt.info pTransactionCreateWitness $ Opt.progDesc "Create a transaction witness")
+    , subParser "assemble"
+        (Opt.info pTransactionAssembleTxBodyWit
+          $ Opt.progDesc "Assemble a tx body and witness(es) to form a transaction")
+    , pSignWitnessBackwardCompatible
+    , subParser "submit"
+        (Opt.info pTransactionSubmit . Opt.progDesc $
+           mconcat
+             [ "Submit a transaction to the local node whose Unix domain socket "
+             , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+             ]
+          )
+    , subParser "policyid"
+        (Opt.info pTransactionPolicyId $ Opt.progDesc "Calculate the PolicyId from the monetary policy script.")
+    , subParser "calculate-min-fee"
+        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
+    , subParser "txid"
+        (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
+    , subParser "view" $
+        Opt.info pTransactionView $ Opt.progDesc "Print a transaction"
+    ]
+ where
+  assembleInfo :: ParserInfo TransactionCmd
+  assembleInfo =
+    Opt.info pTransactionAssembleTxBodyWit
+      $ Opt.progDesc "Assemble a tx body and witness(es) to form a transaction"
 
-    pTransactionSign  :: Parser TransactionCmd
-    pTransactionSign = TxSign <$> pTxBodyFile Input
-                              <*> pSomeSigningKeyFiles
-                              <*> optional pNetworkId
-                              <*> pTxFile Output
+  pSignWitnessBackwardCompatible :: Parser TransactionCmd
+  pSignWitnessBackwardCompatible =
+    Opt.subparser
+      $ Opt.command "sign-witness" assembleInfo <> Opt.internal
 
-    pTransactionWitness :: Parser TransactionCmd
-    pTransactionWitness = TxWitness <$> pTxBodyFile Input
-                                    <*> pWitnessSigningKeyFile
-                                    <*> optional pNetworkId
+  pTransactionBuild :: Parser TransactionCmd
+  pTransactionBuild = TxBuildRaw <$> pCardanoEra
+                                 <*> some pTxIn
+                                 <*> many pTxOut
+                                 <*> optional pMintMultiAsset
+                                 <*> optional pInvalidBefore
+                                 <*> optional pInvalidHereafter
+                                 <*> optional pTxFee
+                                 <*> many pCertificateFile
+                                 <*> many pWithdrawal
+                                 <*> pTxMetadataJsonSchema
+                                 <*> many pScript
+                                 <*> many pMetadataFile
+                                 <*> optional pUpdateProposalFile
+                                 <*> pTxBodyFile Output
+
+  pTransactionSign  :: Parser TransactionCmd
+  pTransactionSign = TxSign <$> pTxBodyFile Input
+                            <*> pSomeWitnessSigningData
+                            <*> optional pNetworkId
+                            <*> pTxFile Output
+
+  pTransactionCreateWitness :: Parser TransactionCmd
+  pTransactionCreateWitness = TxCreateWitness
+                                <$> pTxBodyFile Input
+                                <*> pWitnessSigningData
+                                <*> optional pNetworkId
+                                <*> pOutputFile
+
+  pTransactionAssembleTxBodyWit :: Parser TransactionCmd
+  pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
+                                    <$> pTxBodyFile Input
+                                    <*> some pWitnessFile
                                     <*> pOutputFile
 
-    pTransactionSignWit :: Parser TransactionCmd
-    pTransactionSignWit = TxSignWitness <$> pTxBodyFile Input
-                                        <*> some pWitnessFile
-                                        <*> pOutputFile
+  pTransactionSubmit :: Parser TransactionCmd
+  pTransactionSubmit = TxSubmit <$> pConsensusModeParams
+                                <*> pNetworkId
+                                <*> pTxSubmitFile
 
-    pTransactionCheck  :: Parser TransactionCmd
-    pTransactionCheck = pure TxCheck
+  pTransactionPolicyId :: Parser TransactionCmd
+  pTransactionPolicyId = TxMintedPolicyId <$> pScript
 
-    pTransactionSubmit  :: Parser TransactionCmd
-    pTransactionSubmit = TxSubmit <$> pProtocol
-                                  <*> pNetworkId
-                                  <*> pTxSubmitFile
+  pTransactionCalculateMinFee :: Parser TransactionCmd
+  pTransactionCalculateMinFee =
+    TxCalculateMinFee
+      <$> pTxBodyFile Input
+      <*> optional pNetworkId
+      <*> pProtocolParamsSourceSpec
+      <*> pTxInCount
+      <*> pTxOutCount
+      <*> pTxShelleyWitnessCount
+      <*> pTxByronWitnessCount
 
-    pTransactionCalculateMinFee :: Parser TransactionCmd
-    pTransactionCalculateMinFee =
-      TxCalculateMinFee
-        <$> pTxBodyFile Input
-        <*> optional pNetworkId
-        <*> pProtocolParamsFile
-        <*> pTxInCount
-        <*> pTxOutCount
-        <*> pTxShelleyWitnessCount
-        <*> pTxByronWitnessCount
+  pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
+  pProtocolParamsSourceSpec =
+    ParamsFromGenesis <$>
+      pGenesisFile
+        "[TESTING] The genesis file to take initial protocol parameters from.  For test clusters only, since the parameters are going to be obsolete for production clusters."
+    <|>
+    ParamsFromFile <$> pProtocolParamsFile
 
-    pTransactionId  :: Parser TransactionCmd
-    pTransactionId = TxGetTxId <$> pTxBodyFile Input
+  pTransactionId  :: Parser TransactionCmd
+  pTransactionId = TxGetTxId <$> pInputTxFile
 
+  pTransactionView :: Parser TransactionCmd
+  pTransactionView = TxView <$> pInputTxFile
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen"
-          (Opt.info pKeyGenOperator $
-             Opt.progDesc "Create a key pair for a node operator's offline \
-                         \ key and a new certificate issue counter")
-      , Opt.command "key-gen-KES"
-          (Opt.info pKeyGenKES $
-             Opt.progDesc "Create a key pair for a node KES operational key")
-      , Opt.command "key-gen-VRF"
-          (Opt.info pKeyGenVRF $
-             Opt.progDesc "Create a key pair for a node VRF operational key")
-      , Opt.command "key-hash-VRF"
-          (Opt.info pKeyHashVRF $
-             Opt.progDesc "Print hash of a node's operational VRF key.")
-      , Opt.command "new-counter"
-          (Opt.info pNewCounter $
-             Opt.progDesc "Create a new certificate issue counter")
-      , Opt.command "issue-op-cert"
-          (Opt.info pIssueOpCert $
-             Opt.progDesc "Issue a node operational certificate")
-      ]
+  asum
+    [ subParser "key-gen"
+        (Opt.info pKeyGenOperator $
+           Opt.progDesc "Create a key pair for a node operator's offline \
+                       \ key and a new certificate issue counter")
+    , subParser "key-gen-KES"
+        (Opt.info pKeyGenKES $
+           Opt.progDesc "Create a key pair for a node KES operational key")
+    , subParser "key-gen-VRF"
+        (Opt.info pKeyGenVRF $
+           Opt.progDesc "Create a key pair for a node VRF operational key")
+    , subParser "key-hash-VRF"
+        (Opt.info pKeyHashVRF $
+           Opt.progDesc "Print hash of a node's operational VRF key.")
+    , subParser "new-counter"
+        (Opt.info pNewCounter $
+           Opt.progDesc "Create a new certificate issue counter")
+    , subParser "issue-op-cert"
+        (Opt.info pIssueOpCert $
+           Opt.progDesc "Issue a node operational certificate")
+    ]
   where
     pKeyGenOperator :: Parser NodeCmd
     pKeyGenOperator =
@@ -520,11 +598,11 @@ pNodeCmd =
 
     pKeyHashVRF :: Parser NodeCmd
     pKeyHashVRF =
-      NodeKeyHashVRF <$> pVerificationKeyFile Input <*> pMaybeOutputFile
+      NodeKeyHashVRF <$> pVerificationKeyOrFile AsVrfKey <*> pMaybeOutputFile
 
     pNewCounter :: Parser NodeCmd
     pNewCounter =
-      NodeNewCounter <$> pColdVerificationKeyFile
+      NodeNewCounter <$> pColdVerificationKeyOrFile
                      <*> pCounterValue
                      <*> pOperatorCertIssueCounterFile
 
@@ -538,7 +616,7 @@ pNodeCmd =
 
     pIssueOpCert :: Parser NodeCmd
     pIssueOpCert =
-      NodeIssueOpCert <$> pKESVerificationKeyFile
+      NodeIssueOpCert <$> pKesVerificationKeyOrFile
                       <*> pColdSigningKeyFile
                       <*> pOperatorCertIssueCounterFile
                       <*> pKesPeriod
@@ -547,147 +625,149 @@ pNodeCmd =
 
 pPoolCmd :: Parser PoolCmd
 pPoolCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "register"
-          (Opt.info pPoolRegster $ Opt.progDesc "Register a stake pool")
-      , Opt.command "re-register"
-          (Opt.info pPoolReRegster $ Opt.progDesc "Re-register a stake pool")
-      , Opt.command "retire"
-          (Opt.info pPoolRetire $ Opt.progDesc "Retire a stake pool")
-      , Opt.command "registration-certificate"
+  asum
+      [ subParser "registration-certificate"
           (Opt.info pStakePoolRegistrationCert $ Opt.progDesc "Create a stake pool registration certificate")
-      , Opt.command "deregistration-certificate"
+      , subParser "deregistration-certificate"
           (Opt.info pStakePoolRetirementCert $ Opt.progDesc "Create a stake pool deregistration certificate")
-      , Opt.command "id"
+      , subParser "id"
           (Opt.info pId $
              Opt.progDesc "Build pool id from the offline key")
-      , Opt.command "metadata-hash"
-          (Opt.info pPoolMetaDataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
+      , subParser "metadata-hash"
+          (Opt.info pPoolMetadataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
-    pPoolRegster :: Parser PoolCmd
-    pPoolRegster = PoolRegister <$> pPoolId
-
-    pPoolReRegster :: Parser PoolCmd
-    pPoolReRegster = PoolReRegister <$> pPoolId
-
-    pPoolRetire :: Parser PoolCmd
-    pPoolRetire = PoolRetire <$> pPoolId <*> pEpochNo <*> parseNodeAddress
-
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pVerificationKeyFile Output
+    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
 
-    pPoolMetaDataHashSubCmd :: Parser PoolCmd
-    pPoolMetaDataHashSubCmd = PoolMetaDataHash <$> pPoolMetaDataFile <*> pMaybeOutputFile
+    pPoolMetadataHashSubCmd :: Parser PoolCmd
+    pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
 
 
 pQueryCmd :: Parser QueryCmd
 pQueryCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "pool-id"
-          (Opt.info pQueryPoolId $ Opt.progDesc "Get the node's pool id")
-      , Opt.command "protocol-parameters"
-          (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
-      , Opt.command "tip"
-          (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
-      , Opt.command "stake-distribution"
-          (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
-      , Opt.command "stake-address-info"
-          (Opt.info pQueryStakeAddressInfo $ Opt.progDesc "Get the current delegations and \
-                                                          \reward accounts filtered by stake \
-                                                          \address.")
-      , Opt.command "utxo"
-          (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
-                                              \filtering by address(es)")
-      , Opt.command "version"
-          (Opt.info pQueryVersion $ Opt.progDesc "Get the node version")
-      , Opt.command "ledger-state"
-          (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current state of the node")
-      , Opt.command "status"
-          (Opt.info pQueryStatus $ Opt.progDesc "Get the status of the node")
-      ]
+  asum
+    [ subParser "protocol-parameters"
+        (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
+    , subParser "tip"
+        (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
+    , subParser "stake-distribution"
+        (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
+    , subParser "stake-address-info"
+        (Opt.info pQueryStakeAddressInfo $ Opt.progDesc "Get the current delegations and \
+                                                        \reward accounts filtered by stake \
+                                                        \address.")
+    , subParser "utxo"
+        (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
+                                            \filtering by address(es)")
+    , subParser "ledger-state"
+        (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
+    , subParser "protocol-state"
+        (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node (Ledger.ChainDepState -- advanced command)")
+    , subParser "stake-snapshot"
+        (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the stake snapshot for a pool (mark,set,go,total -- advanced command)")
+    , subParser "pool-params"
+        (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
+    ]
   where
-    pQueryPoolId :: Parser QueryCmd
-    pQueryPoolId = QueryPoolId <$> parseNodeAddress
-
     pQueryProtocolParameters :: Parser QueryCmd
     pQueryProtocolParameters =
-      QueryProtocolParameters
-        <$> pProtocol
+      QueryProtocolParameters'
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
+    pQueryTip = QueryTip
+                  <$> pCardanoEra
+                  <*> pConsensusModeParams
+                  <*> pNetworkId
+                  <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
-      QueryUTxO
-        <$> pProtocol
+      QueryUTxO'
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pQueryFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeDistribution :: Parser QueryCmd
     pQueryStakeDistribution =
-      QueryStakeDistribution
-        <$> pProtocol
+      QueryStakeDistribution'
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
     pQueryStakeAddressInfo :: Parser QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
-        <$> pProtocol
+        <$> pCardanoEra
+        <*> pConsensusModeParams
         <*> pFilterByStakeAddress
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-    pQueryVersion :: Parser QueryCmd
-    pQueryVersion = QueryVersion <$> parseNodeAddress
-
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState <$> pProtocol <*> pNetworkId <*> pMaybeOutputFile
+    pQueryLedgerState = QueryLedgerState'
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
+                          <*> pNetworkId
+                          <*> pMaybeOutputFile
 
-    pQueryStatus :: Parser QueryCmd
-    pQueryStatus = QueryStatus <$> parseNodeAddress
+    pQueryProtocolState :: Parser QueryCmd
+    pQueryProtocolState = QueryProtocolState'
+                            <$> pCardanoEra
+                            <*> pConsensusModeParams
+                            <*> pNetworkId
+                            <*> pMaybeOutputFile
 
+    pQueryStakeSnapshot :: Parser QueryCmd
+    pQueryStakeSnapshot = QueryStakeSnapshot'
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
+                          <*> pNetworkId
+                          <*> pStakePoolVerificationKeyHash
 
-pBlockCmd :: Parser BlockCmd
-pBlockCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "info"
-          (Opt.info pBlockInfo $ Opt.progDesc "Get the node's pool id")
-      ]
-  where
-    pBlockInfo :: Parser BlockCmd
-    pBlockInfo = BlockInfo <$> pBlockId <*> parseNodeAddress
+    pQueryPoolParams :: Parser QueryCmd
+    pQueryPoolParams = QueryPoolParams'
+                          <$> pCardanoEra
+                          <*> pConsensusModeParams
+                          <*> pNetworkId
+                          <*> pStakePoolVerificationKeyHash
+
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "create-mir-certificate"
-          (Opt.info pMIRCertificate $
-            Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
-      , Opt.command "create-update-proposal"
-          (Opt.info pUpdateProposal $
-            Opt.progDesc "Create an update proposal")
-      , Opt.command "protocol-update"
-          (Opt.info pProtocolUpdate $ Opt.progDesc "Protocol update")
-      , Opt.command "cold-keys"
-          (Opt.info pColdKeys $ Opt.progDesc "Cold keys")
-      ]
+ asum
+   [ subParser "create-mir-certificate"
+       (Opt.info pMIRCertificate $
+         Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
+   , subParser "create-genesis-key-delegation-certificate"
+       (Opt.info pGovernanceGenesisKeyDelegationCertificate $
+         Opt.progDesc "Create a genesis key delegation certificate")
+   , subParser "create-update-proposal"
+       (Opt.info pUpdateProposal $
+         Opt.progDesc "Create an update proposal")
+   ]
   where
     pMIRCertificate :: Parser GovernanceCmd
     pMIRCertificate = GovernanceMIRCertificate
                         <$> pMIRPot
-                        <*> some pStakeVerificationKeyFile
+                        <*> some pStakeAddress
                         <*> some pRewardAmt
                         <*> pOutputFile
+
+    pGovernanceGenesisKeyDelegationCertificate :: Parser GovernanceCmd
+    pGovernanceGenesisKeyDelegationCertificate =
+      GovernanceGenesisKeyDelegationCertificate
+        <$> pGenesisVerificationKeyOrHashOrFile
+        <*> pGenesisDelegateVerificationKeyOrHashOrFile
+        <*> pVrfVerificationKeyOrHashOrFile
+        <*> pOutputFile
 
     pMIRPot :: Parser Shelley.MIRPot
     pMIRPot =
@@ -695,7 +775,7 @@ pGovernanceCmd =
             (  Opt.long "reserves"
             <> Opt.help "Use the reserves pot."
             )
-      <|> Opt.flag' Shelley.ReservesMIR
+      <|> Opt.flag' Shelley.TreasuryMIR
             (  Opt.long "treasury"
             <> Opt.help "Use the treasury pot."
             )
@@ -707,20 +787,6 @@ pGovernanceCmd =
                         <*> some pGenesisVerificationKeyFile
                         <*> pShelleyProtocolParametersUpdate
 
-    pProtocolUpdate :: Parser GovernanceCmd
-    pProtocolUpdate = GovernanceProtocolUpdate <$> pColdSigningKeyFile
-
-    pColdKeys :: Parser GovernanceCmd
-    pColdKeys = GovernanceColdKeys <$> pGenesisKeyFile
-
-    pGenesisKeyFile :: Parser SigningKeyFile
-    pGenesisKeyFile =
-      pColdSigningKeyFile
-        <|> Opt.strOption
-              (  Opt.long "genesis-key"
-              <> Opt.internal
-              )
-
 pRewardAmt :: Parser Lovelace
 pRewardAmt =
     Opt.option (readerFromAttoParser parseLovelace)
@@ -729,57 +795,42 @@ pRewardAmt =
       <> Opt.help "The reward for the relevant reward account."
       )
 
-pSystemCmd :: Parser SystemCmd
-pSystemCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "start"
-          (Opt.info pSystemStart $ Opt.progDesc "Start system")
-      , Opt.command "stop"
-          (Opt.info pSystemStop $ Opt.progDesc "Stop system")
-      ]
-  where
-    pSystemStart :: Parser SystemCmd
-    pSystemStart = SysStart <$> pGenesisFile <*> parseNodeAddress
-
-    pSystemStop :: Parser SystemCmd
-    pSystemStop = SysStop <$> parseNodeAddress
-
-
 pGenesisCmd :: Parser GenesisCmd
 pGenesisCmd =
-  Opt.subparser $
-    mconcat
-      [ Opt.command "key-gen-genesis"
-          (Opt.info pGenesisKeyGen $
-             Opt.progDesc "Create a Shelley genesis key pair")
-      , Opt.command "key-gen-delegate"
-          (Opt.info pGenesisDelegateKeyGen $
-             Opt.progDesc "Create a Shelley genesis delegate key pair")
-      , Opt.command "key-gen-utxo"
-          (Opt.info pGenesisUTxOKeyGen $
-             Opt.progDesc "Create a Shelley genesis UTxO key pair")
-      , Opt.command "key-hash"
-          (Opt.info pGenesisKeyHash $
-             Opt.progDesc "Print the identifier (hash) of a public key")
-      , Opt.command "get-ver-key"
-          (Opt.info pGenesisVerKey $
-             Opt.progDesc "Derive the verification key from a signing key")
-      , Opt.command "initial-addr"
-          (Opt.info pGenesisAddr $
-             Opt.progDesc "Get the address for an initial UTxO based on the verification key")
-      , Opt.command "initial-txin"
-          (Opt.info pGenesisTxIn $
-             Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
-      , Opt.command "create"
-          (Opt.info pGenesisCreate $
-             Opt.progDesc ("Create a Shelley genesis file from a genesis "
-                        ++ "template and genesis/delegation/spending keys."))
-
-      , Opt.command "hash"
-          (Opt.info pGenesisHash $
-             Opt.progDesc "Compute the hash of a genesis file")
-      ]
+  asum
+    [ subParser "key-gen-genesis"
+        (Opt.info pGenesisKeyGen $
+           Opt.progDesc "Create a Shelley genesis key pair")
+    , subParser "key-gen-delegate"
+        (Opt.info pGenesisDelegateKeyGen $
+           Opt.progDesc "Create a Shelley genesis delegate key pair")
+    , subParser "key-gen-utxo"
+        (Opt.info pGenesisUTxOKeyGen $
+           Opt.progDesc "Create a Shelley genesis UTxO key pair")
+    , subParser "key-hash"
+        (Opt.info pGenesisKeyHash $
+           Opt.progDesc "Print the identifier (hash) of a public key")
+    , subParser "get-ver-key"
+        (Opt.info pGenesisVerKey $
+           Opt.progDesc "Derive the verification key from a signing key")
+    , subParser "initial-addr"
+        (Opt.info pGenesisAddr $
+           Opt.progDesc "Get the address for an initial UTxO based on the verification key")
+    , subParser "initial-txin"
+        (Opt.info pGenesisTxIn $
+           Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
+    , subParser "create"
+        (Opt.info pGenesisCreate $
+           Opt.progDesc ("Create a Shelley genesis file from a genesis "
+                      ++ "template and genesis/delegation/spending keys."))
+    , subParser "create-staked"
+        (Opt.info pGenesisCreateStaked $
+           Opt.progDesc ("Create a staked Shelley genesis file from a genesis "
+                      ++ "template and genesis/delegation/spending keys."))
+    , subParser "hash"
+        (Opt.info pGenesisHash $
+           Opt.progDesc "Compute the hash of a genesis file")
+    ]
   where
     pGenesisKeyGen :: Parser GenesisCmd
     pGenesisKeyGen =
@@ -817,12 +868,28 @@ pGenesisCmd =
                     <*> pGenesisNumGenesisKeys
                     <*> pGenesisNumUTxOKeys
                     <*> pMaybeSystemStart
-                    <*> pInitialSupply
+                    <*> pInitialSupplyNonDelegated
                     <*> pNetworkId
+
+    pGenesisCreateStaked :: Parser GenesisCmd
+    pGenesisCreateStaked =
+      GenesisCreateStaked
+        <$> pGenesisDir
+        <*> pGenesisNumGenesisKeys
+        <*> pGenesisNumUTxOKeys
+        <*> pGenesisNumPools
+        <*> pGenesisNumStDelegs
+        <*> pMaybeSystemStart
+        <*> pInitialSupplyNonDelegated
+        <*> pInitialSupplyDelegated
+        <*> pNetworkId
+        <*> pBulkPoolCredFiles
+        <*> pBulkPoolsPerFile
+        <*> pStuffedUtxoCount
 
     pGenesisHash :: Parser GenesisCmd
     pGenesisHash =
-      GenesisHashFile <$> pGenesisFile
+      GenesisHashFile <$> pGenesisFile "The genesis file."
 
     pGenesisDir :: Parser GenesisDir
     pGenesisDir =
@@ -861,18 +928,73 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
+    pGenesisNumPools :: Parser Word
+    pGenesisNumPools =
+        Opt.option Opt.auto
+          (  Opt.long "gen-pools"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of stake pool credential sets to make [default is 0]."
+          <> Opt.value 0
+          )
+
+    pGenesisNumStDelegs :: Parser Word
+    pGenesisNumStDelegs =
+        Opt.option Opt.auto
+          (  Opt.long "gen-stake-delegs"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of stake delegator credential sets to make [default is 0]."
+          <> Opt.value 0
+          )
+
+    pStuffedUtxoCount :: Parser Word
+    pStuffedUtxoCount =
+        Opt.option Opt.auto
+          (  Opt.long "num-stuffed-utxo"
+          <> Opt.metavar "INT"
+          <> Opt.help "The number of fake UTxO entries to generate [default is 0]."
+          <> Opt.value 0
+          )
+
     convertTime :: String -> UTCTime
     convertTime =
       parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
-    pInitialSupply :: Parser (Maybe Lovelace)
-    pInitialSupply =
+    pInitialSupplyNonDelegated :: Parser (Maybe Lovelace)
+    pInitialSupplyNonDelegated =
       Opt.optional $
       Lovelace <$>
         Opt.option Opt.auto
           (  Opt.long "supply"
           <> Opt.metavar "LOVELACE"
-          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial stake holders."
+          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial, non-delegating stake holders."
+          )
+
+    pInitialSupplyDelegated :: Parser Lovelace
+    pInitialSupplyDelegated =
+      fmap (Lovelace . fromMaybe 0) $ Opt.optional $
+        Opt.option Opt.auto
+          (  Opt.long "supply-delegated"
+          <> Opt.metavar "LOVELACE"
+          <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial, delegating stake holders."
+          <> Opt.value 0
+          )
+
+    pBulkPoolCredFiles :: Parser Word
+    pBulkPoolCredFiles =
+        Opt.option Opt.auto
+          (  Opt.long "bulk-pool-cred-files"
+          <> Opt.metavar "INT"
+          <> Opt.help "Generate bulk pool credential files [default is 0]."
+          <> Opt.value 0
+          )
+
+    pBulkPoolsPerFile :: Parser Word
+    pBulkPoolsPerFile =
+        Opt.option Opt.auto
+          (  Opt.long "bulk-pools-per-file"
+          <> Opt.metavar "INT"
+          <> Opt.help "Each bulk pool to contain this many pool credential sets [default is 0]."
+          <> Opt.value 0
           )
 
 
@@ -933,9 +1055,9 @@ pCertificateFile =
          )
     )
 
-pPoolMetaDataFile :: Parser PoolMetaDataFile
-pPoolMetaDataFile =
-  PoolMetaDataFile <$>
+pPoolMetadataFile :: Parser PoolMetadataFile
+pPoolMetadataFile =
+  PoolMetadataFile <$>
     Opt.strOption
       (  Opt.long "pool-metadata-file"
       <> Opt.metavar "FILE"
@@ -943,9 +1065,28 @@ pPoolMetaDataFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pMetaDataFile :: Parser MetaDataFile
-pMetaDataFile =
-      MetaDataFileJSON <$>
+pTxMetadataJsonSchema :: Parser TxMetadataJsonSchema
+pTxMetadataJsonSchema =
+    (  Opt.flag' ()
+        (  Opt.long "json-metadata-no-schema"
+        <> Opt.help "Use the \"no schema\" conversion from JSON to tx metadata."
+        )
+    *> pure TxMetadataJsonNoSchema
+    )
+  <|>
+    (  Opt.flag' ()
+        (  Opt.long "json-metadata-detailed-schema"
+        <> Opt.help "Use the \"detailed schema\" conversion from JSON to tx metadata."
+        )
+    *> pure TxMetadataJsonDetailedSchema
+    )
+  <|>
+    -- Default to the no-schema conversion.
+    pure TxMetadataJsonNoSchema
+
+pMetadataFile :: Parser MetadataFile
+pMetadataFile =
+      MetadataFileJSON <$>
         ( Opt.strOption
             (  Opt.long "metadata-json-file"
             <> Opt.metavar "FILE"
@@ -959,7 +1100,7 @@ pMetaDataFile =
             )
         )
   <|>
-      MetaDataFileCBOR <$>
+      MetadataFileCBOR <$>
         Opt.strOption
           (  Opt.long "metadata-cbor-file"
           <> Opt.metavar "FILE"
@@ -1015,16 +1156,23 @@ pColdSigningKeyFile =
       )
     )
 
-pSomeSigningKeyFiles :: Parser [SigningKeyFile]
-pSomeSigningKeyFiles =
+pSomeWitnessSigningData :: Parser [WitnessSigningData]
+pSomeWitnessSigningData =
   some $
-    SigningKeyFile <$>
-      Opt.strOption
-      (  Opt.long "signing-key-file"
-      <> Opt.metavar "FILE"
-      <> Opt.help ("Input filepath of the signing key (one or more).")
-      <> Opt.completer (Opt.bashCompleter "file")
-      )
+      KeyWitnessSigningData
+        <$>
+          ( SigningKeyFile <$>
+              Opt.strOption
+                (  Opt.long "signing-key-file"
+                <> Opt.metavar "FILE"
+                <> Opt.help "Input filepath of the signing key (one or more)."
+                <> Opt.completer (Opt.bashCompleter "file")
+                )
+          )
+        <*>
+          optional pByronAddress
+    <|>
+      ScriptWitnessSigningData <$> pScript
 
 pSigningKeyFile :: FileDirection -> Parser SigningKeyFile
 pSigningKeyFile fdir =
@@ -1036,25 +1184,22 @@ pSigningKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pWitnessSigningKeyFile :: Parser SigningKeyFile
-pWitnessSigningKeyFile =
-  SigningKeyFile <$>
-    ( Opt.strOption
-        (  Opt.long "witness-signing-key-file"
-        <> Opt.metavar "FILE"
-        <> Opt.help "Filepath of the witness signing key."
-        <> Opt.completer (Opt.bashCompleter "file")
+pWitnessSigningData :: Parser WitnessSigningData
+pWitnessSigningData =
+    KeyWitnessSigningData
+      <$>
+        ( SigningKeyFile <$>
+            Opt.strOption
+              (  Opt.long "signing-key-file"
+              <> Opt.metavar "FILE"
+              <> Opt.help "Filepath of the signing key to be used in witness construction."
+              <> Opt.completer (Opt.bashCompleter "file")
+              )
         )
-    )
-
-pBlockId :: Parser BlockId
-pBlockId =
-  BlockId <$>
-    Opt.strOption
-      (  Opt.long "block-id"
-      <> Opt.metavar "STRING"
-      <> Opt.help "The block identifier."
-      )
+      <*>
+        optional pByronAddress
+  <|>
+    ScriptWitnessSigningData <$> pScript
 
 pKesPeriod :: Parser KESPeriod
 pKesPeriod =
@@ -1084,13 +1229,13 @@ pEpochNoUpdateProp =
       <> Opt.help "The epoch number in which the update proposal is valid."
       )
 
-pGenesisFile :: Parser GenesisFile
-pGenesisFile =
+pGenesisFile :: String -> Parser GenesisFile
+pGenesisFile desc =
   GenesisFile <$>
     Opt.strOption
       (  Opt.long "genesis"
       <> Opt.metavar "FILE"
-      <> Opt.help "The genesis file."
+      <> Opt.help desc
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
@@ -1108,6 +1253,17 @@ pOperatorCertIssueCounterFile =
         (  Opt.long "operational-certificate-issue-counter"
         <> Opt.internal
         )
+    )
+
+
+pOutputFormat :: Parser OutputFormat
+pOutputFormat =
+  Opt.option readOutputFormat
+    (  Opt.long "output-format"
+    <> Opt.metavar "STRING"
+    <> Opt.help "Optional output format. Accepted output formats are \"hex\" \
+                \and \"bech32\" (default is \"bech32\")."
+    <> Opt.value OutputFormatBech32
     )
 
 
@@ -1132,31 +1288,11 @@ pOutputFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pPoolId :: Parser PoolId
-pPoolId =
-  PoolId <$>
-    Opt.strOption
-      (  Opt.long "pool-id"
-      <> Opt.metavar "STRING"
-      <> Opt.help "The pool identifier."
-      )
-
-pPrivKeyFile :: Parser PrivKeyFile
-pPrivKeyFile =
-  PrivKeyFile <$>
-    ( Opt.strOption
-        (  Opt.long "signing-key-file"
-        <> Opt.metavar "FILE"
-        <> Opt.help "The private key file."
-        <> Opt.completer (Opt.bashCompleter "file")
-        )
-    <|>
-      Opt.strOption
-        (  Opt.long "private-key"
-        <> Opt.internal
-        )
-
-    )
+pColdVerificationKeyOrFile :: Parser ColdVerificationKeyOrFile
+pColdVerificationKeyOrFile =
+  ColdStakePoolVerificationKey <$> pStakePoolVerificationKey
+    <|> ColdGenesisDelegateVerificationKey <$> pGenesisDelegateVerificationKey
+    <|> ColdVerificationKeyFile <$> pColdVerificationKeyFile
 
 pColdVerificationKeyFile :: Parser VerificationKeyFile
 pColdVerificationKeyFile =
@@ -1164,7 +1300,7 @@ pColdVerificationKeyFile =
     ( Opt.strOption
         (  Opt.long "cold-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the cold verification key.")
+        <> Opt.help "Filepath of the cold verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1173,6 +1309,26 @@ pColdVerificationKeyFile =
         <> Opt.internal
         )
     )
+
+pVerificationKey
+  :: forall keyrole. SerialiseAsBech32 (VerificationKey keyrole)
+  => AsType keyrole
+  -> Parser (VerificationKey keyrole)
+pVerificationKey asType =
+  Opt.option
+    (readVerificationKey asType)
+      (  Opt.long "verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Verification key (Bech32 or hex-encoded)."
+      )
+
+pVerificationKeyOrFile
+  :: SerialiseAsBech32 (VerificationKey keyrole)
+  => AsType keyrole
+  -> Parser (VerificationKeyOrFile keyrole)
+pVerificationKeyOrFile asType =
+  VerificationKeyValue <$> pVerificationKey asType
+    <|> VerificationKeyFilePath <$> pVerificationKeyFile Input
 
 pVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
 pVerificationKeyFile fdir =
@@ -1204,9 +1360,136 @@ pGenesisVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
+pGenesisVerificationKeyHash :: Parser (Hash GenesisKey)
+pGenesisVerificationKeyHash =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-verification-key-hash"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis verification key hash (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (Hash GenesisKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis verification key hash.") Right
+        . deserialiseFromRawBytesHex (AsHash AsGenesisKey)
+        . BSC.pack
 
-pKESVerificationKeyFile :: Parser VerificationKeyFile
-pKESVerificationKeyFile =
+pGenesisVerificationKey :: Parser (VerificationKey GenesisKey)
+pGenesisVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis verification key (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (VerificationKey GenesisKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis verification key.") Right
+        . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisKey)
+        . BSC.pack
+
+pGenesisVerificationKeyOrFile :: Parser (VerificationKeyOrFile GenesisKey)
+pGenesisVerificationKeyOrFile =
+  VerificationKeyValue <$> pGenesisVerificationKey
+    <|> VerificationKeyFilePath <$> pGenesisVerificationKeyFile
+
+pGenesisVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile GenesisKey)
+pGenesisVerificationKeyOrHashOrFile =
+  VerificationKeyOrFile <$> pGenesisVerificationKeyOrFile
+    <|> VerificationKeyHash <$> pGenesisVerificationKeyHash
+
+pGenesisDelegateVerificationKeyFile :: Parser VerificationKeyFile
+pGenesisDelegateVerificationKeyFile =
+  VerificationKeyFile <$>
+    Opt.strOption
+      (  Opt.long "genesis-delegate-verification-key-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Filepath of the genesis delegate verification key."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
+pGenesisDelegateVerificationKeyHash :: Parser (Hash GenesisDelegateKey)
+pGenesisDelegateVerificationKeyHash =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-delegate-verification-key-hash"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis delegate verification key hash (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (Hash GenesisDelegateKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis delegate verification key hash.") Right
+        . deserialiseFromRawBytesHex (AsHash AsGenesisDelegateKey)
+        . BSC.pack
+
+pGenesisDelegateVerificationKey :: Parser (VerificationKey GenesisDelegateKey)
+pGenesisDelegateVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "genesis-delegate-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Genesis delegate verification key (hex-encoded)."
+        )
+  where
+    deserialiseFromHex
+      :: String
+      -> Either String (VerificationKey GenesisDelegateKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid genesis delegate verification key.") Right
+        . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisDelegateKey)
+        . BSC.pack
+
+pGenesisDelegateVerificationKeyOrFile
+  :: Parser (VerificationKeyOrFile GenesisDelegateKey)
+pGenesisDelegateVerificationKeyOrFile =
+  VerificationKeyValue <$> pGenesisDelegateVerificationKey
+    <|> VerificationKeyFilePath <$> pGenesisDelegateVerificationKeyFile
+
+pGenesisDelegateVerificationKeyOrHashOrFile
+  :: Parser (VerificationKeyOrHashOrFile GenesisDelegateKey)
+pGenesisDelegateVerificationKeyOrHashOrFile =
+  VerificationKeyOrFile <$> pGenesisDelegateVerificationKeyOrFile
+    <|> VerificationKeyHash <$> pGenesisDelegateVerificationKeyHash
+
+pKesVerificationKeyOrFile :: Parser (VerificationKeyOrFile KesKey)
+pKesVerificationKeyOrFile =
+  VerificationKeyValue <$> pKesVerificationKey
+    <|> VerificationKeyFilePath <$> pKesVerificationKeyFile
+
+pKesVerificationKey :: Parser (VerificationKey KesKey)
+pKesVerificationKey =
+    Opt.option
+      (Opt.eitherReader deserialiseVerKey)
+        (  Opt.long "kes-verification-key"
+        <> Opt.metavar "STRING"
+        <> Opt.help "A Bech32 or hex-encoded hot KES verification key."
+        )
+  where
+    asType :: AsType (VerificationKey KesKey)
+    asType = AsVerificationKey AsKesKey
+
+    deserialiseVerKey :: String -> Either String (VerificationKey KesKey)
+    deserialiseVerKey str =
+      case deserialiseFromBech32 asType (Text.pack str) of
+        Right res -> Right res
+
+        -- The input was valid Bech32, but some other error occurred.
+        Left err@(Bech32UnexpectedPrefix _ _) -> Left (displayError err)
+        Left err@(Bech32DataPartToBytesError _) -> Left (displayError err)
+        Left err@(Bech32DeserialiseFromBytesError _) -> Left (displayError err)
+        Left err@(Bech32WrongPrefix _ _) -> Left (displayError err)
+
+        -- The input was not valid Bech32. Attempt to deserialise it as hex.
+        Left (Bech32DecodingError _) ->
+          case deserialiseFromRawBytesHex asType (BSC.pack str) of
+            Just res' -> Right res'
+            Nothing -> Left "Invalid stake pool verification key."
+
+pKesVerificationKeyFile :: Parser VerificationKeyFile
+pKesVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
         (  Opt.long "kes-verification-key-file"
@@ -1232,6 +1515,19 @@ pNetworkId =
       <> Opt.help "Use the mainnet magic id."
       )
 
+{-
+pPoolId :: Parser PoolId
+pPoolId =
+  pMainnet <|> fmap Testnet pTestnetMagic
+ where
+   pMainnet :: Parser NetworkId
+   pMainnet =
+    Opt.flag' Mainnet
+      (  Opt.long "mainnet"
+      <> Opt.help "Use the mainnet magic id."
+      )
+-}
+
 pTestnetMagic :: Parser NetworkMagic
 pTestnetMagic =
   NetworkMagic <$>
@@ -1250,6 +1546,29 @@ pTxSubmitFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
+pCardanoEra :: Parser AnyCardanoEra
+pCardanoEra = asum
+  [ Opt.flag' (AnyCardanoEra ByronEra)
+      (  Opt.long "byron-era"
+      <> Opt.help "Specify the Byron era"
+      )
+  , Opt.flag' (AnyCardanoEra ShelleyEra)
+      (  Opt.long "shelley-era"
+      <> Opt.help "Specify the Shelley era"
+      )
+  , Opt.flag' (AnyCardanoEra AllegraEra)
+      (  Opt.long "allegra-era"
+      <> Opt.help "Specify the Allegra era"
+      )
+  , Opt.flag' (AnyCardanoEra MaryEra)
+      (  Opt.long "mary-era"
+      <> Opt.help "Specify the Mary era (default)"
+      )
+
+    -- Default for now:
+  , pure (AnyCardanoEra MaryEra)
+  ]
+
 pTxIn :: Parser TxIn
 pTxIn =
   Opt.option (readerFromAttoParser parseTxIn)
@@ -1264,13 +1583,13 @@ parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txid (TxIx txix)) =
   mconcat
-    [ Text.decodeUtf8 (serialiseToRawBytesHex txid)
+    [ serialiseToRawBytesHexText txid
     , "#"
     , Text.pack (show txix)
     ]
 
 parseTxId :: Atto.Parser TxId
-parseTxId = do
+parseTxId = (<?> "Transaction ID (hexadecimal)") $ do
   bstr <- Atto.takeWhile1 Char.isHexDigit
   case deserialiseFromRawBytesHex AsTxId bstr of
     Just addr -> return addr
@@ -1280,28 +1599,68 @@ parseTxIx :: Atto.Parser TxIx
 parseTxIx = toEnum <$> Atto.decimal
 
 
-pTxOut :: Parser (TxOut Shelley)
+pTxOut :: Parser TxOutAnyEra
 pTxOut =
-  Opt.option (readerFromAttoParser parseTxOut)
-    (  Opt.long "tx-out"
-    <> Opt.metavar "TX-OUT"
-    <> Opt.help "The ouput transaction as Address+Lovelace where Address is \
-                \the Bech32-encoded address followed by the amount in \
-                \Lovelace."
-    )
-  where
-    parseTxOut :: Atto.Parser (TxOut Shelley)
-    parseTxOut =
-      TxOut <$> parseAddress <* Atto.char '+' <*> parseLovelace
-
-pTxTTL :: Parser SlotNo
-pTxTTL =
-  SlotNo <$>
-    Opt.option Opt.auto
-      (  Opt.long "ttl"
-      <> Opt.metavar "SLOT"
-      <> Opt.help "Time to live (in slots)."
+    Opt.option (readerFromParsecParser parseTxOutAnyEra)
+      (  Opt.long "tx-out"
+      <> Opt.metavar "TX-OUT"
+      -- TODO: Update the help text to describe the new syntax as well.
+      <> Opt.help "The transaction output as Address+Lovelace where Address is \
+                  \the Bech32-encoded address followed by the amount in \
+                  \Lovelace."
       )
+
+pMintMultiAsset :: Parser Value
+pMintMultiAsset =
+  Opt.option
+    (readerFromParsecParser parseValue)
+      (  Opt.long "mint"
+      <> Opt.metavar "VALUE"
+      <> Opt.help "Mint multi-asset value(s) with the multi-asset cli syntax"
+      )
+
+pInvalidBefore :: Parser SlotNo
+pInvalidBefore =
+  SlotNo <$>
+    ( Opt.option Opt.auto
+       (  Opt.long "invalid-before"
+       <> Opt.metavar "SLOT"
+       <> Opt.help "Time that transaction is valid from (in slots)."
+       )
+    <|>
+      Opt.option Opt.auto
+        (  Opt.long "lower-bound"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time that transaction is valid from (in slots) \
+                    \(deprecated; use --invalid-before instead)."
+        <> Opt.internal
+        )
+    )
+
+pInvalidHereafter :: Parser SlotNo
+pInvalidHereafter =
+  SlotNo <$>
+    ( Opt.option Opt.auto
+        (  Opt.long "invalid-hereafter"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time that transaction is valid until (in slots)."
+        )
+    <|>
+      Opt.option Opt.auto
+        (  Opt.long "upper-bound"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time that transaction is valid until (in slots) \
+                    \(deprecated; use --invalid-hereafter instead)."
+       <> Opt.internal
+        )
+    <|>
+      Opt.option Opt.auto
+        (  Opt.long "ttl"
+        <> Opt.metavar "SLOT"
+        <> Opt.help "Time to live (in slots) (deprecated; use --invalid-hereafter instead)."
+        <> Opt.internal
+        )
+    )
 
 pTxFee :: Parser Lovelace
 pTxFee =
@@ -1318,7 +1677,7 @@ pWitnessFile =
     Opt.strOption
       (  Opt.long "witness-file"
       <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the witness.")
+      <> Opt.help "Filepath of the witness"
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
@@ -1328,7 +1687,7 @@ pTxBodyFile fdir =
       (  Opt.strOption
            (  Opt.long optName
            <> Opt.metavar "FILE"
-           <> Opt.help (show fdir ++ " filepath of the TxBody.")
+           <> Opt.help (show fdir ++ " filepath of the JSON TxBody.")
            <> Opt.completer (Opt.bashCompleter "file")
            )
       <|>
@@ -1350,7 +1709,7 @@ pTxFile fdir =
       (  Opt.strOption
            (  Opt.long optName
            <> Opt.metavar "FILE"
-           <> Opt.help (show fdir ++ " filepath of the Tx.")
+           <> Opt.help (show fdir ++ " filepath of the JSON Tx.")
            <> Opt.completer (Opt.bashCompleter "file")
            )
       <|>
@@ -1364,6 +1723,10 @@ pTxFile fdir =
       case fdir of
         Input -> "tx-file"
         Output -> "out-file"
+
+pInputTxFile :: Parser InputTxFile
+pInputTxFile =
+  InputTxBodyFile <$> pTxBodyFile Input <|> InputTxFile <$> pTxFile Input
 
 pTxInCount :: Parser TxInCount
 pTxInCount =
@@ -1409,9 +1772,9 @@ pQueryFilter = pAddresses <|> pure NoFilter
     pAddresses = FilterByAddress . Set.fromList <$>
                    some pFilterByAddress
 
-pFilterByAddress :: Parser (Address Shelley)
+pFilterByAddress :: Parser AddressAny
 pFilterByAddress =
-    Opt.option (readerFromAttoParser parseAddress)
+    Opt.option (readerFromAttoParser parseAddressAny)
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
@@ -1425,6 +1788,21 @@ pFilterByStakeAddress =
       <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
       )
 
+pByronAddress :: Parser (Address ByronAddr)
+pByronAddress =
+    Opt.option
+      (Opt.eitherReader deserialise)
+        (  Opt.long "address"
+        <> Opt.metavar "STRING"
+        <> Opt.help "Byron address (Base58-encoded)."
+        )
+  where
+    deserialise :: String -> Either String (Address ByronAddr)
+    deserialise =
+      maybe (Left "Invalid Byron address.") Right
+        . deserialiseAddress AsByronAddress
+        . Text.pack
+
 pAddress :: Parser Text
 pAddress =
   Text.pack <$>
@@ -1434,6 +1812,27 @@ pAddress =
       <> Opt.help "A Cardano address"
       )
 
+pStakeAddress :: Parser StakeAddress
+pStakeAddress =
+    Opt.option (readerFromAttoParser parseStakeAddress)
+      (  Opt.long "stake-address"
+      <> Opt.metavar "ADDRESS"
+      <> Opt.help "Target stake address (bech32 format)."
+      )
+
+pStakeVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pStakeVerificationKeyOrFile =
+  VerificationKeyValue <$> pStakeVerificationKey
+    <|> VerificationKeyFilePath <$> pStakeVerificationKeyFile
+
+pStakeVerificationKey :: Parser (VerificationKey StakeKey)
+pStakeVerificationKey =
+  Opt.option
+    (readVerificationKey AsStakeKey)
+      (  Opt.long "stake-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Stake verification key (Bech32 or hex-encoded)."
+      )
 
 pStakeVerificationKeyFile :: Parser VerificationKeyFile
 pStakeVerificationKeyFile =
@@ -1441,7 +1840,7 @@ pStakeVerificationKeyFile =
     ( Opt.strOption
         (  Opt.long "stake-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the staking verification key.")
+        <> Opt.help "Filepath of the staking verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1452,13 +1851,13 @@ pStakeVerificationKeyFile =
     )
 
 
-pPoolStakeVerificationKeyFile :: Parser VerificationKeyFile
-pPoolStakeVerificationKeyFile =
+pStakePoolVerificationKeyFile :: Parser VerificationKeyFile
+pStakePoolVerificationKeyFile =
   VerificationKeyFile <$>
     (  Opt.strOption
          (  Opt.long "cold-verification-key-file"
          <> Opt.metavar "FILE"
-         <> Opt.help ("Filepath of the stake pool verification key.")
+         <> Opt.help "Filepath of the stake pool verification key."
          <> Opt.completer (Opt.bashCompleter "file")
          )
     <|>
@@ -1471,29 +1870,91 @@ pPoolStakeVerificationKeyFile =
 pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
 pStakePoolVerificationKeyHash =
     Opt.option
-      (Opt.maybeReader spvkHash)
-        (  Opt.long "cold-verification-key-hash"
-        <> Opt.metavar "HASH"
-        <> Opt.help "Stake pool verification key hash (hex-encoded)."
+      (Opt.maybeReader pBech32OrHexStakePoolId)
+        (  Opt.long "stake-pool-id"
+        <> Opt.metavar "STAKE-POOL-ID"
+        <> Opt.help "Stake pool ID/verification key hash (either \
+                    \Bech32-encoded or hex-encoded)."
         )
   where
-    spvkHash :: String -> Maybe (Hash StakePoolKey)
-    spvkHash = deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+    pBech32OrHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pBech32OrHexStakePoolId str =
+      pBech32StakePoolId str <|> pHexStakePoolId str
 
-pStakePoolVerificationKeyHashOrFile :: Parser StakePoolVerificationKeyHashOrFile
-pStakePoolVerificationKeyHashOrFile =
-  StakePoolVerificationKeyFile <$> pPoolStakeVerificationKeyFile
-    <|> StakePoolVerificationKeyHash <$> pStakePoolVerificationKeyHash
+    pHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pHexStakePoolId =
+      deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
 
-pVRFVerificationKeyFile :: Parser VerificationKeyFile
-pVRFVerificationKeyFile =
+    pBech32StakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pBech32StakePoolId =
+      either (const Nothing) Just
+        . deserialiseFromBech32 (AsHash AsStakePoolKey)
+        . Text.pack
+
+pStakePoolVerificationKey :: Parser (VerificationKey StakePoolKey)
+pStakePoolVerificationKey =
+  Opt.option
+    (readVerificationKey AsStakePoolKey)
+      (  Opt.long "stake-pool-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Stake pool verification key (Bech32 or hex-encoded)."
+      )
+
+pStakePoolVerificationKeyOrFile
+  :: Parser (VerificationKeyOrFile StakePoolKey)
+pStakePoolVerificationKeyOrFile =
+  VerificationKeyValue <$> pStakePoolVerificationKey
+    <|> VerificationKeyFilePath <$> pStakePoolVerificationKeyFile
+
+pStakePoolVerificationKeyOrHashOrFile
+  :: Parser (VerificationKeyOrHashOrFile StakePoolKey)
+pStakePoolVerificationKeyOrHashOrFile =
+  VerificationKeyOrFile <$> pStakePoolVerificationKeyOrFile
+    <|> VerificationKeyHash <$> pStakePoolVerificationKeyHash
+
+pVrfVerificationKeyFile :: Parser VerificationKeyFile
+pVrfVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
       (  Opt.long "vrf-verification-key-file"
       <> Opt.metavar "FILE"
-      <> Opt.help ("Filepath of the VRF verification key.")
+      <> Opt.help "Filepath of the VRF verification key."
       <> Opt.completer (Opt.bashCompleter "file")
       )
+
+pVrfVerificationKeyHash :: Parser (Hash VrfKey)
+pVrfVerificationKeyHash =
+    Opt.option
+      (Opt.eitherReader deserialiseFromHex)
+        (  Opt.long "vrf-verification-key-hash"
+        <> Opt.metavar "STRING"
+        <> Opt.help "VRF verification key hash (hex-encoded)."
+        )
+  where
+    deserialiseFromHex :: String -> Either String (Hash VrfKey)
+    deserialiseFromHex =
+      maybe (Left "Invalid VRF verification key hash.") Right
+        . deserialiseFromRawBytesHex (AsHash AsVrfKey)
+        . BSC.pack
+
+pVrfVerificationKey :: Parser (VerificationKey VrfKey)
+pVrfVerificationKey =
+  Opt.option
+    (readVerificationKey AsVrfKey)
+      (  Opt.long "vrf-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "VRF verification key (Bech32 or hex-encoded)."
+      )
+
+pVrfVerificationKeyOrFile :: Parser (VerificationKeyOrFile VrfKey)
+pVrfVerificationKeyOrFile =
+  VerificationKeyValue <$> pVrfVerificationKey
+    <|> VerificationKeyFilePath <$> pVrfVerificationKeyFile
+
+pVrfVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile VrfKey)
+pVrfVerificationKeyOrHashOrFile =
+  VerificationKeyOrFile <$> pVrfVerificationKeyOrFile
+    <|> VerificationKeyHash <$> pVrfVerificationKeyHash
 
 pRewardAcctVerificationKeyFile :: Parser VerificationKeyFile
 pRewardAcctVerificationKeyFile =
@@ -1501,7 +1962,7 @@ pRewardAcctVerificationKeyFile =
     ( Opt.strOption
         (  Opt.long "pool-reward-account-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the reward account staking verification key.")
+        <> Opt.help "Filepath of the reward account stake verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1511,14 +1972,27 @@ pRewardAcctVerificationKeyFile =
         )
     )
 
+pRewardAcctVerificationKey :: Parser (VerificationKey StakeKey)
+pRewardAcctVerificationKey =
+  Opt.option
+    (readVerificationKey AsStakeKey)
+      (  Opt.long "pool-reward-account-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Reward account stake verification key (Bech32 or hex-encoded)."
+      )
 
-pPoolOwner :: Parser VerificationKeyFile
-pPoolOwner =
+pRewardAcctVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pRewardAcctVerificationKeyOrFile =
+  VerificationKeyValue <$> pRewardAcctVerificationKey
+    <|> VerificationKeyFilePath <$> pRewardAcctVerificationKeyFile
+
+pPoolOwnerVerificationKeyFile :: Parser VerificationKeyFile
+pPoolOwnerVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
         (  Opt.long "pool-owner-stake-verification-key-file"
         <> Opt.metavar "FILE"
-        <> Opt.help ("Filepath of the pool owner staking verification key.")
+        <> Opt.help "Filepath of the pool owner stake verification key."
         <> Opt.completer (Opt.bashCompleter "file")
         )
     <|>
@@ -1528,6 +2002,19 @@ pPoolOwner =
           )
     )
 
+pPoolOwnerVerificationKey :: Parser (VerificationKey StakeKey)
+pPoolOwnerVerificationKey =
+  Opt.option
+    (readVerificationKey AsStakeKey)
+      (  Opt.long "pool-owner-verification-key"
+      <> Opt.metavar "STRING"
+      <> Opt.help "Pool owner stake verification key (Bech32 or hex-encoded)."
+      )
+
+pPoolOwnerVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pPoolOwnerVerificationKeyOrFile =
+  VerificationKeyValue <$> pPoolOwnerVerificationKey
+    <|> VerificationKeyFilePath <$> pPoolOwnerVerificationKeyFile
 
 pPoolPledge :: Parser Lovelace
 pPoolPledge =
@@ -1589,18 +2076,16 @@ eDNSName str =
     Just dnsName -> Right . Text.encodeUtf8 . Shelley.dnsToText $ dnsName
 
 pSingleHostAddress :: Parser StakePoolRelay
-pSingleHostAddress =
-  liftA3
-    (\ip4 ip6 port -> singleHostAddress ip4 ip6 port)
-    (optional pIpV4)
-    (optional pIpV6)
-    pPort
+pSingleHostAddress = singleHostAddress
+  <$> optional pIpV4
+  <*> optional pIpV6
+  <*> pPort
  where
   singleHostAddress :: Maybe IP.IPv4 -> Maybe IP.IPv6 -> PortNumber -> StakePoolRelay
   singleHostAddress ipv4 ipv6 port =
     case (ipv4, ipv6) of
       (Nothing, Nothing) ->
-        panic $ "Please enter either an IPv4 or IPv6 address for the pool relay"
+        panic "Please enter either an IPv4 or IPv6 address for the pool relay"
       (Just i4, Nothing) ->
         StakePoolRelayIp (Just i4) Nothing (Just port)
       (Nothing, Just i6) ->
@@ -1638,7 +2123,7 @@ pStakePoolMetadataReference =
       <$> pStakePoolMetadataUrl
       <*> pStakePoolMetadataHash
 
-pStakePoolMetadataUrl :: Parser URI
+pStakePoolMetadataUrl :: Parser Text
 pStakePoolMetadataUrl =
   Opt.option (readURIOfMaxLength 64)
     (  Opt.long "metadata-url"
@@ -1655,31 +2140,29 @@ pStakePoolMetadataHash =
         <> Opt.help "Pool metadata hash."
         )
   where
-    getHashFromHexString :: String -> Maybe (Crypto.Hash Crypto.Blake2b_256 ByteString)
-    getHashFromHexString = Crypto.hashFromBytesAsHex . BSC.pack
-
     metadataHash :: String -> Maybe (Hash StakePoolMetadata)
-    metadataHash str = StakePoolMetadataHash <$> getHashFromHexString str
+    metadataHash = deserialiseFromRawBytesHex (AsHash AsStakePoolMetadata)
+                 . BSC.pack
 
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
- PoolRegistrationCert
-  <$> pPoolStakeVerificationKeyFile
-  <*> pVRFVerificationKeyFile
-  <*> pPoolPledge
-  <*> pPoolCost
-  <*> pPoolMargin
-  <*> pRewardAcctVerificationKeyFile
-  <*> some pPoolOwner
-  <*> many pPoolRelay
-  <*> pStakePoolMetadataReference
-  <*> pNetworkId
-  <*> pOutputFile
+  PoolRegistrationCert
+    <$> pStakePoolVerificationKeyOrFile
+    <*> pVrfVerificationKeyOrFile
+    <*> pPoolPledge
+    <*> pPoolCost
+    <*> pPoolMargin
+    <*> pRewardAcctVerificationKeyOrFile
+    <*> some pPoolOwnerVerificationKeyOrFile
+    <*> many pPoolRelay
+    <*> pStakePoolMetadataReference
+    <*> pNetworkId
+    <*> pOutputFile
 
 pStakePoolRetirementCert :: Parser PoolCmd
 pStakePoolRetirementCert =
   PoolRetirementCert
-    <$> pPoolStakeVerificationKeyFile
+    <$> pStakePoolVerificationKeyOrFile
     <*> pEpochNo
     <*> pOutputFile
 
@@ -1826,9 +2309,9 @@ pDecentralParam =
       <> Opt.help "Decentralization parameter."
       )
 
-pExtraEntropy :: Parser (Maybe ByteString)
+pExtraEntropy :: Parser (Maybe PraosNonce)
 pExtraEntropy =
-      Opt.option (Just <$> readerFromAttoParser parseEntropyBytes)
+      Opt.option (Just <$> readerFromAttoParser parsePraosNonce)
         (  Opt.long "extra-entropy"
         <> Opt.metavar "HEX"
         <> Opt.help "Praos extra entropy, as a hex byte string."
@@ -1838,86 +2321,53 @@ pExtraEntropy =
         <> Opt.help "Reset the Praos extra entropy to none."
         )
   where
+    parsePraosNonce :: Atto.Parser PraosNonce
+    parsePraosNonce = makePraosNonce <$> parseEntropyBytes
+
     parseEntropyBytes :: Atto.Parser ByteString
-    parseEntropyBytes =
-      (fst . Base16.decode) <$> Atto.takeWhile1 Char.isHexDigit
+    parseEntropyBytes = either fail return
+                      . B16.decode
+                    =<< Atto.takeWhile1 Char.isHexDigit
 
 
-pProtocol :: Parser Protocol
-pProtocol =
-    (  Opt.flag' ()
-        (  Opt.long "shelley-mode"
-        <> Opt.help "For talking to a node running in Shelley-only mode."
-        )
-    *> pShelley
-    )
-  <|>
-    (  Opt.flag' ()
-        (  Opt.long "byron-mode"
-        <> Opt.help "For talking to a node running in Byron-only mode."
-        )
-    *> pByron
-    )
-  <|>
-    (  Opt.flag' ()
-        (  Opt.long "cardano-mode"
-        <> Opt.help "For talking to a node running in full Cardano mode (default)."
-        )
-    *> pCardano
-    )
-  <|>
-    -- Default to the Cardano protocol.
-    pure (CardanoProtocol defaultByronEpochSlots defaultSecurityParam)
-  where
-    pByron :: Parser Protocol
-    pByron = ByronProtocol <$> pEpochSlots <*> pSecurityParam
+pConsensusModeParams :: Parser AnyConsensusModeParams
+pConsensusModeParams = asum
+  [ Opt.flag' (AnyConsensusModeParams ShelleyModeParams)
+      (  Opt.long "shelley-mode"
+      <> Opt.help "For talking to a node running in Shelley-only mode."
+      )
+  , Opt.flag' ()
+      (  Opt.long "byron-mode"
+      <> Opt.help "For talking to a node running in Byron-only mode."
+      )
+       *> pByronConsensusMode
+  , Opt.flag' ()
+      (  Opt.long "cardano-mode"
+      <> Opt.help "For talking to a node running in full Cardano mode (default)."
+      )
+       *> pCardanoConsensusMode
+  , -- Default to the Cardano consensus mode.
+    pure . AnyConsensusModeParams . CardanoModeParams $ EpochSlots defaultByronEpochSlots
+  ]
+ where
+   pCardanoConsensusMode :: Parser AnyConsensusModeParams
+   pCardanoConsensusMode = AnyConsensusModeParams . CardanoModeParams <$> pEpochSlots
+   pByronConsensusMode :: Parser AnyConsensusModeParams
+   pByronConsensusMode = AnyConsensusModeParams . ByronModeParams <$> pEpochSlots
 
-    pShelley :: Parser Protocol
-    pShelley = pure ShelleyProtocol
+defaultByronEpochSlots :: Word64
+defaultByronEpochSlots = 21600
 
-    pCardano :: Parser Protocol
-    pCardano = CardanoProtocol <$> pEpochSlots <*> pSecurityParam
-
-    pEpochSlots :: Parser EpochSlots
-    pEpochSlots =
-        ( EpochSlots <$>
-            Opt.option Opt.auto
-              (  Opt.long "epoch-slots"
-              <> Opt.metavar "NATURAL"
-              <> Opt.help
-                    (  "The number of slots per epoch for the Byron era "
-                    <> "(default is "
-                    <> show (unEpochSlots defaultByronEpochSlots)
-                    <> ")."
-                    )
-              )
-        )
-      <|>
-        -- Default to the mainnet value.
-        pure defaultByronEpochSlots
-
-    pSecurityParam :: Parser SecurityParam
-    pSecurityParam =
-        ( SecurityParam <$>
-            Opt.option Opt.auto
-              (  Opt.long "security-param"
-              <> Opt.metavar "NATURAL"
-              <> Opt.help
-                    (  "The security parameter (default is "
-                    <> show (maxRollbacks defaultSecurityParam)
-                    <> ")."
-                    )
-              )
-        )
-      <|>
-          -- Default to the mainnet value.
-          pure defaultSecurityParam
-
-    defaultByronEpochSlots :: EpochSlots
-    defaultByronEpochSlots = EpochSlots 21600
-
-    defaultSecurityParam :: SecurityParam
-    defaultSecurityParam = SecurityParam 2160
+pEpochSlots :: Parser EpochSlots
+pEpochSlots =
+  EpochSlots <$>
+    Opt.option Opt.auto
+      (  Opt.long "epoch-slots"
+      <> Opt.metavar "NATURAL"
+      <> Opt.help "The number of slots per epoch for the Byron era."
+      <> Opt.value defaultByronEpochSlots -- Default to the mainnet value.
+      <> Opt.showDefault
+      )
 
 pProtocolVersion :: Parser (Natural, Natural)
 pProtocolVersion =
@@ -1937,18 +2387,21 @@ pProtocolVersion =
                     \ (old software canvalidate but not produce new blocks)."
         )
 
-
 --
 -- Shelley CLI flag field parsers
 --
 
 parseLovelace :: Atto.Parser Lovelace
-parseLovelace = Lovelace <$> Atto.decimal
+parseLovelace = do
+  i <- Atto.decimal
+  if i > toInteger (maxBound :: Word64)
+  then fail $ show i <> " lovelace exceeds the Word64 upper bound"
+  else return $ Lovelace i
 
-parseAddress :: Atto.Parser (Address Shelley)
-parseAddress = do
+parseAddressAny :: Atto.Parser AddressAny
+parseAddressAny = do
     str <- lexPlausibleAddressString
-    case deserialiseAddress AsShelleyAddress str of
+    case deserialiseAddress AsAddressAny str of
       Nothing   -> fail "invalid address"
       Just addr -> pure addr
 
@@ -1975,10 +2428,38 @@ lexPlausibleAddressString =
 -- Helpers
 --------------------------------------------------------------------------------
 
-readURIOfMaxLength :: Int -> Opt.ReadM URI
-readURIOfMaxLength maxLen = do
-  s <- readStringOfMaxLength maxLen
-  maybe (fail "The provided string must be a valid URI.") pure (parseURI s)
+-- | Read a Bech32 or hex-encoded verification key.
+readVerificationKey
+  :: forall keyrole. SerialiseAsBech32 (VerificationKey keyrole)
+  => AsType keyrole
+  -> Opt.ReadM (VerificationKey keyrole)
+readVerificationKey asType =
+    Opt.eitherReader deserialiseFromBech32OrHex
+  where
+    keyFormats :: NonEmpty (InputFormat (VerificationKey keyrole))
+    keyFormats = NE.fromList [InputFormatBech32, InputFormatHex]
+
+    deserialiseFromBech32OrHex
+      :: String
+      -> Either String (VerificationKey keyrole)
+    deserialiseFromBech32OrHex str =
+      first (Text.unpack . renderInputDecodeError) $
+        deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
+
+readOutputFormat :: Opt.ReadM OutputFormat
+readOutputFormat = do
+  s <- Opt.str
+  case s of
+    "hex" -> pure OutputFormatHex
+    "bech32" -> pure OutputFormatBech32
+    _ ->
+      fail $ "Invalid output format: \""
+        <> s
+        <> "\". Accepted output formats are \"hex\" and \"bech32\"."
+
+readURIOfMaxLength :: Int -> Opt.ReadM Text
+readURIOfMaxLength maxLen =
+  Text.pack <$> readStringOfMaxLength maxLen
 
 readStringOfMaxLength :: Int -> Opt.ReadM String
 readStringOfMaxLength maxLen = do
@@ -2005,3 +2486,18 @@ readRational = toRational <$> readerFromAttoParser Atto.scientific
 readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
 readerFromAttoParser p =
     Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
+
+readerFromParsecParser :: Parsec.Parser a -> Opt.ReadM a
+readerFromParsecParser p =
+    Opt.eitherReader (first formatError . Parsec.parse (p <* Parsec.eof) "")
+  where
+    --TODO: the default parsec error formatting is quite good, but we could
+    -- customise it somewhat:
+    formatError err =
+      Parsec.showErrorMessages "or" "unknown parse error"
+                               "expecting" "unexpected" "end of input"
+                               (Parsec.errorMessages err)
+
+subParser :: String -> ParserInfo a -> Parser a
+subParser availableCommand pInfo =
+  Opt.hsubparser $ Opt.command availableCommand pInfo <> Opt.metavar availableCommand
