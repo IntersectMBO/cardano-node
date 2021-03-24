@@ -38,6 +38,9 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 
+import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
+import           Cardano.TraceDispatcher.OrphanInstances.HardFork ()
+
 import           Cardano.Node.Protocol.Types
 
 

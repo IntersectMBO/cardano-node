@@ -17,11 +17,12 @@ import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
                      ForgeStateUpdateError, Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,  HasTxId,
                      HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
+import Cardano.Logging
 
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -30,6 +31,7 @@ type TraceConstraints blk =
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk
+    
     , ToJSON   (TxId (GenTx blk))
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
@@ -40,6 +42,18 @@ type TraceConstraints blk =
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotForge blk)
     , ToObject (ForgeStateUpdateError blk)
+
+    , LogFormatting (LedgerUpdate blk)
+    , LogFormatting (ApplyTxErr blk)
+    , LogFormatting (GenTx blk)
+    , LogFormatting (Header blk)
+    , LogFormatting (LedgerError blk)
+    , LogFormatting (LedgerEvent blk)
+    , LogFormatting (OtherHeaderEnvelopeError blk)
+    , LogFormatting (ValidationErr (BlockProtocol blk))
+    , LogFormatting (CannotForge blk)
+    , LogFormatting (ForgeStateUpdateError blk)
+
     , Show blk
     , Show (Header blk)
     )
