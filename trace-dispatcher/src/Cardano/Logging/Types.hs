@@ -10,7 +10,8 @@
 
 module Cardano.Logging.Types (
     LogFormatting(..)
-  , Metric(..)
+  , Metric(..)  
+  , mkObject
   , Documented(..)
   , DocMsg(..)
   , LoggingContext(..)
@@ -39,6 +40,7 @@ import qualified Data.Aeson as A
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text)
 import           GHC.Generics
 
@@ -68,6 +70,11 @@ data Metric
   -- If a text is given it is appended as last element to the namespace
     | DoubleM (Maybe Text) Double
   deriving (Show, Eq)
+
+-- | A helper function for creating an |Object| given a list of pairs, named items,
+-- or the empty |Object|.
+mkObject :: [(Text, a)] -> HM.HashMap Text a
+mkObject = HM.fromList
 
 -- Document all log messages by providing a list of DocMsgs for all constructors.
 -- Because it is not enforced by the type system, it is very

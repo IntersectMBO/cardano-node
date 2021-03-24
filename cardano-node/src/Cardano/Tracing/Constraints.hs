@@ -23,11 +23,13 @@ import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeSta
                    Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+
+import           Cardano.Logging
 
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =
@@ -47,9 +49,23 @@ type TraceConstraints blk =
     , ToObject (ValidationErr (BlockProtocol blk))
     , ToObject (CannotForge blk)
     , ToObject (ForgeStateUpdateError blk)
+
+    -- TODO: handle the implications in the new logging
     , ToObject (UtxoPredicateFailure (AlonzoEra StandardCrypto))
     , ToObject (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
     , ToObject (AlonzoPredFail (AlonzoEra StandardCrypto))
+
+    , LogFormatting (LedgerUpdate blk)
+    , LogFormatting (ApplyTxErr blk)
+    , LogFormatting (GenTx blk)
+    , LogFormatting (Header blk)
+    , LogFormatting (LedgerError blk)
+    , LogFormatting (LedgerEvent blk)
+    , LogFormatting (OtherHeaderEnvelopeError blk)
+    , LogFormatting (ValidationErr (BlockProtocol blk))
+    , LogFormatting (CannotForge blk)
+    , LogFormatting (ForgeStateUpdateError blk)
+
     , Show blk
     , Show (Header blk)
     )

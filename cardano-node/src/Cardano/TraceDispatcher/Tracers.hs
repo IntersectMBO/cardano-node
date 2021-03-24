@@ -1,7 +1,11 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE MonoLocalBinds      #-}
-{-# LANGUAGE PackageImports      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE MonoLocalBinds       #-}
+{-# LANGUAGE PackageImports       #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
+{-# OPTIONS_GHC -Wno-unused-imports  #-}
+
 
 module Cardano.TraceDispatcher.Tracers
   ( mkDispatchTracers
@@ -11,6 +15,7 @@ import           Cardano.Prelude
 
 import           Cardano.Logging
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
+import           Cardano.Tracing.OrphanInstances.Byron ()
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
@@ -22,7 +27,10 @@ import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 import           Cardano.Tracing.Tracers
 import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 
+import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate,
+                     LedgerWarning)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)

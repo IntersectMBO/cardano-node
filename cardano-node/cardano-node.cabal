@@ -77,6 +77,11 @@ library
                        Cardano.Node.Types
                        Cardano.TraceDispatcher.Tracers
                        Cardano.TraceDispatcher.OrphanInstances.Consensus
+                       Cardano.TraceDispatcher.OrphanInstances.Byron
+                       Cardano.TraceDispatcher.OrphanInstances.Network
+                       Cardano.TraceDispatcher.OrphanInstances.HardFork
+                       Cardano.TraceDispatcher.OrphanInstances.Common
+                       Cardano.TraceDispatcher.OrphanInstances.Shelley
                        Cardano.TraceDispatcher.Render
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
