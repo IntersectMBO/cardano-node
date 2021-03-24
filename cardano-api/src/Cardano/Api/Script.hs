@@ -27,6 +27,10 @@ module Cardano.Api.Script (
     ScriptInEra(..),
     toScriptInEra,
     eraOfScriptInEra,
+    ScriptWitness(..),
+    WitTxIn,
+    WitMisc,
+    WitnessKind(..),
 
     -- ** Languages supported in each era
     ScriptLanguageInEra(..),
@@ -266,11 +270,13 @@ data Script lang where
      -- For now there are no values of PlutusScriptVersion so this branch
      -- is inaccessible.
      PlutusScript :: !(PlutusScriptVersion lang)
-                  -> ()
+                  -> PlutusScript lang
                   -> Script lang
 
 deriving instance (Eq   (Script lang))
 deriving instance (Show (Script lang))
+
+type PlutusScript lang = ()
 
 instance HasTypeProxy lang => HasTypeProxy (Script lang) where
     data AsType (Script lang) = AsScript (AsType lang)
@@ -402,6 +408,56 @@ instance HasTextEnvelope ScriptInAnyLang where
 -- Scripts in the context of a ledger era
 --
 
+-- | A tag type for the context in which a script is used in a transaction.
+--
+-- This type tags the context as being to witness a transaction input.
+--
+data WitTxIn
+
+-- | A tag type for the context in which a script is used in a transaction.
+--
+-- This type tags the context as being to witness miscellaneous uses: minting,
+-- certificates and withdrawals. This is all uses /except/ transaction inputs.
+--
+data WitMisc
+
+-- | A /use/ of a script within a transaction body to witness something is being
+-- used in an authorised manner. That thing can be
+--
+-- * spending a transaction input
+-- * minting tokens
+-- * using a certificate
+-- * withdrawing from a reward account
+--
+-- For simple script languages, the use of the script is the same in all
+-- contexts. For Plutus scripts, using a script involes supplying a redeemer.
+-- In addition, Plutus scripts used for spending inputs must also supply the
+-- datum value used when originally creating the TxOut that is now being spent.
+--
+data ScriptWitness witctx era where
+
+     SimpleScriptWitness      :: ScriptLanguageInEra lang era
+                              -> SimpleScript lang
+                              -> ScriptWitness witctx era
+
+     PlutusScriptWitnessTxIn  :: ScriptLanguageInEra lang era
+                              -> PlutusScript lang
+                              -> Redeemer
+                              -> TxOutDatum
+                              -> ScriptWitness WitTxIn era
+
+     PlutusScriptWitnessTxEtc :: ScriptLanguageInEra lang era
+                              -> PlutusScript lang
+                              -> Redeemer
+                              -> ScriptWitness WitMisc era
+
+deriving instance Show (ScriptWitness witctx era)
+instance Eq (ScriptWitness witctx era) where
+  (==) = undefined
+
+type Redeemer   = ()
+type TxOutDatum = ()
+
 data ScriptInEra era where
      ScriptInEra :: ScriptLanguageInEra lang era
                  -> Script lang
@@ -517,6 +573,14 @@ toScriptInEra era (ScriptInAnyLang lang s) = do
 eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
 eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
 
+
+-- ----------------------------------------------------------------------------
+-- The kind of witness to use, key (signature) or script
+--
+
+data WitnessKind witctx era = WitnessByKey
+                            | WitnessByScript (ScriptWitness witctx era)
+  deriving stock (Eq, Show)
 
 -- ----------------------------------------------------------------------------
 -- Script Hash

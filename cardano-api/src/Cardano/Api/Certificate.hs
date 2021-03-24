@@ -62,6 +62,7 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 
 import           Cardano.Api.Address
+import           Cardano.Api.Eras
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
@@ -71,6 +72,7 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Value
+import           Cardano.Api.Script (WitnessKind, WitMisc)
 
 
 -- ----------------------------------------------------------------------------
@@ -80,9 +82,11 @@ import           Cardano.Api.Value
 data Certificate =
 
      -- Stake address certificates
-     StakeAddressRegistrationCertificate   StakeCredential
-   | StakeAddressDeregistrationCertificate StakeCredential
+     StakeAddressRegistrationCertificate   StakeCredential -- (WitnessKind WitMisc ShelleyEra)
+   | StakeAddressDeregistrationCertificate StakeCredential -- (WitnessKind WitMisc ShelleyEra)
    | StakeAddressDelegationCertificate     StakeCredential PoolId
+                                           -- (WitnessKind WitMisc ShelleyEra)
+                                           --TODO: use era param properly
 
      -- Stake pool certificates
    | StakePoolRegistrationCertificate StakePoolParameters

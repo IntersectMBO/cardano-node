@@ -736,7 +736,7 @@ data TxWithdrawals era where
      TxWithdrawalsNone :: TxWithdrawals era
 
      TxWithdrawals     :: WithdrawalsSupportedInEra era
-                       -> [(StakeAddress, Lovelace)]
+                       -> [(StakeAddress, Lovelace, WitnessKind WitMisc era)]
                        -> TxWithdrawals era
 
 deriving instance Eq   (TxWithdrawals era)
@@ -783,7 +783,10 @@ data TxMintValue era where
 
      TxMintNone  :: TxMintValue era
 
-     TxMintValue :: MultiAssetSupportedInEra era -> Value -> TxMintValue era
+     TxMintValue :: MultiAssetSupportedInEra era
+                 -> Value
+                 -> ScriptWitness WitMisc era
+                 -> TxMintValue era
 
 deriving instance Eq   (TxMintValue era)
 deriving instance Show (TxMintValue era)
@@ -795,7 +798,7 @@ deriving instance Show (TxMintValue era)
 
 data TxBodyContent era =
      TxBodyContent {
-       txIns            :: [TxIn],
+       txIns            :: [(TxIn, WitnessKind WitTxIn era)],
        txOuts           :: [TxOut era],
        txFee            :: TxFee era,
        txValidityRange  :: (TxValidityLowerBound era,
