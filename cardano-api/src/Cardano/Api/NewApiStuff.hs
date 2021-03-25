@@ -114,11 +114,14 @@ applyBlock
   -- ^ The environment returned by @initialLedgerState@
   -> LedgerState
   -- ^ The current ledger state
+  -> Bool
+  -- ^ True to perform validation. If True, `tickThenApply` will be used instead
+  -- of `tickThenReapply`.
   -> Cardano.Api.Block.Block era
   -- ^ Some block to apply
   -> LedgerState
   -- ^ The new ledger state.
-applyBlock env oldState block = let
+applyBlock env oldState enableValidation block = let
   cardanoBlock :: Ouroboros.Consensus.Cardano.Block.CardanoBlock Ouroboros.Consensus.Shelley.Eras.StandardCrypto
   cardanoBlock = case block of
     Cardano.Api.Block.ByronBlock byronBlock -> Ouroboros.Consensus.Cardano.Block.BlockByron byronBlock
@@ -126,7 +129,7 @@ applyBlock env oldState block = let
       Cardano.Api.Eras.ShelleyBasedEraShelley -> Ouroboros.Consensus.Cardano.Block.BlockShelley shelleyBlock
       Cardano.Api.Eras.ShelleyBasedEraAllegra -> Ouroboros.Consensus.Cardano.Block.BlockAllegra shelleyBlock
       Cardano.Api.Eras.ShelleyBasedEraMary    -> Ouroboros.Consensus.Cardano.Block.BlockMary shelleyBlock
-  newState = applyBlock' env oldState cardanoBlock
+  newState = applyBlock' env oldState enableValidation cardanoBlock
   in newState
 
 pattern LedgerStateByron
@@ -655,10 +658,12 @@ envSecurityParam env = k
 applyBlock'
   :: Env
   -> LedgerState
+  -> Bool
+  -- ^ True to validate
   ->  Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkBlock
             (Ouroboros.Consensus.Cardano.Block.CardanoEras C.StandardCrypto)
   -> LedgerState
-applyBlock' env oldState blk = oldState { clsState = applyBlk (envLedgerConfig env) blk (clsState oldState) }
+applyBlock' env oldState enableValidation blk = oldState { clsState = applyBlk (envLedgerConfig env) blk (clsState oldState) }
   where
     applyBlk
         :: Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkLedgerConfig
@@ -670,8 +675,11 @@ applyBlock' env oldState blk = oldState { clsState = applyBlk (envLedgerConfig e
         -> Ouroboros.Consensus.Shelley.Ledger.Ledger.LedgerState
             (Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkBlock
                 (C.CardanoEras Ouroboros.Consensus.Shelley.Protocol.StandardCrypto))
-    applyBlk cfg block lsb =
-      case tickThenReapplyCheckHash cfg block lsb of
+    applyBlk cfg block lsb = if enableValidation
+      then case tickThenApply cfg block lsb of
+        Left err -> error $ Text.unpack err
+        Right result -> result
+      else case tickThenReapplyCheckHash cfg block lsb of
         Left err -> error $ Text.unpack err
         Right result -> result
 
@@ -710,6 +718,23 @@ tickThenReapplyCheckHash cfg block lsb =
                       $ Ouroboros.Network.Block.blockHash block
                   , "."
                   ]
+
+-- Like 'Consensus.tickThenReapply' but also checks that the previous hash from the block matches
+-- the head hash of the ledger state.
+tickThenApply
+    :: Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkLedgerConfig
+        (C.CardanoEras Ouroboros.Consensus.Shelley.Protocol.StandardCrypto)
+    -> C.CardanoBlock C.StandardCrypto
+    -> Ouroboros.Consensus.Shelley.Ledger.Ledger.LedgerState
+        (Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkBlock
+            (C.CardanoEras Ouroboros.Consensus.Shelley.Protocol.StandardCrypto))
+    -> Either Text (Ouroboros.Consensus.Shelley.Ledger.Ledger.LedgerState
+        (Ouroboros.Consensus.HardFork.Combinator.Basics.HardForkBlock
+            (C.CardanoEras Ouroboros.Consensus.Shelley.Protocol.StandardCrypto)))
+tickThenApply cfg block lsb
+  = either (Left . Text.pack . show) Right
+  $ runExcept
+  $ Ouroboros.Consensus.Ledger.Abstract.tickThenApply cfg block lsb
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =

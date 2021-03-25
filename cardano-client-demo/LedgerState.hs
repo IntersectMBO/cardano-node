@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
@@ -38,9 +39,10 @@ main = do
   blockCount <- foldBlocks
     configFilePath
     socketPath
+    True -- enable validation?
     (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env
-      ledgerState
+      !ledgerState
       (BlockInMode (Block (BlockHeader _slotNo _blockHeaderHash (BlockNo blockNoI)) _transactions) _era)
       blockCount -> do
         case ledgerState of
@@ -64,6 +66,9 @@ foldBlocks
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> FilePath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
+  -> Bool
+  -- ^ True to enable validation. Under the hood this will use @applyBlock@
+  -- instead of @reapplyBlock@ from the @ApplyBlock@ type class.
   -> a
   -- ^ The initial accumulator state.
   -> (Env -> LedgerState -> BlockInMode CardanoMode -> a -> IO a)
@@ -82,7 +87,7 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> IO a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath state0 accumulate = do
+foldBlocks nodeConfigFilePath socketPath enableValidation state0 accumulate = do
   (env, ledgerState) <- initialLedgerState nodeConfigFilePath
 
   -- Place to store the accumulated state
@@ -165,7 +170,7 @@ foldBlocks nodeConfigFilePath socketPath state0 accumulate = do
         clientNextN n knownLedgerStates =
           ClientStNext {
               recvMsgRollForward = \blockInMode@(BlockInMode block@(Block (BlockHeader slotNo _ currBlockNo) _) _era) serverChainTip -> do
-                let newLedgerState = applyBlock env (fromMaybe (error "Impossible! Missing Ledger state") . fmap (\(_,x,_) -> x) $ Seq.lookup 0 knownLedgerStates) block
+                let newLedgerState = applyBlock env (fromMaybe (error "Impossible! Missing Ledger state") . fmap (\(_,x,_) -> x) $ Seq.lookup 0 knownLedgerStates) enableValidation block
                     (knownLedgerStates', committedStates) = pushLedgerState' knownLedgerStates slotNo newLedgerState blockInMode
                     newClientTip = At currBlockNo
                     newServerTip = fromChainTip serverChainTip
