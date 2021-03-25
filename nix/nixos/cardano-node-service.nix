@@ -85,10 +85,8 @@ let
         ''}
         # If exist copy state from existing instance instead of syncing from scratch:
         if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath} ]; then
-          echo "Copying existing immutable db from ${instanceDbPath}"
-          mkdir -p ${instanceDbPath}
-          cp -a ${cfg.databasePath}/immutable ${instanceDbPath}/
-          cp -a ${cfg.databasePath}/protocolMagicId ${instanceDbPath}/
+          echo "Copying existing immutable db from ${cfg.databasePath}"
+          ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath}/ ${instanceDbPath}/ || true
         fi
         exec ${toString cmd}'';
 in {
