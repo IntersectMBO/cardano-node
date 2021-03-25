@@ -1,5 +1,27 @@
 # Changelog for cardano-node
 
+## 1.26.1 -- March 2021
+
+### node changes
+- Fix RTS options, which got accidentally corrupted in the previous release.
+  (#2511)
+- Support for GHC 8.6.5 has been dropped. (#2507)
+- Various internal improvements and refactorings. (#2505)
+- Disable the "uncoupled blocks" metric. This was shown in profiling to have an
+  unfortunately large overhead. This reverts the change introduced in #2321.
+  (#2510)
+- Update the iohk-monitoring framework to fix a file descriptor leak. (#2518)
+
+### ledger changes
+- Fix an unevalutated thunk error in reward computation. (#2183)
+- Additional properties added to the Mary/Allegra formal specification (#2178)
+- Updates to the Alonzo formal specification (#2189, #2194)
+- Work on implementing the upcoming Alonzo era. (#2176, #2185, #2190)
+
+### network changes
+- Add a tracer for the delay between when a block should have been forged and
+  when we're ready to adopt it. (#2995)
+
 ## 1.26.0 -- March 2021
 
 ### node changes

@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                   cardano-node-chairman
-version:                1.26.0
+version:                1.26.1
 description:            The cardano full node
 author:                 IOHK
 maintainer:             operations@iohk.io

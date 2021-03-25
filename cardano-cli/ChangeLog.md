@@ -1,5 +1,9 @@
 # Changelog for cardano-cli
 
+## 1.26.1 -- March 2021
+- It's no longer necessary to specify the era when making a CLI query. When not
+  specified, the current era will be used as a default. (#2470)
+
 ## 1.26.0 -- March 2021
 - Add three new queries to the CLI, exposing functionality already present in
   the API:

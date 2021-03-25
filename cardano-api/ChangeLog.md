@@ -1,5 +1,16 @@
 # Changelog for cardano-api
 
+## 1.26.1 -- March 2021
+
+- The cardano-submit-api now takes transactions encoded as CBOR rather than
+  JSON. This reverts a change to existing behaviour for backwards compatibility.
+  (#2491, #2512)
+- Remove a backwards-compatibility workaround related to the optional query
+  point (#2241 below) when querying the NodeLocalState. This had resulted in
+  spurious notifications of disconnection in the logs. Note that as a
+  consequence of this, instances of the CLI and other tools using the 1.26.1 API
+  will fail to query node state from older versions of the node. (#2540)
+
 ## 1.26.0 -- March 2020
 - Added a demo for the use of cardano-client. This is an API to allow writing
   programs to interact with the cardano node. (#2295, #2303)
