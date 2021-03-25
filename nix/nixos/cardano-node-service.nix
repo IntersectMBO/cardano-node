@@ -7,7 +7,7 @@ with lib; with builtins;
 let
   cfg = config.services.cardano-node;
   inherit (cfg.cardanoNodePkgs) commonLib cardano-node cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
-  envConfig = cfg.environments.${cfg.environment}; systemdServiceName = "cardano-node${optionalString cfg.instanced "@"}";
+  envConfig = cfg.environments.${cfg.environment};
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: i: let
     instanceConfig = cfg.nodeConfig // (optionalAttrs (cfg.nodeConfig ? hasEKG) {
@@ -100,14 +100,6 @@ in {
         description = ''
           Enable cardano-node, a node implementing ouroboros protocols
           (the blockchain protocols running cardano).
-        '';
-      };
-      instanced = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to enable systemd service instancing.
-          For details see https://fedoramagazine.org/systemd-template-unit-files/
         '';
       };
       instances = mkOption {
@@ -474,9 +466,9 @@ in {
   config = mkIf cfg.enable ( let
     stateDirBase = "/var/lib/";
     runDirBase = "/run/";
-    genInstanceConf = f: listToAttrs (if cfg.instances > 1 && !cfg.instanced
-      then genList (i: let n = "${systemdServiceName}-${toString i}"; in nameValuePair n (f n i)) cfg.instances
-      else [ (nameValuePair systemdServiceName (f systemdServiceName 0)) ]); in lib.mkMerge [
+    genInstanceConf = f: listToAttrs (if cfg.instances > 1
+      then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
+      else [ (nameValuePair "cardano-node" (f "cardano-node" 0)) ]); in lib.mkMerge [
     {
       users.groups.cardano-node.gid = 10016;
       users.users.cardano-node = {
@@ -496,7 +488,7 @@ in {
         requires = optional cfg.systemdSocketActivation "${n}.socket"
           ++ (optional (cfg.instances > 1) "cardano-node.service");
         wants = [ "network-online.target" ];
-        wantedBy = mkIf (!cfg.instanced) [ "multi-user.target" ];
+        wantedBy = [ "multi-user.target" ];
         partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
         script = mkScript cfg i;
         serviceConfig = {
