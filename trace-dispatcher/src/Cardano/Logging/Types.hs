@@ -10,7 +10,7 @@
 
 module Cardano.Logging.Types (
     LogFormatting(..)
-  , Metric(..)  
+  , Metric(..)
   , mkObject
   , Documented(..)
   , DocMsg(..)
@@ -125,7 +125,10 @@ instance Monad m => Monoid (Trace m a) where
     mempty  = Trace T.nullTracer
 
 -- | Formerly known as verbosity
-data DetailLevel = DBrief | DRegular | DDetailed
+data DetailLevel =
+      DBrief
+    | DRegular
+    | DDetailed
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
 -- | Privacy of a message. Default is Public
@@ -159,7 +162,10 @@ data SeverityF
     | SilenceF                 -- ^ Don't show anything
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
-data FormattedMessage = Human Text | Machine Text | Metrics [Metric]
+data FormattedMessage =
+      Human Text
+    | Machine Text
+    | Metrics [Metric]
   deriving (Eq, Show)
 
 -- Configuration options for individual namespace elements
