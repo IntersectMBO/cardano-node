@@ -136,6 +136,7 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , process
+                      , psqueues
                       , safe-exceptions
                       , scientific
                       , shelley-spec-ledger
