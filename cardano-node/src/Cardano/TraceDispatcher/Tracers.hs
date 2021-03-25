@@ -14,8 +14,9 @@ module Cardano.TraceDispatcher.Tracers
 import           Cardano.Prelude
 
 import           Cardano.Logging
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
+import           Cardano.TraceDispatcher.ChainDBTracer
 import           Cardano.Tracing.OrphanInstances.Byron ()
+import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 

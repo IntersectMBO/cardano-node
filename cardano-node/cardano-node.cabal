@@ -82,6 +82,7 @@ library
                        Cardano.TraceDispatcher.OrphanInstances.HardFork
                        Cardano.TraceDispatcher.OrphanInstances.Common
                        Cardano.TraceDispatcher.OrphanInstances.Shelley
+                       Cardano.TraceDispatcher.ChainDBTracer
                        Cardano.TraceDispatcher.Render
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
