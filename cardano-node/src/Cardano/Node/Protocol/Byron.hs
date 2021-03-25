@@ -42,6 +42,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.HardFork ()
+import           Cardano.TraceDispatcher.ChainDBTracer ()
 
 import           Cardano.Node.Protocol.Types
 
