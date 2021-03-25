@@ -466,64 +466,25 @@ queryNodeLocalState :: forall mode result.
                     -> QueryInMode mode result
                     -> IO (Either Net.Query.AcquireFailure result)
 queryNodeLocalState connctInfo mpoint query = do
-    pointVar  <- maybe newEmptyTMVarIO newTMVarIO mpoint
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
-        localChainSyncClient    = case mpoint of
-                                    Nothing -> LocalChainSyncClient
-                                                 $ getChainPoint pointVar resultVar
-                                    Just{}  -> NoLocalChainSyncClient,
-        localStateQueryClient   = Just (singleQuery pointVar resultVar),
+        localChainSyncClient    = NoLocalChainSyncClient,
+        localStateQueryClient   = Just (singleQuery mpoint resultVar),
         localTxSubmissionClient = Nothing
       }
     atomically (takeTMVar resultVar)
   where
-    -- Retry until the local node query protocol
-    -- has returned its result
-    waitOnQuery :: TMVar ChainPoint
-                -> TMVar (Either AcquireFailure result)
-                -> ChainTip -> IO ()
-    waitOnQuery pVar qVar t = do
-      atomically $ putTMVar pVar (chainTipToChainPoint t)
-      atomically $ isEmptyTMVar qVar >>= check . not
-    -- If we were not supplied with a chain point then we'll find out using
-    -- the chain sync protocol.
-    -- TODO: this would be easier if the query protocol supported an implicit
-    -- tip point directly.
-    getChainPoint
-      :: TMVar ChainPoint
-      -> TMVar (Either AcquireFailure result)
-      -> Net.Sync.ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
-    getChainPoint pointVar' queryResultVar =
-      Net.Sync.ChainSyncClient $ do
-        pure $
-          Net.Sync.SendMsgRequestNext next (pure next)
-      where
-        next :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
-        next = Net.Sync.ClientStNext {
-                 Net.Sync.recvMsgRollForward = \_blk tip ->
-                   Net.Sync.ChainSyncClient $ do
-                     waitOnQuery pointVar' queryResultVar tip
-                     pure $ Net.Sync.SendMsgDone (),
-
-                 Net.Sync.recvMsgRollBackward = \_point tip ->
-                   Net.Sync.ChainSyncClient $ do
-                     waitOnQuery pointVar' queryResultVar tip
-                     pure $ Net.Sync.SendMsgDone ()
-               }
-
     singleQuery
-      :: TMVar ChainPoint
+      :: Maybe ChainPoint
       -> TMVar (Either Net.Query.AcquireFailure result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
-    singleQuery pointVar' resultVar' =
+    singleQuery mPointVar' resultVar' =
       LocalStateQueryClient $ do
-      point <- atomically $ takeTMVar pointVar'
       pure $
-        Net.Query.SendMsgAcquire (Just point) $
+        Net.Query.SendMsgAcquire mPointVar' $
         Net.Query.ClientStAcquiring
           { Net.Query.recvMsgAcquired =
               pure $ Net.Query.SendMsgQuery query $
