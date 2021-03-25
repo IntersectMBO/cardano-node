@@ -24,13 +24,7 @@ common project-config
                         -Wincomplete-uni-patterns
                         -Wpartial-fields
                         -Wredundant-constraints
-
-  if impl(ghc >= 8.10)
-    ghc-options:        -Wunused-packages
-
-  if impl(ghc < 8.10)
-    ghc-options:        -Wno-incomplete-patterns
-
+                        -Wunused-packages
 
 library
   import:               base, project-config
