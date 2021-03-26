@@ -180,7 +180,12 @@ source-repository-package
     ouroboros-network-framework
     typed-protocols
     typed-protocols-examples
-    Win32-network
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/Win32-network
+  tag: d81187239fe5f303aa1770565ad307efa605c820
+  --sha256: 13plwx6k7rh5g8m2ri6s7c3l952pg6ayfm76qw2hlnihywal1526
 
 constraints:
     hedgehog >= 1.0
