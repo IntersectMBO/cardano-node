@@ -35,15 +35,7 @@ common project-config
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
                         -Wredundant-constraints
-
-  if impl(ghc >= 8.10)
-    ghc-options:        -Wunused-packages
-
-  -- Pattern match checking has improved since 8.6.5. GHC now considers more
-  -- pattern matches as redundant than before, so disable this warning for older
-  -- versions of GHC that still consider them incomplete.
-  if impl(ghc < 8.10)
-    ghc-options:        -Wno-incomplete-patterns
+                        -Wunused-packages
 
 common maybe-Win32
   if os(windows)
@@ -163,15 +155,9 @@ executable cardano-node
                         -rtsopts
 
   if arch(arm)
-    if impl(ghc >= 8.10)
-      ghc-options:        "-with-rtsopts=-T -I0 -A16m -N1 --disable-delayed-os-memory-return"
-    else
-      ghc-options:        "-with-rtsopts=-T -I0 -A16m -N1"
+    ghc-options:        "-with-rtsopts=-T -I0 -A16m -N1 --disable-delayed-os-memory-return"
   else
-    if impl(ghc >= 8.10)
-      ghc-options:        "-with-rtsopts=-T -I0 -A16m -N2 --disable-delayed-os-memory-return"
-    else
-      ghc-options:        "-with-rtsopts=-T -I0 -A16m -N2"
+    ghc-options:        "-with-rtsopts=-T -I0 -A16m -N2 --disable-delayed-os-memory-return"
 
   other-modules:        Paths_cardano_node
 
