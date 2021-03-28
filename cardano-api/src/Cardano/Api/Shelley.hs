@@ -62,7 +62,6 @@ module Cardano.Api.Shelley
     KeyWitness
       ( ShelleyBootstrapWitness
       , ShelleyKeyWitness
-      , ShelleyScriptWitness
       ),
     ShelleyWitnessSigningKey
       ( WitnessPaymentKey
