@@ -25,7 +25,6 @@ module Cardano.Api.TxBody (
 
     -- ** Transitional utils
     makeByronTransaction,
-    makeShelleyTransaction,
 
     -- * Transaction Ids
     TxId(..),
@@ -1408,47 +1407,7 @@ makeByronTransaction txIns txOuts =
         txUpdateProposal = TxUpdateProposalNone,
         txMintValue      = TxMintNone
       }
-
--- | Transitional function to help the CLI move to the updated TxBody API.
---
-makeShelleyTransaction :: [TxIn]
-                       -> [TxOut ShelleyEra]
-                       -> SlotNo
-                       -> Lovelace
-                       -> [Certificate]
-                       -> [(StakeAddress, Lovelace)]
-                       -> Maybe TxMetadata
-                       -> Maybe UpdateProposal
-                       -> Either (TxBodyError ShelleyEra) (TxBody ShelleyEra)
-makeShelleyTransaction txIns txOuts ttl fee
-                       certs withdrawals mMetadata mUpdateProp =
-    makeTransactionBody $
-      TxBodyContent {
-        txIns            = [ (txin, BuildTxWith (KeyWitness KeyWitnessForSpending))
-                           | txin <- txIns ],
-        txOuts,
-        txFee            = TxFeeExplicit TxFeesExplicitInShelleyEra fee,
-        txValidityRange  = (TxValidityNoLowerBound,
-                            TxValidityUpperBound
-                              ValidityUpperBoundInShelleyEra ttl),
-        txMetadata       = case mMetadata of
-                             Nothing -> TxMetadataNone
-                             Just md -> TxMetadataInEra
-                                          TxMetadataInShelleyEra md,
-        txAuxScripts     = TxAuxScriptsNone,
-        txWithdrawals    = TxWithdrawals WithdrawalsInShelleyEra
-                             [ (stakeaddr, lovelace,
-                                BuildTxWith (KeyWitness KeyWitnessForStakeAddr))
-                             | (stakeaddr, lovelace) <- withdrawals ],
-        txCertificates   = TxCertificates CertificatesInShelleyEra certs
-                                          (BuildTxWith Map.empty),
-        txUpdateProposal = case mUpdateProp of
-                             Nothing -> TxUpdateProposalNone
-                             Just up -> TxUpdateProposal
-                                          UpdateProposalInShelleyEra up,
-        txMintValue      = TxMintNone
-      }
-
+{-# DEPRECATED makeByronTransaction "Use makeTransactionBody" #-}
 
 -- ----------------------------------------------------------------------------
 -- Other utilities helpful with making transaction bodies
