@@ -634,6 +634,22 @@ updateProposalSupportedInEra MaryEra    = Just UpdateProposalInMaryEra
 
 
 -- ----------------------------------------------------------------------------
+-- Building vs viewing transactions
+--
+
+data BuildTx
+data ViewTx
+
+data BuildTxWith build a where
+
+     ViewTx      ::      BuildTxWith ViewTx  a
+     BuildTxWith :: a -> BuildTxWith BuildTx a
+
+deriving instance Eq   a => Eq   (BuildTxWith build a)
+deriving instance Show a => Show (BuildTxWith build a)
+
+
+-- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
 --
 
