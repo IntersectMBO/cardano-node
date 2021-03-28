@@ -176,6 +176,11 @@ module Cardano.Api (
     TxUpdateProposal(..),
     TxMintValue(..),
 
+    -- ** Building vs viewing transactions
+    BuildTxWith(..),
+    BuildTx,
+    ViewTx,
+
     -- ** Era-dependent transaction body features
     MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
@@ -294,6 +299,13 @@ module Cardano.Api (
     ScriptInEra(..),
     toScriptInEra,
     eraOfScriptInEra,
+
+    -- * Use of a script in an era as a witness
+    WitCtxTxIn, WitCtxMint, WitCtxStake,
+    ScriptWitness(..),
+    Witness(..),
+    KeyWitnessInCtx(..),
+    ScriptWitnessInCtx(..),
 
     -- *** Languages supported in each era
     ScriptLanguageInEra(..),

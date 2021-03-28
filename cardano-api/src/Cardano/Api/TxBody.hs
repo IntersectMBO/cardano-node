@@ -51,6 +51,11 @@ module Cardano.Api.TxBody (
     TxUpdateProposal(..),
     TxMintValue(..),
 
+    -- ** Building vs viewing transactions
+    BuildTxWith(..),
+    BuildTx,
+    ViewTx,
+
     -- * Era-dependent transaction body features
     MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
