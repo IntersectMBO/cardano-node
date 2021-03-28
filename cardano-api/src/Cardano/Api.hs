@@ -214,7 +214,7 @@ module Cardano.Api (
 
     -- ** Incremental signing and separate witnesses
     makeSignedTransaction,
-    Witness,
+    KeyWitness,
     makeByronKeyWitness,
     makeByronTransaction,
     ShelleyWitnessSigningKey(..),
