@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module Test.Cardano.Api.Typed.Gen
   ( genAddressByron
@@ -428,7 +429,7 @@ genTxAuxScripts era =
                            <$> Gen.list (Range.linear 0 3)
                                         (genScriptInEra MaryEra)
 
-genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals era)
+genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals era =
   case era of
     ByronEra -> pure TxWithdrawalsNone
@@ -448,24 +449,24 @@ genTxWithdrawals era =
         , pure (TxWithdrawals WithdrawalsInMaryEra mempty) -- TODO: Generate withdrawals
         ]
 
-genTxCertificates :: CardanoEra era -> Gen (TxCertificates era)
+genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates era =
   case era of
     ByronEra -> pure TxCertificatesNone
     ShelleyEra ->
       Gen.choice
         [ pure TxCertificatesNone
-        , pure (TxCertificates CertificatesInShelleyEra mempty) -- TODO: Generate certificates
+        , pure (TxCertificates CertificatesInShelleyEra mempty $ BuildTxWith mempty) -- TODO: Generate certificates
         ]
     AllegraEra ->
       Gen.choice
         [ pure TxCertificatesNone
-        , pure (TxCertificates CertificatesInAllegraEra mempty) -- TODO: Generate certificates
+        , pure (TxCertificates CertificatesInAllegraEra mempty $ BuildTxWith mempty) -- TODO: Generate certificates
         ]
     MaryEra ->
       Gen.choice
         [ pure TxCertificatesNone
-        , pure (TxCertificates CertificatesInMaryEra mempty) -- TODO: Generate certificates
+        , pure (TxCertificates CertificatesInMaryEra mempty $ BuildTxWith mempty) -- TODO: Generate certificates
         ]
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
@@ -491,7 +492,7 @@ genTxUpdateProposal era =
     emptyUpdateProposal :: UpdateProposal
     emptyUpdateProposal = UpdateProposal Map.empty (EpochNo 0)
 
-genTxMintValue :: CardanoEra era -> Gen (TxMintValue era)
+genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue era =
   case era of
     ByronEra -> pure TxMintNone
@@ -500,10 +501,10 @@ genTxMintValue era =
     MaryEra ->
       Gen.choice
         [ pure TxMintNone
-        , TxMintValue MultiAssetInMaryEra <$> genValueForMinting
+        , TxMintValue MultiAssetInMaryEra <$> genValueForMinting <*> return (BuildTxWith mempty)
         ]
 
-genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent era)
+genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
   trxIns <- Gen.list (Range.constant 1 10) genTxIn
   trxOuts <- Gen.list (Range.constant 1 10) (genTxOut era)
@@ -517,7 +518,7 @@ genTxBodyContent era = do
   mintValue <- genTxMintValue era
 
   pure $ TxBodyContent
-    { txIns = trxIns
+    { txIns = map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) trxIns
     , txOuts = trxOuts
     , txFee = fee
     , txValidityRange = validityRange
@@ -559,7 +560,7 @@ genTx era =
     <$> genWitnessList
     <*> genTxBody era
   where
-    genWitnessList :: Gen [Witness era]
+    genWitnessList :: Gen [KeyWitness era]
     genWitnessList =
       case era of
         ByronEra -> Gen.list (Range.constant 1 10) genByronKeyWitness
@@ -567,7 +568,7 @@ genTx era =
         AllegraEra -> genShelleyBasedWitnessList
         MaryEra -> genShelleyBasedWitnessList
 
-    genShelleyBasedWitnessList :: IsShelleyBasedEra era => Gen [Witness era]
+    genShelleyBasedWitnessList :: IsShelleyBasedEra era => Gen [KeyWitness era]
     genShelleyBasedWitnessList = do
       bsWits <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness era)
       keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness era)
@@ -576,7 +577,7 @@ genTx era =
 genVerificationKey :: Key keyrole => AsType keyrole -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
-genByronKeyWitness :: Gen (Witness ByronEra)
+genByronKeyWitness :: Gen (KeyWitness ByronEra)
 genByronKeyWitness = do
   pmId <- genProtocolMagicId
   txinWitness <- genVKWitness pmId
@@ -592,7 +593,7 @@ genWitnessNetworkIdOrByronAddress =
 genShelleyBootstrapWitness
   :: IsShelleyBasedEra era
   => CardanoEra era
-  -> Gen (Witness era)
+  -> Gen (KeyWitness era)
 genShelleyBootstrapWitness era =
  makeShelleyBootstrapWitness
    <$> genWitnessNetworkIdOrByronAddress
@@ -602,7 +603,7 @@ genShelleyBootstrapWitness era =
 genShelleyKeyWitness
   :: IsShelleyBasedEra era
   => CardanoEra era
-  -> Gen (Witness era)
+  -> Gen (KeyWitness era)
 genShelleyKeyWitness era =
   makeShelleyKeyWitness
     <$> genTxBody era
@@ -611,7 +612,7 @@ genShelleyKeyWitness era =
 genShelleyWitness
   :: IsShelleyBasedEra era
   => CardanoEra era
-  -> Gen (Witness era)
+  -> Gen (KeyWitness era)
 genShelleyWitness era =
   Gen.choice
    [ genShelleyKeyWitness era

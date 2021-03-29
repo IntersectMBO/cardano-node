@@ -21,62 +21,59 @@ import           Test.Golden.Shelley.Genesis.KeyGenGenesis (golden_shelleyGenesi
 import           Test.Golden.Shelley.Genesis.KeyGenUtxo (golden_shelleyGenesisKeyGenUtxo)
 import           Test.Golden.Shelley.Genesis.KeyHash (golden_shelleyGenesisKeyHash)
 import           Test.Golden.Shelley.Key.ConvertCardanoAddressKey
-                     (golden_convertCardanoAddressByronSigningKey,
-                     golden_convertCardanoAddressIcarusSigningKey,
-                     golden_convertCardanoAddressShelleyPaymentSigningKey,
-                     golden_convertCardanoAddressShelleyStakeSigningKey)
+                   (golden_convertCardanoAddressByronSigningKey,
+                   golden_convertCardanoAddressIcarusSigningKey,
+                   golden_convertCardanoAddressShelleyPaymentSigningKey,
+                   golden_convertCardanoAddressShelleyStakeSigningKey)
 import           Test.Golden.Shelley.Node.IssueOpCert (golden_shelleyNodeIssueOpCert)
 import           Test.Golden.Shelley.Node.KeyGen (golden_shelleyNodeKeyGen)
 import           Test.Golden.Shelley.Node.KeyGenKes (golden_shelleyNodeKeyGenKes)
 import           Test.Golden.Shelley.Node.KeyGenVrf (golden_shelleyNodeKeyGenVrf)
 import           Test.Golden.Shelley.StakeAddress.Build (golden_shelleyStakeAddressBuild)
 import           Test.Golden.Shelley.StakeAddress.DeregistrationCertificate
-                     (golden_shelleyStakeAddressDeregistrationCertificate)
+                   (golden_shelleyStakeAddressDeregistrationCertificate)
 import           Test.Golden.Shelley.StakeAddress.KeyGen (golden_shelleyStakeAddressKeyGen)
 import           Test.Golden.Shelley.StakeAddress.RegistrationCertificate
-                     (golden_shelleyStakeAddressRegistrationCertificate)
+                   (golden_shelleyStakeAddressRegistrationCertificate)
 import           Test.Golden.Shelley.StakePool.RegistrationCertificate
-                     (golden_shelleyStakePoolRegistrationCertificate)
+                   (golden_shelleyStakePoolRegistrationCertificate)
 import           Test.Golden.Shelley.TextEnvelope.Certificates.GenesisKeyDelegationCertificate
-                     (golden_shelleyGenesisKeyDelegationCertificate)
+                   (golden_shelleyGenesisKeyDelegationCertificate)
 import           Test.Golden.Shelley.TextEnvelope.Certificates.MIRCertificate
-                     (golden_shelleyMIRCertificate)
+                   (golden_shelleyMIRCertificate)
 import           Test.Golden.Shelley.TextEnvelope.Certificates.OperationalCertificate
-                     (golden_shelleyOperationalCertificate)
+                   (golden_shelleyOperationalCertificate)
 import           Test.Golden.Shelley.TextEnvelope.Certificates.StakeAddressCertificates
-                     (golden_shelleyStakeAddressCertificates)
+                   (golden_shelleyStakeAddressCertificates)
 import           Test.Golden.Shelley.TextEnvelope.Certificates.StakePoolCertificates
-                     (golden_shelleyStakePoolCertificates)
+                   (golden_shelleyStakePoolCertificates)
 
 import           Test.Golden.Shelley.Metadata.StakePoolMetadata (golden_stakePoolMetadataHash)
 import           Test.Golden.Shelley.MultiSig.Address (golden_shelleyAllMultiSigAddressBuild,
-                     golden_shelleyAnyMultiSigAddressBuild,
-                     golden_shelleyAtLeastMultiSigAddressBuild)
+                   golden_shelleyAnyMultiSigAddressBuild, golden_shelleyAtLeastMultiSigAddressBuild)
 import           Test.Golden.Shelley.TextEnvelope.Keys.ExtendedPaymentKeys
-                     (golden_shelleyExtendedPaymentKeys)
+                   (golden_shelleyExtendedPaymentKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisDelegateKeys
-                     (golden_shelleyGenesisDelegateKeys)
+                   (golden_shelleyGenesisDelegateKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisKeys (golden_shelleyGenesisKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.GenesisUTxOKeys
-                     (golden_shelleyGenesisUTxOKeys)
+                   (golden_shelleyGenesisUTxOKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.KESKeys (golden_shelleyKESKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.PaymentKeys (golden_shelleyPaymentKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.StakeKeys (golden_shelleyStakeKeys)
 import           Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys (golden_shelleyVRFKeys)
 import           Test.Golden.Shelley.TextView.DecodeCbor (golden_shelleyTextViewDecodeCbor)
 import           Test.Golden.Shelley.Transaction.Assemble
-                     (golden_shelleyTransactionAssembleWitness_AllMultiSig,
-                     golden_shelleyTransactionAssembleWitness_AnyMultiSig,
-                     golden_shelleyTransactionAssembleWitness_AtLeastMultiSig,
-                     golden_shelleyTransactionAssembleWitness_SigningKey)
-import           Test.Golden.Shelley.Transaction.Build (golden_shelleyTransactionBuild)
+                   (golden_shelleyTransactionAssembleWitness_SigningKey)
+import           Test.Golden.Shelley.Transaction.Build (golden_shelleyTransactionBuild,
+                   golden_shelleyTransactionBuild_CertificateScriptWitnessed,
+                   golden_shelleyTransactionBuild_Minting,
+                   golden_shelleyTransactionBuild_TxInScriptWitnessed,
+                   golden_shelleyTransactionBuild_WithdrawalScriptWitnessed)
 import           Test.Golden.Shelley.Transaction.CalculateMinFee
-                     (golden_shelleyTransactionCalculateMinFee)
+                   (golden_shelleyTransactionCalculateMinFee)
 import           Test.Golden.Shelley.Transaction.CreateWitness
-                     (golden_shelleyTransactionAllMultiSigWitness,
-                     golden_shelleyTransactionAnyMultiSigWitness,
-                     golden_shelleyTransactionAtLeastMultiSigWitness,
-                     golden_shelleyTransactionSigningKeyWitness)
+                   (golden_shelleyTransactionSigningKeyWitness)
 import           Test.Golden.Shelley.Transaction.Sign (golden_shelleyTransactionSign)
 
 import           Test.Golden.Shelley.TextEnvelope.Tx.Tx (golden_shelleyTx)
@@ -117,6 +114,10 @@ keyTests =
         , ("golden_shelleyStakePoolRegistrationCertificate", golden_shelleyStakePoolRegistrationCertificate)
         , ("golden_shelleyTextViewDecodeCbor", golden_shelleyTextViewDecodeCbor)
         , ("golden_shelleyTransactionBuild", golden_shelleyTransactionBuild)
+        , ("golden_shelleyTransactionBuild_TxInScriptWitnessed", golden_shelleyTransactionBuild_TxInScriptWitnessed)
+        , ("golden_shelleyTransactionBuild_Minting", golden_shelleyTransactionBuild_Minting)
+        , ("golden_shelleyTransactionBuild_CertificateScriptWitnessed", golden_shelleyTransactionBuild_CertificateScriptWitnessed)
+        , ("golden_shelleyTransactionBuild_WithdrawalScriptWitnessed", golden_shelleyTransactionBuild_WithdrawalScriptWitnessed)
         , ("golden_shelleyTransactionCalculateMinFee", golden_shelleyTransactionCalculateMinFee)
         , ("golden_shelleyTransactionSign", golden_shelleyTransactionSign)
         , ("golden_shelleyVRFKeys", golden_shelleyVRFKeys)
@@ -166,12 +167,6 @@ multiSigTests =
         [ ("golden_shelleyAllMultiSigAddressBuild", golden_shelleyAllMultiSigAddressBuild)
         , ("golden_shelleyAnyMultiSigAddressBuild", golden_shelleyAnyMultiSigAddressBuild)
         , ("golden_shelleyAtLeastMultiSigAddressBuild", golden_shelleyAtLeastMultiSigAddressBuild)
-        , ("golden_shelleyTransactionAssembleWitness_AllMultiSig", golden_shelleyTransactionAssembleWitness_AllMultiSig)
-        , ("golden_shelleyTransactionAssembleWitness_AnyMultiSig", golden_shelleyTransactionAssembleWitness_AnyMultiSig)
-        , ("golden_shelleyTransactionAssembleWitness_AtLeastMultiSig", golden_shelleyTransactionAssembleWitness_AtLeastMultiSig)
         , ("golden_shelleyTransactionAssembleWitness_SigningKey", golden_shelleyTransactionAssembleWitness_SigningKey)
-        , ("golden_shelleyTransactionAllMultiSigWitness", golden_shelleyTransactionAllMultiSigWitness)
-        , ("golden_shelleyTransactionAnyMultiSigWitness", golden_shelleyTransactionAnyMultiSigWitness)
-        , ("golden_shelleyTransactionAtLeastMultiSigWitness", golden_shelleyTransactionAtLeastMultiSigWitness)
         , ("golden_shelleyTransactionSigningKeyWitness", golden_shelleyTransactionSigningKeyWitness)
         ]

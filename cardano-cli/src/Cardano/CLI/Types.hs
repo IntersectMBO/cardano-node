@@ -9,7 +9,6 @@ module Cardano.CLI.Types
   , OutputFormat (..)
   , QueryFilter (..)
   , SigningKeyFile (..)
-  , SigningKeyOrScriptFile (..)
   , SocketPath (..)
   , ScriptFile (..)
   , TransferDirection(..)
@@ -79,10 +78,6 @@ newtype VerificationKeyFile
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
-
-data SigningKeyOrScriptFile = ScriptFileForWitness FilePath
-                            | SigningKeyFileForWitness FilePath
-                            deriving (Eq, Show)
 
 -- | Determines the direction in which the MIR certificate will transfer ADA.
 data TransferDirection = TransferToReserves | TransferToTreasury

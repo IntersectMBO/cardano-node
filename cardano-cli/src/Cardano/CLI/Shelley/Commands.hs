@@ -162,18 +162,20 @@ renderKeyCmd cmd =
 data TransactionCmd
   = TxBuildRaw
       AnyCardanoEra
-      [TxIn]
+      [(TxIn, Maybe ScriptFile)]
+      -- ^ Transaction inputs with optional spending scripts
       [TxOutAnyEra]
-      (Maybe Value)
-      -- ^ Multi-Asset value
+      (Maybe (Value, [ScriptFile]))
+      -- ^ Multi-Asset value with script witness
       (Maybe SlotNo)
       -- ^ Transaction lower bound
       (Maybe SlotNo)
       -- ^ Transaction upper bound
       (Maybe Lovelace)
       -- ^ Tx fee
-      [CertificateFile]
-      [(StakeAddress, Lovelace)]
+      [(CertificateFile, Maybe ScriptFile)]
+      -- ^ Certificates with potential script witness
+      [(StakeAddress, Lovelace, Maybe ScriptFile)]
       TxMetadataJsonSchema
       [ScriptFile]
       -- ^ Auxillary scripts
@@ -491,7 +493,6 @@ data WitnessSigningData
       --
       -- If specified, both the network ID and derivation path are extracted
       -- from the address and used in the construction of the Byron witness.
-  | ScriptWitnessSigningData !ScriptFile
   deriving Show
 
 -- | Either a stake pool verification key, genesis delegate verification key,

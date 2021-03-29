@@ -91,7 +91,7 @@ module Cardano.Api.TxBody (
     fromTxOut,
 
     -- * Data family instances
-    AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody),
+    AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
 
     -- * Conversion functions
     fromByronTxIn,
@@ -944,6 +944,9 @@ pattern AsShelleyTxBody :: AsType (TxBody ShelleyEra)
 pattern AsShelleyTxBody = AsTxBody AsShelleyEra
 {-# COMPLETE AsShelleyTxBody #-}
 
+pattern AsMaryTxBody :: AsType (TxBody MaryEra)
+pattern AsMaryTxBody = AsTxBody AsMaryEra
+{-# COMPLETE AsMaryTxBody #-}
 
 instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
 
@@ -1012,7 +1015,7 @@ deserialiseShelleyBasedTxBody mkTxBody bs =
       return $ CBOR.Annotator $ \fbs ->
         mkTxBody
           (CBOR.runAnnotator txbody fbs)
-          (map (flip CBOR.runAnnotator fbs) txscripts)
+          (map (`CBOR.runAnnotator` fbs) txscripts)
           (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
@@ -1312,6 +1315,8 @@ data SimpleScriptInEra era where
                        -> SimpleScript lang
                        -> SimpleScriptInEra era
 
+{-# ANN collectTxBodySimpleScripts ("HLint: ignore Reduce duplication" :: Text) #-}
+
 collectTxBodySimpleScripts :: TxBodyContent BuildTx era
                            -> [SimpleScriptInEra era]
 collectTxBodySimpleScripts TxBodyContent {
@@ -1338,6 +1343,7 @@ collectTxBodySimpleScripts TxBodyContent {
     | TxMintValue _ _ (BuildTxWith witnesses) <- [txMintValue]
     , witness <- Map.elems witnesses
     , script <- simpleScriptInEra witness ]
+
   where
     simpleScriptInEra :: Witness witctx era -> [SimpleScriptInEra era]
     simpleScriptInEra (ScriptWitness

@@ -15,9 +15,8 @@ import qualified Hedgehog.Extras.Test.File as H
 
 golden_shelleyTransactionSign :: Property
 golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDir -> do
-  txBodyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/tx-body-file"
-  initialUtxo1SigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/initial-utxo1.skey"
-  initialUtxo2SigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/initial-utxo2.skey"
+  txBodyFile <- noteInputFile "test/data/golden/shelley/tx/txbody"
+  initialUtxo1SigningKeyFile <- noteInputFile "test/data/golden/shelley/keys/payment_keys/signing_key"
   utxoSigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/utxo.skey"
   stakeSigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/stake.skey"
   nodeColdSigningKeyFile <- noteInputFile "test/data/golden/shelley/transaction-sign/node-cold.skey"
@@ -34,7 +33,7 @@ golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDi
     , "--tx-file", signedTransactionFile
     ]
 
-  H.assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
+  H.assertFileOccurences 1 "Tx MaryEra" signedTransactionFile
   H.assertEndsWithSingleNewline signedTransactionFile
 
   -- Sign for a testnet with a testnet network magic of 11, but use two signing keys
@@ -44,11 +43,11 @@ golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDi
     , "--mainnet"
     , "--tx-body-file", txBodyFile
     , "--signing-key-file", initialUtxo1SigningKeyFile
-    , "--signing-key-file", initialUtxo2SigningKeyFile
+    , "--signing-key-file", initialUtxo1SigningKeyFile
     , "--tx-file", signedTransactionFile
     ]
 
-  H.assertFileOccurences 1 "TxSignedShelley" signedTransactionFile
+  H.assertFileOccurences 1 "Tx MaryEra" signedTransactionFile
   H.assertEndsWithSingleNewline signedTransactionFile
 
   -- Sign a pool registration transaction.
@@ -64,5 +63,5 @@ golden_shelleyTransactionSign = propertyOnce $ H.moduleWorkspace "tmp" $ \tempDi
     , "--tx-file", transactionPoolRegSignedFile
     ]
 
-  H.assertFileOccurences 1 "TxSignedShelley" transactionPoolRegSignedFile
+  H.assertFileOccurences 1 "Tx MaryEra" transactionPoolRegSignedFile
   H.assertEndsWithSingleNewline transactionPoolRegSignedFile

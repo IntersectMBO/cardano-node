@@ -8,7 +8,7 @@ inputs:
 mint:
   lovelace: 0
   policies:
-    16979b841a6ba532e87e34748c59d0f3fa416c344755a8bf20c839b9:
+    69596718df8203759c0f9e86f3f79d1dd45bc9d34109a4fccc824e02:
       '': 142
 outputs:
 - address:

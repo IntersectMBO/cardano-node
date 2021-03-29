@@ -34,7 +34,7 @@ In the draft `tx-out`, `ttl` and `fee` can be zero. Later we use the `out-file` 
 
     cardano-cli transaction build-raw \
     --shelley-era \
-    --tx-in <TxHash>#<TxIx> \<FutureSlot>
+    --tx-in <TxHash>#<TxIx> \
     --tx-out <Address>+<Lovelace> \
     --tx-out <Address>+0 \
     --invalid-hereafter 0

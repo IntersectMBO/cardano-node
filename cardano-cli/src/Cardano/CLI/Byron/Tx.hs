@@ -146,8 +146,24 @@ txSpendGenesisUTxOByronPBFT
   -> Address ByronAddr
   -> [TxOut ByronEra]
   -> Tx ByronEra
-txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs =
-    case makeByronTransaction [fromByronTxIn txIn] outs of
+txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
+    let txBodyCont =
+          TxBodyContent
+            [ (fromByronTxIn txIn
+              , BuildTxWith (KeyWitness KeyWitnessForSpending))
+            ]
+            outs
+            (TxFeeImplicit TxFeesImplicitInByronEra)
+            ( TxValidityNoLowerBound
+            , TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
+            )
+            TxMetadataNone
+            TxAuxScriptsNone
+            TxWithdrawalsNone
+            TxCertificatesNone
+            TxUpdateProposalNone
+            TxMintNone
+    case makeTransactionBody txBodyCont of
       Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
       Right txBody -> let bWit = fromByronWitness sk nId txBody
                       in makeSignedTransaction [bWit] txBody
@@ -165,13 +181,29 @@ txSpendUTxOByronPBFT
   -> [TxIn]
   -> [TxOut ByronEra]
   -> Tx ByronEra
-txSpendUTxOByronPBFT nId sk txIn outs =
-    case makeByronTransaction txIn outs of
-      Left err -> error $ "An error occurred while making a Byron era transaction: " <> show err
-      Right txBody -> let bWit = fromByronWitness sk nId txBody
-                      in makeSignedTransaction [bWit] txBody
+txSpendUTxOByronPBFT nId sk txIns outs = do
+  let txBodyCont = TxBodyContent
+                     [ ( txIn
+                       , BuildTxWith (KeyWitness KeyWitnessForSpending)
+                       ) | txIn <- txIns
+                     ]
+                     outs
+                     (TxFeeImplicit TxFeesImplicitInByronEra)
+                     ( TxValidityNoLowerBound
+                     , TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
+                     )
+                     TxMetadataNone
+                     TxAuxScriptsNone
+                     TxWithdrawalsNone
+                     TxCertificatesNone
+                     TxUpdateProposalNone
+                     TxMintNone
+  case makeTransactionBody txBodyCont of
+    Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
+    Right txBody -> let bWit = fromByronWitness sk nId txBody
+                    in makeSignedTransaction [bWit] txBody
 
-fromByronWitness :: SomeByronSigningKey -> NetworkId -> TxBody ByronEra -> Witness ByronEra
+fromByronWitness :: SomeByronSigningKey -> NetworkId -> TxBody ByronEra -> KeyWitness ByronEra
 fromByronWitness bw nId txBody =
   case bw of
     AByronSigningKeyLegacy sk -> makeByronKeyWitness nId txBody sk

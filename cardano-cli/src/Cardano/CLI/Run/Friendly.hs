@@ -44,11 +44,11 @@ friendlyTxBody era txbody =
     <>
     case txbody of
       ByronTxBody body -> friendlyTxBodyByron body
-      ShelleyTxBody ShelleyBasedEraShelley body aux ->
+      ShelleyTxBody ShelleyBasedEraShelley body _scripts aux ->
         addAuxData aux $ friendlyTxBodyShelley body
-      ShelleyTxBody ShelleyBasedEraAllegra body aux ->
+      ShelleyTxBody ShelleyBasedEraAllegra body _scripts aux ->
         addAuxData aux $ friendlyTxBodyAllegra body
-      ShelleyTxBody ShelleyBasedEraMary body aux ->
+      ShelleyTxBody ShelleyBasedEraMary body _scripts aux ->
         addAuxData aux $ friendlyTxBodyMary body
 
 addAuxData :: Show a => Maybe a -> Object -> Object
