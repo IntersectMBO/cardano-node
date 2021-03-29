@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | User-friendly pretty-printing for textual user interfaces (TUI)
-module Cardano.CLI.Shelley.Run.Pretty (friendlyTxBodyBS) where
+module Cardano.CLI.Run.Friendly (friendlyTxBodyBS) where
 
 import           Cardano.Prelude
 
