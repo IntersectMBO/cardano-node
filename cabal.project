@@ -9,7 +9,6 @@ packages:
     cardano-node
     cardano-node-chairman
     cardano-submit-api
-    hedgehog-extras
     nix/supervisord-cluster/topology
 
 package cardano-api
@@ -94,6 +93,12 @@ package io-sim-classes
 -- scripts/cabal-inside-nix-shell.sh --restore
 -- --------------------------- 8< --------------------------
 -- Please do not put any `source-repository-package` clause above this line.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/hedgehog-extras
+  tag: 8bcd3c9dc22cc44f9fcfe161f4638a384fc7a187
+  --sha256: 12viwpahjdfvlqpnzdgjp40nw31rvyznnab1hml9afpaxd6ixh70
 
 source-repository-package
   type: git
