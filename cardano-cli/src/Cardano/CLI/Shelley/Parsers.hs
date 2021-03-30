@@ -720,13 +720,13 @@ pQueryCmd =
 
     pQueryStakeSnapshot :: Parser QueryCmd
     pQueryStakeSnapshot = QueryStakeSnapshot'
-                          <*> pConsensusModeParams
+                          <$> pConsensusModeParams
                           <*> pNetworkId
                           <*> pStakePoolVerificationKeyHash
 
     pQueryPoolParams :: Parser QueryCmd
     pQueryPoolParams = QueryPoolParams'
-                          <*> pConsensusModeParams
+                          <$> pConsensusModeParams
                           <*> pNetworkId
                           <*> pStakePoolVerificationKeyHash
 

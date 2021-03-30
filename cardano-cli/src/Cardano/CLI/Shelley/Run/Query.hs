@@ -274,7 +274,7 @@ runQueryPoolParams (AnyConsensusModeParams cModeParams)
                   cModeParams
                   localNodeConnInfo
                   qInMode
-      obtainLedgerEraClassConstraints sbe (writePoolParams stakeDist poolid) result
+      obtainLedgerEraClassConstraints sbe (writePoolParams poolid) result
     Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
 
 
@@ -302,7 +302,7 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams)
                   cModeParams
                   localNodeConnInfo
                   qInMode
-      obtainLedgerEraClassConstraints sbe (writeStakeSnapshot stakeDist poolid) result
+      obtainLedgerEraClassConstraints sbe (writeStakeSnapshot poolid) result
     Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
 
 
@@ -474,11 +474,11 @@ writeStakeSnapshot :: forall era ledgerera.
                  => Era ledgerera
                  => FromCBOR (LedgerState era)
                  =>
-                    SerialisedLedgerState era
-                 -> Hash StakePoolKey
+                    Hash StakePoolKey
+                 -> SerialisedLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
 
-writeStakeSnapshot qState poolId =
+writeStakeSnapshot poolId qState =
        case decodeLedgerState qState of
            Left bs ->
                       firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
@@ -537,12 +537,12 @@ writePoolParams :: forall era ledgerera.
                  => FromCBOR (LedgerState era)
                  =>  Crypto.Crypto (Crypto ledgerera)
                  =>
-                    SerialisedLedgerState era
-                 -> Hash StakePoolKey
+                    Hash StakePoolKey
+                 -> SerialisedLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
 
 --    .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
-writePoolParams qState poolId =
+writePoolParams poolId qState =
        case decodeLedgerState qState of
            Left bs ->
                       firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
