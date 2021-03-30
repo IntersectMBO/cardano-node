@@ -102,7 +102,9 @@
       - [ ] edit
       - [ ] agree
       - [ ] complete
-5. [Future work](#Future-work)
+5. [Appendix](#Appendix)
+   1. [Decisions](#Decisions)
+   2. [Future work](#Future-work)
 
 # Document status
 
@@ -124,6 +126,7 @@ To do list:
 * [x] [Decide missing configuration](#Decide-missing-configuration)
 * [ ] [Discuss possibility of pure, thread-safe aggregation](#Discuss-possibility-of-pure-thread-safe-aggregation)
 * [ ] [Decide trace-outs types](#Decide-trace-outs-types)
+* [ ] Agree on editing.
 * [ ] Final proofreading.
 * [ ] Feedback.
 
@@ -213,16 +216,6 @@ traceWith :: Tracer m a -> a -> m ()
 traceWith trAddBlock (IgnoreBlockOlderThanK p)
 ```
 
-### Decide inline trace type annotation with trace function
-
-__DECISION: move `traceNamed` to the dispatcher API__
-
-> Alternatively, to trace that value, while extending the name of the trace inside the program (as opposed to deferring that to the dispatcher), the __trace__ function can be used:
->
-> ```haskell
-> traceNamed trAddBlock "ignoreBlock" (IgnoreBlockOlderThanK p)
-> ```
-
 ## Tracer namespace
 
 __Tracers__ are organised into a hierarchical __tracer namespace__, where the tree nodes and leaves are identified by `Text` name components.
@@ -247,32 +240,6 @@ appendName "specific" $ appendName "middle" $ appendName "general" tracer
 
 ..which will have the name `["general", "middle", "specific"]`.
 
-### Decide tracer definedness
-
-DECISION: every message constructor has to have a unique tracer name.
-
-DECISION: Therefore, each __tracer__ has a __tracer name__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
-
-### Decide tracer name definition
-
-DECISION: there is value in maintaining a user-friendly trace message namespace.
-
-> We could have used the (`Type` * `Constructor`) pair, which is a more technical approach.  Problems with that:
-> 1. __synthetic traces__ exist.
-> 2. Developer-provided type/constructor names are not necessarily ideal from user standpoint.
-
-### Decide inline trace type annotation with trace function 2
-
-DECISION: we use `traceWith` in the library code and `traceNamed` in th dispatcher.
-
-> Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
->
-> ```haskell
-> traceNamed exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
-> -- instead of:
-> traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
-> ```
-
 ## Trace annotation
 
 As mentioned in the overview, __traces__ are interpreted by the __dispatcher__ in a __trace context__.  This context consists of two parts:
@@ -294,44 +261,6 @@ Only severity and detail level can be supplied in configuration.
 
 ## Filter annotations
 
-### Decide on explicit trace filtering
-
-DECISION:  move to [Integration and implementation in the node](#Integration-and-implementation-in-the-node).
-
-> Not all messages shall be logged, but only a subset. The most common case is when we want to see messages that have a minimum severity level of e.g. `Warning`.
->
-> This can be done by calling the function `filterTraceBySeverity`, which only processes messages further with a severity equal or greater as the given one. E.g.:
->
-> ```haskell
-> let filteredTracer = filterTraceBySeverity WarningF exampleTracer
-> ```
->
-> A more general filter function is offered, which gives access to the object and a `LoggingContext`, which contains the namespace, the severity, the privacy and the detailLevel:
->
-> ```haskell
-> --- | Don't process further if the result of the selector function
-> ---   is False.
-> filterTrace :: (Monad m) =>
->      ((LoggingContext, a) -> Bool)
->   -> Trace m a
->   -> Trace m a
->
-> data LoggingContext = LoggingContext {
->     lcNamespace   :: Namespace
->   , lcSeverity    :: Maybe Severity
->   , lcPrivacy     :: Maybe Privacy
->   , lcDetailLevel :: Maybe DetailLevel
-> }
-> ```
-> So you can e.g. write a filter function, which only displays _Public_ messages:
->
-> ```haskell
-> filterTrace (\ (c, a) -> case lcPrivacy c of
->                 Just s  -> s == Public
->                 Nothing -> True)
-> ```
-> We come back to trace filtering when we treat the _Configuration_, cause the configuration makes it possible to enable a fine grained control of which messages are filtered out and which are further processed based on the Namespace.
-
 ### Severity
 
 __Severity__ is expressed in terms of:
@@ -341,7 +270,7 @@ data SeverityS
     = Debug | Info | Notice | Warning | Error | Critical | Alert | Emergency
 ```
 
-..which ranges from minimum (`Debug`) to the maximum (`Emergency`) severity, and allows ignoring messages with severity level _below_ a configured __severity cutoff__.
+..which ranges from minimum (`Debug`) to the maximum (`Emergency`) severity, and allows ignoring messages with severity level _below_ a configured global __severity cutoff__.
 
 The following __trace combinators__ affect __annotated severity__ of a trace:
 
@@ -364,8 +293,10 @@ tracer'' = withSeverity (\case
 If the combinators are applied multiple times to a single trace, only the innermost application affects it -- the rest of them is ignored.
 
 ```haskell
-trace (setSeverity Warning trAddBlock) "ignoreBlock" (IgnoreBlockOlderThanK b)
+traceWith (setSeverity Warning trAddBlock) (IgnoreBlockOlderThanK b)
 ```
+
+In addition, the __annotated severity__ of a particular trace can be changed in configuration, by referring to the __tracer name__ -- which allows to put it above or below the __global severity cutoff__, effectively either enabling or disabling it.
 
 `Info` is the default __annotated severity__, in the absence of trace annotations.
 
@@ -385,24 +316,13 @@ __Confidential__ privacy level means that the trace will not be externalised fro
 The annotation mechanism is similar to the one of severity:
 
 ```haskell
-setPrivacy :: Monad m => Privacy -> Trace m a -> Trace m a
+privately :: Trace m a -> Trace m a
 withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
 ```
 
 `Public` is the default __annotated privacy__, in the absence of privacy annotations.
 
 See [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy -filtering-implementation) for a more formal explanation of semantics.
-
-#### Decide on privately combinator
-
-DECISION: we agree to add `privately` to the API.
-
-> Instead of the `setPrivacy` combinator, we could save the trouble of passing the privacy argument, by relying on the fact that default privacy is `Public`, and introduce instead a `privately` combinator:
->
-> ```haskell
-> privately :: Trace m a -> Trace m a
-> ```
-> This combinator potentially entirely replaces `setPrivacy` and `withPrivacy`.
 
 ### Frequency
 
@@ -411,6 +331,7 @@ __Frequency filtering__ is yet another part of __trace filtering__ parameter, an
 Semantically this is implemented a randomly-fair suppression of messages when their moving-average frequency exceeds a given threshold parameter.
 
 The __frequency limiter__ itself emits a __suppression summary__ message under the following conditions:
+
 * when it message suppression begins, and
 * when message suppression stops -- adding the number of suppressed messages.
 
@@ -429,6 +350,8 @@ data LimitingMessage =
     StartLimiting Text
   | StopLimiting  Text Int
 ```
+
+The frequency filtering is intended to be applied to a subset of traces (those known to be noisy).  For this subset of traces the frequency limit can be configured globally.
 
 ## Presentation
 ### Formatting
@@ -490,6 +413,8 @@ metricsFormatter :: (LogFormatting a, MonadIO m)
   -> m (Trace m a)
 ```
 
+The __detail level__ can be configured globally, and also per-trace, by referring to a particular __tracer name__.
+
 #### Decide on type error instead of silent dropping of messages
 
 > We cannot allow silent dropping of messages, which is relevant in light of the above:
@@ -505,26 +430,6 @@ metricsFormatter :: (LogFormatting a, MonadIO m)
 An orthogonal aspect of __trace presentation__ is control over the amount of details presented for each trace.  This is important, because the emitted __program traces__ can be extremely detailed, which makes their complete presentation extremely expensive.
 
 Additionally, because detail level is important for debugging (f.e. sometimes we want to see even the bytestring serialisation of a transaction), this control mechanism has to be configurable.
-
-#### Decide on dispatcher detail level control
-
-DECISION: Move to the implementation API.
-
-It doesn't seem to make sense to decide on detail level inside the dispatcher -- so seems to be a purely configuration+`LogFormatting`-defined mechanism.
-
-> This detail level control is expressed by:
->
-> ```haskell
-> data DetailLevel = DBrief | DRegular | DDetailed
-> ```
-> For setting this, the following functions can be used:
->
-> ```haskell
-> setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
-> withDetails :: Monad m => (a -> DetailLevel) -> Trace m a -> Trace m a
-> ```
->
-> We explain in the section about formatting, how to specify which detail levels display which information.
 
 ### Documentation
 
@@ -634,22 +539,6 @@ data TraceConfiguration = TraceConfiguration {
 ```
 More configuration options e.g. for different transformers and __trace-outs__ can be added by this mechanism.
 
-### Decide namespace-aware configuration
-
-DECISION: Move to the implementation API.  Privacy should not be configurable.  Frequency limits should be configurable, at least globally -- maybe not per-namespace.
-
-> It doesn't make a lot of sense to configure Privacy.
->
-> It could make sense to configure frequency limits.
-
-### Decide missing configuration
-
-DECISION:
-
-* Global severity cutoff + per namespace.
-* Global detail level + per namespace.
-* Global *trace-out* configuration: stdout, trace forwarder.
-
 # Integration and implementation in the node
 ## Overall tracing setup
 
@@ -694,6 +583,54 @@ Configuring a __trace-out__ to output human-readable text (and therefore to use 
 >
 > We should consider that we already have a dedicated `cardano-logger` component for file logging.
 
+### Convenient namespace-extending tracing
+
+Sometimes, while implementing the __trace dispatcher__, it's convenient to combine `traceWith` with `appendName`.
+
+For this purpose, we provide `traceNamed`:
+
+> ```haskell
+> case event of
+>   IgnoreBlockOlderThanK{} ->
+>     traceNamed trAddBlock "IgnoreBlockOlderThanK" "Block ignored"
+> ```
+
+### Explicit trace filtering
+
+Not all messages shall be logged, but only a subset. The most common case is when we want to see messages that have a minimum severity level of e.g. `Warning`.
+
+This can be done by calling the function `filterTraceBySeverity`, which only processes messages further with a severity equal or greater as the given one. E.g.:
+
+```haskell
+let filteredTracer = filterTraceBySeverity WarningF exampleTracer
+```
+
+A more general filter function is offered, which gives access to the object and a `LoggingContext`, which contains the namespace, the severity, the privacy and the detailLevel:
+
+```haskell
+--- | Don't process further if the result of the selector function
+---   is False.
+filterTrace :: (Monad m) =>
+     ((LoggingContext, a) -> Bool)
+  -> Trace m a
+  -> Trace m a
+
+data LoggingContext = LoggingContext {
+    lcNamespace   :: Namespace
+  , lcSeverity    :: Maybe Severity
+  , lcPrivacy     :: Maybe Privacy
+  , lcDetailLevel :: Maybe DetailLevel
+}
+```
+So you can e.g. write a filter function, which only displays _Public_ messages:
+
+```haskell
+filterTrace (\ (c, a) -> case lcPrivacy c of
+                Just s  -> s == Public
+                Nothing -> True)
+```
+We come back to trace filtering when we treat the _Configuration_, cause the configuration makes it possible to enable a fine grained control of which messages are filtered out and which are further processed based on the Namespace.
+
 ## Severity filtering implementation
 
 __Trace filtering__ is affected by __annotation__ and __configuration__ components of the trace's __severity context__ as follows:
@@ -702,6 +639,22 @@ __Trace filtering__ is affected by __annotation__ and __configuration__ componen
    * the configuration-specified __default severity__, and
    * the configuration-specified __trace-specific severity__
 2. The trace is then ignored, if the trace's __annotated severity__ is __less__ than its __configuration severity__.
+
+## Detail level control
+
+This detail level control is expressed by:
+
+```haskell
+data DetailLevel = DBrief | DRegular | DDetailed
+```
+For setting this, the following functions can be used:
+
+```haskell
+setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
+withDetails :: Monad m => (a -> DetailLevel) -> Trace m a -> Trace m a
+```
+
+We explain in the section about formatting, how to specify which detail levels display which information.
 
 ## Confidentiality and privacy filtering implementation
 
@@ -786,8 +739,84 @@ In the third example we unite two traces to one tracer, for which we trivially u
 tracer1  = appendName "tracer1" exTracer
 tracer2  = appendName "tracer2" exTracer
 ```
+# Appendix
 
-# Future work
+## Decisions
+
+### Decide inline trace type annotation with trace function
+
+__DECISION: move `traceNamed` to the dispatcher API__
+
+> Alternatively, to trace that value, while extending the name of the trace inside the program (as opposed to deferring that to the dispatcher), the __trace__ function can be used:
+>
+> ```haskell
+> traceNamed trAddBlock "ignoreBlock" (IgnoreBlockOlderThanK p)
+> ```
+
+### Decide tracer definedness
+
+DECISION: Every message constructor has to have a unique tracer name.
+
+DECISION: Therefore, each __tracer__ has a __tracer name__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
+
+### Decide tracer name definition
+
+> We could have used the (`Type` * `Constructor`) pair, which is a more technical approach.  Problems with that:
+> 1. __synthetic traces__ exist.
+> 2. Developer-provided type/constructor names are not necessarily ideal from user standpoint.
+
+DECISION: there is value in maintaining a user-friendly trace message namespace.
+
+### Decide inline trace type annotation with trace function 2
+
+DECISION: we use `traceWith` in the library code and `traceNamed` in th dispatcher.
+
+> Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
+>
+> ```haskell
+> traceNamed exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
+> -- instead of:
+> traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
+> ```
+
+### Decide on explicit trace filtering
+
+DECISION:  move to [Integration and implementation in the node](#Integration-and-implementation-in-the-node).
+
+### Decide on privately combinator
+
+> Instead of the `setPrivacy` combinator, we could save the trouble of passing the privacy argument, by relying on the fact that default privacy is `Public`, and introduce instead a `privately` combinator:
+>
+> ```haskell
+> privately :: Trace m a -> Trace m a
+> ```
+> This combinator potentially entirely replaces `setPrivacy` and `withPrivacy`.
+
+DECISION: we agree to add `privately` to the API.
+
+### Decide on dispatcher detail level control
+
+It doesn't seem to make sense to decide on detail level inside the dispatcher -- so seems to be a purely configuration+`LogFormatting`-defined mechanism.
+
+DECISION: Move to the implementation API.
+
+### Decide namespace-aware configuration
+
+> It doesn't make a lot of sense to configure Privacy.
+>
+> It could make sense to configure frequency limits.
+
+DECISION: Move to the implementation API.  Privacy should not be configurable.  Frequency limits should be configurable, at least globally -- maybe not per-namespace.
+
+### Decide missing configuration
+
+DECISION:
+
+* Global severity cutoff + per namespace.
+* Global detail level + per namespace.
+* Global *trace-out* configuration: stdout, trace forwarder.
+
+## Future work
 
 There is a number of topics that were discussed, but deferred to a latter iteration of design/implementation:
 
