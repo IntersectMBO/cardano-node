@@ -665,7 +665,7 @@ pQueryCmd =
     , subParser "protocol-state"
         (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node (Ledger.ChainDepState -- advanced command)")
     , subParser "stake-snapshot"
-        (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the stake snapshot for a pool (mark,set,go,total -- advanced command)")
+        (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the three stake snapshots for a pool, plus the total active stake (advanced command)")
     , subParser "pool-params"
         (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
     ]
@@ -678,10 +678,11 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryTip :: Parser QueryCmd
-    pQueryTip = QueryTip
-                  <$> pConsensusModeParams
-                  <*> pNetworkId
-                  <*> pMaybeOutputFile
+    pQueryTip =
+      QueryTip
+        <$> pConsensusModeParams
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
     pQueryUTxO =
@@ -707,28 +708,32 @@ pQueryCmd =
         <*> pMaybeOutputFile
 
     pQueryLedgerState :: Parser QueryCmd
-    pQueryLedgerState = QueryLedgerState'
-                          <$> pConsensusModeParams
-                          <*> pNetworkId
-                          <*> pMaybeOutputFile
+    pQueryLedgerState =
+      QueryLedgerState'
+        <$> pConsensusModeParams
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pQueryProtocolState :: Parser QueryCmd
-    pQueryProtocolState = QueryProtocolState'
-                            <$> pConsensusModeParams
-                            <*> pNetworkId
-                            <*> pMaybeOutputFile
+    pQueryProtocolState =
+      QueryProtocolState'
+        <$> pConsensusModeParams
+        <*> pNetworkId
+        <*> pMaybeOutputFile
 
     pQueryStakeSnapshot :: Parser QueryCmd
-    pQueryStakeSnapshot = QueryStakeSnapshot'
-                          <$> pConsensusModeParams
-                          <*> pNetworkId
-                          <*> pStakePoolVerificationKeyHash
+    pQueryStakeSnapshot =
+      QueryStakeSnapshot'
+        <$> pConsensusModeParams
+        <*> pNetworkId
+        <*> pStakePoolVerificationKeyHash
 
     pQueryPoolParams :: Parser QueryCmd
-    pQueryPoolParams = QueryPoolParams'
-                          <$> pConsensusModeParams
-                          <*> pNetworkId
-                          <*> pStakePoolVerificationKeyHash
+    pQueryPoolParams =
+      QueryPoolParams'
+        <$> pConsensusModeParams
+        <*> pNetworkId
+        <*> pStakePoolVerificationKeyHash
 
 
 pGovernanceCmd :: Parser GovernanceCmd

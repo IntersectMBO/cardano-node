@@ -17,13 +17,14 @@ module Cardano.CLI.Shelley.Run.Query
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
-import           Data.Aeson (ToJSON (..), (.=),object,pairs)
+import           Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.HashMap.Strict as HMS
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -45,9 +46,10 @@ import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
 
 import           Cardano.Binary (decodeFull)
-import           Cardano.Crypto.Hash (hashToBytesAsHex,hashFromStringAsHex)
+import           Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytesAsHex)
 
 import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
@@ -55,17 +57,12 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                    (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
-import           Shelley.Spec.Ledger.Scripts ()
-
--- These imports are used specifically for stake snapshots
-import           Shelley.Spec.Ledger.LedgerState hiding (LedgerState,_delegations)
-import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Keys (KeyHash(..))
-import           Data.Maybe
-import           Cardano.Ledger.Era
-
-
+import           Shelley.Spec.Ledger.EpochBoundary
+import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
+import           Shelley.Spec.Ledger.LedgerState hiding (LedgerState, _delegations)
+import           Shelley.Spec.Ledger.Scripts ()
+import           Shelley.Spec.Ledger.TxBody (PoolParams (..))
 
 
 {- HLINT ignore "Reduce duplication" -}
@@ -254,7 +251,6 @@ runQueryPoolParams
   -> NetworkId
   -> Hash StakePoolKey
   -> ExceptT ShelleyQueryCmdError IO ()
-
 runQueryPoolParams (AnyConsensusModeParams cModeParams)
                     network poolid = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
@@ -454,58 +450,62 @@ writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
      first (const ls) (decodeFull ls)
 
 
--- Data Structure to hold stake information so that it can be printed nicely
+-- | This local data structure is introduced purely to allow nicely formatted output and has no other purpose.
+-- mark, set, go are the three ledger state stake snapshots (most recent to least recent)
+-- go is the snapshot that is used for the current epoch, set will be used in the next epoch,
+-- mark for the epoch after that.  marktot etc record the total active stake for each snapshot
+-- This information can be used by community tools to calculate upcoming leader schedules
 data Stakes =  Stakes {
-      mark, set, go, total :: Integer
+      mark, set, go :: Integer,
+      marktot, settot, gotot :: Integer
     } deriving Show
 
+-- | Pretty printing for stake information
 instance ToJSON Stakes where
-    -- this generates a Value
-    toJSON (Stakes m s g t) =
-        object ["activeStakeMark" .= m, "activeStakeSet" .= s, "activeStakeGo" .= g, "activeStakeTotal" .= t]
+    toJSON (Stakes m s g mt st gt) =
+        object ["poolStakeMark" .= m, "poolStakeSet" .= s, "poolStakeGo" .= g,
+                "activeStakeMark" .= mt, "activeStakeSet" .= st, "activeStakeGo" .= gt]
 
-    -- this encodes directly to a bytestring Builder
-    toEncoding (Stakes m s g t) =
-        pairs ("mark" .= m <> "set" .= s  <> "go" .= g  <> "total" .= t)
+    toEncoding  (Stakes m s g mt st gt) =
+        pairs ("poolStakeMark" .= m <> "poolStakeSet" .= s <> "poolStakeGo" .= g <>
+               "activeStakeMark" .= mt <> "activeStakeSet" .= st <> "activeStakeGo" .= gt)
 
 
 writeStakeSnapshot :: forall era ledgerera.
-                    ShelleyLedgerEra era ~ ledgerera
-                 => Era ledgerera
-                 => FromCBOR (LedgerState era)
-                 =>
-                    Hash StakePoolKey
-                 -> SerialisedLedgerState era
-                 -> ExceptT ShelleyQueryCmdError IO ()
+                      ShelleyLedgerEra era ~ ledgerera
+                   => Era.Era ledgerera
+                   => FromCBOR (LedgerState era)
+                   => Hash StakePoolKey
+                   -> SerialisedLedgerState era
+                   -> ExceptT ShelleyQueryCmdError IO ()
 
 writeStakeSnapshot poolId qState =
-       case decodeLedgerState qState of
-           Left bs ->
-                      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-           Right ledgerState ->
-                 if maybehk == Nothing then
-                     left ShelleyQueryCmdPoolIdError
-                 else
-                     liftIO . LBS.putStrLn $  encodePretty $ Stakes {mark = markStake,set = setStake,go = goStake,total = totalStake}
-                 where
-                       -- Ledger State
-                       (LedgerState snapshot)  = ledgerState
+  case decodeLedgerState qState of
+    Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+    Right ledgerState ->
+      if maybehk == Nothing then
+        left ShelleyQueryCmdPoolIdError
+      else
+        liftIO . LBS.putStrLn $  encodePretty $ Stakes {mark = markStake,set = setStake,go = goStake,marktot = markTotal,settot = setTotal,gotot = goTotal}
+      where
+        -- Ledger State
+        (LedgerState snapshot)  = ledgerState
 
-                       -- The three stake snapshots
-                       (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
+        -- The three stake snapshots, obtained from the ledger state
+        (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
 
-                       -- calculation of total stake - this assumes a fixed supply - seems hard to get the variable value
-                       maxSupply = Coin $ 45 * 1000 * 1000 * 1000 * 1000 * 1000
-                       Coin totalStake = circulation (nesEs snapshot) maxSupply
+        -- Calculate the three pool and active stake values for the given pool
+        markStake =   getPoolStake hk markS
+        setStake =    getPoolStake hk setS
+        goStake =     getPoolStake hk goS
 
-                       -- Calculate the three stake values for the given pool
-                       markStake =   getPoolStake hk markS
-                       setStake =    getPoolStake  hk setS
-                       goStake =     getPoolStake  hk goS
+        markTotal =   getAllStake markS
+        setTotal =    getAllStake setS
+        goTotal =     getAllStake goS
 
-                       -- Convert the hash string into a KeyHash for use by the ledger
-                       maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
-                       hk = KeyHash $ fromJust $ maybehk
+        -- Convert the hash string into a KeyHash for use by the ledger
+        maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
+        hk = KeyHash $ fromJust $ maybehk
 
  where
    decodeLedgerState
@@ -514,57 +514,72 @@ writeStakeSnapshot poolId qState =
    decodeLedgerState (SerialisedLedgerState (Serialised ls)) =
      first (const ls) (decodeFull ls)
 
---   getPoolStake
---     :: Hash StakePoolKey
---     ->
---        SnapShot (Crypto ledgerera)
---     -> Integer
+   -- Sum all the stake that is held by the pool
+   getPoolStake :: KeyHash Shelley.Spec.Ledger.Keys.StakePool crypto
+                -> SnapShot crypto
+                -> Integer
    getPoolStake hk ss = pStake
       where
-        -- Sum all the stake that is held by the pool
         Coin pStake = fold s
              where
-                (Stake s) = poolStake hk delegs stake
+                (Stake s) = poolStake hk (_delegations ss) (_stake ss)
 
-                -- stake and delegation snapshots
-                stake =  _stake ss
-                delegs = _delegations ss
+   -- Sum the active stake from a snapshot
+   getAllStake :: SnapShot crypto
+               -> Integer
+   getAllStake (SnapShot stake _ _) = activeStake
+      where
+        Coin activeStake = fold . unStake $ stake
+
+-- | This local data structure is introduced purely to allow nicely formatted output and has no other purpose.
+-- params are the current pool parameter settings, futureparams are new parameters, retiringEpoch is the
+-- epoch that has been set for pool retirement.  Any of these may be Nothing
+data Params crypto =  Params {
+  params, futureparams :: Maybe (PoolParams crypto),
+  retiringEpoch :: Maybe EpochNo
+  } deriving Show
+
+-- | Pretty printing for pool parameters
+instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
+  toJSON (Params p fp r) =
+    object ["poolParams" .= p, "futurePoolParams" .= fp, "retiring" .= r]
+
+  toEncoding (Params p fp r) =
+    pairs ("poolParams" .= p <> "futurePoolParams" .= fp <> "retiring" .= r)
 
 
 writePoolParams :: forall era ledgerera.
-                    ShelleyLedgerEra era ~ ledgerera
+                   ShelleyLedgerEra era ~ ledgerera
+                => FromCBOR (LedgerState era)
+                => Crypto.Crypto (Era.Crypto ledgerera)
+                => Hash StakePoolKey
+                -> SerialisedLedgerState era
+                -> ExceptT ShelleyQueryCmdError IO ()
 
-                 => FromCBOR (LedgerState era)
-                 =>  Crypto.Crypto (Crypto ledgerera)
-                 =>
-                    Hash StakePoolKey
-                 -> SerialisedLedgerState era
-                 -> ExceptT ShelleyQueryCmdError IO ()
-
---    .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
+-- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
+--   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
 writePoolParams poolId qState =
-       case decodeLedgerState qState of
-           Left bs ->
-                      firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-           Right ledgerState ->
-                 if maybehk == Nothing then
-                     left ShelleyQueryCmdPoolIdError
-                 else
-                     liftIO . LBS.putStrLn $  encodePretty $ (poolparams,fpoolparams,retiring)
-             where
-                       (LedgerState snapshot)  = ledgerState
+  case decodeLedgerState qState of
+    Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+    Right ledgerState ->
+      if maybehk == Nothing then
+        left ShelleyQueryCmdPoolIdError
+      else
+        liftIO . LBS.putStrLn $  encodePretty $ Params poolparams fpoolparams retiring
+      where
+        (LedgerState snapshot)  = ledgerState
 
-                       -- pool state
-                       ps = _pstate $ _delegationState $ esLState $ nesEs snapshot
+        -- pool state
+        ps = _pstate $ _delegationState $ esLState $ nesEs snapshot
 
-                       -- Convert the hash string into a KeyHash for use by the ledger
-                       maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
-                       hk = KeyHash $ fromJust $ maybehk
+        -- Convert the hash string into a KeyHash for use by the ledger
+        maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
+        hk = KeyHash $ fromJust $ maybehk
 
-                       -- pool parameters
-                       poolparams = getPoolParams hk $ _pParams ps
-                       fpoolparams = getPoolParams hk $ _fPParams ps
-                       retiring = getPoolParams hk $ _retiring ps
+        -- pool parameters
+        poolparams = getPoolParams hk $ _pParams ps
+        fpoolparams = getPoolParams hk $ _fPParams ps
+        retiring = getPoolParams hk $ _retiring ps
 
  where
    decodeLedgerState
@@ -573,10 +588,9 @@ writePoolParams poolId qState =
    decodeLedgerState (SerialisedLedgerState (Serialised ls)) =
      first (const ls) (decodeFull ls)
 
---   getPoolParameters ::
---     NewEpochState era ->
---     KeyHash 'StakePool (Crypto era) ->
---     Maybe (PoolParams (Crypto era))
+   getPoolParams :: KeyHash StakePool (Era.Crypto ledgerera)
+                 -> Map (KeyHash StakePool (Era.Crypto ledgerera)) params
+                 -> Maybe params
    getPoolParams poolid ps = Map.lookup poolid ps
 
 

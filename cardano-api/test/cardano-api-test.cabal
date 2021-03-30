@@ -18,17 +18,12 @@ common project-config
                         OverloadedStrings
 
   ghc-options:          -Wall
+                        -Wcompat
                         -Wincomplete-record-updates
                         -Wincomplete-uni-patterns
-                        -Wredundant-constraints
                         -Wpartial-fields
-                        -Wcompat
-
-  if impl(ghc >= 8.10)
-    ghc-options:        -Wunused-packages
-
-  if impl(ghc < 8.10)
-    ghc-options:        -Wno-incomplete-patterns
+                        -Wredundant-constraints
+                        -Wunused-packages
 
 library
   import:               base, project-config

@@ -59,9 +59,7 @@ common project-config
                         -Wno-missing-import-lists
                         -Wno-safe
                         -Wno-unsafe
-
-  if impl(ghc >= 8.10)
-    ghc-options:        -Wunused-packages
+                        -Wunused-packages
 
 library
   import:               base, project-config

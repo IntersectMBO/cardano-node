@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                   cardano-cli
-version:                1.26.0
+version:                1.26.1
 description:            The Cardano command-line interface.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -29,9 +29,7 @@ common project-config
                         -Wincomplete-uni-patterns
                         -Wpartial-fields
                         -Wredundant-constraints
-
-  if impl(ghc >= 8.10)
-    ghc-options:        -Wunused-packages
+                        -Wunused-packages
 
 common maybe-unix
   if !os(windows)
@@ -137,6 +135,7 @@ library
                       , utf8-string
                       , unordered-containers
                       , vector
+                      , yaml
 
 executable cardano-cli
   import:               base, project-config
@@ -208,6 +207,7 @@ test-suite cardano-cli-golden
                       , text
                       , time
                       , unordered-containers
+  build-tool-depends:   cardano-cli:cardano-cli
 
   other-modules:        Test.Golden.Shelley
                         Test.Golden.Byron.SigningKeys
@@ -259,6 +259,7 @@ test-suite cardano-cli-golden
                         Test.Golden.Shelley.Transaction.CalculateMinFee
                         Test.Golden.Shelley.Transaction.CreateWitness
                         Test.Golden.Shelley.Transaction.Sign
+                        Test.Golden.TxView
                         Test.Golden.Version
                         Test.OptParse
 

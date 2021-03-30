@@ -18,11 +18,11 @@ docutils==0.16
 future==0.18.2
 idna==2.9
 imagesize==1.2.0
-Jinja2==2.11.2
+Jinja2==2.11.3
 jsonpointer==2.0
 jsonref==0.2
 MarkupSafe==1.1.1
-Pygments==2.6.1
+Pygments==2.7.4
 pytz==2020.1
 requests==2.24.0
 six==1.15.0

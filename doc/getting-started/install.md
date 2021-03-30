@@ -27,7 +27,7 @@ To download the source code and build it, you need the following packages and to
 * developer libraries for `ncurses`,
 * `ncurses` compatibility libraries,
 * the Haskell build tool `cabal`,
-* the GHC Haskell compiler.
+* the GHC Haskell compiler (version `8.10.2` or above).
 
 In Redhat, Fedora, and Centos:
 

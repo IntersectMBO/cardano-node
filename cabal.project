@@ -9,7 +9,6 @@ packages:
     cardano-node
     cardano-node-chairman
     cardano-submit-api
-    hedgehog-extras
     nix/supervisord-cluster/topology
 
 package cardano-api
@@ -25,9 +24,6 @@ package cardano-node
   ghc-options: -Werror
 
 package cardano-node-chairman
-  ghc-options: -Werror
-
-package hedgehog-extras
   ghc-options: -Werror
 
 package cryptonite
@@ -94,6 +90,12 @@ package io-sim-classes
 -- scripts/cabal-inside-nix-shell.sh --restore
 -- --------------------------- 8< --------------------------
 -- Please do not put any `source-repository-package` clause above this line.
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/hedgehog-extras
+  tag: 8bcd3c9dc22cc44f9fcfe161f4638a384fc7a187
+  --sha256: 12viwpahjdfvlqpnzdgjp40nw31rvyznnab1hml9afpaxd6ixh70
 
 source-repository-package
   type: git
@@ -165,9 +167,15 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://github.com/input-output-hk/Win32-network
+  tag: 94153b676617f8f33abe8d8182c37377d2784bd1
+  --sha256: 0pb7bg0936fldaa5r08nqbxvi2g8pcy4w3c7kdcg7pdgmimr30ss
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 1ab4ded9eb5a6e7dec9bdd1869506f6a6eb73f42
-  --sha256: 1h1hwpww6b8c8hggr9x70417bs432glzhdfzdd7bvzhlc32lb30m
+  tag: 7f90c8c59ffc7d61a4e161e886d8962a9c26787a
+  --sha256: 0hnw6hvbyny3wniaqw8d37l4ysgp8xrq5d84fapxfm525a4hfs0x
   subdir:
     io-sim
     io-sim-classes
@@ -180,7 +188,6 @@ source-repository-package
     ouroboros-network-framework
     typed-protocols
     typed-protocols-examples
-    Win32-network
 
 constraints:
     hedgehog >= 1.0

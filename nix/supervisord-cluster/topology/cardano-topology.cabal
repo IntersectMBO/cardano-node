@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                  cardano-topology
-version:               1.25.0
+version:               1.26.1
 description:           A cardano topology generator
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -14,21 +14,22 @@ common base                         { build-depends: base                       
 
 common project-config
   default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
+                        -Wpartial-fields
+                        -Wredundant-constraints
 
 executable cardano-topology
   import:               base, project-config
   hs-source-dirs:       .
   main-is:              cardano-topology.hs
   ghc-options:          -threaded
-                        -Wall
-                        -Wincomplete-record-updates
-                        -Wincomplete-uni-patterns
-                        -Wredundant-constraints
-                        -Wpartial-fields
-                        -Wcompat
                         -rtsopts
                         "-with-rtsopts=-T"
-                        -Wno-unticked-promoted-constructors
   build-depends:        aeson
                       , bytestring
                       , containers
@@ -36,5 +37,3 @@ executable cardano-topology
                       , optparse-applicative
                       , split
                       , text
-
-  default-extensions:   NoImplicitPrelude
