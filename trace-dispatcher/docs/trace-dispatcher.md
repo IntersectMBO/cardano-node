@@ -72,7 +72,7 @@
       - [x] edit
       - [ ] agree
       - [ ] complete
-4. [Integration and implementation details](#Integration-and-implementation-details)
+4. [Integration and implementation in the node](#Integration-and-implementation-in-the-node)
    1. [Overall tracing setup](#Overall-tracing-setup)
       - [x] edit
       - [ ] agree
@@ -111,16 +111,17 @@ Work in progress.
 To do list:
 
 * [x] Finish editing.
-* [ ] [Decide inline trace type annotation with trace function](#Decide-inline-trace-type-annotation-with-trace-function)
-* [ ] [Decide tracer definedness](#Decide-tracer-definedness)
-* [ ] [Decide tracer name definition](#Decide-tracer-name-definition)
-* [ ] [Decide inline trace type annotation with trace function 2](#Decide-inline-trace-type-annotation-with-trace-function-2)
-* [ ] [Decide on explicit trace filtering](#Decide-on-explicit-trace-filtering)
-* [ ] [Decide on privately combinator](#Decide-on-privately-combinator)
+* [x] [Decide inline trace type annotation with trace function](#Decide-inline-trace-type-annotation-with-trace-function)
+* [x] [Decide tracer definedness](#Decide-tracer-definedness)
+* [x] [Decide tracer name definition](#Decide-tracer-name-definition)
+* [x] [Decide inline trace type annotation with trace function 2](#Decide-inline-trace-type-annotation-with-trace-function-2)
+* [x] [Decide on explicit trace filtering](#Decide-on-explicit-trace-filtering)
+* [x] [Decide on privately combinator](#Decide-on-privately-combinator)
 * [ ] [Decide on type error instead of silent dropping of messages](#Decide-on-type-error-instead-of-silent-dropping-of-messages)
 * [ ] [Decide on more direct interface to EKG metrics](#Decide-on-more-direct-interface-to-ekg-metrics)
-* [ ] [Decide on dispatcher detail level control](#Decide-on-dispatcher-detail-level-control)
-* [ ] [Decide namespace-aware configuration](#Decide-namespace-aware-configuration)
+* [x] [Decide on dispatcher detail level control](#Decide-on-dispatcher-detail-level-control)
+* [x] [Decide namespace-aware configuration](#Decide-namespace-aware-configuration)
+* [x] [Decide missing configuration](#Decide-missing-configuration)
 * [ ] [Discuss possibility of pure, thread-safe aggregation](#Discuss-possibility-of-pure-thread-safe-aggregation)
 * [ ] [Decide trace-outs types](#Decide-trace-outs-types)
 * [ ] Final proofreading.
@@ -214,17 +215,19 @@ traceWith trAddBlock (IgnoreBlockOlderThanK p)
 
 ### Decide inline trace type annotation with trace function
 
+__DECISION: move `traceNamed` to the dispatcher API__
+
 > Alternatively, to trace that value, while extending the name of the trace inside the program (as opposed to deferring that to the dispatcher), the __trace__ function can be used:
 >
 > ```haskell
-> trace trAddBlock "ignoreBlock" (IgnoreBlockOlderThanK p)
+> traceNamed trAddBlock "ignoreBlock" (IgnoreBlockOlderThanK p)
 > ```
 
 ## Tracer namespace
 
 __Tracers__ are organised into a hierarchical __tracer namespace__, where the tree nodes and leaves are identified by `Text` name components.
 
-The __tracer namespace__ appears in the followinc contexts:
+The __tracer namespace__ appears in the following contexts:
 
 * __documentation__, where it defines the overall structure of the generated documentation output,
 * __configuration__, where it allows referring to tracers we want to reconfigure in some way, such as changing their severity,
@@ -246,11 +249,13 @@ appendName "specific" $ appendName "middle" $ appendName "general" tracer
 
 ### Decide tracer definedness
 
-> Therefore, each __tracer__ has a __tracer name__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
-> vs.:
-> Every trace at a trace-out must be uniquely identified by its Namespace.)
+DECISION: every message constructor has to have a unique tracer name.
+
+DECISION: Therefore, each __tracer__ has a __tracer name__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
 
 ### Decide tracer name definition
+
+DECISION: there is value in maintaining a user-friendly trace message namespace.
 
 > We could have used the (`Type` * `Constructor`) pair, which is a more technical approach.  Problems with that:
 > 1. __synthetic traces__ exist.
@@ -258,10 +263,12 @@ appendName "specific" $ appendName "middle" $ appendName "general" tracer
 
 ### Decide inline trace type annotation with trace function 2
 
+DECISION: we use `traceWith` in the library code and `traceNamed` in th dispatcher.
+
 > Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
 >
 > ```haskell
-> trace exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
+> traceNamed exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
 > -- instead of:
 > traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
 > ```
@@ -288,6 +295,8 @@ Only severity and detail level can be supplied in configuration.
 ## Filter annotations
 
 ### Decide on explicit trace filtering
+
+DECISION:  move to [Integration and implementation in the node](#Integration-and-implementation-in-the-node).
 
 > Not all messages shall be logged, but only a subset. The most common case is when we want to see messages that have a minimum severity level of e.g. `Warning`.
 >
@@ -386,10 +395,12 @@ See [Confidentiality and privacy filtering implementation](#Confidentiality-and-
 
 #### Decide on privately combinator
 
+DECISION: we agree to add `privately` to the API.
+
 > Instead of the `setPrivacy` combinator, we could save the trouble of passing the privacy argument, by relying on the fact that default privacy is `Public`, and introduce instead a `privately` combinator:
 >
 > ```haskell
-> privately :: Privacy -> Trace m a -> Trace m a
+> privately :: Trace m a -> Trace m a
 > ```
 > This combinator potentially entirely replaces `setPrivacy` and `withPrivacy`.
 
@@ -497,6 +508,8 @@ Additionally, because detail level is important for debugging (f.e. sometimes we
 
 #### Decide on dispatcher detail level control
 
+DECISION: Move to the implementation API.
+
 It doesn't seem to make sense to decide on detail level inside the dispatcher -- so seems to be a purely configuration+`LogFormatting`-defined mechanism.
 
 > This detail level control is expressed by:
@@ -583,7 +596,7 @@ following way, and it will output the Stats:
   traceWith 2.0 aggroTracer -- measure: 2.0 sum: 3.1
 ```
 
-### Discuss possibility of pure, thread-safe aggregation
+### Discuss possibility of pure aggregation
 
 > I would like to find a function foldTrace, that omits the MVar and can thus be called pure. Help is appreciated.
 
@@ -623,19 +636,21 @@ More configuration options e.g. for different transformers and __trace-outs__ ca
 
 ### Decide namespace-aware configuration
 
+DECISION: Move to the implementation API.  Privacy should not be configurable.  Frequency limits should be configurable, at least globally -- maybe not per-namespace.
+
 > It doesn't make a lot of sense to configure Privacy.
 >
 > It could make sense to configure frequency limits.
 
 ### Decide missing configuration
 
-> We still need to allow configuration of:
->
-> * Global severity cutoff.
-> * Global detail level.
-> * Global *trace-out* configuration: stdout, trace forwarder.
+DECISION:
 
-# Integration and implementation details
+* Global severity cutoff + per namespace.
+* Global detail level + per namespace.
+* Global *trace-out* configuration: stdout, trace forwarder.
+
+# Integration and implementation in the node
 ## Overall tracing setup
 
 As a result of the __trace__ / __tracer__ duality, the program components that wish to emit traces of particular types, must be parametrised with matching tracers.
@@ -674,6 +689,8 @@ Configuring a __trace-out__ to output human-readable text (and therefore to use 
 ### Decide trace-outs types
 
 > We shouldn't implement file-based tracing, unless we intend to implement it properly, i.e. with log rotation.
+>
+> One reason why writing to a file in the stdout backend is somewhat undesirable, is because it weakens the security property we assign to this backend -- the Confidential-ity enforcement.
 >
 > We should consider that we already have a dedicated `cardano-logger` component for file logging.
 
