@@ -17,9 +17,10 @@ import           Control.Exception (SomeException, try)
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Fixed (Pico)
 import qualified Data.Text as T
 import           Data.Text (Text)
-import           Data.Time.Clock (NominalDiffTime)
+import           Data.Time.Clock (NominalDiffTime, secondsToNominalDiffTime)
 import           Data.Typeable (Typeable)
 import           Data.Void (Void)
 import           Data.Word (Word16)
@@ -63,13 +64,14 @@ data HowToConnect
 
 launchForwarders
   :: HowToConnect
+  -> Maybe Pico
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration Text)
   -> IO ()
-launchForwarders endpoint configs =
-  try (launchForwarders' endpoint configs) >>= \case
+launchForwarders endpoint benchFillFreq configs =
+  try (launchForwarders' endpoint benchFillFreq configs) >>= \case
     Left (_e :: SomeException) -> do
       threadDelay $ toMicroSecs howOftenToReconnect
-      launchForwarders endpoint configs
+      launchForwarders endpoint benchFillFreq configs
     Right _ -> return ()
  where
   toMicroSecs :: NominalDiffTime -> Int
@@ -79,29 +81,31 @@ launchForwarders endpoint configs =
 
 launchForwarders'
   :: HowToConnect
+  -> Maybe Pico
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration Text)
   -> IO ()
-launchForwarders' endpoint configs = withIOManager $ \iocp -> do
+launchForwarders' endpoint benchFillFreq configs = withIOManager $ \iocp -> do
   case endpoint of
     LocalPipe localPipe -> do
       let snocket = localSnocket iocp localPipe
           address = localAddressFromPath localPipe
-      doConnectToAcceptor snocket address noTimeLimitsHandshake configs
+      doConnectToAcceptor snocket address noTimeLimitsHandshake benchFillFreq configs
     RemoteSocket host port -> do
       acceptorAddr:_ <- Socket.getAddrInfo Nothing (Just host) (Just port)
       let snocket = socketSnocket iocp
           address = Socket.addrAddress acceptorAddr
-      doConnectToAcceptor snocket address timeLimitsHandshake configs
+      doConnectToAcceptor snocket address timeLimitsHandshake benchFillFreq configs
 
 doConnectToAcceptor
   :: Snocket IO fd addr
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
+  -> Maybe Pico
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration Text)
   -> IO ()
-doConnectToAcceptor snocket address timeLimits (ekgConfig, tfConfig) = do
-  tfQueue <- newTBQueueIO 1000
-  _ <- async $ loWriter tfQueue
+doConnectToAcceptor snocket address timeLimits benchFillFreq (ekgConfig, tfConfig) = do
+  tfQueue <- newTBQueueIO 1000000
+  _ <- async $ loWriter tfQueue benchFillFreq
   store <- EKG.newStore
   EKG.registerGcMetrics store
 
@@ -138,11 +142,18 @@ doConnectToAcceptor snocket address timeLimits (ekgConfig, tfConfig) = do
 -- We need it for 'TF.ForwarderConfiguration a' (in this example it is 'Text').
 instance ShowProxy Text
 
-loWriter :: TBQueue (LogObject Text) -> IO ()
-loWriter queue = forever $ do
+loWriter :: TBQueue (LogObject Text) -> Maybe Pico -> IO ()
+loWriter queue benchFillFreq = forever $ do
   meta <- mkLOMeta Info Public
   atomically $ writeTBQueue queue (lo meta)
-  threadDelay 500000
+  threadDelay fillPause
  where
   lo :: LOMeta -> LogObject Text
   lo meta = LogObject "demo.forwarder.LO.1" meta $ LogMessage "demo.forwarder.LogMessage.1"
+
+  fillPause = case benchFillFreq of
+                Just ff -> toMicroSecs . secondsToNominalDiffTime $ ff
+                Nothing -> 500000
+
+  toMicroSecs :: NominalDiffTime -> Int
+  toMicroSecs dt = fromEnum dt `div` 1000000

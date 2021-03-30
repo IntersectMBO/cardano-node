@@ -96,7 +96,7 @@ doListenToForwarder
 doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) = do
   store <- EKG.newStore
   metricsStore <- newIORef emptyMetricsLocalStore
-  logObjectsQueue <- newTBQueueIO 1000
+  logObjectsQueue <- newTBQueueIO 1000000
 
   networkState <- newNetworkMutableState
   _ <- async $ cleanNetworkMutableState networkState
