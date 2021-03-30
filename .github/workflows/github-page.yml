@@ -103,8 +103,8 @@ jobs:
       if: github.ref == 'refs/heads/master'
       run: |
         git fetch origin gh-pages:gh-pages
-        git config --local user.email "$(git show --format="%aN" | head -n 1)"
-        git config --local user.name  "$(git show --format="%aE" | head -n 1)"
+        git config --local user.email "operations@iohk.io"
+        git config --local user.name  "Input Output HK"
         git add .
         git stash
         git checkout gh-pages
