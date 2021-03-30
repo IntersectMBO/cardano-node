@@ -26,9 +26,6 @@ package cardano-node
 package cardano-node-chairman
   ghc-options: -Werror
 
-package hedgehog-extras
-  ghc-options: -Werror
-
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
