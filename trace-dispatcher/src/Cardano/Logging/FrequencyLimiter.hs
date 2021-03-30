@@ -10,8 +10,8 @@ module Cardano.Logging.FrequencyLimiter (
 
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
-import qualified Data.Aeson as A
-import           Data.Text (Text)
+import           Data.Aeson ((.=), Value(..))
+import           Data.Text (Text, pack)
 import           Data.Time.Clock.System
 import           GHC.Generics
 
@@ -26,9 +26,23 @@ data LimitingMessage =
     -- and gives the number of messages that has been suppressed
   deriving (Eq, Ord, Show, Generic)
 
--- TODO Needs handwritten instance
-instance A.ToJSON LimitingMessage where
-    toEncoding = A.genericToEncoding A.defaultOptions
+instance LogFormatting LimitingMessage where
+  forHuman (StartLimiting txt) = "Start of frequency limiting for " <> txt
+  forHuman (StopLimiting txt num) = "Stop of frequency limiting for " <> txt <>
+    ". Suppressed " <> pack (show num) <> " messages."
+  forMachine _dtl (StartLimiting txt) = mkObject
+        [ "kind" .= String "StartLimiting"
+        , "name" .= String txt
+        ]
+  forMachine _dtl (StopLimiting txt num) = mkObject
+        [ "kind" .= String "StopLimiting"
+        , "name" .= String txt
+        , "numSuppressed" .= Number (fromIntegral num)
+        ]
+  asMetrics (StartLimiting _txt) = []
+  asMetrics (StopLimiting txt num) = [IntM (Just ("suppressedMessages " <> txt))
+                                        (fromIntegral num)]
+
 
 data FrequencyRec a = FrequencyRec {
     frMessage  :: Maybe a   -- ^ The message to pass

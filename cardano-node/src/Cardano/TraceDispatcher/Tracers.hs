@@ -13,9 +13,8 @@ module Cardano.TraceDispatcher.Tracers
   , docTracers
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (trace)
 import qualified Data.Text.IO as T
-import           Debug.Trace
 
 import           Cardano.Logging
 import           Cardano.TraceDispatcher.ChainDBTracer
@@ -58,7 +57,6 @@ chainDBMachineTracer = do
     trBase <- standardTracer Nothing
     tr <- humanFormatter True "cardano" trBase
     let cdbmTrNs = appendName "chainDB" $ appendName "node" tr
-    configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTrNs]
     pure cdbmTrNs
 
 docTracers :: IO ()
@@ -89,7 +87,8 @@ mkDispatchTracers
   -> Maybe EKGDirect
   -> IO (Tracers peer localPeer blk)
 mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect = do
-  cdbmTr <- trace "!!!mkDispatchTracers" $ chainDBMachineTracer
+  cdbmTr <- chainDBMachineTracer
+  configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
 

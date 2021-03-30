@@ -14,6 +14,7 @@ import           Data.IORef (IORef, modifyIORef, newIORef, readIORef)
 import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import           GHC.Conc (ThreadId)
+import           System.IO (hFlush, stdout)
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
@@ -73,13 +74,15 @@ initLogging :: IORef (StandardTracerState a) -> IO ()
 initLogging stateRef = do
   (inChan, outChan) <- newChan 2048
   threadId <- forkIO $ forever $ do
-    state <- readIORef stateRef
     msg   <- readChan outChan
+    state <- readIORef stateRef
     case stTarget state of
         LogFile f -> do
                         TIO.appendFile f msg
                         TIO.appendFile f "\n"
-        LogStdout -> TIO.putStrLn msg
+        LogStdout -> do
+                        TIO.putStrLn msg
+                        hFlush stdout
   modifyIORef stateRef (\ st ->
     st {stRunning = Just (inChan, outChan, threadId)})
 

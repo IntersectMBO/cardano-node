@@ -13,9 +13,10 @@ module Cardano.Logging.Trace (
   , appendName
   , setSeverity
   , withSeverity
-  , filterTraceByPrivacy
+  , privately
   , setPrivacy
   , withPrivacy
+  , filterTraceByPrivacy
   , setDetails
   , withDetails
   , foldTraceM
@@ -25,23 +26,32 @@ module Cardano.Logging.Trace (
 
 where
 
+import           Debug.Trace
+
 import           Control.Monad (join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import           Data.Maybe (isJust)
-import           Data.Text (Text)
+import           Data.Text (Text, unpack)
 import           UnliftIO.MVar
 
 import           Cardano.Logging.Types
 
+-- | Adds a message object to a trace
+traceWith :: (LogFormatting a, Show a, Monad m) => Trace m a -> a -> m ()
+traceWith (Trace tr) a = trace ("traceWith " ++ logString) $
+    T.traceWith tr (emptyLoggingContext, Nothing, a)
+  where
+    logString = case forHuman a of
+                  "" -> case forMachine DRegular a of
+                          obj | null obj -> show a
+                          obj -> show obj
+                  other -> unpack other
+
 -- | Convenience function for tracing a message with a name
 --   As the simple name suggest, this should be the standard function
-traceNamed :: (Monad m) => Trace m a -> Text -> a -> m ()
+traceNamed :: (LogFormatting a, Show a, Monad m) => Trace m a -> Text -> a -> m ()
 traceNamed tr n = traceWith (appendName n tr)
-
--- | Adds a message object to a trace
-traceWith :: (Monad m) => Trace m a -> a -> m ()
-traceWith (Trace tr) a = T.traceWith tr (emptyLoggingContext, Nothing, a)
 
 --- | Don't process further if the result of the selector function
 ---   is False.
@@ -130,6 +140,10 @@ filterTraceByPrivacy (Just minPrivacy) = filterTrace $
           Just s  -> fromEnum s >= fromEnum minPrivacy
           Nothing -> True
 filterTraceByPrivacy Nothing = id
+
+-- | Sets privacy Confidential for the messages in this trace
+privately :: Monad m => Trace m a -> Trace m a
+privately = setPrivacy Confidential
 
 -- | Sets privacy for the messages in this trace
 setPrivacy :: Monad m => Privacy -> Trace m a -> Trace m a
