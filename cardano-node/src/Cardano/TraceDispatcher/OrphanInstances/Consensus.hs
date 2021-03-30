@@ -59,7 +59,6 @@ instance ConvertRawHash blk
         , "slot" .= unSlotNo (realPointSlot p)
         , "hash" .= renderHeaderHashForDetails (Proxy @blk) dtal (realPointHash p) ]
 
-
 instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
       => LogFormatting (LedgerEvent blk) where
   forMachine dtal = \case

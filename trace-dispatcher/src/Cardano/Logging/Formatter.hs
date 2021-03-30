@@ -31,16 +31,21 @@ import           Network.HostName
 -- | Format this trace as metrics
 metricsFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Trace m FormattedMessage
+  => Text
+  -> Trace m FormattedMessage
   -> m (Trace m a)
-metricsFormatter (Trace tr) = do
+metricsFormatter application (Trace tr) = do
   let trr = mkTracer
   pure $ Trace (T.arrow trr)
  where
     mkTracer = T.emit $
-      \ (lc, mbC, v) ->
-        let metrics =  asMetrics v
-        in T.traceWith tr (lc, mbC, Metrics metrics)
+      \
+        (lc, _mbC, v) ->
+          let metrics =  asMetrics v
+          in T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                                , Nothing
+                                , Metrics metrics)
+
 
 -- | Format this trace for human readability
 -- The boolean value tells, if this representation is for the console and should be colored
@@ -59,7 +64,9 @@ humanFormatter withColor application (Trace tr) = do
     mkTracer hn = T.emit $
       \ (lc, mbC, v) -> do
         text <- liftIO $ formatContextHuman withColor hn application lc (forHuman v)
-        T.traceWith tr (lc, mbC, Human text)
+        T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                           , mbC
+                           , Human text)
 
 formatContextHuman ::
      Bool
@@ -106,7 +113,9 @@ machineFormatter detailLevel application (Trace tr) = do
     mkTracer hn = T.emit $
       \ (lc, mbC, v) -> do
         obj <- liftIO $ formatContextMachine hn application lc (forMachine detailLevel v)
-        T.traceWith tr (lc, mbC, Machine (decodeUtf8 (BS.toStrict (AE.encode obj))))
+        T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                           , mbC
+                           , Machine (decodeUtf8 (BS.toStrict (AE.encode obj))))
 
 formatContextMachine ::
      String
