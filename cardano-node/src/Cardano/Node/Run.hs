@@ -57,7 +57,12 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.TraceDispatcher.Tracers (mkDispatchTracers)
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESInfo (..), HasKESMetricsData (..))
+import           Cardano.TraceDispatcher.OrphanInstances.Shelley()
+import           Cardano.TraceDispatcher.OrphanInstances.Byron()
 
+
+import           Ouroboros.Consensus.Block (BlockProtocol)
+import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
