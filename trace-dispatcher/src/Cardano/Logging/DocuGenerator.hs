@@ -70,7 +70,7 @@ buildersToText builderList =
       $ mconcat
         $ intersperse (fromText "\n\n") (map snd sortedBuilders)
 
-documentMarkdown :: (LogFormatting a, MonadIO m) =>
+documentMarkdown :: ({-LogFormatting a,-} MonadIO m) =>
      Documented a
   -> [Trace m a]
   -> m [(Namespace, Builder)]
@@ -83,9 +83,9 @@ documentMarkdown (Documented documented) tracers = do
     pure $ map (\(i, ld) -> (head (ldNamespace ld), documentItem (i, ld))) sortedItems
   where
     documentItem :: (Int, LogDoc) -> Builder
-    documentItem (idx, ld@LogDoc {..}) = mconcat $ intersperse (fromText "\n\n")
+    documentItem (_idx, ld@LogDoc {..}) = mconcat $ intersperse (fromText "\n\n")
       [ namespacesBuilder (nub ldNamespace)
-      , representationBuilder (documented `listIndex` idx)
+--      , representationBuilder (documented `listIndex` idx)
       , propertiesBuilder ld
       , backendsBuilder (nub ldBackends)
       , betweenLines (fromText ldDoc)
@@ -102,9 +102,9 @@ documentMarkdown (Documented documented) tracers = do
     namespaceBuilder ns = fromText "### " <>
       mconcat (intersperse (singleton '.') (map fromText ns))
 
-    representationBuilder :: LogFormatting a => Maybe (DocMsg a) -> Builder
-    representationBuilder Nothing = mempty
-    representationBuilder (Just DocMsg {..}) = mconcat
+    _representationBuilder :: LogFormatting a => Maybe (DocMsg a) -> Builder
+    _representationBuilder Nothing = mempty
+    _representationBuilder (Just DocMsg {..}) = mconcat
       $ intersperse (singleton '\n')
         [case forHuman dmPrototype of
           "" -> mempty
@@ -198,8 +198,7 @@ asCode b = singleton '`' <> b <> singleton '`'
 betweenLines :: Builder -> Builder
 betweenLines b = fromText "\n***\n" <> b <> fromText "\n***\n"
 
-
-listIndex :: [a] -> Int -> Maybe a
-listIndex l i = if i >= length l
+_listIndex :: [a] -> Int -> Maybe a
+_listIndex l i = if i >= length l
                   then Nothing
                   else Just (l !! i)
