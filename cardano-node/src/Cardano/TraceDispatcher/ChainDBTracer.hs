@@ -1,63 +1,72 @@
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE PatternSynonyms            #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-deprecations  #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-orphans  #-}
+
+
 
 module Cardano.TraceDispatcher.ChainDBTracer
   ( docChainDBTraceEvent
+  -- , TestBlock
+  -- , castdocChainDB
   ) where
 
 
 import           Data.Aeson (Value (String), toJSON, (.=))
 import qualified Data.Aeson as A
 import           Data.HashMap.Strict (insertWith)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import           NoThunks.Class (NoThunks)
-import qualified Data.List.NonEmpty as NE
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
-import           Text.Show
-import           Cardano.Slotting.Slot (EpochNo(..))
+import           Cardano.Slotting.Slot (EpochNo (..))
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
+import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
+import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.Network ()
 import           Cardano.TraceDispatcher.Render (condenseT,
                      renderHeaderHashForDetails, renderPoint,
                      renderPointAsPhrase, renderPointForDetails,
                      renderRealPoint, renderRealPointAsPhrase, showT)
+import           Text.Show
 
-import           Ouroboros.Consensus.Block (BlockNo (BlockNo), ConvertRawHash,
+import           Ouroboros.Consensus.Block (BlockNo (BlockNo), ChainHash (..),
+                     ConvertRawHash, GetHeader (..), GetPrevHash (..),
                      HasHeader, Header, HeaderHash, Point, RealPoint,
-                     SlotNo (unSlotNo), StandardHash, headerPoint, pointSlot,
-                     realPointHash, realPointSlot, ChainHash(..), GetHeader(..),
-                     GetPrevHash(..), getBlockHeaderFields)
+                     SlotNo (unSlotNo), StandardHash, getBlockHeaderFields,
+                     headerPoint, pointSlot, realPointHash, realPointSlot)
 import           Ouroboros.Consensus.Block.RealPoint
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock,
                      ByronHash (..))
 import qualified Ouroboros.Consensus.Cardano as PBFT
+import           Ouroboros.Consensus.Fragment.Diff (ChainDiff (..))
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError (..))
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
                      LedgerEvent (..), LedgerUpdate, LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                      (LedgerSupportsProtocol)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (HeaderFields(..))
-import           Ouroboros.Consensus.Fragment.Diff(ChainDiff(..))
 import qualified Ouroboros.Network.AnchoredSeq as AS
-import           Ouroboros.Consensus.Util.Condense (Condense(..))
+import           Ouroboros.Network.Block (HeaderFields (..))
 
 addedHdrsNewChain :: HasHeader (Header blk)
   => AF.AnchoredFragment (Header blk)
@@ -76,188 +85,189 @@ kindContext toAdd = insertWith f "kind" (String toAdd)
     f (String new) _            = String new
     f _ o                       = o
 
+
 --------------------
 -- Documentation types
 
-newtype TestHash = UnsafeTestHash {
-      unTestHash :: NonEmpty Word64
-    }
-  deriving stock    (Generic)
-  deriving newtype  (Eq, Ord)
-  deriving anyclass (NoThunks)
-
-pattern TestHash :: NonEmpty Word64 -> TestHash
-pattern TestHash path <- UnsafeTestHash path where
-  TestHash path = UnsafeTestHash (force path)
-
-testHashFromList :: [Word64] -> TestHash
-testHashFromList = TestHash . NE.fromList . reverse
-
-instance Show TestHash where
-  show (UnsafeTestHash h) = "(testHashFromList " <> show (reverse (NE.toList h)) <> ")"
-
-instance Condense TestHash where
-  condense = condense . reverse . NE.toList . unTestHash
-
-data TestBlock = TestBlock {
-      tbHash  :: TestHash
-    , tbSlot  :: SlotNo
-      -- ^ We store a separate 'Block.SlotNo', as slots can have gaps between
-      -- them, unlike block numbers.
-      --
-      -- Note that when generating a 'TestBlock', you must make sure that
-      -- blocks with the same 'TestHash' have the same slot number.
-    , tbValid :: Bool
-      -- ^ Note that when generating a 'TestBlock', you must make sure that
-      -- blocks with the same 'TestHash' have the same value for 'tbValid'.
-    }
-  deriving stock    (Show, Eq, Ord, Generic)
-  deriving anyclass (NoThunks)
-
-newtype instance Header TestBlock = TestHeader { testHeader :: TestBlock }
-  deriving stock   (Eq, Show)
-  deriving newtype (NoThunks)
-
-instance GetHeader TestBlock where
-  getHeader = TestHeader
-  blockMatchesHeader (TestHeader blk') blk = blk == blk'
-  headerIsEBB = const Nothing
-
-type instance HeaderHash TestBlock = TestHash
-
-instance HasHeader TestBlock where
-  getHeaderFields = getBlockHeaderFields
-
-instance HasHeader (Header TestBlock) where
-  getHeaderFields (TestHeader TestBlock{..}) = HeaderFields {
-        headerFieldHash    = tbHash
-      , headerFieldSlot    = tbSlot
-      , headerFieldBlockNo = fromIntegral . NE.length . unTestHash $ tbHash
-      }
-
-instance GetPrevHash TestBlock where
-  headerPrevHash (TestHeader b) =
-      case NE.nonEmpty . NE.tail . unTestHash . tbHash $ b of
-        Nothing       -> GenesisHash
-        Just prevHash -> BlockHash (TestHash prevHash)
-
-instance StandardHash TestBlock
-
-docValidationError :: ChainDB.InvalidBlockReason TestBlock
-docValidationError = ChainDB.ValidationError
-  (ExtValidationErrorHeader (HeaderEnvelopeError (UnexpectedSlotNo 1 2)))
-
-docHeaderFields :: HeaderFields TestBlock
-docHeaderFields = HeaderFields 1 1 docTestHash
-
-docAF :: AF.AnchoredFragment (HeaderFields TestBlock)
-docAF = AS.Empty (AS.asAnchor docHeaderFields)
-
-docAFH :: AF.AnchoredFragment (Header TestBlock)
-docAFH =  AS.Empty (AS.asAnchor (TestHeader docTestBlock))
-
-docHeaderDiff :: ChainDiff (HeaderFields TestBlock)
-docHeaderDiff = ChainDiff 1 docAF
-
-docTestHash :: TestHash
-docTestHash = testHashFromList [1]
-
-docTestBlock :: TestBlock
-docTestBlock = TestBlock docTestHash 1 True
-
-docNTI :: ChainDB.NewTipInfo TestBlock
-docNTI = ChainDB.NewTipInfo (RealPoint 1 docTestHash) (EpochNo 1) 1 (RealPoint 1 docTestHash)
-
+-- newtype TestHash = UnsafeTestHash {
+--       unTestHash :: NonEmpty Word64
+--     }
+--   deriving stock    (Generic)
+--   deriving newtype  (Eq, Ord)
+--   deriving anyclass (NoThunks)
 --
---     -- | The new block fits onto the current chain (first
---     -- fragment) and we have successfully used it to extend our (new) current
---     -- chain (second fragment).
---   | AddedToCurrentChain
---       [LedgerEvent blk]
---       (NewTipInfo blk)
---       (AnchoredFragment (Header blk))
---       (AnchoredFragment (Header blk))
+-- pattern TestHash :: NonEmpty Word64 -> TestHash
+-- pattern TestHash path <- UnsafeTestHash path where
+--   TestHash path = UnsafeTestHash (force path)
 --
---     -- | The new block fits onto some fork and we have switched to that fork
---     -- (second fragment), as it is preferable to our (previous) current chain
---     -- (first fragment).
---   | SwitchedToAFork
---       [LedgerEvent blk]
---       (NewTipInfo blk)
---       (AnchoredFragment (Header blk))
---       (AnchoredFragment (Header blk))
+-- testHashFromList :: [Word64] -> TestHash
+-- testHashFromList = TestHash . NE.fromList . reverse
 --
---     -- | An event traced during validating performed while adding a block.
---   | AddBlockValidation (TraceValidationEvent blk)
+-- instance Show TestHash where
+--   show (UnsafeTestHash h) = "(testHashFromList " <> show (reverse (NE.toList h)) <> ")"
 --
---     -- | Run chain selection for a block that was previously from the future.
---     -- This is done for all blocks from the future each time a new block is
---     -- added.
---   | ChainSelectionForFutureBlock (RealPoint blk)
---   deriving (Generic)
+-- instance Condense TestHash where
+--   condense = condense . reverse . NE.toList . unTestHash
+--
+-- data TestBlock = TestBlock {
+--       tbHash  :: TestHash
+--     , tbSlot  :: SlotNo
+--       -- ^ We store a separate 'Block.SlotNo', as slots can have gaps between
+--       -- them, unlike block numbers.
+--       --
+--       -- Note that when generating a 'TestBlock', you must make sure that
+--       -- blocks with the same 'TestHash' have the same slot number.
+--     , tbValid :: Bool
+--       -- ^ Note that when generating a 'TestBlock', you must make sure that
+--       -- blocks with the same 'TestHash' have the same value for 'tbValid'.
+--     }
+--   deriving stock    (Show, Eq, Ord, Generic)
+--   deriving anyclass (NoThunks)
+--
+-- newtype instance Header TestBlock = TestHeader { testHeader :: TestBlock }
+--   deriving stock   (Eq, Show)
+--   deriving newtype (NoThunks)
+--
+-- instance GetHeader TestBlock where
+--   getHeader = TestHeader
+--   blockMatchesHeader (TestHeader blk') blk = blk == blk'
+--   headerIsEBB = const Nothing
+--
+-- type instance HeaderHash TestBlock = TestHash
+--
+-- instance HasHeader TestBlock where
+--   getHeaderFields = getBlockHeaderFields
+--
+-- instance HasHeader (Header TestBlock) where
+--   getHeaderFields (TestHeader TestBlock{..}) = HeaderFields {
+--         headerFieldHash    = tbHash
+--       , headerFieldSlot    = tbSlot
+--       , headerFieldBlockNo = fromIntegral . NE.length . unTestHash $ tbHash
+--       }
+--
+-- instance GetPrevHash TestBlock where
+--   headerPrevHash (TestHeader b) =
+--       case NE.nonEmpty . NE.tail . unTestHash . tbHash $ b of
+--         Nothing       -> GenesisHash
+--         Just prevHash -> BlockHash (TestHash prevHash)
+--
+-- instance StandardHash TestBlock
+--
+-- -- instance HasTxs TestBlock where
+-- --   extractTxs _blk = []
+-- --
+-- -- instance HasTxs (GenTx TestBlock) where
+-- --   extractTxs _blk = []
+--
+-- -- instance forall a blk.(a ~ LedgerWarning blk) => LogFormatting a where
+--
+--
+-- docExtValidationError :: ExtValidationError TestBlock
+-- docExtValidationError = ExtValidationErrorHeader (HeaderEnvelopeError (UnexpectedSlotNo 1 2))
+--
+-- docValidationError :: ChainDB.InvalidBlockReason TestBlock
+-- docValidationError = ChainDB.ValidationError docExtValidationError
+--
+-- docHeaderFields :: HeaderFields TestBlock
+-- docHeaderFields = HeaderFields 1 1 docTestHash
+--
+-- docAF :: AF.AnchoredFragment (HeaderFields TestBlock)
+-- docAF = AS.Empty (AS.asAnchor docHeaderFields)
+--
 --
 
+--
+-- docTestHash :: TestHash
+-- docTestHash = testHashFromList [1]
+--
+-- docTestBlock :: TestBlock
+-- docTestBlock = TestBlock docTestHash 1 True
+--
+
+--
+-- docPoint :: RealPoint TestBlock
+-- docPoint = RealPoint 1 docTestHash
+
+---------------------------------
+
+docPoint :: RealPoint blk
+docPoint = undefined
+
+docHeaderDiff :: ChainDiff (HeaderFields blk)
+docHeaderDiff = undefined
+
+docValidationError :: ChainDB.InvalidBlockReason blk
+docValidationError = undefined
+
+docNTI :: ChainDB.NewTipInfo blk
+docNTI = ChainDB.NewTipInfo docPoint (EpochNo 1) 1 docPoint
+
+docAFH :: AF.AnchoredFragment (Header blk)
+docAFH =  undefined
+
+docExtValidationError :: ExtValidationError blk
+docExtValidationError = ExtValidationErrorHeader (HeaderEnvelopeError (UnexpectedSlotNo 1 2))
+
+--------------------------------
 
 
-docChainDBTraceEvent :: Documented (ChainDB.TraceEvent TestBlock)
+docChainDBTraceEvent :: Documented (ChainDB.TraceEvent blk)
 docChainDBTraceEvent = Documented [
     DocMsg
-      (ChainDB.TraceAddBlockEvent
-        (ChainDB.IgnoreBlockOlderThanK
-          (RealPoint 1 docTestHash)))
+      (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK docPoint))
       "IgnoreBlockOlderThanK"
       "A block with a 'BlockNo' more than @k@ back than the current tip\
       \ was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.IgnoreBlockAlreadyInVolatileDB
-          (RealPoint 1 docTestHash)))
+          docPoint))
       "IgnoreBlockAlreadyInVolatileDB"
       "A block that is already in the Volatile DB was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.IgnoreInvalidBlock
-          (RealPoint 1 docTestHash) docValidationError))
+          docPoint docValidationError))
       "IgnoreBlockAlreadyInVolatileDB"
       "A block that is already in the Volatile DB was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedBlockToQueue
-          (RealPoint 1 docTestHash) 1))
+          docPoint 1))
       "AddedBlockToQueue"
       "The block was added to the queue and will be added to the ChainDB by\
       \ the background thread. The size of the queue is included.."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.BlockInTheFuture
-          (RealPoint 1 docTestHash) 1))
+          docPoint 1))
       "BlockInTheFuture"
       "The block is from the future, i.e., its slot number is greater than\
       \ the current slot (the second argument)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedBlockToVolatileDB
-          (RealPoint 1 docTestHash) 1 ChainDB.IsEBB))
+          docPoint 1 ChainDB.IsEBB))
       "AddedBlockToVolatileDB"
       "A block was added to the Volatile DB"
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.TryAddToCurrentChain
-          (RealPoint 1 docTestHash)))
+          docPoint))
       "TryAddToCurrentChain"
       "The block fits onto the current chain, we'll try to use it to extend\
       \ our chain."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.TrySwitchToAFork
-          (RealPoint 1 docTestHash) docHeaderDiff))
+          docPoint docHeaderDiff))
       "TrySwitchToAFork"
       "The block fits onto some fork, we'll try to switch to that fork (if\
       \ it is preferable to our chain)"
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.StoreButDontChange
-          (RealPoint 1 docTestHash)))
+          docPoint))
       "StoreButDontChange"
       "The block fits onto some fork, we'll try to switch to that fork (if\
       \ it is preferable to our chain)."
@@ -266,9 +276,63 @@ docChainDBTraceEvent = Documented [
         (ChainDB.AddedToCurrentChain [] docNTI docAFH docAFH))
       "AddedToCurrentChain"
       "The new block fits onto the current chain (first\
-      \fragment) and we have successfully used it to extend our (new) current\
-      \chain (second fragment)."
+      \ fragment) and we have successfully used it to extend our (new) current\
+      \ chain (second fragment)."
+  , DocMsg
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.SwitchedToAFork [] docNTI docAFH docAFH))
+      "SwitchedToAFork"
+      "The new block fits onto some fork and we have switched to that fork\
+      \ (second fragment), as it is preferable to our (previous) current chain\
+      \ (first fragment)."
+  , DocMsg
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.AddBlockValidation
+          (ChainDB.InvalidBlock docExtValidationError docPoint)))
+      "AddBlockValidation.InvalidBlock"
+      "An event traced during validating performed while adding a block.\
+      \A point was found to be invalid."
+  , DocMsg
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.AddBlockValidation
+          (ChainDB.InvalidCandidate docAFH)))
+      "AddBlockValidation.InvalidCandidate"
+      "An event traced during validating performed while adding a block.\
+      \A candidate chain was invalid."
+  , DocMsg
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.AddBlockValidation
+          (ChainDB.ValidCandidate docAFH)))
+      "AddBlockValidation.ValidCandidate"
+      "An event traced during validating performed while adding a block\
+      \A candidate chain was valid."
+  , DocMsg
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.AddBlockValidation
+          (ChainDB.CandidateContainsFutureBlocks docAFH [])))
+      "AddBlockValidation.CandidateContainsFutureBlocks"
+      "An event traced during validating performed while adding a block\
+      \Candidate contains headers from the future which do no exceed the\
+      \clock skew."
+  , DocMsg
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.AddBlockValidation
+          (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew docAFH [])))
+      "AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
+      "An event traced during validating performed while adding a block\
+      \An event traced during validating performed while adding a block\
+      \Candidate contains headers from the future which do no exceed the\
+      \clock skew."
+  , DocMsg
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.ChainSelectionForFutureBlock docPoint))
+      "ChainSelectionForFutureBlock"
+      "Run chain selection for a block that was previously from the future.\
+      \ This is done for all blocks from the future each time a new block is\
+      \ added."
   ]
+
+
 
 instance (  LogFormatting (Header blk)
           , LogFormatting (LedgerEvent blk)
@@ -412,73 +476,6 @@ instance ( LogFormatting (Header blk)
       mkObject [ "kind" .= String "TChainSelectionForFutureBlock"
                , "block" .= forMachine dtal pt ]
 
-
-  -- data TraceEvent blk
-  --   = TraceAddBlockEvent          (TraceAddBlockEvent           blk)
-  --   | TraceReaderEvent            (TraceReaderEvent             blk)
-  --   | TraceCopyToImmutableDBEvent (TraceCopyToImmutableDBEvent  blk)
-  --   | TraceGCEvent                (TraceGCEvent                 blk)
-  --   | TraceInitChainSelEvent      (TraceInitChainSelEvent       blk)
-  --   | TraceOpenEvent              (TraceOpenEvent               blk)
-  --   | TraceIteratorEvent          (TraceIteratorEvent           blk)
-  --   | TraceLedgerEvent            (LgrDB.TraceEvent             blk)
-  --   | TraceLedgerReplayEvent      (LgrDB.TraceLedgerReplayEvent blk)
-  --   | TraceImmutableDBEvent       (ImmutableDB.TraceEvent       blk)
-  --   | TraceVolatileDBEvent        (VolatileDB.TraceEvent        blk)
-  --   deriving (Generic)
-
-
-
-
-
-
-
-  --
-  --   -- | The block is from the future, i.e., its slot number is greater than
-  --   -- the current slot (the second argument).
-  -- | BlockInTheFuture (RealPoint blk) SlotNo
-  --
-  --   -- | A block was added to the Volatile DB
-  -- | AddedBlockToVolatileDB (RealPoint blk) BlockNo IsEBB
-  --
-  --   -- | The block fits onto the current chain, we'll try to use it to extend
-  --   -- our chain.
-  -- | TryAddToCurrentChain (RealPoint blk)
-  --
-  --   -- | The block fits onto some fork, we'll try to switch to that fork (if
-  --   -- it is preferable to our chain).
-  -- | TrySwitchToAFork (RealPoint blk) (ChainDiff (HeaderFields blk))
-  --
-  --   -- | The block doesn't fit onto any other block, so we store it and ignore
-  --   -- it.
-  -- | StoreButDontChange (RealPoint blk)
-  --
-  --   -- | The new block fits onto the current chain (first
-  --   -- fragment) and we have successfully used it to extend our (new) current
-  --   -- chain (second fragment).
-  -- | AddedToCurrentChain
-  --     [LedgerEvent blk]
-  --     (NewTipInfo blk)
-  --     (AnchoredFragment (Header blk))
-  --     (AnchoredFragment (Header blk))
-  --
-  --   -- | The new block fits onto some fork and we have switched to that fork
-  --   -- (second fragment), as it is preferable to our (previous) current chain
-  --   -- (first fragment).
-  -- | SwitchedToAFork
-  --     [LedgerEvent blk]
-  --     (NewTipInfo blk)
-  --     (AnchoredFragment (Header blk))
-  --     (AnchoredFragment (Header blk))
-  --
-  --   -- | An event traced during validating performed while adding a block.
-  -- | AddBlockValidation (TraceValidationEvent blk)
-  --
-  --   -- | Run chain selection for a block that was previously from the future.
-  --   -- This is done for all blocks from the future each time a new block is
-  --   -- added.
-  -- | ChainSelectionForFutureBlock (RealPoint blk)
-
 instance ( HasHeader (Header blk)
          , LedgerSupportsProtocol blk
          , ConvertRawHash (Header blk)
@@ -568,12 +565,6 @@ instance ConvertRawHash blk
   forHuman ChainDB.OpenedLgrDB = "Opened lgr db"
 
 
-      --   ChainDB.NewFollower ->  "New follower was created"
-      --   ChainDB.FollowerNoLongerInMem _ ->  "FollowerNoLongerInMem"
-      --   ChainDB.FollowerSwitchToMem _ _ ->  "FollowerSwitchToMem"
-      --   ChainDB.FollowerNewImmIterator _ _ ->  "FollowerNewImmIterator"
-
-      --   ChainDB.InitChainSelValidation _ ->  "InitChainSelValidation"
 
 instance  ( StandardHash blk
           , ConvertRawHash blk

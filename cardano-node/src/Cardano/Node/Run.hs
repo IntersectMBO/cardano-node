@@ -54,6 +54,9 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.TraceDispatcher.Tracers (mkDispatchTracers)
+import           Cardano.TraceDispatcher.OrphanInstances.Shelley()
+import           Cardano.TraceDispatcher.OrphanInstances.Byron()
+
 
 import           Ouroboros.Consensus.Block (BlockProtocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus

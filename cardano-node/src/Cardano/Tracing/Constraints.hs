@@ -17,7 +17,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
                      ForgeStateUpdateError, Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,  HasTxId,
                      HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
@@ -31,7 +31,7 @@ type TraceConstraints blk =
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk
-    
+
     , ToJSON   (TxId (GenTx blk))
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
@@ -44,6 +44,7 @@ type TraceConstraints blk =
     , ToObject (ForgeStateUpdateError blk)
 
     , LogFormatting (LedgerUpdate blk)
+    , LogFormatting (LedgerWarning blk)
     , LogFormatting (ApplyTxErr blk)
     , LogFormatting (GenTx blk)
     , LogFormatting (Header blk)
