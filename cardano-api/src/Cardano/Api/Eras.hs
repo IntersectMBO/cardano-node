@@ -201,6 +201,9 @@ instance Bounded AnyCardanoEra where
     minBound = AnyCardanoEra ByronEra
     maxBound = AnyCardanoEra MaryEra
 
+instance ToJSON AnyCardanoEra where
+   toJSON (AnyCardanoEra era) = toJSON era
+
 -- | Like the 'AnyCardanoEra' constructor but does not demand a 'IsCardanoEra'
 -- class constraint.
 --
