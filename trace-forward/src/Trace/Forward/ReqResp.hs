@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Trace.Forward.ReqResp
   ( Request (..)
   , Response (..)
   ) where
 
 import           Codec.Serialise (Serialise (..))
-import           Codec.CBOR.Decoding
 import           Data.Aeson (Value)
 import           Data.Word (Word16)
 import           Data.Scientific (Scientific, base10Exponent, coefficient, scientific)

@@ -38,7 +38,7 @@ data AcceptorConfiguration a = AcceptorConfiguration
   , whatToRequest     :: !Request
     -- | Additional action that will be performed every time the acceptor will
     -- receive the response from the forwarder.
-  , actionOnResponse  :: !((Response a) -> IO ())
+  , actionOnResponse  :: !(Response a -> IO ())
     -- | 'IORef' that can be used as a brake: if an external thread will set it to
     -- 'True', the acceptor will send 'MsgDone' message to the forwarder and their
     -- session will be closed.

@@ -153,5 +153,5 @@ acceptorActions True config@AcceptorConfiguration{..} loQueue =
   toMicroSecs :: NominalDiffTime -> Int
   toMicroSecs dt = fromEnum dt `div` 1000000
 acceptorActions False AcceptorConfiguration{..} _ =
-  Acceptor.SendMsgDone $
+  Acceptor.SendMsgDone
     actionOnDone

@@ -1,8 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Network.Forwarder
   ( HowToConnect (..)
@@ -18,10 +19,8 @@ import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Fixed (Pico)
-import qualified Data.Text as T
 import           Data.Text (Text)
 import           Data.Time.Clock (NominalDiffTime, secondsToNominalDiffTime)
-import           Data.Typeable (Typeable)
 import           Data.Void (Void)
 import           Data.Word (Word16)
 import qualified Network.Socket as Socket
@@ -29,8 +28,7 @@ import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                                         MiniProtocolNum (..), MuxMode (..),
-                                        OuroborosApplication (..), MuxPeer (..),
-                                        RunMiniProtocol (..),
+                                        OuroborosApplication (..), RunMiniProtocol (..),
                                         miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                                                              noTimeLimitsHandshake,
@@ -51,12 +49,10 @@ import           Cardano.BM.Data.LogItem (LogObject (..), LOContent (..), LOMeta
 import           Cardano.BM.Data.Severity (Severity (..))
 
 import qualified Trace.Forward.Configuration as TF
-import qualified Trace.Forward.ReqResp as TF
 import           Trace.Forward.Network.Forwarder (forwardLogObjects)
 
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder (forwardEKGMetrics)
-import qualified System.Metrics.ReqResp as EKGF
 
 data HowToConnect
   = LocalPipe !FilePath
@@ -107,7 +103,7 @@ doConnectToAcceptor snocket address timeLimits benchFillFreq (ekgConfig, tfConfi
   tfQueue <- newTBQueueIO 1000000
   _ <- async $ loWriter tfQueue benchFillFreq
   store <- EKG.newStore
-  EKG.registerGcMetrics store
+  -- EKG.registerGcMetrics store
 
   connectToNode
     snocket

@@ -1,48 +1,63 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (async)
-import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO, writeTBQueue)
+import           Control.Concurrent.Async (withAsync)
 import           Control.Monad (forever)
-import           Control.Monad.STM (atomically)
 import           Control.Tracer (contramap, nullTracer, stdoutTracer)
 import           Data.Fixed (Pico)
 import           Data.Maybe (isJust)
 import           Data.Text (Text, pack)
-import           Data.Time.Clock (secondsToNominalDiffTime)
-import           Data.Word (Word16)
+import           Data.Time.Clock (NominalDiffTime, secondsToNominalDiffTime)
 import           System.Environment (getArgs)
 import           System.Exit (die)
 
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
-
-import           Cardano.BM.Data.LogItem (LogObject (..), LOContent (..), LOMeta (..),
-                                          PrivacyAnnotation (..), mkLOMeta)
-import           Cardano.BM.Data.Severity (Severity (..))
-
-import qualified Trace.Forward.Acceptor as TF
 import qualified Trace.Forward.Configuration as TF
-import qualified Trace.Forward.ReqResp as TF
 
-import qualified System.Metrics.Acceptor as EKGF
 import qualified System.Metrics.Configuration as EKGF
-import qualified System.Metrics.ReqResp as EKGF
 
 import           Network.Forwarder (HowToConnect (..), launchForwarders)
 
 main :: IO ()
 main = do
-  (howToConnect, freq, benchFillFreq) <- getArgs >>= \case
-    [path, freq] ->
-      return (LocalPipe path, read freq :: Pico, Nothing)
-    [host, port, freq] ->
-      return (RemoteSocket host port, read freq :: Pico, Nothing)
-    [path, freq, "-b", ff] ->
-      return (LocalPipe path, read freq :: Pico, Just (read ff :: Pico))
-    _ ->
-      die "Usage: demo-forwarder-mux (pathToLocalPipe | host port) freqInSecs [-b fillFreqInSecs]"
-  launchForwarders howToConnect benchFillFreq $ mkConfigs howToConnect freq benchFillFreq
+  (howToConnect, freq, benchFillFreq, reConnectTest) <- do
+    args <- getArgs
+    if "--dc" `elem` args
+      then
+        case args of
+          [host, port, "--dc", freq] ->
+            return ( RemoteSocket host port
+                   , 0.5
+                   , Nothing
+                   , Just (read freq :: Pico) -- This is how often the client will be shut down.
+                   )
+          _ -> die "Usage: demo-forwarder-mux host port --dc freqInSecs"
+      else
+        case args of
+          [path, freq] ->
+            return ( LocalPipe path
+                   , read freq :: Pico
+                   , Nothing
+                   , Nothing
+                   )
+          [host, port, freq] ->
+            return ( RemoteSocket host port
+                   , read freq :: Pico
+                   , Nothing
+                   , Nothing
+                   )
+          [path, freq, "-b", ff] ->
+            return ( LocalPipe path
+                   , read freq :: Pico
+                   , Just (read ff :: Pico)
+                   , Nothing
+                   )
+          _ ->
+            die "Usage: demo-forwarder-mux (pathToLocalPipe | host port) freqInSecs [-b fillFreqInSecs]"
+  let configs = mkConfigs howToConnect freq benchFillFreq
+  
+  case reConnectTest of
+    Nothing -> launchForwarders howToConnect benchFillFreq configs
+    Just rcFreq -> runReConnector (launchForwarders howToConnect benchFillFreq configs) rcFreq
 
 mkConfigs
   :: HowToConnect
@@ -73,3 +88,13 @@ mkConfigs howToConnect freq benchFillFreq = (ekgConfig, tfConfig)
   forEKGF (RemoteSocket h p) = EKGF.RemoteSocket (pack h) (read p :: EKGF.Port)
 
   benchMode = isJust benchFillFreq
+
+toMicroSecs :: NominalDiffTime -> Int
+toMicroSecs dt = fromEnum dt `div` 1000000
+
+runReConnector :: IO () -> Pico -> IO ()
+runReConnector forwarder rcFreq = forever $ do
+  putStrLn "ReConnect test, start forwarder..."
+  withAsync forwarder $ \_ -> do
+    threadDelay . toMicroSecs . secondsToNominalDiffTime $ rcFreq
+    putStrLn "ReConnect test, stop forwarder..."

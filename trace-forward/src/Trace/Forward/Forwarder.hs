@@ -28,8 +28,8 @@ runTraceForwarder
   :: (CBOR.Serialise a,
       ShowProxy a,
       Typeable a)
-  => (ForwarderConfiguration a)  -- ^ Forwarder configuration.
-  -> TBQueue (LogObject a)       -- ^ The queue the forwarder will take 'LogObject's from.
+  => ForwarderConfiguration a  -- ^ Forwarder configuration.
+  -> TBQueue (LogObject a)     -- ^ The queue the forwarder will take 'LogObject's from.
   -> IO ()
 runTraceForwarder config@ForwarderConfiguration{..} loQueue =
   try (connectToAcceptor config loQueue) >>= \case

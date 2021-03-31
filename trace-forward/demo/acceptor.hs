@@ -1,5 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 import           Control.Concurrent.STM.TBQueue (newTBQueueIO)
 import           Control.Tracer (contramap, stdoutTracer)
 import           Data.IORef (newIORef)
