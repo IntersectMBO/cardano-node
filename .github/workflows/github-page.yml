@@ -19,13 +19,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Select build directory
-      run: |
-        CABAL_BUILDDIR=dist
-
-        echo "CABAL_BUILDDIR=$CABAL_BUILDDIR"
-        echo "CABAL_BUILDDIR=$CABAL_BUILDDIR" >> $GITHUB_ENV
-
     - name: Set cache version
       run: echo "CACHE_VERSION=UN37rUo" >> $GITHUB_ENV
 
@@ -63,7 +56,7 @@ jobs:
         mv cabal.project.tmp cabal.project
 
     - name: Cabal Configure
-      run: cabal configure --builddir="$CABAL_BUILDDIR" --write-ghc-environment-files=always
+      run: cabal configure --write-ghc-environment-files=always
 
     - name: Use cabal.project.local.github-pages
       run: |
@@ -84,12 +77,12 @@ jobs:
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
 
     - name: Install dependencies
-      run: cabal build all --builddir="$CABAL_BUILDDIR" --only-dependencies
+      run: cabal build all --only-dependencies
 
     - name: Build Haddock documentation 🔧
       run: |
         mkdir ./haddocks
-        ./scripts/haddocs.sh ./haddocks true "$CABAL_BUILDDIR"
+        ./scripts/haddocs.sh ./haddocks true
 
     - name: Upload documentation
       uses: actions/upload-artifact@v2
