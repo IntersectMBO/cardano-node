@@ -22,9 +22,9 @@ import           Cardano.Api.Shelley
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (InputFormat (..), VerificationKeyOrFile (..),
-                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..),
-                   deserialiseInput, renderInputDecodeError)
+import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentSource (..),
+                   VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
+                   VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
 import           Control.Monad.Fail (fail)
 import           Data.Attoparsec.Combinator ((<?>))
@@ -128,7 +128,7 @@ pAddressCmd =
      , subParser "build"
          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
      , subParser "build-script"
-         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address.")
+         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address. (deprecated; use 'build' instead with '--script-file')")
      , subParser "info"
          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
      ]
@@ -145,25 +145,29 @@ pAddressCmd =
         <*> pMaybeOutputFile
 
     pAddressBuild :: Parser AddressCmd
-    pAddressBuild =
-      AddressBuild
-        <$> pPaymentVerificationKeyTextOrFile
-        <*> Opt.optional pStakeVerificationKeyOrFile
-        <*> pNetworkId
-        <*> pMaybeOutputFile
+    pAddressBuild = AddressBuild
+      <$> pPaymentSource
+      <*> Opt.optional pStakeVerificationKeyOrFile
+      <*> pNetworkId
+      <*> pMaybeOutputFile
 
     pAddressBuildScript :: Parser AddressCmd
     pAddressBuildScript = AddressBuildMultiSig
-                            <$> pScript
-                            <*> pNetworkId
-                            <*> pMaybeOutputFile
+      <$> pScript
+      <*> pNetworkId
+      <*> pMaybeOutputFile
 
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
 
+pPaymentSource :: Parser PaymentSource
+pPaymentSource =
+        SourcePaymentKey <$> pPaymentVerificationKeyTextOrFile
+    <|> SourcePaymentScript <$> pScript
+
 pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
-  VktofVerificationKeyText <$> pPaymentVerificationKeyText
+        VktofVerificationKeyText <$> pPaymentVerificationKeyText
     <|> VktofVerificationKeyFile <$> pPaymentVerificationKeyFile
 
 pPaymentVerificationKeyText :: Parser Text

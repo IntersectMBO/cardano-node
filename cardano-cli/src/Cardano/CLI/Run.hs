@@ -15,10 +15,10 @@ import qualified Data.Text.IO as Text
 
 import           Cardano.CLI.Byron.Commands (ByronCommand)
 import           Cardano.CLI.Byron.Run (ByronClientCmdError, renderByronClientCmdError,
-                     runByronClientCommand)
+                   runByronClientCommand)
 import           Cardano.CLI.Shelley.Commands (ShelleyCommand)
 import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyClientCmdError,
-                     runShelleyClientCommand)
+                   runShelleyClientCommand)
 
 import           Cardano.Config.Git.Rev (gitRev)
 import           Data.Version (showVersion)
