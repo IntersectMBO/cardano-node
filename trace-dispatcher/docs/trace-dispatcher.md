@@ -119,11 +119,14 @@ To do list:
 * [x] [Decide inline trace type annotation with trace function 2](#Decide-inline-trace-type-annotation-with-trace-function-2)
 * [x] [Decide on explicit trace filtering](#Decide-on-explicit-trace-filtering)
 * [x] [Decide on privately combinator](#Decide-on-privately-combinator)
-* [ ] [Decide on type error instead of silent dropping of messages](#Decide-on-type-error-instead-of-silent-dropping-of-messages)
+* [ ] [Decide extra privacy tagging](#Decide-extra-privacy-tagging)
+* [ ] [Decide on type errors instead of silent dropping of messages](#Decide-on-type-errors-instead-of-silent-dropping-of-messages)
 * [ ] [Decide on more direct interface to EKG metrics](#Decide-on-more-direct-interface-to-ekg-metrics)
 * [x] [Decide on dispatcher detail level control](#Decide-on-dispatcher-detail-level-control)
 * [x] [Decide namespace-aware configuration](#Decide-namespace-aware-configuration)
+* [ ] [Discuss impact of missing documentation entries](#Discuss-impact-of-missing-documentation-entries)
 * [x] [Decide missing configuration](#Decide-missing-configuration)
+* [ ] [Decide complete configuration](#Decide-complete-configuration)
 * [ ] [Discuss possibility of pure, thread-safe aggregation](#Discuss-possibility-of-pure-thread-safe-aggregation)
 * [ ] [Decide trace-outs types](#Decide-trace-outs-types)
 * [ ] Agree on editing.
@@ -141,21 +144,21 @@ To do list:
 Key design decisions were:
 
 1. Retaining the separation of concerns in the frontend side, as provided by the `contra-tracer` library.
-2. Rely on __trace combinators__ primarily, as opposed to optinf for a typeclass heavy API.
-3. Separation of data plane and control plane:  high-frequency events incur minimal processing on the data-plane, whereas complicated configuration logic only happens on the control plane, that is proportional to infrequent reconfiguration events.
+2. Rely on __trace combinators__ primarily, as opposed to opting for a typeclass heavy API.
+3. Separation of data plane and control plane:  high-frequency events incur minimal processing on the data-plane, whereas complicated configuration logic only happens on the control plane, and that is proportional to infrequent reconfiguration events.
 4. A tougher stance on separation of concerns in the backend side:  we choose to move expensive trace processing outside of the system.
 5. A measure of backward compatibility with the previous logging system.
 6. Retaining the global namespace for all traces.
 
 ## Overview and terminology
 
-The emitted __program traces__ (streams of __messages__ of arbitrary data types) are collected across all program components, and undergo __trace interpretation__ by the __dispatcher__ into __metrics__ and __log objects__, which are finally externalised.
+The emitted __program traces__ (streams of __messages__ of arbitrary data types, where each data type defines a number of different __message constructors__) are collected across all program components, and undergo __trace interpretation__ by the __dispatcher__ into __metrics__ and __log objects__, which are afterwards externalised.
 
 Therefore, we can conceptually decompose the __tracing system__ into three components:
 
 * __frontend__, the entry point for __program trace__ collection, which is just a single function (`traceWith` from the `contra-tracer` library);  Program locations that invoke this frontend (thereby injecting messages into the tracing system) is called __trace-ins__.
-* __dispatcher__, is a structured, namespaced set of contravariantly-composed `IO` actions, triggered by the entry point, and that performs __trace interpretation__;
-* __backend__, which is what externalises the __metrics__ and __log objects__ outside the system, through __trace-outs__.
+* __dispatcher__, is a structured, namespaced set of contravariantly-composed `IO` actions, triggered by the entry point.  Its role is specifically __trace interpretation__;
+* __backend__, which is what externalises results of the interpretation ( __metrics__ and __log objects__) outside the system, through __trace-outs__.
 
 The trace-emitting program itself is only exposed to the the frontend part of the tracing system, as it only needs to define the traces themselves, and specify the __trace-ins__ -- call sites that inject traces.  It is notably free from any extra obligations, such as the need to define the `LogFormatting` instances.
 
@@ -165,11 +168,11 @@ __Trace interpretation__ is specified in terms of:
 
 * __trace synthesis__, which means production of __synthetic traces__ -- in cases where we decide it is cheaper (or at all possible) to perform trace aggregation inside the program,
 * __trace naming__, which is assignment of hierarchically-structured names to all traces -- which serve identification, documentation and configuration purposes,
-* __trace filtering__: which, in turn is based on __severity__, __privacy__ and __frequency__ of messages,
+* __trace filtering__: which, in turn relies on notions of __severity__, __privacy__ and __frequency__ of messages,
 * __trace presentation__ : relying on __detail level__ and on the `LogFormatting` transformation of the traces into JSON, human readable and metric forms -- the last step before traces meet their __trace-outs__,
-* __trace documentation__, as it is just another mode of the trace network execution.
+* __trace documentation__, as a mode of the __dispatcher__ operation.
 
-The __trace interpretation__ process requires that for each trace the __dispatcher__ is provided with:
+The __trace interpretation__ process requires that for each traced type the __dispatcher__ is provided with:
 
 * instances of the `LogFormatting` typeclass, and
 * __trace prototypes__ and __trace documentation__.
@@ -209,7 +212,7 @@ data Tracer m a = Tracer (a -> m ())
 
 ## Emitting traces
 
-To actually emit a trace, given a __trace value__ (or a __message__) and a corresponding tracer, the `traceWith` function needs to be used:
+To actually emit a trace, given a __message__ and a corresponding tracer, the `traceWith` function needs to be used:
 
 ```haskell
 traceWith :: Tracer m a -> a -> m ()
@@ -257,13 +260,13 @@ The __annotation context__ of the trace is defined as follows:
 1. __trace filtering__ -- by __privacy__, __severity__ and __frequency__ annotations,
 2. __trace presentation__ -- by __detail level__ annotations.
 
-Only severity and detail level can be supplied in configuration.
+Severity, detail level and frequency can be configured.
 
 ## Filter annotations
 
 ### Severity
 
-__Severity__ is expressed in terms of:
+__Severity__ is expressed in terms of the enumeration provided by [section 6.2.1 of RFC 5424](https://tools.ietf.org/html/rfc5424#section-6.2.1):
 
 ```haskell
 data SeverityS
@@ -296,15 +299,15 @@ If the combinators are applied multiple times to a single trace, only the innerm
 traceWith (setSeverity Warning trAddBlock) (IgnoreBlockOlderThanK b)
 ```
 
-In addition, the __annotated severity__ of a particular trace can be changed in configuration, by referring to the __tracer name__ -- which allows to put it above or below the __global severity cutoff__, effectively either enabling or disabling it.
+In addition, the __annotated severity__ of a particular traces can be further overriden by configuration, at the __tracer namespace__ granularity -- which allows to put them above or below the __global severity cutoff__, effectively either enabling or disabling them.
 
-`Info` is the default __annotated severity__, in the absence of trace annotations.
+`Info` is the default __annotated severity__, in the absence of trace annotations or configured severity overrides.
 
 See [Severity filtering implementation](#Severity-filtering-implementation) for a more formal explanation of semantics.
 
 ### Privacy
 
-__Privacy__ is expressed in terms of:
+__Privacy__ annotations allows limiting __trace-outs__ that particular traces can reach.  It is expressed in terms of:
 
 ```haskell
 data Privacy
@@ -322,13 +325,19 @@ withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
 
 `Public` is the default __annotated privacy__, in the absence of privacy annotations.
 
-See [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy -filtering-implementation) for a more formal explanation of semantics.
+Trace privacy cannot be configured.
+
+See [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy -filtering-implementation) for a more full discussion of semantics.
+
+#### Decide extra privacy tagging
+
+We might opt to further prevent occasional leaks of `Confidential` traces, by tagging all output from those traces with a sufficiently scary keyword, such as, for example, `SECRET`.
 
 ### Frequency
 
-__Frequency filtering__ is yet another part of __trace filtering__ parameter, and represents an optional limit on trace frequency.
+__Frequency filtering__ is yet another part of __trace filtering__, and represents an optional limit on the observable frequency of trace messages.
 
-Semantically this is implemented a randomly-fair suppression of messages when their moving-average frequency exceeds a given threshold parameter.
+Semantically, this is corresponds to a randomly-fair suppression of messages within a particular trace, when their moving-average frequency exceeds a given threshold parameter.
 
 The __frequency limiter__ itself emits a __suppression summary__ message under the following conditions:
 
@@ -364,7 +373,7 @@ The `LogFormatting` typeclass is used to describe __trace presentation__ -- mapp
 * the `forHuman` method shall represent the message in human readable form.
   It's default implementation defers to `forMachine`.
 
-* the `asMetrics` method shall represent the message as 0 to n metrics.
+* the `asMetrics` method shall represent the message as `0` to `n` metrics.
   It's default implementation assumes no metrics. If a text is given it is
   appended as last element to the namespace.
 
@@ -387,13 +396,13 @@ data Metric
     deriving (Show, Eq)
 ```
 
-The standard formatters, transforms a stream of messages of a, where a is an instance of _LogFormatter_ to a stream of _FormattedMessages_.
+The standard formatters transform a stream of messages of `a`, where `a` is an instance of `LogFormatter` to a stream of `FormattedMessages`.
 
 ```haskell
 data FormattedMessage = Human Text | Machine Text | Metrics [Metric]
 ```
 
-The human formatter takes a Bool argument, which tells if color codes for stdout output shall be inserted, and an argument which is the app name, which gets prepended to the namespace, while the machineFormatter has as arguments the desired detail level and as well the application name. The metricas formatter takes no extra arguments:
+`humanFormatter` takes a `Bool` argument, which tells if color codes for the standard output __trace-out__ shall be inserted, and an argument which is the app name, which gets prepended to the namespace, while the `machineFormatter` has as arguments the desired detail level and as well the application name.  `metricsFormatter` takes no extra arguments:
 
 ```haskell
 humanFormatter :: (LogFormatting a, MonadIO m)
@@ -415,7 +424,7 @@ metricsFormatter :: (LogFormatting a, MonadIO m)
 
 The __detail level__ can be configured globally, and also per-trace, by referring to a particular __tracer name__.
 
-#### Decide on type error instead of silent dropping of messages
+#### Decide on type errors instead of silent dropping of messages
 
 > We cannot allow silent dropping of messages, which is relevant in light of the above:
 >
@@ -427,25 +436,23 @@ The __detail level__ can be configured globally, and also per-trace, by referrin
 
 ### Detail level
 
-An orthogonal aspect of __trace presentation__ is control over the amount of details presented for each trace.  This is important, because the emitted __program traces__ can be extremely detailed, which makes their complete presentation extremely expensive.
+An aspect of __trace presentation__ is the amount of details presented for each trace.  This is important, because the emitted __program traces__ might contain extreme details, which, if presented in full, would have made handling of the trace extremely expensive.
 
-Additionally, because detail level is important for debugging (f.e. sometimes we want to see even the bytestring serialisation of a transaction), this control mechanism has to be configurable.
+Additionally, because detail level is important for debugging (e.g. sometimes we want to see even the `ByteString` serialisation of a transaction), this control mechanism has to be configurable.
 
 ### Documentation
 
-Self-documentation features are provided by a combination of:
+The self-documentation features of `trace-dispatcher` are provided by a combination of:
 
-* __Trace documentation__ mechanism, consisting of the `Documented a` type, carrying a list of per-constructor `DocMsg` description, and
-* A documentation generation mode, that emits the entire document, using the __tracer namespace__ to guide the document structure.
+* __documentation annotations__, expressed by the `Documented a` type, that carry a list of per- __message constructor__ description (of `DocMsg` type), and
+* a special __dispatcher__ execution mode that emits documentation for all annotated traces, using the __tracer namespace__ to guide the document structure.
 
-The per-constructor `DocMsg` objects are constructed by providing:
+The per- __message constructor__ `DocMsg` objects combine:
 
-* Prototype of the message -- a stubbed constructor invocation,
-* Message documentation text, in Markdown format,
+* __trace prototypes__ -- a stubbed __message constructor__ invocation,
+* message documentation text, in Markdown format,
 
-> * the most special name of the message in the namespace
-
-*Because it is not enforced by the type system, it is very important to provide a complete list, as the prototypes are used as well for configuration*.
+*Because it is not enforced by the type system, it is very important that each trace provides a complete list of `DocMsg` entries for all message contructors, as these prototypes are also used for configuration*.
 
 ```haskell
 newtype Documented a = Documented {undoc :: [DocMsg a]}
@@ -456,6 +463,12 @@ data DocMsg a = DocMsg {
   , dmMarkdown  :: Text
 }
 ```
+
+#### Discuss impact of missing documentation entries
+
+What is the worst case impact of a missing `DocMsg`?
+
+How can we reduce that impact?
 
 ## Fold-based aggregation
 
@@ -503,17 +516,17 @@ following way, and it will output the Stats:
 
 ### Discuss possibility of pure aggregation
 
-> I would like to find a function foldTrace, that omits the MVar and can thus be called pure. Help is appreciated.
+> I would like to find a function `foldTrace`, that omits the MVar and can thus be called pure.  Help is appreciated.
 
 ## Configuration
 
-The configurability of __dispatcher__ this library allows to define is based on:
+The configurability of __dispatchers__ this library allows to define is based on:
 
-1. __Tracer namespace__-based configurability, down to trace constructor granularity,
+1. __Tracer namespace__-based configurability, down to __message constructor__ granularity,
 2. Runtime reconfigurability, triggered by invocation of `configureTracers`,
-3. Prototypes for each message constructor.
+3. Prototypes for each __message constructor__.
 
-This is implemented by running the entire __dispatcher__ trace network at configuration time.
+Reconfiguration can be triggered at runtime and essentially involves running the entire __dispatcher__ trace network, by doing trace specialisation for each trace that has __prototypes__ defined.
 
 ```haskell
 -- The function configures the traces with the given configuration
@@ -539,6 +552,10 @@ data TraceConfiguration = TraceConfiguration {
 ```
 More configuration options e.g. for different transformers and __trace-outs__ can be added by this mechanism.
 
+### Decide complete configuration
+
+We still need to fully decide on the complete configuration format.
+
 # Integration and implementation in the node
 ## Overall tracing setup
 
@@ -546,15 +563,15 @@ As a result of the __trace__ / __tracer__ duality, the program components that w
 
 Because all these tracers are defined as part of the __dispatcher__ definition, which is itself defined in a centralised location, that allows a certain program structure to emerge:
 
-1. The program initialisation routine reads __trace configuration__ and uses that to parametrise the __dispatcher__ that would executes a __tracing policy__ defined by that configuration.
+1. The program initialisation routine reads __trace configuration__ and uses that to parametrise the __dispatcher__ that is meant to express a __tracing policy__ defined by that configuration.
 2. As mentioned previously, that dispatcher is generally expressed as a structured (preferably hierarchically structured) value that defines per-program-component set of __tracers__.
-3. This __dispatcher__ (in other words, the set of __tracers__ it is composed of) is given as an argument to the rest of the program, which then distributes them to its components and begins execution.
+3. This __dispatcher__ (in other words, the set of __tracers__ it is composed of) is given as an argument to the rest of the program, which then distributes them across its components and then begins execution.
 
 ## Trace-outs
 
-__Trace-outs__, as mentioned before, are the destinations of all __traces__, after they have undergone __trace interpretation__ into __metrics__ and __log objects__.
+__Trace-outs__, as mentioned before, are final destinations of all __traces__, after they have undergone __trace interpretation__ into __metrics__ and __log objects__.
 
-There are two __trace-outs__ defined for the system:
+There are exactly two __trace-outs__ defined for the system:
 
 1. `stdout`, the basic standard output destination.  It is notable in that it can also accept `Confidential` traces.
 2. `trace-forwarder`, a purely network-only sink that forwards both __log objects__ and __metrics__ using a combination of dedicated protocols over TCP or local sockets.  Only processes `Public` traces.
@@ -663,8 +680,6 @@ __Trace filtering__ is affected by the __privacy context__ as follows:
 1. `Confidential` traces can only reach the `stdout` __trace-out__.
 2. `Public` traces reach both the `stdout` and `trace-forwarder` __trace-outs__.
 
-It is worth noting, that enforcement of the trace privacy policy is expressed in terms of __trace-outs__.
-
 In effect, it is impossible to leak the `Confidential` traces due to logging misconfiguration -- a leak can only happen if the user explicitly allows network access to the standard output of the traced program.
 
 ## Note on SilenceF severity filter
@@ -755,7 +770,7 @@ __DECISION: move `traceNamed` to the dispatcher API__
 
 ### Decide tracer definedness
 
-DECISION: Every message constructor has to have a unique tracer name.
+DECISION: Every __message constructor__ has to have a unique tracer name.
 
 DECISION: Therefore, each __tracer__ has a __tracer name__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
 
