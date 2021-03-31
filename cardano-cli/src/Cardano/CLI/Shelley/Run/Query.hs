@@ -156,24 +156,13 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
   mEpoch <- mEpochQuery anyEra consensusMode  localNodeConnInfo
   tip <- liftIO $ getLocalChainTip localNodeConnInfo
   let output = encodePretty
-        . toObject "era" (Just (eraString anyEra))
+        . toObject "era" (Just (toJSON anyEra))
         . toObject "epoch" mEpoch
         $ toJSON tip
   case mOutFile of
     Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
     Nothing                 -> liftIO $ LBS.putStrLn        output
   where
-    eraString
-      :: AnyCardanoEra
-      -> String
-    eraString (AnyCardanoEra era) =
-      case cardanoEraStyle era of
-        LegacyByronEra -> "byron"
-        ShelleyBasedEra sbe -> case sbe of
-          ShelleyBasedEraShelley -> "shelley"
-          ShelleyBasedEraAllegra -> "allegra"
-          ShelleyBasedEraMary -> "mary"
-
     mEpochQuery
       :: AnyCardanoEra
       -> ConsensusMode mode
