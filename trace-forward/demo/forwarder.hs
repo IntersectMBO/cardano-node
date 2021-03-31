@@ -1,6 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
 import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO, writeTBQueue)

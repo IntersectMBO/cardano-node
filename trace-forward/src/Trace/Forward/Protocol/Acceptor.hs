@@ -51,6 +51,6 @@ traceAcceptorPeer = \case
     -- We do an actual transition using 'yield', to go from the 'StIdle' to
     -- 'StDone' state. Once in the 'StDone' state we can actually stop using
     -- 'done', with a return value.
-    Effect $ do
-      r <- getResult
-      return $ Yield (ClientAgency TokIdle) MsgDone (Done TokDone r)
+    Effect $
+      Yield (ClientAgency TokIdle) MsgDone . Done TokDone
+        <$> getResult

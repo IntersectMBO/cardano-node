@@ -1,9 +1,11 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Test.GetLogObjects
   ( getLogObjectsViaPipe
   , getLogObjectsViaSocket
   ) where
 
-import Test.Hspec
+import           Test.Hspec (shouldBe)
 
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Concurrent.STM.TBQueue (newTBQueueIO, readTBQueue,

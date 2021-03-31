@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Network.Acceptor
   ( HowToConnect (..)
@@ -9,9 +10,11 @@ module Network.Acceptor
   ) where
 
 import           Codec.CBOR.Term (Term)
-import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (async, wait)
-import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO)
+import           Control.Concurrent (ThreadId)
+import           Control.Concurrent.Async (async, asyncThreadId, wait)
+import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TBQueue (newTBQueueIO)
+import           Control.Concurrent.STM.TVar
 import           Control.Exception (SomeException, try)
 import           Control.Monad (void)
 import qualified Data.ByteString.Lazy as LBS
@@ -22,7 +25,7 @@ import           Data.Word (Word16)
 import qualified Network.Socket as Socket
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                                         MiniProtocolNum (..), MuxMode (..),
-                                        OuroborosApplication (..), MuxPeer (..),
+                                        OuroborosApplication (..),
                                         RunMiniProtocol (..),
                                         miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
@@ -45,15 +48,11 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 import qualified System.Metrics as EKG
 
-import qualified Trace.Forward.Acceptor as TF
 import qualified Trace.Forward.Configuration as TF
-import qualified Trace.Forward.ReqResp as TF
 import           Trace.Forward.Network.Acceptor (acceptLogObjects)
 
-import qualified System.Metrics.Acceptor as EKGF
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetrics)
-import qualified System.Metrics.ReqResp as EKGF
 import           System.Metrics.Store.Acceptor (emptyMetricsLocalStore)
 
 data HowToConnect
@@ -63,28 +62,30 @@ data HowToConnect
 launchAcceptors
   :: HowToConnect
   -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration Text)
+  -> TVar ThreadId
   -> IO ()
-launchAcceptors endpoint configs =
-  try (launchAcceptors' endpoint configs) >>= \case
+launchAcceptors endpoint configs tidVar =
+  try (launchAcceptors' endpoint configs tidVar) >>= \case
     Left (_e :: SomeException) ->
-      launchAcceptors endpoint configs
+      launchAcceptors endpoint configs tidVar
     Right _ -> return ()
 
 launchAcceptors'
   :: HowToConnect
   -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration Text)
+  -> TVar ThreadId
   -> IO ()
-launchAcceptors' endpoint configs = withIOManager $ \iocp -> do
+launchAcceptors' endpoint configs tidVar = withIOManager $ \iocp -> do
   case endpoint of
     LocalPipe localPipe -> do
       let snocket = localSnocket iocp localPipe
           address = localAddressFromPath localPipe
-      void $ doListenToForwarder snocket address noTimeLimitsHandshake configs
+      void $ doListenToForwarder snocket address noTimeLimitsHandshake configs tidVar
     RemoteSocket host port -> do
       listenAddress:_ <- Socket.getAddrInfo Nothing (Just host) (Just port)
       let snocket = socketSnocket iocp
           address = Socket.addrAddress listenAddress
-      void $ doListenToForwarder snocket address timeLimitsHandshake configs
+      void $ doListenToForwarder snocket address timeLimitsHandshake configs tidVar
 
 doListenToForwarder
   :: Ord addr
@@ -92,8 +93,9 @@ doListenToForwarder
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
   -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration Text)
+  -> TVar ThreadId
   -> IO Void
-doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) = do
+doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) tidVar = do
   store <- EKG.newStore
   metricsStore <- newIORef emptyMetricsLocalStore
   logObjectsQueue <- newTBQueueIO 1000000
@@ -120,7 +122,12 @@ doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) = do
       )
     )
     nullErrorPolicies
-    $ \_ serverAsync -> wait serverAsync -- Block until async exception.
+    $ \_ serverAsync -> do
+      let tid = asyncThreadId serverAsync
+      -- Store it to will be able to kill it later.
+      putStrLn $ "STORE TID: " <> show tid
+      atomically $ modifyTVar' tidVar (const tid)
+      wait serverAsync -- Block until async exception.
  where
   acceptorApp
     :: [(RunMiniProtocol 'ResponderMode LBS.ByteString IO Void (), Word16)]
