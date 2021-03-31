@@ -155,37 +155,51 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
   anyEra <- determineEra cModeParams localNodeConnInfo
   mEpoch <- mEpochQuery anyEra consensusMode  localNodeConnInfo
   tip <- liftIO $ getLocalChainTip localNodeConnInfo
-  let output = encodePretty . toObject mEpoch $ toJSON tip
+  let output = encodePretty
+        . toObject "era" (Just (eraString anyEra))
+        . toObject "epoch" mEpoch
+        $ toJSON tip
   case mOutFile of
     Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
     Nothing                 -> liftIO $ LBS.putStrLn        output
- where
-   mEpochQuery
-     :: AnyCardanoEra
-     -> ConsensusMode mode
-     -> LocalNodeConnectInfo mode
-     -> ExceptT ShelleyQueryCmdError IO (Maybe EpochNo)
-   mEpochQuery (AnyCardanoEra era) cMode lNodeConnInfo =
-     case toEraInMode era cMode of
-       Nothing -> return Nothing
-       Just eraInMode ->
-         case cardanoEraStyle era of
-           LegacyByronEra -> return Nothing
-           ShelleyBasedEra sbe -> do
-             let epochQuery = QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryEpoch
-             eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
-             case eResult of
-               Left _acqFail -> return Nothing
-               Right eNum -> case eNum of
-                               Left _eraMismatch -> return Nothing
-                               Right epochNum -> return $ Just epochNum
+  where
+    eraString
+      :: AnyCardanoEra
+      -> String
+    eraString (AnyCardanoEra era) =
+      case cardanoEraStyle era of
+        LegacyByronEra -> "byron"
+        ShelleyBasedEra sbe -> case sbe of
+          ShelleyBasedEraShelley -> "shelley"
+          ShelleyBasedEraAllegra -> "allegra"
+          ShelleyBasedEraMary -> "mary"
 
-   toObject :: Maybe EpochNo -> Aeson.Value -> Aeson.Value
-   toObject (Just e) (Aeson.Object obj) =
-     Aeson.Object $ obj <> HMS.fromList ["epoch" .= toJSON e]
-   toObject Nothing (Aeson.Object obj) =
-     Aeson.Object $ obj <> HMS.fromList ["epoch" .= Aeson.Null]
-   toObject _ _ = Aeson.Null
+    mEpochQuery
+      :: AnyCardanoEra
+      -> ConsensusMode mode
+      -> LocalNodeConnectInfo mode
+      -> ExceptT ShelleyQueryCmdError IO (Maybe EpochNo)
+    mEpochQuery (AnyCardanoEra era) cMode lNodeConnInfo =
+      case toEraInMode era cMode of
+        Nothing -> return Nothing
+        Just eraInMode ->
+          case cardanoEraStyle era of
+            LegacyByronEra -> return Nothing
+            ShelleyBasedEra sbe -> do
+              let epochQuery = QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryEpoch
+              eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
+              case eResult of
+                Left _acqFail -> return Nothing
+                Right eNum -> case eNum of
+                  Left _eraMismatch -> return Nothing
+                  Right epochNum -> return $ Just epochNum
+
+    toObject :: ToJSON a => Text -> Maybe a -> Aeson.Value -> Aeson.Value
+    toObject name (Just a) (Aeson.Object obj) =
+      Aeson.Object $ obj <> HMS.fromList [name .= toJSON a]
+    toObject name Nothing (Aeson.Object obj) =
+      Aeson.Object $ obj <> HMS.fromList [name .= Aeson.Null]
+    toObject _ _ _ = Aeson.Null
 
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
