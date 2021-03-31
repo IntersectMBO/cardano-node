@@ -17,18 +17,12 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-    - name: Select optimal cabal version
-      run: |
-        case "$OS" in
-          Windows_NT)   echo "CABAL_VERSION=3.4.0.1-rc3"  >> $GITHUB_ENV;;
-          *)            echo "CABAL_VERSION=3.4.0.0"      >> $GITHUB_ENV;;
-        esac
-
+    
     - uses: haskell/actions/setup@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ env.CABAL_VERSION }}
+        cabal-version: 3.4.0.0
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
