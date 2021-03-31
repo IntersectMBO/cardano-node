@@ -64,3 +64,9 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
   forMachine dtal = \case
     LedgerUpdate  update  -> forMachine dtal update
     LedgerWarning warning -> forMachine dtal warning
+
+instance LogFormatting LedgerDB.DiskSnapshot where
+  forMachine DDetailed snap =
+    mkObject [ "kind" .= String "snapshot"
+             , "snapshot" .= String (Text.pack $ show snap) ]
+  forMachine _ _snap = mkObject [ "kind" .= String "snapshot" ]
