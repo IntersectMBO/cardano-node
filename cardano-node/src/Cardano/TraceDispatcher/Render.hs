@@ -6,12 +6,12 @@
 module Cardano.TraceDispatcher.Render
   (
   -- renderBlockOrEBB
-  -- , renderChunkNo
-       renderHeaderHash
+       renderChunkNo
+     , renderHeaderHash
      , renderHeaderHashForDetails
-  -- , renderChainHash
-  -- , renderTipBlockNo
-  -- , renderTipHash
+     , renderChainHash
+     , renderTipBlockNo
+     , renderTipHash
      , condenseT
      , showT
      , renderPoint
@@ -60,19 +60,19 @@ showT = Text.pack . show
 -- renderBlockOrEBB :: BlockOrEBB -> Text
 -- renderBlockOrEBB (Block slotNo) = "Block at " <> renderSlotNo slotNo
 -- renderBlockOrEBB (EBB epochNo) = "Epoch boundary block at " <> renderEpochNo epochNo
---
--- renderChunkNo :: ChunkNo -> Text
--- renderChunkNo = Text.pack . show . unChunkNo
---
+
+renderChunkNo :: ChunkNo -> Text
+renderChunkNo = Text.pack . show . unChunkNo
+
 -- renderEpochNo :: EpochNo -> Text
 -- renderEpochNo = Text.pack . show . unEpochNo
---
--- renderTipBlockNo :: ImmDB.Tip blk -> Text
--- renderTipBlockNo = Text.pack . show . unBlockNo . ImmDB.tipBlockNo
---
--- renderTipHash :: StandardHash blk => ImmDB.Tip blk -> Text
--- renderTipHash tInfo = Text.pack . show $ ImmDB.tipHash tInfo
---
+
+renderTipBlockNo :: ImmDB.Tip blk -> Text
+renderTipBlockNo = Text.pack . show . unBlockNo . ImmDB.tipBlockNo
+
+renderTipHash :: StandardHash blk => ImmDB.Tip blk -> Text
+renderTipHash tInfo = Text.pack . show $ ImmDB.tipHash tInfo
+
 -- renderTxIdForDetails
 --   :: ConvertTxId blk
 --   => TracingDetails
@@ -166,9 +166,9 @@ renderHeaderHashForDetails p dtal =
 renderHeaderHash :: ConvertRawHash blk => proxy blk -> HeaderHash blk -> Text
 renderHeaderHash p = Text.decodeLatin1 . B16.encode . toRawHash p
 
--- renderChainHash :: (HeaderHash blk -> Text) -> ChainHash blk -> Text
--- renderChainHash _ GenesisHash = "GenesisHash"
--- renderChainHash p (BlockHash hash) = p hash
+renderChainHash :: (HeaderHash blk -> Text) -> ChainHash blk -> Text
+renderChainHash _ GenesisHash = "GenesisHash"
+renderChainHash p (BlockHash hash) = p hash
 
 trimHashTextForDetails :: DetailLevel -> Text -> Text
 trimHashTextForDetails dtal =

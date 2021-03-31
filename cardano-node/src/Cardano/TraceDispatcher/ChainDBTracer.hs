@@ -7,6 +7,7 @@
 {-# LANGUAGE PatternSynonyms            #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -24,31 +25,26 @@ module Cardano.TraceDispatcher.ChainDBTracer
   ) where
 
 
+import           Control.Monad.Class.MonadTime (Time (..))
 import           Data.Aeson (Value (String), toJSON, (.=))
 import qualified Data.Aeson as A
 import           Data.HashMap.Strict (insertWith)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           NoThunks.Class (NoThunks)
+import           Text.Show
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Cardano.Slotting.Slot (EpochNo (..))
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
+import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 import           Cardano.TraceDispatcher.OrphanInstances.Network ()
-import           Cardano.TraceDispatcher.Render (condenseT,
-                     renderHeaderHashForDetails, renderPoint,
-                     renderPointAsPhrase, renderPointForDetails,
-                     renderRealPoint, renderRealPointAsPhrase, showT)
-import           Text.Show
+import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
+import           Cardano.TraceDispatcher.Render
 
-import           Ouroboros.Consensus.Block (BlockNo (BlockNo), ChainHash (..),
-                     ConvertRawHash, GetHeader (..), GetPrevHash (..),
-                     HasHeader, Header, HeaderHash, Point, RealPoint,
-                     SlotNo (unSlotNo), StandardHash, getBlockHeaderFields,
-                     headerPoint, pointSlot, realPointHash, realPointSlot)
+import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.Block.RealPoint
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock,
                      ByronHash (..))
@@ -62,11 +58,14 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                      (LedgerSupportsProtocol)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.Storage.ChainDB.Impl.Types as ChainDB
+import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block (HeaderFields (..))
+import           Ouroboros.Network.Point (WithOrigin)
 
 addedHdrsNewChain :: HasHeader (Header blk)
   => AF.AnchoredFragment (Header blk)
@@ -85,112 +84,12 @@ kindContext toAdd = insertWith f "kind" (String toAdd)
     f (String new) _            = String new
     f _ o                       = o
 
+----------- Documentation prototypes
 
---------------------
--- Documentation types
+docRealPoint :: RealPoint blk
+docRealPoint = undefined
 
--- newtype TestHash = UnsafeTestHash {
---       unTestHash :: NonEmpty Word64
---     }
---   deriving stock    (Generic)
---   deriving newtype  (Eq, Ord)
---   deriving anyclass (NoThunks)
---
--- pattern TestHash :: NonEmpty Word64 -> TestHash
--- pattern TestHash path <- UnsafeTestHash path where
---   TestHash path = UnsafeTestHash (force path)
---
--- testHashFromList :: [Word64] -> TestHash
--- testHashFromList = TestHash . NE.fromList . reverse
---
--- instance Show TestHash where
---   show (UnsafeTestHash h) = "(testHashFromList " <> show (reverse (NE.toList h)) <> ")"
---
--- instance Condense TestHash where
---   condense = condense . reverse . NE.toList . unTestHash
---
--- data TestBlock = TestBlock {
---       tbHash  :: TestHash
---     , tbSlot  :: SlotNo
---       -- ^ We store a separate 'Block.SlotNo', as slots can have gaps between
---       -- them, unlike block numbers.
---       --
---       -- Note that when generating a 'TestBlock', you must make sure that
---       -- blocks with the same 'TestHash' have the same slot number.
---     , tbValid :: Bool
---       -- ^ Note that when generating a 'TestBlock', you must make sure that
---       -- blocks with the same 'TestHash' have the same value for 'tbValid'.
---     }
---   deriving stock    (Show, Eq, Ord, Generic)
---   deriving anyclass (NoThunks)
---
--- newtype instance Header TestBlock = TestHeader { testHeader :: TestBlock }
---   deriving stock   (Eq, Show)
---   deriving newtype (NoThunks)
---
--- instance GetHeader TestBlock where
---   getHeader = TestHeader
---   blockMatchesHeader (TestHeader blk') blk = blk == blk'
---   headerIsEBB = const Nothing
---
--- type instance HeaderHash TestBlock = TestHash
---
--- instance HasHeader TestBlock where
---   getHeaderFields = getBlockHeaderFields
---
--- instance HasHeader (Header TestBlock) where
---   getHeaderFields (TestHeader TestBlock{..}) = HeaderFields {
---         headerFieldHash    = tbHash
---       , headerFieldSlot    = tbSlot
---       , headerFieldBlockNo = fromIntegral . NE.length . unTestHash $ tbHash
---       }
---
--- instance GetPrevHash TestBlock where
---   headerPrevHash (TestHeader b) =
---       case NE.nonEmpty . NE.tail . unTestHash . tbHash $ b of
---         Nothing       -> GenesisHash
---         Just prevHash -> BlockHash (TestHash prevHash)
---
--- instance StandardHash TestBlock
---
--- -- instance HasTxs TestBlock where
--- --   extractTxs _blk = []
--- --
--- -- instance HasTxs (GenTx TestBlock) where
--- --   extractTxs _blk = []
---
--- -- instance forall a blk.(a ~ LedgerWarning blk) => LogFormatting a where
---
---
--- docExtValidationError :: ExtValidationError TestBlock
--- docExtValidationError = ExtValidationErrorHeader (HeaderEnvelopeError (UnexpectedSlotNo 1 2))
---
--- docValidationError :: ChainDB.InvalidBlockReason TestBlock
--- docValidationError = ChainDB.ValidationError docExtValidationError
---
--- docHeaderFields :: HeaderFields TestBlock
--- docHeaderFields = HeaderFields 1 1 docTestHash
---
--- docAF :: AF.AnchoredFragment (HeaderFields TestBlock)
--- docAF = AS.Empty (AS.asAnchor docHeaderFields)
---
---
-
---
--- docTestHash :: TestHash
--- docTestHash = testHashFromList [1]
---
--- docTestBlock :: TestBlock
--- docTestBlock = TestBlock docTestHash 1 True
---
-
---
--- docPoint :: RealPoint TestBlock
--- docPoint = RealPoint 1 docTestHash
-
----------------------------------
-
-docPoint :: RealPoint blk
+docPoint :: Point blk
 docPoint = undefined
 
 docHeaderDiff :: ChainDiff (HeaderFields blk)
@@ -200,7 +99,7 @@ docValidationError :: ChainDB.InvalidBlockReason blk
 docValidationError = undefined
 
 docNTI :: ChainDB.NewTipInfo blk
-docNTI = ChainDB.NewTipInfo docPoint (EpochNo 1) 1 docPoint
+docNTI = ChainDB.NewTipInfo docRealPoint (EpochNo 1) 1 docRealPoint
 
 docAFH :: AF.AnchoredFragment (Header blk)
 docAFH =  undefined
@@ -208,109 +107,136 @@ docAFH =  undefined
 docExtValidationError :: ExtValidationError blk
 docExtValidationError = ExtValidationErrorHeader (HeaderEnvelopeError (UnexpectedSlotNo 1 2))
 
---------------------------------
+docFollowerRollState :: ChainDB.FollowerRollState blk
+docFollowerRollState = undefined
 
+docWoSlotNo :: WithOrigin SlotNo
+docWoSlotNo = undefined
+
+docTime :: Time
+docTime = undefined
+
+docChunkNo :: ImmDB.ChunkNo
+docChunkNo = undefined
+
+docStreamFrom :: ChainDB.StreamFrom blk
+docStreamFrom = undefined
+
+docStreamTo :: ChainDB.StreamTo blk
+docStreamTo = undefined
+
+docUnknownRange :: ChainDB.UnknownRange blk
+docUnknownRange = undefined
+
+docDiskSnapshot :: LedgerDB.DiskSnapshot
+docDiskSnapshot = undefined
+
+docInitFailure :: LedgerDB.InitFailure blk
+docInitFailure = undefined
+
+----------- Documentation
 
 docChainDBTraceEvent :: Documented (ChainDB.TraceEvent blk)
 docChainDBTraceEvent = Documented [
     DocMsg
-      (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK docPoint))
-      "IgnoreBlockOlderThanK"
+      (ChainDB.TraceAddBlockEvent
+        (ChainDB.IgnoreBlockOlderThanK docRealPoint))
+      "AddBlockEvent.IgnoreBlockOlderThanK"
       "A block with a 'BlockNo' more than @k@ back than the current tip\
       \ was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.IgnoreBlockAlreadyInVolatileDB
-          docPoint))
-      "IgnoreBlockAlreadyInVolatileDB"
+          docRealPoint))
+      "AddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
       "A block that is already in the Volatile DB was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.IgnoreInvalidBlock
-          docPoint docValidationError))
-      "IgnoreBlockAlreadyInVolatileDB"
+          docRealPoint docValidationError))
+      "AddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
       "A block that is already in the Volatile DB was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedBlockToQueue
-          docPoint 1))
-      "AddedBlockToQueue"
+          docRealPoint 1))
+      "AddBlockEvent.AddedBlockToQueue"
       "The block was added to the queue and will be added to the ChainDB by\
       \ the background thread. The size of the queue is included.."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.BlockInTheFuture
-          docPoint 1))
-      "BlockInTheFuture"
+          docRealPoint 1))
+      "AddBlockEvent.BlockInTheFuture"
       "The block is from the future, i.e., its slot number is greater than\
       \ the current slot (the second argument)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedBlockToVolatileDB
-          docPoint 1 ChainDB.IsEBB))
-      "AddedBlockToVolatileDB"
+          docRealPoint 1 ChainDB.IsEBB))
+      "AddBlockEvent.AddedBlockToVolatileDB"
       "A block was added to the Volatile DB"
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.TryAddToCurrentChain
-          docPoint))
-      "TryAddToCurrentChain"
+          docRealPoint))
+      "AddBlockEvent.TryAddToCurrentChain"
       "The block fits onto the current chain, we'll try to use it to extend\
       \ our chain."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.TrySwitchToAFork
-          docPoint docHeaderDiff))
-      "TrySwitchToAFork"
+          docRealPoint docHeaderDiff))
+      "AddBlockEvent.TrySwitchToAFork"
       "The block fits onto some fork, we'll try to switch to that fork (if\
       \ it is preferable to our chain)"
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.StoreButDontChange
-          docPoint))
-      "StoreButDontChange"
+          docRealPoint))
+      "AddBlockEvent.StoreButDontChange"
       "The block fits onto some fork, we'll try to switch to that fork (if\
       \ it is preferable to our chain)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedToCurrentChain [] docNTI docAFH docAFH))
-      "AddedToCurrentChain"
+      "AddBlockEvent.AddedToCurrentChain"
       "The new block fits onto the current chain (first\
       \ fragment) and we have successfully used it to extend our (new) current\
       \ chain (second fragment)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.SwitchedToAFork [] docNTI docAFH docAFH))
-      "SwitchedToAFork"
+      "AddBlockEvent.SwitchedToAFork"
       "The new block fits onto some fork and we have switched to that fork\
       \ (second fragment), as it is preferable to our (previous) current chain\
       \ (first fragment)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
-          (ChainDB.InvalidBlock docExtValidationError docPoint)))
-      "AddBlockValidation.InvalidBlock"
+          (ChainDB.InvalidBlock docExtValidationError docRealPoint)))
+      "AddBlockEvent.AddBlockValidation.InvalidBlock"
       "An event traced during validating performed while adding a block.\
       \A point was found to be invalid."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
           (ChainDB.InvalidCandidate docAFH)))
-      "AddBlockValidation.InvalidCandidate"
+      "AddBlockEvent.AddBlockValidation.InvalidCandidate"
       "An event traced during validating performed while adding a block.\
       \A candidate chain was invalid."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
           (ChainDB.ValidCandidate docAFH)))
-      "AddBlockValidation.ValidCandidate"
+      "AddBlockEvent.AddBlockValidation.ValidCandidate"
       "An event traced during validating performed while adding a block\
       \A candidate chain was valid."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
           (ChainDB.CandidateContainsFutureBlocks docAFH [])))
-      "AddBlockValidation.CandidateContainsFutureBlocks"
+      "AddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocks"
       "An event traced during validating performed while adding a block\
       \Candidate contains headers from the future which do no exceed the\
       \clock skew."
@@ -318,20 +244,215 @@ docChainDBTraceEvent = Documented [
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
           (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew docAFH [])))
-      "AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
+      "AddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
       "An event traced during validating performed while adding a block\
       \An event traced during validating performed while adding a block\
       \Candidate contains headers from the future which do no exceed the\
       \clock skew."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
-        (ChainDB.ChainSelectionForFutureBlock docPoint))
-      "ChainSelectionForFutureBlock"
+        (ChainDB.ChainSelectionForFutureBlock docRealPoint))
+      "AddBlockEvent.ChainSelectionForFutureBlock"
       "Run chain selection for a block that was previously from the future.\
       \ This is done for all blocks from the future each time a new block is\
       \ added."
-  ]
+  , DocMsg
+      (ChainDB.TraceFollowerEvent ChainDB.NewFollower)
+      "FollowerEvent.NewFollower"
+      "A new follower was created."
+  , DocMsg
+      (ChainDB.TraceFollowerEvent
+        (ChainDB.FollowerNoLongerInMem docFollowerRollState))
+      "FollowerEvent.FollowerNoLongerInMem"
+      "The follower was in the 'FollowerInImmutableDB' state and is switched to\
+      \ the 'FollowerInMem' state."
+  , DocMsg
+      (ChainDB.TraceFollowerEvent
+        (ChainDB.FollowerSwitchToMem docPoint docWoSlotNo))
+      "FollowerEvent.FollowerSwitchToMem"
+      "The follower was in the 'FollowerInImmutableDB' state and is switched to\
+      \ the 'FollowerInMem' state."
+  , DocMsg
+      (ChainDB.TraceFollowerEvent
+        (ChainDB.FollowerNewImmIterator docPoint docWoSlotNo))
+      "FollowerEvent.FollowerNewImmIterator"
+      "The follower is in the 'FollowerInImmutableDB' state but the iterator is\
+      \ exhausted while the ImmDB has grown, so we open a new iterator to\
+      \ stream these blocks too."
+  , DocMsg
+      (ChainDB.TraceCopyToImmutableDBEvent
+        (ChainDB.CopiedBlockToImmutableDB docPoint))
+      "CopyToImmutableDBEvent.CopiedBlockToImmutableDB"
+      "A block was successfully copied to the ImmDB."
+  , DocMsg
+      (ChainDB.TraceCopyToImmutableDBEvent
+        (ChainDB.NoBlocksToCopyToImmutableDB))
+      "CopyToImmutableDBEvent.NoBlocksToCopyToImmutableDB"
+      "There are no block to copy to the ImmDB."
+  , DocMsg
+      (ChainDB.TraceGCEvent
+        (ChainDB.ScheduledGC 1 docTime))
+      "GCEvent.NoBlocksToCopyToImmutableDB"
+      "There are no block to copy to the ImmDB."
+  , DocMsg
+      (ChainDB.TraceGCEvent
+        (ChainDB.PerformedGC 1))
+      "GCEvent.NoBlocksToCopyToImmutableDB"
+      "There are no block to copy to the ImmDB."
+  , DocMsg
+      (ChainDB.TraceInitChainSelEvent
+        (ChainDB.InitChainSelValidation
+          (ChainDB.InvalidBlock docExtValidationError docRealPoint)))
+      "InitChainSelEvent.InitChainSelValidation.InvalidBlock"
+      "A point was found to be invalid."
+  , DocMsg
+      (ChainDB.TraceInitChainSelEvent
+        (ChainDB.InitChainSelValidation
+          (ChainDB.InvalidCandidate docAFH)))
+      "InitChainSelEvent.InitChainSelValidation.InvalidCandidate"
+      "A candidate chain was invalid."
+  , DocMsg
+      (ChainDB.TraceInitChainSelEvent
+        (ChainDB.InitChainSelValidation
+          (ChainDB.ValidCandidate docAFH)))
+      "InitChainSelEvent.InitChainSelValidation.ValidCandidate"
+      "A candidate chain was valid."
+  , DocMsg
+      (ChainDB.TraceInitChainSelEvent
+        (ChainDB.InitChainSelValidation
+          (ChainDB.CandidateContainsFutureBlocks docAFH [])))
+      "InitChainSelEvent.InitChainSelValidation.CandidateContainsFutureBlocks"
+      "Candidate contains headers from the future which do not exceed the\
+      \ clock skew."
+  , DocMsg
+      (ChainDB.TraceInitChainSelEvent
+        (ChainDB.InitChainSelValidation
+          (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew docAFH [])))
+      "InitChainSelEvent.InitChainSelValidation.CandidateContainsFutureBlocksExceedingClockSkew"
+      "Candidate contains headers from the future which exceed the\
+      \ clock skew, making them invalid."
 
+  , DocMsg
+      (ChainDB.TraceOpenEvent
+        (ChainDB.OpenedDB docPoint docPoint))
+      "OpenEvent.OpenedDB"
+      "The ChainDB was opened."
+  , DocMsg
+      (ChainDB.TraceOpenEvent
+        (ChainDB.ClosedDB docPoint docPoint))
+      "OpenEvent.ClosedDB"
+      "The ChainDB was closed."
+  , DocMsg
+      (ChainDB.TraceOpenEvent
+        (ChainDB.OpenedImmutableDB docPoint docChunkNo))
+      "OpenEvent.OpenedImmutableDB"
+      "The ImmDB was opened."
+  , DocMsg
+      (ChainDB.TraceOpenEvent
+        (ChainDB.OpenedImmutableDB docPoint docChunkNo))
+      "OpenEvent.OpenedImmutableDB"
+      "The ImmDB was opened."
+  , DocMsg
+      (ChainDB.TraceOpenEvent
+        ChainDB.OpenedVolatileDB)
+      "OpenEvent.OpenedVolatileDB"
+      "The VolatileDB was opened."
+  , DocMsg
+      (ChainDB.TraceOpenEvent
+        ChainDB.OpenedLgrDB)
+      "OpenEvent.OpenedLgrDB"
+      "The LedgerDB was opened."
+
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        (ChainDB.UnknownRangeRequested docUnknownRange))
+      "IteratorEvent.UnknownRangeRequested"
+      "An unknown range was requested, see 'UnknownRange'."
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        (ChainDB.StreamFromVolatileDB docStreamFrom docStreamTo [docRealPoint]))
+      "IteratorEvent.StreamFromVolatileDB"
+      "Stream only from the VolatileDB."
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        (ChainDB.StreamFromImmutableDB docStreamFrom docStreamTo))
+      "IteratorEvent.StreamFromImmutableDB"
+      "Stream only from the ImmDB."
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        (ChainDB.StreamFromBoth docStreamFrom docStreamTo [docRealPoint]))
+      "IteratorEvent.StreamFromBoth"
+      "Stream from both the VolatileDB and the ImmDB."
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        (ChainDB.BlockMissingFromVolatileDB docRealPoint))
+      "IteratorEvent.BlockMissingFromVolatileDB"
+      " A block is no longer in the VolatileDB because it has been garbage\
+      \ collected. It might now be in the ImmDB if it was part of the\
+      \ current chain."
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        (ChainDB.BlockWasCopiedToImmutableDB docRealPoint))
+      "IteratorEvent.BlockWasCopiedToImmutableDB"
+      "A block that has been garbage collected from the VolatileDB is now\
+      \ found and streamed from the ImmDB."
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        (ChainDB.BlockGCedFromVolatileDB docRealPoint))
+      "IteratorEvent.BlockGCedFromVolatileDB"
+      "A block is no longer in the VolatileDB and isn't in the ImmDB\
+      \ either; it wasn't part of the current chain."
+  , DocMsg
+      (ChainDB.TraceIteratorEvent
+        ChainDB.SwitchBackToVolatileDB)
+      "IteratorEvent.SwitchBackToVolatileDB"
+      "We have streamed one or more blocks from the ImmDB that were part\
+      \ of the VolatileDB when initialising the iterator. Now, we have to look\
+      \ back in the VolatileDB again because the ImmDB doesn't have the\
+      \ next block we're looking for."
+  , DocMsg
+      (ChainDB.TraceLedgerEvent
+        (LedgerDB.InvalidSnapshot docDiskSnapshot docInitFailure))
+      "TraceLedgerEvent.InvalidSnapshot"
+      "An on disk snapshot was skipped because it was invalid."
+  , DocMsg
+      (ChainDB.TraceLedgerEvent
+        (LedgerDB.TookSnapshot docDiskSnapshot docRealPoint))
+      "TraceLedgerEvent.TookSnapshot"
+      "A snapshot was written to disk."
+  , DocMsg
+      (ChainDB.TraceLedgerEvent
+        (LedgerDB.DeletedSnapshot docDiskSnapshot))
+      "TraceLedgerEvent.DeletedSnapshot"
+      "An old or invalid on-disk snapshot was deleted."
+
+  , DocMsg
+      (ChainDB.TraceLedgerReplayEvent
+        (LedgerDB.ReplayFromGenesis docPoint))
+      "TraceLedgerEvent.ReplayFromGenesis"
+      "There were no LedgerDB snapshots on disk, so we're replaying all\
+      \ blocks starting from Genesis against the initial ledger.\
+      \ The @replayTo@ parameter corresponds to the block at the tip of the\
+      \ ImmDB, i.e., the last block to replay."
+  , DocMsg
+      (ChainDB.TraceLedgerReplayEvent
+        (LedgerDB.ReplayFromSnapshot docDiskSnapshot docRealPoint docPoint))
+      "TraceLedgerEvent.ReplayFromSnapshot"
+      "There was a LedgerDB snapshot on disk corresponding to the given tip.\
+      \ We're replaying more recent blocks against it.\
+      \ The @replayTo@ parameter corresponds to the block at the tip of the\
+      \ ImmDB, i.e., the last block to replay."
+  , DocMsg
+      (ChainDB.TraceLedgerReplayEvent
+        (LedgerDB.ReplayedBlock docRealPoint [] docPoint))
+      "TraceLedgerEvent.ReplayedBlock"
+      "We replayed the given block (reference) on the genesis snapshot\
+      \ during the initialisation of the LedgerDB.\
+      \ \
+      \ The @blockInfo@ parameter corresponds replayed block and the @replayTo@\
+      \ parameter corresponds to the block at the tip of the ImmDB, i.e.,\
+      \ the last block to replay."
+  ]
 
 
 instance (  LogFormatting (Header blk)
@@ -343,45 +464,54 @@ instance (  LogFormatting (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
-  forHuman (ChainDB.TraceAddBlockEvent v) = forHuman v
-  -- -- forHuman (TraceReaderEvent v) = forHuman v
-  -- forHuman (TraceCopyToImmutableDBEvent v) = forHuman v
-  -- forHuman (TraceGCEvent v) = forHuman v
-  -- forHuman (TraceInitChainSelEvent v) = forHuman v
-  -- forHuman (TraceOpenEvent v) = forHuman v
-  -- forHuman (TraceIteratorEvent v) = forHuman v
-  -- forHuman (TraceLedgerEvent v) = forHuman v
-  -- forHuman (TraceLedgerReplayEvent v) = forHuman v
-  -- forHuman (TraceImmutableDBEvent v) = forHuman v
-  -- forHuman (TraceVolatileDBEvent v) = forHuman v
-  forHuman _                              = ""
+  forHuman (ChainDB.TraceAddBlockEvent v)          = forHuman v
+  forHuman (ChainDB.TraceFollowerEvent v)          = forHuman v
+  forHuman (ChainDB.TraceCopyToImmutableDBEvent v) = forHuman v
+  forHuman (ChainDB.TraceGCEvent v)                = forHuman v
+  forHuman (ChainDB.TraceInitChainSelEvent v)      = forHuman v
+  forHuman (ChainDB.TraceOpenEvent v)              = forHuman v
+  forHuman (ChainDB.TraceIteratorEvent v)          = forHuman v
+  forHuman (ChainDB.TraceLedgerEvent v)            = forHuman v
+  forHuman (ChainDB.TraceLedgerReplayEvent v) = forHuman v
+  forHuman (ChainDB.TraceImmutableDBEvent v) = forHuman v
+  -- forHuman (ChainDB.TraceVolatileDBEvent v) = forHuman v
+  forHuman _                                       = ""
 
   forMachine details (ChainDB.TraceAddBlockEvent v) =
-     kindContext "AddBlockEvent" $ forMachine details v
-  -- -- forMachine details (TraceReaderEvent v) = forMachine details v
-  -- forMachine details (TraceCopyToImmutableDBEvent v) = forMachine details v
-  -- forMachine details (TraceGCEvent v) = forMachine details v
-  -- forMachine details (TraceInitChainSelEvent v) = forMachine details v
-  -- forMachine details (TraceOpenEvent v) = forMachine details v
-  -- forMachine details (TraceIteratorEvent v) = forMachine details v
-  -- forMachine details (TraceLedgerEvent v) = forMachine details v
-  -- forMachine details (TraceLedgerReplayEvent v) = forMachine details v
-  -- forMachine details (TraceImmutableDBEvent v) = forMachine details v
-  -- forMachine details (TraceVolatileDBEvent v) = forMachine details v
+    kindContext "AddBlockEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceFollowerEvent v) =
+    kindContext "FollowerEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceCopyToImmutableDBEvent v) =
+    kindContext "CopyToImmutableDBEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceGCEvent v) =
+    kindContext "TraceGCEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceInitChainSelEvent v) =
+    kindContext "InitChainSelEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceOpenEvent v) =
+    kindContext "OpenEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceIteratorEvent v) =
+    kindContext "IteratorEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceLedgerEvent v) =
+    kindContext "LedgerEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceLedgerReplayEvent v) =
+    kindContext "LedgerReplayEvent" $ forMachine details v
+  forMachine details (ChainDB.TraceImmutableDBEvent v) =
+    kindContext "ImmutableDBEvent" $ forMachine details v
+  -- forMachine details (ChainDB.TraceVolatileDBEvent v) = forMachine details v
   forMachine _details _ = mempty
 
-  asMetrics (ChainDB.TraceAddBlockEvent v) = asMetrics v
-  -- -- asMetrics (TraceReaderEvent v) = asMetrics v
-  -- asMetrics (TraceCopyToImmutableDBEvent v) = asMetrics v
-  -- asMetrics (TraceGCEvent v) = asMetrics v
-  -- asMetrics (TraceInitChainSelEvent v) = asMetrics v
-  -- asMetrics (TraceOpenEvent v) = asMetrics v
-  -- asMetrics (TraceIteratorEvent v) = asMetrics v
-  -- asMetrics (TraceLedgerEvent v) = asMetrics v
-  -- asMetrics (TraceLedgerReplayEvent v) = asMetrics v
-  -- asMetrics (TraceImmutableDBEvent v) = asMetrics v
-  -- asMetrics (TraceVolatileDBEvent v) = asMetrics v
-  asMetrics _                              = []
+  asMetrics (ChainDB.TraceAddBlockEvent v)          = asMetrics v
+  asMetrics (ChainDB.TraceFollowerEvent v)          = asMetrics v
+  asMetrics (ChainDB.TraceCopyToImmutableDBEvent v) = asMetrics v
+  asMetrics (ChainDB.TraceGCEvent v)                = asMetrics v
+  asMetrics (ChainDB.TraceInitChainSelEvent v)      = asMetrics v
+  asMetrics (ChainDB.TraceOpenEvent v)              = asMetrics v
+  asMetrics (ChainDB.TraceIteratorEvent v) = asMetrics v
+  asMetrics (ChainDB.TraceLedgerEvent v) = asMetrics v
+  asMetrics (ChainDB.TraceLedgerReplayEvent v) = asMetrics v
+  asMetrics (ChainDB.TraceImmutableDBEvent v) = asMetrics v
+  -- asMetrics (ChainDB.TraceVolatileDBEvent v) = asMetrics v
+  asMetrics _                                       = []
 
 
 instance ( LogFormatting (Header blk)
@@ -516,7 +646,7 @@ instance ( HasHeader (Header blk)
         renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
         Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
 
-instance ConvertRawHash blk
+instance (StandardHash blk, ConvertRawHash blk)
           => LogFormatting (LedgerDB.TraceReplayEvent blk (Point blk)) where
   forHuman (LedgerDB.ReplayFromGenesis _replayTo) =
       "Replaying ledger from genesis"
@@ -525,6 +655,16 @@ instance ConvertRawHash blk
         renderRealPointAsPhrase tip'
   forHuman (LedgerDB.ReplayedBlock pt _ledgerEvents replayTo) =
       "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
+  forMachine _dtal (LedgerDB.ReplayFromGenesis _replayTo) =
+      mkObject [ "kind" .= String "ReplayFromGenesis" ]
+  forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip' _replayTo) =
+      mkObject [ "kind" .= String "ReplayFromSnapshot"
+               , "snapshot" .= forMachine dtal snap
+               , "tip" .= show tip' ]
+  forMachine _dtal (LedgerDB.ReplayedBlock pt _ledgerEvents replayTo) =
+      mkObject [ "kind" .= String "ReplayedBlock"
+               , "slot" .= unSlotNo (realPointSlot pt)
+               , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
 instance ( StandardHash blk
          , ConvertRawHash blk)
@@ -536,19 +676,43 @@ instance ( StandardHash blk
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
       "Invalid snapshot " <> showT snap <> showT failure
+  forMachine dtals (LedgerDB.TookSnapshot snap pt) =
+    mkObject [ "kind" .= String "TookSnapshot"
+             , "snapshot" .= forMachine dtals snap
+             , "tip" .= show pt ]
+  forMachine dtals (LedgerDB.DeletedSnapshot snap) =
+    mkObject [ "kind" .= String "DeletedSnapshot"
+             , "snapshot" .= forMachine dtals snap ]
+  forMachine dtals (LedgerDB.InvalidSnapshot snap failure) =
+    mkObject [ "kind" .= String "TraceLedgerEvent.InvalidSnapshot"
+             , "snapshot" .= forMachine dtals snap
+             , "failure" .= show failure ]
+
 
 instance ConvertRawHash blk
           => LogFormatting (ChainDB.TraceCopyToImmutableDBEvent blk) where
   forHuman (ChainDB.CopiedBlockToImmutableDB pt) =
-      "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
-  forHuman  ChainDB.NoBlocksToCopyToImmutableDB  =
-      "There are no blocks to copy to the ImmutableDB"
+      "Copied block " <> renderPointAsPhrase pt <> " to the ImmDB"
+  forHuman ChainDB.NoBlocksToCopyToImmutableDB  =
+      "There are no blocks to copy to the ImmDB"
+  forMachine dtals (ChainDB.CopiedBlockToImmutableDB pt) =
+      mkObject [ "kind" .= String "CopiedBlockToImmutableDB"
+               , "slot" .= forMachine dtals pt ]
+  forMachine _dtals ChainDB.NoBlocksToCopyToImmutableDB =
+      mkObject [ "kind" .= String "NoBlocksToCopyToImmutableDB" ]
 
 instance LogFormatting (ChainDB.TraceGCEvent blk) where
   forHuman (ChainDB.PerformedGC slot) =
       "Performed a garbage collection for " <> condenseT slot
   forHuman (ChainDB.ScheduledGC slot _difft) =
       "Scheduled a garbage collection for " <> condenseT slot
+  forMachine dtals (ChainDB.PerformedGC slot) =
+      mkObject [ "kind" .= String "PerformedGC"
+               , "slot" .= forMachine dtals slot ]
+  forMachine dtals (ChainDB.ScheduledGC slot difft) =
+      mkObject $ [ "kind" .= String "TraceGCEvent.ScheduledGC"
+                 , "slot" .= forMachine dtals slot ] <>
+                 [ "difft" .= String ((Text.pack . show) difft) | dtals >= DDetailed]
 
 instance ConvertRawHash blk
           => LogFormatting (ChainDB.TraceOpenEvent blk) where
@@ -564,6 +728,23 @@ instance ConvertRawHash blk
   forHuman ChainDB.OpenedVolatileDB = "Opened vol db"
   forHuman ChainDB.OpenedLgrDB = "Opened lgr db"
 
+  forMachine dtal (ChainDB.OpenedDB immTip tip')=
+    mkObject [ "kind" .= String "OpenedDB"
+             , "immtip" .= forMachine dtal immTip
+             , "tip" .= forMachine dtal tip' ]
+  forMachine dtal (ChainDB.ClosedDB immTip tip') =
+    mkObject [ "kind" .= String "TraceOpenEvent.ClosedDB"
+             , "immtip" .= forMachine dtal immTip
+             , "tip" .= forMachine dtal tip' ]
+  forMachine dtal (ChainDB.OpenedImmutableDB immTip epoch) =
+    mkObject [ "kind" .= String "OpenedImmutableDB"
+             , "immtip" .= forMachine dtal immTip
+             , "epoch" .= String ((Text.pack . show) epoch) ]
+  forMachine _dtal ChainDB.OpenedVolatileDB =
+      mkObject [ "kind" .= String "OpenedVolatileDB" ]
+  forMachine _dtal ChainDB.OpenedLgrDB =
+      mkObject [ "kind" .= String "OpenedLgrDB" ]
+
 
 
 instance  ( StandardHash blk
@@ -572,13 +753,13 @@ instance  ( StandardHash blk
   forHuman (ChainDB.UnknownRangeRequested ev') = forHuman ev'
   forHuman (ChainDB.BlockMissingFromVolatileDB realPt) =
       "This block is no longer in the VolatileDB because it has been garbage\
-         \ collected. It might now be in the ImmutableDB if it was part of the\
+         \ collected. It might now be in the ImmDB if it was part of the\
          \ current chain. Block: " <> renderRealPoint realPt
   forHuman (ChainDB.StreamFromImmutableDB sFrom sTo) =
-      "Stream only from the ImmutableDB. StreamFrom:" <> showT sFrom <>
+      "Stream only from the ImmDB. StreamFrom:" <> showT sFrom <>
         " StreamTo: " <> showT sTo
   forHuman (ChainDB.StreamFromBoth sFrom sTo pts) =
-      "Stream from both the VolatileDB and the ImmutableDB."
+      "Stream from both the VolatileDB and the ImmDB."
         <> " StreamFrom: " <> showT sFrom <> " StreamTo: " <> showT sTo
         <> " Points: " <> showT (map renderRealPoint pts)
   forHuman (ChainDB.StreamFromVolatileDB sFrom sTo pts) =
@@ -587,11 +768,48 @@ instance  ( StandardHash blk
         <> " Points: " <> showT (map renderRealPoint pts)
   forHuman (ChainDB.BlockWasCopiedToImmutableDB pt) =
       "This block has been garbage collected from the VolatileDB is now\
-        \ found and streamed from the ImmutableDB. Block: " <> renderRealPoint pt
+        \ found and streamed from the ImmDB. Block: " <> renderRealPoint pt
   forHuman (ChainDB.BlockGCedFromVolatileDB pt) =
-      "This block no longer in the VolatileDB and isn't in the ImmutableDB\
+      "This block no longer in the VolatileDB and isn't in the ImmDB\
         \ either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
   forHuman ChainDB.SwitchBackToVolatileDB = "SwitchBackToVolatileDB"
+
+  forMachine _dtal (ChainDB.UnknownRangeRequested unkRange) =
+    mkObject [ "kind" .= String "UnknownRangeRequested"
+             , "range" .= String (showT unkRange)
+             ]
+  forMachine _dtal (ChainDB.StreamFromVolatileDB streamFrom streamTo realPt) =
+    mkObject [ "kind" .= String "StreamFromVolatileDB"
+             , "from" .= String (showT streamFrom)
+             , "to" .= String (showT streamTo)
+             , "point" .= String (Text.pack . show $ map renderRealPoint realPt)
+             ]
+  forMachine _dtal (ChainDB.StreamFromImmutableDB streamFrom streamTo) =
+    mkObject [ "kind" .= String "StreamFromImmutableDB"
+             , "from" .= String (showT streamFrom)
+             , "to" .= String (showT streamTo)
+             ]
+  forMachine _dtal (ChainDB.StreamFromBoth streamFrom streamTo realPt) =
+    mkObject [ "kind" .= String "StreamFromBoth"
+             , "from" .= String (showT streamFrom)
+             , "to" .= String (showT streamTo)
+             , "point" .= String (Text.pack . show $ map renderRealPoint realPt)
+             ]
+  forMachine _dtal (ChainDB.BlockMissingFromVolatileDB realPt) =
+    mkObject [ "kind" .= String "BlockMissingFromVolatileDB"
+             , "point" .= String (renderRealPoint realPt)
+             ]
+  forMachine _dtal (ChainDB.BlockWasCopiedToImmutableDB realPt) =
+    mkObject [ "kind" .= String "BlockWasCopiedToImmutableDB"
+             , "point" .= String (renderRealPoint realPt)
+             ]
+  forMachine _dtal (ChainDB.BlockGCedFromVolatileDB realPt) =
+    mkObject [ "kind" .= String "BlockGCedFromVolatileDB"
+             , "point" .= String (renderRealPoint realPt)
+             ]
+  forMachine _dtal ChainDB.SwitchBackToVolatileDB =
+    mkObject ["kind" .= String "SwitchBackToVolatileDB"
+             ]
 
 instance  ( StandardHash blk
           , ConvertRawHash blk
@@ -638,3 +856,138 @@ instance (Show (PBFT.PBftVerKeyHash c))
       [ "kind" .= String "PBftCannotForgeThresholdExceeded"
       , "numForged" .= numForged
       ]
+
+instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
+  => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
+  forHuman (ChainDB.InitChainSelValidation v) = forHuman v
+  forMachine dtal (ChainDB.InitChainSelValidation v) =
+    kindContext "InitChainSelValidation" $ forMachine dtal v
+  asMetrics (ChainDB.InitChainSelValidation v) = asMetrics v
+
+instance (ConvertRawHash blk, StandardHash blk) => LogFormatting (ChainDB.TraceFollowerEvent blk) where
+  forHuman ChainDB.NewFollower = "A new Follower was created"
+  forHuman (ChainDB.FollowerNoLongerInMem _rrs) =
+    "The follower was in the 'FollowerInMem' state but its point is no longer on\
+    \ the in-memory chain fragment, so it has to switch to the\
+    \ 'FollowerInImmutableDB' state"
+  forHuman (ChainDB.FollowerSwitchToMem point slot) =
+    "The follower was in the 'FollowerInImmutableDB' state and is switched to\
+    \ the 'FollowerInMem' state. Point: " <> showT point <> " slot: " <> showT slot
+  forHuman (ChainDB.FollowerNewImmIterator point slot) =
+    "The follower is in the 'FollowerInImmutableDB' state but the iterator is\
+    \ exhausted while the ImmDB has grown, so we open a new iterator to\
+    \ stream these blocks too. Point: " <> showT point <> " slot: " <> showT slot
+  forMachine _dtal ChainDB.NewFollower =
+      mkObject [ "kind" .= String "NewFollower" ]
+  forMachine _dtal (ChainDB.FollowerNoLongerInMem _) =
+      mkObject [ "kind" .= String "FollowerNoLongerInMem" ]
+  forMachine _dtal (ChainDB.FollowerSwitchToMem _ _) =
+      mkObject [ "kind" .= String "FollowerSwitchToMem" ]
+  forMachine _dtal (ChainDB.FollowerNewImmIterator _ _) =
+      mkObject [ "kind" .= String "FollowerNewImmIterator" ]
+
+instance (ConvertRawHash blk, StandardHash blk)
+  => LogFormatting (ImmDB.TraceEvent blk) where
+    forMachine _dtal ImmDB.NoValidLastLocation =
+      mkObject [ "kind" .= String "NoValidLastLocation" ]
+    forMachine _dtal (ImmDB.ValidatedLastLocation chunkNo immTip) =
+      mkObject [ "kind" .= String "ValidatedLastLocation"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "immTip" .= String (renderTipHash immTip)
+               , "blockNo" .= String (renderTipBlockNo immTip)
+               ]
+    forMachine _dtal (ImmDB.ValidatingChunk chunkNo) =
+      mkObject [ "kind" .= String "ValidatingChunk"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    forMachine _dtal (ImmDB.MissingChunkFile chunkNo) =
+      mkObject [ "kind" .= String "MissingChunkFile"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               ]
+    forMachine _dtal (ImmDB.InvalidChunkFile chunkNo (ImmDB.ChunkErrRead readIncErr)) =
+      mkObject [ "kind" .= String "InvalidChunkFile.ChunkErrRead"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "error" .= String (showT readIncErr)
+               ]
+    forMachine _dtal (ImmDB.InvalidChunkFile chunkNo
+                        (ImmDB.ChunkErrHashMismatch hashPrevBlock prevHashOfBlock)) =
+      mkObject [ "kind" .= String "InvalidChunkFile.ChunkErrHashMismatch"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "hashPrevBlock" .= String (Text.decodeLatin1
+                                    . toRawHash (Proxy @blk) $ hashPrevBlock)
+               , "prevHashOfBlock" .= String (renderChainHash (Text.decodeLatin1
+                                    . toRawHash (Proxy @blk)) prevHashOfBlock)
+               ]
+    forMachine dtal (ImmDB.InvalidChunkFile chunkNo (ImmDB.ChunkErrCorrupt pt)) =
+      mkObject [ "kind" .= String "InvalidChunkFile.ChunkErrCorrupt"
+               , "chunkNo" .= String (renderChunkNo chunkNo)
+               , "block" .= String (renderPointForDetails dtal pt)
+               ]
+    -- ImmDB.ChunkFileDoesntFit expectPrevHash actualPrevHash ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.ChunkFileDoesntFit"
+    --            , "expectedPrevHash" .= String (renderChainHash (Text.decodeLatin1 . toRawHash (Proxy @blk)) expectPrevHash)
+    --            , "actualPrevHash" .= String (renderChainHash (Text.decodeLatin1 . toRawHash (Proxy @blk)) actualPrevHash)
+    --            ]
+    -- ImmDB.MissingPrimaryIndex chunkNo ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.MissingPrimaryIndex"
+    --            , "chunkNo" .= String (renderChunkNo chunkNo)
+    --            ]
+    -- ImmDB.MissingSecondaryIndex chunkNo ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.MissingSecondaryIndex"
+    --            , "chunkNo" .= String (renderChunkNo chunkNo)
+    --            ]
+    -- ImmDB.InvalidPrimaryIndex chunkNo ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.InvalidPrimaryIndex"
+    --            , "chunkNo" .= String (renderChunkNo chunkNo)
+    --            ]
+    -- ImmDB.InvalidSecondaryIndex chunkNo ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.InvalidSecondaryIndex"
+    --            , "chunkNo" .= String (renderChunkNo chunkNo)
+    --            ]
+    -- ImmDB.RewritePrimaryIndex chunkNo ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.RewritePrimaryIndex"
+    --            , "chunkNo" .= String (renderChunkNo chunkNo)
+    --            ]
+    -- ImmDB.RewriteSecondaryIndex chunkNo ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.RewriteSecondaryIndex"
+    --            , "chunkNo" .= String (renderChunkNo chunkNo)
+    --            ]
+    -- ImmDB.Migrating txt ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.Migrating"
+    --            , "info" .= String txt
+    --            ]
+    -- ImmDB.DeletingAfter immTipWithInfo ->
+    --   mkObject [ "kind" .= String "TraceImmutableDBEvent.DeletingAfter"
+    --            , "immTipHash" .= String (renderWithOrigin renderTipHash immTipWithInfo)
+    --            , "immTipBlockNo" .= String (renderWithOrigin renderTipBlockNo immTipWithInfo)
+    --            ]
+    -- ImmDB.DBAlreadyClosed -> mkObject [ "kind" .= String "TraceImmutableDBEvent.DBAlreadyClosed" ]
+    -- ImmDB.DBClosed -> mkObject [ "kind" .= String "TraceImmutableDBEvent.DBClosed" ]
+    -- ImmDB.TraceCacheEvent cacheEv ->
+    --   case cacheEv of
+    --     ImmDB.TraceCurrentChunkHit chunkNo nbPastChunksInCache ->
+    --       mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TraceCurrentChunkHit"
+    --                , "chunkNo" .= String (renderChunkNo chunkNo)
+    --                , "noPastChunks" .= String (showT nbPastChunksInCache)
+    --                ]
+    --     ImmDB.TracePastChunkHit chunkNo nbPastChunksInCache ->
+    --       mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunkHit"
+    --                , "chunkNo" .= String (renderChunkNo chunkNo)
+    --                , "noPastChunks" .= String (showT nbPastChunksInCache)
+    --                ]
+    --     ImmDB.TracePastChunkMiss chunkNo nbPastChunksInCache ->
+    --       mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunkMiss"
+    --                , "chunkNo" .= String (renderChunkNo chunkNo)
+    --                , "noPastChunks" .= String (showT nbPastChunksInCache)
+    --                ]
+    --     ImmDB.TracePastChunkEvict chunkNo nbPastChunksInCache ->
+    --       mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunkEvict"
+    --                , "chunkNo" .= String (renderChunkNo chunkNo)
+    --                , "noPastChunks" .= String (showT nbPastChunksInCache)
+    --                ]
+    --     ImmDB.TracePastChunksExpired chunkNos nbPastChunksInCache ->
+    --       mkObject [ "kind" .= String "TraceImmDbEvent.TraceCacheEvent.TracePastChunksExpired"
+    --                , "chunkNos" .= String (Text.pack . show $ map renderChunkNo chunkNos)
+    --                , "noPastChunks" .= String (showT nbPastChunksInCache)
+    --                ]
+    --
