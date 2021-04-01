@@ -11,7 +11,8 @@
 
 module Cardano.TraceDispatcher.OrphanInstances.Byron () where
 
-import           Cardano.Tracing.OrphanInstances.Byron ()
+-- TODO: Temporary hack for toJSON instances
+import Cardano.Tracing.OrphanInstances.Byron ()
 
 import           Cardano.Logging
 import           Cardano.Prelude

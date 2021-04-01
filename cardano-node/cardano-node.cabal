@@ -90,7 +90,9 @@ library
                        Cardano.TraceDispatcher.OrphanInstances.HardFork
                        Cardano.TraceDispatcher.OrphanInstances.Common
                        Cardano.TraceDispatcher.OrphanInstances.Shelley
-                       Cardano.TraceDispatcher.ChainDBTracer
+                       Cardano.TraceDispatcher.ChainDBTracer.Docu
+                       Cardano.TraceDispatcher.ChainDBTracer.Formatting
+                       Cardano.TraceDispatcher.ChainDBTracer.Combinators                                             
                        Cardano.TraceDispatcher.Render
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints

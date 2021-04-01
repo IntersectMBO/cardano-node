@@ -17,7 +17,8 @@ import           Cardano.Prelude hiding (trace)
 import qualified Data.Text.IO as T
 
 import           Cardano.Logging
-import           Cardano.TraceDispatcher.ChainDBTracer
+import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
+import           Cardano.TraceDispatcher.ChainDBTracer.Docu
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)

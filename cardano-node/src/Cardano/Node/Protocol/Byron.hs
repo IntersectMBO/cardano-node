@@ -47,7 +47,7 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.HardFork ()
-import           Cardano.TraceDispatcher.ChainDBTracer ()
+import           Cardano.TraceDispatcher.ChainDBTracer.Formatting ()
 
 import           Cardano.Node.Protocol.Types
 
