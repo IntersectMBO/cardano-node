@@ -24,7 +24,7 @@ module Cardano.TraceDispatcher.Render
   -- , renderTipForDetails
   -- , renderTxId
   -- , renderTxIdForDetails
-  -- , renderWithOrigin
+     , renderWithOrigin
   ) where
 
 import           Cardano.Prelude
@@ -82,10 +82,10 @@ renderTipHash tInfo = Text.pack . show $ ImmDB.tipHash tInfo
 --
 -- renderTxId :: ConvertTxId blk => TxId (GenTx blk) -> Text
 -- renderTxId = Text.decodeLatin1 . B16.encode . txIdToRawBytes
---
--- renderWithOrigin :: (a -> Text) -> WithOrigin a -> Text
--- renderWithOrigin _ Origin = "origin"
--- renderWithOrigin render (At a) = render a
+
+renderWithOrigin :: (a -> Text) -> WithOrigin a -> Text
+renderWithOrigin _ Origin = "origin"
+renderWithOrigin render (At a) = render a
 
 renderSlotNo :: SlotNo -> Text
 renderSlotNo = Text.pack . show . unSlotNo
