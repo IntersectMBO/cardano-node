@@ -2,7 +2,7 @@
 , lib
 , bech32
 , basePort ? 30000
-, stateDir ? "./state-cluster"
+, stateDir ? "state-cluster"
 , cacheDir ? "~/.cache"
 , extraSupervisorConfig ? {}
 , useCabalRun ? false
@@ -41,18 +41,11 @@ let
       inherit lib stateDir useCabalRun;
     };
 
-  baseEnvConfig = pkgs.callPackage ./base-env.nix
-    { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig;
-      inherit (profile) era;
-      inherit stateDir lib;
-    };
-
   ## This yields two attributes: 'params' and 'files'
   mkGenesisBash = pkgs.callPackage ./genesis.nix
     { inherit
       lib
       cacheDir stateDir
-      baseEnvConfig
       basePort
       profile
       profileJSONFile;
@@ -60,11 +53,12 @@ let
     };
 
   node-setups = pkgs.callPackage ./node-setups.nix
-    { inherit (topology) nodeSpecs;
+    { inherit (pkgs.commonLib.cardanoLib) defaultLogConfig;
+      inherit (topology) nodeSpecs;
       inherit
         pkgs lib stateDir
-        baseEnvConfig
         basePort
+        profile
         useCabalRun;
     };
 
@@ -87,7 +81,7 @@ let
 
     mkdir -p ${cacheDir}
 
-    if [ -f ${stateDir}/supervisord.pid ]
+    if test "$(netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0"
     then echo "Cluster already running. Please run 'stop-cluster' first!"
          exit 1; fi
 
@@ -108,7 +102,8 @@ EOF
       profile_pretty_describe(.)
       ' ${profileJSONFile} --raw-output
 
-    rm -rf ${stateDir}
+    rm -rf     ${stateDir}
+    mkdir -p ./${stateDir}
 
     PATH=$PATH:${path}
     ${defCardanoExesBash}
@@ -121,15 +116,22 @@ EOF
       (flip mapAttrsToList node-setups.nodeSetups
         (name: nodeSetup:
           ''
-          jq . ${__toFile "${name}.json"
+          jq . ${__toFile "${name}-node-config.json"
             (__toJSON nodeSetup.nodeConfig)} > \
-             ${stateDir}/${name}.config.json
+             ${stateDir}/${name}/config.json
 
-          jq . ${__toFile "${name}.json"
+          jq . ${__toFile "${name}-service-config.json"
                 (__toJSON
-                   (removeAttrs nodeSetup.envConfig
+                   (removeAttrs nodeSetup.nodeServiceConfig
                       ["override" "overrideDerivation"]))} > \
-             ${stateDir}/${name}.env.json
+             ${stateDir}/${name}/service-config.json
+
+          jq . ${__toFile "${name}-spec.json"
+                (__toJSON
+                   (removeAttrs nodeSetup.nodeSpec
+                      ["override" "overrideDerivation"]))} > \
+             ${stateDir}/${name}/spec.json
+
           ''
         ))}
 
@@ -140,7 +142,7 @@ EOF
     ## Wait for socket activation:
     #
     if test ! -v "CARDANO_NODE_SOCKET_PATH"
-    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/node-0.socket; fi
+    then export CARDANO_NODE_SOCKET_PATH=$PWD/${stateDir}/node-0/node.socket; fi
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
 
     echo 'Recording node pids..'
@@ -174,4 +176,4 @@ EOF
     fi
   '';
 
-in { inherit baseEnvConfig start stop profilesJSON profile; }
+in { inherit stateDir start stop profilesJSON profile; }

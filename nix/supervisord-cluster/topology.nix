@@ -59,8 +59,6 @@ in
 
   mkTopologyBash =
     ''
-  mkdir -p "${stateDir}/topologies"
-
   ## 0. Generate the overall topology, in the 'cardano-ops'/nixops style:
   #
   args=( --topology-output "${stateDir}/topology-nixops.json"
@@ -105,6 +103,7 @@ in
             --slurpfile topology "${topologyNixopsFile}"
             --null-input
           )
+     mkdir -p "${stateDir}/node-$i"
      jq 'def loopback_node_topology_from_nixops_topology($topo; $i):
            $topo.coreNodes[$i].producers                      as $producers
          | ($producers | map(ltrimstr("node-") | fromjson))   as $prod_indices
@@ -119,7 +118,7 @@ in
            };
 
          loopback_node_topology_from_nixops_topology($topology[0]; $i)
-        ' "''${args[@]}" > "${stateDir}/topologies/node-$i.json"
+        ' "''${args[@]}" > "${stateDir}/node-$i/topology.json"
   done
 
   ## 3. Generate the observer topology, which is fully connected:
@@ -127,6 +126,7 @@ in
   args=( --slurpfile topology "${topologyNixopsFile}"
          --null-input
        )
+  mkdir -p "${stateDir}/node-${toString n_hosts}"
   jq 'def loopback_observer_topology_from_nixops_topology($topo):
         [range(0; $topo.coreNodes | length)] as $prod_indices
       | { Producers:
@@ -140,6 +140,6 @@ in
         };
 
       loopback_observer_topology_from_nixops_topology($topology[0])
-     ' "''${args[@]}" > "${stateDir}/topologies/node-${toString n_hosts}.json"
+     ' "''${args[@]}" > "${stateDir}/node-${toString n_hosts}/topology.json"
     '';
 }

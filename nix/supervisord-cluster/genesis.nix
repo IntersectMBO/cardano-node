@@ -4,7 +4,6 @@
 ##
 , cacheDir
 , stateDir
-, baseEnvConfig
 , basePort
 ##
 , profile

@@ -2,21 +2,96 @@
 , lib
 , stateDir
 , basePort
-, baseEnvConfig
 , nodeSpecs                ## :: Map NodeName NodeSpec
+, profile
 , useCabalRun
+, defaultLogConfig
 }:
 
 with lib;
 
 let
+  ##
+  ## nodeSpecServiceConfig :: NodeSpec -> ServiceConfig
+  ##
+  nodeSpecServiceConfig =
+    { name, i, kind, port, isProducer }:
+    {
+      stateDir       = stateDir + "/${name}";
+      socketPath     = "${stateDir}/${name}/node.socket";
+      topology       = "${stateDir}/${name}/topology.json";
+      nodeConfigFile = "${stateDir}/${name}/config.json";
+      dbPrefix       = "db-${name}";
+      port           = nodeIndexToNodePort i;
+      nodeConfig =
+        lib.recursiveUpdate defaultLogConfig
+          ({
+            Protocol             = "Cardano";
+            RequiresNetworkMagic = "RequiresMagic";
+            ShelleyGenesisFile   = "../shelley/genesis.json";
+            ByronGenesisFile     =   "../byron/genesis.json";
+
+            hasEKG           = nodeIndexToEkgPort i;
+            hasPrometheus    = [ "127.0.0.1" (nodeIndexToPrometheusPort i) ];
+
+            TracingVerbosity = "NormalVerbosity";
+            minSeverity      = "Debug";
+
+            TraceMempool     = true;
+            TraceTxInbound   = true;
+
+            defaultScribes = [
+              [ "StdoutSK" "stdout" ]
+            ];
+            setupScribes =
+              [{
+                scKind     = "StdoutSK";
+                scName     = "stdout";
+                scFormat   = "ScJson";
+              }];
+            options = {
+              mapBackends = {
+                "cardano.node.resources" = [ "KatipBK" ];
+              };
+            };
+
+            LastKnownBlockVersion-Major = 0;
+            LastKnownBlockVersion-Minor = 0;
+            LastKnownBlockVersion-Alt   = 0;
+          } //
+          ({
+            shelley =
+              { TestShelleyHardForkAtEpoch = 0;
+              };
+            allegra =
+              { TestShelleyHardForkAtEpoch = 0;
+                TestAllegraHardForkAtEpoch = 0;
+              };
+            mary =
+              { TestShelleyHardForkAtEpoch = 0;
+                TestAllegraHardForkAtEpoch = 0;
+                TestMaryHardForkAtEpoch    = 0;
+              };
+          }).${profile.era});
+    } // optionalAttrs isProducer {
+      operationalCertificate = "${stateDir}/shelley/node-keys/node${toString i}.opcert";
+      kesKey                 = "${stateDir}/shelley/node-keys/node-kes${toString i}.skey";
+      vrfKey                 = "${stateDir}/shelley/node-keys/node-vrf${toString i}.skey";
+    } // optionalAttrs useCabalRun {
+      executable = "cabal run exe:cardano-node --";
+    };
+
+  nodeIndexToNodePort       = i: basePort +   0 + i;
+  nodeIndexToEkgPort        = i: basePort + 100 + i;
+  nodeIndexToPrometheusPort = i: basePort + 200 + i;
+
   ## Given an env config, evaluate it and produce the node service.
   ## Call the given function on this service.
   ##
-  ## mapNodeService :: (EnvConfig -> Service -> a) -> EnvConfig -> a
+  ## nodeServiceConfigService :: NodeServiceConfig -> NodeService
   ##
-  mapNodeService =
-    f: envConfig:
+  nodeServiceConfigService =
+    serviceConfig:
     let
     systemdCompat.options = {
       systemd.services = mkOption {};
@@ -28,95 +103,40 @@ let
       extra = {
         services.cardano-node = {
           enable = true;
-          inherit (envConfig) topology nodeConfig nodeConfigFile port dbPrefix socketPath;
-          inherit stateDir;
-        }
-        // optionalAttrs (__hasAttr "vrfKey" envConfig)
-        { inherit (envConfig) operationalCertificate kesKey vrfKey;
-        }
-        // optionalAttrs useCabalRun
-        { executable = "cabal run exe:cardano-node --";
-        };
+        } // serviceConfig;
       };
     in evalModules {
       prefix = [];
       modules = import ../nixos/module-list.nix ++ [ systemdCompat extra ];
       args = { inherit pkgs; };
     };
-    in f envConfig eval.config.services.cardano-node;
-
-  nodeIndexToEkgPort        = i: basePort + 100 + i;
-  nodeIndexToPrometheusPort = i: basePort + 200 + i;
+    in eval.config.services.cardano-node;
 
   ##
-  ## nodeSpecEnvConfig :: NodeSpec -> EnvConfig
+  ## nodeSetups :: Map NodeName (NodeSpec, NodeConfig, ServiceConfig, Script)
   ##
-  nodeSpecEnvConfig =
-    { name, i, kind, port, isProducer }:
-      recursiveUpdate
-        baseEnvConfig
-        ({ nodeConfig =
-             {
-               hasEKG           = nodeIndexToEkgPort i;
-               hasPrometheus    = [ "127.0.0.1" (nodeIndexToPrometheusPort i) ];
+  nodeSetups = mapAttrs
+    (_: nodeSpec:
+      let
+        nodeServiceConfig = nodeSpecServiceConfig nodeSpec;
+        nodeService = nodeServiceConfigService nodeServiceConfig;
+      in {
+        inherit nodeSpec nodeServiceConfig;
+        inherit (nodeService) nodeConfig;
 
-               TracingVerbosity = "NormalVerbosity";
-               minSeverity      = "Debug";
-
-               TraceMempool     = true;
-               TraceTxInbound   = true;
-
-               defaultScribes = [
-                 [ "StdoutSK" "stdout" ]
-               ];
-               setupScribes = [
-                 {
-                   scKind     = "StdoutSK";
-                   scName     = "stdout";
-                   scFormat   = "ScJson"; }
-               ];
-               options = {
-                 mapBackends = {
-                   "cardano.node.resources" = [ "KatipBK" ];
-                 };
-               };
-             };
-           dbPrefix       = "db-${name}";
-           nodeConfigFile = "${stateDir}/${name}.config.json";
-           port           = basePort + i;
-           socketPath     = "${stateDir}/${name}.socket";
-           topology       = "${stateDir}/topologies/${name}.json";
-         } // optionalAttrs isProducer {
-           operationalCertificate = "${stateDir}/shelley/node-keys/node${toString i}.opcert";
-           kesKey                 = "${stateDir}/shelley/node-keys/node-kes${toString i}.skey";
-           vrfKey                 = "${stateDir}/shelley/node-keys/node-vrf${toString i}.skey";
-         });
-
-  ##
-  ## envConfigNodeSetup :: EnvConfig -> (Script, NodeConfig)
-  ##
-  envConfigNodeSetup =
-    mapNodeService
-      (envConfig: nodeService:
-        {
-          inherit envConfig;
-          inherit (nodeService) nodeConfig;
-          startupScript =
-            pkgs.writeScript "cardano-node"
+        startupScript =
+          pkgs.writeScript "cardano-node"
             ''
             #!${pkgs.stdenv.shell}
             ${nodeService.script}
             '';
-        });
-
-  ##
-  ## nodeSetups :: Map NodeName (Script, NodeConfig)
-  ##
-  nodeSetups = mapAttrs
-                 (_: spec: envConfigNodeSetup (nodeSpecEnvConfig spec))
-                 nodeSpecs;
+      })
+    nodeSpecs;
 in
 {
   inherit nodeSetups;
-  inherit nodeIndexToEkgPort nodeIndexToPrometheusPort;
+  inherit
+    nodeIndexToNodePort
+    nodeIndexToEkgPort
+    nodeIndexToPrometheusPort;
 }

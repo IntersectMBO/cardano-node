@@ -17,8 +17,8 @@ let
   nodeSpecSupervisorProgram = { name, i, kind, port, isProducer }:
     nameValuePair "program:${kind}-${toString i}" {
       command        = "${nodeSetups."${name}".startupScript}";
-      stdout_logfile = "${stateDir}/${name}.stdout";
-      stderr_logfile = "${stateDir}/${name}.stderr";
+      stdout_logfile = "${stateDir}/${name}/stdout";
+      stderr_logfile = "${stateDir}/${name}/stderr";
     };
 
   ##

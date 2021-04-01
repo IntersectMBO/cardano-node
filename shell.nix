@@ -97,7 +97,7 @@ let
       source <(cardano-node --bash-completion-script cardano-node)
 
       # Socket path default to first BFT node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.baseEnvConfig.stateDir}/bft0.socket
+      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.stateDir}/node-0.socket
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
         export CARDANO_NODE_SOCKET_PATH="$PWD/state-node-${customConfig.network}/node.socket"
