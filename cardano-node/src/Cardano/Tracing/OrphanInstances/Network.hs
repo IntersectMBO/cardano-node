@@ -73,7 +73,8 @@ import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInboun
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 import           Ouroboros.Network.Diffusion (TraceLocalRootPeers, TracePublicRootPeers,
                    TracePeerSelection (..), PeerSelectionActionsTrace (..),
-                   ConnectionManagerTrace (..), ConnectionHandlerTrace (..))
+                   ConnectionManagerTrace (..), ConnectionHandlerTrace (..),
+                   PeerSelectionCounters (..))
 import           Ouroboros.Network.Server2 (ServerTrace)
 import qualified Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace)
@@ -390,6 +391,10 @@ instance HasSeverityAnnotation (PeerSelectionActionsTrace Socket.SockAddr) where
      PeerMonitoringError {}     -> Error
      PeerMonitoringResult {}    -> Debug
 
+instance HasPrivacyAnnotation PeerSelectionCounters
+instance HasSeverityAnnotation PeerSelectionCounters where
+  getSeverityAnnotation _ = Info
+
 instance HasPrivacyAnnotation (ConnectionManagerTrace addr connTrace)
 instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
   getSeverityAnnotation ev =
@@ -420,7 +425,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionCleanup {}        -> Debug
       TrConnectionTimeWait {}       -> Debug
       TrConnectionTimeWaitDone {}   -> Debug
-      TrDebugState {}               -> Debug
+      TrConnectionManagerCounters {} -> Info
 
 instance HasPrivacyAnnotation (ServerTrace addr)
 instance HasSeverityAnnotation (ServerTrace addr) where
@@ -580,6 +585,11 @@ instance HasTextFormatter (DebugPeerSelection Socket.SockAddr conn) where
 instance Transformable Text IO (PeerSelectionActionsTrace Socket.SockAddr) where
   trTransformer = trStructuredText
 instance HasTextFormatter (PeerSelectionActionsTrace Socket.SockAddr) where
+  formatText a _ = pack (show a)
+
+instance Transformable Text IO PeerSelectionCounters where
+  trTransformer = trStructuredText
+instance HasTextFormatter PeerSelectionCounters where
   formatText a _ = pack (show a)
 
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
@@ -1194,6 +1204,11 @@ instance ToObject (PeerSelectionActionsTrace Socket.SockAddr) where
     mkObject [ "kind" .= String "PeerSelectionAction"
              , "event" .= show ev ]
 
+instance ToObject PeerSelectionCounters where
+  toObject _verb ev =
+    mkObject [ "kind" .= String "PeerSelectionCounters"
+             , "event" .= show ev ]
+
 instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
       => ToObject (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
   toObject verb ev =
@@ -1293,7 +1308,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
         mkObject
           [ "kind" .= String "PruneConnections"
           , "peers" .= toJSON (toObject verb `map` peers)
-          ] 
+          ]
       TrConnectionCleanup connId ->
         mkObject
           [ "kind" .= String "ConnectionCleanup"
@@ -1309,10 +1324,10 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
           [ "kind" .= String "ConnectionTimeWaitDone"
           , "connectionId" .= toObject verb connId
           ]
-      TrDebugState cmState ->
+      TrConnectionManagerCounters cmCounters ->
         mkObject
-          [ "kind" .= String "DebugState"
-          , "state" .= String (pack . show $ cmState)
+          [ "kind" .= String "ConnectionManagerCounters"
+          , "state" .= String (pack . show $ cmCounters)
           ]
 
 
