@@ -1581,8 +1581,7 @@ CARDANO_NODE_SOCKET_PATH=example/node1/node.sock \
     cardano-cli transaction submit \
       --shelley-mode \
       --tx-file example/tx1.tx \
-      --testnet-magic 42 \
-      --shelley-mode
+      --testnet-magic 42
 ```
 
 If we now go look at the node logs (or stdout) for node1 we should see that
