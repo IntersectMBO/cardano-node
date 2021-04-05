@@ -11,6 +11,16 @@
 with lib;
 
 let
+
+  ## The AWS node is started with:
+  ## cardano-node run
+  ## --config /nix/store/nywkyj205skkqy27ip3p0678977kxq0b-config-1-0.json
+  ## --database-path /var/lib/cardano-node/db-bench-dense-k51-10ep-2000kU-500kD-6600esec
+  ## --topology /nix/store/sb8gn8wb4s8m7a4pmkb6hvlr4fhy5vn2-topology.yaml
+  ## --shelley-vrf-key /var/lib/keys/cardano-node-vrf-signing
+  ## --shelley-kes-key /var/lib/keys/cardano-node-kes-signing
+  ## --shelley-operational-certificate /var/lib/keys/cardano-node-operational-cert
+  ## +RTS -l-agu -t --machine-readable -RTS +RTS -N2 -A16m -qg -qb -M14336.000000M -RTS
   ##
   ## nodeSpecServiceConfig :: NodeSpec -> ServiceConfig
   ##
@@ -18,10 +28,10 @@ let
     { name, i, kind, port, isProducer }:
     {
       stateDir       = stateDir + "/${name}";
-      socketPath     = "${stateDir}/${name}/node.socket";
-      topology       = "${stateDir}/${name}/topology.json";
-      nodeConfigFile = "${stateDir}/${name}/config.json";
-      dbPrefix       = "db-${name}";
+      socketPath     = "node.socket";
+      topology       = "topology.json";
+      nodeConfigFile = "config.json";
+      dbPrefix       = "db";
       port           = nodeIndexToNodePort i;
       nodeConfig =
         lib.recursiveUpdate defaultLogConfig
@@ -74,9 +84,9 @@ let
               };
           }).${profile.era});
     } // optionalAttrs isProducer {
-      operationalCertificate = "${stateDir}/shelley/node-keys/node${toString i}.opcert";
-      kesKey                 = "${stateDir}/shelley/node-keys/node-kes${toString i}.skey";
-      vrfKey                 = "${stateDir}/shelley/node-keys/node-vrf${toString i}.skey";
+      operationalCertificate = "../shelley/node-keys/node${toString i}.opcert";
+      kesKey                 = "../shelley/node-keys/node-kes${toString i}.skey";
+      vrfKey                 = "../shelley/node-keys/node-vrf${toString i}.skey";
     } // optionalAttrs useCabalRun {
       executable = "cabal run exe:cardano-node --";
     };
@@ -121,8 +131,7 @@ let
         nodeServiceConfig = nodeSpecServiceConfig nodeSpec;
         nodeService = nodeServiceConfigService nodeServiceConfig;
       in {
-        inherit nodeSpec nodeServiceConfig;
-        inherit (nodeService) nodeConfig;
+        inherit nodeSpec nodeServiceConfig nodeService;
 
         startupScript =
           pkgs.writeScript "cardano-node"

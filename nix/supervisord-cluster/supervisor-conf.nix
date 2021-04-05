@@ -2,7 +2,6 @@
 , lib
 , stateDir
 , basePort
-, nodeSpecs                ## :: Map NodeName NodeSpec
 , nodeSetups               ## :: Map NodeName NodeSetup
   ## Last-moment overrides:
 , extraSupervisorConfig
@@ -12,23 +11,28 @@ with lib;
 
 let
   ##
-  ## nodeSpecSupervisorProgram :: NodeSpec -> SupervisorConfSection
+  ## nodeSetupSupervisorProgram :: NodeSpec -> SupervisorConfSection
   ##
-  nodeSpecSupervisorProgram = { name, i, kind, port, isProducer }:
-    nameValuePair "program:${kind}-${toString i}" {
-      command        = "${nodeSetups."${name}".startupScript}";
-      stdout_logfile = "${stateDir}/${name}/stdout";
-      stderr_logfile = "${stateDir}/${name}/stderr";
+  ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
+  ##
+  nodeSetupSupervisorProgram = { nodeSpec, nodeService, startupScript, ... }:
+    nameValuePair "program:${nodeSpec.name}" {
+      directory      = "${nodeService.stateDir}";
+      command        = "${startupScript}";
+      stdout_logfile = "${nodeService.stateDir}/stdout";
+      stderr_logfile = "${nodeService.stateDir}/stderr";
     };
 
   ##
   ## supervisorConf :: SupervisorConf
   ##
+  ## Refer to: http://supervisord.org/configuration.html
+  ##
   supervisorConf =
     {
       supervisord = {
-        logfile = "${stateDir}/supervisord.log";
-        pidfile = "${stateDir}/supervisord.pid";
+        logfile = "${stateDir}/supervisor/supervisord.log";
+        pidfile = "${stateDir}/supervisor/supervisord.pid";
         strip_ansi = true;
       };
       supervisorctl = {};
@@ -41,7 +45,7 @@ let
     }
     //
     listToAttrs
-      (mapAttrsToList (_: nodeSpecSupervisorProgram) nodeSpecs)
+      (mapAttrsToList (_: nodeSetupSupervisorProgram) nodeSetups)
     //
     {
       "program:webserver" = {

@@ -63,8 +63,7 @@ let
     };
 
   supervisorConf = pkgs.callPackage ./supervisor-conf.nix
-    { inherit (topology) nodeSpecs;
-      inherit (node-setups) nodeSetups;
+    { inherit (node-setups) nodeSetups;
       inherit
         pkgs lib stateDir
         basePort
@@ -103,7 +102,7 @@ EOF
       ' ${profileJSONFile} --raw-output
 
     rm -rf     ${stateDir}
-    mkdir -p ./${stateDir}
+    mkdir -p ./${stateDir}/supervisor
 
     PATH=$PATH:${path}
     ${defCardanoExesBash}
@@ -117,7 +116,7 @@ EOF
         (name: nodeSetup:
           ''
           jq . ${__toFile "${name}-node-config.json"
-            (__toJSON nodeSetup.nodeConfig)} > \
+            (__toJSON nodeSetup.nodeService.nodeConfig)} > \
              ${stateDir}/${name}/config.json
 
           jq . ${__toFile "${name}-service-config.json"
@@ -135,9 +134,9 @@ EOF
           ''
         ))}
 
+    cp ${supervisorConf} ${stateDir}/supervisor/supervisord.conf
     ${pkgs.python3Packages.supervisor}/bin/supervisord \
-        --config ${__trace "supervisorConfig: ${supervisorConf} "
-                   supervisorConf} $@
+        --config ${supervisorConf} $@
 
     ## Wait for socket activation:
     #
@@ -146,10 +145,10 @@ EOF
     while [ ! -S $CARDANO_NODE_SOCKET_PATH ]; do echo "Waiting 5 seconds for bft node to start"; sleep 5; done
 
     echo 'Recording node pids..'
-    ${pkgs.psmisc}/bin/pstree -Ap $(cat ${stateDir}/supervisord.pid) |
+    ${pkgs.psmisc}/bin/pstree -Ap $(cat ${stateDir}/supervisor/supervisord.pid) |
     grep 'cabal.*cardano-node' |
     sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/' \
-      > ${stateDir}/cardano-node.pids
+      > ${stateDir}/supervisor/cardano-node.pids
 
     ${optionalString (!profile.genesis.single_shot)
      ''
@@ -166,11 +165,11 @@ EOF
   stop = pkgs.writeScriptBin "stop-cluster" ''
     set -euo pipefail
     ${pkgs.python3Packages.supervisor}/bin/supervisorctl stop all
-    if [ -f ${stateDir}/supervisord.pid ]
+    if [ -f ${stateDir}/supervisor/supervisord.pid ]
     then
-      kill $(<${stateDir}/supervisord.pid) $(<${stateDir}/cardano-node.pids)
+      kill $(<${stateDir}/supervisor/supervisord.pid) $(<${stateDir}/supervisor/cardano-node.pids)
       echo "Cluster terminated!"
-      rm -f ${stateDir}/supervisord.pid ${stateDir}/cardano-node.pids
+      rm -f ${stateDir}/supervisor/supervisord.pid ${stateDir}/supervisor/cardano-node.pids
     else
       echo "Cluster is not running!"
     fi
