@@ -68,8 +68,7 @@ pkgs: _: with pkgs;
   inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
   inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
 
-  mkCluster = cfg: callPackage ./supervisord-cluster
-                     (lib.traceValSeqN 2 cfg);
+  mkCluster = cfg: callPackage ./supervisord-cluster cfg;
   cardanolib-py = callPackage ./cardanolib-py {};
 
   clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };

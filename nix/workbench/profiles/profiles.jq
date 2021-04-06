@@ -57,11 +57,11 @@
 ## ..which simply calls ./profiles.nix with {} params.
 ##
 
-include "topology"    { search: "profiles" };
-include "defaults"    { search: "profiles" };
-include "adhoc"       { search: "profiles" };
-include "variants"    { search: "profiles" };
-include "derived"     { search: "profiles" };
+include "topology"    { search: "." };
+include "defaults"    { search: "." };
+include "adhoc"       { search: "." };
+include "variants"    { search: "." };
+include "derived"     { search: "." };
 
 def profiles($era; $mcompo; $topo; $extra_profiles):
     ($mcompo // topology_composition($topo // {}) // {}) as $compo

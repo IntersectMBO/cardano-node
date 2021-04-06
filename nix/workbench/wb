@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC1090,SC2046,SC2206,SC2207
+
+set -euo pipefail
+
+global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
+global_runsdir=${global_runsdir:-$(realpath "$global_basedir/../../runs")}
+global_cachedir="$HOME"/.cache/cardano-workbench
+
+. "$global_basedir"/lib.sh
+. "$global_basedir"/profile.sh
+. "$global_basedir"/genesis.sh
+. "$global_basedir"/topology.sh
+. "$global_basedir"/run.sh
+
+. "$global_basedir"/local.sh
+
+usage_main() {
+     __usage "OP" "Main OPs" <<EOF
+    profile    (p)        Cluster profile operations.  Default subop is 'list'
+    genesis    (g)        Genesis
+    topology   (t)        Topology generation
+    run        (r)        Managing cluster runs.  Default subop is 'list'
+
+    record     (c)        Re-enter the Nix-generated artifacts into the flawed world
+
+    local      (l)        Managing local cluster
+
+  Options:
+
+    --cache-dir DIR       Set the cache directory;  Defaults to $global_cachedir
+    --trace / --debug     set -x
+    --help                This short help.
+    --help-full           Extended help.
+EOF
+}
+
+usage_extra() {
+    cat >&2 <<EOF
+  Other OPs:
+
+    call ARGS..           Call internal functions with arguments.
+
+  Extra options:
+
+    --cls                 Clear screen, before acting further.
+    --runsdir DIR         Set the runs directory.  Defaults to $global_runsdir
+
+EOF
+}
+
+while test $# -gt 0
+do case "$1" in
+       --cachedir )
+           global_cachedir=$2; shift;;
+       --runsdir )
+           global_runsdir=$2; shift;;
+       --cls )
+           echo -en "\ec">&2;;
+       --trace | --debug )
+           set -x;;
+       --help )
+           usage_main; exit 1;;
+       --help-full | --help-all | --help-extra )
+           usage_main; usage_extra; exit 1;;
+       * ) break;; esac; shift; done
+
+main() {
+    local op=${1:?$(usage_main)}; shift
+
+    case "${op}" in
+        profile | profiles | prof | ps | p )
+            profile "$@";;
+        genesis | g )
+            genesis "$@";;
+        topology | topo | t )
+            topology "$@";;
+        run | runs | r )
+            run "$@";;
+        local | loc | l )
+            local_ "$@";;
+        call )
+            "$@";;
+        * ) usage_main; exit 1;; esac
+}
+
+main "$@"

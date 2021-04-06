@@ -10,5 +10,4 @@ with haskell-nix.haskellLib;
   inherit (extra)
     recRecurseIntoAttrs
     collectChecks;
-
 }

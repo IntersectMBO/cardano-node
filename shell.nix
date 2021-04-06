@@ -1,13 +1,18 @@
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
 { config ? {}
-, autoStartCluster ? false
 , sourcesOverride ? {}
 , withHoogle ? true
 , clusterProfile ? "default-mary"
 , customConfig ? { profileName = clusterProfile; }
+
+, autoStartCluster ? false
+, useCabalRun      ? false
+, workbenchDevMode ? false
+, workbenchConfig ?
+  { inherit useCabalRun workbenchDevMode; }
 , pkgs ? import ./nix {
-    inherit config sourcesOverride;
+    inherit config sourcesOverride workbenchConfig;
   }
 }:
 with pkgs;
@@ -17,8 +22,8 @@ let
   # NOTE: due to some cabal limitation,
   #  you have to remove all `source-repository-package` entries from cabal.project
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
-  clusterCabal = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = true; });
-  clusterNix   = mkCluster (lib.recursiveUpdate customConfig { useCabalRun = false; });
+  clusterCabal = mkCluster (lib.recursiveUpdate customConfig (workbenchConfig // { useCabalRun = true; }));
+  clusterNix   = mkCluster (lib.recursiveUpdate customConfig (workbenchConfig // { useCabalRun = false; }));
   shell = cardanoNodeHaskellPackages.shellFor {
     name = "cabal-dev-shell";
 
@@ -44,6 +49,11 @@ let
       tmux
       pkgs.git
     ]
+    ## Workbench's main script is called directly in dev mode.
+    ++ lib.optionals (!workbenchDevMode)
+    [
+      pkgs.workbench.workbench
+    ]
     ## Local cluster not available on Darwin,
     ## because psmisc fails to build on Big Sur.
     ++ lib.optionals (!stdenv.isDarwin)
@@ -57,17 +67,25 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo "Setting 'cabal.project' for local builds.."
+      echo "workbench:  setting 'cabal.project' for local builds.."
       ./scripts/cabal-inside-nix-shell.sh
 
+      ${pkgs.workbench.shellHook}
+
       function atexit() {
-          echo "Reverting 'cabal.project' to the index version.."
+          echo "workbench:  reverting 'cabal.project' to the index version.."
           ./scripts/cabal-inside-nix-shell.sh --restore
+
+          ${lib.optionalString autoStartCluster ''
+          if wb local supervisord-running
+          then echo "workbench:  stopping cluster (because 'autoStartCluster' implies this):"
+               stop-cluster
+          fi''}
       }
       trap atexit EXIT
 
       ${lib.optionalString autoStartCluster ''
-      echo "Starting cluster (because 'auto-start-cluster' is true):"
+      echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
       start-cluster
       ''}
     '';
@@ -87,6 +105,7 @@ let
       clusterNix.start
       clusterNix.stop
       cardanolib-py
+      pkgs.workbench.workbench
     ];
     shellHook = ''
       echo "DevOps Tools" \
@@ -96,8 +115,9 @@ let
       source <(cardano-cli --bash-completion-script cardano-cli)
       source <(cardano-node --bash-completion-script cardano-node)
 
-      # Socket path default to first BFT node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$PWD/${clusterNix.stateDir}/node-0.socket
+      # Socket path default to first node launched by "start-cluster":
+      export CARDANO_NODE_SOCKET_PATH=$(wb local get-node-socket-path ${clusterNix.stateDir})
+
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
         export CARDANO_NODE_SOCKET_PATH="$PWD/state-node-${customConfig.network}/node.socket"
@@ -120,7 +140,7 @@ let
       "
 
       ${lib.optionalString autoStartCluster ''
-      echo "Starting cluster (because 'auto-start-cluster' is true):"
+      echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
       start-cluster
       ''}
     '';

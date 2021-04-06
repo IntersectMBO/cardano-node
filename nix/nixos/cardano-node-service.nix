@@ -10,11 +10,25 @@ let
   envConfig = cfg.environments.${cfg.environment};
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg: i: let
-    instanceConfig = cfg.nodeConfig // (optionalAttrs (cfg.nodeConfig ? hasEKG) {
-      hasEKG = cfg.nodeConfig.hasEKG + i;
-    }) // (optionalAttrs (cfg.nodeConfig ? hasPrometheus) {
-      hasPrometheus = map (n: if isInt n then n + i else n) cfg.nodeConfig.hasPrometheus;
-    });
+    instanceConfig =
+      cfg.nodeConfig
+      //
+      (optionalAttrs (cfg.nodeConfig ? hasEKG)
+        {
+          hasEKG = cfg.nodeConfig.hasEKG + i;
+        })
+      //
+      (optionalAttrs (cfg.nodeConfig ? hasPrometheus)
+        {
+          hasPrometheus = map (n: if isInt n then n + i else n) cfg.nodeConfig.hasPrometheus;
+        })
+      //
+      (foldl' (x: y: x // y) {}
+        (mapAttrsToList
+          (era: epoch:
+            { "Test${era}HardForkAtEpoch" = epoch;
+            })
+          cfg.forceHardForks));
     realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml"
       else if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
@@ -381,6 +395,14 @@ in {
         type = types.nullOr types.str;
         default = null;
         description = ''Actual configuration file (shell expression).'';
+      };
+
+      forceHardForks = mkOption {
+        type = types.attrs;
+        default = {};
+        description = ''
+          A developer-oriented dictionary option to force hard forks for given eras at given epochs.  Maps capitalised era names (Shelley, Allegra, Mary, etc.) to hard fork epoch number.
+          '';
       };
 
       extraArgs = mkOption {
