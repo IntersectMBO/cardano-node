@@ -37,7 +37,11 @@ Documentation for building the node can be found `here <https://docs.cardano.org
 Linux Executable
 ==================
 
-You can download the latest version of ``cardano-node`` and ``cardano-cli`` `here <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-linux/latest-finished>`_.
+You can download the latest version of ``cardano-node`` and ``cardano-cli``:
+
+* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-linux/latest-finished>`_
+* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished>`_
+* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-macos/latest-finished>`_
 
 Windows Executable
 ==================
