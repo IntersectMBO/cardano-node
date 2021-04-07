@@ -37,33 +37,32 @@ module Cardano.Api.Certificate (
 
 import           Prelude
 
-import           Data.Maybe
 import           Data.ByteString (ByteString)
+import qualified Data.Foldable as Foldable
+import qualified Data.Map.Strict as Map
+import           Data.Maybe
+import qualified Data.Sequence.Strict as Seq
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Data.Sequence.Strict as Seq
-import qualified Data.Foldable as Foldable
 
 import           Data.IP (IPv4, IPv6)
 import           Network.Socket (PortNumber)
 
-import           Cardano.Slotting.Slot (EpochNo (..))
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
-import           Shelley.Spec.Ledger.BaseTypes
-                   (maybeToStrictMaybe, strictMaybeToMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Coin as Shelley (toDeltaCoin)
-import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
+import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 import           Cardano.Api.Address
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
@@ -127,13 +126,13 @@ data MIRTarget =
      -- a mapping of stake credentials to lovelace.
      StakeAddressesMIR [(StakeCredential, Lovelace)]
 
-     -- | Use 'SendToOppositePotMIR' to make the target of a 'MIRCertificate'
-     -- the opposite pot. Specifically, if the 'MIRPot' in a 'MIRCertificate'
-     -- is 'ReservesMIR', then using 'SendToOppositePotMIR' will transfer
-     -- lovelace from the reserves to the treasury. Otherwise, if it is
-     -- 'TreasuryMIR', then using 'SendToOppositePotMIR' will transfer
-     -- lovelace from the treasury to the reserves.
-   | SendToOppositePotMIR Lovelace
+     -- | Use 'SendToReservesMIR' to make the target of a 'MIRCertificate'
+     -- the reserves pot.
+   | SendToReservesMIR Lovelace
+
+     -- | Use 'SendToTreasuryMIR' to make the target of a 'MIRCertificate'
+     -- the treasury pot.
+   | SendToTreasuryMIR Lovelace
   deriving stock (Eq, Show)
 
 -- ----------------------------------------------------------------------------
@@ -262,11 +261,25 @@ toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
            [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
            | (sc, v) <- amounts ])
 
-toShelleyCertificate (MIRCertificate mirpot (SendToOppositePotMIR amount)) =
-    Shelley.DCertMir $
-      Shelley.MIRCert
-        mirpot
-        (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+toShelleyCertificate (MIRCertificate mirPot (SendToReservesMIR amount)) =
+    case mirPot of
+      TreasuryMIR ->
+        Shelley.DCertMir $
+          Shelley.MIRCert
+            TreasuryMIR
+            (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+      ReservesMIR ->
+        error "toShelleyCertificate: Incorrect MIRPot specified. Expected TreasuryMIR but got ReservesMIR"
+
+toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
+    case mirPot of
+      ReservesMIR ->
+        Shelley.DCertMir $
+          Shelley.MIRCert
+            ReservesMIR
+            (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+      TreasuryMIR ->
+        error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
 
 
 fromShelleyCertificate :: Shelley.DCert StandardCrypto -> Certificate
@@ -308,13 +321,15 @@ fromShelleyCertificate (Shelley.DCertMir
         [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
         | (sc, v) <- Map.toList amounts ]
       )
+fromShelleyCertificate (Shelley.DCertMir
+                         (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) =
+    MIRCertificate ReservesMIR
+      (SendToTreasuryMIR $ fromShelleyLovelace amount)
 
 fromShelleyCertificate (Shelley.DCertMir
-                         (Shelley.MIRCert mirpot (Shelley.SendToOppositePotMIR amount))) =
-    MIRCertificate
-      mirpot
-      (SendToOppositePotMIR $ fromShelleyLovelace amount)
-
+                         (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) =
+    MIRCertificate TreasuryMIR
+      (SendToReservesMIR $ fromShelleyLovelace amount)
 
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams StandardCrypto
 toShelleyPoolParams StakePoolParameters {

@@ -722,7 +722,7 @@ pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
  asum
    [ subParser "create-mir-certificate"
-       (Opt.info pMIRCertificate $
+       (Opt.info (pMIRPayStakeAddresses <|> mirCertParsers) $
          Opt.progDesc "Create an MIR (Move Instantaneous Rewards) certificate")
    , subParser "create-genesis-key-delegation-certificate"
        (Opt.info pGovernanceGenesisKeyDelegationCertificate $
@@ -732,12 +732,36 @@ pGovernanceCmd =
          Opt.progDesc "Create an update proposal")
    ]
   where
-    pMIRCertificate :: Parser GovernanceCmd
-    pMIRCertificate = GovernanceMIRCertificate
-                        <$> pMIRPot
-                        <*> some pStakeAddress
-                        <*> some pRewardAmt
-                        <*> pOutputFile
+    mirCertParsers :: Parser GovernanceCmd
+    mirCertParsers = asum
+      [ subParser "stake-addresses" (Opt.info pMIRPayStakeAddresses $
+          Opt.progDesc "Create an MIR certificate to pay stake addresses")
+      , subParser "transfer-to-treasury" (Opt.info pMIRTransferToTreasury $
+          Opt.progDesc "Create an MIR certificate to transfer from the reserves pot\
+                       \ to the treasury pot")
+      , subParser "transfer-to-rewards" (Opt.info pMIRTransferToReserves $
+          Opt.progDesc "Create an MIR certificate to transfer from the treasury pot\
+                       \ to the reserves pot")
+      ]
+
+    pMIRPayStakeAddresses :: Parser GovernanceCmd
+    pMIRPayStakeAddresses = GovernanceMIRPayStakeAddressesCertificate
+                              <$> pMIRPot
+                              <*> some pStakeAddress
+                              <*> some pRewardAmt
+                              <*> pOutputFile
+
+    pMIRTransferToTreasury :: Parser GovernanceCmd
+    pMIRTransferToTreasury = GovernanceMIRTransfer
+                               <$> pTransferAmt
+                               <*> pOutputFile
+                               <*> pure TransferToTreasury
+
+    pMIRTransferToReserves :: Parser GovernanceCmd
+    pMIRTransferToReserves = GovernanceMIRTransfer
+                               <$> pTransferAmt
+                               <*> pOutputFile
+                               <*> pure TransferToReserves
 
     pGovernanceGenesisKeyDelegationCertificate :: Parser GovernanceCmd
     pGovernanceGenesisKeyDelegationCertificate =
@@ -764,6 +788,14 @@ pGovernanceCmd =
                         <*> pEpochNoUpdateProp
                         <*> some pGenesisVerificationKeyFile
                         <*> pShelleyProtocolParametersUpdate
+
+pTransferAmt :: Parser Lovelace
+pTransferAmt =
+    Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "transfer"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "The amount to transfer."
+      )
 
 pRewardAmt :: Parser Lovelace
 pRewardAmt =

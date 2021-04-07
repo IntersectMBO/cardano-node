@@ -37,7 +37,7 @@ import           System.Win32.File
 #endif
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                     mkLOMeta)
+                   mkLOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -46,10 +46,10 @@ import           Paths_cardano_node (version)
 import qualified Cardano.Crypto.Libsodium as Crypto
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
-                     createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
+                   createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                     PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
-                     makeNodeConfiguration, parseNodeConfigurationFP)
+                   PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
+                   makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
@@ -58,8 +58,8 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                     DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode,
-                     RunNodeArgs (..), StdRunNodeArgs (..))
+                   DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
+                   StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -67,7 +67,7 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                     gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
+                   gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
@@ -374,7 +374,7 @@ createDiffusionArguments
   -> Maybe (SocketOrSocketInfo Socket AddrInfo)
    -- ^ Either a socket bound to IPv6 address provided by systemd or IPv6
    -- address to bind to for NodeToNode communication.
-  -> SocketOrSocketInfo Socket SocketPath
+  -> Maybe (SocketOrSocketInfo Socket SocketPath)
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
   -- NodeToClient communication.
   -> DiffusionMode
@@ -383,7 +383,7 @@ createDiffusionArguments
   -> DiffusionArguments
 createDiffusionArguments publicIPv4SocketsOrAddrs
                          publicIPv6SocketsOrAddrs
-                         localSocketOrPath
+                         mLocalSocketOrPath
                          diffusionMode
                          ipProducers dnsProducers
                          =
@@ -392,10 +392,8 @@ createDiffusionArguments publicIPv4SocketsOrAddrs
     -- merged into `ouroboros-networ`.
     { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPv4SocketsOrAddrs
     , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPv6SocketsOrAddrs
-    , daLocalAddress = Just -- TODO allow expressing the Nothing case in the config
-                     .  fmap unSocketPath
-                     . eitherSocketOrSocketInfo
-                     $ localSocketOrPath
+    , daLocalAddress = mLocalSocketOrPath >>= return . fmap unSocketPath
+                                                     . eitherSocketOrSocketInfo
     , daIpProducers  = ipProducers
     , daDnsProducers = dnsProducers
     -- TODO: these limits are arbitrary at the moment;
