@@ -73,6 +73,11 @@ instance LogFormatting Int where
   forHuman i     = (pack . show) i
   asMetrics i    = [IntM Nothing (fromIntegral i)]
 
+instance LogFormatting Integer where
+  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
+  forHuman i     = (pack . show) i
+  asMetrics i    = [IntM Nothing i]
+
 data Metric
   -- | An integer metric.
   -- If a text is given it is appended as last element to the namespace

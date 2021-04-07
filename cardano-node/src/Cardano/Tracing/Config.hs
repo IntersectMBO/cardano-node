@@ -4,7 +4,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-
 module Cardano.Tracing.Config
   ( TraceOptions (..)
   , TraceSelection (..)
@@ -19,7 +18,6 @@ import           Data.Aeson.Types (Parser)
 import           Data.Text (pack)
 
 import           Cardano.BM.Tracing (TracingVerbosity (..))
-
 import           Cardano.Node.Orphans ()
 
 
