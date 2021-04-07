@@ -57,8 +57,8 @@ chainDBMachineTracer ::
   => Trace IO FormattedMessage
   -> IO (Trace IO (ChainDB.TraceEvent blk))
 chainDBMachineTracer trBase = do
-    tr <- humanFormatter True "cardano" trBase
-    let cdbmTrNs = appendName "chainDB" $ appendName "node" tr
+    tr <- humanFormatter True "Cardano" trBase
+    let cdbmTrNs = appendName "ChainDB" $ appendName "Node" tr
     pure $ withNamesChainDB $ withSeverityChainDB cdbmTrNs
 
 docTracers :: IO ()
@@ -88,10 +88,11 @@ mkDispatchTracers
   -> Old.Trace IO Text
   -> NodeKernelData blk
   -> Maybe EKGDirect
+  -> Trace IO FormattedMessage
   -> IO (Tracers peer localPeer blk)
-mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect = do
-  trBase <- standardTracer Nothing
+mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect trBase = do
   cdbmTr <- chainDBMachineTracer trBase
+--  ipST   <- ipSubscriptionTracer trBase
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -138,5 +139,5 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     , diffusionInitializationTracer = nullTracer
   }
 
-mkDispatchTracers blockConfig tOpts tr nodeKern ekgDirect =
+mkDispatchTracers blockConfig tOpts tr nodeKern ekgDirect _ =
   mkTracers blockConfig tOpts tr nodeKern ekgDirect
