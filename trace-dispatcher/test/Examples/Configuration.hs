@@ -26,7 +26,7 @@ instance LogFormatting TestMessage where
 
 testMessageDocumented :: Documented TestMessage
 testMessageDocumented = Documented [
-  DocMsg (TestMessage "dummy") "text" "just a text"
+  DocMsg (TestMessage "dummy") ["text"] "just a text"
   ]
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage)

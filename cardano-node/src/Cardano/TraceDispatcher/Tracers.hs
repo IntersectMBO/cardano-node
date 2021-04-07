@@ -18,6 +18,7 @@ import qualified Data.Text.IO as T
 
 import           Cardano.Logging
 import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
+import           Cardano.TraceDispatcher.ChainDBTracer.Combinators
 import           Cardano.TraceDispatcher.ChainDBTracer.Docu
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
@@ -53,19 +54,20 @@ chainDBMachineTracer ::
   , LedgerSupportsProtocol blk
   , InspectLedger blk
   )
-  => IO (Trace IO (ChainDB.TraceEvent blk))
-chainDBMachineTracer = do
-    trBase <- standardTracer Nothing
+  => Trace IO FormattedMessage
+  -> IO (Trace IO (ChainDB.TraceEvent blk))
+chainDBMachineTracer trBase = do
     tr <- humanFormatter True "cardano" trBase
     let cdbmTrNs = appendName "chainDB" $ appendName "node" tr
-    pure cdbmTrNs
+    pure $ withNamesChainDB $ withSeverityChainDB cdbmTrNs
 
 docTracers :: IO ()
 docTracers = do
-  cdbmTr <- chainDBMachineTracer
-  bl1  <- documentMarkdown
-            (docChainDBTraceEvent :: Documented (ChainDB.TraceEvent ByronBlock))
-            [cdbmTr]
+  trBase <- standardTracer Nothing
+  cdbmTr <- chainDBMachineTracer trBase
+  bl1    <- documentMarkdown
+              (docChainDBTraceEvent :: Documented (ChainDB.TraceEvent ByronBlock))
+              [cdbmTr]
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" (buildersToText bl1)
 
 
@@ -88,7 +90,8 @@ mkDispatchTracers
   -> Maybe EKGDirect
   -> IO (Tracers peer localPeer blk)
 mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect = do
-  cdbmTr <- chainDBMachineTracer
+  trBase <- standardTracer Nothing
+  cdbmTr <- chainDBMachineTracer trBase
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)

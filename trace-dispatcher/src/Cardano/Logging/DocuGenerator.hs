@@ -32,7 +32,7 @@ documentTracers (Documented documented) tracers = do
     docTrace docIdx docColl (Trace tr) =
       mapM_
         (\ (DocMsg {..}, idx) -> do
-          T.traceWith tr (emptyLoggingContext {lcNamespace = [dmName]},
+          T.traceWith tr (emptyLoggingContext {lcNamespace = dmName},
                           Just (Document idx dmMarkdown docColl), dmPrototype))
         docIdx
 
