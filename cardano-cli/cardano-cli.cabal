@@ -87,6 +87,8 @@ library
                         Cardano.CLI.Shelley.Run.TextView
                         Cardano.CLI.Shelley.Run.Transaction
 
+                        Cardano.CLI.Slot
+
                         Cardano.CLI.Mary.RenderValue
                         Cardano.CLI.Mary.TxOutParser
                         Cardano.CLI.Mary.ValueParser
@@ -112,13 +114,16 @@ library
                       , cardano-ledger-byron
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
+                      , cardano-slotting
                       , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
                       , containers
                       , cryptonite
+                      , deepseq
                       , directory
                       , filepath
                       , formatting
+                      , hashable
                       , iproute
                       , network
                       , optparse-applicative
@@ -128,11 +133,13 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , parsec
+                      , quiet
                       , shelley-spec-ledger
                       , small-steps
                       , split
                       , text
                       , time
+                      , transformers
                       , transformers-except
                       , utf8-string
                       , unordered-containers
