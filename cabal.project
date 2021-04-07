@@ -122,6 +122,7 @@ source-repository-package
   tag: e8f19bcc9c8f405131cb95ca6ada26b2b4eac638
   --sha256: 1v36d3lyhmadzj0abdfsppjna7n7llzqzp9ikx5yq28l2kda2f1p
   subdir:
+    alonzo/impl
     byron/chain/executable-spec
     byron/crypto
     byron/crypto/test
@@ -192,6 +193,17 @@ source-repository-package
     typed-protocols
     typed-protocols-examples
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/plutus
+  tag: ffc1768f5be7af66d8d745a31c9c6a77c5c55104
+  --sha256: 0qwj0xnvkrxsmfw883w3idfnhj073d5swcxl54zs7ay4fgwrm4c2
+  subdir:
+    plutus-core
+    plutus-ledger-api
+    plutus-tx
+    prettyprinter-configurable
+
 constraints:
     hedgehog >= 1.0
   , bimap >= 0.4.0
@@ -203,3 +215,8 @@ constraints:
 
 package comonad
   flags: -test-doctests
+
+allow-newer:
+  monoidal-containers:aeson,
+  size-based:template-haskell
+

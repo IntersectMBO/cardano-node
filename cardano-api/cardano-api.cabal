@@ -101,6 +101,7 @@ library
                       , cardano-crypto-wrapper
                       , cardano-ledger-byron
                       , cardano-ledger-core
+                      , cardano-ledger-alonzo
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-slotting
