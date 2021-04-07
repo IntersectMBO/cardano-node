@@ -8,11 +8,9 @@ import           Cardano.Logging
 import           Control.Concurrent
 import           System.Remote.Monitoring (forkServer)
 
-instance LogFormatting Int where
-  asMetrics i = [IntM Nothing (fromIntegral i)]
 
 countDocumented :: Documented Int
-countDocumented = Documented [DocMsg 0 "count" "count"]
+countDocumented = Documented [DocMsg 0 ["count"] "count"]
 
 testEKG :: IO ()
 testEKG = do
