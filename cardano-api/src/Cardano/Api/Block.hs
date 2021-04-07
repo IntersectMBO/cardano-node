@@ -47,7 +47,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (Foldable (toList))
 
-import           Cardano.Slotting.Block (BlockNo)
+import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Slotting.Slot (EpochNo, SlotNo)
 
 import qualified Ouroboros.Network.Block as Consensus
@@ -132,7 +132,13 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
-getBlockTxs :: forall era . Block era -> [Tx era]
+    showsPrec p (ShelleyBlock ShelleyBasedEraAlonzo block) =
+      showParen (p >= 11)
+        ( showString "ShelleyBlock ShelleyBasedEraAlonzo "
+        . showsPrec 11 block
+        )
+
+getBlockTxs :: forall era. Block era -> [Tx era]
 getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
     case byronBlockRaw of
       Byron.ABOBBoundary{} -> [] -- no txs in EBBs
@@ -147,6 +153,7 @@ getBlockTxs (ShelleyBlock shelleyEra Consensus.ShelleyBlock{Consensus.shelleyBlo
       ShelleyBasedEraShelley -> go
       ShelleyBasedEraAllegra -> go
       ShelleyBasedEraMary    -> go
+      ShelleyBasedEraAlonzo  -> go
   where
     go :: Ledger.TxSeq (ShelleyLedgerEra era) ~ Shelley.TxSeq (ShelleyLedgerEra era)
        => SafeToHash (Core.Witnesses (ShelleyLedgerEra era))
@@ -198,6 +205,9 @@ fromConsensusBlock CardanoMode =
         BlockInMode (ShelleyBlock ShelleyBasedEraMary b')
                      MaryEraInCardanoMode
 
+      Consensus.BlockAlonzo b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b')
+                     AlonzoEraInCardanoMode
 
 -- ----------------------------------------------------------------------------
 -- Block headers
@@ -229,6 +239,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
   ShelleyBasedEraShelley -> go
   ShelleyBasedEraAllegra -> go
   ShelleyBasedEraMary -> go
+  ShelleyBasedEraAlonzo -> go
   where
     go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => BlockHeader
     go = BlockHeader headerFieldSlot (HeaderHash hashSBS) headerFieldBlockNo
