@@ -11,6 +11,7 @@ module Cardano.Logging.Trace (
   , filterTraceMaybe
   , filterTraceBySeverity
   , appendName
+  , withNamesAppended
   , setSeverity
   , withSeverity
   , privately
@@ -26,31 +27,23 @@ module Cardano.Logging.Trace (
 
 where
 
-import           Debug.Trace
-
 import           Control.Monad (join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import           Data.Maybe (isJust)
-import           Data.Text (Text, unpack)
+import           Data.Text (Text)
 import           UnliftIO.MVar
 
 import           Cardano.Logging.Types
 
 -- | Adds a message object to a trace
-traceWith :: (LogFormatting a, Show a, Monad m) => Trace m a -> a -> m ()
-traceWith (Trace tr) a = trace ("traceWith " ++ logString) $
+traceWith :: Monad m => Trace m a -> a -> m ()
+traceWith (Trace tr) a =
     T.traceWith tr (emptyLoggingContext, Nothing, a)
-  where
-    logString = case forHuman a of
-                  "" -> case forMachine DRegular a of
-                          obj | null obj -> show a
-                          obj -> show obj
-                  other -> unpack other
 
 -- | Convenience function for tracing a message with a name
 --   As the simple name suggest, this should be the standard function
-traceNamed :: (LogFormatting a, Show a, Monad m) => Trace m a -> Text -> a -> m ()
+traceNamed :: Monad m => Trace m a -> Text -> a -> m ()
 traceNamed tr n = traceWith (appendName n tr)
 
 --- | Don't process further if the result of the selector function
@@ -106,6 +99,14 @@ appendName name (Trace tr) = Trace $
     T.contramap
       (\ case
         (lc, mbC, e) -> (lc {lcNamespace = name : lcNamespace lc}, mbC, e))
+      tr
+
+-- | Sets severities for the messages in this trace based on the selector function
+withNamesAppended :: Monad m => (a -> [Text]) -> Trace m a -> Trace m a
+withNamesAppended func (Trace tr) = Trace $
+    T.contramap
+      (\case
+        (lc, mbC, e) -> (lc {lcNamespace = func e ++ lcNamespace lc}, mbC, e))
       tr
 
 -- | Sets severity for the messages in this trace

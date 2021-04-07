@@ -155,13 +155,13 @@ traceForgeEventDocu :: Documented (TraceForgeEvent LogBlock)
 traceForgeEventDocu = Documented [
     DocMsg
       (TraceStartLeadershipCheck (SlotNo 1))
-      "StartLeadershipCheck"
+      ["StartLeadershipCheck"]
       "Start of the leadership check\n\
         \\n\
         \We record the current slot number."
   , DocMsg
       (TraceSlotIsImmutable (SlotNo 1) (Point Origin) (BlockNo 1))
-      "SlotIsImmutable"
+      ["SlotIsImmutable"]
       "Leadership check failed: the tip of the ImmutableDB inhabits the\n\
         \current slot\n\
         \\n\
@@ -181,7 +181,7 @@ traceForgeEventDocu = Documented [
         \See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
   , DocMsg
     (TraceBlockFromFuture (SlotNo 1) (SlotNo 1))
-    "LeadershipCheckFailed"
+    ["LeadershipCheckFailed"]
     "Leadership check failed: the current chain contains a block from a slot\n\
       \/after/ the current slot\n\
       \\n\

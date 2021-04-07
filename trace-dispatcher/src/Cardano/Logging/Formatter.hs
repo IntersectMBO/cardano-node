@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -17,7 +18,7 @@ import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as BS
 import           Data.List (intersperse)
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text, pack, stripPrefix)
+import           Data.Text (Text, pack, stripPrefix, null)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
@@ -39,12 +40,16 @@ metricsFormatter application (Trace tr) = do
   pure $ Trace (T.arrow trr)
  where
     mkTracer = T.emit $
-      \
-        (lc, _mbC, v) ->
+      \ case
+        (lc, Nothing, v) ->
           let metrics =  asMetrics v
           in T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                                 , Nothing
                                 , Metrics metrics)
+        (lc, Just ctrl, _v) ->
+          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                             , Just ctrl
+                             , Metrics [])
 
 
 -- | Format this trace for human readability
@@ -62,11 +67,21 @@ humanFormatter withColor application (Trace tr) = do
   pure $ Trace (T.arrow trr)
  where
     mkTracer hn = T.emit $
-      \ (lc, mbC, v) -> do
-        text <- liftIO $ formatContextHuman withColor hn application lc (forHuman v)
-        T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                           , mbC
-                           , Human text)
+      \ case
+        (lc, Nothing, v) -> do
+          let fh = forHuman v
+          text <- if Data.Text.null fh
+                      then liftIO $ do -- if no human formatter use the machine formatter output
+                        obj <- formatContextMachine hn application lc (forMachine DRegular v)
+                        pure $ decodeUtf8 (BS.toStrict (AE.encode obj))
+                      else liftIO $ formatContextHuman withColor hn application lc fh
+          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                             , Nothing
+                             , Human text)
+        (lc, Just ctrl, _v) -> do
+          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                             , Just ctrl
+                             , Human "")
 
 formatContextHuman ::
      Bool
@@ -81,20 +96,29 @@ formatContextHuman withColor hostname application LoggingContext {..}  txt = do
   let severity = fromMaybe Info lcSeverity
       tid      = fromMaybe ((pack . show) thid)
                     ((stripPrefix "ThreadId " . pack . show) thid)
+      ts       = fromString $ formatTime defaultTimeLocale "%F %H:%M:%S%4Q" time
       ns       = colorBySeverity
                     withColor
                     severity
-                    $ mconcat (intersperse (singleton '.')
-                      (fromString hostname :
-                        (map fromText (application : lcNamespace)
-                          <> [fromString (show severity) , fromText tid])))
-      ts       = fromString $ formatTime defaultTimeLocale "%F %T" time
+                    $ fromString hostname
+                      <> singleton ':'
+                      <> mconcat (intersperse (singleton '.')
+                          (map fromText (application : lcNamespace)))
+      tadd     = fromText " ("
+                  <> fromString (show severity)
+                  <> singleton ','
+                  <> fromText tid
+                  <> fromText ") "
   pure $ toStrict
           $ toLazyText
-            $ mconcat (map squareBrackets [ns, ts]) <> singleton ' ' <> fromText txt
+            $ squareBrackets ts
+              <> singleton ' '
+              <> squareBrackets ns
+              <> tadd
+              <> fromText txt
   where
     squareBrackets :: Builder -> Builder
-    squareBrackets b = TB.singleton '[' <> b <> TB.singleton ']'
+    squareBrackets b = singleton '[' <> b <> singleton ']'
 
 -- | Format this trace for machine readability
 -- The detail level give a hint to the formatter
@@ -111,11 +135,16 @@ machineFormatter detailLevel application (Trace tr) = do
   pure $ Trace (T.arrow trr)
  where
     mkTracer hn = T.emit $
-      \ (lc, mbC, v) -> do
-        obj <- liftIO $ formatContextMachine hn application lc (forMachine detailLevel v)
-        T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                           , mbC
-                           , Machine (decodeUtf8 (BS.toStrict (AE.encode obj))))
+      \case
+        (lc, Nothing, v) -> do
+          obj <- liftIO $ formatContextMachine hn application lc (forMachine detailLevel v)
+          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                             , Nothing
+                             , Machine (decodeUtf8 (BS.toStrict (AE.encode obj))))
+        (lc, Just c, _v) -> do
+          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                             , Just c
+                             , Machine "")
 
 formatContextMachine ::
      String
@@ -130,7 +159,7 @@ formatContextMachine hostname application LoggingContext {..} obj = do
       tid      = fromMaybe ((pack . show) thid)
                     ((stripPrefix "ThreadId " . pack . show) thid)
       ns       = application : lcNamespace
-      ts       = pack $ formatTime defaultTimeLocale "%F %T" time
+      ts       = pack $ formatTime defaultTimeLocale "%F %H:%M:%S%4Q" time
   pure $ AE.object [  "at"      .= ts
                     , "ns"      .= ns
                     , "sev"     .= severity

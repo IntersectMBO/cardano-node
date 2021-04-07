@@ -37,11 +37,12 @@ module Cardano.Logging.Types (
 import           Control.Tracer
 import qualified Control.Tracer as T
 import qualified Data.Aeson as A
+import           Data.Aeson ((.=))
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.HashMap.Strict as HM
-import           Data.Text (Text)
+import           Data.Text (Text, pack)
 import           GHC.Generics
 
 -- | Every message needs this to define how to represent it
@@ -61,6 +62,16 @@ class LogFormatting a where
   -- No metrics by default
   asMetrics :: a -> [Metric]
   asMetrics _v = []
+
+instance LogFormatting Double where
+  forMachine d _ = mkObject [ "val" .= A.String ((pack . show) d)]
+  forHuman d     = (pack . show) d
+  asMetrics d    = [DoubleM Nothing d]
+
+instance LogFormatting Int where
+  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
+  forHuman i     = (pack . show) i
+  asMetrics i    = [IntM Nothing (fromIntegral i)]
 
 data Metric
   -- | An integer metric.
@@ -86,7 +97,7 @@ newtype Documented a = Documented {undoc :: [DocMsg a]}
 -- and a comment in markdown format
 data DocMsg a = DocMsg {
     dmPrototype :: a
-  , dmName      :: Text
+  , dmName      :: [Text]
   , dmMarkdown  :: Text
 }
 
