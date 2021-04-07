@@ -26,6 +26,7 @@ module Cardano.Node.Configuration.Logging
 import           Cardano.Prelude hiding (trace)
 
 import qualified Control.Concurrent.Async as Async
+import qualified Control.Concurrent as Conc
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
 import "contra-tracer" Control.Tracer
@@ -63,6 +64,8 @@ import           Cardano.BM.Stats.Resources
 import qualified Cardano.BM.Trace as Trace
 import           Cardano.BM.Tracing
 
+import qualified Cardano.Logging as NL
+
 import qualified Cardano.Chain.Genesis as Gen
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Block (BlockProtocol)
@@ -82,6 +85,7 @@ import           Cardano.Config.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Common ()
+import           Cardano.Tracing.Config(TraceOptions(..))
 import           Paths_cardano_node (version)
 
 --------------------------------
@@ -149,12 +153,13 @@ loggingCLIConfiguration = maybe emptyConfig readConfig
 
 -- | Create logging feature for `cardano-node`
 createLoggingLayer
-  :: Text
+  :: TraceOptions
+  -> Text
   -> NodeConfiguration
   -> Consensus.Protocol IO blk (BlockProtocol blk)
+  -> NL.Trace IO NL.FormattedMessage
   -> ExceptT ConfigError IO LoggingLayer
-createLoggingLayer ver nodeConfig' p = do
-
+createLoggingLayer topt ver nodeConfig' p ntrace = do
   logConfig <- loggingCLIConfiguration $
     if ncLoggingSwitch nodeConfig'
     -- Re-interpret node config again, as logging 'Configuration':
@@ -166,13 +171,13 @@ createLoggingLayer ver nodeConfig' p = do
     Config.setTextOption logConfig "appversion" ver
     Config.setTextOption logConfig "appcommit" gitRev
 
-  (baseTrace, switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
+  (baseTrace', switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
 
   let loggingEnabled :: Bool
       loggingEnabled = ncLoggingSwitch nodeConfig'
       trace :: Trace IO Text
       trace = if loggingEnabled
-              then baseTrace
+              then baseTrace'
               else Trace.nullTracer
 
   when loggingEnabled $ liftIO $
@@ -245,7 +250,7 @@ createLoggingLayer ver nodeConfig' p = do
 
      when (ncLogMetrics nodeConfig) $
        -- Record node metrics, if configured
-       startCapturingMetrics trace
+       startCapturingMetrics topt trace ntrace
 
    mkLogLayer :: Configuration -> Switchboard Text -> Maybe EKGDirect -> Trace IO Text -> LoggingLayer
    mkLogLayer logConfig switchBoard mbEkgDirect trace =
@@ -268,25 +273,52 @@ createLoggingLayer ver nodeConfig' p = do
        , llEKGDirect = mbEkgDirect
        }
 
-   startCapturingMetrics :: Trace IO Text -> IO ()
-   startCapturingMetrics tr = do
+   startCapturingMetrics :: TraceOptions
+    -> Trace IO Text
+    -> NL.Trace IO NL.FormattedMessage
+    -> IO ()
+   startCapturingMetrics (TraceDispatcher _) _tr trn = do
+      trn' <- NL.humanFormatter True "Cardano" trn
+      let trNs' = NL.appendName "Resources" $ NL.appendName "Node" trn'
+      let trNs  = {--withSeverityResources--} trNs'
+      void . Async.async . forever $ do
+        readResourceStats
+          >>= maybe (pure ())
+                (traceResourceStatsN trNs)
+        Conc.threadDelay 1000000 -- TODO:  make configurable
+                            -- in microseconds
+
+   startCapturingMetrics _ tr _trn = do
      void . Async.async . forever $ do
        readResourceStats
          >>= maybe (pure ())
                    (traceResourceStats
                       (appendName "node" tr))
-       threadDelay 1000000 -- TODO:  make configurable
+       Conc.threadDelay 1000000 -- TODO:  make configurable
+
    traceResourceStats :: Trace IO Text -> ResourceStats -> IO ()
    traceResourceStats tr rs = do
      traceWith (toLogObject' NormalVerbosity $ appendName "resources" tr) rs
-     traceCounter "Stat.cputicks"    tr . fromIntegral $ rCentiCpu rs
-     traceCounter "Mem.resident"     tr . fromIntegral $ rRSS rs
-     traceCounter "RTS.gcLiveBytes"  tr . fromIntegral $ rLive rs
-     traceCounter "RTS.gcMajorNum"   tr . fromIntegral $ rGcsMajor rs
-     traceCounter "RTS.gcMinorNum"   tr . fromIntegral $ rGcsMinor rs
-     traceCounter "RTS.gcticks"      tr . fromIntegral $ rCentiGC rs
-     traceCounter "RTS.mutticks"     tr . fromIntegral $ rCentiMut rs
-     traceCounter "Stat.threads"     tr . fromIntegral $ rThreads rs
+     traceCounter "Stat.cputicks"    tr (fromIntegral $ rCentiCpu rs)
+     traceCounter "Mem.resident"     tr (fromIntegral $ rRSS rs)
+     traceCounter "RTS.gcLiveBytes"  tr (fromIntegral $ rLive rs)
+     traceCounter "RTS.gcMajorNum"   tr (fromIntegral $ rGcsMajor rs)
+     traceCounter "RTS.gcMinorNum"   tr (fromIntegral $ rGcsMinor rs)
+     traceCounter "RTS.gcticks"      tr (fromIntegral $ rCentiGC rs)
+     traceCounter "RTS.mutticks"     tr (fromIntegral $ rCentiMut rs)
+     traceCounter "Stat.threads"     tr (fromIntegral $ rThreads rs)
+
+   traceResourceStatsN :: NL.Trace IO Integer -> ResourceStats -> IO ()
+   traceResourceStatsN tr rs = do
+     NL.traceNamed tr "Stat.Cputicks"    (fromIntegral $ rCentiCpu rs)
+     NL.traceNamed tr "Mem.Resident"     (fromIntegral $ rRSS rs)
+     NL.traceNamed tr "RTS.GcLiveBytes"  (fromIntegral $ rLive rs)
+     NL.traceNamed tr "RTS.GcMajorNum"   (fromIntegral $ rGcsMajor rs)
+     NL.traceNamed tr "RTS.GcMinorNum"   (fromIntegral $ rGcsMinor rs)
+     NL.traceNamed tr "RTS.Gcticks"      (fromIntegral $ rCentiGC rs)
+     NL.traceNamed tr "RTS.Mutticks"     (fromIntegral $ rCentiMut rs)
+     NL.traceNamed tr "Stat.Threads"     (fromIntegral $ rThreads rs)
+
 
 traceCounter
   :: Text
