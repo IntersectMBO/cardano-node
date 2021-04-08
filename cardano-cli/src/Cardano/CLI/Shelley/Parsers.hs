@@ -22,8 +22,8 @@ import           Cardano.Api.Shelley
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentSource (..),
-                   VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
+import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
+                   StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
 import           Control.Monad.Fail (fail)
@@ -31,7 +31,7 @@ import           Data.Attoparsec.Combinator ((<?>))
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 import           Network.Socket (PortNumber)
-import           Options.Applicative hiding (str)
+import           Options.Applicative hiding (help, str)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import qualified Data.ByteString.Base16 as B16
@@ -128,7 +128,7 @@ pAddressCmd =
      , subParser "build"
          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
      , subParser "build-script"
-         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address. (deprecated; use 'build' instead with '--script-file')")
+         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address. (deprecated; use 'build' instead with '--payment-script-file')")
      , subParser "info"
          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
      ]
@@ -146,8 +146,8 @@ pAddressCmd =
 
     pAddressBuild :: Parser AddressCmd
     pAddressBuild = AddressBuild
-      <$> pPaymentSource
-      <*> Opt.optional pStakeVerificationKeyOrFile
+      <$> pPaymentVerifier
+      <*> Opt.optional pStakeVerifier
       <*> pNetworkId
       <*> pMaybeOutputFile
 
@@ -160,10 +160,15 @@ pAddressCmd =
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
 
-pPaymentSource :: Parser PaymentSource
-pPaymentSource =
-        SourcePaymentKey <$> pPaymentVerificationKeyTextOrFile
-    <|> SourcePaymentScript <$> pScript
+pPaymentVerifier :: Parser PaymentVerifier
+pPaymentVerifier =
+        PaymentVerifierKey <$> pPaymentVerificationKeyTextOrFile
+    <|> PaymentVerifierScriptFile <$> pScriptFor "payment-script-file" "Filepath of the payment script."
+
+pStakeVerifier :: Parser StakeVerifier
+pStakeVerifier =
+        StakeVerifierKey <$> pStakeVerificationKeyOrFile
+    <|> StakeVerifierScriptFile <$> pScriptFor "stake-script-file" "Filepath of the staking script."
 
 pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
@@ -196,10 +201,13 @@ pPaymentVerificationKeyFile =
     )
 
 pScript :: Parser ScriptFile
-pScript = ScriptFile <$> Opt.strOption
-  (  Opt.long "script-file"
+pScript = pScriptFor "script-file" "Filepath of the script."
+
+pScriptFor :: String -> String -> Parser ScriptFile
+pScriptFor name help = ScriptFile <$> Opt.strOption
+  (  Opt.long name
   <> Opt.metavar "FILE"
-  <> Opt.help "Filepath of the script."
+  <> Opt.help help
   <> Opt.completer (Opt.bashCompleter "file")
   )
 
