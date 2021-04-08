@@ -281,6 +281,7 @@ createLoggingLayer ver nodeConfig' p = do
      traceCounter "Stat.cputicks"    tr . fromIntegral $ rCentiCpu rs
      traceCounter "Mem.resident"     tr . fromIntegral $ rRSS rs
      traceCounter "RTS.gcLiveBytes"  tr . fromIntegral $ rLive rs
+     traceCounter "RTS.gcHeapBytes"  tr . fromIntegral $ rHeap rs
      traceCounter "RTS.gcMajorNum"   tr . fromIntegral $ rGcsMajor rs
      traceCounter "RTS.gcMinorNum"   tr . fromIntegral $ rGcsMinor rs
      traceCounter "RTS.gcticks"      tr . fromIntegral $ rCentiGC rs
