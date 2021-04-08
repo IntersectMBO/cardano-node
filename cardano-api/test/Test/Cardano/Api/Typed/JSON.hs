@@ -26,11 +26,17 @@ prop_roundtrip_praos_nonce_JSON = H.property $ do
   pNonce <- forAll $ Gen.just genMaybePraosNonce
   tripping pNonce encode eitherDecode
 
-prop_roundtrip_protocol_parameters_JSON :: Property
-prop_roundtrip_protocol_parameters_JSON = H.property $ do
-  pp <- forAll genProtocolParameters
-  tripping pp encode eitherDecode
+prop_roundtrip_protocol_parameters_JSON_Shelley :: Property
+prop_roundtrip_protocol_parameters_JSON_Shelley =
+  rountrip_JSON_Era genProtocolParameters ShelleyBasedEraShelley
 
+prop_roundtrip_protocol_parameters_JSON_Allegra :: Property
+prop_roundtrip_protocol_parameters_JSON_Allegra =
+  rountrip_JSON_Era genProtocolParameters ShelleyBasedEraAllegra
+
+prop_roundtrip_protocol_parameters_JSON_Mary :: Property
+prop_roundtrip_protocol_parameters_JSON_Mary =
+  rountrip_JSON_Era genProtocolParameters ShelleyBasedEraMary
 
 -- -----------------------------------------------------------------------------
 
@@ -42,7 +48,12 @@ roundtrip_CBOR typeProxy gen =
     val <- H.forAll gen
     H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
 
-
+rountrip_JSON_Era
+  :: (FromJSON a, ToJSON a, Eq a, Show a)
+  => (ShelleyBasedEra era -> Gen a) -> ShelleyBasedEra era -> Property
+rountrip_JSON_Era gen sbe = H.property $ do
+  pp <- H.forAll $ gen sbe
+  tripping pp encode eitherDecode
 
 -- -----------------------------------------------------------------------------
 

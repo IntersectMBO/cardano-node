@@ -197,7 +197,7 @@ data TransactionCmd
       TxByronWitnessCount
   | TxCalculateMinValue
       ProtocolParamsSourceSpec
-      Value
+      TxBodyFile
   | TxGetTxId InputTxFile
   | TxView InputTxFile
   deriving Show

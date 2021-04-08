@@ -34,7 +34,7 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary
 import qualified Cardano.Binary as CBOR
 
 --TODO: following import needed for orphan Eq Script instance
-import           Cardano.Ledger.ShelleyMA.TxBody ()
+import qualified Cardano.Ledger.ShelleyMA.TxBody as ShelleyMA
 import           Shelley.Spec.Ledger.Scripts ()
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
@@ -84,6 +84,9 @@ data ShelleyTxCmdError
   | ShelleyTxCmdScriptLanguageNotSupportedInEra AnyScriptLanguage AnyCardanoEra
   | ShelleyTxCmdGenesisCmdError !ShelleyGenesisCmdError
   | ShelleyTxCmdPolicyIdNotSpecified PolicyId
+  | ShelleyTxCmdProtocolParametersError ProtocolParametersError
+  | ShelleyTxCmdMultiAssetNotAvailableInEra AnyCardanoEra FilePath
+  | ShelleyTxCmdMinUTxOValueNotSpecifiedInPParams ProtocolParamsFile
   deriving Show
 
 data SomeTxBodyError where
@@ -168,6 +171,14 @@ renderShelleyTxCmdError err =
       "A script provided to witness minting does not correspond to the policy id \
       \of any asset specified in the \"--mint\" field. The script hash is: "
       <> serialiseToRawBytesHexText sWit
+    ShelleyTxCmdProtocolParametersError pParamsErr ->
+      renderProtocolParamsErr pParamsErr
+    ShelleyTxCmdMultiAssetNotAvailableInEra era txbodyFp ->
+      "Multi assets not available in " <> renderEra era
+      <> " for tx body file: " <> Text.pack txbodyFp
+    ShelleyTxCmdMinUTxOValueNotSpecifiedInPParams (ProtocolParamsFile pparamsFp) ->
+      "MinUTxOValue not specified in:" <> Text.pack pparamsFp
+
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -208,7 +219,7 @@ runTransactionCmd cmd =
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                            nShelleyKeyWitnesses nByronKeyWitnesses
-    TxCalculateMinValue pParamSpec txOuts -> runTxCalculateMinValue pParamSpec txOuts
+    TxCalculateMinValue pParamSpec txBodyFp -> runTxCalculateMinValue pParamSpec txBodyFp
     TxGetTxId txinfile -> runTxGetTxId txinfile
     TxView txinfile -> runTxView txinfile
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
@@ -558,6 +569,8 @@ validateTxMintValue era (Just (val, scripts)) =
                          , ScriptWitness ScriptWitnessForMinting
                              $ SimpleScriptWitness sLangInEra sVer sScript
                          )
+                PlutusScript _ _ ->
+                  panic "createScriptWitness: Plutus scripts not supported yet."
 
      else left $ ShelleyTxCmdPolicyIdNotSpecified scriptHash
 
@@ -575,7 +588,7 @@ createScriptWitness era (ScriptFile fp) = do
       case script of
         SimpleScript sVer sScript ->
           return $ SimpleScriptWitness sLangInEra sVer sScript
-
+        PlutusScript _ _ -> panic "createScriptWitness: Plutus scripts not supported yet."
     Nothing ->
       left $ ShelleyTxCmdScriptLanguageNotSupportedInEra
                (AnyScriptLanguage sLang)
@@ -666,29 +679,43 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
 
-    InAnyShelleyBasedEra _era txbody <-
+    InAnyShelleyBasedEra sbe txbody <-
           --TODO: in principle we should be able to support Byron era txs too
           onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions"
       =<< readFileTxBody txbodyFile
+    case protocolParamsSourceSpec of
+      ParamsFromGenesis genFile -> do
+        pparams <- getProtocolParametersFromGen genFile
+        let tx = makeSignedTransaction [] txbody
+            Lovelace fee = estimateTransactionFee sbe
+                                 (fromMaybe Mainnet nw)
+                                 (protocolParamTxFeeFixed pparams)
+                                 (protocolParamTxFeePerByte pparams)
+                                 tx
+                                 nInputs nOutputs
+                                 nByronKeyWitnesses nShelleyKeyWitnesses
 
-    pparams <-
-      case protocolParamsSourceSpec of
-        ParamsFromGenesis (GenesisFile f) ->
-          fromShelleyPParams . sgProtocolParams <$>
-            firstExceptT ShelleyTxCmdGenesisCmdError
-              (readShelleyGenesis f identity)
-        ParamsFromFile f -> readProtocolParameters f
+        liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+      ParamsFromFile pParamFile -> do
+        pparams <- readProtocolParameters sbe pParamFile
+        let tx = makeSignedTransaction [] txbody
+            Lovelace fee = estimateTransactionFee sbe
+                                 (fromMaybe Mainnet nw)
+                                 (protocolParamTxFeeFixed pparams)
+                                 (protocolParamTxFeePerByte pparams)
+                                 tx
+                                 nInputs nOutputs
+                                 nByronKeyWitnesses nShelleyKeyWitnesses
 
-    let tx = makeSignedTransaction [] txbody
-        Lovelace fee = estimateTransactionFee
-                             (fromMaybe Mainnet nw)
-                             (protocolParamTxFeeFixed pparams)
-                             (protocolParamTxFeePerByte pparams)
-                             tx
-                             nInputs nOutputs
-                             nByronKeyWitnesses nShelleyKeyWitnesses
+        liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
-    liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+
+getProtocolParametersFromGen :: GenesisFile
+                             -> ExceptT ShelleyTxCmdError IO (ProtocolParameters ShelleyEra)
+getProtocolParametersFromGen (GenesisFile f) = do
+  shelleyGen <- firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
+  firstExceptT ShelleyTxCmdProtocolParametersError . hoistEither
+    $ fromShelleyPParams ShelleyBasedEraShelley $ sgProtocolParams shelleyGen
 
 -- ----------------------------------------------------------------------------
 -- Transaction fee calculation
@@ -696,18 +723,31 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
 runTxCalculateMinValue
   :: ProtocolParamsSourceSpec
-  -> Value
+  -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinValue protocolParamsSourceSpec value = do
-  pp <- case protocolParamsSourceSpec of
-    ParamsFromGenesis (GenesisFile f) ->
-      fromShelleyPParams . sgProtocolParams <$>
-        firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
-    ParamsFromFile f -> readProtocolParameters f
-
-  let minValues = calcMinimumDeposit value (protocolParamMinUTxOValue pp)
-
-  liftIO $ IO.print minValues
+runTxCalculateMinValue protocolParamsSourceSpec (TxBodyFile txbodyFile) = do
+  InAnyCardanoEra era apiTxBody <- readFileTxBody txbodyFile
+  case cardanoEraStyle era of
+    LegacyByronEra -> txFeatureMismatch era TxFeatureMultiAssetOutputs
+    ShelleyBasedEra ShelleyBasedEraMary ->
+      case protocolParamsSourceSpec of
+        ParamsFromGenesis _ -> panic "runTxCalculateMinValue: Currently \
+                                     \not possible to get protocol params from genesis file/"
+        -- We need evidence that we are at least in the Mary era in order to use multi assets.
+        -- readShelleyGenesis defaults to the shelley era. TODO: make `readShelleyGenesis` era independent.
+        -- This error currently isn't possible as we only parse `ParamsFromFile` in the cli currently.
+        ParamsFromFile f -> do
+          pp <- readProtocolParameters ShelleyBasedEraMary f
+          case protocolParamMinUTxOValue pp of
+            Just minUTxOVal -> do
+              let (ShelleyTxBody _ txbody _ _) = apiTxBody
+                  (ShelleyMA.TxBody _ _ _ _ _ _ _ _ mint) = txbody
+                  value = fromMaryValue mint
+              let minDeposit = calcMinimumDeposit value minUTxOVal
+              liftIO $ IO.print minDeposit
+            Nothing -> left $ ShelleyTxCmdMinUTxOValueNotSpecifiedInPParams f
+    ShelleyBasedEra wrongera ->
+      left $ ShelleyTxCmdMultiAssetNotAvailableInEra (anyCardanoEraShelleyBased wrongera) txbodyFile
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
@@ -716,9 +756,11 @@ runTxCreatePolicyId (ScriptFile sFile) = do
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
-readProtocolParameters :: ProtocolParamsFile
-                       -> ExceptT ShelleyTxCmdError IO ProtocolParameters
-readProtocolParameters (ProtocolParamsFile fpath) = do
+readProtocolParameters :: IsCardanoEra era
+                       => ShelleyBasedEra era
+                       -> ProtocolParamsFile
+                       -> ExceptT ShelleyTxCmdError IO (ProtocolParameters era)
+readProtocolParameters _ (ProtocolParamsFile fpath) = do
   pparams <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
     Aeson.eitherDecode' pparams

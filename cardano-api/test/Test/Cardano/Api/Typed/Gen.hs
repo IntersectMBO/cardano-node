@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -82,8 +81,8 @@ genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 genScript :: ScriptLanguage lang -> Gen (Script lang)
 genScript (SimpleScriptLanguage lang) =
     SimpleScript lang <$> genSimpleScript lang
-
-genScript (PlutusScriptLanguage lang) = case lang of {}
+genScript (PlutusScriptLanguage PlutusScriptV1) = Gen.discard
+-- TODO: Unsure how to generate this currently
 
 genSimpleScript :: SimpleScriptVersion lang -> Gen (SimpleScript lang)
 genSimpleScript lang =
@@ -645,24 +644,36 @@ genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce =
   Gen.maybe (makePraosNonce <$> Gen.bytes (Range.linear 0 32))
 
-genProtocolParameters :: Gen ProtocolParameters
-genProtocolParameters =
-  ProtocolParameters
-    <$> ((,) <$> genNat <*> genNat)
-    <*> genRational
-    <*> genMaybePraosNonce
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genLovelace
-    <*> genLovelace
-    <*> genLovelace
-    <*> genLovelace
-    <*> genEpochNo
-    <*> genNat
-    <*> genRational
-    <*> genRational
-    <*> genRational
+genProtocolParameters :: ShelleyBasedEra era -> Gen (ProtocolParameters era)
+genProtocolParameters sbe =
+  case sbe of
+    ShelleyBasedEraShelley -> genPreAlonzo
+    ShelleyBasedEraAllegra -> genPreAlonzo
+    ShelleyBasedEraMary -> genPreAlonzo
+ where
+   genPreAlonzo =
+    ProtocolParameters
+      <$> ((,) <$> genNat <*> genNat)
+      <*> genRational
+      <*> genMaybePraosNonce
+      <*> genNat
+      <*> genNat
+      <*> genNat
+      <*> genNat
+      <*> genNat
+      <*> (Just <$> genLovelace)
+      <*> genLovelace
+      <*> genLovelace
+      <*> genLovelace
+      <*> genEpochNo
+      <*> genNat
+      <*> genRational
+      <*> genRational
+      <*> genRational
+      <*> return Nothing
+      <*> return Nothing
+      <*> return Nothing
+      <*> return Nothing
+      <*> return Nothing
+      <*> return Nothing
 

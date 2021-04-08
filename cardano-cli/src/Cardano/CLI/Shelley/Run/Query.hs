@@ -151,8 +151,9 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
     Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
  where
   writeProtocolParameters
-    :: Maybe OutputFile
-    -> ProtocolParameters
+    :: IsCardanoEra era
+    => Maybe OutputFile
+    -> ProtocolParameters era
     -> ExceptT ShelleyQueryCmdError IO ()
   writeProtocolParameters mOutFile' pparams =
     case mOutFile' of

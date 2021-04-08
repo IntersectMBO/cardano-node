@@ -561,8 +561,8 @@ pTransaction =
 
   pTransactionCalculateMinValue :: Parser TransactionCmd
   pTransactionCalculateMinValue = TxCalculateMinValue
-    <$> pProtocolParamsSourceSpec
-    <*> pMultiAsset
+    <$> (ParamsFromFile <$> pProtocolParamsFile)
+    <*> pTxBodyFile Input
 
   pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
   pProtocolParamsSourceSpec =
@@ -1645,15 +1645,6 @@ pTxOut =
                   \Lovelace."
       )
 
-pMultiAsset :: Parser Value
-pMultiAsset =
-  Opt.option
-    (readerFromParsecParser parseValue)
-      (  Opt.long "multi-asset"
-      <> Opt.metavar "VALUE"
-      <> Opt.help "Multi-asset value(s) with the multi-asset cli syntax"
-      )
-
 pMintMultiAsset :: Parser (Value, [ScriptFile])
 pMintMultiAsset =
   (,) <$> Opt.option
@@ -2236,6 +2227,15 @@ pShelleyProtocolParametersUpdate =
     <*> optional pPoolInfluence
     <*> optional pMonetaryExpansion
     <*> optional pTreasuryExpansion
+    -- TODO: Update when Alonzo is incorporated
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+
+
 
 pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =
