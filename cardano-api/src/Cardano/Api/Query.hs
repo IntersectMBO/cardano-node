@@ -44,6 +44,7 @@ module Cardano.Api.Query (
 
 import           Data.Aeson (ToJSON (..), object, (.=))
 import           Data.Bifunctor (bimap)
+import           Data.Either (fromRight)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
@@ -485,13 +486,15 @@ fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
 
 fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
     case q' of
-      Consensus.GetGenesisConfig -> fromShelleyGenesis
-                                      (Consensus.getCompactGenesis r')
+      Consensus.GetGenesisConfig -> fromRight (error "Handle")
+                                      $ fromShelleyGenesis shelleyBasedEra'
+                                          (Consensus.getCompactGenesis r')
       _                          -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryProtocolParameters q' r' =
     case q' of
-      Consensus.GetCurrentPParams -> fromShelleyPParams r'
+      Consensus.GetCurrentPParams -> fromRight (error "Handle")
+                                       $ fromShelleyPParams shelleyBasedEra' r'
       _                           -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryProtocolParametersUpdate q' r' =
