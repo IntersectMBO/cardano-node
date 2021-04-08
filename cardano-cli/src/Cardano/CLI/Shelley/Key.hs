@@ -32,7 +32,7 @@ module Cardano.CLI.Shelley.Key
   , readVerificationKeyOrHashOrFile
   , readVerificationKeyOrHashOrTextEnvFile
 
-  , PaymentSource(..)
+  , PaymentVerifier(..)
   ) where
 
 import           Cardano.Prelude
@@ -383,9 +383,9 @@ readVerificationKeyOrTextEnvFile asType verKeyOrFile =
     VerificationKeyFilePath (VerificationKeyFile fp) ->
       readKeyFileTextEnvelope (AsVerificationKey asType) fp
 
-data PaymentSource
-  = SourcePaymentKey VerificationKeyTextOrFile
-  | SourcePaymentScript ScriptFile
+data PaymentVerifier
+  = PaymentVerifierKey VerificationKeyTextOrFile
+  | PaymentVerifierScriptFile ScriptFile
   deriving (Eq, Show)
 
 -- | Either an unvalidated text representation of a verification key or a path

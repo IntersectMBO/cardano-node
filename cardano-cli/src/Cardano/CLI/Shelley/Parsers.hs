@@ -22,7 +22,7 @@ import           Cardano.Api.Shelley
 import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentSource (..),
+import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
                    VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
@@ -128,7 +128,7 @@ pAddressCmd =
      , subParser "build"
          (Opt.info pAddressBuild $ Opt.progDesc "Build a Shelley payment address, with optional delegation to a stake address.")
      , subParser "build-script"
-         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address. (deprecated; use 'build' instead with '--script-file')")
+         (Opt.info pAddressBuildScript $ Opt.progDesc "Build a Shelley script address. (deprecated; use 'build' instead with '--payment-script-file')")
      , subParser "info"
          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
      ]
@@ -146,7 +146,7 @@ pAddressCmd =
 
     pAddressBuild :: Parser AddressCmd
     pAddressBuild = AddressBuild
-      <$> pPaymentSource
+      <$> pPaymentVerifier
       <*> Opt.optional pStakeVerificationKeyOrFile
       <*> pNetworkId
       <*> pMaybeOutputFile
@@ -160,10 +160,10 @@ pAddressCmd =
     pAddressInfo :: Parser AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
 
-pPaymentSource :: Parser PaymentSource
-pPaymentSource =
-        SourcePaymentKey <$> pPaymentVerificationKeyTextOrFile
-    <|> SourcePaymentScript <$> pScript
+pPaymentVerifier :: Parser PaymentVerifier
+pPaymentVerifier =
+        PaymentVerifierKey <$> pPaymentVerificationKeyTextOrFile
+    <|> PaymentVerifierScriptFile <$> pPaymentScript
 
 pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
@@ -200,6 +200,14 @@ pScript = ScriptFile <$> Opt.strOption
   (  Opt.long "script-file"
   <> Opt.metavar "FILE"
   <> Opt.help "Filepath of the script."
+  <> Opt.completer (Opt.bashCompleter "file")
+  )
+
+pPaymentScript :: Parser ScriptFile
+pPaymentScript = ScriptFile <$> Opt.strOption
+  (  Opt.long "payment-script-file"
+  <> Opt.metavar "FILE"
+  <> Opt.help "Filepath of the payment script."
   <> Opt.completer (Opt.bashCompleter "file")
   )
 

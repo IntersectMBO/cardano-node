@@ -29,7 +29,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentSource (..),
+import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentVerifier (..),
                    VerificationKeyOrFile, VerificationKeyTextOrFile,
                    VerificationKeyTextOrFileError (..), readVerificationKeyOrFile,
                    readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
@@ -65,7 +65,7 @@ runAddressCmd cmd =
   case cmd of
     AddressKeyGen kt vkf skf -> runAddressKeyGen kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
-    AddressBuild paymentSource stkVk nw mOutFp -> runAddressBuild paymentSource stkVk nw mOutFp
+    AddressBuild paymentVerifier stkVk nw mOutFp -> runAddressBuild paymentVerifier stkVk nw mOutFp
     AddressBuildMultiSig sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
@@ -109,14 +109,14 @@ runAddressKeyHash vkeyTextOrFile mOutputFp = do
     Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 
-runAddressBuild :: PaymentSource
+runAddressBuild :: PaymentVerifier
                 -> Maybe (VerificationKeyOrFile StakeKey)
                 -> NetworkId
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuild paymentSource mbStkVkeyOrFile nw mOutFp = do
-  outText <- case paymentSource of
-    SourcePaymentKey payVkeyTextOrFile -> do
+runAddressBuild paymentVerifier mbStkVkeyOrFile nw mOutFp = do
+  outText <- case paymentVerifier of
+    PaymentVerifierKey payVkeyTextOrFile -> do
       payVKey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
         readAddressVerificationKeyTextOrFile payVkeyTextOrFile
 
@@ -135,7 +135,7 @@ runAddressBuild paymentSource mbStkVkeyOrFile nw mOutFp = do
 
       return $ serialiseAddress (addr :: AddressAny)
 
-    SourcePaymentScript (ScriptFile fp) -> do
+    PaymentVerifierScriptFile (ScriptFile fp) -> do
       scriptBytes <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp) $ LBS.readFile fp
       ScriptInAnyLang _lang script <-
         firstExceptT (ShelleyAddressCmdAesonDecodeError fp . Text.pack) $
@@ -230,7 +230,7 @@ runAddressBuildScript
   -> ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildScript scriptFile networkId mOutputFile = do
   liftIO deprecationWarning
-  runAddressBuild (SourcePaymentScript scriptFile) Nothing networkId mOutputFile
+  runAddressBuild (PaymentVerifierScriptFile scriptFile) Nothing networkId mOutputFile
 
 deprecationWarning :: IO ()
 deprecationWarning = do
