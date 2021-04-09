@@ -76,6 +76,8 @@ import           Ouroboros.Network.Diffusion (TraceLocalRootPeers, TracePublicRo
                    ConnectionManagerTrace (..), ConnectionHandlerTrace (..))
 import           Ouroboros.Network.Server2 (ServerTrace)
 import qualified Ouroboros.Network.Server2 as Server
+import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace)
+import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
@@ -424,22 +426,26 @@ instance HasSeverityAnnotation (ServerTrace addr) where
   getSeverityAnnotation ev =
     case ev of
       Server.TrAcceptConnection {}                      -> Debug
-      Server.TrNewConnection {}                         -> Debug
       Server.TrAcceptError {}                           -> Error
       Server.TrAcceptPolicyTrace {}                     -> Notice
       Server.TrServerStarted {}                         -> Notice
       Server.TrServerStopped {}                         -> Notice
       Server.TrServerError {}                           -> Critical
-      Server.TrResponderRestarted {}                    -> Debug
-      Server.TrResponderStartFailure {}                 -> Error
-      Server.TrResponderErrored {}                      -> Info
-      Server.TrResponderTerminated {}                   -> Debug
-      Server.TrPromotedToWarmRemote {}                  -> Info
-      Server.TrDemotedToColdRemote {}                   -> Info
-      Server.TrWaitIdleRemote {}                        -> Debug
-      Server.TrMuxCleanExit {}                          -> Debug
-      Server.TrMuxErrored {}                            -> Info
 
+instance HasPrivacyAnnotation (InboundGovernorTrace addr)
+instance HasSeverityAnnotation (InboundGovernorTrace addr) where
+  getSeverityAnnotation ev =
+    case ev of
+      InboundGovernor.TrNewConnection {}         -> Debug
+      InboundGovernor.TrResponderRestarted {}    -> Debug
+      InboundGovernor.TrResponderStartFailure {} -> Error
+      InboundGovernor.TrResponderErrored {}      -> Info
+      InboundGovernor.TrResponderTerminated {}   -> Debug
+      InboundGovernor.TrPromotedToWarmRemote {}  -> Info
+      InboundGovernor.TrDemotedToColdRemote {}   -> Info
+      InboundGovernor.TrWaitIdleRemote {}        -> Debug
+      InboundGovernor.TrMuxCleanExit {}          -> Debug
+      InboundGovernor.TrMuxErrored {}            -> Info
 
 --
 -- | instances of @Transformable@
@@ -591,6 +597,13 @@ instance Show addr
   trTransformer = trStructuredText
 instance Show addr
       => HasTextFormatter (ServerTrace addr) where
+  formatText a _ = pack (show a)
+
+instance Show addr
+      => Transformable Text IO (InboundGovernorTrace addr) where
+  trTransformer = trStructuredText
+instance Show addr
+      => HasTextFormatter (InboundGovernorTrace addr) where
   formatText a _ = pack (show a)
 
 --
@@ -1307,4 +1320,11 @@ instance Show addr
   -- TODO: a better 'ToObject' instance
   toObject _verb ev =
     mkObject [ "kind" .= String "ServerTrace"
+             , "event" .= show ev ]
+
+instance Show addr
+      => ToObject (InboundGovernorTrace addr) where
+  -- TODO: a better 'ToObject' instance
+  toObject _verb ev =
+    mkObject [ "kind" .= String "InboundGovernorTrace"
              , "event" .= show ev ]
