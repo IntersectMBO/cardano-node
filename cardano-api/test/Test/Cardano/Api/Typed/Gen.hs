@@ -503,6 +503,20 @@ genTxMintValue era =
         [ pure TxMintNone
         , TxMintValue MultiAssetInMaryEra <$> genValueForMinting <*> return (BuildTxWith mempty)
         ]
+    AlonzoEra ->
+      Gen.choice
+        [ pure TxMintNone
+        , TxMintValue MultiAssetInAlonzoEra <$> genValueForMinting
+        ]
+
+_genTxExecutionUnits :: CardanoEra era -> Gen (TxExecutionUnits era)
+_genTxExecutionUnits era =
+  case executionUnitsSupportedInEra era of
+    Nothing -> return TxExecutionUnitsNone
+    Just supported ->
+      TxExecutionUnits supported
+        <$> Gen.word64 (Range.constant 0 10)
+        <*> Gen.word64 (Range.constant 0 10)
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
@@ -528,6 +542,7 @@ genTxBodyContent era = do
     , txCertificates = certs
     , txUpdateProposal = updateProposal
     , txMintValue = mintValue
+    , txWitnessPPData = panic "TODO"
     }
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)

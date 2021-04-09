@@ -152,10 +152,10 @@ data QueryInShelleyBasedEra era result where
        :: QueryInShelleyBasedEra era EpochNo
 
      QueryGenesisParameters
-       :: QueryInShelleyBasedEra era GenesisParameters
+       :: QueryInShelleyBasedEra era (GenesisParameters era)
 
      QueryProtocolParameters
-       :: QueryInShelleyBasedEra era ProtocolParameters
+       :: QueryInShelleyBasedEra era (ProtocolParameters era)
 
      QueryProtocolParametersUpdate
        :: QueryInShelleyBasedEra era
@@ -242,20 +242,14 @@ toShelleyAddrSet era =
 
 fromUTxO
   :: ShelleyLedgerEra era ~ ledgerera
+  => Ledger.Crypto ledgerera ~ StandardCrypto
   => ShelleyBasedEra era
   -> Shelley.UTxO ledgerera
   -> UTxO era
-fromUTxO eraConversion utxo =
-  case eraConversion of
-    ShelleyBasedEraShelley ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn fromShelleyTxOut) $ Map.toList sUtxo
-    ShelleyBasedEraAllegra ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraAllegra)) $ Map.toList sUtxo
-    ShelleyBasedEraMary ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraMary)) $ Map.toList sUtxo
+fromUTxO sbe (Shelley.UTxO utxo) =
+  UTxO . Map.fromList
+       . map (bimap fromShelleyTxIn (fromTxOut sbe))
+       $ Map.toList utxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational
@@ -317,6 +311,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       ShelleyEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
+      AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
 
 
 toConsensusQueryShelleyBased
@@ -383,6 +378,7 @@ consensusQueryInEraInMode ByronEraInCardanoMode   = Consensus.QueryIfCurrentByro
 consensusQueryInEraInMode ShelleyEraInCardanoMode = Consensus.QueryIfCurrentShelley
 consensusQueryInEraInMode AllegraEraInCardanoMode = Consensus.QueryIfCurrentAllegra
 consensusQueryInEraInMode MaryEraInCardanoMode    = Consensus.QueryIfCurrentMary
+consensusQueryInEraInMode AlonzoEraInCardanoMode  = Consensus.QueryIfCurrentAlonzo
 
 
 -- ----------------------------------------------------------------------------
@@ -461,11 +457,19 @@ fromConsensusQueryResult (QueryInEra MaryEraInCardanoMode
               r'
       _ -> fromConsensusQueryResultMismatch
 
+fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
+                                     (QueryInShelleyBasedEra _era _q)) q' r' =
+    case q' of
+      -- TODO: Type error..need to return PParams type family?
+      Consensus.QueryIfCurrentAlonzo _q'' ->
+        bimap fromConsensusEraMismatch
+              (error "(fromConsensusQueryResultShelleyBased ShelleyBasedEraAlonzo q q'')")
+              r'
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.
      ShelleyLedgerEra era ~ ledgerera
-  => Shelley.PParams ledgerera ~ Core.PParams ledgerera
   => Shelley.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
   => Consensus.ShelleyBasedEra ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
@@ -484,14 +488,14 @@ fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
       Consensus.GetEpochNo -> epoch
       _                    -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
+fromConsensusQueryResultShelleyBased shelleyBasedEra' QueryGenesisParameters q' r' =
     case q' of
       Consensus.GetGenesisConfig -> fromRight (error "Handle")
                                       $ fromShelleyGenesis shelleyBasedEra'
                                           (Consensus.getCompactGenesis r')
       _                          -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryProtocolParameters q' r' =
+fromConsensusQueryResultShelleyBased shelleyBasedEra' QueryProtocolParameters q' r' =
     case q' of
       Consensus.GetCurrentPParams -> fromRight (error "Handle")
                                        $ fromShelleyPParams shelleyBasedEra' r'

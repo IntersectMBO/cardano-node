@@ -41,6 +41,7 @@ module Cardano.Api.ProtocolParameters (
     toShelleyUpdate,
     toUpdate,
     fromShelleyPParams,
+    toShelleyPParams,
     fromShelleyPParamsUpdate,
     fromShelleyProposedPPUpdates,
     fromShelleyUpdate,
@@ -1284,6 +1285,45 @@ toProtocolParamsAlonzo pparams =
         , protocolParamMaxValSize          = Nothing --TODO: Waiting on consensus to update to latest ledger Just $ Alonzo._maxValSize pparams
         }
 
+fromProtocolParamsAlonzo :: ProtocolParameters era -> Alonzo.PParams ledgerera
+fromProtocolParamsAlonzo pparams =
+   Alonzo.PParams
+        { Alonzo._protocolVersion = let (maj, minor) = protocolParamProtocolVersion pparams
+                                    in Alonzo.ProtVer maj minor
+        , Alonzo._d = Shelley.unitIntervalFromRational $ protocolParamDecentralization pparams
+        , Alonzo._extraEntropy  = toShelleyNonce $ protocolParamExtraPraosEntropy pparams
+        , Alonzo._maxBHSize = protocolParamMaxBlockHeaderSize pparams
+        , Alonzo._maxBBSize = protocolParamMaxBlockBodySize pparams
+        , Alonzo._maxTxSize = protocolParamMaxTxSize pparams
+        , Alonzo._minfeeB = protocolParamTxFeeFixed pparams
+        , Alonzo._minfeeA = protocolParamTxFeePerByte pparams
+        , Alonzo._keyDeposit = toShelleyLovelace $ protocolParamStakeAddressDeposit pparams
+        , Alonzo._poolDeposit = toShelleyLovelace $ protocolParamStakePoolDeposit pparams
+        , Alonzo._minPoolCost = toShelleyLovelace $ protocolParamMinPoolCost pparams
+        , Alonzo._eMax = protocolParamPoolRetireMaxEpoch pparams
+        , Alonzo._nOpt = protocolParamStakePoolTargetNum pparams
+        , Alonzo._a0 = protocolParamPoolPledgeInfluence pparams
+        , Alonzo._rho = Shelley.unitIntervalFromRational $ protocolParamMonetaryExpansion pparams
+        , Alonzo._tau = Shelley.unitIntervalFromRational $ protocolParamTreasuryCut pparams
+
+        , Alonzo._adaPerUTxOByte = case protocolParamUTxOCostPerByte pparams of
+                                     Just costPerByte ->  toShelleyLovelace costPerByte
+                                     Nothing -> error "fromProtocolParamsAlonzo: Must specify _adaPerUTxOByte"
+        , Alonzo._costmdls = case protocolParamCostModels pparams of
+                               Just cModel->  toCostModel cModel
+                               Nothing -> error "fromProtocolParamsAlonzo: Must specify _costmdls"
+        , Alonzo._prices = case protocolParamPrices pparams of
+                             Just pParamPrices ->  toPrices pParamPrices
+                             Nothing -> error "fromProtocolParamsAlonzo: Must specify _prices"
+        , Alonzo._maxTxExUnits = case protocolParamMaxTxExUnits pparams of
+                                   Just eUnits -> toTxExecUnits eUnits
+                                   Nothing -> error "fromProtocolParamsAlonzo: Must specify _maxTxExUnits"
+        , Alonzo._maxBlockExUnits =  case protocolParamMaxBlockExUnits pparams of
+                                       Just eUnits -> toExUnits eUnits
+                                       Nothing -> error "fromProtocolParamsAlonzo: Must specify _maxBlockExUnits"
+        -- TODO: _maxValSize :: !(HKD f Natural) -- consensus needs to update their ledger dep
+        }
+
 fromShelleyPParams
   :: ShelleyBasedEra era
   -> Core.PParams (ShelleyLedgerEra era)
@@ -1296,6 +1336,42 @@ fromShelleyPParams sbe pparams =
              ShelleyBasedEraAlonzo -> toProtocolParamsAlonzo pparams
   in do checkProtocolVersion sbe (protocolParamProtocolVersion pp)
         return pp
+
+fromProtocolParamsShelley :: ProtocolParameters era -> Shelley.PParams ledgerera
+fromProtocolParamsShelley pparams =
+   Shelley.PParams
+        { Shelley._protocolVersion = let (maj, minor) = protocolParamProtocolVersion pparams
+                                     in Shelley.ProtVer maj minor
+        , Shelley._d = Shelley.unitIntervalFromRational $ protocolParamDecentralization pparams
+        , Shelley._extraEntropy  = toShelleyNonce $ protocolParamExtraPraosEntropy pparams
+        , Shelley._maxBHSize = protocolParamMaxBlockHeaderSize pparams
+        , Shelley._maxBBSize = protocolParamMaxBlockBodySize pparams
+        , Shelley._maxTxSize = protocolParamMaxTxSize pparams
+        , Shelley._minfeeB = protocolParamTxFeeFixed pparams
+        , Shelley._minfeeA = protocolParamTxFeePerByte pparams
+        , Shelley._minUTxOValue =  case protocolParamMinUTxOValue pparams of
+                                     Just ll -> toShelleyLovelace ll
+                                     Nothing -> error "fromProtocolParamsShelley: _minUTxOValue not specified"
+        , Shelley._keyDeposit = toShelleyLovelace $ protocolParamStakeAddressDeposit pparams
+        , Shelley._poolDeposit = toShelleyLovelace $ protocolParamStakePoolDeposit pparams
+        , Shelley._minPoolCost = toShelleyLovelace $ protocolParamMinPoolCost pparams
+        , Shelley._eMax = protocolParamPoolRetireMaxEpoch pparams
+        , Shelley._nOpt = protocolParamStakePoolTargetNum pparams
+        , Shelley._a0 = protocolParamPoolPledgeInfluence pparams
+        , Shelley._rho = Shelley.unitIntervalFromRational $ protocolParamMonetaryExpansion pparams
+        , Shelley._tau = Shelley.unitIntervalFromRational $ protocolParamTreasuryCut pparams
+        }
+
+toShelleyPParams
+  :: ShelleyBasedEra era
+  -> ProtocolParameters era
+  -> Core.PParams (ShelleyLedgerEra era)
+toShelleyPParams sbe pparams =
+  case sbe of
+    ShelleyBasedEraShelley -> fromProtocolParamsShelley pparams
+    ShelleyBasedEraAllegra -> fromProtocolParamsShelley pparams
+    ShelleyBasedEraMary -> fromProtocolParamsShelley pparams
+    ShelleyBasedEraAlonzo -> fromProtocolParamsAlonzo pparams
 
 
 checkProtocolVersion
