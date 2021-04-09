@@ -54,7 +54,7 @@ import           Cardano.Api.Shelley hiding (PoolId)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
-import           Cardano.CLI.Shelley.Key (PaymentSource, VerificationKeyOrFile,
+import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, VerificationKeyOrFile,
                    VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
@@ -96,8 +96,8 @@ data AddressCmd
   = AddressKeyGen AddressKeyType VerificationKeyFile SigningKeyFile
   | AddressKeyHash VerificationKeyTextOrFile (Maybe OutputFile)
   | AddressBuild
-      PaymentSource
-      (Maybe (VerificationKeyOrFile StakeKey))
+      PaymentVerifier
+      (Maybe StakeVerifier)
       NetworkId
       (Maybe OutputFile)
   | AddressBuildMultiSig ScriptFile NetworkId (Maybe OutputFile)

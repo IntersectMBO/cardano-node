@@ -29,8 +29,8 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentSource (..),
-                   VerificationKeyOrFile, VerificationKeyTextOrFile,
+import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentVerifier (..),
+                   StakeVerifier (..), VerificationKeyTextOrFile,
                    VerificationKeyTextOrFileError (..), readVerificationKeyOrFile,
                    readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
@@ -65,7 +65,7 @@ runAddressCmd cmd =
   case cmd of
     AddressKeyGen kt vkf skf -> runAddressKeyGen kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
-    AddressBuild paymentSource stkVk nw mOutFp -> runAddressBuild paymentSource stkVk nw mOutFp
+    AddressBuild paymentVerifier mbStakeVerifier nw mOutFp -> runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp
     AddressBuildMultiSig sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
@@ -109,14 +109,14 @@ runAddressKeyHash vkeyTextOrFile mOutputFp = do
     Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 
-runAddressBuild :: PaymentSource
-                -> Maybe (VerificationKeyOrFile StakeKey)
+runAddressBuild :: PaymentVerifier
+                -> Maybe StakeVerifier
                 -> NetworkId
                 -> Maybe OutputFile
                 -> ExceptT ShelleyAddressCmdError IO ()
-runAddressBuild paymentSource mbStkVkeyOrFile nw mOutFp = do
-  outText <- case paymentSource of
-    SourcePaymentKey payVkeyTextOrFile -> do
+runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
+  outText <- case paymentVerifier of
+    PaymentVerifierKey payVkeyTextOrFile -> do
       payVKey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
         readAddressVerificationKeyTextOrFile payVkeyTextOrFile
 
@@ -125,17 +125,17 @@ runAddressBuild paymentSource mbStkVkeyOrFile nw mOutFp = do
           return (AddressByron (makeByronAddress nw vk))
 
         APaymentVerificationKey vk ->
-          AddressShelley <$> buildShelleyAddress vk mbStkVkeyOrFile nw
+          AddressShelley <$> buildShelleyAddress vk mbStakeVerifier nw
 
         APaymentExtendedVerificationKey vk ->
-          AddressShelley <$> buildShelleyAddress (castVerificationKey vk) mbStkVkeyOrFile nw
+          AddressShelley <$> buildShelleyAddress (castVerificationKey vk) mbStakeVerifier nw
 
         AGenesisUTxOVerificationKey vk ->
-          AddressShelley <$> buildShelleyAddress (castVerificationKey vk) mbStkVkeyOrFile nw
+          AddressShelley <$> buildShelleyAddress (castVerificationKey vk) mbStakeVerifier nw
 
       return $ serialiseAddress (addr :: AddressAny)
 
-    SourcePaymentScript (ScriptFile fp) -> do
+    PaymentVerifierScriptFile (ScriptFile fp) -> do
       scriptBytes <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp) $ LBS.readFile fp
       ScriptInAnyLang _lang script <-
         firstExceptT (ShelleyAddressCmdAesonDecodeError fp . Text.pack) $
@@ -143,32 +143,43 @@ runAddressBuild paymentSource mbStkVkeyOrFile nw mOutFp = do
 
       let payCred = PaymentCredentialByScript (hashScript script)
 
-      serialiseAddress . makeShelleyAddress nw payCred <$> makeStakeAddressRef mbStkVkeyOrFile
+      serialiseAddress . makeShelleyAddress nw payCred <$> makeStakeAddressRef mbStakeVerifier
 
   case mOutFp of
     Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath outText
     Nothing                 -> liftIO $ Text.putStr          outText
 
 makeStakeAddressRef
-  :: Maybe (VerificationKeyOrFile StakeKey)
+  :: Maybe StakeVerifier
   -> ExceptT ShelleyAddressCmdError IO StakeAddressReference
-makeStakeAddressRef mbStkVkeyOrFile = do
-  mstakeVKey <- case mbStkVkeyOrFile of
-    Nothing -> pure Nothing
-    Just stkVkeyOrFile -> firstExceptT ShelleyAddressCmdReadKeyFileError $
-        fmap Just $ newExceptT $ readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
+makeStakeAddressRef mbStakeVerifier = do
+  case mbStakeVerifier of
+    Nothing -> pure NoStakeAddress
+    Just stakeVerifier -> case stakeVerifier of
+      StakeVerifierKey stkVkeyOrFile -> do
+        mstakeVKey <- firstExceptT ShelleyAddressCmdReadKeyFileError $
+          fmap Just $ newExceptT $ readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
 
-  return $ maybe NoStakeAddress
-    (StakeAddressByValue . StakeCredentialByKey . verificationKeyHash)
-    mstakeVKey
+        return $ maybe NoStakeAddress
+          (StakeAddressByValue . StakeCredentialByKey . verificationKeyHash)
+          mstakeVKey
+
+      StakeVerifierScriptFile (ScriptFile fp) -> do
+        scriptBytes <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp) $ LBS.readFile fp
+        ScriptInAnyLang _lang script <-
+          firstExceptT (ShelleyAddressCmdAesonDecodeError fp . Text.pack) $
+          hoistEither $ Aeson.eitherDecode scriptBytes
+
+        let stakeCred = StakeCredentialByScript (hashScript script)
+        return (StakeAddressByValue stakeCred)
 
 buildShelleyAddress
   :: VerificationKey PaymentKey
-  -> Maybe (VerificationKeyOrFile StakeKey)
+  -> Maybe StakeVerifier
   -> NetworkId
   -> ExceptT ShelleyAddressCmdError IO (Address ShelleyAddr)
-buildShelleyAddress vkey mbStkVkeyOrFile nw =
-  makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash vkey)) <$> makeStakeAddressRef mbStkVkeyOrFile
+buildShelleyAddress vkey mbStakeVerifier nw =
+  makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash vkey)) <$> makeStakeAddressRef mbStakeVerifier
 
 
 --
@@ -230,7 +241,7 @@ runAddressBuildScript
   -> ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildScript scriptFile networkId mOutputFile = do
   liftIO deprecationWarning
-  runAddressBuild (SourcePaymentScript scriptFile) Nothing networkId mOutputFile
+  runAddressBuild (PaymentVerifierScriptFile scriptFile) Nothing networkId mOutputFile
 
 deprecationWarning :: IO ()
 deprecationWarning = do
