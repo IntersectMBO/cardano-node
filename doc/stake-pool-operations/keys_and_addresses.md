@@ -66,6 +66,8 @@ This address __CAN'T__ receive payments but will receive the rewards from partic
 
 > NOTE: Ensure that your node has synced to the current block height which can be checked at [explorer.cardano.org](https://explorer.cardano.org). If it is not, you may see an error referring to the Byron Era.
 
+> NOTE2: Make sure that you query for the correct era. You can e.g. use `--mary-era` to query for the mary era.
+
 To query the balance of an address we need a running node and the environment variable `CARDANO_NODE_SOCKET_PATH` set to the path of the node.socket:
 
 ```
