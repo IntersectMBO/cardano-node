@@ -65,6 +65,8 @@ type TracePeerSelection = ("TracePeerSelection" :: Symbol)
 type TracePeerSelectionActions = ("TracePeerSelectionActions" :: Symbol)
 type TracePublicRootPeers = ("TracePublicRootPeers" :: Symbol)
 type TraceServer = ("TraceServer" :: Symbol)
+type TraceInboundGovernor = ("InboundGovernor" :: Symbol)
+type TraceLocalInboundGovernor = ("LocalInboundGovernor" :: Symbol)
 type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
@@ -121,6 +123,8 @@ data TraceSelection
   , tracePeerSelectionActions :: OnOff TracePeerSelectionActions
   , tracePublicRootPeers :: OnOff TracePublicRootPeers
   , traceServer :: OnOff TraceServer
+  , traceInboundGovernor :: OnOff TraceInboundGovernor
+  , traceLocalInboundGovernor :: OnOff TraceLocalInboundGovernor
   , traceTxInbound :: OnOff TraceTxInbound
   , traceTxOutbound :: OnOff TraceTxOutbound
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
@@ -204,6 +208,10 @@ traceConfigParser v =
       publicRootPeers = OnOff False
       server :: OnOff TraceServer
       server = OnOff False
+      inboundGovernor :: OnOff TraceInboundGovernor
+      inboundGovernor = OnOff False
+      localInboundGovernor :: OnOff TraceLocalInboundGovernor
+      localInboundGovernor = OnOff False
       txInbound :: OnOff TraceTxInbound
       txInbound = OnOff False
       txOutbound :: OnOff TraceTxOutbound
@@ -255,6 +263,8 @@ traceConfigParser v =
     <*> v .:? getName peerSelectionActions .!= peerSelectionActions
     <*> v .:? getName publicRootPeers .!= publicRootPeers
     <*> v .:? getName server .!= server
+    <*> v .:? getName inboundGovernor .!= inboundGovernor
+    <*> v .:? getName localInboundGovernor .!= localInboundGovernor
     <*> v .:? getName txInbound .!= txInbound
     <*> v .:? getName txOutbound .!= txOutbound
     <*> v .:? getName txSubmissionProtocol .!= txSubmissionProtocol
