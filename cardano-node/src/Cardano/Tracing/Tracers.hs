@@ -302,6 +302,8 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
             tracerOnOff (traceConnectionManager trSel) verb "ConnectionManager" tr,
           dtServerTracer =
             tracerOnOff (traceServer trSel) verb "Server" tr,
+          dtInboundGovernorTracer =
+            tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
           dtLedgerPeersTracer =
             tracerOnOff (traceLedgerPeers trSel) verb "LedgerPeers" tr,
           --
@@ -314,7 +316,9 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
           dtLocalConnectionManagerTracer =
             tracerOnOff (traceLocalConnectionManager trSel) verb "LocalConnectionManager" tr,
           dtLocalServerTracer =
-            tracerOnOff (traceLocalServer trSel) verb "LocalServer" tr
+            tracerOnOff (traceLocalServer trSel) verb "LocalServer" tr,
+          dtLocalInboundGovernorTracer =
+            tracerOnOff (traceLocalInboundGovernor trSel) verb "LocalInboundGovernor" tr
         }
     }
  where
