@@ -33,7 +33,7 @@ newtype Request = GetLogObjects Word16
 -- Please note that the list of 'LogObject's can be empty (for example,
 -- if the forwarder's log queue is empty).
 newtype Response a = ResponseLogObjects [LogObject a]
-  deriving (Generic, Show)
+  deriving (Eq, Generic, Show)
 
 instance ShowProxy Request
 instance Serialise Request

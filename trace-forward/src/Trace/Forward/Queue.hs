@@ -19,7 +19,6 @@ import           Trace.Forward.Configuration (ForwarderConfiguration (..))
 import           Trace.Forward.ReqResp (Request (..), Response (..))
 import qualified Trace.Forward.Protocol.Forwarder as Forwarder
 
--- | 
 readLogObjectsFromQueue
   :: ForwarderConfiguration a -- ^ The forwarder configuration.
   -> TBQueue (LogObject a)    -- ^ The queue we will read 'LogObject's from.

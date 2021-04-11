@@ -150,27 +150,37 @@ executable demo-acceptor-mux
                        -rtsopts
                        -with-rtsopts=-T
 
-
-
-
-
 test-suite trace-forward-test
   import:              common-options
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  main-is:             Spec.hs
-  other-modules:       Test.GetLogObjects
-                       Test.MkConfig
-  build-depends:         base
+  main-is:             trace-forward-test.hs
+  other-modules:       Trace.Forward.Test.Codec
+                       Trace.Forward.Test.Demo
+                       Trace.Forward.Test.MkConfig
+                       Trace.Forward.Test.Types
+
+  build-depends:         aeson
+                       , base
+                       , bytestring
+                       , cborg
                        , contra-tracer
                        , iohk-monitoring
+                       , io-sim
+                       , io-sim-classes
                        , ouroboros-network-framework
-                       , hspec
+                       , QuickCheck
+                       , serialise
                        , stm
+                       , tasty
+                       , tasty-quickcheck
                        , text
                        , time
                        , trace-forward
+                       , typed-protocols-examples
                        , unordered-containers
+                       , vector
+
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N
