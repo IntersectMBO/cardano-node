@@ -1,4 +1,4 @@
-module Test.MkConfig
+module Trace.Forward.Test.MkConfig
   ( mkAcceptorConfig
   , mkForwarderConfig
   ) where
@@ -22,11 +22,11 @@ mkAcceptorConfig endpoint weAreDone request =
   AcceptorConfiguration
     { acceptorTracer    = nullTracer
     , forwarderEndpoint = endpoint
-    , requestFrequency  = secondsToNominalDiffTime 1
+    , requestFrequency  = secondsToNominalDiffTime 0.05
     , whatToRequest     = request
-    , actionOnResponse  = \_ -> return ()
+    , actionOnResponse  = const $ return ()
     , shouldWeStop      = weAreDone
-    , actionOnDone      = putStrLn "Acceptor: we are done!"
+    , actionOnDone      = return ()
     }
 
 mkForwarderConfig
@@ -37,5 +37,5 @@ mkForwarderConfig endpoint =
     { forwarderTracer    = nullTracer
     , acceptorEndpoint   = endpoint
     , reConnectFrequency = secondsToNominalDiffTime 1
-    , actionOnRequest    = \_ -> return ()
+    , actionOnRequest    = const $ return ()
     }

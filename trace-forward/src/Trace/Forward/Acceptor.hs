@@ -10,7 +10,6 @@ module Trace.Forward.Acceptor
 import qualified Codec.Serialise as CBOR
 import           Control.Concurrent.STM.TBQueue (TBQueue)
 import           Control.Exception (SomeException, try)
-import           Control.Monad (void)
 import           Data.Typeable (Typeable)
 
 import           Cardano.BM.Data.LogItem (LogObject)
@@ -31,7 +30,7 @@ runTraceAcceptor
   -> TBQueue (LogObject a)    -- ^ The queue all received 'LogObject's will be write in.
   -> IO ()
 runTraceAcceptor config loQueue =
-  try (void $ listenToForwarder config loQueue) >>= \case
+  try (listenToForwarder config loQueue) >>= \case
     Left (_e :: SomeException) ->
       runTraceAcceptor config loQueue
     Right _ -> return ()

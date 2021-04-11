@@ -10,8 +10,9 @@ module Trace.Forward.Network.Acceptor
 import           Codec.CBOR.Term (Term)
 import qualified Codec.Serialise as CBOR
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (async, wait)
+import           Control.Concurrent.Async (async, wait, waitAnyCancel)
 import           Control.Concurrent.STM.TBQueue (TBQueue)
+import           Control.Monad (void)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IORef (readIORef)
 import qualified Data.Text as T
@@ -57,7 +58,7 @@ listenToForwarder
       Typeable a)
   => AcceptorConfiguration a
   -> TBQueue (LogObject a)
-  -> IO Void
+  -> IO ()
 listenToForwarder config loQueue = withIOManager $ \iocp -> do
   let app = acceptorApp config loQueue
   case forwarderEndpoint config of
@@ -77,26 +78,28 @@ doListenToForwarder
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
   -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
-  -> IO Void
+  -> IO ()
 doListenToForwarder snocket address timeLimits app = do
   networkState <- newNetworkMutableState
-  _ <- async $ cleanNetworkMutableState networkState
-  withServerNode
-    snocket
-    nullNetworkServerTracers
-    networkState
-    (AcceptedConnectionsLimit maxBound maxBound 0)
-    address
-    unversionedHandshakeCodec
-    timeLimits
-    (cborTermVersionDataCodec unversionedProtocolDataCodec)
-    acceptableVersion
-    (simpleSingletonVersions
-      UnversionedProtocol
-      UnversionedProtocolData
-      (SomeResponderApplication app))
-    nullErrorPolicies
-    $ \_ serverAsync -> wait serverAsync -- Block until async exception.
+  nsAsync <- async $ cleanNetworkMutableState networkState
+  clAsync <- async . void $
+    withServerNode
+      snocket
+      nullNetworkServerTracers
+      networkState
+      (AcceptedConnectionsLimit maxBound maxBound 0)
+      address
+      unversionedHandshakeCodec
+      timeLimits
+      (cborTermVersionDataCodec unversionedProtocolDataCodec)
+      acceptableVersion
+      (simpleSingletonVersions
+        UnversionedProtocol
+        UnversionedProtocolData
+        (SomeResponderApplication app))
+      nullErrorPolicies
+      $ \_ serverAsync -> wait serverAsync -- Block until async exception.
+  void $ waitAnyCancel [nsAsync, clAsync]
 
 acceptorApp
   :: (CBOR.Serialise a,
