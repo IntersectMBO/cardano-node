@@ -24,12 +24,11 @@
 #   docker run -v node-ipc:/ipc inputoutput/some-node-client
 ############################################################################
 
-{ iohkNix
+{ pkgs
 , commonLib
 , dockerTools
 
 # The main contents of the image.
-, cardano-node
 , cardano-cli
 , scripts
 
@@ -51,8 +50,9 @@
 , writeScriptBin
 , runtimeShell
 , lib
-
-, repoName ? "inputoutput/cardano-node"
+, exe
+, script
+, repoName ? "inputoutput/${exe}"
 }:
 
 let
@@ -80,27 +80,24 @@ let
   };
   # Image with all iohk-nix network configs or utilizes a configuration volume mount
   # To choose a network, use `-e NETWORK testnet`
-    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (_: value: value) (commonLib.forEnvironments (env: ''
-      elif [[ "$NETWORK" == "${env.name}" ]]; then
-        exec ${scripts.${env.name}.node}
-    '')));
+    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: ''
+      elif [[ "$NETWORK" == "${env}" ]]; then
+        exec ${scripts.${script}}
+    '') scripts);
   nodeDockerImage = let
     entry-point = writeScriptBin "entry-point" ''
       #!${runtimeShell}
       if [[ -z "$NETWORK" ]]; then
-        exec ${cardano-node}/bin/cardano-node $@
+        exec ${pkgs.${exe}}/bin/${exe} $@
       ${clusterStatements}
       else
         echo "Managed configuration for network "$NETWORK" does not exist"
       fi
     '';
-    gitrev' = if (gitrev == null)
-      then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
-      else gitrev;
   in dockerTools.buildImage {
     name = "${repoName}";
     fromImage = baseImage;
-    tag = "${gitrev'}";
+    tag = "${gitrev}";
     created = "now";   # Set creation date to build time. Breaks reproducibility
     contents = [ entry-point ];
     config = {

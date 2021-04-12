@@ -2,53 +2,77 @@
   description = "Cardano Node";
 
   inputs = {
-    haskell-nix.url = "github:input-output-hk/haskell.nix";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    haskellNix.url = "github:input-output-hk/haskell.nix";
+    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     utils.url = "github:numtide/flake-utils";
+    iohkNix = {
+      url = "github:input-output-hk/iohk-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, utils, haskell-nix, ... }:
-    (utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
-      let
-        legacyPackages = import ./nix {
-          inherit sources system nixpkgs iohkNix;
-          haskellNix = haskell-nix.legacyPackages.${system};
+  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, ... }:
+    let
+      inherit (haskellNix.internal) config;
+      inherit (nixpkgs) lib;
+      inherit (lib) systems mapAttrs recursiveUpdate mkDefault optionalAttrs nameValuePair;
+      inherit (utils.lib) eachSystem mkApp flattenTree;
+      inherit (iohkNix.lib) prefixNamesWith collectExes;
+
+      overlays = with iohkNix.overlays; [
+        haskellNix.overlay
+        haskell-nix-extra
+        crypto
+        cardano-lib
+        (final: prev: {
+          customConfig = import ./custom-config.nix;
+          workbenchConfig =  import ./workbench-config.nix;
           gitrev = self.rev or "dirty";
-        };
-        lib = nixpkgs.lib;
-        sources = import ./nix/sources.nix { pkgs = legacyPackages; };
-        iohkNix = import sources.iohk-nix { inherit system; };
-        environments = iohkNix.cardanoLib.environments;
-        environmentName = "testnet";
+          commonLib = lib
+            // iohkNix.lib
+            // final.cardanoLib;
+        })
+        (import ./nix/pkgs.nix)
+      ];
 
-        eachEnv = lib.flip lib.pipe [
-          (lib.forEach (builtins.attrNames environments))
-          lib.listToAttrs
-        ];
+    in eachSystem (import ./supported-systems.nix) (system:
+      let
+        pkgs = import nixpkgs { inherit system overlays config; };
 
-        config = env:
-          { pkgs, ... }: {
-            services.cardano-node = rec {
+        inherit (pkgs.commonLib) eachEnv environnments;
+
+        devShell = import ./shell.nix { inherit pkgs; };
+
+        flake = pkgs.cardanoNodeProject.flake {};
+
+        muslFlake = (import nixpkgs { inherit system overlays config;
+          crossSystem = systems.examples.musl64;
+        }).cardanoNodeProject.flake {};
+
+        windowsFlake = (import nixpkgs { inherit system overlays config;
+          crossSystem = systems.examples.mingwW64;
+        }).cardanoNodeProject.flake {};
+
+        configModule = conf:
+          { pkgs, lib, ... }: {
+            services.cardano-node = {
               stateDir = "/persist";
               socketPath = "/alloc/node.socket";
               enable = true;
-              package = pkgs.cardano-node;
-              environment = env;
-              cardanoNodePkgs = pkgs;
-              hostAddr = "0.0.0.0";
-              port = 3001;
-            };
+              cardanoNodePkgs = lib.mkDefault pkgs;
+              hostAddr = lib.mkDefault "0.0.0.0";
+            } // conf;
           };
 
-        evaluated = env:
+        evaluated = conf:
           lib.nixosSystem {
-            inherit system;
-            pkgs = legacyPackages;
-            modules = [ ./nix/nixos/cardano-node-service.nix (config env) ];
+            inherit pkgs system;
+            modules = [ ./nix/nixos/cardano-node-service.nix (configModule conf) ];
           };
+
 
         packages = let
-          deps = with legacyPackages; [
+          deps = with pkgs; [
             coreutils
             findutils
             gnugrep
@@ -65,37 +89,87 @@
             tree
           ];
 
-          vanilla = eachEnv (env:
-            lib.nameValuePair "cardano-node-${env}"
-            (legacyPackages.writeShellScriptBin "cardano-node-entrypoint" ''
-              ${(evaluated env).config.services.cardano-node.script}
-            ''));
+          vanilla = eachEnv (environment:
+            nameValuePair "${environment}/node-entrypoint"
+            (pkgs.writeShellScriptBin "cardano-node-entrypoint"
+              (evaluated { inherit environment; }).config.services.cardano-node.script));
 
           debug = eachEnv (env:
             let
-              entrypoint =
-                legacyPackages.writeShellScriptBin "cardano-node-entrypoint" ''
-                  ${(evaluated env).config.services.cardano-node.script}
-                '';
-
-              closure = legacyPackages.symlinkJoin {
+              closure = pkgs.symlinkJoin {
                 name = "cardano-node-entrypoint";
-                paths = [ entrypoint ] ++ deps;
+                paths = [ vanilla."cardano-node-${env}" ] ++ deps;
               };
-            in lib.nameValuePair "cardano-node-${env}-debug" closure);
-        in debug // vanilla;
-      in {
-        inherit iohkNix environments evaluated legacyPackages packages;
+            in nameValuePair "${env}/node-entrypoint-debug" closure);
 
-        apps = eachEnv (env:
-          lib.nameValuePair "cardano-node-${env}" (utils.lib.mkApp {
-            drv = packages."cardano-node-${env}";
-            exePath = "/bin/cardano-node-entrypoint";
-          }));
-        })) // {
-          overlay = import ./overlay.nix self;
-          nixosModules = {
-            cardano-node = { imports = [ ./nix/nixos/cardano-node-service.nix ]; };
+        in debug // vanilla // {
+          inherit (devShell) devops;
+        } // (collectExes flake.packages)
+          # Linux only packages:
+          // optionalAttrs (system == "x86_64-linux") (
+            prefixNamesWith "windows/" (collectExes windowsFlake.packages)
+            // (prefixNamesWith "static/" (collectExes muslFlake.packages))
+            // {
+              "dockerImage/node" = pkgs.dockerImage;
+              "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+            }
+          );
+
+      in recursiveUpdate flake {
+
+        inherit evaluated environnments packages;
+
+        legacyPackages = pkgs;
+
+        checks = # Linux only checks:
+          optionalAttrs (system == "x86_64-linux") (
+            prefixNamesWith "windows/" windowsFlake.checks
+            // (prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests))
+          );
+
+        # Built by `nix build .`
+        defaultPackage = flake.packages."cardano-node:exe:cardano-node";
+
+        # Run by `nix run .`
+        defaultApp = flake.apps."cardano-node:exe:cardano-node";
+
+        # This is used by `nix develop .` to open a devShell
+        inherit devShell;
+
+        apps = {
+          repl = mkApp {
+            drv = pkgs.writeShellScriptBin "repl" ''
+              confnix=$(mktemp)
+              echo "builtins.getFlake (toString $(git rev-parse --show-toplevel))" >$confnix
+              trap "rm $confnix" EXIT
+              nix repl $confnix
+          '';
           };
+        }
+        # nix run .#<env>/node
+        // (mapAttrs
+          (_: drv: (mkApp {inherit drv; exePath = "";}))
+          (flattenTree pkgs.scripts))
+        # nix run .#<env>/node-entrypoint
+        // (eachEnv (env: lib.nameValuePair "${env}/node-entrypoint" (utils.lib.mkApp {
+            drv = packages."${env}/node-entrypoint";
+            exePath = "/bin/cardano-node-entrypoint";
+          })))
+        # nix run .#<exe>
+        // (collectExes flake.apps);
+
+      }
+    ) // {
+      overlay = import ./overlay.nix self;
+      nixosModules = {
+        cardano-node = { pkgs, lib, ... }: {
+          imports = [ ./nix/nixos/cardano-node-service.nix ];
+          services.cardano-node.cardanoNodePkgs = lib.mkDefault self.legacyPackages.${pkgs.system};
         };
+        cardano-submit-api = { pkgs, lib, ... }: {
+          imports = [ ./nix/nixos/cardano-submit-api-service.nix ];
+          services.cardano-submit-api.cardanoNodePkgs = lib.mkDefault self.legacyPackages.${pkgs.system};
+        };
+      };
+    };
 }

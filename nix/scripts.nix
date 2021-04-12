@@ -1,19 +1,8 @@
 { pkgs
-, config
 , customConfig
  }:
 with pkgs.commonLib;
 let
-  inherit (pkgs) svcLib;
-  pkgsModule = {
-    config._module.args.pkgs = mkDefault pkgs;
-  };
-  systemdCompat.options = {
-    systemd.services = mkOption {};
-    systemd.sockets = lib.mkOption {};
-    assertions = [];
-    users = mkOption {};
-  };
   mkNodeScript = envConfig: let
     defaultConfig = {
       cardanoNodePkgs = pkgs;
@@ -96,10 +85,10 @@ let
       prefix = [];
       modules = [
         ./nixos/cardano-node-service.nix
-        systemdCompat
+        systemdCompatModule
         nodeConf
-        pkgsModule
       ];
+      args = { inherit pkgs; };
       check = false;
     }).config.services.cardano-node.script;
   in pkgs.writeScript "cardano-node-${envConfig.name}" ''
@@ -108,8 +97,7 @@ let
     mkdir -p "${config.stateDir}"
     ${nodeScript} $@
   '';
-  scripts = forEnvironments (environment:
-  {
+  scripts = forEnvironments (environment: recurseIntoAttrs {
     node = mkNodeScript environment;
   });
 in scripts

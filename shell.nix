@@ -4,15 +4,15 @@
 , sourcesOverride ? {}
 , withHoogle ? true
 , clusterProfile ? "default-mary"
-, customConfig ? { profileName = clusterProfile; }
+, customConfig ? import ./custom-config.nix // { profileName = clusterProfile; }
 
 , autoStartCluster ? false
 , useCabalRun      ? false
 , workbenchDevMode ? false
-, workbenchConfig ?
+, workbenchConfig ? import ./workbench-config.nix //
   { inherit useCabalRun workbenchDevMode; }
 , pkgs ? import ./nix {
-    inherit config sourcesOverride workbenchConfig;
+    inherit config sourcesOverride customConfig workbenchConfig;
   }
 }:
 with pkgs;
@@ -21,7 +21,7 @@ let
     ''
       echo "
         Commands:
-          * niv update <package> - update package
+          * nix flake update --update-input <iohkNix|haskellNix> - update imput
           * cardano-cli - used for key generation and other operations tasks
           * wb - cluster workbench
           * start-cluster - start a local development cluster
@@ -37,22 +37,58 @@ let
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
   clusterCabal = mkCluster (lib.recursiveUpdate customConfig (workbenchConfig // { useCabalRun = true; }));
   clusterNix   = mkCluster (lib.recursiveUpdate customConfig (workbenchConfig // { useCabalRun = false; }));
-  shell = cardanoNodeHaskellPackages.shellFor {
+  nixWapped = writeShellScriptBin "nix" ''
+    if [[ "$@" == "flake show"* ]] || [[ "$@" == "flake check"* ]]; then
+      echo 'Temporary override `supported-systems.nix` original content to be able to use `nix flake show|check` on dev machines (workaround for https://github.com/NixOS/nix/issues/4265)'
+      SYSTEMS="$(${git}/bin/git rev-parse --show-toplevel)/supported-systems.nix"
+      BACKUP="$(mktemp)"
+      mv "$SYSTEMS" "$BACKUP"
+      echo '[ "${system}" ]' > "$SYSTEMS"
+      function atexit() {
+          mv "$BACKUP" "$SYSTEMS"
+      }
+      trap atexit EXIT
+    fi
+    GC_DONT_GC=1 ${nixFlakes}/bin/nix "$@"
+  '';
+  cabalWapped = writeShellScriptBin "cabal" ''
+    # Temporary modify `cabal.project` for local builds..
+    PROJECT="$(${git}/bin/git rev-parse --show-toplevel)/cabal.project"
+    BACKUP="$(mktemp)"
+    cp -a "$PROJECT" "$BACKUP"
+    sed -ni '1,/--- 8< ---/ p' $PROJECT
+    function atexit() {
+        mv "$BACKUP" "$PROJECT"
+    }
+    trap atexit EXIT
+    ${cabal}/bin/cabal "$@"
+  '';
+
+  shell = cardanoNodeProject.shellFor {
     name = "cabal-dev-shell";
 
     inherit withHoogle;
 
     packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
 
+    tools = {
+      hlint = {
+        version = "latest";
+        inherit (cardanoNodeProject) index-state;
+      };
+      haskell-language-server = {
+        version = "latest";
+        inherit (cardanoNodeProject) index-state;
+      };
+    };
+
     # These programs will be available inside the nix-shell.
     buildInputs = with haskellPackages; [
-      cabal-install
       cardano-ping
+      cabalWapped
       ghcid
-      hlint
       weeder
-      nix
-      niv
+      nixWapped
       pkgconfig
       profiteur
       profiterole
@@ -80,13 +116,7 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo "workbench:  setting 'cabal.project' for local builds.."
-      ./scripts/cabal-inside-nix-shell.sh
-
       function atexit() {
-          echo "workbench:  reverting 'cabal.project' to the index version.."
-          ./scripts/cabal-inside-nix-shell.sh --restore
-
           ${lib.optionalString autoStartCluster ''
           if wb local supervisord-running
           then echo "workbench:  stopping cluster (because 'autoStartCluster' implies this):"
@@ -94,7 +124,6 @@ let
           fi''}
       }
       trap atexit EXIT
-
       ${lib.optionalString (autoStartCluster && useCabalRun) ''
       unset NIX_ENFORCE_PURITY
       ''}
@@ -116,8 +145,7 @@ let
     stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
-      cabal-install
-      niv
+      nixWapped
       cardano-cli
       bech32
       cardano-node
@@ -153,7 +181,8 @@ let
 
       ''}
 
-      echo "NOTE: you may need to export GITHUB_TOKEN if you hit rate limits with niv"
+      echo "NOTE: you may need to use a github access token if you hit rate limits with nix flake update:"
+      echo '      edit ~/.config/nix/nix.conf and add line `access-tokens = "github.com=23ac...b289"`'
       ${commandHelp}
 
       ${lib.optionalString autoStartCluster ''

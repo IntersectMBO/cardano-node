@@ -112,6 +112,7 @@ let
       extra = {
         services.cardano-node = {
           enable = true;
+          cardanoNodePkgs = pkgs;
         } // serviceConfig;
       };
     in evalModules {

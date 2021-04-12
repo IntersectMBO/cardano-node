@@ -42,6 +42,11 @@ tags
 # For now require that users generate their own hie.yaml
 hie.yaml
 
+# Ignore local modification of nix config files
+/custom-config.nix
+/workbench-config.nix
+/supported-systems.nix
+
 # Ignore Visual Studio code configuration
 .vscode/tasks.json
 

@@ -77,7 +77,6 @@ let
       "--host-ipv6-addr ${cfg.ipv6HostAddr}"
     )) ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
-        choice() { i=$1; shift; eval "echo \''${$((i + 1))}"; }
         echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
         echo "${toString cmd}"
@@ -97,11 +96,13 @@ let
           ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
           ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
         ''}
+        ${lib.optionalString (i > 0) ''
         # If exist copy state from existing instance instead of syncing from scratch:
         if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath} ]; then
           echo "Copying existing immutable db from ${cfg.databasePath}"
           ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath}/ ${instanceDbPath}/ || true
         fi
+        ''}
         exec ${toString cmd}'';
 in {
   options = {

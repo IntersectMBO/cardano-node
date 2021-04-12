@@ -58,5 +58,4 @@ let
 
 in
   pkgs.writeText "supervisor.conf"
-    (pkgs.commonLib.supervisord.writeSupervisorConfig
-       supervisorConf)
+    (generators.toINI {} supervisorConf)

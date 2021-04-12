@@ -134,7 +134,7 @@ EOF
 
   environment =
     {
-      cardanoLib = pkgs.commonLib.cardanoLib;
+      inherit (pkgs) cardanoLib;
       inherit
         stateDir cacheDir
         basePort;

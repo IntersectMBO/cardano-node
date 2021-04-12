@@ -1,6 +1,6 @@
 {
   "nodes": {
-    "haskell-nix": {
+    "haskellNix": {
       "inputs": {
         "nixpkgs": "nixpkgs",
         "nixpkgs-2003": "nixpkgs-2003",
@@ -8,16 +8,36 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1616030196,
-        "narHash": "sha256-bGTsRBTiUzmjDZYkCi/hJsIHXxPAoDIMKp2b61POcKs=",
+        "lastModified": 1619399651,
+        "narHash": "sha256-fXF2a32kAtqfI9uAl9jaTv9zc9BKSuE/1v4jnveATmI=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "962ecfed3a4fb656b5a91d89159291e00ed766bc",
+        "rev": "ac38a412998e48e2ad5f069548d7a6cd5d822660",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
         "repo": "haskell.nix",
+        "type": "github"
+      }
+    },
+    "iohkNix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1619575755,
+        "narHash": "sha256-UCrW7x7h4WMlssN/cxcj9rZ+hmGgTqO7Kf0oGBRTlZg=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "9dd8ce3474ca4cd1f7c2310c2cf92fb9cd2e0984",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
         "type": "github"
       }
     },
@@ -85,36 +105,24 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1610842533,
-        "narHash": "sha256-6hW8CML8RnNrRJMv7E56rXAhsCNgUM97HIVSqWxnO64=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "68398d2dd50efc2d878bf0f83bbc8bc323b6b0e0",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
-        "haskell-nix": "haskell-nix",
-        "nixpkgs": "nixpkgs_2",
+        "haskellNix": "haskellNix",
+        "iohkNix": "iohkNix",
+        "nixpkgs": [
+          "haskellNix",
+          "nixpkgs-unstable"
+        ],
         "utils": "utils"
       }
     },
     "utils": {
       "locked": {
-        "lastModified": 1614513358,
-        "narHash": "sha256-LakhOx3S1dRjnh0b5Dg3mbZyH0ToC9I8Y2wKSkBaTzU=",
+        "lastModified": 1619345332,
+        "narHash": "sha256-qHnQkEp1uklKTpx3MvKtY6xzgcqXDsz5nLilbbuL+3A=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "5466c5bbece17adaab2d82fae80b46e807611bf3",
+        "rev": "2ebf2558e5bf978c7fb8ea927dfaed8fefab2e28",
         "type": "github"
       },
       "original": {

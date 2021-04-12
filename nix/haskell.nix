@@ -37,14 +37,14 @@ let
   '';
 
   projectPackages = lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
-    (haskell-nix.cabalProject {
+    (haskell-nix.cabalProject' {
       inherit src cabalProjectLocal;
       compiler-nix-name = compiler;
-    }));
+    }).hsPkgs);
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
-  pkgSet = haskell-nix.cabalProject ({
+  pkgSet = haskell-nix.cabalProject' ({
     inherit src cabalProjectLocal;
     compiler-nix-name = compiler;
     modules = [
@@ -176,12 +176,8 @@ let
   # setGitRev is a postInstall script to stamp executables with
   # version info. It uses the "gitrev" argument, if set. Otherwise,
   # the revision is sourced from the local git work tree.
-  setGitRev = ''${haskellBuildUtils}/bin/set-git-rev "${gitrev'}" $out/bin/*'';
+  setGitRev = ''${buildPackages.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*'';
   # package with libsodium:
   setLibSodium = "ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll";
-  gitrev' = if (gitrev == null)
-    then buildPackages.commonLib.commitIdFromGitRepoOrZero ../.git
-    else gitrev;
-  haskellBuildUtils = buildPackages.haskellBuildUtils.package;
 in
   pkgSet
