@@ -21,6 +21,10 @@ import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
 import           Cardano.TraceDispatcher.ChainDBTracer.Combinators
 import           Cardano.TraceDispatcher.ChainDBTracer.Docu
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
+import           Cardano.TraceDispatcher.ConsensusTracer.Formatting ()
+import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
+import           Cardano.TraceDispatcher.ConsensusTracer.Docu
+
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
@@ -34,6 +38,7 @@ import           Cardano.Tracing.Tracers
 import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 
 import           Ouroboros.Consensus.Block (ConvertRawHash, HasHeader, Header)
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client(TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
@@ -59,16 +64,35 @@ chainDBMachineTracer ::
 chainDBMachineTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
     let cdbmTrNs = appendName "ChainDB" $ appendName "Node" tr
-    pure $ withNamesChainDB $ withSeverityChainDB cdbmTrNs
+    pure $ withNamesAppended namesForChainDBTraceEvents
+            $ withSeverity severityChainDB cdbmTrNs
+
+chainSyncClientTracer ::
+  ( ConvertRawHash blk
+  , LedgerSupportsProtocol blk
+  , Show (Header blk)
+  )
+  => Trace IO FormattedMessage
+  -> IO (Trace IO (TraceChainSyncClientEvent blk))
+chainSyncClientTracer trBase = do
+    tr <- humanFormatter True "Cardano" trBase
+    let cdbmTrNs = appendName "ChainSyncClient" $ appendName "Node" tr
+    pure $ withNamesAppended namesForChainSyncClientEvent
+            $ withSeverity severityChainSyncClientEvent cdbmTrNs
 
 docTracers :: IO ()
 docTracers = do
   trBase <- standardTracer Nothing
   cdbmTr <- chainDBMachineTracer trBase
+  cscTr  <- chainSyncClientTracer trBase
   bl1    <- documentMarkdown
               (docChainDBTraceEvent :: Documented (ChainDB.TraceEvent ByronBlock))
               [cdbmTr]
-  T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" (buildersToText bl1)
+  bl2    <- documentMarkdown
+              (docChainSyncClientEvent :: Documented (TraceChainSyncClientEvent ByronBlock))
+              [cscTr]
+  let bl = bl1 ++ bl2
+  T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" (buildersToText bl)
 
 
 -- | Tracers for all system components.
@@ -92,13 +116,13 @@ mkDispatchTracers
   -> IO (Tracers peer localPeer blk)
 mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect trBase = do
   cdbmTr <- chainDBMachineTracer trBase
---  ipST   <- ipSubscriptionTracer trBase
+  cscTr  <- chainSyncClientTracer trBase
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
 
     , consensusTracers = Consensus.Tracers
-      { Consensus.chainSyncClientTracer = nullTracer
+      { Consensus.chainSyncClientTracer = Tracer (traceWith cscTr)
       , Consensus.chainSyncServerHeaderTracer = nullTracer
       , Consensus.chainSyncServerBlockTracer = nullTracer
       , Consensus.blockFetchDecisionTracer = nullTracer
