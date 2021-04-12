@@ -67,15 +67,16 @@ When building and submitting a transaction in the shelley era you need to check 
 Look for the value of `SlotNo`
 
     {
-        "blockNo": 16829,
-        "headerHash": "3e6f59b10d605e7f59ba8383cb0ddcd42480ddcc0a85d41bad1e4648eb5465ad",
-        "slotNo": 369200
+        "epoch": 259,
+        "hash": "dbf5104ab91a7a0b405353ad31760b52b2703098ec17185bdd7ff1800bb61aca",
+        "slot": 26633911,
+        "block": 5580350
     }
 
 Therefore, if N = 200 slots
 
-    invalid-hereafter = 369200 + 200
-    invalid-hereafter = 369400
+    invalid-hereafter = 26633911 + 200
+    invalid-hereafter = 26634111
 
 **Build the transaction**
 
@@ -85,7 +86,7 @@ This time we include all the paramenters:
     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
     --tx-out $(cat payment2.addr)+100000000 \
     --tx-out $(cat payment.addr)+999899832035 \
-    --invalid-hereafter 369400 \
+    --invalid-hereafter 26634111 \
     --fee 167965 \
     --out-file tx.raw
 

@@ -69,15 +69,16 @@ Then we need the current tip of the blockchain:
 
     cardano-cli query tip --mainnet
     {
-        "blockNo": 36929,
-        "headerHash": "44c2a2be237ea485c15bf2a50c12b4d2aabe6d4233cb1b2131efc080615a17d0",
-        "slotNo": 906528
+        "epoch": 259,
+        "hash": "dbf5104ab91a7a0b405353ad31760b52b2703098ec17185bdd7ff1800bb61aca",
+        "slot": 26633911,
+        "block": 5580350
     }
 
-Look for Tip `slotNo` value. In this example we are on slot 906528. So we have KES period is 251:
+Look for tip `slot` value. In this example we are on slot `26633911`. So we have KES period is `7398`:
 
-    expr 906528 / 3600
-    > 251
+    expr 26633911 / 3600
+    > 7398
 
 To generate the certificate:
 
@@ -85,7 +86,7 @@ To generate the certificate:
     --kes-verification-key-file kes.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter cold.counter \
-    --kes-period 251 \
+    --kes-period 7398 \
     --out-file node.cert
 
 #### Move the cold keys to secure storage and remove them from your local machine.

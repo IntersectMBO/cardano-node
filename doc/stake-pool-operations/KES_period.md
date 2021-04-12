@@ -25,15 +25,16 @@ We check the current tip of the blockchain:
     cardano-cli query tip --mainnet
 
     {
-        "blockNo": 36914,
-        "headerHash": "58df595137e71c0fa65edc99add11704b00e5f163475bd804e4bd59c126bfc9b",
-        "slotNo": 8520857
+        "epoch": 259,
+        "hash": "dbf5104ab91a7a0b405353ad31760b52b2703098ec17185bdd7ff1800bb61aca",
+        "slot": 26633911,
+        "block": 5580350
     }
 
-In this example, we are currently in slot 8520857, and we know from the genesis file that one period lasts for 129600 slots. So we calculate the current period by
+In this example, we are currently in slot 26633911, and we know from the genesis file that one period lasts for 129600 slots. So we calculate the current period by
 
-    expr 8520857 / 129600
-    > 65
+    expr 26633911 / 129600
+    > 205
 
 With this we are able to generate an operational certificate for our stake pool:
 
@@ -41,5 +42,5 @@ With this we are able to generate an operational certificate for our stake pool:
     --kes-verification-key-file kes.vkey \
     --cold-signing-key-file cold.skey \
     --operational-certificate-issue-counter cold.counter \
-    --kes-period 65 \
+    --kes-period 205 \
     --out-file node.cert
