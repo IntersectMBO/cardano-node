@@ -56,18 +56,19 @@ To start a passive node:
 
 **Replace x.x.x.x with your public IP and indicate the correct paths to the required files.**
 
-Many commands relay on the environment variable CARDANO_NODE_SOCKET_PATH:
+Many commands rely on the environment variable CARDANO_NODE_SOCKET_PATH:
 
     export CARDANO_NODE_SOCKET_PATH=path/to/db/node.socket
 
-Check that the node is syncing by fetching the current tip. When syncing slotNo should be increasing.
+Check that the node is syncing by fetching the current tip. When syncing `slot` should be increasing.
 
-        cardano-cli query tip --mainnet
+    cardano-cli query tip --mainnet
 
-        {
-            "blockNo": 36322,
-            "headerHash": "3f1bea22be21452415851ae670f4bac9340471cb7f2f6a664fac56d7f60dbaad",
-            "slotNo": 888561
-        }
+    {
+        "epoch": 259,
+        "hash": "dbf5104ab91a7a0b405353ad31760b52b2703098ec17185bdd7ff1800bb61aca",
+        "slot": 26633911,
+        "block": 5580350
+    }
 
 **Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.

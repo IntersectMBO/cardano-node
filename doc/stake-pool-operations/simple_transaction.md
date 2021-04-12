@@ -86,15 +86,16 @@ Query the tip of the blockchain:
 
     cardano-cli query tip --mainnet
 
-Look for the value of `slotNo`
+Look for the value of `slot`
 
     {
-        "blockNo": 16829,
-        "headerHash": "3e6f59b10d605e7f59ba8383cb0ddcd42480ddcc0a85d41bad1e4648eb5465ad",
-        "slotNo": 369200
+        "epoch": 259,
+        "hash": "dbf5104ab91a7a0b405353ad31760b52b2703098ec17185bdd7ff1800bb61aca",
+        "slot": 26633911,
+        "block": 5580350
     }
 
-Calculate your TTL, for example:  369200 + 200 slots = 369400
+Calculate your `invalid-hereafter`, for example:  26633911 + 200 slots = 26634111
 
 #### Build the transaction
 
@@ -104,7 +105,7 @@ We write the transaction in a file, we will name it `tx.raw`.
     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \
     --tx-out $(cat payment2.addr)+10000000 \
     --tx-out $(cat payment.addr)+9832035 \
-    --invalid-hereafter 369400 \
+    --invalid-hereafter 26634111 \
     --fee 167965 \
     --out-file tx.raw
 

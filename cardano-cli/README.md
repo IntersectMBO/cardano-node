@@ -4,18 +4,20 @@
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
 
 The general synopsis is as follows:
- ```
+
+```
    Usage: cardano-cli (Genesis related CMDs | Key related CMDs | Delegation related CMDs | Transaction related CMDs | Local node related CMDs)
 ```
 
 The top-level commands are as shown below.
 
-```
+```bash
 $ cardano-cli --help
 cardano-cli - utility to support a variety of key operations (genesis
 generation, migration, pretty-printing..) for different system generations.
 
-Usage: cardano-cli (Era based commands | Byron specific commands | Miscellaneous commands)
+Usage: cardano-cli (Era based commands | Byron specific commands |
+                     Miscellaneous commands)
 
 Available options:
   --version                Show the cardano-cli version
@@ -44,12 +46,10 @@ Miscellaneous commands
   version                  Show the cardano-cli version
 ```
 
-```
-
 Byron-specific commands
 
-```
-cardano-cli byron --help
+```bash
+$ cardano-cli byron --help
 Usage: cardano-cli byron (key | transaction | query | genesis | governance |
                            miscellaneous)
   Byron specific commands
