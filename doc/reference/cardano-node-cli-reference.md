@@ -34,11 +34,11 @@ The `stake-address` command contains the following sub commands:
 
 *cardano-cli transaction*
 The `transaction` command contains the following sub commands:
-* `build-raw`: builds a low-level transaction (uses the --cardano-mode, --byron-mode, --shelley mode flags)
+* `build-raw`: builds a low-level transaction (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
 * `sign`: signs the transaction
 * `assemble` : combines and assembles the transaction witness(es) with a transaction body to create a transaction
 * `witness`: witnesses a transaction
-* `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARANO_NODE_SOCKET_PATH environment variable (uses the --cardano-mode, --byron-mode, --shelley mode flags)
+* `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARANO_NODE_SOCKET_PATH environment variable (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
 * `calculate-min-fee`: calculates the minimum fee for the transaction
 * `txid`: retrieves the transaction ID
 * `policyid`: retrieves the transaction ID
