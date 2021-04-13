@@ -515,49 +515,38 @@ writeStakeSnapshot poolId qState =
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
-writePoolParams :: forall era ledgerera.
-                   ShelleyLedgerEra era ~ ledgerera
-                => FromCBOR (LedgerState era)
-                => Crypto.Crypto (Era.Crypto ledgerera)
-                => Hash StakePoolKey
-                -> SerialisedLedgerState era
-                -> ExceptT ShelleyQueryCmdError IO ()
+writePoolParams :: forall era ledgerera. ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => FromCBOR (LedgerState era)
+  => Crypto.Crypto (Era.Crypto ledgerera)
+  => Hash StakePoolKey
+  -> SerialisedLedgerState era
+  -> ExceptT ShelleyQueryCmdError IO ()
 writePoolParams poolId qState =
   case decodeLedgerState qState of
     Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-    Right ledgerState ->
-      if isNothing maybehk then
-        left $ ShelleyQueryCmdPoolIdError poolId
-      else
-        liftIO . LBS.putStrLn $  encodePretty $ Params poolparams fpoolparams retiring
-      where
-        (LedgerState snapshot)  = ledgerState
+    Right ledgerState -> do
+      let LedgerState snapshot = ledgerState
+      let poolState = _pstate $ _delegationState $ esLState $ nesEs snapshot
 
-        -- pool state
-        ps = _pstate $ _delegationState $ esLState $ nesEs snapshot
+      -- Convert the hash string into a KeyHash for use by the ledger
+      case KeyHash <$> hashFromStringAsHex (filter (/= '"') (show poolId)) of
+        Just hk -> do
+          -- Pool parameters
+          let poolparams = Map.lookup hk $ _pParams poolState
+          let fpoolparams = Map.lookup hk $ _fPParams poolState
+          let retiring = Map.lookup hk $ _retiring poolState
 
-        -- Convert the hash string into a KeyHash for use by the ledger
-        maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
-        hk = KeyHash $ fromJust maybehk
+          liftIO . LBS.putStrLn $ encodePretty $ Params poolparams fpoolparams retiring
 
-        -- pool parameters
-        poolparams = getPoolParams hk $ _pParams ps
-        fpoolparams = getPoolParams hk $ _fPParams ps
-        retiring = getPoolParams hk $ _retiring ps
-
-
-        getPoolParams :: KeyHash StakePool (Era.Crypto ledgerera)
-                      -> Map (KeyHash StakePool (Era.Crypto ledgerera)) params
-                      -> Maybe params
-        getPoolParams poolid poolparammap = Map.lookup poolid poolparammap
+        Nothing -> left $ ShelleyQueryCmdPoolIdError poolId
 
 decodeLedgerState ::
   forall era.
      FromCBOR (LedgerState era)
   => SerialisedLedgerState era
   -> Either LBS.ByteString (LedgerState era)
-decodeLedgerState (SerialisedLedgerState (Serialised ls)) =
-  first (const ls) (decodeFull ls)
+decodeLedgerState (SerialisedLedgerState (Serialised ls)) = first (const ls) (decodeFull ls)
 
 writeProtocolState :: Crypto.Crypto StandardCrypto
                    => Maybe OutputFile
