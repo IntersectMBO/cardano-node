@@ -452,14 +452,13 @@ writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath $ unSerialised serLedgerState
 
-writeStakeSnapshot :: forall era ledgerera.
-                      ShelleyLedgerEra era ~ ledgerera
-                   => Era.Era ledgerera
-                   => FromCBOR (LedgerState era)
-                   => Hash StakePoolKey
-                   -> SerialisedLedgerState era
-                   -> ExceptT ShelleyQueryCmdError IO ()
-
+writeStakeSnapshot :: forall era ledgerera. ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => Era.Era ledgerera
+  => FromCBOR (LedgerState era)
+  => Hash StakePoolKey
+  -> SerialisedLedgerState era
+  -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeSnapshot poolId qState =
   case decodeLedgerState qState of
     Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
@@ -491,22 +490,19 @@ writeStakeSnapshot poolId qState =
             , gotot = goTotal
             }
         Nothing -> left $ ShelleyQueryCmdPoolIdError poolId
-      where
-        -- Sum all the stake that is held by the pool
-        getPoolStake :: KeyHash Shelley.Spec.Ledger.Keys.StakePool crypto
-                     -> SnapShot crypto
-                     -> Integer
-        getPoolStake hash ss = pStake
-          where
-            Coin pStake = fold s
-            (Stake s) = poolStake hash (_delegations ss) (_stake ss)
 
-        -- Sum the active stake from a snapshot
-        getAllStake :: SnapShot crypto
-                    -> Integer
-        getAllStake (SnapShot stake _ _) = activeStake
-          where
-            Coin activeStake = fold . unStake $ stake
+-- | Sum all the stake that is held by the pool
+getPoolStake :: KeyHash Shelley.Spec.Ledger.Keys.StakePool crypto -> SnapShot crypto -> Integer
+getPoolStake hash ss = pStake
+  where
+    Coin pStake = fold s
+    (Stake s) = poolStake hash (_delegations ss) (_stake ss)
+
+-- | Sum the active stake from a snapshot
+getAllStake :: SnapShot crypto -> Integer
+getAllStake (SnapShot stake _ _) = activeStake
+  where
+    Coin activeStake = fold . unStake $ stake
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
