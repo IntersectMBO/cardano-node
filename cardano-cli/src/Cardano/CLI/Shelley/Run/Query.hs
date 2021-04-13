@@ -24,7 +24,6 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.HashMap.Strict as HMS
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -464,39 +463,35 @@ writeStakeSnapshot :: forall era ledgerera.
 writeStakeSnapshot poolId qState =
   case decodeLedgerState qState of
     Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-    Right ledgerState ->
-      if isNothing maybehk then
-        left $ ShelleyQueryCmdPoolIdError poolId
-      else
-        liftIO . LBS.putStrLn $ encodePretty $
-          Stakes { markpool = markStake
-                 , setpool = setStake
-                 , gopool = goStake
-                 , marktot = markTotal
-                 , settot = setTotal
-                 , gotot = goTotal
-                 }
+    Right ledgerState -> do
+      -- Convert the hash string into a KeyHash for use by the ledger
+      case fmap KeyHash . hashFromStringAsHex $ filter (/= '"') $ show poolId of
+        Just hk -> do
+          -- Ledger State
+          let (LedgerState snapshot) = ledgerState
+
+          -- The three stake snapshots, obtained from the ledger state
+          let (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
+
+          -- Calculate the three pool and active stake values for the given pool
+          let markStake =  getPoolStake hk markS
+          let setStake = getPoolStake hk setS
+          let goStake = getPoolStake hk goS
+
+          let markTotal = getAllStake markS
+          let setTotal = getAllStake setS
+          let goTotal = getAllStake goS
+
+          liftIO . LBS.putStrLn $ encodePretty $ Stakes
+            { markpool = markStake
+            , setpool = setStake
+            , gopool = goStake
+            , marktot = markTotal
+            , settot = setTotal
+            , gotot = goTotal
+            }
+        Nothing -> left $ ShelleyQueryCmdPoolIdError poolId
       where
-        -- Ledger State
-        (LedgerState snapshot) = ledgerState
-
-        -- The three stake snapshots, obtained from the ledger state
-        (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
-
-
-        -- Calculate the three pool and active stake values for the given pool
-        markStake =  getPoolStake hk markS
-        setStake = getPoolStake hk setS
-        goStake = getPoolStake hk goS
-
-        markTotal = getAllStake markS
-        setTotal = getAllStake setS
-        goTotal = getAllStake goS
-
-        -- Convert the hash string into a KeyHash for use by the ledger
-        maybehk = hashFromStringAsHex $ filter (/= '"') $ show poolId
-        hk = KeyHash $ fromJust maybehk
-
         -- Sum all the stake that is held by the pool
         getPoolStake :: KeyHash Shelley.Spec.Ledger.Keys.StakePool crypto
                      -> SnapShot crypto
