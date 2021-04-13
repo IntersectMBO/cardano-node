@@ -23,6 +23,9 @@ module Cardano.Api.Tx (
     getTxBody,
     getTxWitnesses,
 
+    -- ** Fetching certificates
+    getTxCertificates,
+
     -- ** Signing in one go
     ShelleySigningKey(..),
     toShelleySigningKey,
@@ -54,6 +57,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import qualified Data.Vector as Vector
 
@@ -108,6 +112,20 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxBody
 
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
+
+-- | Get all the @Certificate@ from @Tx@.
+getTxCertificates :: forall era. Tx era -> Seq.StrictSeq Certificate
+getTxCertificates tx =
+    case getTxBody tx of
+        -- Byron doesn't have any additional certificates!
+        ByronTxBody {} -> Seq.Empty
+        ShelleyTxBody ShelleyBasedEraShelley (Shelley.TxBody _ _ certs _ _ _ _ _) _aux ->
+            fromShelleyCertificate <$> certs
+        ShelleyTxBody ShelleyBasedEraAllegra (Allegra.TxBody _ _ certs _ _ _ _ _ _) _aux ->
+            fromShelleyCertificate <$> certs
+        ShelleyTxBody ShelleyBasedEraMary (Allegra.TxBody _ _ certs _ _ _ _ _ _) _aux ->
+            fromShelleyCertificate <$> certs
 
 -- ----------------------------------------------------------------------------
 -- Signed transactions

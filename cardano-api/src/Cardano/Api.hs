@@ -248,6 +248,7 @@ module Cardano.Api (
 
     -- * Certificates
     Certificate,
+    getTxCertificates,
 
     -- ** Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and
