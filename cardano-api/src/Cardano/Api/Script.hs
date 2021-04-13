@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Script (
@@ -46,6 +47,7 @@ module Cardano.Api.Script (
 
     -- * Internal conversion functions
     toShelleyScript,
+    fromShelleyBasedScript,
     toShelleyMultiSig,
     fromShelleyMultiSig,
     toAllegraTimelock,
@@ -653,6 +655,34 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript _ script)) =
       SimpleScriptV2InAllegra -> toAllegraTimelock script
       SimpleScriptV2InMary    -> toAllegraTimelock script
 
+fromShelleyBasedScript
+  :: forall era
+  . IsShelleyBasedEra era
+  => Ledger.Script (ShelleyLedgerEra era)
+  -> ScriptInEra era
+fromShelleyBasedScript script = case shelleyBasedEra @era of
+  ShelleyBasedEraShelley -> ScriptInEra
+                              SimpleScriptV1InShelley
+                              (SimpleScript
+                                simpleScriptVersion
+                                (fromShelleyMultiSig script)
+                              )
+  ShelleyBasedEraAllegra -> ScriptInEra
+                              _
+                              (SimpleScript
+                                simpleScriptVersion
+                                (fromAllegraTimelock
+                                  _
+                                  script
+                                )
+                              )
+  ShelleyBasedEraMary    -> _
+
+  -- = ScriptInEra undefined
+  -- . fromAllegraTimelock TimeLocksInSimpleScriptV2
+-- TODO What to do here? We don't know the version of the script! We could use
+-- the latest version, or the lowest version supported by the sctipt (see
+-- `scriptLanguageSupportedInEra`)", or can we really know the version somehow?
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
 --
@@ -755,7 +785,6 @@ instance IsScriptLanguage lang => FromJSON (Script lang) where
       SimpleScriptLanguage lang -> SimpleScript lang <$>
                                      parseSimpleScript lang v
       PlutusScriptLanguage lang -> case lang of {}
-
 
 instance FromJSON ScriptInAnyLang where
   parseJSON v =

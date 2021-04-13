@@ -281,7 +281,6 @@ toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
       TreasuryMIR ->
         error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
 
-
 fromShelleyCertificate :: Shelley.DCert StandardCrypto -> Certificate
 fromShelleyCertificate (Shelley.DCertDeleg (Shelley.RegKey stakecred)) =
     StakeAddressRegistrationCertificate

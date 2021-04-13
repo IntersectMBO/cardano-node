@@ -34,24 +34,24 @@ module Cardano.Api.TxMetadata (
 import           Prelude
 
 import           Data.Bifunctor (first)
-import           Data.Maybe (fromMaybe)
-import           Data.Word
-import qualified Data.Scientific as Scientific
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.ByteString.Base16 as Base16
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as List
+import qualified Data.Map.Lazy as Map.Lazy
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
+import qualified Data.Scientific as Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.Map.Lazy as Map.Lazy
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List
 import qualified Data.Vector as Vector
+import           Data.Word
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Text as Aeson.Text
@@ -107,8 +107,7 @@ instance SerialiseAsCBOR TxMetadata where
         . (\(TxMetadata m) -> m)
 
     deserialiseFromCBOR AsTxMetadata bs =
-          TxMetadata
-        . fromShelleyMetadata
+          fromShelleyMetadata
         . (\(Shelley.Metadata m) -> m)
       <$> (CBOR.decodeAnnotator "TxMetadata" fromCBOR (LBS.fromStrict bs)
            :: Either CBOR.DecoderError (Shelley.Metadata ()))
@@ -137,8 +136,8 @@ toShelleyMetadata = Map.map toShelleyMetadatum
                                                toShelleyMetadatum v)
                                             | (k,v) <- xs ]
 
-fromShelleyMetadata :: Map Word64 Shelley.Metadatum -> Map Word64 TxMetadataValue
-fromShelleyMetadata = Map.Lazy.map fromShelleyMetadatum
+fromShelleyMetadata :: Map Word64 Shelley.Metadatum -> TxMetadata
+fromShelleyMetadata = TxMetadata . Map.Lazy.map fromShelleyMetadatum
   where
     fromShelleyMetadatum :: Shelley.Metadatum -> TxMetadataValue
     fromShelleyMetadatum (Shelley.I     x) = TxMetaNumber x
