@@ -255,25 +255,21 @@ runQueryPoolParams
   -> NetworkId
   -> Hash StakePoolKey
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryPoolParams (AnyConsensusModeParams cModeParams)
-                    network poolid = do
+runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolid = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
   anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
+
   let cMode = consensusModeOnly cModeParams
+
   sbe <- getSbe $ cardanoEraStyle era
 
   case toEraInMode era cMode of
     Just eInMode -> do
-      let qInMode = QueryInEra eInMode
-                      . QueryInShelleyBasedEra sbe
-                      $ QueryLedgerState
-      result <- executeQuery
-                  era
-                  cModeParams
-                  localNodeConnInfo
-                  qInMode
+      let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryLedgerState
+      result <- executeQuery era cModeParams localNodeConnInfo qInMode
       obtainLedgerEraClassConstraints sbe (writePoolParams poolid) result
     Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
 
@@ -281,32 +277,26 @@ runQueryPoolParams (AnyConsensusModeParams cModeParams)
 -- | Obtain stake snapshot information for a pool, plus information about the total active stake.
 -- This information can be used for leader slot calculation, for example, and has been requested by SPOs.
 -- Obtaining the information directly is significantly more time and memory efficient than using a full ledger state dump.
---
-
 runQueryStakeSnapshot
   :: AnyConsensusModeParams
   -> NetworkId
   -> Hash StakePoolKey
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryStakeSnapshot (AnyConsensusModeParams cModeParams)
-                    network poolid = do
+runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolid = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
   anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
+
   let cMode = consensusModeOnly cModeParams
+
   sbe <- getSbe $ cardanoEraStyle era
 
   case toEraInMode era cMode of
     Just eInMode -> do
-      let qInMode = QueryInEra eInMode
-                      . QueryInShelleyBasedEra sbe
-                      $ QueryLedgerState
-      result <- executeQuery
-                  era
-                  cModeParams
-                  localNodeConnInfo
-                  qInMode
+      let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryLedgerState
+      result <- executeQuery era cModeParams localNodeConnInfo qInMode
       obtainLedgerEraClassConstraints sbe (writeStakeSnapshot poolid) result
     Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
 
