@@ -59,6 +59,7 @@ pkgs: _: with pkgs;
   inherit (cardanoNodeHaskellPackages.cardano-cli.components.exes) cardano-cli;
   inherit (cardanoNodeHaskellPackages.cardano-topology.components.exes) cardano-topology;
   inherit (cardanoNodeHaskellPackages.bech32.components.exes) bech32;
+  inherit (cardanoNodeHaskellPackages.cardano-submit-api.components.exes) cardano-submit-api;
   cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
   cardano-node-eventlogged = cardanoNodeEventlogHaskellPackages.cardano-node.components.exes.cardano-node;
   cardano-node-asserted = cardanoNodeAssertedHaskellPackages.cardano-node.components.exes.cardano-node;

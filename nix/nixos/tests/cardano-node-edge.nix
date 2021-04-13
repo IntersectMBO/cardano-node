@@ -36,6 +36,14 @@ with pkgs;
         };
       };
       systemd.services.cardano-node.serviceConfig.Restart = lib.mkForce "no";
+      services.cardano-submit-api = {
+        enable = true;
+        port = 8101;
+        network = "mainnet";
+        socketPath = config.services.cardano-node.socketPath;
+        cardanoNodePkgs = pkgs;
+      };
+      systemd.services.cardano-submit-api.serviceConfig.SupplementaryGroups = "cardano-node";
     };
   };
   testScript = ''
@@ -49,6 +57,8 @@ with pkgs;
     machine.succeed(
         "${cardano-ping}/bin/cardano-ping -h 127.0.0.1 -c 1 -q --json | ${jq}/bin/jq -c"
     )
+    machine.wait_for_open_port(8101)
+    machine.succeed("systemctl status cardano-submit-api")
   '';
 
 }
