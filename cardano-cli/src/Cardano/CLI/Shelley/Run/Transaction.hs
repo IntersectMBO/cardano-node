@@ -43,11 +43,11 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
+import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..), readShelleyGenesis,
                    renderShelleyGenesisCmdError)
-import           Cardano.CLI.Shelley.Run.Pretty (friendlyTxBodyBS)
 import           Cardano.CLI.Types
 
 data ShelleyTxCmdError
@@ -792,7 +792,7 @@ runTxView txfile = do
       InputTxFile (TxFile txFile) -> do
         InAnyCardanoEra era tx <- readFileTx txFile
         return . InAnyCardanoEra era $ getTxBody tx
-  liftIO $ BS.putStrLn $ friendlyTxBodyBS era txbody
+  liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
 
 runTxCreateWitness
   :: TxBodyFile
