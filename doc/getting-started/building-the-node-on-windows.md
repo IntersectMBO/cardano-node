@@ -18,7 +18,7 @@ choco install --version 8.10.2 ghc
 ## Install pkg-config
 
 ```PowerShell
-choco install pgkconfiglite
+choco install pkgconfiglite
 ```
 
 ## Install vcpkg
