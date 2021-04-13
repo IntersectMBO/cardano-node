@@ -179,33 +179,6 @@ in {
         '';
       };
 
-     # TODO: remove
-     genesisFile = mkOption {
-        type = types.path;
-        default = envConfig.genesisFile or null;
-        description = ''
-          Genesis json file
-        '';
-      };
-
-     # TODO: remove
-      genesisHash = mkOption {
-        type = types.nullOr types.str;
-        default = envConfig.genesisHash;
-        description = ''
-          Hash of the genesis file
-        '';
-      };
-
-     # TODO: remove
-      genesisHashPath = mkOption {
-        type = types.nullOr types.path;
-        default = null;
-        description = ''
-          Path to the Hash of the genesis file
-        '';
-      };
-
       # Byron signing/delegation
 
       signingKey = mkOption {
@@ -438,25 +411,6 @@ in {
             else if cfg.profiling == "space-bio" then ["-hb"] ++ commonProfilingArgs
             else [];
         description = ''RTS profiling options'';
-      };
-
-      tracingVerbosity = mkOption {
-        type = types.str;
-        default = envConfig.tracingVerbosity;
-        description = ''verbosity level of structured representation of traced values.'';
-      };
-
-      protover-major = mkOption {
-        type = types.nullOr types.int;
-        default = null;
-      };
-      protover-minor = mkOption {
-        type = types.nullOr types.int;
-        default = null;
-      };
-      protover-alt = mkOption {
-        type = types.nullOr types.int;
-        default = null;
       };
     };
   };
