@@ -211,9 +211,7 @@ readAddressVerificationKeyTextOrFile vkTextOrFile =
       readVerificationKeyTextOrFileAnyOf bech32Types textEnvTypes vkTextOrFile
   where
     bech32Types =
-      [ FromSomeType (AsVerificationKey AsByronKey)
-                     AByronVerificationKey
-      , FromSomeType (AsVerificationKey AsPaymentKey)
+      [ FromSomeType (AsVerificationKey AsPaymentKey)
                      APaymentVerificationKey
       , FromSomeType (AsVerificationKey AsPaymentExtendedKey)
                      APaymentExtendedVerificationKey
