@@ -55,7 +55,9 @@ let
     '' else p;
 
   packages = {
-    inherit haskellPackages cardano-node cardano-cli db-converter cardano-ping
+    inherit haskellPackages
+      cardano-node cardano-node-profiled cardano-node-eventlogged
+      cardano-cli db-converter cardano-ping
       scripts nixosTests environments dockerImage mkCluster bech32;
 
     # so that eval time gc roots are cached (nix-tools stuff)
