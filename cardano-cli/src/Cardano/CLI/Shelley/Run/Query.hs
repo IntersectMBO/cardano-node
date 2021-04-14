@@ -47,6 +47,7 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
@@ -151,8 +152,9 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
     Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
  where
   writeProtocolParameters
-    :: Maybe OutputFile
-    -> ProtocolParameters
+    :: IsCardanoEra era
+    => Maybe OutputFile
+    -> ProtocolParameters era
     -> ExceptT ShelleyQueryCmdError IO ()
   writeProtocolParameters mOutFile' pparams =
     case mOutFile' of
@@ -326,7 +328,7 @@ runQueryLedgerState
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLedgerState (AnyConsensusModeParams cModeParams)
-                    network mOutFile = do
+                    network _mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -339,13 +341,14 @@ runQueryLedgerState (AnyConsensusModeParams cModeParams)
       let qInMode = QueryInEra eInMode
                       . QueryInShelleyBasedEra sbe
                       $ QueryDebugLedgerState
-      result <- executeQuery
+      _result <- executeQuery
                   era
                   cModeParams
                   localNodeConnInfo
                   qInMode
-      obtainLedgerEraClassConstraints sbe (writeLedgerState mOutFile) result
-    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
+      panic "TODO"
+      --obtainLedgerEraClassConstraints sbe (writeLedgerState mOutFile) result
+    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
 
 
 runQueryProtocolState
@@ -445,14 +448,14 @@ writeStakeAddressInfo mOutFile delegsAndRewards =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath (encodePretty delegsAndRewards)
 
-writeLedgerState :: forall era ledgerera.
+_writeLedgerState :: forall era ledgerera.
                     ShelleyLedgerEra era ~ ledgerera
                  => ToJSON (DebugLedgerState era)
                  => FromCBOR (DebugLedgerState era)
                  => Maybe OutputFile
                  -> SerialisedDebugLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
-writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
+_writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
   case mOutFile of
     Nothing -> case decodeLedgerState qState of
                  Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
@@ -566,6 +569,7 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
           ShelleyBasedEraShelley -> writeUTxo fpath utxo
           ShelleyBasedEraAllegra -> writeUTxo fpath utxo
           ShelleyBasedEraMary -> writeUTxo fpath utxo
+          ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
  where
    writeUTxo fpath utxo' =
      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
@@ -582,6 +586,9 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
     ShelleyBasedEraMary    ->
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
+    ShelleyBasedEraAlonzo ->
+      mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
+
  where
    title :: Text
    title =
@@ -618,7 +625,14 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , textShowN 6 index
              , "        " <> printableValue value
              ]
-
+    ShelleyBasedEraAlonzo ->
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+      in Text.putStrLn $
+           mconcat
+             [ Text.decodeLatin1 (hashToBytesAsHex txhash)
+             , textShowN 6 index
+             , "        " <> printableValue value
+             ]
  where
   textShowN :: Show a => Int -> a -> Text
   textShowN len x =
@@ -775,15 +789,20 @@ queryResult eAcq =
         Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
         Right result -> return result
 
-obtainLedgerEraClassConstraints
+_obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
+  => ToJSON (Core.PParams ledgerera)
+  => ToJSON (Ledger.PParamsDelta ledgerera)
+  => ToJSON (Core.TxOut ledgerera)
   => ShelleyBasedEra era
   -> ((Ledger.ShelleyBased ledgerera
       , ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
+      , Ledger.UsesPParams ledgerera
       , Era.Crypto ledgerera ~ StandardCrypto
       ) => a) -> a
-obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
+_obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
+_obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
+_obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
+_obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 

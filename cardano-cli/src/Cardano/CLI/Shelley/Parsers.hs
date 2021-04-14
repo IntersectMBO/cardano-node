@@ -212,6 +212,24 @@ pScriptFor name help = ScriptFile <$> Opt.strOption
   <> Opt.completer (Opt.bashCompleter "file")
   )
 
+--parseDatum :: Parser Datum
+--parseDatum = Datum <$> Opt.strOption
+--              (  Opt.long "datum-file"
+--              <> Opt.metavar "FILE"
+--              <> Opt.help "Filepath of the datum. The data passed is \
+--                          \passed to a Plutus script which validates \
+--                          \that the output is spent correctly"
+--              <> Opt.completer (Opt.bashCompleter "file")
+--              )
+
+--pRedeemer :: Parser Redeemer
+--pRedeemer = Redeemer <$> Opt.strOption
+--    (  Opt.long "redeemer-file"
+--    <> Opt.metavar "FILE"
+--    <> Opt.help "Filepath of the script redeemer."
+--    <> Opt.completer (Opt.bashCompleter "file")
+--    )
+
 pStakeAddressCmd :: Parser StakeAddressCmd
 pStakeAddressCmd =
     asum
@@ -517,6 +535,7 @@ pTransaction =
                                  <*> many pWithdrawal
                                  <*> pTxMetadataJsonSchema
                                  <*> many (pScriptFor "auxiliary-script-file" "Filepath of auxiliary script(s)")
+                                 <*> optional pProtocolParamsFile
                                  <*> many pMetadataFile
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
@@ -2236,6 +2255,13 @@ pShelleyProtocolParametersUpdate =
     <*> optional pPoolInfluence
     <*> optional pMonetaryExpansion
     <*> optional pTreasuryExpansion
+    -- TODO: Jordan - update
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
 
 pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =

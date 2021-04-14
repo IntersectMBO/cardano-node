@@ -1,5 +1,6 @@
 module Cardano.CLI.Mary.ValueParser
   ( parseValue
+  , policyId
   ) where
 
 import           Prelude

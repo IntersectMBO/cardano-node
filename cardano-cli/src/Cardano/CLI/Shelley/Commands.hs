@@ -178,6 +178,7 @@ data TransactionCmd
       [(StakeAddress, Lovelace, Maybe ScriptFile)]
       TxMetadataJsonSchema
       [ScriptFile]
+      (Maybe ProtocolParamsFile)
       -- ^ Auxillary scripts
       [MetadataFile]
       (Maybe UpdateProposalFile)
