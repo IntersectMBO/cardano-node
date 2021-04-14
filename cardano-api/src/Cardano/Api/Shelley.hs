@@ -86,6 +86,8 @@ module Cardano.Api.Shelley
 
     -- * Protocol parameters
     ProtocolParameters(..),
+    ProtocolParametersError(..),
+    renderProtocolParamsErr,
 
     -- * Scripts
     toShelleyScript,

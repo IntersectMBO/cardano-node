@@ -69,7 +69,7 @@ data StakePoolMetadata =
 
 newtype instance Hash StakePoolMetadata =
                  StakePoolMetadataHash (Shelley.Hash StandardCrypto ByteString)
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 instance HasTypeProxy StakePoolMetadata where
     data AsType StakePoolMetadata = AsStakePoolMetadata

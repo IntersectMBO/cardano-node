@@ -159,6 +159,7 @@ module Cardano.Api (
     -- ** Transaction inputs
     TxIn(TxIn),
     TxIx(TxIx),
+    plutusScriptsSupportedInEra,
 
     -- ** Transaction outputs
     TxOut(TxOut),
@@ -177,7 +178,7 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
-    TxExecutionUnits(..),
+    ScriptExecutionUnits(..),
     TxWitnessPPDataHash(..),
 
     -- ** Building vs viewing transactions
@@ -198,6 +199,8 @@ module Cardano.Api (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
+    WitnessPPDataSupportedInEra(..),
+    PlutusScriptsSupportedInEra(..),
 
     -- ** Feature availability functions
     multiAssetSupportedInEra,
@@ -287,7 +290,7 @@ module Cardano.Api (
     SimpleScriptV2,
     ScriptLanguage(..),
     SimpleScriptVersion(..),
-    PlutusScriptVersion,
+    PlutusScriptVersion(..),
     AnyScriptLanguage(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
@@ -316,6 +319,10 @@ module Cardano.Api (
     scriptLanguageSupportedInEra,
     languageOfScriptLanguageInEra,
     eraOfScriptLanguageInEra,
+
+
+    -- ** Plutus script datum
+    ScriptDatum(..),
 
     -- ** Simple scripts
     -- | Making multi-signature and time-lock scripts.
