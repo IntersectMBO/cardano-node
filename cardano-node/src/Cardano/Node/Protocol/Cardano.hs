@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -83,7 +84,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcTestAllegraHardForkAtEpoch,
                              npcTestAllegraHardForkAtVersion,
                              npcTestMaryHardForkAtEpoch,
-                             npcTestMaryHardForkAtVersion
+                             npcTestMaryHardForkAtVersion,
+                             npcTestAlonzoHardForkAtEpoch,
+                             npcTestAlonzoHardForkAtVersion
                            }
                            files = do
     byronGenesis <-
@@ -138,7 +141,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           shelleyBasedGenesis = shelleyGenesis,
           shelleyBasedInitialNonce =
             Shelley.genesisHashToPraosNonce shelleyGenesisHash,
-          shelleyBasedLeaderCredentials = shelleyLeaderCredentials
+          shelleyBasedLeaderCredentials = shelleyLeaderCredentials,
+          shelleyTranslationContext = ()
         }
         Consensus.ProtocolParamsShelley {
           -- This is /not/ the Shelley protocol version. It is the protocol
@@ -163,6 +167,15 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- protocol version then this is also the Mary protocol version.
           maryProtVer =
             ProtVer 4 0
+        }
+        Consensus.ProtocolParamsAlonzo {
+          -- This is /not/ the Mary protocol version. It is the protocol
+          -- version that this node will declare that it understands, when it
+          -- is in the Mary era. Since Mary is currently the last known
+          -- protocol version then this is also the Mary protocol version.
+          alonzoProtVer =
+            ProtVer 4 0,
+          alonzoTranslationContext = 42
         }
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
@@ -205,6 +218,14 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
             case npcTestMaryHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 4 fromIntegral npcTestMaryHardForkAtVersion)
+               Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+        }
+        -- Mary to Alonzo hard fork parameters
+        Consensus.ProtocolParamsTransition {
+          transitionTrigger =
+            case npcTestAlonzoHardForkAtEpoch of
+               Nothing -> Consensus.TriggerHardForkAtVersion
+                            (maybe 5 fromIntegral npcTestAlonzoHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
 

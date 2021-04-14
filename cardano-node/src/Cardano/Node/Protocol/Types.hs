@@ -19,8 +19,9 @@ import           NoThunks.Class (NoThunks)
 
 import qualified Cardano.Api.Protocol.Types as Cardano
 
+import           Cardano.Node.Orphans ()
 import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.Metrics (HasKESMetricsData, HasKESInfo)
+import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 
 data Protocol = ByronProtocol
               | ShelleyProtocol

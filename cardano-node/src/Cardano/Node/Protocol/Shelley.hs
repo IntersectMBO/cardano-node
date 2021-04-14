@@ -52,7 +52,6 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import           Cardano.Node.Protocol.Types
 
-
 ------------------------------------------------------------------------------
 -- Shelley protocol
 --
@@ -82,7 +81,8 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
         shelleyBasedGenesis = genesis,
         shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,
         shelleyBasedLeaderCredentials =
-            leaderCredentials
+            leaderCredentials,
+        shelleyTranslationContext = ()
       }
       Consensus.ProtocolParamsShelley {
         shelleyProtVer =
