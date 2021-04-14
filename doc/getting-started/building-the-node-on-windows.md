@@ -46,7 +46,7 @@ create `libsodium.pc` file, which contains:
 
 ```
 libdir=VCPKG_PATH/installed/x64-windows/bin
-includedir=VCPKG_PATH/intsalled/x64-windows/include
+includedir=VCPKG_PATH/installed/x64-windows/include
 
 Name: libsodium
 Description: libsodium library
