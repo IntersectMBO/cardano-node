@@ -661,9 +661,7 @@ readWitnessSigningData (KeyWitnessSigningData skFile mbByronAddr) = do
       ]
 
     bech32FileTypes =
-      [ FromSomeType (AsSigningKey AsByronKey)
-                          (`AByronSigningKey` mbByronAddr)
-      , FromSomeType (AsSigningKey AsPaymentKey)
+      [ FromSomeType (AsSigningKey AsPaymentKey)
                           APaymentSigningKey
       , FromSomeType (AsSigningKey AsPaymentExtendedKey)
                           APaymentExtendedSigningKey

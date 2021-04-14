@@ -185,9 +185,7 @@ readSigningKeyFile skFile =
       ]
 
     bech32FileTypes =
-      [ FromSomeType (AsSigningKey AsByronKey)
-                      AByronSigningKey
-      , FromSomeType (AsSigningKey AsPaymentKey)
+      [ FromSomeType (AsSigningKey AsPaymentKey)
                       APaymentSigningKey
       , FromSomeType (AsSigningKey AsPaymentExtendedKey)
                       APaymentExtendedSigningKey

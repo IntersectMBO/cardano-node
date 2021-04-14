@@ -52,11 +52,10 @@ import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Wallet
 
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.KeysShelley
-import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
@@ -151,14 +150,6 @@ instance SerialiseAsRawBytes (SigningKey ByronKey) where
     deserialiseFromRawBytes (AsSigningKey AsByronKey) bs =
       either (const Nothing) (Just . ByronSigningKey . Byron.SigningKey)
              (snd <$> CBOR.deserialiseFromBytes Byron.fromCBORXPrv (LB.fromStrict bs))
-
-instance SerialiseAsBech32 (VerificationKey ByronKey) where
-    bech32PrefixFor         _ =  "addr_xvk"
-    bech32PrefixesPermitted _ = ["addr_xvk"]
-
-instance SerialiseAsBech32 (SigningKey ByronKey) where
-    bech32PrefixFor         _ =  "addr_xsk"
-    bech32PrefixesPermitted _ = ["addr_xsk"]
 
 newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
   deriving (Eq, Ord)
