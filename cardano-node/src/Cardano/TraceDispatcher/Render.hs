@@ -20,8 +20,8 @@ module Cardano.TraceDispatcher.Render
      , renderRealPoint
      , renderRealPointAsPhrase
      , renderSlotNo
-  -- , renderTip
-  -- , renderTipForDetails
+     , renderTip
+     , renderTipForDetails
   -- , renderTxId
   -- , renderTxIdForDetails
      , renderWithOrigin
@@ -142,15 +142,15 @@ renderPointAsPhrase point =
         <> " at slot "
         <> renderSlotNo slot
 
--- renderTipForDetails
---   :: ConvertRawHash blk
---   => TracingDetails
---   -> Tip blk
---   -> Text
--- renderTipForDetails dtal = renderPointForDetails dtal . getTipPoint
---
--- renderTip :: ConvertRawHash blk => Tip blk -> Text
--- renderTip = renderTipForDetails MaximalDetails
+renderTipForDetails
+  :: ConvertRawHash blk
+  => DetailLevel
+  -> Tip blk
+  -> Text
+renderTipForDetails dtal = renderPointForDetails dtal . getTipPoint
+
+renderTip :: ConvertRawHash blk => Tip blk -> Text
+renderTip = renderTipForDetails DDetailed
 
 renderHeaderHashForDetails
   :: ConvertRawHash blk
