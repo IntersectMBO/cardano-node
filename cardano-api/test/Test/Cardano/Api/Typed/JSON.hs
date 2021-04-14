@@ -28,7 +28,7 @@ prop_roundtrip_praos_nonce_JSON = H.property $ do
 
 prop_roundtrip_protocol_parameters_JSON :: Property
 prop_roundtrip_protocol_parameters_JSON = H.property $ do
-  pp <- forAll genProtocolParameters
+  pp <- forAll $ genProtocolParameters ShelleyBasedEraMary -- TODO: Generate all eras
   tripping pp encode eitherDecode
 
 
