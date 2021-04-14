@@ -12,6 +12,7 @@ module Cardano.Logging.Types (
     LogFormatting(..)
   , Metric(..)
   , mkObject
+  , emptyObject
   , Documented(..)
   , DocMsg(..)
   , LoggingContext(..)
@@ -91,6 +92,10 @@ data Metric
 -- or the empty |Object|.
 mkObject :: [(Text, a)] -> HM.HashMap Text a
 mkObject = HM.fromList
+
+-- | A helper function for creating an empty |Object|.
+emptyObject :: HM.HashMap Text a
+emptyObject = HM.empty
 
 -- Document all log messages by providing a list of DocMsgs for all constructors.
 -- Because it is not enforced by the type system, it is very

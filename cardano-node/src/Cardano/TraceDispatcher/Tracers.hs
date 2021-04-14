@@ -17,14 +17,13 @@ import           Cardano.Prelude hiding (trace)
 import qualified Data.Text.IO as T
 
 import           Cardano.Logging
-import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
 import           Cardano.TraceDispatcher.ChainDBTracer.Combinators
 import           Cardano.TraceDispatcher.ChainDBTracer.Docu
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Cardano.TraceDispatcher.ConsensusTracer.Formatting ()
+import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
 import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
 import           Cardano.TraceDispatcher.ConsensusTracer.Docu
-
+import           Cardano.TraceDispatcher.ConsensusTracer.Formatting ()
+import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
@@ -37,19 +36,25 @@ import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 import           Cardano.Tracing.Tracers
 import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 
-import           Ouroboros.Consensus.Block (ConvertRawHash, HasHeader, Header)
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client(TraceChainSyncClientEvent)
+import           Ouroboros.Consensus.Block (ConvertRawHash, HasHeader, Header,
+                     Point)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
                      LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                      (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
+                     (TraceChainSyncClientEvent)
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+                     (TraceChainSyncServerEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import           Ouroboros.Network.BlockFetch.Decision
 
 chainDBMachineTracer ::
   ( LogFormatting (LedgerUpdate blk)
@@ -80,18 +85,71 @@ chainSyncClientTracer trBase = do
     pure $ withNamesAppended namesForChainSyncClientEvent
             $ withSeverity severityChainSyncClientEvent cdbmTrNs
 
-docTracers :: IO ()
+chainSyncServerHeaderTracer ::
+  ( ConvertRawHash blk
+  )
+  => Trace IO FormattedMessage
+  -> IO (Trace IO (TraceChainSyncServerEvent blk))
+chainSyncServerHeaderTracer trBase = do
+    tr <- humanFormatter True "Cardano" trBase
+    let cdbmTrNs = appendName "ChainSyncServerHeader" $ appendName "Node" tr
+    pure $ withNamesAppended namesForChainSyncServerEvent
+            $ withSeverity severityChainSyncServerEvent cdbmTrNs
+
+chainSyncServerBlockTracer ::
+  ( ConvertRawHash blk
+  )
+  => Trace IO FormattedMessage
+  -> IO (Trace IO (TraceChainSyncServerEvent blk))
+chainSyncServerBlockTracer trBase = do
+    tr <- humanFormatter True "Cardano" trBase
+    let cdbmTrNs = appendName "ChainSyncServerBlock" $ appendName "Node" tr
+    pure $ withNamesAppended namesForChainSyncServerEvent
+            $ withSeverity severityChainSyncServerEvent cdbmTrNs
+
+blockFetchDecisionTracer :: forall blk remotePeer .
+  ( Show remotePeer
+  )
+  => Trace IO FormattedMessage
+  -> IO (Trace IO [TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])])
+blockFetchDecisionTracer trBase = do
+    tr <- humanFormatter True "Cardano" trBase
+    let cdbmTrNs = appendName "BlockFetchDecision" $ appendName "Node" tr
+    pure $ withNamesAppended namesForBlockFetchDecision
+            $ withSeverity severityBlockFetchDecision cdbmTrNs
+
+docTracers :: forall remotePeer.
+  ( Show remotePeer
+  )
+  => IO ()
 docTracers = do
   trBase <- standardTracer Nothing
   cdbmTr <- chainDBMachineTracer trBase
   cscTr  <- chainSyncClientTracer trBase
+  csshTr <- chainSyncServerHeaderTracer trBase
+  cssbTr <- chainSyncServerBlockTracer trBase
+  bfdTr  <- blockFetchDecisionTracer trBase
   bl1    <- documentMarkdown
-              (docChainDBTraceEvent :: Documented (ChainDB.TraceEvent ByronBlock))
+              (docChainDBTraceEvent :: Documented
+                (ChainDB.TraceEvent ByronBlock))
               [cdbmTr]
   bl2    <- documentMarkdown
-              (docChainSyncClientEvent :: Documented (TraceChainSyncClientEvent ByronBlock))
+              (docChainSyncClientEvent :: Documented
+                (TraceChainSyncClientEvent ByronBlock))
               [cscTr]
-  let bl = bl1 ++ bl2
+  bl3    <- documentMarkdown
+              (docChainSyncServerEvent :: Documented
+                (TraceChainSyncServerEvent ByronBlock))
+              [csshTr]
+  bl4    <- documentMarkdown
+              (docChainSyncServerEvent :: Documented
+                (TraceChainSyncServerEvent ByronBlock))
+              [cssbTr]
+  bl5    <- documentMarkdown
+              (docBlockFetchDecision :: Documented
+                [TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])])
+              [bfdTr]
+  let bl = bl1 ++ bl2 ++ bl3 ++ bl4 ++ bl5
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" (buildersToText bl)
 
 
@@ -117,15 +175,23 @@ mkDispatchTracers
 mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect trBase = do
   cdbmTr <- chainDBMachineTracer trBase
   cscTr  <- chainSyncClientTracer trBase
+  csshTr <- chainSyncServerHeaderTracer trBase
+  cssbTr <- chainSyncServerBlockTracer trBase
+  bfdTr  <- blockFetchDecisionTracer trBase
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
+  configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
+  configureTracers emptyTraceConfig docChainSyncServerEvent [csshTr]
+  configureTracers emptyTraceConfig docChainSyncServerEvent [cssbTr]
+  configureTracers emptyTraceConfig docBlockFetchDecision   [bfdTr]
+
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
 
     , consensusTracers = Consensus.Tracers
       { Consensus.chainSyncClientTracer = Tracer (traceWith cscTr)
-      , Consensus.chainSyncServerHeaderTracer = nullTracer
-      , Consensus.chainSyncServerBlockTracer = nullTracer
-      , Consensus.blockFetchDecisionTracer = nullTracer
+      , Consensus.chainSyncServerHeaderTracer = Tracer (traceWith csshTr)
+      , Consensus.chainSyncServerBlockTracer = Tracer (traceWith cssbTr)
+      , Consensus.blockFetchDecisionTracer = Tracer (traceWith bfdTr)
       , Consensus.blockFetchClientTracer = nullTracer
       , Consensus.blockFetchServerTracer = nullTracer
       , Consensus.forgeStateInfoTracer = nullTracer
