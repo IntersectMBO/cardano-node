@@ -25,9 +25,8 @@ let
   packages = {
     inherit haskellPackages
       cardano-node cardano-node-profiled cardano-node-eventlogged
-      cardano-cli db-converter cardano-ping
+      cardano-cli db-converter cardano-ping tx-generator
       scripts environments dockerImage submitApiDockerImage bech32;
-
     nixosTests = recRecurseIntoAttrs nixosTests;
 
     # so that eval time gc roots are cached (nix-tools stuff)

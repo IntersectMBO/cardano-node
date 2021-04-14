@@ -1,0 +1,150 @@
+name:                  tx-generator
+version:               1.27
+description:           The transaction generator for cardano node
+author:                IOHK
+maintainer:            operations@iohk.io
+license:               Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+build-type:            Simple
+cabal-version:         >= 1.10
+extra-source-files:    README.md
+library
+
+  hs-source-dirs:      src
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-prepositive-qualified-module
+                        -Wno-unticked-promoted-constructors
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wwarn=deprecations
+
+  exposed-modules:
+                       Cardano.Benchmarking.CliArgsScript
+                       Cardano.Benchmarking.Command
+                       Cardano.Benchmarking.DSL
+                       Cardano.Benchmarking.FundSet
+                       Cardano.Benchmarking.GeneratorTx
+                       Cardano.Benchmarking.GeneratorTx.Benchmark
+                       Cardano.Benchmarking.GeneratorTx.Error
+                       Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
+                       Cardano.Benchmarking.GeneratorTx.Genesis
+                       Cardano.Benchmarking.GeneratorTx.NodeToNode
+                       Cardano.Benchmarking.GeneratorTx.Tx
+                       Cardano.Benchmarking.GeneratorTx.SizedMetadata
+                       Cardano.Benchmarking.GeneratorTx.Tx.Byron
+                       Cardano.Benchmarking.GeneratorTx.Submission
+                       Cardano.Benchmarking.GeneratorTx.CLI.Parsers
+                       Cardano.Benchmarking.OuroborosImports
+                       Cardano.Benchmarking.Script
+                       Cardano.Benchmarking.Script.Action
+                       Cardano.Benchmarking.Script.Aeson
+                       Cardano.Benchmarking.Script.Core
+                       Cardano.Benchmarking.Script.Env
+                       Cardano.Benchmarking.Script.Example
+                       Cardano.Benchmarking.Script.Setters
+                       Cardano.Benchmarking.Script.Store
+                       Cardano.Benchmarking.Tracer
+                       Cardano.Benchmarking.Types
+                       Cardano.Benchmarking.Wallet
+
+  other-modules:       Paths_tx_generator
+
+  build-depends:       aeson
+                     , aeson-pretty
+                     , async
+                     , attoparsec
+                     , base >=4.12 && <5
+                     , bytestring
+                     , cardano-api
+                     , cardano-binary
+                     , cardano-cli
+                     , cardano-crypto-class
+                     , cardano-crypto-wrapper
+                     , cardano-ledger-byron
+                     , cardano-node
+                     , cardano-prelude
+                     , contra-tracer
+                     , cborg >= 0.2.2 && < 0.3
+                     , containers
+                     , constraints-extras
+                     , dependent-map
+                     , dependent-sum
+                     , dependent-sum-template
+                     , extra
+                     , formatting
+                     , generic-monoid
+                     , ghc-prim
+                     , io-sim-classes
+                     , iohk-monitoring
+                     , ixset-typed
+                     , network
+                     , network-mux
+                     , optparse-applicative
+                     , ouroboros-consensus
+                     , ouroboros-consensus-byron
+                     , ouroboros-consensus-cardano
+                     , ouroboros-consensus-shelley
+                     , ouroboros-network
+                     , ouroboros-network-framework
+                     , random
+                     , serialise
+                     , shelley-spec-ledger
+                     , stm
+                     , text
+                     , time
+                     , transformers
+                     , transformers-except
+                     , unordered-containers
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                       OverloadedStrings
+
+  ghc-options:         -Wall
+                       -Wno-implicit-prelude
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+                       -fno-warn-missing-import-lists
+                       -Wno-unticked-promoted-constructors
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -Wpartial-fields
+                       -Wcompat
+
+executable tx-generator
+  hs-source-dirs:      app
+  main-is:             tx-generator.hs
+  default-language:    Haskell2010
+  ghc-options:         -threaded
+                       -Wall
+                       -rtsopts
+                       "-with-rtsopts=-T"
+
+  build-depends:       base >=4.12 && <5
+                     , tx-generator
+
+test-suite tx-generator-test
+  hs-source-dirs:       test
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        base >=4.12 && <5
+                      , tasty-hunit
+                      , tasty
+                      , heredoc
+                      , optparse-applicative
+                      , tx-generator
+
+  default-language:     Haskell2010
+
+  ghc-options:          -Weverything
+                        -fno-warn-missing-import-lists
+                        -fno-warn-safe
+                        -fno-warn-unsafe
+                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

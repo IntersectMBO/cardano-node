@@ -11,6 +11,7 @@ packages:
     cardano-node-chairman
     cardano-submit-api
     nix/workbench/cardano-topology
+    bench/tx-generator
 
 package cardano-api
   ghc-options: -Werror
@@ -25,6 +26,9 @@ package cardano-node
   ghc-options: -Werror
 
 package cardano-node-chairman
+  ghc-options: -Werror
+
+package tx-generator
   ghc-options: -Werror
 
 package cryptonite

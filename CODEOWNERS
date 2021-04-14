@@ -19,7 +19,8 @@ cabal.project                                                 @LaurenceIO
 doc                                                           @docs-access
 README.*                                                      @docs-access
 
-
+bench/tx-generator                                            @deepfire @MarcFontaine
+bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
 Makefile                                                      @deepfire

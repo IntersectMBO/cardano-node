@@ -103,6 +103,14 @@ let
         # does not require any messing with cabal files.
         packages.katip.doExactConfig = true;
 
+        # we need the following shared libraries for the musl build to succeed
+        # musl on x86_64, can load dynamic libraries, and we need it to use the
+        # shared loader, as the one in GHC is not very stable.
+        packages.cardano-api.components.library.enableShared = true;
+        packages.cardano-config.components.library.enableShared = true;
+        packages.cardano-node.components.library.enableShared = true;
+        packages.cardano-cli.components.library.enableShared = true;
+
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
 
