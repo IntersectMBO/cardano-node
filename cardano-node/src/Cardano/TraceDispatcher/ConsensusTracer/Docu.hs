@@ -5,16 +5,21 @@
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
 module Cardano.TraceDispatcher.ConsensusTracer.Docu
-  (  docChainSyncClientEvent
+  ( docChainSyncClientEvent
+  , docChainSyncServerEvent
+  , docBlockFetchDecision
   ) where
 
 import           Cardano.Logging
 import           Cardano.Prelude
 
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer(..))
+
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Network.Block
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
-
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+import           Ouroboros.Network.BlockFetch.Decision(FetchDecision)
 
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
@@ -38,6 +43,21 @@ docChainSyncClientException = undefined
 
 docChainSyncClientResult :: ChainSyncClientResult
 docChainSyncClientResult = undefined
+
+docChainUpdate :: ChainUpdate block a
+docChainUpdate = undefined
+
+docTip :: Tip blk
+docTip = undefined
+
+docpeer :: remotePeer
+docpeer = undefined
+
+docFetchDecline :: FetchDecision [Point (Header blk)]
+docFetchDecline = Left undefined
+
+docFetchResult :: FetchDecision [Point (Header blk)]
+docFetchResult = Right undefined
 
 --------------------
 
@@ -65,4 +85,37 @@ docChainSyncClientEvent = Documented [
       (TraceTermination docChainSyncClientResult)
       []
       "The client has terminated."
+  ]
+
+docChainSyncServerEvent :: Documented (TraceChainSyncServerEvent blk)
+docChainSyncServerEvent = Documented [
+    DocMsg
+      (TraceChainSyncServerRead docTip docChainUpdate)
+      []
+      "TODO"
+    , DocMsg
+      (TraceChainSyncServerReadBlocked docTip docChainUpdate)
+      []
+      "TODO"
+    , DocMsg
+      (TraceChainSyncRollForward docPoint)
+      []
+      "TODO"
+    , DocMsg
+      (TraceChainSyncRollBackward docPoint)
+      []
+      "TODO"
+  ]
+
+docBlockFetchDecision ::
+  Documented ([TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])])
+docBlockFetchDecision = Documented [
+    DocMsg
+      [TraceLabelPeer docpeer docFetchDecline]
+      []
+      "TODO"
+    , DocMsg
+      [TraceLabelPeer docpeer docFetchResult]
+      []
+      "TODO"
   ]
