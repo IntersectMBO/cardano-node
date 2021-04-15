@@ -53,6 +53,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import           Data.Functor.Identity (Identity)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Vector as Vector
@@ -84,6 +85,7 @@ import qualified Cardano.Crypto.Signing as Byron
 --
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import qualified Cardano.Ledger.Core as Ledger
@@ -448,11 +450,12 @@ getTxBody (ShelleyTx era tx) =
                                                 _txwitsBoot
                                                 txscripts
                                                 _txdats
-                                                _txrdmrs,
-                                Alonzo.isValidating = isValidating,
+                                                txrdmrs,
+                                Alonzo.isValidating = _isValidating,
                                 Alonzo.auxiliaryData = auxiliaryData
                               } = ShelleyTxBody era txbody (Map.elems txscripts)
-                                                (strictMaybeToMaybe auxiliaryData) (Just isValidating)
+                                                (strictMaybeToMaybe auxiliaryData)
+                                                (Just txrdmrs)
     getAlonzoTxBody _ = error "Why is GHC asking for TxConstr?"
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
@@ -518,12 +521,15 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
       (unAnnotated txbody)
       (Vector.fromList [ w | ByronKeyWitness w <- witnesses ])
 
-makeSignedTransaction witnesses (ShelleyTxBody era txbody txscripts txmetadata isValid) =
+makeSignedTransaction witnesses (ShelleyTxBody era txbody txscripts txmetadata mRdmrMap) =
     case era of
       ShelleyBasedEraShelley -> ShelleyTx era $ makeShelleySignedTransaction txbody
       ShelleyBasedEraAllegra -> ShelleyTx era $ makeShelleySignedTransaction txbody
       ShelleyBasedEraMary    -> ShelleyTx era $ makeShelleySignedTransaction txbody
-      ShelleyBasedEraAlonzo  -> ShelleyTx era $ makeAlonzoSignedTransaction txbody
+      ShelleyBasedEraAlonzo  ->
+        case mRdmrMap of
+          Just rdmrMap -> ShelleyTx era $ makeAlonzoSignedTransaction txbody rdmrMap
+          Nothing -> error "makeSignedTransaction: Alonzo era required a redeemer map"
   where
     makeShelleySignedTransaction
       :: Ledger.Crypto ledgerera ~ StandardCrypto
@@ -534,7 +540,8 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txscripts txmetadata i
       => Shelley.UsesAuxiliary ledgerera
       => FromCBOR (CBOR.Annotator (Ledger.Script ledgerera))
       => Shelley.ValidateScript ledgerera
-      => Ledger.TxBody (ShelleyLedgerEra era) -> Shelley.Tx ledgerera
+      => Ledger.TxBody (ShelleyLedgerEra era)
+      -> Shelley.Tx ledgerera
     makeShelleySignedTransaction txbody' =
         Shelley.Tx
           txbody'
@@ -552,8 +559,9 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txscripts txmetadata i
       => ToCBOR (Ledger.TxBody ledgerera)
       => ToCBOR (Ledger.Script ledgerera)
       => Shelley.ValidateScript ledgerera
-      => Ledger.TxBody (ShelleyLedgerEra era) -> Alonzo.Tx ledgerera
-    makeAlonzoSignedTransaction txbody' =
+      => Ledger.TxBody (ShelleyLedgerEra era)
+      -> Map Alonzo.RdmrPtr (Alonzo.Data ledgerera, Alonzo.ExUnits) -> Alonzo.Tx ledgerera
+    makeAlonzoSignedTransaction txbody' rdmrMap  =
       Alonzo.Tx
         txbody'
         (Alonzo.TxWitness
@@ -562,12 +570,12 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txscripts txmetadata i
           (Map.fromList [ (Shelley.hashScript @ledgerera sw, sw)
                         | sw <- txscripts ])
           (error "Map (DataHash (Crypto ledgerera)) (Data ledgerera)")
-          (error "Map RdmrPtr (Data ledgerera, ExUnits)"))
+          rdmrMap
+        )
         -- TODO: Seems to be some discussion around the isValidating flag
-        (case isValid of
-           Just vBool -> vBool
-           Nothing -> error "makeAlonzoSignedTransaction: isValidating flag was not specified")
+        (error "IsValidating")
         (maybeToStrictMaybe txmetadata)
+
 
 makeByronKeyWitness :: forall key.
                        IsByronKey key

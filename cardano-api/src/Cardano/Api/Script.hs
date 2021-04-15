@@ -33,6 +33,8 @@ module Cardano.Api.Script (
     WitCtxTxIn, WitCtxMint, WitCtxStake,
     ScriptWitness(..),
     ScriptExecutionUnits(..),
+    Redeemer(..),
+    fromScriptExecutionUnits,
     Witness(..),
     KeyWitnessInCtx(..),
     ScriptWitnessInCtx(..),
@@ -101,6 +103,7 @@ import           Cardano.Slotting.Slot (SlotNo)
 
 import qualified Cardano.Ledger.Core as Ledger
 
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
@@ -497,13 +500,6 @@ instance HasTextEnvelope ScriptInAnyLang where
     textEnvelopeType _ = "Script"
 
 -- ----------------------------------------------------------------------------
--- Plutus script datum. All transaction outputs that are locked by Plutus scripts must include
--- the hash of an additional “datum”. The datum can be used to encode state, for example.
-
-newtype ScriptDatum = ScriptDatum ()
-       deriving newtype (Eq, Ord, Show)
-
--- ----------------------------------------------------------------------------
 -- Scripts in the context of a ledger era
 --
 
@@ -690,9 +686,22 @@ data ScriptWitness witctx era where
                          -> PlutusScriptVersion  lang
                          -> PlutusScript         lang
                          -> ScriptExecutionUnits
+                         -> ScriptDatum witctx
+                         -> Redeemer era
                          -> ScriptWitness witctx era
 
 deriving instance Show (ScriptWitness witctx era)
+
+data ScriptDatum witctx where
+     ScriptDatumForTxIn    :: Datum -> ScriptDatum WitCtxTxIn
+     NoScriptDatumForMint  :: ScriptDatum WitCtxMint
+     NoScriptDatumForStake :: ScriptDatum WitCtxStake
+
+deriving instance Show (ScriptDatum witctx)
+deriving instance Eq (ScriptDatum witctx)
+
+-- Placeholder for Data era in ledger specs
+newtype Datum = Datum () deriving (Eq, Show)
 
 -- The GADT in the SimpleScriptWitness constructor requires a custom instance
 instance Eq (ScriptWitness witctx era) where
@@ -703,14 +712,16 @@ instance Eq (ScriptWitness witctx era) where
         Nothing   -> False
         Just Refl -> version == version' && script == script'
 
-    (==) (PlutusScriptWitness langInEra  version  script execUnits)
-         (PlutusScriptWitness langInEra' version' script' execUnits') =
+    (==) (PlutusScriptWitness langInEra  version  script execUnits datum redeemer)
+         (PlutusScriptWitness langInEra' version' script' execUnits' datum' redeemer') =
       case testEquality (languageOfScriptLanguageInEra langInEra)
                         (languageOfScriptLanguageInEra langInEra') of
         Nothing   -> False
         Just Refl ->    version   == version'
                      && script    == script'
                      && execUnits == execUnits'
+                     && datum     == datum'
+                     && redeemer  == redeemer'
 
     (==)  _ _ = False
 
@@ -734,6 +745,19 @@ data ExecutionUnitsSupportedInEra era where
 deriving instance Show (ExecutionUnitsSupportedInEra era)
 deriving instance Eq (ExecutionUnitsSupportedInEra era)
 
+_toScriptExecutionUnits :: Alonzo.ExUnits -> ScriptExecutionUnits
+_toScriptExecutionUnits (Alonzo.ExUnits mMem mSteps) = ScriptExecutionUnits mMem mSteps
+
+fromScriptExecutionUnits :: ScriptExecutionUnits -> Alonzo.ExUnits
+fromScriptExecutionUnits (ScriptExecutionUnits mMem mSteps) = Alonzo.ExUnits mMem mSteps
+
+data Redeemer era where
+  Redeemer :: Alonzo.Data (ShelleyLedgerEra era) -> Redeemer era
+
+deriving instance Show (Redeemer era)
+deriving instance Eq (Redeemer era)
+
+
 -- ----------------------------------------------------------------------------
 -- The kind of witness to use, key (signature) or script
 --
@@ -747,7 +771,7 @@ data Witness witctx era where
                    -> ScriptWitness      witctx era
                    -> Witness            witctx era
 
-deriving instance Eq   (Witness witctx era)
+deriving instance Eq   (Witness wiScriptWitnesstctx era)
 deriving instance Show (Witness witctx era)
 
 data KeyWitnessInCtx witctx where

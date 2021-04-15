@@ -163,6 +163,7 @@ module Cardano.Api (
 
     -- ** Transaction outputs
     TxOut(TxOut),
+    TxOutDatumHash(..),
     TxOutValue(..),
     serialiseAddressForTxOut,
 
