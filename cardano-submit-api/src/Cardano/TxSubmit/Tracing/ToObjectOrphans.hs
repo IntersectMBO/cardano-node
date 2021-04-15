@@ -11,8 +11,11 @@ import           Cardano.BM.Data.Tracer (HasPrivacyAnnotation, HasSeverityAnnota
                    HasTextFormatter, ToObject (toObject), Transformable (..), mkObject,
                    trStructured)
 import           Data.Aeson ((.=))
+import           Data.String (String)
 import           Data.Text (Text)
 import           Ouroboros.Network.NodeToClient (ErrorPolicyTrace (..), WithAddr (..))
+import           System.IO (IO)
+import           Text.Show (Show (..))
 
 import qualified Network.Socket as Socket
 

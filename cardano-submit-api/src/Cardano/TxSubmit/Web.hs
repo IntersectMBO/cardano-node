@@ -30,6 +30,8 @@ import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError
                    TxSubmitApi, TxSubmitApiRecord (..), TxSubmitWebApiError (TxSubmitFail),
                    renderTxCmdError)
 import           Cardano.TxSubmit.Util (logException)
+import           Control.Applicative (Applicative (pure), (<$>))
+import           Control.Monad (Functor (fmap), Monad (return), (=<<))
 import           Control.Monad.Except (ExceptT, MonadError (throwError), MonadIO (liftIO),
                    runExceptT)
 import           Control.Monad.IO.Class (liftIO)
@@ -38,15 +40,20 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Data.Aeson (ToJSON (..))
 import           Data.Bifunctor (first, second)
 import           Data.ByteString.Char8 (ByteString)
-import           Data.Either (isRight, lefts, partitionEithers, rights)
-import           Data.Maybe (listToMaybe)
+import           Data.Either (Either (..), partitionEithers)
+import           Data.Function (($), (.))
+import           Data.Maybe (listToMaybe, maybe)
 import           Data.Proxy (Proxy (..))
+import           Data.Semigroup (Semigroup ((<>)))
+import           Data.String (String)
 import           Data.Text (Text)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import           Servant (Application, Handler, ServerError (..), err400, throwError)
 import           Servant.API.Generic (toServant)
 import           Servant.Server.Generic (AsServerT)
 import           System.Environment (lookupEnv)
+import           System.IO (IO)
+import           Text.Show (Show (show))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.TxSubmit.Rest.Web as Web

@@ -1,3 +1,7 @@
 
+import           System.IO (IO)
+
+import qualified System.IO as IO
+
 main :: IO ()
-main = putStrLn "cardano-tx-submit test"
+main = IO.putStrLn "cardano-tx-submit test"

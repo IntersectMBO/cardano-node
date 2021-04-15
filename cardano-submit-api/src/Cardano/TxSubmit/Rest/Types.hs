@@ -7,6 +7,8 @@ module Cardano.TxSubmit.Rest.Types
   ) where
 
 import           Data.Function ((&))
+import           Data.Semigroup ((<>))
+import           Text.Show (Show (..))
 
 import qualified Network.Wai.Handler.Warp as Warp
 
