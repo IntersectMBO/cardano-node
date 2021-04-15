@@ -83,7 +83,9 @@
                 paths = [ entrypoint ] ++ deps;
               };
             in lib.nameValuePair "cardano-node-${env}-debug" closure);
-        in debug // vanilla;
+        in debug // vanilla // {
+          cardano-cli = legacyPackages.cardano-cli;
+        };
       in {
         inherit iohkNix environments evaluated legacyPackages packages;
 
