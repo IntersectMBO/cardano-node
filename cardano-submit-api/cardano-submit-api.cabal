@@ -48,8 +48,6 @@ common project-config
   default-language:     Haskell2010
   
   ghc-options:          -Wall
-                        -fwarn-incomplete-patterns
-                        -fwarn-redundant-constraints
                         -Wcompat
                         -Werror
                         -Wincomplete-record-updates
@@ -60,6 +58,11 @@ common project-config
                         -Wno-safe
                         -Wno-unsafe
                         -Wunused-packages
+
+                        -XNoImplicitPrelude
+
+                        -fwarn-incomplete-patterns
+                        -fwarn-redundant-constraints
 
 library
   import:               base, project-config

@@ -14,9 +14,12 @@ module Cardano.TxSubmit.ErrorRender
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.UTxO.UTxO (UTxOError (..))
 import           Cardano.Chain.UTxO.Validation (TxValidationError (..), UTxOValidationError (..))
+import           Data.Function ((.))
+import           Data.Monoid (Monoid (mconcat), (<>))
 import           Data.Text (Text)
 import           Formatting (build, sformat, stext, (%))
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
+import           Text.Show (Show (show))
 
 import qualified Data.Text as T
 
