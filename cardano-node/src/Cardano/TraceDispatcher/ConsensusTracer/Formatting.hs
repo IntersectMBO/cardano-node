@@ -11,11 +11,10 @@ module Cardano.TraceDispatcher.ConsensusTracer.Formatting
   (
   ) where
 
-import           Data.Aeson (Value (String), (.=), toJSON)
+import           Data.Aeson (Value (String), toJSON, (.=))
 import qualified Data.Text as Text
 import           Text.Show
 
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
@@ -27,10 +26,17 @@ import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
+import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
+                     (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+
 import           Ouroboros.Network.Block
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.TxSubmission.Inbound
+import           Ouroboros.Network.TxSubmission.Outbound
 
 
 instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
@@ -118,3 +124,83 @@ instance LogFormatting (FetchDecision [Point header]) where
     mkObject [ "kind" .= String "FetchDecision results"
              , "length" .= String (showT $ length results)
              ]
+
+instance LogFormatting (BlockFetch.TraceFetchClientState header) where
+  forMachine _dtal BlockFetch.AddedFetchRequest {} =
+    mkObject [ "kind" .= String "AddedFetchRequest" ]
+  forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
+    mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
+  forMachine _dtal BlockFetch.CompletedBlockFetch {} =
+    mkObject [ "kind" .= String "CompletedBlockFetch" ]
+  forMachine _dtal BlockFetch.CompletedFetchBatch {} =
+    mkObject [ "kind" .= String "CompletedFetchBatch" ]
+  forMachine _dtal BlockFetch.StartedFetchBatch {} =
+    mkObject [ "kind" .= String "StartedFetchBatch" ]
+  forMachine _dtal BlockFetch.RejectedFetchBatch {} =
+    mkObject [ "kind" .= String "RejectedFetchBatch" ]
+  forMachine _dtal BlockFetch.ClientTerminating {} =
+    mkObject [ "kind" .= String "ClientTerminating" ]
+
+instance LogFormatting (TraceBlockFetchServerEvent blk) where
+  forMachine _dtal _ =
+    mkObject [ "kind" .= String "BlockFetchServer" ]
+
+-- TODO
+--
+-- instance LogFormatting a => LogFormatting (Consensus.TraceLabelCreds a) where
+--   forMachine dtal (Consensus.TraceLabelCreds creds val) =
+--     mkObject [ "credentials" .= toJSON creds
+--              , "val"         .= forMachine dtal val
+--             ]
+
+instance LogFormatting (TraceTxSubmissionInbound txid tx) where
+  forMachine _dtal (TraceTxSubmissionCollected count) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionCollected"
+      , "count" .= toJSON count
+      ]
+  forMachine _dtal (TraceTxSubmissionProcessed processed) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionProcessed"
+      , "accepted" .= toJSON (ptxcAccepted processed)
+      , "rejected" .= toJSON (ptxcRejected processed)
+      ]
+  forMachine _dtal TraceTxInboundTerminated =
+    mkObject
+      [ "kind" .= String "TraceTxInboundTerminated"
+      ]
+  forMachine _dtal (TraceTxInboundCanRequestMoreTxs count) =
+    mkObject
+      [ "kind" .= String "TraceTxInboundCanRequestMoreTxs"
+      , "count" .= toJSON count
+      ]
+  forMachine _dtal (TraceTxInboundCannotRequestMoreTxs count) =
+    mkObject
+      [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
+      , "count" .= toJSON count
+      ]
+
+instance (Show txid, Show tx)
+      => LogFormatting (TraceTxSubmissionOutbound txid tx) where
+  forMachine DDetailed (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      , "txIds" .= String (Text.pack $ show txids)
+      ]
+  forMachine _dtal (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      ]
+  forMachine DDetailed (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      , "txs" .= String (Text.pack $ show txs)
+      ]
+  forMachine _dtal (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
+    mkObject
+      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      ]
+  forMachine _dtal (TraceControlMessage _msg) =
+    mkObject
+      [ "kind" .= String "TraceControlMessage"
+      ]
