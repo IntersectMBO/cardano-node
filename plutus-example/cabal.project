@@ -1,37 +1,8 @@
 index-state: 2021-04-30T00:00:00Z
 
 packages:
-    cardano-api
-    cardano-cli
-    cardano-client-demo
-    cardano-config
-    cardano-node
-    cardano-node-chairman
-    cardano-submit-api
-    cardano-testnet
-    bench/cardano-topology
-    bench/locli
-    bench/tx-generator
-    plutus-example/plutus-example
-    trace-forward
-
-package cardano-api
-  ghc-options: -Werror
-
-package cardano-cli
-  ghc-options: -Werror
-
-package cardano-config
-  ghc-options: -Werror
-
-package cardano-node
-  ghc-options: -Werror
-
-package cardano-node-chairman
-  ghc-options: -Werror
-
-package tx-generator
-  ghc-options: -Werror
+    plutus-example
+    ../cardano-api
 
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
@@ -45,117 +16,37 @@ tests: False
 
 test-show-details: direct
 
--- Then enable specific tests in this repo
-
-package cardano-api
-  tests: True
-
-package cardano-cli
-  tests: True
-
-package cardano-node
-  tests: True
-
-package cardano-node-chairman
-  tests: True
-
-package cardano-submit-api
-  tests: True
-
-package cardano-testnet
-  tests: True
-
-package trace-forward
-  tests: True
-
--- The following is needed because Nix is doing something crazy.
-package byron-spec-ledger
-  tests: False
-
-package iohk-monitoring
-  tests: False
-
-package ouroboros-consensus-test
-  tests: False
-
-package ouroboros-consensus-cardano-test
-  tests: False
-
-package ouroboros-network
-  tests: False
-
-package ouroboros-network-framework
-  tests: False
-
-package plutus-tx
-  tests: False
-
-package prettyprinter-configurable
-  tests: False
-
-package small-steps
-  tests: False
-
-package small-steps-test
-  tests: False
-
-package goblins
-  tests: False
-
-package io-classes
-  tests: False
-
-package cardano-ledger-alonzo-test
-  tests: False
-
--- ---------------------------------------------------------
-
--- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
--- when using the "cabal" wrapper script provided by nix-shell.
--- --------------------------- 8< --------------------------
--- Please do not put any `source-repository-package` clause above this line.
-
--- Using a fork until our patches can be merged upstream
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/optparse-applicative
-  tag: 7497a29cb998721a9068d5725d49461f2bba0e7a
-  --sha256: 1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r
-
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: edf6945007177a638fbeb8802397f3a6f4e47c14
-  --sha256: 0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9
+  tag: 2f28e62f1508f07bb628963ee9bb23dc19ec0e03
+  --sha256: 0sjlk19v0dg63v8dawg844y3wzm1nmq0qxpvhip81x5yi091jjmm
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: cb0f19c85e5bb5299839ad4ed66af6fa61322cc4
-  --sha256: 0dnkfqcvbifbk3m5pg8kyjqjy0zj1l4vd23p39n6ym4q0bnib1cq
+  tag: b6a215c42a28dc8b71b42946fe30256a333d34af
+  --sha256: 1l9nqsg6kfkfadlbvyl4afdf8v408zf0fn6dkihqf56g2mnk4i04
   subdir:
-    base-deriving-via
     binary
     binary/test
     cardano-crypto-class
     cardano-crypto-praos
     cardano-crypto-tests
-    measures
-    orphans-deriving-via
     slotting
     strict-containers
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-crypto
-  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
-  --sha256: 06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3
+  tag: ce8f1934e4b6252084710975bd9bbc0a4648ece4
+  --sha256: 1v2laq04piyj511b2m77hxjh9l1yd6k9kc7g6bjala4w3zdwa4ni
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 6aa1cd0a64a464371b94d4ac182e7e2cddc83a36
-  --sha256: 1yv2biqc2q01xn7i7h7d1yn8dzygnqn8mywpjfs1i0pa7gnf5q14
+  tag: ec9c77edbf5700a4b2ece8f97a1e313df06abc97
+  --sha256: 1ia8x9dnw36y0xazg7xg263ax9mamw9w4sg460cmibj3wv49im4w
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -172,8 +63,6 @@ source-repository-package
     shelley/chain-and-ledger/shelley-spec-ledger-test
     shelley-ma/impl
     shelley-ma/shelley-ma-test
---TODO: disabled until it drops its dep on plutus-tx-plugin
---  alonzo/test
 
 source-repository-package
   type: git
@@ -208,13 +97,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/Win32-network
-  tag: 3825d3abf75f83f406c1f7161883c438dac7277d
-  --sha256: 19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx
+  tag: 5b3d08c454f425da5cf045fe7865950d7c806691
+  --sha256: 0npyihbaqlih9abdbaj451lm1h0kl5braczy8vn41s3ivbbnvpcw
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: a6d84582d8516f894c1607c3f4d70a8c60239f74 
+  tag: a6d84582d8516f894c1607c3f4d70a8c60239f74
   --sha256: 1narqq9qxz8hf1mspvwrr2l26497c1906l2y1db2sa8b6v8lr9sq
   subdir:
     io-sim
@@ -235,8 +124,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: edc6d4672c41de4485444122ff843bc86ff421a0
-  --sha256: 12dmxp11xlal8rr3371sir5q4f7gscmyl84nw6wm47mb5b28bk92
+  tag: 523f349f3d68db07c98150734793ed7003d1f562
+  --sha256: 0vp6wiv1fz5bzvw90pdwv96nck78m5s91xiwjhkksq06l1yqr3ps
   subdir:
     plutus-core
     plutus-ledger
@@ -244,15 +133,14 @@ source-repository-package
     plutus-tx
     plutus-tx-plugin
     prettyprinter-configurable
-    stubs/plutus-ghc-stub
     word-array
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/flat
-  tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
-  --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
+  location: https://github.com/Quid2/flat.git
+  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
+  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
 
 constraints:
     hedgehog >= 1.0
@@ -270,5 +158,4 @@ package cardano-ledger-alonzo-test
   tests: False
 
 allow-newer:
-  monoidal-containers:aeson,
   size-based:template-haskell

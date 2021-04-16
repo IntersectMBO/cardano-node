@@ -35,8 +35,7 @@ import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                                            SomeResponderApplication (..),
                                            cleanNetworkMutableState, newNetworkMutableState,
                                            nullNetworkServerTracers, withServerNode)
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                                                             noTimeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                                                                    UnversionedProtocolData (..),
                                                                    unversionedHandshakeCodec,
@@ -63,7 +62,7 @@ listenToForwarder
   -> IO ()
 listenToForwarder iomgr config@AcceptorConfiguration{forwarderEndpoint} loHandler niHandler = do
   let (LocalPipe localPipe) = forwarderEndpoint
-      snocket = localSnocket iomgr localPipe
+      snocket = localSnocket iomgr
       address = localAddressFromPath localPipe
   doListenToForwarder snocket address noTimeLimitsHandshake app
  where
@@ -98,7 +97,7 @@ doListenToForwarder snocket address timeLimits app = do
             address
             unversionedHandshakeCodec
             timeLimits
-            (cborTermVersionDataCodec unversionedProtocolDataCodec)
+            unversionedProtocolDataCodec
             acceptableVersion
             (simpleSingletonVersions
               UnversionedProtocol

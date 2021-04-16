@@ -19,10 +19,13 @@ module Test.Cardano.Node.Gen
 import           Cardano.Prelude
 
 import           Cardano.Node.Configuration.Topology (NetworkTopology (..), NodeSetup (..),
-                     RemoteAddress (..))
+                     PeerAdvertise (..), RemoteAddress (..), UseLedger (..))
 import           Cardano.Node.Types (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..),
                    NodeIPAddress, NodeIPv4Address, NodeIPv6Address)
+import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+
 
 import qualified Data.IP as IP
 
@@ -36,7 +39,7 @@ genNetworkTopology :: Gen NetworkTopology
 genNetworkTopology =
   Gen.choice
     [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup
-    , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
+    , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress <*> genUseLedger
     ]
 
 genNodeAddress' :: Gen addr -> Gen (NodeAddress' addr)
@@ -84,11 +87,17 @@ genNodeSetup =
     <*> Gen.maybe (genNodeAddress' genNodeHostIPv4Address)
     <*> Gen.maybe (genNodeAddress' genNodeHostIPv6Address)
     <*> Gen.list (Range.linear 0 6) genRemoteAddress
+    <*> genUseLedger
 
 genRemoteAddress :: Gen RemoteAddress
 genRemoteAddress =
   RemoteAddress
     <$> Gen.element cooking
     <*> fmap fromIntegral (Gen.word16 $ Range.linear 100 20000)
-    <*> Gen.int (Range.linear 0 100)
+    <*> Gen.element [DoAdvertisePeer, DoNotAdvertisePeer]
 
+genUseLedger :: Gen UseLedger
+genUseLedger = do
+    slot <- Gen.integral (Range.linear (-1) 10) :: Gen Integer
+    if slot >= 0 then return $ UseLedger $ UseLedgerAfter $ SlotNo $ fromIntegral slot
+                 else return $ UseLedger   DontUseLedger
