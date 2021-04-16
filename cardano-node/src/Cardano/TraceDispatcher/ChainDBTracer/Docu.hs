@@ -34,74 +34,74 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 
 ----------- Prototype objects for docu generation
 
-docRealPoint :: RealPoint blk
-docRealPoint = undefined
+protoRealPoint :: RealPoint blk
+protoRealPoint = undefined
 
-docPoint :: Point blk
-docPoint = undefined
+protoPoint :: Point blk
+protoPoint = undefined
 
-docHeaderDiff :: ChainDiff (HeaderFields blk)
-docHeaderDiff = undefined
+protoHeaderDiff :: ChainDiff (HeaderFields blk)
+protoHeaderDiff = undefined
 
-docValidationError :: ChainDB.InvalidBlockReason blk
-docValidationError = undefined
+protoValidationError :: ChainDB.InvalidBlockReason blk
+protoValidationError = undefined
 
-docNTI :: ChainDB.NewTipInfo blk
-docNTI = ChainDB.NewTipInfo docRealPoint (EpochNo 1) 1 docRealPoint
+protoNTI :: ChainDB.NewTipInfo blk
+protoNTI = ChainDB.NewTipInfo protoRealPoint (EpochNo 1) 1 protoRealPoint
 
-docAFH :: AF.AnchoredFragment (Header blk)
-docAFH =  undefined
+protoAFH :: AF.AnchoredFragment (Header blk)
+protoAFH =  undefined
 
-docExtValidationError :: ExtValidationError blk
-docExtValidationError = ExtValidationErrorHeader (HeaderEnvelopeError (UnexpectedSlotNo 1 2))
+protoExtValidationError :: ExtValidationError blk
+protoExtValidationError = ExtValidationErrorHeader (HeaderEnvelopeError (UnexpectedSlotNo 1 2))
 
-docFollowerRollState :: ChainDB.FollowerRollState blk
-docFollowerRollState = undefined
+protoFollowerRollState :: ChainDB.FollowerRollState blk
+protoFollowerRollState = undefined
 
-docWoSlotNo :: WithOrigin SlotNo
-docWoSlotNo = undefined
+protoWoSlotNo :: WithOrigin SlotNo
+protoWoSlotNo = undefined
 
-docTime :: Time
-docTime = undefined
+protoTime :: Time
+protoTime = undefined
 
-docChunkNo :: ImmDB.ChunkNo
-docChunkNo = undefined
+protoChunkNo :: ImmDB.ChunkNo
+protoChunkNo = undefined
 
-docStreamFrom :: ChainDB.StreamFrom blk
-docStreamFrom = undefined
+protoStreamFrom :: ChainDB.StreamFrom blk
+protoStreamFrom = undefined
 
-docStreamTo :: ChainDB.StreamTo blk
-docStreamTo = undefined
+protoStreamTo :: ChainDB.StreamTo blk
+protoStreamTo = undefined
 
-docUnknownRange :: ChainDB.UnknownRange blk
-docUnknownRange = undefined
+protoUnknownRange :: ChainDB.UnknownRange blk
+protoUnknownRange = undefined
 
-docDiskSnapshot :: LedgerDB.DiskSnapshot
-docDiskSnapshot = undefined
+protoDiskSnapshot :: LedgerDB.DiskSnapshot
+protoDiskSnapshot = undefined
 
-docInitFailure :: LedgerDB.InitFailure blk
-docInitFailure = undefined
+protoInitFailure :: LedgerDB.InitFailure blk
+protoInitFailure = undefined
 
-docTip :: ImmDB.Tip blk
-docTip = undefined
+protoTip :: ImmDB.Tip blk
+protoTip = undefined
 
-docChunkFileError :: ImmDB.ChunkFileError blk
-docChunkFileError = undefined
+protoChunkFileError :: ImmDB.ChunkFileError blk
+protoChunkFileError = undefined
 
-docChainHash :: ChainHash blk
-docChainHash = undefined
+protoChainHash :: ChainHash blk
+protoChainHash = undefined
 
-docWithOriginTip :: WithOrigin (ImmDB.Tip blk)
-docWithOriginTip = undefined
+protoWithOriginTip :: WithOrigin (ImmDB.Tip blk)
+protoWithOriginTip = undefined
 
-docParseError :: VolDB.ParseError blk
-docParseError = undefined
+protoParseError :: VolDB.ParseError blk
+protoParseError = undefined
 
-docFsPath :: FsPath
-docFsPath = mkFsPath [""]
+protoFsPath :: FsPath
+protoFsPath = mkFsPath [""]
 
-docBlockOffset :: VolDB.BlockOffset
-docBlockOffset = undefined
+protoBlockOffset :: VolDB.BlockOffset
+protoBlockOffset = undefined
 
 ----------- Documentation
 
@@ -109,73 +109,73 @@ docChainDBTraceEvent :: Documented (ChainDB.TraceEvent blk)
 docChainDBTraceEvent = Documented [
     DocMsg
       (ChainDB.TraceAddBlockEvent
-        (ChainDB.IgnoreBlockOlderThanK docRealPoint))
+        (ChainDB.IgnoreBlockOlderThanK protoRealPoint))
       []
       "A block with a 'BlockNo' more than @k@ back than the current tip\
       \ was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.IgnoreBlockAlreadyInVolatileDB
-          docRealPoint))
+          protoRealPoint))
       []
       "A block that is already in the Volatile DB was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.IgnoreInvalidBlock
-          docRealPoint docValidationError))
+          protoRealPoint protoValidationError))
       []
       "A block that is already in the Volatile DB was ignored."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedBlockToQueue
-          docRealPoint 1))
+          protoRealPoint 1))
       []
       "The block was added to the queue and will be added to the ChainDB by\
       \ the background thread. The size of the queue is included.."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.BlockInTheFuture
-          docRealPoint 1))
+          protoRealPoint 1))
       []
       "The block is from the future, i.e., its slot number is greater than\
       \ the current slot (the second argument)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedBlockToVolatileDB
-          docRealPoint 1 ChainDB.IsEBB))
+          protoRealPoint 1 ChainDB.IsEBB))
       []
       "A block was added to the Volatile DB"
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.TryAddToCurrentChain
-          docRealPoint))
+          protoRealPoint))
       []
       "The block fits onto the current chain, we'll try to use it to extend\
       \ our chain."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.TrySwitchToAFork
-          docRealPoint docHeaderDiff))
+          protoRealPoint protoHeaderDiff))
       []
       "The block fits onto some fork, we'll try to switch to that fork (if\
       \ it is preferable to our chain)"
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.StoreButDontChange
-          docRealPoint))
+          protoRealPoint))
       []
       "The block fits onto some fork, we'll try to switch to that fork (if\
       \ it is preferable to our chain)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
-        (ChainDB.AddedToCurrentChain [] docNTI docAFH docAFH))
+        (ChainDB.AddedToCurrentChain [] protoNTI protoAFH protoAFH))
       []
       "The new block fits onto the current chain (first\
       \ fragment) and we have successfully used it to extend our (new) current\
       \ chain (second fragment)."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
-        (ChainDB.SwitchedToAFork [] docNTI docAFH docAFH))
+        (ChainDB.SwitchedToAFork [] protoNTI protoAFH protoAFH))
       []
       "The new block fits onto some fork and we have switched to that fork\
       \ (second fragment), as it is preferable to our (previous) current chain\
@@ -183,28 +183,28 @@ docChainDBTraceEvent = Documented [
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
-          (ChainDB.InvalidBlock docExtValidationError docRealPoint)))
+          (ChainDB.InvalidBlock protoExtValidationError protoRealPoint)))
       []
       "An event traced during validating performed while adding a block.\
       \A point was found to be invalid."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
-          (ChainDB.InvalidCandidate docAFH)))
+          (ChainDB.InvalidCandidate protoAFH)))
       []
       "An event traced during validating performed while adding a block.\
       \A candidate chain was invalid."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
-          (ChainDB.ValidCandidate docAFH)))
+          (ChainDB.ValidCandidate protoAFH)))
       []
       "An event traced during validating performed while adding a block\
       \A candidate chain was valid."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
-          (ChainDB.CandidateContainsFutureBlocks docAFH [])))
+          (ChainDB.CandidateContainsFutureBlocks protoAFH [])))
       []
       "An event traced during validating performed while adding a block\
       \Candidate contains headers from the future which do no exceed the\
@@ -212,7 +212,7 @@ docChainDBTraceEvent = Documented [
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddBlockValidation
-          (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew docAFH [])))
+          (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew protoAFH [])))
       []
       "An event traced during validating performed while adding a block\
       \An event traced during validating performed while adding a block\
@@ -220,7 +220,7 @@ docChainDBTraceEvent = Documented [
       \clock skew."
   , DocMsg
       (ChainDB.TraceAddBlockEvent
-        (ChainDB.ChainSelectionForFutureBlock docRealPoint))
+        (ChainDB.ChainSelectionForFutureBlock protoRealPoint))
       []
       "Run chain selection for a block that was previously from the future.\
       \ This is done for all blocks from the future each time a new block is\
@@ -231,26 +231,26 @@ docChainDBTraceEvent = Documented [
       "A new follower was created."
   , DocMsg
       (ChainDB.TraceFollowerEvent
-        (ChainDB.FollowerNoLongerInMem docFollowerRollState))
+        (ChainDB.FollowerNoLongerInMem protoFollowerRollState))
       []
       "The follower was in the 'FollowerInImmutableDB' state and is switched to\
       \ the 'FollowerInMem' state."
   , DocMsg
       (ChainDB.TraceFollowerEvent
-        (ChainDB.FollowerSwitchToMem docPoint docWoSlotNo))
+        (ChainDB.FollowerSwitchToMem protoPoint protoWoSlotNo))
       []
       "The follower was in the 'FollowerInImmutableDB' state and is switched to\
       \ the 'FollowerInMem' state."
   , DocMsg
       (ChainDB.TraceFollowerEvent
-        (ChainDB.FollowerNewImmIterator docPoint docWoSlotNo))
+        (ChainDB.FollowerNewImmIterator protoPoint protoWoSlotNo))
       []
       "The follower is in the 'FollowerInImmutableDB' state but the iterator is\
       \ exhausted while the ImmDB has grown, so we open a new iterator to\
       \ stream these blocks too."
   , DocMsg
       (ChainDB.TraceCopyToImmutableDBEvent
-        (ChainDB.CopiedBlockToImmutableDB docPoint))
+        (ChainDB.CopiedBlockToImmutableDB protoPoint))
       []
       "A block was successfully copied to the ImmDB."
   , DocMsg
@@ -260,7 +260,7 @@ docChainDBTraceEvent = Documented [
       "There are no block to copy to the ImmDB."
   , DocMsg
       (ChainDB.TraceGCEvent
-        (ChainDB.ScheduledGC 1 docTime))
+        (ChainDB.ScheduledGC 1 protoTime))
       []
       "There are no block to copy to the ImmDB."
   , DocMsg
@@ -271,49 +271,49 @@ docChainDBTraceEvent = Documented [
   , DocMsg
       (ChainDB.TraceInitChainSelEvent
         (ChainDB.InitChainSelValidation
-          (ChainDB.InvalidBlock docExtValidationError docRealPoint)))
+          (ChainDB.InvalidBlock protoExtValidationError protoRealPoint)))
       []
       "A point was found to be invalid."
   , DocMsg
       (ChainDB.TraceInitChainSelEvent
         (ChainDB.InitChainSelValidation
-          (ChainDB.InvalidCandidate docAFH)))
+          (ChainDB.InvalidCandidate protoAFH)))
       []
       "A candidate chain was invalid."
   , DocMsg
       (ChainDB.TraceInitChainSelEvent
         (ChainDB.InitChainSelValidation
-          (ChainDB.ValidCandidate docAFH)))
+          (ChainDB.ValidCandidate protoAFH)))
       []
       "A candidate chain was valid."
   , DocMsg
       (ChainDB.TraceInitChainSelEvent
         (ChainDB.InitChainSelValidation
-          (ChainDB.CandidateContainsFutureBlocks docAFH [])))
+          (ChainDB.CandidateContainsFutureBlocks protoAFH [])))
       []
       "Candidate contains headers from the future which do not exceed the\
       \ clock skew."
   , DocMsg
       (ChainDB.TraceInitChainSelEvent
         (ChainDB.InitChainSelValidation
-          (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew docAFH [])))
+          (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew protoAFH [])))
       []
       "Candidate contains headers from the future which exceed the\
       \ clock skew, making them invalid."
 
   , DocMsg
       (ChainDB.TraceOpenEvent
-        (ChainDB.OpenedDB docPoint docPoint))
+        (ChainDB.OpenedDB protoPoint protoPoint))
       []
       "The ChainDB was opened."
   , DocMsg
       (ChainDB.TraceOpenEvent
-        (ChainDB.ClosedDB docPoint docPoint))
+        (ChainDB.ClosedDB protoPoint protoPoint))
       []
       "The ChainDB was closed."
   , DocMsg
       (ChainDB.TraceOpenEvent
-        (ChainDB.OpenedImmutableDB docPoint docChunkNo))
+        (ChainDB.OpenedImmutableDB protoPoint protoChunkNo))
       []
       "The ImmDB was opened."
   , DocMsg
@@ -328,40 +328,40 @@ docChainDBTraceEvent = Documented [
       "The LedgerDB was opened."
   , DocMsg
       (ChainDB.TraceIteratorEvent
-        (ChainDB.UnknownRangeRequested docUnknownRange))
+        (ChainDB.UnknownRangeRequested protoUnknownRange))
       []
       "An unknown range was requested, see 'UnknownRange'."
   , DocMsg
       (ChainDB.TraceIteratorEvent
-        (ChainDB.StreamFromVolatileDB docStreamFrom docStreamTo [docRealPoint]))
+        (ChainDB.StreamFromVolatileDB protoStreamFrom protoStreamTo [protoRealPoint]))
       []
       "Stream only from the VolatileDB."
   , DocMsg
       (ChainDB.TraceIteratorEvent
-        (ChainDB.StreamFromImmutableDB docStreamFrom docStreamTo))
+        (ChainDB.StreamFromImmutableDB protoStreamFrom protoStreamTo))
       []
       "Stream only from the ImmDB."
   , DocMsg
       (ChainDB.TraceIteratorEvent
-        (ChainDB.StreamFromBoth docStreamFrom docStreamTo [docRealPoint]))
+        (ChainDB.StreamFromBoth protoStreamFrom protoStreamTo [protoRealPoint]))
       []
       "Stream from both the VolatileDB and the ImmDB."
   , DocMsg
       (ChainDB.TraceIteratorEvent
-        (ChainDB.BlockMissingFromVolatileDB docRealPoint))
+        (ChainDB.BlockMissingFromVolatileDB protoRealPoint))
       []
       " A block is no longer in the VolatileDB because it has been garbage\
       \ collected. It might now be in the ImmDB if it was part of the\
       \ current chain."
   , DocMsg
       (ChainDB.TraceIteratorEvent
-        (ChainDB.BlockWasCopiedToImmutableDB docRealPoint))
+        (ChainDB.BlockWasCopiedToImmutableDB protoRealPoint))
       []
       "A block that has been garbage collected from the VolatileDB is now\
       \ found and streamed from the ImmDB."
   , DocMsg
       (ChainDB.TraceIteratorEvent
-        (ChainDB.BlockGCedFromVolatileDB docRealPoint))
+        (ChainDB.BlockGCedFromVolatileDB protoRealPoint))
       []
       "A block is no longer in the VolatileDB and isn't in the ImmDB\
       \ either; it wasn't part of the current chain."
@@ -375,23 +375,23 @@ docChainDBTraceEvent = Documented [
       \ next block we're looking for."
   , DocMsg
       (ChainDB.TraceLedgerEvent
-        (LedgerDB.InvalidSnapshot docDiskSnapshot docInitFailure))
+        (LedgerDB.InvalidSnapshot protoDiskSnapshot protoInitFailure))
       []
       "An on disk snapshot was skipped because it was invalid."
   , DocMsg
       (ChainDB.TraceLedgerEvent
-        (LedgerDB.TookSnapshot docDiskSnapshot docRealPoint))
+        (LedgerDB.TookSnapshot protoDiskSnapshot protoRealPoint))
       []
       "A snapshot was written to disk."
   , DocMsg
       (ChainDB.TraceLedgerEvent
-        (LedgerDB.DeletedSnapshot docDiskSnapshot))
+        (LedgerDB.DeletedSnapshot protoDiskSnapshot))
       []
       "An old or invalid on-disk snapshot was deleted."
 
   , DocMsg
       (ChainDB.TraceLedgerReplayEvent
-        (LedgerDB.ReplayFromGenesis docPoint))
+        (LedgerDB.ReplayFromGenesis protoPoint))
       []
       "There were no LedgerDB snapshots on disk, so we're replaying all\
       \ blocks starting from Genesis against the initial ledger.\
@@ -399,7 +399,7 @@ docChainDBTraceEvent = Documented [
       \ ImmDB, i.e., the last block to replay."
   , DocMsg
       (ChainDB.TraceLedgerReplayEvent
-        (LedgerDB.ReplayFromSnapshot docDiskSnapshot docRealPoint docPoint))
+        (LedgerDB.ReplayFromSnapshot protoDiskSnapshot protoRealPoint protoPoint))
       []
       "There was a LedgerDB snapshot on disk corresponding to the given tip.\
       \ We're replaying more recent blocks against it.\
@@ -407,7 +407,7 @@ docChainDBTraceEvent = Documented [
       \ ImmDB, i.e., the last block to replay."
   , DocMsg
       (ChainDB.TraceLedgerReplayEvent
-        (LedgerDB.ReplayedBlock docRealPoint [] docPoint))
+        (LedgerDB.ReplayedBlock protoRealPoint [] protoPoint))
       []
       "We replayed the given block (reference) on the genesis snapshot\
       \ during the initialisation of the LedgerDB.\
@@ -422,58 +422,58 @@ docChainDBTraceEvent = Documented [
       "No valid last location was found"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.ValidatedLastLocation docChunkNo docTip))
+        (ImmDB.ValidatedLastLocation protoChunkNo protoTip))
       []
       "The last location was validatet"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.ValidatingChunk docChunkNo))
+        (ImmDB.ValidatingChunk protoChunkNo))
       []
       "The chunk was validatet"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.MissingChunkFile docChunkNo))
+        (ImmDB.MissingChunkFile protoChunkNo))
       []
       "Chunk file is missing"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.InvalidChunkFile docChunkNo docChunkFileError))
+        (ImmDB.InvalidChunkFile protoChunkNo protoChunkFileError))
       []
       "Chunk file is invalid"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.ChunkFileDoesntFit docChainHash docChainHash))
+        (ImmDB.ChunkFileDoesntFit protoChainHash protoChainHash))
       []
       "The hash of the last block in the previous epoch doesn't match the\
       \ previous hash of the first block in the current epoch"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.MissingPrimaryIndex docChunkNo))
+        (ImmDB.MissingPrimaryIndex protoChunkNo))
       []
       "The primary index is missing."
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.MissingSecondaryIndex docChunkNo))
+        (ImmDB.MissingSecondaryIndex protoChunkNo))
       []
       "The secondary index is missing."
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.InvalidPrimaryIndex docChunkNo))
+        (ImmDB.InvalidPrimaryIndex protoChunkNo))
       []
       "The primary index is invalid."
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.InvalidSecondaryIndex docChunkNo))
+        (ImmDB.InvalidSecondaryIndex protoChunkNo))
       []
       "The secondary index is invalid."
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.RewritePrimaryIndex docChunkNo))
+        (ImmDB.RewritePrimaryIndex protoChunkNo))
       []
       "The primary index gets rewritten."
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.RewriteSecondaryIndex docChunkNo))
+        (ImmDB.RewriteSecondaryIndex protoChunkNo))
       []
       "The secondary index gets rewritten."
   , DocMsg
@@ -483,7 +483,7 @@ docChainDBTraceEvent = Documented [
       "Performing a migration of the on-disk files."
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
-        (ImmDB.DeletingAfter docWithOriginTip))
+        (ImmDB.DeletingAfter protoWithOriginTip))
       []
       "TODO"
   , DocMsg
@@ -497,32 +497,32 @@ docChainDBTraceEvent = Documented [
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
         (ImmDB.TraceCacheEvent
-          (ImmDB.TraceCurrentChunkHit docChunkNo 1)))
+          (ImmDB.TraceCurrentChunkHit protoChunkNo 1)))
       []
       "TODO"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
         (ImmDB.TraceCacheEvent
-          (ImmDB.TracePastChunkHit docChunkNo 1)))
+          (ImmDB.TracePastChunkHit protoChunkNo 1)))
       []
       "TODO"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
         (ImmDB.TraceCacheEvent
-          (ImmDB.TracePastChunkMiss docChunkNo 1)))
+          (ImmDB.TracePastChunkMiss protoChunkNo 1)))
       []
       "TODO"
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
         (ImmDB.TraceCacheEvent
-          (ImmDB.TracePastChunkEvict docChunkNo 1)))
+          (ImmDB.TracePastChunkEvict protoChunkNo 1)))
       []
       "The least recently used past chunk was evicted because the cache\
       \ was full."
   , DocMsg
       (ChainDB.TraceImmutableDBEvent
         (ImmDB.TraceCacheEvent
-          (ImmDB.TracePastChunksExpired [docChunkNo] 1)))
+          (ImmDB.TracePastChunksExpired [protoChunkNo] 1)))
       []
       "Past chunks were expired from the cache because they haven't been\
       \ used for a while."
@@ -539,12 +539,12 @@ docChainDBTraceEvent = Documented [
       "TODO"
   , DocMsg
       (ChainDB.TraceVolatileDBEvent
-        (VolDB.Truncate docParseError docFsPath docBlockOffset))
+        (VolDB.Truncate protoParseError protoFsPath protoBlockOffset))
       []
       "TODO"
   , DocMsg
       (ChainDB.TraceVolatileDBEvent
-        (VolDB.InvalidFileNames [docFsPath]))
+        (VolDB.InvalidFileNames [protoFsPath]))
       []
       "TODO"
   , DocMsg
@@ -554,7 +554,7 @@ docChainDBTraceEvent = Documented [
       "TODO"
   , DocMsg
       (ChainDB.TraceVolatileDBEvent
-        (VolDB.TruncateCurrentFile docFsPath))
+        (VolDB.TruncateCurrentFile protoFsPath))
       []
       "TODO"
   ]
