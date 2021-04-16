@@ -20,8 +20,7 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                                         OuroborosApplication (..), MuxPeer (..),
                                         RunMiniProtocol (..),
                                         miniProtocolLimits, miniProtocolNum, miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                                                             noTimeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                                                                    UnversionedProtocolData (..),
                                                                    unversionedHandshakeCodec,
@@ -71,7 +70,7 @@ doConnectToAcceptor snocket address timeLimits app =
     snocket
     unversionedHandshakeCodec
     timeLimits
-    (cborTermVersionDataCodec unversionedProtocolDataCodec)
+    unversionedProtocolDataCodec
     nullNetworkConnectTracers
     acceptableVersion
     (simpleSingletonVersions
