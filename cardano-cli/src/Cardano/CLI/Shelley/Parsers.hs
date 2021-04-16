@@ -486,6 +486,8 @@ pTransaction =
         (Opt.info pTransactionPolicyId $ Opt.progDesc "Calculate the PolicyId from the monetary policy script.")
     , subParser "calculate-min-fee"
         (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
+    , subParser "calculate-min-value"
+        (Opt.info pTransactionCalculateMinValue $ Opt.progDesc "Calculate the minimum value for a transaction")
     , subParser "txid"
         (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
     , subParser "view" $
@@ -555,6 +557,11 @@ pTransaction =
       <*> pTxOutCount
       <*> pTxShelleyWitnessCount
       <*> pTxByronWitnessCount
+
+  pTransactionCalculateMinValue :: Parser TransactionCmd
+  pTransactionCalculateMinValue = TxCalculateMinValue
+    <$> pProtocolParamsSourceSpec
+    <*> pMultiAsset
 
   pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
   pProtocolParamsSourceSpec =
@@ -1613,6 +1620,15 @@ pTxOut =
       <> Opt.help "The transaction output as Address+Lovelace where Address is \
                   \the Bech32-encoded address followed by the amount in \
                   \Lovelace."
+      )
+
+pMultiAsset :: Parser Value
+pMultiAsset =
+  Opt.option
+    (readerFromParsecParser parseValue)
+      (  Opt.long "multi-asset"
+      <> Opt.metavar "VALUE"
+      <> Opt.help "Multi-asset value(s) with the multi-asset cli syntax"
       )
 
 pMintMultiAsset :: Parser Value

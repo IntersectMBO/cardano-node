@@ -66,7 +66,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdWriteFileError !(FileError ())
   | ShelleyQueryCmdHelpersError !HelpersError
   | ShelleyQueryCmdAcquireFailure !AcquireFailure
-  | ShelleyQueryCmdEraConsensusModeMismatch !AnyCardanoEra !AnyConsensusMode
+  | ShelleyQueryCmdEraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
   | ShelleyQueryCmdByronEra
   | ShelleyQueryCmdEraMismatch !EraMismatch
   deriving Show
@@ -80,7 +80,7 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
     ShelleyQueryCmdAcquireFailure aqFail -> Text.pack $ show aqFail
     ShelleyQueryCmdByronEra -> "This query cannot be used for the Byron era"
-    ShelleyQueryCmdEraConsensusModeMismatch (AnyCardanoEra era) (AnyConsensusMode cMode) ->
+    ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) (AnyCardanoEra era) ->
       "Consensus mode and era mismatch. Consensus mode: " <> show cMode <>
       " Era: " <> show era
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
@@ -129,7 +129,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
                   localNodeConnInfo
                   query
       writeProtocolParameters mOutFile result
-    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
  where
   writeProtocolParameters
     :: Maybe OutputFile
@@ -219,7 +219,7 @@ runQueryUTxO (AnyConsensusModeParams cModeParams)
                   localNodeConnInfo
                   qInMode
       writeFilteredUTxOs sbe mOutFile result
-    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
  where
   createQuery
     :: ShelleyBasedEra era
@@ -260,7 +260,7 @@ runQueryLedgerState (AnyConsensusModeParams cModeParams)
                   localNodeConnInfo
                   qInMode
       obtainLedgerEraClassConstraints sbe (writeLedgerState mOutFile) result
-    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 
 runQueryProtocolState
@@ -288,7 +288,7 @@ runQueryProtocolState (AnyConsensusModeParams cModeParams)
                   localNodeConnInfo
                   qInMode
       writeProtocolState mOutFile result
-    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 -- | Query the current delegations and reward accounts, filtered by a given
 -- set of addresses, from a Shelley node via the local state query protocol.
@@ -321,7 +321,7 @@ runQueryStakeAddressInfo (AnyConsensusModeParams cModeParams)
                   localNodeConnInfo
                   query
       writeStakeAddressInfo mOutFile $ DelegationsAndRewards result
-    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 -- -------------------------------------------------------------------------------------------------
 
@@ -504,7 +504,7 @@ runQueryStakeDistribution (AnyConsensusModeParams cModeParams)
                   localNodeConnInfo
                   query
       writeStakeDistribution mOutFile result
-    Nothing -> left . ShelleyQueryCmdEraConsensusModeMismatch anyE $ AnyConsensusMode cMode
+    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 
 writeStakeDistribution
@@ -575,7 +575,7 @@ calcEraInMode
   -> ConsensusMode mode
   -> ExceptT ShelleyQueryCmdError IO (EraInMode era mode)
 calcEraInMode era mode=
-  hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (anyCardanoEra era) (AnyConsensusMode mode))
+  hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode mode) (anyCardanoEra era))
                    $ toEraInMode era mode
 
 determineEra
