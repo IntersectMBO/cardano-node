@@ -22,6 +22,7 @@ import           Prelude (String)
 
 import           Control.Monad (fail)
 import           Data.Aeson
+import           Data.Time.Clock (DiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -89,6 +90,21 @@ data NodeConfiguration
        , ncTraceConfig    :: !TraceOptions
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
+
+         -- | Protocol idleness timeout, see
+         -- 'Ouroboros.Network.Diffusion.daProtocolIdleTimeout'.
+         --
+       , ncProtocolIdleTimeout   :: DiffTime
+         -- | Wait time timeout, see
+         -- 'Ouroboros.Netowrk.Diffusion.daTimeWaitTimeout'.
+         --
+       , ncTimeWaitTimeout       :: DiffTime
+
+         -- P2P governor targets
+       , ncTargetNumberOfRootPeers        :: Int
+       , ncTargetNumberOfKnownPeers       :: Int
+       , ncTargetNumberOfEstablishedPeers :: Int
+       , ncTargetNumberOfActivePeers      :: Int
        } deriving (Eq, Show)
 
 
@@ -128,6 +144,16 @@ data PartialNodeConfiguration
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
+
+         -- Network timeouts
+       , pncProtocolIdleTimeout   :: !(Last DiffTime)
+       , pncTimeWaitTimeout       :: !(Last DiffTime)
+
+         -- P2P governor targets
+       , pncTargetNumberOfRootPeers        :: !(Last Int)
+       , pncTargetNumberOfKnownPeers       :: !(Last Int)
+       , pncTargetNumberOfEstablishedPeers :: !(Last Int)
+       , pncTargetNumberOfActivePeers      :: !(Last Int)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -178,6 +204,16 @@ instance FromJSON PartialNodeConfiguration where
                                                                <*> parseHardForkProtocol v)
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
+      -- Network timeouts
+      pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
+      pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
+
+      -- P2P Governor parameters, with conservative defaults.
+      pncTargetNumberOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
+      pncTargetNumberOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
+      pncTargetNumberOfEstablishedPeers <- Last <$> v .:? "TargetNumberOfEstablishedPeers"
+      pncTargetNumberOfActivePeers      <- Last <$> v .:? "TargetNumberOfActivePeers"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketPath
@@ -200,6 +236,12 @@ instance FromJSON PartialNodeConfiguration where
            , pncShutdownIPC = mempty
            , pncShutdownOnSlotSynced = mempty
            , pncMaybeMempoolCapacityOverride
+           , pncProtocolIdleTimeout
+           , pncTimeWaitTimeout
+           , pncTargetNumberOfRootPeers
+           , pncTargetNumberOfKnownPeers
+           , pncTargetNumberOfEstablishedPeers
+           , pncTargetNumberOfActivePeers
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -334,6 +376,12 @@ defaultPartialNodeConfiguration =
     , pncLogMetrics = mempty
     , pncTraceConfig = mempty
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncProtocolIdleTimeout   = Last (Just 5)
+    , pncTimeWaitTimeout       = Last (Just 60)
+    , pncTargetNumberOfRootPeers        = Last (Just 5)
+    , pncTargetNumberOfKnownPeers       = Last (Just 5)
+    , pncTargetNumberOfEstablishedPeers = Last (Just 2)
+    , pncTargetNumberOfActivePeers      = Last (Just 1)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -357,6 +405,24 @@ makeNodeConfiguration pnc = do
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
+  ncTargetNumberOfRootPeers <-
+    lastToEither "Missing TargetNumberOfRootPeers"
+    $ pncTargetNumberOfRootPeers pnc
+  ncTargetNumberOfKnownPeers <-
+    lastToEither "Missing TargetNumberOfKnownPeers"
+    $ pncTargetNumberOfKnownPeers pnc
+  ncTargetNumberOfEstablishedPeers <-
+    lastToEither "Missing TargetNumberOfEstablishedPeers"
+    $ pncTargetNumberOfEstablishedPeers pnc
+  ncTargetNumberOfActivePeers <-
+    lastToEither "Missing TargetNumberOfActivePeers"
+    $ pncTargetNumberOfActivePeers pnc
+  ncProtocolIdleTimeout <-
+    lastToEither "Missing ProtocolIdleTimeout"
+    $ pncProtocolIdleTimeout pnc
+  ncTimeWaitTimeout <-
+    lastToEither "Missing TimeWaitTimeout"
+    $ pncTimeWaitTimeout pnc
 
   testEnableDevelopmentNetworkProtocols <-
     lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
@@ -384,6 +450,12 @@ makeNodeConfiguration pnc = do
              , ncTraceConfig = if loggingSwitch then traceConfig
                                                 else TracingOff
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
+             , ncProtocolIdleTimeout
+             , ncTimeWaitTimeout
+             , ncTargetNumberOfRootPeers
+             , ncTargetNumberOfKnownPeers
+             , ncTargetNumberOfEstablishedPeers
+             , ncTargetNumberOfActivePeers
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

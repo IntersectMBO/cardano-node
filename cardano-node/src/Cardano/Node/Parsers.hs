@@ -95,6 +95,12 @@ nodeRunParser = do
            , pncLogMetrics = mempty
            , pncTraceConfig = mempty
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncProtocolIdleTimeout = mempty
+           , pncTimeWaitTimeout = mempty
+           , pncTargetNumberOfRootPeers = mempty
+           , pncTargetNumberOfKnownPeers = mempty
+           , pncTargetNumberOfEstablishedPeers = mempty
+           , pncTargetNumberOfActivePeers = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
