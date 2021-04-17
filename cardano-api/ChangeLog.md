@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 1.26.2 -- April 2021
+- Update `cardano-ledger-spec` version to delay the evaludation stake
+  distribution which was causing a halt in node block production at the epoch
+  boundary. (#2616)
+
 ## 1.26.1 -- March 2021
 
 - The cardano-submit-api now takes transactions encoded as CBOR rather than

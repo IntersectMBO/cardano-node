@@ -1,5 +1,10 @@
 # Changelog for cardano-cli
 
+## 1.26.2 -- April 2021
+- Update `cardano-ledger-spec` version to delay the evaludation stake
+  distribution which was causing a halt in node block production at the epoch
+  boundary. (#2616)
+
 ## 1.26.1 -- March 2021
 - It's no longer necessary to specify the era when making a CLI query. When not
   specified, the current era will be used as a default. (#2470)
