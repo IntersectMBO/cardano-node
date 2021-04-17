@@ -193,6 +193,9 @@ data TransactionCmd
       TxOutCount
       TxShelleyWitnessCount
       TxByronWitnessCount
+  | TxCalculateMinValue
+      ProtocolParamsSourceSpec
+      Value
   | TxGetTxId InputTxFile
   | TxView InputTxFile
   deriving Show
@@ -221,6 +224,7 @@ renderTransactionCmd cmd =
     TxSubmit {} -> "transaction submit"
     TxMintedPolicyId {} -> "transaction policyid"
     TxCalculateMinFee {} -> "transaction calculate-min-fee"
+    TxCalculateMinValue {} -> "transaction calculate-min-value"
     TxGetTxId {} -> "transaction txid"
     TxView {} -> "transaction view"
 

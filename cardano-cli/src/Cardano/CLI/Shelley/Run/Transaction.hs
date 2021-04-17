@@ -50,6 +50,8 @@ import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..), r
                    renderShelleyGenesisCmdError)
 import           Cardano.CLI.Types
 
+import qualified System.IO as IO
+
 data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
   | ShelleyTxCmdReadFileError !(FileError ())
@@ -58,7 +60,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdReadWitnessSigningDataError !ReadWitnessSigningDataError
   | ShelleyTxCmdWriteFileError !(FileError ())
   | ShelleyTxCmdEraConsensusModeMismatch
-      !FilePath
+      !(Maybe FilePath)
       !AnyConsensusMode
       !AnyCardanoEra
       -- ^ Era
@@ -86,7 +88,6 @@ data SomeTxBodyError where
      SomeTxBodyError :: TxBodyError era -> SomeTxBodyError
 
 deriving instance Show SomeTxBodyError
-
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -206,6 +207,7 @@ runTransactionCmd cmd =
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                            nShelleyKeyWitnesses nByronKeyWitnesses
+    TxCalculateMinValue pParamSpec txOuts -> runTxCalculateMinValue pParamSpec txOuts
     TxGetTxId txinfile -> runTxGetTxId txinfile
     TxView txinfile -> runTxView txinfile
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
@@ -508,7 +510,7 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
     InAnyCardanoEra era tx <- readFileTx txFile
     let cMode = AnyConsensusMode $ consensusModeOnly cModeParams
     eraInMode <- hoistMaybe
-                   (ShelleyTxCmdEraConsensusModeMismatch txFile cMode (AnyCardanoEra era))
+                   (ShelleyTxCmdEraConsensusModeMismatch (Just txFile) cMode (AnyCardanoEra era))
                    (toEraInMode era $ consensusModeOnly cModeParams)
     let txInMode = TxInMode tx eraInMode
         localNodeConnInfo = LocalNodeConnectInfo
@@ -566,6 +568,25 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
                              nByronKeyWitnesses nShelleyKeyWitnesses
 
     liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
+
+-- ----------------------------------------------------------------------------
+-- Transaction fee calculation
+--
+
+runTxCalculateMinValue
+  :: ProtocolParamsSourceSpec
+  -> Value
+  -> ExceptT ShelleyTxCmdError IO ()
+runTxCalculateMinValue protocolParamsSourceSpec value = do
+  pp <- case protocolParamsSourceSpec of
+    ParamsFromGenesis (GenesisFile f) ->
+      fromShelleyPParams . sgProtocolParams <$>
+        firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
+    ParamsFromFile f -> readProtocolParameters f
+
+  let minValues = calcMinimumDeposit value (protocolParamMinUTxOValue pp)
+
+  liftIO $ IO.print minValues
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
