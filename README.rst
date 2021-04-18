@@ -105,7 +105,7 @@ The general synopsis is as follows:
 
 * ``--port`` - Specify which port to assign to the node.
 
-* ``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration`` (e.g. `config-0.yaml <configuration/defaults/liveview/config-0.yaml>`_).
+* ``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration`` (e.g. `config-0.yaml <configuration/defaults/simpleview/config-0.yaml>`_).
 
 * ``--validate-db`` - Flag to revalidate all on-disk database files
 
