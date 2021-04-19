@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
@@ -11,7 +12,7 @@ module Cardano.TraceDispatcher.ConsensusTracer.Formatting
   (
   ) where
 
-import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (String), toJSON, (.=))
 import qualified Data.Text as Text
 import           Text.Show
 
@@ -25,11 +26,17 @@ import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
+                     GenTxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
+import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
+                     TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                      (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
+                     (TraceLocalTxSubmissionServerEvent (..))
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
@@ -37,6 +44,7 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
+
 
 
 instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
@@ -203,4 +211,45 @@ instance (Show txid, Show tx)
   forMachine _dtal (TraceControlMessage _msg) =
     mkObject
       [ "kind" .= String "TraceControlMessage"
+      ]
+
+instance LogFormatting (TraceLocalTxSubmissionServerEvent blk) where
+  forMachine _dtal (TraceReceivedTx _gtx) =
+    mkObject [ "kind" .= String "ReceivedTx" ]
+
+instance ( Show (ApplyTxErr blk), LogFormatting (ApplyTxErr blk), LogFormatting (GenTx blk),
+           ToJSON (GenTxId blk)
+         ) => LogFormatting (TraceEventMempool blk) where
+  forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
+    mkObject
+      [ "kind" .= String "TraceMempoolAddedTx"
+      , "tx" .= forMachine dtal tx
+      , "mempoolSize" .= forMachine dtal mpSzAfter
+      ]
+  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz) =
+    mkObject
+      [ "kind" .= String "TraceMempoolRejectedTx"
+      , "err" .= forMachine dtal txApplyErr
+      , "tx" .= forMachine dtal tx
+      , "mempoolSize" .= forMachine dtal mpSz
+      ]
+  forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
+    mkObject
+      [ "kind" .= String "TraceMempoolRemoveTxs"
+      , "txs" .= map (forMachine dtal) txs
+      , "mempoolSize" .= forMachine dtal mpSz
+      ]
+  forMachine dtal (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
+    mkObject
+      [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
+      , "txsRemoved" .= txs0
+      , "txsInvalidated" .= map (forMachine dtal) txs1
+      , "mempoolSize" .= forMachine dtal mpSz
+      ]
+
+instance LogFormatting MempoolSize where
+  forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
+    mkObject
+      [ "numTxs" .= msNumTxs
+      , "bytes" .= msNumBytes
       ]
