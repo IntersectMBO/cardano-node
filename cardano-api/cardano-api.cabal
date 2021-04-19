@@ -64,6 +64,7 @@ library
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysPraos
                         Cardano.Api.KeysShelley
+                        Cardano.Api.LedgerState
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
@@ -112,6 +113,7 @@ library
                       , formatting
                       , iproute
                       , memory
+                      , mtl
                       , network
                       , nothunks
                       , ouroboros-consensus
@@ -131,6 +133,7 @@ library
                       , typed-protocols
                       , unordered-containers >= 0.2.11
                       , vector
+                      , yaml
 
 test-suite cardano-api-test
   import:               base, project-config

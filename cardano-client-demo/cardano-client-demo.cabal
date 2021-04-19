@@ -34,3 +34,36 @@ executable scan-blocks-pipelined
                       , cardano-slotting
                       , filepath
                       , time
+
+executable ledger-state
+  import:              base, project-config
+  main-is:             LedgerState.hs
+  build-depends:       aeson,
+                       base16-bytestring,
+                       bytestring,
+                       containers,
+                       filepath,
+                       memory,
+                       mtl,
+                       text,
+                       time,
+                       transformers,
+                       transformers-except,
+                       yaml,
+
+                       cryptonite,
+                       cardano-api,
+                       cardano-binary,
+                       cardano-crypto-class,
+                       cardano-crypto-wrapper,
+                       cardano-ledger-byron,
+                       cardano-node,
+                       cardano-slotting,
+                       iohk-monitoring,
+                       ouroboros-network,
+                       ouroboros-consensus,
+                       ouroboros-consensus-cardano,
+                       ouroboros-consensus-byron,
+                       ouroboros-consensus-shelley,
+                       shelley-spec-ledger,
+                       typed-protocols,

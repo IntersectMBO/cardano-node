@@ -98,6 +98,8 @@ data Block era where
 pattern Block :: BlockHeader -> [Tx era] -> Block era
 pattern Block header txs <- (getBlockHeaderAndTxs -> (header, txs))
 
+{-# COMPLETE Block #-}
+
 getBlockHeaderAndTxs :: Block era -> (BlockHeader, [Tx era])
 getBlockHeaderAndTxs block = (getBlockHeader block, getBlockTxs block)
 
