@@ -149,7 +149,6 @@ test-suite cardano-api-test
                       , cardano-crypto-tests
                       , cardano-ledger-byron-test
                       , cardano-prelude
-                      , cardano-prelude-test
                       , cardano-slotting
                       , containers
                       , hedgehog
