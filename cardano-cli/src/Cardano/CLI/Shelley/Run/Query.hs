@@ -157,7 +157,10 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
   anyEra <- determineEra cModeParams localNodeConnInfo
   mEpoch <- mEpochQuery anyEra consensusMode  localNodeConnInfo
+  nMoo <- mEraHistoryQuery anyEra consensusMode localNodeConnInfo
   tip <- liftIO $ getLocalChainTip localNodeConnInfo
+
+  liftIO . putStrLn $ "moo: " <> show @_ @Text nMoo
 
   let timeInterpreter = mkTimeInterpreter @IO
         (error "StartTime")
@@ -206,6 +209,23 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
                 Right eNum -> case eNum of
                   Left _eraMismatch -> return Nothing
                   Right epochNum -> return $ Just epochNum
+
+    mEraHistoryQuery
+      :: AnyCardanoEra
+      -> ConsensusMode mode
+      -> LocalNodeConnectInfo mode
+      -> ExceptT ShelleyQueryCmdError IO (Maybe Int)
+    mEraHistoryQuery (AnyCardanoEra era) cMode lNodeConnInfo =
+      case toEraInMode era cMode of
+        Nothing -> return Nothing
+        Just eraInMode -> case eraInMode of
+          ByronEraInCardanoMode -> do
+            let epochQuery = QueryEraHistory CardanoModeIsMultiEra  -- $ QueryInShelleyBasedEra sbe QueryEpoch
+            eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
+            case eResult of
+              Left _acqFail -> return Nothing
+              Right eraHistory -> return (Just (moo eraHistory))
+          _ -> error "Invalid mode"
 
     toObject :: ToJSON a => Text -> Maybe a -> Aeson.Value -> Aeson.Value
     toObject name (Just a) (Aeson.Object obj) =

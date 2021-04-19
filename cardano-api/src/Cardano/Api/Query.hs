@@ -35,6 +35,8 @@ module Cardano.Api.Query (
     LedgerState(..),
 
     EraHistory(..),
+
+    moo,
   ) where
 
 import           Data.Aeson (ToJSON (..), object, (.=))
@@ -106,6 +108,9 @@ data EraHistory mode where
     => ConsensusMode mode
     -> History.Interpreter xs
     -> EraHistory mode
+
+moo :: EraHistory mode -> Int
+moo _ = 0
 
 --TODO: add support for these
 --     QueryEraStart   :: ConsensusModeIsMultiEra mode
