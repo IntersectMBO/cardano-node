@@ -14,21 +14,21 @@ import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import           Cardano.Api
 
+import           Hedgehog.Extras.Aeson
 import           Test.Cardano.Api.Examples
 import           Test.Cardano.Api.Typed.Gen
-import           Test.Cardano.Prelude (goldenTestJSONPretty)
 
 prop_golden_AllMultiSig :: Property
 prop_golden_AllMultiSig =
-  goldenTestJSONPretty exampleAllShelley "test/Golden/MultiSig/Shelley/all"
+  goldenTestJsonValuePretty exampleAllShelley "test/Golden/MultiSig/Shelley/all"
 
 prop_golden_AnyMultiSig :: Property
 prop_golden_AnyMultiSig =
-  goldenTestJSONPretty exampleAnyShelley "test/Golden/MultiSig/Shelley/any"
+  goldenTestJsonValuePretty exampleAnyShelley "test/Golden/MultiSig/Shelley/any"
 
 prop_golden_MofNMultiSig :: Property
 prop_golden_MofNMultiSig =
-  goldenTestJSONPretty exampleMofNShelley "test/Golden/MultiSig/Shelley/atleast"
+  goldenTestJsonValuePretty exampleMofNShelley "test/Golden/MultiSig/Shelley/atleast"
 
 prop_roundtrip_MultiSigScript_JSON :: Property
 prop_roundtrip_MultiSigScript_JSON =
