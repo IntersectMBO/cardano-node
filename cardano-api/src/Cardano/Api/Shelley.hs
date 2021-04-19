@@ -59,10 +59,9 @@ module Cardano.Api.Shelley
     Tx(ShelleyTx),
 
     -- ** Incremental signing and separate witnesses
-    Witness
+    KeyWitness
       ( ShelleyBootstrapWitness
       , ShelleyKeyWitness
-      , ShelleyScriptWitness
       ),
     ShelleyWitnessSigningKey
       ( WitnessPaymentKey

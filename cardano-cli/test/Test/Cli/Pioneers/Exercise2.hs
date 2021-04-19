@@ -36,6 +36,9 @@ prop_createTransaction = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   void $ execCardanoCLI
     [ "transaction", "build-raw"
     , "--tx-in", "91999ea21177b33ebe6b8690724a0c026d410a11ad7521caa350abdafa5394c3#0"
+    , "--auxiliary-script-file", "test/data/golden/shelley/multisig/scripts/all"
+    , "--tx-in", "91999ea21177b33ebe6b8690724a0c026d410a11ad7521caa350abdafa5394c3#0"
+    , "--auxiliary-script-file", "test/data/golden/shelley/multisig/scripts/all"
     , "--tx-out", "addr1v9wmu83pzajplrtpsq6tsqdgwr98x888trpmah2u0ezznsge7del3+100000000"
     , "--fee", "1000000"
     , "--invalid-hereafter", "500000"

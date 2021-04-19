@@ -28,6 +28,13 @@ module Cardano.Api.Script (
     toScriptInEra,
     eraOfScriptInEra,
 
+    -- * Use of a script in an era as a witness
+    WitCtxTxIn, WitCtxMint, WitCtxStake,
+    ScriptWitness(..),
+    Witness(..),
+    KeyWitnessInCtx(..),
+    ScriptWitnessInCtx(..),
+
     -- ** Languages supported in each era
     ScriptLanguageInEra(..),
     scriptLanguageSupportedInEra,
@@ -516,6 +523,95 @@ toScriptInEra era (ScriptInAnyLang lang s) = do
 
 eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
 eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
+
+
+-- ----------------------------------------------------------------------------
+-- Scripts used in a transaction (in an era) to witness authorised use
+--
+
+-- | A tag type for the context in which a script is used in a transaction.
+--
+-- This type tags the context as being to witness a transaction input.
+--
+data WitCtxTxIn
+
+-- | A tag type for the context in which a script is used in a transaction.
+--
+-- This type tags the context as being to witness minting.
+--
+data WitCtxMint
+
+-- | A tag type for the context in which a script is used in a transaction.
+--
+-- This type tags the context as being to witness the use of stake addresses in
+-- both certificates and withdrawals.
+--
+data WitCtxStake
+
+-- | A /use/ of a script within a transaction body to witness that something is
+-- being used in an authorised manner. That can be
+--
+-- * spending a transaction input
+-- * minting tokens
+-- * using a certificate (stake address certs specifically)
+-- * withdrawing from a reward account
+--
+-- For simple script languages, the use of the script is the same in all
+-- contexts. For Plutus scripts, using a script involves supplying a redeemer.
+-- In addition, Plutus scripts used for spending inputs must also supply the
+-- datum value used when originally creating the TxOut that is now being spent.
+--
+data ScriptWitness witctx era where
+
+     SimpleScriptWitness :: ScriptLanguageInEra lang era
+                         -> SimpleScriptVersion lang
+                         -> SimpleScript        lang
+                         -> ScriptWitness witctx era
+
+deriving instance Show (ScriptWitness witctx era)
+
+-- The GADT in the SimpleScriptWitness constructor requires a custom instance
+instance Eq (ScriptWitness witctx era) where
+    (==) (SimpleScriptWitness langInEra  version  script)
+         (SimpleScriptWitness langInEra' version' script') =
+      case testEquality (languageOfScriptLanguageInEra langInEra)
+                        (languageOfScriptLanguageInEra langInEra') of
+        Nothing   -> False
+        Just Refl -> version == version' && script == script'
+
+
+-- ----------------------------------------------------------------------------
+-- The kind of witness to use, key (signature) or script
+--
+
+data Witness witctx era where
+
+     KeyWitness    :: KeyWitnessInCtx witctx
+                   -> Witness         witctx era
+
+     ScriptWitness :: ScriptWitnessInCtx witctx
+                   -> ScriptWitness      witctx era
+                   -> Witness            witctx era
+
+deriving instance Eq   (Witness witctx era)
+deriving instance Show (Witness witctx era)
+
+data KeyWitnessInCtx witctx where
+
+     KeyWitnessForSpending  :: KeyWitnessInCtx WitCtxTxIn
+     KeyWitnessForStakeAddr :: KeyWitnessInCtx WitCtxStake
+
+data ScriptWitnessInCtx witctx where
+
+     ScriptWitnessForSpending  :: ScriptWitnessInCtx WitCtxTxIn
+     ScriptWitnessForMinting   :: ScriptWitnessInCtx WitCtxMint
+     ScriptWitnessForStakeAddr :: ScriptWitnessInCtx WitCtxStake
+
+deriving instance Eq   (KeyWitnessInCtx witctx)
+deriving instance Show (KeyWitnessInCtx witctx)
+
+deriving instance Eq   (ScriptWitnessInCtx witctx)
+deriving instance Show (ScriptWitnessInCtx witctx)
 
 
 -- ----------------------------------------------------------------------------

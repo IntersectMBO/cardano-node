@@ -30,7 +30,7 @@ sed -i ${ROOT}/configuration.yaml \
     -e 's/^TraceBlockchainTime: False/TraceBlockchainTime: True/'
 
 # Set up our template
-$cardano_cli shelley genesis create --testnet-magic 42 --genesis-dir ${ROOT}
+$cardano_cli genesis create --testnet-magic 42 --genesis-dir ${ROOT}
 
 # Then edit the genesis.spec.json ...
 
@@ -49,7 +49,7 @@ sed -i ${ROOT}/genesis.spec.json \
 
 # Now generate for real:
 
-$cardano_cli shelley genesis create \
+$cardano_cli genesis create \
     --testnet-magic 42 \
     --genesis-dir ${ROOT}/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
@@ -74,12 +74,12 @@ mkdir ${ALL_NODES}
 # This was done already for the BFT nodes as part of the genesis creation
 
 for NODE in ${POOL_NODES}; do
-  $cardano_cli shelley node key-gen \
+  $cardano_cli node key-gen \
     --cold-verification-key-file                 ${NODE}/operator.vkey \
     --cold-signing-key-file                      ${NODE}/operator.skey \
     --operational-certificate-issue-counter-file ${NODE}/operator.counter
 
-  $cardano_cli shelley node key-gen-VRF \
+  $cardano_cli node key-gen-VRF \
     --verification-key-file ${NODE}/vrf.vkey \
     --signing-key-file      ${NODE}/vrf.skey
 
@@ -101,11 +101,11 @@ done
 # Make hot keys and for all nodes
 for NODE in ${ALL_NODES}; do
 
-  $cardano_cli shelley node key-gen-KES \
+  $cardano_cli node key-gen-KES \
       --verification-key-file ${NODE}/kes.vkey \
       --signing-key-file      ${NODE}/kes.skey
 
-  $cardano_cli shelley node issue-op-cert \
+  $cardano_cli node issue-op-cert \
       --kes-period 0 \
       --kes-verification-key-file                  ${NODE}/kes.vkey \
       --cold-signing-key-file                      ${NODE}/operator.skey \
@@ -193,30 +193,30 @@ mkdir addresses
 
 for ADDR in ${ADDRS}; do
   # Payment address keys
-  $cardano_cli shelley address key-gen \
+  $cardano_cli address key-gen \
       --verification-key-file addresses/${ADDR}.vkey \
       --signing-key-file      addresses/${ADDR}.skey
 
   # Stake address keys
-  $cardano_cli shelley stake-address key-gen \
+  $cardano_cli stake-address key-gen \
       --verification-key-file addresses/${ADDR}-stake.vkey \
       --signing-key-file      addresses/${ADDR}-stake.skey
 
   # Payment addresses
-  $cardano_cli shelley address build \
+  $cardano_cli address build \
       --payment-verification-key-file addresses/${ADDR}.vkey \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --testnet-magic 42 \
       --out-file addresses/${ADDR}.addr
 
   # Stake addresses
-  $cardano_cli shelley stake-address build \
+  $cardano_cli stake-address build \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --testnet-magic 42 \
       --out-file addresses/${ADDR}-stake.addr
 
   # Stake addresses registration certs
-  $cardano_cli shelley stake-address registration-certificate \
+  $cardano_cli stake-address registration-certificate \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
       --out-file addresses/${ADDR}-stake.reg.cert
 done
@@ -226,7 +226,7 @@ USER_POOL_N="1"
 
 for N in ${USER_POOL_N}; do
   # Stake address delegation certs
-  $cardano_cli shelley stake-address delegation-certificate \
+  $cardano_cli stake-address delegation-certificate \
       --stake-verification-key-file addresses/user${N}-stake.vkey \
       --cold-verification-key-file  node-pool${N}/operator.vkey \
       --out-file addresses/user${N}-stake.deleg.cert
@@ -244,7 +244,7 @@ echo "====================================================================="
 # Next is to make the stake pool registration cert
 
 for NODE in ${POOL_NODES}; do
-  $cardano_cli shelley stake-pool registration-certificate \
+  $cardano_cli stake-pool registration-certificate \
     --testnet-magic 42 \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
     --cold-verification-key-file             ${NODE}/operator.vkey \
@@ -268,10 +268,10 @@ echo "====================================================================="
 #  3. register the user1 stake address
 #  4. delegate from the user1 stake address to the stake pool
 
-$cardano_cli shelley transaction build-raw \
+$cardano_cli transaction build-raw \
     --invalid-hereafter 1000 \
     --fee 0 \
-    --tx-in $($cardano_cli shelley genesis initial-txin \
+    --tx-in $($cardano_cli genesis initial-txin \
                 --testnet-magic 42 \
                 --verification-key-file utxo-keys/utxo1.vkey) \
     --tx-out $(cat addresses/user1.addr)+${SUPPLY} \
@@ -287,7 +287,7 @@ $cardano_cli shelley transaction build-raw \
 # 3. the pool1 owner key, due to the pool registration cert
 # 3. the pool1 operator key, due to the pool registration cert
 
-$cardano_cli shelley transaction sign \
+$cardano_cli transaction sign \
     --signing-key-file utxo-keys/utxo1.skey \
     --signing-key-file addresses/user1-stake.skey \
     --signing-key-file node-pool1/owner.skey \

@@ -59,8 +59,8 @@ import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
-import qualified System.Info as OS
 import qualified System.IO as IO
+import qualified System.Info as OS
 #ifdef UNIX
 import           System.Posix.Files
 #endif

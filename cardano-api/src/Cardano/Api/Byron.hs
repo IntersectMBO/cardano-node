@@ -32,7 +32,7 @@ module Cardano.Api.Byron
     Tx(ByronTx),
 
     -- ** Incremental signing and separate witnesses
-    Witness (ByronKeyWitness),
+    KeyWitness (ByronKeyWitness),
     WitnessNetworkIdOrByronAddress
       ( WitnessNetworkId
       , WitnessByronAddress

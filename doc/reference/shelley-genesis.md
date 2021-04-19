@@ -1420,15 +1420,21 @@ to use the low level command to select the exact UTxO to spend.
 $ cardano-cli transaction build-raw
 Usage: cardano-cli transaction build-raw [--byron-era | --shelley-era |
                                            --allegra-era | --mary-era]
-                                         (--tx-in TX-IN) [--tx-out TX-OUT]
-                                         [--mint VALUE] [--invalid-before SLOT]
+                                         (--tx-in TX-IN
+                                         [--txin-script-file FILE])
+                                         [--tx-out TX-OUT]
+                                         [--mint VALUE
+                                           (--minting-script-file FILE)]
+                                         [--invalid-before SLOT]
                                          [--invalid-hereafter SLOT]
                                          [--fee LOVELACE]
-                                         [--certificate-file FILE]
-                                         [--withdrawal WITHDRAWAL]
+                                         [--certificate-file CERTIFICATEFILE
+                                           [--certificate-script-file FILE]]
+                                         [--withdrawal WITHDRAWAL
+                                           [--withdrawal-script-file FILE]]
                                          [--json-metadata-no-schema |
                                            --json-metadata-detailed-schema]
-                                         [--script-file FILE]
+                                         [--auxiliary-script-file FILE]
                                          [--metadata-json-file FILE |
                                            --metadata-cbor-file FILE]
                                          [--update-proposal-file FILE]
@@ -1440,29 +1446,39 @@ Available options:
   --shelley-era            Specify the Shelley era
   --allegra-era            Specify the Allegra era
   --mary-era               Specify the Mary era (default)
-  --tx-in TX-IN            The input transaction as TxId#TxIx where TxId is the
-                           transaction hash and TxIx is the index.
+  --tx-in TX-IN            TxId#TxIx
+  --txin-script-file FILE  Filepath of the spending script witness
   --tx-out TX-OUT          The transaction output as Address+Lovelace where
                            Address is the Bech32-encoded address followed by the
                            amount in Lovelace.
   --mint VALUE             Mint multi-asset value(s) with the multi-asset cli
-                           syntax
+                           syntax. You must specifiy a script witness.
+  --minting-script-file FILE
+                           Filepath of the multi-asset witness script.
   --invalid-before SLOT    Time that transaction is valid from (in slots).
   --invalid-hereafter SLOT Time that transaction is valid until (in slots).
   --fee LOVELACE           The fee amount in Lovelace.
-  --certificate-file FILE  Filepath of the certificate. This encompasses all
+  --certificate-file CERTIFICATEFILE
+                           Filepath of the certificate. This encompasses all
                            types of certificates (stake pool certificates, stake
-                           key certificates etc)
+                           key certificates etc). Optionally specify a script
+                           witness.
+  --certificate-script-file FILE
+                           Filepath of the certificate script witness
   --withdrawal WITHDRAWAL  The reward withdrawal as StakeAddress+Lovelace where
                            StakeAddress is the Bech32-encoded stake address
-                           followed by the amount in Lovelace.
+                           followed by the amount in Lovelace. Optionally
+                           specify a script witness.
+  --withdrawal-script-file FILE
+                           Filepath of the withdrawal script witness.
   --json-metadata-no-schema
                            Use the "no schema" conversion from JSON to tx
                            metadata.
   --json-metadata-detailed-schema
                            Use the "detailed schema" conversion from JSON to tx
                            metadata.
-  --script-file FILE       Filepath of the script.
+  --auxiliary-script-file FILE
+                           Filepath of auxiliary script(s)
   --metadata-json-file FILE
                            Filepath of the metadata file, in JSON format.
   --metadata-cbor-file FILE

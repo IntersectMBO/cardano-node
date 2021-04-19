@@ -118,7 +118,7 @@ for i in 1 2 3; do
     | sed "s|^|${esc}[$((31+$i))m[node-$i]${esc}[0m |g" &
 done
 
-rmdir "${data_dir}/genesis/delegate-keys"
+rm -r  "${data_dir}/genesis/delegate-keys"
 
 function cleanup()
 {

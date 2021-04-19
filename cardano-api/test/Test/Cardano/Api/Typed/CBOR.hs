@@ -46,19 +46,19 @@ prop_roundtrip_tx_shelley_CBOR =
 
 prop_roundtrip_witness_byron_CBOR :: Property
 prop_roundtrip_witness_byron_CBOR =
-  roundtrip_CBOR (AsWitness AsByronEra) genByronKeyWitness
+  roundtrip_CBOR (AsKeyWitness AsByronEra) genByronKeyWitness
 
 prop_roundtrip_witness_shelley_CBOR :: Property
 prop_roundtrip_witness_shelley_CBOR =
-  roundtrip_CBOR (AsWitness AsShelleyEra) (genShelleyWitness ShelleyEra)
+  roundtrip_CBOR (AsKeyWitness AsShelleyEra) (genShelleyWitness ShelleyEra)
 
 prop_roundtrip_witness_allegra_CBOR :: Property
 prop_roundtrip_witness_allegra_CBOR =
-  roundtrip_CBOR (AsWitness AsAllegraEra) (genShelleyWitness AllegraEra)
+  roundtrip_CBOR (AsKeyWitness AsAllegraEra) (genShelleyWitness AllegraEra)
 
 prop_roundtrip_witness_mary_CBOR :: Property
 prop_roundtrip_witness_mary_CBOR =
-  roundtrip_CBOR (AsWitness AsMaryEra) (genShelleyWitness MaryEra)
+  roundtrip_CBOR (AsKeyWitness AsMaryEra) (genShelleyWitness MaryEra)
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR =
