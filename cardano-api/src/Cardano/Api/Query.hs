@@ -33,6 +33,8 @@ module Cardano.Api.Query (
     ProtocolState(..),
 
     LedgerState(..),
+
+    EraHistory(..),
   ) where
 
 import           Data.Aeson (ToJSON (..), object, (.=))
@@ -97,7 +99,13 @@ data QueryInMode mode result where
                      -> QueryInMode mode (Either EraMismatch result)
 
      QueryEraHistory :: ConsensusModeIsMultiEra mode
-                     -> QueryInMode mode (History.Interpreter xs)
+                     -> QueryInMode mode (EraHistory mode)
+
+data EraHistory mode where
+  EraHistory :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
+    => ConsensusMode mode
+    -> History.Interpreter xs
+    -> EraHistory mode
 
 --TODO: add support for these
 --     QueryEraStart   :: ConsensusModeIsMultiEra mode
@@ -370,8 +378,7 @@ fromConsensusQueryResult :: forall mode block result result'.
                          -> result
 fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
     case q' of
-      Consensus.QueryHardFork Consensus.GetInterpreter ->
-        _u
+      Consensus.QueryHardFork Consensus.GetInterpreter -> EraHistory CardanoMode r'
       _ -> fromConsensusQueryResultMismatch
 
 
