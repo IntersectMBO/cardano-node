@@ -65,6 +65,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
+import qualified Ouroboros.Consensus.HardFork.History as History
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
@@ -95,12 +96,14 @@ data QueryInMode mode result where
                      -> QueryInEra era result
                      -> QueryInMode mode (Either EraMismatch result)
 
+     QueryEraHistory :: ConsensusModeIsMultiEra mode
+                     -> QueryInMode mode (History.Interpreter xs)
+
 --TODO: add support for these
 --     QueryEraStart   :: ConsensusModeIsMultiEra mode
 --                     -> EraInMode era mode
 --                     -> QueryInMode mode (Maybe EraStart)
 
---     QueryEraHistory :: QueryInMode mode EraHistory
 
 deriving instance Show (QueryInMode mode result)
 
@@ -267,6 +270,9 @@ toConsensusQuery :: forall mode block result.
                     ConsensusBlockForMode mode ~ block
                  => QueryInMode mode result
                  -> Some (Consensus.Query block)
+toConsensusQuery (QueryEraHistory CardanoModeIsMultiEra) =
+    Some (Consensus.QueryHardFork Consensus.GetInterpreter)
+
 toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
     Some (Consensus.QueryHardFork Consensus.GetCurrentEra)
 
@@ -362,6 +368,13 @@ fromConsensusQueryResult :: forall mode block result result'.
                          -> Consensus.Query block result'
                          -> result'
                          -> result
+fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
+    case q' of
+      Consensus.QueryHardFork Consensus.GetInterpreter ->
+        _u
+      _ -> fromConsensusQueryResultMismatch
+
+
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
     case q' of
       Consensus.QueryHardFork Consensus.GetCurrentEra ->
