@@ -29,10 +29,10 @@ module Cardano.Api.Query (
     fromConsensusQueryResult,
 
     -- * Wrapper types used in queries
-    SerialisedLedgerState(..),
+    SerialisedDebugLedgerState(..),
     ProtocolState(..),
 
-    LedgerState(..),
+    DebugLedgerState(..),
   ) where
 
 import           Data.Aeson (ToJSON (..), object, (.=))
@@ -148,8 +148,8 @@ data QueryInShelleyBasedEra era result where
      -- QueryPoolRanking
      --   :: QueryInShelleyBasedEra era RewardProvenance
 
-     QueryLedgerState
-       :: QueryInShelleyBasedEra era (SerialisedLedgerState era)
+     QueryDebugLedgerState
+       :: QueryInShelleyBasedEra era (SerialisedDebugLedgerState era)
 
      QueryProtocolState
        :: QueryInShelleyBasedEra era (ProtocolState era)
@@ -170,14 +170,14 @@ newtype UTxO era = UTxO (Map TxIn (TxOut era))
 instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
 
-newtype SerialisedLedgerState era
-  = SerialisedLedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))
+newtype SerialisedDebugLedgerState era
+  = SerialisedDebugLedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
-data LedgerState era where
-  LedgerState :: ShelleyLedgerEra era ~ ledgerera => Shelley.NewEpochState ledgerera -> LedgerState era
+data DebugLedgerState era where
+  DebugLedgerState :: ShelleyLedgerEra era ~ ledgerera => Shelley.NewEpochState ledgerera -> DebugLedgerState era
 
-instance (Typeable era, Shelley.TransLedgerState FromCBOR (ShelleyLedgerEra era)) => FromCBOR (LedgerState era) where
-  fromCBOR = LedgerState <$> (fromCBOR :: Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
+instance (Typeable era, Shelley.TransLedgerState FromCBOR (ShelleyLedgerEra era)) => FromCBOR (DebugLedgerState era) where
+  fromCBOR = DebugLedgerState <$> (fromCBOR :: Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
 -- TODO: Shelley based era class!
 instance ( IsShelleyBasedEra era
@@ -185,8 +185,8 @@ instance ( IsShelleyBasedEra era
          , Consensus.ShelleyBasedEra ledgerera
          , ToJSON (Core.PParams ledgerera)
          , ToJSON (Shelley.PParamsDelta ledgerera)
-         , ToJSON (Core.TxOut ledgerera)) => ToJSON (LedgerState era) where
-  toJSON (LedgerState newEpochS) = object [ "lastEpoch" .= Shelley.nesEL newEpochS
+         , ToJSON (Core.TxOut ledgerera)) => ToJSON (DebugLedgerState era) where
+  toJSON (DebugLedgerState newEpochS) = object [ "lastEpoch" .= Shelley.nesEL newEpochS
                                           , "blocksBefore" .= Shelley.nesBprev newEpochS
                                           , "blocksCurrent" .= Shelley.nesBcur newEpochS
                                           , "stateBefore" .= Shelley.nesEs newEpochS
@@ -329,7 +329,7 @@ toConsensusQueryShelleyBased erainmode (QueryStakeAddresses creds _nId) =
     creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
     creds' = Set.map toShelleyStakeCredential creds
 
-toConsensusQueryShelleyBased erainmode QueryLedgerState =
+toConsensusQueryShelleyBased erainmode QueryDebugLedgerState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugNewEpochState))
 
 toConsensusQueryShelleyBased erainmode QueryProtocolState =
@@ -486,9 +486,9 @@ fromConsensusQueryResultShelleyBased _ (QueryStakeAddresses _ nId) q' r' =
               )
       _ -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryLedgerState{} q' r' =
+fromConsensusQueryResultShelleyBased _ QueryDebugLedgerState{} q' r' =
     case q' of
-      Consensus.GetCBOR Consensus.DebugNewEpochState -> SerialisedLedgerState r'
+      Consensus.GetCBOR Consensus.DebugNewEpochState -> SerialisedDebugLedgerState r'
       _                                              -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryProtocolState q' r' =
