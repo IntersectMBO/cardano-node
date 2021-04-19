@@ -12,6 +12,8 @@ module Cardano.TraceDispatcher.ConsensusTracer.Docu
   , docBlockFetchServer
   , docTxInbound
   , docTxOutbound
+  , docLocalTxSubmissionServer
+  , docMempool
   ) where
 
 import           Cardano.Logging
@@ -20,10 +22,16 @@ import           Data.Time.Clock
 
 
 import           Ouroboros.Consensus.Block
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
+                     GenTxId)
+import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
+                     TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                      (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
+                     (TraceLocalTxSubmissionServerEvent (..))
 
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -101,6 +109,19 @@ protoTxId = undefined
 
 protoControlMessage :: ControlMessage
 protoControlMessage = undefined
+
+protoGenTx :: GenTx blk
+protoGenTx = undefined
+
+protoGenTxId :: GenTxId blk
+protoGenTxId = undefined
+
+protoMempoolSize :: MempoolSize
+protoMempoolSize = undefined
+
+-- Not working because of type families
+-- protoApplyTxErr :: ApplyTxErr blk
+-- protoApplyTxErr = undefined
 
 --------------------
 
@@ -308,12 +329,33 @@ docTxOutbound = Documented [
     "TODO"
   ]
 
--- data TraceTxSubmissionOutbound txid tx
--- = TraceTxSubmissionOutboundRecvMsgRequestTxs
---     [txid]
---     -- ^ The IDs of the transactions requested.
--- | TraceTxSubmissionOutboundSendMsgReplyTxs
---     [tx]
---     -- ^ The transactions to be sent in the response.
--- | TraceControlMessage ControlMessage
--- deriving Show
+docLocalTxSubmissionServer :: Documented (TraceLocalTxSubmissionServerEvent blk)
+docLocalTxSubmissionServer = Documented [
+    DocMsg
+    (TraceReceivedTx protoGenTx)
+    []
+    "A transaction was received."
+  ]
+
+docMempool :: forall blk. Documented (TraceEventMempool blk)
+docMempool = Documented [
+    DocMsg
+      (TraceMempoolAddedTx protoGenTx protoMempoolSize protoMempoolSize)
+      []
+      "New, valid transaction that was added to the Mempool."
+  , DocMsg
+      (TraceMempoolRejectedTx protoGenTx (undefined :: ApplyTxErr blk) protoMempoolSize)
+      []
+      "New, invalid transaction thas was rejected and thus not added to\
+      \ the Mempool."
+  , DocMsg
+      (TraceMempoolRemoveTxs [protoGenTx] protoMempoolSize)
+      []
+      "Previously valid transactions that are no longer valid because of\
+      \ changes in the ledger state. These transactions have been removed\
+      \ from the Mempool."
+  , DocMsg
+      (TraceMempoolManuallyRemovedTxs [protoGenTxId] [protoGenTx] protoMempoolSize)
+      []
+      "Transactions that have been manually removed from the Mempool."
+  ]

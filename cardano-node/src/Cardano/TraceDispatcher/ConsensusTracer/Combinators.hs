@@ -25,6 +25,13 @@ module Cardano.TraceDispatcher.ConsensusTracer.Combinators
   , severityTxOutbound
   , namesForTxOutbound
 
+  , severityLocalTxSubmissionServer
+  , namesForLocalTxSubmissionServer
+
+  , severityMempool
+  , namesForMempool
+
+
   ) where
 
 
@@ -37,12 +44,15 @@ import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
 
-import           Ouroboros.Consensus.Block ({-ForgeStateInfo,-} Point)
+import           Ouroboros.Consensus.Block (Point)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
+import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                      (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
+                     (TraceLocalTxSubmissionServerEvent (..))
 -- import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 
 
@@ -221,3 +231,24 @@ namesForTxOutbound' TraceTxSubmissionOutboundSendMsgReplyTxs {} =
     ["TxSubmissionOutboundSendMsgReply"]
 namesForTxOutbound' TraceControlMessage {} =
     ["ControlMessage"]
+
+severityLocalTxSubmissionServer ::
+     (TraceLocalTxSubmissionServerEvent blk)
+  -> SeverityS
+severityLocalTxSubmissionServer _ = Info
+
+namesForLocalTxSubmissionServer ::
+  (TraceLocalTxSubmissionServerEvent blk)
+  -> [Text]
+namesForLocalTxSubmissionServer TraceReceivedTx {} = ["ReceivedTx"]
+
+severityMempool ::
+     (TraceEventMempool blk)
+  -> SeverityS
+severityMempool _ = Info
+
+namesForMempool :: TraceEventMempool blk -> [Text]
+namesForMempool TraceMempoolAddedTx {}            = ["AddedTx"]
+namesForMempool TraceMempoolRejectedTx {}         = ["RejectedTx"]
+namesForMempool TraceMempoolRemoveTxs {}          = ["RemoveTxs"]
+namesForMempool TraceMempoolManuallyRemovedTxs {} = ["ManuallyRemovedTxs"]
