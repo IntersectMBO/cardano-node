@@ -36,7 +36,7 @@ import           Ouroboros.Consensus.Ledger.Extended
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent (..), LedgerUpdate,
                      LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxId,
-                     TxId, txId)
+                     LedgerSupportsMempool, TxId, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server (TraceBlockFetchServerEvent)
@@ -233,7 +233,8 @@ instance ConvertRawHash blk
   trTransformer = trStructured
 
 
-instance ( ToObject (ApplyTxErr blk), Show (ApplyTxErr blk), ToObject (GenTx blk),
+instance ( LedgerSupportsMempool blk
+         , ToObject (ApplyTxErr blk), Show (ApplyTxErr blk), ToObject (GenTx blk),
            ToJSON (GenTxId blk)) => Transformable Text IO (TraceEventMempool blk) where
   trTransformer = trStructured
 
@@ -260,6 +261,7 @@ instance ( tx ~ GenTx blk
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk
          , HasTxId tx
+         , LedgerSupportsMempool blk
          , LedgerSupportsProtocol blk
          , Show (TxId tx)
          , Show (ForgeStateUpdateError blk)
@@ -322,7 +324,7 @@ instance ( tx ~ GenTx blk
       "Adopted block forged in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
-        <> ", TxIds: " <> showT (map txId txs)
+        <> ", TxIds: " <> showT (map (txId . txForgetValidated) txs)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
@@ -1012,13 +1014,14 @@ instance ConvertRawHash blk
                , "point" .= toObject verb point
                ]
 
-instance ( Show (ApplyTxErr blk), ToObject (ApplyTxErr blk), ToObject (GenTx blk),
+instance ( LedgerSupportsMempool blk
+         , Show (ApplyTxErr blk), ToObject (ApplyTxErr blk), ToObject (GenTx blk),
            ToJSON (GenTxId blk)
          ) => ToObject (TraceEventMempool blk) where
   toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolAddedTx"
-      , "tx" .= toObject verb tx
+      , "tx" .= toObject verb (txForgetValidated tx)
       , "mempoolSize" .= toObject verb mpSzAfter
       ]
   toObject verb (TraceMempoolRejectedTx tx txApplyErr mpSz) =
@@ -1031,14 +1034,14 @@ instance ( Show (ApplyTxErr blk), ToObject (ApplyTxErr blk), ToObject (GenTx blk
   toObject verb (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txs" .= map (toObject verb) txs
+      , "txs" .= map (toObject verb . txForgetValidated) txs
       , "mempoolSize" .= toObject verb mpSz
       ]
   toObject verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
       , "txsRemoved" .= txs0
-      , "txsInvalidated" .= map (toObject verb) txs1
+      , "txsInvalidated" .= map (toObject verb . txForgetValidated) txs1
       , "mempoolSize" .= toObject verb mpSz
       ]
 
@@ -1159,7 +1162,7 @@ instance ( tx ~ GenTx blk
           MaximalVerbosity
           (blockHash blk)
       , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-      , "txIds" .= toJSON (map (show . txId) txs)
+      , "txIds" .= toJSON (map (show . txId . txForgetValidated) txs)
       ]
   toObject verb (TraceAdoptedBlock slotNo blk _txs) =
     mkObject

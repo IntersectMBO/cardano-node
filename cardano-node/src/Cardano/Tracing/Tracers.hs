@@ -63,7 +63,7 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs, LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -849,10 +849,10 @@ mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   traceNamedObject tr' (meta, logValue2)
 
 mempoolTracer
-  :: ( Show (ApplyTxErr blk)
-     , ToJSON (GenTxId blk)
+  :: ( ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
      , ToObject (GenTx blk)
+     , LedgerSupportsMempool blk
      )
   => TraceSelection
   -> Trace IO Text
@@ -864,10 +864,10 @@ mempoolTracer tc tracer fStats = Tracer $ \ev -> do
     let tr = appendName "Mempool" tracer
     traceWith (mpTracer tc tr) ev
 
-mpTracer :: ( Show (ApplyTxErr blk)
-            , ToJSON (GenTxId blk)
+mpTracer :: ( ToJSON (GenTxId blk)
             , ToObject (ApplyTxErr blk)
             , ToObject (GenTx blk)
+            , LedgerSupportsMempool blk
             )
          => TraceSelection -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
 mpTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr

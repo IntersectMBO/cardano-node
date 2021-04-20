@@ -27,7 +27,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
                      (HardForkLedgerConfig (DegenLedgerConfig))
 import qualified Ouroboros.Consensus.HardFork.History.Qry as HFI
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerCfg (..), ExtLedgerState)
-import qualified Ouroboros.Consensus.Ledger.Query as Consensus (Query, answerQuery)
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus (BlockQuery, Query(..), answerQuery)
 import           Ouroboros.Consensus.Node (RunNode)
 import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -93,14 +93,15 @@ answerQueryWithLedgerState blkType protocol extLedgerState query = runIdentity $
 
     answerQueryHelper
       :: forall m result'. Monad m
-      => Consensus.Query blk result'
+      => Consensus.BlockQuery blk result'
       -> m result'
     answerQueryHelper q = pure $
-      Consensus.answerQuery (ExtLedgerCfg cfg) q extLedgerState
+      Consensus.answerQuery (ExtLedgerCfg cfg) (Consensus.BlockQuery q) extLedgerState
 
     byronQuery :: blk ~ ByronBlockHFC => Identity result
     byronQuery =
         HF.singleEraCompatQuery
+          cfg
           epochSize
           slotLength
           answerQueryHelper
@@ -114,6 +115,7 @@ answerQueryWithLedgerState blkType protocol extLedgerState query = runIdentity $
     shelleyBasedQuery :: blk ~ ShelleyBlockHFC era => Identity result
     shelleyBasedQuery =
         HF.singleEraCompatQuery
+          cfg
           epochSize
           slotLength
           answerQueryHelper

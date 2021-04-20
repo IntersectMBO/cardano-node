@@ -55,6 +55,9 @@ module Cardano.Api.IPC (
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
+    EraHistory(..),
+    getProgress,
+
     -- *** Common queries
     getLocalChainTip,
 
@@ -83,7 +86,7 @@ import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
 import qualified Ouroboros.Network.NodeToClient as Net
 import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..), mapQueryOnLocalStateQueryClient)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
@@ -388,7 +391,7 @@ convLocalNodeClientProtocols
       localTxSubmissionClientForBlock = convLocalTxSubmissionClient mode <$>
                                           localTxSubmissionClient,
 
-      localStateQueryClientForBlock   = convLocalStateQueryClient mode <$>
+      localStateQueryClientForBlock   = mapQueryOnLocalStateQueryClient Consensus.BlockQuery . convLocalStateQueryClient mode <$>
                                           localStateQueryClient
     }
 
@@ -438,7 +441,7 @@ convLocalStateQueryClient
   => ConsensusMode mode
   -> LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) m a
   -> LocalStateQueryClient block (Consensus.Point block)
-                           (Consensus.Query block) m a
+                           (Consensus.BlockQuery block) m a
 convLocalStateQueryClient mode =
     Net.Query.mapLocalStateQueryClient
       (toConsensusPointInMode mode)

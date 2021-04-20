@@ -47,6 +47,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (Foldable (toList))
 
+import           Cardano.Ledger.Era (TxSeq (..))
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (EpochNo, SlotNo)
 
@@ -145,7 +146,9 @@ getBlockTxs (ShelleyBlock shelleyEra Consensus.ShelleyBlock{Consensus.shelleyBlo
       ShelleyBasedEraAllegra -> go
       ShelleyBasedEraMary    -> go
   where
-    go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => [Tx era]
+    go :: (Consensus.ShelleyBasedEra (ShelleyLedgerEra era),
+      Cardano.Ledger.Era.TxSeq (ShelleyLedgerEra era) ~ Shelley.TxSeq (ShelleyLedgerEra era))
+      => [Tx era]
     go = case shelleyBlockRaw of Shelley.Block _header (Shelley.TxSeq txs) -> [ShelleyTx shelleyEra x | x <- toList txs]
 
 -- ----------------------------------------------------------------------------
