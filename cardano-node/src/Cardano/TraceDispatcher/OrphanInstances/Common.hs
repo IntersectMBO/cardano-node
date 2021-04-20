@@ -1,20 +1,20 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE EmptyCase                  #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.TraceDispatcher.OrphanInstances.Common
   () where
 
-import Cardano.Tracing.OrphanInstances.Common()
-
 import           Cardano.Prelude
+
+
 -- import           Prelude (fail)
 --
 -- import           Data.Aeson
@@ -30,7 +30,7 @@ import           Cardano.Prelude
 -- import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 -- import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 -- import           Ouroboros.Network.Block (HeaderHash, Tip (..))
-import Cardano.Logging
+import           Cardano.Logging
 
 
 -- | A bit of a weird one, but needed because some of the very general
@@ -39,6 +39,8 @@ import Cardano.Logging
 --
 instance LogFormatting Void where
   forMachine _dtal x = case x of {}
+
+instance LogFormatting () where
 
 -- instance FromJSON DetailLevel where
 --   parseJSON (String str) = case str of

@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 module Cardano.Node.Protocol.Types
   ( Protocol(..)

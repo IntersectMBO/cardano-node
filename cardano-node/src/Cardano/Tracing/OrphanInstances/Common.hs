@@ -89,11 +89,11 @@ instance FromJSON PortNumber where
   parseJSON invalid  = fail $ "Parsing of port number failed due to type mismatch. "
                             <> "Encountered: " <> show invalid
 
-instance FromJSON Update.ApplicationName where
-  parseJSON (String x) = pure $ Update.ApplicationName x
-  parseJSON invalid  =
-    fail $ "Parsing of application name failed due to type mismatch. "
-    <> "Encountered: " <> show invalid
+-- instance FromJSON Update.ApplicationName where
+--   parseJSON (String x) = pure $ Update.ApplicationName x
+--   parseJSON invalid  =
+--     fail $ "Parsing of application name failed due to type mismatch. "
+--     <> "Encountered: " <> show invalid
 
 instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
   toJSON TipGenesis = object [ "genesis" .= True ]

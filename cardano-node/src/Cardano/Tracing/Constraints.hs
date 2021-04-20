@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 module Cardano.Tracing.Constraints
   ( TraceConstraints
@@ -12,6 +13,9 @@ import           Data.Aeson
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Queries (LedgerQueries)
+import           Cardano.Logging (LogFormatting)
+import           Cardano.TraceDispatcher.ConsensusTracer.Formatting (ForgeStateInfoDispatch)
+
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.PParams (PParamsUpdate)
@@ -40,6 +44,9 @@ type TraceConstraints blk =
     , ToJSON   (TxId (GenTx blk))
     , ToJSON   (TxOut (AlonzoEra StandardCrypto))
     , ToJSON   (PParamsUpdate (AlonzoEra StandardCrypto))
+    , ForgeStateInfoDispatch blk
+    , ToJSON   (TxId (GenTx blk))
+
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
     , ToObject (Header blk)

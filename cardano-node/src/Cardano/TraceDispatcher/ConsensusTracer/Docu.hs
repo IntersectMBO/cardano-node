@@ -14,6 +14,7 @@ module Cardano.TraceDispatcher.ConsensusTracer.Docu
   , docTxOutbound
   , docLocalTxSubmissionServer
   , docMempool
+  , docForge
   ) where
 
 import           Cardano.Logging
@@ -32,6 +33,8 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.Tracers
+import           Ouroboros.Consensus.Forecast (OutsideForecastRange)
 
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -119,9 +122,33 @@ protoGenTxId = undefined
 protoMempoolSize :: MempoolSize
 protoMempoolSize = undefined
 
--- Not working because of type families
+protoTxt :: Text
+protoTxt = "info"
+
+protoSlotNo :: SlotNo
+protoSlotNo = SlotNo 1
+
+protoBlockNo :: BlockNo
+protoBlockNo = BlockNo 2
+
+protoBlk :: blk
+protoBlk = undefined
+
+protoOutsideForecastRange :: OutsideForecastRange
+protoOutsideForecastRange = undefined
+
+protoInvalidBlockReason :: InvalidBlockReason blk
+protoInvalidBlockReason = undefined
+
+-- Not working because of non-injective type families
 -- protoApplyTxErr :: ApplyTxErr blk
 -- protoApplyTxErr = undefined
+
+-- protoForgeStateUpdateError :: ForgeStateUpdateError blk
+-- protoForgeStateUpdateError = undefined
+
+-- protoCannotForge :: CannotForge blk
+-- protoCannotForge = undefined
 
 --------------------
 
@@ -358,4 +385,173 @@ docMempool = Documented [
       (TraceMempoolManuallyRemovedTxs [protoGenTxId] [protoGenTx] protoMempoolSize)
       []
       "Transactions that have been manually removed from the Mempool."
+  ]
+
+docForge :: forall blk. Documented (TraceLabelCreds (TraceForgeEvent blk))
+docForge = Documented [
+    DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceStartLeadershipCheck protoSlotNo))
+      []
+      "Start of the leadership check."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceSlotIsImmutable protoSlotNo protoPoint protoBlockNo))
+      []
+      "Leadership check failed: the tip of the ImmutableDB inhabits the\
+      \  current slot\
+      \ \
+      \  This might happen in two cases.\
+      \ \
+      \   1. the clock moved backwards, on restart we ignored everything from the\
+      \      VolatileDB since it's all in the future, and now the tip of the\
+      \      ImmutableDB points to a block produced in the same slot we're trying\
+      \      to produce a block in\
+      \ \
+      \   2. k = 0 and we already adopted a block from another leader of the same\
+      \      slot.\
+      \ \
+      \  We record both the current slot number as well as the tip of the\
+      \  ImmutableDB.\
+      \ \
+      \ See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceBlockFromFuture protoSlotNo protoSlotNo))
+      []
+      "Leadership check failed: the current chain contains a block from a slot\
+      \  /after/ the current slot\
+      \ \
+      \  This can only happen if the system is under heavy load.\
+      \ \
+      \  We record both the current slot number as well as the slot number of the\
+      \  block at the tip of the chain.\
+      \ \
+      \  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceBlockContext protoSlotNo protoBlockNo protoPoint))
+      []
+      "We found out to which block we are going to connect the block we are about\
+      \  to forge.\
+      \ \
+      \  We record the current slot number, the block number of the block to\
+      \  connect to and its point.\
+      \ \
+      \  Note that block number of the block we will try to forge is one more than\
+      \  the recorded block number."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceNoLedgerState protoSlotNo protoPoint))
+      []
+      "Leadership check failed: we were unable to get the ledger state for the\
+      \  point of the block we want to connect to\
+      \ \
+      \  This can happen if after choosing which block to connect to the node\
+      \  switched to a different fork. We expect this to happen only rather\
+      \  rarely, so this certainly merits a warning; if it happens a lot, that\
+      \  merits an investigation.\
+      \ \
+      \  We record both the current slot number as well as the point of the block\
+      \  we attempt to connect the new block to (that we requested the ledger\
+      \  state for)."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceLedgerState protoSlotNo protoPoint))
+      []
+      "We obtained a ledger state for the point of the block we want to\
+      \  connect to\
+      \ \
+      \  We record both the current slot number as well as the point of the block\
+      \  we attempt to connect the new block to (that we requested the ledger\
+      \  state for)."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceNoLedgerView protoSlotNo protoOutsideForecastRange))
+      []
+      "Leadership check failed: we were unable to get the ledger view for the\
+      \  current slot number\
+      \ \
+      \  This will only happen if there are many missing blocks between the tip of\
+      \  our chain and the current slot.\
+      \ \
+      \  We record also the failure returned by 'forecastFor'."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceLedgerView protoSlotNo))
+      []
+      "We obtained a ledger view for the current slot number\
+      \ \
+      \  We record the current slot number."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceForgeStateUpdateError protoSlotNo undefined))
+      []
+      "Updating the forge state failed.\
+      \ \
+      \  For example, the KES key could not be evolved anymore.\
+      \ \
+      \  We record the error returned by 'updateForgeState'."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceNodeCannotForge protoSlotNo undefined))
+      []
+      "We did the leadership check and concluded that we should lead and forge\
+      \  a block, but cannot.\
+      \ \
+      \  This should only happen rarely and should be logged with warning severity.\
+      \ \
+      \  Records why we cannot forge a block."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceNodeNotLeader protoSlotNo))
+      []
+      "We did the leadership check and concluded we are not the leader\
+      \ \
+      \  We record the current slot number"
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceNodeIsLeader protoSlotNo))
+      []
+      "We did the leadership check and concluded we /are/ the leader\
+      \ \
+      \  The node will soon forge; it is about to read its transactions from the\
+      \  Mempool. This will be followed by TraceForgedBlock."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceForgedBlock protoSlotNo protoPoint protoBlk protoMempoolSize))
+      []
+      "We forged a block\
+      \ \
+      \  We record the current slot number, the point of the predecessor, the block\
+      \  itself, and the total size of the mempool snapshot at the time we produced\
+      \  the block (which may be significantly larger than the block, due to\
+      \  maximum block size)\
+      \ \
+      \  This will be followed by one of three messages:\
+      \ \
+      \  * TraceAdoptedBlock (normally)\
+      \  * TraceDidntAdoptBlock (rarely)\
+      \  * TraceForgedInvalidBlock (hopefully never -- this would indicate a bug)"
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceDidntAdoptBlock protoSlotNo protoBlk))
+      []
+      "We did not adopt the block we produced, but the block was valid. We\
+      \  must have adopted a block that another leader of the same slot produced\
+      \  before we got the chance of adopting our own block. This is very rare,\
+      \  this warrants a warning."
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceForgedInvalidBlock protoSlotNo protoBlk protoInvalidBlockReason))
+      []
+      "We forged a block that is invalid according to the ledger in the\
+      \  ChainDB. This means there is an inconsistency between the mempool\
+      \  validation and the ledger validation. This is a serious error!"
+  , DocMsg
+      (TraceLabelCreds protoTxt
+        (TraceAdoptedBlock protoSlotNo protoBlk [protoGenTx]))
+      []
+      "We adopted the block we produced, we also trace the transactions\
+      \  that were adopted."
   ]
