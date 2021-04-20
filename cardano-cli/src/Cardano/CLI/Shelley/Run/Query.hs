@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -50,6 +51,7 @@ import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..), SlotLength)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 import           Ouroboros.Network.Block (Serialised (..))
@@ -61,6 +63,8 @@ import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
+
+import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -75,6 +79,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdByronEra
   | ShelleyQueryCmdPoolIdError (Hash StakePoolKey)
   | ShelleyQueryCmdEraMismatch !EraMismatch
+  | ShelleyQueryCmdGeneric !Text
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -93,6 +98,7 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
       "\nAn error mismatch occured." <> "\nSpecified query era: " <> queryEra <>
       "\nCurrent ledger era: " <> ledgerEra
+    ShelleyQueryCmdGeneric message -> message
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -166,13 +172,27 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
   anyEra <- determineEra cModeParams localNodeConnInfo
   mEpoch <- mEpochQuery anyEra consensusMode  localNodeConnInfo
   tip <- liftIO $ getLocalChainTip localNodeConnInfo
+
+  let tipSlotNo = case tip of
+        ChainTipAtGenesis -> 0
+        ChainTip slotNo _ _ -> slotNo
+
+  result <- mProgressQuery anyEra consensusMode localNodeConnInfo tipSlotNo
+
+  let jsonRelativeDiffTime = case result of
+        Left e -> toJsonPastHorizonException e
+        Right (RelativeTime relativeDiffTime, _slotLength) -> toJSON relativeDiffTime
+
   let output = encodePretty
         . toObject "era" (Just (toJSON anyEra))
         . toObject "epoch" mEpoch
+        . toObject "relativeTime" (Just jsonRelativeDiffTime)
         $ toJSON tip
+
   case mOutFile of
     Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
     Nothing                 -> liftIO $ LBS.putStrLn        output
+
   where
     mEpochQuery
       :: AnyCardanoEra
@@ -194,6 +214,22 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
                   Left _eraMismatch -> return Nothing
                   Right epochNum -> return $ Just epochNum
 
+    mProgressQuery
+      :: AnyCardanoEra
+      -> ConsensusMode mode
+      -> LocalNodeConnectInfo mode
+      -> SlotNo
+      -> ExceptT ShelleyQueryCmdError IO (Either Qry.PastHorizonException (RelativeTime, SlotLength))
+    mProgressQuery _ cMode lNodeConnInfo slotNo = case cMode of
+      CardanoMode -> do
+        let epochQuery = QueryEraHistory CardanoModeIsMultiEra  -- QueryInShelleyBasedEra sbe QueryEpoch
+        eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
+        case eResult of
+          Left acqFail -> left (ShelleyQueryCmdGeneric (show acqFail))
+          Right eraHistory -> return $ getProgress slotNo eraHistory
+
+      mode -> left (ShelleyQueryCmdGeneric ("Not cardano mode: " <> show mode))
+
     toObject :: ToJSON a => Text -> Maybe a -> Aeson.Value -> Aeson.Value
     toObject name (Just a) (Aeson.Object obj) =
       Aeson.Object $ obj <> HMS.fromList [name .= toJSON a]
@@ -201,6 +237,13 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
       Aeson.Object $ obj <> HMS.fromList [name .= Aeson.Null]
     toObject _ _ _ = Aeson.Null
 
+toJsonPastHorizonException :: Qry.PastHorizonException -> Aeson.Value
+toJsonPastHorizonException e = Aeson.object
+  [ "error" .= Aeson.String "Past Horizon"
+  , "callStack" .= toJSON @String (show (Qry.pastHorizonCallStack e))
+  , "expression" .= toJSON @String (show (Qry.pastHorizonExpression e))
+  , "summary" .= toJSON @String (show (Qry.pastHorizonSummary e))
+  ]
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.

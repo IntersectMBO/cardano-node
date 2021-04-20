@@ -33,6 +33,12 @@ module Cardano.Api.Query (
     ProtocolState(..),
 
     DebugLedgerState(..),
+
+    LedgerState(..),
+
+    EraHistory(..),
+
+    getProgress,
   ) where
 
 import           Data.Aeson (ToJSON (..), object, (.=))
@@ -53,8 +59,9 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import           Ouroboros.Consensus.Cardano.Block (StandardCrypto)
+import           Ouroboros.Consensus.Cardano.Block (StandardCrypto, LedgerState(..))
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised)
@@ -65,6 +72,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
+import qualified Ouroboros.Consensus.HardFork.History as History
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
@@ -81,26 +89,40 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
+import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 
 -- ----------------------------------------------------------------------------
 -- Queries
 --
 
 data QueryInMode mode result where
+  QueryCurrentEra
+    :: ConsensusModeIsMultiEra mode
+    -> QueryInMode mode AnyCardanoEra
 
-     QueryCurrentEra :: ConsensusModeIsMultiEra mode
-                     -> QueryInMode mode AnyCardanoEra
+  QueryInEra
+    :: EraInMode era mode
+    -> QueryInEra era result
+    -> QueryInMode mode (Either EraMismatch result)
 
-     QueryInEra      :: EraInMode era mode
-                     -> QueryInEra era result
-                     -> QueryInMode mode (Either EraMismatch result)
+  QueryEraHistory
+    :: ConsensusModeIsMultiEra mode
+    -> QueryInMode mode (EraHistory mode)
+
+data EraHistory mode where
+  EraHistory
+    :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
+    => ConsensusMode mode
+    -> History.Interpreter xs
+    -> EraHistory mode
+
+getProgress :: SlotNo -> EraHistory mode -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
+getProgress slotNo (EraHistory _ interpreter) = Qry.interpretQuery interpreter (Qry.slotToWallclock slotNo)
 
 --TODO: add support for these
 --     QueryEraStart   :: ConsensusModeIsMultiEra mode
 --                     -> EraInMode era mode
 --                     -> QueryInMode mode (Maybe EraStart)
-
---     QueryEraHistory :: QueryInMode mode EraHistory
 
 deriving instance Show (QueryInMode mode result)
 
@@ -267,6 +289,9 @@ toConsensusQuery :: forall mode block result.
                     ConsensusBlockForMode mode ~ block
                  => QueryInMode mode result
                  -> Some (Consensus.Query block)
+toConsensusQuery (QueryEraHistory CardanoModeIsMultiEra) =
+    Some (Consensus.QueryHardFork Consensus.GetInterpreter)
+
 toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
     Some (Consensus.QueryHardFork Consensus.GetCurrentEra)
 
@@ -362,6 +387,12 @@ fromConsensusQueryResult :: forall mode block result result'.
                          -> Consensus.Query block result'
                          -> result'
                          -> result
+fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
+    case q' of
+      Consensus.QueryHardFork Consensus.GetInterpreter -> EraHistory CardanoMode r'
+      _ -> fromConsensusQueryResultMismatch
+
+
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
     case q' of
       Consensus.QueryHardFork Consensus.GetCurrentEra ->

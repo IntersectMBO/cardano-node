@@ -55,6 +55,9 @@ module Cardano.Api.IPC (
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
+    EraHistory(..),
+    getProgress,
+
     -- *** Common queries
     getLocalChainTip,
 
