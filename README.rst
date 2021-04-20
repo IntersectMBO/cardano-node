@@ -60,6 +60,15 @@ The download includes cardano-node.exe and a .dll. To run the node with cardano-
 
     cardano-node.exe run --topology ./mainnet-topology.json --database-path ./state --port 3001 --config ./configuration-mainnet.yaml --socket-path \\.\pipe\cardano-node
 
+Docker image
+============
+
+You can pull the docker image with the latest version of cardano-node from `here <https://hub.docker.com/r/inputoutput/cardano-node>`_.
+
+.. code-block:: console
+
+    docker pull inputoutput/cardano-node
+
 ``cardano-node``
 ================
 This refers to the client that is used for running a node.
