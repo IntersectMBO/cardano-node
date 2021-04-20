@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 module Cardano.Tracing.Constraints
   ( TraceConstraints
@@ -12,6 +13,9 @@ import           Data.Aeson
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Queries (LedgerQueries)
+import           Cardano.Logging (LogFormatting)
+import           Cardano.TraceDispatcher.ConsensusTracer.Formatting (ForgeStateInfoDispatch)
+
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
                      ForgeStateUpdateError, Header)
@@ -22,7 +26,6 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,  HasTxI
                      HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import Cardano.Logging
 
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -31,8 +34,9 @@ type TraceConstraints blk =
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk
-
+    , ForgeStateInfoDispatch blk
     , ToJSON   (TxId (GenTx blk))
+
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
     , ToObject (Header blk)

@@ -1,8 +1,11 @@
+
 {-# LANGUAGE AllowAmbiguousTypes  #-}
 {-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE MonoLocalBinds       #-}
 {-# LANGUAGE PackageImports       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
@@ -13,17 +16,17 @@ module Cardano.TraceDispatcher.Tracers
   , docTracers
   ) where
 
-import           Cardano.Prelude hiding (trace)
-import qualified Data.Text.IO as T
-import           Data.Aeson (ToJSON)
 import           Cardano.Logging
+import           Cardano.Prelude hiding (trace)
 import           Cardano.TraceDispatcher.ChainDBTracer.Combinators
 import           Cardano.TraceDispatcher.ChainDBTracer.Docu
 import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
 import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
 import           Cardano.TraceDispatcher.ConsensusTracer.Docu
-import           Cardano.TraceDispatcher.ConsensusTracer.Formatting ()
+import           Cardano.TraceDispatcher.ConsensusTracer.Formatting (ForgeStateInfoDispatch(..))
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
+import           Data.Aeson (ToJSON)
+import qualified Data.Text.IO as T
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
@@ -36,14 +39,16 @@ import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 import           Cardano.Tracing.Tracers
 import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 
-import           Ouroboros.Consensus.Block (ConvertRawHash, ForgeStateInfo,
-                     HasHeader, Header, Point)
+import           Ouroboros.Consensus.Block (CannotForge, ConvertRawHash,
+                     ForgeStateInfo, ForgeStateUpdateError, HasHeader, Header,
+                     Point)
+import           Ouroboros.Consensus.Block.Forging (ForgeStateInfo)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
                      LedgerUpdate, LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId,
-                     TxId, ApplyTxErr)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
+                     GenTxId, HasTxId, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                      (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
@@ -57,9 +62,12 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
-import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
+import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Shelley.Ledger.Block
+import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+
 
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -80,9 +88,9 @@ chainDBMachineTracer ::
   -> IO (Trace IO (ChainDB.TraceEvent blk))
 chainDBMachineTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "ChainDB" $ appendName "Node" tr
+    let trNs = appendName "ChainDB" $ appendName "Node" tr
     pure $ withNamesAppended namesForChainDBTraceEvents
-            $ withSeverity severityChainDB cdbmTrNs
+            $ withSeverity severityChainDB trNs
 
 chainSyncClientTracer ::
   ( ConvertRawHash blk
@@ -93,9 +101,9 @@ chainSyncClientTracer ::
   -> IO (Trace IO (TraceChainSyncClientEvent blk))
 chainSyncClientTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "ChainSyncClient" $ appendName "Node" tr
+    let trNs = appendName "ChainSyncClient" $ appendName "Node" tr
     pure $ withNamesAppended namesForChainSyncClientEvent
-            $ withSeverity severityChainSyncClientEvent cdbmTrNs
+            $ withSeverity severityChainSyncClientEvent trNs
 
 chainSyncServerHeaderTracer ::
   ( ConvertRawHash blk
@@ -104,9 +112,9 @@ chainSyncServerHeaderTracer ::
   -> IO (Trace IO (TraceChainSyncServerEvent blk))
 chainSyncServerHeaderTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "ChainSyncServerHeader" $ appendName "Node" tr
+    let trNs = appendName "ChainSyncServerHeader" $ appendName "Node" tr
     pure $ withNamesAppended namesForChainSyncServerEvent
-            $ withSeverity severityChainSyncServerEvent cdbmTrNs
+            $ withSeverity severityChainSyncServerEvent trNs
 
 chainSyncServerBlockTracer ::
   ( ConvertRawHash blk
@@ -115,9 +123,9 @@ chainSyncServerBlockTracer ::
   -> IO (Trace IO (TraceChainSyncServerEvent blk))
 chainSyncServerBlockTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "ChainSyncServerBlock" $ appendName "Node" tr
+    let trNs = appendName "ChainSyncServerBlock" $ appendName "Node" tr
     pure $ withNamesAppended namesForChainSyncServerEvent
-            $ withSeverity severityChainSyncServerEvent cdbmTrNs
+            $ withSeverity severityChainSyncServerEvent trNs
 
 blockFetchDecisionTracer :: forall blk remotePeer .
   ( Show remotePeer
@@ -127,9 +135,9 @@ blockFetchDecisionTracer :: forall blk remotePeer .
                   (FetchDecision [Point (Header blk)])])
 blockFetchDecisionTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "BlockFetchDecision" $ appendName "Node" tr
+    let trNs = appendName "BlockFetchDecision" $ appendName "Node" tr
     pure $ withNamesAppended namesForBlockFetchDecision
-            $ withSeverity severityBlockFetchDecision cdbmTrNs
+            $ withSeverity severityBlockFetchDecision trNs
 
 
 blockFetchClientTracer :: forall blk remotePeer .
@@ -141,39 +149,40 @@ blockFetchClientTracer :: forall blk remotePeer .
                   (BlockFetch.TraceFetchClientState (Header blk))))
 blockFetchClientTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "BlockFetchClient" $ appendName "Node" tr
+    let trNs = appendName "BlockFetchClient" $ appendName "Node" tr
     pure $ withNamesAppended namesForBlockFetchClient
-            $ withSeverity severityBlockFetchClient cdbmTrNs
+            $ withSeverity severityBlockFetchClient trNs
 
 blockFetchServerTracer :: forall blk .
      Trace IO FormattedMessage
   -> IO (Trace IO (TraceBlockFetchServerEvent blk))
 blockFetchServerTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "BlockFetchServer" $ appendName "Node" tr
+    let trNs = appendName "BlockFetchServer" $ appendName "Node" tr
     pure $ withNamesAppended namesForBlockFetchServer
-            $ withSeverity severityBlockFetchServer cdbmTrNs
+            $ withSeverity severityBlockFetchServer trNs
 
--- TODO
--- forgeStateInfoTracer :: forall blk .
---      Trace IO FormattedMessage
---   -> IO (Trace IO (Consensus.TraceLabelCreds (ForgeStateInfo blk)))
--- forgeStateInfoTracer trBase = do
---     tr <- humanFormatter True "Cardano" trBase
---     let cdbmTrNs = appendName "Forge" $ appendName "Node" tr
---     pure $ withNamesAppended namesForStateInfo
---             $ withSeverity severityStateInfo cdbmTrNs
+forgeStateInfoTracer :: forall blk .
+     ForgeStateInfoDispatch blk
+  => Proxy blk
+  -> Trace IO FormattedMessage
+  -> IO (Trace IO (Consensus.TraceLabelCreds (ForgeStateInfo blk)))
+forgeStateInfoTracer pr trBase = do
+    tr <- humanFormatterStateInfo pr True "Cardano" trBase
+    let trNs = appendName "BlockFetchServer" $ appendName "Node" tr
+    pure $ withNamesAppended (namesForStateInfo pr)
+            $ withSeverity (severityStateInfo pr) trNs
 
 txInboundTracer :: forall blk remotePeer.
-  (Show remotePeer)
+     Show remotePeer
   => Trace IO FormattedMessage
   -> IO (Trace IO (BlockFetch.TraceLabelPeer remotePeer
                     (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk))))
 txInboundTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "TxInbound" $ appendName "Node" tr
+    let trNs = appendName "TxInbound" $ appendName "Node" tr
     pure $ withNamesAppended namesForTxInbound
-            $ withSeverity severityTxInbound cdbmTrNs
+            $ withSeverity severityTxInbound trNs
 
 txOutboundTracer :: forall blk remotePeer.
   ( Show remotePeer,
@@ -184,18 +193,18 @@ txOutboundTracer :: forall blk remotePeer.
                     (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))))
 txOutboundTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "TxOutbound" $ appendName "Node" tr
+    let trNs = appendName "TxOutbound" $ appendName "Node" tr
     pure $ withNamesAppended namesForTxOutbound
-            $ withSeverity severityTxOutbound cdbmTrNs
+            $ withSeverity severityTxOutbound trNs
 
 localTxSubmissionServerTracer ::
      Trace IO FormattedMessage
   -> IO (Trace IO (TraceLocalTxSubmissionServerEvent blk))
 localTxSubmissionServerTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "LocalTxSubmissionServerEvent" $ appendName "Node" tr
+    let trNs = appendName "LocalTxSubmissionServerEvent" $ appendName "Node" tr
     pure $ withNamesAppended namesForLocalTxSubmissionServer
-            $ withSeverity severityLocalTxSubmissionServer cdbmTrNs
+            $ withSeverity severityLocalTxSubmissionServer trNs
 
 mempoolTracer ::
   ( Show (ApplyTxErr blk)
@@ -206,18 +215,43 @@ mempoolTracer ::
   -> IO (Trace IO (TraceEventMempool blk))
 mempoolTracer trBase = do
     tr <- humanFormatter True "Cardano" trBase
-    let cdbmTrNs = appendName "Mempool" $ appendName "Node" tr
+    let trNs = appendName "Mempool" $ appendName "Node" tr
     pure $ withNamesAppended namesForMempool
-            $ withSeverity severityMempool cdbmTrNs
+            $ withSeverity severityMempool trNs
 
-docTracers :: forall blk remotePeer.
+
+forgeTracer ::
+  (  HasTxId (GenTx blk)
+  ,  LedgerSupportsProtocol blk
+  ,  Consensus.SerialiseNodeToNodeConstraints blk
+  ,  Show (ForgeStateUpdateError blk)
+  ,  Show (CannotForge blk)
+  ,  LogFormatting (CannotForge blk)
+  ,  LogFormatting (ForgeStateUpdateError blk)
+  ,  LogFormatting (ChainDB.InvalidBlockReason blk))
+  => Trace IO FormattedMessage
+  -> IO (Trace IO (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk)))
+forgeTracer trBase = do
+    tr <- humanFormatter True "Cardano" trBase
+    let trNs = appendName "Forge" $ appendName "Node" tr
+    pure $ withNamesAppended namesForForge
+            $ withSeverity severityForge trNs
+
+docTracers :: forall remotePeer.
   ( Show remotePeer
-  , Show (TxId (GenTx blk))
-  , Show (GenTx blk)
-  , Show (ApplyTxErr blk)
-  , LogFormatting (ApplyTxErr blk)
-  , LogFormatting (GenTx blk)
-  , ToJSON (GenTxId blk)
+  , Show (GenTx ByronBlock)
+  , Show (ApplyTxErr ByronBlock)
+  , LogFormatting (ApplyTxErr ByronBlock)
+  , LogFormatting (GenTx ByronBlock)
+  , LogFormatting (CannotForge ByronBlock)
+  , LogFormatting (ForgeStateUpdateError ByronBlock)
+  , LogFormatting (ChainDB.InvalidBlockReason ByronBlock)
+  , ToJSON (GenTxId ByronBlock)
+  , HasTxId (GenTx ByronBlock)
+  , LedgerSupportsProtocol ByronBlock
+  , Consensus.SerialiseNodeToNodeConstraints ByronBlock
+  , Show (ForgeStateUpdateError ByronBlock)
+  , Show (CannotForge ByronBlock)
   )
   => IO ()
 docTracers = do
@@ -233,6 +267,7 @@ docTracers = do
   txoTr  <- txOutboundTracer trBase
   ltxsTr <- localTxSubmissionServerTracer trBase
   mpTr   <- mempoolTracer trBase
+  fTr    <- forgeTracer trBase
 
   cdbmTrDoc    <- documentMarkdown
               (docChainDBTraceEvent :: Documented
@@ -250,7 +285,7 @@ docTracers = do
               (docChainSyncServerEvent :: Documented
                 (TraceChainSyncServerEvent ByronBlock))
               [cssbTr]
-  bfdTrDoc    <- documentMarkdown
+  _bfdTrDoc    <- documentMarkdown
               (docBlockFetchDecision :: Documented
                 [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header ByronBlock)])])
               [bfdTr]
@@ -261,32 +296,36 @@ docTracers = do
   txiTrDoc    <- documentMarkdown
               (docTxInbound :: Documented
                 (BlockFetch.TraceLabelPeer remotePeer
-                  (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
+                  (TraceTxSubmissionInbound (GenTxId ByronBlock) (GenTx ByronBlock))))
               [txiTr]
   txoTrDoc    <- documentMarkdown
               (docTxOutbound :: Documented
                 (BlockFetch.TraceLabelPeer remotePeer
-                  (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))))
+                  (TraceTxSubmissionOutbound (GenTxId ByronBlock) (GenTx ByronBlock))))
               [txoTr]
   ltxsTrDoc    <- documentMarkdown
               (docLocalTxSubmissionServer :: Documented
-                (TraceLocalTxSubmissionServerEvent blk))
+                (TraceLocalTxSubmissionServerEvent ByronBlock))
               [ltxsTr]
-  mpTrDoc    <- documentMarkdown
+  _mpTrDoc    <- documentMarkdown
               (docMempool :: Documented
-                (TraceEventMempool blk))
+                (TraceEventMempool ByronBlock))
               [mpTr]
-
+  fTrDoc    <- documentMarkdown
+              (docForge :: Documented
+                (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent ByronBlock)))
+              [fTr]
   let bl = cdbmTrDoc
-        ++ cscTrDoc
-        ++ csshTrDoc
-        ++ cssbTrDoc
-        ++ bfdTrDoc
-        ++ bfsTrDoc
-        ++ txiTrDoc
-        ++ txoTrDoc
-        ++ ltxsTrDoc
-        ++ mpTrDoc
+         ++ cscTrDoc
+         ++ csshTrDoc
+         ++ cssbTrDoc
+        -- ++ bfdTrDoc
+         ++ bfsTrDoc
+         ++ txiTrDoc
+         ++ txoTrDoc
+         ++ ltxsTrDoc
+--         ++ mpTrDoc
+         ++ fTrDoc
 
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" (buildersToText bl)
 
@@ -296,6 +335,7 @@ mkDispatchTracers
   :: forall peer localPeer blk.
   ( Consensus.RunNode blk
   , LogFormatting (LedgerWarning blk)
+  , LogFormatting (ChainDB.InvalidBlockReason blk)
   , HasKESMetricsData blk
   , HasKESInfo blk
   , TraceConstraints blk
@@ -318,10 +358,12 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   bfdTr  <- blockFetchDecisionTracer trBase
   bfcTr  <- blockFetchClientTracer trBase
   txiTr  <- txInboundTracer trBase
-  bfsTr :: (Trace IO (TraceBlockFetchServerEvent blk)) <- blockFetchServerTracer trBase
+  bfsTr  <- blockFetchServerTracer trBase
+  fsiTr  <- forgeStateInfoTracer (Proxy @blk) trBase
   txoTr  <- txOutboundTracer trBase
   ltxsTr <- localTxSubmissionServerTracer trBase
   mpTr   <- mempoolTracer trBase
+  fTr    <- forgeTracer trBase
 
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -333,6 +375,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   configureTracers emptyTraceConfig docTxInbound            [txiTr]
   configureTracers emptyTraceConfig docLocalTxSubmissionServer [ltxsTr]
   configureTracers emptyTraceConfig docMempool              [mpTr]
+  configureTracers emptyTraceConfig docForge                [fTr]
 
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -343,12 +386,12 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , Consensus.blockFetchDecisionTracer = Tracer (traceWith bfdTr)
       , Consensus.blockFetchClientTracer = Tracer (traceWith bfcTr)
       , Consensus.blockFetchServerTracer = Tracer (traceWith bfsTr)
-      , Consensus.forgeStateInfoTracer = nullTracer
+      , Consensus.forgeStateInfoTracer = Tracer (traceWith fsiTr)
       , Consensus.txInboundTracer = Tracer (traceWith txiTr)
       , Consensus.txOutboundTracer = Tracer (traceWith txoTr)
       , Consensus.localTxSubmissionServerTracer = Tracer (traceWith ltxsTr)
       , Consensus.mempoolTracer = Tracer (traceWith mpTr)
-      , Consensus.forgeTracer = nullTracer
+      , Consensus.forgeTracer = Tracer (traceWith fTr)
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.keepAliveClientTracer = nullTracer
       }

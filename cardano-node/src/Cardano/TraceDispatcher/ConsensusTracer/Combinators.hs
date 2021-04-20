@@ -16,8 +16,10 @@ module Cardano.TraceDispatcher.ConsensusTracer.Combinators
   , severityBlockFetchServer
   , namesForBlockFetchServer
 
-  -- , severityStateInfo
-  -- , namesForStateInfo
+  , severityStateInfoShelley
+  , severityStateInfoByron
+  , namesForStateInfoShelley
+  , namesForStateInfoByron
 
   , severityTxInbound
   , namesForTxInbound
@@ -31,6 +33,8 @@ module Cardano.TraceDispatcher.ConsensusTracer.Combinators
   , severityMempool
   , namesForMempool
 
+  , severityForge
+  , namesForForge
 
   ) where
 
@@ -38,7 +42,6 @@ module Cardano.TraceDispatcher.ConsensusTracer.Combinators
 import           Cardano.Logging
 import           Cardano.Prelude
 
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.TxSubmission.Inbound
@@ -53,7 +56,8 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
--- import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Node.Tracers
+import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 
 severityChainSyncClientEvent :: TraceChainSyncClientEvent blk -> SeverityS
@@ -92,11 +96,11 @@ namesForChainSyncServerEvent TraceChainSyncRollBackward      {} =
       ["RollBackward"]
 
 severityBlockFetchDecision ::
-     [TraceLabelPeer peer (FetchDecision [Point header])]
+     [BlockFetch.TraceLabelPeer peer (FetchDecision [Point header])]
   -> SeverityS
 severityBlockFetchDecision []  = Info
 severityBlockFetchDecision l   = maximum $
-  map (\(TraceLabelPeer _ a) -> fetchDecisionSeverity a) l
+  map (\(BlockFetch.TraceLabelPeer _ a) -> fetchDecisionSeverity a) l
     where
       fetchDecisionSeverity :: FetchDecision a -> SeverityS
       fetchDecisionSeverity fd =
@@ -115,14 +119,14 @@ severityBlockFetchDecision l   = maximum $
           Right _                                -> Info
 
 namesForBlockFetchDecision ::
-     [TraceLabelPeer peer (FetchDecision [Point header])]
+     [BlockFetch.TraceLabelPeer peer (FetchDecision [Point header])]
   -> [Text]
 namesForBlockFetchDecision _ = []
 
 severityBlockFetchClient ::
-     TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
+     BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
   -> SeverityS
-severityBlockFetchClient (TraceLabelPeer _p bf) = severityBlockFetchClient' bf
+severityBlockFetchClient (BlockFetch.TraceLabelPeer _p bf) = severityBlockFetchClient' bf
 
 severityBlockFetchClient' ::
      (BlockFetch.TraceFetchClientState header)
@@ -136,9 +140,9 @@ severityBlockFetchClient' BlockFetch.RejectedFetchBatch {}       = Info
 severityBlockFetchClient' BlockFetch.ClientTerminating {}        = Notice
 
 namesForBlockFetchClient ::
-    TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
+    BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
   -> [Text]
-namesForBlockFetchClient (TraceLabelPeer _p bf) = namesForBlockFetchClient' bf
+namesForBlockFetchClient (BlockFetch.TraceLabelPeer _p bf) = namesForBlockFetchClient' bf
 
 namesForBlockFetchClient' ::
     BlockFetch.TraceFetchClientState header
@@ -168,20 +172,22 @@ namesForBlockFetchServer ::
   -> [Text]
 namesForBlockFetchServer TraceBlockFetchServerSendBlock {} = ["SendBlock"]
 
--- type instance ForgeStateInfo ByronBlock = ()
--- type instance ForgeStateInfo (ShelleyBlock era) = HotKey.KESInfo
+severityStateInfoShelley :: HotKey.KESInfo -> SeverityS
+severityStateInfoShelley _ki = Info
 
--- TODO
--- severityStateInfo :: Consensus.TraceLabelCreds (ForgeStateInfo blk) -> SeverityS
--- severityStateInfo (Consensus.TraceLabelCreds _ a) = severityStateInfo' a
---
--- severityStateInfo' :: ForgeStateInfo blk -> SeverityS
--- severityStateInfo' byronBlock = Info
+severityStateInfoByron :: () -> SeverityS
+severityStateInfoByron _ = Info
+
+namesForStateInfoShelley :: HotKey.KESInfo -> [Text]
+namesForStateInfoShelley _ki = []
+
+namesForStateInfoByron :: () -> [Text]
+namesForStateInfoByron _ = []
 
 severityTxInbound ::
-    TraceLabelPeer peer (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
+    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
   -> SeverityS
-severityTxInbound (TraceLabelPeer _p ti) = severityTxInbound' ti
+severityTxInbound (BlockFetch.TraceLabelPeer _p ti) = severityTxInbound' ti
 
 severityTxInbound' ::
     TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)
@@ -189,9 +195,9 @@ severityTxInbound' ::
 severityTxInbound' _ti = Info
 
 namesForTxInbound ::
-    TraceLabelPeer peer (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
+    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))
   -> [Text]
-namesForTxInbound (TraceLabelPeer _p ti) = namesForTxInbound' ti
+namesForTxInbound (BlockFetch.TraceLabelPeer _p ti) = namesForTxInbound' ti
 
 namesForTxInbound' ::
     TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)
@@ -208,9 +214,9 @@ namesForTxInbound' TraceTxInboundCannotRequestMoreTxs {} =
     ["TxInboundCannotRequestMoreTxs"]
 
 severityTxOutbound ::
-    TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
+    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
   -> SeverityS
-severityTxOutbound (TraceLabelPeer _p ti) = severityTxOutbound' ti
+severityTxOutbound (BlockFetch.TraceLabelPeer _p ti) = severityTxOutbound' ti
 
 severityTxOutbound' ::
     TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)
@@ -218,9 +224,9 @@ severityTxOutbound' ::
 severityTxOutbound' _ti = Info
 
 namesForTxOutbound ::
-    TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
+    BlockFetch.TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))
   -> [Text]
-namesForTxOutbound (TraceLabelPeer _p ti) = namesForTxOutbound' ti
+namesForTxOutbound (BlockFetch.TraceLabelPeer _p ti) = namesForTxOutbound' ti
 
 namesForTxOutbound' ::
     TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)
@@ -252,3 +258,45 @@ namesForMempool TraceMempoolAddedTx {}            = ["AddedTx"]
 namesForMempool TraceMempoolRejectedTx {}         = ["RejectedTx"]
 namesForMempool TraceMempoolRemoveTxs {}          = ["RemoveTxs"]
 namesForMempool TraceMempoolManuallyRemovedTxs {} = ["ManuallyRemovedTxs"]
+
+severityForge :: TraceLabelCreds (TraceForgeEvent blk) -> SeverityS
+severityForge (TraceLabelCreds _t e) = severityForge' e
+
+severityForge' :: TraceForgeEvent blk -> SeverityS
+severityForge' TraceStartLeadershipCheck {}  = Info
+severityForge' TraceSlotIsImmutable {}       = Error
+severityForge' TraceBlockFromFuture {}       = Error
+severityForge' TraceBlockContext {}          = Debug
+severityForge' TraceNoLedgerState {}         = Error
+severityForge' TraceLedgerState {}           = Debug
+severityForge' TraceNoLedgerView {}          = Error
+severityForge' TraceLedgerView {}            = Debug
+severityForge' TraceForgeStateUpdateError {} = Error
+severityForge' TraceNodeCannotForge {}       = Error
+severityForge' TraceNodeNotLeader {}         = Info
+severityForge' TraceNodeIsLeader {}          = Info
+severityForge' TraceForgedBlock {}           = Info
+severityForge' TraceDidntAdoptBlock {}       = Error
+severityForge' TraceForgedInvalidBlock {}    = Error
+severityForge' TraceAdoptedBlock {}          = Info
+
+namesForForge :: TraceLabelCreds (TraceForgeEvent blk) -> [Text]
+namesForForge (TraceLabelCreds _t e) = namesForForge' e
+
+namesForForge' :: TraceForgeEvent blk -> [Text]
+namesForForge' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
+namesForForge' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
+namesForForge' TraceBlockFromFuture {}       = ["BlockFromFuture"]
+namesForForge' TraceBlockContext {}          = ["BlockContext"]
+namesForForge' TraceNoLedgerState {}         = ["NoLedgerState"]
+namesForForge' TraceLedgerState {}           = ["LedgerState"]
+namesForForge' TraceNoLedgerView {}          = ["NoLedgerView"]
+namesForForge' TraceLedgerView {}            = ["LedgerView"]
+namesForForge' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
+namesForForge' TraceNodeCannotForge {}       = ["NodeCannotForge"]
+namesForForge' TraceNodeNotLeader {}         = ["NodeNotLeader"]
+namesForForge' TraceNodeIsLeader {}          = ["NodeIsLeader"]
+namesForForge' TraceForgedBlock {}           = ["ForgedBlock"]
+namesForForge' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
+namesForForge' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
+namesForForge' TraceAdoptedBlock {}          = ["AdoptedBlock"]
