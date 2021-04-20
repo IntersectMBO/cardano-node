@@ -68,11 +68,11 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DomainAddress, PeerSelectionTargets (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..), RelayAddress (..), DomainAddress (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                      gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
-import           Cardano.Node.Configuration.Topology
+import           Cardano.Node.Configuration.TopologyP2P
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types
@@ -222,9 +222,15 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   eitherTopology <- readTopologyFile nc
   nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
 
-  let dnsLocalRoots :: [(NodeDnsAddress, PeerAdvertise)]
+  let relayAddresses = producerAddresses nt
+      dnsLocalRoots :: [(NodeDnsAddress, PeerAdvertise)]
+      dnsLocalRoots = [ (NodeAddress (NodeHostDnsAddress (decodeUtf8 $ domain))
+                                                         port
+                         , pa)
+                      | (RelayDomain (DomainAddress domain port), pa) <- relayAddresses ]
       ipLocalRoots  :: [(NodeIPAddress,  PeerAdvertise)]
-      (ipLocalRoots, dnsLocalRoots) = producerAddresses nt
+      ipLocalRoots = [ (NodeAddress (NodeHostIPAddress ip) port, pa)
+                     | (RelayAddress ip port, pa) <- relayAddresses ]
 
       diffusionArguments :: DiffusionArguments
       diffusionArguments =
@@ -431,24 +437,18 @@ createDiffusionArguments NodeConfiguration {
     , daTimeWaitTimeout       = ncTimeWaitTimeout
     }
 
-
 producerAddresses
   :: NetworkTopology
-  -> ( [(NodeIPAddress,  PeerAdvertise)]
-     , [(NodeDnsAddress, PeerAdvertise)])
+  -> [(RelayAddress,  PeerAdvertise)]
 producerAddresses nt =
   case nt of
-    RealNodeTopology producers' _ -> partitionEithers $ map remoteAddressToNodeAddress producers'
-    MockNodeTopology nodeSetup ->
-      partitionEithers . map remoteAddressToNodeAddress $ concatMap producers nodeSetup
+    RealNodeTopology lrpg prp _ ->
+      concatMap (rootAddressToRelayAddress . localRoots) (groups lrpg)
+      ++ concatMap rootAddressToRelayAddress (map publicRoots prp)
 
 useLedgerAfterSlot
   :: NetworkTopology
   -> UseLedgerAfter
 useLedgerAfterSlot nt =
   case nt of
-       RealNodeTopology _ (UseLedger ul) -> ul
-       MockNodeTopology (nodeSetup:_)    ->
-           let (UseLedger ul) = useLedger nodeSetup in
-           ul
-       MockNodeTopology [] -> DontUseLedger
+       RealNodeTopology _ _ (UseLedger ul) -> ul
