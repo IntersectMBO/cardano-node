@@ -17,9 +17,9 @@ module Testnet.Shelley
   ) where
 
 #ifdef UNIX
-import           Prelude (Integer, map)
+import           Prelude (Integer, map, Bool(..))
 #else
-import           Prelude (Integer)
+import           Prelude (Integer, Bool(..))
 #endif
 
 import           Control.Monad
@@ -219,15 +219,25 @@ testnet testnetOptions H.Conf {..} = do
     let port = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
       J.object
-      [ "Producers" .= J.toJSON
-        [ J.object
-          [ "addr" .= J.toJSON @String ifaceAddress
-          , "port" .= J.toJSON @Int peerPort
-          , "valency" .= J.toJSON @Int 1
+      [ "LocalRoots" .= J.object
+        [ "groups" .= J.toJSON
+          [ J.object
+            [ "localRoots" .= J.object
+              [ "addrs" .= J.toJSON
+                [ J.object
+                  [ "addr" .= J.toJSON @String ifaceAddress
+                  , "port" .= J.toJSON @Int peerPort
+                  ]
+                | peerPort <- allPorts \\ [port]
+                ]
+              , "advertise" .= J.toJSON @Bool False
+              ]
+            , "valency" .= J.toJSON @Int 1
+            ]
           ]
-        | peerPort <- allPorts \\ [port]
         ]
       ]
+
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
   -- Generated node operator keys (cold, hot) and operational certs

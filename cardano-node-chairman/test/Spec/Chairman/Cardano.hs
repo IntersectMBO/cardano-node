@@ -25,4 +25,4 @@ hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
 
   H.TestnetRuntime { H.allNodes } <- H.testnet H.defaultTestnetOptions conf
 
-  chairmanOver 120 50 conf allNodes
+  chairmanOver 240 50 conf allNodes
