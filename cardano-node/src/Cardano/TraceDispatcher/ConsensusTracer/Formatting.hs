@@ -5,20 +5,24 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.TraceDispatcher.ConsensusTracer.Formatting
   (
+    ForgeStateInfoDispatch(..)
   ) where
 
 import           Data.Aeson (ToJSON, Value (String), toJSON, (.=))
 import qualified Data.Text as Text
 import           Text.Show
 
-
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
+import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
+                     (namesForStateInfoByron, namesForStateInfoShelley,
+                     severityStateInfoByron, severityStateInfoShelley)
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 import           Cardano.TraceDispatcher.OrphanInstances.Network ()
@@ -26,8 +30,12 @@ import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
-                     GenTxId)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
+import           Ouroboros.Consensus.Cardano.ShelleyHFC
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId,
+                     HasTxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
                      TraceEventMempool (..))
@@ -37,6 +45,11 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints,
+                     estimateBlockSize)
+import           Ouroboros.Consensus.Node.Tracers
+import           Ouroboros.Consensus.Shelley.Ledger.Block
+import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
@@ -253,3 +266,255 @@ instance LogFormatting MempoolSize where
       [ "numTxs" .= msNumTxs
       , "bytes" .= msNumBytes
       ]
+
+instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
+  forMachine dtal (TraceLabelCreds _t a)  = forMachine dtal a
+  forHuman (TraceLabelCreds _t a)         = forHuman a
+  asMetrics (TraceLabelCreds _t a)        = asMetrics a
+
+instance ( tx ~ GenTx blk
+         , ConvertRawHash blk
+         , HasTxId tx
+         , GetHeader blk
+         , HasHeader blk
+         , LedgerSupportsProtocol blk
+         , SerialiseNodeToNodeConstraints blk
+         , Show (TxId tx)
+         , Show (ForgeStateUpdateError blk)
+         , Show (CannotForge blk)
+         , LogFormatting (InvalidBlockReason blk)
+         , LogFormatting (CannotForge blk)
+         , LogFormatting (ForgeStateUpdateError blk))
+      => LogFormatting (TraceForgeEvent blk) where
+  forMachine _dtal (TraceStartLeadershipCheck slotNo) =
+    mkObject
+      [ "kind" .= String "TraceStartLeadershipCheck"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine dtal (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
+    mkObject
+      [ "kind" .= String "TraceSlotIsImmutable"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "tip" .= renderPointForDetails dtal tipPoint
+      , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
+      ]
+  forMachine _dtal (TraceBlockFromFuture currentSlot tip) =
+    mkObject
+      [ "kind" .= String "TraceBlockFromFuture"
+      , "current slot" .= toJSON (unSlotNo currentSlot)
+      , "tip" .= toJSON (unSlotNo tip)
+      ]
+  forMachine dtal (TraceBlockContext currentSlot tipBlkNo tipPoint) =
+    mkObject
+      [ "kind" .= String "TraceBlockContext"
+      , "current slot" .= toJSON (unSlotNo currentSlot)
+      , "tip" .= renderPointForDetails dtal tipPoint
+      , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
+      ]
+  forMachine _dtal (TraceNoLedgerState slotNo _pt) =
+    mkObject
+      [ "kind" .= String "TraceNoLedgerState"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine _dtal (TraceLedgerState slotNo _pt) =
+    mkObject
+      [ "kind" .= String "TraceLedgerState"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine _dtal (TraceNoLedgerView slotNo _) =
+    mkObject
+      [ "kind" .= String "TraceNoLedgerView"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine _dtal (TraceLedgerView slotNo) =
+    mkObject
+      [ "kind" .= String "TraceLedgerView"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine dtal (TraceForgeStateUpdateError slotNo reason) =
+    mkObject
+      [ "kind" .= String "TraceForgeStateUpdateError"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= forMachine dtal reason
+      ]
+  forMachine dtal (TraceNodeCannotForge slotNo reason) =
+    mkObject
+      [ "kind" .= String "TraceNodeCannotForge"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= forMachine dtal reason
+      ]
+  forMachine _dtal (TraceNodeNotLeader slotNo) =
+    mkObject
+      [ "kind" .= String "TraceNodeNotLeader"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine _dtal (TraceNodeIsLeader slotNo) =
+    mkObject
+      [ "kind" .= String "TraceNodeIsLeader"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine _dtal (TraceForgedBlock slotNo _ _ _) =
+    mkObject
+      [ "kind" .= String "TraceForgedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine _dtal (TraceDidntAdoptBlock slotNo _) =
+    mkObject
+      [ "kind" .= String "TraceDidntAdoptBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine dtal (TraceForgedInvalidBlock slotNo _ reason) =
+    mkObject
+      [ "kind" .= String "TraceForgedInvalidBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "reason" .= forMachine dtal reason
+      ]
+  forMachine DDetailed (TraceAdoptedBlock slotNo blk _txs) =
+    mkObject
+      [ "kind" .= String "TraceAdoptedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "blockHash" .= renderHeaderHashForDetails
+          (Proxy @blk)
+          DDetailed
+          (blockHash blk)
+      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+--      , "txIds" .= toJSON (map (show . txId) txs) TODO
+      ]
+  forMachine dtal (TraceAdoptedBlock slotNo blk _txs) =
+    mkObject
+      [ "kind" .= String "TraceAdoptedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "blockHash" .= renderHeaderHashForDetails
+          (Proxy @blk)
+          dtal
+          (blockHash blk)
+      , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      ]
+
+  forHuman (TraceStartLeadershipCheck slotNo) =
+      "Checking for leadership in slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceSlotIsImmutable slotNo immutableTipPoint immutableTipBlkNo) =
+      "Couldn't forge block because current slot is immutable: "
+        <> "immutable tip: " <> renderPointAsPhrase immutableTipPoint
+        <> ", immutable tip block no: " <> showT (unBlockNo immutableTipBlkNo)
+        <> ", current slot: " <> showT (unSlotNo slotNo)
+  forHuman (TraceBlockFromFuture currentSlot tipSlot) =
+      "Couldn't forge block because current tip is in the future: "
+        <> "current tip slot: " <> showT (unSlotNo tipSlot)
+        <> ", current slot: " <> showT (unSlotNo currentSlot)
+  forHuman (TraceBlockContext currentSlot tipBlockNo tipPoint) =
+      "New block will fit onto: "
+        <> "tip: " <> renderPointAsPhrase tipPoint
+        <> ", tip block no: " <> showT (unBlockNo tipBlockNo)
+        <> ", current slot: " <> showT (unSlotNo currentSlot)
+  forHuman (TraceNoLedgerState slotNo pt) =
+      "Could not obtain ledger state for point "
+        <> renderPointAsPhrase pt
+        <> ", current slot: "
+        <> showT (unSlotNo slotNo)
+  forHuman (TraceLedgerState slotNo pt) =
+      "Obtained a ledger state for point "
+        <> renderPointAsPhrase pt
+        <> ", current slot: "
+        <> showT (unSlotNo slotNo)
+  forHuman (TraceNoLedgerView slotNo _) =
+      "Could not obtain ledger view for slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceLedgerView slotNo) =
+      "Obtained a ledger view for slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceForgeStateUpdateError slotNo reason) =
+      "Updating the forge state in slot "
+        <> showT (unSlotNo slotNo)
+        <> " failed because: "
+        <> showT reason
+  forHuman (TraceNodeCannotForge slotNo reason) =
+      "We are the leader in slot "
+        <> showT (unSlotNo slotNo)
+        <> ", but we cannot forge because: "
+        <> showT reason
+  forHuman (TraceNodeNotLeader slotNo) =
+      "Not leading slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceNodeIsLeader slotNo) =
+      "Leading slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceForgedBlock slotNo _ _ _) =
+      "Forged block in slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceDidntAdoptBlock slotNo _) =
+      "Didn't adopt forged block in slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceForgedInvalidBlock slotNo _ reason) =
+      "Forged invalid block in slot "
+        <> showT (unSlotNo slotNo)
+        <> ", reason: " <> showT reason
+  forHuman (TraceAdoptedBlock slotNo blk _txs) =
+      "Adopted block forged in slot "
+        <> showT (unSlotNo slotNo)
+        <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
+      --  <> ", TxIds: " <> showT (map txId txs) TODO Fix
+
+
+class ForgeStateInfoDispatch blk where
+  severityStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> SeverityS
+  namesForStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> [Text]
+  humanFormatterStateInfo ::
+       MonadIO m
+    => Proxy blk
+    -> Bool
+    -> Text
+    -> Trace m FormattedMessage
+    -> m (Trace m (TraceLabelCreds (ForgeStateInfo blk)))
+
+instance ForgeStateInfoDispatch ByronBlock where
+    severityStateInfo _ (TraceLabelCreds _ v) =
+      severityStateInfoByron v
+    namesForStateInfo _ (TraceLabelCreds _ v) =
+      namesForStateInfoByron v
+    humanFormatterStateInfo _ colorize name baseTracer =
+      humanFormatterStateInfoByron colorize name baseTracer
+
+humanFormatterStateInfoByron ::
+     MonadIO m
+  => Bool
+  -> Text
+  -> Trace m FormattedMessage
+  -> m (Trace m (TraceLabelCreds ()))
+humanFormatterStateInfoByron colorize name baseTracer =
+    humanFormatter colorize name baseTracer
+
+instance ForgeStateInfoDispatch (ShelleyBlock era) where
+    severityStateInfo _ (TraceLabelCreds _ kesinfo) =
+      severityStateInfoShelley kesinfo
+    namesForStateInfo _ (TraceLabelCreds _ kesinfo) =
+      namesForStateInfoShelley kesinfo
+    humanFormatterStateInfo _ colorize name baseTracer =
+      humanFormatterStateInfoShelley colorize name baseTracer
+
+
+instance ForgeStateInfoDispatch (ShelleyBlockHFC era) where
+    severityStateInfo _ (TraceLabelCreds _ _v) = Info
+--      severityStateInfoShelleyHF kesinfo
+    namesForStateInfo _ (TraceLabelCreds _ _v) = []
+--      namesForStateInfoShelleyHF kesinfo
+    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
+
+instance ForgeStateInfoDispatch ByronBlockHFC where
+    severityStateInfo _ (TraceLabelCreds _ _v) = Info
+--      severityStateInfoByronHF kesinfo
+    namesForStateInfo _ (TraceLabelCreds _ _v) = []
+--      namesForStateInfoByronHF kesinfo
+    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
+--      humanFormatterStateInfoByronHF colorize name baseTracer
+
+instance ForgeStateInfoDispatch (CardanoBlock crypt) where
+    severityStateInfo _ (TraceLabelCreds _ _v) = Info
+--      severityStateInfoCardano kesinfo
+    namesForStateInfo _ (TraceLabelCreds _ _v) = []
+--      namesForStateInfoCardano kesinfo
+    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
+--      humanFormatterStateInfoCardano colorize name baseTracer
+
+humanFormatterStateInfoShelley ::
+     MonadIO m
+  => Bool
+  -> Text
+  -> Trace m FormattedMessage
+  -> m (Trace m (TraceLabelCreds HotKey.KESInfo))
+humanFormatterStateInfoShelley colorize name baseTracer =
+  humanFormatter colorize name baseTracer
