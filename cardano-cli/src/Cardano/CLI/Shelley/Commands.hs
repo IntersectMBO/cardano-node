@@ -299,6 +299,8 @@ data QueryCmd =
   | QueryUTxO' AnyConsensusModeParams QueryFilter NetworkId (Maybe OutputFile)
   | QueryLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakeSnapshot' AnyConsensusModeParams NetworkId (Hash StakePoolKey)
+  | QueryPoolParams' AnyConsensusModeParams NetworkId (Hash StakePoolKey)
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
@@ -311,6 +313,8 @@ renderQueryCmd cmd =
     QueryUTxO' {} -> "query utxo"
     QueryLedgerState' {} -> "query ledger-state"
     QueryProtocolState' {} -> "query protocol-state"
+    QueryStakeSnapshot' {} -> "query stake-snapshot"
+    QueryPoolParams' {} -> "query pool-params"
 
 data GovernanceCmd
   = GovernanceMIRPayStakeAddressesCertificate
