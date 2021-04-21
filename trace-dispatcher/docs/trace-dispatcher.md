@@ -17,7 +17,7 @@
       - [ ] complete
    3. [Overview and terminology](#Overview-and-terminology)
       - [x] edit
-      - [ ] agree
+      - [x] agree
 3. [Interface overview](#Interface-overview)
    1. [The trace / tracer duality](#The-trace--tracer-duality)
       - [x] edit
@@ -152,12 +152,12 @@ Key design decisions were:
 
 ## Overview and terminology
 
-The emitted __program traces__ (streams of __messages__ of arbitrary data types, where each data type defines a number of different __message constructors__) are collected across all program components, and undergo __trace interpretation__ by the __dispatcher__ into __metrics__ and __log objects__, which are afterwards externalised.
+The emitted __program traces__ (streams of __messages__ of arbitrary data types, where each data type defines a number of different __message constructors__) are collected across all program components, and undergo __trace interpretation__ by the __dispatcher__ into __metrics__ and __messages__, which are afterwards externalised.
 
 Therefore, we can conceptually decompose the __tracing system__ into three components:
 
-* __frontend__, the entry point for __program trace__ collection, which is just a single function (`traceWith` from the `contra-tracer` library);  Program locations that invoke this frontend (thereby injecting messages into the tracing system) is called __trace-ins__.
-* __dispatcher__, is a structured, namespaced set of contravariantly-composed `IO` actions, triggered by the entry point.  Its role is specifically __trace interpretation__;
+* __frontend__, the entry point for __program trace__ collection, which is just a single function `traceWith`;  Program locations that invoke this frontend (thereby injecting messages into the tracing system) is called __trace-ins__.
+* __dispatcher__, is a structured, namespaced set of contravariantly-composed transformations, triggered by the entry point.  Its role is specifically __trace interpretation__;
 * __backend__, which is what externalises results of the interpretation ( __metrics__ and __log objects__) outside the system, through __trace-outs__.
 
 The trace-emitting program itself is only exposed to the the frontend part of the tracing system, as it only needs to define the traces themselves, and specify the __trace-ins__ -- call sites that inject traces.  It is notably free from any extra obligations, such as the need to define the `LogFormatting` instances.
@@ -201,13 +201,13 @@ data TraceAddBlockEvent blk =
 __Traces__ cannot be entered into the tracing system, unless they are accompanied by a matching __tracer__ -- a monadic callback, that expresses the action of tracing of values of that particular type:
 
 ```haskell
-trAddBlock :: Tracer IO (TraceAddBlockEvent blk)
+trAddBlock :: Trace IO (TraceAddBlockEvent blk)
 ```
 
 From the user perspective, __tracers__ can be approximated (WARNING: simplification!) as:
 
 ```haskell
-data Tracer m a = Tracer (a -> m ())
+data Tracer m a = Trace (a -> m ())
 ```
 
 ## Emitting traces
@@ -215,7 +215,7 @@ data Tracer m a = Tracer (a -> m ())
 To actually emit a trace, given a __message__ and a corresponding tracer, the `traceWith` function needs to be used:
 
 ```haskell
-traceWith :: Tracer m a -> a -> m ()
+traceWith :: Trace m a -> a -> m ()
 traceWith trAddBlock (IgnoreBlockOlderThanK p)
 ```
 
@@ -243,11 +243,11 @@ appendName "specific" $ appendName "middle" $ appendName "general" tracer
 
 ..which will have the name `["general", "middle", "specific"]`.
 
-## Trace annotation
+## Trace context
 
 As mentioned in the overview, __traces__ are interpreted by the __dispatcher__ in a __trace context__.  This context consists of two parts:
 
-* the __annotation context__ of the trace, as introduced by __trace combinators__, and
+* the __logging context__ of the trace, as introduced by __trace combinators__, and
 * the __configuration context__ coming from the program configuration (initial or runtime).
 
 Both pieces meet together, to inform the following decisions:
@@ -255,14 +255,14 @@ Both pieces meet together, to inform the following decisions:
 1. __trace filtering__ -- whether a trace reaches particular __trace-outs__ or not,
 2. __trace presentation__ -- which detail level is used during transformation of the __trace__ into __log objects__.
 
-The __annotation context__ of the trace is defined as follows:
+The __logging context__ of the trace is defined as follows:
 
-1. __trace filtering__ -- by __privacy__, __severity__ and __frequency__ annotations,
-2. __trace presentation__ -- by __detail level__ annotations.
+1. __trace filtering__ -- by __privacy__, __severity__ and __namespace__ context,
+2. __trace presentation__ -- by __detail level__ context.
 
-Severity, detail level and frequency can be configured.
+Severity an detail level can be configured.
 
-## Filter annotations
+## Filter context
 
 ### Severity
 
@@ -283,9 +283,7 @@ setSeverity  :: Monad m => Severity        -> Trace m a -> Trace m a
 
 -- Unconditional annotation:
 tracer   = setSeverity Notice trAddBlock
--- ..or equivalently:
-tracer'  = withSeverity (const Notice)
-                        trAddBlock
+
 -- Conditional annotation:
 tracer'' = withSeverity (\case
                            IgnoreBlockOlderThanK{}          -> Warning
@@ -293,15 +291,15 @@ tracer'' = withSeverity (\case
                         trAddBlock
 ```
 
-If the combinators are applied multiple times to a single trace, only the innermost application affects it -- the rest of them is ignored.
+If the combinators are applied multiple times to a single trace, only the outermost application affects it -- the rest of them is ignored.
 
 ```haskell
 traceWith (setSeverity Warning trAddBlock) (IgnoreBlockOlderThanK b)
 ```
 
-In addition, the __annotated severity__ of a particular traces can be further overriden by configuration, at the __tracer namespace__ granularity -- which allows to put them above or below the __global severity cutoff__, effectively either enabling or disabling them.
+In addition, the __severity context__ of a particular trace can be further overriden by configuration, at the __tracer namespace__ granularity -- which allows to put them above or below the __global severity cutoff__, effectively either enabling or disabling them.
 
-`Info` is the default __annotated severity__, in the absence of trace annotations or configured severity overrides.
+`Info` is the default __severity__, in the absence of trace context or configured severity overrides.
 
 See [Severity filtering implementation](#Severity-filtering-implementation) for a more formal explanation of semantics.
 
@@ -323,7 +321,7 @@ privately :: Trace m a -> Trace m a
 withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
 ```
 
-`Public` is the default __annotated privacy__, in the absence of privacy annotations.
+`Public` is the default __privacy__, in the absence of privacy annotations.
 
 Trace privacy cannot be configured.
 
@@ -335,7 +333,7 @@ We might opt to further prevent occasional leaks of `Confidential` traces, by ta
 
 ### Frequency
 
-__Frequency filtering__ is yet another part of __trace filtering__, and represents an optional limit on the observable frequency of trace messages.
+__Frequency filtering__ is yet another part of __trace filtering__, and represents an optional limit on the observable frequency of individual trace messages.
 
 Semantically, this is corresponds to a randomly-fair suppression of messages within a particular trace, when their moving-average frequency exceeds a given threshold parameter.
 
@@ -360,12 +358,12 @@ data LimitingMessage =
   | StopLimiting  Text Int
 ```
 
-The frequency filtering is intended to be applied to a subset of traces (those known to be noisy).  For this subset of traces the frequency limit can be configured globally.
+The frequency filtering is intended to be applied to a subset of traces (those known to be noisy).  For this subset of traces the frequency limit can be configured.
 
 ## Presentation
 ### Formatting
 
-The `LogFormatting` typeclass is used to describe __trace presentation__ -- mapping __traces__ to __metrics__ and __log objects__.
+The `LogFormatting` typeclass is used to describe __trace presentation__ -- mapping __traces__ to __metrics__ and __messages__.
 
 * The `forMachine` method is used for a machine readable representation, which can varied through detail level.
   It's default implementation assumes no machine representation.
@@ -376,8 +374,6 @@ The `LogFormatting` typeclass is used to describe __trace presentation__ -- mapp
 * the `asMetrics` method shall represent the message as `0` to `n` metrics.
   It's default implementation assumes no metrics. If a text is given it is
   appended as last element to the namespace.
-
-An example implementation:
 
 ```haskell
 class LogFormatting a where
@@ -438,7 +434,7 @@ The __detail level__ can be configured globally, and also per-trace, by referrin
 
 An aspect of __trace presentation__ is the amount of details presented for each trace.  This is important, because the emitted __program traces__ might contain extreme details, which, if presented in full, would have made handling of the trace extremely expensive.
 
-Additionally, because detail level is important for debugging (e.g. sometimes we want to see even the `ByteString` serialisation of a transaction), this control mechanism has to be configurable.
+Additionally, because detail level is important for debugging (e.g. sometimes we want to see even the `ByteString` serialisation of a transaction), this control mechanism is configurable up to specific messages.
 
 ### Documentation
 
@@ -459,7 +455,7 @@ newtype Documented a = Documented {undoc :: [DocMsg a]}
 
 data DocMsg a = DocMsg {
     dmPrototype :: a
-  , dmName      :: Text
+  , dmName      :: [Text]
   , dmMarkdown  :: Text
 }
 ```
@@ -472,9 +468,8 @@ How can we reduce that impact?
 
 ## Fold-based aggregation
 
-Trace aggregation introduces a problem of concurrent access to shared state, because __tracers__ can be invoked from different threads.
+If aggregated information from multiple consecutive messages is needed the following fold functions can be used:
 
-While, in general, aggregation can span multiple __traces__, so a universal solution is not possible, we can still encode a useful pattern for a single-trace shared state control based on folds, both pure (`foldTraceM`) and impure (`foldMTraceM`):
 
 ```haskell
 -- | Folds the function with state b over messages a in the trace.
@@ -492,6 +487,8 @@ foldMTraceM :: forall a acc m . MonadIO m
 
 newtype Folding a acc = Folding acc
 ```
+
+Since __tracers__ can be invoked from different threads, an MVar is used to secure correct behaviour.
 
 As an example we want to log a measurement value together with the sum of all measurements that occurred so far.  For this we define a `Measure` type to hold a `Double`, a `Stats` type to hold the the sum together with the measurement and a `fold`-friendly function to calculate new `Stats` from old `Stats` and `Measure`:
 
@@ -514,6 +511,10 @@ following way, and it will output the Stats:
   traceWith 2.0 aggroTracer -- measure: 2.0 sum: 3.1
 ```
 
+<!-- 
+While, in general, aggregation can span multiple __traces__, so a universal solution is not possible, we can still encode a useful pattern for a single-trace shared state control based on folds, both pure (`foldTraceM`) and impure (`foldMTraceM`):
+-->
+
 ### Discuss possibility of pure aggregation
 
 > I would like to find a function `foldTrace`, that omits the MVar and can thus be called pure.  Help is appreciated.
@@ -522,9 +523,9 @@ following way, and it will output the Stats:
 
 The configurability of __dispatchers__ this library allows to define is based on:
 
-1. __Tracer namespace__-based configurability, down to __message constructor__ granularity,
+1. __Tracer namespace__-based configurability, down to single __message__ granularity,
 2. Runtime reconfigurability, triggered by invocation of `configureTracers`,
-3. Prototypes for each __message constructor__.
+3. Prototypes for each __message__.
 
 Reconfiguration can be triggered at runtime and essentially involves running the entire __dispatcher__ trace network, by doing trace specialisation for each trace that has __prototypes__ defined.
 
@@ -540,9 +541,7 @@ data ConfigOption = ConfigOption {
     -- | Severity level
     coSeverity     :: SeverityF
     -- | Detail level
-  , coDetailLevel  :: DetailLevel
-    -- | Privacy level
-  , coPrivacy      :: Privacy
+  , coDetailLevel  :: DetailLevel  
 }
 
 data TraceConfiguration = TraceConfiguration {
@@ -555,6 +554,8 @@ More configuration options e.g. for different transformers and __trace-outs__ ca
 ### Decide complete configuration
 
 We still need to fully decide on the complete configuration format.
+My proposal is to add backends to this mechanism.
+My proposal is to add formatting to this mechanism.
 
 # Integration and implementation in the node
 ## Overall tracing setup
@@ -564,7 +565,7 @@ As a result of the __trace__ / __tracer__ duality, the program components that w
 Because all these tracers are defined as part of the __dispatcher__ definition, which is itself defined in a centralised location, that allows a certain program structure to emerge:
 
 1. The program initialisation routine reads __trace configuration__ and uses that to parametrise the __dispatcher__ that is meant to express a __tracing policy__ defined by that configuration.
-2. As mentioned previously, that dispatcher is generally expressed as a structured (preferably hierarchically structured) value that defines per-program-component set of __tracers__.
+2. As mentioned previously, that dispatcher is generally expressed as a structured value, that defines per-program-component set of __tracers__.
 3. This __dispatcher__ (in other words, the set of __tracers__ it is composed of) is given as an argument to the rest of the program, which then distributes them across its components and then begins execution.
 
 ## Trace-outs
@@ -576,7 +577,7 @@ There are exactly two __trace-outs__ defined for the system:
 1. `stdout`, the basic standard output destination.  It is notable in that it can also accept `Confidential` traces.
 2. `trace-forwarder`, a purely network-only sink that forwards both __log objects__ and __metrics__ using a combination of dedicated protocols over TCP or local sockets.  Only processes `Public` traces.
 
-The `trace-forwarder` is intended to be used as a __metric__ / __log object__ source for `RTView` and `cardano-logger`.
+The `trace-forwarder` is intended to be used as a __metric__ / __messages__ source for `RTView` and `cardano-logger`.
 
 ```haskell
 stdoutTracer :: MonadIO m
@@ -588,9 +589,9 @@ forwardingTracer :: MonadIO m
   -> m (Trace m FormattedMessage)
 ```
 
-Configuring a __trace-out__ to output human-readable text (and therefore to use the human formatter), produces a presentation of the form `[HOST.NAMESPACE.SEVERITY.THREADID]`:
+Configuring a __trace-out__ to output human-readable text (and therefore to use the human formatter), produces a presentation of the form `[HOST:NAMESPACE] (SEVERITY.THREADID)`:
 
-    [deus-x-machina.cardano.general.middle.specific.Info.379]
+    [deus-x-machina:cardano.general.middle.specific](Info.379)
 
 ### Decide trace-outs types
 
@@ -600,6 +601,7 @@ Configuring a __trace-out__ to output human-readable text (and therefore to use 
 >
 > We should consider that we already have a dedicated `cardano-logger` component for file logging.
 
+<!--
 ### Convenient namespace-extending tracing
 
 Sometimes, while implementing the __trace dispatcher__, it's convenient to combine `traceWith` with `appendName`.
@@ -610,7 +612,9 @@ For this purpose, we provide `traceNamed`:
 > case event of
 >   IgnoreBlockOlderThanK{} ->
 >     traceNamed trAddBlock "IgnoreBlockOlderThanK" "Block ignored"
-> ```
+> ``` 
+
+-->
 
 ### Explicit trace filtering
 
@@ -646,15 +650,10 @@ filterTrace (\ (c, a) -> case lcPrivacy c of
                 Just s  -> s == Public
                 Nothing -> True)
 ```
-We come back to trace filtering when we treat the _Configuration_, cause the configuration makes it possible to enable a fine grained control of which messages are filtered out and which are further processed based on the Namespace.
-
-## Severity filtering implementation
 
 __Trace filtering__ is affected by __annotation__ and __configuration__ components of the trace's __severity context__ as follows:
 
-1. The effective __configuration severity__ of a trace is determined as a the __maximum__ of:
-   * the configuration-specified __default severity__, and
-   * the configuration-specified __trace-specific severity__
+1. The effective __configuration severity__ of a trace is determined as a the __most specific__ configuration-specified __severity.
 2. The trace is then ignored, if the trace's __annotated severity__ is __less__ than its __configuration severity__.
 
 ## Detail level control
@@ -772,7 +771,7 @@ __DECISION: move `traceNamed` to the dispatcher API__
 
 DECISION: Every __message constructor__ has to have a unique tracer name.
 
-DECISION: Therefore, each __tracer__ has a __tracer name__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
+DECISION: Therefore, each __tracer__ has a __namespace__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
 
 ### Decide tracer name definition
 
