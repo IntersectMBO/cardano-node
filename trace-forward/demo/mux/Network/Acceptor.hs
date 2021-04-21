@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -48,7 +49,10 @@ import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 import qualified System.Metrics as EKG
 
+import           Cardano.BM.Data.LogItem (LogObject)
+
 import qualified Trace.Forward.Configuration as TF
+import           Trace.Forward.LogObject ()
 import           Trace.Forward.Network.Acceptor (acceptLogObjects)
 
 import qualified System.Metrics.Configuration as EKGF
@@ -61,7 +65,7 @@ data HowToConnect
 
 launchAcceptors
   :: HowToConnect
-  -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration Text)
+  -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration (LogObject Text))
   -> TVar ThreadId
   -> IO ()
 launchAcceptors endpoint configs tidVar =
@@ -72,7 +76,7 @@ launchAcceptors endpoint configs tidVar =
 
 launchAcceptors'
   :: HowToConnect
-  -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration Text)
+  -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration (LogObject Text))
   -> TVar ThreadId
   -> IO ()
 launchAcceptors' endpoint configs tidVar = withIOManager $ \iocp -> do
@@ -92,7 +96,7 @@ doListenToForwarder
   => Snocket IO fd addr
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
-  -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration Text)
+  -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration (LogObject Text))
   -> TVar ThreadId
   -> IO Void
 doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) tidVar = do
@@ -142,5 +146,5 @@ doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) tidVar = do
       | (prot, num) <- protocols
       ]
 
--- We need it for 'TF.AcceptorConfiguration a' (in this example it is 'Text').
-instance ShowProxy Text
+-- We need it for 'TF.AcceptorConfiguration a' (in this example it is 'LogObject Text').
+instance ShowProxy (LogObject Text)

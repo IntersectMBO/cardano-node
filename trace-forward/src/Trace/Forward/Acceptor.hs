@@ -12,8 +12,6 @@ import           Control.Concurrent.STM.TBQueue (TBQueue)
 import           Control.Exception (SomeException, try)
 import           Data.Typeable (Typeable)
 
-import           Cardano.BM.Data.LogItem (LogObject)
-
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import           Trace.Forward.Network.Acceptor (listenToForwarder)
@@ -23,11 +21,11 @@ import           Trace.Forward.Configuration (AcceptorConfiguration (..))
 -- the forwarder establishes network connection with the acceptor. This is because
 -- a few forwarders are able to connect to the same acceptor.
 runTraceAcceptor
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => AcceptorConfiguration a  -- ^ Acceptor configuration.
-  -> TBQueue (LogObject a)    -- ^ The queue all received 'LogObject's will be write in.
+  :: (CBOR.Serialise lo,
+      ShowProxy lo,
+      Typeable lo)
+  => AcceptorConfiguration lo -- ^ Acceptor configuration.
+  -> TBQueue lo               -- ^ The queue all received 'LogObject's will be write in.
   -> IO ()
 runTraceAcceptor config loQueue =
   try (listenToForwarder config loQueue) >>= \case

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -24,6 +25,7 @@ import           Cardano.BM.Data.Severity (Severity (..))
 import           Trace.Forward.Forwarder (runTraceForwarder)
 import           Trace.Forward.Configuration (ForwarderConfiguration (..),
                                               HowToConnect (..), Port)
+import           Trace.Forward.LogObject ()
 
 main :: IO ()
 main = do
@@ -32,7 +34,7 @@ main = do
     [path, freq]       -> return (LocalPipe path, freq)
     [host, port, freq] -> return (RemoteSocket (pack host) (read port :: Port), freq)
     _                  -> die "Usage: demo-forwarder (pathToLocalPipe | host port) freqInSecs"
-  let config :: ForwarderConfiguration Text
+  let config :: ForwarderConfiguration (LogObject Text)
       config =
         ForwarderConfiguration
           { forwarderTracer    = contramap show stdoutTracer
@@ -53,8 +55,8 @@ main = do
   -- will take them from the 'queue' and send them back.
   runTraceForwarder config queue
 
--- We need it for 'ForwarderConfiguration a' (in this example it is 'Text').
-instance ShowProxy Text
+-- We need it for 'ForwarderConfiguration lo' (in this example it is 'LogObject Text').
+instance ShowProxy (LogObject Text)
 
 loWriter :: TBQueue (LogObject Text) -> IO ()
 loWriter queue = forever $ do

@@ -10,6 +10,7 @@ module Trace.Forward.Test.Types
 
 import           Data.Aeson.Types (Object, Value (..))
 import qualified Data.HashMap.Strict as HM
+-- import           Data.List.NonEmpty (NonEmpty)
 import           Data.Text (Text)
 import           Data.Time.Calendar (fromGregorian)
 import           Data.Time.Clock (UTCTime (..))
@@ -29,20 +30,16 @@ import           Cardano.BM.Data.LogItem (CommandValue (..), LoggerName, LogObje
 import           Cardano.BM.Data.Severity (Severity (..))
 
 import           Trace.Forward.Protocol.Type
-import           Trace.Forward.ReqResp
 
 data Endpoint = Pipe | Socket
 
--- | Response is parametrized by type because of 'LogObject'.
+-- | Reply is parametrized by type because of 'LogObject'.
 -- In practise we use 'LogObject Text' in most cases, so test
--- it with 'Response Text' as well.
-type TraceForwardText = TraceForward Request (Response Text)
+-- it with 'Reply Text' as well.
+type TraceForwardText = TraceForward (LogObject Text)
 
 instance Arbitrary Request where
   arbitrary = GetLogObjects <$> arbitrary
-
-instance Arbitrary (Response Text) where
-  arbitrary = ResponseLogObjects <$> arbitrary
 
 instance Arbitrary (LogObject Text) where
   arbitrary = LogObject
@@ -155,19 +152,24 @@ instance Arbitrary (AnyMessageAndAgency TraceForwardText) where
   arbitrary = genTraceForward arbitrary arbitrary
 
 genTraceForward
-  :: Gen req
-  -> Gen resp
-  -> Gen (AnyMessageAndAgency (TraceForward req resp))
-genTraceForward genReq genResp = oneof
-  [ AnyMessageAndAgency (ClientAgency TokIdle) . MsgReq <$> genReq
-  , AnyMessageAndAgency (ServerAgency TokBusy) . MsgResp <$> genResp
-  , return $ AnyMessageAndAgency (ClientAgency TokIdle) MsgDone
+  :: Gen Request
+  -> Gen [LogObject Text]
+  -> Gen (AnyMessageAndAgency TraceForwardText)
+genTraceForward genReq genReplyList = oneof
+  [ AnyMessageAndAgency
+      (ClientAgency TokIdle)
+    . MsgRequest TokNonBlocking <$> genReq
+  , AnyMessageAndAgency
+      (ServerAgency (TokBusy TokNonBlocking))
+    . MsgReply . NonBlockingReply <$> genReplyList
+  , return $ AnyMessageAndAgency
+      (ClientAgency TokIdle)
+      MsgDone
   ]
 
-instance ( Eq req
-         , Eq resp
-         ) => Eq (AnyMessage (TraceForward req resp)) where
-  AnyMessage (MsgReq r1)  == AnyMessage (MsgReq r2)  = r1 == r2
-  AnyMessage (MsgResp r1) == AnyMessage (MsgResp r2) = r1 == r2
-  AnyMessage MsgDone      == AnyMessage MsgDone      = True
-  _                       == _                       = False
+instance Eq (AnyMessage TraceForwardText) where
+  AnyMessage (MsgRequest _ r1) == AnyMessage (MsgRequest _ r2) = r1 == r2
+  AnyMessage (MsgReply (NonBlockingReply r1)) == AnyMessage (MsgReply (NonBlockingReply r2)) = r1 == r2
+  AnyMessage (MsgReply (BlockingReply r1))    == AnyMessage (MsgReply (BlockingReply r2))    = r1 == r2
+  AnyMessage MsgDone == AnyMessage MsgDone = True
+  _                  == _                  = False

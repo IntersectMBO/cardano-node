@@ -13,8 +13,10 @@ import           Data.Word (Word16, Word64)
 import           System.Environment (getArgs)
 import           System.Exit (die)
 
+import           Cardano.BM.Data.LogItem (LogObject)
+
 import qualified Trace.Forward.Configuration as TF
-import qualified Trace.Forward.ReqResp as TF
+import qualified Trace.Forward.Protocol.Type as TF
 
 import qualified System.Metrics.Configuration as EKGF
 import qualified System.Metrics.ReqResp as EKGF
@@ -88,7 +90,7 @@ mkConfigs
   -> Word16
   -> Maybe Pico
   -> Maybe Word64
-  -> IO (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration Text)
+  -> IO (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration (LogObject Text))
 mkConfigs listenIt freq itemsNum benchSpeedFreq totalObjs = do
   stopEKGF <- newIORef False
   stopTF <- newIORef False
@@ -115,7 +117,7 @@ mkConfigs listenIt freq itemsNum benchSpeedFreq totalObjs = do
           , EKGF.shouldWeStop      = stopEKGF
           , EKGF.actionOnDone      = putStrLn "EKGF: we are done!"
           }
-      tfConfig :: TF.AcceptorConfiguration Text
+      tfConfig :: TF.AcceptorConfiguration (LogObject Text)
       tfConfig =
         TF.AcceptorConfiguration
           { TF.acceptorTracer    = if benchMode then nullTracer else contramap show stdoutTracer
@@ -123,7 +125,7 @@ mkConfigs listenIt freq itemsNum benchSpeedFreq totalObjs = do
           , TF.requestFrequency  = secondsToNominalDiffTime freq
           , TF.whatToRequest     = TF.GetLogObjects itemsNum
             -- Currently, only TF works in bench mode.
-          , TF.actionOnResponse  = if benchMode then count loCounter else print
+          , TF.actionOnReply     = if benchMode then count loCounter else print
           , TF.shouldWeStop      = stopTF
           , TF.actionOnDone      = putStrLn "TF: we are done!"
           }
@@ -137,8 +139,8 @@ mkConfigs listenIt freq itemsNum benchSpeedFreq totalObjs = do
 
   benchMode = isJust benchSpeedFreq
 
-  count :: IORef Word64 -> TF.Response Text -> IO ()
-  count loCounter (TF.ResponseLogObjects los) =
+  count :: IORef Word64 -> [LogObject Text] -> IO ()
+  count loCounter los =
     atomicModifyIORef' loCounter $ \cnt -> (cnt + fromIntegral (length los), ())
 
   runSpeedPrinter loCounter diff stopTF =

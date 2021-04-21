@@ -8,30 +8,32 @@ import           Data.IORef (IORef)
 import           Data.Text (Text)
 import           Data.Time.Clock (secondsToNominalDiffTime)
 
+import           Cardano.BM.Data.LogItem (LogObject (..))
+
 import           Trace.Forward.Configuration (AcceptorConfiguration (..),
                                               ForwarderConfiguration (..),
                                               HowToConnect (..))
-import           Trace.Forward.ReqResp (Request (..))
+import           Trace.Forward.Protocol.Type (Request (..))
 
 mkAcceptorConfig
   :: HowToConnect
   -> IORef Bool
   -> Request
-  -> AcceptorConfiguration Text
+  -> AcceptorConfiguration (LogObject Text)
 mkAcceptorConfig endpoint weAreDone request =
   AcceptorConfiguration
     { acceptorTracer    = nullTracer
     , forwarderEndpoint = endpoint
     , requestFrequency  = secondsToNominalDiffTime 0.05
     , whatToRequest     = request
-    , actionOnResponse  = const $ return ()
+    , actionOnReply     = const $ return ()
     , shouldWeStop      = weAreDone
     , actionOnDone      = return ()
     }
 
 mkForwarderConfig
   :: HowToConnect
-  -> ForwarderConfiguration Text
+  -> ForwarderConfiguration (LogObject Text)
 mkForwarderConfig endpoint =
   ForwarderConfiguration
     { forwarderTracer    = nullTracer

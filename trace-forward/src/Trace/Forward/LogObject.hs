@@ -3,18 +3,12 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Trace.Forward.ReqResp
-  ( Request (..)
-  , Response (..)
-  ) where
+module Trace.Forward.LogObject () where
 
 import           Codec.Serialise (Serialise (..))
 import           Data.Aeson (Value)
-import           Data.Word (Word16)
 import           Data.Scientific (Scientific, base10Exponent, coefficient, scientific)
-import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import           Cardano.BM.Data.Aggregated (Aggregated, BaseStats, EWMA, Measurable, Stats)
 import           Cardano.BM.Data.BackendKind (BackendKind (..))
@@ -23,22 +17,7 @@ import           Cardano.BM.Data.LogItem (CommandValue (..), LogObject (..), LOC
                                           LOMeta (..), MonitorAction (..), PrivacyAnnotation (..))
 import           Cardano.BM.Data.Severity (Severity)
 
--- | The request for N 'LogObject's.
--- The acceptor will send this request to the forwarder.
-newtype Request = GetLogObjects Word16
-  deriving (Eq, Generic, Show)
-
--- | The response with 'LogObject's.
--- The forwarder will send it to the acceptor as a reply for the request.
--- Please note that the list of 'LogObject's can be empty (for example,
--- if the forwarder's log queue is empty).
-newtype Response a = ResponseLogObjects [LogObject a]
-  deriving (Eq, Generic, Show)
-
-instance ShowProxy Request
-instance Serialise Request
-
--- Instances we need to serialize 'LogObject's.
+-- Instances we need to serialize 'LogObject' from 'iohk-monitoring-framework'.
 
 deriving instance Generic BackendKind
 deriving instance Generic CommandValue
@@ -71,7 +50,3 @@ instance Serialise Severity
 instance Serialise Stats
 instance Serialise Value
 instance (Serialise a) => Serialise (LogObject a)
-
-instance (ShowProxy a, Typeable a) => ShowProxy (Response a)
--- instance (ShowProxy a) => ShowProxy (Response a)
-instance (Serialise a) => Serialise (Response a)

@@ -12,7 +12,6 @@ import qualified Codec.Serialise as CBOR
 import           Control.Concurrent.STM.TBQueue (TBQueue)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import           Data.Typeable (Typeable)
 import           Data.Void (Void)
 import qualified Network.Socket as Socket
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
@@ -35,19 +34,16 @@ import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, local
 import           Ouroboros.Network.Socket (connectToNode, nullNetworkConnectTracers)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
-import           Cardano.BM.Data.LogItem (LogObject)
-
 import           Trace.Forward.Configuration (ForwarderConfiguration (..), HowToConnect (..))
 import           Trace.Forward.Queue (readLogObjectsFromQueue)
 import qualified Trace.Forward.Protocol.Forwarder as Forwarder
 import qualified Trace.Forward.Protocol.Codec as Forwarder
 
 connectToAcceptor
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => ForwarderConfiguration a
-  -> TBQueue (LogObject a)
+  :: (CBOR.Serialise lo,
+      ShowProxy lo)
+  => ForwarderConfiguration lo
+  -> TBQueue lo
   -> IO ()
 connectToAcceptor config@ForwarderConfiguration{..} loQueue = withIOManager $ \iocp -> do
   let app = forwarderApp config loQueue
@@ -84,11 +80,10 @@ doConnectToAcceptor snocket address timeLimits app =
     address
 
 forwarderApp
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => ForwarderConfiguration a
-  -> TBQueue (LogObject a)
+  :: (CBOR.Serialise lo,
+      ShowProxy lo)
+  => ForwarderConfiguration lo
+  -> TBQueue lo
   -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
 forwarderApp config loQueue =
   OuroborosApplication $ \_connectionId _shouldStopSTM ->
@@ -100,11 +95,10 @@ forwarderApp config loQueue =
     ]
 
 forwardLogObjects
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => ForwarderConfiguration a
-  -> TBQueue (LogObject a)
+  :: (CBOR.Serialise lo,
+      ShowProxy lo)
+  => ForwarderConfiguration lo
+  -> TBQueue lo
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
 forwardLogObjects config loQueue =
   InitiatorProtocolOnly $

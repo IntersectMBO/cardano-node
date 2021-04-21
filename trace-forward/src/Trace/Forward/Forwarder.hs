@@ -15,8 +15,6 @@ import           Control.Exception (SomeException, try)
 import           Data.Time.Clock (NominalDiffTime)
 import           Data.Typeable (Typeable)
 
-import           Cardano.BM.Data.LogItem (LogObject)
-
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import           Trace.Forward.Configuration (ForwarderConfiguration (..))
@@ -25,11 +23,11 @@ import           Trace.Forward.Network.Forwarder (connectToAcceptor)
 -- | Please note that forwarder is a client from the __networking__ point of view:
 -- it establishes network connection with the acceptor.
 runTraceForwarder
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => ForwarderConfiguration a  -- ^ Forwarder configuration.
-  -> TBQueue (LogObject a)     -- ^ The queue the forwarder will take 'LogObject's from.
+  :: (CBOR.Serialise lo,
+      ShowProxy lo,
+      Typeable lo)
+  => ForwarderConfiguration lo -- ^ Forwarder configuration.
+  -> TBQueue lo                -- ^ The queue the forwarder will take 'LogObject's from.
   -> IO ()
 runTraceForwarder config@ForwarderConfiguration{..} loQueue =
   try (connectToAcceptor config loQueue) >>= \case
