@@ -34,7 +34,7 @@ jobs:
 
     - name: Install pkgconfiglite
       if: matrix.os == 'windows-latest'
-      run: retry 2 choco install -y pkgconfiglite
+      run: retry 2 choco install -y pkgconfiglite --allow-empty-checksums
 
     - name: Install libsodium (Windows)
       if: matrix.os == 'windows-latest'
