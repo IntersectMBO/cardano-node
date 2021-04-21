@@ -11,6 +11,8 @@ import           Data.Time.Clock (NominalDiffTime, secondsToNominalDiffTime)
 import           System.Environment (getArgs)
 import           System.Exit (die)
 
+import           Cardano.BM.Data.LogItem (LogObject)
+
 import qualified Trace.Forward.Configuration as TF
 
 import qualified System.Metrics.Configuration as EKGF
@@ -63,7 +65,7 @@ mkConfigs
   :: HowToConnect
   -> Pico
   -> Maybe Pico
-  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration Text)
+  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration (LogObject Text))
 mkConfigs howToConnect freq benchFillFreq = (ekgConfig, tfConfig)
  where
   ekgConfig =

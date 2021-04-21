@@ -1,5 +1,7 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -22,9 +24,10 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 import           Cardano.BM.Data.LogItem (LogObject (..))
 
 import           Trace.Forward.Acceptor (runTraceAcceptor)
-import           Trace.Forward.Forwarder (runTraceForwarder)
 import           Trace.Forward.Configuration (HowToConnect (..))
-import           Trace.Forward.ReqResp (Request (..))
+import           Trace.Forward.Forwarder (runTraceForwarder)
+import           Trace.Forward.LogObject ()
+import           Trace.Forward.Protocol.Type (Request (..))
 
 import           Trace.Forward.Test.MkConfig (mkAcceptorConfig, mkForwarderConfig)
 import           Trace.Forward.Test.Types (Endpoint (..))
@@ -79,7 +82,7 @@ propDemoIO' maxLen endpoint (NonEmpty logObjects') = do
 
   -- Take all 'LogObject's we received from the forwarder.
   acceptedObjects <- atomically $ toList acceptorQueue
-  -- They must be equal.
+  -- They must be equal.FlexibleInstances
   return $ logObjects === acceptedObjects
 
 waitTillAcceptorReceiveObjects :: IO ()
@@ -93,6 +96,6 @@ toList q =
       l <- toList q
       return $ lo : l
 
--- We need it for 'AcceptorConfiguration a' and 'ForwarderConfiguration a'
--- (in this example it is 'Text').
-instance ShowProxy Text
+-- We need it for 'AcceptorConfiguration lo' and 'ForwarderConfiguration lo'
+-- (in this example it is 'LogObject Text').
+instance ShowProxy (LogObject Text)

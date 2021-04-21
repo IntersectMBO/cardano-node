@@ -3,6 +3,7 @@
 
 module Trace.Forward.Network.Acceptor
   ( listenToForwarder
+  -- , runAcceptorPeer
   -- | Export this function for Mux purpose.
   , acceptLogObjects
   ) where
@@ -15,6 +16,7 @@ import           Control.Concurrent.STM.TBQueue (TBQueue)
 import           Control.Monad (void)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IORef (readIORef)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import           Data.Time.Clock (NominalDiffTime)
 import           Data.Typeable (Typeable)
@@ -25,7 +27,7 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                                         OuroborosApplication (..), MuxPeer (..),
                                         RunMiniProtocol (..),
                                         miniProtocolLimits, miniProtocolNum, miniProtocolRun)
-import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
+import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits, runPeerWithLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket, socketSnocket)
@@ -44,20 +46,18 @@ import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, simpleSingletonVersions)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
-import           Cardano.BM.Data.LogItem (LogObject)
-
 import qualified Trace.Forward.Protocol.Acceptor as Acceptor
 import qualified Trace.Forward.Protocol.Codec as Acceptor
-import           Trace.Forward.Queue (writeLogObjectsToQueue)
-import           Trace.Forward.ReqResp (Request (..), Response (..))
+import           Trace.Forward.Protocol.Type
+import           Trace.Forward.Queue (logObjectsFromReply, writeLogObjectsToQueue)
 import           Trace.Forward.Configuration (AcceptorConfiguration (..), HowToConnect (..))
 
 listenToForwarder
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => AcceptorConfiguration a
-  -> TBQueue (LogObject a)
+  :: (CBOR.Serialise lo,
+      ShowProxy lo,
+      Typeable lo)
+  => AcceptorConfiguration lo
+  -> TBQueue lo
   -> IO ()
 listenToForwarder config loQueue = withIOManager $ \iocp -> do
   let app = acceptorApp config loQueue
@@ -102,11 +102,11 @@ doListenToForwarder snocket address timeLimits app = do
   void $ waitAnyCancel [nsAsync, clAsync]
 
 acceptorApp
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => AcceptorConfiguration a
-  -> TBQueue (LogObject a)
+  :: (CBOR.Serialise lo,
+      ShowProxy lo,
+      Typeable lo)
+  => AcceptorConfiguration lo
+  -> TBQueue lo
   -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
 acceptorApp config loQueue =
   OuroborosApplication $ \_connectionId _shouldStopSTM -> [
@@ -118,11 +118,11 @@ acceptorApp config loQueue =
   ]
 
 acceptLogObjects
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => AcceptorConfiguration a
-  -> TBQueue (LogObject a)
+  :: (CBOR.Serialise lo,
+      ShowProxy lo,
+      Typeable lo)
+  => AcceptorConfiguration lo
+  -> TBQueue lo
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 acceptLogObjects config loQueue =
   ResponderProtocolOnly $
@@ -130,31 +130,48 @@ acceptLogObjects config loQueue =
       (acceptorTracer config)
       (Acceptor.codecTraceForward CBOR.encode CBOR.decode
                                   CBOR.encode CBOR.decode)
-      (Acceptor.traceAcceptorPeer $ acceptorActions True config loQueue)
+      (Acceptor.traceAcceptorPeer $ acceptorActions config loQueue False)
 
 acceptorActions
-  :: (CBOR.Serialise a,
-      ShowProxy a,
-      Typeable a)
-  => Bool
-  -> AcceptorConfiguration a
-  -> TBQueue (LogObject a)
-  -> Acceptor.TraceAcceptor Request (Response a) IO ()
-acceptorActions True config@AcceptorConfiguration{..} loQueue =
-  Acceptor.SendMsgReq whatToRequest $ \response -> do
-    writeLogObjectsToQueue response loQueue
-    actionOnResponse response
+  :: (CBOR.Serialise lo,
+      ShowProxy lo,
+      Typeable lo)
+  => AcceptorConfiguration lo
+  -> TBQueue lo
+  -> Bool
+  -> Acceptor.TraceAcceptor lo IO ()
+acceptorActions config@AcceptorConfiguration{..} loQueue False =
+  Acceptor.SendMsgRequest TokBlocking whatToRequest $ \reply -> do
+    writeLogObjectsToQueue reply loQueue
+    actionOnReply $ logObjectsFromReply reply
     threadDelay $ toMicroSecs requestFrequency
-    weAreDone <- readIORef shouldWeStop
-    if weAreDone
-      then return $ acceptorActions False config loQueue
-      else return $ acceptorActions True  config loQueue
+    readIORef shouldWeStop >>= return . acceptorActions config loQueue
  where
   -- TODO: temporary function, should be rewritten
-  -- (we have to take into account actual time of 'actionOnResponse'
-  -- as well as actual time of getting the response from the forwarder).
+  -- (we have to take into account actual time of 'actionOnReply'
+  -- as well as actual time of getting the reply from the forwarder).
   toMicroSecs :: NominalDiffTime -> Int
   toMicroSecs dt = fromEnum dt `div` 1000000
-acceptorActions False AcceptorConfiguration{..} _ =
+
+acceptorActions AcceptorConfiguration{..} _ True =
   Acceptor.SendMsgDone
     actionOnDone
+
+{-
+runAcceptorPeer
+  :: (CBOR.Serialise lo,
+      ShowProxy lo,
+      Typeable lo)
+  => AcceptorConfiguration lo
+  -> TBQueue lo
+  -> IO ((), Maybe LBS.ByteString)
+runAcceptorPeer config loQueue =
+  runPeerWithLimits
+    (acceptorTracer config)
+    (Acceptor.codecTraceForward CBOR.encode CBOR.decode
+                                CBOR.encode CBOR.decode)
+    (Acceptor.byteLimitsTraceForward (fromIntegral . LBS.length))
+    Acceptor.timeLimitsTraceForward
+    (fromMaybe id (delayChannel <$> outboundDelay) outboundChannel)
+    (Acceptor.traceAcceptorPeer $ acceptorActions config loQueue False)
+-}

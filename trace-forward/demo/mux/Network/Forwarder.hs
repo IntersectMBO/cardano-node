@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -49,6 +50,7 @@ import           Cardano.BM.Data.LogItem (LogObject (..), LOContent (..), LOMeta
 import           Cardano.BM.Data.Severity (Severity (..))
 
 import qualified Trace.Forward.Configuration as TF
+import           Trace.Forward.LogObject ()
 import           Trace.Forward.Network.Forwarder (forwardLogObjects)
 
 import qualified System.Metrics.Configuration as EKGF
@@ -61,7 +63,7 @@ data HowToConnect
 launchForwarders
   :: HowToConnect
   -> Maybe Pico
-  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration Text)
+  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration (LogObject Text))
   -> IO ()
 launchForwarders endpoint benchFillFreq configs =
   try (launchForwarders' endpoint benchFillFreq configs) >>= \case
@@ -78,7 +80,7 @@ launchForwarders endpoint benchFillFreq configs =
 launchForwarders'
   :: HowToConnect
   -> Maybe Pico
-  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration Text)
+  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration (LogObject Text))
   -> IO ()
 launchForwarders' endpoint benchFillFreq configs = withIOManager $ \iocp -> do
   case endpoint of
@@ -97,7 +99,7 @@ doConnectToAcceptor
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
   -> Maybe Pico
-  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration Text)
+  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration (LogObject Text))
   -> IO ()
 doConnectToAcceptor snocket address timeLimits benchFillFreq (ekgConfig, tfConfig) = do
   tfQueue <- newTBQueueIO 1000000
@@ -135,8 +137,8 @@ doConnectToAcceptor snocket address timeLimits benchFillFreq (ekgConfig, tfConfi
       | (prot, num) <- protocols
       ]
 
--- We need it for 'TF.ForwarderConfiguration a' (in this example it is 'Text').
-instance ShowProxy Text
+-- We need it for 'TF.ForwarderConfiguration lo' (in this example it is 'LogObject Text').
+instance ShowProxy (LogObject Text)
 
 loWriter :: TBQueue (LogObject Text) -> Maybe Pico -> IO ()
 loWriter queue benchFillFreq = forever $ do

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -13,10 +14,13 @@ import           System.Exit (die)
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
+import           Cardano.BM.Data.LogItem (LogObject)
+
 import           Trace.Forward.Acceptor (runTraceAcceptor)
 import           Trace.Forward.Configuration (AcceptorConfiguration (..),
                                               HowToConnect (..), Port)
-import           Trace.Forward.ReqResp (Request (..))
+import           Trace.Forward.LogObject ()
+import           Trace.Forward.Protocol.Type (Request (..))
 
 main :: IO ()
 main = do
@@ -26,14 +30,14 @@ main = do
     [host, port, freq] -> return (RemoteSocket (pack host) (read port :: Port), freq)
     _                  -> die "Usage: demo-acceptor (pathToLocalPipe | host port) freqInSecs"
   weAreDone <- newIORef False
-  let config :: AcceptorConfiguration Text
+  let config :: AcceptorConfiguration (LogObject Text)
       config =
         AcceptorConfiguration
           { acceptorTracer    = contramap show stdoutTracer
           , forwarderEndpoint = listenIt
           , requestFrequency  = secondsToNominalDiffTime (read freq :: Pico)
           , whatToRequest     = GetLogObjects 10
-          , actionOnResponse  = print
+          , actionOnReply     = print
           , shouldWeStop      = weAreDone
           , actionOnDone      = putStrLn "We are done!"
           }
@@ -47,5 +51,5 @@ main = do
   -- the acceptor will write them in the 'queue'.
   runTraceAcceptor config queue
 
--- We need it for 'AcceptorConfiguration a' (in this example it is 'Text').
-instance ShowProxy Text
+-- We need it for 'AcceptorConfiguration lo' (in this example it is 'LogObject Text').
+instance ShowProxy (LogObject Text)

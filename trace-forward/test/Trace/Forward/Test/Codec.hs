@@ -15,6 +15,7 @@ import           Test.Tasty.QuickCheck (testProperty)
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..), Codec, prop_codecM)
 import           Ouroboros.Network.Codec (encode)
 
+import           Trace.Forward.LogObject ()
 import           Trace.Forward.Protocol.Codec (codecTraceForward)
 
 import           Trace.Forward.Test.Types (TraceForwardText)

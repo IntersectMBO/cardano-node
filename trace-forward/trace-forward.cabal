@@ -37,8 +37,8 @@ library
   exposed-modules:     Trace.Forward.Acceptor
                        Trace.Forward.Configuration
                        Trace.Forward.Forwarder
+                       Trace.Forward.LogObject
                        Trace.Forward.Queue
-                       Trace.Forward.ReqResp
 
                        Trace.Forward.Network.Acceptor
                        Trace.Forward.Network.Forwarder
@@ -89,6 +89,7 @@ executable demo-acceptor
   main-is:             acceptor.hs
   build-depends:         base
                        , contra-tracer
+                       , iohk-monitoring
                        , ouroboros-network-framework
                        , stm
                        , trace-forward
@@ -137,6 +138,7 @@ executable demo-acceptor-mux
                        , contra-tracer
                        , ekg-core
                        , ekg-forward
+                       , iohk-monitoring
                        , network
                        , ouroboros-network-framework
                        , stm

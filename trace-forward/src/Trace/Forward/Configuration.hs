@@ -13,8 +13,7 @@ import           Data.Time.Clock (NominalDiffTime)
 import           Data.Word (Word16)
 import           Ouroboros.Network.Driver (TraceSendRecv)
 
-import           Trace.Forward.Protocol.Type (TraceForward)
-import           Trace.Forward.ReqResp (Request, Response)
+import           Trace.Forward.Protocol.Type (Request, TraceForward)
 
 type Host = Text
 type Port = Word16
@@ -25,10 +24,10 @@ data HowToConnect
   | RemoteSocket !Host !Port  -- ^ Remote socket (host and port).
 
 -- | Acceptor configuration.
-data AcceptorConfiguration a = AcceptorConfiguration
+data AcceptorConfiguration lo = AcceptorConfiguration
   { -- | The tracer that will be used by the acceptor in its network layer.
     -- For more info about tracers please read its [documentation](https://github.com/input-output-hk/iohk-monitoring-framework/tree/master/contra-tracer).
-    acceptorTracer    :: !(Tracer IO (TraceSendRecv (TraceForward Request (Response a))))
+    acceptorTracer    :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
     -- | The endpoint that will be used to listen to the forwarder.
   , forwarderEndpoint :: !HowToConnect
     -- | Specifies how often the acceptor will ask the framework for new 'LogObject's.
@@ -37,8 +36,8 @@ data AcceptorConfiguration a = AcceptorConfiguration
     -- | The request specifies how many 'LogObject's will be requested.
   , whatToRequest     :: !Request
     -- | Additional action that will be performed every time the acceptor will
-    -- receive the response from the forwarder.
-  , actionOnResponse  :: !(Response a -> IO ())
+    -- receive the reply from the forwarder.
+  , actionOnReply     :: !([lo] -> IO ())
     -- | 'IORef' that can be used as a brake: if an external thread will set it to
     -- 'True', the acceptor will send 'MsgDone' message to the forwarder and their
     -- session will be closed.
@@ -48,9 +47,9 @@ data AcceptorConfiguration a = AcceptorConfiguration
   }
 
 -- | Forwarder configuration.
-data ForwarderConfiguration a = ForwarderConfiguration
+data ForwarderConfiguration lo = ForwarderConfiguration
   { -- | The tracer that will be used by the forwarder in its network layer.
-    forwarderTracer    :: !(Tracer IO (TraceSendRecv (TraceForward Request (Response a))))
+    forwarderTracer    :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
     -- | The endpoint that will be used to connect to the acceptor.
   , acceptorEndpoint   :: !HowToConnect
     -- | If the connection with the acceptor will fail, the forwarder will attempt
