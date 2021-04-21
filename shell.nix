@@ -17,6 +17,19 @@
 }:
 with pkgs;
 let
+  commandHelp =
+    ''
+      echo "
+        Commands:
+          * niv update <package> - update package
+          * cardano-cli - used for key generation and other operations tasks
+          * wb - cluster workbench
+          * start-cluster - start a local development cluster
+          * stop-cluster - stop a local development cluster
+
+      "
+    '';
+
   # This provides a development environment that can be used with nix-shell or
   # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   # NOTE: due to some cabal limitation,
@@ -67,6 +80,8 @@ let
     exactDeps = true;
 
     shellHook = ''
+      set -euo pipefail
+
       echo "workbench:  setting 'cabal.project' for local builds.."
       ./scripts/cabal-inside-nix-shell.sh
 
@@ -88,6 +103,10 @@ let
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
       start-cluster
       ''}
+
+      ${commandHelp}
+
+      set +e
     '';
   };
 
@@ -112,6 +131,8 @@ let
       | ${figlet}/bin/figlet -f banner -c \
       | ${lolcat}/bin/lolcat
 
+      wb explain-mode
+
       source <(cardano-cli --bash-completion-script cardano-cli)
       source <(cardano-node --bash-completion-script cardano-node)
 
@@ -131,13 +152,7 @@ let
       ''}
 
       echo "NOTE: you may need to export GITHUB_TOKEN if you hit rate limits with niv"
-      echo "Commands:
-        * niv update <package> - update package
-        * cardano-cli - used for key generation and other operations tasks
-        * start-cluster - start a local development cluster
-        * stop-cluster - stop a local development cluster
-
-      "
+      ${commandHelp}
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"

@@ -6,32 +6,36 @@ set -euo pipefail
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 global_runsdir=${global_runsdir:-$(realpath "$global_basedir/../../runs")}
 global_cachedir="$HOME"/.cache/cardano-workbench
+global_mode='unknown'
 
 . "$global_basedir"/lib.sh
 . "$global_basedir"/profile.sh
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
 . "$global_basedir"/run.sh
+. "$global_basedir"/explain-mode.sh
 
 . "$global_basedir"/local.sh
 
 usage_main() {
      __usage "OP" "Main OPs" <<EOF
-    profile    (p)        Cluster profile operations.  Default subop is 'list'
-    genesis    (g)        Genesis
-    topology   (t)        Topology generation
-    run        (r)        Managing cluster runs.  Default subop is 'list'
+    profile      (p)      Cluster profile operations.  Default subop is 'list'
+    genesis      (g)      Genesis
+    topology     (t)      Topology generation
+    run          (r)      Managing cluster runs.  Default subop is 'list'
 
-    record     (c)        Re-enter the Nix-generated artifacts into the flawed world
+    record       (c)      Re-enter the Nix-generated artifacts into the flawed world
 
-    local      (l)        Managing local cluster
+    local        (l)      Managing local cluster
+
+    explain-mode (x)      Explain current mode
 
   Options:
 
     --cache-dir DIR       Set the cache directory;  Defaults to $global_cachedir
     --trace / --debug     set -x
-    --help                This short help.
-    --help-full           Extended help.
+    --help                This short help
+    --help-full           Extended help
 EOF
 }
 
@@ -39,11 +43,13 @@ usage_extra() {
     cat >&2 <<EOF
   Other OPs:
 
-    call ARGS..           Call internal functions with arguments.
+    call ARGS..           Call internal functions with arguments
+    mode                  Report mode set by --set-mode
 
   Extra options:
 
     --cls                 Clear screen, before acting further.
+    --set-mode MODE       Set mode.  Only has effect on 'mode' OP
     --runsdir DIR         Set the runs directory.  Defaults to $global_runsdir
 
 EOF
@@ -59,6 +65,8 @@ do case "$1" in
            echo -en "\ec">&2;;
        --trace | --debug )
            set -x;;
+       --set-mode )
+           global_mode=$2; shift;;
        --help )
            usage_main; exit 1;;
        --help-full | --help-all | --help-extra )
@@ -69,6 +77,8 @@ main() {
     local op=${1:?$(usage_main)}; shift
 
     case "${op}" in
+        ## Public:
+        #
         profile | profiles | prof | ps | p )
             profile "$@";;
         genesis | g )
@@ -79,8 +89,15 @@ main() {
             run "$@";;
         local | loc | l )
             local_ "$@";;
+        explain-mode )
+            explain-mode $global_mode;;
+
+        ## Internals:
+        #
         call )
             "$@";;
+        mode )
+            echo -n      $global_mode;;
         * ) usage_main; exit 1;; esac
 }
 
