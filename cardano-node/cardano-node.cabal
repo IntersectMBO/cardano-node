@@ -95,7 +95,8 @@ library
                        Cardano.TraceDispatcher.ChainDBTracer.Combinators
                        Cardano.TraceDispatcher.ConsensusTracer.Docu
                        Cardano.TraceDispatcher.ConsensusTracer.Formatting
-                       Cardano.TraceDispatcher.ConsensusTracer.Combinators                                                                    
+                       Cardano.TraceDispatcher.ConsensusTracer.Combinators
+                       Cardano.TraceDispatcher.ConsensusTracer.StateInfo                                                                
                        Cardano.TraceDispatcher.Render
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints

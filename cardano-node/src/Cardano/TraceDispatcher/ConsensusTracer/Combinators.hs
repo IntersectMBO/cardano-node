@@ -16,11 +16,6 @@ module Cardano.TraceDispatcher.ConsensusTracer.Combinators
   , severityBlockFetchServer
   , namesForBlockFetchServer
 
-  , severityStateInfoShelley
-  , severityStateInfoByron
-  , namesForStateInfoShelley
-  , namesForStateInfoByron
-
   , severityTxInbound
   , namesForTxInbound
 
@@ -57,7 +52,6 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Node.Tracers
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 
 severityChainSyncClientEvent :: TraceChainSyncClientEvent blk -> SeverityS
@@ -171,18 +165,6 @@ namesForBlockFetchServer ::
      (TraceBlockFetchServerEvent blk)
   -> [Text]
 namesForBlockFetchServer TraceBlockFetchServerSendBlock {} = ["SendBlock"]
-
-severityStateInfoShelley :: HotKey.KESInfo -> SeverityS
-severityStateInfoShelley _ki = Info
-
-severityStateInfoByron :: () -> SeverityS
-severityStateInfoByron _ = Info
-
-namesForStateInfoShelley :: HotKey.KESInfo -> [Text]
-namesForStateInfoShelley _ki = []
-
-namesForStateInfoByron :: () -> [Text]
-namesForStateInfoByron _ = []
 
 severityTxInbound ::
     BlockFetch.TraceLabelPeer peer (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))

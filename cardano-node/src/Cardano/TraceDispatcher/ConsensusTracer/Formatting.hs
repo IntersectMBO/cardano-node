@@ -3,7 +3,6 @@
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
 
@@ -11,7 +10,6 @@
 
 module Cardano.TraceDispatcher.ConsensusTracer.Formatting
   (
-    ForgeStateInfoDispatch(..)
   ) where
 
 import           Data.Aeson (ToJSON, Value (String), toJSON, (.=))
@@ -20,9 +18,6 @@ import           Text.Show
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
-import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
-                     (namesForStateInfoByron, namesForStateInfoShelley,
-                     severityStateInfoByron, severityStateInfoShelley)
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 import           Cardano.TraceDispatcher.OrphanInstances.Network ()
@@ -30,10 +25,7 @@ import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
-import           Ouroboros.Consensus.Cardano.ShelleyHFC
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId,
                      HasTxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
@@ -48,8 +40,6 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints,
                      estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
-import           Ouroboros.Consensus.Shelley.Ledger.Block
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
@@ -166,14 +156,6 @@ instance LogFormatting (TraceBlockFetchServerEvent blk) where
   forMachine _dtal _ =
     mkObject [ "kind" .= String "BlockFetchServer" ]
 
--- TODO
---
--- instance LogFormatting a => LogFormatting (Consensus.TraceLabelCreds a) where
---   forMachine dtal (Consensus.TraceLabelCreds creds val) =
---     mkObject [ "credentials" .= toJSON creds
---              , "val"         .= forMachine dtal val
---             ]
-
 instance LogFormatting (TraceTxSubmissionInbound txid tx) where
   forMachine _dtal (TraceTxSubmissionCollected count) =
     mkObject
@@ -266,11 +248,6 @@ instance LogFormatting MempoolSize where
       [ "numTxs" .= msNumTxs
       , "bytes" .= msNumBytes
       ]
-
-instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
-  forMachine dtal (TraceLabelCreds _t a)  = forMachine dtal a
-  forHuman (TraceLabelCreds _t a)         = forHuman a
-  asMetrics (TraceLabelCreds _t a)        = asMetrics a
 
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk
@@ -448,73 +425,3 @@ instance ( tx ~ GenTx blk
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
       --  <> ", TxIds: " <> showT (map txId txs) TODO Fix
-
-
-class ForgeStateInfoDispatch blk where
-  severityStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> SeverityS
-  namesForStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> [Text]
-  humanFormatterStateInfo ::
-       MonadIO m
-    => Proxy blk
-    -> Bool
-    -> Text
-    -> Trace m FormattedMessage
-    -> m (Trace m (TraceLabelCreds (ForgeStateInfo blk)))
-
-instance ForgeStateInfoDispatch ByronBlock where
-    severityStateInfo _ (TraceLabelCreds _ v) =
-      severityStateInfoByron v
-    namesForStateInfo _ (TraceLabelCreds _ v) =
-      namesForStateInfoByron v
-    humanFormatterStateInfo _ colorize name baseTracer =
-      humanFormatterStateInfoByron colorize name baseTracer
-
-humanFormatterStateInfoByron ::
-     MonadIO m
-  => Bool
-  -> Text
-  -> Trace m FormattedMessage
-  -> m (Trace m (TraceLabelCreds ()))
-humanFormatterStateInfoByron colorize name baseTracer =
-    humanFormatter colorize name baseTracer
-
-instance ForgeStateInfoDispatch (ShelleyBlock era) where
-    severityStateInfo _ (TraceLabelCreds _ kesinfo) =
-      severityStateInfoShelley kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ kesinfo) =
-      namesForStateInfoShelley kesinfo
-    humanFormatterStateInfo _ colorize name baseTracer =
-      humanFormatterStateInfoShelley colorize name baseTracer
-
-
-instance ForgeStateInfoDispatch (ShelleyBlockHFC era) where
-    severityStateInfo _ (TraceLabelCreds _ _v) = Info
---      severityStateInfoShelleyHF kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ _v) = []
---      namesForStateInfoShelleyHF kesinfo
-    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
-
-instance ForgeStateInfoDispatch ByronBlockHFC where
-    severityStateInfo _ (TraceLabelCreds _ _v) = Info
---      severityStateInfoByronHF kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ _v) = []
---      namesForStateInfoByronHF kesinfo
-    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
---      humanFormatterStateInfoByronHF colorize name baseTracer
-
-instance ForgeStateInfoDispatch (CardanoBlock crypt) where
-    severityStateInfo _ (TraceLabelCreds _ _v) = Info
---      severityStateInfoCardano kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ _v) = []
---      namesForStateInfoCardano kesinfo
-    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
---      humanFormatterStateInfoCardano colorize name baseTracer
-
-humanFormatterStateInfoShelley ::
-     MonadIO m
-  => Bool
-  -> Text
-  -> Trace m FormattedMessage
-  -> m (Trace m (TraceLabelCreds HotKey.KESInfo))
-humanFormatterStateInfoShelley colorize name baseTracer =
-  humanFormatter colorize name baseTracer

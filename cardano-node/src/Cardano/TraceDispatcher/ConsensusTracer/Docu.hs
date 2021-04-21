@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
 module Cardano.TraceDispatcher.ConsensusTracer.Docu
