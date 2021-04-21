@@ -55,13 +55,14 @@ jobs:
         cat cabal.project | sed 's|reorder-goals: True|reorder-goals: False|g' > cabal.project.tmp
         mv cabal.project.tmp cabal.project
 
-    - name: Cabal Configure
-      run: cabal configure --write-ghc-environment-files=always
-
     - name: Use cabal.project.local.github-pages
+      run: cp .github/workflows/cabal.project.local.github-pages cabal.project.local
+
+    - name: Dry run
       run: |
-        cat ./cabal.project.local.github-pages >> ./cabal.project.local
-        cat ./cabal.project.local
+        cabal build all --dependencies-only --dry-run
+        mkdir ./haddocks
+        DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
 
     - name: Record dependencies
       run: |
@@ -80,9 +81,11 @@ jobs:
       run: cabal build all --only-dependencies
 
     - name: Build Haddock documentation 🔧
+      run: ./scripts/haddocs.sh ./haddocks true
+
+    - name: View HTML files
       run: |
-        mkdir ./haddocks
-        ./scripts/haddocs.sh ./haddocks true
+        find "dist-newstyle/build" -name '*.html' | xargs grep html
 
     - name: Upload documentation
       uses: actions/upload-artifact@v2

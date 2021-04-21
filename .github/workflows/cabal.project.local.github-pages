@@ -1,3 +1,7 @@
+write-ghc-environment-files: always
+
+ignore-project: False
+
 package cardano-crypto-praos
   flags: -external-libsodium-vrf
 
