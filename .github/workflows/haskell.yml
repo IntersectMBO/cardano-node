@@ -17,7 +17,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-    
+
     - uses: haskell/actions/setup@v1
       id: setup-haskell
       with:
@@ -88,28 +88,24 @@ jobs:
     - name: Cabal update
       run: retry 2 cabal update
 
-    - name: Disable reorder goals on MacOS and Linux
-      # Avoid reorder goals for platforms that don't need it because re-order goals can take up to 10 minutes
-      if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
-      run: |
-        cat cabal.project | sed 's|reorder-goals: True|reorder-goals: False|g' > cabal.project.tmp
-        mv cabal.project.tmp cabal.project
-
-    - name: Cabal Configure
-      run: retry 2 cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+    - name: Configure build
+      run: cp .github/workflows/cabal.project.local.$RUNNER_OS cabal.project.local
 
     - name: Record dependencies
       run: |
+        cabal build all --only-dependencies --dry-run
         cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
+        date > date.txt
 
     - uses: actions/cache@v2
       name: Cache cabal store
       with:
         path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
         restore-keys: |
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Install dependencies
       run: retry 2 cabal build all --only-dependencies
@@ -140,10 +136,10 @@ jobs:
         done
 
     - name: Save Artifact
-      if: matrix.ghc == '8.10.3'
+      if: matrix.ghc == '8.10.4'
       uses: actions/upload-artifact@v1
       with:
-        name: ${{ matrix.os }}_cardano-rest
+        name: artifacts-${{ matrix.os }}
         path: ./artifacts
 
     - name: Delete socket files in preparation for upload artifacts
@@ -186,12 +182,12 @@ jobs:
     - name: Download Artifact (linux)
       uses: actions/download-artifact@v1
       with:
-        name: ubuntu-latest_cardano-rest
+        name: artifacts-ubuntu-latest
 
     - name: Download Artifact (macOS)
       uses: actions/download-artifact@v1
       with:
-        name: macOS-latest_cardano-rest
+        name: artifacts-macOS-latest
 
     - name: Upload Release Asset (cardano-submit-api, linux)
       uses: actions/upload-release-asset@v1
@@ -199,7 +195,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./ubuntu-latest_cardano-rest/cardano-submit-api.tar.gz
+        asset_path: ./artifacts-ubuntu-latest/cardano-submit-api.tar.gz
         asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-linux.tar.gz
         asset_content_type: application/gzip
 
@@ -209,6 +205,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./macOS-latest_cardano-rest/cardano-submit-api.tar.gz
+        asset_path: ./artifacts-macOS-latest/cardano-submit-api.tar.gz
         asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-macOS.tar.gz
         asset_content_type: application/gzip

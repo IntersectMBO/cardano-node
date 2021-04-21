@@ -17,10 +17,16 @@ set -euo pipefail
 OUTPUT_DIR=${1:-"./haddocks"}
 REGENERATE=${2:-"true"}
 BUILD_DIR=${3:-"dist-newstyle"}
+DRY_RUN="${DRY_RUN:-}"
 
 GHC_VERSION=$(ghc --numeric-version)
 OS_ARCH="$(cat "$BUILD_DIR/cache/plan.json" | jq -r '.arch + "-" + .os' | head -n 1 | xargs)"
 
+if [ "${DRY_RUN}" == 1 ]; then
+  DRY_RUN_ARGS="--dry-run"
+else
+  DRY_RUN_ARGS=""
+fi
 
 # we don't include `--use-index` option, because then quickjump data is not
 # generated.  This is not ideal, but there is no way to generate only top level
@@ -41,6 +47,7 @@ HADDOCK_OPTS=(
     --haddock-option "--show-all"
     --haddock-option "--use-unicode"
     --disable-tests
+    $DRY_RUN_ARGS
   )
 
 # build documentation of all modules
@@ -58,6 +65,11 @@ if [ ${REGENERATE} == "true" ]; then
     exe:cardano-testnet
 elif [ ${REGENERATE} != "false" ]; then
   cabal haddock "${HADDOCK_OPTS[@]}" ${REGENERATE}
+fi
+
+if [ "${DRY_RUN}" == 1 ]; then
+  echo "Exiting dry run"
+  exit 0
 fi
 
 if [[ !( -d ${OUTPUT_DIR} ) ]]; then
