@@ -14,7 +14,7 @@ import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Queries (LedgerQueries)
 import           Cardano.Logging (LogFormatting)
-import           Cardano.TraceDispatcher.ConsensusTracer.Formatting (ForgeStateInfoDispatch)
+import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo (ForgeStateInfoDispatch)
 
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,

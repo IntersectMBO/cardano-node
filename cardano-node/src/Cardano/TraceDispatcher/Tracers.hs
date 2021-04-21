@@ -23,7 +23,7 @@ import           Cardano.TraceDispatcher.ChainDBTracer.Docu
 import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
 import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
 import           Cardano.TraceDispatcher.ConsensusTracer.Docu
-import           Cardano.TraceDispatcher.ConsensusTracer.Formatting (ForgeStateInfoDispatch(..))
+import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo (ForgeStateInfoDispatch(..))
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 import           Data.Aeson (ToJSON)
 import qualified Data.Text.IO as T
