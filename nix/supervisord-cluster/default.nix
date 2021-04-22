@@ -190,6 +190,8 @@ let
 
     ln -s ${profile.topology.files} "${stateDir}"/topology
 
+    prebuild-executables
+
     genesis_args+=(
         ## Positionals:
         ${profile.JSON}

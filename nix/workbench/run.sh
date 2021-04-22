@@ -15,22 +15,31 @@ case "${op}" in
         ;;
 
     mkname )
-        local batch=$1
-        local profjson=$2
-        echo "$(date +'%Y'-'%m'-'%d'-'%H.%M').$batch.$prof"
+        local usage="USAGE: wb run mkname BATCH-NAME PROFILE-NAME"
+        local batch=${1:?$usage}
+        local prof=${2:?$usage}
+        echo -n "$(date +'%Y'-'%m'-'%d'-'%H.%M').$batch.$prof"
         ;;
 
     create )
+        local usage="USAGE: wb run create ??? BATCH-NAME PROFILE-NAME"
         ## Assumptions:
         ##   - genesis has been created
         ##   - the cluster is operating
-        local name=$1
-        local batch=$2
-        local prof=$3
+        local name=${1:?$usage}
+        local batch=${2:?$usage}
+        local prof=${3:?$usage}
 
         local dir=$runsdir/$name
         if test "$(realpath "$dir")" = test "$(realpath "$global_runsdir")" -o "$name" = '.'
         then fatal "bad, bad tag '$name'"; fi
+        ;;
+
+    ### Undocumented
+    describe | d )
+        cat <<EOF
+global_runsdir=$global_runsdir
+EOF
         ;;
 
     * ) usage_run;; esac
