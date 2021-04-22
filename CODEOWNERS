@@ -20,6 +20,7 @@ doc                                                           @docs-access
 README.*                                                      @docs-access
 
 
+nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
 
 .buildkite                                                    @devops
