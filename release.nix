@@ -124,12 +124,13 @@ let
     [ "haskellPackages" "cardano-node-chairman" "checks" ]
     [ "cardano-node-profiled" "components" "exes" ]
     [ "checks" "tests" "cardano-node-chairman" ]
+    [ "workbench" ] [ "profiles" ]
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [
     ["shell"] ["cardano-ping"] ["roots"]
   ] ++ onlyBuildOnDefaultSystem;
-  noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ["plan-nix"] ]
+  noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ["plan-nix"]]
     ++ noCrossBuild;
 
   # Remove build jobs for which cross compiling does not make sense.
