@@ -59,7 +59,8 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types
+    ( RelativeTime, SlotLength, SystemStart )
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import           Ouroboros.Consensus.Cardano.Block (StandardCrypto, LedgerState(..))
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -108,6 +109,10 @@ data QueryInMode mode result where
   QueryEraHistory
     :: ConsensusModeIsMultiEra mode
     -> QueryInMode mode (EraHistory mode)
+
+  QuerySystemStart
+    :: ConsensusModeIsMultiEra mode
+    -> QueryInMode mode SystemStart
 
 data EraHistory mode where
   EraHistory
@@ -295,6 +300,9 @@ toConsensusQuery (QueryEraHistory CardanoModeIsMultiEra) =
 toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
     Some (Consensus.QueryHardFork Consensus.GetCurrentEra)
 
+toConsensusQuery (QuerySystemStart CardanoModeIsMultiEra) =
+    Some (Consensus.QueryHardFork Consensus.GetSystemStart)
+
 toConsensusQuery (QueryInEra ByronEraInByronMode QueryByronUpdateState) =
     Some (Consensus.DegenQuery Consensus.GetUpdateInterfaceState)
 
@@ -392,6 +400,10 @@ fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
       Consensus.QueryHardFork Consensus.GetInterpreter -> EraHistory CardanoMode r'
       _ -> fromConsensusQueryResultMismatch
 
+fromConsensusQueryResult (QuerySystemStart CardanoModeIsMultiEra) q' r' =
+    case q' of
+      Consensus.QueryHardFork Consensus.GetSystemStart -> r'
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
     case q' of

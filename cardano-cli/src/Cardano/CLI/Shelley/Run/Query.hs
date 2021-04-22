@@ -31,6 +31,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
+import           Data.Time.Clock
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 
@@ -51,7 +52,7 @@ import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..), SlotLength)
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..), SlotLength, SystemStart, toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 import           Ouroboros.Network.Block (Serialised (..))
@@ -63,6 +64,8 @@ import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
+import Text.Printf(printf)
+
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 
@@ -159,6 +162,18 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
           LBS.writeFile fpath (encodePretty pparams)
 
+percentage :: RelativeTime -> RelativeTime -> RelativeTime -> Text
+percentage tolerance a b = Text.pack (printf "%.2f" (fromIntegral @Int @Double (ua * 10000 `div` ub) / 100.0))
+  where st = relativeTimeSeconds tolerance
+        -- Plus 1 to prevent division by zero
+        sa = relativeTimeSeconds a + 1
+        sb = relativeTimeSeconds b + 1
+        ua = min (sa + st) sb
+        ub = sb
+
+relativeTimeSeconds :: RelativeTime -> Int
+relativeTimeSeconds (RelativeTime dt) = floor (nominalDiffTimeToSeconds dt)
+
 runQueryTip
   :: AnyConsensusModeParams
   -> NetworkId
@@ -177,16 +192,24 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
         ChainTipAtGenesis -> 0
         ChainTip slotNo _ _ -> slotNo
 
-  result <- mProgressQuery anyEra consensusMode localNodeConnInfo tipSlotNo
+  tipTimeResult <- mProgressQuery anyEra consensusMode localNodeConnInfo tipSlotNo
+    <&> bimap toJsonPastHorizonException fst
 
-  let jsonRelativeDiffTime = case result of
-        Left e -> toJsonPastHorizonException e
-        Right (RelativeTime relativeDiffTime, _slotLength) -> toJSON relativeDiffTime
+  let jsonTipTime :: Aeson.Value = either identity (toJSON . relativeTimeSeconds) tipTimeResult
+
+  systemStart <- mSystemStartQuery anyEra consensusMode localNodeConnInfo
+
+  nowSeconds <- toRelativeTime systemStart <$> liftIO getCurrentTime
+
+  let tolerance = RelativeTime (secondsToNominalDiffTime 600)
+  let jsonSyncProgress = either identity (toJSON . flip (percentage tolerance) nowSeconds) tipTimeResult
 
   let output = encodePretty
         . toObject "era" (Just (toJSON anyEra))
         . toObject "epoch" mEpoch
-        . toObject "relativeTime" (Just jsonRelativeDiffTime)
+        . toObject "tipTime" (Just jsonTipTime)
+        . toObject "now" (Just (relativeTimeSeconds nowSeconds))
+        . toObject "syncProgress" (Just jsonSyncProgress)
         $ toJSON tip
 
   case mOutFile of
@@ -227,6 +250,21 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
         case eResult of
           Left acqFail -> left (ShelleyQueryCmdGeneric (show acqFail))
           Right eraHistory -> return $ getProgress slotNo eraHistory
+
+      mode -> left (ShelleyQueryCmdGeneric ("Not cardano mode: " <> show mode))
+
+    mSystemStartQuery
+      :: AnyCardanoEra
+      -> ConsensusMode mode
+      -> LocalNodeConnectInfo mode
+      -> ExceptT ShelleyQueryCmdError IO SystemStart
+    mSystemStartQuery _ cMode lNodeConnInfo = case cMode of
+      CardanoMode -> do
+        let epochQuery = QuerySystemStart CardanoModeIsMultiEra  -- QueryInShelleyBasedEra sbe QueryEpoch
+        eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
+        case eResult of
+          Left acqFail -> left (ShelleyQueryCmdGeneric (show acqFail))
+          Right systemStart -> return systemStart
 
       mode -> left (ShelleyQueryCmdGeneric ("Not cardano mode: " <> show mode))
 
