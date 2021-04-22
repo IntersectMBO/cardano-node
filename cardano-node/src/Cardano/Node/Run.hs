@@ -16,11 +16,13 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
+import           Cardano.Prelude hiding (ByteString, atomically, take, trace, STM)
 import           Prelude (String)
+import qualified Data.Map as Map
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
+import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Tracer
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
@@ -28,7 +30,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
-import           Network.Socket (AddrInfo, SockAddr, Socket)
+import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
 #ifdef UNIX
@@ -67,8 +69,8 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
-                   DomainAddress, PeerSelectionTargets (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..), RelayAddress (..), DomainAddress (..))
+                   PeerSelectionTargets (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..), RelayAddress (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                      gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
@@ -222,29 +224,23 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
   eitherTopology <- readTopologyFile nc
   nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
 
-  let relayAddresses = producerAddresses nt
-      dnsLocalRoots :: [(NodeDnsAddress, PeerAdvertise)]
-      dnsLocalRoots = [ (NodeAddress (NodeHostDnsAddress (decodeUtf8 domain))
-                                                         port
-                         , pa)
-                      | (RelayDomain (DomainAddress domain port), pa) <- relayAddresses ]
-      ipLocalRoots  :: [(NodeIPAddress,  PeerAdvertise)]
-      ipLocalRoots = [ (NodeAddress (NodeHostIPAddress ip) port, pa)
-                     | (RelayAddress ip port, pa) <- relayAddresses ]
+  let (localRoots, publicRoots) = producerAddresses nt
 
-      diffusionArguments :: DiffusionArguments
+  localRootsVar <- newTVarIO localRoots
+  publicRootsVar <- newTVarIO publicRoots
+  useLedgerVar <- newTVarIO (useLedgerAfterSlot nt)
+
+  let
+      diffusionArguments :: DiffusionArguments IO
       diffusionArguments =
         createDiffusionArguments
           nc
           publicIPv4SocketOrAddr
           publicIPv6SocketOrAddr
           localSocketOrPath
-          ((\(a, b) -> (nodeHostIPAddressToSockAddr a, b))
-            `map` ipLocalRoots)
-          ((\(a,b) -> (nodeDnsAddressToDomainAddress a, b))
-            `map` dnsLocalRoots)
-          []
-          (useLedgerAfterSlot nt)
+          (readTVar localRootsVar)
+          (readTVar publicRootsVar)
+          (readTVar useLedgerVar)
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
@@ -257,10 +253,10 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
     (meta, LogMessage . Text.pack . show . ncDiffusionMode $ nc)
   traceNamedObject
     (appendName "local-roots" trace)
-    (meta, LogMessage . Text.pack . show $ dnsLocalRoots)
+    (meta, LogMessage . Text.pack . show $ localRoots)
   traceNamedObject
-    (appendName "local-roots" trace)
-    (meta, LogMessage . Text.pack . show $ ipLocalRoots)
+    (appendName "public-roots" trace)
+    (meta, LogMessage . Text.pack . show $ publicRoots)
   traceNamedObject
     (appendName "local-socket" trace)
     (meta, LogMessage . Text.pack . show $ localSocketOrPath)
@@ -378,11 +374,10 @@ createDiffusionArguments
   -> SocketOrSocketInfo Socket SocketPath
   -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
   -- NodeToClient communication.
-  -> [(SockAddr, PeerAdvertise)]
-  -> [(DomainAddress, PeerAdvertise)]
-  -> [DomainAddress]
-  -> UseLedgerAfter
-  -> DiffusionArguments
+  -> STM m [(Int, Map RelayAddress PeerAdvertise)]
+  -> STM m [RelayAddress]
+  -> STM m UseLedgerAfter
+  -> DiffusionArguments m
 createDiffusionArguments NodeConfiguration {
                            ncTargetNumberOfRootPeers,
                            ncTargetNumberOfKnownPeers,
@@ -395,10 +390,9 @@ createDiffusionArguments NodeConfiguration {
                          publicIPv4SocketsOrAddrs
                          publicIPv6SocketsOrAddrs
                          localSocketOrPath
-                         daStaticLocalRootPeers
-                         daLocalRootPeers
-                         daPublicRootPeers
-                         daUseLedgerAfter
+                         daReadLocalRootPeers
+                         daReadPublicRootPeers
+                         daReadUseLedgerAfter
                          =
   DiffusionArguments
     { daIPv4Address = case publicIPv4SocketsOrAddrs of
@@ -412,10 +406,9 @@ createDiffusionArguments NodeConfiguration {
     , daLocalAddress = case localSocketOrPath of  -- TODO allow expressing the Nothing case in the config
                         ActualSocket socket          -> Just $ Left socket
                         SocketInfo (SocketPath path) -> Just $ Right path
-    , daStaticLocalRootPeers
-    , daLocalRootPeers
-    , daPublicRootPeers
-    , daUseLedgerAfter
+    , daReadLocalRootPeers
+    , daReadPublicRootPeers
+    , daReadUseLedgerAfter
     -- TODO: these limits are arbitrary at the moment;
     -- issue: https://github.com/input-output-hk/ouroboros-network/issues/1836
     , daAcceptedConnectionsLimit = AcceptedConnectionsLimit {
@@ -439,12 +432,19 @@ createDiffusionArguments NodeConfiguration {
 
 producerAddresses
   :: NetworkTopology
-  -> [(RelayAddress,  PeerAdvertise)]
+  -> ([(Int, Map RelayAddress PeerAdvertise)], [RelayAddress])
 producerAddresses nt =
   case nt of
     RealNodeTopology lrpg prp _ ->
-      concatMap (rootAddressToRelayAddress . localRoots) (groups lrpg)
-      ++ concatMap rootAddressToRelayAddress (map publicRoots prp)
+      ( map (\lrp -> ( valency lrp
+                    , Map.fromList $ rootAddressToRelayAddress
+                                   $ localRoots lrp
+                    )
+            )
+            (groups lrpg)
+      , concatMap (map fst . rootAddressToRelayAddress)
+                  (map publicRoots prp)
+      )
 
 useLedgerAfterSlot
   :: NetworkTopology
