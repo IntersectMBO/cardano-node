@@ -12,6 +12,7 @@
 , gitrev ? null
 , iohkNix ? import sources.iohk-nix { inherit system; }
 , haskellNix ? (import sources."haskell.nix" { inherit system sourcesOverride; }).nixpkgsArgs
+, workbenchConfig ? {}
 }:
 let
   # for inclusion in pkgs:
@@ -25,7 +26,9 @@ let
     ++ iohkNix.overlays.iohkNix
     # our own overlays:
     ++ [
-      (pkgs: _: with pkgs; {
+      (pkgs: _:
+        let workbench = pkgs.callPackage ./workbench workbenchConfig; in
+        with pkgs; {
         inherit gitrev;
 
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
@@ -33,6 +36,9 @@ let
           // import ./util.nix { inherit haskell-nix; }
           # also expose our sources, nixpkgs and overlays
           // { inherit overlays sources nixpkgs; };
+
+        inherit workbench;
+        inherit (workbench) runWorkbench runJq;
       })
       # And, of course, our haskell-nix-ified cabal project:
       (import ./pkgs.nix)

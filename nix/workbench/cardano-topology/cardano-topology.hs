@@ -11,6 +11,7 @@ import qualified Data.GraphViz as G
 import qualified Data.GraphViz.Attributes.Complete as G
 import qualified Data.GraphViz.Printing as G
 import           Data.List (tails)
+import           Data.Maybe (isJust)
 import qualified Data.Text.Lazy.IO as T
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           GHC.Generics
@@ -168,6 +169,7 @@ mkNode Spec{..} = Node{..}
     org = "IOHK"
     nodeId = id
     pools = mpools
+    stakePool = isJust mpools
     region = locationRegion loc
     producers = idName <$> links
 
@@ -184,6 +186,7 @@ data Node = Node
   , producers :: [String]
   , nodeId    :: Int
   , pools     :: Maybe Int
+  , stakePool :: Bool
   }
   deriving (Generic, Show)
 
