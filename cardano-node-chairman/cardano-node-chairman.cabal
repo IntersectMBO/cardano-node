@@ -80,7 +80,6 @@ executable cardano-node-chairman
                       , network-mux
                       , optparse-applicative
                       , ouroboros-consensus
-                      , ouroboros-consensus-cardano
                       , ouroboros-network
                       , ouroboros-network-framework
                       , process

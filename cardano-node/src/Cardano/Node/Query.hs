@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- | Answer queries using the ledger state of the running node
@@ -17,7 +18,7 @@ import           Cardano.Prelude
 import           Data.Time.Clock (UTCTime)
 
 -- Consensus
-import           Ouroboros.Consensus.Block (BlockProtocol, SlotNo)
+import           Ouroboros.Consensus.Block (SlotNo)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Config (TopLevelConfig, configBlock, configLedger)
 import           Ouroboros.Consensus.Config.SupportsNode (getSystemStart)
@@ -31,6 +32,8 @@ import           Ouroboros.Consensus.Node (RunNode)
 import           Ouroboros.Consensus.Node.ProtocolInfo (pInfoConfig)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
+import qualified Cardano.Api.Protocol.Types as Protocol
+
 -- Byron
 import qualified Cardano.Chain.Genesis as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Conversions as Byron
@@ -40,46 +43,53 @@ import           Ouroboros.Consensus.Shelley.Ledger (shelleyLedgerGenesis)
 import qualified Shelley.Spec.Ledger.API as SL
 
 -- Cardano
-import qualified Ouroboros.Consensus.Cardano as Consensus
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as CanHardFork
-import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
+import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 
 import           Cardano.Tracing.Kernel
 
 -- | Answer a general query about the current ledger state of the running node.
 answerQuery
-  :: forall blk result. RunNode blk
-  => Consensus.Protocol IO blk (BlockProtocol blk)
+  :: forall blk result
+  . ( RunNode blk
+    , Protocol.Protocol IO blk
+    )
+  => Protocol.BlockType blk
+  -> Protocol.ProtocolInfoArgs IO blk
   -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
   -> HF.HardForkCompatQuery blk result
   -> IO result
-answerQuery protocol nodeKernel query = do
+answerQuery blkType protocol nodeKernel query = do
     extLedgerState <- atomically $ ChainDB.getCurrentLedger chainDB
-    return $ answerQueryWithLedgerState protocol extLedgerState query
+    return $ answerQueryWithLedgerState blkType protocol extLedgerState query
   where
     chainDB = getChainDB nodeKernel
 
 -- | Answer a general query about the given ledger state.
 answerQueryWithLedgerState
-  :: forall blk result. RunNode blk
-  => Consensus.Protocol IO blk (BlockProtocol blk)
+  :: forall blk result
+  . ( RunNode blk
+    , Protocol.Protocol IO blk
+    )
+  => Protocol.BlockType blk
+  -> Protocol.ProtocolInfoArgs IO blk
   -> ExtLedgerState blk
   -> HF.HardForkCompatQuery blk result
   -> result
-answerQueryWithLedgerState protocol extLedgerState query = runIdentity $
-    case protocol of
-      Consensus.ProtocolByron {} ->
+answerQueryWithLedgerState blkType protocol extLedgerState query = runIdentity $
+    case blkType of
+      Protocol.ByronBlockType {} ->
         byronQuery
-      Consensus.ProtocolShelley {} ->
+      Protocol.ShelleyBlockType {} ->
         shelleyBasedQuery
-      Consensus.ProtocolCardano {} ->
+      Protocol.CardanoBlockType {} ->
         HF.forwardCompatQuery
           answerQueryHelper
           query
   where
     cfg :: TopLevelConfig blk
-    cfg = pInfoConfig $ Consensus.protocolInfo protocol
+    cfg = pInfoConfig $ Protocol.protocolInfo protocol
 
     answerQueryHelper
       :: forall m result'. Monad m
@@ -141,13 +151,17 @@ qryEpochStartTimeOfSlot slotNo = HFI.qryFromExpr $
 -- scratch, we don't know yet when the transition to Shelley will happen, so we
 -- can't do conversions for slots from the Shelley era.
 getEpochStartTimeOfSlot
-  :: forall blk.  RunNode blk
-  => Consensus.Protocol IO blk (BlockProtocol blk)
+  :: forall blk
+  . ( RunNode blk
+    , Protocol.Protocol IO blk
+    )
+  => Protocol.BlockType blk
+  -> Protocol.ProtocolInfoArgs IO blk
   -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
   -> SlotNo
   -> IO (Either HFI.PastHorizonException UTCTime)
-getEpochStartTimeOfSlot protocol nodeKernel slotNo = do
-    interpreter <- answerQuery protocol nodeKernel HF.compatGetInterpreter
+getEpochStartTimeOfSlot blkType protocol nodeKernel slotNo = do
+    interpreter <- answerQuery blkType protocol nodeKernel HF.compatGetInterpreter
     -- NOTE: ask for an interpreter sparingly, as it is not super cheap. You can
     -- use that same interpreter to answer many queries.
     --
@@ -172,5 +186,5 @@ getEpochStartTimeOfSlot protocol nodeKernel slotNo = do
           getSystemStart
         . configBlock
         . pInfoConfig
-        . Consensus.protocolInfo
+        . Protocol.protocolInfo
         $ protocol

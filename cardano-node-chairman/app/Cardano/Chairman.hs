@@ -12,7 +12,7 @@
 module Cardano.Chairman (chairmanTest) where
 
 
-import           Cardano.Api.Protocol.Types (SomeNodeClientProtocol (..))
+import           Cardano.Api.Protocol.Types
 import           Cardano.Node.Types (SocketPath (..))
 import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show, throwIO)
 import           Control.Monad.Class.MonadAsync
@@ -23,8 +23,8 @@ import           Control.Monad.Class.MonadTimer
 import           Control.Tracer
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Coerce (coerce)
-import           Ouroboros.Consensus.Block (BlockProtocol, CodecConfig, GetHeader (..), Header)
-import           Ouroboros.Consensus.Cardano
+import           Ouroboros.Consensus.Block (CodecConfig, GetHeader (..), Header)
+import           Ouroboros.Consensus.Config.SecurityParam
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 import           Ouroboros.Consensus.Network.NodeToClient
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (HasNetworkProtocolVersion (..),
@@ -72,7 +72,7 @@ chairmanTest tracer protocol nw securityParam runningTime progressThreshold sock
   traceWith tracer ("Will observe nodes for " ++ show runningTime)
   traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
-  SomeNodeClientProtocol (ptcl :: ProtocolClient blk (BlockProtocol blk)) <- return protocol
+  SomeNodeClientProtocol (ptcl :: ProtocolClientInfoArgs blk) <- return protocol
 
   -- Run the chairman and get the final snapshot of the chain from each node.
   chainsSnapshot <- runChairman

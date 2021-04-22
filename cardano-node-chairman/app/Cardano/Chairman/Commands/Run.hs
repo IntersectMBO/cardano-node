@@ -19,7 +19,7 @@ import           Cardano.Prelude hiding (option)
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (Tracer (..), stdoutTracer)
 import           Options.Applicative
-import           Ouroboros.Consensus.Cardano (SecurityParam (..))
+import           Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
 
 import qualified Data.Time.Clock as DTC
 import qualified Options.Applicative as Opt

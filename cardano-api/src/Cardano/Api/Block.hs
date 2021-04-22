@@ -58,9 +58,9 @@ import qualified Ouroboros.Consensus.Block as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
-import qualified Ouroboros.Consensus.Cardano.ShelleyHFC as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
+import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import qualified Cardano.Chain.Block as Byron

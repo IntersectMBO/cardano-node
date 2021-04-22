@@ -494,7 +494,7 @@ isRollForward (TraceChainSyncRollForward _) = True
 isRollForward _ = False
 
 isTraceBlockFetchServerBlockCount :: TraceBlockFetchServerEvent blk -> Bool
-isTraceBlockFetchServerBlockCount TraceBlockFetchServerSendBlock = True
+isTraceBlockFetchServerBlockCount (TraceBlockFetchServerSendBlock _) = True
 
 mkConsensusTracers
   :: forall blk peer localPeer.
