@@ -145,6 +145,9 @@ let
           };
 
       profiles = genAttrs profile-names mkProfile;
+
+      profilesJSON =
+        runWorkbench "all-profiles.json" "profiles generate-all";
     };
 in
 {

@@ -216,5 +216,6 @@ let
 in
 {
   inherit (pkgs) workbench;
+  inherit (workbenchProfiles) profilesJSON;
   inherit profile stateDir start stop;
 }
