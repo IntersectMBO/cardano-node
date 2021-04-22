@@ -33,6 +33,7 @@ import qualified Network.Socket as Socket (SockAddr)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
+import           Cardano.Node.Configuration.Topology (UseLedger (..))
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), txId)
@@ -183,6 +184,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       PickedPeers {}                 -> Info
       FetchingNewLedgerState {}      -> Info
       DisabledLedgerPeers {}         -> Info
+      TraceUseLedgerAfter {}         -> Info
       WaitingOnRequest {}            -> Debug
       RequestForPeers {}             -> Debug
       ReusingLedgerState {}          -> Debug
@@ -1108,6 +1110,11 @@ instance ToObject TraceLedgerPeers where
   toObject _verb DisabledLedgerPeers =
     mkObject
       [ "kind" .= String "DisabledLedgerPeers"
+      ]
+  toObject _verb (TraceUseLedgerAfter ula) =
+    mkObject
+      [ "kind" .= String "TraceUseLedgerAfter"
+      , "useLedgerAfter" .= UseLedger ula
       ]
   toObject _verb WaitingOnRequest =
     mkObject
