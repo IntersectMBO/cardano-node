@@ -37,6 +37,7 @@ module Cardano.Api.Script (
     fromScriptExecutionUnits,
     Witness(..),
     KeyWitnessInCtx(..),
+    WitCtxPlutus,
     ScriptWitnessInCtx(..),
 
     -- ** Languages supported in each era
@@ -662,6 +663,13 @@ data WitCtxMint
 --
 data WitCtxStake
 
+-- | A tag type for the context in which a key witness is used in a transaction.
+--
+-- This type tags the context as being a Plutus script requiring additional
+-- key witnesses.
+
+data WitCtxPlutus
+
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
 --
@@ -776,9 +784,10 @@ deriving instance Show (Witness witctx era)
 
 data KeyWitnessInCtx witctx where
 
-     KeyWitnessForPlutusFee :: KeyWitnessInCtx WitCtxTxIn
-     KeyWitnessForSpending  :: KeyWitnessInCtx WitCtxTxIn
-     KeyWitnessForStakeAddr :: KeyWitnessInCtx WitCtxStake
+     KeyWitnessForPlutusFee    :: KeyWitnessInCtx WitCtxTxIn
+     KeyWitnessForSpending     :: KeyWitnessInCtx WitCtxTxIn
+     KeyWitnessForStakeAddr    :: KeyWitnessInCtx WitCtxStake
+     KeyWitnessForPlutusScript :: KeyWitness era -> KeyWitnessInCtx WitCtxPlutus
 
 data ScriptWitnessInCtx witctx where
 

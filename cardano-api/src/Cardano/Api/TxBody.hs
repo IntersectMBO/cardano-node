@@ -910,6 +910,22 @@ data TxMintValue build era where
 deriving instance Eq   (TxMintValue build era)
 deriving instance Show (TxMintValue build era)
 
+
+data TxPlutusWitnesses build era where
+    TxPlutusWitnessesNone :: TxPlutusWitnesses build era
+    TxPlutusWitnesses      :: TxPlutusWitnessesSupportedInEra era
+                           -> [BuildTxWith build (Witness WitCtxPlutus era)]
+                           -> TxPlutusWitnesses build era
+
+deriving instance Eq   (TxPlutusWitnesses build era)
+deriving instance Show (TxPlutusWitnesses build era)
+
+data TxPlutusWitnessesSupportedInEra era where
+    TxPlutusWitnessesSupportedInAlonzoEra :: TxPlutusWitnessesSupportedInEra AlonzoEra
+
+deriving instance Eq   (TxPlutusWitnessesSupportedInEra era)
+deriving instance Show (TxPlutusWitnessesSupportedInEra era)
+
 -- ----------------------------------------------------------------------------
 -- Data necessary to create a hash of the script execution data.
 --
@@ -944,18 +960,19 @@ _witnessPPDataSupportedInEra AlonzoEra  = Just WitnessPPDataSupportedInAlonzoEra
 
 data TxBodyContent build era =
      TxBodyContent {
-       txIns            :: [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))],
-       txOuts           :: [TxOut era],
-       txFee            :: TxFee era,
-       txValidityRange  :: (TxValidityLowerBound era,
-                            TxValidityUpperBound era),
-       txMetadata       :: TxMetadataInEra era,
-       txAuxScripts     :: TxAuxScripts era,
-       txWithdrawals    :: TxWithdrawals  build era,
-       txCertificates   :: TxCertificates build era,
-       txUpdateProposal :: TxUpdateProposal era,
-       txMintValue      :: TxMintValue build era,
-       txWitnessPPData  :: TxWitnessPPDataHash era
+       txIns             :: [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))],
+       txOuts            :: [TxOut era],
+       txFee             :: TxFee era,
+       txValidityRange   :: (TxValidityLowerBound era,
+                             TxValidityUpperBound era),
+       txMetadata        :: TxMetadataInEra era,
+       txAuxScripts      :: TxAuxScripts era,
+       txWithdrawals     :: TxWithdrawals  build era,
+       txCertificates    :: TxCertificates build era,
+       txUpdateProposal  :: TxUpdateProposal era,
+       txMintValue       :: TxMintValue build era,
+       txPlutusWitnesses :: TxPlutusWitnesses build era,
+       txWitnessPPData   :: TxWitnessPPDataHash era
      }
 
 
@@ -2172,7 +2189,9 @@ makeByronTransactionBodyContent txIns txOuts =
     txWithdrawals    = TxWithdrawalsNone,
     txCertificates   = TxCertificatesNone,
     txUpdateProposal = TxUpdateProposalNone,
-    txMintValue      = TxMintNone
+    txMintValue      = TxMintNone,
+    txPlutusWitnesses = TxPlutusWitnessesNone,
+    txWitnessPPData   = TxWitnessPPDataHashNone
   }
 
 

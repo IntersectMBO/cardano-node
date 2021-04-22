@@ -578,6 +578,7 @@ genTxBodyContent era = do
     , txCertificates = certs
     , txUpdateProposal = updateProposal
     , txMintValue = mintValue
+    , txPlutusWitnesses = panic "TODO"
     , txWitnessPPData = panic "TODO"
     }
 
