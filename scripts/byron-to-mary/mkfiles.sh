@@ -32,8 +32,9 @@ set -e
 #    below. It's good for a quick test, and does not rely on posting update
 #    proposals to the chain.
 #    This is quite convenient, but it does not test that we can do the
-#    transition by posting update proposals to the network.
-#
+#    transition by posting update proposals to the network. For even more convenience
+#    if you want to start a node in Shelley, Allegra or Mary from epoch 0, supply the script
+#    with a shelley, allegra or mary string argument. E.g mkfiles.sh mary.
 
 ROOT=example
 
@@ -540,3 +541,31 @@ echo "  --cardano-mode --allegra-era --testnet-magic 42"
 echo
 echo "Similarly, use --mary-era in the Mary era."
 popd
+
+# For an automatic transition at epoch 0, specifying mary, allegra or shelley
+# will start the node in the appropriate era.
+echo ""
+if [ "$1" = "mary" ]; then
+  echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestMaryHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  sed -i ${ROOT}/configuration.yaml \
+      -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 4/'
+  echo "Nodes will start in Mary era from epoch 0"
+
+elif [ "$1" = "allegra" ]; then
+  echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  sed -i ${ROOT}/configuration.yaml \
+      -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 3/'
+  echo "Nodes will start in Allegra era from epoch 0"
+
+elif [ "$1" = "shelley" ]; then
+  echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  sed -i ${ROOT}/configuration.yaml \
+      -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 2/'
+  echo "Nodes will start in Shelley era from epoch 0"
+
+else
+  echo "Default yaml configuration applied."
+fi
