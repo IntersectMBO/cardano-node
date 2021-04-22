@@ -38,6 +38,7 @@ module Cardano.Api.TxBody (
     -- * Transaction outputs
     TxOut(..),
     TxOutValue(..),
+    serialiseAddressForTxOut,
 
     -- * Other transaction body types
     TxFee(..),
@@ -287,31 +288,14 @@ data TxOut era
   deriving Generic
 
 instance IsCardanoEra era => ToJSON (TxOut era) where
-  toJSON (TxOut (AddressInEra addrType addr) val) =
-    case addrType of
-      ByronAddressInAnyEra ->
-        let hexAddr = serialiseToRawBytesHexText addr
-        in object [ "address" .= hexAddr
-                  , "value" .= toJSON val
-                  ]
-      ShelleyAddressInEra sbe ->
-        case sbe of
-          ShelleyBasedEraShelley ->
-            object
-              [ "address" .= serialiseToBech32 addr
-              , "value" .= toJSON val
-              ]
-          ShelleyBasedEraAllegra ->
-            object
-              [ "address" .= serialiseToBech32 addr
-              , "value" .= toJSON val
-              ]
-          ShelleyBasedEraMary ->
-            object
-              [ "address" .= serialiseToBech32 addr
-              , "value" .= toJSON val
-              ]
+  toJSON (TxOut addr val) =
+    object ["address" .= serialiseAddressForTxOut addr, "value" .= toJSON val]
 
+serialiseAddressForTxOut :: AddressInEra era -> Text
+serialiseAddressForTxOut (AddressInEra addrType addr) =
+  case addrType of
+    ByronAddressInAnyEra  -> serialiseToRawBytesHexText addr
+    ShelleyAddressInEra _ -> serialiseToBech32 addr
 
 
 deriving instance Eq   (TxOut era)
