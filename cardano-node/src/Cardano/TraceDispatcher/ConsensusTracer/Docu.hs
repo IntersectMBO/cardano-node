@@ -37,7 +37,7 @@ import           Ouroboros.Consensus.Forecast (OutsideForecastRange)
 
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision)
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline(..))
 import           Ouroboros.Network.BlockFetch.DeltaQ
                      (PeerFetchInFlightLimits (..))
 import           Ouroboros.Network.Mux (ControlMessage)
@@ -49,11 +49,15 @@ import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 import           Cardano.TraceDispatcher.OrphanInstances.Network ()
 import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
 
+
 protoHeader :: Header blk
 protoHeader = undefined
 
 protoPoint :: Point blk
 protoPoint = undefined
+
+protoPointH :: Point (Header blk)
+protoPointH = undefined
 
 protoOurTipBlock :: Our (Tip blk)
 protoOurTipBlock = undefined
@@ -67,7 +71,7 @@ protoChainSyncClientException = undefined
 protoChainSyncClientResult :: ChainSyncClientResult
 protoChainSyncClientResult = undefined
 
-protoChainUpdate :: ChainUpdate block a
+protoChainUpdate :: ChainUpdate blk a
 protoChainUpdate = undefined
 
 protoTip :: Tip blk
@@ -77,21 +81,21 @@ protoRemotePeer :: remotePeer
 protoRemotePeer = undefined
 
 protoFetchDecline :: FetchDecision [Point (Header blk)]
-protoFetchDecline = Left undefined
+protoFetchDecline = Left FetchDeclineChainNotPlausible
 
 protoFetchResult :: FetchDecision [Point (Header blk)]
-protoFetchResult = Right undefined
+protoFetchResult = Right [protoPointH]
 
-protoFetchRequest :: BlockFetch.FetchRequest header
+protoFetchRequest :: BlockFetch.FetchRequest (Header blk)
 protoFetchRequest = undefined
 
-protoPeerFetchInFlight :: BlockFetch.PeerFetchInFlight h
+protoPeerFetchInFlight :: BlockFetch.PeerFetchInFlight (Header blk)
 protoPeerFetchInFlight = undefined
 
 protoPeerFetchInFlightLimits :: PeerFetchInFlightLimits
 protoPeerFetchInFlightLimits = PeerFetchInFlightLimits 10 10
 
-protoPeerFetchStatus :: BlockFetch.PeerFetchStatus header
+protoPeerFetchStatus :: BlockFetch.PeerFetchStatus (Header blk)
 protoPeerFetchStatus = undefined
 
 protoChainRange :: BlockFetch.ChainRange (Point header)
@@ -109,14 +113,14 @@ protoTx = undefined
 protoTxId :: txId
 protoTxId = undefined
 
+protoGenTxId :: GenTxId txId
+protoGenTxId = undefined
+
 protoControlMessage :: ControlMessage
 protoControlMessage = undefined
 
 protoGenTx :: GenTx blk
 protoGenTx = undefined
-
-protoGenTxId :: GenTxId blk
-protoGenTxId = undefined
 
 protoMempoolSize :: MempoolSize
 protoMempoolSize = undefined
@@ -212,7 +216,7 @@ docBlockFetchDecision = Documented [
 
 
 docBlockFetchClient ::
-  Documented (BlockFetch.TraceLabelPeer remotePeer (BlockFetch.TraceFetchClientState header))
+  Documented (BlockFetch.TraceLabelPeer remotePeer (BlockFetch.TraceFetchClientState (Header blk)))
 docBlockFetchClient = Documented [
     DocMsg
       (BlockFetch.TraceLabelPeer protoRemotePeer
@@ -249,7 +253,7 @@ docBlockFetchClient = Documented [
     DocMsg
       (BlockFetch.TraceLabelPeer protoRemotePeer
         (BlockFetch.CompletedBlockFetch
-          protoPoint
+          protoPointH
           protoPeerFetchInFlight
           protoPeerFetchInFlightLimits
           protoPeerFetchStatus
@@ -332,7 +336,7 @@ docTxInbound = Documented [
     "TODO"
   ]
 
-docTxOutbound ::
+docTxOutbound :: forall remotePeer txid tx.
   Documented (BlockFetch.TraceLabelPeer remotePeer
     (TraceTxSubmissionOutbound txid tx))
 docTxOutbound = Documented [
@@ -386,7 +390,7 @@ docMempool = Documented [
       "Transactions that have been manually removed from the Mempool."
   ]
 
-docForge :: forall blk. Documented (TraceLabelCreds (TraceForgeEvent blk))
+docForge :: Documented (TraceLabelCreds (TraceForgeEvent blk))
 docForge = Documented [
     DocMsg
       (TraceLabelCreds protoTxt

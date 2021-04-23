@@ -3,8 +3,8 @@
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DataKinds #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -26,8 +26,8 @@ import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId,
-                     HasTxId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
+                     GenTxId, HasTxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
                      TraceEventMempool (..))

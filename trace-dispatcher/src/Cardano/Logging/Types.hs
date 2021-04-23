@@ -6,8 +6,6 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
-
-
 module Cardano.Logging.Types (
     LogFormatting(..)
   , Metric(..)
@@ -63,21 +61,6 @@ class LogFormatting a where
   -- No metrics by default
   asMetrics :: a -> [Metric]
   asMetrics _v = []
-
-instance LogFormatting Double where
-  forMachine d _ = mkObject [ "val" .= A.String ((pack . show) d)]
-  forHuman d     = (pack . show) d
-  asMetrics d    = [DoubleM Nothing d]
-
-instance LogFormatting Int where
-  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
-  forHuman i     = (pack . show) i
-  asMetrics i    = [IntM Nothing (fromIntegral i)]
-
-instance LogFormatting Integer where
-  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
-  forHuman i     = (pack . show) i
-  asMetrics i    = [IntM Nothing i]
 
 data Metric
   -- | An integer metric.
@@ -263,6 +246,21 @@ instance LogFormatting b => LogFormatting (Folding a b) where
   forMachine v (Folding b) =  forMachine v b
   forHuman (Folding b)     =  forHuman b
   asMetrics (Folding b)    =  asMetrics b
+
+instance LogFormatting Double where
+  forMachine d _ = mkObject [ "val" .= A.String ((pack . show) d)]
+  forHuman d     = (pack . show) d
+  asMetrics d    = [DoubleM Nothing d]
+
+instance LogFormatting Int where
+  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
+  forHuman i     = (pack . show) i
+  asMetrics i    = [IntM Nothing (fromIntegral i)]
+
+instance LogFormatting Integer where
+  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
+  forHuman i     = (pack . show) i
+  asMetrics i    = [IntM Nothing i]
 
 instance A.ToJSON DetailLevel where
     toEncoding = A.genericToEncoding A.defaultOptions

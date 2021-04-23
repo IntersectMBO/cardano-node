@@ -235,11 +235,13 @@ severityMempool ::
   -> SeverityS
 severityMempool _ = Info
 
+-- TODO: not working with undefines because of bang patterns
 namesForMempool :: TraceEventMempool blk -> [Text]
-namesForMempool TraceMempoolAddedTx {}            = ["AddedTx"]
-namesForMempool TraceMempoolRejectedTx {}         = ["RejectedTx"]
-namesForMempool TraceMempoolRemoveTxs {}          = ["RemoveTxs"]
-namesForMempool TraceMempoolManuallyRemovedTxs {} = ["ManuallyRemovedTxs"]
+-- namesForMempool (TraceMempoolAddedTx _ _ _)            = ["AddedTx"]
+-- namesForMempool TraceMempoolRejectedTx {}         = ["RejectedTx"]
+-- namesForMempool TraceMempoolRemoveTxs {}          = ["RemoveTxs"]
+-- namesForMempool TraceMempoolManuallyRemovedTxs {} = ["ManuallyRemovedTxs"]
+namesForMempool _            = []
 
 severityForge :: TraceLabelCreds (TraceForgeEvent blk) -> SeverityS
 severityForge (TraceLabelCreds _t e) = severityForge' e
