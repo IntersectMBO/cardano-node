@@ -50,11 +50,14 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
     dns domain `y.y.y.y` (assuming they are), and try to maintain a connection with at least `1` of the
     resolved ips.
 
-* `isDomain` tells if a given address is a dns address or not. If true and object `domain: { domain, port }` should be specified instead.
-
 * `valency` tells the node how many connections your node should try to pick from the given group. If a dns address is given, valency governs to how many resolved ip addresses should we maintain active (hot) connection.
 
 Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network.
+
+You __can__ tell the node that the topology configuration file changed by sending a SIGHUP
+signal to the `cardano-node` process, e.g. `pkill -HUP cardano-node`. After receiving the
+signal, `cardano-node` will re-read the file and restart all dns resolution. Please
+**note** that this only applies to the topology configuration file!
 
 #### The genesis.json file
 
