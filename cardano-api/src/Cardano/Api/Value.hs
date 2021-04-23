@@ -38,6 +38,7 @@ module Cardano.Api.Value
 
     -- * Internal conversion functions
   , toByronLovelace
+  , fromByronLovelace
   , toShelleyLovelace
   , fromShelleyLovelace
   , fromShelleyDeltaLovelace
@@ -98,6 +99,9 @@ toByronLovelace (Lovelace x) =
     case Byron.integerToLovelace x of
       Left  _  -> Nothing
       Right x' -> Just x'
+
+fromByronLovelace :: Byron.Lovelace -> Lovelace
+fromByronLovelace = Lovelace . Byron.lovelaceToInteger
 
 toShelleyLovelace :: Lovelace -> Shelley.Coin
 toShelleyLovelace (Lovelace l) = Shelley.Coin l
