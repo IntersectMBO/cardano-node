@@ -37,12 +37,18 @@ import           System.Environment (lookupEnv)
 #ifdef UNIX
 import           System.Posix.Files
 import           System.Posix.Types (FileMode)
+import qualified System.Posix.Signals as Signals
 #else
 import           System.Win32.File
 #endif
 
+#ifdef UNIX
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                   mkLOMeta)
+                     mkLOMeta, LOMeta)
+#else
+import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
+                     mkLOMeta)
+#endif
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -244,6 +250,16 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
   publicRootsVar <- newTVarIO publicRoots
   useLedgerVar <- newTVarIO (useLedgerAfterSlot nt)
 
+#ifdef UNIX
+  _ <- Signals.installHandler
+        Signals.sigHUP
+        (updateVars meta localRootsVar publicRootsVar useLedgerVar)
+        Nothing
+#endif
+  traceNamedObject
+          (appendName "signal-handler" trace)
+          (meta, LogMessage (Text.pack "Installed signal handler"))
+
   let diffusionArguments :: DiffusionArguments IO
       diffusionArguments =
         createDiffusionArguments
@@ -270,6 +286,9 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
   traceNamedObject
     (appendName "public-roots" trace)
     (meta, LogMessage . Text.pack . show $ publicRoots)
+  traceNamedObject
+    (appendName "use-ledger-after-slot" trace)
+    (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
   traceNamedObject
     (appendName "local-socket" trace)
     (meta, LogMessage . Text.pack . show $ localSocketOrPath)
@@ -328,6 +347,41 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
   traceNodeBasicInfo tr basicInfoItems =
     forM_ basicInfoItems $ \(LogObject nm mt content) ->
       traceNamedObject (appendName nm tr) (mt, content)
+
+#ifdef UNIX
+  updateVars :: LOMeta
+             -> StrictTVar IO [(Int, Map RelayAddress PeerAdvertise)]
+             -> StrictTVar IO [RelayAddress]
+             -> StrictTVar IO UseLedgerAfter
+             -> Signals.Handler
+  updateVars meta localRootsVar publicRootsVar useLedgerVar =
+    Signals.Catch $ do
+      traceNamedObject
+          (appendName "signal-handler" trace)
+          (meta, LogMessage (Text.pack "SIGHUP signal received - Performing topology configuration update"))
+
+      eitherTopology <- readTopologyFile nc
+      nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
+
+      let (localRoots, publicRoots) = producerAddresses nt
+
+      atomically $ do
+        writeTVar localRootsVar localRoots
+        writeTVar publicRootsVar publicRoots
+        writeTVar useLedgerVar (useLedgerAfterSlot nt)
+
+      traceNamedObject
+        (appendName "local-roots" trace)
+        (meta, LogMessage . Text.pack . show $ localRoots)
+      traceNamedObject
+        (appendName "public-roots" trace)
+        (meta, LogMessage . Text.pack . show $ publicRoots)
+      traceNamedObject
+        (appendName "use-ledger-after-slot" trace)
+        (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
+
+{-# ANN handleSimpleNode ("HLint: ignore Reduce duplication" :: Text) #-}
+#endif
 
 --------------------------------------------------------------------------------
 -- Helper functions
