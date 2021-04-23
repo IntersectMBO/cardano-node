@@ -10,14 +10,8 @@
 -- | User-friendly pretty-printing for textual user interfaces (TUI)
 module Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS) where
 
-import           Cardano.Api as Api
-import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness))
-import           Cardano.Api.Shelley (Address (ShelleyAddress),
-                   KeyWitness (ShelleyBootstrapWitness, ShelleyKeyWitness), StakeAddress (..))
-import           Cardano.CLI.Helpers (textShow)
-import           Cardano.Ledger.Crypto (Crypto)
-import qualified Cardano.Ledger.Shelley.API as Shelley
 import           Cardano.Prelude
+
 import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
@@ -29,13 +23,22 @@ import           Data.Yaml (array)
 import           Data.Yaml.Pretty (setConfCompare)
 import qualified Data.Yaml.Pretty as Yaml
 
+import           Cardano.Api as Api
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness))
+import           Cardano.Api.Shelley (Address (ShelleyAddress),
+                   KeyWitness (ShelleyBootstrapWitness, ShelleyKeyWitness), StakeAddress (..),
+                   StakeCredential (..), StakePoolParameters (..), fromShelleyPaymentCredential,
+                   fromShelleyStakeCredential, fromShelleyStakeReference)
+import           Cardano.CLI.Helpers (textShow)
+import qualified Cardano.Ledger.Shelley.API as Shelley
+
 yamlConfig :: Yaml.Config
 yamlConfig = Yaml.defConfig & setConfCompare compare
 
-friendlyTxBS :: CardanoEra era -> Tx era -> ByteString
+friendlyTxBS :: IsCardanoEra era => CardanoEra era -> Tx era -> ByteString
 friendlyTxBS era = Yaml.encodePretty yamlConfig . object . friendlyTx era
 
-friendlyTx :: CardanoEra era -> Tx era -> [Aeson.Pair]
+friendlyTx :: IsCardanoEra era => CardanoEra era -> Tx era -> [Aeson.Pair]
 friendlyTx era (Tx body witnesses) =
   ("witnesses" .= map friendlyKeyWitness witnesses) : friendlyTxBody era body
 
@@ -49,11 +52,13 @@ friendlyKeyWitness =
       ShelleyKeyWitness _era (Shelley.WitVKey key signature) ->
         ["key" .= textShow key, "signature" .= textShow signature]
 
-friendlyTxBodyBS :: CardanoEra era -> TxBody era -> ByteString
+friendlyTxBodyBS
+  :: IsCardanoEra era => CardanoEra era -> TxBody era -> ByteString
 friendlyTxBodyBS era =
   Yaml.encodePretty yamlConfig . object . friendlyTxBody era
 
-friendlyTxBody :: CardanoEra era -> TxBody era -> [Aeson.Pair]
+friendlyTxBody
+  :: IsCardanoEra era => CardanoEra era -> TxBody era -> [Aeson.Pair]
 friendlyTxBody
   era
   (TxBody
@@ -121,64 +126,68 @@ friendlyValidityRange era = \case
                 TxValidityUpperBound _ s -> toJSON s
           ]
     | otherwise -> Null
-  where
-    isLowerBoundSupported = isJust $ validityLowerBoundSupportedInEra era
-    isUpperBoundSupported = isJust $ validityUpperBoundSupportedInEra era
+ where
+  isLowerBoundSupported = isJust $ validityLowerBoundSupportedInEra era
+  isUpperBoundSupported = isJust $ validityUpperBoundSupportedInEra era
 
 friendlyWithdrawals :: TxWithdrawals ViewTx era -> Aeson.Value
 friendlyWithdrawals TxWithdrawalsNone = Null
 friendlyWithdrawals (TxWithdrawals _ withdrawals) =
   array
-    [ object
-        [ "address" .= serialiseAddress addr
-        , "network" .= net
-        , "credential" .= cred
-        , "amount" .= friendlyLovelace amount
-        ]
-    | (addr@(StakeAddress net cred), amount, _) <- withdrawals
+    [ object $
+        "address" .= serialiseAddress addr :
+        "amount" .= friendlyLovelace amount :
+        friendlyStakeAddress addr
+    | (addr, amount, _) <- withdrawals
     ]
 
--- TODO: Babbage era
-friendlyTxOut :: TxOut CtxTx era -> Aeson.Value
-friendlyTxOut (TxOut addr amount mdatum _) =
-  case addr of
-    AddressInEra ByronAddressInAnyEra byronAdr ->
-      object  [ "address era" .= String "Byron"
-              , "address" .= serialiseAddress byronAdr
+friendlyStakeAddress :: StakeAddress -> [Aeson.Pair]
+friendlyStakeAddress (StakeAddress net cred) =
+  [ "network" .= net
+  , friendlyStakeCredential $ fromShelleyStakeCredential cred
+  ]
+
+friendlyTxOut :: IsCardanoEra era => TxOut CtxTx era -> Aeson.Value
+friendlyTxOut (TxOut addr amount mdatum script) =
+  object $
+    case addr of
+      AddressInEra ByronAddressInAnyEra byronAdr ->
+        [ "address era" .= String "Byron"
+        , "address" .= serialiseAddress byronAdr
+        , "amount" .= friendlyTxOutValue amount
+        ]
+      AddressInEra (ShelleyAddressInEra sbe) saddr@(ShelleyAddress net cred stake) ->
+        let preAlonzo =
+              friendlyPaymentCredential (fromShelleyPaymentCredential cred) :
+              [ "address era" .= Aeson.String "Shelley"
+              , "network" .= net
+              , "address" .= serialiseAddress saddr
               , "amount" .= friendlyTxOutValue amount
+              , "stake reference" .=
+                  friendlyStakeReference (fromShelleyStakeReference stake)
               ]
+            datum =
+              [ "datum" .= renderDatum mdatum
+              | isJust $ scriptDataSupportedInEra $ shelleyBasedToCardanoEra sbe
+              ]
+            sinceAlonzo = ["reference script" .= script]
+        in preAlonzo ++ datum ++ sinceAlonzo
+ where
+  renderDatum :: TxOutDatum CtxTx era -> Aeson.Value
+  renderDatum TxOutDatumNone = Aeson.Null
+  renderDatum (TxOutDatumHash _ h) =
+    Aeson.String $ serialiseToRawBytesHexText h
+  renderDatum (TxOutDatumInTx _ sData) =
+    scriptDataToJson ScriptDataJsonDetailedSchema sData
+  renderDatum (TxOutDatumInline _ _) = panic "TODO: Babbage"
 
-    AddressInEra (ShelleyAddressInEra sbe) saddr@(ShelleyAddress net cred stake) ->
-      let preAlonzo :: [Aeson.Pair]
-          preAlonzo =
-            [ "address era" .= Aeson.String "Shelley"
-            , "network" .= net
-            , "payment credential" .= cred
-            , "stake reference" .= friendlyStakeReference stake
-            , "address" .= serialiseAddress saddr
-            , "amount" .= friendlyTxOutValue amount
-            ]
-          datum :: ShelleyBasedEra era -> [Aeson.Pair]
-          datum ShelleyBasedEraShelley = []
-          datum ShelleyBasedEraAllegra = []
-          datum ShelleyBasedEraMary = []
-          datum ShelleyBasedEraAlonzo = ["datum" .= renderDatum mdatum]
-          datum ShelleyBasedEraBabbage = panic "TODO: Babbage"
-      in object $ preAlonzo ++ datum sbe
-  where
-   renderDatum :: TxOutDatum CtxTx era -> Aeson.Value
-   renderDatum TxOutDatumNone = Aeson.Null
-   renderDatum (TxOutDatumHash _ h) =
-     Aeson.String $ serialiseToRawBytesHexText h
-   renderDatum (TxOutDatumInTx _ sData) =
-     scriptDataToJson ScriptDataJsonDetailedSchema sData
-   renderDatum (TxOutDatumInline _ _) = panic "TODO: Babbage"
+          -- datum ShelleyBasedEraBabbage = panic "TODO: Babbage"
 
-friendlyStakeReference :: Crypto crypto => Shelley.StakeReference crypto -> Aeson.Value
+friendlyStakeReference :: StakeAddressReference -> Aeson.Value
 friendlyStakeReference = \case
-  Shelley.StakeRefBase cred -> toJSON cred
-  Shelley.StakeRefNull -> Null
-  Shelley.StakeRefPtr ptr -> toJSON ptr
+  NoStakeAddress -> Null
+  StakeAddressByPointer ptr -> String (show ptr)
+  StakeAddressByValue cred -> object [friendlyStakeCredential cred]
 
 friendlyUpdateProposal :: TxUpdateProposal era -> Aeson.Value
 friendlyUpdateProposal = \case
@@ -269,7 +278,103 @@ friendlyPrices ExecutionUnitPrices{priceExecutionMemory, priceExecutionSteps} =
 friendlyCertificates :: TxCertificates ViewTx era -> Aeson.Value
 friendlyCertificates = \case
   TxCertificatesNone -> Null
-  TxCertificates _ cs _ -> toJSON $ map textShow cs
+  TxCertificates _ cs _ -> array $ map friendlyCertificate cs
+
+friendlyCertificate :: Certificate -> Aeson.Value
+friendlyCertificate =
+  object
+    . (: [])
+    . \case
+      -- Stake address certificates
+      StakeAddressRegistrationCertificate credential ->
+        "stake address registration"
+          .= object [friendlyStakeCredential credential]
+      StakeAddressDeregistrationCertificate credential ->
+        "stake address deregistration"
+          .= object [friendlyStakeCredential credential]
+      StakeAddressDelegationCertificate credential poolId ->
+        "stake address delegation"
+          .= object [friendlyStakeCredential credential, "pool" .= poolId]
+
+      -- Stake pool certificates
+      StakePoolRegistrationCertificate parameters ->
+        "stake pool registration" .= friendlyStakePoolParameters parameters
+      StakePoolRetirementCertificate poolId epochNo ->
+        "stake pool retirement" .= object ["pool" .= poolId, "epoch" .= epochNo]
+
+      -- Special certificates
+      GenesisKeyDelegationCertificate
+        genesisKeyHash
+        delegateKeyHash
+        vrfKeyHash ->
+          "genesis key delegation"
+            .= object
+              [ "genesis key hash"
+                  .= serialiseToRawBytesHexText genesisKeyHash,
+                "delegate key hash"
+                  .= serialiseToRawBytesHexText delegateKeyHash,
+                "VRF key hash" .= serialiseToRawBytesHexText vrfKeyHash
+              ]
+      MIRCertificate pot target ->
+        "MIR" .= object ["pot" .= friendlyMirPot pot, friendlyMirTarget target]
+
+friendlyMirTarget :: MIRTarget -> Aeson.Pair
+friendlyMirTarget = \case
+  StakeAddressesMIR addresses ->
+    "target stake addresses" .=
+      [ object
+          [ friendlyStakeCredential credential
+          , "amount" .= friendlyLovelace lovelace
+          ]
+      | (credential, lovelace) <- addresses
+      ]
+  SendToReservesMIR amount -> "send to reserves" .= friendlyLovelace amount
+  SendToTreasuryMIR amount -> "send to treasury" .= friendlyLovelace amount
+
+friendlyStakeCredential :: StakeCredential -> Aeson.Pair
+friendlyStakeCredential = \case
+  StakeCredentialByKey keyHash ->
+    "stake credential key hash" .= serialiseToRawBytesHexText keyHash
+  StakeCredentialByScript scriptHash ->
+    "stake credential script hash" .= serialiseToRawBytesHexText scriptHash
+
+friendlyPaymentCredential :: PaymentCredential -> Aeson.Pair
+friendlyPaymentCredential = \case
+  PaymentCredentialByKey keyHash ->
+    "payment credential key hash" .= serialiseToRawBytesHexText keyHash
+  PaymentCredentialByScript scriptHash ->
+    "payment credential script hash" .= serialiseToRawBytesHexText scriptHash
+
+friendlyMirPot :: Shelley.MIRPot -> Aeson.Value
+friendlyMirPot = \case
+  Shelley.ReservesMIR -> "reserves"
+  Shelley.TreasuryMIR -> "treasury"
+
+friendlyStakePoolParameters :: StakePoolParameters -> Aeson.Value
+friendlyStakePoolParameters
+  StakePoolParameters
+    { stakePoolId
+    , stakePoolVRF
+    , stakePoolCost
+    , stakePoolMargin
+    , stakePoolRewardAccount
+    , stakePoolPledge
+    , stakePoolOwners
+    , stakePoolRelays
+    , stakePoolMetadata
+    } =
+  object
+    [ "pool" .= stakePoolId
+    , "VRF key hash" .= serialiseToRawBytesHexText stakePoolVRF
+    , "cost" .= friendlyLovelace stakePoolCost
+    , "margin" .= friendlyRational stakePoolMargin
+    , "reward account" .= object (friendlyStakeAddress stakePoolRewardAccount)
+    , "pledge" .= friendlyLovelace stakePoolPledge
+    , "owners (stake key hashes)"
+        .= map serialiseToRawBytesHexText stakePoolOwners
+    , "relays" .= map textShow stakePoolRelays
+    , "metadata" .= fmap textShow stakePoolMetadata
+    ]
 
 friendlyRational :: Rational -> Aeson.Value
 friendlyRational r =
@@ -277,9 +382,9 @@ friendlyRational r =
     case d of
       1 -> textShow n
       _ -> textShow n <> "/" <> textShow d
-  where
-    n = numerator r
-    d = denominator r
+ where
+  n = numerator r
+  d = denominator r
 
 friendlyFee :: TxFee era -> Aeson.Value
 friendlyFee = \case
@@ -308,24 +413,24 @@ friendlyValue v =
           Aeson.fromText (friendlyPolicyId policy) .= friendlyAssets assets
     | bundle <- bundles
     ]
-  where
+ where
 
-    ValueNestedRep bundles = valueToNestedRep v
+  ValueNestedRep bundles = valueToNestedRep v
 
-    friendlyPolicyId = ("policy " <>) . serialiseToRawBytesHexText
+  friendlyPolicyId = ("policy " <>) . serialiseToRawBytesHexText
 
-    friendlyAssets = Map.mapKeys friendlyAssetName
+  friendlyAssets = Map.mapKeys friendlyAssetName
 
-    friendlyAssetName = \case
-      "" -> "default asset"
-      name@(AssetName nameBS) ->
-        "asset " <> serialiseToRawBytesHexText name <> nameAsciiSuffix
-        where
-          nameAsciiSuffix
-            | nameIsAscii = " (" <> nameAscii <> ")"
-            | otherwise = ""
-          nameIsAscii = BSC.all (\c -> isAscii c && isAlphaNum c) nameBS
-          nameAscii = Text.pack $ BSC.unpack nameBS
+  friendlyAssetName = \case
+    "" -> "default asset"
+    name@(AssetName nameBS) ->
+      "asset " <> serialiseToRawBytesHexText name <> nameAsciiSuffix
+     where
+      nameAsciiSuffix
+        | nameIsAscii = " (" <> nameAscii <> ")"
+        | otherwise = ""
+      nameIsAscii = BSC.all (\c -> isAscii c && isAlphaNum c) nameBS
+      nameAscii = Text.pack $ BSC.unpack nameBS
 
 friendlyMetadata :: TxMetadataInEra era -> Aeson.Value
 friendlyMetadata = \case

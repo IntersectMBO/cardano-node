@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -75,17 +76,16 @@ module Cardano.Api.Address (
 
 import           Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), withText)
+import           Control.Applicative ((<|>))
+import           Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base58 as Base58
-import           Data.Char
+import           Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
-
-import           Control.Applicative
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Address as Shelley
@@ -481,6 +481,15 @@ data StakeCredential
        = StakeCredentialByKey    (Hash StakeKey)
        | StakeCredentialByScript  ScriptHash
   deriving (Eq, Ord, Show)
+
+instance ToJSON StakeCredential where
+  toJSON =
+    Aeson.object
+      . \case
+        StakeCredentialByKey keyHash ->
+          ["stakingKeyHash" .= serialiseToRawBytesHexText keyHash]
+        StakeCredentialByScript scriptHash ->
+          ["stakingScriptHash" .= serialiseToRawBytesHexText scriptHash]
 
 data StakeAddressReference
        = StakeAddressByValue   StakeCredential
