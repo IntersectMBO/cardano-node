@@ -95,6 +95,10 @@ let
       }
       trap atexit EXIT
 
+      ${lib.optionalString (autoStartCluster && useCabalRun) ''
+      unset NIX_ENFORCE_PURITY
+      ''}
+
       ${pkgs.workbench.shellHook}
 
       ${lib.optionalString autoStartCluster ''
