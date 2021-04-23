@@ -219,7 +219,6 @@ mempoolTracer trBase = do
     pure $ withNamesAppended namesForMempool
             $ withSeverity severityMempool trNs
 
-
 forgeTracer ::
   (  HasTxId (GenTx blk)
   ,  LedgerSupportsProtocol blk
@@ -237,24 +236,29 @@ forgeTracer trBase = do
     pure $ withNamesAppended namesForForge
             $ withSeverity severityForge trNs
 
-docTracers :: forall remotePeer.
+docTracers :: forall blk remotePeer.
   ( Show remotePeer
-  , Show (GenTx ByronBlock)
-  , Show (ApplyTxErr ByronBlock)
-  , LogFormatting (ApplyTxErr ByronBlock)
-  , LogFormatting (GenTx ByronBlock)
-  , LogFormatting (CannotForge ByronBlock)
-  , LogFormatting (ForgeStateUpdateError ByronBlock)
-  , LogFormatting (ChainDB.InvalidBlockReason ByronBlock)
-  , ToJSON (GenTxId ByronBlock)
-  , HasTxId (GenTx ByronBlock)
-  , LedgerSupportsProtocol ByronBlock
-  , Consensus.SerialiseNodeToNodeConstraints ByronBlock
-  , Show (ForgeStateUpdateError ByronBlock)
-  , Show (CannotForge ByronBlock)
+  , Show (GenTx blk)
+  , Show (ApplyTxErr blk)
+  , Show (Header blk)
+  , LogFormatting (ApplyTxErr blk)
+  , LogFormatting (GenTx blk)
+  , LogFormatting (CannotForge blk)
+  , LogFormatting (ForgeStateUpdateError blk)
+  , LogFormatting (ChainDB.InvalidBlockReason blk)
+  , LogFormatting (LedgerUpdate blk)
+  , LogFormatting (LedgerWarning blk)
+  , LogFormatting (Header blk)
+  , ToJSON (GenTxId blk)
+  , HasTxId (GenTx blk)
+  , LedgerSupportsProtocol blk
+  , InspectLedger blk
+  , Consensus.SerialiseNodeToNodeConstraints blk
+  , Show (ForgeStateUpdateError blk)
+  , Show (CannotForge blk)
   )
-  => IO ()
-docTracers = do
+  => Proxy blk -> IO ()
+docTracers _ = do
   trBase <- standardTracer Nothing
 
   cdbmTr <- chainDBMachineTracer trBase
@@ -271,63 +275,64 @@ docTracers = do
 
   cdbmTrDoc    <- documentMarkdown
               (docChainDBTraceEvent :: Documented
-                (ChainDB.TraceEvent ByronBlock))
+                (ChainDB.TraceEvent blk))
               [cdbmTr]
   cscTrDoc    <- documentMarkdown
               (docChainSyncClientEvent :: Documented
-                (TraceChainSyncClientEvent ByronBlock))
+                (TraceChainSyncClientEvent blk))
               [cscTr]
   csshTrDoc    <- documentMarkdown
               (docChainSyncServerEvent :: Documented
-                (TraceChainSyncServerEvent ByronBlock))
+                (TraceChainSyncServerEvent blk))
               [csshTr]
   cssbTrDoc    <- documentMarkdown
               (docChainSyncServerEvent :: Documented
-                (TraceChainSyncServerEvent ByronBlock))
+                (TraceChainSyncServerEvent blk))
               [cssbTr]
-  _bfdTrDoc    <- documentMarkdown
+  bfdTrDoc    <- documentMarkdown
               (docBlockFetchDecision :: Documented
-                [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header ByronBlock)])])
+                [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])])
               [bfdTr]
   bfsTrDoc    <- documentMarkdown
               (docBlockFetchServer :: Documented
-                (TraceBlockFetchServerEvent ByronBlock))
+                (TraceBlockFetchServerEvent blk))
               [bfsTr]
   txiTrDoc    <- documentMarkdown
               (docTxInbound :: Documented
                 (BlockFetch.TraceLabelPeer remotePeer
-                  (TraceTxSubmissionInbound (GenTxId ByronBlock) (GenTx ByronBlock))))
+                  (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
               [txiTr]
   txoTrDoc    <- documentMarkdown
               (docTxOutbound :: Documented
                 (BlockFetch.TraceLabelPeer remotePeer
-                  (TraceTxSubmissionOutbound (GenTxId ByronBlock) (GenTx ByronBlock))))
+                  (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))))
               [txoTr]
   ltxsTrDoc    <- documentMarkdown
               (docLocalTxSubmissionServer :: Documented
-                (TraceLocalTxSubmissionServerEvent ByronBlock))
+                (TraceLocalTxSubmissionServerEvent blk))
               [ltxsTr]
-  _mpTrDoc    <- documentMarkdown
+  mpTrDoc    <- documentMarkdown
               (docMempool :: Documented
-                (TraceEventMempool ByronBlock))
+                (TraceEventMempool blk))
               [mpTr]
   fTrDoc    <- documentMarkdown
               (docForge :: Documented
-                (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent ByronBlock)))
+                (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk)))
               [fTr]
   let bl = cdbmTrDoc
-         ++ cscTrDoc
-         ++ csshTrDoc
-         ++ cssbTrDoc
-        -- ++ bfdTrDoc
-         ++ bfsTrDoc
-         ++ txiTrDoc
-         ++ txoTrDoc
-         ++ ltxsTrDoc
---         ++ mpTrDoc
-         ++ fTrDoc
-
-  T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" (buildersToText bl)
+          ++ cscTrDoc
+          ++ csshTrDoc
+          ++ cssbTrDoc
+          ++ bfdTrDoc
+          ++ bfsTrDoc
+          ++ txiTrDoc
+          ++ txoTrDoc
+          ++ ltxsTrDoc
+          ++ mpTrDoc
+          ++ fTrDoc
+  res <- buildersToText bl
+  T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
+  pure ()
 
 -- | Tracers for all system components.
 --

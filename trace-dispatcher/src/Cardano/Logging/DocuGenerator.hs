@@ -21,6 +21,7 @@ import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText,
                      singleton)
+import           Data.Time (getZonedTime)
 
 documentTracers :: MonadIO m => Documented a -> [Trace m a] -> m DocCollector
 documentTracers (Documented documented) tracers = do
@@ -63,12 +64,17 @@ docIt backend formattedMessage (LoggingContext {..},
                         Nothing -> emptyLogDoc mdText))
         docMap)
 
-buildersToText :: [(Namespace, Builder)] -> Text
-buildersToText builderList =
+buildersToText :: [(Namespace, Builder)] -> IO Text
+buildersToText builderList = do
+  time <- getZonedTime
+--  tz   <- getTimeZone
   let sortedBuilders = sortBy (\ (l,_) (r,_) -> compare l r) builderList
-  in toStrict $ toLazyText
-      $ mconcat
-        $ intersperse (fromText "\n\n") (map snd sortedBuilders)
+      num = length builderList
+      content = mconcat $ intersperse (fromText "\n\n") (map snd sortedBuilders)
+      numbers = fromString $ "\n\n" <> show num <> " log messages."
+      ts      = fromString $ "\nGenerated at "
+                  <> show time <> "."
+  pure $ toStrict $ toLazyText (content <> numbers <> ts)
 
 documentMarkdown :: ({-LogFormatting a,-} MonadIO m) =>
      Documented a
