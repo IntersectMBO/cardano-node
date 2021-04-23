@@ -1,15 +1,21 @@
+let
+  basePortDefault    = 30000;
+  cacheDirDefault    = "${__getEnv "HOME"}/.cache";
+  stateDirDefault    = "state-cluster";
+  profileNameDefault = "default-mary";
+in
 { pkgs
 , lib
 , bech32
-, basePort ? 30000
-, stateDir ? "state-cluster"
-, cacheDir ? "${__getEnv "HOME"}/.cache"
+, basePort              ? basePortDefault
+, stateDir              ? stateDirDefault
+, cacheDir              ? cacheDirDefault
 , extraSupervisorConfig ? {}
-, useCabalRun ? false
-, workbenchDevMode ? false
-, enableEKG ? true
+, useCabalRun           ? false
+, workbenchDevMode      ? false
+, enableEKG             ? true
 ##
-, profileName ? "default-mary"
+, profileName           ? profileNameDefault
 , ...
 }:
 with lib;
@@ -170,15 +176,21 @@ let
 
     wb profile describe ${profileName}
 
-    if test -e "${stateDir}" && test ! -f "${stateDir}"/genesis/byron-protocol-params.json
-    then echo "workbench ERROR:  state directory exists, but looks suspicious -- refusing to remove it: '${stateDir}'" >&2
-         exit 1
-    fi
+    ${optionalString (stateDir != stateDirDefault)
+      ''
+      if test -e "${stateDir}" && test ! -f "${stateDir}"/supervisor/workbench-token
+      then echo "workbench ERROR:  state directory exists, but looks suspicious -- decide on removing it manually to continue:  rm -rf ${stateDir}" >&2
+           exit 1
+      fi
+      ''}
 
     rm -rf   "${stateDir}"
     mkdir -p "${stateDir}"/supervisor "${cacheDir}"
+    touch    "${stateDir}"/supervisor/workbench-token
 
     ln -s ${profile.topology.files} "${stateDir}"/topology
+
+    prebuild-executables
 
     genesis_args+=(
         ## Positionals:

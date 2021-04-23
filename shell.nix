@@ -80,12 +80,8 @@ let
     exactDeps = true;
 
     shellHook = ''
-      set -euo pipefail
-
       echo "workbench:  setting 'cabal.project' for local builds.."
       ./scripts/cabal-inside-nix-shell.sh
-
-      ${pkgs.workbench.shellHook}
 
       function atexit() {
           echo "workbench:  reverting 'cabal.project' to the index version.."
@@ -98,6 +94,12 @@ let
           fi''}
       }
       trap atexit EXIT
+
+      ${lib.optionalString (autoStartCluster && useCabalRun) ''
+      unset NIX_ENFORCE_PURITY
+      ''}
+
+      ${pkgs.workbench.shellHook}
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
