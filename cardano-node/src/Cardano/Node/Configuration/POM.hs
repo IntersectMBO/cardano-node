@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
+{-# OPTIONS_GHC -Wno-orphans            #-}
 
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
@@ -35,6 +37,10 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.Config
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+
+deriving instance Eq SnapshotInterval
+deriving instance Generic SnapshotInterval
 
 data NodeConfiguration
   = NodeConfiguration
@@ -56,8 +62,9 @@ data NodeConfiguration
        , ncProtocolConfig :: !NodeProtocolConfiguration
 
          -- Node parameters, not protocol-specific:
-       , ncSocketPath     :: !(Maybe SocketPath)
-       , ncDiffusionMode  :: !DiffusionMode
+       , ncSocketPath       :: !(Maybe SocketPath)
+       , ncDiffusionMode    :: !DiffusionMode
+       , ncSnapshotInterval :: !SnapshotInterval
 
          -- BlockFetch configuration
        , ncMaxConcurrencyBulkSync :: !(Maybe MaxConcurrencyBulkSync)
@@ -90,8 +97,9 @@ data PartialNodeConfiguration
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
 
          -- Node parameters, not protocol-specific:
-       , pncSocketPath     :: !(Last SocketPath)
-       , pncDiffusionMode  :: !(Last DiffusionMode)
+       , pncSocketPath       :: !(Last SocketPath)
+       , pncDiffusionMode    :: !(Last DiffusionMode)
+       , pncSnapshotInterval :: !(Last SnapshotInterval)
 
          -- BlockFetch configuration
        , pncMaxConcurrencyBulkSync :: !(Last MaxConcurrencyBulkSync)
@@ -120,6 +128,8 @@ instance FromJSON PartialNodeConfiguration where
       pncSocketPath' <- Last <$> v .:? "SocketPath"
       pncDiffusionMode'
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
+      pncSnapshotInterval'
+        <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
 
       -- Blockfetch parameters
       pncMaxConcurrencyBulkSync' <- Last <$> v .:? "MaxConcurrencyBulkSync"
@@ -150,6 +160,7 @@ instance FromJSON PartialNodeConfiguration where
              pncProtocolConfig = pncProtocolConfig'
            , pncSocketPath = pncSocketPath'
            , pncDiffusionMode = pncDiffusionMode'
+           , pncSnapshotInterval = pncSnapshotInterval'
            , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
            , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
@@ -250,6 +261,7 @@ defaultPartialNodeConfiguration =
     , pncLoggingSwitch = Last $ Just True
     , pncSocketPath = mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
+    , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncNodeIPv4Addr = mempty
     , pncNodeIPv6Addr = mempty
@@ -285,6 +297,8 @@ makeNodeConfiguration pnc = do
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
+  snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
+
   return $ NodeConfiguration
              { ncNodeIPv4Addr = getLast $ pncNodeIPv4Addr pnc
              , ncNodeIPv6Addr = getLast $ pncNodeIPv6Addr pnc
@@ -299,6 +313,7 @@ makeNodeConfiguration pnc = do
              , ncProtocolConfig = protocolConfig
              , ncSocketPath = getLast $ pncSocketPath pnc
              , ncDiffusionMode = diffusionMode
+             , ncSnapshotInterval = snapshotInterval
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
              , ncLoggingSwitch = loggingSwitch
