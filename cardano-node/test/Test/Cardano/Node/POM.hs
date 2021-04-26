@@ -7,11 +7,14 @@ module Test.Cardano.Node.POM
 
 import           Cardano.Prelude
 
+import           Data.Time.Clock (secondsToDiffTime)
+
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
@@ -45,6 +48,7 @@ testPartialYamlConfig =
                             (GenesisFile "dummmy-genesis-file") Nothing
     , pncSocketPath = Last Nothing
     , pncDiffusionMode = Last Nothing
+    , pncSnapshotInterval = mempty
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
     , pncLoggingSwitch = Last $ Just True
@@ -75,6 +79,7 @@ testPartialCliConfig =
     , pncDatabaseFile = mempty
     , pncSocketPath   = mempty
     , pncDiffusionMode = mempty
+    , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
     , pncShutdownIPC = Last $ Just Nothing
@@ -106,6 +111,7 @@ expectedConfig =
                              (GenesisFile "dummmy-genesis-file") Nothing
     , ncSocketPath = Nothing
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
+    , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
     , ncLoggingSwitch = True
