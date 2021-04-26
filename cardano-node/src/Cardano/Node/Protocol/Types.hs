@@ -23,6 +23,7 @@ import           Ouroboros.Consensus.Block (BlockProtocol)
 import qualified Ouroboros.Consensus.Cardano as Consensus (Protocol)
 import           Ouroboros.Consensus.Node.Run (RunNode)
 
+import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo(GetKESInfo)
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESMetricsData, HasKESInfo)
 
@@ -53,6 +54,7 @@ instance FromJSON Protocol where
 type SomeConsensusProtocolConstraints blk =
      ( HasKESMetricsData blk
      , HasKESInfo blk
+     , GetKESInfo blk
      , RunNode blk
      , TraceConstraints blk
      )
