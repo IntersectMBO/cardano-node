@@ -27,6 +27,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
 
 -- TODO: Remove me, cli should not depend directly on plutus repo.
+-- import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
 import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as Plutus
 
@@ -138,4 +139,3 @@ renderAlonzoProtocolInstantiationError (AlonzoGenesisDecodeError fp err) =
   "Error decoding genesis at: " <> Text.pack fp <> " Error: " <> err
 renderAlonzoProtocolInstantiationError (GenesisFileNotFound fp) =
   "Genesis file not found at: " <> Text.pack fp
-

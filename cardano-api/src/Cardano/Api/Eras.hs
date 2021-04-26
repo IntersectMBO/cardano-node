@@ -91,7 +91,6 @@ instance HasTypeProxy AlonzoEra where
     data AsType AlonzoEra = AsAlonzoEra
     proxyToAsType _ = AsAlonzoEra
 
-
 -- ----------------------------------------------------------------------------
 -- Deprecated aliases
 --

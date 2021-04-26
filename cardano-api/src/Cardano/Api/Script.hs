@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -475,6 +476,28 @@ deriving instance Show (ScriptLanguageInEra lang era)
 instance HasTypeProxy era => HasTypeProxy (ScriptInEra era) where
     data AsType (ScriptInEra era) = AsScriptInEra (AsType era)
     proxyToAsType _ = AsScriptInEra (proxyToAsType (Proxy :: Proxy era))
+
+-- instance IsCardanoEra era => SerialiseAsCBOR (ScriptInEra era) where
+--     serialiseToCBOR (ScriptInEra _lang s) =
+--       serialiseToCBOR (toScriptInAnyLang s)
+
+--     deserialiseFromCBOR (AsScriptInEra _) bs = do
+--       s@(ScriptInAnyLang lang _) <- deserialiseFromCBOR AsScriptInAnyLang bs
+--       case toScriptInEra cardanoEra s of
+--         Just s' -> Right s'
+--         Nothing ->
+--           Left $ CBOR.DecoderErrorCustom
+--                  (Text.pack (show (cardanoEra :: CardanoEra era)) <> " Script")
+--                  ("Script language " <> Text.pack (show lang) <>
+--                   " not supported in this era")
+
+-- instance IsShelleyBasedEra era => HasTextEnvelope (ScriptInEra era) where
+--     textEnvelopeType _ =
+--       case shelleyBasedEra :: ShelleyBasedEra era of
+--         ShelleyBasedEraShelley -> "ScriptInEra ShelleyEra"
+--         ShelleyBasedEraAllegra -> "ScriptInEra AllegraEra"
+--         ShelleyBasedEraMary    -> "ScriptInEra MaryEra"
+--         ShelleyBasedEraAlonzo  -> "ScriptInEra AlonzoEra"
 
 
 -- | Check if a given script language is supported in a given era, and if so
@@ -1050,6 +1073,66 @@ instance ToJSON (SimpleScript lang) where
            , "scripts" .= map toJSON reqScripts
            ]
 
+
+-- instance IsScriptLanguage lang => FromJSON (Script lang) where
+--   parseJSON v =
+--     case scriptLanguage :: ScriptLanguage lang of
+--       SimpleScriptLanguage lang -> SimpleScript lang <$>
+--                                      parseSimpleScript lang v
+--       PlutusScriptLanguage lang -> case lang of {}
+
+
+instance FromJSON ScriptInAnyLang where
+  parseJSON v =
+      -- The SimpleScript language has the property that it is backwards
+      -- compatible, so we can parse as the latest version and then downgrade
+      -- to the minimum version that has all the features actually used.
+      toMinimumSimpleScriptVersion <$> parseSimpleScript SimpleScriptV2 v
+    where
+      --TODO: this will need to be adjusted when more versions are added
+      -- with appropriate helper functions it can probably be done in an
+      -- era-generic style
+      toMinimumSimpleScriptVersion s =
+        case adjustSimpleScriptVersion SimpleScriptV1 s of
+          Nothing -> ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
+                                     (SimpleScript SimpleScriptV2 s)
+          Just s' -> ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
+                                     (SimpleScript SimpleScriptV1 s')
+
+
+instance IsCardanoEra era => FromJSON (ScriptInEra era) where
+  parseJSON v =
+    case cardanoEra :: CardanoEra era of
+      ByronEra   -> fail "Scripts are not supported in the Byron era"
+
+      ShelleyEra -> ScriptInEra SimpleScriptV1InShelley
+                  . SimpleScript SimpleScriptV1
+                <$> parseSimpleScript SimpleScriptV1 v
+
+      --TODO: this will need to be adjusted when more versions are added.
+      -- It can probably be done in an era-generic style, with the use of
+      -- appropriate helper functions.
+      AllegraEra -> toMinimumSimpleScriptVersion
+                <$> parseSimpleScript SimpleScriptV2 v
+        where
+          toMinimumSimpleScriptVersion s =
+            case adjustSimpleScriptVersion SimpleScriptV1 s of
+              Nothing -> ScriptInEra SimpleScriptV2InAllegra
+                                     (SimpleScript SimpleScriptV2 s)
+              Just s' -> ScriptInEra SimpleScriptV1InAllegra
+                                     (SimpleScript SimpleScriptV1 s')
+
+      MaryEra -> toMinimumSimpleScriptVersion
+             <$> parseSimpleScript SimpleScriptV2 v
+        where
+          toMinimumSimpleScriptVersion s =
+            case adjustSimpleScriptVersion SimpleScriptV1 s of
+              Nothing -> ScriptInEra SimpleScriptV2InMary
+                                     (SimpleScript SimpleScriptV2 s)
+              Just s' -> ScriptInEra SimpleScriptV1InMary
+                                     (SimpleScript SimpleScriptV1 s')
+
+      AlonzoEra -> error "JSON support for Plutus scripts not implemented"
 
 instance IsSimpleScriptLanguage lang => FromJSON (SimpleScript lang) where
   parseJSON = parseSimpleScript simpleScriptVersion

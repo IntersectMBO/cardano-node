@@ -184,6 +184,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
               then ProtVer 5 0  -- Advertise we can support Alonzo
               else ProtVer 4 0  -- Otherwise only advertise we know about Mary.
         }
+        -- TODO: TestEnableDevelopmentHardForkEras :: Bool. This bool
+        -- will tell use whether or not to change the 'maryProtVer' field
+        -- from version 4 to version 5 so that we can fork to version 5
         Consensus.ProtocolParamsAlonzo {
           -- This is /not/ the Alonzo protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
