@@ -6,21 +6,55 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 
 ```json
 {
-  "Producers": [
+  "LocalRoots": {
+    "groups": [
+      {
+        "localRoots": {
+          "addrs": [
+            {
+              "addr": "x.x.x.x",
+              "port": 3001
+            }
+          ],
+          "advertise": false
+        },
+        "valency": 1
+      }
+    ]
+  },
+  "PublicRoots": [
     {
-      "addr": "x.x.x.x",
-      "port": 3001,
-      "valency": 1
+      "publicRoots" : {
+        "addrs": [
+          {
+            "addr": "y.y.y.y",
+            "port": 3002
+          }
+        ],
+        "advertise": false
+      }
     }
-  ]
+  ],
+  "useLedgerAfterSlot": 0
 }
 ```
-* This means that your node will contact node at ip `x.x.x.x` on `port 3001`.
 
-* `valency` tells the node how many connections your node should have. It only has an effect for dns addresses. If a dns address is given, valency governs to how many resolved ip addresses should we maintain active (hot) connection; for ip addresses, valency is used as a Boolean value, where `0` means to ignore the address.
+* The main difference between `LocalRoots` and `PublicRoots` is that with the former
+    you can specify different groups with different valencies. That can be useful to
+    inform your node of different targets withing a group to achieve. `LocalRoots`
+    is for peers which the node always should have as hot, such as their own block producer.
+    `PublicRoots` represent a source of fallback peers, a source of peers to be used if peers
+    from the ledger (`useLedgerAfterSlot`) is disabled or unavailable.
 
-Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
+* This means that your node will contact node at ip `x.x.x.x` on `port 3001`, and resolve
+    dns domain `y.y.y.y` (assuming they are), and try to maintain a connection with at least `1` of the
+    resolved ips.
 
+* `isDomain` tells if a given address is a dns address or not. If true and object `domain: { domain, port }` should be specified instead.
+
+* `valency` tells the node how many connections your node should try to pick from the given group. If a dns address is given, valency governs to how many resolved ip addresses should we maintain active (hot) connection.
+
+Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network.
 
 #### The genesis.json file
 
