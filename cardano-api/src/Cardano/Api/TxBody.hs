@@ -1,10 +1,13 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,6 +22,7 @@ module Cardano.Api.TxBody (
 
     -- * Transaction bodies
     TxBody(..),
+    getTransactionBodyContent,
     makeTransactionBody,
     TxBodyContent(..),
     TxBodyError(..),
@@ -100,12 +104,14 @@ module Cardano.Api.TxBody (
 
 import           Prelude
 
+import           Control.Monad (guard)
 import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Foldable (toList)
 import           Data.List (intercalate)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
@@ -118,8 +124,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           GHC.Generics
-
-import           Control.Monad (guard)
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
@@ -139,7 +143,10 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
+import           Cardano.Ledger.Val (isZero)
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -300,6 +307,13 @@ serialiseAddressForTxOut (AddressInEra addrType addr) =
 
 deriving instance Eq   (TxOut era)
 deriving instance Show (TxOut era)
+
+
+fromByronTxOut :: Byron.TxOut -> TxOut ByronEra
+fromByronTxOut (Byron.TxOut addr value) =
+  TxOut
+    (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
+    (TxOutAdaOnly AdaOnlyInByronEra (fromByronLovelace value))
 
 
 toByronTxOut :: TxOut ByronEra -> Maybe Byron.TxOut
@@ -1022,6 +1036,8 @@ data TxBodyError era =
      | TxBodyOutputOverflow Quantity (TxOut era)
      | TxBodyMetadataError [(Word64, TxMetadataRangeError)]
      | TxBodyMintAdaError
+     | TxBodyAuxDataHashInvalidError
+     | TxBodyMintBeforeMaryError
      deriving Show
 
 instance Error (TxBodyError era) where
@@ -1042,6 +1058,10 @@ instance Error (TxBodyError era) where
         | (k, err) <- errs ]
     displayError TxBodyMintAdaError =
       "Transaction cannot mint ada, only non-ada assets"
+    displayError TxBodyMintBeforeMaryError =
+      "Transaction can mint in Mary era or later"
+    displayError TxBodyAuxDataHashInvalidError =
+      "Auxiliary data hash is invalid"
 
 
 makeTransactionBody :: forall era.
@@ -1052,6 +1072,290 @@ makeTransactionBody =
     case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
       ShelleyBasedEra era -> makeShelleyTransactionBody era
+
+
+getTransactionBodyContent
+  :: TxBody era -> Either (TxBodyError era) (TxBodyContent ViewTx era)
+getTransactionBodyContent = \case
+  ByronTxBody body ->
+    Right $ getByronTxBodyContent body
+  ShelleyTxBody era body _scripts mAux ->
+    fromLedgerTxBody era body mAux
+
+
+fromLedgerTxBody
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
+  -> Either (TxBodyError era) (TxBodyContent ViewTx era)
+fromLedgerTxBody era body mAux = do
+  checkAuxiliaryDataHash era body mAux
+  txMintValue <- fromLedgerTxMintValue era body
+  pure
+    TxBodyContent
+      { txIns            = fromLedgerTxIns            era body
+      , txOuts           = fromLedgerTxOuts           era body
+      , txFee            = fromLedgerTxFee            era body
+      , txValidityRange  = fromLedgerTxValidityRange  era body
+      , txWithdrawals    = fromLedgerTxWithdrawals    era body
+      , txCertificates   = fromLedgerTxCertificates   era body
+      , txUpdateProposal = fromLedgerTxUpdateProposal era body
+      , txMintValue
+      , txMetadata
+      , txAuxScripts
+      }
+  where
+    (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
+
+
+checkAuxiliaryDataHash
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
+  -> Either (TxBodyError era) ()
+checkAuxiliaryDataHash era body mAux =
+  guard hashEquality ?! TxBodyAuxDataHashInvalidError
+  where
+    mAux' = maybeToStrictMaybe mAux
+    hashEquality =
+      case era of
+        ShelleyBasedEraShelley ->
+          Shelley._mdHash body ==
+          (Ledger.hashAuxiliaryData @StandardShelley <$> mAux')
+        ShelleyBasedEraAllegra ->
+          Allegra.adHash' body ==
+          (Ledger.hashAuxiliaryData @StandardAllegra <$> mAux')
+        ShelleyBasedEraMary ->
+          Mary.adHash' body ==
+          (Ledger.hashAuxiliaryData @StandardMary <$> mAux')
+
+
+fromLedgerTxIns
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> [(TxIn,BuildTxWith ViewTx (Witness WitCtxTxIn era))]
+fromLedgerTxIns era body =
+  [ (fromShelleyTxIn input, ViewTx)
+  | input <-
+      case era of
+        ShelleyBasedEraShelley -> toList $ Shelley._inputs body
+        ShelleyBasedEraAllegra -> toList $ Allegra.inputs' body
+        ShelleyBasedEraMary    -> toList $ Mary.inputs'    body
+  ]
+
+
+fromLedgerTxOuts
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> [TxOut era]
+fromLedgerTxOuts era body =
+  fromTxOut era <$>
+  case era of
+    ShelleyBasedEraShelley -> toList $ Shelley._outputs body
+    ShelleyBasedEraAllegra -> toList $ Allegra.outputs' body
+    ShelleyBasedEraMary    -> toList $ Mary.outputs'    body
+
+
+fromLedgerTxFee
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxFee era
+fromLedgerTxFee era body =
+  case era of
+    ShelleyBasedEraShelley ->
+      TxFeeExplicit TxFeesExplicitInShelleyEra $
+      fromShelleyLovelace $ Shelley._txfee body
+    ShelleyBasedEraAllegra ->
+      TxFeeExplicit TxFeesExplicitInAllegraEra $
+      fromShelleyLovelace $ Allegra.txfee' body
+    ShelleyBasedEraMary ->
+      TxFeeExplicit TxFeesExplicitInMaryEra $
+      fromShelleyLovelace $ Mary.txfee' body
+
+
+fromLedgerTxValidityRange
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> (TxValidityLowerBound era, TxValidityUpperBound era)
+fromLedgerTxValidityRange era body =
+  case era of
+    ShelleyBasedEraShelley ->
+      ( TxValidityNoLowerBound
+      , TxValidityUpperBound ValidityUpperBoundInShelleyEra $ Shelley._ttl body
+      )
+    ShelleyBasedEraAllegra ->
+      ( case invalidBefore of
+          SNothing -> TxValidityNoLowerBound
+          SJust s  -> TxValidityLowerBound ValidityLowerBoundInAllegraEra s
+      , case invalidHereafter of
+          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
+          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInAllegraEra s
+      )
+      where
+        Allegra.ValidityInterval{invalidBefore, invalidHereafter} =
+          Allegra.vldt' body
+    ShelleyBasedEraMary ->
+      ( case invalidBefore of
+          SNothing -> TxValidityNoLowerBound
+          SJust s  -> TxValidityLowerBound ValidityLowerBoundInMaryEra s
+      , case invalidHereafter of
+          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
+          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInMaryEra s
+      )
+      where
+        Mary.ValidityInterval{invalidBefore, invalidHereafter} = Mary.vldt' body
+
+
+fromLedgerAuxiliaryData
+  :: ShelleyBasedEra era
+  -> Ledger.AuxiliaryData (ShelleyLedgerEra era)
+  -> (Map Word64 TxMetadataValue, [ScriptInEra era])
+fromLedgerAuxiliaryData ShelleyBasedEraShelley (Shelley.Metadata metadata) =
+  (fromShelleyMetadata metadata, [])
+fromLedgerAuxiliaryData ShelleyBasedEraAllegra (Allegra.AuxiliaryData ms ss) =
+  ( fromShelleyMetadata ms
+  , fromShelleyBasedScript ShelleyBasedEraAllegra <$> toList ss
+  )
+fromLedgerAuxiliaryData ShelleyBasedEraMary (Mary.AuxiliaryData ms ss) =
+  ( fromShelleyMetadata ms
+  , fromShelleyBasedScript ShelleyBasedEraMary <$> toList ss
+  )
+
+
+fromLedgerTxAuxiliaryData
+  :: ShelleyBasedEra era
+  -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
+  -> (TxMetadataInEra era, TxAuxScripts era)
+fromLedgerTxAuxiliaryData _ Nothing = (TxMetadataNone, TxAuxScriptsNone)
+fromLedgerTxAuxiliaryData era (Just auxData) =
+  case era of
+    ShelleyBasedEraShelley ->
+      ( if null ms then
+          TxMetadataNone
+        else
+          TxMetadataInEra TxMetadataInShelleyEra $ TxMetadata ms
+      , TxAuxScriptsNone
+      )
+    ShelleyBasedEraAllegra ->
+      ( if null ms then
+          TxMetadataNone
+        else
+          TxMetadataInEra TxMetadataInAllegraEra $ TxMetadata ms
+      , case ss of
+          [] -> TxAuxScriptsNone
+          _  -> TxAuxScripts AuxScriptsInAllegraEra ss
+      )
+    ShelleyBasedEraMary ->
+      ( if null ms then
+          TxMetadataNone
+        else
+          TxMetadataInEra TxMetadataInMaryEra $ TxMetadata ms
+      , case ss of
+          [] -> TxAuxScriptsNone
+          _  -> TxAuxScripts AuxScriptsInMaryEra ss
+      )
+  where
+    (ms, ss) = fromLedgerAuxiliaryData era auxData
+
+
+fromLedgerTxWithdrawals
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxWithdrawals ViewTx era
+fromLedgerTxWithdrawals era body =
+  case era of
+    ShelleyBasedEraShelley
+      | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
+      | otherwise ->
+          TxWithdrawals WithdrawalsInShelleyEra $
+          fromShelleyWithdrawal withdrawals
+      where
+        withdrawals = Shelley._wdrls body
+    ShelleyBasedEraAllegra
+      | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
+      | otherwise ->
+          TxWithdrawals WithdrawalsInAllegraEra $
+          fromShelleyWithdrawal withdrawals
+      where
+        withdrawals = Allegra.wdrls' body
+    ShelleyBasedEraMary
+      | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
+      | otherwise ->
+          TxWithdrawals WithdrawalsInMaryEra $ fromShelleyWithdrawal withdrawals
+      where
+        withdrawals = Mary.wdrls' body
+
+
+fromLedgerTxCertificates
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxCertificates ViewTx era
+fromLedgerTxCertificates era body =
+  case era of
+    ShelleyBasedEraShelley
+      | null certificates -> TxCertificatesNone
+      | otherwise ->
+          TxCertificates
+            CertificatesInShelleyEra
+            (map fromShelleyCertificate $ toList certificates)
+            ViewTx
+      where
+        certificates = Shelley._certs body
+    ShelleyBasedEraAllegra
+      | null certificates -> TxCertificatesNone
+      | otherwise ->
+          TxCertificates
+            CertificatesInAllegraEra
+            (map fromShelleyCertificate $ toList certificates)
+            ViewTx
+      where
+        certificates = Allegra.certs' body
+    ShelleyBasedEraMary
+      | null certificates -> TxCertificatesNone
+      | otherwise ->
+          TxCertificates
+            CertificatesInMaryEra
+            (map fromShelleyCertificate $ toList certificates)
+            ViewTx
+      where
+        certificates = Mary.certs' body
+
+
+fromLedgerTxUpdateProposal
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxUpdateProposal era
+fromLedgerTxUpdateProposal era body =
+  case era of
+    ShelleyBasedEraShelley ->
+      case Shelley._txUpdate body of
+        SNothing -> TxUpdateProposalNone
+        SJust p ->
+          TxUpdateProposal UpdateProposalInShelleyEra $ fromShelleyUpdate p
+    ShelleyBasedEraAllegra ->
+      case Allegra.update' body of
+        SNothing -> TxUpdateProposalNone
+        SJust p ->
+          TxUpdateProposal UpdateProposalInAllegraEra $ fromShelleyUpdate p
+    ShelleyBasedEraMary ->
+      case Mary.update' body of
+        SNothing -> TxUpdateProposalNone
+        SJust p ->
+          TxUpdateProposal UpdateProposalInMaryEra $ fromShelleyUpdate p
+
+
+fromLedgerTxMintValue
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Either (TxBodyError era) (TxMintValue ViewTx era)
+fromLedgerTxMintValue era body =
+  case era of
+    ShelleyBasedEraShelley -> pure TxMintNone
+    ShelleyBasedEraAllegra ->
+      TxMintNone <$
+      guard (isZero $ Allegra.mint' body) ?! TxBodyMintBeforeMaryError
+    ShelleyBasedEraMary
+      | isZero mint -> pure TxMintNone
+      | otherwise   ->
+          pure $ TxMintValue MultiAssetInMaryEra (fromMaryValue mint) ViewTx
+      where
+        mint = Mary.mint' body
 
 
 makeByronTransactionBody :: TxBodyContent BuildTx ByronEra
@@ -1085,6 +1389,13 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
     classifyRangeError
       (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
              _) = case era of {}
+
+getByronTxBodyContent :: Annotated Byron.Tx ByteString
+                      -> TxBodyContent ViewTx ByronEra
+getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
+  makeByronTransactionBodyContent
+    [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
+    (fromByronTxOut <$> toList txOutputs)
 
 makeShelleyTransactionBody :: ShelleyBasedEra era
                            -> TxBodyContent BuildTx era
@@ -1184,10 +1495,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
              TxFeeImplicit era'  -> case era' of {}
              TxFeeExplicit _ fee -> toShelleyLovelace fee)
           (Allegra.ValidityInterval {
-             Allegra.invalidBefore    = case lowerBound of
+             invalidBefore    = case lowerBound of
                                           TxValidityNoLowerBound   -> SNothing
                                           TxValidityLowerBound _ s -> SJust s,
-             Allegra.invalidHereafter = case upperBound of
+             invalidHereafter = case upperBound of
                                           TxValidityNoUpperBound _ -> SNothing
                                           TxValidityUpperBound _ s -> SJust s
            })
@@ -1262,10 +1573,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
              TxFeeImplicit era'  -> case era' of {}
              TxFeeExplicit _ fee -> toShelleyLovelace fee)
           (Allegra.ValidityInterval {
-             Allegra.invalidBefore    = case lowerBound of
+             invalidBefore    = case lowerBound of
                                           TxValidityNoLowerBound   -> SNothing
                                           TxValidityLowerBound _ s -> SJust s,
-             Allegra.invalidHereafter = case upperBound of
+             invalidHereafter = case upperBound of
                                           TxValidityNoUpperBound _ -> SNothing
                                           TxValidityUpperBound _ s -> SJust s
            })
@@ -1336,6 +1647,7 @@ collectTxBodySimpleScripts TxBodyContent {
 
     simpleScriptInEra _ = []
 
+
 toShelleySimpleScript :: SimpleScriptInEra era
                       -> Ledger.Script (ShelleyLedgerEra era)
 toShelleySimpleScript (SimpleScriptInEra langInEra version script) =
@@ -1348,6 +1660,16 @@ toShelleyWithdrawal withdrawals =
         [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
         | (stakeAddr, value, _) <- withdrawals ]
 
+
+fromShelleyWithdrawal
+  :: Shelley.Wdrl StandardCrypto
+  -> [(StakeAddress, Lovelace, BuildTxWith ViewTx (Witness WitCtxStake era))]
+fromShelleyWithdrawal (Shelley.Wdrl withdrawals) =
+  [ (fromShelleyStakeAddr stakeAddr, fromShelleyLovelace value, ViewTx)
+  | (stakeAddr, value) <- Map.assocs withdrawals
+  ]
+
+
 -- | In the Shelley era the auxiliary data consists only of the tx metadata
 toShelleyAuxiliaryData :: Map Word64 TxMetadataValue
                        -> Ledger.AuxiliaryData StandardShelley
@@ -1355,21 +1677,23 @@ toShelleyAuxiliaryData m =
     Shelley.Metadata
       (toShelleyMetadata m)
 
+
 -- | In the Allegra and Mary eras the auxiliary data consists of the tx metadata
 -- and the axiliary scripts.
 --
-toAllegraAuxiliaryData :: forall era ledgeera.
-                          ShelleyLedgerEra era ~ ledgeera
-                       => Ledger.AuxiliaryData ledgeera ~ Allegra.AuxiliaryData ledgeera
-                       => Ledger.AnnotatedData (Ledger.Script ledgeera)
-                       => Ord (Ledger.Script ledgeera)
+toAllegraAuxiliaryData :: forall era ledgerera.
+                          ShelleyLedgerEra era ~ ledgerera
+                       => Ledger.AuxiliaryData ledgerera ~ Allegra.AuxiliaryData ledgerera
+                       => Ledger.AnnotatedData (Ledger.Script ledgerera)
+                       => Ord (Ledger.Script ledgerera)
                        => Map Word64 TxMetadataValue
                        -> [ScriptInEra era]
-                       -> Ledger.AuxiliaryData ledgeera
+                       -> Ledger.AuxiliaryData ledgerera
 toAllegraAuxiliaryData m ss =
     Allegra.AuxiliaryData
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
+
 
 -- ----------------------------------------------------------------------------
 -- Transitional utility functions for making transaction bodies
@@ -1381,23 +1705,33 @@ makeByronTransaction :: [TxIn]
                      -> [TxOut ByronEra]
                      -> Either (TxBodyError ByronEra) (TxBody ByronEra)
 makeByronTransaction txIns txOuts =
-    makeTransactionBody $
-      TxBodyContent {
-        txIns            = [ (txin, BuildTxWith (KeyWitness KeyWitnessForSpending))
-                           | txin <- txIns ],
-        txOuts,
-        txFee            = TxFeeImplicit TxFeesImplicitInByronEra,
-        txValidityRange  = (TxValidityNoLowerBound,
-                            TxValidityNoUpperBound
-                              ValidityNoUpperBoundInByronEra),
-        txMetadata       = TxMetadataNone,
-        txAuxScripts     = TxAuxScriptsNone,
-        txWithdrawals    = TxWithdrawalsNone,
-        txCertificates   = TxCertificatesNone,
-        txUpdateProposal = TxUpdateProposalNone,
-        txMintValue      = TxMintNone
-      }
+  makeTransactionBody $
+    makeByronTransactionBodyContent
+      [(txin, BuildTxWith (KeyWitness KeyWitnessForSpending)) | txin <- txIns]
+      txOuts
 {-# DEPRECATED makeByronTransaction "Use makeTransactionBody" #-}
+
+
+makeByronTransactionBodyContent
+  :: [(TxIn, BuildTxWith build (Witness WitCtxTxIn ByronEra))]
+  -> [TxOut ByronEra]
+  -> TxBodyContent build ByronEra
+makeByronTransactionBodyContent txIns txOuts =
+  TxBodyContent {
+    txIns,
+    txOuts,
+    txFee            = TxFeeImplicit TxFeesImplicitInByronEra,
+    txValidityRange  = (TxValidityNoLowerBound,
+                        TxValidityNoUpperBound
+                          ValidityNoUpperBoundInByronEra),
+    txMetadata       = TxMetadataNone,
+    txAuxScripts     = TxAuxScriptsNone,
+    txWithdrawals    = TxWithdrawalsNone,
+    txCertificates   = TxCertificatesNone,
+    txUpdateProposal = TxUpdateProposalNone,
+    txMintValue      = TxMintNone
+  }
+
 
 -- ----------------------------------------------------------------------------
 -- Other utilities helpful with making transaction bodies
