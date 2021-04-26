@@ -27,15 +27,26 @@ case "${op}" in
         ;;
 
     all-profiles | generate-all | all )
-        (cd "$global_basedir/profiles";
+        with_era_profiles '
+          map (profiles(.; null; null; []))
+          | add
+        ';;
 
-         jq --argjson eras "$(to_jsonlist ${global_profile_eras[*]})" --null-input '
-           include "profiles";
+    all-profile-names | names | all-names )
+        with_era_profiles '
+          map (profile_names(.; null; null; []))
+          | add
+        ';;
 
-           $eras
-           | map(profiles(.; null; null; []))
-           | add
-           ');;
+    has-profile )
+        local usage="USAGE: wb profile has-profile NAME"
+        local name=${1:?$usage}
+
+        with_era_profiles '
+          map (has_profile(.; null; null; []; $name))
+          | any
+        ' --exit-status --arg name "$name" >/dev/null
+        ;;
 
     compose )
         local profile_names="$@"
@@ -117,4 +128,16 @@ case "${op}" in
            ' "${args[@]}";;
 
     * ) usage_profile;; esac
+}
+
+with_era_profiles() {
+    local usage="USAGE: wb profile with-profiles JQEXP"
+    local jqexp=${1:?$usage}; shift
+
+    jq  -L "$global_basedir/profiles" \
+        --argjson eras "$(to_jsonlist ${global_profile_eras[*]})" \
+        --null-input '
+       include "profiles";
+
+       $eras | '"$jqexp" "$@"
 }

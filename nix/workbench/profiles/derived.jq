@@ -1,5 +1,5 @@
-include "defaults" { search: "." };
-include "cli-args" { search: "." };
+include "defaults";
+include "cli-args";
 
 def may_attr($attr; $dict; $defdict; $scale; $suf):
   if ($dict[$attr] //
