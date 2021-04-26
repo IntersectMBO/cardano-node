@@ -66,8 +66,8 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
@@ -78,8 +78,8 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Api.Address
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -88,7 +88,6 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
-import           Cardano.Binary
 
 
 -- | The values of the set of /updateable/ protocol paramaters. At any
@@ -479,7 +478,7 @@ instance HasTextEnvelope UpdateProposal where
 instance SerialiseAsCBOR UpdateProposal where
     serialiseToCBOR = CBOR.serializeEncoding' . toCBOR . toShelleyUpdate @StandardShelley
     deserialiseFromCBOR _ bs =
-      fromShelleyUpdate @StandardShelley <$> decodeFull (LBS.fromStrict bs)
+      fromShelleyUpdate @StandardShelley <$> CBOR.decodeFull (LBS.fromStrict bs)
 
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
@@ -492,7 +491,7 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 
 
 -- ----------------------------------------------------------------------------
--- Genesis paramaters
+-- Genesis parameters
 --
 
 data GenesisParameters =
@@ -563,7 +562,7 @@ data GenesisParameters =
 --
 
 toShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                   , Shelley.PParamsDelta ledgerera
+                   , Ledger.PParamsDelta ledgerera
                      ~ Shelley.PParamsUpdate ledgerera
                    )
                 => UpdateProposal -> Shelley.Update ledgerera
@@ -573,7 +572,7 @@ toShelleyUpdate (UpdateProposal ppup epochno) =
 
 toShelleyProposedPPUpdates :: forall ledgerera.
                               ( Ledger.Crypto ledgerera ~ StandardCrypto
-                              , Shelley.PParamsDelta ledgerera
+                              , Ledger.PParamsDelta ledgerera
                                 ~ Shelley.PParamsUpdate ledgerera
                               )
                             => Map (Hash GenesisKey) ProtocolParametersUpdate
@@ -636,7 +635,7 @@ toShelleyPParamsUpdate
     }
 
 fromShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                     , Shelley.PParamsDelta ledgerera
+                     , Ledger.PParamsDelta ledgerera
                        ~ Shelley.PParamsUpdate ledgerera
                      )
                   => Shelley.Update ledgerera -> UpdateProposal
@@ -645,7 +644,7 @@ fromShelleyUpdate (Shelley.Update ppup epochno) =
 
 
 fromShelleyProposedPPUpdates :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                                , Shelley.PParamsDelta ledgerera
+                                , Ledger.PParamsDelta ledgerera
                                   ~ Shelley.PParamsUpdate ledgerera
                                 )
                              => Shelley.ProposedPPUpdates ledgerera

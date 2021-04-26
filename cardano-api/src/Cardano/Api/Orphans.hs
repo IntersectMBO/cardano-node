@@ -74,7 +74,7 @@ instance ToJSON Shelley.AccountState where
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          , ToJSON (Core.PParams era)
-         , ToJSON (Shelley.PParamsDelta era)
+         , ToJSON (Core.PParamsDelta era)
          ) => ToJSON (Shelley.EpochState era) where
   toJSON eState = object [ "esAccountState" .= Shelley.esAccountState eState
                          , "esSnapshots" .= Shelley.esSnapshots eState
@@ -86,7 +86,7 @@ instance ( Consensus.ShelleyBasedEra era
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
-         , ToJSON (Shelley.PParamsDelta era)
+         , ToJSON (Core.PParamsDelta era)
          ) => ToJSON (Shelley.LedgerState era) where
   toJSON lState = object [ "utxoState" .= Shelley._utxoState lState
                          , "delegationState" .= Shelley._delegationState lState
@@ -94,7 +94,7 @@ instance ( Consensus.ShelleyBasedEra era
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
-         , ToJSON (Shelley.PParamsDelta era)
+         , ToJSON (Core.PParamsDelta era)
          ) => ToJSON (Shelley.UTxOState era) where
   toJSON utxoState = object [ "utxo" .= Shelley._utxo utxoState
                             , "deposited" .= Shelley._deposited utxoState
@@ -102,14 +102,14 @@ instance ( Consensus.ShelleyBasedEra era
                             , "ppups" .= Shelley._ppups utxoState
                             ]
 
-instance ( ToJSON (Shelley.PParamsDelta era)
+instance ( ToJSON (Core.PParamsDelta era)
          , Shelley.UsesPParams era
          ) => ToJSON (Shelley.PPUPState era) where
   toJSON ppUpState = object [ "proposals" .= Shelley.proposals ppUpState
                             , "futureProposals" .= Shelley.futureProposals ppUpState
                             ]
 
-instance ( ToJSON (Shelley.PParamsDelta era)
+instance ( ToJSON (Core.PParamsDelta era)
          , Shelley.UsesPParams era
          ) => ToJSON (Shelley.ProposedPPUpdates era) where
   toJSON (Shelley.ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates

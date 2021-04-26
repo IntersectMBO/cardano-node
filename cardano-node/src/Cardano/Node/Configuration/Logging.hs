@@ -33,10 +33,10 @@ import qualified Data.Map as Map
 import           Data.Text (pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
-import qualified System.Remote.Monitoring as EKG
+import           System.Metrics.Counter (Counter)
 import           System.Metrics.Gauge (Gauge)
 import           System.Metrics.Label (Label)
-import           System.Metrics.Counter (Counter)
+import qualified System.Remote.Monitoring as EKG
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
@@ -78,8 +78,8 @@ import qualified Shelley.Spec.Ledger.API as SL
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import           Cardano.Config.Git.Rev (gitRev)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
-import           Cardano.Node.Types
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Paths_cardano_node (version)
 
@@ -321,11 +321,12 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
             let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
             in getGenesisValues "Shelley" cfgShelley
           CardanoBlockType ->
-            let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary = Consensus.configLedger cfg
+            let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron
                ++ getGenesisValues "Shelley" cfgShelley
                ++ getGenesisValues "Allegra" cfgAllegra
                ++ getGenesisValues "Mary"    cfgMary
+               ++ getGenesisValues "Alonzo"  cfgAlonzo
       items = nub $
         [ ("protocol",      pack . protocolName $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)

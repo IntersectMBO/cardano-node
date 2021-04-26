@@ -353,6 +353,7 @@ genTxOutValue era =
     ShelleyEra -> TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace
     AllegraEra -> TxOutAdaOnly AdaOnlyInAllegraEra <$> genLovelace
     MaryEra -> TxOutValue MultiAssetInMaryEra <$> genValueForTxOut
+    AlonzoEra -> panic "genTxOutValue: Alonzo not implemented yet"
 
 genTxOut :: CardanoEra era -> Gen (TxOut era)
 genTxOut era =
@@ -367,6 +368,7 @@ genTxOut era =
       TxOut
         <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> genTxOutValue era
+    AlonzoEra -> panic "genTxOut: Alonzo not implemented yet"
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo
@@ -379,6 +381,7 @@ genTxValidityLowerBound era =
     ShelleyEra -> pure TxValidityNoLowerBound
     AllegraEra -> TxValidityLowerBound ValidityLowerBoundInAllegraEra <$> genTtl
     MaryEra -> TxValidityLowerBound ValidityLowerBoundInMaryEra <$> genTtl
+    AlonzoEra -> panic "genTxValidityLowerBound: Alonzo not implemented yet "
 
 -- TODO: Accept a range for generating ttl.
 genTxValidityUpperBound :: CardanoEra era -> Gen (TxValidityUpperBound era)
@@ -388,6 +391,7 @@ genTxValidityUpperBound era =
     ShelleyEra -> TxValidityUpperBound ValidityUpperBoundInShelleyEra <$> genTtl
     AllegraEra -> TxValidityUpperBound ValidityUpperBoundInAllegraEra <$> genTtl
     MaryEra -> TxValidityUpperBound ValidityUpperBoundInMaryEra <$> genTtl
+    AlonzoEra -> panic "genTxValidityUpperBound: Alonzo not implemented yet "
 
 genTxValidityRange
   :: CardanoEra era
@@ -416,6 +420,7 @@ genTxMetadataInEra era =
         [ pure TxMetadataNone
         , TxMetadataInEra TxMetadataInMaryEra <$> genTxMetadata
         ]
+    AlonzoEra -> panic "genTxMetadataInEra: Alonzo not implemented yet"
 
 genTxAuxScripts :: CardanoEra era -> Gen (TxAuxScripts era)
 genTxAuxScripts era =
@@ -428,6 +433,7 @@ genTxAuxScripts era =
     MaryEra    -> TxAuxScripts AuxScriptsInMaryEra
                            <$> Gen.list (Range.linear 0 3)
                                         (genScriptInEra MaryEra)
+    AlonzoEra -> panic "genTxAuxScripts: Alonzo not implemented yet"
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals era =
@@ -448,6 +454,7 @@ genTxWithdrawals era =
         [ pure TxWithdrawalsNone
         , pure (TxWithdrawals WithdrawalsInMaryEra mempty) -- TODO: Generate withdrawals
         ]
+    AlonzoEra -> panic "genTxWithdrawals: Alonzo not implemented yet"
 
 genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates era =
@@ -468,6 +475,7 @@ genTxCertificates era =
         [ pure TxCertificatesNone
         , pure (TxCertificates CertificatesInMaryEra mempty $ BuildTxWith mempty) -- TODO: Generate certificates
         ]
+    AlonzoEra -> panic "genTxCertificates: Alonzo not implemented yet"
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal era =
@@ -488,6 +496,7 @@ genTxUpdateProposal era =
         [ pure TxUpdateProposalNone
         , pure (TxUpdateProposal UpdateProposalInMaryEra emptyUpdateProposal) -- TODO: Generate proposals
         ]
+    AlonzoEra -> panic "genTxUpdateProposal: Alonzo not implemented yet"
   where
     emptyUpdateProposal :: UpdateProposal
     emptyUpdateProposal = UpdateProposal Map.empty (EpochNo 0)
@@ -503,6 +512,8 @@ genTxMintValue era =
         [ pure TxMintNone
         , TxMintValue MultiAssetInMaryEra <$> genValueForMinting <*> return (BuildTxWith mempty)
         ]
+    AlonzoEra -> panic "genTxMintValue: Alonzo not implemented yet"
+
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
@@ -537,6 +548,7 @@ genTxFee era =
     ShelleyEra -> TxFeeExplicit TxFeesExplicitInShelleyEra <$> genLovelace
     AllegraEra -> TxFeeExplicit TxFeesExplicitInAllegraEra <$> genLovelace
     MaryEra -> TxFeeExplicit TxFeesExplicitInMaryEra <$> genLovelace
+    AlonzoEra -> panic "genTxFee: Alonzo not implemented yet"
 
 genTxBody :: CardanoEra era -> Gen (TxBody era)
 genTxBody era =
@@ -553,6 +565,7 @@ genTxBody era =
       case res of
         Left err -> fail (show err) -- TODO: Render function for TxBodyError
         Right txBody -> pure txBody
+    AlonzoEra -> panic "genTxBody: Alonzo not implemented yet"
 
 genTx :: forall era. CardanoEra era -> Gen (Tx era)
 genTx era =
@@ -567,6 +580,7 @@ genTx era =
         ShelleyEra -> genShelleyBasedWitnessList
         AllegraEra -> genShelleyBasedWitnessList
         MaryEra -> genShelleyBasedWitnessList
+        AlonzoEra -> panic "genTx: Alonzo not implemented yet"
 
     genShelleyBasedWitnessList :: IsShelleyBasedEra era => Gen [KeyWitness era]
     genShelleyBasedWitnessList = do

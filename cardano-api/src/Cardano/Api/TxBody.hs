@@ -231,6 +231,7 @@ getTxId (ShelleyTxBody era tx _ _) =
       ShelleyBasedEraShelley -> getTxIdShelley tx
       ShelleyBasedEraAllegra -> getTxIdShelley tx
       ShelleyBasedEraMary    -> getTxIdShelley tx
+      ShelleyBasedEraAlonzo  -> error "getTxId: Alonzo not implemented yet"
   where
     getTxIdShelley :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
                    => Ledger.UsesTxBody (ShelleyLedgerEra era)
@@ -366,6 +367,7 @@ fromTxOut shelleyBasedEra' ledgerTxOut =
                               in TxOut (fromShelleyAddr addr)
                                         (TxOutValue MultiAssetInMaryEra
                                                       (fromMaryValue value))
+    ShelleyBasedEraAlonzo  -> error "fromTxOut: Alonzo not implemented yet"
 
 -- ----------------------------------------------------------------------------
 -- Era-dependent transaction body features
@@ -412,6 +414,8 @@ multiAssetSupportedInEra ByronEra   = Left AdaOnlyInByronEra
 multiAssetSupportedInEra ShelleyEra = Left AdaOnlyInShelleyEra
 multiAssetSupportedInEra AllegraEra = Left AdaOnlyInAllegraEra
 multiAssetSupportedInEra MaryEra    = Right MultiAssetInMaryEra
+multiAssetSupportedInEra AlonzoEra  =
+  error "multiAssetSupportedInEra: Alonzo not implemented yet"
 
 
 -- | A representation of whether the era requires explicitly specified fees in
@@ -448,6 +452,7 @@ txFeesExplicitInEra ByronEra   = Left  TxFeesImplicitInByronEra
 txFeesExplicitInEra ShelleyEra = Right TxFeesExplicitInShelleyEra
 txFeesExplicitInEra AllegraEra = Right TxFeesExplicitInAllegraEra
 txFeesExplicitInEra MaryEra    = Right TxFeesExplicitInMaryEra
+txFeesExplicitInEra AlonzoEra  = error "txFeesExplicitInEra: Alonzo not implemented yet"
 
 
 -- | A representation of whether the era supports transactions with an upper
@@ -472,6 +477,8 @@ validityUpperBoundSupportedInEra ByronEra   = Nothing
 validityUpperBoundSupportedInEra ShelleyEra = Just ValidityUpperBoundInShelleyEra
 validityUpperBoundSupportedInEra AllegraEra = Just ValidityUpperBoundInAllegraEra
 validityUpperBoundSupportedInEra MaryEra    = Just ValidityUpperBoundInMaryEra
+validityUpperBoundSupportedInEra AlonzoEra  =
+  error "validityUpperBoundSupportedInEra: Alonzo not implemented yet"
 
 
 -- | A representation of whether the era supports transactions having /no/
@@ -499,6 +506,8 @@ validityNoUpperBoundSupportedInEra ByronEra   = Just ValidityNoUpperBoundInByron
 validityNoUpperBoundSupportedInEra ShelleyEra = Nothing
 validityNoUpperBoundSupportedInEra AllegraEra = Just ValidityNoUpperBoundInAllegraEra
 validityNoUpperBoundSupportedInEra MaryEra    = Just ValidityNoUpperBoundInMaryEra
+validityNoUpperBoundSupportedInEra AlonzoEra  =
+  error "validityNoUpperBoundSupportedInEra: Alonzo not implemented yet"
 
 
 -- | A representation of whether the era supports transactions with a lower
@@ -522,7 +531,8 @@ validityLowerBoundSupportedInEra ByronEra   = Nothing
 validityLowerBoundSupportedInEra ShelleyEra = Nothing
 validityLowerBoundSupportedInEra AllegraEra = Just ValidityLowerBoundInAllegraEra
 validityLowerBoundSupportedInEra MaryEra    = Just ValidityLowerBoundInMaryEra
-
+validityLowerBoundSupportedInEra AlonzoEra  =
+  error "validityLowerBoundSupportedInEra: Alonzo not implemented yet"
 
 -- | A representation of whether the era supports transaction metadata.
 --
@@ -543,6 +553,8 @@ txMetadataSupportedInEra ByronEra   = Nothing
 txMetadataSupportedInEra ShelleyEra = Just TxMetadataInShelleyEra
 txMetadataSupportedInEra AllegraEra = Just TxMetadataInAllegraEra
 txMetadataSupportedInEra MaryEra    = Just TxMetadataInMaryEra
+txMetadataSupportedInEra AlonzoEra  =
+  error "txMetadataSupportedInEra: Alonzo not implemented yet"
 
 
 -- | A representation of whether the era supports auxiliary scripts in
@@ -564,6 +576,8 @@ auxScriptsSupportedInEra ByronEra   = Nothing
 auxScriptsSupportedInEra ShelleyEra = Nothing
 auxScriptsSupportedInEra AllegraEra = Just AuxScriptsInAllegraEra
 auxScriptsSupportedInEra MaryEra    = Just AuxScriptsInMaryEra
+auxScriptsSupportedInEra AlonzoEra  =
+  error "auxScriptsSupportedInEra: Alonzo not supported yet"
 
 
 -- | A representation of whether the era supports withdrawals from reward
@@ -587,6 +601,8 @@ withdrawalsSupportedInEra ByronEra   = Nothing
 withdrawalsSupportedInEra ShelleyEra = Just WithdrawalsInShelleyEra
 withdrawalsSupportedInEra AllegraEra = Just WithdrawalsInAllegraEra
 withdrawalsSupportedInEra MaryEra    = Just WithdrawalsInMaryEra
+withdrawalsSupportedInEra AlonzoEra  =
+  error "withdrawalsSupportedInEra: Alonzo not implemented yet"
 
 
 -- | A representation of whether the era supports 'Certificate's embedded in
@@ -609,6 +625,8 @@ certificatesSupportedInEra ByronEra   = Nothing
 certificatesSupportedInEra ShelleyEra = Just CertificatesInShelleyEra
 certificatesSupportedInEra AllegraEra = Just CertificatesInAllegraEra
 certificatesSupportedInEra MaryEra    = Just CertificatesInMaryEra
+certificatesSupportedInEra AlonzoEra  =
+  error "certificatesSupportedInEra: Alonzo not implemented yet"
 
 
 -- | A representation of whether the era supports 'UpdateProposal's embedded in
@@ -633,6 +651,8 @@ updateProposalSupportedInEra ByronEra   = Nothing
 updateProposalSupportedInEra ShelleyEra = Just UpdateProposalInShelleyEra
 updateProposalSupportedInEra AllegraEra = Just UpdateProposalInAllegraEra
 updateProposalSupportedInEra MaryEra    = Just UpdateProposalInMaryEra
+updateProposalSupportedInEra AlonzoEra  =
+  error "updateProposalSupportedInEra: Alonzo not implemented yet"
 
 
 -- ----------------------------------------------------------------------------
@@ -885,6 +905,8 @@ instance Eq (TxBody era) where
            ShelleyBasedEraMary    -> txbodyA     == txbodyB
                                   && txscriptsA  == txscriptsB
                                   && txmetadataA == txmetadataB
+           ShelleyBasedEraAlonzo  ->
+             error "Eq (TxBody era): Alonzo not implemented yet"
 
     (==) ByronTxBody{} (ShelleyTxBody era _ _ _) = case era of {}
 
@@ -930,6 +952,18 @@ instance Show (TxBody era) where
         . showsPrec 11 txmetadata
         )
 
+    showsPrec p (ShelleyTxBody ShelleyBasedEraAlonzo
+                               txbody txscripts txmetadata) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxBody ShelleyBasedEraMary "
+        . showsPrec 11 txbody
+        . showChar ' '
+        . showsPrec 11 txscripts
+        . showChar ' '
+        . showsPrec 11 txmetadata
+        )
+
+
 instance HasTypeProxy era => HasTypeProxy (TxBody era) where
     data AsType (TxBody era) = AsTxBody (AsType era)
     proxyToAsType _ = AsTxBody (proxyToAsType (Proxy :: Proxy era))
@@ -957,6 +991,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
         ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
         ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
+        ShelleyBasedEraAlonzo  -> error "serialiseToCBOR: Alonzo era not implemented yet"
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -974,6 +1009,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
                         (ShelleyTxBody ShelleyBasedEraAllegra) bs
         MaryEra    -> deserialiseShelleyBasedTxBody
                         (ShelleyTxBody ShelleyBasedEraMary) bs
+        AlonzoEra    -> error "deserialiseFromCBOR: Alonzo era not implemented yet"
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
@@ -1023,6 +1059,7 @@ instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
         ShelleyEra -> "TxUnsignedShelley"
         AllegraEra -> "TxBodyAllegra"
         MaryEra    -> "TxBodyMary"
+        AlonzoEra  -> "TxBodyAlonzo"
 
 
 -- ----------------------------------------------------------------------------
@@ -1128,7 +1165,7 @@ checkAuxiliaryDataHash era body mAux =
         ShelleyBasedEraMary ->
           Mary.adHash' body ==
           (Ledger.hashAuxiliaryData @StandardMary <$> mAux')
-
+        ShelleyBasedEraAlonzo -> error "checkAuxiliaryDataHash: Alonzo era not implemented yet"
 
 fromLedgerTxIns
   :: ShelleyBasedEra era
@@ -1141,6 +1178,7 @@ fromLedgerTxIns era body =
         ShelleyBasedEraShelley -> toList $ Shelley._inputs body
         ShelleyBasedEraAllegra -> toList $ Allegra.inputs' body
         ShelleyBasedEraMary    -> toList $ Mary.inputs'    body
+        ShelleyBasedEraAlonzo  -> error "fromLedgerTxIns: Alonzo era not implemented yet"
   ]
 
 
@@ -1152,6 +1190,7 @@ fromLedgerTxOuts era body =
     ShelleyBasedEraShelley -> toList $ Shelley._outputs body
     ShelleyBasedEraAllegra -> toList $ Allegra.outputs' body
     ShelleyBasedEraMary    -> toList $ Mary.outputs'    body
+    ShelleyBasedEraAlonzo  -> error "fromLedgerTxOuts: Alonzo era not implemented yet"
 
 
 fromLedgerTxFee
@@ -1167,7 +1206,7 @@ fromLedgerTxFee era body =
     ShelleyBasedEraMary ->
       TxFeeExplicit TxFeesExplicitInMaryEra $
       fromShelleyLovelace $ Mary.txfee' body
-
+    ShelleyBasedEraAlonzo -> error "fromLedgerTxFee: Alonzo era not implemented yet"
 
 fromLedgerTxValidityRange
   :: ShelleyBasedEra era
@@ -1200,6 +1239,7 @@ fromLedgerTxValidityRange era body =
       )
       where
         Mary.ValidityInterval{invalidBefore, invalidHereafter} = Mary.vldt' body
+    ShelleyBasedEraAlonzo -> error "fromLedgerTxValidityRange: Alonzo era not implemented yet"
 
 
 fromLedgerAuxiliaryData
@@ -1216,7 +1256,8 @@ fromLedgerAuxiliaryData ShelleyBasedEraMary (Mary.AuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraMary <$> toList ss
   )
-
+fromLedgerAuxiliaryData ShelleyBasedEraAlonzo _ =
+  error "fromLedgerAuxiliaryData: Alonzo era not implemented yet"
 
 fromLedgerTxAuxiliaryData
   :: ShelleyBasedEra era
@@ -1250,6 +1291,7 @@ fromLedgerTxAuxiliaryData era (Just auxData) =
           [] -> TxAuxScriptsNone
           _  -> TxAuxScripts AuxScriptsInMaryEra ss
       )
+    ShelleyBasedEraAlonzo -> error "fromLedgerTxAuxiliaryData: Alonzo era not implemented yet"
   where
     (ms, ss) = fromLedgerAuxiliaryData era auxData
 
@@ -1280,7 +1322,7 @@ fromLedgerTxWithdrawals era body =
           TxWithdrawals WithdrawalsInMaryEra $ fromShelleyWithdrawal withdrawals
       where
         withdrawals = Mary.wdrls' body
-
+    ShelleyBasedEraAlonzo -> error "fromLedgerTxWithdrawals: Alonzo era not implemented yet"
 
 fromLedgerTxCertificates
   :: ShelleyBasedEra era
@@ -1315,7 +1357,7 @@ fromLedgerTxCertificates era body =
             ViewTx
       where
         certificates = Mary.certs' body
-
+    ShelleyBasedEraAlonzo -> error "fromLedgerTxCertificates: Alonzo era not implemented yet"
 
 fromLedgerTxUpdateProposal
   :: ShelleyBasedEra era
@@ -1338,6 +1380,7 @@ fromLedgerTxUpdateProposal era body =
         SNothing -> TxUpdateProposalNone
         SJust p ->
           TxUpdateProposal UpdateProposalInMaryEra $ fromShelleyUpdate p
+    ShelleyBasedEraAlonzo -> error "fromLedgerTxUpdateProposal: Alonzo era not implemented yet"
 
 
 fromLedgerTxMintValue
@@ -1356,6 +1399,7 @@ fromLedgerTxMintValue era body =
           pure $ TxMintValue MultiAssetInMaryEra (fromMaryValue mint) ViewTx
       where
         mint = Mary.mint' body
+    ShelleyBasedEraAlonzo -> error "fromLedgerTxMintValue: Alonzo era not implemented yet"
 
 
 makeByronTransactionBody :: TxBodyContent BuildTx ByronEra
@@ -1603,6 +1647,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
         ss = case txAuxScripts of
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
+
+makeShelleyTransactionBody ShelleyBasedEraAlonzo _ =
+  error "makeShelleyTransactionBody: Alonzo era not implemented yet"
 
 data SimpleScriptInEra era where
      SimpleScriptInEra :: ScriptLanguageInEra lang era

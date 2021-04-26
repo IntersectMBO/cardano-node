@@ -42,17 +42,15 @@ transactionFee :: forall era.
                -> Natural -- ^ The tx fee per byte
                -> Tx era
                -> Lovelace
-transactionFee txFeeFixed txFeePerByte (ShelleyTx _ tx) =
-    Lovelace (a * x + b)
-  where
-    a = toInteger txFeePerByte
-    x = getField @"txsize" tx
-    b = toInteger txFeeFixed
-
---TODO: This can be made to work for Byron txs too. Do that: fill in this case
--- and remove the IsShelleyBasedEra constraint.
-transactionFee _ _ (ByronTx _) =
-    case shelleyBasedEra :: ShelleyBasedEra era of {}
+transactionFee txFeeFixed txFeePerByte tx =
+  let a = toInteger txFeePerByte
+      b = toInteger txFeeFixed
+  in case tx of
+       ShelleyTx _ tx' -> let x = getField @"txsize" tx'
+                          in Lovelace (a * x + b)
+       --TODO: This can be made to work for Byron txs too. Do that: fill in this case
+       -- and remove the IsShelleyBasedEra constraint.
+       ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
 
 
 --TODO: in the Byron case the per-byte is non-integral, would need different

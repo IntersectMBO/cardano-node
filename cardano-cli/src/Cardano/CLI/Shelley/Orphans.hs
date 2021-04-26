@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -27,8 +28,8 @@ import           Cardano.Crypto.Hash.Class as Crypto
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
-import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
 import           Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
@@ -44,6 +45,10 @@ import qualified Shelley.Spec.Ledger.STS.Tickn as Ledger
 import           Shelley.Spec.Ledger.TxBody (TxId (..))
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
+
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import           Cardano.Ledger.Alonzo.Translation (AlonzoGenesis (..))
+import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
 
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
@@ -95,3 +100,32 @@ deriving newtype  instance ToJSON    (Ledger.Mary.PolicyID StandardCrypto)
 
 instance (ToJSONKey k, ToJSON v) => ToJSON (SetAlgebra.BiMap v k v) where
   toJSON = toJSON . SetAlgebra.forwards -- to normal Map
+
+
+
+deriving instance FromJSON Alonzo.ExUnits
+deriving instance FromJSON Alonzo.Prices
+
+-- We defer parsing of the cost model so that we can
+-- read it as a filepath. This is to reduce further pollution
+-- of the genesis file.
+instance FromJSON Alonzo.AlonzoGenesis where
+  parseJSON =
+    withObject "Alonzo Genesis" $ \o -> do
+      adaPerUTxOWord       <- o .: "adaPerUTxOWord"
+      prices               <- o .: "executionPrices"
+      maxTxExUnits         <- o .: "maxTxExUnits"
+      maxBlockExUnits      <- o .: "maxBlockExUnits"
+      maxValSize           <- o .: "maxValueSize"
+      collateralPercentage <- o .: "collateralPercentage"
+      maxCollateralInputs  <- o .: "maxCollateralInputs"
+      return Alonzo.AlonzoGenesis {
+        adaPerUTxOWord,
+        costmdls = mempty,
+        prices,
+        maxTxExUnits,
+        maxBlockExUnits,
+        maxValSize,
+        collateralPercentage,
+        maxCollateralInputs
+      }

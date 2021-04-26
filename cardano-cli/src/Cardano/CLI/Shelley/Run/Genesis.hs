@@ -10,6 +10,7 @@
 module Cardano.CLI.Shelley.Run.Genesis
   ( ShelleyGenesisCmdError(..)
   , readShelleyGenesis
+  , readAlonzoGenesis
   , renderShelleyGenesisCmdError
   , runGenesisCmd
   ) where
@@ -17,8 +18,10 @@ module Cardano.CLI.Shelley.Run.Genesis
 import           Cardano.Prelude
 import           Prelude (id)
 
+import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.Binary.Get as Bin
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -59,9 +62,14 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
+import           Cardano.Ledger.Coin (Coin (..))
+import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
 import qualified Shelley.Spec.Ledger.API as Ledger
 import qualified Shelley.Spec.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
@@ -70,6 +78,7 @@ import           Cardano.Ledger.Era ()
 import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
+import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 import           Cardano.CLI.Shelley.Run.Address
 import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderShelleyNodeCmdError,
@@ -95,6 +104,7 @@ data ShelleyGenesisCmdError
   | ShelleyGenesisCmdNodeCmdError !ShelleyNodeCmdError
   | ShelleyGenesisCmdPoolCmdError !ShelleyPoolCmdError
   | ShelleyGenesisCmdStakeAddressCmdError !ShelleyStakeAddressCmdError
+  | ShelleyGenesisCmdCostModelsError !FilePath
   deriving Show
 
 renderShelleyGenesisCmdError :: ShelleyGenesisCmdError -> Text
@@ -129,7 +139,8 @@ renderShelleyGenesisCmdError err =
     ShelleyGenesisCmdNodeCmdError e -> renderShelleyNodeCmdError e
     ShelleyGenesisCmdPoolCmdError e -> renderShelleyPoolCmdError e
     ShelleyGenesisCmdStakeAddressCmdError e -> renderShelleyStakeAddressCmdError e
-
+    ShelleyGenesisCmdCostModelsError fp ->
+      "Cost model is invalid: " <> Text.pack fp
 
 runGenesisCmd :: GenesisCmd -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
@@ -919,3 +930,69 @@ runGenesisHashFile (GenesisFile fpath) = do
    let gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
        gh = Crypto.hashWith id content
    liftIO $ Text.putStrLn (Crypto.hashToTextAsHex gh)
+
+--
+-- Alonzo genesis
+--
+
+-- | In order to avoid introducing a separate Alonzo genesis file, we
+-- have added additional fields to the Shelley genesis that are required
+-- when hardforking to Alonzo. Unfortunately the 'ShelleyGenesis' 'FromJSON'
+-- instance exists in cardano-ledger-specs so we must duplicate code for now.
+
+readAlonzoGenesis
+  :: FilePath
+  -> ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
+readAlonzoGenesis fpath = do
+  alonzoGenWrapper <- readAndDecode
+                       `catchError` \err ->
+                         case err of
+                           ShelleyGenesisCmdGenesisFileError (FileIOError _ ioe)
+                             | isDoesNotExistError ioe -> panic "Shelley genesis file not found."
+                           _                           -> left err
+  createAlonzoGenesis alonzoGenWrapper
+
+ where
+  readAndDecode :: ExceptT ShelleyGenesisCmdError IO AlonzoGenWrapper
+  readAndDecode = do
+      lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
+      firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
+        . hoistEither $ Aeson.eitherDecode' lbs
+
+
+createAlonzoGenesis
+  :: AlonzoGenWrapper
+  -> ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
+createAlonzoGenesis (AlonzoGenWrapper costModelFp' alonzoGenesis) = do
+  costModel <- readAndDecode
+  case Plutus.extractModelParams costModel of
+    -- TODO: We should not be using functions directly from the plutus repo
+    -- These should be exposed via the ledger
+    Just m -> if Plutus.validateCostModelParams m
+              then left $ ShelleyGenesisCmdCostModelsError costModelFp'
+              else return $ alonzoGenesis { Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 $ Alonzo.CostModel m }
+
+    Nothing -> panic ""
+ where
+  readAndDecode :: ExceptT ShelleyGenesisCmdError IO Plutus.CostModel
+  readAndDecode = do
+      lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError costModelFp') $ LBS.readFile costModelFp'
+      firstExceptT (ShelleyGenesisCmdAesonDecodeError costModelFp' . Text.pack)
+        . hoistEither $ Aeson.eitherDecode' lbs
+
+
+data AlonzoGenWrapper =
+  AlonzoGenWrapper { costModelFp :: FilePath
+                   , genesis :: Alonzo.AlonzoGenesis
+                   }
+
+instance FromJSON AlonzoGenWrapper where
+  parseJSON = withObject "Alonzo Genesis Wrapper" $ \o -> do
+                -- NB: This has an empty map for the cost model
+                alonzoGenensis <- parseJSON (Aeson.Object o) :: Aeson.Parser Alonzo.AlonzoGenesis
+                cModelFp <- o .: "alonzoCostModel"
+                return $ AlonzoGenWrapper
+                           { costModelFp = cModelFp
+                           , genesis = alonzoGenensis
+                           }
+
