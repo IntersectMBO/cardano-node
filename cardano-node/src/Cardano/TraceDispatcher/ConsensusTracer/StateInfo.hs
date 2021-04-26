@@ -1,32 +1,59 @@
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
 module Cardano.TraceDispatcher.ConsensusTracer.StateInfo
   (
-    ForgeStateInfoDispatch(..)
-  , severityStateInfoShelley
-  , severityStateInfoByron
-  , namesForStateInfoShelley
-  , namesForStateInfoByron
+    GetKESInfo(..)
+  , severityStateInfo
+  , namesForStateInfo
+  , humanFormatterStateInfo
   ) where
 
 import           Data.Aeson (toJSON, (.=))
+import           Data.SOP.Strict
 
 import           Cardano.Logging
-import           Cardano.Prelude hiding (Show, show)
+import           Cardano.Prelude hiding (All, Show, show)
 import           Cardano.TraceDispatcher.ConsensusTracer.Formatting ()
 
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
-import           Ouroboros.Consensus.Node.Tracers (TraceLabelCreds(..))
 import           Ouroboros.Consensus.Block.Forging
-import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
-import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
-import           Ouroboros.Consensus.Cardano.ShelleyHFC (ShelleyBlockHFC)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import           Ouroboros.Consensus.HardFork.Combinator (HardForkBlock)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
+                     (OneEraForgeStateInfo (..))
+import           Ouroboros.Consensus.Node.Tracers (TraceLabelCreds (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
+import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
+import           Ouroboros.Consensus.TypeFamilyWrappers
+                     (WrapForgeStateInfo (..))
+
+class GetKESInfo blk where
+  getKESInfoFromStateInfo :: Proxy blk -> ForgeStateInfo blk -> Maybe HotKey.KESInfo
+  getKESInfoFromStateInfo _ _ = Nothing
+
+instance GetKESInfo (ShelleyBlock era) where
+  getKESInfoFromStateInfo _ fsi = Just fsi
+
+instance GetKESInfo ByronBlock
+
+instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
+  getKESInfoFromStateInfo _ =
+      hcollapse
+    . hcmap (Proxy @GetKESInfo) getOne
+    . getOneEraForgeStateInfo
+   where
+    getOne :: forall blk. GetKESInfo blk
+           => WrapForgeStateInfo blk
+           -> K (Maybe HotKey.KESInfo) blk
+    getOne = K . getKESInfoFromStateInfo (Proxy @blk) . unwrapForgeStateInfo
 
 
 instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
@@ -38,83 +65,40 @@ instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
   forHuman (TraceLabelCreds _t a)         = forHuman a
   asMetrics (TraceLabelCreds _t a)        = asMetrics a
 
-class ForgeStateInfoDispatch blk where
-  severityStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> SeverityS
-  namesForStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> [Text]
-  humanFormatterStateInfo ::
-       MonadIO m
-    => Proxy blk
-    -> Bool
-    -> Text
-    -> Trace m FormattedMessage
-    -> m (Trace m (TraceLabelCreds (ForgeStateInfo blk)))
+traceAsMaybeKESInfo
+  :: forall m blk . (GetKESInfo blk, MonadIO m)
+  => Proxy blk
+  -> Trace m (Maybe (TraceLabelCreds (HotKey.KESInfo)))
+  -> Trace m (TraceLabelCreds (ForgeStateInfo blk))
+traceAsMaybeKESInfo pr (Trace tr) = Trace $
+  contramap
+        (\(lc, mbC, (TraceLabelCreds c e)) ->
+            case getKESInfoFromStateInfo pr e of
+              Just kesi -> (lc, mbC, Just (TraceLabelCreds c kesi))
+              Nothing   -> (lc, mbC, Nothing))
+        tr
 
-instance ForgeStateInfoDispatch ByronBlock where
-    severityStateInfo _ (TraceLabelCreds _ v) =
-      severityStateInfoByron v
-    namesForStateInfo _ (TraceLabelCreds _ v) =
-      namesForStateInfoByron v
-    humanFormatterStateInfo _ colorize name baseTracer =
-      humanFormatterStateInfoByron colorize name baseTracer
-
-instance ForgeStateInfoDispatch (ShelleyBlock era) where
-    severityStateInfo _ (TraceLabelCreds _ kesinfo) =
-      severityStateInfoShelley kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ kesinfo) =
-      namesForStateInfoShelley kesinfo
-    humanFormatterStateInfo _ colorize name baseTracer =
-      humanFormatterStateInfoShelley colorize name baseTracer
-
-
-instance ForgeStateInfoDispatch (ShelleyBlockHFC era) where
-    severityStateInfo _ (TraceLabelCreds _ _v) = Info
---      severityStateInfoShelleyHF kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ _v) = []
---      namesForStateInfoShelleyHF kesinfo
-    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
-
-instance ForgeStateInfoDispatch ByronBlockHFC where
-    severityStateInfo _ (TraceLabelCreds _ _v) = Info
---      severityStateInfoByronHF kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ _v) = []
---      namesForStateInfoByronHF kesinfo
-    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
---      humanFormatterStateInfoByronHF colorize name baseTracer
-
-instance ForgeStateInfoDispatch (CardanoBlock crypt) where
-    severityStateInfo _ (TraceLabelCreds _ _v) = Info
---      severityStateInfoCardano kesinfo
-    namesForStateInfo _ (TraceLabelCreds _ _v) = []
---      namesForStateInfoCardano kesinfo
-    humanFormatterStateInfo _ _colorize _name _baseTracer = undefined
---      humanFormatterStateInfoCardano colorize name baseTracer
-
-humanFormatterStateInfoByron ::
-     MonadIO m
-  => Bool
+humanFormatterStateInfo ::
+  (  MonadIO m
+  ,  GetKESInfo blk)
+  => Proxy blk
+  -> Bool
   -> Text
   -> Trace m FormattedMessage
-  -> m (Trace m (TraceLabelCreds ()))
-humanFormatterStateInfoByron colorize name baseTracer =
-    humanFormatter colorize name baseTracer
+  -> m (Trace m (TraceLabelCreds (ForgeStateInfo blk)))
+humanFormatterStateInfo pr withColor application tr = do
+  tr' <- humanFormatter withColor application tr
+  pure $ traceAsMaybeKESInfo pr (filterTraceMaybe tr')
 
-humanFormatterStateInfoShelley ::
-     MonadIO m
-  => Bool
-  -> Text
-  -> Trace m FormattedMessage
-  -> m (Trace m (TraceLabelCreds HotKey.KESInfo))
-humanFormatterStateInfoShelley colorize name baseTracer =
-  humanFormatter colorize name baseTracer
 
-severityStateInfoShelley :: HotKey.KESInfo -> SeverityS
-severityStateInfoShelley _ki = Info
+severityStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> SeverityS
+severityStateInfo pr (TraceLabelCreds _creds a) = severityStateInfo' pr a
 
-severityStateInfoByron :: () -> SeverityS
-severityStateInfoByron _ = Info
+severityStateInfo' :: Proxy blk -> ForgeStateInfo blk -> SeverityS
+severityStateInfo' _pr _fsi = Info
 
-namesForStateInfoShelley :: HotKey.KESInfo -> [Text]
-namesForStateInfoShelley _ki = []
+namesForStateInfo :: Proxy blk -> TraceLabelCreds (ForgeStateInfo blk) -> [Text]
+namesForStateInfo pr (TraceLabelCreds _creds a) = namesForStateInfo' pr a
 
-namesForStateInfoByron :: () -> [Text]
-namesForStateInfoByron _ = []
+namesForStateInfo' :: Proxy blk -> ForgeStateInfo blk -> [Text]
+namesForStateInfo' _pr _fsi = []

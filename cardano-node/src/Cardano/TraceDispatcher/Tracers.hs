@@ -23,7 +23,7 @@ import           Cardano.TraceDispatcher.ChainDBTracer.Docu
 import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
 import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
 import           Cardano.TraceDispatcher.ConsensusTracer.Docu
-import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo (ForgeStateInfoDispatch(..))
+import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 import           Data.Aeson (ToJSON)
 import qualified Data.Text.IO as T
@@ -163,12 +163,12 @@ blockFetchServerTracer trBase = do
             $ withSeverity severityBlockFetchServer trNs
 
 forgeStateInfoTracer :: forall blk .
-     ForgeStateInfoDispatch blk
+     GetKESInfo blk
   => Proxy blk
   -> Trace IO FormattedMessage
   -> IO (Trace IO (Consensus.TraceLabelCreds (ForgeStateInfo blk)))
 forgeStateInfoTracer pr trBase = do
-    tr <- humanFormatterStateInfo pr True "Cardano" trBase
+    tr <- humanFormatterStateInfo (Proxy @blk) True "Cardano" trBase
     let trNs = appendName "BlockFetchServer" $ appendName "Node" tr
     pure $ withNamesAppended (namesForStateInfo pr)
             $ withSeverity (severityStateInfo pr) trNs
@@ -343,6 +343,7 @@ mkDispatchTracers
   , LogFormatting (ChainDB.InvalidBlockReason blk)
   , HasKESMetricsData blk
   , HasKESInfo blk
+  , GetKESInfo blk
   , TraceConstraints blk
   , Show peer, Eq peer
   , Show localPeer

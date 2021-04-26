@@ -14,7 +14,6 @@ import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Queries (LedgerQueries)
 import           Cardano.Logging (LogFormatting)
-import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo (ForgeStateInfoDispatch)
 
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
@@ -45,7 +44,6 @@ type TraceConstraints blk =
     , ToJSON   (TxOut (AlonzoEra StandardCrypto))
     , ToJSON   (PParamsUpdate (AlonzoEra StandardCrypto))
     , ForgeStateInfoDispatch blk
-    , ToJSON   (TxId (GenTx blk))
 
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
