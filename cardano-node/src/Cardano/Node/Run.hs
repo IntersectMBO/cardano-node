@@ -285,6 +285,7 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
        { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
        , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
        , srnChainDbValidateOverride     = ncValidateDB nc
+       , srnSnapshotInterval            = ncSnapshotInterval nc
        , srnDatabasePath                = dbPath
        , srnDiffusionArguments          = diffusionArguments
        , srnDiffusionTracers            = diffusionTracers

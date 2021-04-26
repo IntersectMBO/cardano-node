@@ -183,7 +183,9 @@ test-suite cardano-node-test
                       , hedgehog
                       , hedgehog-corpus
                       , iproute
+                      , ouroboros-consensus
                       , ouroboros-network
+                      , time
 
   other-modules:        Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen
