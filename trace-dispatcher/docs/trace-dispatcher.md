@@ -80,23 +80,19 @@
 4. [Integration and implementation in the node](#Integration-and-implementation-in-the-node)
    1. [Overall tracing setup](#Overall-tracing-setup)
       - [x] edit
-      - [ ] agree
+      - [x] agree
       - [ ] complete
    2. [Trace-outs](#Trace-outs)
       - [x] edit
-      - [ ] agree
+      - [x] agree
       - [ ] complete
-   3. [Severity filtering implementation](#Severity-filtering-implementation)
+   3. [Explicit trace filtering](#Explicit-trace-filtering)
        - [x] edit
-       - [ ] agree
+       - [x] agree
        - [ ] complete
    4. [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy-filtering-implementation)
       - [x] edit
-      - [ ] agree
-      - [ ] complete
-   5. [Note on SilenceF severity filter](#Note-on-SilenceF-severity-filter)
-      - [x] edit
-      - [ ] agree
+      - [x] agree
       - [ ] complete
    5. [Documentation generation](#Documentation-generation)
       - [x] edit
@@ -158,7 +154,7 @@ Therefore, we can conceptually decompose the __tracing system__ into three compo
 
 * __frontend__, the entry point for __program trace__ collection, which is just a single function `traceWith`;  Program locations that invoke this frontend (thereby injecting messages into the tracing system) is called __trace-ins__.
 * __dispatcher__, is a structured, namespaced set of contravariantly-composed transformations, triggered by the entry point.  Its role is specifically __trace interpretation__;
-* __backend__, which is what externalises results of the interpretation ( __metrics__ and __messages__) outside the system, through __trace-outs__.
+* __backend__, externalises results of the interpretation ( __metrics__ and __messages__) outside the system, through __trace-outs__.
 
 The trace-emitting program itself is only exposed to the the frontend part of the tracing system, as it only needs to define the traces themselves, and specify the __trace-ins__ -- call sites that inject traces.  It is notably free from any extra obligations, such as the need to define the `LogFormatting` instances.
 
@@ -302,7 +298,7 @@ In addition, the __severity context__ of a particular trace can be further overr
 
 `Info` is the default __severity__, in the absence of trace context or configured severity overrides.
 
-See [Severity filtering implementation](#Severity-filtering-implementation) for a more formal explanation of semantics.
+NOTE: as en extension to the filtering severity type (`SeverityF`), a `SilenceF` constructor is defined, which encodes unconditional silencing of a particular trace -- and therefore serves as a semantic expression of the `nullTracer` functionality.
 
 ### Privacy
 
@@ -602,7 +598,9 @@ As a result of the __trace__ / __tracer__ duality, the program components that w
 Because all these tracers are defined as part of the __dispatcher__ definition, which is itself defined in a centralised location, that allows a certain program structure to emerge:
 
 1. The program initialisation routine reads __trace configuration__ and uses that to parametrise the __dispatcher__ that is meant to express a __tracing policy__ defined by that configuration.
+
 2. As mentioned previously, that dispatcher is generally expressed as a structured value, that defines per-program-component set of __tracers__.
+
 3. This __dispatcher__ (in other words, the set of __tracers__ it is composed of) is given as an argument to the rest of the program, which then distributes them across its components and then begins execution.
 
 ## Trace-outs
@@ -612,9 +610,11 @@ __Trace-outs__, as mentioned before, are final destinations of all __traces__, a
 There are exactly two __trace-outs__ defined for the system:
 
 1. `stdout`, the basic standard output destination.  It is notable in that it can also accept `Confidential` traces.
-2. `trace-forwarder`, a purely network-only sink that forwards both __messages__ and __metrics__ using a combination of dedicated protocols over TCP or local sockets.  Only processes `Public` traces.
+2. `trace-forward`, a purely network-only sink that forwards __messages__ using a combination of dedicated protocols over TCP or local sockets.  Only capable of forwarding `Public` traces.
 
-The `trace-forwarder` is intended to be used as a __metric__ / __messages__ source for `RTView` and `cardano-logger`.
+`forwardingTracer` is intended to be used as a __message__ source for `RTView` and `cardano-logger`.
+
+`ekgTracer` submits metrics to a local EKG store, which can then export messages further.
 
 ```haskell
 stdoutTracer :: MonadIO m
@@ -622,7 +622,11 @@ stdoutTracer :: MonadIO m
   -> m (Trace m FormattedMessage)
 
 forwardingTracer :: MonadIO m
-  => Either Metrics.Store Server
+  => ForwardTarget
+  -> m (Trace m FormattedMessage)
+
+ekgTracer :: MonadIO m
+  => Ekg.Store
   -> m (Trace m FormattedMessage)
 ```
 
@@ -638,26 +642,14 @@ Configuring a __trace-out__ to output human-readable text (and therefore to use 
 >
 > We should consider that we already have a dedicated `cardano-logger` component for file logging.
 
-<!--
-### Convenient namespace-extending tracing
-
-Sometimes, while implementing the __trace dispatcher__, it's convenient to combine `traceWith` with `appendName`.
-
-For this purpose, we provide `traceNamed`:
-
-> ```haskell
-> case event of
->   IgnoreBlockOlderThanK{} ->
->     traceNamed trAddBlock "IgnoreBlockOlderThanK" "Block ignored"
-> ```
-
--->
-
 ### Explicit trace filtering
 
-Not all messages shall be logged, but only a subset. The most common case is when we want to see messages that have a minimum severity level of e.g. `Warning`.
+__Trace filtering__ is affected by __annotation__ and __configuration__ components of the trace's __severity context__ as follows:
 
-This can be done by calling the function `filterTraceBySeverity`, which only processes messages further with a severity equal or greater as the given one. E.g.:
+1. The effective __configuration severity__ of a trace is determined as a the __most specific__ configuration-specified __severity__.
+2. The trace is then ignored, if the trace's __annotated severity__ is __less__ than its __configuration severity__.
+
+For the purposes of trace dispatcher implementation, direct trace filtering can be done by `filterTraceBySeverity`, which only processes messages further with a severity equal or greater as the given one. E.g.:
 
 ```haskell
 let filteredTracer = filterTraceBySeverity WarningF exampleTracer
@@ -688,11 +680,6 @@ filterTrace (\ (c, a) -> case lcPrivacy c of
                 Nothing -> True)
 ```
 
-__Trace filtering__ is affected by __annotation__ and __configuration__ components of the trace's __severity context__ as follows:
-
-1. The effective __configuration severity__ of a trace is determined as a the __most specific__ configuration-specified __severity.
-2. The trace is then ignored, if the trace's __annotated severity__ is __less__ than its __configuration severity__.
-
 ## Confidentiality and privacy filtering implementation
 
 __Trace filtering__ is affected by the __privacy context__ as follows:
@@ -701,10 +688,6 @@ __Trace filtering__ is affected by the __privacy context__ as follows:
 2. `Public` traces reach both the `stdout` and `trace-forwarder` __trace-outs__.
 
 In effect, it is impossible to leak the `Confidential` traces due to logging misconfiguration -- a leak can only happen if the user explicitly allows network access to the standard output of the traced program.
-
-## Note on SilenceF severity filter
-
-As en extension to the public set of severities, a private `SilenceF` constructor is defined which encodes unconditional silencing of a particular trace -- and therefore serves as a semantic expression of the `nullTracer` functionality.
 
 ## Documentation generation
 
