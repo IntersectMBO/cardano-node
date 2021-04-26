@@ -50,9 +50,9 @@ import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHF
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
                    eraIndexZero)
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
-import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
+import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 
@@ -145,6 +145,7 @@ data EraInMode era mode where
      ShelleyEraInCardanoMode :: EraInMode ShelleyEra CardanoMode
      AllegraEraInCardanoMode :: EraInMode AllegraEra CardanoMode
      MaryEraInCardanoMode    :: EraInMode MaryEra    CardanoMode
+     AlonzoEraInCardanoMode  :: EraInMode AlonzoEra  CardanoMode
 
 deriving instance Show (EraInMode era mode)
 
@@ -156,6 +157,7 @@ eraInModeToEra ByronEraInCardanoMode   = ByronEra
 eraInModeToEra ShelleyEraInCardanoMode = ShelleyEra
 eraInModeToEra AllegraEraInCardanoMode = AllegraEra
 eraInModeToEra MaryEraInCardanoMode    = MaryEra
+eraInModeToEra AlonzoEraInCardanoMode  = AlonzoEra
 
 
 data AnyEraInMode mode where
@@ -173,6 +175,7 @@ anyEraInModeToAnyEra (AnyEraInMode erainmode) =
     ShelleyEraInCardanoMode -> AnyCardanoEra ShelleyEra
     AllegraEraInCardanoMode -> AnyCardanoEra AllegraEra
     MaryEraInCardanoMode    -> AnyCardanoEra MaryEra
+    AlonzoEraInCardanoMode  -> AnyCardanoEra AlonzoEra
 
 
 -- | The consensus-mode-specific parameters needed to connect to a local node
@@ -234,6 +237,8 @@ eraIndex2 = eraIndexSucc eraIndex1
 eraIndex3 :: Consensus.EraIndex (x3 : x2 : x1 : x0 : xs)
 eraIndex3 = eraIndexSucc eraIndex2
 
+eraIndex4 :: Consensus.EraIndex (x4 : x3 : x2 : x1 : x0 : xs)
+eraIndex4 = eraIndexSucc eraIndex3
 
 toConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
                     => EraInMode era mode
@@ -245,6 +250,7 @@ toConsensusEraIndex ByronEraInCardanoMode   = eraIndex0
 toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
 toConsensusEraIndex AllegraEraInCardanoMode = eraIndex2
 toConsensusEraIndex MaryEraInCardanoMode    = eraIndex3
+toConsensusEraIndex AlonzoEraInCardanoMode  = eraIndex4
 
 
 fromConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
@@ -284,4 +290,7 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
 
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (Z (K ())))))) =
       AnyEraInMode MaryEraInCardanoMode
+
+    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (Z (K ()))))))) =
+      AnyEraInMode AlonzoEraInCardanoMode
 

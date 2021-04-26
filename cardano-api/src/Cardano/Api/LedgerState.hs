@@ -160,6 +160,7 @@ applyBlock env oldState enableValidation block
         ShelleyBasedEraShelley -> Consensus.BlockShelley shelleyBlock
         ShelleyBasedEraAllegra -> Consensus.BlockAllegra shelleyBlock
         ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
+        ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
 
 pattern LedgerStateByron
   :: Ledger.LedgerState Byron.ByronBlock
@@ -445,14 +446,16 @@ data NodeConfig = NodeConfig
   , ncByronSoftwareVersion :: !Cardano.Chain.Update.SoftwareVersion
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
 
-  -- Shelley hardfok parameters
-  , ncByronToShelley :: !ByronToShelley
-
-  -- Allegra hardfok parameters
-  , ncShelleyToAllegra :: !ShelleyToAllegra
-
-  -- Mary hardfok parameters
-  , ncAllegraToMary :: !AllegraToMary
+  -- Per-era parameters for the hardfok transitions:
+  , ncByronToShelley   :: !(Consensus.ProtocolTransitionParamsShelleyBased
+                              Shelley.StandardShelley)
+  , ncShelleyToAllegra :: !(Consensus.ProtocolTransitionParamsShelleyBased
+                              Shelley.StandardAllegra)
+  , ncAllegraToMary    :: !(Consensus.ProtocolTransitionParamsShelleyBased
+                              Shelley.StandardMary)
+--TODO:
+--, ncMaryToAlonzo     :: !(Consensus.ProtocolTransitionParamsShelleyBased
+--                            Shelley.StandardAlonzo)
   }
 
 instance FromJSON NodeConfig where
@@ -470,9 +473,14 @@ instance FromJSON NodeConfig where
           <*> o .: "RequiresNetworkMagic"
           <*> parseByronSoftwareVersion o
           <*> parseByronProtocolVersion o
-          <*> (Consensus.ProtocolParamsTransition <$> parseShelleyHardForkEpoch o)
-          <*> (Consensus.ProtocolParamsTransition <$> parseAllegraHardForkEpoch o)
-          <*> (Consensus.ProtocolParamsTransition <$> parseMaryHardForkEpoch o)
+          <*> (Consensus.ProtocolTransitionParamsShelleyBased ()
+                 <$> parseShelleyHardForkEpoch o)
+          <*> (Consensus.ProtocolTransitionParamsShelleyBased ()
+                 <$> parseAllegraHardForkEpoch o)
+          <*> (Consensus.ProtocolTransitionParamsShelleyBased ()
+                 <$> parseMaryHardForkEpoch o)
+--        <*> (Consensus.ProtocolTransitionParamsShelleyBased ({-alonzo genesis-})
+--               <$> parseAlonzoHardForkEpoch o)
 
       parseByronProtocolVersion :: Object -> Data.Aeson.Types.Internal.Parser Cardano.Chain.Update.ProtocolVersion
       parseByronProtocolVersion o =
@@ -548,19 +556,6 @@ data ShelleyConfig = ShelleyConfig
   , scGenesisHash :: !GenesisHashShelley
   }
 
-type ByronToShelley =
-  Consensus.ProtocolParamsTransition Byron.ByronBlock
-    (Shelley.ShelleyBlock Shelley.StandardShelley)
-
-type ShelleyToAllegra =
-  Consensus.ProtocolParamsTransition
-    (Shelley.ShelleyBlock Shelley.StandardShelley)
-    (Shelley.ShelleyBlock Shelley.StandardAllegra)
-
-type AllegraToMary =
-  Consensus.ProtocolParamsTransition
-    (Shelley.ShelleyBlock Shelley.StandardAllegra)
-    (Shelley.ShelleyBlock Shelley.StandardMary)
 
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath
@@ -619,9 +614,13 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis)
           Consensus.ProtocolParamsMary
             { Consensus.maryProtVer = shelleyProtVer dnc
             }
+          Consensus.ProtocolParamsAlonzo
+            { Consensus.alonzoProtVer = error "mkProtocolInfoCardano: alonzoProtVer"
+            }
           (ncByronToShelley dnc)
           (ncShelleyToAllegra dnc)
           (ncAllegraToMary dnc)
+          (error "mkProtocolInfoCardano: ProtocolTransitionParamsShelleyBased StandardAlonzo")
 
 shelleyPraosNonce :: ShelleyConfig -> Shelley.Spec.Nonce
 shelleyPraosNonce sCfg = Shelley.Spec.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)

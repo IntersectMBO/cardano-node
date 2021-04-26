@@ -132,6 +132,9 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
+    showsPrec _ (ShelleyBlock ShelleyBasedEraAlonzo _) =
+      error "Show (Block era): Alonzo not implemented yet"
+
 getBlockTxs :: forall era . Block era -> [Tx era]
 getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
     case byronBlockRaw of
@@ -147,6 +150,8 @@ getBlockTxs (ShelleyBlock shelleyEra Consensus.ShelleyBlock{Consensus.shelleyBlo
       ShelleyBasedEraShelley -> go
       ShelleyBasedEraAllegra -> go
       ShelleyBasedEraMary    -> go
+      ShelleyBasedEraAlonzo  ->
+        error "getBlockTxs: Alonzo era not implemented yet"
   where
     go :: Ledger.TxSeq (ShelleyLedgerEra era) ~ Shelley.TxSeq (ShelleyLedgerEra era)
        => SafeToHash (Core.Witnesses (ShelleyLedgerEra era))
@@ -198,6 +203,9 @@ fromConsensusBlock CardanoMode =
         BlockInMode (ShelleyBlock ShelleyBasedEraMary b')
                      MaryEraInCardanoMode
 
+      Consensus.BlockAlonzo b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b')
+                     AlonzoEraInCardanoMode
 
 -- ----------------------------------------------------------------------------
 -- Block headers
@@ -229,6 +237,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
   ShelleyBasedEraShelley -> go
   ShelleyBasedEraAllegra -> go
   ShelleyBasedEraMary -> go
+  ShelleyBasedEraAlonzo -> error "getBlockHeader: Alonzo era not implemented yet"
   where
     go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => BlockHeader
     go = BlockHeader headerFieldSlot (HeaderHash hashSBS) headerFieldBlockNo

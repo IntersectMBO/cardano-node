@@ -16,6 +16,7 @@ import           Cardano.Prelude hiding (show)
 import           Prelude (String, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
+import           Data.Aeson (Value (..))
 import qualified Data.IP as IP
 import           Data.Text (pack)
 

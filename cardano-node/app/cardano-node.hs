@@ -18,7 +18,7 @@ import           System.Info (arch, compilerName, compilerVersion, os)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration)
 import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
-                     renderHelpDoc)
+                   renderHelpDoc)
 import           Cardano.Node.Run (runNode)
 
 main :: IO ()

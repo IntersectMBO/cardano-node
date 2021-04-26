@@ -14,11 +14,11 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
+import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Shelley
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
 --

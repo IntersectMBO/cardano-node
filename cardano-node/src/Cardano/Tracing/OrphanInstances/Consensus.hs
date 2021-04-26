@@ -16,6 +16,7 @@ module Cardano.Tracing.OrphanInstances.Consensus () where
 import           Cardano.Prelude hiding (show)
 import           Prelude (show)
 
+import           Data.Aeson (Value (..))
 import           Data.Text (pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -256,7 +257,8 @@ instance ( tx ~ GenTx blk
          , ToObject (OtherHeaderEnvelopeError blk)
          , ToObject (ValidationErr (BlockProtocol blk))
          , ToObject (CannotForge blk)
-         , ToObject (ForgeStateUpdateError blk))
+         , ToObject (ForgeStateUpdateError blk)
+         , LedgerSupportsMempool blk)
       => Transformable Text IO (TraceForgeEvent blk) where
   trTransformer = trStructuredText
 
@@ -265,9 +267,11 @@ instance ( tx ~ GenTx blk
          , HasTxId tx
          , LedgerSupportsMempool blk
          , LedgerSupportsProtocol blk
+         , LedgerSupportsMempool blk
          , Show (TxId tx)
          , Show (ForgeStateUpdateError blk)
-         , Show (CannotForge blk))
+         , Show (CannotForge blk)
+         , LedgerSupportsMempool blk)
       => HasTextFormatter (TraceForgeEvent blk) where
   formatText = \case
     TraceStartLeadershipCheck slotNo -> const $

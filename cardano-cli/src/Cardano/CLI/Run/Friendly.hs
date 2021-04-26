@@ -18,7 +18,7 @@ import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
 
 import           Cardano.Api as Api (AddressInEra (..),
                    AddressTypeInEra (ByronAddressInAnyEra, ShelleyAddressInEra), CardanoEra,
-                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraMary, ShelleyBasedEraShelley),
+                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraMary, ShelleyBasedEraShelley),
                    ShelleyEra, TxBody, serialiseAddress)
 import           Cardano.Api.Byron (TxBody (ByronTxBody))
 import           Cardano.Api.Shelley (TxBody (ShelleyTxBody), fromShelleyAddr)
@@ -50,6 +50,8 @@ friendlyTxBody era txbody =
         addAuxData aux $ friendlyTxBodyAllegra body
       ShelleyTxBody ShelleyBasedEraMary body _scripts aux ->
         addAuxData aux $ friendlyTxBodyMary body
+      ShelleyTxBody ShelleyBasedEraAlonzo _ _ _ ->
+        panic "friendlyTxBody: Alonzo not implemented yet"
 
 addAuxData :: Show a => Maybe a -> Object -> Object
 addAuxData = HashMap.insert "auxiliary data" . maybe Null (toJSON . textShow)

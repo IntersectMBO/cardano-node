@@ -102,6 +102,13 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) MaryEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
+toConsensusGenTx (TxInMode (ShelleyTx _ _tx) AlonzoEraInCardanoMode) =
+    Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))
+  where
+    tx' = error "toConsensusGenTx: Alonzo not implemented yet"
+    -- Consensus needs to expose a function that can make create Alonzo txs
+
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction validation errors in the context of eras and consensus modes
@@ -144,6 +151,12 @@ instance Show (TxValidationError era) where
     showsPrec p (ShelleyTxValidationError ShelleyBasedEraMary err) =
       showParen (p >= 11)
         ( showString "ShelleyTxValidationError ShelleyBasedEraMary "
+        . showsPrec 11 err
+        )
+
+    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAlonzo err) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxValidationError ShelleyBasedEraAlonzo "
         . showsPrec 11 err
         )
 
@@ -197,6 +210,11 @@ fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrMary err) =
     TxValidationErrorInMode
       (ShelleyTxValidationError ShelleyBasedEraMary err)
       MaryEraInCardanoMode
+
+fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAlonzo err) =
+    TxValidationErrorInMode
+      (ShelleyTxValidationError ShelleyBasedEraAlonzo err)
+      AlonzoEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrWrongEra err) =
     TxValidationEraMismatch err

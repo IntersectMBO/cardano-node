@@ -465,6 +465,7 @@ instance IsShelleyBasedEra era => HasTextEnvelope (ScriptInEra era) where
         ShelleyBasedEraShelley -> "ScriptInEra ShelleyEra"
         ShelleyBasedEraAllegra -> "ScriptInEra AllegraEra"
         ShelleyBasedEraMary    -> "ScriptInEra MaryEra"
+        ShelleyBasedEraAlonzo  -> "ScriptInEra AlonzoEra"
 
 
 -- | Check if a given script language is supported in a given era, and if so
@@ -769,6 +770,8 @@ fromShelleyBasedScript era script =
       ScriptInEra SimpleScriptV2InMary $
       SimpleScript SimpleScriptV2 $
       fromAllegraTimelock TimeLocksInSimpleScriptV2 script
+    ShelleyBasedEraAlonzo ->
+      error "fromShelleyBasedScript: Alonzo era not implemented yet"
 
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
@@ -924,6 +927,7 @@ instance IsCardanoEra era => FromJSON (ScriptInEra era) where
               Just s' -> ScriptInEra SimpleScriptV1InMary
                                      (SimpleScript SimpleScriptV1 s')
 
+      AlonzoEra -> error "JSON support for Plutus scripts not implemented"
 
 instance IsSimpleScriptLanguage lang => FromJSON (SimpleScript lang) where
   parseJSON = parseSimpleScript simpleScriptVersion

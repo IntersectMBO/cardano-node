@@ -17,7 +17,6 @@ module Cardano.Tracing.OrphanInstances.Common
   , mkObject
   , emptyObject
   , ToJSON
-  , Value (..)
   , toJSON
   , (.=)
 
@@ -43,7 +42,7 @@ module Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Prelude
 import           Prelude (fail)
 
-import           Data.Aeson
+import           Data.Aeson hiding (Value)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import           Data.Scientific (coefficient)
@@ -52,20 +51,18 @@ import qualified Data.Text.Encoding as Text
 import           Network.Socket (PortNumber)
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                     mkLOMeta)
+                   mkLOMeta)
 import           Cardano.BM.Data.Tracer (HasTextFormatter (..), emptyObject, mkObject, trStructured,
-                     trStructuredText)
+                   trStructuredText)
 import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
-                     Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
-                     Transformable (..))
+                   Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
+                   Transformable (..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
-
-
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are
 -- no cases needed.
@@ -125,3 +122,4 @@ instance ToObject ResourceStats where
     case toJSON stats of
       Object x -> x
       _ -> mempty
+

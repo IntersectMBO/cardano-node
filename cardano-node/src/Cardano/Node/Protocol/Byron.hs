@@ -14,7 +14,7 @@ module Cardano.Node.Protocol.Byron
 
 import           Cardano.Prelude
 import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither,
-                     hoistMaybe, left)
+                   hoistMaybe, left)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
@@ -26,8 +26,8 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 
 import qualified Cardano.Chain.Genesis as Genesis
-import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
+import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
 import           Ouroboros.Consensus.Cardano
@@ -35,10 +35,10 @@ import qualified Ouroboros.Consensus.Cardano as Consensus
 
 import           Cardano.Node.Types
 
+import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
-
-import           Cardano.Node.Protocol.Types
+import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 
 ------------------------------------------------------------------------------
