@@ -23,6 +23,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Mary.Value as Mary
@@ -32,7 +33,6 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Shelley.Spec.Ledger.API as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import qualified Shelley.Spec.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
