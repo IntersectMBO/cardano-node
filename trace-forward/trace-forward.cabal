@@ -43,10 +43,11 @@ library
                        Trace.Forward.Network.Acceptor
                        Trace.Forward.Network.Forwarder
 
-                       Trace.Forward.Protocol.Type
-                       Trace.Forward.Protocol.Codec
                        Trace.Forward.Protocol.Acceptor
+                       Trace.Forward.Protocol.Codec
                        Trace.Forward.Protocol.Forwarder
+                       Trace.Forward.Protocol.Limits
+                       Trace.Forward.Protocol.Type
 
   build-depends:         aeson
                        , async
