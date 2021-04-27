@@ -35,13 +35,15 @@ module Cardano.Logging.Types (
 
 import           Control.Tracer
 import qualified Control.Tracer as T
-import qualified Data.Aeson as A
+import qualified Data.Aeson as AE
 import           Data.Aeson ((.=))
+import qualified Data.ByteString.Lazy as BS
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text, pack)
+import           Data.Text.Encoding (decodeUtf8)
 import           GHC.Generics
 
 -- | Every message needs this to define how to represent it
@@ -49,13 +51,12 @@ class LogFormatting a where
   -- | Machine readable representation with the possibility to represent
   -- with different details based on the detail level.
   -- No machine readable representation as default
-  forMachine :: DetailLevel -> a -> A.Object
-  forMachine _ _v = mempty
+  forMachine :: DetailLevel -> a -> AE.Object
 
   -- | Human readable representation.
   -- No human representation is represented by the empty text and is the default
   forHuman :: a -> Text
-  forHuman _v = ""
+  forHuman v = decodeUtf8 (BS.toStrict (AE.encode (forMachine DRegular v)))
 
   -- | Metrics representation.
   -- No metrics by default
@@ -248,34 +249,34 @@ instance LogFormatting b => LogFormatting (Folding a b) where
   asMetrics (Folding b)    =  asMetrics b
 
 instance LogFormatting Double where
-  forMachine d _ = mkObject [ "val" .= A.String ((pack . show) d)]
+  forMachine d _ = mkObject [ "val" .= AE.String ((pack . show) d)]
   forHuman d     = (pack . show) d
   asMetrics d    = [DoubleM Nothing d]
 
 instance LogFormatting Int where
-  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
+  forMachine i _ = mkObject [ "val" .= AE.String ((pack . show) i)]
   forHuman i     = (pack . show) i
   asMetrics i    = [IntM Nothing (fromIntegral i)]
 
 instance LogFormatting Integer where
-  forMachine i _ = mkObject [ "val" .= A.String ((pack . show) i)]
+  forMachine i _ = mkObject [ "val" .= AE.String ((pack . show) i)]
   forHuman i     = (pack . show) i
   asMetrics i    = [IntM Nothing i]
 
-instance A.ToJSON DetailLevel where
-    toEncoding = A.genericToEncoding A.defaultOptions
+instance AE.ToJSON DetailLevel where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
 
-instance A.ToJSON Privacy where
-    toEncoding = A.genericToEncoding A.defaultOptions
+instance AE.ToJSON Privacy where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
 
-instance A.ToJSON SeverityS where
-    toEncoding = A.genericToEncoding A.defaultOptions
+instance AE.ToJSON SeverityS where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
 
-instance A.ToJSON SeverityF where
-    toEncoding = A.genericToEncoding A.defaultOptions
+instance AE.ToJSON SeverityF where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
 
-instance A.ToJSON ConfigOption where
-    toEncoding = A.genericToEncoding A.defaultOptions
+instance AE.ToJSON ConfigOption where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
 
-instance A.ToJSON TraceConfig where
-    toEncoding = A.genericToEncoding A.defaultOptions
+instance AE.ToJSON TraceConfig where
+    toEncoding = AE.genericToEncoding AE.defaultOptions

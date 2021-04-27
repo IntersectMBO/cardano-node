@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
@@ -14,14 +16,23 @@ module Cardano.TraceDispatcher.ConsensusTracer.Docu
   , docLocalTxSubmissionServer
   , docMempool
   , docForge
+  , docForgeStateInfo
+  , docBlockchainTime
   ) where
 
 import           Cardano.Logging
 import           Cardano.Prelude
+import           Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import           Data.Time.Clock
 
 
 import           Ouroboros.Consensus.Block
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types
+                     (SystemStart (..))
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
+                     (TraceBlockchainTimeEvent (..))
+import           Ouroboros.Consensus.Forecast (OutsideForecastRange)
+import           Ouroboros.Consensus.HardFork.History (PastHorizonException)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
@@ -33,11 +44,12 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
 import           Ouroboros.Consensus.Node.Tracers
-import           Ouroboros.Consensus.Forecast (OutsideForecastRange)
+import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline(..))
+import           Ouroboros.Network.BlockFetch.Decision (FetchDecision,
+                     FetchDecline (..))
 import           Ouroboros.Network.BlockFetch.DeltaQ
                      (PeerFetchInFlightLimits (..))
 import           Ouroboros.Network.Mux (ControlMessage)
@@ -104,6 +116,9 @@ protoChainRange = undefined
 protoNominalDiffTime :: NominalDiffTime
 protoNominalDiffTime = nominalDay
 
+protoDiffTime :: DiffTime
+protoDiffTime = secondsToDiffTime 100
+
 protoProcessedTxCount :: ProcessedTxCount
 protoProcessedTxCount = ProcessedTxCount 2 1
 
@@ -142,6 +157,18 @@ protoOutsideForecastRange = undefined
 
 protoInvalidBlockReason :: InvalidBlockReason blk
 protoInvalidBlockReason = undefined
+
+protoKESInfo :: HotKey.KESInfo
+protoKESInfo = undefined
+
+protoUTCTime :: UTCTime
+protoUTCTime = UTCTime (fromOrdinalDate 2021 100) protoDiffTime
+
+protoSystemStart :: SystemStart
+protoSystemStart = SystemStart protoUTCTime
+
+protoPastHorizonException :: PastHorizonException
+protoPastHorizonException = undefined
 
 -- Not working because of non-injective type families
 -- protoApplyTxErr :: ApplyTxErr blk
@@ -557,4 +584,52 @@ docForge = Documented [
       []
       "We adopted the block we produced, we also trace the transactions\
       \  that were adopted."
+  ]
+
+docForgeStateInfo :: Documented (TraceLabelCreds (HotKey.KESInfo))
+docForgeStateInfo = Documented [
+    DocMsg
+      (TraceLabelCreds protoTxt protoKESInfo)
+      []
+      "TODO."
+    ]
+
+docBlockchainTime :: Documented (TraceBlockchainTimeEvent t)
+docBlockchainTime = Documented [
+    DocMsg
+      (TraceStartTimeInTheFuture protoSystemStart protoNominalDiffTime)
+      []
+      "The start time of the blockchain time is in the future\
+      \\
+      \We have to block (for 'NominalDiffTime') until that time comes."
+  , DocMsg
+      (TraceCurrentSlotUnknown (undefined :: t) protoPastHorizonException)
+      []
+      "Current slot is not yet known\
+      \\
+      \ This happens when the tip of our current chain is so far in the past that\
+      \ we cannot translate the current wallclock to a slot number, typically\
+      \ during syncing. Until the current slot number is known, we cannot\
+      \ produce blocks. Seeing this message during syncing therefore is\
+      \ normal and to be expected.\
+      \\
+      \ We record the current time (the time we tried to translate to a 'SlotNo')\
+      \ as well as the 'PastHorizonException', which provides detail on the\
+      \ bounds between which we /can/ do conversions. The distance between the\
+      \ current time and the upper bound should rapidly decrease with consecutive\
+      \ 'TraceCurrentSlotUnknown' messages during syncing."
+  , DocMsg
+      (TraceSystemClockMovedBack (undefined :: t) (undefined :: t))
+      []
+      "The system clock moved back an acceptable time span, e.g., because of\
+      \ an NTP sync.\
+      \\
+      \ The system clock moved back such that the new current slot would be\
+      \ smaller than the previous one. If this is within the configured limit, we\
+      \ trace this warning but *do not change the current slot*. The current slot\
+      \ never decreases, but the current slot may stay the same longer than\
+      \ expected.\
+      \\
+      \ When the system clock moved back more than the configured limit, we shut\
+      \ down with a fatal exception."
   ]

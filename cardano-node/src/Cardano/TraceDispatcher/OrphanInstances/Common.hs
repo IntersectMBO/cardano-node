@@ -38,9 +38,11 @@ import           Cardano.Logging
 -- no cases needed.
 --
 instance LogFormatting Void where
-  forMachine _dtal x = case x of {}
+  forMachine _dtal _x = mempty
 
 instance LogFormatting () where
+  forMachine _dtal _x = mempty
+
 
 -- instance FromJSON DetailLevel where
 --   parseJSON (String str) = case str of
