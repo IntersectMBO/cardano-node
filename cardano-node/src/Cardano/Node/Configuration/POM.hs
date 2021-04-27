@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 {-# OPTIONS_GHC -Wno-orphans            #-}
@@ -38,9 +37,6 @@ import           Cardano.Tracing.Config
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
-
-deriving instance Eq SnapshotInterval
-deriving instance Generic SnapshotInterval
 
 data NodeConfiguration
   = NodeConfiguration

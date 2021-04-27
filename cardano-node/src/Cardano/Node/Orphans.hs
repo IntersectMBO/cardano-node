@@ -1,5 +1,5 @@
-
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -13,6 +13,8 @@ import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
+
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
 instance FromJSON TracingVerbosity where
   parseJSON (String str) = case str of
@@ -31,3 +33,6 @@ instance FromJSON Update.ApplicationName where
   parseJSON invalid  =
     fail $ "Parsing of application name failed due to type mismatch. "
     <> "Encountered: " <> show invalid
+
+deriving instance Eq SnapshotInterval
+deriving instance Generic SnapshotInterval
