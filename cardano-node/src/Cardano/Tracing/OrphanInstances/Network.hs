@@ -442,16 +442,17 @@ instance HasPrivacyAnnotation (InboundGovernorTrace addr)
 instance HasSeverityAnnotation (InboundGovernorTrace addr) where
   getSeverityAnnotation ev =
     case ev of
-      InboundGovernor.TrNewConnection {}         -> Debug
-      InboundGovernor.TrResponderRestarted {}    -> Debug
-      InboundGovernor.TrResponderStartFailure {} -> Error
-      InboundGovernor.TrResponderErrored {}      -> Info
-      InboundGovernor.TrResponderTerminated {}   -> Debug
-      InboundGovernor.TrPromotedToWarmRemote {}  -> Info
-      InboundGovernor.TrDemotedToColdRemote {}   -> Info
-      InboundGovernor.TrWaitIdleRemote {}        -> Debug
-      InboundGovernor.TrMuxCleanExit {}          -> Debug
-      InboundGovernor.TrMuxErrored {}            -> Info
+      InboundGovernor.TrNewConnection {}           -> Debug
+      InboundGovernor.TrResponderRestarted {}      -> Debug
+      InboundGovernor.TrResponderStartFailure {}   -> Error
+      InboundGovernor.TrResponderErrored {}        -> Info
+      InboundGovernor.TrResponderTerminated {}     -> Debug
+      InboundGovernor.TrPromotedToWarmRemote {}    -> Info
+      InboundGovernor.TrDemotedToColdRemote {}     -> Info
+      InboundGovernor.TrWaitIdleRemote {}          -> Debug
+      InboundGovernor.TrMuxCleanExit {}            -> Debug
+      InboundGovernor.TrMuxErrored {}              -> Info
+      InboundGovernor.TrInboundGovernorCounters {} -> Info
 
 --
 -- | instances of @Transformable@
