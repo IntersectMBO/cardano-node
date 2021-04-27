@@ -307,19 +307,25 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
             tracerOnOff (traceDebugPeerSelectionInitiatorResponderTracer trSel)
                         verb "DebugPeerSelection" tr,
           dtTracePeerSelectionCounters =
-            tracePeerSelectionCountersMetrics ekgDirect $
-              tracerOnOff (tracePeerSelectionCounters trSel)
-                        verb "PeerSelectionCounters" tr,
+               tracePeerSelectionCountersMetrics
+                 (tracePeerSelectionCounters trSel)
+                 ekgDirect
+            <> tracerOnOff (tracePeerSelection trSel)
+                           verb "PeerSelection" tr,
           dtPeerSelectionActionsTracer =
             tracerOnOff (tracePeerSelectionActions trSel) verb "PeerSelectionActions" tr,
           dtConnectionManagerTracer =
-            traceConnectionManagerTraceMetrics ekgDirect $
-              tracerOnOff (traceConnectionManager trSel) verb "ConnectionManager" tr,
+               traceConnectionManagerTraceMetrics
+                 (traceConnectionManagerCounters trSel)
+                 ekgDirect
+            <> tracerOnOff (traceConnectionManager trSel) verb "ConnectionManager" tr,
           dtServerTracer =
             tracerOnOff (traceServer trSel) verb "Server" tr,
           dtInboundGovernorTracer =
-            traceInboundGovernorTraceMetrics ekgDirect $
-            tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
+               traceInboundGovernorCountersMetrics
+                 (traceInboundGovernorCounters trSel)
+                 ekgDirect
+            <> tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
           dtLedgerPeersTracer =
             tracerOnOff (traceLedgerPeers trSel) verb "LedgerPeers" tr,
           --
@@ -620,7 +626,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
    traceServedCount Nothing _ = pure ()
    traceServedCount (Just ekgDirect) ev =
      when (isRollForward ev) $
-       sendEKGDirectCounter ekgDirect "cardano.node.metrics.served.header.counter.int"
+       sendEKGDirectCounter ekgDirect
+                            "cardano.node.metrics.served.header.counter.int"
 
 traceBlockFetchServerMetrics
   :: forall blk. ()
@@ -658,12 +665,16 @@ traceBlockFetchServerMetrics (Just ekgDirect) tBlocksServed tLocalUp tMaxSlotNo 
                         EQ -> do
                             lu <- STM.modifyReadTVar' tLocalUp (+1)
                             return (served, Just lu)
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.served.block.count" served
+      sendEKGDirectInt ekgDirect
+                       "cardano.node.metrics.served.block.count"
+                       served
       case mbLocalUpstreamyness of
-           Just localUpstreamyness -> 
-                sendEKGDirectInt ekgDirect "cardano.node.metrics.served.block.latest.count"
-                                 localUpstreamyness
-           Nothing                 -> return ()
+           Just localUpstreamyness ->
+             sendEKGDirectInt
+               ekgDirect
+               "cardano.node.metrics.served.block.latest.count"
+               localUpstreamyness
+           Nothing -> return ()
 
 -- | CdfCounter tracks the number of time a value below 'limit' has been seen.
 newtype CdfCounter (limit :: Nat) = CdfCounter Int64
@@ -767,7 +778,9 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf2sVar cdf5s
                "cardano.node.metrics.blockfetchclient.blockdelay.cdfFive"
                cdf5s
             when (delay > 5) $
-              sendEKGDirectCounter ekgDirect "cardano.node.metrics.blockfetchclient.lateblocks"
+              sendEKGDirectCounter
+                ekgDirect
+                "cardano.node.metrics.blockfetchclient.lateblocks"
 
     bfTracer e =
       traceWith tracer e
@@ -1142,11 +1155,14 @@ nodeToClientTracers'
 nodeToClientTracers' trSel verb tr =
   NodeToClient.Tracers
   { NodeToClient.tChainSyncTracer =
-    tracerOnOff (traceLocalChainSyncProtocol trSel) verb "LocalChainSyncProtocol" tr
+      tracerOnOff (traceLocalChainSyncProtocol trSel)
+                  verb "LocalChainSyncProtocol" tr
   , NodeToClient.tTxSubmissionTracer =
-    tracerOnOff (traceLocalTxSubmissionProtocol trSel) verb "LocalTxSubmissionProtocol" tr
+      tracerOnOff (traceLocalTxSubmissionProtocol trSel)
+                  verb "LocalTxSubmissionProtocol" tr
   , NodeToClient.tStateQueryTracer =
-    tracerOnOff (traceLocalStateQueryProtocol trSel) verb "LocalStateQueryProtocol" tr
+      tracerOnOff (traceLocalStateQueryProtocol trSel)
+                  verb "LocalStateQueryProtocol" tr
   }
 
 --------------------------------------------------------------------------------
@@ -1168,12 +1184,24 @@ nodeToNodeTracers'
   -> NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
 nodeToNodeTracers' trSel verb tr =
   NodeToNode.Tracers
-  { NodeToNode.tChainSyncTracer = tracerOnOff (traceChainSyncProtocol trSel) verb "ChainSyncProtocol" tr
-  , NodeToNode.tChainSyncSerialisedTracer = showOnOff (traceChainSyncProtocol trSel) "ChainSyncProtocolSerialised" tr
-  , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol trSel) verb "BlockFetchProtocol" tr
-  , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised trSel) "BlockFetchProtocolSerialised" tr
-  , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
-  , NodeToNode.tTxSubmission2Tracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
+  { NodeToNode.tChainSyncTracer =
+      tracerOnOff (traceChainSyncProtocol trSel)
+                  verb "ChainSyncProtocol" tr
+  , NodeToNode.tChainSyncSerialisedTracer =
+      showOnOff (traceChainSyncProtocol trSel)
+                "ChainSyncProtocolSerialised" tr
+  , NodeToNode.tBlockFetchTracer =
+      tracerOnOff (traceBlockFetchProtocol trSel)
+                  verb "BlockFetchProtocol" tr
+  , NodeToNode.tBlockFetchSerialisedTracer =
+      showOnOff (traceBlockFetchProtocolSerialised trSel)
+                "BlockFetchProtocolSerialised" tr
+  , NodeToNode.tTxSubmissionTracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
+  , NodeToNode.tTxSubmission2Tracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
   }
 
 teeTraceBlockFetchDecision
@@ -1219,12 +1247,12 @@ teeTraceBlockFetchDecisionElide = elideToLogObject
 --------------------------------------------------------------------------------
 
 traceConnectionManagerTraceMetrics
-    :: Maybe EKGDirect
+    :: OnOff TraceConnectionManagerCounters
+    -> Maybe EKGDirect
     -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
-    -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
-traceConnectionManagerTraceMetrics Nothing          tracer = tracer
-traceConnectionManagerTraceMetrics (Just ekgDirect) tracer =
-    tracer <> cmtTracer
+traceConnectionManagerTraceMetrics _             Nothing         = nullTracer
+traceConnectionManagerTraceMetrics (OnOff False) _               = nullTracer
+traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
   where
     cmtTracer :: Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
     cmtTracer = Tracer $ \msg -> case msg of
@@ -1254,25 +1282,42 @@ traceConnectionManagerTraceMetrics (Just ekgDirect) tracer =
                          outgoingConns
       _ -> return ()
 
-traceInboundGovernorTraceMetrics :: Maybe EKGDirect -> Tracer IO (InboundGovernorTrace peerAddr) -> Tracer IO (InboundGovernorTrace peerAddr)
-traceInboundGovernorTraceMetrics Nothing tracer     = tracer
-traceInboundGovernorTraceMetrics (Just ekgDirect) _ = Tracer pscTracer
-  where
-    pscTracer :: InboundGovernorTrace peerAddr -> IO ()
-    pscTracer (TrInboundGovernorCounters (InboundGovernorCounters hotPeersRemote)) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotRemote" hotPeersRemote
-    pscTracer _ = return ()
 
-
-tracePeerSelectionCountersMetrics :: Maybe EKGDirect -> Tracer IO PeerSelectionCounters -> Tracer IO PeerSelectionCounters
-tracePeerSelectionCountersMetrics Nothing tracer     = tracer
-tracePeerSelectionCountersMetrics (Just ekgDirect) _ = Tracer pscTracer
+tracePeerSelectionCountersMetrics
+    :: OnOff TracePeerSelectionCounters
+    -> Maybe EKGDirect
+    -> Tracer IO PeerSelectionCounters
+tracePeerSelectionCountersMetrics _             Nothing          = nullTracer
+tracePeerSelectionCountersMetrics (OnOff False) _                = nullTracer
+tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
   where
-    pscTracer :: PeerSelectionCounters -> IO ()
-    pscTracer (PeerSelectionCounters cold warm hot) = do
+    pscTracer :: Tracer IO PeerSelectionCounters
+    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot) -> do
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  hot
+
+
+traceInboundGovernorCountersMetrics
+    :: forall addr.
+       OnOff TraceInboundGovernorCounters
+    -> Maybe EKGDirect
+    -> Tracer IO (InboundGovernorTrace addr)
+traceInboundGovernorCountersMetrics _             Nothing         = nullTracer
+traceInboundGovernorCountersMetrics (OnOff False) _               = nullTracer
+traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
+  where
+    ipgcTracer :: Tracer IO (InboundGovernorTrace addr)
+    ipgcTracer = Tracer $ \msg -> case msg of
+      (TrInboundGovernorCounters InboundGovernorCounters {
+          warmPeersRemote,
+          hotPeersRemote
+        }) -> do
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.warm"
+                                     warmPeersRemote
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.hot"
+                                     hotPeersRemote
+      _ -> return ()
 
 
 -- | get information about a chain fragment
