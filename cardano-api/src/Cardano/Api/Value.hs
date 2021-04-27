@@ -68,9 +68,9 @@ import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Chain.Common as Byron
 
+import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
-import qualified Shelley.Spec.Ledger.Coin as Shelley
 
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 

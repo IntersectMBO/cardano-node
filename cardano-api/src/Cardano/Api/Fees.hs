@@ -1,6 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Fee calculation
 --
@@ -11,14 +13,12 @@ module Cardano.Api.Fees (
 
 import           Prelude
 
-import           Numeric.Natural
-
 import qualified Data.ByteString as BS
+import           GHC.Records (HasField (..))
+import           Numeric.Natural
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Byron
-
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.NetworkId
@@ -46,7 +46,7 @@ transactionFee txFeeFixed txFeePerByte (ShelleyTx _ tx) =
     Lovelace (a * x + b)
   where
     a = toInteger txFeePerByte
-    x = Shelley.txsize tx
+    x = getField @"txsize" tx
     b = toInteger txFeeFixed
 
 --TODO: This can be made to work for Byron txs too. Do that: fill in this case

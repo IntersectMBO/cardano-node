@@ -88,6 +88,7 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
+import           Cardano.Binary
 
 
 -- | The values of the set of /updateable/ protocol paramaters. At any
@@ -478,8 +479,7 @@ instance HasTextEnvelope UpdateProposal where
 instance SerialiseAsCBOR UpdateProposal where
     serialiseToCBOR = CBOR.serializeEncoding' . toCBOR . toShelleyUpdate @StandardShelley
     deserialiseFromCBOR _ bs =
-      fromShelleyUpdate @StandardShelley <$>
-        CBOR.decodeAnnotator "UpdateProposal" fromCBOR (LBS.fromStrict bs)
+      fromShelleyUpdate @StandardShelley <$> decodeFull (LBS.fromStrict bs)
 
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate

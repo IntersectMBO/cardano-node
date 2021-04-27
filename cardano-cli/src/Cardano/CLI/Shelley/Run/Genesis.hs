@@ -61,7 +61,7 @@ import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
 import qualified Shelley.Spec.Ledger.API as Ledger
 import qualified Shelley.Spec.Ledger.BaseTypes as Ledger
-import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Coin (Coin (..))
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 

@@ -565,12 +565,6 @@ instance (Show txid, Show tx)
       [ "kind" .= String "MsgDone"
       , "agency" .= String (pack $ show stok)
       ]
-  --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
-  toObject _verb (AnyMessageAndAgency stok _) =
-    mkObject
-      [ "kind" .= String "MsgKThxBye"
-      , "agency" .= String (pack $ show stok)
-      ]
 
 instance (Show txid, Show tx)
       => ToObject (AnyMessageAndAgency (TxSubmission2 txid tx)) where
