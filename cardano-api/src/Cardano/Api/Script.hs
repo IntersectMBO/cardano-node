@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Script (
@@ -97,7 +98,7 @@ import qualified Cardano.Ledger.Core as Ledger
 
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import qualified Cardano.Ledger.Coin as Shelley
+-- import qualified Cardano.Ledger.Coin as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
@@ -111,6 +112,7 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 
+-- import qualified Cardano.Ledger.Era as Shelley
 {- HLINT ignore "Use section" -}
 
 
@@ -647,7 +649,7 @@ hashScript (SimpleScript SimpleScriptV1 s) =
     -- For V1, we convert to the Shelley-era version specifically and hash that.
     -- Later ledger eras have to be compatible anyway.
     ScriptHash
-  . Shelley.hashMultiSigScript
+  . Shelley.hashMultiSigScript @(ShelleyLedgerEra ShelleyEra)
   . toShelleyMultiSig
   $ s
 
@@ -655,7 +657,7 @@ hashScript (SimpleScript SimpleScriptV2 s) =
     -- For V1, we convert to the Allegra-era version specifically and hash that.
     -- Later ledger eras have to be compatible anyway.
     ScriptHash
-  . Timelock.hashTimelockScript
+  . Shelley.hashScript @(ShelleyLedgerEra AllegraEra)
   . (toAllegraTimelock :: SimpleScript SimpleScriptV2
                        -> Timelock.Timelock StandardCrypto)
   $ s
