@@ -83,6 +83,8 @@ import           Ouroboros.Network.Diffusion ( DiffusionTracers (..)
                                               , ConnectionManagerTrace (..)
                                               , PeerSelectionCounters (..)
                                               , ConnectionManagerCounters (..)
+                                              , InboundGovernorTrace (..)
+                                              , InboundGovernorCounters (..)
                                              )
 import qualified Ouroboros.Network.Diffusion as Diffusion
 
@@ -312,6 +314,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
           dtServerTracer =
             tracerOnOff (traceServer trSel) verb "Server" tr,
           dtInboundGovernorTracer =
+            traceInboundGovernorTraceMetrics ekgDirect $
             tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
           dtLedgerPeersTracer =
             tracerOnOff (traceLedgerPeers trSel) verb "LedgerPeers" tr,
@@ -1204,20 +1207,28 @@ traceConnectionManagerTraceMetrics (Just ekgDirect) _ = Tracer cmtTracer
     cmtTracer :: (ConnectionManagerTrace peerAddr handlerTrace) -> IO ()
     cmtTracer (TrConnectionManagerCounters
                 (ConnectionManagerCounters
-                  numberConns
+                  nConnsPruning
                   duplexConns
                   uniConns
                   incomingConns
                   outgoingConns
                 )
               ) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.numberConns" numberConns
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.nConnsPruningg" nConnsPruning
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.duplexConns" duplexConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.uniConns" uniConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.incomingConns" incomingConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.outgoingConns" outgoingConns
     cmtTracer _ = return ()
 
+traceInboundGovernorTraceMetrics :: Maybe EKGDirect -> Tracer IO (InboundGovernorTrace peerAddr) -> Tracer IO (InboundGovernorTrace peerAddr)
+traceInboundGovernorTraceMetrics Nothing tracer     = tracer
+traceInboundGovernorTraceMetrics (Just ekgDirect) _ = Tracer pscTracer
+  where
+    pscTracer :: InboundGovernorTrace peerAddr -> IO ()
+    pscTracer (TrInboundGovernorCounters (InboundGovernorCounters hotPeersRemote)) = do
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotRemote" hotPeersRemote
+    pscTracer _ = return ()
 
 
 tracePeerSelectionCountersMetrics :: Maybe EKGDirect -> Tracer IO PeerSelectionCounters -> Tracer IO PeerSelectionCounters
