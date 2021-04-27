@@ -25,6 +25,9 @@ import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
+                     (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
                      GenTxId, HasTxId)
@@ -425,3 +428,33 @@ instance ( tx ~ GenTx blk
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
       --  <> ", TxIds: " <> showT (map txId txs) TODO Fix
+
+instance Show t => LogFormatting (TraceBlockchainTimeEvent t) where
+    forMachine _dtal (TraceStartTimeInTheFuture (SystemStart start) toWait) =
+        mkObject [ "kind" .= String "TStartTimeInTheFuture"
+                 , "systemStart" .= String (showT start)
+                 , "toWait" .= String (showT toWait)
+                 ]
+    forMachine _dtal (TraceCurrentSlotUnknown time _) =
+        mkObject [ "kind" .= String "CurrentSlotUnknown"
+                 , "time" .= String (showT time)
+                 ]
+    forMachine _dtal (TraceSystemClockMovedBack prevTime newTime) =
+        mkObject [ "kind" .= String "SystemClockMovedBack"
+                 , "prevTime" .= String (showT prevTime)
+                 , "newTime" .= String (showT newTime)
+                 ]
+    forHuman (TraceStartTimeInTheFuture (SystemStart start) toWait) =
+      "Waiting "
+      <> (Text.pack . show) toWait
+      <> " until genesis start time at "
+      <> (Text.pack . show) start
+    forHuman (TraceCurrentSlotUnknown time _) =
+      "Too far from the chain tip to determine the current slot number for the time "
+       <> (Text.pack . show) time
+    forHuman (TraceSystemClockMovedBack prevTime newTime) =
+      "The system wall clock time moved backwards, but within our tolerance "
+      <> "threshold. Previous 'current' time: "
+      <> (Text.pack . show) prevTime
+      <> ". New 'current' time: "
+      <> (Text.pack . show) newTime
