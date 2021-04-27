@@ -1225,7 +1225,7 @@ traceConnectionManagerTraceMetrics (Just ekgDirect) _ = Tracer cmtTracer
                   outgoingConns
                 )
               ) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.nConnsPruningg" nConnsPruning
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.nConnsPruning" nConnsPruning
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.duplexConns" duplexConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.uniConns" uniConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.incomingConns" incomingConns
@@ -1237,8 +1237,12 @@ traceInboundGovernorTraceMetrics Nothing tracer     = tracer
 traceInboundGovernorTraceMetrics (Just ekgDirect) _ = Tracer pscTracer
   where
     pscTracer :: InboundGovernorTrace peerAddr -> IO ()
-    pscTracer (TrInboundGovernorCounters (InboundGovernorCounters hotPeersRemote)) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotRemote" hotPeersRemote
+    pscTracer (TrInboundGovernorCounters
+                (InboundGovernorCounters
+                  wPeersRemote
+                  hPeersRemote)) = do
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warmRemote" wPeersRemote
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotRemote" hPeersRemote
     pscTracer _ = return ()
 
 
