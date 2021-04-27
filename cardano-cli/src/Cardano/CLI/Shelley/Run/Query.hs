@@ -59,7 +59,7 @@ import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
-import           Shelley.Spec.Ledger.LedgerState hiding (LedgerState, _delegations)
+import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 
 {- HLINT ignore "Reduce duplication" -}
@@ -105,7 +105,7 @@ runQueryCmd cmd =
       runQueryStakeDistribution consensusModeParams network mOutFile
     QueryStakeAddressInfo consensusModeParams addr network mOutFile ->
       runQueryStakeAddressInfo consensusModeParams addr network mOutFile
-    QueryLedgerState' consensusModeParams network mOutFile ->
+    QueryDebugLedgerState' consensusModeParams network mOutFile ->
       runQueryLedgerState consensusModeParams network mOutFile
     QueryStakeSnapshot' consensusModeParams network poolid ->
       runQueryStakeSnapshot consensusModeParams network poolid
@@ -266,7 +266,7 @@ runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolid = do
   eInMode <- toEraInMode era cMode
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryLedgerState
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
   obtainLedgerEraClassConstraints sbe (writePoolParams poolid) result
 
@@ -290,7 +290,7 @@ runQueryStakeSnapshot (AnyConsensusModeParams cModeParams) network poolid = do
   eInMode <- toEraInMode era cMode
     & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryLedgerState
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
   obtainLedgerEraClassConstraints sbe (writeStakeSnapshot poolid) result
 
@@ -313,7 +313,7 @@ runQueryLedgerState (AnyConsensusModeParams cModeParams)
     Just eInMode -> do
       let qInMode = QueryInEra eInMode
                       . QueryInShelleyBasedEra sbe
-                      $ QueryLedgerState
+                      $ QueryDebugLedgerState
       result <- executeQuery
                   era
                   cModeParams
@@ -422,12 +422,12 @@ writeStakeAddressInfo mOutFile delegsAndRewards =
 
 writeLedgerState :: forall era ledgerera.
                     ShelleyLedgerEra era ~ ledgerera
-                 => ToJSON (LedgerState era)
-                 => FromCBOR (LedgerState era)
+                 => ToJSON (DebugLedgerState era)
+                 => FromCBOR (DebugLedgerState era)
                  => Maybe OutputFile
-                 -> SerialisedLedgerState era
+                 -> SerialisedDebugLedgerState era
                  -> ExceptT ShelleyQueryCmdError IO ()
-writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
+writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
   case mOutFile of
     Nothing -> case decodeLedgerState qState of
                  Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
@@ -439,9 +439,9 @@ writeLedgerState mOutFile qState@(SerialisedLedgerState serLedgerState) =
 writeStakeSnapshot :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
-  => FromCBOR (LedgerState era)
+  => FromCBOR (DebugLedgerState era)
   => PoolId
-  -> SerialisedLedgerState era
+  -> SerialisedDebugLedgerState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeSnapshot (StakePoolKeyHash hk) qState =
   case decodeLedgerState qState of
@@ -450,7 +450,7 @@ writeStakeSnapshot (StakePoolKeyHash hk) qState =
 
     Right ledgerState -> do
       -- Ledger State
-      let (LedgerState snapshot) = ledgerState
+      let (DebugLedgerState snapshot) = ledgerState
 
       -- The three stake snapshots, obtained from the ledger state
       let (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
@@ -482,11 +482,11 @@ getAllStake (SnapShot stake _ _) = activeStake
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
 writePoolParams :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
-  => FromCBOR (LedgerState era)
+  => FromCBOR (DebugLedgerState era)
   => Crypto.Crypto (Era.Crypto ledgerera)
   => Era.Crypto ledgerera ~ StandardCrypto
   => PoolId
-  -> SerialisedLedgerState era
+  -> SerialisedDebugLedgerState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writePoolParams (StakePoolKeyHash hk) qState =
   case decodeLedgerState qState of
@@ -494,7 +494,7 @@ writePoolParams (StakePoolKeyHash hk) qState =
     Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
 
     Right ledgerState -> do
-      let LedgerState snapshot = ledgerState
+      let DebugLedgerState snapshot = ledgerState
       let poolState = _pstate $ _delegationState $ esLState $ nesEs snapshot
 
       -- Pool parameters
@@ -505,10 +505,10 @@ writePoolParams (StakePoolKeyHash hk) qState =
       liftIO . LBS.putStrLn $ encodePretty $ Params poolParams fPoolParams retiring
 
 decodeLedgerState :: forall era. ()
-  => FromCBOR (LedgerState era)
-  => SerialisedLedgerState era
-  -> Either LBS.ByteString (LedgerState era)
-decodeLedgerState (SerialisedLedgerState (Serialised ls)) = first (const ls) (decodeFull ls)
+  => FromCBOR (DebugLedgerState era)
+  => SerialisedDebugLedgerState era
+  -> Either LBS.ByteString (DebugLedgerState era)
+decodeLedgerState (SerialisedDebugLedgerState (Serialised ls)) = first (const ls) (decodeFull ls)
 
 writeProtocolState :: Crypto.Crypto StandardCrypto
                    => Maybe OutputFile
@@ -754,8 +754,8 @@ obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> ((Ledger.ShelleyBased ledgerera
-      , ToJSON (LedgerState era)
-      , FromCBOR (LedgerState era)
+      , ToJSON (DebugLedgerState era)
+      , FromCBOR (DebugLedgerState era)
       , Era.Crypto ledgerera ~ StandardCrypto
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f

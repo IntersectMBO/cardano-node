@@ -157,9 +157,9 @@ module Cardano.Api.Shelley
 
     -- ** Local State Query
     QueryInShelleyBasedEra(..),
-    LedgerState(..),
+    DebugLedgerState(..),
     ProtocolState(..),
-    SerialisedLedgerState(..),
+    SerialisedDebugLedgerState(..),
     UTxO(..),
 
     -- ** Conversions
