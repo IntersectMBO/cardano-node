@@ -41,6 +41,7 @@ library
                       , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-ledger-byron-test
+                      , cardano-ledger-core
                       , cardano-prelude
                       , containers
                       , hedgehog

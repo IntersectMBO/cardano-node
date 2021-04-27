@@ -21,7 +21,7 @@ import           Ouroboros.Consensus.Util.Time
 
 import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (Network (..), truncateUnitInterval)
-import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Credential (Credential (..), PaymentCredential,
                    StakeCredential, StakeReference (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),

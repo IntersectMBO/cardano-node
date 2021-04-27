@@ -56,7 +56,7 @@ import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
-import qualified Shelley.Spec.Ledger.Coin as Shelley (toDeltaCoin)
+import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
 import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 

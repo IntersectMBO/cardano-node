@@ -52,10 +52,10 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
+import           Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Vector as Vector
-
 --
 -- Common types, consensus, network
 --
@@ -88,6 +88,7 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
 
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
@@ -373,7 +374,7 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
         MaryEra    -> "TxWitness MaryEra"
 
 
-pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
+pattern Tx :: Ledger.Era era => TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
   where
     Tx txbody ws = makeSignedTransaction ws txbody
@@ -393,20 +394,21 @@ getTxBody (ShelleyTx era tx) =
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
+                     => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
                      => Shelley.ShelleyBased ledgerera
                      => Shelley.Tx ledgerera
                      -> TxBody era
     getShelleyTxBody Shelley.Tx {
-                       Shelley._body       = txbody,
-                       Shelley._metadata   = txmetadata,
-                       Shelley._witnessSet = Shelley.WitnessSet
+                       Shelley.body       = txbody,
+                       Shelley.auxiliaryData = txAuxiliaryData,
+                       Shelley.wits = Shelley.WitnessSet
                                               _addrWits
                                                msigWits
                                               _bootWits
                      } =
       ShelleyTxBody era txbody
                     (Map.elems msigWits)
-                    (strictMaybeToMaybe txmetadata)
+                    (strictMaybeToMaybe txAuxiliaryData)
 
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
@@ -424,11 +426,13 @@ getTxWitnesses (ShelleyTx era tx) =
   where
     getShelleyTxWitnesses :: forall ledgerera.
                              Ledger.Crypto ledgerera ~ StandardCrypto
+                          => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
+                          => ToCBOR (Ledger.Witnesses ledgerera)
                           => Shelley.ShelleyBased ledgerera
                           => Shelley.Tx ledgerera
                           -> [KeyWitness era]
     getShelleyTxWitnesses Shelley.Tx {
-                            Shelley._witnessSet =
+                            Shelley.wits =
                               Shelley.WitnessSet
                                 addrWits
                                _msigWits
@@ -458,6 +462,8 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txscripts txmetadata) 
     makeShelleySignedTransaction :: forall ledgerera.
                                     ShelleyLedgerEra era ~ ledgerera
                                  => Ledger.Crypto ledgerera ~ StandardCrypto
+                                 => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
+                                 => ToCBOR (Ledger.Witnesses ledgerera)
                                  => Shelley.ShelleyBased ledgerera
                                  => Shelley.ValidateScript ledgerera
                                  => Ledger.TxBody ledgerera
