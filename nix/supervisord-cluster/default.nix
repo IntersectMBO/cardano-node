@@ -190,7 +190,7 @@ let
 
     ln -s ${profile.topology.files} "${stateDir}"/topology
 
-    prebuild-executables
+    workbench-prebuild-executables
 
     genesis_args+=(
         ## Positionals:

@@ -111,18 +111,23 @@ let
       ${exeCabalOp "run" "cardano-topology"} "$@"
     }
 
-    function prebuild-executables() {
+    export -f cardano-cli cardano-node cardano-topology
+
+    ''}
+
+    function workbench-prebuild-executables() {
+      ${optionalString useCabalRun
+        ''
       echo -n "workbench:  prebuilding executables:"
       for exe in cardano-cli cardano-node cardano-topology
       do echo -n " $exe"
          $exe --help >/dev/null || true
       done
+        ''}
       echo
     }
+    export -f workbench-prebuild-executables
 
-    export -f cardano-cli cardano-node cardano-topology prebuild-executables
-
-    ''}
     '';
 
   generateProfiles =
