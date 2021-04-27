@@ -10,11 +10,15 @@ module Trace.Forward.Network.Forwarder
 import           Codec.CBOR.Term (Term)
 import qualified Codec.Serialise as CBOR
 import           Control.Concurrent.STM.TBQueue (TBQueue)
+import           Control.Monad (unless)
+import           Control.Monad.Class.MonadSTM.Strict (StrictTVar, atomically, modifyTVar,
+                                                      newEmptyTMVarIO, newTVarIO, putTMVar,
+                                                      readTVar, retry)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import           Data.Void (Void)
 import qualified Network.Socket as Socket
-import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
+import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits, runPeerWithLimits)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                                         MiniProtocolNum (..), MuxMode (..),
@@ -38,6 +42,7 @@ import           Trace.Forward.Configuration (ForwarderConfiguration (..), HowTo
 import           Trace.Forward.Queue (readLogObjectsFromQueue)
 import qualified Trace.Forward.Protocol.Forwarder as Forwarder
 import qualified Trace.Forward.Protocol.Codec as Forwarder
+import           Trace.Forward.Protocol.Limits (byteLimitsTraceForward, timeLimitsTraceForward)
 
 connectToAcceptor
   :: (CBOR.Serialise lo,
@@ -45,8 +50,7 @@ connectToAcceptor
   => ForwarderConfiguration lo
   -> TBQueue lo
   -> IO ()
-connectToAcceptor config@ForwarderConfiguration{..} loQueue = withIOManager $ \iocp -> do
-  let app = forwarderApp config loQueue
+connectToAcceptor config@ForwarderConfiguration{..} loQueue = withIOManager $ \iocp ->
   case acceptorEndpoint of
     LocalPipe localPipe -> do
       let snocket = localSnocket iocp localPipe
@@ -57,6 +61,14 @@ connectToAcceptor config@ForwarderConfiguration{..} loQueue = withIOManager $ \i
       let snocket = socketSnocket iocp
           address = Socket.addrAddress acceptorAddr
       doConnectToAcceptor snocket address timeLimitsHandshake app
+ where
+  app = OuroborosApplication $ \_connectionId _shouldStopSTM ->
+          [ MiniProtocol
+              { miniProtocolNum    = MiniProtocolNum 1
+              , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+              , miniProtocolRun    = forwardLogObjects config loQueue
+              }
+          ]
 
 doConnectToAcceptor
   :: Snocket IO fd addr
@@ -79,21 +91,6 @@ doConnectToAcceptor snocket address timeLimits app =
     Nothing
     address
 
-forwarderApp
-  :: (CBOR.Serialise lo,
-      ShowProxy lo)
-  => ForwarderConfiguration lo
-  -> TBQueue lo
-  -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
-forwarderApp config loQueue =
-  OuroborosApplication $ \_connectionId _shouldStopSTM ->
-    [ MiniProtocol
-        { miniProtocolNum    = MiniProtocolNum 2
-        , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-        , miniProtocolRun    = forwardLogObjects config loQueue
-        }
-    ]
-
 forwardLogObjects
   :: (CBOR.Serialise lo,
       ShowProxy lo)
@@ -102,8 +99,25 @@ forwardLogObjects
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
 forwardLogObjects config loQueue =
   InitiatorProtocolOnly $
-    MuxPeer
-      (forwarderTracer config)
-      (Forwarder.codecTraceForward CBOR.encode CBOR.decode
-                                   CBOR.encode CBOR.decode)
-      (Forwarder.traceForwarderPeer $ readLogObjectsFromQueue config loQueue)
+    MuxPeerRaw $ \channel -> do
+      cv <- newEmptyTMVarIO
+      siblingVar <- newTVarIO 2
+      (r, trailing) <-
+        runPeerWithLimits
+          (forwarderTracer config)
+          (Forwarder.codecTraceForward CBOR.encode CBOR.decode
+                                       CBOR.encode CBOR.decode)
+          (byteLimitsTraceForward (fromIntegral . LBS.length))
+          timeLimitsTraceForward
+          channel
+          (Forwarder.traceForwarderPeer $ readLogObjectsFromQueue config loQueue)
+      atomically $ putTMVar cv r
+      waitSibling siblingVar
+      return ((), trailing)
+ where
+  waitSibling :: StrictTVar IO Int -> IO ()
+  waitSibling cntVar = do
+    atomically $ modifyTVar cntVar (\a -> a - 1)
+    atomically $ do
+      cnt <- readTVar cntVar
+      unless (cnt == 0) retry

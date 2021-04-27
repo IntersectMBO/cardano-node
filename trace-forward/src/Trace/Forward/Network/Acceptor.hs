@@ -3,7 +3,6 @@
 
 module Trace.Forward.Network.Acceptor
   ( listenToForwarder
-  -- , runAcceptorPeer
   -- | Export this function for Mux purpose.
   , acceptLogObjects
   ) where
@@ -13,10 +12,13 @@ import qualified Codec.Serialise as CBOR
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async, wait, waitAnyCancel)
 import           Control.Concurrent.STM.TBQueue (TBQueue)
-import           Control.Monad (void)
+import           Control.Monad (void, unless)
+import           Control.Monad.Class.MonadSTM.Strict (StrictTVar, atomically, modifyTVar,
+                                                      newEmptyTMVarIO, newTVarIO, putTMVar,
+                                                      readTVar, retry)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Functor ((<&>))
 import           Data.IORef (readIORef)
-import           Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import           Data.Time.Clock (NominalDiffTime)
 import           Data.Typeable (Typeable)
@@ -48,6 +50,7 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import qualified Trace.Forward.Protocol.Acceptor as Acceptor
 import qualified Trace.Forward.Protocol.Codec as Acceptor
+import           Trace.Forward.Protocol.Limits (byteLimitsTraceForward, timeLimitsTraceForward)
 import           Trace.Forward.Protocol.Type
 import           Trace.Forward.Queue (logObjectsFromReply, writeLogObjectsToQueue)
 import           Trace.Forward.Configuration (AcceptorConfiguration (..), HowToConnect (..))
@@ -59,9 +62,8 @@ listenToForwarder
   => AcceptorConfiguration lo
   -> TBQueue lo
   -> IO ()
-listenToForwarder config loQueue = withIOManager $ \iocp -> do
-  let app = acceptorApp config loQueue
-  case forwarderEndpoint config of
+listenToForwarder config@AcceptorConfiguration {..} loQueue = withIOManager $ \iocp ->
+  case forwarderEndpoint of
     LocalPipe localPipe -> do
       let snocket = localSnocket iocp localPipe
           address = localAddressFromPath localPipe
@@ -71,6 +73,14 @@ listenToForwarder config loQueue = withIOManager $ \iocp -> do
       let snocket = socketSnocket iocp
           address = Socket.addrAddress listenAddress
       doListenToForwarder snocket address timeLimitsHandshake app
+ where
+  app = OuroborosApplication $ \_connectionId _shouldStopSTM ->
+          [ MiniProtocol
+              { miniProtocolNum    = MiniProtocolNum 1
+              , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+              , miniProtocolRun    = acceptLogObjects config loQueue
+              }
+          ]
 
 doListenToForwarder
   :: Ord addr
@@ -101,22 +111,6 @@ doListenToForwarder snocket address timeLimits app = do
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
   void $ waitAnyCancel [nsAsync, clAsync]
 
-acceptorApp
-  :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
-  => AcceptorConfiguration lo
-  -> TBQueue lo
-  -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
-acceptorApp config loQueue =
-  OuroborosApplication $ \_connectionId _shouldStopSTM -> [
-    MiniProtocol
-      { miniProtocolNum    = MiniProtocolNum 2
-      , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-      , miniProtocolRun    = acceptLogObjects config loQueue
-      }
-  ]
-
 acceptLogObjects
   :: (CBOR.Serialise lo,
       ShowProxy lo,
@@ -126,11 +120,28 @@ acceptLogObjects
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 acceptLogObjects config loQueue =
   ResponderProtocolOnly $
-    MuxPeer
-      (acceptorTracer config)
-      (Acceptor.codecTraceForward CBOR.encode CBOR.decode
-                                  CBOR.encode CBOR.decode)
-      (Acceptor.traceAcceptorPeer $ acceptorActions config loQueue False)
+    MuxPeerRaw $ \channel -> do
+      sv <- newEmptyTMVarIO
+      siblingVar <- newTVarIO 2
+      (r, trailing) <-
+        runPeerWithLimits
+          (acceptorTracer config)
+          (Acceptor.codecTraceForward CBOR.encode CBOR.decode
+                                      CBOR.encode CBOR.decode)
+          (byteLimitsTraceForward (fromIntegral . LBS.length))
+          timeLimitsTraceForward
+          channel
+          (Acceptor.traceAcceptorPeer $ acceptorActions config loQueue False)
+      atomically $ putTMVar sv r
+      waitSibling siblingVar
+      return ((), trailing)
+ where
+  waitSibling :: StrictTVar IO Int -> IO ()
+  waitSibling cntVar = do
+    atomically $ modifyTVar cntVar (\a -> a - 1)
+    atomically $ do
+      cnt <- readTVar cntVar
+      unless (cnt == 0) retry
 
 acceptorActions
   :: (CBOR.Serialise lo,
@@ -145,7 +156,7 @@ acceptorActions config@AcceptorConfiguration{..} loQueue False =
     writeLogObjectsToQueue reply loQueue
     actionOnReply $ logObjectsFromReply reply
     threadDelay $ toMicroSecs requestFrequency
-    readIORef shouldWeStop >>= return . acceptorActions config loQueue
+    readIORef shouldWeStop <&> acceptorActions config loQueue
  where
   -- TODO: temporary function, should be rewritten
   -- (we have to take into account actual time of 'actionOnReply'
@@ -156,22 +167,3 @@ acceptorActions config@AcceptorConfiguration{..} loQueue False =
 acceptorActions AcceptorConfiguration{..} _ True =
   Acceptor.SendMsgDone
     actionOnDone
-
-{-
-runAcceptorPeer
-  :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
-  => AcceptorConfiguration lo
-  -> TBQueue lo
-  -> IO ((), Maybe LBS.ByteString)
-runAcceptorPeer config loQueue =
-  runPeerWithLimits
-    (acceptorTracer config)
-    (Acceptor.codecTraceForward CBOR.encode CBOR.decode
-                                CBOR.encode CBOR.decode)
-    (Acceptor.byteLimitsTraceForward (fromIntegral . LBS.length))
-    Acceptor.timeLimitsTraceForward
-    (fromMaybe id (delayChannel <$> outboundDelay) outboundChannel)
-    (Acceptor.traceAcceptorPeer $ acceptorActions config loQueue False)
--}
