@@ -43,6 +43,7 @@ module Cardano.Node.Types
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
+  , NodeAlonzoProtocolConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , protocolName
   , renderVRFPrivateKeyFilePermissionError
@@ -261,8 +262,16 @@ data NodeProtocolConfiguration =
      | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
      | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
                                         NodeShelleyProtocolConfiguration
+                                        NodeAlonzoProtocolConfiguration
                                         NodeHardForkProtocolConfiguration
   deriving (Eq, Show)
+
+data NodeAlonzoProtocolConfiguration =
+       NodeAlonzoProtocolConfiguration
+         { npcAlonzoGenesisFile     :: !GenesisFile
+         , npcAlonzoGenesisFileHash :: !(Maybe GenesisHash)
+         } deriving (Eq, Show)
+
 
 data NodeShelleyProtocolConfiguration =
      NodeShelleyProtocolConfiguration {
@@ -348,13 +357,29 @@ data NodeHardForkProtocolConfiguration =
      , npcTestMaryHardForkAtEpoch :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+       --
+     , npcTestMaryHardForkAtVersion :: Maybe Word
+
+       -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
        --
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestMaryHardForkAtVersion :: Maybe Word
+     , npcTestAlonzoHardForkAtEpoch :: Maybe EpochNo
 
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestAlonzoHardForkAtVersion :: Maybe Word
      }
   deriving (Eq, Show)
 
@@ -375,9 +400,10 @@ instance AdjustFilePaths NodeProtocolConfiguration where
   adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
     NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pch) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pch) =
     NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                      (adjustFilePaths f pcs)
+                                     (adjustFilePaths f pca)
                                      pch
 
 instance AdjustFilePaths NodeByronProtocolConfiguration where
@@ -391,6 +417,14 @@ instance AdjustFilePaths NodeShelleyProtocolConfiguration where
                         npcShelleyGenesisFile
                       } =
     x { npcShelleyGenesisFile = adjustFilePaths f npcShelleyGenesisFile }
+
+
+instance AdjustFilePaths NodeAlonzoProtocolConfiguration where
+  adjustFilePaths f x@NodeAlonzoProtocolConfiguration {
+                        npcAlonzoGenesisFile
+                      } =
+    x { npcAlonzoGenesisFile = adjustFilePaths f npcAlonzoGenesisFile }
+
 
 instance AdjustFilePaths SocketPath where
   adjustFilePaths f (SocketPath p) = SocketPath (f p)

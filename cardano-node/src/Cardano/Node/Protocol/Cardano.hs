@@ -59,6 +59,7 @@ import           Cardano.Node.Protocol.Types
 mkSomeConsensusProtocolCardano
   :: NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
+  -> NodeAlonzoProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
@@ -77,6 +78,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcShelleyGenesisFile,
                              npcShelleyGenesisFileHash
                            }
+                           _AlonzoProtocolConfig
                            NodeHardForkProtocolConfiguration {
                              npcTestShelleyHardForkAtEpoch,
                              npcTestShelleyHardForkAtVersion,
