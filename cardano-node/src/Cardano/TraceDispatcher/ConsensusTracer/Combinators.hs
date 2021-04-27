@@ -31,6 +31,9 @@ module Cardano.TraceDispatcher.ConsensusTracer.Combinators
   , severityForge
   , namesForForge
 
+  , namesBlockchainTime
+  , severityBlockchainTime
+
   ) where
 
 
@@ -43,6 +46,8 @@ import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
 
 import           Ouroboros.Consensus.Block (Point)
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
+                     (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -284,3 +289,14 @@ namesForForge' TraceForgedBlock {}           = ["ForgedBlock"]
 namesForForge' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
 namesForForge' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
 namesForForge' TraceAdoptedBlock {}          = ["AdoptedBlock"]
+
+namesBlockchainTime :: TraceBlockchainTimeEvent t -> [Text]
+namesBlockchainTime TraceStartTimeInTheFuture {} = ["StartTimeInTheFuture"]
+namesBlockchainTime TraceCurrentSlotUnknown {}   = ["CurrentSlotUnknown"]
+namesBlockchainTime TraceSystemClockMovedBack {} = ["SystemClockMovedBack"]
+
+-- TODO: Confirm the severities
+severityBlockchainTime :: TraceBlockchainTimeEvent t -> SeverityS
+severityBlockchainTime TraceStartTimeInTheFuture {} = Warning
+severityBlockchainTime TraceCurrentSlotUnknown {}   = Warning
+severityBlockchainTime TraceSystemClockMovedBack {} = Warning
