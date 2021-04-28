@@ -4,15 +4,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Trace.Forward.Queue
-  ( readLogObjectsFromQueue
+  ( readItems
   , writeLogObjectsToQueue
   , logObjectsFromReply
   ) where
 
-import           Control.Concurrent.STM (STM, atomically)
+import           Control.Concurrent.STM (STM, atomically, retry)
 import           Control.Concurrent.STM.TBQueue (TBQueue, isFullTBQueue,
                                                  tryReadTBQueue, writeTBQueue)
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, unless)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
 
@@ -20,20 +20,30 @@ import           Trace.Forward.Configuration (ForwarderConfiguration (..))
 import qualified Trace.Forward.Protocol.Forwarder as Forwarder
 import           Trace.Forward.Protocol.Type
 
-readLogObjectsFromQueue
+readItems
   :: ForwarderConfiguration lo -- ^ The forwarder configuration.
   -> TBQueue lo                -- ^ The queue we will read 'LogObject's from.
   -> Forwarder.TraceForwarder lo IO ()
-readLogObjectsFromQueue config@ForwarderConfiguration {..} loQueue =
+readItems config@ForwarderConfiguration{..} loQueue =
   Forwarder.TraceForwarder
-    { Forwarder.recvMsgRequest = \blocking request@(GetLogObjects n) -> do
+    { Forwarder.recvMsgNodeInfoRequest = do
+        reply <- nodeBasicInfo            
+        return (reply, readItems config loQueue)
+    , Forwarder.recvMsgRequest = \blocking request@(GetLogObjects n) -> do
         actionOnRequest request
-        logObjects <- atomically (getLogObject n loQueue)
-        let replyList =
-              case blocking of
-                TokBlocking    -> BlockingReply $ NE.fromList logObjects -- TODO: logObjects can be empty!
-                TokNonBlocking -> NonBlockingReply logObjects
-        return (replyList, readLogObjectsFromQueue config loQueue)
+        replyList <-
+          case blocking of
+            TokBlocking -> do
+              logObjects <- atomically $
+                getLogObject n loQueue >>= \case
+                  []     -> retry -- No 'LogObject's, just wait...
+                  (x:xs) -> return $ x NE.:| xs
+              return $ BlockingReply logObjects
+            TokNonBlocking -> do
+              logObjects <- atomically $ getLogObject n loQueue
+              -- 'logObjects' may be empty, it's a normal case for non-blocking request.
+              return $ NonBlockingReply logObjects  
+        return (replyList, readItems config loQueue)
     , Forwarder.recvMsgDone = return ()
     }
 
@@ -50,7 +60,6 @@ getLogObject n loQueue =
       -- It means that we want to read a new 'LogObject' from the queue,
       -- but it is already empty. The simplest case is just return all
       -- 'LogObject's we already read.
-      -- TODO: Discuss what we should do in this case!
       getLogObject 0 loQueue
 
 writeLogObjectsToQueue
@@ -61,13 +70,11 @@ writeLogObjectsToQueue reply loQueue =
   writeListToQueue $ logObjectsFromReply reply
  where
   writeListToQueue [] = return ()
-  writeListToQueue l =
-    atomically $
-      forM_ l $ \lo' -> do
-        itIsFull <- isFullTBQueue loQueue
-        if itIsFull
-          then return ()
-          else writeTBQueue loQueue lo'
+  writeListToQueue l = atomically $
+    forM_ l $ \lo' -> do
+      itIsFull <- isFullTBQueue loQueue
+      unless itIsFull $
+        writeTBQueue loQueue lo'
 
 logObjectsFromReply :: BlockingReplyList blocking lo -> [lo]
 logObjectsFromReply reply = 

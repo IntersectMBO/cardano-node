@@ -73,14 +73,14 @@ mkConfigs howToConnect freq benchFillFreq = (ekgConfig, tfConfig)
       { EKGF.forwarderTracer    = if benchMode then nullTracer else contramap show stdoutTracer
       , EKGF.acceptorEndpoint   = forEKGF howToConnect
       , EKGF.reConnectFrequency = secondsToNominalDiffTime freq
-      , EKGF.actionOnRequest    = \_ -> return ()
+      , EKGF.actionOnRequest    = const (return ())
       }
   tfConfig =
     TF.ForwarderConfiguration
-      { TF.forwarderTracer    = if benchMode then nullTracer else contramap show stdoutTracer
-      , TF.acceptorEndpoint   = forTF howToConnect
-      , TF.reConnectFrequency = secondsToNominalDiffTime freq
-      , TF.actionOnRequest    = \_ -> return ()
+      { TF.forwarderTracer  = if benchMode then nullTracer else contramap show stdoutTracer
+      , TF.acceptorEndpoint = forTF howToConnect
+      , TF.nodeBasicInfo    = return [("NodeName", "node-1")]
+      , TF.actionOnRequest  = const (return ())
       }
 
   forTF (LocalPipe p)      = TF.LocalPipe p

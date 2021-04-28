@@ -10,9 +10,7 @@ import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO, writeTBQ
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import           Control.Tracer (contramap, stdoutTracer)
-import           Data.Fixed (Pico)
 import           Data.Text (Text, pack)
-import           Data.Time.Clock (secondsToNominalDiffTime)
 import           System.Environment (getArgs)
 import           System.Exit (die)
 
@@ -30,17 +28,17 @@ import           Trace.Forward.LogObject ()
 main :: IO ()
 main = do
   -- Prepare the forwarder's configuration.
-  (howToConnect, freq) <- getArgs >>= \case
-    [path, freq]       -> return (LocalPipe path, freq)
-    [host, port, freq] -> return (RemoteSocket (pack host) (read port :: Port), freq)
-    _                  -> die "Usage: demo-forwarder (pathToLocalPipe | host port) freqInSecs"
+  howToConnect <- getArgs >>= \case
+    [path]       -> return $ LocalPipe path
+    [host, port] -> return $ RemoteSocket (pack host) (read port :: Port)
+    _            -> die "Usage: demo-forwarder (pathToLocalPipe | host port)"
   let config :: ForwarderConfiguration (LogObject Text)
       config =
         ForwarderConfiguration
-          { forwarderTracer    = contramap show stdoutTracer
-          , acceptorEndpoint   = howToConnect
-          , reConnectFrequency = secondsToNominalDiffTime (read freq :: Pico)
-          , actionOnRequest    = \_ -> return ()
+          { forwarderTracer  = contramap show stdoutTracer
+          , acceptorEndpoint = howToConnect
+          , nodeBasicInfo    = return [("NodeName", "node-1")]
+          , actionOnRequest  = print -- const (return ())
           }
 
   -- Create a queue for 'LogObject's: when the acceptor will ask for N 'LogObject's

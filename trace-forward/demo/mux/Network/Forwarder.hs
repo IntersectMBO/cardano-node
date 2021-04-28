@@ -67,15 +67,9 @@ launchForwarders
   -> IO ()
 launchForwarders endpoint benchFillFreq configs =
   try (launchForwarders' endpoint benchFillFreq configs) >>= \case
-    Left (_e :: SomeException) -> do
-      threadDelay $ toMicroSecs howOftenToReconnect
+    Left (_e :: SomeException) ->
       launchForwarders endpoint benchFillFreq configs
     Right _ -> return ()
- where
-  toMicroSecs :: NominalDiffTime -> Int
-  toMicroSecs dt = fromEnum dt `div` 1000000
-  -- Actually we could take second frequency as well, they are equal in this demo.
-  howOftenToReconnect = EKGF.reConnectFrequency $ fst configs
 
 launchForwarders'
   :: HowToConnect
@@ -105,7 +99,7 @@ doConnectToAcceptor snocket address timeLimits benchFillFreq (ekgConfig, tfConfi
   tfQueue <- newTBQueueIO 1000000
   _ <- async $ loWriter tfQueue benchFillFreq
   store <- EKG.newStore
-  -- EKG.registerGcMetrics store
+  EKG.registerGcMetrics store
 
   connectToNode
     snocket

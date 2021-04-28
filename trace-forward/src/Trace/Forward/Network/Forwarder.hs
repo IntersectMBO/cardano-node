@@ -39,7 +39,7 @@ import           Ouroboros.Network.Socket (connectToNode, nullNetworkConnectTrac
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import           Trace.Forward.Configuration (ForwarderConfiguration (..), HowToConnect (..))
-import           Trace.Forward.Queue (readLogObjectsFromQueue)
+import           Trace.Forward.Queue (readItems)
 import qualified Trace.Forward.Protocol.Forwarder as Forwarder
 import qualified Trace.Forward.Protocol.Codec as Forwarder
 import           Trace.Forward.Protocol.Limits (byteLimitsTraceForward, timeLimitsTraceForward)
@@ -106,11 +106,12 @@ forwardLogObjects config loQueue =
         runPeerWithLimits
           (forwarderTracer config)
           (Forwarder.codecTraceForward CBOR.encode CBOR.decode
+                                       CBOR.encode CBOR.decode
                                        CBOR.encode CBOR.decode)
           (byteLimitsTraceForward (fromIntegral . LBS.length))
           timeLimitsTraceForward
           channel
-          (Forwarder.traceForwarderPeer $ readLogObjectsFromQueue config loQueue)
+          (Forwarder.traceForwarderPeer $ readItems config loQueue)
       atomically $ putTMVar cv r
       waitSibling siblingVar
       return ((), trailing)

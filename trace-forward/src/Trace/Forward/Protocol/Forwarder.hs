@@ -20,9 +20,13 @@ import           Trace.Forward.Protocol.Type
 -- from the __interaction__ point of view: the acceptor sends a request for
 -- new 'LogObject's, the forwarder replies to the acceptor.
 --
-data TraceForwarder lo m a = TraceForwarder {
+data TraceForwarder lo m a = TraceForwarder
+  { -- | The acceptor sent us a request for node's basic info.
+    recvMsgNodeInfoRequest
+      :: m (NodeInfo, TraceForwarder lo m a)
+
     -- | The acceptor sent us a request for new 'LogObject's.
-    recvMsgRequest
+  , recvMsgRequest
       :: forall blocking. TokBlockingStyle blocking
       -> Request
       -> m (BlockingReplyList blocking lo, TraceForwarder lo m a)
@@ -43,6 +47,15 @@ traceForwarderPeer TraceForwarder{..} =
   -- In the 'StIdle' state the forwarder is awaiting a request message
   -- from the acceptor.
   Await (ClientAgency TokIdle) $ \case
+    -- The acceptor sent us a request for node's basic info, so now we're
+    -- in the 'StBusy' state which means it's the forwarder's turn to send
+    -- a reply.
+    MsgNodeInfoRequest -> Effect $ do
+      (reply, next) <- recvMsgNodeInfoRequest
+      return $ Yield (ServerAgency TokNodeInfoBusy)
+                     (MsgNodeInfoReply reply)
+                     (traceForwarderPeer next)
+
     -- The acceptor sent us a request for new 'LogObject's, so now we're
     -- in the 'StBusy' state which means it's the forwarder's turn to send
     -- a reply.

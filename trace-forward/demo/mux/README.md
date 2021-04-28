@@ -4,7 +4,7 @@ There are two demo programs, `demo-forwarder-mux` and `demo-acceptor-mux`. You c
 
 These demo-programs use two libraries: `trace-forward` and [`ekg-forward`](https://github.com/input-output-hk/ekg-forward). The purpose of these demo-programs is demonstration of `Mux`-ing of two `typed-protocol`s using one single connection.
 
-You can use it as a practical example of how to integrate these two libraries in the forwarder application (for example, `cardano-node`) and in the acceptor application (for example, logger or [RTView](https://github.com/input-output-hk/cardano-rt-view)).
+You can use it as a practical example of how to integrate these two libraries in the forwarder application (for example, `cardano-node`) and in the acceptor application (for example, tracer or [RTView](https://github.com/input-output-hk/cardano-rt-view)).
 
 Demo-programs can be launched in different modes.
 
@@ -13,35 +13,33 @@ Demo-programs can be launched in different modes.
 Run demo-programs like this:
 
 ```
-$ ./demo-acceptor-mux ./demo-mux.sock 0.001 1000
+$ ./demo-acceptor-mux ./demo-mux.sock 1000
 ```
 
 ```
-$ ./demo-forwarder-mux ./demo-mux.sock 1
+$ ./demo-forwarder-mux ./demo-mux.sock
 ```
 
 or like this:
 
 ```
-$ ./demo-acceptor-mux 127.0.0.1 3010 0.001 1000
+$ ./demo-acceptor-mux 127.0.0.1 3010 1000
 ```
 
 ```
-$ ./demo-forwarder-mux 127.0.0.1 3010 1
+$ ./demo-forwarder-mux 127.0.0.1 3010
 ```
 
 In these examples, `demo-mux.sock` is a local pipe, and `127.0.0.1 3010` is a host and a port.
 
-Next two values for the acceptor are the request frequency (in seconds) and the number of requested `LogObject`s. In this example the acceptor will ask `1000` `LogObject`s every `0.001` seconds.
-
-The next value for the forwarder is a reconnect frequency: how often the forwarder will try to reconnect to the acceptor if the connection will be broken. In this example the forwarder will try to reconnect every second.
+Next value for the acceptor is the number of requested `LogObject`s, in this example the acceptor will ask `1000` `LogObject`s.
 
 ## Benchmark Mode
 
 Run demo-programs like this:
 
 ```
-$ ./demo-acceptor-mux ./demo-mux.sock 0.001 1000 -b 2
+$ ./demo-acceptor-mux ./demo-mux.sock 1000 -b 2
 ```
 
 ```

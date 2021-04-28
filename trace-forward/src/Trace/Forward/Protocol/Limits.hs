@@ -31,6 +31,7 @@ byteLimitsTraceForward = ProtocolSizeLimits stateToLimit
               (st :: TraceForward lo).
        PeerHasAgency pr st
     -> Word
+  stateToLimit (ServerAgency TokNodeInfoBusy)          = largeByteLimit
   stateToLimit (ServerAgency (TokBusy TokBlocking))    = largeByteLimit
   stateToLimit (ServerAgency (TokBusy TokNonBlocking)) = largeByteLimit
   stateToLimit (ClientAgency TokIdle)                  = smallByteLimit
@@ -46,6 +47,7 @@ timeLimitsTraceForward = ProtocolTimeLimits stateToLimit
               (st :: TraceForward lo).
        PeerHasAgency pr st
     -> Maybe DiffTime
+  stateToLimit (ServerAgency TokNodeInfoBusy)          = shortWait
   stateToLimit (ServerAgency (TokBusy TokBlocking))    = waitForever
   stateToLimit (ServerAgency (TokBusy TokNonBlocking)) = shortWait
   stateToLimit (ClientAgency TokIdle)                  = waitForever

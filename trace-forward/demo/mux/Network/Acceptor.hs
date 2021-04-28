@@ -102,7 +102,8 @@ doListenToForwarder
 doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) tidVar = do
   store <- EKG.newStore
   metricsStore <- newIORef emptyMetricsLocalStore
-  logObjectsQueue <- newTBQueueIO 1000000
+  loQueue <- newTBQueueIO 1000000
+  niStore <- newIORef []
 
   networkState <- newNetworkMutableState
   _ <- async $ cleanNetworkMutableState networkState
@@ -121,7 +122,7 @@ doListenToForwarder snocket address timeLimits (ekgConfig, tfConfig) tidVar = do
       UnversionedProtocolData
       (SomeResponderApplication $
          acceptorApp [ (acceptEKGMetrics ekgConfig store metricsStore, 1)
-                     , (acceptLogObjects tfConfig logObjectsQueue,     2)
+                     , (acceptLogObjects tfConfig loQueue niStore,     2)
                      ]
       )
     )

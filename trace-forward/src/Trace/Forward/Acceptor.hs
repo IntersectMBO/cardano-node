@@ -16,6 +16,7 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import           Trace.Forward.Network.Acceptor (listenToForwarder)
 import           Trace.Forward.Configuration (AcceptorConfiguration (..))
+import           Trace.Forward.Protocol.Type (NodeInfoStore)
 
 -- | Please note that acceptor is a server from the __networking__ point of view:
 -- the forwarder establishes network connection with the acceptor. This is because
@@ -25,10 +26,11 @@ runTraceAcceptor
       ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor configuration.
-  -> TBQueue lo               -- ^ The queue all received 'LogObject's will be write in.
+  -> TBQueue lo               -- ^ The queue all received 'LogObject's will be written in.
+  -> NodeInfoStore            -- ^ The store node's basic info will be written in.
   -> IO ()
-runTraceAcceptor config loQueue =
-  try (listenToForwarder config loQueue) >>= \case
+runTraceAcceptor config loQueue niStore =
+  try (listenToForwarder config loQueue niStore) >>= \case
     Left (_e :: SomeException) ->
-      runTraceAcceptor config loQueue
+      runTraceAcceptor config loQueue niStore
     Right _ -> return ()

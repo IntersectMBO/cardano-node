@@ -122,7 +122,6 @@ mkConfigs listenIt freq itemsNum benchSpeedFreq totalObjs = do
         TF.AcceptorConfiguration
           { TF.acceptorTracer    = if benchMode then nullTracer else contramap show stdoutTracer
           , TF.forwarderEndpoint = forTF listenIt
-          , TF.requestFrequency  = secondsToNominalDiffTime freq
           , TF.whatToRequest     = TF.GetLogObjects itemsNum
             -- Currently, only TF works in bench mode.
           , TF.actionOnReply     = if benchMode then count loCounter else print

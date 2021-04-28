@@ -43,6 +43,7 @@ codec
            m LBS.ByteString
 codec = codecTraceForward S.encode S.decode
                           S.encode S.decode
+                          S.encode S.decode
 
 -- | Check that the codec produces a valid CBOR term
 -- that is decodeable by CBOR.decodeTerm.

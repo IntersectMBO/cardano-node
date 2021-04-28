@@ -6,7 +6,6 @@ module Trace.Forward.Test.MkConfig
 import           Control.Tracer (nullTracer)
 import           Data.IORef (IORef)
 import           Data.Text (Text)
-import           Data.Time.Clock (secondsToNominalDiffTime)
 
 import           Cardano.BM.Data.LogItem (LogObject (..))
 
@@ -24,7 +23,6 @@ mkAcceptorConfig endpoint weAreDone request =
   AcceptorConfiguration
     { acceptorTracer    = nullTracer
     , forwarderEndpoint = endpoint
-    , requestFrequency  = secondsToNominalDiffTime 0.05
     , whatToRequest     = request
     , actionOnReply     = const $ return ()
     , shouldWeStop      = weAreDone
@@ -36,8 +34,8 @@ mkForwarderConfig
   -> ForwarderConfiguration (LogObject Text)
 mkForwarderConfig endpoint =
   ForwarderConfiguration
-    { forwarderTracer    = nullTracer
-    , acceptorEndpoint   = endpoint
-    , reConnectFrequency = secondsToNominalDiffTime 1
-    , actionOnRequest    = const $ return ()
+    { forwarderTracer  = nullTracer
+    , acceptorEndpoint = endpoint
+    , nodeBasicInfo    = return [("NodeName", "node-1")]
+    , actionOnRequest  = const $ return ()
     }

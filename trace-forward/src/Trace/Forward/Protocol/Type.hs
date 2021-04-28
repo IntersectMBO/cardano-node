@@ -22,11 +22,15 @@ module Trace.Forward.Protocol.Type
   , NobodyHasAgency (..)
   , Request (..)
   , BlockingReplyList (..)
+  , NodeInfo
+  , NodeInfoStore
   ) where
 
 import           Codec.Serialise (Serialise (..))
+import           Data.IORef (IORef)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Proxy (Proxy(..))
+import           Data.Text (Text)
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core (Protocol (..))
@@ -64,12 +68,22 @@ instance Serialise Request
 data TraceForward lo where
 
   -- | Both acceptor and forwarder are in idle state. The acceptor can send a
-  -- request for 'LogObject's and the forwarder is waiting for a request.
+  -- request for node's basic info or for a list of 'LogObject's, the forwarder
+  -- is waiting for some request.
+  --
+  -- Node's basic info is a fundamental information about the node, such as
+  -- its protocol, version, start time, etc. It is assuming that the node
+  -- is able to provide such information immediately.
   StIdle :: TraceForward lo
+
+  -- | The acceptor has sent a request for node's basic info. The acceptor is
+  -- now waiting for a reply, and the forwarder is busy getting ready to send a
+  -- reply with node's basic info.
+  StNodeInfoBusy :: TraceForward lo
 
   -- | The acceptor has sent a next request for 'LogObject's. The acceptor is
   -- now waiting for a reply, and the forwarder is busy getting ready to send a
-  -- reply with new 'LogObject's.
+  -- reply with new list of 'LogObject's.
   --
   -- There are two sub-states for this, for blocking and non-blocking cases.
   StBusy :: StBlockingStyle -> TraceForward lo
@@ -113,12 +127,31 @@ data BlockingReplyList (blocking :: StBlockingStyle) lo where
 deriving instance Eq   lo => Eq   (BlockingReplyList blocking lo)
 deriving instance Show lo => Show (BlockingReplyList blocking lo)
 
+-- | The node (on the forwarder side) provides its basic information, such as
+--   protocol, version, start time, unique name, etc.
+type NodeInfo = [(Text, Text)]
+
+-- | The store for 'NodeInfo', will be used on the acceptor's side to store received node's info.
+type NodeInfoStore = IORef NodeInfo
+
 instance Protocol (TraceForward lo) where
 
   -- | The messages in the Trace forwarding/accepting protocol.
   --
   data Message (TraceForward lo) from to where
-    -- | Request the non-empty list of 'LogObject's from the forwarder.
+
+    -- | Request the node's basic info from the forwarder.
+    --   State: Idle -> NodeInfoBusy.
+    MsgNodeInfoRequest
+      :: Message (TraceForward lo) 'StIdle 'StNodeInfoBusy
+
+    -- | Reply with the node's basic info, as a list of pairs.
+    --   State: NodeInfoBusy -> Idle.
+    MsgNodeInfoReply
+      :: NodeInfo
+      -> Message (TraceForward lo) 'StNodeInfoBusy 'StIdle
+
+    -- | Request the list of 'LogObject's from the forwarder.
     --   State: Idle -> Busy.
     --
     -- With 'TokBlocking' this is a a blocking operation: the reply will
@@ -159,7 +192,8 @@ instance Protocol (TraceForward lo) where
     TokIdle :: ClientHasAgency 'StIdle
 
   data ServerHasAgency st where
-    TokBusy :: TokBlockingStyle blocking -> ServerHasAgency ('StBusy blocking)
+    TokNodeInfoBusy :: ServerHasAgency 'StNodeInfoBusy
+    TokBusy         :: TokBlockingStyle blocking -> ServerHasAgency ('StBusy blocking)
 
   data NobodyHasAgency st where
     TokDone :: NobodyHasAgency 'StDone
@@ -171,12 +205,15 @@ instance Protocol (TraceForward lo) where
 
 instance (Show lo)
       => Show (Message (TraceForward lo) from to) where
-  show MsgRequest{} = "MsgRequest"
-  show MsgReply{}   = "MsgReply"
-  show MsgDone{}    = "MsgDone"
+  show MsgNodeInfoRequest{} = "MsgNodeInfoRequest"
+  show MsgNodeInfoReply{}   = "MsgNodeInfoReply"
+  show MsgRequest{}         = "MsgRequest"
+  show MsgReply{}           = "MsgReply"
+  show MsgDone{}            = "MsgDone"
 
 instance Show (ClientHasAgency (st :: TraceForward lo)) where
   show TokIdle = "TokIdle"
 
 instance Show (ServerHasAgency (st :: TraceForward lo)) where
-  show TokBusy{} = "TokBusy"
+  show TokNodeInfoBusy = "TokNodeInfoBusy"
+  show TokBusy{}       = "TokBusy"

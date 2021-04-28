@@ -26,6 +26,10 @@ import           Trace.Forward.Protocol.Type
 -- 'LogObject's, the forwarder replies to the acceptor.
 --
 data TraceAcceptor lo m a where
+  SendMsgNodeInfoRequest
+    :: (NodeInfo -> m (TraceAcceptor lo m a))
+    -> TraceAcceptor lo m a
+
   SendMsgRequest
     :: TokBlockingStyle blocking
     -> Request
@@ -44,6 +48,15 @@ traceAcceptorPeer
   => TraceAcceptor lo m a
   -> Peer (TraceForward lo) 'AsClient 'StIdle m a
 traceAcceptorPeer = \case
+  SendMsgNodeInfoRequest next ->
+    -- Send our message (request for node's basic info from the forwarder).
+    Yield (ClientAgency TokIdle) MsgNodeInfoRequest $
+      -- We're now into the 'StNodeInfoBusy' state, and now we'll wait for
+      -- a reply from the forwarder.
+      Await (ServerAgency TokNodeInfoBusy) $ \(MsgNodeInfoReply reply) ->
+        Effect $
+          traceAcceptorPeer <$> next reply
+
   SendMsgRequest TokBlocking request next ->
     -- Send our message (request for new 'LogObject's from the forwarder).
     Yield (ClientAgency TokIdle) (MsgRequest TokBlocking request) $

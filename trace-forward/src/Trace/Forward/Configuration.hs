@@ -9,11 +9,10 @@ module Trace.Forward.Configuration
 import           Control.Tracer (Tracer)
 import           Data.IORef (IORef)
 import           Data.Text (Text)
-import           Data.Time.Clock (NominalDiffTime)
 import           Data.Word (Word16)
 import           Ouroboros.Network.Driver (TraceSendRecv)
 
-import           Trace.Forward.Protocol.Type (Request, TraceForward)
+import           Trace.Forward.Protocol.Type (NodeInfo, Request, TraceForward)
 
 type Host = Text
 type Port = Word16
@@ -30,9 +29,6 @@ data AcceptorConfiguration lo = AcceptorConfiguration
     acceptorTracer    :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
     -- | The endpoint that will be used to listen to the forwarder.
   , forwarderEndpoint :: !HowToConnect
-    -- | Specifies how often the acceptor will ask the framework for new 'LogObject's.
-    -- It can be specified as seconds or as fraction of second.
-  , requestFrequency  :: !NominalDiffTime
     -- | The request specifies how many 'LogObject's will be requested.
   , whatToRequest     :: !Request
     -- | Additional action that will be performed every time the acceptor will
@@ -52,10 +48,8 @@ data ForwarderConfiguration lo = ForwarderConfiguration
     forwarderTracer    :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
     -- | The endpoint that will be used to connect to the acceptor.
   , acceptorEndpoint   :: !HowToConnect
-    -- | If the connection with the acceptor will fail, the forwarder will attempt
-    -- to re-establish the connection after this delay.
-    -- It can be specified as seconds or as fraction of second.
-  , reConnectFrequency :: !NominalDiffTime
+    -- | An action that returns node's basic information.
+  , nodeBasicInfo      :: !(IO NodeInfo)
     -- | Additional action that will be performed every time the forwarder will
     -- receive the request from the acceptor.
   , actionOnRequest    :: !(Request -> IO ())

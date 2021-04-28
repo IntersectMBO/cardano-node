@@ -63,6 +63,7 @@ propDemoIO' maxLen endpoint (NonEmpty logObjects') = do
   let logObjects = take maxLen logObjects' -- We don't want too big list here.
   forwarderQueue <- newTBQueueIO . fromIntegral . length $ logObjects
   acceptorQueue  <- newTBQueueIO . fromIntegral . length $ logObjects
+  acceptorNodeInfo <- newIORef []
   weAreDone <- newIORef False
 
   let acceptorConfig = mkAcceptorConfig endpoint weAreDone $ GetLogObjects 1
@@ -76,7 +77,7 @@ propDemoIO' maxLen endpoint (NonEmpty logObjects') = do
   threadDelay 1000000
 
   -- Run the acceptor.
-  void . forkIO $ runTraceAcceptor acceptorConfig acceptorQueue
+  void . forkIO $ runTraceAcceptor acceptorConfig acceptorQueue acceptorNodeInfo
   waitTillAcceptorReceiveObjects
   atomicModifyIORef' weAreDone $ const (True, ())
 

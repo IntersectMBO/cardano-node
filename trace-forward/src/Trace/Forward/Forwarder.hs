@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- This top-level module will be used by the forwarder app
@@ -9,10 +8,8 @@ module Trace.Forward.Forwarder
   ) where
 
 import qualified Codec.Serialise as CBOR
-import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.STM.TBQueue (TBQueue)
 import           Control.Exception (SomeException, try)
-import           Data.Time.Clock (NominalDiffTime)
 import           Data.Typeable (Typeable)
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
@@ -29,12 +26,9 @@ runTraceForwarder
   => ForwarderConfiguration lo -- ^ Forwarder configuration.
   -> TBQueue lo                -- ^ The queue the forwarder will take 'LogObject's from.
   -> IO ()
-runTraceForwarder config@ForwarderConfiguration{..} loQueue =
+runTraceForwarder config loQueue =
   try (connectToAcceptor config loQueue) >>= \case
-    Left (_e :: SomeException) -> do
-      threadDelay $ toMicroSecs reConnectFrequency
+    Left (e :: SomeException) -> do
+      putStrLn $ "trace-forward, forwarder problem: " <> show e
       runTraceForwarder config loQueue
     Right _ -> return ()
- where
-  toMicroSecs :: NominalDiffTime -> Int
-  toMicroSecs dt = fromEnum dt `div` 1000000
