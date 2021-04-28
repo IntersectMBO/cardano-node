@@ -100,10 +100,11 @@ let
     exactDeps = true;
 
     shellHook = ''
+      ${cluster.workbench.shellHook}
+
       ${lib.optionalString autoStartCluster ''
       function atexit() {
-
-          if wb local supervisord-running
+          if wb backend is-running
           then echo "workbench:  stopping cluster (because 'autoStartCluster' implies this):"
                stop-cluster
           fi
@@ -111,8 +112,6 @@ let
       trap atexit EXIT
       ''}
       unset NIX_ENFORCE_PURITY
-
-      ${cluster.workbench.shellHook}
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
@@ -151,7 +150,7 @@ let
       ${cluster.workbench.shellHook}
 
       # Socket path default to first node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$(wb local get-node-socket-path ${cluster.stateDir})
+      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${cluster.stateDir})
 
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''

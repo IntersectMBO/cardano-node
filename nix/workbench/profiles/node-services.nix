@@ -165,7 +165,6 @@ let
         };
 
         topology = rec {
-          ## XXX: hard-code for local case!
           JSON  = backend.topologyForNode { inherit profile nodeSpec; };
           value = __fromJSON (__readFile JSON);
         };

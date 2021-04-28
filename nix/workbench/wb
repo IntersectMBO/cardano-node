@@ -4,35 +4,33 @@
 set -euo pipefail
 
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
-global_runsdir=${global_runsdir:-$(realpath "$global_basedir/../../runs")}
-global_cachedir="$HOME"/.cache/cardano-workbench
 global_mode='unknown'
 
 . "$global_basedir"/lib.sh
+. "$global_basedir"/env.sh
 . "$global_basedir"/profile.sh
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
 . "$global_basedir"/run.sh
 . "$global_basedir"/explain-mode.sh
 
-. "$global_basedir"/local.sh
+. "$global_basedir"/backend.sh
 
 usage_main() {
+    test -z "$1" ||
+        msg "Unknown op: $1"
      __usage "OP" "Main OPs" <<EOF
-    profile      (p)      Cluster profile operations.  Default subop is 'list'
+    env          (e)      Environment configuration
     genesis      (g)      Genesis
     topology     (t)      Topology generation
-    run          (r)      Managing cluster runs.  Default subop is 'list'
-
-    record       (c)      Re-enter the Nix-generated artifacts into the flawed world
-
-    local        (l)      Managing local cluster
+    profile      (p)      Cluster profile ops.  Default op is 'list'
+    cluster      (c)      Cluster state ops
+    run          (r)      Managing cluster runs.  Default op is 'list'
 
     explain-mode (x)      Explain current mode
 
   Options:
 
-    --cache-dir DIR       Set the cache directory;  Defaults to $global_cachedir
     --trace / --debug     set -x
     --help                This short help
     --help-full           Extended help
@@ -50,17 +48,12 @@ usage_extra() {
 
     --cls                 Clear screen, before acting further.
     --set-mode MODE       Set mode.  Only has effect on 'mode' OP
-    --runsdir DIR         Set the runs directory.  Defaults to $global_runsdir
 
 EOF
 }
 
 while test $# -gt 0
 do case "$1" in
-       --cachedir )
-           global_cachedir=$2; shift;;
-       --runsdir )
-           global_runsdir=$2; shift;;
        --cls )
            echo -en "\ec">&2;;
        --trace | --debug )
@@ -76,29 +69,34 @@ do case "$1" in
 main() {
     local op=${1:?$(usage_main)}; shift
 
-    case "${op}" in
+    case "$op" in
         ## Public:
         #
-        profile | profiles | prof | ps | p )
-            profile "$@";;
+        env | e )
+            env "$@";;
         genesis | g )
             genesis "$@";;
         topology | topo | t )
             topology "$@";;
+        profile | profiles | prof | ps | p )
+            profile "$@";;
+        cluster | c )
+            cluster "$@";;
         run | runs | r )
             run "$@";;
-        local | loc | l )
-            local_ "$@";;
+
         explain-mode | x )
             explain-mode $global_mode;;
 
         ## Internals:
         #
+        backend )
+            backend "$@";;
         call )
             "$@";;
         mode )
             echo -n      $global_mode;;
-        * ) usage_main; exit 1;; esac
+        * ) usage_main "$op"; exit 1;; esac
 }
 
 main "$@"
