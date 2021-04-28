@@ -8,7 +8,7 @@ maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-build-type:             Simple
+build-type:             Custom
 extra-source-files:     ChangeLog.md
 
 Flag unexpected_thunks
@@ -21,6 +21,10 @@ flag systemd
   manual:         False
 
 common base                         { build-depends: base                             >= 4.14       && < 4.15     }
+
+custom-setup
+  setup-depends:        base  >= 4.5 && < 4.15
+                      , Cabal == 3.4.0.0
 
 common project-config
   default-language:     Haskell2010
