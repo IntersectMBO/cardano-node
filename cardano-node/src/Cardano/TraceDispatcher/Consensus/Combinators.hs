@@ -1,5 +1,5 @@
 
-module Cardano.TraceDispatcher.ConsensusTracer.Combinators
+module Cardano.TraceDispatcher.Consensus.Combinators
   (
     severityChainSyncClientEvent
   , namesForChainSyncClientEvent

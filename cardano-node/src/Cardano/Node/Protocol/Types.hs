@@ -20,7 +20,7 @@ import           NoThunks.Class (NoThunks)
 
 import qualified Cardano.Api.Protocol.Types as Cardano
 
-import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo(GetKESInfo)
+import           Cardano.TraceDispatcher.Consensus.StateInfo(GetKESInfo)
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESMetricsData, HasKESInfo)
 
