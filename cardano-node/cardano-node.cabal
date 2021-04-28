@@ -90,13 +90,16 @@ library
                        Cardano.TraceDispatcher.OrphanInstances.HardFork
                        Cardano.TraceDispatcher.OrphanInstances.Common
                        Cardano.TraceDispatcher.OrphanInstances.Shelley
-                       Cardano.TraceDispatcher.ChainDBTracer.Docu
-                       Cardano.TraceDispatcher.ChainDBTracer.Formatting
-                       Cardano.TraceDispatcher.ChainDBTracer.Combinators
-                       Cardano.TraceDispatcher.ConsensusTracer.Docu
-                       Cardano.TraceDispatcher.ConsensusTracer.Formatting
-                       Cardano.TraceDispatcher.ConsensusTracer.Combinators
-                       Cardano.TraceDispatcher.ConsensusTracer.StateInfo                                                                
+                       Cardano.TraceDispatcher.ChainDB.Docu
+                       Cardano.TraceDispatcher.ChainDB.Formatting
+                       Cardano.TraceDispatcher.ChainDB.Combinators
+                       Cardano.TraceDispatcher.Consensus.Docu
+                       Cardano.TraceDispatcher.Consensus.Formatting
+                       Cardano.TraceDispatcher.Consensus.Combinators
+                       Cardano.TraceDispatcher.Consensus.StateInfo
+                       Cardano.TraceDispatcher.Network.Docu
+                       Cardano.TraceDispatcher.Network.Formatting
+                       Cardano.TraceDispatcher.Network.Combinators
                        Cardano.TraceDispatcher.Render
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints

@@ -21,12 +21,16 @@ import qualified Data.Text.IO as T
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (trace)
-import           Cardano.TraceDispatcher.ChainDBTracer.Combinators
-import           Cardano.TraceDispatcher.ChainDBTracer.Docu
-import           Cardano.TraceDispatcher.ChainDBTracer.Formatting
-import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
-import           Cardano.TraceDispatcher.ConsensusTracer.Docu
-import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo
+import           Cardano.TraceDispatcher.ChainDB.Combinators
+import           Cardano.TraceDispatcher.ChainDB.Docu
+import           Cardano.TraceDispatcher.ChainDB.Formatting
+import           Cardano.TraceDispatcher.Consensus.Combinators
+import           Cardano.TraceDispatcher.Consensus.Docu
+import           Cardano.TraceDispatcher.Consensus.Formatting
+import           Cardano.TraceDispatcher.Consensus.StateInfo
+import           Cardano.TraceDispatcher.Network.Combinators
+import           Cardano.TraceDispatcher.Network.Docu
+import           Cardano.TraceDispatcher.Network.Formatting
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
@@ -71,10 +75,12 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
-
+import           Ouroboros.Network.Block (Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.TxSubmission.Inbound
                      (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound
@@ -257,6 +263,21 @@ keepAliveClientTracer trBase = do
     pure $ withNamesAppended namesKeepAliveClient
             $ withSeverity severityKeepAliveClient trNs
 
+tChainSyncTracer ::
+  (  MonadIO m
+  ,  Show peer
+  ,  LogFormatting
+      (TraceSendRecv (ChainSync (Serialised blk) (Point blk) (Tip blk))))
+  => Trace m FormattedMessage
+  -> m (Trace m (BlockFetch.TraceLabelPeer peer
+                    (TraceSendRecv
+                      (ChainSync (Serialised blk) (Point blk) (Tip blk)))))
+tChainSyncTracer trBase = do
+    tr <- humanFormatter True "Cardano" trBase
+    let trNs = appendName "TChainSync" $ appendName "Node" tr
+    pure $ withNamesAppended namesTChainSync
+            $ withSeverity severityTChainSync trNs
+
 docTracers :: forall blk remotePeer t.
   ( Show remotePeer
   , Show (GenTx blk)
@@ -413,6 +434,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   fTr    <- forgeTracer trBase
   btTr   <- blockchainTimeTracer trBase
   kacTr  <- keepAliveClientTracer trBase
+  tcsTr  <- tChainSyncTracer trBase
 
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -427,6 +449,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   configureTracers emptyTraceConfig docForge                [fTr]
   configureTracers emptyTraceConfig docBlockchainTime       [btTr]
   configureTracers emptyTraceConfig docKeepAliveClient      [kacTr]
+  configureTracers emptyTraceConfig docTChainSync           [tcsTr]
 
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -448,7 +471,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , Consensus.keepAliveClientTracer = Tracer (traceWith kacTr)
       }
     , nodeToClientTracers = NodeToClient.Tracers
-      { NodeToClient.tChainSyncTracer = nullTracer
+      { NodeToClient.tChainSyncTracer = Tracer (traceWith tcsTr)
       , NodeToClient.tTxSubmissionTracer = nullTracer
       , NodeToClient.tStateQueryTracer = nullTracer
       }

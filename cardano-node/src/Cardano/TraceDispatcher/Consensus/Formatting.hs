@@ -8,7 +8,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.TraceDispatcher.ConsensusTracer.Formatting
+module Cardano.TraceDispatcher.Consensus.Formatting
   (
   ) where
 

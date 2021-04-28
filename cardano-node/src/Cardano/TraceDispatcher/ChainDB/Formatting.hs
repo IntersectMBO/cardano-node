@@ -7,7 +7,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.TraceDispatcher.ChainDBTracer.Formatting
+module Cardano.TraceDispatcher.ChainDB.Formatting
   (
   ) where
 
