@@ -1,4 +1,1 @@
 # GitHub Linguist annotations.
-
-# Hide niv boilerplate
-nix/sources.nix linguist-generated=true

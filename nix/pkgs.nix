@@ -1,9 +1,9 @@
 # our packages overlay
-pkgs: _: with pkgs;
+final: prev: with final;
   let
     compiler = config.haskellNix.compiler or "ghc8104";
   in {
-  cardanoNodeHaskellPackages = import ./haskell.nix {
+  cardanoNodeProject = import ./haskell.nix {
     inherit compiler
       pkgs
       lib
@@ -13,7 +13,8 @@ pkgs: _: with pkgs;
       gitrev
       ;
   };
-  cardanoNodeProfiledHaskellPackages = import ./haskell.nix {
+  cardanoNodeHaskellPackages = cardanoNodeProject.hsPkgs;
+  cardanoNodeProfiledHaskellPackages = (import ./haskell.nix {
     inherit compiler
       pkgs
       lib
@@ -23,8 +24,8 @@ pkgs: _: with pkgs;
       gitrev
       ;
     profiling = true;
-  };
-  cardanoNodeEventlogHaskellPackages = import ./haskell.nix {
+  }).hsPkgs;
+  cardanoNodeEventlogHaskellPackages = (import ./haskell.nix {
     inherit compiler
       pkgs
       lib
@@ -34,8 +35,8 @@ pkgs: _: with pkgs;
       gitrev
       ;
     eventlog = true;
-  };
-  cardanoNodeAssertedHaskellPackages = import ./haskell.nix {
+  }).hsPkgs;
+  cardanoNodeAssertedHaskellPackages = (import ./haskell.nix {
     inherit config
       pkgs
       lib
@@ -52,7 +53,7 @@ pkgs: _: with pkgs;
       "ouroboros-network"
       "network-mux"
     ];
-  };
+  }).hsPkgs;
 
   #Grab the executable component of our package.
   inherit (cardanoNodeHaskellPackages.cardano-node.components.exes) cardano-node;
@@ -69,14 +70,54 @@ pkgs: _: with pkgs;
   inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
 
   mkCluster = cfg: callPackage ./supervisord-cluster cfg;
+
+  cabal = haskell-nix.tool compiler "cabal" {
+    version = "latest";
+    inherit (cardanoNodeProject) index-state;
+  };
+
   cardanolib-py = callPackage ./cardanolib-py {};
+
+  scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs customConfig; })
+    (import ./scripts-submit-api.nix { inherit pkgs customConfig; });
+
+  dockerImage = let
+    defaultConfig = {
+      stateDir = "/data";
+      dbPrefix = "db";
+      socketPath = "/ipc/node.socket";
+    };
+    customConfig' = defaultConfig // customConfig;
+  in callPackage ./docker.nix {
+    exe = "cardano-node";
+    scripts = import ./scripts.nix {
+      inherit pkgs;
+      customConfig = customConfig';
+    };
+    script = "node";
+  };
+
+  submitApiDockerImage = let
+    defaultConfig = {
+      socketPath = "/ipc/node.socket";
+    };
+    customConfig' = defaultConfig // customConfig;
+  in callPackage ./docker.nix {
+    exe = "cardano-submit-api";
+    scripts = import ./scripts-submit-api.nix {
+      inherit pkgs;
+      customConfig = customConfig';
+    };
+    script = "submit-api";
+  };
+
+  # NixOS tests run a node and submit-api and validate it listens
+  nixosTests = import ./nixos/tests {
+    inherit pkgs;
+  };
 
   clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
 
-  inherit ((haskell-nix.hackage-package {
-    name = "hlint";
-    version = "3.1.6";
-    compiler-nix-name = compiler;
-    inherit (cardanoNodeHaskellPackages) index-state;
-  }).components.exes) hlint;
+  workbench = callPackage ./workbench workbenchConfig;
+  inherit (workbench) runWorkbench runJq;
 }
