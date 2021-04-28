@@ -1,5 +1,5 @@
 
-module Cardano.TraceDispatcher.ChainDBTracer.Combinators
+module Cardano.TraceDispatcher.ChainDB.Combinators
   ( severityChainDB
   , namesForChainDBTraceEvents
   ) where

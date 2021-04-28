@@ -22,6 +22,7 @@ import qualified Cardano.Api.Protocol.Types as Cardano
 
 import           Cardano.Node.Orphans ()
 import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo(GetKESInfo)
+import           Cardano.TraceDispatcher.Consensus.StateInfo(GetKESInfo)
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 

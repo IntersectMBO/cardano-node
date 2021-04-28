@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
-module Cardano.TraceDispatcher.ConsensusTracer.StateInfo
+module Cardano.TraceDispatcher.Consensus.StateInfo
   (
     GetKESInfo(..)
   , severityStateInfo
@@ -22,7 +22,7 @@ import           Data.SOP.Strict
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (All, Show, show)
-import           Cardano.TraceDispatcher.ConsensusTracer.Formatting ()
+import           Cardano.TraceDispatcher.Consensus.Formatting ()
 
 import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)

@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
-module Cardano.TraceDispatcher.ConsensusTracer.Docu
+module Cardano.TraceDispatcher.Consensus.Docu
   ( docChainSyncClientEvent
   , docChainSyncServerEvent
   , docBlockFetchDecision

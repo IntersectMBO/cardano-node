@@ -4,7 +4,7 @@
 
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
-module Cardano.TraceDispatcher.ChainDBTracer.Docu
+module Cardano.TraceDispatcher.ChainDB.Docu
   ( docChainDBTraceEvent
   ) where
 
