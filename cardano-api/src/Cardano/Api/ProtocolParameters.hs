@@ -52,14 +52,15 @@ module Cardano.Api.ProtocolParameters (
 
 import           Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.:?),
-                   (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.!=), (.:),
+                   (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (mapMaybe)
 import           Data.Scientific (Scientific)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -98,12 +99,12 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Core as Core
+import qualified Language.PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
-
 
 -- | The values of the set of /updateable/ protocol paramaters. At any
 -- particular point on the chain there is a current set of paramaters in use.
@@ -184,6 +185,8 @@ data ProtocolParameters era =
        -- | The minimum permitted value for new UTxO entries, ie for
        -- transaction outputs.
        --
+       -- NB: This parameter is not available in the Alonzo era
+       -- and is replaced with 'protocolParamUTxOCostPerByte'.
        protocolParamMinUTxOValue :: Maybe Lovelace,
 
        -- | The deposit required to register a stake address.
@@ -232,14 +235,14 @@ data ProtocolParameters era =
        -- Introduced in Alonzo
 
        -- | Cost in ada per byte of UTxO storage (instead of
-       --protocolParamMinUTxOValue in the Alonzo era onwards).
+       -- 'protocolParamMinUTxOValue' in the Alonzo era onwards).
        protocolParamUTxOCostPerByte :: Maybe Lovelace,
 
        -- | Cost models for non-native script languages.
-       protocolParamCostModels :: Maybe CostModel,
+       protocolParamCostModels :: Map AnyScriptLanguage CostModel,
 
-       -- | Prices of execution units (for non-native script languages).
-       protocolParamPrices :: Maybe Prices,
+       -- | Price of execution units for non-native script languages.
+       protocolParamPrices :: Maybe ExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        protocolParamMaxTxExUnits :: Maybe MaxTxExecutionUnits,
@@ -296,29 +299,29 @@ renderProtocolParamsErr (ProtocolParametersErrorWrongVersion expected got) =
   <> " Expected: " <> Text.pack (show expected)
 
 createProtocolParameters
-  :: (Natural, Natural)           -- ^ Protocol version (major,minor)
-  -> Rational                     -- ^ Decentralization parameter
-  -> Maybe PraosNonce             -- ^ Extra entropy
-  -> Natural                      -- ^ Max block header size
-  -> Natural                      -- ^ Max block body size
-  -> Natural                      -- ^ Max tx size
-  -> Natural                      -- ^ Tx fee fixed (constant factor)
-  -> Natural                      -- ^ Tx fee per bytes (linear factor)
-  -> Maybe Lovelace               -- ^ Min UTxO value
-  -> Lovelace                     -- ^ Stake address deposit
-  -> Lovelace                     -- ^ Stake pool deposit
-  -> Lovelace                     -- ^ Min pool cost
-  -> EpochNo                      -- ^ Max pool retire epoch
-  -> Natural                      -- ^ Stake pool target number
-  -> Rational                     -- ^ Pool pledge influence
-  -> Rational                     -- ^ Monetary expansion
-  -> Rational                     -- ^ Treasury cut
-  -> Maybe Lovelace               -- ^ UTxO cost per byte
-  -> Maybe CostModel              -- ^ Cost model
-  -> Maybe Prices                 -- ^ Price of execution units
-  -> Maybe MaxTxExecutionUnits    -- ^ Script execution resources allowed per tx
-  -> Maybe MaxBlockExecutionUnits -- ^ Script execution resources allowed per block
-  -> Maybe Natural                -- ^ Max size of a Value in tx output
+  :: (Natural, Natural)              -- ^ Protocol version (major,minor)
+  -> Rational                        -- ^ Decentralization parameter
+  -> Maybe PraosNonce                -- ^ Extra entropy
+  -> Natural                         -- ^ Max block header size
+  -> Natural                         -- ^ Max block body size
+  -> Natural                         -- ^ Max tx size
+  -> Natural                         -- ^ Tx fee fixed (constant factor)
+  -> Natural                         -- ^ Tx fee per bytes (linear factor)
+  -> Maybe Lovelace                  -- ^ Min UTxO value
+  -> Lovelace                        -- ^ Stake address deposit
+  -> Lovelace                        -- ^ Stake pool deposit
+  -> Lovelace                        -- ^ Min pool cost
+  -> EpochNo                         -- ^ Max pool retire epoch
+  -> Natural                         -- ^ Stake pool target number
+  -> Rational                        -- ^ Pool pledge influence
+  -> Rational                        -- ^ Monetary expansion
+  -> Rational                        -- ^ Treasury cut
+  -> Maybe Lovelace                  -- ^ UTxO cost per byte
+  -> Map AnyScriptLanguage CostModel -- ^ Cost model
+  -> Maybe ExecutionUnitPrices       -- ^ Price of execution units
+  -> Maybe MaxTxExecutionUnits       -- ^ Script execution resources allowed per tx
+  -> Maybe MaxBlockExecutionUnits    -- ^ Script execution resources allowed per block
+  -> Maybe Natural                   -- ^ Max size of a Value in tx output
   -> ProtocolParameters era
 createProtocolParameters ver decent exEntropy bHeadSize bBodySize maxTxSize
                          txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
@@ -354,29 +357,29 @@ createProtocolParameters ver decent exEntropy bHeadSize bBodySize maxTxSize
 
 createProtocolParametersInEra
   :: CardanoEra era
-  -> (Natural, Natural)           -- ^ Protocol version (major,minor)
-  -> Rational                     -- ^ Decentralization parameter
-  -> Maybe PraosNonce             -- ^ Extra entropy
-  -> Natural                      -- ^ Max block header size
-  -> Natural                      -- ^ Max block body size
-  -> Natural                      -- ^ Max tx size
-  -> Natural                      -- ^ Tx fee fixed (constant factor)
-  -> Natural                      -- ^ Tx fee per bytes (linear factor)
-  -> Maybe Lovelace               -- ^ Min UTxO value
-  -> Lovelace                     -- ^ Stake address deposit
-  -> Lovelace                     -- ^ Stake pool deposit
-  -> Lovelace                     -- ^ Min pool cost
-  -> EpochNo                      -- ^ Max pool retire epoch
-  -> Natural                      -- ^ Stake pool target number
-  -> Rational                     -- ^ Pool pledge influence
-  -> Rational                     -- ^ Monetary expansion
-  -> Rational                     -- ^ Treasury cut
-  -> Maybe Lovelace               -- ^ UTxO cost per byte
-  -> Maybe CostModel              -- ^ Cost model
-  -> Maybe Prices                 -- ^ Price of execution units
-  -> Maybe MaxTxExecutionUnits    -- ^ Script execution resources allowed per tx
-  -> Maybe MaxBlockExecutionUnits -- ^ Script execution resources allowed per block
-  -> Maybe Natural                -- ^ Max size of a Value in tx output
+  -> (Natural, Natural)                        -- ^ Protocol version (major,minor)
+  -> Rational                                  -- ^ Decentralization parameter
+  -> Maybe PraosNonce                          -- ^ Extra entropy
+  -> Natural                                   -- ^ Max block header size
+  -> Natural                                   -- ^ Max block body size
+  -> Natural                                   -- ^ Max tx size
+  -> Natural                                   -- ^ Tx fee fixed (constant factor)
+  -> Natural                                   -- ^ Tx fee per bytes (linear factor)
+  -> Maybe Lovelace                            -- ^ Min UTxO value
+  -> Lovelace                                  -- ^ Stake address deposit
+  -> Lovelace                                  -- ^ Stake pool deposit
+  -> Lovelace                                  -- ^ Min pool cost
+  -> EpochNo                                   -- ^ Max pool retire epoch
+  -> Natural                                   -- ^ Stake pool target number
+  -> Rational                                  -- ^ Pool pledge influence
+  -> Rational                                  -- ^ Monetary expansion
+  -> Rational                                  -- ^ Treasury cut
+  -> Maybe Lovelace                            -- ^ UTxO cost per byte
+  -> Map AnyScriptLanguage CostModel           -- ^ Cost model
+  -> Map AnyScriptLanguage ExecutionUnitPrices -- ^ Price of execution units
+  -> Maybe MaxTxExecutionUnits                 -- ^ Script execution resources allowed per tx
+  -> Maybe MaxBlockExecutionUnits              -- ^ Script execution resources allowed per block
+  -> Maybe Natural                             -- ^ Max size of a Value in tx output
   -> Either ProtocolParametersError (ProtocolParameters era)
 createProtocolParametersInEra
    era ver decent exEntropy bHeadSize bBodySize maxTxSize
@@ -394,21 +397,21 @@ createProtocolParametersInEra
                      ver decent exEntropy bHeadSize bBodySize maxTxSize
                      txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
                      minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-                     monExpansion treasuryCut Nothing Nothing Nothing Nothing
+                     monExpansion treasuryCut Nothing mempty Nothing Nothing
                      Nothing Nothing
         ShelleyBasedEraAllegra -> do
           return $ createProtocolParameters
                      ver decent exEntropy bHeadSize bBodySize maxTxSize
                      txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
                      minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-                     monExpansion treasuryCut Nothing Nothing Nothing Nothing
+                     monExpansion treasuryCut Nothing mempty Nothing Nothing
                      Nothing Nothing
         ShelleyBasedEraMary -> do
           return $ createProtocolParameters
                      ver decent exEntropy bHeadSize bBodySize maxTxSize
                      txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
                      minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-                     monExpansion treasuryCut Nothing Nothing Nothing Nothing
+                     monExpansion treasuryCut Nothing mempty Nothing Nothing
                      Nothing Nothing
      -- ShelleyBasedEraAlonzo ->
      --   return $ createProtocolParameters
@@ -502,94 +505,62 @@ data ExecutionUnits
                      , time :: Word64
                      } deriving (Eq, Show)
 
-
-newtype CostModel = CostModel (Map AnyScriptLanguage Cost)
-                  deriving (Eq,Show)
+newtype CostModel = CostModel (Map.Map Text Integer)
+             deriving (Eq, Show)
 
 _fromLanguage :: Alonzo.Language -> AnyScriptLanguage
 _fromLanguage Alonzo.PlutusV1 = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)
 
-_fromCostModel :: Map Alonzo.Language Alonzo.CostModel -> CostModel
-_fromCostModel _ = CostModel mempty
+_fromCostModel :: Map Alonzo.Language Alonzo.CostModel -> Map AnyScriptLanguage CostModel
+_fromCostModel aCostMap = Map.fromList . mapMaybe conv  $ Map.toList aCostMap
+ where
+   conv :: (Alonzo.Language, Alonzo.CostModel) -> Maybe (AnyScriptLanguage, CostModel)
+   conv (Alonzo.PlutusV1, Alonzo.CostModel _aCostModel) =
+     Just (undefined, CostModel $ error "Need to bump ledger spec dependency")
+   conv (Alonzo.PlutusV1, _) = Nothing
 
-_toCostModel :: CostModel -> Map Alonzo.Language Alonzo.CostModel
-_toCostModel _ = Map.empty
+_toCostModel :: Map AnyScriptLanguage CostModel -> Map Alonzo.Language Alonzo.CostModel
+_toCostModel cMap = Map.fromList . mapMaybe conv $ Map.toList cMap
+ where
+   conv :: (AnyScriptLanguage, CostModel) -> Maybe (Alonzo.Language, Alonzo.CostModel)
+   conv (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1), CostModel _costModel) =
+     Just (Alonzo.PlutusV1, Alonzo.CostModel $ error "Need to bump ledger spec dependency")
+   conv (AnyScriptLanguage (SimpleScriptLanguage _), _) = Nothing
 
-
-newtype Cost = Cost (Map.Map Operation Integer)
-             deriving (Eq, Show)
-
-data Operation = Add | Subtract | OtherOperation
-                 deriving (Eq, Ord, Show)
-
-instance ToJSON Operation where
-  toJSON Add = Aeson.String "Add"
-  toJSON Subtract = Aeson.String "Subtract"
-  toJSON OtherOperation = Aeson.String "OtherOperation"
-
-instance FromJSON Operation where
-  parseJSON = withText "Operation" $ \t ->
-                case t of
-                  "Add" -> return Add
-                  "Subtract" -> return Subtract
-                  "OtherOperation" -> return OtherOperation
-                  unOp -> fail $ "Unknown operation: " <> Text.unpack unOp
-
-instance ToJSON Cost where
-  toJSON (Cost c) = toJSON c
-
-instance Aeson.ToJSONKey Operation where
-  toJSONKey = Aeson.toJSONKeyText render
-    where
-      render = Text.pack . show
-
-instance FromJSON Cost where
-  parseJSON = withObject "Cost" $ \obj -> do
-   addCost <- obj .: "Add"
-   subtractCost <- obj .: "Subtract"
-   otherOperationCost <- obj .: "OtherOperation"
-   return . Cost $ Map.fromList [ (Add, addCost)
-                                , (Subtract, subtractCost)
-                                , (OtherOperation, otherOperationCost)
-                                ]
-
-instance ToJSON CostModel where
-  toJSON (CostModel map') =
-    object . concatMap toPair $ Map.toList map'
-      where
-        toPair :: (AnyScriptLanguage, Cost) -> [Aeson.Pair]
-     -- toPair (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1), c) = ["PlutusScriptV1" .= toJSON c]
-        toPair (AnyScriptLanguage uLang, _) = error $ "Unsupported script language:" <> show uLang
+-- TODO: Need to bump the plutus dependency to get access to
+-- extractModelParams :: CostModel -> Maybe CostModelParams
+toCostModelParams :: Plutus.CostModel -> Maybe (Map Text Integer)
+toCostModelParams _ = Nothing
 
 instance FromJSON CostModel where
-  parseJSON = withObject "CostModel" $ \o -> do
-    val <- o .: "PlutusScriptV1"
-    c <- (parseJSON val :: Aeson.Parser Cost)
-    return . CostModel . Map.fromList $ [(AnyScriptLanguage (error "PlutusScriptLanguage PlutusScriptV1"), c)]
+  parseJSON v = do
+    pCostModel <- parseJSON v :: Aeson.Parser Plutus.CostModel
+    case toCostModelParams pCostModel of
+      Just cModelParams -> return $ CostModel cModelParams
+      Nothing ->
+        error $ "Error converting Plutus cost model to cost model params: " <> show pCostModel
 
+data ExecutionUnitPrices =
+  ExecutionUnitPrices { perUnitSpace :: Lovelace
+                      , perUnitTime :: Lovelace
+                      } deriving (Eq, Show)
 
-
-data Prices = Prices { perUnitSpace :: Lovelace
-                     , perUnitTime :: Lovelace
-                     }
-            deriving (Eq, Show)
-
-_fromPrices :: Alonzo.Prices -> Prices
+_fromPrices :: Alonzo.Prices -> ExecutionUnitPrices
 _fromPrices (Alonzo.Prices pMem pStep) =
-  Prices (fromShelleyLovelace pMem) (fromShelleyLovelace pStep)
+  ExecutionUnitPrices (fromShelleyLovelace pMem) (fromShelleyLovelace pStep)
 
-_toPrices :: Prices -> Alonzo.Prices
-_toPrices (Prices pMem pStep) =
+_toPrices :: ExecutionUnitPrices -> Alonzo.Prices
+_toPrices (ExecutionUnitPrices pMem pStep) =
   Alonzo.Prices (toShelleyLovelace pMem) (toShelleyLovelace pStep)
 
-instance FromJSON Prices where
-  parseJSON = withObject "Prices" $ \o -> do
-    obj <- o .: "prices"
-    Prices <$> obj .: "unitSpace" <*> obj .: "unitTime"
+instance FromJSON ExecutionUnitPrices where
+  parseJSON = withObject "ExecutionUnitPrices" $ \o -> do
+    obj <- o .: "executionUnitPrices"
+    ExecutionUnitPrices <$> obj .: "unitSpace" <*> obj .: "unitTime"
 
-instance ToJSON Prices where
-  toJSON (Prices perSpace perTime) =
-    object [ "prices" .= object
+instance ToJSON ExecutionUnitPrices where
+  toJSON (ExecutionUnitPrices perSpace perTime) =
+    object [ "executionUnitPrices" .= object
              [ "unitSpace" .= perSpace , "unitTime" .= perTime]
            ]
 
@@ -619,8 +590,8 @@ parseProtocolParameters era =
                         <*> o .: "monetaryExpansion"
                         <*> o .: "treasuryCut"
                         <*> o .:? "utxoCostPerByte"
-                        <*> o .:? "costModel"
-                        <*> o .:? "prices"
+                        <*> o .:? "costModel" .!= mempty
+                        <*> o .:? "executionUnitPrices" .!= mempty
                         <*> o .:? "maxTxExecUnits"
                         <*> o .:? "maxBlockExecUnits"
                         <*> o .:? "maxValueSize"
@@ -672,7 +643,7 @@ createProtocolParametersObject sbe pp =
         ["minUTxOValue" .= protocolParamMinUTxOValue pp]
   --  ShelleyBasedEraAlonzo ->
   --    [ "costModels"  .= protocolParamCostModels pp
-  --    , "execPrices" .= protocolParamPrices pp
+  --    , "executionUnitPrices" .= protocolParamPrices pp
   --    , "maxTxExecutionUnits" .= protocolParamMaxTxExUnits pp
   --    , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits pp
   --    , "maxValSize" .= protocolParamMaxValSize pp
@@ -803,10 +774,10 @@ data ProtocolParametersUpdate =
        protocolUpdateUTxOCostPerByte :: Maybe Lovelace,
 
        -- | Cost models for non-native script languages.
-       protocolUpdateCostModels :: Maybe CostModel,
+       protocolUpdateCostModels :: Map AnyScriptLanguage CostModel,
 
-       -- | Prices of execution units (for non-native script languages).
-       protocolUpdatePrices :: Maybe Prices,
+       -- | Map AnyScriptLanguage ExecutionUnitPrices of execution units (for non-native script languages).
+       protocolUpdatePrices :: Map AnyScriptLanguage ExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        protocolUpdateMaxTxExUnits :: Maybe MaxTxExecutionUnits,
@@ -841,8 +812,8 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdateTreasuryCut         = merge protocolUpdateTreasuryCut
       -- Intoduced in Alonzo below.
       , protocolUpdateUTxOCostPerByte     = merge protocolUpdateUTxOCostPerByte
-      , protocolUpdateCostModels          = merge protocolUpdateCostModels
-      , protocolUpdatePrices              = merge protocolUpdatePrices
+      , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
+      , protocolUpdatePrices              = mergeMap protocolUpdatePrices
       , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
       , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
       , protocolUpdateParamMaxValSize     = merge protocolUpdateParamMaxValSize
@@ -851,6 +822,15 @@ instance Semigroup ProtocolParametersUpdate where
         -- prefer the right hand side:
         merge :: (ProtocolParametersUpdate -> Maybe a) -> Maybe a
         merge f = f ppu2 `mplus` f ppu1
+
+        -- need to use map merge where:
+        -- keys present in m1 and m2: remove/ignore m1 key
+        -- keys present in m1 and not m2 : remove/ignore m1 key
+        -- keys present in m2 and not m1: keep m2
+        -- I.e prefer m2 -- TODO: left off here. Remember plutus json jared sent you
+        mergeMap :: (ProtocolParametersUpdate -> Map AnyScriptLanguage a)
+                 -> Map AnyScriptLanguage a
+        mergeMap = undefined
 
 instance Monoid ProtocolParametersUpdate where
     mempty =
@@ -873,8 +853,8 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateMonetaryExpansion   = Nothing
       , protocolUpdateTreasuryCut         = Nothing
       , protocolUpdateUTxOCostPerByte     = Nothing
-      , protocolUpdateCostModels          = Nothing
-      , protocolUpdatePrices              = Nothing
+      , protocolUpdateCostModels          = mempty
+      , protocolUpdatePrices              = mempty
       , protocolUpdateMaxTxExUnits        = Nothing
       , protocolUpdateMaxBlockExUnits     = Nothing
       , protocolUpdateParamMaxValSize     = Nothing
@@ -1242,8 +1222,8 @@ fromShelleyPParamsUpdate
     , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
                                             strictMaybeToMaybe _tau
     , protocolUpdateUTxOCostPerByte     = Nothing
-    , protocolUpdateCostModels          = Nothing
-    , protocolUpdatePrices              = Nothing
+    , protocolUpdateCostModels          = mempty
+    , protocolUpdatePrices              = mempty
     , protocolUpdateMaxTxExUnits        = Nothing
     , protocolUpdateMaxBlockExUnits     = Nothing
     , protocolUpdateParamMaxValSize     = Nothing
@@ -1272,7 +1252,7 @@ toProtocolParamsShelley pparams =
         , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational $ Shelley._rho pparams
         , protocolParamTreasuryCut         = Shelley.unitIntervalToRational $ Shelley._tau pparams
         , protocolParamUTxOCostPerByte     = Nothing
-        , protocolParamCostModels          = Nothing
+        , protocolParamCostModels          = mempty
         , protocolParamPrices              = Nothing
         , protocolParamMaxTxExUnits        = Nothing
         , protocolParamMaxBlockExUnits     = Nothing
@@ -1302,7 +1282,7 @@ _toProtocolParamsAlonzo pparams =
         , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational $ Alonzo._rho pparams
         , protocolParamTreasuryCut         = Shelley.unitIntervalToRational $ Alonzo._tau pparams
         , protocolParamUTxOCostPerByte     = Just . fromShelleyLovelace $ Alonzo._adaPerUTxOByte pparams
-        , protocolParamCostModels          = Just . _fromCostModel $ Alonzo._costmdls pparams
+        , protocolParamCostModels          = _fromCostModel $ Alonzo._costmdls pparams
         , protocolParamPrices              = Just . _fromPrices $ Alonzo._prices pparams
         , protocolParamMaxTxExUnits        = Just . _fromMaxTxExec $ Alonzo._maxTxExUnits pparams
         , protocolParamMaxBlockExUnits     = Just . _fromMaxBlockExec $ Alonzo._maxBlockExUnits pparams

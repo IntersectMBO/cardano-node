@@ -76,7 +76,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
-import           Data.Aeson (Value (..), object, (.:), (.=))
+import           Data.Aeson (Value (..), fromJSONKey, object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Sequence.Strict as Seq
@@ -207,6 +207,29 @@ data AnyScriptLanguage where
 
 deriving instance (Show AnyScriptLanguage)
 
+instance FromJSON AnyScriptLanguage where
+    parseJSON = withObject "AnyScriptLanguage" $ \o -> do
+      v <- o .: "scriptLanguage"
+      case v of
+        Aeson.String "Plutus" -> return . AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV1
+        Aeson.String "Simple" -> do
+          ver <- o .: "version"
+          case ver of
+            Aeson.String "SimpleScriptV1" ->
+              return . AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV1
+            Aeson.String "SimpleScriptV2" ->
+              return . AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV2
+            err -> fail $ "Error parsing \"version\". Expected \"SimpleScriptV1\" or \"SimpleScriptV2\" \
+                        \ but got: " <> show err
+
+        err -> fail $ "Error parsing \"scriptLanguage\". Expected \"Plutus\" or \"Simple\" \
+                      \ but got: " <> show err
+
+
+instance Aeson.FromJSONKey AnyScriptLanguage where
+    fromJSONKey = Aeson.FromJSONKeyValue parseJSON
+
+
 instance Eq AnyScriptLanguage where
     AnyScriptLanguage lang == AnyScriptLanguage lang' =
       case testEquality lang lang' of
@@ -215,35 +238,8 @@ instance Eq AnyScriptLanguage where
 
 instance Ord AnyScriptLanguage where
 
-  AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) <= AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) = True
-  AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) <= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) = False
-  AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) <= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) = False
+  sLangA <= sLangB = fromEnum sLangA <= fromEnum sLangB
 
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) <= AnyScriptLanguage (PlutusScriptLanguage _) = True
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) <= AnyScriptLanguage (PlutusScriptLanguage _) = True
-
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) <= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) = True
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) <= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) = True
-
-
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) <= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) = False
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) <= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) = True
-
-
-  AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) >= AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) = False
-  AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) >= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) = True
-  AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1) >= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) = True
-
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) >= AnyScriptLanguage (PlutusScriptLanguage _) = False
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) >= AnyScriptLanguage (PlutusScriptLanguage _) = False
-
-
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) >= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) = False
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) >= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) = False
-
-
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) >= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1) = True
-  AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) >= AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2) = False
 
 
 instance Enum AnyScriptLanguage where

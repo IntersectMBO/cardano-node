@@ -670,8 +670,10 @@ genProtocolParameters sbe =
       <*> genRational
       <*> genRational
       <*> genRational
+      -- TODO: When Alonzo is implemented replace
+      -- below with generators.
       <*> return Nothing
-      <*> return Nothing
+      <*> return mempty
       <*> return Nothing
       <*> return Nothing
       <*> return Nothing
