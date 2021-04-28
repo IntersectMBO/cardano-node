@@ -14,6 +14,8 @@ module Cardano.TraceDispatcher.ConsensusTracer.Formatting
 
 import           Data.Aeson (ToJSON, Value (String), toJSON, (.=))
 import qualified Data.Text as Text
+import           Data.Time(DiffTime)
+import           Control.Monad.Class.MonadTime(Time(..))
 import           Text.Show
 
 import           Cardano.Logging
@@ -48,6 +50,8 @@ import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
 
@@ -458,3 +462,22 @@ instance Show t => LogFormatting (TraceBlockchainTimeEvent t) where
       <> (Text.pack . show) prevTime
       <> ". New 'current' time: "
       <> (Text.pack . show) newTime
+
+instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) where
+    forMachine _dtal (AddSample peer rtt pgsv) =
+        mkObject
+          [ "kind" .= String "AddSample"
+          , "address" .= show peer
+          , "rtt" .= rtt
+          , "sampleTime" .= show (dTime $ sampleTime pgsv)
+          , "outboundG" .= (realToFrac $ gGSV (outboundGSV pgsv) :: Double)
+          , "inboundG" .= (realToFrac $ gGSV (inboundGSV pgsv) :: Double)
+          ]
+        where
+          gGSV :: GSV -> DiffTime
+          gGSV (GSV g _ _) = g
+
+          dTime :: Time -> Double
+          dTime (Time d) = realToFrac d
+
+    forHuman tr = showT tr

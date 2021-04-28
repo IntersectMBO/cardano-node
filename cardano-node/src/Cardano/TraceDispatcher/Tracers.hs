@@ -16,6 +16,9 @@ module Cardano.TraceDispatcher.Tracers
   , docTracers
   ) where
 
+import           Data.Aeson (ToJSON)
+import qualified Data.Text.IO as T
+
 import           Cardano.Logging
 import           Cardano.Prelude hiding (trace)
 import           Cardano.TraceDispatcher.ChainDBTracer.Combinators
@@ -25,8 +28,6 @@ import           Cardano.TraceDispatcher.ConsensusTracer.Combinators
 import           Cardano.TraceDispatcher.ConsensusTracer.Docu
 import           Cardano.TraceDispatcher.ConsensusTracer.StateInfo
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Data.Aeson (ToJSON)
-import qualified Data.Text.IO as T
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
@@ -71,9 +72,9 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
 
-
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.TxSubmission.Inbound
                      (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound
@@ -131,8 +132,7 @@ chainSyncServerBlockTracer trBase = do
             $ withSeverity severityChainSyncServerEvent trNs
 
 blockFetchDecisionTracer :: forall blk remotePeer .
-  ( Show remotePeer
-  )
+     Show remotePeer
   => Trace IO FormattedMessage
   -> IO (Trace IO [BlockFetch.TraceLabelPeer remotePeer
                   (FetchDecision [Point (Header blk)])])
@@ -247,6 +247,16 @@ blockchainTimeTracer trBase = do
     pure $ withNamesAppended namesBlockchainTime
             $ withSeverity severityBlockchainTime trNs
 
+keepAliveClientTracer ::
+     Show peer
+  => Trace IO FormattedMessage
+  -> IO (Trace IO (TraceKeepAliveClient peer))
+keepAliveClientTracer trBase = do
+    tr <- humanFormatter True "Cardano" trBase
+    let trNs = appendName "KeepAliveClient" $ appendName "Node" tr
+    pure $ withNamesAppended namesKeepAliveClient
+            $ withSeverity severityKeepAliveClient trNs
+
 docTracers :: forall blk remotePeer t.
   ( Show remotePeer
   , Show (GenTx blk)
@@ -286,6 +296,7 @@ docTracers _ = do
   mpTr   <- mempoolTracer trBase
   fTr    <- forgeTracer trBase
   btTr   <- blockchainTimeTracer trBase
+  kacTr  <- keepAliveClientTracer trBase
 
   cdbmTrDoc    <- documentMarkdown
               (docChainDBTraceEvent :: Documented
@@ -341,6 +352,10 @@ docTracers _ = do
               (docBlockchainTime :: Documented
                 (TraceBlockchainTimeEvent t))
               [btTr]
+  kacTrDoc  <- documentMarkdown
+              (docKeepAliveClient :: Documented
+                (TraceKeepAliveClient remotePeer))
+              [kacTr]
 
   let bl = cdbmTrDoc
           ++ cscTrDoc
@@ -355,6 +370,7 @@ docTracers _ = do
           ++ mpTrDoc
           ++ fTrDoc
           ++ btTrDoc
+          ++ kacTrDoc
   res <- buildersToText bl
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
   pure ()
@@ -396,6 +412,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   mpTr   <- mempoolTracer trBase
   fTr    <- forgeTracer trBase
   btTr   <- blockchainTimeTracer trBase
+  kacTr  <- keepAliveClientTracer trBase
 
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -409,6 +426,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   configureTracers emptyTraceConfig docMempool              [mpTr]
   configureTracers emptyTraceConfig docForge                [fTr]
   configureTracers emptyTraceConfig docBlockchainTime       [btTr]
+  configureTracers emptyTraceConfig docKeepAliveClient      [kacTr]
 
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -427,7 +445,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , Consensus.mempoolTracer = Tracer (traceWith mpTr)
       , Consensus.forgeTracer = Tracer (traceWith fTr)
       , Consensus.blockchainTimeTracer = Tracer (traceWith btTr)
-      , Consensus.keepAliveClientTracer = nullTracer
+      , Consensus.keepAliveClientTracer = Tracer (traceWith kacTr)
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
