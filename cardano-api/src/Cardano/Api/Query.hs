@@ -88,6 +88,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.ProtocolParametersUpdate
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 

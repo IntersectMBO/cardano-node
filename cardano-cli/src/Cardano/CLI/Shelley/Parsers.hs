@@ -2229,8 +2229,8 @@ pShelleyProtocolParametersUpdate =
     <*> optional pTreasuryExpansion
     -- TODO: Update when Alonzo is incorporated
     <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
+    <*> pure mempty
+    <*> pure mempty
     <*> pure Nothing
     <*> pure Nothing
     <*> pure Nothing

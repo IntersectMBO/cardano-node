@@ -20,30 +20,18 @@ module Cardano.Api.ProtocolParameters (
     renderProtocolParamsErr,
     EpochNo,
 
-    -- * Updates to the protocol paramaters
-    ProtocolParametersUpdate(..),
-
     -- * PraosNonce
     PraosNonce,
     makePraosNonce,
-
-    -- * Update proposals to change the protocol paramaters
-    UpdateProposal(..),
-    makeShelleyUpdateProposal,
+    fromPraosNonce,
+    toShelleyNonce,
 
     -- * Protocol paramaters fixed in the genesis file
     GenesisParameters(..),
     EpochSize(..),
 
     -- * Internal conversion functions
-    toShelleyPParamsUpdate,
-    toShelleyProposedPPUpdates,
-    toShelleyUpdate,
-    toUpdate,
     fromShelleyPParams,
-    fromShelleyPParamsUpdate,
-    fromShelleyProposedPPUpdates,
-    fromShelleyUpdate,
     fromShelleyGenesis,
 
     -- * Data family instances
@@ -57,7 +45,6 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, wit
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
@@ -69,38 +56,26 @@ import           Data.Word (Word64)
 import           GHC.Generics
 import           Numeric.Natural
 
-import           Control.Monad
-
-import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo, EpochSize (..))
 
-import qualified Cardano.Ledger.Era as Ledger
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
 import           Cardano.Binary
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Core as Core
 import qualified Language.PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
@@ -650,218 +625,6 @@ createProtocolParametersObject sbe pp =
   --    ]
 
 -- ----------------------------------------------------------------------------
--- Updates to the protocol paramaters
---
-
--- | The representation of a change in the 'ProtocolParameters'.
---
-data ProtocolParametersUpdate =
-     ProtocolParametersUpdate {
-
-       -- | Protocol version, major and minor. Updating the major version is
-       -- used to trigger hard forks.
-       --
-       protocolUpdateProtocolVersion :: Maybe (Natural, Natural),
-
-       -- | The decentralization parameter. This is fraction of slots that
-       -- belong to the BFT overlay schedule, rather than the Praos schedule.
-       -- So 1 means fully centralised, while 0 means fully decentralised.
-       --
-       -- This is the \"d\" parameter from the design document.
-       --
-       protocolUpdateDecentralization :: Maybe Rational,
-
-       -- | Extra entropy for the Praos per-epoch nonce.
-       --
-       -- This can be used to add extra entropy during the decentralisation
-       -- process. If the extra entropy can be demonstrated to be generated
-       -- randomly then this method can be used to show that the initial
-       -- federated operators did not subtly bias the initial schedule so that
-       -- they retain undue influence after decentralisation.
-       --
-       protocolUpdateExtraPraosEntropy :: Maybe (Maybe PraosNonce),
-
-       -- | The maximum permitted size of a block header.
-       --
-       -- This must be at least as big as the largest legitimate block headers
-       -- but should not be too much larger, to help prevent DoS attacks.
-       --
-       -- Caution: setting this to be smaller than legitimate block headers is
-       -- a sure way to brick the system!
-       --
-       protocolUpdateMaxBlockHeaderSize :: Maybe Natural,
-
-       -- | The maximum permitted size of the block body (that is, the block
-       -- payload, without the block header).
-       --
-       -- This should be picked with the Praos network delta security parameter
-       -- in mind. Making this too large can severely weaken the Praos
-       -- consensus properties.
-       --
-       -- Caution: setting this to be smaller than a transaction that can
-       -- change the protocol parameters is a sure way to brick the system!
-       --
-       protocolUpdateMaxBlockBodySize :: Maybe Natural,
-
-       -- | The maximum permitted size of a transaction.
-       --
-       -- Typically this should not be too high a fraction of the block size,
-       -- otherwise wastage from block fragmentation becomes a problem, and
-       -- the current implementation does not use any sophisticated box packing
-       -- algorithm.
-       --
-       protocolUpdateMaxTxSize :: Maybe Natural,
-
-       -- | The constant factor for the minimum fee calculation.
-       --
-       protocolUpdateTxFeeFixed :: Maybe Natural,
-
-       -- | The linear factor for the minimum fee calculation.
-       --
-       protocolUpdateTxFeePerByte :: Maybe Natural,
-
-       -- | The minimum permitted value for new UTxO entries, ie for
-       -- transaction outputs.
-       --
-       protocolUpdateMinUTxOValue :: Maybe Lovelace,
-
-       -- | The deposit required to register a stake address.
-       --
-       protocolUpdateStakeAddressDeposit :: Maybe Lovelace,
-
-       -- | The deposit required to register a stake pool.
-       --
-       protocolUpdateStakePoolDeposit :: Maybe Lovelace,
-
-       -- | The minimum value that stake pools are permitted to declare for
-       -- their cost parameter.
-       --
-       protocolUpdateMinPoolCost :: Maybe Lovelace,
-
-       -- | The maximum number of epochs into the future that stake pools
-       -- are permitted to schedule a retirement.
-       --
-       protocolUpdatePoolRetireMaxEpoch :: Maybe EpochNo,
-
-       -- | The equilibrium target number of stake pools.
-       --
-       -- This is the \"k\" incentives parameter from the design document.
-       --
-       protocolUpdateStakePoolTargetNum :: Maybe Natural,
-
-       -- | The influence of the pledge in stake pool rewards.
-       --
-       -- This is the \"a_0\" incentives parameter from the design document.
-       --
-       protocolUpdatePoolPledgeInfluence :: Maybe Rational,
-
-       -- | The monetary expansion rate. This determines the fraction of the
-       -- reserves that are added to the fee pot each epoch.
-       --
-       -- This is the \"rho\" incentives parameter from the design document.
-       --
-       protocolUpdateMonetaryExpansion :: Maybe Rational,
-
-       -- | The fraction of the fee pot each epoch that goes to the treasury.
-       --
-       -- This is the \"tau\" incentives parameter from the design document.
-       --
-       protocolUpdateTreasuryCut :: Maybe Rational,
-       -- Introduced in Alonzo
-
-       -- | Cost in ada per byte of UTxO storage (instead of
-       --protocolParamMinUTxOValue in the Alonzo era onwards).
-       protocolUpdateUTxOCostPerByte :: Maybe Lovelace,
-
-       -- | Cost models for non-native script languages.
-       protocolUpdateCostModels :: Map AnyScriptLanguage CostModel,
-
-       -- | Map AnyScriptLanguage ExecutionUnitPrices of execution units (for non-native script languages).
-       protocolUpdatePrices :: Map AnyScriptLanguage ExecutionUnitPrices,
-
-       -- | Max total script execution resources units allowed per tx
-       protocolUpdateMaxTxExUnits :: Maybe MaxTxExecutionUnits,
-
-       -- | Max total script execution resources units allowed per block
-       protocolUpdateMaxBlockExUnits :: Maybe MaxBlockExecutionUnits,
-
-       -- | Max size of a Value in a tx output.
-       protocolUpdateParamMaxValSize :: Maybe Natural
-    }
-  deriving (Eq, Show)
-
-instance Semigroup ProtocolParametersUpdate where
-    ppu1 <> ppu2 =
-      ProtocolParametersUpdate {
-        protocolUpdateProtocolVersion     = merge protocolUpdateProtocolVersion
-      , protocolUpdateDecentralization    = merge protocolUpdateDecentralization
-      , protocolUpdateExtraPraosEntropy   = merge protocolUpdateExtraPraosEntropy
-      , protocolUpdateMaxBlockHeaderSize  = merge protocolUpdateMaxBlockHeaderSize
-      , protocolUpdateMaxBlockBodySize    = merge protocolUpdateMaxBlockBodySize
-      , protocolUpdateMaxTxSize           = merge protocolUpdateMaxTxSize
-      , protocolUpdateTxFeeFixed          = merge protocolUpdateTxFeeFixed
-      , protocolUpdateTxFeePerByte        = merge protocolUpdateTxFeePerByte
-      , protocolUpdateMinUTxOValue        = merge protocolUpdateMinUTxOValue
-      , protocolUpdateStakeAddressDeposit = merge protocolUpdateStakeAddressDeposit
-      , protocolUpdateStakePoolDeposit    = merge protocolUpdateStakePoolDeposit
-      , protocolUpdateMinPoolCost         = merge protocolUpdateMinPoolCost
-      , protocolUpdatePoolRetireMaxEpoch  = merge protocolUpdatePoolRetireMaxEpoch
-      , protocolUpdateStakePoolTargetNum  = merge protocolUpdateStakePoolTargetNum
-      , protocolUpdateMonetaryExpansion   = merge protocolUpdateMonetaryExpansion
-      , protocolUpdatePoolPledgeInfluence = merge protocolUpdatePoolPledgeInfluence
-      , protocolUpdateTreasuryCut         = merge protocolUpdateTreasuryCut
-      -- Intoduced in Alonzo below.
-      , protocolUpdateUTxOCostPerByte     = merge protocolUpdateUTxOCostPerByte
-      , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
-      , protocolUpdatePrices              = mergeMap protocolUpdatePrices
-      , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
-      , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
-      , protocolUpdateParamMaxValSize     = merge protocolUpdateParamMaxValSize
-      }
-      where
-        -- prefer the right hand side:
-        merge :: (ProtocolParametersUpdate -> Maybe a) -> Maybe a
-        merge f = f ppu2 `mplus` f ppu1
-
-        -- need to use map merge where:
-        -- keys present in m1 and m2: remove/ignore m1 key
-        -- keys present in m1 and not m2 : remove/ignore m1 key
-        -- keys present in m2 and not m1: keep m2
-        -- I.e prefer m2 -- TODO: left off here. Remember plutus json jared sent you
-        mergeMap :: (ProtocolParametersUpdate -> Map AnyScriptLanguage a)
-                 -> Map AnyScriptLanguage a
-        mergeMap = undefined
-
-instance Monoid ProtocolParametersUpdate where
-    mempty =
-      ProtocolParametersUpdate {
-        protocolUpdateProtocolVersion     = Nothing
-      , protocolUpdateDecentralization    = Nothing
-      , protocolUpdateExtraPraosEntropy   = Nothing
-      , protocolUpdateMaxBlockHeaderSize  = Nothing
-      , protocolUpdateMaxBlockBodySize    = Nothing
-      , protocolUpdateMaxTxSize           = Nothing
-      , protocolUpdateTxFeeFixed          = Nothing
-      , protocolUpdateTxFeePerByte        = Nothing
-      , protocolUpdateMinUTxOValue        = Nothing
-      , protocolUpdateStakeAddressDeposit = Nothing
-      , protocolUpdateStakePoolDeposit    = Nothing
-      , protocolUpdateMinPoolCost         = Nothing
-      , protocolUpdatePoolRetireMaxEpoch  = Nothing
-      , protocolUpdateStakePoolTargetNum  = Nothing
-      , protocolUpdatePoolPledgeInfluence = Nothing
-      , protocolUpdateMonetaryExpansion   = Nothing
-      , protocolUpdateTreasuryCut         = Nothing
-      , protocolUpdateUTxOCostPerByte     = Nothing
-      , protocolUpdateCostModels          = mempty
-      , protocolUpdatePrices              = mempty
-      , protocolUpdateMaxTxExUnits        = Nothing
-      , protocolUpdateMaxBlockExUnits     = Nothing
-      , protocolUpdateParamMaxValSize     = Nothing
-      }
-
-
--- ----------------------------------------------------------------------------
 -- Praos nonce
 --
 
@@ -888,39 +651,6 @@ toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
 fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
 fromPraosNonce Shelley.NeutralNonce = Nothing
 fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
-
-
--- ----------------------------------------------------------------------------
--- Proposals embedded in transactions to update protocol parameters
---
-
-data UpdateProposal =
-     UpdateProposal
-       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
-       !EpochNo
-    deriving stock (Eq, Show)
-
-instance HasTypeProxy UpdateProposal where
-    data AsType UpdateProposal = AsUpdateProposal
-    proxyToAsType _ = AsUpdateProposal
-
-instance HasTextEnvelope UpdateProposal where
-    textEnvelopeType _ = "UpdateProposalShelley"
-
---TODO: Jordan UpdateProposal needs to be parameterized by era or have access to the era
-instance SerialiseAsCBOR UpdateProposal where
-    serialiseToCBOR = CBOR.serializeEncoding' . toCBOR . toShelleyUpdate @StandardShelley
-    deserialiseFromCBOR _ bs =
-      fromShelleyUpdate @StandardShelley <$> decodeFull (LBS.fromStrict bs)
-
-
-makeShelleyUpdateProposal :: ProtocolParametersUpdate
-                          -> [Hash GenesisKey]
-                          -> EpochNo
-                          -> UpdateProposal
-makeShelleyUpdateProposal params genesisKeyHashes =
-    --TODO decide how to handle parameter validation
-    UpdateProposal (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
 
 
 -- ----------------------------------------------------------------------------
@@ -989,246 +719,18 @@ data GenesisParameters era =
        protocolInitialUpdateableProtocolParameters :: ProtocolParameters era
      }
 
-
--- ----------------------------------------------------------------------------
--- Conversion functions
---
-
-toShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                   , Shelley.PParamsDelta ledgerera
-                     ~ Shelley.PParamsUpdate ledgerera
-                   )
-                => UpdateProposal -> Shelley.Update ledgerera
-toShelleyUpdate (UpdateProposal ppup epochno) =
-    Shelley.Update (toShelleyProposedPPUpdates ppup) epochno
-
-
-toShelleyProposedPPUpdates :: forall ledgerera.
-                              ( Ledger.Crypto ledgerera ~ StandardCrypto
-                              , Shelley.PParamsDelta ledgerera
-                                ~ Shelley.PParamsUpdate ledgerera
-                              )
-                            => Map (Hash GenesisKey) ProtocolParametersUpdate
-                            -> Shelley.ProposedPPUpdates ledgerera
-toShelleyProposedPPUpdates =
-    Shelley.ProposedPPUpdates
-  . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
-  . Map.map (toShelleyPParamsUpdate @ledgerera)
-
-toUpdate  :: ShelleyLedgerEra era ~ ledgerera
-          => Ledger.Crypto ledgerera ~ StandardCrypto
-          => ShelleyBasedEra era
-          -> UpdateProposal -> Shelley.Update ledgerera
-toUpdate sbe (UpdateProposal ppup epochno) =
-    Shelley.Update (toProposedPPUpdates sbe ppup) epochno
-
-toProposedPPUpdates :: ShelleyLedgerEra era ~ ledgerera
-                    => Ledger.Crypto ledgerera ~ StandardCrypto
-                    => ShelleyBasedEra era
-                    -> Map (Hash GenesisKey) ProtocolParametersUpdate
-                    -> Shelley.ProposedPPUpdates ledgerera
-toProposedPPUpdates sbe m =
-  let f = case sbe of
-            ShelleyBasedEraShelley -> toShelleyPParamsUpdate
-            ShelleyBasedEraAllegra -> toShelleyPParamsUpdate
-            ShelleyBasedEraMary -> toShelleyPParamsUpdate
-        --  ShelleyBasedEraAlonzo -> toAlonzoPParamsUpdate
-  in Shelley.ProposedPPUpdates
-       . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
-       $ Map.map f m
-
-{-
-toAlonzoPParamsUpdate :: ProtocolParametersUpdate
-                      -> Alonzo.PParamsUpdate ledgerera
-toAlonzoPParamsUpdate
-    ProtocolParametersUpdate {
-        protocolUpdateProtocolVersion
-      , protocolUpdateDecentralization
-      , protocolUpdateExtraPraosEntropy
-      , protocolUpdateMaxBlockHeaderSize
-      , protocolUpdateMaxBlockBodySize
-      , protocolUpdateMaxTxSize
-      , protocolUpdateTxFeeFixed
-      , protocolUpdateStakeAddressDeposit
-      , protocolUpdateStakePoolDeposit
-      , protocolUpdateMinPoolCost
-      , protocolUpdatePoolRetireMaxEpoch
-      , protocolUpdateStakePoolTargetNum
-      , protocolUpdatePoolPledgeInfluence
-      , protocolUpdateMonetaryExpansion
-      , protocolUpdateTreasuryCut
-
-      , protocolUpdateTxFeePerByte
-      , protocolUpdateMaxBlockExUnits
-      , protocolUpdateMaxTxExUnits
-      , protocolUpdatePrices
-      , protocolUpdateCostModels
-      , protocolUpdateUTxOCostPerByte
-     -- , protocolUpdateParamMaxValSize
-      } =
-      Alonzo.PParams
-           { Alonzo._minfeeA =    maybeToStrictMaybe protocolUpdateTxFeePerByte,
-             Alonzo._minfeeB    = maybeToStrictMaybe protocolUpdateTxFeeFixed,
-             Alonzo._maxBBSize  = maybeToStrictMaybe protocolUpdateMaxBlockBodySize,
-             Alonzo._maxTxSize  = maybeToStrictMaybe protocolUpdateMaxTxSize,
-             Alonzo._maxBHSize  = maybeToStrictMaybe protocolUpdateMaxBlockHeaderSize,
-             Alonzo._keyDeposit = toShelleyLovelace <$>
-                                    maybeToStrictMaybe protocolUpdateStakeAddressDeposit,
-             Alonzo._poolDeposit = toShelleyLovelace <$>
-                                     maybeToStrictMaybe protocolUpdateStakePoolDeposit,
-             Alonzo._eMax = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch,
-             Alonzo._nOpt = maybeToStrictMaybe protocolUpdateStakePoolTargetNum,
-             Alonzo._a0   = maybeToStrictMaybe protocolUpdatePoolPledgeInfluence,
-             Alonzo._rho  = Shelley.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateMonetaryExpansion,
-             Alonzo._tau = Shelley.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateTreasuryCut,
-             Alonzo._d = Shelley.unitIntervalFromRational <$>
-                                      maybeToStrictMaybe protocolUpdateDecentralization,
-             Alonzo._extraEntropy = toShelleyNonce <$>
-                                          maybeToStrictMaybe protocolUpdateExtraPraosEntropy,
-             Alonzo._protocolVersion = uncurry Shelley.ProtVer <$>
-                                          maybeToStrictMaybe protocolUpdateProtocolVersion,
-             Alonzo._minPoolCost = toShelleyLovelace <$>
-                                       maybeToStrictMaybe protocolUpdateMinPoolCost,
-
-             Alonzo._adaPerUTxOByte = toShelleyLovelace <$> maybeToStrictMaybe protocolUpdateUTxOCostPerByte,
-             Alonzo._costmdls = toCostModel <$> maybeToStrictMaybe protocolUpdateCostModels,
-             Alonzo._prices = toPrices <$> maybeToStrictMaybe protocolUpdatePrices,
-             Alonzo._maxTxExUnits = toTxExecUnits <$> maybeToStrictMaybe protocolUpdateMaxTxExUnits,
-             Alonzo._maxBlockExUnits = toExUnits <$> maybeToStrictMaybe protocolUpdateMaxBlockExUnits
-           }
--}
-
-toShelleyPParamsUpdate :: ProtocolParametersUpdate
-                       -> Shelley.PParamsUpdate ledgerera
-toShelleyPParamsUpdate
-    ProtocolParametersUpdate {
-      protocolUpdateProtocolVersion
-    , protocolUpdateDecentralization
-    , protocolUpdateExtraPraosEntropy
-    , protocolUpdateMaxBlockHeaderSize
-    , protocolUpdateMaxBlockBodySize
-    , protocolUpdateMaxTxSize
-    , protocolUpdateTxFeeFixed
-    , protocolUpdateTxFeePerByte
-    , protocolUpdateMinUTxOValue
-    , protocolUpdateStakeAddressDeposit
-    , protocolUpdateStakePoolDeposit
-    , protocolUpdateMinPoolCost
-    , protocolUpdatePoolRetireMaxEpoch
-    , protocolUpdateStakePoolTargetNum
-    , protocolUpdatePoolPledgeInfluence
-    , protocolUpdateMonetaryExpansion
-    , protocolUpdateTreasuryCut
-    } =
-    Shelley.PParams {
-      Shelley._minfeeA     = maybeToStrictMaybe protocolUpdateTxFeePerByte
-    , Shelley._minfeeB     = maybeToStrictMaybe protocolUpdateTxFeeFixed
-    , Shelley._maxBBSize   = maybeToStrictMaybe protocolUpdateMaxBlockBodySize
-    , Shelley._maxTxSize   = maybeToStrictMaybe protocolUpdateMaxTxSize
-    , Shelley._maxBHSize   = maybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
-    , Shelley._keyDeposit  = toShelleyLovelace <$>
-                               maybeToStrictMaybe protocolUpdateStakeAddressDeposit
-    , Shelley._poolDeposit = toShelleyLovelace <$>
-                               maybeToStrictMaybe protocolUpdateStakePoolDeposit
-    , Shelley._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
-    , Shelley._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
-    , Shelley._a0          = maybeToStrictMaybe protocolUpdatePoolPledgeInfluence
-    , Shelley._rho         = Shelley.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateMonetaryExpansion
-    , Shelley._tau         = Shelley.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateTreasuryCut
-    , Shelley._d           = Shelley.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateDecentralization
-    , Shelley._extraEntropy    = toShelleyNonce <$>
-                                   maybeToStrictMaybe protocolUpdateExtraPraosEntropy
-    , Shelley._protocolVersion = uncurry Shelley.ProtVer <$>
-                                   maybeToStrictMaybe protocolUpdateProtocolVersion
-    , Shelley._minUTxOValue    = toShelleyLovelace <$>
-                                   maybeToStrictMaybe protocolUpdateMinUTxOValue
-    , Shelley._minPoolCost     = toShelleyLovelace <$>
-                                   maybeToStrictMaybe protocolUpdateMinPoolCost
-    }
-
-fromShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                     , Shelley.PParamsDelta ledgerera
-                       ~ Shelley.PParamsUpdate ledgerera
-                     )
-                  => Shelley.Update ledgerera -> UpdateProposal
-fromShelleyUpdate (Shelley.Update ppup epochno) =
-    UpdateProposal (fromShelleyProposedPPUpdates ppup) epochno
-
-
-fromShelleyProposedPPUpdates :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                                , Shelley.PParamsDelta ledgerera
-                                  ~ Shelley.PParamsUpdate ledgerera
-                                )
-                             => Shelley.ProposedPPUpdates ledgerera
-                             -> Map (Hash GenesisKey) ProtocolParametersUpdate
-fromShelleyProposedPPUpdates =
-    Map.map fromShelleyPParamsUpdate
-  . Map.mapKeysMonotonic GenesisKeyHash
-  . (\(Shelley.ProposedPPUpdates ppup) -> ppup)
-
-
-fromShelleyPParamsUpdate :: Shelley.PParamsUpdate ledgerera
-                         -> ProtocolParametersUpdate
-fromShelleyPParamsUpdate
-    Shelley.PParams {
-      Shelley._minfeeA
-    , Shelley._minfeeB
-    , Shelley._maxBBSize
-    , Shelley._maxTxSize
-    , Shelley._maxBHSize
-    , Shelley._keyDeposit
-    , Shelley._poolDeposit
-    , Shelley._eMax
-    , Shelley._nOpt
-    , Shelley._a0
-    , Shelley._rho
-    , Shelley._tau
-    , Shelley._d
-    , Shelley._extraEntropy
-    , Shelley._protocolVersion
-    , Shelley._minUTxOValue
-    , Shelley._minPoolCost
-    } =
-    ProtocolParametersUpdate {
-      protocolUpdateProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b)) <$>
-                                          strictMaybeToMaybe _protocolVersion
-    , protocolUpdateDecentralization    = Shelley.unitIntervalToRational <$>
-                                            strictMaybeToMaybe _d
-    , protocolUpdateExtraPraosEntropy   = fromPraosNonce <$>
-                                            strictMaybeToMaybe _extraEntropy
-    , protocolUpdateMaxBlockHeaderSize  = strictMaybeToMaybe _maxBHSize
-    , protocolUpdateMaxBlockBodySize    = strictMaybeToMaybe _maxBBSize
-    , protocolUpdateMaxTxSize           = strictMaybeToMaybe _maxTxSize
-    , protocolUpdateTxFeeFixed          = strictMaybeToMaybe _minfeeB
-    , protocolUpdateTxFeePerByte        = strictMaybeToMaybe _minfeeA
-    , protocolUpdateMinUTxOValue        = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe _minUTxOValue
-    , protocolUpdateStakeAddressDeposit = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe _keyDeposit
-    , protocolUpdateStakePoolDeposit    = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe _poolDeposit
-    , protocolUpdateMinPoolCost         = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe _minPoolCost
-    , protocolUpdatePoolRetireMaxEpoch  = strictMaybeToMaybe _eMax
-    , protocolUpdateStakePoolTargetNum  = strictMaybeToMaybe _nOpt
-    , protocolUpdatePoolPledgeInfluence = strictMaybeToMaybe _a0
-    , protocolUpdateMonetaryExpansion   = Shelley.unitIntervalToRational <$>
-                                            strictMaybeToMaybe _rho
-    , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
-                                            strictMaybeToMaybe _tau
-    , protocolUpdateUTxOCostPerByte     = Nothing
-    , protocolUpdateCostModels          = mempty
-    , protocolUpdatePrices              = mempty
-    , protocolUpdateMaxTxExUnits        = Nothing
-    , protocolUpdateMaxBlockExUnits     = Nothing
-    , protocolUpdateParamMaxValSize     = Nothing
-    }
-
+fromShelleyPParams
+  :: ShelleyBasedEra era
+  -> Core.PParams (ShelleyLedgerEra era)
+  -> Either ProtocolParametersError (ProtocolParameters era)
+fromShelleyPParams sbe pparams =
+  let pp = case sbe of
+             ShelleyBasedEraShelley -> toProtocolParamsShelley pparams
+             ShelleyBasedEraAllegra -> toProtocolParamsShelley pparams
+             ShelleyBasedEraMary -> toProtocolParamsShelley pparams
+--           ShelleyBasedEraAlonzo -> toProtocolParamsAlonzo pparams
+  in do checkProtocolVersion sbe (protocolParamProtocolVersion pp)
+        return pp
 
 toProtocolParamsShelley :: Shelley.PParams ledgerera -> ProtocolParameters era
 toProtocolParamsShelley pparams =
@@ -1258,49 +760,6 @@ toProtocolParamsShelley pparams =
         , protocolParamMaxBlockExUnits     = Nothing
         , protocolParamMaxValSize          = Nothing
         }
-
-
-_toProtocolParamsAlonzo :: Alonzo.PParams ledgerera -> ProtocolParameters era
-_toProtocolParamsAlonzo pparams =
-   ProtocolParameters
-        { protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
-                                               $ Alonzo._protocolVersion pparams
-        , protocolParamDecentralization    = Shelley.unitIntervalToRational $ Alonzo._d pparams
-        , protocolParamExtraPraosEntropy   = fromPraosNonce $ Alonzo._extraEntropy pparams
-        , protocolParamMaxBlockHeaderSize  = Alonzo._maxBHSize pparams
-        , protocolParamMaxBlockBodySize    = Alonzo._maxBBSize pparams
-        , protocolParamMaxTxSize           = Alonzo._maxTxSize pparams
-        , protocolParamTxFeeFixed          = Alonzo._minfeeB pparams
-        , protocolParamTxFeePerByte        = Alonzo._minfeeA pparams
-        , protocolParamMinUTxOValue        = Nothing
-        , protocolParamStakeAddressDeposit = fromShelleyLovelace $ Alonzo._keyDeposit pparams
-        , protocolParamStakePoolDeposit    = fromShelleyLovelace $ Alonzo._poolDeposit pparams
-        , protocolParamMinPoolCost         = fromShelleyLovelace $ Alonzo._minPoolCost pparams
-        , protocolParamPoolRetireMaxEpoch  = Alonzo._eMax pparams
-        , protocolParamStakePoolTargetNum  = Alonzo._nOpt pparams
-        , protocolParamPoolPledgeInfluence = Alonzo._a0 pparams
-        , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational $ Alonzo._rho pparams
-        , protocolParamTreasuryCut         = Shelley.unitIntervalToRational $ Alonzo._tau pparams
-        , protocolParamUTxOCostPerByte     = Just . fromShelleyLovelace $ Alonzo._adaPerUTxOByte pparams
-        , protocolParamCostModels          = _fromCostModel $ Alonzo._costmdls pparams
-        , protocolParamPrices              = Just . _fromPrices $ Alonzo._prices pparams
-        , protocolParamMaxTxExUnits        = Just . _fromMaxTxExec $ Alonzo._maxTxExUnits pparams
-        , protocolParamMaxBlockExUnits     = Just . _fromMaxBlockExec $ Alonzo._maxBlockExUnits pparams
-        , protocolParamMaxValSize          = Nothing --TODO: Waiting on consensus to update to latest ledger Just $ Alonzo._maxValSize pparams
-        }
-
-fromShelleyPParams
-  :: ShelleyBasedEra era
-  -> Core.PParams (ShelleyLedgerEra era)
-  -> Either ProtocolParametersError (ProtocolParameters era)
-fromShelleyPParams sbe pparams =
-  let pp = case sbe of
-             ShelleyBasedEraShelley -> toProtocolParamsShelley pparams
-             ShelleyBasedEraAllegra -> toProtocolParamsShelley pparams
-             ShelleyBasedEraMary -> toProtocolParamsShelley pparams
---           ShelleyBasedEraAlonzo -> toProtocolParamsAlonzo pparams
-  in do checkProtocolVersion sbe (protocolParamProtocolVersion pp)
-        return pp
 
 
 checkProtocolVersion

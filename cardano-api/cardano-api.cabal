@@ -69,6 +69,7 @@ library
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.ProtocolParameters
+                        Cardano.Api.ProtocolParametersUpdate
                         Cardano.Api.Query
                         Cardano.Api.Script
                         Cardano.Api.SerialiseBech32

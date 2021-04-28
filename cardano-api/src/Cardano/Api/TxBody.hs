@@ -169,7 +169,7 @@ import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
-import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.ProtocolParametersUpdate
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
