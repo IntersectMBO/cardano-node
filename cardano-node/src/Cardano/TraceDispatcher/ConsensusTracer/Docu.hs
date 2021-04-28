@@ -18,13 +18,13 @@ module Cardano.TraceDispatcher.ConsensusTracer.Docu
   , docForge
   , docForgeStateInfo
   , docBlockchainTime
+  , docKeepAliveClient
   ) where
 
 import           Cardano.Logging
 import           Cardano.Prelude
 import           Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import           Data.Time.Clock
-
 
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types
@@ -51,7 +51,8 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision,
                      FetchDecline (..))
 import           Ouroboros.Network.BlockFetch.DeltaQ
-                     (PeerFetchInFlightLimits (..))
+                     (PeerFetchInFlightLimits (..), PeerGSV)
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Mux (ControlMessage)
 import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
@@ -169,6 +170,9 @@ protoSystemStart = SystemStart protoUTCTime
 
 protoPastHorizonException :: PastHorizonException
 protoPastHorizonException = undefined
+
+protoPeerGSV :: PeerGSV
+protoPeerGSV = undefined
 
 -- Not working because of non-injective type families
 -- protoApplyTxErr :: ApplyTxErr blk
@@ -632,4 +636,12 @@ docBlockchainTime = Documented [
       \\
       \ When the system clock moved back more than the configured limit, we shut\
       \ down with a fatal exception."
+  ]
+
+docKeepAliveClient :: Documented (TraceKeepAliveClient peer)
+docKeepAliveClient = Documented [
+    DocMsg
+      (AddSample (undefined :: peer) protoDiffTime protoPeerGSV)
+      []
+      "TODO"
   ]

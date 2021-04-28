@@ -34,6 +34,9 @@ module Cardano.TraceDispatcher.ConsensusTracer.Combinators
   , namesBlockchainTime
   , severityBlockchainTime
 
+  , namesKeepAliveClient
+  , severityKeepAliveClient
+
   ) where
 
 
@@ -42,6 +45,7 @@ import           Cardano.Prelude
 
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
 
@@ -300,3 +304,9 @@ severityBlockchainTime :: TraceBlockchainTimeEvent t -> SeverityS
 severityBlockchainTime TraceStartTimeInTheFuture {} = Warning
 severityBlockchainTime TraceCurrentSlotUnknown {}   = Warning
 severityBlockchainTime TraceSystemClockMovedBack {} = Warning
+
+namesKeepAliveClient :: TraceKeepAliveClient peer -> [Text]
+namesKeepAliveClient _ = ["KeepAliveClient"]
+
+severityKeepAliveClient :: TraceKeepAliveClient peer -> SeverityS
+severityKeepAliveClient _ = Info
