@@ -41,7 +41,7 @@ The `transaction` command contains the following sub commands:
 * `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARANO_NODE_SOCKET_PATH environment variable (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
 * `calculate-min-fee`: calculates the minimum fee for the transaction
 * `txid`: retrieves the transaction ID
-* `policyid`: retrieves the transaction ID
+* `policyid`: retrieves the policy ID
 
 *cardano-cli node*
 The `node` command contains the following sub commands:
