@@ -54,11 +54,8 @@
     "executionPrices": 42,
     "maxTxExUnits": 42,
     "maxBlockExUnits": 42,
-<<<<<<< HEAD
     "maxValueSize": 42,
-=======
     "maxMultiAssetSize": 42,
->>>>>>> 66187bdfa (Add initial Alonzo era support to the API and node)
     "costModel": "configuration/cardano/alonzo/shelley_qa_cost-model.json"
 
 }
