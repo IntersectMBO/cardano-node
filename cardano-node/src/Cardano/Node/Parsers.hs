@@ -11,12 +11,15 @@ module Cardano.Node.Parsers
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
+import           Data.Time.Clock (secondsToDiffTime)
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
+
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Types
@@ -52,6 +55,7 @@ nodeRunParser = do
 
   -- NodeConfiguration filepath
   nodeConfigFp <- lastOption parseConfigFile
+  snapshotInterval <- lastOption parseSnapshotInterval
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
@@ -67,6 +71,7 @@ nodeRunParser = do
            , pncDatabaseFile = DbFile <$> dbFp
            , pncSocketPath   = socketFp
            , pncDiffusionMode = mempty
+           , pncSnapshotInterval = snapshotInterval
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
              , byronKeyFile
@@ -253,6 +258,15 @@ parseVrfKeyFilePath =
         <> completer (bashCompleter "file")
     )
 
+-- TODO revisit because it sucks
+parseSnapshotInterval :: Parser SnapshotInterval
+parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) parseDifftime
+  where
+  parseDifftime = option auto
+    ( long "snapshot-interval"
+        <> metavar "SNAPSHOTINTERVAL"
+        <> help "Snapshot Interval (in second)"
+    )
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

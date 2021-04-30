@@ -104,6 +104,7 @@ library
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-byron
+                      , cardano-ledger-core
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-slotting
@@ -183,7 +184,9 @@ test-suite cardano-node-test
                       , hedgehog
                       , hedgehog-corpus
                       , iproute
+                      , ouroboros-consensus
                       , ouroboros-network
+                      , time
 
   other-modules:        Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen

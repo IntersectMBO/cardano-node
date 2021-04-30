@@ -247,6 +247,7 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (UTXOW era))
          , ToObject (PredicateFailure (Core.EraRule "LEDGER" era))
+         , ToObject (PredicateFailure (Core.EraRule "LEDGERS" era))
          ) => ToObject (BbodyPredicateFailure era) where
   toObject _verb (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
@@ -283,13 +284,13 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
          ) => ToObject (UtxowPredicateFailure era) where
-  toObject _verb (InvalidWitnessesUTXOW wits) =
+  toObject _verb (InvalidWitnessesUTXOW wits') =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
-             , "invalidWitnesses" .= map textShow wits
+             , "invalidWitnesses" .= map textShow wits'
              ]
-  toObject _verb (MissingVKeyWitnessesUTXOW (WitHashes wits)) =
+  toObject _verb (MissingVKeyWitnessesUTXOW (WitHashes wits')) =
     mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW"
-             , "missingWitnesses" .= wits
+             , "missingWitnesses" .= wits'
              ]
   toObject _verb (MissingScriptWitnessesUTXOW missingScripts) =
     mkObject [ "kind" .= String "MissingScriptWitnessesUTXOW"
@@ -584,7 +585,6 @@ instance ToObject (PoolPredicateFailure era) where
              , "error" .= String "The stake pool cost is too low"
              ]
 
-
 -- Apparently this should never happen according to the Shelley exec spec
   toObject _verb (WrongCertificateTypePOOL index) =
     case index of
@@ -602,6 +602,13 @@ instance ToObject (PoolPredicateFailure era) where
                     , "error" .= String "Wrong certificate type: Unknown certificate type"
                     ]
 
+  toObject _verb (WrongNetworkPOOL networkId listedNetworkId poolId) =
+    mkObject [ "kind" .= String "WrongNetworkPOOL"
+             , "networkId" .= String (textShow networkId)
+             , "listedNetworkId" .= String (textShow listedNetworkId)
+             , "poolId" .= String (textShow poolId)
+             , "error" .= String "Wrong network ID in pool registration certificate"
+             ]
 
 instance ( ToObject (PredicateFailure (Core.EraRule "NEWEPOCH" era))
          , ToObject (PredicateFailure (Core.EraRule "RUPD" era))
