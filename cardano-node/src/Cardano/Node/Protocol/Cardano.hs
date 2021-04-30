@@ -36,7 +36,8 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Cardano.Node.Protocol.Alonzo (AlonzoProtocolInstantiationError, readAlonzoGenesis)
+import           Cardano.Node.Protocol.Alonzo (AlonzoProtocolInstantiationError, readAlonzoGenesis,
+                   renderAlonzoProtocolInstantiationError)
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 
@@ -268,5 +269,5 @@ renderCardanoProtocolInstantiationError
     Shelley.renderShelleyProtocolInstantiationError err
 
 renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationErrorAlonzo _) =
-    error "TODO: renderCardanoProtocolInstantiationError CardanoProtocolInstantiationErrorAlonzo"
+  (CardanoProtocolInstantiationErrorAlonzo err) =
+    renderAlonzoProtocolInstantiationError err
