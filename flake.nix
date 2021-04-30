@@ -39,7 +39,7 @@
       let
         pkgs = import nixpkgs { inherit system overlays config; };
 
-        inherit (pkgs.commonLib) eachEnv environnments;
+        inherit (pkgs.commonLib) eachEnv environments;
 
         devShell = import ./shell.nix { inherit pkgs; };
 
@@ -117,7 +117,7 @@
 
       in recursiveUpdate flake {
 
-        inherit evaluated environnments packages;
+        inherit evaluated environments packages;
 
         legacyPackages = pkgs;
 
