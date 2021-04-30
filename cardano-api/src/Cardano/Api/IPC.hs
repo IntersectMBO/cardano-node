@@ -324,7 +324,7 @@ data LocalNodeClientProtocolsForBlock block =
      , localStateQueryClientForBlock
          :: Maybe (LocalStateQueryClient  block
                                          (Consensus.Point block)
-                                         (Consensus.Query block)
+                                         (Consensus.BlockQuery block)
                                           IO ())
 
      , localTxSubmissionClientForBlock
@@ -441,7 +441,7 @@ convLocalStateQueryClient
   => ConsensusMode mode
   -> LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) m a
   -> LocalStateQueryClient block (Consensus.Point block)
-                           (Consensus.Query block) m a
+                           (Consensus.BlockQuery block) m a
 convLocalStateQueryClient mode =
     Net.Query.mapLocalStateQueryClient
       (toConsensusPointInMode mode)
