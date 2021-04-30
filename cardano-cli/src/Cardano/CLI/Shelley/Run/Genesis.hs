@@ -66,12 +66,14 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
 import           Cardano.Ledger.Coin (Coin (..))
-import qualified Plutus.V1.Ledger.Api as Plutus
-import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
 import qualified Shelley.Spec.Ledger.API as Ledger
 import qualified Shelley.Spec.Ledger.BaseTypes as Ledger
 import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.PParams as Shelley
+
+-- TODO: Remove me, cli should not depend directly on plutus repo.
+import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
+import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as Plutus
 
 import           Cardano.Ledger.Era ()
 
@@ -963,26 +965,38 @@ readAlonzoGenesis fpath = do
 createAlonzoGenesis
   :: AlonzoGenWrapper
   -> ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
-createAlonzoGenesis (AlonzoGenWrapper costModelFp' alonzoGenesis) = do
-  costModel <- readAndDecode
-  case Plutus.extractModelParams costModel of
-    -- TODO: We should not be using functions directly from the plutus repo
-    -- These should be exposed via the ledger
-    Just m -> if Plutus.validateCostModelParams m
-              then left $ ShelleyGenesisCmdCostModelsError costModelFp'
-              else return $ alonzoGenesis { Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 $ Alonzo.CostModel m }
+createAlonzoGenesis (AlonzoGenWrapper costModelFp' alonzoGenesis) =
+  case costModelFp' of
+    Just fp -> do
+      costModel <- readAndDecode fp
+      case Plutus.extractModelParams costModel of
+        -- TODO: We should not be using functions directly from the plutus repo
+        -- These should be exposed via the ledger
+        Just m -> -- if Plutus.validateCostModelParams m
+                  -- then left $ ShelleyGenesisCmdCostModelsError costModelFp'
+                  -- else
+                  --TODO: Plutus repo needs to expose a cost model validation function
+                  return $ alonzoGenesis { Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 $ Alonzo.CostModel m }
 
-    Nothing -> panic ""
+        Nothing -> panic "createAlonzoGenesis: not implemented yet"
+    Nothing ->
+      case Plutus.extractModelParams Plutus.defaultCostModel of
+        Just m ->
+          if Alonzo.validateCostModelParams m
+          then return $ alonzoGenesis { Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 $ Alonzo.CostModel m  }
+          else panic "createAlonzoGenesis: Plutus.defaultCostModel is invalid"
+
+        Nothing -> panic "createAlonzoGenesis: Could not extract cost model params from Plutus.defaultCostModel"
  where
-  readAndDecode :: ExceptT ShelleyGenesisCmdError IO Plutus.CostModel
-  readAndDecode = do
-      lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError costModelFp') $ LBS.readFile costModelFp'
-      firstExceptT (ShelleyGenesisCmdAesonDecodeError costModelFp' . Text.pack)
+  readAndDecode :: FilePath -> ExceptT ShelleyGenesisCmdError IO Plutus.CostModel
+  readAndDecode fp = do
+      lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fp) $ LBS.readFile fp
+      firstExceptT (ShelleyGenesisCmdAesonDecodeError fp . Text.pack)
         . hoistEither $ Aeson.eitherDecode' lbs
 
 
 data AlonzoGenWrapper =
-  AlonzoGenWrapper { costModelFp :: FilePath
+  AlonzoGenWrapper { costModelFp :: Maybe FilePath
                    , genesis :: Alonzo.AlonzoGenesis
                    }
 
@@ -990,7 +1004,7 @@ instance FromJSON AlonzoGenWrapper where
   parseJSON = withObject "Alonzo Genesis Wrapper" $ \o -> do
                 -- NB: This has an empty map for the cost model
                 alonzoGenensis <- parseJSON (Aeson.Object o) :: Aeson.Parser Alonzo.AlonzoGenesis
-                cModelFp <- o .: "alonzoCostModel"
+                cModelFp <- o .:? "costModel"
                 return $ AlonzoGenWrapper
                            { costModelFp = cModelFp
                            , genesis = alonzoGenensis
