@@ -45,6 +45,8 @@
 
         flake = pkgs.cardanoNodeProject.flake {};
 
+        scripts = pkgs.scripts;
+
         muslFlake = (import nixpkgs { inherit system overlays config;
           crossSystem = systems.examples.musl64;
         }).cardanoNodeProject.flake {};
@@ -135,6 +137,7 @@
 
         # This is used by `nix develop .` to open a devShell
         inherit devShell;
+        inherit scripts;
 
         apps = {
           repl = mkApp {

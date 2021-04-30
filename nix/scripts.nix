@@ -91,7 +91,7 @@ let
       args = { inherit pkgs; };
       check = false;
     }).config.services.cardano-node.script;
-  in pkgs.writeScript "cardano-node-${envConfig.name}" ''
+  in pkgs.writeScriptBin "cardano-node-${envConfig.name}" ''
     #!${pkgs.runtimeShell}
     set -euo pipefail
     mkdir -p "${config.stateDir}"
