@@ -23,6 +23,8 @@ final: prev: with final;
       buildPackages
       gitrev
       ;
+    inherit (cardanoNodeProject) projectPackages;
+    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     profiling = true;
   }).hsPkgs;
   cardanoNodeEventlogHaskellPackages = (import ./haskell.nix {
@@ -34,6 +36,8 @@ final: prev: with final;
       buildPackages
       gitrev
       ;
+    inherit (cardanoNodeProject) projectPackages;
+    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     eventlog = true;
   }).hsPkgs;
   cardanoNodeAssertedHaskellPackages = (import ./haskell.nix {
@@ -45,6 +49,8 @@ final: prev: with final;
       buildPackages
       gitrev
       ;
+    inherit (cardanoNodeProject) projectPackages;
+    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     assertedPackages = [
       "ouroboros-consensus"
       "ouroboros-consensus-cardano"
@@ -71,6 +77,11 @@ final: prev: with final;
 
   cabal = haskell-nix.tool compiler "cabal" {
     version = "latest";
+    inherit (cardanoNodeProject) index-state;
+  };
+
+  hlint = haskell-nix.tool compiler "hlint" {
+    version = "3.2.7";
     inherit (cardanoNodeProject) index-state;
   };
 

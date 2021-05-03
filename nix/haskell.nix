@@ -17,30 +17,29 @@
 # Version info, to be passed when not building from a git work tree
 , gitrev ? null
 , libsodium ? pkgs.libsodium
-}:
-let
-
-  src = haskell-nix.haskellLib.cleanGit {
+, src ? (haskell-nix.haskellLib.cleanGit {
       name = "cardano-node-src";
       src = ../.;
-  };
+  })
 
   # It is important this matches in both calls to cabalProject or `cabal configure`
   # will run twice.
-  cabalProjectLocal = ''
+, cabalProjectLocal ? ''
     allow-newer: terminfo:base
   ''
   # Needed for the Windows cabal constraint solver.
   + lib.optionalString stdenv.hostPlatform.isWindows ''
     max-backjumps: 10000
     reorder-goals: True
-  '';
+  ''
 
-  projectPackages = lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
+, projectPackages ? lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
     (haskell-nix.cabalProject' {
       inherit src cabalProjectLocal;
       compiler-nix-name = compiler;
-    }).hsPkgs);
+    }).hsPkgs)
+}:
+let
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
@@ -180,4 +179,6 @@ let
   # package with libsodium:
   setLibSodium = "ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll";
 in
-  pkgSet
+  pkgSet // {
+    inherit projectPackages;
+  }

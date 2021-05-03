@@ -6,26 +6,38 @@
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     utils.url = "github:numtide/flake-utils";
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/flakes-improvements";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+    custom-config = {
+      url = "path:./custom-config.nix";
+      flake = false;
+    };
+    workbench-config = {
+      url = "path:./workbench-config.nix";
+      flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, ... }:
+  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, custom-config, workbench-config, ... }:
     let
       inherit (haskellNix.internal) config;
       inherit (nixpkgs) lib;
-      inherit (lib) systems mapAttrs recursiveUpdate mkDefault optionalAttrs nameValuePair;
+      inherit (lib) head systems mapAttrs recursiveUpdate mkDefault optionalAttrs nameValuePair;
       inherit (utils.lib) eachSystem mkApp flattenTree;
       inherit (iohkNix.lib) prefixNamesWith collectExes;
 
-      overlays = with iohkNix.overlays; [
+      supportedSystems = import ./supported-systems.nix;
+      defaultSystem = head supportedSystems;
+
+      overlays = [
         haskellNix.overlay
-        haskell-nix-extra
-        crypto
-        cardano-lib
+        iohkNix.overlays.haskell-nix-extra
+        iohkNix.overlays.crypto
+        iohkNix.overlays.cardano-lib
+        iohkNix.overlays.utils
         (final: prev: {
-          customConfig = import ./custom-config.nix;
+          customConfig = import custom-config;
           gitrev = self.rev or "dirty";
           commonLib = lib
             // iohkNix.lib
@@ -34,7 +46,7 @@
         (import ./nix/pkgs.nix)
       ];
 
-    in eachSystem (import ./supported-systems.nix) (system:
+    in eachSystem supportedSystems (system:
       let
         pkgs = import nixpkgs { inherit system overlays config; };
 
@@ -68,7 +80,6 @@
             inherit pkgs system;
             modules = [ ./nix/nixos/cardano-node-service.nix (configModule conf) ];
           };
-
 
         packages = let
           deps = with pkgs; [
@@ -104,10 +115,12 @@
         in debug // vanilla // {
           inherit (devShell) devops;
         } // (collectExes flake.packages)
+        // (prefixNamesWith "static/"
+              (mapAttrs pkgs.rewriteStatic (collectExes
+                (if system == "x86_64-darwin" then flake else muslFlake).packages)))
           # Linux only packages:
           // optionalAttrs (system == "x86_64-linux") (
             prefixNamesWith "windows/" (collectExes windowsFlake.packages)
-            // (prefixNamesWith "static/" (collectExes muslFlake.packages))
             // {
               "dockerImage/node" = pkgs.dockerImage;
               "dockerImage/submit-api" = pkgs.submitApiDockerImage;
@@ -124,7 +137,13 @@
           optionalAttrs (system == "x86_64-linux") (
             prefixNamesWith "windows/" windowsFlake.checks
             // (prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests))
-          );
+             # checks run on default system only;
+          ) // optionalAttrs (system == defaultSystem) {
+            hlint = pkgs.callPackage pkgs.hlintCheck {
+              #inherit (pkgs.cardanoNodeProject.projectModule) src;
+              src = ./.;
+            };
+          };
 
         # Built by `nix build .`
         defaultPackage = flake.packages."cardano-node:exe:cardano-node";
@@ -146,9 +165,7 @@
           };
         }
         # nix run .#<env>/node
-        // (mapAttrs
-          (_: drv: (mkApp {inherit drv; exePath = "";}))
-          (flattenTree pkgs.scripts))
+        // (mapAttrs (_: drv: (mkApp {inherit drv;})) (flattenTree pkgs.scripts))
         # nix run .#<env>/node-entrypoint
         // (eachEnv (env: lib.nameValuePair "${env}/node-entrypoint" (utils.lib.mkApp {
             drv = packages."${env}/node-entrypoint";

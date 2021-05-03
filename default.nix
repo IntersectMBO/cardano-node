@@ -46,8 +46,8 @@ let
       # `checks.tests` collect results of executing the tests:
       tests = collectChecks haskellPackages;
 
-      hlint = callPackage iohkNix.tests.hlint {
-        src = ./. ;
+      hlint = callPackage hlintCheck {
+        inherit (cardanoNodeProject.projectModule) src;
       };
     };
 

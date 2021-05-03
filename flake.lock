@@ -1,5 +1,17 @@
 {
   "nodes": {
+    "custom-config": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-qNmeui7DIV4Q+FqQm97CPIfzz4pVQcvzNLu486UXRI0=",
+        "path": "./custom-config.nix",
+        "type": "path"
+      },
+      "original": {
+        "path": "./custom-config.nix",
+        "type": "path"
+      }
+    },
     "haskellNix": {
       "inputs": {
         "nixpkgs": "nixpkgs",
@@ -8,11 +20,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1619399651,
-        "narHash": "sha256-fXF2a32kAtqfI9uAl9jaTv9zc9BKSuE/1v4jnveATmI=",
+        "lastModified": 1619745466,
+        "narHash": "sha256-C3WTy9vrViORxyFUOjCxZDkD10XpFiqxxnqTqpIdQk8=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "ac38a412998e48e2ad5f069548d7a6cd5d822660",
+        "rev": "648e46ba3a235520f8be2f23bd6dda22525c61a1",
         "type": "github"
       },
       "original": {
@@ -28,15 +40,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1619575755,
-        "narHash": "sha256-UCrW7x7h4WMlssN/cxcj9rZ+hmGgTqO7Kf0oGBRTlZg=",
+        "lastModified": 1620045651,
+        "narHash": "sha256-WWIKzL2pvRMQmNWp73krQ1a2TcEN1LAJX3n9CZKI32I=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "9dd8ce3474ca4cd1f7c2310c2cf92fb9cd2e0984",
+        "rev": "f0289ec88fc5060e89bdaf0201aa8c87aad84adc",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "flakes-improvements",
         "repo": "iohk-nix",
         "type": "github"
       }
@@ -107,13 +120,15 @@
     },
     "root": {
       "inputs": {
+        "custom-config": "custom-config",
         "haskellNix": "haskellNix",
         "iohkNix": "iohkNix",
         "nixpkgs": [
           "haskellNix",
           "nixpkgs-unstable"
         ],
-        "utils": "utils"
+        "utils": "utils",
+        "workbench-config": "workbench-config"
       }
     },
     "utils": {
@@ -129,6 +144,18 @@
         "owner": "numtide",
         "repo": "flake-utils",
         "type": "github"
+      }
+    },
+    "workbench-config": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-iFSPu804N4Qh4x11uFnieiEUQKPmjGp3jArABb9E3Pc=",
+        "path": "./workbench-config.nix",
+        "type": "path"
+      },
+      "original": {
+        "path": "./workbench-config.nix",
+        "type": "path"
       }
     }
   },

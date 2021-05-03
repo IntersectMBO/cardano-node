@@ -33,6 +33,7 @@ let
     ++ iohkNix.overlays.crypto
     # iohkNix: nix utilities:
     ++ iohkNix.overlays.iohkNix
+    ++ iohkNix.overlays.utils
     # our own overlays:
     ++ [
       (pkgs: _: with pkgs; {

@@ -74,13 +74,9 @@ let
 
     inherit withHoogle;
 
-    packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
+    packages = lib.attrVals cardanoNodeProject.projectPackages;
 
     tools = {
-      hlint = {
-        version = "latest";
-        inherit (cardanoNodeProject) index-state;
-      };
       haskell-language-server = {
         version = "latest";
         inherit (cardanoNodeProject) index-state;
@@ -102,6 +98,7 @@ let
       sqlite-interactive
       tmux
       pkgs.git
+      pkgs.hlint
     ]
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
