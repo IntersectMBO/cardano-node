@@ -24,6 +24,7 @@ import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 import           Cardano.TraceDispatcher.OrphanInstances.Network ()
 import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
+import           Cardano.TraceDispatcher.Common.Formatting ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
@@ -119,10 +120,6 @@ instance ConvertRawHash blk
       mkObject [ "kind" .= String "ChainSyncRollBackward"
                , "point" .= forMachine dtal point
                ]
-
-instance (Show peer, LogFormatting a) => LogFormatting (TraceLabelPeer peer a) where
-  forMachine dtal (TraceLabelPeer peerid a) =
-    mkObject [ "peer" .= show peerid ] <> forMachine dtal a
 
 instance Show peer
       => LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
