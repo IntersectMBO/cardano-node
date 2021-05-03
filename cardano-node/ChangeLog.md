@@ -1,5 +1,63 @@
 # Changelog for cardano-node
 
+## 1.27 -- April 2021
+
+### node changes
+
+- Add an additional GC heap metric to RTS. (#2592)
+- Add details about registering relays on-chain to SPO documentation. (#2591)
+- Improved installation documentation. (#2624)
+- Preparatory support for Alonzo. (#2547)
+- Preparatory support for Voltaire. (#2498)
+- Add a docker image option for downloading cardano-node. (#2632)
+- Miscellaneous internal improvements. (#2644, #2645, #2646)
+
+### consensus changes
+
+- Some preparation for upcoming work on Voltaire. (#2978)
+- Drop support for GHC 8.6.5. Note that support had already been dropped in the
+  node. (#3004)
+- Introduce an option to configure the snapshot interval. This will primarily be
+  used by downstream teams for testing and benchmarking. (#2966, #3092)
+- Preparatory work for the implementation of Ouroboros Genesis. (#3002)
+- Test varying stake distributions in the automated tests. (#3072)
+- Add a peer label to chain sync client traces, allowing us to view which peer
+  supplied which header and when. (#3091)
+- Provide the ledger with the ability to perform slot to time conversion. This
+  will be needed for Plutus scripts in the upcoming Alonzo release. (#3036, #3098)
+### ledger changes
+
+- Work on implementing the upcoming Alonzo era. (#2192, #2198, #2200, #2204,
+  #2210, #2211, #2212, #2214, #2215, #2216, #2218, #2220, #2221, #2222, #2225,
+  #2226, #2227, #2229, #2231, #2235, #2237, #2242, #2243, #2251, #2256, #2260,
+  #2264)
+- Released the CDDL spec for Alonzo. (#2228)
+- Add an optional network ID field to the transaction body. This will only come
+  into use in the Alonzo era. (#2219, #2254)
+- Define a cardano-ledger-core package containing era-independent primitives.
+  (#2207)
+- Fixes to the ShelleyMA formal specification. (#2181)
+- Various internal refactorings and improvements. (#2191, #2202, #2206, #2217,
+  #2233, #2247, #2257)
+- Fix a bug in reward update application which could have resulted in the wrong
+  amount of funds being added to the treasury. (#2238)
+- Some work to reduce the extra CPU load at an epoch boundary, and reduce the
+  resulting "pause" in normal operation. (#2240, #2241, #2250, #2262)
+- Added formal definitions for much of the crypto used to the Shelley spec.
+  (#2236, #2252)
+- Expose AdaPots for use in downstream projects. (#2208)
+- Some Byron-era serialisation testing. (#2217)
+- Some preparation for upcoming work on Voltaire. (#2135)
+
+### network changes
+
+- Removed the deprecated 'KThxBye' message from the TxSubmission protocol.
+  (#2238)
+- Introduce new representation for local root peers. This is in preparation for
+  P2P support. (#3006)
+- Add a new KeepAlive codec that produces a valid CBOR encoding. (#3062)
+- Various internal updates and refactorings. (#3003, #3077)
+
 ## 1.26.1 -- March 2021
 
 ### node changes
