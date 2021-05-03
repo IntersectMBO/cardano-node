@@ -31,10 +31,10 @@ module Cardano.TraceDispatcher.Consensus.Combinators
   , severityForge
   , namesForForge
 
-  , namesBlockchainTime
+  , namesForBlockchainTime
   , severityBlockchainTime
 
-  , namesKeepAliveClient
+  , namesForKeepAliveClient
   , severityKeepAliveClient
 
   ) where
@@ -294,10 +294,10 @@ namesForForge' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
 namesForForge' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
 namesForForge' TraceAdoptedBlock {}          = ["AdoptedBlock"]
 
-namesBlockchainTime :: TraceBlockchainTimeEvent t -> [Text]
-namesBlockchainTime TraceStartTimeInTheFuture {} = ["StartTimeInTheFuture"]
-namesBlockchainTime TraceCurrentSlotUnknown {}   = ["CurrentSlotUnknown"]
-namesBlockchainTime TraceSystemClockMovedBack {} = ["SystemClockMovedBack"]
+namesForBlockchainTime :: TraceBlockchainTimeEvent t -> [Text]
+namesForBlockchainTime TraceStartTimeInTheFuture {} = ["StartTimeInTheFuture"]
+namesForBlockchainTime TraceCurrentSlotUnknown {}   = ["CurrentSlotUnknown"]
+namesForBlockchainTime TraceSystemClockMovedBack {} = ["SystemClockMovedBack"]
 
 -- TODO: Confirm the severities
 severityBlockchainTime :: TraceBlockchainTimeEvent t -> SeverityS
@@ -305,8 +305,8 @@ severityBlockchainTime TraceStartTimeInTheFuture {} = Warning
 severityBlockchainTime TraceCurrentSlotUnknown {}   = Warning
 severityBlockchainTime TraceSystemClockMovedBack {} = Warning
 
-namesKeepAliveClient :: TraceKeepAliveClient peer -> [Text]
-namesKeepAliveClient _ = ["KeepAliveClient"]
+namesForKeepAliveClient :: TraceKeepAliveClient peer -> [Text]
+namesForKeepAliveClient _ = ["KeepAliveClient"]
 
 severityKeepAliveClient :: TraceKeepAliveClient peer -> SeverityS
 severityKeepAliveClient _ = Info
