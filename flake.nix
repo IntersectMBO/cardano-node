@@ -9,17 +9,12 @@
       url = "github:input-output-hk/iohk-nix/flakes-improvements";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    custom-config = {
-      url = "path:./custom-config.nix";
-      flake = false;
-    };
-    workbench-config = {
-      url = "path:./workbench-config.nix";
-      flake = false;
+    customConfig = {
+      url = "path:./custom-config";
     };
   };
 
-  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, custom-config, workbench-config, ... }:
+  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig }:
     let
       inherit (haskellNix.internal) config;
       inherit (nixpkgs) lib;
@@ -37,7 +32,7 @@
         iohkNix.overlays.cardano-lib
         iohkNix.overlays.utils
         (final: prev: {
-          customConfig = import custom-config;
+          customConfig = import ./custom-config // customConfig.outputs;
           gitrev = self.rev or "dirty";
           commonLib = lib
             // iohkNix.lib

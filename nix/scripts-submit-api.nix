@@ -1,11 +1,11 @@
 { pkgs
-, customConfig
+, customConfigs ? [ pkgs.customConfig ]
 }:
 with pkgs.commonLib;
 let
   mkScript = envConfig: let
     service = evalService {
-      inherit pkgs customConfig;
+      inherit pkgs customConfigs;
       serviceName = "cardano-submit-api";
       modules = [
         ./nixos/cardano-submit-api-service.nix

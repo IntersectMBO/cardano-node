@@ -87,8 +87,8 @@ final: prev: with final;
 
   cardanolib-py = callPackage ./cardanolib-py {};
 
-  scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs customConfig; })
-    (import ./scripts-submit-api.nix { inherit pkgs customConfig; });
+  scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs; })
+    (import ./scripts-submit-api.nix { inherit pkgs; });
 
   dockerImage = let
     defaultConfig = {
@@ -96,12 +96,11 @@ final: prev: with final;
       dbPrefix = "db";
       socketPath = "/ipc/node.socket";
     };
-    customConfig' = defaultConfig // customConfig;
   in callPackage ./docker.nix {
     exe = "cardano-node";
     scripts = import ./scripts.nix {
       inherit pkgs;
-      customConfig = customConfig';
+      customConfigs = [ defaultConfig customConfig ];
     };
     script = "node";
   };
@@ -110,12 +109,11 @@ final: prev: with final;
     defaultConfig = {
       socketPath = "/ipc/node.socket";
     };
-    customConfig' = defaultConfig // customConfig;
   in callPackage ./docker.nix {
     exe = "cardano-submit-api";
     scripts = import ./scripts-submit-api.nix {
       inherit pkgs;
-      customConfig = customConfig';
+      customConfigs = [ defaultConfig customConfig ];
     };
     script = "submit-api";
   };

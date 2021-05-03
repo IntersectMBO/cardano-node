@@ -7,16 +7,12 @@
 , moreutils
 , makeWrapper
 , runCommand
-
-## Default to pure Nix-iness:
-, useCabalRun ? false
-, workbenchDevMode ? false
-
+, customConfig
 , cardano-cli
 , cardano-topology
 }:
 
-with lib;
+with lib; with customConfig;
 
 let
   nixWbMode =

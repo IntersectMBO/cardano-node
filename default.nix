@@ -3,7 +3,7 @@
 # allows to cutomize haskellNix (ghc and profiling, see ./nix/haskell.nix)
 , config ? {}
 # override scripts with custom configuration
-, customConfig ? import ./custom-config.nix
+, customConfig ? {}
 # allows to override dependencies of the project without modifications,
 # eg. to test build against local checkout of nixpkgs and iohk-nix:
 # nix build -f default.nix cardano-node --arg sourcesOverride '{

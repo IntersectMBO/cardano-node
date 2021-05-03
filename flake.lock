@@ -1,14 +1,13 @@
 {
   "nodes": {
-    "custom-config": {
-      "flake": false,
+    "customConfig": {
       "locked": {
-        "narHash": "sha256-qNmeui7DIV4Q+FqQm97CPIfzz4pVQcvzNLu486UXRI0=",
-        "path": "./custom-config.nix",
+        "narHash": "sha256-akpV9QbxyQPEr3FEsnixziG1fo4bU4D3+jOY3UTCx98=",
+        "path": "./custom-config",
         "type": "path"
       },
       "original": {
-        "path": "./custom-config.nix",
+        "path": "./custom-config",
         "type": "path"
       }
     },
@@ -40,11 +39,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1620045651,
-        "narHash": "sha256-WWIKzL2pvRMQmNWp73krQ1a2TcEN1LAJX3n9CZKI32I=",
+        "lastModified": 1620121360,
+        "narHash": "sha256-dzAGTysd+uXpyOTXX8Dm7rUTkpqtOQZ5QZc+9gQksQY=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "f0289ec88fc5060e89bdaf0201aa8c87aad84adc",
+        "rev": "cf960439153dc333a304a6f8994365e03790e2a8",
         "type": "github"
       },
       "original": {
@@ -120,15 +119,14 @@
     },
     "root": {
       "inputs": {
-        "custom-config": "custom-config",
+        "customConfig": "customConfig",
         "haskellNix": "haskellNix",
         "iohkNix": "iohkNix",
         "nixpkgs": [
           "haskellNix",
           "nixpkgs-unstable"
         ],
-        "utils": "utils",
-        "workbench-config": "workbench-config"
+        "utils": "utils"
       }
     },
     "utils": {
@@ -144,18 +142,6 @@
         "owner": "numtide",
         "repo": "flake-utils",
         "type": "github"
-      }
-    },
-    "workbench-config": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-iFSPu804N4Qh4x11uFnieiEUQKPmjGp3jArABb9E3Pc=",
-        "path": "./workbench-config.nix",
-        "type": "path"
-      },
-      "original": {
-        "path": "./workbench-config.nix",
-        "type": "path"
       }
     }
   },

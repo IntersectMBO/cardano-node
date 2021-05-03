@@ -3,16 +3,12 @@
 { config ? {}
 , sourcesOverride ? {}
 , withHoogle ? true
-, clusterProfile ? "default-mary"
-, customConfig ? import ./custom-config.nix // { profileName = clusterProfile; }
-
-, autoStartCluster ? false
-, workbenchDevMode ? false
+, customConfig ? {}
 , pkgs ? import ./nix {
     inherit config sourcesOverride customConfig;
   }
 }:
-with pkgs;
+with pkgs; with pkgs.customConfig;
 let
   commandHelp =
     ''
