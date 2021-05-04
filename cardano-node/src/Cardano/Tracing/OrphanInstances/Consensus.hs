@@ -16,6 +16,7 @@ module Cardano.Tracing.OrphanInstances.Consensus () where
 import           Cardano.Prelude hiding (show)
 import           Prelude (show)
 
+import           Data.Aeson (Value (..))
 import           Data.Text (pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -263,6 +264,7 @@ instance ( tx ~ GenTx blk
          , HasTxId tx
          , LedgerSupportsMempool blk
          , LedgerSupportsProtocol blk
+         , LedgerSupportsMempool blk
          , Show (TxId tx)
          , Show (ForgeStateUpdateError blk)
          , Show (CannotForge blk))

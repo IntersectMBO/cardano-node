@@ -619,9 +619,14 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis)
           Consensus.ProtocolParamsMary
             { Consensus.maryProtVer = shelleyProtVer dnc
             }
+          Consensus.ProtocolParamsAlonzo
+            { Consensus.alonzoGenesis = error "mkProtocolInfoCardano: Alonzo era not implemented yet"
+            , Consensus.alonzoProtVer = error "mkProtocolInfoCardano: Alonzo era not implemented yet"
+            }
           (ncByronToShelley dnc)
           (ncShelleyToAllegra dnc)
           (ncAllegraToMary dnc)
+          (error "mkProtocolInfoCardano: Alonzo era not implemented yet")
 
 shelleyPraosNonce :: ShelleyConfig -> Shelley.Spec.Nonce
 shelleyPraosNonce sCfg = Shelley.Spec.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)

@@ -70,12 +70,11 @@ import           Cardano.Api.Script
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
-import           Cardano.Binary
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Core as Core
-import qualified Language.PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
+import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
@@ -492,7 +491,6 @@ _fromCostModel aCostMap = Map.fromList . mapMaybe conv  $ Map.toList aCostMap
    conv :: (Alonzo.Language, Alonzo.CostModel) -> Maybe (AnyScriptLanguage, CostModel)
    conv (Alonzo.PlutusV1, Alonzo.CostModel _aCostModel) =
      Just (undefined, CostModel $ error "Need to bump ledger spec dependency")
-   conv (Alonzo.PlutusV1, _) = Nothing
 
 _toCostModel :: Map AnyScriptLanguage CostModel -> Map Alonzo.Language Alonzo.CostModel
 _toCostModel cMap = Map.fromList . mapMaybe conv $ Map.toList cMap

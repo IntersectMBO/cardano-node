@@ -50,9 +50,9 @@ import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHF
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
                    eraIndexZero)
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
-import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
+import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 
@@ -284,4 +284,7 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
 
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (Z (K ())))))) =
       AnyEraInMode MaryEraInCardanoMode
+    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (Z (K ()))))))) =
+      error "fromShelleyEraIndex: Alonzo not implemented yet"
+
 

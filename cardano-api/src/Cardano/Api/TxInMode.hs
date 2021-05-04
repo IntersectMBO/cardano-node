@@ -198,6 +198,9 @@ fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrMary err) =
       (ShelleyTxValidationError ShelleyBasedEraMary err)
       MaryEraInCardanoMode
 
+fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAlonzo _) =
+    error "fromConsensusApplyTxErr: Alonzo era not implemented yet"
+
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrWrongEra err) =
     TxValidationEraMismatch err
 

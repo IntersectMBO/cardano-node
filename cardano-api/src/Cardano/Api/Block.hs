@@ -197,7 +197,7 @@ fromConsensusBlock CardanoMode =
       Consensus.BlockMary b' ->
         BlockInMode (ShelleyBlock ShelleyBasedEraMary b')
                      MaryEraInCardanoMode
-
+      Consensus.BlockAlonzo _ -> error "fromConsensusBlock: Alonzo not implemented yet"
 
 -- ----------------------------------------------------------------------------
 -- Block headers

@@ -17,7 +17,6 @@ module Cardano.Tracing.OrphanInstances.Common
   , mkObject
   , emptyObject
   , ToJSON
-  , Value (..)
   , toJSON
   , (.=)
 
@@ -43,7 +42,8 @@ module Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Prelude
 import           Prelude (fail)
 
-import           Data.Aeson
+import           Data.Aeson hiding (Value)
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import           Data.Scientific (coefficient)
@@ -52,19 +52,29 @@ import qualified Data.Text.Encoding as Text
 import           Network.Socket (PortNumber)
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                     mkLOMeta)
+                   mkLOMeta)
 import           Cardano.BM.Data.Tracer (HasTextFormatter (..), emptyObject, mkObject, trStructured,
-                     trStructuredText)
+                   trStructuredText)
 import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
-                     Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
-                     Transformable (..))
+                   Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
+                   Transformable (..))
 import qualified Cardano.Chain.Update as Update
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Alonzo as Alonzo
+import           Cardano.Ledger.Alonzo.PParams (PParamsUpdate)
+import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
+import           Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.SafeHash as SafeHash
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
-
+import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are
@@ -125,3 +135,26 @@ instance ToObject ResourceStats where
     case toJSON stats of
       Object x -> x
       _ -> mempty
+
+instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
+    => ToJSON (TxOut era) where
+  toJSON (Alonzo.TxOut addr v dataHash) =
+    object [ "address" .= toJSON addr
+           , "value" .= toJSON v
+           , "datahash" .= case strictMaybeToMaybe dataHash of
+                             Nothing -> Aeson.Null
+                             Just dHash ->
+                               Aeson.String . Crypto.hashToTextAsHex
+                                 $ SafeHash.extractHash dHash
+           ]
+
+
+instance ToJSON (PParamsUpdate crypto) where
+  toJSON _ = Aeson.Null -- TODO: Implement
+
+
+instance ToObject (UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
+  toObject _ _ = panic "ToJSON: UtxoPredicateFailure not implemented yet"
+
+instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
+  toObject _ _ = panic "ToJSON: AlonzoBbodyPredFail not implemented yet"

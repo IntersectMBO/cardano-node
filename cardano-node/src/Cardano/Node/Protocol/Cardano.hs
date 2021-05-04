@@ -140,7 +140,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           shelleyBasedGenesis = shelleyGenesis,
           shelleyBasedInitialNonce =
             Shelley.genesisHashToPraosNonce shelleyGenesisHash,
-          shelleyBasedLeaderCredentials = shelleyLeaderCredentials
+            shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
         Consensus.ProtocolParamsShelley {
           -- This is /not/ the Shelley protocol version. It is the protocol
@@ -166,6 +166,15 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           maryProtVer =
             ProtVer 4 0
         }
+        Consensus.ProtocolParamsAlonzo {
+          -- This is /not/ the Alonzo protocol version. It is the protocol
+          -- version that this node will declare that it understands, when it
+          -- is in the Alonzo era. Since Alonzo is currently the last known
+          -- protocol version then this is a        Consensus.ProtocolParamsTransition {
+          alonzoGenesis = error "mkSomeConsensusProtocolCardano: Alonzo not implemented yet",
+          alonzoProtVer = error "mkSomeConsensusProtocolCardano: Alonzo not implemented yet"
+        }
+
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
         -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
         -- Byron to Shelley hard fork parameters
@@ -208,6 +217,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 4 fromIntegral npcTestMaryHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
+        }
+        Consensus.ProtocolParamsTransition {
+          transitionTrigger = error "mkSomeConsensusProtocolCardano: Alonzo era not implemented yet"
         }
 
 ------------------------------------------------------------------------------

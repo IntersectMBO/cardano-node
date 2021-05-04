@@ -69,7 +69,7 @@ import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Language.PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
+import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
 import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
@@ -307,7 +307,7 @@ instance SerialiseAsCBOR UpdateProposal where
     serialiseToCBOR = CBOR.serializeEncoding' . toCBOR . toShelleyUpdate @StandardShelley
     deserialiseFromCBOR _ bs =
       fromShelleyUpdate @StandardShelley <$>
-        CBOR.decodeAnnotator "UpdateProposal" fromCBOR (LBS.fromStrict bs)
+        CBOR.decodeFull (LBS.fromStrict bs)
 
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
@@ -330,7 +330,6 @@ _fromCostModel aCostMap = Map.fromList . mapMaybe conv  $ Map.toList aCostMap
    conv :: (Alonzo.Language, Alonzo.CostModel) -> Maybe (AnyScriptLanguage, CostModel)
    conv (Alonzo.PlutusV1, Alonzo.CostModel _aCostModel) =
      Just (undefined, CostModel $ error "Need to bump ledger spec dependency")
-   conv (Alonzo.PlutusV1, _) = Nothing
 
 _toCostModel :: Map AnyScriptLanguage CostModel -> Map Alonzo.Language Alonzo.CostModel
 _toCostModel cMap = Map.fromList . mapMaybe conv $ Map.toList cMap

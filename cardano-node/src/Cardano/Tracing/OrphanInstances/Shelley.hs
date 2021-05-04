@@ -19,12 +19,17 @@ module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
+import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
+import qualified Cardano.Api as Api
 import           Cardano.Api.Orphans ()
+import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Tracing.OrphanInstances.Common
@@ -39,14 +44,21 @@ import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Alonzo as Alonzo
+import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Core
+import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
+import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
@@ -279,6 +291,58 @@ instance ( ShelleyBasedEra era
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
+instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
+  toObject v (WrappedShelleyEraFailure utxoPredFail) =
+    toObject v utxoPredFail
+  toObject _ (UnRedeemableScripts scripts) =
+    mkObject [ "kind" .= String "UnRedeemableScripts"
+             , "scripts" .= renderUnredeemableScripts scripts
+             ]
+  toObject _ (MissingNeededScriptHash scriptHashes) =
+    mkObject [ "kind" .= String "MissingNeededScriptHash"
+             , "scripts" .= toJSON (map (Aeson.String . renderScriptHash) $ Set.toList scriptHashes)
+             ]
+  toObject _ (DataHashSetsDontAgree fromTx fromUtxo) =
+    mkObject [ "kind" .= String "DataHashSetsDontAgree"
+             , "fromTx" .= map (hashToText . SafeHash.extractHash) (Set.toList fromTx)
+             , "fromUtxo" .= map (hashToText . SafeHash.extractHash) (Set.toList fromUtxo)
+             ]
+  toObject _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
+    mkObject [ "kind" .= String "PPViewHashesDontMatch"
+             , "fromTxBody" .= renderWitnessPPDataHash (strictMaybeToMaybe ppHashInTxBody)
+             , "fromPParams" .= renderWitnessPPDataHash (strictMaybeToMaybe ppHashFromPParams)
+             ]
+  toObject _ (MissingRequiredSigners missingKeyWitnesses) =
+    mkObject [ "kind" .= String "MissingRequiredSigners"
+             , "witnesses" .= Set.toList missingKeyWitnesses
+             ]
+  toObject _ (Phase1ScriptWitnessNotValidating scripts) =
+    mkObject [ "kind" .= String "Phase1ScriptWitnessNotValidating"
+             , "scripts" .= map renderScriptHash (Set.toList scripts)
+             ]
+
+renderWitnessPPDataHash :: Maybe (Alonzo.WitnessPPDataHash StandardCrypto) -> Aeson.Value
+renderWitnessPPDataHash (Just witPPDataHash) = Aeson.String . hashToText $ SafeHash.extractHash witPPDataHash
+renderWitnessPPDataHash Nothing = Aeson.Null
+
+renderScriptHash :: ScriptHash StandardCrypto -> Text
+renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
+
+renderUnredeemableScripts :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
+renderUnredeemableScripts scripts = Aeson.object $ map renderTuple  scripts
+ where
+  renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
+  renderTuple (scriptPurpose, sHash) =  renderScriptHash sHash .= renderScriptPurpose scriptPurpose
+
+  renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
+  renderScriptPurpose (Alonzo.Minting pid) =
+    Aeson.object [ "minting" .= toJSON pid]
+  renderScriptPurpose (Alonzo.Spending txin) =
+    Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
+  renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
+    Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+  renderScriptPurpose (Alonzo.Certifying cert) =
+    Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
 
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
@@ -448,12 +512,12 @@ instance ( ShelleyBasedEra era
              , "error" .= String "Too many asset ids in the tx output"
              ]
 
-renderBadInputsUTxOErr ::  Set (TxIn era) -> Value
+renderBadInputsUTxOErr ::  Set (TxIn era) -> Aeson.Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
 
-renderValueNotConservedErr :: Show val => val -> val -> Value
+renderValueNotConservedErr :: Show val => val -> val -> Aeson.Value
 renderValueNotConservedErr consumed produced = String $
     "This transaction consumed " <> show consumed <> " but produced " <> show produced
 
@@ -774,6 +838,10 @@ instance ToObject (UpecPredicateFailure era) where
 --------------------------------------------------------------------------------
 -- Helper functions
 --------------------------------------------------------------------------------
+
+
+hashToText :: Crypto.Hash crypto a -> Text
+hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show

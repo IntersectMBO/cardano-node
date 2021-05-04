@@ -20,8 +20,6 @@ import           Numeric.Natural
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Byron
 
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.Tx as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.NetworkId
@@ -50,19 +48,12 @@ transactionFee sbe txFeeFixed txFeePerByte tx =
     getFee :: Lovelace
     getFee =
       case tx of
-        ShelleyTx _ tx' -> let x = getTxSize sbe tx'
+        ShelleyTx _ tx' -> let x = getField @"txsize" tx'
                            in Lovelace (a * x + b)
         ByronTx _ -> case sbe :: ShelleyBasedEra ByronEra of {}
 
-    getTxSize :: ShelleyBasedEra era -> Shelley.Tx (ShelleyLedgerEra era) -> Integer
-    getTxSize ShelleyBasedEraShelley = Shelley.txsize
-    getTxSize ShelleyBasedEraAllegra = Shelley.txsize
-    getTxSize ShelleyBasedEraMary = Shelley.txsize
- -- TODO: Change Shelley.Tx to Tx type family
- -- getTxSize ShelleyBasedEraAlonzo = getField @"txsize"
 
     a = toInteger txFeePerByte
-    x = getField @"txsize" tx
     b = toInteger txFeeFixed
 
 --TODO: in the Byron case the per-byte is non-integral, would need different

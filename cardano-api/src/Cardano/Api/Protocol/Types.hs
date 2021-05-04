@@ -22,11 +22,11 @@ import           Cardano.Chain.Slotting (EpochSlots)
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano
-import           Ouroboros.Consensus.Cardano.Node
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
+import           Ouroboros.Consensus.Cardano.Node
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo(..), ProtocolInfo(..))
+import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
@@ -58,27 +58,33 @@ instance IOLike m => Protocol m (CardanoBlock StandardCrypto) where
     ProtocolParamsShelley
     ProtocolParamsAllegra
     ProtocolParamsMary
+    ProtocolParamsAlonzo
     (ProtocolParamsTransition ByronBlock (ShelleyBlock StandardShelley))
     (ProtocolParamsTransition (ShelleyBlock StandardShelley) (ShelleyBlock StandardAllegra))
     (ProtocolParamsTransition (ShelleyBlock StandardAllegra) (ShelleyBlock StandardMary))
+    (ProtocolParamsTransition (ShelleyBlock StandardMary) (ShelleyBlock StandardAlonzo))
   protocolInfo (ProtocolInfoArgsCardano
                paramsByron
                paramsShelleyBased
                paramsShelley
                paramsAllegra
                paramsMary
+               paramsAlonzo
                paramsByronShelley
                paramsShelleyAllegra
-               paramsAllegraMary) =
+               paramsAllegraMary
+               paramsMaryAlonzo) =
     protocolInfoCardano
       paramsByron
       paramsShelleyBased
       paramsShelley
       paramsAllegra
       paramsMary
+      paramsAlonzo
       paramsByronShelley
       paramsShelleyAllegra
       paramsAllegraMary
+      paramsMaryAlonzo
 
 instance ProtocolClient ByronBlockHFC where
   data ProtocolClientInfoArgs ByronBlockHFC =
