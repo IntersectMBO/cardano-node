@@ -1,5 +1,5 @@
 { pkgs
-, runCommand, runJq, runWorkbench, writeText
+, runCommand, runWorkbench, runJq, workbench, writeText
 
 ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
 , backend
@@ -38,14 +38,14 @@ let
       inherit JSON value;
 
       topology    = pkgs.callPackage
-        ./topology.nix   { inherit profile; };
+        ./topology.nix   { inherit workbench profile; };
 
       node-specs  = pkgs.callPackage
-        ./node-specs.nix { inherit backend profile; };
+        ./node-specs.nix { inherit runWorkbench profile backend; };
 
      inherit (pkgs.callPackage
                ./node-services.nix
-               { inherit backend environment profile; })
+               { inherit runJq runWorkbench backend environment profile; })
         node-services;
     };
 

@@ -69,8 +69,6 @@ final: prev: with final;
   inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
   inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
 
-  mkCluster = cfg: callPackage ./supervisord-cluster cfg;
-
   cabal = haskell-nix.tool compiler "cabal" {
     version = "latest";
     inherit (cardanoNodeProject) index-state;
@@ -117,7 +115,4 @@ final: prev: with final;
   };
 
   clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
-
-  workbench = callPackage ./workbench workbenchConfig;
-  inherit (workbench) runWorkbench runJq;
 }

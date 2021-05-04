@@ -7,12 +7,9 @@
 , customConfig ? import ./custom-config.nix // { profileName = clusterProfile; }
 
 , autoStartCluster ? false
-, useCabalRun      ? false
 , workbenchDevMode ? false
-, workbenchConfig ? import ./workbench-config.nix //
-  { inherit useCabalRun workbenchDevMode; }
 , pkgs ? import ./nix {
-    inherit config sourcesOverride customConfig workbenchConfig;
+    inherit config sourcesOverride customConfig;
   }
 }:
 with pkgs;
@@ -35,8 +32,14 @@ let
   # NOTE: due to some cabal limitation,
   #  you have to remove all `source-repository-package` entries from cabal.project
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
-  clusterCabal = mkCluster (lib.recursiveUpdate customConfig (workbenchConfig // { useCabalRun = true; }));
-  clusterNix   = mkCluster (lib.recursiveUpdate customConfig (workbenchConfig // { useCabalRun = false; }));
+  mkCluster =
+    { useCabalRun }:
+    callPackage ./nix/supervisord-cluster
+      { inherit useCabalRun workbenchDevMode;
+        workbench = pkgs.callPackage ./nix/workbench
+          { inherit useCabalRun workbenchDevMode; };
+      };
+  ## inherit (workbench) runWorkbench runJq;
   nixWapped = writeShellScriptBin "nix" ''
     if [[ "$@" == "flake show"* ]] || [[ "$@" == "flake check"* ]]; then
       echo 'Temporary override `supported-systems.nix` original content to be able to use `nix flake show|check` on dev machines (workaround for https://github.com/NixOS/nix/issues/4265)'
@@ -64,7 +67,9 @@ let
     ${cabal}/bin/cabal "$@"
   '';
 
-  shell = cardanoNodeProject.shellFor {
+  shell =
+    let cluster = mkCluster { useCabalRun = true; };
+    in cardanoNodeProject.shellFor {
     name = "cabal-dev-shell";
 
     inherit withHoogle;
@@ -101,14 +106,14 @@ let
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
     [
-      pkgs.workbench.workbench
+      cluster.workbench.workbench
     ]
     ## Local cluster not available on Darwin,
     ## because psmisc fails to build on Big Sur.
     ++ lib.optionals (!stdenv.isDarwin)
     [
-      clusterCabal.start
-      clusterCabal.stop
+      cluster.start
+      cluster.stop
     ];
 
     # Prevents cabal from choosing alternate plans, so that
@@ -122,13 +127,13 @@ let
           then echo "workbench:  stopping cluster (because 'autoStartCluster' implies this):"
                stop-cluster
           fi''}
+          ./scripts/cabal-inside-nix-shell.sh --restore
       }
       trap atexit EXIT
-      ${lib.optionalString (autoStartCluster && useCabalRun) ''
-      unset NIX_ENFORCE_PURITY
-      ''}
 
-      ${pkgs.workbench.shellHook}
+      unset NIX_ENFORCE_PURITY
+
+      ${cluster.workbench.shellHook}
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
@@ -142,7 +147,8 @@ let
   };
 
   devops =
-    stdenv.mkDerivation {
+    let cluster = mkCluster { useCabalRun = false; };
+    in stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
       nixWapped
@@ -151,10 +157,10 @@ let
       cardano-node
       python3Packages.supervisor
       python3Packages.ipython
-      clusterNix.start
-      clusterNix.stop
+      cluster.start
+      cluster.stop
       cardanolib-py
-      pkgs.workbench.workbench
+      cluster.workbench.workbench
     ];
     shellHook = ''
       echo "DevOps Tools" \
@@ -163,11 +169,13 @@ let
 
       wb explain-mode
 
+      ${cluster.workbench.shellHook}
+
       source <(cardano-cli --bash-completion-script cardano-cli)
       source <(cardano-node --bash-completion-script cardano-node)
 
       # Socket path default to first node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$(wb local get-node-socket-path ${clusterNix.stateDir})
+      export CARDANO_NODE_SOCKET_PATH=$(wb local get-node-socket-path ${cluster.stateDir})
 
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''

@@ -7,7 +7,7 @@
 let
   files =
     runCommand "topology-${profile.name}" {} ''
-      ${workbench.workbench}/bin/wb topology make ${profile.JSON} $out
+      ${workbench}/bin/wb topology make ${profile.JSON} $out
     '';
 in
 {

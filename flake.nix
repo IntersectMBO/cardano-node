@@ -26,7 +26,6 @@
         cardano-lib
         (final: prev: {
           customConfig = import ./custom-config.nix;
-          workbenchConfig =  import ./workbench-config.nix;
           gitrev = self.rev or "dirty";
           commonLib = lib
             // iohkNix.lib
