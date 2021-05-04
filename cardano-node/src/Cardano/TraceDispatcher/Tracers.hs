@@ -81,11 +81,11 @@ import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.TxSubmission.Inbound
                      (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound
                      (TraceTxSubmissionOutbound)
-
 
 mkStandardTracer ::
      LogFormatting evt
@@ -206,6 +206,11 @@ docTracers _ = do
               namesForTChainSync
               severityTChainSync
               trBase
+  ttsTr  <-  mkStandardTracer
+              "TTxSubmission"
+              namesForTTxSubmission
+              severityTTxSubmission
+              trBase
 
   cdbmTrDoc    <- documentMarkdown
               (docChainDBTraceEvent :: Documented
@@ -275,6 +280,14 @@ docTracers _ = do
                   (TraceSendRecv
                     (ChainSync (Serialised blk) (Point blk) (Tip blk)))))
               [tcsTr]
+  ttsTrDoc  <-  documentMarkdown
+              (docTTxSubmission :: Documented
+                 (BlockFetch.TraceLabelPeer
+                    peer
+                    (TraceSendRecv
+                       (LTS.LocalTxSubmission
+                          (GenTx blk) (ApplyTxErr blk)))))
+              [ttsTr]
 
   let bl = cdbmTrDoc
           ++ cscTrDoc
@@ -292,6 +305,7 @@ docTracers _ = do
           ++ btTrDoc
           ++ kacTrDoc
           ++ tcsTrDoc
+          ++ ttsTrDoc
   res <- buildersToText bl
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
   pure ()
@@ -397,6 +411,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
               namesForTChainSync
               severityTChainSync
               trBase
+  ttsTr  <-  mkStandardTracer
+              "TTxSubmission"
+              namesForTTxSubmission
+              severityTTxSubmission
+              trBase
 
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -412,6 +431,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   configureTracers emptyTraceConfig docBlockchainTime       [btTr]
   configureTracers emptyTraceConfig docKeepAliveClient      [kacTr]
   configureTracers emptyTraceConfig docTChainSync           [tcsTr]
+  configureTracers emptyTraceConfig docTTxSubmission        [ttsTr]
 
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -434,7 +454,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = Tracer (traceWith tcsTr)
-      , NodeToClient.tTxSubmissionTracer = nullTracer
+      , NodeToClient.tTxSubmissionTracer = Tracer (traceWith ttsTr)
       , NodeToClient.tStateQueryTracer = nullTracer
       }
     , nodeToNodeTracers = NodeToNode.Tracers
