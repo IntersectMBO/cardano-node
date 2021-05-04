@@ -6,6 +6,9 @@ module Cardano.TraceDispatcher.Network.Combinators
     severityTChainSync
   , namesForTChainSync
 
+  , severityTTxSubmission
+  , namesForTTxSubmission
+
   ) where
 
 
@@ -19,6 +22,9 @@ import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
 
 
 severityTChainSync :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
@@ -63,3 +69,41 @@ namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
     namesTChainSync'' MsgIntersectFound {}    = ["IntersectFound"]
     namesTChainSync'' MsgIntersectNotFound {} = ["IntersectNotFound"]
     namesTChainSync'' MsgDone {}              = ["Done"]
+
+severityTTxSubmission :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (LTS.LocalTxSubmission (GenTx blk) (ApplyTxErr blk)))
+  -> SeverityS
+severityTTxSubmission (BlockFetch.TraceLabelPeer _ v) = severityTTxSubmission' v
+  where
+    severityTTxSubmission' (TraceSendMsg msg) = severityTTxSubmission'' msg
+    severityTTxSubmission' (TraceRecvMsg msg) = severityTTxSubmission'' msg
+
+    severityTTxSubmission'' (AnyMessageAndAgency _agency msg) = severityTTxSubmission''' msg
+
+    severityTTxSubmission''' :: LTS.Message
+      (LTS.LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) from to
+      -> SeverityS
+    severityTTxSubmission''' LTS.MsgSubmitTx {} = Info
+    severityTTxSubmission''' LTS.MsgAcceptTx {} = Info
+    severityTTxSubmission''' LTS.MsgRejectTx {} = Info
+    severityTTxSubmission''' LTS.MsgDone {}     = Info
+
+
+namesForTTxSubmission :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (LTS.LocalTxSubmission (GenTx blk) (ApplyTxErr blk)))
+  -> [Text]
+namesForTTxSubmission (BlockFetch.TraceLabelPeer _ v) = namesTTxSubmission v
+  where
+
+    namesTTxSubmission (TraceSendMsg msg) = "Send" : namesTTxSubmission' msg
+    namesTTxSubmission (TraceRecvMsg msg) = "Recieve" : namesTTxSubmission' msg
+
+    namesTTxSubmission' (AnyMessageAndAgency _agency msg) = namesTTxSubmission'' msg
+
+    namesTTxSubmission'' ::LTS.Message
+      (LTS.LocalTxSubmission (GenTx blk) (ApplyTxErr blk)) from to
+      -> [Text]
+    namesTTxSubmission'' LTS.MsgSubmitTx {} = ["SubmitTx"]
+    namesTTxSubmission'' LTS.MsgAcceptTx {} = ["AcceptTx"]
+    namesTTxSubmission'' LTS.MsgRejectTx {} = ["RejectTx"]
+    namesTTxSubmission'' LTS.MsgDone {}     = ["Done"]

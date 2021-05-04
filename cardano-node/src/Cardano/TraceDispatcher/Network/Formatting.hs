@@ -24,6 +24,7 @@ import           Cardano.Prelude hiding (Show, show)
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 
 
 instance LogFormatting (AnyMessageAndAgency ps)
@@ -72,3 +73,21 @@ instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
      mkObject [ "kind" .= String "MsgDone"
               , "agency" .= String (pack $ show stok)
               ]
+
+instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
+  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgSubmitTx{}) =
+    mkObject [ "kind" .= String "MsgSubmitTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgAcceptTx{}) =
+    mkObject [ "kind" .= String "MsgAcceptTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgRejectTx{}) =
+    mkObject [ "kind" .= String "MsgRejectTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgDone{}) =
+    mkObject [ "kind" .= String "MsgDone"
+             , "agency" .= String (pack $ show stok)
+             ]
