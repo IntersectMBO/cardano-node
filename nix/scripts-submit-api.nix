@@ -11,8 +11,8 @@ let
         ./nixos/cardano-submit-api-service.nix
         {
           services.cardano-submit-api = {
-            network = lib.mkDefault envConfig.name;
-            cardanoNodePkgs = lib.mkDefault pkgs;
+            network = mkDefault envConfig.name;
+            cardanoNodePkgs = mkDefault pkgs;
           };
         }
       ];

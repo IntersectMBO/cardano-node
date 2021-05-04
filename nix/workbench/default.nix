@@ -1,7 +1,6 @@
 { lib
 , stdenv
 
-, cabal-install
 , graphviz
 , jq
 , moreutils
@@ -67,7 +66,7 @@ let
     '';
 
   exeCabalOp = op: exe:
-    toString [ "${cabal-install}/bin/cabal" op "${exe}" "--"];
+    toString [ "cabal" op "${exe}" "--"];
 
   checkoutWbMode =
     if useCabalRun

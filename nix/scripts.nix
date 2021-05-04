@@ -11,12 +11,13 @@ let
         ./nixos/cardano-node-service.nix
         ({config, ...}: {
           services.cardano-node = {
+            hostAddr = mkDefault "0.0.0.0";
             environment = mkDefault envConfig.name;
             cardanoNodePkgs = mkDefault pkgs;
             stateDir = mkDefault "state-node-${config.services.cardano-node.environment}";
             runtimeDir = mkDefault null;
           } // optionalAttrs (envConfig ? topology) {
-            topology = lib.mkDefault envConfig.topology;
+            topology = mkDefault envConfig.topology;
           };
         })
       ];
@@ -28,6 +29,27 @@ let
     ${service.script} $@
   '';
 
-in forEnvironments (environment: recurseIntoAttrs {
+  debugDeps = with pkgs; [
+    coreutils
+    findutils
+    gnugrep
+    gnused
+    postgresql
+    strace
+    lsof
+    dnsutils
+    bashInteractive
+    iproute
+    curl
+    netcat
+    bat
+    tree
+  ];
+
+in forEnvironments (environment: recurseIntoAttrs rec {
   node = mkScript environment;
+  node-debug = pkgs.symlinkJoin {
+    inherit (node) name;
+    paths = [ node ] ++ debugDeps;
+  };
 })

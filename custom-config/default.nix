@@ -1,6 +1,6 @@
 {
   profileName = "default-mary";
-  autoStartCluster = false;
+  autoStartCluster = true;
   useCabalRun      = false;
   workbenchDevMode = false;
 }

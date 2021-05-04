@@ -37,7 +37,7 @@ let
         gitrev = if gitrev == null
           then iohkNix.commitIdFromGitRepoOrZero ../.git
           else gitrev;
-        customConfig = import ./custom-config // customConfig;
+        customConfig = import ../custom-config // customConfig;
         inherit (pkgs.iohkNix) cardanoLib;
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
         commonLib = with pkgs; lib // cardanoLib // iohk-nix.lib
