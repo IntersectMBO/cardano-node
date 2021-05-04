@@ -266,7 +266,7 @@ fromShelleyRewardAccounts =
 toConsensusQuery :: forall mode block result.
                     ConsensusBlockForMode mode ~ block
                  => QueryInMode mode result
-                 -> Some (Consensus.Query block)
+                 -> Some (Consensus.BlockQuery block)
 toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
     Some (Consensus.QueryHardFork Consensus.GetCurrentEra)
 
@@ -294,7 +294,7 @@ toConsensusQueryShelleyBased
   => block ~ Consensus.HardForkBlock xs
   => EraInMode era mode
   -> QueryInShelleyBasedEra era result
-  -> Some (Consensus.Query block)
+  -> Some (Consensus.BlockQuery block)
 toConsensusQueryShelleyBased erainmode QueryChainPoint =
     Some (consensusQueryInEraInMode erainmode Consensus.GetLedgerTip)
 
@@ -342,8 +342,8 @@ consensusQueryInEraInMode
   => modeblock ~ Consensus.HardForkBlock xs
   => Consensus.HardForkQueryResult xs result ~ result'
   => EraInMode era mode
-  -> Consensus.Query erablock  result
-  -> Consensus.Query modeblock result'
+  -> Consensus.BlockQuery erablock  result
+  -> Consensus.BlockQuery modeblock result'
 consensusQueryInEraInMode ByronEraInByronMode     = Consensus.DegenQuery
 consensusQueryInEraInMode ShelleyEraInShelleyMode = Consensus.DegenQuery
 consensusQueryInEraInMode ByronEraInCardanoMode   = Consensus.QueryIfCurrentByron
@@ -359,7 +359,7 @@ consensusQueryInEraInMode MaryEraInCardanoMode    = Consensus.QueryIfCurrentMary
 fromConsensusQueryResult :: forall mode block result result'.
                             ConsensusBlockForMode mode ~ block
                          => QueryInMode mode result
-                         -> Consensus.Query block result'
+                         -> Consensus.BlockQuery block result'
                          -> result'
                          -> result
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
@@ -433,7 +433,7 @@ fromConsensusQueryResultShelleyBased
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
-  -> Consensus.Query (Consensus.ShelleyBlock ledgerera) result'
+  -> Consensus.BlockQuery (Consensus.ShelleyBlock ledgerera) result'
   -> result'
   -> result
 fromConsensusQueryResultShelleyBased _ QueryChainPoint q' point =

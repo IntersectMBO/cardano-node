@@ -83,7 +83,7 @@ import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
 import qualified Ouroboros.Network.NodeToClient as Net
 import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..), mapQueryOnLocalStateQueryClient)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
@@ -434,12 +434,12 @@ convLocalTxSubmissionClient mode =
 
 convLocalStateQueryClient
   :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
+     (ConsensusBlockForMode mode ~ block, Monad m)
   => ConsensusMode mode
   -> LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) m a
   -> LocalStateQueryClient block (Consensus.Point block)
                            (Consensus.Query block) m a
-convLocalStateQueryClient mode =
+convLocalStateQueryClient mode = mapQueryOnLocalStateQueryClient Consensus.BlockQuery .
     Net.Query.mapLocalStateQueryClient
       (toConsensusPointInMode mode)
       toConsensusQuery
