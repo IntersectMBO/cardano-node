@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                   cardano-api
-version:                1.26.1
+version:                1.27.0
 description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -114,7 +114,6 @@ library
                       , formatting
                       , iproute
                       , memory
-                      , mtl
                       , network
                       , nothunks
                       , ouroboros-consensus

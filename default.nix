@@ -26,7 +26,7 @@ let
     inherit haskellPackages
       cardano-node cardano-node-profiled cardano-node-eventlogged
       cardano-cli db-converter cardano-ping
-      scripts environments dockerImage submitApiDockerImage mkCluster bech32;
+      scripts environments dockerImage submitApiDockerImage bech32;
 
     nixosTests = recRecurseIntoAttrs nixosTests;
 
@@ -50,8 +50,6 @@ let
         src = ./. ;
       };
     };
-
-    profiles = (mkCluster customConfig).profilesJSON;
 
     shell = import ./shell.nix {
       inherit pkgs;

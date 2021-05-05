@@ -43,10 +43,10 @@ CLUSTER_PROFILE    = default-mary
 CLUSTER_ARGS_EXTRA =
 
 cluster-shell:
-	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true --arg 'useCabalRun' true
+	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true
 
 cluster-shell-dev:
-	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true --arg 'useCabalRun' true --arg 'workbenchDevMode' true
+	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true --arg 'workbenchDevMode' true
 
 cluster-shell-trace:             CLUSTER_ARGS_EXTRA = --trace
 large-state-cluster-shell-trace: CLUSTER_ARGS_EXTRA = --trace

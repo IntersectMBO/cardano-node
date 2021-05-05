@@ -1,5 +1,29 @@
 # Changelog for cardano-cli
 
+## 1.27 -- April 2021
+
+- The query tip now also returns the era (e.g. Shelley, Allegra, Alonzo).
+  (#2561, #2562, #2598)
+- The `address build` command now incorporates the functionality of the script
+  address build command, which is now deprecated. (#2486, #2587)
+- Add additional commands for creating MIR certificates to the CLI. This
+  supports the ability to transfer funds to the treasury for Catalyst projects.
+  (#2503)
+- The transaction view command now additionally shows detailed of minted
+  non-native tokens. (#2550)
+- Removed support for Byron addresses using the Bech32 encoding. The only
+  supported way to use Byron-era addresses is through a file, using the text
+  envelope format. (#2605)
+- Add a new command which computes the minimum ADA value/deposit for a
+  multi-asset value. (#2612)
+- Add two new query commands:
+  - `query stake-snapshot` allows querying the three stake snapshots for a given
+    stake pool.
+  - `query pool-params` returns the current and future parameters, as well as
+    the retiring information.
+  (#2560)
+- Updated the CLI reference documentation. (#2665)
+
 ## 1.26.1 -- March 2021
 - It's no longer necessary to specify the era when making a CLI query. When not
   specified, the current era will be used as a default. (#2470)

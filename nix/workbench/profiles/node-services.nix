@@ -1,4 +1,5 @@
 { pkgs
+, runJq, runWorkbench
 
 ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
 , backend
@@ -121,8 +122,6 @@ let
       args = { inherit pkgs; };
     };
     in eval.config.services.cardano-node;
-
-  inherit (pkgs) runJq runWorkbench;
 
   ##
   ## node-services :: Map NodeName (NodeSpec, ServiceConfig, Service, NodeConfig, Script)

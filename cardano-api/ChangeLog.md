@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 1.27 -- April 2021
+
+- Add initial support for the ledger state and folding over blocks to the API.
+  (#2633)
+
 ## 1.26.1 -- March 2021
 
 - The cardano-submit-api now takes transactions encoded as CBOR rather than
