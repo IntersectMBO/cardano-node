@@ -71,7 +71,7 @@ let
     '';
 
   exeCabalOp = op: exe:
-    toString [ "${cabal-install}/bin/cabal" "-v0" op "exe:${exe}" "--"];
+    toString [ "${cabal-install}/bin/cabal" op "${exe}" "--"];
 
   checkoutWbMode =
     if useCabalRun
@@ -97,18 +97,20 @@ let
 
     ${optionalString useCabalRun
     ''
+    ./scripts/cabal-inside-nix-shell.sh
+
     echo 'workbench:  cabal-inside-nix-shell mode enabled, calling cardano-* via 'cabal run' (instead of using Nix store)' >&2
 
     function cardano-cli() {
-      ${exeCabalOp "run" "cardano-cli"} "$@"
+      ${exeCabalOp "exec" "cardano-cli"} "$@"
     }
 
     function cardano-node() {
-      ${exeCabalOp "run" "cardano-node"} "$@"
+      ${exeCabalOp "exec" "cardano-node"} "$@"
     }
 
     function cardano-topology() {
-      ${exeCabalOp "run" "cardano-topology"} "$@"
+      ${exeCabalOp "exec" "cardano-topology"} "$@"
     }
 
     export -f cardano-cli cardano-node cardano-topology
@@ -118,13 +120,14 @@ let
     function workbench-prebuild-executables() {
       ${optionalString useCabalRun
         ''
-      echo -n "workbench:  prebuilding executables:"
+      echo -n "workbench:  prebuilding executables (because of useCabalRun):"
       for exe in cardano-cli cardano-node cardano-topology
       do echo -n " $exe"
-         $exe --help >/dev/null || true
+         cabal -v0 build exe:$exe >/dev/null || return 1
       done
-        ''}
       echo
+        ''}
+      true
     }
     export -f workbench-prebuild-executables
 
@@ -153,6 +156,7 @@ let
         pkgs.callPackage ./profiles
           { inherit
               pkgs
+              runWorkbench runJq workbench
               backend
               environment
               profileName;

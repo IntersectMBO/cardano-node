@@ -89,7 +89,7 @@ main() {
             run "$@";;
         local | loc | l )
             local_ "$@";;
-        explain-mode )
+        explain-mode | x )
             explain-mode $global_mode;;
 
         ## Internals:

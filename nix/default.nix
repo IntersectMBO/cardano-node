@@ -4,7 +4,6 @@
 , customConfig ? import ./custom-config.nix
 , sourcesOverride ? {}
 , gitrev ? null
-, workbenchConfig ? import ../workbench-config.nix
 }:
 let
   gitrev' = if gitrev == null
@@ -38,7 +37,7 @@ let
     ++ [
       (pkgs: _: with pkgs; {
         gitrev = gitrev';
-        inherit customConfig workbenchConfig;
+        inherit customConfig;
 
         inherit (iohkNix) cardanoLib;
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:

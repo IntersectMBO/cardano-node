@@ -5,6 +5,7 @@ let
   profileNameDefault = "default-mary";
 in
 { pkgs
+, workbench
 , lib
 , bech32
 , basePort              ? basePortDefault
@@ -29,7 +30,7 @@ let
       topologyForNode =
         { profile, nodeSpec }:
         let inherit (nodeSpec) name i; in
-        pkgs.runWorkbench "topology-${name}.json"
+        workbench.runWorkbench "topology-${name}.json"
           (if nodeSpec.isProducer
            then "topology for-local-node     ${toString i}   ${profile.topology.files} ${toString basePort}"
            else "topology for-local-observer ${profile.name} ${profile.topology.files} ${toString basePort}");
@@ -140,7 +141,7 @@ EOF
         basePort;
     };
 
-  workbenchProfiles = pkgs.workbench.generateProfiles
+  workbenchProfiles = workbench.generateProfiles
     { inherit pkgs backend environment; };
 in
 
@@ -156,7 +157,7 @@ let
     ]
     ## In dev mode, call the script directly:
     ++ optionals (!workbenchDevMode)
-    [ pkgs.workbench.workbench ];
+    [ workbench.workbench ];
 
   start = pkgs.writeScriptBin "start-cluster" ''
     set -euo pipefail
@@ -174,6 +175,8 @@ let
 
     wb local assert-stopped
 
+    workbench-prebuild-executables || return 1
+
     wb profile describe ${profileName}
 
     ${optionalString (stateDir != stateDirDefault)
@@ -189,8 +192,6 @@ let
     touch    "${stateDir}"/supervisor/workbench-token
 
     ln -s ${profile.topology.files} "${stateDir}"/topology
-
-    workbench-prebuild-executables
 
     genesis_args+=(
         ## Positionals:
@@ -227,7 +228,7 @@ let
 
 in
 {
-  inherit (pkgs) workbench;
+  inherit workbench;
   inherit (workbenchProfiles) profilesJSON;
   inherit profile stateDir start stop;
 }
