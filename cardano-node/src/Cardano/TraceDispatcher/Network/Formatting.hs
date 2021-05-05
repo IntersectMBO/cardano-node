@@ -5,6 +5,8 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -25,6 +27,8 @@ import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
+import           Ouroboros.Consensus.Byron.Ledger (Query)
 
 
 instance LogFormatting (AnyMessageAndAgency ps)
@@ -88,6 +92,42 @@ instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) wher
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTS.MsgDone{}) =
+    mkObject [ "kind" .= String "MsgDone"
+             , "agency" .= String (pack $ show stok)
+             ]
+
+
+instance (forall result. Show (Query blk result))
+      => LogFormatting (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquire{}) =
+    mkObject [ "kind" .= String "MsgAcquire"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquired{}) =
+    mkObject [ "kind" .= String "MsgAcquired"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgFailure{}) =
+    mkObject [ "kind" .= String "MsgFailure"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgQuery{}) =
+    mkObject [ "kind" .= String "MsgQuery"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgResult{}) =
+    mkObject [ "kind" .= String "MsgResult"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgRelease{}) =
+    mkObject [ "kind" .= String "MsgRelease"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgReAcquire{}) =
+    mkObject [ "kind" .= String "MsgReAcquire"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgDone{}) =
     mkObject [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
