@@ -114,7 +114,6 @@ library
                       , formatting
                       , iproute
                       , memory
-                      , mtl
                       , network
                       , nothunks
                       , ouroboros-consensus
