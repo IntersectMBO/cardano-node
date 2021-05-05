@@ -1,12 +1,14 @@
 
-{-# LANGUAGE AllowAmbiguousTypes  #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE MonoLocalBinds       #-}
-{-# LANGUAGE PackageImports       #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MonoLocalBinds        #-}
+{-# LANGUAGE PackageImports        #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+
 
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
@@ -50,7 +52,7 @@ import           Ouroboros.Consensus.Block (CannotForge, ConvertRawHash,
 import           Ouroboros.Consensus.Block.Forging (ForgeStateInfo)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
                      (TraceBlockchainTimeEvent (..))
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, Query)
 import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
                      LedgerUpdate, LedgerWarning)
@@ -74,6 +76,7 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Block
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.Storage.Serialisation (SerialisedHeader)
 
 import           Ouroboros.Network.Block (Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -81,6 +84,8 @@ import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
+                     (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.TxSubmission.Inbound
                      (TraceTxSubmissionInbound)
@@ -107,6 +112,7 @@ docTracers :: forall blk remotePeer peer t.
   , Show (ApplyTxErr blk)
   , Show (Header blk)
   , Show t
+  , forall result. Show (Query blk result)
   , LogFormatting (LedgerUpdate blk)
   , LogFormatting (LedgerWarning blk)
   , LogFormatting (ApplyTxErr blk)
@@ -211,7 +217,21 @@ docTracers _ = do
               namesForTTxSubmission
               severityTTxSubmission
               trBase
-
+  tsqTr  <-  mkStandardTracer
+              "TStateQuery"
+              namesForTStateQuery
+              severityTStateQuery
+              trBase
+  tcsnTr <-  mkStandardTracer
+              "TChainSyncNode"
+              namesForTChainSyncNode
+              severityTChainSyncNode
+              trBase
+  tcssTr <-  mkStandardTracer
+              "TChainSyncSerialised"
+              namesForTChainSyncSerialised
+              severityTChainSyncSerialised
+              trBase
   cdbmTrDoc    <- documentMarkdown
               (docChainDBTraceEvent :: Documented
                 (ChainDB.TraceEvent blk))
@@ -288,6 +308,24 @@ docTracers _ = do
                        (LTS.LocalTxSubmission
                           (GenTx blk) (ApplyTxErr blk)))))
               [ttsTr]
+  tsqTrDoc  <-  documentMarkdown
+              (docTStateQuery :: Documented
+                 (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (LocalStateQuery blk (Point blk) (Query blk)))))
+              [tsqTr]
+  tcsnTrDoc  <-  documentMarkdown
+              (docTChainSync :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (ChainSync (Header blk) (Point blk) (Tip blk)))))
+              [tcsnTr]
+  tcssTrDoc  <-  documentMarkdown
+              (docTChainSync :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (ChainSync (SerialisedHeader blk) (Point blk) (Tip blk)))))
+              [tcssTr]
 
   let bl = cdbmTrDoc
           ++ cscTrDoc
@@ -306,6 +344,9 @@ docTracers _ = do
           ++ kacTrDoc
           ++ tcsTrDoc
           ++ ttsTrDoc
+          ++ tsqTrDoc
+          ++ tcsnTrDoc
+          ++ tcssTrDoc
   res <- buildersToText bl
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
   pure ()
@@ -397,26 +438,40 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
               severityForge
               trBase
   btTr   <- mkStandardTracer
-                "BlockchainTime"
-                namesForBlockchainTime
-                severityBlockchainTime
-                trBase
+              "BlockchainTime"
+              namesForBlockchainTime
+              severityBlockchainTime
+              trBase
   kacTr  <- mkStandardTracer
-                "KeepAliveClient"
-                namesForKeepAliveClient
-                severityKeepAliveClient
-                trBase
+              "KeepAliveClient"
+              namesForKeepAliveClient
+              severityKeepAliveClient
+              trBase
   tcsTr  <-  mkStandardTracer
-              "TChainSync"
+              "TChainSyncClient"
               namesForTChainSync
               severityTChainSync
               trBase
   ttsTr  <-  mkStandardTracer
-              "TTxSubmission"
+              "TTxSubmissionClient"
               namesForTTxSubmission
               severityTTxSubmission
               trBase
-
+  tsqTr  <-  mkStandardTracer
+              "TStateQueryClient"
+              namesForTStateQuery
+              severityTStateQuery
+              trBase
+  tcsnTr <-  mkStandardTracer
+              "TChainSyncNode"
+              namesForTChainSyncNode
+              severityTChainSyncNode
+              trBase
+  tcssTr <-  mkStandardTracer
+              "TChainSyncSerialised"
+              namesForTChainSyncSerialised
+              severityTChainSyncSerialised
+              trBase
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
   configureTracers emptyTraceConfig docChainSyncServerEvent [csshTr]
@@ -432,6 +487,9 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   configureTracers emptyTraceConfig docKeepAliveClient      [kacTr]
   configureTracers emptyTraceConfig docTChainSync           [tcsTr]
   configureTracers emptyTraceConfig docTTxSubmission        [ttsTr]
+  configureTracers emptyTraceConfig docTStateQuery          [tsqTr]
+  configureTracers emptyTraceConfig docTChainSync           [tcsnTr]
+  configureTracers emptyTraceConfig docTChainSync           [tcssTr]
 
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -455,11 +513,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = Tracer (traceWith tcsTr)
       , NodeToClient.tTxSubmissionTracer = Tracer (traceWith ttsTr)
-      , NodeToClient.tStateQueryTracer = nullTracer
+      , NodeToClient.tStateQueryTracer = Tracer (traceWith tsqTr)
       }
     , nodeToNodeTracers = NodeToNode.Tracers
-      { NodeToNode.tChainSyncTracer = nullTracer
-      , NodeToNode.tChainSyncSerialisedTracer = nullTracer
+      { NodeToNode.tChainSyncTracer = Tracer (traceWith tcsnTr)
+      , NodeToNode.tChainSyncSerialisedTracer = Tracer (traceWith tcssTr)
       , NodeToNode.tBlockFetchTracer = nullTracer
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
       , NodeToNode.tTxSubmissionTracer = nullTracer
