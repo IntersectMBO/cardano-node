@@ -25,8 +25,6 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Data.Aeson
 import           Data.SOP.Strict
 
--- import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.TraceDispatcher.OrphanInstances.Common ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize (..))

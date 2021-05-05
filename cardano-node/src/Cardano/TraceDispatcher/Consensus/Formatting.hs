@@ -12,19 +12,18 @@ module Cardano.TraceDispatcher.Consensus.Formatting
   (
   ) where
 
+import           Control.Monad.Class.MonadTime (Time (..))
 import           Data.Aeson (ToJSON, Value (String), toJSON, (.=))
 import qualified Data.Text as Text
-import           Data.Time(DiffTime)
-import           Control.Monad.Class.MonadTime(Time(..))
+import           Data.Time (DiffTime)
 import           Text.Show
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
+import           Cardano.TraceDispatcher.Common.Formatting ()
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Cardano.TraceDispatcher.OrphanInstances.Network ()
 import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
-import           Cardano.TraceDispatcher.Common.Formatting ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block

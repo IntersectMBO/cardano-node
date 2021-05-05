@@ -1,11 +1,11 @@
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -14,22 +14,29 @@ module Cardano.TraceDispatcher.Network.Formatting
   (
   ) where
 
-import           Data.Aeson (Value (String), (.=))
+import           Data.Aeson (Value (String), (.=), toJSON)
 import           Data.Text (pack)
 import           Text.Show
 
 import           Cardano.TraceDispatcher.Common.Formatting ()
+import           Cardano.TraceDispatcher.Render
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
+import           Cardano.TraceDispatcher.Common.ConvertTxId
 
-import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
-import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
-import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
+import           Ouroboros.Consensus.Block (getHeader)
 import           Ouroboros.Consensus.Byron.Ledger (Query)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (HasTxs, GenTx, txId, extractTxs)
+import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 
+import           Ouroboros.Network.Block (Point, blockHash)
+import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
+import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
+import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import           Ouroboros.Network.Protocol.BlockFetch.Type
 
 instance LogFormatting (AnyMessageAndAgency ps)
       => LogFormatting (TraceSendRecv ps) where
@@ -129,5 +136,54 @@ instance (forall result. Show (Query blk result))
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgDone{}) =
     mkObject [ "kind" .= String "MsgDone"
+             , "agency" .= String (pack $ show stok)
+             ]
+
+--
+-- | instances of @ToObject@
+--
+-- NOTE: this list is sorted by the unqualified name of the outermost type.
+
+instance ( ConvertTxId' blk
+         , RunNode blk
+         , HasTxs blk
+         )
+      => LogFormatting (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
+  forMachine DBrief (AnyMessageAndAgency stok (MsgBlock blk)) =
+    mkObject [ "kind" .= String "MsgBlock"
+             , "agency" .= String (pack $ show stok)
+             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             ]
+
+  forMachine dtal (AnyMessageAndAgency stok (MsgBlock blk)) =
+    mkObject [ "kind" .= String "MsgBlock"
+             , "agency" .= String (pack $ show stok)
+             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
+             ]
+      where
+        presentTx :: GenTx blk -> Value
+        presentTx =  String . renderTxIdForDetails dtal . txId
+
+  forMachine _v (AnyMessageAndAgency stok MsgRequestRange{}) =
+    mkObject [ "kind" .= String "MsgRequestRange"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgStartBatch{}) =
+    mkObject [ "kind" .= String "MsgStartBatch"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
+    mkObject [ "kind" .= String "MsgNoBlocks"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgBatchDone{}) =
+    mkObject [ "kind" .= String "MsgBatchDone"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgClientDone{}) =
+    mkObject [ "kind" .= String "MsgClientDone"
              , "agency" .= String (pack $ show stok)
              ]

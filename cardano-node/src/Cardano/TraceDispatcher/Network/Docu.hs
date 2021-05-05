@@ -9,6 +9,7 @@ module Cardano.TraceDispatcher.Network.Docu
   ( docTChainSync
   , docTTxSubmission
   , docTStateQuery
+  , docTBlockFetch
   ) where
 
 import           Cardano.Logging
@@ -20,6 +21,7 @@ import           Ouroboros.Network.Block (Point, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
+import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
@@ -232,3 +234,11 @@ docTStateQuery = Documented [
         []
         "The client can terminate the protocol."
   ]
+
+docTBlockFetch :: Documented
+      (BlockFetch.TraceLabelPeer peer
+       (TraceSendRecv
+         (BlockFetch blk (Point blk))))
+docTBlockFetch = Documented [
+      ]
+      --DocMsg
