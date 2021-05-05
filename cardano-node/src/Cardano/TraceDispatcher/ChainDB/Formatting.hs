@@ -22,8 +22,8 @@ import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Cardano.TraceDispatcher.OrphanInstances.Network ()
 import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
+import Cardano.TraceDispatcher.Common.Formatting ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block

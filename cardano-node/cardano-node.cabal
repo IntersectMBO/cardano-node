@@ -86,11 +86,10 @@ library
                        Cardano.TraceDispatcher.Tracers
                        Cardano.TraceDispatcher.OrphanInstances.Consensus
                        Cardano.TraceDispatcher.OrphanInstances.Byron
-                       Cardano.TraceDispatcher.OrphanInstances.Network
                        Cardano.TraceDispatcher.OrphanInstances.HardFork
-                       Cardano.TraceDispatcher.OrphanInstances.Common
                        Cardano.TraceDispatcher.OrphanInstances.Shelley
                        Cardano.TraceDispatcher.Common.Formatting
+                       Cardano.TraceDispatcher.Common.ConvertTxId
                        Cardano.TraceDispatcher.ChainDB.Docu
                        Cardano.TraceDispatcher.ChainDB.Formatting
                        Cardano.TraceDispatcher.ChainDB.Combinators
