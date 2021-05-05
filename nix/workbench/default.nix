@@ -1,6 +1,6 @@
 { lib
 , stdenv
-
+, pkgs
 , graphviz
 , jq
 , moreutils
@@ -34,7 +34,8 @@ let
       '';
 
       postFixup = ''
-        wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode ${nixWbMode}" --prefix PATH ":" ${stdenv.lib.makeBinPath
+        wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode
+        ${nixWbMode}" --prefix PATH ":" ${pkgs.lib.makeBinPath
           [ graphviz
             jq
             moreutils
