@@ -17,6 +17,10 @@ module Cardano.TraceDispatcher.Network.Combinators
 
   , severityTChainSyncSerialised
   , namesForTChainSyncSerialised
+
+  , severityTBlockFetch
+  , namesForTBlockFetch
+
   ) where
 
 
@@ -28,6 +32,8 @@ import           Ouroboros.Network.Block (Point, Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
+import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..),
+                     Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
@@ -245,3 +251,40 @@ namesForTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) =
     namesTChainSync'' MsgIntersectFound {}    = ["IntersectFound"]
     namesTChainSync'' MsgIntersectNotFound {} = ["IntersectNotFound"]
     namesTChainSync'' MsgDone {}              = ["Done"]
+
+severityTBlockFetch :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (BlockFetch blk (Point blk))) -> SeverityS
+severityTBlockFetch (BlockFetch.TraceLabelPeer _ v) = severityTBlockFetch' v
+  where
+    severityTBlockFetch' (TraceSendMsg msg) = severityTBlockFetch'' msg
+    severityTBlockFetch' (TraceRecvMsg msg) = severityTBlockFetch'' msg
+
+    severityTBlockFetch'' (AnyMessageAndAgency _agency msg) = severityTBlockFetch''' msg
+
+    severityTBlockFetch''' :: Message (BlockFetch blk (Point blk)) from to
+                                   -> SeverityS
+    severityTBlockFetch''' MsgRequestRange {} = Info
+    severityTBlockFetch''' MsgStartBatch {}   = Info
+    severityTBlockFetch''' MsgNoBlocks {}     = Info
+    severityTBlockFetch''' MsgBlock {}        = Info
+    severityTBlockFetch''' MsgBatchDone {}    = Info
+    severityTBlockFetch''' MsgClientDone {}   = Info
+
+namesForTBlockFetch :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (BlockFetch blk (Point blk))) -> [Text]
+namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) =
+  "NodeToNode" : "Serialised" : namesTBlockFetch v
+  where
+    namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
+    namesTBlockFetch (TraceRecvMsg msg) = "Recieve" : namesTBlockFetch' msg
+
+    namesTBlockFetch' (AnyMessageAndAgency _agency msg) = namesTBlockFetch'' msg
+
+    namesTBlockFetch'' :: Message (BlockFetch blk (Point blk)) from to
+                               -> [Text]
+    namesTBlockFetch'' MsgRequestRange {} = ["RequestRange"]
+    namesTBlockFetch'' MsgStartBatch {}   = ["StartBatch"]
+    namesTBlockFetch'' MsgNoBlocks {}     = ["NoBlocks"]
+    namesTBlockFetch'' MsgBlock {}        = ["Block"]
+    namesTBlockFetch'' MsgBatchDone {}    = ["BatchDone"]
+    namesTBlockFetch'' MsgClientDone {}   = ["ClientDone"]

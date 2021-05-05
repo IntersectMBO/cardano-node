@@ -26,7 +26,6 @@ import qualified Data.Text as Text
 
 import           Cardano.Logging
 import           Cardano.Prelude
-import           Cardano.TraceDispatcher.OrphanInstances.Network ()
 import           Cardano.TraceDispatcher.Render (condenseT,
                      renderHeaderHashForDetails, renderPoint,
                      renderPointAsPhrase, renderPointForDetails,

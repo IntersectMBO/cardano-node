@@ -22,8 +22,8 @@ module Cardano.TraceDispatcher.Render
      , renderSlotNo
      , renderTip
      , renderTipForDetails
-  -- , renderTxId
-  -- , renderTxIdForDetails
+     , renderTxId
+     , renderTxIdForDetails
      , renderWithOrigin
   ) where
 
@@ -37,7 +37,7 @@ import qualified Data.Text.Encoding as Text
 import           Cardano.Logging
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..),
                      WithOrigin (..))
-import           Cardano.Tracing.ConvertTxId (ConvertTxId (..))
+import           Cardano.TraceDispatcher.Common.ConvertTxId (ConvertTxId' (..))
 import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..),
                      RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
@@ -73,15 +73,15 @@ renderTipBlockNo = Text.pack . show . unBlockNo . ImmDB.tipBlockNo
 renderTipHash :: StandardHash blk => ImmDB.Tip blk -> Text
 renderTipHash tInfo = Text.pack . show $ ImmDB.tipHash tInfo
 
--- renderTxIdForDetails
---   :: ConvertTxId blk
---   => TracingDetails
---   -> TxId (GenTx blk)
---   -> Text
--- renderTxIdForDetails dtal = trimHashTextForDetails dtal . renderTxId
---
--- renderTxId :: ConvertTxId blk => TxId (GenTx blk) -> Text
--- renderTxId = Text.decodeLatin1 . B16.encode . txIdToRawBytes
+renderTxIdForDetails
+  :: ConvertTxId' blk
+  => DetailLevel
+  -> TxId (GenTx blk)
+  -> Text
+renderTxIdForDetails dtal = trimHashTextForDetails dtal . renderTxId
+
+renderTxId :: ConvertTxId' blk => TxId (GenTx blk) -> Text
+renderTxId = Text.decodeLatin1 . B16.encode . txIdToRawBytes
 
 renderWithOrigin :: (a -> Text) -> WithOrigin a -> Text
 renderWithOrigin _ Origin = "origin"

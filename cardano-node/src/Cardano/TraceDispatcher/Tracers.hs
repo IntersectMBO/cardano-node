@@ -34,13 +34,15 @@ import           Cardano.TraceDispatcher.Network.Combinators
 import           Cardano.TraceDispatcher.Network.Docu
 import           Cardano.TraceDispatcher.Network.Formatting
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
+import           Cardano.TraceDispatcher.Common.Formatting
+import           Cardano.TraceDispatcher.Common.ConvertTxId
+
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
 import qualified Cardano.BM.Data.Trace as Old
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.ConvertTxId
 import           Cardano.Tracing.Kernel (NodeKernelData)
 import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 import           Cardano.Tracing.Tracers
@@ -57,7 +59,7 @@ import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
                      LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
-                     GenTxId, HasTxId, TxId)
+                     GenTxId, HasTxId, TxId, HasTxs)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                      (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
@@ -83,6 +85,7 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type
                      (LocalStateQuery)
@@ -108,8 +111,6 @@ mkStandardTracer name namesFor severityFor trBase = do
 docTracers :: forall blk remotePeer peer t.
   ( Show remotePeer
   , Show peer
-  , Show (GenTx blk)
-  , Show (ApplyTxErr blk)
   , Show (Header blk)
   , Show t
   , forall result. Show (Query blk result)
@@ -124,10 +125,9 @@ docTracers :: forall blk remotePeer peer t.
   , ToJSON (GenTxId blk)
   , HasTxId (GenTx blk)
   , LedgerSupportsProtocol blk
-  , InspectLedger blk
-  , Consensus.SerialiseNodeToNodeConstraints blk
-  , Show (ForgeStateUpdateError blk)
-  , Show (CannotForge blk)
+  , Consensus.RunNode blk
+  , HasTxs blk
+  , ConvertTxId' blk
   )
   => Proxy blk -> IO ()
 docTracers _ = do
@@ -232,6 +232,13 @@ docTracers _ = do
               namesForTChainSyncSerialised
               severityTChainSyncSerialised
               trBase
+  tbfTr  <-  mkStandardTracer
+              "TBlockFetch"
+              namesForTBlockFetch
+              severityTBlockFetch
+              trBase
+
+
   cdbmTrDoc    <- documentMarkdown
               (docChainDBTraceEvent :: Documented
                 (ChainDB.TraceEvent blk))
@@ -326,6 +333,11 @@ docTracers _ = do
                   (TraceSendRecv
                     (ChainSync (SerialisedHeader blk) (Point blk) (Tip blk)))))
               [tcssTr]
+  tbfTrDoc  <-  documentMarkdown
+              (docTBlockFetch :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv (BlockFetch blk (Point blk)))))
+              [tbfTr]
 
   let bl = cdbmTrDoc
           ++ cscTrDoc
@@ -347,6 +359,7 @@ docTracers _ = do
           ++ tsqTrDoc
           ++ tcsnTrDoc
           ++ tcssTrDoc
+          ++ tbfTrDoc
   res <- buildersToText bl
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
   pure ()
@@ -472,6 +485,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
               namesForTChainSyncSerialised
               severityTChainSyncSerialised
               trBase
+  tbfTr  <-  mkStandardTracer
+              "TBlockFetch"
+              namesForTBlockFetch
+              severityTBlockFetch
+              trBase
   configureTracers emptyTraceConfig docChainDBTraceEvent [cdbmTr]
   configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
   configureTracers emptyTraceConfig docChainSyncServerEvent [csshTr]
@@ -490,6 +508,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
   configureTracers emptyTraceConfig docTStateQuery          [tsqTr]
   configureTracers emptyTraceConfig docTChainSync           [tcsnTr]
   configureTracers emptyTraceConfig docTChainSync           [tcssTr]
+  configureTracers emptyTraceConfig docTBlockFetch          [tbfTr]
 
   pure Tracers
     { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -518,7 +537,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     , nodeToNodeTracers = NodeToNode.Tracers
       { NodeToNode.tChainSyncTracer = Tracer (traceWith tcsnTr)
       , NodeToNode.tChainSyncSerialisedTracer = Tracer (traceWith tcssTr)
-      , NodeToNode.tBlockFetchTracer = nullTracer
+      , NodeToNode.tBlockFetchTracer = Tracer (traceWith tbfTr)
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
       , NodeToNode.tTxSubmissionTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer

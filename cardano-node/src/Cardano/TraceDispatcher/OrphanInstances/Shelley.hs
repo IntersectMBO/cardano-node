@@ -30,11 +30,8 @@ import           Cardano.Tracing.OrphanInstances.Shelley()
 import           Cardano.Api.Orphans ()
 
 import           Cardano.Slotting.Block (BlockNo (..))
-import           Cardano.TraceDispatcher.OrphanInstances.Common ()
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
--- import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
