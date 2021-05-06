@@ -29,9 +29,10 @@ let
             { "Test${era}HardForkAtEpoch" = epoch;
             })
           cfg.forceHardForks));
-    realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml"
-      else if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
+    nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
+    realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml"
+      else nodeConfigFile;
     topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON {
       Producers = cfg.producers ++ (cfg.instanceProducers i);
     });
@@ -83,18 +84,18 @@ let
         ${lib.optionalString (cfg.environment == "selfnode") ''
           echo "Wiping all data in ${cfg.stateDir}"
           rm -rf ${cfg.stateDir}/*
-          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
+          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${nodeConfigFile})
           START_TIME=$(date +%s --date="30 seconds")
           ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime|tonumber}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
-          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
+          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${nodeConfigFile} > ${realNodeConfigFile}
         ''}
         ${lib.optionalString (cfg.environment == "shelley_selfnode") ''
           echo "Wiping all data in ${cfg.stateDir}"
           rm -rf ${cfg.stateDir}/*
-          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
+          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${nodeConfigFile})
           START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="30 seconds")
           ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
-          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
+          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${nodeConfigFile} > ${realNodeConfigFile}
         ''}
         ${lib.optionalString (i > 0) ''
         # If exist copy state from existing instance instead of syncing from scratch:

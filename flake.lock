@@ -2,7 +2,7 @@
   "nodes": {
     "customConfig": {
       "locked": {
-        "narHash": "sha256-oGyOEDIS9gcpuF6EWecNeUMl1pN4AlUP+pWNeQfQ5lQ=",
+        "narHash": "sha256-t+2eKBUm6IZfWfgPUBcTEP64FJorFcY30NgmqAjLrjI=",
         "path": "./custom-config",
         "type": "path"
       },
@@ -39,16 +39,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1620309978,
-        "narHash": "sha256-zYJN5nJH8ONHdrHFOvLECWPqBVztJ0DGWK+MCFw6g8U=",
+        "lastModified": 1620314199,
+        "narHash": "sha256-JCu5wnt3ja8UBQv5G3aRhQ+ZcAKB6+ivodv3yA6UnK8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "c5a18198f141ccdcecc4cde7c530de8a420cad21",
+        "rev": "0ce3abcfed803ed77472488f30b299fda9d941b1",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "flakes-improvements",
         "repo": "iohk-nix",
         "type": "github"
       }
