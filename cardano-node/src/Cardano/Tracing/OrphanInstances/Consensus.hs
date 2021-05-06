@@ -26,6 +26,7 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderHeaderHashForVerbosity, renderPoint, renderPointAsPhrase,
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipForVerbosity, renderTipHash, renderWithOrigin)
+import           Cardano.Slotting.Slot (fromWithOrigin)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash (..),
                    ForgeStateUpdateError, Header, RealPoint, getHeader, headerPoint, realPointHash,
@@ -660,6 +661,7 @@ instance ( ConvertRawHash blk
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint extended)
+               , "chainLengthDelta" .= extended `chainLengthΔ` base
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
@@ -669,6 +671,7 @@ instance ( ConvertRawHash blk
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint new)
+               , "chainLengthDelta" .= new `chainLengthΔ` old
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
@@ -710,6 +713,8 @@ instance ( ConvertRawHash blk
          Just (_, _, _, s2 :: AF.AnchoredFragment (Header blk)) ->
            AF.toOldestFirst s2
          Nothing -> [] -- No sense to do validation here.
+     chainLengthΔ :: AF.AnchoredFragment (Header blk) -> AF.AnchoredFragment (Header blk) -> Int
+     chainLengthΔ = on (-) (fromWithOrigin (-1) . fmap (fromIntegral . unBlockNo) . AF.headBlockNo)
   toObject MinimalVerbosity (ChainDB.TraceLedgerReplayEvent _ev) = emptyObject -- no output
   toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis _replayTo ->
