@@ -1,15 +1,29 @@
+let defaultCustomConfig = import ./custom-config defaultCustomConfig;
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
+in
 { config ? {}
 , sourcesOverride ? {}
-, withHoogle ? true
-, customConfig ? {}
+, withHoogle ? defaultCustomConfig.withHoogle
+, clusterProfile ? defaultCustomConfig.localCluster.profileName
+, autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
+, workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
+, customConfig ? {
+    inherit withHoogle;
+    localCluster =  {
+      inherit autoStartCluster workbenchDevMode;
+      profileName = clusterProfile;
+    };
+  }
 , pkgs ? import ./nix {
     inherit config sourcesOverride customConfig;
   }
 }:
-with pkgs; with pkgs.customConfig;
+with pkgs;
 let
+  inherit (pkgs) customConfig;
+  inherit (customConfig) withHoogle localCluster;
+  inherit (localCluster) autoStartCluster workbenchDevMode;
   commandHelp =
     ''
       echo "
@@ -31,11 +45,9 @@ let
   mkCluster =
     { useCabalRun }:
     callPackage ./nix/supervisord-cluster
-      { inherit useCabalRun workbenchDevMode;
-        workbench = pkgs.callPackage ./nix/workbench
-          { inherit useCabalRun workbenchDevMode; };
+      { inherit useCabalRun;
+        workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
       };
-  ## inherit (workbench) runWorkbench runJq;
 
   shell =
     let cluster = mkCluster { useCabalRun = true; };

@@ -33,7 +33,9 @@
         iohkNix.overlays.cardano-lib
         iohkNix.overlays.utils
         (final: prev: {
-          customConfig = import ./custom-config // customConfig.outputs;
+          customConfig = recursiveUpdate
+            (import ./custom-config final.customConfig)
+            customConfig.outputs;
           gitrev = self.rev or "dirty";
           commonLib = lib
             // iohkNix.lib

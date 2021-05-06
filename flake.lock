@@ -2,7 +2,7 @@
   "nodes": {
     "customConfig": {
       "locked": {
-        "narHash": "sha256-akpV9QbxyQPEr3FEsnixziG1fo4bU4D3+jOY3UTCx98=",
+        "narHash": "sha256-oGyOEDIS9gcpuF6EWecNeUMl1pN4AlUP+pWNeQfQ5lQ=",
         "path": "./custom-config",
         "type": "path"
       },
@@ -39,11 +39,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1620121360,
-        "narHash": "sha256-dzAGTysd+uXpyOTXX8Dm7rUTkpqtOQZ5QZc+9gQksQY=",
+        "lastModified": 1620309978,
+        "narHash": "sha256-zYJN5nJH8ONHdrHFOvLECWPqBVztJ0DGWK+MCFw6g8U=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "cf960439153dc333a304a6f8994365e03790e2a8",
+        "rev": "c5a18198f141ccdcecc4cde7c530de8a420cad21",
         "type": "github"
       },
       "original": {

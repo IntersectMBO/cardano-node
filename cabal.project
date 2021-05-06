@@ -86,8 +86,7 @@ package io-sim-classes
 -- ---------------------------------------------------------
 
 -- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
--- scripts/cabal-inside-nix-shell.sh
--- scripts/cabal-inside-nix-shell.sh --restore
+-- when using the "cabal" wrapper script provided by nix-shell.
 -- --------------------------- 8< --------------------------
 -- Please do not put any `source-repository-package` clause above this line.
 

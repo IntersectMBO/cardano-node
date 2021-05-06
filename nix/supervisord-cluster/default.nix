@@ -8,18 +8,12 @@ in
 , workbench
 , lib
 , bech32
-, basePort              ? basePortDefault
-, stateDir              ? stateDirDefault
-, cacheDir              ? cacheDirDefault
-, extraSupervisorConfig ? {}
-, useCabalRun           ? false
-, workbenchDevMode      ? false
-, enableEKG             ? true
-##
-, profileName           ? profileNameDefault
+, customConfig
+
+, useCabalRun
 , ...
 }:
-with lib;
+with lib; with customConfig.localCluster;
 let
   backend =
     rec

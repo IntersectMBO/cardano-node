@@ -9,9 +9,11 @@
 , customConfig
 , cardano-cli
 , cardano-topology
+
+, useCabalRun
 }:
 
-with lib; with customConfig;
+with lib; with customConfig.localCluster;
 
 let
   nixWbMode =
@@ -34,8 +36,8 @@ let
       '';
 
       postFixup = ''
-        wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode
-        ${nixWbMode}" --prefix PATH ":" ${pkgs.lib.makeBinPath
+        wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode ${nixWbMode}" \
+        --prefix PATH ":" ${pkgs.lib.makeBinPath
           [ graphviz
             jq
             moreutils
@@ -93,8 +95,6 @@ let
 
     ${optionalString useCabalRun
     ''
-    ./scripts/cabal-inside-nix-shell.sh
-
     echo 'workbench:  cabal-inside-nix-shell mode enabled, calling cardano-* via 'cabal run' (instead of using Nix store)' >&2
 
     function cardano-cli() {
@@ -117,6 +117,7 @@ let
       ${optionalString useCabalRun
         ''
       echo -n "workbench:  prebuilding executables (because of useCabalRun):"
+      echo $PWD
       for exe in cardano-cli cardano-node cardano-topology
       do echo -n " $exe"
          cabal -v0 build exe:$exe >/dev/null || return 1
