@@ -147,6 +147,7 @@ module Cardano.Api (
 
     -- ** Transaction bodies
     TxBody,
+    getTransactionBodyContent,
     makeTransactionBody,
     TxBodyContent(..),
     TxBodyError(..),
@@ -162,6 +163,7 @@ module Cardano.Api (
     -- ** Transaction outputs
     TxOut(TxOut),
     TxOutValue(..),
+    serialiseAddressForTxOut,
 
     -- ** Other transaction body types
     TxFee(..),
