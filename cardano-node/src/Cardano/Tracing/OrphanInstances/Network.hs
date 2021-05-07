@@ -26,11 +26,12 @@ import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), txForgetValidated,
+                   txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState,
-                     TraceLabelPeer (..))
+                   TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..), PeerHasAgency (..))
@@ -38,7 +39,7 @@ import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
-                     WithAddr (..))
+                   WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
@@ -47,15 +48,16 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuer
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
+import           Ouroboros.Network.Protocol.Trans.Hello.Type (ClientHasAgency (..), Message (..),
+                   ServerHasAgency (..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
-import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..),
-                     ClientHasAgency (..), ServerHasAgency (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
-                     SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
-                     WithIPList (..))
-import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound (..), ProcessedTxCount(..))
+                   SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
+                   WithIPList (..))
+import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
+                   TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
@@ -422,7 +424,7 @@ instance ( ConvertTxId blk
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
+             , "txIds" .= toJSON (presentTx <$> map txForgetValidated (extractTxs blk))
              ]
       where
         presentTx :: GenTx blk -> Value

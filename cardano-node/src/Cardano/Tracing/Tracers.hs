@@ -34,10 +34,10 @@ import qualified Data.HashMap.Strict as Map
 import qualified Data.Map as SMap
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
-import qualified System.Remote.Monitoring as EKG
+import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
-import qualified System.Metrics.Counter as Counter
+import qualified System.Remote.Monitoring as EKG
 
 import           Network.Mux (MuxTrace, WithMuxBearer)
 import qualified Network.Socket as Socket (SockAddr)
@@ -55,15 +55,16 @@ import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge, ConvertRawHash,
-                     ForgeStateInfo, ForgeStateUpdateError, Header, realPointSlot)
+                   ForgeStateInfo, ForgeStateUpdateError, Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
-                     TraceBlockchainTimeEvent (..))
+                   TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
+                   LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -75,7 +76,7 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
-                     blockNo, pointSlot, unBlockNo)
+                   blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -102,9 +103,9 @@ import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Network.TxSubmission.Inbound
 
-import qualified Ouroboros.Network.Diffusion as ND
 import qualified Cardano.Node.STM as STM
 import qualified Control.Concurrent.STM as STM
+import qualified Ouroboros.Network.Diffusion as ND
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
@@ -849,10 +850,10 @@ mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   traceNamedObject tr' (meta, logValue2)
 
 mempoolTracer
-  :: ( Show (ApplyTxErr blk)
-     , ToJSON (GenTxId blk)
+  :: ( ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
      , ToObject (GenTx blk)
+     , LedgerSupportsMempool blk
      )
   => TraceSelection
   -> Trace IO Text
@@ -864,10 +865,10 @@ mempoolTracer tc tracer fStats = Tracer $ \ev -> do
     let tr = appendName "Mempool" tracer
     traceWith (mpTracer tc tr) ev
 
-mpTracer :: ( Show (ApplyTxErr blk)
-            , ToJSON (GenTxId blk)
+mpTracer :: ( ToJSON (GenTxId blk)
             , ToObject (ApplyTxErr blk)
             , ToObject (GenTx blk)
+            , LedgerSupportsMempool blk
             )
          => TraceSelection -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
 mpTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
