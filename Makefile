@@ -54,12 +54,6 @@ large-state-cluster-shell:       CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mar
 large-state-cluster-shell-trace: CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
 cluster-shell-trace large-state-cluster-shell large-state-cluster-shell-trace: cluster-shell
 
-cabal-setup setup:
-	./scripts/cabal-inside-nix-shell.sh
-
-cabal-restore restore:
-	./scripts/cabal-inside-nix-shell.sh --restore
-
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
 
@@ -86,4 +80,4 @@ full-clean: clean
 cls:
 	echo -en "\ec"
 
-.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean cls cabal-setup setup cabal-restore restore
+.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean cls setup restore

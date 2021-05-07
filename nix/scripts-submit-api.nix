@@ -1,36 +1,27 @@
 { pkgs
-, customConfig
- }:
+, customConfigs ? [ pkgs.customConfig ]
+}:
 with pkgs.commonLib;
 let
-  customConfig' = customConfig // (customConfig.submit-api or {});
   mkScript = envConfig: let
-
-    configModule = { options, config, ...}: {
-      services.cardano-submit-api = recursiveUpdate {
-        enable = true;
-        network = envConfig.name;
-        environment = envConfig;
-        cardanoNodePkgs = pkgs;
-      } (let validOptions = attrNames options.services.cardano-submit-api;
-        in filterAttrs (n: _: elem n validOptions) customConfig');
-    };
-
-    serviceScript = (modules.evalModules {
-      prefix = [];
+    service = evalService {
+      inherit pkgs customConfigs;
+      serviceName = "cardano-submit-api";
       modules = [
         ./nixos/cardano-submit-api-service.nix
-        systemdCompatModule
-        configModule
+        {
+          services.cardano-submit-api = {
+            network = mkDefault envConfig.name;
+            cardanoNodePkgs = mkDefault pkgs;
+          };
+        }
       ];
-      args = { inherit pkgs; };
-      check = false;
-    }).config.services.cardano-submit-api.script;
+    };
 
-  in pkgs.writeScript "cardano-submit-api-${envConfig.name}" ''
+  in pkgs.writeScript "cardano-submit-api-${service.network}" ''
     #!${pkgs.runtimeShell}
     set -euo pipefail
-    ${serviceScript} $@
+    ${service.script} $@
   '';
 
   scripts = forEnvironments (environment: recurseIntoAttrs {

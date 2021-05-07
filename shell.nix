@@ -1,19 +1,29 @@
+let defaultCustomConfig = import ./custom-config defaultCustomConfig;
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
+in
 { config ? {}
 , sourcesOverride ? {}
-, withHoogle ? true
-, clusterProfile ? "default-mary"
-, customConfig ? import ./custom-config.nix // { profileName = clusterProfile; }
-
-, autoStartCluster ? false
-, workbenchDevMode ? false
+, withHoogle ? defaultCustomConfig.withHoogle
+, clusterProfile ? defaultCustomConfig.localCluster.profileName
+, autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
+, workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
+, customConfig ? {
+    inherit withHoogle;
+    localCluster =  {
+      inherit autoStartCluster workbenchDevMode;
+      profileName = clusterProfile;
+    };
+  }
 , pkgs ? import ./nix {
     inherit config sourcesOverride customConfig;
   }
 }:
 with pkgs;
 let
+  inherit (pkgs) customConfig;
+  inherit (customConfig) withHoogle localCluster;
+  inherit (localCluster) autoStartCluster workbenchDevMode;
   commandHelp =
     ''
       echo "
@@ -35,37 +45,9 @@ let
   mkCluster =
     { useCabalRun }:
     callPackage ./nix/supervisord-cluster
-      { inherit useCabalRun workbenchDevMode;
-        workbench = pkgs.callPackage ./nix/workbench
-          { inherit useCabalRun workbenchDevMode; };
+      { inherit useCabalRun;
+        workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
       };
-  ## inherit (workbench) runWorkbench runJq;
-  nixWapped = writeShellScriptBin "nix" ''
-    if [[ "$@" == "flake show"* ]] || [[ "$@" == "flake check"* ]]; then
-      echo 'Temporary override `supported-systems.nix` original content to be able to use `nix flake show|check` on dev machines (workaround for https://github.com/NixOS/nix/issues/4265)'
-      SYSTEMS="$(${git}/bin/git rev-parse --show-toplevel)/supported-systems.nix"
-      BACKUP="$(mktemp)"
-      mv "$SYSTEMS" "$BACKUP"
-      echo '[ "${system}" ]' > "$SYSTEMS"
-      function atexit() {
-          mv "$BACKUP" "$SYSTEMS"
-      }
-      trap atexit EXIT
-    fi
-    GC_DONT_GC=1 ${nixFlakes}/bin/nix "$@"
-  '';
-  cabalWapped = writeShellScriptBin "cabal" ''
-    # Temporary modify `cabal.project` for local builds..
-    PROJECT="$(${git}/bin/git rev-parse --show-toplevel)/cabal.project"
-    BACKUP="$(mktemp)"
-    cp -a "$PROJECT" "$BACKUP"
-    sed -ni '1,/--- 8< ---/ p' $PROJECT
-    function atexit() {
-        mv "$BACKUP" "$PROJECT"
-    }
-    trap atexit EXIT
-    ${cabal}/bin/cabal "$@"
-  '';
 
   shell =
     let cluster = mkCluster { useCabalRun = true; };
@@ -74,13 +56,9 @@ let
 
     inherit withHoogle;
 
-    packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
+    packages = lib.attrVals cardanoNodeProject.projectPackages;
 
     tools = {
-      hlint = {
-        version = "latest";
-        inherit (cardanoNodeProject) index-state;
-      };
       haskell-language-server = {
         version = "latest";
         inherit (cardanoNodeProject) index-state;
@@ -88,12 +66,12 @@ let
     };
 
     # These programs will be available inside the nix-shell.
-    buildInputs = with haskellPackages; [
+    nativeBuildInputs = with haskellPackages; [
       cardano-ping
-      cabalWapped
+      cabalWrapped
       ghcid
       weeder
-      nixWapped
+      nixWrapped
       pkgconfig
       profiteur
       profiterole
@@ -102,6 +80,7 @@ let
       sqlite-interactive
       tmux
       pkgs.git
+      pkgs.hlint
     ]
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
@@ -121,16 +100,16 @@ let
     exactDeps = true;
 
     shellHook = ''
+      ${lib.optionalString autoStartCluster ''
       function atexit() {
-          ${lib.optionalString autoStartCluster ''
+
           if wb local supervisord-running
           then echo "workbench:  stopping cluster (because 'autoStartCluster' implies this):"
                stop-cluster
-          fi''}
-          ./scripts/cabal-inside-nix-shell.sh --restore
+          fi
       }
       trap atexit EXIT
-
+      ''}
       unset NIX_ENFORCE_PURITY
 
       ${cluster.workbench.shellHook}
@@ -150,8 +129,8 @@ let
     let cluster = mkCluster { useCabalRun = false; };
     in stdenv.mkDerivation {
     name = "devops-shell";
-    buildInputs = [
-      nixWapped
+    nativeBuildInputs = [
+      nixWrapped
       cardano-cli
       bech32
       cardano-node
@@ -170,9 +149,6 @@ let
       wb explain-mode
 
       ${cluster.workbench.shellHook}
-
-      source <(cardano-cli --bash-completion-script cardano-cli)
-      source <(cardano-node --bash-completion-script cardano-node)
 
       # Socket path default to first node launched by "start-cluster":
       export CARDANO_NODE_SOCKET_PATH=$(wb local get-node-socket-path ${cluster.stateDir})

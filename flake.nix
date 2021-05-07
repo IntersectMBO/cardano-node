@@ -9,23 +9,33 @@
       url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    customConfig = {
+      url = "path:./custom-config";
+    };
   };
 
-  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, ... }:
+  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig }:
     let
       inherit (haskellNix.internal) config;
       inherit (nixpkgs) lib;
-      inherit (lib) systems mapAttrs recursiveUpdate mkDefault optionalAttrs nameValuePair;
+      inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
+        getAttrs optionalAttrs nameValuePair attrNames;
       inherit (utils.lib) eachSystem mkApp flattenTree;
       inherit (iohkNix.lib) prefixNamesWith collectExes;
 
-      overlays = with iohkNix.overlays; [
+      supportedSystems = import ./supported-systems.nix;
+      defaultSystem = head supportedSystems;
+
+      overlays = [
         haskellNix.overlay
-        haskell-nix-extra
-        crypto
-        cardano-lib
+        iohkNix.overlays.haskell-nix-extra
+        iohkNix.overlays.crypto
+        iohkNix.overlays.cardano-lib
+        iohkNix.overlays.utils
         (final: prev: {
-          customConfig = import ./custom-config.nix;
+          customConfig = recursiveUpdate
+            (import ./custom-config final.customConfig)
+            customConfig.outputs;
           gitrev = self.rev or "dirty";
           commonLib = lib
             // iohkNix.lib
@@ -34,7 +44,7 @@
         (import ./nix/pkgs.nix)
       ];
 
-    in eachSystem (import ./supported-systems.nix) (system:
+    in eachSystem supportedSystems (system:
       let
         pkgs = import nixpkgs { inherit system overlays config; };
 
@@ -52,79 +62,55 @@
           crossSystem = systems.examples.mingwW64;
         }).cardanoNodeProject.flake {};
 
-        configModule = conf:
-          { pkgs, lib, ... }: {
-            services.cardano-node = {
-              stateDir = "/persist";
-              socketPath = "/alloc/node.socket";
-              enable = true;
-              cardanoNodePkgs = lib.mkDefault pkgs;
-              hostAddr = lib.mkDefault "0.0.0.0";
-            } // conf;
+        scripts = flattenTree pkgs.scripts;
+
+        checkNames = attrNames flake.checks;
+
+        checks =
+          # Linux only checks:
+          optionalAttrs (system == "x86_64-linux") (
+            prefixNamesWith "windows/" (removeAttrs
+              (getAttrs checkNames windowsFlake.checks)
+              ["cardano-node-chairman:test:chairman-tests"]
+            )
+            // (prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests))
+          )
+          # checks run on default system only;
+          // optionalAttrs (system == defaultSystem) {
+            hlint = pkgs.callPackage pkgs.hlintCheck {
+              inherit (pkgs.cardanoNodeProject.projectModule) src;
+            };
           };
 
-        evaluated = conf:
-          lib.nixosSystem {
-            inherit pkgs system;
-            modules = [ ./nix/nixos/cardano-node-service.nix (configModule conf) ];
-          };
+        exes = collectExes flake.packages;
+        exeNames = attrNames exes;
+        lazyCollectExe = p: getAttrs exeNames (collectExes p);
 
-
-        packages = let
-          deps = with pkgs; [
-            coreutils
-            findutils
-            gnugrep
-            gnused
-            postgresql
-            strace
-            lsof
-            dnsutils
-            bashInteractive
-            iproute
-            curl
-            netcat
-            bat
-            tree
-          ];
-
-          vanilla = eachEnv (environment:
-            nameValuePair "${environment}/node-entrypoint"
-            (pkgs.writeShellScriptBin "cardano-node-entrypoint"
-              (evaluated { inherit environment; }).config.services.cardano-node.script));
-
-          debug = eachEnv (env:
-            let
-              closure = pkgs.symlinkJoin {
-                name = "cardano-node-entrypoint";
-                paths = [ vanilla."cardano-node-${env}" ] ++ deps;
-              };
-            in nameValuePair "${env}/node-entrypoint-debug" closure);
-
-        in debug // vanilla // {
+        packages = {
           inherit (devShell) devops;
-        } // (collectExes flake.packages)
-          # Linux only packages:
-          // optionalAttrs (system == "x86_64-linux") (
-            prefixNamesWith "windows/" (collectExes windowsFlake.packages)
-            // (prefixNamesWith "static/" (collectExes muslFlake.packages))
-            // {
-              "dockerImage/node" = pkgs.dockerImage;
-              "dockerImage/submit-api" = pkgs.submitApiDockerImage;
-            }
-          );
+          inherit (pkgs) cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
+        }
+        // scripts
+        // (collectExes flake.packages)
+        // (prefixNamesWith "static/"
+              (mapAttrs pkgs.rewriteStatic (lazyCollectExe
+                (if system == "x86_64-darwin" then flake else muslFlake).packages)))
+        # Linux only packages:
+        // optionalAttrs (system == "x86_64-linux") (
+          prefixNamesWith "windows/" (lazyCollectExe windowsFlake.packages)
+          // {
+            "dockerImage/node" = pkgs.dockerImage;
+            "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+          }
+        )
+        # Add checks to be able to build them individually
+        // (prefixNamesWith "checks/" checks);
 
       in recursiveUpdate flake {
 
-        inherit evaluated environments packages;
+        inherit environments packages checks;
 
         legacyPackages = pkgs;
-
-        checks = # Linux only checks:
-          optionalAttrs (system == "x86_64-linux") (
-            prefixNamesWith "windows/" windowsFlake.checks
-            // (prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests))
-          );
 
         # Built by `nix build .`
         defaultPackage = flake.packages."cardano-node:exe:cardano-node";
@@ -144,19 +130,10 @@
               nix repl $confnix
           '';
           };
+          cardano-ping = { type = "app"; program = pkgs.cardano-ping.exePath; };
         }
-        # nix run .#<env>/node
-        // (mapAttrs
-          (_: drv: (mkApp {inherit drv; exePath = "";}))
-          (flattenTree pkgs.scripts))
-        # nix run .#<env>/node-entrypoint
-        // (eachEnv (env: lib.nameValuePair "${env}/node-entrypoint" (utils.lib.mkApp {
-            drv = packages."${env}/node-entrypoint";
-            exePath = "/bin/cardano-node-entrypoint";
-          })))
         # nix run .#<exe>
         // (collectExes flake.apps);
-
       }
     ) // {
       overlay = import ./overlay.nix self;

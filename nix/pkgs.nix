@@ -23,6 +23,8 @@ final: prev: with final;
       buildPackages
       gitrev
       ;
+    inherit (cardanoNodeProject) projectPackages;
+    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     profiling = true;
   }).hsPkgs;
   cardanoNodeEventlogHaskellPackages = (import ./haskell.nix {
@@ -34,10 +36,12 @@ final: prev: with final;
       buildPackages
       gitrev
       ;
+    inherit (cardanoNodeProject) projectPackages;
+    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     eventlog = true;
   }).hsPkgs;
   cardanoNodeAssertedHaskellPackages = (import ./haskell.nix {
-    inherit config
+    inherit compiler
       pkgs
       lib
       stdenv
@@ -45,6 +49,8 @@ final: prev: with final;
       buildPackages
       gitrev
       ;
+    inherit (cardanoNodeProject) projectPackages;
+    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     assertedPackages = [
       "ouroboros-consensus"
       "ouroboros-consensus-cardano"
@@ -74,10 +80,15 @@ final: prev: with final;
     inherit (cardanoNodeProject) index-state;
   };
 
+  hlint = haskell-nix.tool compiler "hlint" {
+    version = "3.2.7";
+    inherit (cardanoNodeProject) index-state;
+  };
+
   cardanolib-py = callPackage ./cardanolib-py {};
 
-  scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs customConfig; })
-    (import ./scripts-submit-api.nix { inherit pkgs customConfig; });
+  scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs; })
+    (import ./scripts-submit-api.nix { inherit pkgs; });
 
   dockerImage = let
     defaultConfig = {
@@ -85,12 +96,11 @@ final: prev: with final;
       dbPrefix = "db";
       socketPath = "/ipc/node.socket";
     };
-    customConfig' = defaultConfig // customConfig;
   in callPackage ./docker.nix {
     exe = "cardano-node";
     scripts = import ./scripts.nix {
       inherit pkgs;
-      customConfig = customConfig';
+      customConfigs = [ defaultConfig customConfig ];
     };
     script = "node";
   };
@@ -99,12 +109,11 @@ final: prev: with final;
     defaultConfig = {
       socketPath = "/ipc/node.socket";
     };
-    customConfig' = defaultConfig // customConfig;
   in callPackage ./docker.nix {
     exe = "cardano-submit-api";
     scripts = import ./scripts-submit-api.nix {
       inherit pkgs;
-      customConfig = customConfig';
+      customConfigs = [ defaultConfig customConfig ];
     };
     script = "submit-api";
   };

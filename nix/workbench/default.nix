@@ -1,22 +1,19 @@
 { lib
 , stdenv
-
-, cabal-install
+, pkgs
 , graphviz
 , jq
 , moreutils
 , makeWrapper
 , runCommand
-
-## Default to pure Nix-iness:
-, useCabalRun ? false
-, workbenchDevMode ? false
-
+, customConfig
 , cardano-cli
 , cardano-topology
+
+, useCabalRun
 }:
 
-with lib;
+with lib; with customConfig.localCluster;
 
 let
   nixWbMode =
@@ -39,7 +36,8 @@ let
       '';
 
       postFixup = ''
-        wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode ${nixWbMode}" --prefix PATH ":" ${stdenv.lib.makeBinPath
+        wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode ${nixWbMode}" \
+        --prefix PATH ":" ${pkgs.lib.makeBinPath
           [ graphviz
             jq
             moreutils
@@ -71,7 +69,7 @@ let
     '';
 
   exeCabalOp = op: exe:
-    toString [ "${cabal-install}/bin/cabal" op "${exe}" "--"];
+    toString [ "cabal" op "${exe}" "--"];
 
   checkoutWbMode =
     if useCabalRun
@@ -97,8 +95,6 @@ let
 
     ${optionalString useCabalRun
     ''
-    ./scripts/cabal-inside-nix-shell.sh
-
     echo 'workbench:  cabal-inside-nix-shell mode enabled, calling cardano-* via 'cabal run' (instead of using Nix store)' >&2
 
     function cardano-cli() {
@@ -121,6 +117,7 @@ let
       ${optionalString useCabalRun
         ''
       echo -n "workbench:  prebuilding executables (because of useCabalRun):"
+      echo $PWD
       for exe in cardano-cli cardano-node cardano-topology
       do echo -n " $exe"
          cabal -v0 build exe:$exe >/dev/null || return 1

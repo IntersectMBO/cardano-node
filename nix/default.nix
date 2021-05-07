@@ -1,14 +1,11 @@
 { system ? builtins.currentSystem
 , crossSystem ? null
 , config ? {}
-, customConfig ? import ./custom-config.nix
+, customConfig ? {}
 , sourcesOverride ? {}
 , gitrev ? null
 }:
 let
-  gitrev' = if gitrev == null
-    then iohkNix.commitIdFromGitRepoOrZero ../.git
-    else gitrev;
   flakeSources = let
     flakeLock = (builtins.fromJSON (builtins.readFile ../flake.lock)).nodes;
     compat = s: builtins.fetchGit {
@@ -33,15 +30,19 @@ let
     ++ iohkNix.overlays.crypto
     # iohkNix: nix utilities:
     ++ iohkNix.overlays.iohkNix
+    ++ iohkNix.overlays.utils
     # our own overlays:
     ++ [
-      (pkgs: _: with pkgs; {
-        gitrev = gitrev';
-        inherit customConfig;
-
-        inherit (iohkNix) cardanoLib;
+      (pkgs: _: {
+        gitrev = if gitrev == null
+          then iohkNix.commitIdFromGitRepoOrZero ../.git
+          else gitrev;
+        customConfig = pkgs.lib.recursiveUpdate
+          (import ../custom-config pkgs.customConfig)
+          customConfig;
+        inherit (pkgs.iohkNix) cardanoLib;
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
-        commonLib = lib // cardanoLib // iohk-nix.lib
+        commonLib = with pkgs; lib // cardanoLib // iohk-nix.lib
           // import ./util.nix { inherit haskell-nix; }
           # also expose our sources, nixpkgs and overlays
           // { inherit overlays sources nixpkgs; };
