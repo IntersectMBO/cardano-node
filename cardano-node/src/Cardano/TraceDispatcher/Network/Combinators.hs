@@ -21,6 +21,12 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityTBlockFetch
   , namesForTBlockFetch
 
+  , severityTBlockFetchSerialised
+  , namesForTBlockFetchSerialised
+
+  , severityTxSubmissionTracerNode
+  , namesForTxSubmissionTracerNode
+
   ) where
 
 
@@ -38,9 +44,11 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
+                     GenTxId)
 import           Ouroboros.Consensus.Storage.Serialisation (SerialisedHeader)
 
 
@@ -261,7 +269,7 @@ severityTBlockFetch (BlockFetch.TraceLabelPeer _ v) = severityTBlockFetch' v
 
     severityTBlockFetch'' (AnyMessageAndAgency _agency msg) = severityTBlockFetch''' msg
 
-    severityTBlockFetch''' :: Message (BlockFetch blk (Point blk)) from to
+    severityTBlockFetch''' :: Message (BlockFetch x (Point blk)) from to
                                    -> SeverityS
     severityTBlockFetch''' MsgRequestRange {} = Info
     severityTBlockFetch''' MsgStartBatch {}   = Info
@@ -273,14 +281,14 @@ severityTBlockFetch (BlockFetch.TraceLabelPeer _ v) = severityTBlockFetch' v
 namesForTBlockFetch :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (BlockFetch blk (Point blk))) -> [Text]
 namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : "Serialised" : namesTBlockFetch v
+  "NodeToNode" : namesTBlockFetch v
   where
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
     namesTBlockFetch (TraceRecvMsg msg) = "Recieve" : namesTBlockFetch' msg
 
     namesTBlockFetch' (AnyMessageAndAgency _agency msg) = namesTBlockFetch'' msg
 
-    namesTBlockFetch'' :: Message (BlockFetch blk (Point blk)) from to
+    namesTBlockFetch'' :: Message (BlockFetch x (Point blk)) from to
                                -> [Text]
     namesTBlockFetch'' MsgRequestRange {} = ["RequestRange"]
     namesTBlockFetch'' MsgStartBatch {}   = ["StartBatch"]
@@ -288,3 +296,88 @@ namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) =
     namesTBlockFetch'' MsgBlock {}        = ["Block"]
     namesTBlockFetch'' MsgBatchDone {}    = ["BatchDone"]
     namesTBlockFetch'' MsgClientDone {}   = ["ClientDone"]
+
+severityTBlockFetchSerialised :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (BlockFetch (Serialised blk) (Point blk))) -> SeverityS
+severityTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) = severityTBlockFetch' v
+  where
+    severityTBlockFetch' (TraceSendMsg msg) = severityTBlockFetch'' msg
+    severityTBlockFetch' (TraceRecvMsg msg) = severityTBlockFetch'' msg
+
+    severityTBlockFetch'' (AnyMessageAndAgency _agency msg) = severityTBlockFetch''' msg
+
+    severityTBlockFetch''' :: Message (BlockFetch x (Point blk)) from to
+                                   -> SeverityS
+    severityTBlockFetch''' MsgRequestRange {} = Info
+    severityTBlockFetch''' MsgStartBatch {}   = Info
+    severityTBlockFetch''' MsgNoBlocks {}     = Info
+    severityTBlockFetch''' MsgBlock {}        = Info
+    severityTBlockFetch''' MsgBatchDone {}    = Info
+    severityTBlockFetch''' MsgClientDone {}   = Info
+
+namesForTBlockFetchSerialised :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (BlockFetch (Serialised blk) (Point blk))) -> [Text]
+namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) =
+  "NodeToNode" : "Serialised" : namesTBlockFetch v
+  where
+    namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
+    namesTBlockFetch (TraceRecvMsg msg) = "Recieve" : namesTBlockFetch' msg
+
+    namesTBlockFetch' (AnyMessageAndAgency _agency msg) = namesTBlockFetch'' msg
+
+    namesTBlockFetch'' :: Message (BlockFetch x (Point blk)) from to
+                               -> [Text]
+    namesTBlockFetch'' MsgRequestRange {} = ["RequestRange"]
+    namesTBlockFetch'' MsgStartBatch {}   = ["StartBatch"]
+    namesTBlockFetch'' MsgNoBlocks {}     = ["NoBlocks"]
+    namesTBlockFetch'' MsgBlock {}        = ["Block"]
+    namesTBlockFetch'' MsgBatchDone {}    = ["BatchDone"]
+    namesTBlockFetch'' MsgClientDone {}   = ["ClientDone"]
+
+severityTxSubmissionTracerNode :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> SeverityS
+severityTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode' v
+  where
+    severityTxSubNode' (TraceSendMsg msg) = severityTxSubNode'' msg
+    severityTxSubNode' (TraceRecvMsg msg) = severityTxSubNode'' msg
+
+    severityTxSubNode'' (AnyMessageAndAgency _agency msg) = severityTxSubNode''' msg
+
+    severityTxSubNode''' ::
+        Message
+          (TXS.TxSubmission (GenTxId blk) (GenTx blk))
+          from
+          to
+     -> SeverityS
+    severityTxSubNode''' TXS.MsgRequestTxIds {} = Info
+    severityTxSubNode''' TXS.MsgReplyTxIds {}   = Info
+    severityTxSubNode''' TXS.MsgRequestTxs {}   = Info
+    severityTxSubNode''' TXS.MsgReplyTxs {}     = Info
+    severityTxSubNode''' TXS.MsgDone {}         = Info
+    severityTxSubNode''' _                      = Info
+    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+
+
+namesForTxSubmissionTracerNode :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> [Text]
+namesForTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) =
+  "NodeToNode" : "Serialised" : namesTxSubNode v
+  where
+    namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
+    namesTxSubNode (TraceRecvMsg msg) = "Recieve" : namesTxSubNode' msg
+
+    namesTxSubNode' (AnyMessageAndAgency _agency msg) = namesTxSubNode'' msg
+
+    namesTxSubNode'' ::
+         Message
+          (TXS.TxSubmission (GenTxId blk) (GenTx blk))
+          from
+          to
+      -> [Text]
+    namesTxSubNode'' TXS.MsgRequestTxIds {} = ["RequestTxIds"]
+    namesTxSubNode'' TXS.MsgReplyTxIds {}   = ["ReplyTxIds"]
+    namesTxSubNode'' TXS.MsgRequestTxs {}   = ["RequestTxs"]
+    namesTxSubNode'' TXS.MsgReplyTxs {}     = ["ReplyTxs"]
+    namesTxSubNode'' TXS.MsgDone {}         = ["Done"]
+    namesTxSubNode'' _                      = ["KThxBye"]
+    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
