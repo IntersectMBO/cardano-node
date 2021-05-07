@@ -29,7 +29,7 @@ Each snapshot is taken at the end of a different era.  The `go` snapshot is the 
 was taken two epochs earlier, `set` was taken one epoch ago, and `mark` was taken immediately
 before the start of the current epoch.
 
-This command if for debugging purposes only and may fail when used in a memory constrained
+This command is for debugging purposes only and may fail when used in a memory constrained
 environment due to the size of the ledger state.
 
 # Querying for pool pparameters
