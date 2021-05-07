@@ -14,7 +14,7 @@ module Cardano.TraceDispatcher.Network.Formatting
   (
   ) where
 
-import           Data.Aeson (Value (String), (.=), toJSON)
+import           Data.Aeson (Value (String), toJSON, (.=))
 import           Data.Text (pack)
 import           Text.Show
 
@@ -25,18 +25,20 @@ import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Cardano.TraceDispatcher.Common.ConvertTxId
 
-import           Ouroboros.Consensus.Block (getHeader)
+import           Ouroboros.Consensus.Block (getHeader, GetHeader, ConvertRawHash)
 import           Ouroboros.Consensus.Byron.Ledger (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (HasTxs, GenTx, txId, extractTxs)
-import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs,
+                     extractTxs, txId, HasTxId)
+import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 
-import           Ouroboros.Network.Block (Point, blockHash)
+import           Ouroboros.Network.Block (Point, Serialised, blockHash, HasHeader)
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
+import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
-import           Ouroboros.Network.Protocol.BlockFetch.Type
+import qualified Ouroboros.Network.Protocol.TxSubmission.Type as STX
 
 instance LogFormatting (AnyMessageAndAgency ps)
       => LogFormatting (TraceSendRecv ps) where
@@ -145,7 +147,11 @@ instance (forall result. Show (Query blk result))
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
 instance ( ConvertTxId' blk
-         , RunNode blk
+         , ConvertRawHash blk
+         , HasHeader blk
+         , GetHeader blk
+         , HasTxId (GenTx blk)
+         , SerialiseNodeToNodeConstraints blk
          , HasTxs blk
          )
       => LogFormatting (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
@@ -187,3 +193,85 @@ instance ( ConvertTxId' blk
     mkObject [ "kind" .= String "MsgClientDone"
              , "agency" .= String (pack $ show stok)
              ]
+
+instance ( ConvertTxId' blk
+         , HasTxId (GenTx blk)
+         , ConvertRawHash blk
+         , HasTxs blk
+         )
+      => LogFormatting (AnyMessageAndAgency (BlockFetch (Serialised blk) (Point blk))) where
+  forMachine DBrief (AnyMessageAndAgency stok (MsgBlock _blk)) =
+    mkObject [ "kind" .= String "MsgBlock"
+             , "agency" .= String (pack $ show stok)
+            -- , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+            -- , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+             ]
+
+  forMachine _dtal (AnyMessageAndAgency stok (MsgBlock _blk)) =
+    mkObject [ "kind" .= String "MsgBlock"
+             , "agency" .= String (pack $ show stok)
+          -- TODO
+          -- , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+          --  , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+          --   , "txIds" .= toJSON (presentTx <$> extractTxs blk)
+             ]
+      -- where
+      --   presentTx :: GenTx blk -> Value
+      --   presentTx =  String . renderTxIdForDetails dtal . txId
+
+  forMachine _v (AnyMessageAndAgency stok MsgRequestRange{}) =
+    mkObject [ "kind" .= String "MsgRequestRange"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgStartBatch{}) =
+    mkObject [ "kind" .= String "MsgStartBatch"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
+    mkObject [ "kind" .= String "MsgNoBlocks"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgBatchDone{}) =
+    mkObject [ "kind" .= String "MsgBatchDone"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _v (AnyMessageAndAgency stok MsgClientDone{}) =
+    mkObject [ "kind" .= String "MsgClientDone"
+             , "agency" .= String (pack $ show stok)
+             ]
+
+instance (Show txid, Show tx)
+      => LogFormatting (AnyMessageAndAgency (STX.TxSubmission txid tx)) where
+  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
+    mkObject
+      [ "kind" .= String "MsgRequestTxs"
+      , "agency" .= String (pack $ show stok)
+      , "txIds" .= String (pack $ show txids)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxs txs)) =
+    mkObject
+      [ "kind" .= String "MsgReplyTxs"
+      , "agency" .= String (pack $ show stok)
+      , "txs" .= String (pack $ show txs)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxIds _ _ _)) =
+    mkObject
+      [ "kind" .= String "MsgRequestTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
+    mkObject
+      [ "kind" .= String "MsgReplyTxIds"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine _dtal (AnyMessageAndAgency stok STX.MsgDone) =
+    mkObject
+      [ "kind" .= String "MsgDone"
+      , "agency" .= String (pack $ show stok)
+      ]
+  --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+  forMachine _dtal (AnyMessageAndAgency stok _) =
+    mkObject
+      [ "kind" .= String "MsgKThxBye"
+      , "agency" .= String (pack $ show stok)
+      ]
