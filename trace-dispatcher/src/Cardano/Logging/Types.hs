@@ -46,7 +46,28 @@ import           Data.Text (Text, pack)
 import           Data.Text.Encoding (decodeUtf8)
 import           GHC.Generics
 
--- | Every message needs this to define how to represent it
+-- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
+--   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.
+-- control object
+newtype Trace m a = Trace
+  {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
+
+-- | Contramap lifted to Trace
+-- If you carry a typed formatter a with the TODO
+instance Monad m => Contravariant (Trace m) where
+    contramap f (Trace tr) = Trace $
+      T.contramap (\ (lc, mbC, a) -> (lc, mbC, f a)) tr
+
+-- | @tr1 <> tr2@ will run @tr1@ and then @tr2@ with the same input.
+instance Monad m => Semigroup (Trace m a) where
+  Trace a1 <> Trace a2 = Trace (a1 <> a2)
+
+instance Monad m => Monoid (Trace m a) where
+    mappend = (<>)
+    mempty  = Trace T.nullTracer
+
+
+-- | Every message needs this to define how to represent itself
 class LogFormatting a where
   -- | Machine readable representation with the possibility to represent
   -- with different details based on the detail level.
@@ -54,9 +75,17 @@ class LogFormatting a where
   forMachine :: DetailLevel -> a -> AE.Object
 
   -- | Human readable representation.
-  -- No human representation is represented by the empty text and is the default
+  -- No human representation is represented by the empty text
+  -- The default implementation returns no human representation
   forHuman :: a -> Text
-  forHuman v = decodeUtf8 (BS.toStrict (AE.encode (forMachine DRegular v)))
+  forHuman v = ""
+
+  -- | Returns the human readable representation. If not avalable the machine readable.
+  forHumanOrMachine :: a -> Text
+  forHumanOrMachine v =
+    case forHuman v of
+      "" -> decodeUtf8 (BS.toStrict (AE.encode (forMachine DRegular v)))
+      t -> t
 
   -- | Metrics representation.
   -- No metrics by default
@@ -110,24 +139,6 @@ data LoggingContext = LoggingContext {
 emptyLoggingContext :: LoggingContext
 emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
 
--- | Tracer comes from the contra-tracer package and carries a context and maybe a trace
--- control object
-newtype Trace m a = Trace
-  {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
-
--- | Contramap lifted to Trace
--- If you carry a typed formatter a with the TODO
-instance Monad m => Contravariant (Trace m) where
-    contramap f (Trace tr) = Trace $
-      T.contramap (\ (lc, mbC, a) -> (lc, mbC, f a)) tr
-
--- | @tr1 <> tr2@ will run @tr1@ and then @tr2@ with the same input.
-instance Monad m => Semigroup (Trace m a) where
-  Trace a1 <> Trace a2 = Trace (a1 <> a2)
-
-instance Monad m => Monoid (Trace m a) where
-    mappend = (<>)
-    mempty  = Trace T.nullTracer
 
 -- | Formerly known as verbosity
 data DetailLevel =
