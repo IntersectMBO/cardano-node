@@ -26,6 +26,7 @@ instance A.ToJSON BaseStats where
     toEncoding = A.genericToEncoding A.defaultOptions
 
 instance LogFormatting BaseStats where
+  forMachine = mempty
   asMetrics BaseStats {..} =
     [ DoubleM (Just "measure") bsMeasure
     , DoubleM (Just "sum") bsSum]
