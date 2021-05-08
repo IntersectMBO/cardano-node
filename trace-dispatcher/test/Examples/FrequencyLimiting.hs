@@ -14,7 +14,23 @@ import           Cardano.Logging
 import           Examples.TestObjects
 
 data LOX = LOS (TraceForgeEvent LogBlock) | LOL LimitingMessage
- deriving (LogFormatting, Generic)
+
+instance LogFormata LOX where
+  forMachine _ (TraceForgeEvent LogBlock) =
+      mkObject
+        [ "kind" .= String "TraceForgeEvent"
+        ]
+  forMachine _ (LOL (StartLimiting text)) =
+      mkObject
+        [ "kind" .= String "StartLimiting"
+          "msg"  .= String msg
+        ]
+  forMachine _ (LOL (StopLimiting msg num)) =
+      mkObject
+        [ "kind" .= String "StopLimiting"
+          "msg"  .= String msg
+          "numSuppressed" .= Int num
+        ]
 
 repeated :: Trace IO (TraceForgeEvent LogBlock) -> Int -> Int -> IO ()
 repeated _ 0 _ = pure ()
