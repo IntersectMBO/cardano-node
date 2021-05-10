@@ -120,8 +120,8 @@ parseNodeHostIPv4Address :: String -> Either String NodeHostIPv4Address
 parseNodeHostIPv4Address str =
   maybe
     (Left $
-      "Failed to parse: " ++ str ++
-      ". Use --host-ipv6-addr to specify IPv6 adddress")
+      "Failed to parse IPv4 address: " ++ str ++
+      ". If you want to specify an IPv6 address, use --host-ipv6-addr option.")
     (Right . NodeHostIPv4Address)
     (readMaybe str)
 
@@ -129,8 +129,8 @@ parseNodeHostIPv6Address :: String -> Either String NodeHostIPv6Address
 parseNodeHostIPv6Address str =
   maybe
     (Left $
-      "Failed to parse: " ++ str ++
-      ". Use --host-addr to specify IPv4 adddress")
+      "Failed to parse IPv6 address: " ++ str ++
+      ". If you want to specify an IPv4 adddress, use --host-addr option.")
     (Right . NodeHostIPv6Address)
     (readMaybe str)
 
