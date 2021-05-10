@@ -224,7 +224,7 @@ handleSimpleNode p trace nodeTracers nc onKernel = do
 
   let relayAddresses = producerAddresses nt
       dnsLocalRoots :: [(NodeDnsAddress, PeerAdvertise)]
-      dnsLocalRoots = [ (NodeAddress (NodeHostDnsAddress (decodeUtf8 $ domain))
+      dnsLocalRoots = [ (NodeAddress (NodeHostDnsAddress (decodeUtf8 domain))
                                                          port
                          , pa)
                       | (RelayDomain (DomainAddress domain port), pa) <- relayAddresses ]
@@ -449,6 +449,4 @@ producerAddresses nt =
 useLedgerAfterSlot
   :: NetworkTopology
   -> UseLedgerAfter
-useLedgerAfterSlot nt =
-  case nt of
-       RealNodeTopology _ _ (UseLedger ul) -> ul
+useLedgerAfterSlot (RealNodeTopology _ _ (UseLedger ul)) = ul
