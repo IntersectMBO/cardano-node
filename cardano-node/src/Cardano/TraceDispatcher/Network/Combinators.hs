@@ -27,6 +27,9 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityTxSubmissionTracerNode
   , namesForTxSubmissionTracerNode
 
+  , severityTxSubmission2TracerNode
+  , namesForTxSubmission2TracerNode
+
   ) where
 
 
@@ -45,6 +48,8 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import           Ouroboros.Network.Protocol.Trans.Hello.Type(Hello, Message(..))
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
@@ -336,32 +341,32 @@ namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) =
 
 severityTxSubmissionTracerNode :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> SeverityS
-severityTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode' v
+severityTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
   where
-    severityTxSubNode' (TraceSendMsg msg) = severityTxSubNode'' msg
-    severityTxSubNode' (TraceRecvMsg msg) = severityTxSubNode'' msg
+    severityTxSubNode (TraceSendMsg msg) = severityTxSubNode' msg
+    severityTxSubNode (TraceRecvMsg msg) = severityTxSubNode' msg
 
-    severityTxSubNode'' (AnyMessageAndAgency _agency msg) = severityTxSubNode''' msg
+    severityTxSubNode' (AnyMessageAndAgency _agency msg) = severityTxSubNode'' msg
 
-    severityTxSubNode''' ::
+    severityTxSubNode'' ::
         Message
           (TXS.TxSubmission (GenTxId blk) (GenTx blk))
           from
           to
      -> SeverityS
-    severityTxSubNode''' TXS.MsgRequestTxIds {} = Info
-    severityTxSubNode''' TXS.MsgReplyTxIds {}   = Info
-    severityTxSubNode''' TXS.MsgRequestTxs {}   = Info
-    severityTxSubNode''' TXS.MsgReplyTxs {}     = Info
-    severityTxSubNode''' TXS.MsgDone {}         = Info
-    severityTxSubNode''' _                      = Info
+    severityTxSubNode'' TXS.MsgRequestTxIds {} = Info
+    severityTxSubNode'' TXS.MsgReplyTxIds {}   = Info
+    severityTxSubNode'' TXS.MsgRequestTxs {}   = Info
+    severityTxSubNode'' TXS.MsgReplyTxs {}     = Info
+    severityTxSubNode'' TXS.MsgDone {}         = Info
+    severityTxSubNode'' _                      = Info
     -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
 
 namesForTxSubmissionTracerNode :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> [Text]
 namesForTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : "Serialised" : namesTxSubNode v
+  "NodeToNode" : "TxSubmission" : namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
     namesTxSubNode (TraceRecvMsg msg) = "Recieve" : namesTxSubNode' msg
@@ -380,4 +385,53 @@ namesForTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode'' TXS.MsgReplyTxs {}     = ["ReplyTxs"]
     namesTxSubNode'' TXS.MsgDone {}         = ["Done"]
     namesTxSubNode'' _                      = ["KThxBye"]
+    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+
+severityTxSubmission2TracerNode :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> SeverityS
+severityTxSubmission2TracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
+  where
+    severityTxSubNode (TraceSendMsg msg) = severityTxSubNode' msg
+    severityTxSubNode (TraceRecvMsg msg) = severityTxSubNode' msg
+
+    severityTxSubNode' (AnyMessageAndAgency _agency msg) = severityTxSubNode'' msg
+
+    severityTxSubNode'' ::
+        Message
+          (Hello (TXS.TxSubmission (GenTxId blk) (GenTx blk)) stIdle)
+          from
+          to
+     -> SeverityS
+    severityTxSubNode'' MsgHello {}                        = Debug
+    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxIds {})   = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxIds {})     = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})     = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})       = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgDone {})           = Info
+    severityTxSubNode'' (MsgTalk _)                        = Info
+    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+
+namesForTxSubmission2TracerNode :: BlockFetch.TraceLabelPeer peer
+  (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
+namesForTxSubmission2TracerNode (BlockFetch.TraceLabelPeer _ v) =
+  "NodeToNode" : "TxSubmission2" : namesTxSubNode v
+  where
+    namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
+    namesTxSubNode (TraceRecvMsg msg) = "Recieve" : namesTxSubNode' msg
+
+    namesTxSubNode' (AnyMessageAndAgency _agency msg) = namesTxSubNode'' msg
+
+    namesTxSubNode'' ::
+         Message
+          (Hello (TXS.TxSubmission (GenTxId blk) (GenTx blk)) stIdle) 
+          from
+          to
+      -> [Text]
+    namesTxSubNode'' MsgHello {}                      = ["MsgHello"]
+    namesTxSubNode'' (MsgTalk TXS.MsgRequestTxIds {}) = ["RequestTxIds"]
+    namesTxSubNode'' (MsgTalk TXS.MsgReplyTxIds {})   = ["ReplyTxIds"]
+    namesTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})   = ["RequestTxs"]
+    namesTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})     = ["ReplyTxs"]
+    namesTxSubNode'' (MsgTalk TXS.MsgDone {})         = ["Done"]
+    namesTxSubNode'' (MsgTalk _)                      = ["KThxBye"]
     -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.

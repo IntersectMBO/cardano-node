@@ -25,20 +25,27 @@ import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Cardano.TraceDispatcher.Common.ConvertTxId
 
-import           Ouroboros.Consensus.Block (getHeader, GetHeader, ConvertRawHash)
+import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader,
+                     getHeader)
 import           Ouroboros.Consensus.Byron.Ledger (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs,
-                     extractTxs, txId, HasTxId)
-import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId,
+                     HasTxs, extractTxs, txId)
+import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints,
+                     estimateBlockSize)
 
-import           Ouroboros.Network.Block (Point, Serialised, blockHash, HasHeader)
+import           Ouroboros.Network.Block (HasHeader, Point, Serialised,
+                     blockHash)
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
+import           Ouroboros.Network.Codec (PeerHasAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import           Ouroboros.Network.Protocol.Trans.Hello.Type
+                     (ClientHasAgency (..), Message (..), ServerHasAgency (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as STX
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
 
 instance LogFormatting (AnyMessageAndAgency ps)
       => LogFormatting (TraceSendRecv ps) where
@@ -142,7 +149,7 @@ instance (forall result. Show (Query blk result))
              ]
 
 --
--- | instances of @ToObject@
+-- | instances of @forMachine@
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
@@ -275,3 +282,23 @@ instance (Show txid, Show tx)
       [ "kind" .= String "MsgKThxBye"
       , "agency" .= String (pack $ show stok)
       ]
+
+instance (Show txid, Show tx)
+      => LogFormatting (AnyMessageAndAgency (TXS.TxSubmission2 txid tx)) where
+  forMachine _dtal (AnyMessageAndAgency
+                   -- we need this pattern match for GHC to recognise this
+                   -- function as total.
+                   stok@(ClientAgency TokHello)
+                   MsgHello) =
+    mkObject
+      [ "kind" .= String "MsgHello"
+      , "agency" .= String (pack $ show stok)
+      ]
+  forMachine dtal (AnyMessageAndAgency
+                  (ClientAgency (TokClientTalk stok))
+                  (MsgTalk msg)) =
+    forMachine dtal (AnyMessageAndAgency (ClientAgency stok) msg)
+  forMachine dtal (AnyMessageAndAgency
+                  (ServerAgency (TokServerTalk stok))
+                  (MsgTalk msg)) =
+    forMachine dtal (AnyMessageAndAgency (ServerAgency stok) msg)
