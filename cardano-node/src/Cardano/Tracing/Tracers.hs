@@ -316,8 +316,8 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
           dtServerTracer =
             tracerOnOff (traceServer trSel) verb "Server" tr,
           dtInboundGovernorTracer =
-            traceInboundGovernorTraceMetrics ekgDirect $
-            tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
+            traceInboundGovernorCountersMetrics ekgDirect $
+              tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
           dtLedgerPeersTracer =
             tracerOnOff (traceLedgerPeers trSel) verb "LedgerPeers" tr,
           --
@@ -1232,19 +1232,6 @@ traceConnectionManagerTraceMetrics (Just ekgDirect) _ = Tracer cmtTracer
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.outgoingConns" outgoingConns
     cmtTracer _ = return ()
 
-traceInboundGovernorTraceMetrics :: Maybe EKGDirect -> Tracer IO (InboundGovernorTrace peerAddr) -> Tracer IO (InboundGovernorTrace peerAddr)
-traceInboundGovernorTraceMetrics Nothing tracer     = tracer
-traceInboundGovernorTraceMetrics (Just ekgDirect) _ = Tracer pscTracer
-  where
-    pscTracer :: InboundGovernorTrace peerAddr -> IO ()
-    pscTracer (TrInboundGovernorCounters
-                (InboundGovernorCounters
-                  wPeersRemote
-                  hPeersRemote)) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warmRemote" wPeersRemote
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotRemote" hPeersRemote
-    pscTracer _ = return ()
-
 
 tracePeerSelectionCountersMetrics :: Maybe EKGDirect -> Tracer IO PeerSelectionCounters -> Tracer IO PeerSelectionCounters
 tracePeerSelectionCountersMetrics Nothing tracer     = tracer
@@ -1255,6 +1242,27 @@ tracePeerSelectionCountersMetrics (Just ekgDirect) _ = Tracer pscTracer
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot" hot
+
+
+traceInboundGovernorCountersMetrics
+    :: forall addr.
+       Maybe EKGDirect
+    -> Tracer IO (InboundGovernorTrace addr)
+    -> Tracer IO (InboundGovernorTrace addr)
+traceInboundGovernorCountersMetrics Nothing          tracer = tracer
+traceInboundGovernorCountersMetrics (Just ekgDirect) tracer = 
+    tracer <> Tracer ipgcTracer
+  where
+    ipgcTracer :: InboundGovernorTrace addr -> IO ()
+    ipgcTracer (TrInboundGovernorCounters InboundGovernorCounters {
+                  warmPeersRemote,
+                  hotPeersRemote
+                }) = do
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.warm"
+                                 warmPeersRemote
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.hot"
+                                 hotPeersRemote
+    ipgcTracer _ = pure ()
 
 
 -- | get information about a chain fragment
