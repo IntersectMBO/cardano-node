@@ -614,7 +614,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
    traceServedCount Nothing _ = pure ()
    traceServedCount (Just ekgDirect) ev =
      when (isRollForward ev) $
-       sendEKGDirectCounter ekgDirect "cardano.node.metrics.served.header.counter.int"
+       sendEKGDirectCounter ekgDirect
+                            "cardano.node.metrics.served.header.counter.int"
 
 traceBlockFetchServerMetrics
   :: forall blk. ()
@@ -652,12 +653,16 @@ traceBlockFetchServerMetrics (Just ekgDirect) tBlocksServed tLocalUp tMaxSlotNo 
                         EQ -> do
                             lu <- STM.modifyReadTVar' tLocalUp (+1)
                             return (served, Just lu)
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.served.block.count" served
+      sendEKGDirectInt ekgDirect
+                       "cardano.node.metrics.served.block.count"
+                       served
       case mbLocalUpstreamyness of
-           Just localUpstreamyness -> 
-                sendEKGDirectInt ekgDirect "cardano.node.metrics.served.block.latest.count"
-                                 localUpstreamyness
-           Nothing                 -> return ()
+           Just localUpstreamyness ->
+             sendEKGDirectInt
+               ekgDirect
+               "cardano.node.metrics.served.block.latest.count"
+               localUpstreamyness
+           Nothing -> return ()
 
 -- | CdfCounter tracks the number of time a value below 'limit' has been seen.
 newtype CdfCounter (limit :: Nat) = CdfCounter Int64
@@ -761,7 +766,9 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf2sVar cdf5s
                "cardano.node.metrics.blockfetchclient.blockdelay.cdfFive"
                cdf5s
             when (delay > 5) $
-              sendEKGDirectCounter ekgDirect "cardano.node.metrics.blockfetchclient.lateblocks"
+              sendEKGDirectCounter
+                ekgDirect
+                "cardano.node.metrics.blockfetchclient.lateblocks"
 
     bfTracer e =
       traceWith tracer e
@@ -1135,11 +1142,14 @@ nodeToClientTracers'
 nodeToClientTracers' trSel verb tr =
   NodeToClient.Tracers
   { NodeToClient.tChainSyncTracer =
-    tracerOnOff (traceLocalChainSyncProtocol trSel) verb "LocalChainSyncProtocol" tr
+      tracerOnOff (traceLocalChainSyncProtocol trSel)
+                  verb "LocalChainSyncProtocol" tr
   , NodeToClient.tTxSubmissionTracer =
-    tracerOnOff (traceLocalTxSubmissionProtocol trSel) verb "LocalTxSubmissionProtocol" tr
+      tracerOnOff (traceLocalTxSubmissionProtocol trSel)
+                  verb "LocalTxSubmissionProtocol" tr
   , NodeToClient.tStateQueryTracer =
-    tracerOnOff (traceLocalStateQueryProtocol trSel) verb "LocalStateQueryProtocol" tr
+      tracerOnOff (traceLocalStateQueryProtocol trSel)
+                  verb "LocalStateQueryProtocol" tr
   }
 
 --------------------------------------------------------------------------------
@@ -1160,12 +1170,24 @@ nodeToNodeTracers'
   -> NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
 nodeToNodeTracers' trSel verb tr =
   NodeToNode.Tracers
-  { NodeToNode.tChainSyncTracer = tracerOnOff (traceChainSyncProtocol trSel) verb "ChainSyncProtocol" tr
-  , NodeToNode.tChainSyncSerialisedTracer = showOnOff (traceChainSyncProtocol trSel) "ChainSyncProtocolSerialised" tr
-  , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol trSel) verb "BlockFetchProtocol" tr
-  , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised trSel) "BlockFetchProtocolSerialised" tr
-  , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
-  , NodeToNode.tTxSubmission2Tracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
+  { NodeToNode.tChainSyncTracer =
+      tracerOnOff (traceChainSyncProtocol trSel)
+                  verb "ChainSyncProtocol" tr
+  , NodeToNode.tChainSyncSerialisedTracer =
+      showOnOff (traceChainSyncProtocol trSel)
+                "ChainSyncProtocolSerialised" tr
+  , NodeToNode.tBlockFetchTracer =
+      tracerOnOff (traceBlockFetchProtocol trSel)
+                  verb "BlockFetchProtocol" tr
+  , NodeToNode.tBlockFetchSerialisedTracer =
+      showOnOff (traceBlockFetchProtocolSerialised trSel)
+                "BlockFetchProtocolSerialised" tr
+  , NodeToNode.tTxSubmissionTracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
+  , NodeToNode.tTxSubmission2Tracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
   }
 
 teeTraceBlockFetchDecision
@@ -1226,15 +1248,28 @@ traceConnectionManagerTraceMetrics (Just ekgDirect) tracer =
                   outgoingConns
                 )
               ) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.prunableConns" prunableConns
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.duplexConns" duplexConns
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.uniConns" uniConns
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.incomingConns" incomingConns
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.outgoingConns" outgoingConns
+      sendEKGDirectInt ekgDirect
+                       "cardano.node.metrics.connectionManager.prunableConns"
+                       prunableConns
+      sendEKGDirectInt ekgDirect
+                       "cardano.node.metrics.connectionManager.duplexConns"
+                       duplexConns
+      sendEKGDirectInt ekgDirect
+                       "cardano.node.metrics.connectionManager.uniConns"
+                       uniConns
+      sendEKGDirectInt ekgDirect
+                       "cardano.node.metrics.connectionManager.incomingConns"
+                       incomingConns
+      sendEKGDirectInt ekgDirect
+                       "cardano.node.metrics.connectionManager.outgoingConns"
+                       outgoingConns
     cmtTracer _ = return ()
 
 
-tracePeerSelectionCountersMetrics :: Maybe EKGDirect -> Tracer IO PeerSelectionCounters -> Tracer IO PeerSelectionCounters
+tracePeerSelectionCountersMetrics
+    :: Maybe EKGDirect
+    -> Tracer IO PeerSelectionCounters
+    -> Tracer IO PeerSelectionCounters
 tracePeerSelectionCountersMetrics Nothing tracer     = tracer
 tracePeerSelectionCountersMetrics (Just ekgDirect) _ = Tracer pscTracer
   where
@@ -1242,7 +1277,7 @@ tracePeerSelectionCountersMetrics (Just ekgDirect) _ = Tracer pscTracer
     pscTracer (PeerSelectionCounters cold warm hot) = do
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot" hot
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  hot
 
 
 traceInboundGovernorCountersMetrics
