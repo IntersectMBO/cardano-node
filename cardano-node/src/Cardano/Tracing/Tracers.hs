@@ -1212,20 +1212,21 @@ traceConnectionManagerTraceMetrics
     :: Maybe EKGDirect
     -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
     -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
-traceConnectionManagerTraceMetrics Nothing tracer     = tracer
-traceConnectionManagerTraceMetrics (Just ekgDirect) _ = Tracer cmtTracer
+traceConnectionManagerTraceMetrics Nothing          tracer = tracer
+traceConnectionManagerTraceMetrics (Just ekgDirect) tracer =
+    tracer <> Tracer cmtTracer
   where
     cmtTracer :: (ConnectionManagerTrace peerAddr handlerTrace) -> IO ()
     cmtTracer (TrConnectionManagerCounters
                 (ConnectionManagerCounters
-                  nConnsPruning
+                  prunableConns
                   duplexConns
                   uniConns
                   incomingConns
                   outgoingConns
                 )
               ) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.nConnsPruning" nConnsPruning
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.prunableConns" prunableConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.duplexConns" duplexConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.uniConns" uniConns
       sendEKGDirectInt ekgDirect "cardano.node.metrics.connectionManager.incomingConns" incomingConns
