@@ -56,7 +56,8 @@ Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and th
 
 You __can__ tell the node that the topology configuration file changed by sending a SIGHUP
 signal to the `cardano-node` process, e.g. `pkill -HUP cardano-node`. After receiving the
-signal, `cardano-node` will re-read the file and restart all dns resolution.
+signal, `cardano-node` will re-read the file and restart all dns resolution. Please
+**note** that this only applies to the topology configuration file!
 
 #### The genesis.json file
 
