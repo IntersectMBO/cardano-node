@@ -10,6 +10,9 @@ module Cardano.Tracing.Config
   , TraceSelection (..)
   , traceConfigParser
   , OnOff (..)
+  , TraceConnectionManagerCounters
+  , TracePeerSelectionCounters
+  , TraceInboundGovernorCounters
   ) where
 
 import           Cardano.Prelude
@@ -41,9 +44,9 @@ type TraceChainSyncClient = ("TraceChainSyncClient" :: Symbol)
 type TraceChainSyncHeaderServer = ("TraceChainSyncHeaderServer" :: Symbol)
 type TraceChainSyncProtocol = ("TraceChainSyncProtocol" :: Symbol)
 type TraceConnectionManager = ("TraceConnectionManager" :: Symbol)
+type TraceConnectionManagerCounters = ("TraceConnectionManagerCounters" :: Symbol)
 type DebugPeerSelectionInitiator = ("DebugPeerSelectionInitiator" :: Symbol)
 type DebugPeerSelectionInitiatorResponder = ("DebugPeerSelectionInitiatorResponder" :: Symbol)
-type TracePeerSelectionCounters = ("TracePeerSelectionCounters" :: Symbol)
 type TraceDiffusionInitialization = ("TraceDiffusionInitialization" :: Symbol)
 type TraceDnsResolver = ("TraceDnsResolver" :: Symbol)
 type TraceForge = ("TraceForge" :: Symbol)
@@ -63,10 +66,12 @@ type TraceMempool = ("TraceMempool" :: Symbol)
 type TraceMux = ("TraceMux" :: Symbol)
 type TraceLocalMux = ("TraceLocalMux" :: Symbol)
 type TracePeerSelection = ("TracePeerSelection" :: Symbol)
+type TracePeerSelectionCounters = ("TracePeerSelectionCounters" :: Symbol)
 type TracePeerSelectionActions = ("TracePeerSelectionActions" :: Symbol)
 type TracePublicRootPeers = ("TracePublicRootPeers" :: Symbol)
 type TraceServer = ("TraceServer" :: Symbol)
 type TraceInboundGovernor = ("InboundGovernor" :: Symbol)
+type TraceInboundGovernorCounters = ("InboundGovernorCounters" :: Symbol)
 type TraceLocalInboundGovernor = ("LocalInboundGovernor" :: Symbol)
 type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
@@ -100,9 +105,9 @@ data TraceSelection
   , traceChainSyncHeaderServer :: OnOff TraceChainSyncHeaderServer
   , traceChainSyncProtocol :: OnOff TraceChainSyncProtocol
   , traceConnectionManager :: OnOff TraceConnectionManager
+  , traceConnectionManagerCounters :: OnOff TraceConnectionManagerCounters
   , traceDebugPeerSelectionInitiatorTracer :: OnOff DebugPeerSelectionInitiator
   , traceDebugPeerSelectionInitiatorResponderTracer :: OnOff DebugPeerSelectionInitiatorResponder
-  , tracePeerSelectionCounters :: OnOff TracePeerSelectionCounters
   , traceDiffusionInitialization :: OnOff TraceDiffusionInitialization
   , traceDnsResolver :: OnOff TraceDnsResolver
   , traceForge :: OnOff TraceForge
@@ -122,10 +127,12 @@ data TraceSelection
   , traceMux :: OnOff TraceMux
   , traceLocalMux :: OnOff TraceLocalMux
   , tracePeerSelection :: OnOff TracePeerSelection
+  , tracePeerSelectionCounters :: OnOff TracePeerSelectionCounters
   , tracePeerSelectionActions :: OnOff TracePeerSelectionActions
   , tracePublicRootPeers :: OnOff TracePublicRootPeers
   , traceServer :: OnOff TraceServer
   , traceInboundGovernor :: OnOff TraceInboundGovernor
+  , traceInboundGovernorCounters :: OnOff TraceInboundGovernorCounters
   , traceLocalInboundGovernor :: OnOff TraceLocalInboundGovernor
   , traceTxInbound :: OnOff TraceTxInbound
   , traceTxOutbound :: OnOff TraceTxOutbound
@@ -163,12 +170,12 @@ traceConfigParser v =
       chainSyncProtocol = OnOff False
       connectionManager :: OnOff TraceConnectionManager
       connectionManager = OnOff False
+      connectionManagerCounters :: OnOff TraceConnectionManagerCounters
+      connectionManagerCounters = OnOff True
       debugPeerSelectionInitiator :: OnOff DebugPeerSelectionInitiator
       debugPeerSelectionInitiator = OnOff False
       debugPeerSelectionInitiatorResponder :: OnOff DebugPeerSelectionInitiatorResponder
       debugPeerSelectionInitiatorResponder = OnOff False
-      trPeerSelectionCounters :: OnOff TracePeerSelectionCounters
-      trPeerSelectionCounters = OnOff False
       diffusionInitialization :: OnOff TraceDiffusionInitialization
       diffusionInitialization = OnOff False
       dnsResolver :: OnOff TraceDnsResolver
@@ -206,6 +213,8 @@ traceConfigParser v =
       localMux = OnOff False
       peerSelection :: OnOff TracePeerSelection
       peerSelection = OnOff False
+      peerSelectionCounters :: OnOff TracePeerSelectionCounters
+      peerSelectionCounters = OnOff True
       peerSelectionActions :: OnOff TracePeerSelectionActions
       peerSelectionActions = OnOff False
       publicRootPeers :: OnOff TracePublicRootPeers
@@ -214,6 +223,8 @@ traceConfigParser v =
       server = OnOff False
       inboundGovernor :: OnOff TraceInboundGovernor
       inboundGovernor = OnOff False
+      inboundGovernorCounters :: OnOff TraceInboundGovernorCounters
+      inboundGovernorCounters = OnOff True
       localInboundGovernor :: OnOff TraceLocalInboundGovernor
       localInboundGovernor = OnOff False
       txInbound :: OnOff TraceTxInbound
@@ -241,12 +252,11 @@ traceConfigParser v =
     <*> v .:? getName chainSyncHeaderServer .!= chainSyncHeaderServer
     <*> v .:? getName chainSyncProtocol .!= chainSyncProtocol
     <*> v .:? getName connectionManager .!= connectionManager
+    <*> v .:? getName connectionManagerCounters .!= connectionManagerCounters
     <*> v .:? getName debugPeerSelectionInitiator
                        .!= debugPeerSelectionInitiator
     <*> v .:? getName debugPeerSelectionInitiatorResponder
                        .!= debugPeerSelectionInitiatorResponder
-    <*> v .:? getName trPeerSelectionCounters
-                       .!= trPeerSelectionCounters
     <*> v .:? getName diffusionInitialization .!= diffusionInitialization
     <*> v .:? getName dnsResolver .!= dnsResolver
     <*> v .:? getName forge .!= forge
@@ -266,10 +276,12 @@ traceConfigParser v =
     <*> v .:? getName mux .!= mux
     <*> v .:? getName localMux .!= localMux
     <*> v .:? getName peerSelection .!= peerSelection
+    <*> v .:? getName peerSelectionCounters .!= peerSelectionCounters
     <*> v .:? getName peerSelectionActions .!= peerSelectionActions
     <*> v .:? getName publicRootPeers .!= publicRootPeers
     <*> v .:? getName server .!= server
     <*> v .:? getName inboundGovernor .!= inboundGovernor
+    <*> v .:? getName inboundGovernorCounters .!= inboundGovernorCounters
     <*> v .:? getName localInboundGovernor .!= localInboundGovernor
     <*> v .:? getName txInbound .!= txInbound
     <*> v .:? getName txOutbound .!= txOutbound
