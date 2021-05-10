@@ -436,12 +436,15 @@ producerAddresses
 producerAddresses nt =
   case nt of
     RealNodeTopology lrpg prp _ ->
-      ( map (\lrp -> (valency lrp
-                           , Map.fromList $ rootAddressToRelayAddress
-                                          $ localRoots lrp))
-                  (groups lrpg)
-      , concatMap (map fst . rootAddressToRelayAddress)
-                  (map publicRoots prp))
+       ( map (\lrp -> ( valency lrp
+                     , Map.fromList $ rootAddressToRelayAddress
+                                    $ localRoots lrp
+                     )
+             )
+             (groups lrpg)
+       , concatMap (map fst . rootAddressToRelayAddress)
+                   (map publicRoots prp)
+       )
 
 useLedgerAfterSlot
   :: NetworkTopology
