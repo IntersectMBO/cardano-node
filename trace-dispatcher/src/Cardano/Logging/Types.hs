@@ -78,7 +78,7 @@ class LogFormatting a where
   -- No human representation is represented by the empty text
   -- The default implementation returns no human representation
   forHuman :: a -> Text
-  forHuman v = ""
+  forHuman _v = ""
 
   -- | Returns the human readable representation. If not avalable the machine readable.
   forHumanOrMachine :: a -> Text
