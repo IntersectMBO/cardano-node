@@ -72,8 +72,8 @@ data RootAddress = RootAddress
 instance FromJSON RootAddress where
   parseJSON = withObject "RootAddress" $ \o ->
                 RootAddress
-                  <$> o .: "addrs"
-                  <*> o .: "advertise"
+                  <$> o .:  "addrs"
+                  <*> o .:? "advertise" .!= DoNotAdvertisePeer
 
 instance ToJSON RootAddress where
   toJSON ra =
