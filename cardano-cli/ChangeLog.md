@@ -9,6 +9,21 @@
 - Add additional commands for creating MIR certificates to the CLI. This
   supports the ability to transfer funds to the treasury for Catalyst projects.
   (#2503)
+- As a result of refactoring in preparation for the upcoming Alonzo release,
+  there are a couple of breaking changes in CLI commands referring to scripts:
+  - Auxiliary scripts (i.e. those included in the Tx auxiliary data, which are
+    not required as transaction signers) must now be included with
+    `--auxiliary-script-file` rather than with `--script-file`.
+  - Scripts witnessing txins, certificates, withdrawls and minting must now be
+    paired with the thing they are witnessing. E.g.
+    ```
+    --certificate-file  $certfile --certificate-script-file $scriptfile
+    --tx-out $txout --minting-script-file $scriptfile
+    --withdrawal $withdrawal --withdrawal-script-file $scriptfile
+    --tx-in $txin --txin-script-file $scriptfile
+    ```
+  - Scripts should now be specified when creating the txbody, rather than when
+    signing the transaction. (#2547)
 - The transaction view command now additionally shows detailed of minted
   non-native tokens. (#2550)
 - Removed support for Byron addresses using the Bech32 encoding. The only
