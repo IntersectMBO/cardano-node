@@ -16,10 +16,11 @@ import           Cardano.Prelude hiding (show)
 import           Prelude (String, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
+import qualified Data.IP as IP
 import           Data.Text (pack)
 
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
-import qualified Network.Socket as Socket (SockAddr)
+import           Network.Socket (SockAddr (..))
 
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
@@ -173,8 +174,8 @@ instance HasSeverityAnnotation (WithDomainName DnsTrace) where
     DnsTraceLookupAAAAResult {} -> Debug
 
 
-instance HasPrivacyAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr))
-instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+instance HasPrivacyAnnotation (WithDomainName (SubscriptionTrace SockAddr))
+instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace SockAddr)) where
   getSeverityAnnotation (WithDomainName _ ev) = case ev of
     SubscriptionTraceConnectStart {} -> Notice
     SubscriptionTraceConnectEnd {} -> Notice
@@ -202,8 +203,8 @@ instance HasSeverityAnnotation (WithDomainName (SubscriptionTrace Socket.SockAdd
     SubscriptionTraceCloseSocket {} -> Debug
 
 
-instance HasPrivacyAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr))
-instance HasSeverityAnnotation (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+instance HasPrivacyAnnotation (WithIPList (SubscriptionTrace SockAddr))
+instance HasSeverityAnnotation (WithIPList (SubscriptionTrace SockAddr)) where
   getSeverityAnnotation (WithIPList _ _ ev) = case ev of
     SubscriptionTraceConnectStart _ -> Info
     SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
@@ -329,7 +330,7 @@ instance HasTextFormatter NtN.AcceptConnectionsPolicyTrace where
   formatText a _ = pack (show a)
 
 
-instance (StandardHash header, Show peer)
+instance (StandardHash header, Show peer, ToObject peer)
       => Transformable Text IO [TraceLabelPeer peer (FetchDecision [Point header])] where
   trTransformer = trStructuredText
 instance (StandardHash header, Show peer)
@@ -337,7 +338,8 @@ instance (StandardHash header, Show peer)
   formatText a _ = pack (show a)
 
 
-instance (Show peer, Show a, HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
+instance ( Show peer, ToObject peer, Show a, HasPrivacyAnnotation a
+         , HasSeverityAnnotation a, ToObject a)
       => Transformable Text IO (TraceLabelPeer peer a) where
   trTransformer = trStructuredText
 instance (Show peer, Show a)
@@ -372,9 +374,9 @@ instance Show addr => HasTextFormatter (WithAddr addr ErrorPolicyTrace) where
   formatText a _ = pack (show a)
 
 
-instance Transformable Text IO (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+instance Transformable Text IO (WithDomainName (SubscriptionTrace SockAddr)) where
   trTransformer = trStructuredText
-instance HasTextFormatter (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+instance HasTextFormatter (WithDomainName (SubscriptionTrace SockAddr)) where
   formatText a _ = pack (show a)
 
 
@@ -384,9 +386,9 @@ instance HasTextFormatter (WithDomainName DnsTrace) where
   formatText a _ = pack (show a)
 
 
-instance Transformable Text IO (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+instance Transformable Text IO (WithIPList (SubscriptionTrace SockAddr)) where
   trTransformer = trStructuredText
-instance HasTextFormatter (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+instance HasTextFormatter (WithIPList (SubscriptionTrace SockAddr)) where
   formatText a _ = pack (show a)
 
 
@@ -731,7 +733,7 @@ instance ToObject (TraceFetchClientState header) where
     mkObject [ "kind" .= String "ClientTerminating" ]
 
 
-instance Show peer
+instance (ToObject peer)
       => ToObject [TraceLabelPeer peer (FetchDecision [Point header])] where
   toObject MinimalVerbosity _ = emptyObject
   toObject _ [] = emptyObject
@@ -740,10 +742,9 @@ instance Show peer
     , "peers" .= toJSON
       (foldl' (\acc x -> toObject MaximalVerbosity x : acc) [] xs) ]
 
-
-instance (Show peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
+instance (ToObject peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
   toObject verb (TraceLabelPeer peerid a) =
-    mkObject [ "peer" .= show peerid ] <> toObject verb a
+    mkObject [ "peer" .= toObject verb peerid ] <> toObject verb a
 
 
 instance ToObject (AnyMessageAndAgency ps)
@@ -832,7 +833,7 @@ instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
              , "event" .= show ev ]
 
 
-instance ToObject (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+instance ToObject (WithIPList (SubscriptionTrace SockAddr)) where
   toObject _verb (WithIPList localAddresses dests ev) =
     mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
              , "localAddresses" .= show localAddresses
@@ -847,7 +848,7 @@ instance ToObject (WithDomainName DnsTrace) where
              , "event" .= show ev ]
 
 
-instance ToObject (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
+instance ToObject (WithDomainName (SubscriptionTrace SockAddr)) where
   toObject _verb (WithDomainName dom ev) =
     mkObject [ "kind" .= String "SubscriptionTrace"
              , "domain" .= show dom
@@ -859,3 +860,34 @@ instance (Show peer) => ToObject (WithMuxBearer peer MuxTrace) where
     mkObject [ "kind" .= String "MuxTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
+
+instance ToObject NtN.RemoteAddress where
+    toObject _verb (SockAddrInet port addr) =
+        let ip = IP.fromHostAddress addr in
+        mkObject [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    toObject _verb (SockAddrInet6 port _ addr _) =
+        let ip = IP.fromHostAddress6 addr in
+        mkObject [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    toObject _verb (SockAddrUnix path) =
+        mkObject [ "path" .= show path ]
+
+
+instance ToObject (NtN.RemoteConnectionId) where
+    toObject verb (NtN.ConnectionId l r) =
+        mkObject [ "local" .= toObject verb l
+                 , "remote" .= toObject verb r
+                 ]
+
+instance ToObject LocalAddress where
+    toObject _verb (LocalAddress path) =
+        mkObject ["path" .= path]
+
+instance ToObject (NtC.LocalConnectionId) where
+    toObject verb (NtC.ConnectionId l r) =
+        mkObject [ "local" .= toObject verb l
+                 , "remote" .= toObject verb r
+                 ]

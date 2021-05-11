@@ -278,8 +278,8 @@ mkTracers
      , HasKESMetricsData blk
      , HasKESInfo blk
      , TraceConstraints blk
-     , Show peer, Eq peer
-     , Show localPeer
+     , Show peer, Eq peer, ToObject peer
+     , Show localPeer, ToObject localPeer
      )
   => BlockConfig blk
   -> TraceOptions
@@ -509,6 +509,7 @@ mkConsensusTracers
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
+     , ToObject peer
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
@@ -963,6 +964,7 @@ nodeToClientTracers'
      , Show (ApplyTxErr blk)
      , Show (GenTx blk)
      , Show localPeer
+     , ToObject localPeer
      , ShowQuery (Query blk)
      )
   => TraceSelection
@@ -990,6 +992,7 @@ nodeToNodeTracers'
      , Show blk
      , Show (Header blk)
      , Show peer
+     , ToObject peer
      )
   => TraceSelection
   -> TracingVerbosity
@@ -1009,6 +1012,7 @@ teeTraceBlockFetchDecision
     :: ( Eq peer
        , HasHeader blk
        , Show peer
+       , ToObject peer
        )
     => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
@@ -1034,6 +1038,7 @@ teeTraceBlockFetchDecisionElide
     :: ( Eq peer
        , HasHeader blk
        , Show peer
+       , ToObject peer
        )
     => TracingVerbosity
     -> MVar (Maybe (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])]),Integer)
