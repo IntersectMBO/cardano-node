@@ -1,5 +1,7 @@
-{-# LANGUAGE GADTs     #-}
-{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE PolyKinds           #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.TraceDispatcher.Network.Combinators
   (
@@ -24,11 +26,14 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityTBlockFetchSerialised
   , namesForTBlockFetchSerialised
 
-  , severityTxSubmissionTracerNode
-  , namesForTxSubmissionTracerNode
+  , severityTxSubmissionNode
+  , namesForTxSubmissionNode
 
-  , severityTxSubmission2TracerNode
-  , namesForTxSubmission2TracerNode
+  , severityTxSubmission2Node
+  , namesForTxSubmission2Node
+
+  , severityIpSubscription
+  , namesForIpSubscription
 
   ) where
 
@@ -36,6 +41,7 @@ module Cardano.TraceDispatcher.Network.Combinators
 import           Cardano.Logging
 import           Cardano.Prelude
 
+import qualified Network.Socket as Socket
 
 import           Ouroboros.Network.Block (Point, Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -47,9 +53,13 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
+import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello,
+                     Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
-import           Ouroboros.Network.Protocol.Trans.Hello.Type(Hello, Message(..))
+import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
+import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
+                     SubscriberError, SubscriptionTrace (..))
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
@@ -339,9 +349,9 @@ namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) =
     namesTBlockFetch'' MsgBatchDone {}    = ["BatchDone"]
     namesTBlockFetch'' MsgClientDone {}   = ["ClientDone"]
 
-severityTxSubmissionTracerNode :: BlockFetch.TraceLabelPeer peer
+severityTxSubmissionNode :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> SeverityS
-severityTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
+severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
   where
     severityTxSubNode (TraceSendMsg msg) = severityTxSubNode' msg
     severityTxSubNode (TraceRecvMsg msg) = severityTxSubNode' msg
@@ -363,9 +373,9 @@ severityTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNo
     -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
 
-namesForTxSubmissionTracerNode :: BlockFetch.TraceLabelPeer peer
+namesForTxSubmissionNode :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> [Text]
-namesForTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) =
+namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : "TxSubmission" : namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
@@ -387,9 +397,9 @@ namesForTxSubmissionTracerNode (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode'' _                      = ["KThxBye"]
     -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
-severityTxSubmission2TracerNode :: BlockFetch.TraceLabelPeer peer
+severityTxSubmission2Node :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> SeverityS
-severityTxSubmission2TracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
+severityTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
   where
     severityTxSubNode (TraceSendMsg msg) = severityTxSubNode' msg
     severityTxSubNode (TraceRecvMsg msg) = severityTxSubNode' msg
@@ -402,18 +412,18 @@ severityTxSubmission2TracerNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubN
           from
           to
      -> SeverityS
-    severityTxSubNode'' MsgHello {}                        = Debug
-    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxIds {})   = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxIds {})     = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})     = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})       = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgDone {})           = Info
-    severityTxSubNode'' (MsgTalk _)                        = Info
+    severityTxSubNode'' MsgHello {}                      = Debug
+    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxIds {}) = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxIds {})   = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})   = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})     = Info
+    severityTxSubNode'' (MsgTalk TXS.MsgDone {})         = Info
+    severityTxSubNode'' (MsgTalk _)                      = Info
     -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
-namesForTxSubmission2TracerNode :: BlockFetch.TraceLabelPeer peer
+namesForTxSubmission2Node :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
-namesForTxSubmission2TracerNode (BlockFetch.TraceLabelPeer _ v) =
+namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : "TxSubmission2" : namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
@@ -423,7 +433,7 @@ namesForTxSubmission2TracerNode (BlockFetch.TraceLabelPeer _ v) =
 
     namesTxSubNode'' ::
          Message
-          (Hello (TXS.TxSubmission (GenTxId blk) (GenTx blk)) stIdle) 
+          (Hello (TXS.TxSubmission (GenTxId blk) (GenTx blk)) stIdle)
           from
           to
       -> [Text]
@@ -435,3 +445,58 @@ namesForTxSubmission2TracerNode (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode'' (MsgTalk TXS.MsgDone {})         = ["Done"]
     namesTxSubNode'' (MsgTalk _)                      = ["KThxBye"]
     -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+
+severityIpSubscription ::
+     WithIPList (SubscriptionTrace Socket.SockAddr)
+  -> SeverityS
+severityIpSubscription WithIPList {..} = case wilEvent of
+    SubscriptionTraceConnectStart _ -> Info
+    SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
+      ConnectSuccess         -> Info
+      ConnectSuccessLast     -> Notice
+      ConnectValencyExceeded -> Warning
+    SubscriptionTraceConnectException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing                   -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
+    SubscriptionTraceSubscriptionRunning -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionFailed -> Error
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Notice
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Info
+    SubscriptionTraceConnectionExist {} -> Notice
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Error
+    SubscriptionTraceMissingLocalAddress -> Warning
+    SubscriptionTraceApplicationException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing                   -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Info
+
+namesForIpSubscription ::
+     WithIPList (SubscriptionTrace Socket.SockAddr)
+  -> [Text]
+namesForIpSubscription WithIPList {..} = case wilEvent of
+    SubscriptionTraceConnectStart _ -> ["ConnectStart"]
+    SubscriptionTraceConnectEnd _ _connectResult -> ["ConnectEnd"]
+    SubscriptionTraceConnectException _ _e -> ["ConnectException"]
+    SubscriptionTraceSocketAllocationException {} -> ["SocketAllocationException"]
+    SubscriptionTraceTryConnectToPeer {}  -> ["TryConnectToPeer"]
+    SubscriptionTraceSkippingPeer {} -> ["SkippingPeer"]
+    SubscriptionTraceSubscriptionRunning -> ["SubscriptionRunning"]
+    SubscriptionTraceSubscriptionWaiting {} -> ["SubscriptionWaiting"]
+    SubscriptionTraceSubscriptionFailed -> ["SubscriptionFailed"]
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> ["SubscriptionWaitingNewConnection"]
+    SubscriptionTraceStart {} -> ["Start"]
+    SubscriptionTraceRestart {} -> ["Restart"]
+    SubscriptionTraceConnectionExist {} -> ["ConnectionExist"]
+    SubscriptionTraceUnsupportedRemoteAddr {} -> ["UnsupportedRemoteAddr"]
+    SubscriptionTraceMissingLocalAddress -> ["MissingLocalAddress"]
+    SubscriptionTraceApplicationException _ _e -> ["ApplicationException"]
+    SubscriptionTraceAllocateSocket {} -> ["AllocateSocket"]
+    SubscriptionTraceCloseSocket {} -> ["CloseSocket"]
