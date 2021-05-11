@@ -4,6 +4,8 @@
 
 - Add initial support for the ledger state and folding over blocks to the API.
   (#2633)
+- Scripts are now stored within the TxBody in the API, rather than in the
+  witnesses. (#2547)
 
 ## 1.26.1 -- March 2021
 
