@@ -12,10 +12,14 @@ module Cardano.TraceDispatcher.Network.Docu
   , docTBlockFetch
   , docTTxSubmissionNode
   , docTTxSubmission2Node
+  , docIpSubscriptionTracer
   ) where
 
 import           Cardano.Logging
 import           Cardano.Prelude
+import qualified Network.Socket as Socket
+import           Data.Time.Clock (DiffTime)
+
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
@@ -32,6 +36,9 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
+import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
+                     LocalAddresses, SubscriptionTrace (..))
 
 
 protoHeader :: header
@@ -66,6 +73,22 @@ protoBlockingReplyList = undefined
 
 protoTxId :: txid
 protoTxId = undefined
+
+protoLocalAdresses :: LocalAddresses addr
+protoLocalAdresses = undefined
+
+protoSocketAddress :: Socket.SockAddr
+protoSocketAddress = undefined
+
+protoRes :: ConnectResult
+protoRes = undefined
+
+protoDiffTime :: DiffTime
+protoDiffTime = undefined
+
+protoException :: NoMethodError
+protoException = undefined
+
 
 ------------------------------------
 
@@ -535,4 +558,87 @@ docTTxSubmission2Node = Documented [
         "Termination message, initiated by the client when the server is\
         \making a blocking call for more transaction identifiers."
   --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
+  ]
+
+docIpSubscriptionTracer :: Documented (WithIPList (SubscriptionTrace Socket.SockAddr))
+docIpSubscriptionTracer = Documented $ map withIPList (undoc docSubscriptionTracer)
+  where
+    withIPList (DocMsg v nl comment) =
+      DocMsg (WithIPList protoLocalAdresses [] v) nl comment
+
+docSubscriptionTracer :: Documented (SubscriptionTrace Socket.SockAddr)
+docSubscriptionTracer = Documented [
+      DocMsg
+        (SubscriptionTraceConnectStart protoSocketAddress)
+        []
+        "Connection Attempt Start with destination."
+    , DocMsg
+        (SubscriptionTraceConnectEnd protoSocketAddress protoRes)
+        []
+        "Connection Attempt end with destination and outcome."
+    , DocMsg
+        (SubscriptionTraceSocketAllocationException protoSocketAddress protoException)
+        []
+        "Socket Allocation Exception with destination and the exception."
+    , DocMsg
+        (SubscriptionTraceConnectException protoSocketAddress protoException)
+        []
+        "Connection Attempt Exception with destination and exception."
+    , DocMsg
+        (SubscriptionTraceTryConnectToPeer protoSocketAddress)
+        []
+        "Trying to connect to peer with address."
+    , DocMsg
+        (SubscriptionTraceSkippingPeer protoSocketAddress)
+        []
+        "Skipping peer with address."
+    , DocMsg
+        SubscriptionTraceSubscriptionRunning
+        []
+        "Required subscriptions started."
+    , DocMsg
+        (SubscriptionTraceSubscriptionWaiting 1)
+        []
+        "Waiting on address with active connections."
+    , DocMsg
+        SubscriptionTraceSubscriptionFailed
+        []
+        "Failed to start all required subscriptions."
+    , DocMsg
+        (SubscriptionTraceSubscriptionWaitingNewConnection protoDiffTime)
+        []
+        "Waiting delay time before attempting a new connection."
+    , DocMsg
+        (SubscriptionTraceStart 1)
+        []
+        "Starting Subscription Worker with a valency."
+    , DocMsg
+        (SubscriptionTraceRestart protoDiffTime 1 2)
+        []
+        "Restarting Subscription after duration with desired valency and\
+        \ current valency."
+    , DocMsg
+        (SubscriptionTraceConnectionExist protoSocketAddress)
+        []
+        "Connection exists to destination."
+    , DocMsg
+        (SubscriptionTraceUnsupportedRemoteAddr protoSocketAddress)
+        []
+        "Unsupported remote target address."
+    , DocMsg
+        SubscriptionTraceMissingLocalAddress
+        []
+        "Missing local address."
+    , DocMsg
+        (SubscriptionTraceApplicationException protoSocketAddress protoException)
+        []
+        "Application Exception occured."
+    , DocMsg
+        (SubscriptionTraceAllocateSocket protoSocketAddress)
+        []
+        "Allocate socket to address."
+    , DocMsg
+        (SubscriptionTraceCloseSocket protoSocketAddress)
+        []
+        "Closed socket to address."
   ]

@@ -258,14 +258,19 @@ mkDispatchTracers' trBase = do
                 severityTBlockFetchSerialised
                 trBase
     tsnTr  <-  mkStandardTracer
-                "TxSubmissionTracer"
-                namesForTxSubmissionTracerNode
-                severityTxSubmissionTracerNode
+                "TxSubmission"
+                namesForTxSubmissionNode
+                severityTxSubmissionNode
                 trBase
     ts2nTr  <-  mkStandardTracer
-                "TxSubmission2Tracer"
-                namesForTxSubmission2TracerNode
-                severityTxSubmission2TracerNode
+                "TxSubmission2"
+                namesForTxSubmission2Node
+                severityTxSubmission2Node
+                trBase
+    ipsTr   <-  mkStandardTracer
+                "IpSubscription"
+                namesForIpSubscription
+                severityIpSubscription
                 trBase
     pure Tracers
       { chainDBTracer = T.Tracer (traceWith cdbmTr)
@@ -299,7 +304,7 @@ mkDispatchTracers' trBase = do
         , NodeToNode.tTxSubmissionTracer = T.Tracer (traceWith tsnTr)
         , NodeToNode.tTxSubmission2Tracer = T.Tracer (traceWith ts2nTr)
         }
-      , ipSubscriptionTracer = T.nullTracer
+      , ipSubscriptionTracer = T.Tracer (traceWith ipsTr)
       , dnsSubscriptionTracer= T.nullTracer
       , dnsResolverTracer = T.nullTracer
       , errorPolicyTracer = T.nullTracer
@@ -376,6 +381,8 @@ configTracers config Tracers {..} = do
       [traceTrans (NodeToNode.tTxSubmissionTracer nodeToNodeTracers)]
     configureTracers config docTTxSubmission2Node
       [traceTrans (NodeToNode.tTxSubmission2Tracer nodeToNodeTracers)]
+    configureTracers config docIpSubscriptionTracer
+      [traceTrans ipSubscriptionTracer]      
     pure ()
 
 docTracers :: forall peer localPeer blk.

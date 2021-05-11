@@ -16,6 +16,7 @@ module Cardano.TraceDispatcher.Network.Formatting
 
 import           Data.Aeson (Value (String), toJSON, (.=))
 import           Data.Text (pack)
+import qualified Network.Socket as Socket
 import           Text.Show
 
 import           Cardano.TraceDispatcher.Common.Formatting ()
@@ -46,6 +47,8 @@ import           Ouroboros.Network.Protocol.Trans.Hello.Type
                      (ClientHasAgency (..), Message (..), ServerHasAgency (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as STX
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import           Ouroboros.Network.Subscription.Ip (SubscriptionTrace,
+                     WithIPList (..))
 
 instance LogFormatting (AnyMessageAndAgency ps)
       => LogFormatting (TraceSendRecv ps) where
@@ -302,3 +305,11 @@ instance (Show txid, Show tx)
                   (ServerAgency (TokServerTalk stok))
                   (MsgTalk msg)) =
     forMachine dtal (AnyMessageAndAgency (ServerAgency stok) msg)
+
+instance LogFormatting (WithIPList (SubscriptionTrace Socket.SockAddr)) where
+  forMachine _dtal (WithIPList localAddresses dests ev) =
+    mkObject [ "kind" .= String "WithIPList SubscriptionTrace"
+             , "localAddresses" .= String (pack $ show localAddresses)
+             , "dests" .= String (pack $ show dests)
+             , "event" .= String (pack $ show ev)]
+  forHuman  obj = pack $ show obj
