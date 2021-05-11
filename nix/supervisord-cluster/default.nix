@@ -131,7 +131,7 @@ let
     wb backend pre-run-hook    "${stateDir}"
 
     wb_run_allocate_args=(
-        --cachedir             "${cacheDir}"
+        --cache-dir            "${cacheDir}"
         --base-port             ${toString basePort}
         --stagger-ports
         --port-shift-ekg        100

@@ -1,3 +1,5 @@
+set -euo pipefail
+
 . $(dirname "$0")/lib.sh
 
 usage_supervisor() {
@@ -7,12 +9,6 @@ usage_supervisor() {
     get-node-socket-path STATE-DIR
                      Given a state dir, print the default node socket path
                        for 'cardano-cli'
-
-    wait-for-local-node-socket
-                     Given a state dir, wait until a node socket appears
-
-    record-node-pids STATE-DIR
-                     Given a state dir, record node pids
 EOF
 }
 
@@ -33,17 +29,12 @@ case "$op" in
         echo -n $state_dir/node-0/node.socket
         ;;
 
-    wait-for-local-node-socket )
-        while test ! -S $CARDANO_NODE_SOCKET_PATH
-        do msg "supervisor:  waiting 5 seconds for $CARDANO_NODE_SOCKET_PATH to appear.."
-           sleep 5
-        done
-        ;;
-
     record-extended-env-config )
         usage="USAGE: wb supervisor $op ENV-JSON [ENV-CONFIG-OPTS..]"
         env_json=${1:?$usage}
 
+               port_shift_ekg=200
+        port_shift_prometheus=300
         while test $# -gt 0
         do case "$1" in
                --port-shift-ekg )        port_shift_ekg=$2; shift;;
@@ -108,6 +99,10 @@ EOF
         if test ! -v CARDANO_NODE_SOCKET_PATH
         then export  CARDANO_NODE_SOCKET_PATH=$($0 get-node-socket-path "$dir")
         fi
+        while test ! -S $CARDANO_NODE_SOCKET_PATH
+        do msg "supervisor:  waiting 5 seconds for $CARDANO_NODE_SOCKET_PATH to appear.."
+           sleep 5
+        done
 
         msg "supervisor:  pid file:  $dir/supervisor/supervisord.pid"
         pstree -Ap "$(cat "$dir"/supervisor/supervisord.pid)" |

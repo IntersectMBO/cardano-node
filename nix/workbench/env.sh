@@ -7,7 +7,7 @@ usage_env() {
                           Compute the environment configuration JSON.
                           The following environment config options are defined:
 
-        --cachedir DIR       Set the cache directory;  Defaults to $default_cachedir
+        --cache-dir DIR      Set the cache directory;  Defaults to $default_cachedir
         --base-port PORTNO   Set base port number;  Defaults to $default_basePort
         --stagger-ports      Whether to allocate different ports for each node;
                                Defaults to no port staggering
@@ -29,7 +29,7 @@ case "${op}" in
             )
 
         while test $# -gt 0; do case "$1" in
-           --cachedir )      v=(--arg     cacheDir      "$2"  "${v[@]}"); shift;;
+           --cache-dir )     v=(--arg     cacheDir      "$2"  "${v[@]}"); shift;;
            --base-port )     v=(--argjson basePort       $2   "${v[@]}"); shift;;
            --stagger-ports ) v=(--argjson staggerPorts  true "${v[@]}");;
            * ) fatal "wb run print-env-config: unknown args: $*";; esac

@@ -1,5 +1,6 @@
 global_runsdir_def=$PWD/run
 global_runsdir=$global_runsdir_def
+global_envjson=$global_runsdir/env.json
 
 usage_run() {
      usage "run" "Managing cluster runs" <<EOF
@@ -26,7 +27,7 @@ run() {
 while test $# -gt 0
 do case "$1" in
        --runsdir )
-           global_runsdir=$2; shift;;
+           global_runsdir=$2; global_envjson=$global_runsdir/env.json; shift;;
        * ) break;; esac; shift; done
 
 local op=${1:-list}; test $# -gt 0 && shift
@@ -36,7 +37,7 @@ case "$op" in
         test -d "$global_runsdir" && cd "$global_runsdir" &&
             ls | {
                 ## Filter out aliases:
-                grep -v 'current' || true; }
+                grep -v 'current\|env\.json' || true; }
         ;;
 
     show | s )
@@ -90,16 +91,15 @@ case "$op" in
 
     allocate )
         local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ENV-CONFIG-OPTS..]"
-        local batch=${1:?$usage}
-        local prof=${2:?$usage}
+        local batch=${1:?$usage}; shift
+        local  prof=${1:?$usage}; shift
 
-        local cacheDir=$default_cacheDir basePort=$default_basePort staggerPorts='false' got_backend_opts=
+        local cacheDir=$default_cacheDir basePort=$default_basePort staggerPorts='false'
         while test $# -gt 0
         do case "$1" in
                --cache-dir )     cacheDir=$2; shift;;
                --base-port )     basePort=$2; shift;;
                --stagger-ports ) staggerPorts=true; shift;;
-               # -- )              got_backend_opts=true; break;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
@@ -124,24 +124,23 @@ case "$op" in
         mkdir -p "$dir" && test -w "$dir" ||
             fatal "failed to create writable run directory:  $dir"
 
-        local env_json="$dir"/env.json
         local args=(
+            --null-input
             --arg     cacheDir    "$cacheDir"
             --argjson basePort     $basePort
             --argjson staggerPorts $staggerPorts
         )
-        jq_fmutate "$env_json" '
+        jq_fmutate "$global_envjson" '
           { cacheDir:     $cacheDir
           , basePort:     $basePort
           , staggerPorts: $staggerPorts
           }
         ' "${args[@]}"
-
-        if test -n "$got_backend_opts"
-        then backend record-extended-env-config "$env_json" "$@"; fi
+        backend record-extended-env-config "$global_envjson" "$@"
+        cp "$global_envjson" "$dir"/env.json
 
         profile get "$prof" > "$dir"/profile.json
-        profile node-specs    "$dir"/profile.json "$dir"/env.json > "$dir"/node-specs.json
+        profile node-specs    "$dir"/profile.json "$global_envjson" > "$dir"/node-specs.json
 
         local args=(
             --arg name      $name
@@ -187,7 +186,7 @@ workbench:  run $name params:
   - profile JSON:    $dir/profile.json
   - node specs:      $dir/node-specs.json
   - topology:        $dir/topology/topology-nixops.json $dir/topology/topology.pdf
-  - node base port:  $(jq .basePort "$dir"/env.json)
+  - node base port:  $(jq .basePort "$global_envjson")
 EOF
         backend describe-run "$dir"
         ;;
@@ -198,7 +197,7 @@ EOF
 
         run set-current "$name"
         local currentRunPath=$(run current-path)
-        local cacheDir=$(jq -r .cacheDir "$currentRunPath"/env.json)
+        local cacheDir=$(jq -r .cacheDir "$global_envjson")
 
         if test "$cacheDir" = 'null'
         then fatal "invalid meta.json in current run:  $currentRunPath/meta.json"; fi

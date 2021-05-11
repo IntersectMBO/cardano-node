@@ -17,7 +17,7 @@ global_mode='unknown'
 . "$global_basedir"/backend.sh
 
 usage_main() {
-    test -z "$1" ||
+    test $# -lt 1 ||
         msg "Unknown op: $1"
      __usage "OP" "Main OPs" <<EOF
     env          (e)      Environment configuration

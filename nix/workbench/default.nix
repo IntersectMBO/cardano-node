@@ -119,7 +119,7 @@ let
     function workbench-prebuild-executables() {
       ${optionalString useCabalRun
         ''
-      git log -n1 --alternate-refs --pretty=format:"%Cblue%h %Cred%cr %Cgreen%D %Creset%s"
+      git log -n1 --alternate-refs --pretty=format:"%Cblue%h %Cred%cr %Cgreen%D %Cblue%s%Creset"
       echo -n "workbench:  prebuilding executables (because of useCabalRun):"
       for exe in cardano-cli cardano-node cardano-topology
       do echo -n " $exe"
@@ -158,7 +158,7 @@ let
 
           JSON = runWorkbench "environment.json"
           ''env compute-config \
-            --cachedir  "${cacheDir}" \
+            --cache-dir "${cacheDir}" \
             --base-port ${toString basePort} \
             ${optionalString staggerPorts "--stagger-ports"} \
           '';
