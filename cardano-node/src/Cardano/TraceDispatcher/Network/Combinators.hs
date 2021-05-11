@@ -32,8 +32,11 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityTxSubmission2Node
   , namesForTxSubmission2Node
 
-  , severityIpSubscription
-  , namesForIpSubscription
+  , severityIPSubscription
+  , namesForIPSubscription
+
+  , severityDNSSubscription
+  , namesForDNSSubscription
 
   ) where
 
@@ -57,6 +60,7 @@ import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello,
                      Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import           Ouroboros.Network.Subscription.Dns (WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
                      SubscriberError, SubscriptionTrace (..))
@@ -446,10 +450,10 @@ namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode'' (MsgTalk _)                      = ["KThxBye"]
     -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
-severityIpSubscription ::
+severityIPSubscription ::
      WithIPList (SubscriptionTrace Socket.SockAddr)
   -> SeverityS
-severityIpSubscription WithIPList {..} = case wilEvent of
+severityIPSubscription WithIPList {..} = case wilEvent of
     SubscriptionTraceConnectStart _ -> Info
     SubscriptionTraceConnectEnd _ connectResult -> case connectResult of
       ConnectSuccess         -> Info
@@ -478,25 +482,63 @@ severityIpSubscription WithIPList {..} = case wilEvent of
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Info
 
-namesForIpSubscription ::
+namesForSubscription ::
+     SubscriptionTrace Socket.SockAddr
+  -> [Text]
+namesForSubscription SubscriptionTraceConnectStart {} = ["ConnectStart"]
+namesForSubscription SubscriptionTraceConnectEnd {} = ["ConnectEnd"]
+namesForSubscription SubscriptionTraceConnectException {} = ["ConnectException"]
+namesForSubscription SubscriptionTraceSocketAllocationException {} = ["SocketAllocationException"]
+namesForSubscription SubscriptionTraceTryConnectToPeer {}  = ["TryConnectToPeer"]
+namesForSubscription SubscriptionTraceSkippingPeer {} = ["SkippingPeer"]
+namesForSubscription SubscriptionTraceSubscriptionRunning = ["SubscriptionRunning"]
+namesForSubscription SubscriptionTraceSubscriptionWaiting {} = ["SubscriptionWaiting"]
+namesForSubscription SubscriptionTraceSubscriptionFailed = ["SubscriptionFailed"]
+namesForSubscription SubscriptionTraceSubscriptionWaitingNewConnection {} = ["SubscriptionWaitingNewConnection"]
+namesForSubscription SubscriptionTraceStart {} = ["Start"]
+namesForSubscription SubscriptionTraceRestart {} = ["Restart"]
+namesForSubscription SubscriptionTraceConnectionExist {} = ["ConnectionExist"]
+namesForSubscription SubscriptionTraceUnsupportedRemoteAddr {} = ["UnsupportedRemoteAddr"]
+namesForSubscription SubscriptionTraceMissingLocalAddress = ["MissingLocalAddress"]
+namesForSubscription SubscriptionTraceApplicationException {} = ["ApplicationException"]
+namesForSubscription SubscriptionTraceAllocateSocket {} = ["AllocateSocket"]
+namesForSubscription SubscriptionTraceCloseSocket {} = ["CloseSocket"]
+
+namesForIPSubscription ::
      WithIPList (SubscriptionTrace Socket.SockAddr)
   -> [Text]
-namesForIpSubscription WithIPList {..} = case wilEvent of
-    SubscriptionTraceConnectStart _ -> ["ConnectStart"]
-    SubscriptionTraceConnectEnd _ _connectResult -> ["ConnectEnd"]
-    SubscriptionTraceConnectException _ _e -> ["ConnectException"]
-    SubscriptionTraceSocketAllocationException {} -> ["SocketAllocationException"]
-    SubscriptionTraceTryConnectToPeer {}  -> ["TryConnectToPeer"]
-    SubscriptionTraceSkippingPeer {} -> ["SkippingPeer"]
-    SubscriptionTraceSubscriptionRunning -> ["SubscriptionRunning"]
-    SubscriptionTraceSubscriptionWaiting {} -> ["SubscriptionWaiting"]
-    SubscriptionTraceSubscriptionFailed -> ["SubscriptionFailed"]
-    SubscriptionTraceSubscriptionWaitingNewConnection {} -> ["SubscriptionWaitingNewConnection"]
-    SubscriptionTraceStart {} -> ["Start"]
-    SubscriptionTraceRestart {} -> ["Restart"]
-    SubscriptionTraceConnectionExist {} -> ["ConnectionExist"]
-    SubscriptionTraceUnsupportedRemoteAddr {} -> ["UnsupportedRemoteAddr"]
-    SubscriptionTraceMissingLocalAddress -> ["MissingLocalAddress"]
-    SubscriptionTraceApplicationException _ _e -> ["ApplicationException"]
-    SubscriptionTraceAllocateSocket {} -> ["AllocateSocket"]
-    SubscriptionTraceCloseSocket {} -> ["CloseSocket"]
+namesForIPSubscription(WithIPList _ _ e) = "IP" : namesForSubscription e
+
+namesForDNSSubscription ::
+     WithDomainName (SubscriptionTrace Socket.SockAddr)
+  -> [Text]
+namesForDNSSubscription(WithDomainName _ e) = "DNS" : namesForSubscription e
+
+severityDNSSubscription ::
+     WithDomainName (SubscriptionTrace Socket.SockAddr)
+  -> SeverityS
+severityDNSSubscription WithDomainName {..} = case wdnEvent of
+    SubscriptionTraceConnectStart {} -> Notice
+    SubscriptionTraceConnectEnd {} -> Notice
+    SubscriptionTraceConnectException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing                   -> Error
+    SubscriptionTraceSocketAllocationException {} -> Error
+    SubscriptionTraceTryConnectToPeer {} -> Info
+    SubscriptionTraceSkippingPeer {} -> Info
+    SubscriptionTraceSubscriptionRunning -> Debug
+    SubscriptionTraceSubscriptionWaiting {} -> Debug
+    SubscriptionTraceSubscriptionFailed -> Warning
+    SubscriptionTraceSubscriptionWaitingNewConnection {} -> Debug
+    SubscriptionTraceStart {} -> Debug
+    SubscriptionTraceRestart {} -> Debug
+    SubscriptionTraceConnectionExist {} -> Info
+    SubscriptionTraceUnsupportedRemoteAddr {} -> Warning
+    SubscriptionTraceMissingLocalAddress -> Warning
+    SubscriptionTraceApplicationException _ e ->
+        case fromException $ SomeException e of
+             Just (_::SubscriberError) -> Debug
+             Nothing                   -> Error
+    SubscriptionTraceAllocateSocket {} -> Debug
+    SubscriptionTraceCloseSocket {} -> Debug
