@@ -269,8 +269,13 @@ mkDispatchTracers' trBase = do
                 trBase
     ipsTr   <-  mkStandardTracer
                 "IpSubscription"
-                namesForIpSubscription
-                severityIpSubscription
+                namesForIPSubscription
+                severityIPSubscription
+                trBase
+    dnssTr  <-  mkStandardTracer
+                "DnsSubscription"
+                namesForDNSSubscription
+                severityDNSSubscription
                 trBase
     pure Tracers
       { chainDBTracer = T.Tracer (traceWith cdbmTr)
@@ -305,7 +310,7 @@ mkDispatchTracers' trBase = do
         , NodeToNode.tTxSubmission2Tracer = T.Tracer (traceWith ts2nTr)
         }
       , ipSubscriptionTracer = T.Tracer (traceWith ipsTr)
-      , dnsSubscriptionTracer= T.nullTracer
+      , dnsSubscriptionTracer = T.Tracer (traceWith dnssTr)
       , dnsResolverTracer = T.nullTracer
       , errorPolicyTracer = T.nullTracer
       , localErrorPolicyTracer = T.nullTracer
@@ -381,8 +386,10 @@ configTracers config Tracers {..} = do
       [traceTrans (NodeToNode.tTxSubmissionTracer nodeToNodeTracers)]
     configureTracers config docTTxSubmission2Node
       [traceTrans (NodeToNode.tTxSubmission2Tracer nodeToNodeTracers)]
-    configureTracers config docIpSubscriptionTracer
-      [traceTrans ipSubscriptionTracer]      
+    configureTracers config docIPSubscriptionTracer
+      [traceTrans ipSubscriptionTracer]
+    configureTracers config docDNSSubscriptionTracer
+        [traceTrans dnsSubscriptionTracer]
     pure ()
 
 docTracers :: forall peer localPeer blk.
@@ -478,6 +485,12 @@ docTracers' _ Tracers {..} = do
   ts2nTrDoc  <-  documentMarkdown
                   docTTxSubmission2Node
                   [traceTrans (NodeToNode.tTxSubmission2Tracer nodeToNodeTracers)]
+  ipsTrDoc   <-  documentMarkdown
+                  docIPSubscriptionTracer
+                  [traceTrans ipSubscriptionTracer]
+  dnssTrDoc  <-  documentMarkdown
+                    docDNSSubscriptionTracer
+                    [traceTrans dnsSubscriptionTracer]
 
   let bl = cdbmTrDoc
           ++ cscTrDoc
@@ -503,6 +516,8 @@ docTracers' _ Tracers {..} = do
           ++ tbfsTrDoc
           ++ tsnTrDoc
           ++ ts2nTrDoc
+          ++ ipsTrDoc
+          ++ dnssTrDoc
 
   res <- buildersToText bl
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
