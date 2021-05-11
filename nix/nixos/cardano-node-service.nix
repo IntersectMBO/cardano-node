@@ -451,6 +451,7 @@ in {
         description = "cardano-node node daemon user";
         uid = 10016;
         group = "cardano-node";
+        isSystemUser = true;
       };
 
       ## TODO:  use http://hackage.haskell.org/package/systemd for:

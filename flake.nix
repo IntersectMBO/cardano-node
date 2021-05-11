@@ -91,7 +91,7 @@
           inherit (pkgs) cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
         }
         // scripts
-        // (collectExes flake.packages)
+        // exes
         // (prefixNamesWith "static/"
               (mapAttrs pkgs.rewriteStatic (lazyCollectExe
                 (if system == "x86_64-darwin" then flake else muslFlake).packages)))
