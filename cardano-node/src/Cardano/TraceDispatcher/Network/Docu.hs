@@ -12,18 +12,19 @@ module Cardano.TraceDispatcher.Network.Docu
   , docTBlockFetch
   , docTTxSubmissionNode
   , docTTxSubmission2Node
-  , docIpSubscriptionTracer
+  , docIPSubscriptionTracer
+  , docDNSSubscriptionTracer
   ) where
 
 import           Cardano.Logging
 import           Cardano.Prelude
-import qualified Network.Socket as Socket
 import           Data.Time.Clock (DiffTime)
-
+import qualified Network.Socket as Socket
+import qualified Network.DNS as DNS
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
-
+                     
 import           Ouroboros.Network.Block (Point, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
@@ -36,6 +37,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import           Ouroboros.Network.Subscription.Dns (WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
                      LocalAddresses, SubscriptionTrace (..))
@@ -89,6 +91,8 @@ protoDiffTime = undefined
 protoException :: NoMethodError
 protoException = undefined
 
+protoDomain :: DNS.Domain
+protoDomain = undefined
 
 ------------------------------------
 
@@ -560,11 +564,17 @@ docTTxSubmission2Node = Documented [
   --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
   ]
 
-docIpSubscriptionTracer :: Documented (WithIPList (SubscriptionTrace Socket.SockAddr))
-docIpSubscriptionTracer = Documented $ map withIPList (undoc docSubscriptionTracer)
+docIPSubscriptionTracer :: Documented (WithIPList (SubscriptionTrace Socket.SockAddr))
+docIPSubscriptionTracer = Documented $ map withIPList (undoc docSubscriptionTracer)
   where
     withIPList (DocMsg v nl comment) =
-      DocMsg (WithIPList protoLocalAdresses [] v) nl comment
+      DocMsg (WithIPList protoLocalAdresses [] v) nl ("IP Subscription: " <> comment)
+
+docDNSSubscriptionTracer :: Documented (WithDomainName (SubscriptionTrace Socket.SockAddr))
+docDNSSubscriptionTracer = Documented $ map withDomainName (undoc docSubscriptionTracer)
+  where
+    withDomainName (DocMsg v nl comment) =
+      DocMsg (WithDomainName protoDomain v) nl ("DNS Subscription: " <> comment)
 
 docSubscriptionTracer :: Documented (SubscriptionTrace Socket.SockAddr)
 docSubscriptionTracer = Documented [
