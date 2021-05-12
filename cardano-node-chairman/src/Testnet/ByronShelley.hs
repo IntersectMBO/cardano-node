@@ -18,7 +18,7 @@ module Testnet.ByronShelley
   ) where
 
 #ifdef UNIX
-import           Prelude (map)
+import           Prelude (map, Bool(..))
 #endif
 
 import           Control.Monad
@@ -177,15 +177,25 @@ testnet testnetOptions H.Conf {..} = do
     let port = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
       J.object
-      [ "Producers" .= J.toJSON
-        [ J.object
-          [ "addr" .= J.toJSON @String ifaceAddress
-          , "port" .= J.toJSON @Int peerPort
-          , "valency" .= J.toJSON @Int 1
+      [ "LocalRoots" .= J.object
+        [ "groups" .= J.toJSON
+          [ J.object
+            [ "localRoots" .= J.object
+              [ "addrs" .= J.toJSON
+                [ J.object
+                  [ "addr" .= J.toJSON @String ifaceAddress
+                  , "port" .= J.toJSON @Int peerPort
+                  ]
+                | peerPort <- allPorts \\ [port]
+                ]
+              , "advertise" .= J.toJSON @Bool False
+              ]
+            , "valency" .= J.toJSON @Int 1
+            ]
           ]
-        | peerPort <- allPorts \\ [port]
         ]
       ]
+
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json") . J.encode $ J.object
