@@ -47,7 +47,8 @@ import           Ouroboros.Network.Protocol.Trans.Hello.Type
                      (ClientHasAgency (..), Message (..), ServerHasAgency (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as STX
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
-import           Ouroboros.Network.Subscription.Dns (WithDomainName (..))
+import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
+                     WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (SubscriptionTrace,
                      WithIPList (..))
 
@@ -324,6 +325,17 @@ instance LogFormatting (WithIPList (SubscriptionTrace Socket.SockAddr)) where
 instance LogFormatting (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   forMachine _dtal (WithDomainName dom ev) =
     mkObject [ "kind" .= String "DNS SubscriptionTrace"
+             , "domain" .= String (pack $ show dom)
+             , "event" .= String (pack $ show ev)]
+  forHuman (WithDomainName dom ev) =
+                     pack (show ev)
+                  <> ". Domain is "
+                  <> pack (show dom)
+                  <> "."
+
+instance LogFormatting (WithDomainName DnsTrace) where
+  forMachine _dtal (WithDomainName dom ev) =
+    mkObject [ "kind" .= String "DnsTrace"
              , "domain" .= String (pack $ show dom)
              , "event" .= String (pack $ show ev)]
   forHuman (WithDomainName dom ev) =

@@ -38,6 +38,9 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityDNSSubscription
   , namesForDNSSubscription
 
+  , severityDNSResolver
+  , namesForDNSResolver
+
   ) where
 
 
@@ -60,10 +63,12 @@ import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello,
                      Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
-import           Ouroboros.Network.Subscription.Dns (WithDomainName (..))
+import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
+                     WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
                      SubscriberError, SubscriptionTrace (..))
+
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
@@ -542,3 +547,23 @@ severityDNSSubscription WithDomainName {..} = case wdnEvent of
              Nothing                   -> Error
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Debug
+
+severityDNSResolver :: WithDomainName DnsTrace -> SeverityS
+severityDNSResolver (WithDomainName _ ev) = case ev of
+    DnsTraceLookupException {}  -> Error
+    DnsTraceLookupAError {}     -> Error
+    DnsTraceLookupAAAAError {}  -> Error
+    DnsTraceLookupIPv6First     -> Debug
+    DnsTraceLookupIPv4First     -> Debug
+    DnsTraceLookupAResult {}    -> Debug
+    DnsTraceLookupAAAAResult {} -> Debug
+
+namesForDNSResolver :: WithDomainName DnsTrace -> [Text]
+namesForDNSResolver (WithDomainName _ ev) = case ev of
+    DnsTraceLookupException {}  -> ["LookupException"]
+    DnsTraceLookupAError {}     -> ["LookupAError"]
+    DnsTraceLookupAAAAError {}  -> ["LookupAAAAError"]
+    DnsTraceLookupIPv6First     -> ["LookupIPv6First"]
+    DnsTraceLookupIPv4First     -> ["LookupIPv4First"]
+    DnsTraceLookupAResult {}    -> ["LookupAResult"]
+    DnsTraceLookupAAAAResult {} -> ["LookupAAAAResult"]
