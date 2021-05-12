@@ -277,6 +277,11 @@ mkDispatchTracers' trBase = do
                 namesForDNSSubscription
                 severityDNSSubscription
                 trBase
+    dnsrTr  <-  mkStandardTracer
+                "DNSResolver"
+                namesForDNSResolver
+                severityDNSResolver
+                trBase
     pure Tracers
       { chainDBTracer = T.Tracer (traceWith cdbmTr)
       , consensusTracers = Consensus.Tracers
@@ -311,7 +316,7 @@ mkDispatchTracers' trBase = do
         }
       , ipSubscriptionTracer = T.Tracer (traceWith ipsTr)
       , dnsSubscriptionTracer = T.Tracer (traceWith dnssTr)
-      , dnsResolverTracer = T.nullTracer
+      , dnsResolverTracer = T.Tracer (traceWith dnsrTr)
       , errorPolicyTracer = T.nullTracer
       , localErrorPolicyTracer = T.nullTracer
       , acceptPolicyTracer = T.nullTracer
@@ -390,6 +395,8 @@ configTracers config Tracers {..} = do
       [traceTrans ipSubscriptionTracer]
     configureTracers config docDNSSubscriptionTracer
         [traceTrans dnsSubscriptionTracer]
+    configureTracers config docDNSResolverTracer
+        [traceTrans dnsResolverTracer]
     pure ()
 
 docTracers :: forall peer localPeer blk.
@@ -489,8 +496,11 @@ docTracers' _ Tracers {..} = do
                   docIPSubscriptionTracer
                   [traceTrans ipSubscriptionTracer]
   dnssTrDoc  <-  documentMarkdown
-                    docDNSSubscriptionTracer
-                    [traceTrans dnsSubscriptionTracer]
+                  docDNSSubscriptionTracer
+                  [traceTrans dnsSubscriptionTracer]
+  dnsrTrDoc  <-  documentMarkdown
+                  docDNSResolverTracer
+                  [traceTrans dnsResolverTracer]
 
   let bl = cdbmTrDoc
           ++ cscTrDoc
@@ -518,6 +528,7 @@ docTracers' _ Tracers {..} = do
           ++ ts2nTrDoc
           ++ ipsTrDoc
           ++ dnssTrDoc
+          ++ dnsrTrDoc
 
   res <- buildersToText bl
   T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
