@@ -15,6 +15,7 @@ module Cardano.Api.Modes (
     CardanoMode,
     ConsensusMode(..),
     AnyConsensusMode(..),
+    renderMode,
     ConsensusModeIsMultiEra(..),
 
     -- * The eras supported by each mode
@@ -38,7 +39,10 @@ module Cardano.Api.Modes (
 
 import           Prelude
 
+import           Cardano.Api.Eras
+
 import           Data.SOP.Strict (K (K), NS (S, Z))
+import           Data.Text (Text)
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -51,9 +55,6 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
-
-import           Cardano.Api.Eras
-
 
 -- ----------------------------------------------------------------------------
 -- Consensus modes
@@ -108,6 +109,10 @@ data AnyConsensusMode where
 
 deriving instance Show AnyConsensusMode
 
+renderMode :: AnyConsensusMode -> Text
+renderMode (AnyConsensusMode ByronMode) = "ByronMode"
+renderMode (AnyConsensusMode ShelleyMode) = "ShelleyMode"
+renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 
 -- | The subset of consensus modes that consist of multiple eras. Some features
 -- are not supported in single-era modes (for exact compatibility with not

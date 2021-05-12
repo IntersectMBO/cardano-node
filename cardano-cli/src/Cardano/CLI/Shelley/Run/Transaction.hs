@@ -175,11 +175,6 @@ renderEra (AnyCardanoEra ShelleyEra) = "Shelley"
 renderEra (AnyCardanoEra AllegraEra) = "Allegra"
 renderEra (AnyCardanoEra MaryEra)    = "Mary"
 
-renderMode :: AnyConsensusMode -> Text
-renderMode (AnyConsensusMode ByronMode) = "ByronMode"
-renderMode (AnyConsensusMode ShelleyMode) = "ShelleyMode"
-renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
-
 renderFeature :: TxFeature -> Text
 renderFeature TxFeatureShelleyAddresses     = "Shelley addresses"
 renderFeature TxFeatureExplicitFees         = "Explicit fees"

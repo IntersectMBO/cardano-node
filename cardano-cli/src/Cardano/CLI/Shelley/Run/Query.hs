@@ -62,6 +62,10 @@ import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 
+import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
+import qualified Data.Text.IO as T
+import qualified System.IO as IO
+
 {- HLINT ignore "Reduce duplication" -}
 
 
@@ -75,6 +79,8 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdByronEra
   | ShelleyQueryCmdPoolIdError (Hash StakePoolKey)
   | ShelleyQueryCmdEraMismatch !EraMismatch
+  | ShelleyQueryCmdUnsupportedMode !AnyConsensusMode
+  | ShelleyQueryCmdPastHorizon !Qry.PastHorizonException
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -93,6 +99,8 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
       "\nAn error mismatch occured." <> "\nSpecified query era: " <> queryEra <>
       "\nCurrent ledger era: " <> ledgerEra
+    ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
+    ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -153,6 +161,15 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
           LBS.writeFile fpath (encodePretty pparams)
 
+logExceptContinue :: MonadIO m => (e -> Text) -> ExceptT e m a -> ExceptT e m (Maybe a)
+logExceptContinue renderError f = do
+  r <- lift $ runExceptT f
+  case r of
+    Left e -> do
+      liftIO $ T.hPutStrLn IO.stderr (renderError e)
+      return Nothing
+    Right a -> return (Just a)
+
 runQueryTip
   :: AnyConsensusModeParams
   -> NetworkId
@@ -164,35 +181,44 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
       consensusMode = consensusModeOnly cModeParams
 
   anyEra <- determineEra cModeParams localNodeConnInfo
-  mEpoch <- mEpochQuery anyEra consensusMode  localNodeConnInfo
   tip <- liftIO $ getLocalChainTip localNodeConnInfo
+
+  let tipSlotNo = case tip of
+        ChainTipAtGenesis -> 0
+        ChainTip slotNo _ _ -> slotNo
+
+  mEpoch <- mSlotToEpoch consensusMode localNodeConnInfo tipSlotNo
+    & fmap tuple3Fst
+    & logExceptContinue renderShelleyQueryCmdError
+
   let output = encodePretty
         . toObject "era" (Just (toJSON anyEra))
-        . toObject "epoch" mEpoch
+        . toObject "epoch" (Just mEpoch)
         $ toJSON tip
   case mOutFile of
     Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
     Nothing                 -> liftIO $ LBS.putStrLn        output
+    
   where
-    mEpochQuery
-      :: AnyCardanoEra
-      -> ConsensusMode mode
+    tuple3Fst :: (a, b, c) -> a
+    tuple3Fst (a, _, _) = a
+
+    mSlotToEpoch
+      :: ConsensusMode mode
       -> LocalNodeConnectInfo mode
-      -> ExceptT ShelleyQueryCmdError IO (Maybe EpochNo)
-    mEpochQuery (AnyCardanoEra era) cMode lNodeConnInfo =
-      case toEraInMode era cMode of
-        Nothing -> return Nothing
-        Just eraInMode ->
-          case cardanoEraStyle era of
-            LegacyByronEra -> return Nothing
-            ShelleyBasedEra sbe -> do
-              let epochQuery = QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryEpoch
-              eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
-              case eResult of
-                Left _acqFail -> return Nothing
-                Right eNum -> case eNum of
-                  Left _eraMismatch -> return Nothing
-                  Right epochNum -> return $ Just epochNum
+      -> SlotNo
+      -> ExceptT ShelleyQueryCmdError IO (EpochNo, SlotsInEpoch, SlotsToEpochEnd)
+    mSlotToEpoch cMode lNodeConnInfo slotNo = case cMode of
+      CardanoMode -> do
+        let epochQuery = QueryEraHistory CardanoModeIsMultiEra
+        eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
+        case eResult of
+          Left acqFail -> left (ShelleyQueryCmdAcquireFailure acqFail)
+          Right eraHistory -> case slotToEpoch slotNo eraHistory of
+            Left e -> throwE (ShelleyQueryCmdPastHorizon e)
+            Right a -> return a
+
+      mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
 
     toObject :: ToJSON a => Text -> Maybe a -> Aeson.Value -> Aeson.Value
     toObject name (Just a) (Aeson.Object obj) =
@@ -200,7 +226,6 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
     toObject name Nothing (Aeson.Object obj) =
       Aeson.Object $ obj <> HMS.fromList [name .= Aeson.Null]
     toObject _ _ _ = Aeson.Null
-
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
