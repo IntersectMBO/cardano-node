@@ -14,17 +14,18 @@ module Cardano.TraceDispatcher.Network.Docu
   , docTTxSubmission2Node
   , docIPSubscriptionTracer
   , docDNSSubscriptionTracer
+  , docDNSResolverTracer
   ) where
 
 import           Cardano.Logging
 import           Cardano.Prelude
 import           Data.Time.Clock (DiffTime)
-import qualified Network.Socket as Socket
 import qualified Network.DNS as DNS
+import qualified Network.Socket as Socket
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
-                     
+
 import           Ouroboros.Network.Block (Point, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
@@ -37,7 +38,8 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
-import           Ouroboros.Network.Subscription.Dns (WithDomainName (..))
+import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
+                     WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
                      LocalAddresses, SubscriptionTrace (..))
@@ -93,6 +95,12 @@ protoException = undefined
 
 protoDomain :: DNS.Domain
 protoDomain = undefined
+
+protoSomeException :: SomeException
+protoSomeException = undefined
+
+protoDNSError :: DNS.DNSError
+protoDNSError = undefined
 
 ------------------------------------
 
@@ -652,3 +660,47 @@ docSubscriptionTracer = Documented [
         []
         "Closed socket to address."
   ]
+
+docDNSResolverTracer :: Documented (WithDomainName DnsTrace)
+docDNSResolverTracer = Documented [
+      DocMsg
+        (WithDomainName protoDomain
+          (DnsTraceLookupException protoSomeException))
+        []
+        "A DNS lookup exception occured."
+    , DocMsg
+        (WithDomainName protoDomain
+          (DnsTraceLookupAError protoDNSError))
+        []
+        "A lookup failed with an error."
+    , DocMsg
+        (WithDomainName protoDomain
+          (DnsTraceLookupAAAAError protoDNSError))
+        []
+        "AAAA lookup failed with an error."
+    , DocMsg
+        (WithDomainName protoDomain
+          DnsTraceLookupIPv4First)
+        []
+        "Returning IPv4 address first."
+    , DocMsg
+        (WithDomainName protoDomain
+          DnsTraceLookupIPv6First)
+        []
+        "Returning IPv6 address first."
+    , DocMsg
+        (WithDomainName protoDomain
+          DnsTraceLookupIPv6First)
+        []
+        "Returning IPv6 address first."
+    , DocMsg
+        (WithDomainName protoDomain
+          (DnsTraceLookupAResult [protoSocketAddress]))
+        []
+        "Lookup A result."
+    , DocMsg
+        (WithDomainName protoDomain
+          (DnsTraceLookupAAAAResult [protoSocketAddress]))
+        []
+        "Lookup AAAA result."
+    ]
