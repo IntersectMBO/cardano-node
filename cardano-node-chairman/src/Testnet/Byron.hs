@@ -13,6 +13,7 @@ module Testnet.Byron
 
 import           Control.Monad
 import           Data.Aeson (Value, (.=))
+import           Data.Bool (Bool(..))
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -148,13 +149,22 @@ testnet testnetOptions H.Conf {..} = do
 
     H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $ J.encode $
       J.object
-      [ ( "Producers"
-        , J.toJSON $ flip fmap [0 .. numBftNodes testnetOptions - 2] $ \j -> J.object
-          [ ("addr", "127.0.0.1")
-          , ("valency", J.toJSON @Int 1)
-          , ("port", J.toJSON (otherPorts L.!! j))
+      [ "LocalRoots" .= J.object
+        [ "groups" .= J.toJSON
+          [ J.object
+            [ "localRoots" .= J.object
+              [ "addrs" .= J.toJSON
+                (flip fmap [0 .. numBftNodes testnetOptions - 2] (\j ->
+                  J.object
+                    [ ("addr", "127.0.0.1")
+                    , ("port",  J.toJSON (otherPorts L.!! j))
+                    ]))
+              , "advertise" .= J.toJSON @Bool False
+              ]
+            , "valency" .= J.toJSON @Int 1
+            ]
           ]
-        )
+        ]
       ]
 
     H.writeFile (tempAbsPath </> "config-" <> si <> ".yaml") . L.unlines . fmap (rewriteConfiguration i) . L.lines =<<
