@@ -81,6 +81,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcShelleyGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
+                             npcTestEnableDevelopmentHardForkEras,
                              npcTestShelleyHardForkAtEpoch,
                              npcTestShelleyHardForkAtVersion,
                              npcTestAllegraHardForkAtEpoch,
@@ -172,12 +173,17 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Mary era. Since Mary is currently the last known
           -- protocol version then this is also the Mary protocol version.
+          --
+          -- During testing of the Alonzo era, we conditionally declare that we
+          -- know about the Alonzo era. We do so only when a config option for
+          -- testing development/unstable eras is used. This lets us include
+          -- not-yet-ready eras in released node versions without mainnet nodes
+          -- prematurely advertising that they could hard fork into the new era.
           maryProtVer =
-            ProtVer 4 0
+            if npcTestEnableDevelopmentHardForkEras
+              then ProtVer 5 0  -- Advertise we can support Alonzo
+              else ProtVer 4 0  -- Otherwise only advertise we know about Mary.
         }
-        -- TODO: TestEnableDevelopmentHardForkEras :: Bool. This bool
-        -- will tell use whether or not to change the 'maryProtVer' field
-        -- from version 4 to version 5 so that we can fork to version 5
         Consensus.ProtocolParamsAlonzo {
           -- This is /not/ the Alonzo protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
