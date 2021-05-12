@@ -365,15 +365,18 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGossipResults         {} -> Debug
       TraceForgetColdPeers       {} -> Info
       TracePromoteColdPeers      {} -> Info
+      TracePromoteColdLocalPeers {} -> Info
       TracePromoteColdFailed     {} -> Error
       TracePromoteColdDone       {} -> Info
       TracePromoteWarmPeers      {} -> Info
       TracePromoteWarmFailed     {} -> Error
       TracePromoteWarmDone       {} -> Info
       TraceDemoteWarmPeers       {} -> Info
+      TracePromoteWarmLocalPeers {} -> Info
       TraceDemoteWarmFailed      {} -> Error
       TraceDemoteWarmDone        {} -> Info
       TraceDemoteHotPeers        {} -> Info
+      TraceDemoteLocalHotPeers   {} -> Info
       TraceDemoteHotFailed       {} -> Error
       TraceDemoteHotDone         {} -> Info
       TraceDemoteAsynchronous    {} -> Info
