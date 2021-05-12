@@ -448,8 +448,10 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrResponderRestarted {}      -> Debug
       InboundGovernor.TrResponderStartFailure {}   -> Error
       InboundGovernor.TrResponderErrored {}        -> Info
+      InboundGovernor.TrResponderStarted {}        -> Debug
       InboundGovernor.TrResponderTerminated {}     -> Debug
       InboundGovernor.TrPromotedToWarmRemote {}    -> Info
+      InboundGovernor.TrPromotedToHotRemote {}     -> Info
       InboundGovernor.TrDemotedToColdRemote {}     -> Info
       InboundGovernor.TrWaitIdleRemote {}          -> Debug
       InboundGovernor.TrMuxCleanExit {}            -> Debug
