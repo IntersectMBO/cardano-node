@@ -12,7 +12,7 @@ module Cardano.Api.Orphans () where
 import           Prelude
 
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-import           Data.Aeson (ToJSON (..), object, (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
@@ -23,6 +23,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -37,8 +38,8 @@ import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import qualified Shelley.Spec.Ledger.Rewards as Shelley
 import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
+import qualified Shelley.Spec.Ledger.Rewards as Shelley
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -278,3 +279,7 @@ instance ToJSON Shelley.RewardType where
 instance ToJSON (SafeHash.SafeHash c a) where
   toJSON = toJSON . SafeHash.extractHash
 
+instance FromJSON Alonzo.Prices where
+  parseJSON = withObject "Prices" $ \o -> do
+    obj <- o .: "executionUnitPrices"
+    Alonzo.Prices <$> obj .: "unitSpace" <*> obj .: "unitTime"

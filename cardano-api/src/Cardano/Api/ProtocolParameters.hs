@@ -16,6 +16,7 @@
 module Cardano.Api.ProtocolParameters (
     -- * The updateable protocol paramaters
     ProtocolParameters(..),
+    checkNecessaryParamsSpecified,
     ProtocolParametersError(..),
     renderProtocolParamsErr,
     EpochNo,
@@ -66,6 +67,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Script
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
@@ -91,7 +93,7 @@ import qualified Shelley.Spec.Ledger.PParams as Shelley
 --
 -- There are also paramaters fixed in the Genesis file. See 'GenesisParameters'.
 --
-data ProtocolParameters era =
+data ProtocolParameters =
      ProtocolParameters {
 
        -- | Protocol version, major and minor. Updating the major version is
@@ -212,11 +214,11 @@ data ProtocolParameters era =
        -- 'protocolParamMinUTxOValue' in the Alonzo era onwards).
        protocolParamUTxOCostPerByte :: Maybe Lovelace,
 
-       -- | Cost models for non-native script languages.
+       -- | Cost models for script languages that use them.
        protocolParamCostModels :: Map AnyScriptLanguage CostModel,
 
-       -- | Price of execution units for non-native script languages.
-       protocolParamPrices :: Maybe ExecutionUnitPrices,
+       -- | Price of execution units for script languages that use them.
+       protocolParamPrices :: Maybe Alonzo.Prices,
 
        -- | Max total script execution resources units allowed per tx
        protocolParamMaxTxExUnits :: Maybe MaxTxExecutionUnits,
@@ -272,158 +274,40 @@ renderProtocolParamsErr (ProtocolParametersErrorWrongVersion expected got) =
      "Incorrect protocol version. Got: " <> Text.pack (show got)
   <> " Expected: " <> Text.pack (show expected)
 
-createProtocolParameters
-  :: (Natural, Natural)              -- ^ Protocol version (major,minor)
-  -> Rational                        -- ^ Decentralization parameter
-  -> Maybe PraosNonce                -- ^ Extra entropy
-  -> Natural                         -- ^ Max block header size
-  -> Natural                         -- ^ Max block body size
-  -> Natural                         -- ^ Max tx size
-  -> Natural                         -- ^ Tx fee fixed (constant factor)
-  -> Natural                         -- ^ Tx fee per bytes (linear factor)
-  -> Maybe Lovelace                  -- ^ Min UTxO value
-  -> Lovelace                        -- ^ Stake address deposit
-  -> Lovelace                        -- ^ Stake pool deposit
-  -> Lovelace                        -- ^ Min pool cost
-  -> EpochNo                         -- ^ Max pool retire epoch
-  -> Natural                         -- ^ Stake pool target number
-  -> Rational                        -- ^ Pool pledge influence
-  -> Rational                        -- ^ Monetary expansion
-  -> Rational                        -- ^ Treasury cut
-  -> Maybe Lovelace                  -- ^ UTxO cost per byte
-  -> Map AnyScriptLanguage CostModel -- ^ Cost model
-  -> Maybe ExecutionUnitPrices       -- ^ Price of execution units
-  -> Maybe MaxTxExecutionUnits       -- ^ Script execution resources allowed per tx
-  -> Maybe MaxBlockExecutionUnits    -- ^ Script execution resources allowed per block
-  -> Maybe Natural                   -- ^ Max size of a Value in tx output
-  -> ProtocolParameters era
-createProtocolParameters ver decent exEntropy bHeadSize bBodySize maxTxSize
-                         txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
-                         minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-                         monExpansion treasuryCut utxoCostPerByte costModels
-                         prices maxTxExUnits maxBlockExUnits maxValueSize =
-  ProtocolParameters
-   { protocolParamProtocolVersion = ver
-   , protocolParamDecentralization = decent
-   , protocolParamExtraPraosEntropy = exEntropy
-   , protocolParamMaxBlockHeaderSize = bHeadSize
-   , protocolParamMaxBlockBodySize = bBodySize
-   , protocolParamMaxTxSize = maxTxSize
-   , protocolParamTxFeeFixed = txFeeFixed
-   , protocolParamTxFeePerByte = txFeePerByte
-   , protocolParamMinUTxOValue = minUtxo
-   , protocolParamStakeAddressDeposit = stakeAddrDep
-   , protocolParamStakePoolDeposit = stakePoolDep
-   , protocolParamMinPoolCost = minPoolCost
-   , protocolParamPoolRetireMaxEpoch = poolRetireEpochMax
-   , protocolParamStakePoolTargetNum = poolTargetNum
-   , protocolParamPoolPledgeInfluence = poolPledge
-   , protocolParamMonetaryExpansion = monExpansion
-   , protocolParamTreasuryCut = treasuryCut
-   -- Fields below Introduced in Alonzo
-   , protocolParamUTxOCostPerByte = utxoCostPerByte
-   , protocolParamCostModels = costModels
-   , protocolParamPrices = prices
-   , protocolParamMaxTxExUnits = maxTxExUnits
-   , protocolParamMaxBlockExUnits = maxBlockExUnits
-   , protocolParamMaxValSize = maxValueSize
-   }
-
-createProtocolParametersInEra
-  :: CardanoEra era
-  -> (Natural, Natural)                        -- ^ Protocol version (major,minor)
-  -> Rational                                  -- ^ Decentralization parameter
-  -> Maybe PraosNonce                          -- ^ Extra entropy
-  -> Natural                                   -- ^ Max block header size
-  -> Natural                                   -- ^ Max block body size
-  -> Natural                                   -- ^ Max tx size
-  -> Natural                                   -- ^ Tx fee fixed (constant factor)
-  -> Natural                                   -- ^ Tx fee per bytes (linear factor)
-  -> Maybe Lovelace                            -- ^ Min UTxO value
-  -> Lovelace                                  -- ^ Stake address deposit
-  -> Lovelace                                  -- ^ Stake pool deposit
-  -> Lovelace                                  -- ^ Min pool cost
-  -> EpochNo                                   -- ^ Max pool retire epoch
-  -> Natural                                   -- ^ Stake pool target number
-  -> Rational                                  -- ^ Pool pledge influence
-  -> Rational                                  -- ^ Monetary expansion
-  -> Rational                                  -- ^ Treasury cut
-  -> Maybe Lovelace                            -- ^ UTxO cost per byte
-  -> Map AnyScriptLanguage CostModel           -- ^ Cost model
-  -> Map AnyScriptLanguage ExecutionUnitPrices -- ^ Price of execution units
-  -> Maybe MaxTxExecutionUnits                 -- ^ Script execution resources allowed per tx
-  -> Maybe MaxBlockExecutionUnits              -- ^ Script execution resources allowed per block
-  -> Maybe Natural                             -- ^ Max size of a Value in tx output
-  -> Either ProtocolParametersError (ProtocolParameters era)
-createProtocolParametersInEra
-   era ver decent exEntropy bHeadSize bBodySize maxTxSize
-   txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
-   minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-   monExpansion treasuryCut _utxoCostPerByte _costModels
-   _prices _maxTxExUnits _maxBlockExUnits _maxValueSize =
-  case cardanoEraStyle era of
-    LegacyByronEra -> Left ProtocolParamsErrNoParamsInByron
-    ShelleyBasedEra sbe -> do
-      checkNecessaryParamsSpecified sbe
-      case sbe of
-        ShelleyBasedEraShelley -> do
-          return $ createProtocolParameters
-                     ver decent exEntropy bHeadSize bBodySize maxTxSize
-                     txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
-                     minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-                     monExpansion treasuryCut Nothing mempty Nothing Nothing
-                     Nothing Nothing
-        ShelleyBasedEraAllegra -> do
-          return $ createProtocolParameters
-                     ver decent exEntropy bHeadSize bBodySize maxTxSize
-                     txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
-                     minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-                     monExpansion treasuryCut Nothing mempty Nothing Nothing
-                     Nothing Nothing
-        ShelleyBasedEraMary -> do
-          return $ createProtocolParameters
-                     ver decent exEntropy bHeadSize bBodySize maxTxSize
-                     txFeeFixed txFeePerByte minUtxo stakeAddrDep stakePoolDep
-                     minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-                     monExpansion treasuryCut Nothing mempty Nothing Nothing
-                     Nothing Nothing
-     -- ShelleyBasedEraAlonzo ->
-     --   return $ createProtocolParameters
-     --              ver decent exEntropy bHeadSize bBodySize maxTxSize
-     --              txFeeFixed txFeePerByte Nothing stakeAddrDep stakePoolDep
-     --              minPoolCost poolRetireEpochMax poolTargetNum poolPledge
-     --              monExpansion treasuryCut utxoCostPerByte costModels
-     --              prices maxTxExUnits maxBlockExUnits maxValueSize
+checkNecessaryParamsSpecified
+  :: ShelleyBasedEra era -> ProtocolParameters -> Either ProtocolParametersError ()
+checkNecessaryParamsSpecified sbe' pparams = do
+  case sbe' of
+    ShelleyBasedEraShelley ->
+       parameterExists
+         (protocolParamMinUTxOValue pparams)
+         (ProtocolParamsErrMustDefineMinUTxo $ toAnyCardanoEra sbe')
+    ShelleyBasedEraAllegra ->
+       parameterExists
+         (protocolParamMinUTxOValue pparams)
+         (ProtocolParamsErrMustDefineMinUTxo $ toAnyCardanoEra sbe')
+    ShelleyBasedEraMary ->
+       parameterExists
+         (protocolParamMinUTxOValue pparams)
+         (ProtocolParamsErrMustDefineMinUTxo $ toAnyCardanoEra sbe')
+--  ShelleyBasedEraAlonzo -> do
+--     parameterExists utxoCostPerByte (ProtocolParamsErrMustDefineCostPerByte anyEra)
+--     parameterExists costModels (ProtocolParamsErrMustDefineCostModel anyEra)
+--     parameterExists prices (ProtocolParamsErrMustDefineScriptExecPrices anyEra)
+--     parameterExists maxTxExUnits (ProtocolParamsErrMustDefineMaxTxExec anyEra)
+--     parameterExists maxBlockExUnits (ProtocolParamsErrMustDefineMaxBlockExec anyEra)
+--     parameterExists maxValueSize (ProtocolParamsErrMustDefineMaxValueSize anyEra)
  where
-  -- | Protocol parameters change in Alonzo. We check
-  --that the required protocol parameters are specified
-  --in the relevant era.
-  checkNecessaryParamsSpecified
-    :: ShelleyBasedEra era -> Either ProtocolParametersError ()
-  checkNecessaryParamsSpecified sbe' = do
-    let anyEra = anyCardanoEra era
-    case sbe' of
-      ShelleyBasedEraShelley ->
-         parameterExists minUtxo (ProtocolParamsErrMustDefineMinUTxo anyEra)
-      ShelleyBasedEraAllegra ->
-         parameterExists minUtxo (ProtocolParamsErrMustDefineMinUTxo anyEra)
-      ShelleyBasedEraMary ->
-         parameterExists minUtxo (ProtocolParamsErrMustDefineMinUTxo anyEra)
-  --  ShelleyBasedEraAlonzo -> do
-  --     parameterExists utxoCostPerByte (ProtocolParamsErrMustDefineCostPerByte anyEra)
-  --     parameterExists costModels (ProtocolParamsErrMustDefineCostModel anyEra)
-  --     parameterExists prices (ProtocolParamsErrMustDefineScriptExecPrices anyEra)
-  --     parameterExists maxTxExUnits (ProtocolParamsErrMustDefineMaxTxExec anyEra)
-  --     parameterExists maxBlockExUnits (ProtocolParamsErrMustDefineMaxBlockExec anyEra)
-  --     parameterExists maxValueSize (ProtocolParamsErrMustDefineMaxValueSize anyEra)
+   toAnyCardanoEra :: IsCardanoEra era => ShelleyBasedEra era -> AnyCardanoEra
+   toAnyCardanoEra sbe = AnyCardanoEra $ anyCardanoEraShelleyBased sbe
 
-  -- | Check if a protocol parameter was specified and fail if not.
-  parameterExists
-    :: Maybe a
-    -> ProtocolParametersError
-    -> Either ProtocolParametersError ()
-  parameterExists value err =
-    maybe (Left err) Right value >> Right ()
+-- | Check if a protocol parameter was specified and fail if not.
+parameterExists
+  :: Maybe a
+  -> ProtocolParametersError
+  -> Either ProtocolParametersError ()
+parameterExists value err =
+  maybe (Left err) Right value >> Right ()
 
 
 newtype MaxTxExecutionUnits =
@@ -513,81 +397,47 @@ instance FromJSON CostModel where
       Nothing ->
         error $ "Error converting Plutus cost model to cost model params: " <> show pCostModel
 
-data ExecutionUnitPrices =
-  ExecutionUnitPrices { perUnitSpace :: Lovelace
-                      , perUnitTime :: Lovelace
-                      } deriving (Eq, Show)
+instance FromJSON ProtocolParameters where
+  parseJSON = parseProtocolParameters
 
-_fromPrices :: Alonzo.Prices -> ExecutionUnitPrices
-_fromPrices (Alonzo.Prices pMem pStep) =
-  ExecutionUnitPrices (fromShelleyLovelace pMem) (fromShelleyLovelace pStep)
-
-_toPrices :: ExecutionUnitPrices -> Alonzo.Prices
-_toPrices (ExecutionUnitPrices pMem pStep) =
-  Alonzo.Prices (toShelleyLovelace pMem) (toShelleyLovelace pStep)
-
-instance FromJSON ExecutionUnitPrices where
-  parseJSON = withObject "ExecutionUnitPrices" $ \o -> do
-    obj <- o .: "executionUnitPrices"
-    ExecutionUnitPrices <$> obj .: "unitSpace" <*> obj .: "unitTime"
-
-instance ToJSON ExecutionUnitPrices where
-  toJSON (ExecutionUnitPrices perSpace perTime) =
-    object [ "executionUnitPrices" .= object
-             [ "unitSpace" .= perSpace , "unitTime" .= perTime]
-           ]
-
-instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
-  parseJSON = parseProtocolParameters cardanoEra
-
-parseProtocolParameters :: CardanoEra era -> Aeson.Value -> Aeson.Parser (ProtocolParameters era)
-parseProtocolParameters era =
+parseProtocolParameters :: Aeson.Value -> Aeson.Parser ProtocolParameters
+parseProtocolParameters =
          withObject "ProtocolParameters" $ \o -> do
            v <- o .: "protocolVersion"
-           eParams <- createProtocolParametersInEra era
-                        <$> ((,) <$> v .: "major" <*> v .: "minor")
-                        <*> o .: "decentralization"
-                        <*> o .: "extraPraosEntropy"
-                        <*> o .: "maxBlockHeaderSize"
-                        <*> o .: "maxBlockBodySize"
-                        <*> o .: "maxTxSize"
-                        <*> o .: "txFeeFixed"
-                        <*> o .: "txFeePerByte"
-                        <*> o .:? "minUTxOValue"
-                        <*> o .: "stakeAddressDeposit"
-                        <*> o .: "stakePoolDeposit"
-                        <*> o .: "minPoolCost"
-                        <*> o .: "poolRetireMaxEpoch"
-                        <*> o .: "stakePoolTargetNum"
-                        <*> o .: "poolPledgeInfluence"
-                        <*> o .: "monetaryExpansion"
-                        <*> o .: "treasuryCut"
-                        <*> o .:? "utxoCostPerByte"
-                        <*> o .:? "costModel" .!= mempty
-                        <*> o .:? "executionUnitPrices" .!= mempty
-                        <*> o .:? "maxTxExecUnits"
-                        <*> o .:? "maxBlockExecUnits"
-                        <*> o .:? "maxValueSize"
-           case eParams of
-             Left err -> fail . Text.unpack $ renderProtocolParamsErr err
-             Right pparams -> return pparams
+           ProtocolParameters
+             <$> ((,) <$> v .: "major" <*> v .: "minor")
+             <*> o .: "decentralization"
+             <*> o .: "extraPraosEntropy"
+             <*> o .: "maxBlockHeaderSize"
+             <*> o .: "maxBlockBodySize"
+             <*> o .: "maxTxSize"
+             <*> o .: "txFeeFixed"
+             <*> o .: "txFeePerByte"
+             <*> o .:? "minUTxOValue"
+             <*> o .: "stakeAddressDeposit"
+             <*> o .: "stakePoolDeposit"
+             <*> o .: "minPoolCost"
+             <*> o .: "poolRetireMaxEpoch"
+             <*> o .: "stakePoolTargetNum"
+             <*> o .: "poolPledgeInfluence"
+             <*> o .: "monetaryExpansion"
+             <*> o .: "treasuryCut"
+             <*> o .:? "utxoCostPerByte"
+             <*> o .:? "costModel" .!= mempty
+             <*> o .:? "executionUnitPrices" .!= Nothing
+             <*> o .:? "maxTxExecUnits"
+             <*> o .:? "maxBlockExecUnits"
+             <*> o .:? "maxValueSize"
 
+instance ToJSON ProtocolParameters where
+  toJSON pp = createProtocolParametersObject pp
 
-instance IsCardanoEra era => ToJSON (ProtocolParameters era) where
-  toJSON pp =
-    case cardanoEraStyle cardanoEra :: CardanoEraStyle era of
-      LegacyByronEra -> error "Protocol parameters are not supported in the Byron era."
-      ShelleyBasedEra sbe -> createProtocolParametersObject sbe pp
-
-createProtocolParametersObject
-  :: ShelleyBasedEra era  -> ProtocolParameters era -> Aeson.Value
-createProtocolParametersObject sbe pp =
-  object $ paramsCommonInAllEras <> eraDependentParams sbe
- where
-  paramsCommonInAllEras :: [Aeson.Pair]
-  paramsCommonInAllEras =
+createProtocolParametersObject :: ProtocolParameters -> Aeson.Value
+createProtocolParametersObject pp =
+  object
     [ "extraPraosEntropy" .= protocolParamExtraPraosEntropy pp
     , "stakePoolTargetNum" .= protocolParamStakePoolTargetNum pp
+    , "minUTxOValue" .= protocolParamMinUTxOValue pp
     , "poolRetireMaxEpoch" .= protocolParamPoolRetireMaxEpoch pp
     , "decentralization" .= (fromRational $ protocolParamDecentralization pp :: Scientific)
     , "stakePoolDeposit" .= protocolParamStakePoolDeposit pp
@@ -603,24 +453,13 @@ createProtocolParametersObject sbe pp =
                            in object ["major" .= major, "minor" .= minor]
     , "txFeeFixed" .= protocolParamTxFeeFixed pp
     , "txFeePerByte" .= protocolParamTxFeePerByte pp
+    -- Alonzo era
+    -- , "costModels"  .= protocolParamCostModels pp
+    -- , "executionUnitPrices" .= protocolParamPrices pp
+    -- , "maxTxExecutionUnits" .= protocolParamMaxTxExUnits pp
+    -- , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits pp
+    -- , "maxValSize" .= protocolParamMaxValSize pp
     ]
-
-  eraDependentParams :: ShelleyBasedEra era -> [Aeson.Pair]
-  eraDependentParams sbe' =
-    case sbe' of
-      ShelleyBasedEraShelley ->
-        ["minUTxOValue" .= protocolParamMinUTxOValue pp]
-      ShelleyBasedEraAllegra ->
-        ["minUTxOValue" .= protocolParamMinUTxOValue pp]
-      ShelleyBasedEraMary ->
-        ["minUTxOValue" .= protocolParamMinUTxOValue pp]
-  --  ShelleyBasedEraAlonzo ->
-  --    [ "costModels"  .= protocolParamCostModels pp
-  --    , "executionUnitPrices" .= protocolParamPrices pp
-  --    , "maxTxExecutionUnits" .= protocolParamMaxTxExUnits pp
-  --    , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits pp
-  --    , "maxValSize" .= protocolParamMaxValSize pp
-  --    ]
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
@@ -714,13 +553,13 @@ data GenesisParameters era =
 
        -- | The initial values of the updateable 'ProtocolParameters'.
        --
-       protocolInitialUpdateableProtocolParameters :: ProtocolParameters era
+       protocolInitialUpdateableProtocolParameters :: ProtocolParameters
      }
 
 fromShelleyPParams
   :: ShelleyBasedEra era
   -> Core.PParams (ShelleyLedgerEra era)
-  -> Either ProtocolParametersError (ProtocolParameters era)
+  -> Either ProtocolParametersError ProtocolParameters
 fromShelleyPParams sbe pparams =
   let pp = case sbe of
              ShelleyBasedEraShelley -> toProtocolParamsShelley pparams
@@ -730,7 +569,7 @@ fromShelleyPParams sbe pparams =
   in do checkProtocolVersion sbe (protocolParamProtocolVersion pp)
         return pp
 
-toProtocolParamsShelley :: Shelley.PParams ledgerera -> ProtocolParameters era
+toProtocolParamsShelley :: Shelley.PParams ledgerera -> ProtocolParameters
 toProtocolParamsShelley pparams =
    ProtocolParameters
         { protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))

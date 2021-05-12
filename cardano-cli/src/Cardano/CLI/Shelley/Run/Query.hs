@@ -47,6 +47,7 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
+import           Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
@@ -56,14 +57,13 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                    (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
-import           Cardano.Ledger.Coin
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 
-import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Data.Text.IO as T
+import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified System.IO as IO
 
 {- HLINT ignore "Reduce duplication" -}
@@ -151,9 +151,8 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
     Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
  where
   writeProtocolParameters
-    :: IsCardanoEra era
-    => Maybe OutputFile
-    -> ProtocolParameters era
+    :: Maybe OutputFile
+    -> ProtocolParameters
     -> ExceptT ShelleyQueryCmdError IO ()
   writeProtocolParameters mOutFile' pparams =
     case mOutFile' of
@@ -199,7 +198,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
   case mOutFile of
     Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
     Nothing                 -> liftIO $ LBS.putStrLn        output
-    
+
   where
     tuple3Fst :: (a, b, c) -> a
     tuple3Fst (a, _, _) = a

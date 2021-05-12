@@ -198,10 +198,10 @@ anyCardanoEra ShelleyEra = AnyCardanoEra ShelleyEra
 anyCardanoEra AllegraEra = AnyCardanoEra AllegraEra
 anyCardanoEra MaryEra    = AnyCardanoEra MaryEra
 
-anyCardanoEraShelleyBased :: ShelleyBasedEra era -> AnyCardanoEra
-anyCardanoEraShelleyBased ShelleyBasedEraShelley = AnyCardanoEra ShelleyEra
-anyCardanoEraShelleyBased ShelleyBasedEraAllegra = AnyCardanoEra AllegraEra
-anyCardanoEraShelleyBased ShelleyBasedEraMary    = AnyCardanoEra MaryEra
+anyCardanoEraShelleyBased :: ShelleyBasedEra era -> CardanoEra era
+anyCardanoEraShelleyBased ShelleyBasedEraShelley = ShelleyEra
+anyCardanoEraShelleyBased ShelleyBasedEraAllegra = AllegraEra
+anyCardanoEraShelleyBased ShelleyBasedEraMary    = MaryEra
 
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
 -- us what era it is, but hides the era type. This is useful when the era is

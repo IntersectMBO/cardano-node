@@ -644,7 +644,7 @@ genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce =
   Gen.maybe (makePraosNonce <$> Gen.bytes (Range.linear 0 32))
 
-genProtocolParameters :: ShelleyBasedEra era -> Gen (ProtocolParameters era)
+genProtocolParameters :: ShelleyBasedEra era -> Gen ProtocolParameters
 genProtocolParameters sbe =
   case sbe of
     ShelleyBasedEraShelley -> genPreAlonzo

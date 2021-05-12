@@ -156,7 +156,7 @@ data QueryInShelleyBasedEra era result where
        :: QueryInShelleyBasedEra era (GenesisParameters era)
 
      QueryProtocolParameters
-       :: QueryInShelleyBasedEra era (ProtocolParameters era)
+       :: QueryInShelleyBasedEra era ProtocolParameters
 
      QueryProtocolParametersUpdate
        :: QueryInShelleyBasedEra era

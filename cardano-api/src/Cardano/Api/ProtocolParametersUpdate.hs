@@ -198,11 +198,11 @@ data ProtocolParametersUpdate =
        --protocolParamMinUTxOValue in the Alonzo era onwards).
        protocolUpdateUTxOCostPerByte :: Maybe Lovelace,
 
-       -- | Cost models for non-native script languages.
+       -- | Cost models for script languages that use them.
        protocolUpdateCostModels :: Map AnyScriptLanguage CostModel,
 
-       -- | Map AnyScriptLanguage ExecutionUnitPrices of execution units (for non-native script languages).
-       protocolUpdatePrices :: Map AnyScriptLanguage ExecutionUnitPrices,
+       -- | Map of script language execution unit prices.
+       protocolUpdatePrices :: Map AnyScriptLanguage Alonzo.Prices,
 
        -- | Max total script execution resources units allowed per tx
        protocolUpdateMaxTxExUnits :: Maybe MaxTxExecutionUnits,

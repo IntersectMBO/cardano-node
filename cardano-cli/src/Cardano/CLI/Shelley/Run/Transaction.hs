@@ -697,7 +697,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
         liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
       ParamsFromFile pParamFile -> do
-        pparams <- readProtocolParameters sbe pParamFile
+        pparams <- readProtocolParameters pParamFile
         let tx = makeSignedTransaction [] txbody
             Lovelace fee = estimateTransactionFee sbe
                                  (fromMaybe Mainnet nw)
@@ -711,7 +711,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
 
 getProtocolParametersFromGen :: GenesisFile
-                             -> ExceptT ShelleyTxCmdError IO (ProtocolParameters ShelleyEra)
+                             -> ExceptT ShelleyTxCmdError IO ProtocolParameters
 getProtocolParametersFromGen (GenesisFile f) = do
   shelleyGen <- firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
   firstExceptT ShelleyTxCmdProtocolParametersError . hoistEither
@@ -729,25 +729,29 @@ runTxCalculateMinValue protocolParamsSourceSpec (TxBodyFile txbodyFile) = do
   InAnyCardanoEra era apiTxBody <- readFileTxBody txbodyFile
   case cardanoEraStyle era of
     LegacyByronEra -> txFeatureMismatch era TxFeatureMultiAssetOutputs
-    ShelleyBasedEra ShelleyBasedEraMary ->
+    ShelleyBasedEra sbe ->
       case protocolParamsSourceSpec of
         ParamsFromGenesis _ -> panic "runTxCalculateMinValue: Currently \
                                      \not possible to get protocol params from genesis file/"
+        -- TODO: Investigate this again since era was removed from ProtocolParameters
         -- We need evidence that we are at least in the Mary era in order to use multi assets.
         -- readShelleyGenesis defaults to the shelley era. TODO: make `readShelleyGenesis` era independent.
         -- This error currently isn't possible as we only parse `ParamsFromFile` in the cli currently.
         ParamsFromFile f -> do
-          pp <- readProtocolParameters ShelleyBasedEraMary f
+          pp <- readProtocolParameters f
           case protocolParamMinUTxOValue pp of
-            Just minUTxOVal -> do
-              let (ShelleyTxBody _ txbody _ _) = apiTxBody
-                  (ShelleyMA.TxBody _ _ _ _ _ _ _ _ mint) = txbody
-                  value = fromMaryValue mint
-              let minDeposit = calcMinimumDeposit value minUTxOVal
-              liftIO $ IO.print minDeposit
+            Just minUTxOVal ->
+              case sbe of
+                ShelleyBasedEraMary -> do
+                  let (ShelleyTxBody _ txbody _ _) = apiTxBody
+                      (ShelleyMA.TxBody _ _ _ _ _ _ _ _ mint) = txbody
+                      value = fromMaryValue mint
+                  let minDeposit = calcMinimumDeposit value minUTxOVal
+                  liftIO $ IO.print minDeposit
+                wrongera ->
+                  left $ ShelleyTxCmdMultiAssetNotAvailableInEra
+                        (AnyCardanoEra $ anyCardanoEraShelleyBased wrongera) txbodyFile
             Nothing -> left $ ShelleyTxCmdMinUTxOValueNotSpecifiedInPParams f
-    ShelleyBasedEra wrongera ->
-      left $ ShelleyTxCmdMultiAssetNotAvailableInEra (anyCardanoEraShelleyBased wrongera) txbodyFile
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
@@ -756,11 +760,9 @@ runTxCreatePolicyId (ScriptFile sFile) = do
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.
-readProtocolParameters :: IsCardanoEra era
-                       => ShelleyBasedEra era
-                       -> ProtocolParamsFile
-                       -> ExceptT ShelleyTxCmdError IO (ProtocolParameters era)
-readProtocolParameters _ (ProtocolParamsFile fpath) = do
+readProtocolParameters :: ProtocolParamsFile
+                       -> ExceptT ShelleyTxCmdError IO ProtocolParameters
+readProtocolParameters (ProtocolParamsFile fpath) = do
   pparams <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
     Aeson.eitherDecode' pparams
