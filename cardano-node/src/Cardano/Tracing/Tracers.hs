@@ -31,7 +31,7 @@ import           GHC.Clock (getMonotonicTimeNSec)
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
-import qualified Data.Map as SMap
+import qualified Data.Map.Strict as SMap
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified System.Metrics.Counter as Counter
