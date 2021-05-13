@@ -19,6 +19,8 @@ module Testnet.ByronShelley
 
 #ifdef UNIX
 import           Prelude (map, Bool(..))
+#else
+import           Prelude (Bool (..))
 #endif
 
 import           Control.Monad
