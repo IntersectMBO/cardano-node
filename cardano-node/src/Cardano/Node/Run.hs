@@ -240,8 +240,7 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
 
   dbPath <- canonDbPath nc
 
-  eitherTopology <- readTopologyFile nc
-  nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
+  nt <- readTopologyFileOrError nc
 
   let (localRoots, publicRoots) = producerAddresses nt
 
@@ -359,8 +358,7 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
           (appendName "signal-handler" trace)
           (meta, LogMessage (Text.pack "SIGHUP signal received - Performing topology configuration update"))
 
-      eitherTopology <- readTopologyFile nc
-      nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
+      nt <- readTopologyFileOrError nc
 
       let (localRoots, publicRoots) = producerAddresses nt
 
