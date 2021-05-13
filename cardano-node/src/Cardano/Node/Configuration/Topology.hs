@@ -13,6 +13,7 @@ module Cardano.Node.Configuration.Topology
   , UseLedger(..)
   , nodeAddressToSockAddr
   , readTopologyFile
+  , readTopologyFileOrError
   , remoteAddressToNodeAddress
   )
 where
@@ -164,3 +165,10 @@ readTopologyFile nc = do
   handlerJSON :: String -> Text
   handlerJSON err = "Is your topology file formatted correctly? \
                     \The port and valency fields should be numerical. " <> Text.pack err
+
+readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
+readTopologyFileOrError nc =
+      readTopologyFile nc
+  >>= either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: "
+                           <> err)
+             pure
