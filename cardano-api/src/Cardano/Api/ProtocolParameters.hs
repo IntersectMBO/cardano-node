@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,6 +25,12 @@ module Cardano.Api.ProtocolParameters (
     PraosNonce,
     makePraosNonce,
 
+    -- * Execution units, prices and cost models,
+    ExecutionUnits(..),
+    ExecutionUnitPrices(..),
+    CostModel(..),
+    validateCostModel,
+
     -- * Update proposals to change the protocol paramaters
     UpdateProposal(..),
     makeShelleyUpdateProposal,
@@ -41,6 +48,8 @@ module Cardano.Api.ProtocolParameters (
     fromShelleyProposedPPUpdates,
     fromShelleyUpdate,
     fromShelleyGenesis,
+    toAlonzoPrices,
+    fromAlonzoPrices,
 
     -- * Data family instances
     AsType(..)
@@ -55,6 +64,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Scientific (Scientific)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime, UTCTime)
 import           GHC.Generics
@@ -77,12 +87,18 @@ import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+--TODO: eliminate this import and use things re-exported from the ledger lib
+import qualified Plutus.V1.Ledger.Api as Plutus
+
 import           Cardano.Api.Address
+import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
@@ -456,6 +472,77 @@ toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
 fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
 fromPraosNonce Shelley.NeutralNonce = Nothing
 fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
+
+
+-- ----------------------------------------------------------------------------
+-- Script execution unit prices and cost models
+--
+
+-- | The prices in 'Lovelace' for 'ExecutionUnits'.
+--
+-- These are used to determine the fee for the use of a script within a
+-- transaction, based on the 'ExecutionUnits' needed by the use of the script.
+--
+data ExecutionUnitPrices =
+     ExecutionUnitPrices {
+       priceExecutionSteps  :: Lovelace,
+       priceExecutionMemory :: Lovelace
+     }
+  deriving (Eq, Show)
+
+toAlonzoPrices :: ExecutionUnitPrices -> Alonzo.Prices
+toAlonzoPrices ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+  Alonzo.Prices {
+    Alonzo.prSteps = toShelleyLovelace priceExecutionSteps,
+    Alonzo.prMem   = toShelleyLovelace priceExecutionMemory
+  }
+
+fromAlonzoPrices :: Alonzo.Prices -> ExecutionUnitPrices
+fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
+  ExecutionUnitPrices {
+    priceExecutionSteps  = fromShelleyLovelace prSteps,
+    priceExecutionMemory = fromShelleyLovelace prMem
+  }
+
+instance ToJSON ExecutionUnitPrices where
+  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+    object [ "priceSteps"  .= priceExecutionSteps
+           , "priceMemory" .= priceExecutionMemory ]
+
+instance FromJSON ExecutionUnitPrices where
+  parseJSON =
+    withObject "ExecutionUnitPrices" $ \o ->
+      ExecutionUnitPrices
+        <$> o .: "priceSteps"
+        <*> o .: "priceMemory"
+
+
+-- ----------------------------------------------------------------------------
+-- Script cost models
+--
+
+newtype CostModel = CostModel (Map Text Integer)
+  deriving (Eq, Show)
+  deriving newtype (ToJSON, FromJSON)
+
+validateCostModel :: PlutusScriptVersion lang
+                  -> CostModel
+                  -> Either InvalidCostModel ()
+validateCostModel PlutusScriptV1 (CostModel m)
+    --TODO: the ledger library should export something for this, e.g. like its
+    -- existing checkCostModel function. We should not need to depend on the
+    -- Plutus library directly. That makes too many assumptions about what the
+    -- ledger library is doing.
+  | Plutus.validateCostModelParams m = Right ()
+  | otherwise                        = Left (InvalidCostModel (CostModel m))
+
+--TODO: it'd be nice if the library told us what was wrong
+newtype InvalidCostModel = InvalidCostModel CostModel
+  deriving Show
+
+instance Error InvalidCostModel where
+  displayError (InvalidCostModel cm) =
+    "Invalid cost model: " ++ show cm
 
 
 -- ----------------------------------------------------------------------------
