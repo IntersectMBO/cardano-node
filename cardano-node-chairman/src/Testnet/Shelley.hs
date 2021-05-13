@@ -19,7 +19,7 @@ module Testnet.Shelley
 #ifdef UNIX
 import           Prelude (Integer, map, Bool(..))
 #else
-import           Prelude (Integer)
+import           Prelude (Integer, Bool(..))
 #endif
 
 import           Control.Monad
