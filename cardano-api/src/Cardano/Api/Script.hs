@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -12,7 +11,7 @@ module Cardano.Api.Script (
     SimpleScriptV2,
     ScriptLanguage(..),
     SimpleScriptVersion(..),
-    PlutusScriptVersion,
+    PlutusScriptVersion(..),
     AnyScriptLanguage(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
@@ -193,15 +192,14 @@ instance TestEquality SimpleScriptVersion where
     testEquality _              _              = Nothing
 
 
-data PlutusScriptVersion lang
-  -- For now, there are no such versions, but it'd be like this:
-  -- PlutusScriptV1 :: PlutusScriptVersion PlutusScriptV1
+data PlutusScriptVersion lang where
+    PlutusScriptV1 :: PlutusScriptVersion PlutusScriptV1
 
 deriving instance (Eq   (PlutusScriptVersion lang))
 deriving instance (Show (PlutusScriptVersion lang))
 
 instance TestEquality PlutusScriptVersion where
-    testEquality lang = case lang of {}
+    testEquality PlutusScriptV1 PlutusScriptV1 = Just Refl
 
 
 data AnyScriptLanguage where
@@ -210,23 +208,24 @@ data AnyScriptLanguage where
 deriving instance (Show AnyScriptLanguage)
 
 instance Eq AnyScriptLanguage where
-    AnyScriptLanguage lang == AnyScriptLanguage lang' =
-      case testEquality lang lang' of
-        Nothing   -> False
-        Just Refl -> True -- since no constructors share types
+    a == b = fromEnum a == fromEnum b
+
+instance Ord AnyScriptLanguage where
+    compare a b = compare (fromEnum a) (fromEnum b)
 
 instance Enum AnyScriptLanguage where
     toEnum 0 = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)
     toEnum 1 = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+    toEnum 2 = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)
     toEnum _ = error "AnyScriptLanguage.toEnum: bad argument"
 
     fromEnum (AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)) = 0
     fromEnum (AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)) = 1
-    fromEnum (AnyScriptLanguage (PlutusScriptLanguage lang)) = case lang of {}
+    fromEnum (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)) = 2
 
 instance Bounded AnyScriptLanguage where
     minBound = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)
-    maxBound = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+    maxBound = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)
 
 
 class HasTypeProxy lang => IsScriptLanguage lang where
@@ -238,8 +237,8 @@ instance IsScriptLanguage SimpleScriptV1 where
 instance IsScriptLanguage SimpleScriptV2 where
     scriptLanguage = SimpleScriptLanguage SimpleScriptV2
 
---instance IsScriptLanguage PlutusScriptV1 where
---    scriptLanguage = PlutusScriptLanguage PlutusScriptV1
+instance IsScriptLanguage PlutusScriptV1 where
+    scriptLanguage = PlutusScriptLanguage PlutusScriptV1
 
 
 class IsScriptLanguage lang => IsSimpleScriptLanguage lang where
@@ -293,6 +292,9 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
     serialiseToCBOR (SimpleScript SimpleScriptV2 s) =
       CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock StandardCrypto)
 
+    serialiseToCBOR (PlutusScript PlutusScriptV1 _s) =
+          error "TODO: serialiseToCBOR: Plutus script CBOR serialisation not implemented yet."
+
     deserialiseFromCBOR _ bs =
       case scriptLanguage :: ScriptLanguage lang of
         SimpleScriptLanguage SimpleScriptV1 ->
@@ -307,7 +309,9 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
                                 -> SimpleScript SimpleScriptV2)
           <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
-        PlutusScriptLanguage v -> case v of {}
+        PlutusScriptLanguage PlutusScriptV1 ->
+                  error "TODO: deserialiseFromCBOR: Plutus script CBOR \
+                        \decoding not implemented yet."
 
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
@@ -315,7 +319,7 @@ instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
       case scriptLanguage :: ScriptLanguage lang of
         SimpleScriptLanguage SimpleScriptV1 -> "SimpleScriptV1"
         SimpleScriptLanguage SimpleScriptV2 -> "SimpleScriptV2"
-        PlutusScriptLanguage v -> case v of {}
+        PlutusScriptLanguage PlutusScriptV1 -> "PlutusScriptV1"
 
 
 -- ----------------------------------------------------------------------------
@@ -353,6 +357,8 @@ instance Eq ScriptInAnyLang where
 toScriptInAnyLang :: Script lang -> ScriptInAnyLang
 toScriptInAnyLang s@(SimpleScript v _) =
     ScriptInAnyLang (SimpleScriptLanguage v) s
+toScriptInAnyLang s@(PlutusScript v _) =
+    ScriptInAnyLang (PlutusScriptLanguage v) s
 
 instance HasTypeProxy ScriptInAnyLang where
     data AsType ScriptInAnyLang = AsScriptInAnyLang
@@ -377,7 +383,8 @@ instance SerialiseAsCBOR ScriptInAnyLang where
        <> CBOR.encodeWord 1
        <> toCBOR (toAllegraTimelock s :: Timelock.Timelock StandardCrypto)
 
-    serialiseToCBOR (ScriptInAnyLang (PlutusScriptLanguage v) _) = case v of {}
+    serialiseToCBOR (ScriptInAnyLang (PlutusScriptLanguage _) _) =
+      error "TODO: serialiseToCBOR: PlutusScript CBOR serialisation not implemented yet"
 
     deserialiseFromCBOR AsScriptInAnyLang bs =
         CBOR.decodeAnnotator "Script" decodeScript (LBS.fromStrict bs)
@@ -661,6 +668,8 @@ hashScript (SimpleScript SimpleScriptV2 s) =
                        -> Timelock.Timelock StandardCrypto)
   $ s
 
+hashScript (PlutusScript PlutusScriptV1 _s) =
+  error "TODO: hashScript: PlutusScript hash not implemented yet."
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
 toShelleyScriptHash (ScriptHash h) =  h
@@ -838,6 +847,7 @@ fromAllegraTimelock timelocks = go
 
 instance ToJSON (Script lang) where
   toJSON (SimpleScript _ script) = toJSON script
+  toJSON (PlutusScript _ _) = error "TODO: toJSON PlutusScript"
 
 instance ToJSON ScriptInAnyLang where
   toJSON (ScriptInAnyLang _ script) = toJSON script
@@ -874,7 +884,8 @@ instance IsScriptLanguage lang => FromJSON (Script lang) where
     case scriptLanguage :: ScriptLanguage lang of
       SimpleScriptLanguage lang -> SimpleScript lang <$>
                                      parseSimpleScript lang v
-      PlutusScriptLanguage lang -> case lang of {}
+      PlutusScriptLanguage _ ->
+        error "TODO: parseJSON PlutusScriptLanguage"
 
 
 instance FromJSON ScriptInAnyLang where

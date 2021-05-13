@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -82,8 +81,8 @@ genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 genScript :: ScriptLanguage lang -> Gen (Script lang)
 genScript (SimpleScriptLanguage lang) =
     SimpleScript lang <$> genSimpleScript lang
-
-genScript (PlutusScriptLanguage lang) = case lang of {}
+genScript (PlutusScriptLanguage PlutusScriptV1) =
+    panic "TODO: genScript (PlutusScriptLanguage PlutusScriptV1)"
 
 genSimpleScript :: SimpleScriptVersion lang -> Gen (SimpleScript lang)
 genSimpleScript lang =

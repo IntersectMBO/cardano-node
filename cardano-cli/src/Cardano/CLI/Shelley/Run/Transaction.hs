@@ -559,6 +559,8 @@ validateTxMintValue era (Just (val, scripts)) =
                          , ScriptWitness ScriptWitnessForMinting
                              $ SimpleScriptWitness sLangInEra sVer sScript
                          )
+                PlutusScript _ _ ->
+                  panic "TODO: reateScriptWitness: Plutus scripts not supported yet."
 
      else left $ ShelleyTxCmdPolicyIdNotSpecified scriptHash
 
@@ -576,6 +578,7 @@ createScriptWitness era (ScriptFile fp) = do
       case script of
         SimpleScript sVer sScript ->
           return $ SimpleScriptWitness sLangInEra sVer sScript
+        PlutusScript _ _ -> panic "TODO: createScriptWitness: Plutus scripts not supported yet."
 
     Nothing ->
       left $ ShelleyTxCmdScriptLanguageNotSupportedInEra
