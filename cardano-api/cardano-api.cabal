@@ -123,6 +123,7 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , plutus-ledger-api
                       , scientific
                       , shelley-spec-ledger
                       , small-steps
