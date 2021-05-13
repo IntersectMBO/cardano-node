@@ -2236,6 +2236,13 @@ pShelleyProtocolParametersUpdate =
     <*> optional pPoolInfluence
     <*> optional pMonetaryExpansion
     <*> optional pTreasuryExpansion
+    -- TODO: Add proper support for these params
+    <*> pure Nothing
+    <*> pure mempty
+    <*> pure mempty
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
 
 pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =

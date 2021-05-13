@@ -57,8 +57,6 @@ module Cardano.Api.ProtocolParameters (
 
 import           Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.=))
-import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
@@ -71,6 +69,10 @@ import           GHC.Generics
 import           Numeric.Natural
 
 import           Control.Monad
+
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
+                   withText, (.!=), (.:), (.:?), (.=))
+import qualified Data.Aeson as Aeson
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -228,7 +230,37 @@ data ProtocolParameters =
        --
        -- This is the \"tau\" incentives parameter from the design document.
        --
-       protocolParamTreasuryCut :: Rational
+       protocolParamTreasuryCut :: Rational,
+
+       -- | Cost in ada per word of UTxO storage.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamUTxOCostPerWord :: Maybe Lovelace,
+
+       -- | Cost models for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamCostModels :: Map AnyPlutusScriptVersion CostModel,
+
+       -- | Price of execution units for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamPrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+
+       -- | Max total script execution resources units allowed per tx
+       --
+       -- /Introduced in Alonzo/
+       protocolParamMaxTxExUnits :: Maybe ExecutionUnits,
+
+       -- | Max total script execution resources units allowed per block
+       --
+       -- /Introduced in Alonzo/
+       protocolParamMaxBlockExUnits :: Maybe ExecutionUnits,
+
+       -- | Max size of a Value in a tx ouput.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamMaxValueSize :: Maybe Natural
     }
   deriving (Eq, Generic, Show)
 
@@ -253,10 +285,17 @@ instance FromJSON ProtocolParameters where
                         <*> o .: "poolPledgeInfluence"
                         <*> o .: "monetaryExpansion"
                         <*> o .: "treasuryCut"
+                        <*> o .:? "utxoCostPerWord"
+                        <*> o .:? "costModel"           .!= Map.empty
+                        <*> o .:? "executionUnitPrices" .!= Map.empty
+                        <*> o .:? "maxTxExecUnits"
+                        <*> o .:? "maxBlockExecUnits"
+                        <*> o .:? "maxValueSize"
 
 instance ToJSON ProtocolParameters where
   toJSON pp = object [ "extraPraosEntropy" .= protocolParamExtraPraosEntropy pp
                      , "stakePoolTargetNum" .= protocolParamStakePoolTargetNum pp
+                     , "minUTxOValue" .= protocolParamMinUTxOValue pp
                      , "poolRetireMaxEpoch" .= protocolParamPoolRetireMaxEpoch pp
                      , "decentralization" .= (fromRational $ protocolParamDecentralization pp :: Scientific)
                      , "stakePoolDeposit" .= protocolParamStakePoolDeposit pp
@@ -272,7 +311,12 @@ instance ToJSON ProtocolParameters where
                                             in object ["major" .= major, "minor" .= minor]
                      , "txFeeFixed" .= protocolParamTxFeeFixed pp
                      , "txFeePerByte" .= protocolParamTxFeePerByte pp
-                     , "minUTxOValue"  .= protocolParamMinUTxOValue pp
+                     -- Alonzo era:
+                     , "costModels"  .= protocolParamCostModels pp
+                     , "executionUnitPrices" .= protocolParamPrices pp
+                     , "maxTxExecutionUnits" .= protocolParamMaxTxExUnits pp
+                     , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits pp
+                     , "maxValSize" .= protocolParamMaxValueSize pp
                      ]
 
 -- ----------------------------------------------------------------------------
@@ -392,7 +436,38 @@ data ProtocolParametersUpdate =
        --
        -- This is the \"tau\" incentives parameter from the design document.
        --
-       protocolUpdateTreasuryCut :: Maybe Rational
+       protocolUpdateTreasuryCut :: Maybe Rational,
+       -- Introduced in Alonzo
+
+       -- | Cost in ada per word of UTxO storage.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateUTxOCostPerWord :: Maybe Lovelace,
+
+       -- | Cost models for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateCostModels :: Map AnyPlutusScriptVersion CostModel,
+
+       -- | Price of execution units for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdatePrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+
+       -- | Max total script execution resources units allowed per tx
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateMaxTxExUnits :: Maybe ExecutionUnits,
+
+       -- | Max total script execution resources units allowed per block
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateMaxBlockExUnits :: Maybe ExecutionUnits,
+
+       -- | Max size of a 'Value' in a tx output.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateParamMaxValueSize :: Maybe Natural
     }
   deriving (Eq, Show)
 
@@ -416,11 +491,22 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdatePoolPledgeInfluence = merge protocolUpdatePoolPledgeInfluence
       , protocolUpdateMonetaryExpansion   = merge protocolUpdateMonetaryExpansion
       , protocolUpdateTreasuryCut         = merge protocolUpdateTreasuryCut
+      -- Intoduced in Alonzo below.
+      , protocolUpdateUTxOCostPerWord     = merge protocolUpdateUTxOCostPerWord
+      , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
+      , protocolUpdatePrices              = mergeMap protocolUpdatePrices
+      , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
+      , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
+      , protocolUpdateParamMaxValueSize   = merge protocolUpdateParamMaxValueSize
       }
       where
         -- prefer the right hand side:
         merge :: (ProtocolParametersUpdate -> Maybe a) -> Maybe a
         merge f = f ppu2 `mplus` f ppu1
+
+        -- prefer the right hand side:
+        mergeMap :: Ord k => (ProtocolParametersUpdate -> Map k a) -> Map k a
+        mergeMap f = f ppu2 `Map.union` f ppu1
 
 instance Monoid ProtocolParametersUpdate where
     mempty =
@@ -442,6 +528,12 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdatePoolPledgeInfluence = Nothing
       , protocolUpdateMonetaryExpansion   = Nothing
       , protocolUpdateTreasuryCut         = Nothing
+      , protocolUpdateUTxOCostPerWord     = Nothing
+      , protocolUpdateCostModels          = mempty
+      , protocolUpdatePrices              = mempty
+      , protocolUpdateMaxTxExUnits        = Nothing
+      , protocolUpdateMaxBlockExUnits     = Nothing
+      , protocolUpdateParamMaxValueSize   = Nothing
       }
 
 
@@ -791,6 +883,12 @@ fromShelleyPParamsUpdate
                                             strictMaybeToMaybe _rho
     , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
                                             strictMaybeToMaybe _tau
+    , protocolUpdateUTxOCostPerWord     = Nothing
+    , protocolUpdateCostModels          = mempty
+    , protocolUpdatePrices              = mempty
+    , protocolUpdateMaxTxExUnits        = Nothing
+    , protocolUpdateMaxBlockExUnits     = Nothing
+    , protocolUpdateParamMaxValueSize   = Nothing
     }
 
 
@@ -835,6 +933,12 @@ fromShelleyPParams
     , protocolParamPoolPledgeInfluence = _a0
     , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational _rho
     , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
+    , protocolParamUTxOCostPerWord     = Nothing
+    , protocolParamCostModels          = Map.empty
+    , protocolParamPrices              = Map.empty
+    , protocolParamMaxTxExUnits        = Nothing
+    , protocolParamMaxBlockExUnits     = Nothing
+    , protocolParamMaxValueSize        = Nothing
     }
 
 
