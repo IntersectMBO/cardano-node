@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -47,6 +48,9 @@ module Cardano.Api.Script (
     timeLocksSupported,
     adjustSimpleScriptVersion,
 
+    -- * Script execution units
+    ExecutionUnits(..),
+
     -- * Script hashes
     ScriptHash(..),
     hashScript,
@@ -58,6 +62,8 @@ module Cardano.Api.Script (
     fromShelleyMultiSig,
     toAllegraTimelock,
     fromAllegraTimelock,
+    toAlonzoExUnits,
+    fromAlonzoExUnits,
     toShelleyScriptHash,
     fromShelleyScriptHash,
 
@@ -67,6 +73,7 @@ module Cardano.Api.Script (
 
 import           Prelude
 
+import           Data.Word (Word64)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
@@ -100,6 +107,7 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -623,6 +631,54 @@ deriving instance Show (KeyWitnessInCtx witctx)
 
 deriving instance Eq   (ScriptWitnessInCtx witctx)
 deriving instance Show (ScriptWitnessInCtx witctx)
+
+
+-- ----------------------------------------------------------------------------
+-- Script execution units
+--
+
+-- | The units for how long a script executes for and how much memory it uses.
+-- This is used to declare the resources used by a particular use of a script.
+--
+-- This type is also used to describe the limits for the maximum overall
+-- execution units per transaction or per block.
+--
+data ExecutionUnits =
+     ExecutionUnits {
+        -- | This corresponds roughly to the time to execute a script.
+        executionSteps  :: Word64,
+
+        -- | This corresponds roughly to the peak memory used during script
+        -- execution.
+        executionMemory :: Word64
+     }
+  deriving (Eq, Show)
+
+instance ToJSON ExecutionUnits where
+  toJSON ExecutionUnits{executionSteps, executionMemory} =
+    object [ "steps"  .= executionSteps
+           , "memory" .= executionMemory ]
+
+instance FromJSON ExecutionUnits where
+  parseJSON =
+    Aeson.withObject "ExecutionUnits" $ \o ->
+      ExecutionUnits
+        <$> o .: "steps"
+        <*> o .: "memory"
+
+toAlonzoExUnits :: ExecutionUnits -> Alonzo.ExUnits
+toAlonzoExUnits ExecutionUnits{executionSteps, executionMemory} =
+  Alonzo.ExUnits {
+    Alonzo.exUnitsSteps = executionSteps,
+    Alonzo.exUnitsMem   = executionMemory
+  }
+
+fromAlonzoExUnits :: Alonzo.ExUnits -> ExecutionUnits
+fromAlonzoExUnits Alonzo.ExUnits{Alonzo.exUnitsSteps, Alonzo.exUnitsMem} =
+  ExecutionUnits {
+    executionSteps  = exUnitsSteps,
+    executionMemory = exUnitsMem
+  }
 
 
 -- ----------------------------------------------------------------------------
