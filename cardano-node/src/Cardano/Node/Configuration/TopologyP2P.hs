@@ -58,10 +58,10 @@ instance FromJSON NodeSetup where
 instance ToJSON NodeSetup where
   toJSON ns =
     object
-      [ "nodeId" .= nodeId ns
-      , "nodeIPv4Address" .= nodeIPv4Address ns
-      , "nodeIPv6Address" .= nodeIPv6Address ns
-      , "producers" .= producers ns
+      [ "nodeId"             .= nodeId ns
+      , "nodeIPv4Address"    .= nodeIPv4Address ns
+      , "nodeIPv6Address"    .= nodeIPv6Address ns
+      , "producers"          .= producers ns
       , "useLedgerAfterSlot" .= useLedger ns
       ]
 
@@ -145,17 +145,17 @@ data NetworkTopology = RealNodeTopology !LocalRootPeersGroups ![PublicRootPeers]
 
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o ->
-                RealNodeTopology <$> (o .:? "LocalRoots"     .!= LocalRootPeersGroups [])
-                                 <*> (o .:? "PublicRoots"    .!= [])
+                RealNodeTopology <$> (o .:? "LocalRoots"         .!= LocalRootPeersGroups [])
+                                 <*> (o .:? "PublicRoots"        .!= [])
                                  <*> (o .:? "useLedgerAfterSlot" .!= UseLedger DontUseLedger)
 
 instance ToJSON NetworkTopology where
   toJSON top =
     case top of
-      RealNodeTopology lrpg prp ul -> object [ "LocalRoots" .= lrpg
-                                            , "PublicRoots" .= prp
-                                            , "useLedgerAfterSlot" .= ul
-                                            ]
+      RealNodeTopology lrpg prp ul -> object [ "LocalRoots"         .= lrpg
+                                             , "PublicRoots"        .= prp
+                                             , "useLedgerAfterSlot" .= ul
+                                             ]
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 -- While running a real protocol, this gives your node its own address and
