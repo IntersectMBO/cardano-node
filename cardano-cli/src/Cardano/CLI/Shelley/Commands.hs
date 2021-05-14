@@ -341,14 +341,17 @@ data SIPCmd
   = SIPNew
       { sipAuthorKeyFile :: VerificationKeyFile
       , proposalText     :: Text
+      , proposalVPD      :: SlotNo
       }
   | SIPReveal
       { sipRevelatorKeyFile  :: VerificationKeyFile
       , revealedProposalText :: Text
+      , revealedProposalVPD  :: SlotNo
       }
   | SIPVote
       { sipVoterKeyFile   :: VerificationKeyFile
       , votedProposalText :: Text
+      , votedProposalVPD  :: SlotNo
       }
   deriving Show
 

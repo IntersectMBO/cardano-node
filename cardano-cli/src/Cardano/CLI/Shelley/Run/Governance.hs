@@ -78,12 +78,12 @@ runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
   runGovernanceUpdateProposal out eNo genVKeys ppUp
 runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
   where
-    runPivoCmd (SIP SIPNew { sipAuthorKeyFile, proposalText }) = do
+    runPivoCmd (SIP SIPNew { sipAuthorKeyFile, proposalText, proposalVPD }) = do
       StakeVerificationKey (Shelley.Keys.VKey vk)
         <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
          $ readVerificationKeyOrFile AsStakeKey
          $ VerificationKeyFilePath sipAuthorKeyFile
-      let sip = SIP.mkSubmission vk constSalt (mkProposal proposalText)
+      let sip = SIP.mkSubmission vk constSalt (mkProposal proposalText proposalVPD)
       -- todo: use 'returnPayload' instead.
       firstExceptT ShelleyGovernanceCmdTextEnvWriteError
         $ newExceptT
@@ -94,12 +94,13 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
                { Pivo.Update.sipSubmissions = singleton sip }
              :: Pivo.Update.Payload StandardPivo
             )
-    runPivoCmd (SIP SIPReveal { sipRevelatorKeyFile, revealedProposalText }) = do
+    runPivoCmd (SIP SIPReveal { sipRevelatorKeyFile, revealedProposalText, revealedProposalVPD }) = do
       StakeVerificationKey (Shelley.Keys.VKey vk)
         <- firstExceptT ShelleyGovernanceCmdKeyReadError . newExceptT
          $ readVerificationKeyOrFile AsStakeKey
          $ VerificationKeyFilePath sipRevelatorKeyFile
-      let revelation = SIP.mkRevelation vk constSalt (mkProposal revealedProposalText)
+      let revelation =
+            SIP.mkRevelation vk constSalt (mkProposal revealedProposalText revealedProposalVPD)
       firstExceptT ShelleyGovernanceCmdTextEnvWriteError
         $ newExceptT
         $ writeFileTextEnvelope
@@ -109,14 +110,14 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
                { Pivo.Update.sipRevelations = singleton revelation }
              :: Pivo.Update.Payload StandardPivo
             )
-    runPivoCmd (SIP SIPVote { sipVoterKeyFile, votedProposalText }) = do
+    runPivoCmd (SIP SIPVote { sipVoterKeyFile, votedProposalText, votedProposalVPD }) = do
       vk <- readUpdateKeyFile sipVoterKeyFile
       returnPayload $
         mempty
           { Pivo.Update.sipVotes       = singleton
                                        $ SIP.mkVote @StandardPivo
                                            vk
-                                           (SIP._id (mkProposal votedProposalText))
+                                           (SIP._id (mkProposal votedProposalText votedProposalVPD))
                                            SIP.For
           }
     runPivoCmd (IMP IMPCommit { impCommiterKeyFile, impCommitSIPText, impCommitVersion, impCommitNewBBSize }) = do
@@ -130,7 +131,8 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
           }
     runPivoCmd (IMP IMPReveal { impRevelatorKeyFile, impRevelationSIPText, impRevelationVersion, impRevealNewBBSize }) = do
       vk <- readUpdateKeyFile impRevelatorKeyFile
-      let ppUpdate = emptyPParamsUpdate { _maxBBSize = maybeToStrictMaybe impRevealNewBBSize }
+      let ppUpdate =
+            emptyPParamsUpdate { _maxBBSize = maybeToStrictMaybe impRevealNewBBSize }
       returnPayload $
         mempty
           { Pivo.Update.impRevelations =
@@ -170,23 +172,18 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
 -- | Make an ad-hoc proposal using the given proposal text.
 mkProposal
   :: Era era
-  => Text -> SIP.Proposal era
-mkProposal text = SIP.mkProposal text constVotingPeriodDuration
+  => Text
+  -> SlotNo
+  -- ^ Proposal's voting period duration
+  -> SIP.Proposal era
+mkProposal text duration = SIP.mkProposal text duration
 
--- todo: add support for specifying the salt through the command line.
+-- TODO: add support for specifying the salt through the command line.
 constSalt :: Int
 constSalt = 84
 
--- todo: add support for specifying the voting period duration through the
--- command line.
-constVotingPeriodDuration :: SlotNo
-constVotingPeriodDuration = 600
-  -- fixme: this is fragile as it depends on the protocol global constants.
-  --
-  -- We chose the security parameter to be 10, and the active
-  -- slot coefficient to be 0.1, so the stabilityWindow becomes
-  -- 3 * 10 / 0.1 = 300
-
+-- FIXME: we need to make this function take a voting period duration as
+-- specified in the command line for the SIP.
 mkImplementation
   :: Era era
   => Text -> Word -> PParamsUpdate era -> IMP.Implementation era
@@ -194,8 +191,12 @@ mkImplementation sipText impVersion ppUpdate =
   IMP.mkImplementation
     (SIP.unProposalId $ SIP._id proposal) constVotingPeriodDuration protocol
   where
-    proposal = mkProposal sipText
+    proposal = mkProposal sipText constVotingPeriodDuration
     protocol = IMP.mkProtocol impVersion IMP.protocolZero ppUpdate
+    -- TODO: add support for specifying the voting period duration
+    -- through the command line.
+    constVotingPeriodDuration :: SlotNo
+    constVotingPeriodDuration = 600
 
 runGovernanceMIRCertificate
   :: Shelley.MIRPot
