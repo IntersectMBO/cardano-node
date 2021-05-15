@@ -150,9 +150,7 @@ instance FromJSON PartialNodeConfiguration where
       -- Logging parameters
       pncLoggingSwitch' <- v .:? "TurnOnLogging" .!= True
       pncLogMetrics'    <- Last <$> v .:? "TurnOnLogMetrics"
-      pncTraceConfig'   <- if pncLoggingSwitch'
-                           then Last . Just <$> traceConfigParser v
-                           else return . Last $ Just TracingOff
+      pncTraceConfig'   <- Last . Just <$> traceConfigParser v
 
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= ByronProtocol
@@ -349,7 +347,8 @@ makeNodeConfiguration pnc = do
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
              , ncLoggingSwitch = loggingSwitch
              , ncLogMetrics = logMetrics
-             , ncTraceConfig = traceConfig
+             , ncTraceConfig = if loggingSwitch then traceConfig
+                                                else TracingOff
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
