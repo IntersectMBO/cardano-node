@@ -135,26 +135,26 @@ instance FromJSON PartialNodeConfiguration where
     withObject "PartialNodeConfiguration" $ \v -> do
 
       -- Node parameters, not protocol-specific
-      pncSocketPath' <- Last <$> v .:? "SocketPath"
-      pncDiffusionMode'
+      pncSocketPath <- Last <$> v .:? "SocketPath"
+      pncDiffusionMode
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
-      pncSnapshotInterval'
+      pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
-      pncTestEnableDevelopmentNetworkProtocols'
+      pncTestEnableDevelopmentNetworkProtocols
         <- Last <$> v .:? "TestEnableDevelopmentNetworkProtocols"
 
       -- Blockfetch parameters
-      pncMaxConcurrencyBulkSync' <- Last <$> v .:? "MaxConcurrencyBulkSync"
-      pncMaxConcurrencyDeadline' <- Last <$> v .:? "MaxConcurrencyDeadline"
+      pncMaxConcurrencyBulkSync <- Last <$> v .:? "MaxConcurrencyBulkSync"
+      pncMaxConcurrencyDeadline <- Last <$> v .:? "MaxConcurrencyDeadline"
 
       -- Logging parameters
-      pncLoggingSwitch' <- v .:? "TurnOnLogging" .!= True
-      pncLogMetrics'    <- Last <$> v .:? "TurnOnLogMetrics"
-      pncTraceConfig'   <- Last . Just <$> traceConfigParser v
+      pncLoggingSwitch <- Last . Just <$> v .:? "TurnOnLogging" .!= True
+      pncLogMetrics    <- Last        <$> v .:? "TurnOnLogMetrics"
+      pncTraceConfig   <- Last . Just <$> traceConfigParser v
 
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= ByronProtocol
-      pncProtocolConfig' <-
+      pncProtocolConfig <-
         case protocol of
           ByronProtocol ->
             Last . Just . NodeProtocolConfigurationByron <$> parseByronProtocol v
@@ -167,17 +167,16 @@ instance FromJSON PartialNodeConfiguration where
                                                                <*> parseShelleyProtocol v
                                                                <*> parseHardForkProtocol v)
       pure PartialNodeConfiguration {
-             pncProtocolConfig = pncProtocolConfig'
-           , pncSocketPath = pncSocketPath'
-           , pncDiffusionMode = pncDiffusionMode'
-           , pncSnapshotInterval = pncSnapshotInterval'
-           , pncTestEnableDevelopmentNetworkProtocols =
-               pncTestEnableDevelopmentNetworkProtocols'
-           , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
-           , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
-           , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
-           , pncLogMetrics = pncLogMetrics'
-           , pncTraceConfig = pncTraceConfig'
+             pncProtocolConfig
+           , pncSocketPath
+           , pncDiffusionMode
+           , pncSnapshotInterval
+           , pncTestEnableDevelopmentNetworkProtocols
+           , pncMaxConcurrencyBulkSync
+           , pncMaxConcurrencyDeadline
+           , pncLoggingSwitch
+           , pncLogMetrics
+           , pncTraceConfig
            , pncNodeIPv4Addr = mempty
            , pncNodeIPv6Addr = mempty
            , pncNodePortNumber = mempty
