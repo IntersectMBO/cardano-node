@@ -70,7 +70,6 @@ library
                        Cardano.Node.Protocol.Cardano
                        Cardano.Node.Protocol.Shelley
                        Cardano.Node.Protocol.Types
-                       Cardano.Node.Query
                        Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.STM
