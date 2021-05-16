@@ -799,6 +799,10 @@ data SimpleScript lang where
 deriving instance Eq   (SimpleScript lang)
 deriving instance Show (SimpleScript lang)
 
+instance HasTypeProxy lang => HasTypeProxy (SimpleScript lang) where
+    data AsType (SimpleScript lang) = AsSimpleScript (AsType lang)
+    proxyToAsType _ = AsSimpleScript (proxyToAsType (Proxy :: Proxy lang))
+
 
 -- | Time lock feature in the 'SimpleScript' language.
 --

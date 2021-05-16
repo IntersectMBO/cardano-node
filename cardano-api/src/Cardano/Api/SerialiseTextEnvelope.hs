@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | TextEnvelope Serialisation
 --
@@ -20,10 +21,14 @@ module Cardano.Api.SerialiseTextEnvelope
   , writeFileTextEnvelopeWithOwnerPermissions
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
+
     -- * Reading one of several key types
   , FromSomeType(..)
   , deserialiseFromTextEnvelopeAnyOf
   , readFileTextEnvelopeAnyOf
+
+    -- * Data family instances
+  , AsType(..)
   ) where
 
 import           Prelude
@@ -89,6 +94,10 @@ data TextEnvelope = TextEnvelope
   , teDescription :: !TextEnvelopeDescr
   , teRawCBOR     :: !ByteString
   } deriving (Eq, Show)
+
+instance HasTypeProxy TextEnvelope where
+    data AsType TextEnvelope = AsTextEnvelope
+    proxyToAsType _ = AsTextEnvelope
 
 instance ToJSON TextEnvelope where
   toJSON TextEnvelope {teType, teDescription, teRawCBOR} =
