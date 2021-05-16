@@ -15,6 +15,7 @@ module Test.Cardano.Api.Typed.Gen
     -- * Scripts
   , genScript
   , genSimpleScript
+  , genPlutusScript
   , genScriptInAnyLang
   , genScriptInEra
   , genScriptHash
@@ -41,6 +42,7 @@ import           Cardano.Prelude
 import           Control.Monad.Fail (fail)
 import qualified Data.Map.Strict as Map
 import           Data.String
+import qualified Data.ByteString.Short as SBS
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -81,8 +83,8 @@ genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 genScript :: ScriptLanguage lang -> Gen (Script lang)
 genScript (SimpleScriptLanguage lang) =
     SimpleScript lang <$> genSimpleScript lang
-genScript (PlutusScriptLanguage PlutusScriptV1) =
-    panic "TODO: genScript (PlutusScriptLanguage PlutusScriptV1)"
+genScript (PlutusScriptLanguage lang) =
+    PlutusScript lang <$> genPlutusScript lang
 
 genSimpleScript :: SimpleScriptVersion lang -> Gen (SimpleScript lang)
 genSimpleScript lang =
@@ -112,6 +114,10 @@ genSimpleScript lang =
            return (RequireMOf m ts)
       ]
 
+genPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
+genPlutusScript _ =
+    -- We make no attempt to create a valid script
+    PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
 
 -- ----------------------------------------------------------------------------
 -- Script generators for any language, or any language valid in a specific era
