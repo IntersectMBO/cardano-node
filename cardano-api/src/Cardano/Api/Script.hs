@@ -48,6 +48,9 @@ module Cardano.Api.Script (
     timeLocksSupported,
     adjustSimpleScriptVersion,
 
+    -- * The Plutus script language
+    PlutusScript(..),
+
     -- * Script execution units
     ExecutionUnits(..),
 
@@ -75,6 +78,8 @@ import           Prelude
 
 import           Data.Word (Word64)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.ByteString.Short (ShortByteString)
+import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (toList)
 import           Data.Scientific (toBoundedInteger)
 import           Data.String (IsString)
@@ -82,6 +87,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -101,12 +107,12 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (SlotNo)
 
 import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Era  as Ledger
 
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
-import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import           Cardano.Api.Eras
@@ -259,6 +265,12 @@ instance IsSimpleScriptLanguage SimpleScriptV2 where
     simpleScriptVersion = SimpleScriptV2
 
 
+class IsScriptLanguage lang => IsPlutusScriptLanguage lang where
+    plutusScriptVersion :: PlutusScriptVersion lang
+
+instance IsPlutusScriptLanguage PlutusScriptV1 where
+    plutusScriptVersion = PlutusScriptV1
+
 
 -- ----------------------------------------------------------------------------
 -- Script type: covering all script languages
@@ -278,12 +290,8 @@ data Script lang where
                   -> !(SimpleScript lang)
                   -> Script lang
 
-     -- Place holder type to show what the pattern is to extend to multiple
-     -- languages, not just multiple versions of a single language.
-     -- For now there are no values of PlutusScriptVersion so this branch
-     -- is inaccessible.
      PlutusScript :: !(PlutusScriptVersion lang)
-                  -> ()
+                  -> !(PlutusScript lang)
                   -> Script lang
 
 deriving instance (Eq   (Script lang))
@@ -300,8 +308,8 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
     serialiseToCBOR (SimpleScript SimpleScriptV2 s) =
       CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock StandardCrypto)
 
-    serialiseToCBOR (PlutusScript PlutusScriptV1 _s) =
-          error "TODO: serialiseToCBOR: Plutus script CBOR serialisation not implemented yet."
+    serialiseToCBOR (PlutusScript PlutusScriptV1 s) =
+      CBOR.serialize' s
 
     deserialiseFromCBOR _ bs =
       case scriptLanguage :: ScriptLanguage lang of
@@ -318,8 +326,8 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
           <$> CBOR.decodeAnnotator "Script" fromCBOR (LBS.fromStrict bs)
 
         PlutusScriptLanguage PlutusScriptV1 ->
-                  error "TODO: deserialiseFromCBOR: Plutus script CBOR \
-                        \decoding not implemented yet."
+              PlutusScript PlutusScriptV1
+          <$> CBOR.decodeFull' bs
 
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
@@ -391,8 +399,12 @@ instance SerialiseAsCBOR ScriptInAnyLang where
        <> CBOR.encodeWord 1
        <> toCBOR (toAllegraTimelock s :: Timelock.Timelock StandardCrypto)
 
-    serialiseToCBOR (ScriptInAnyLang (PlutusScriptLanguage _) _) =
-      error "TODO: serialiseToCBOR: PlutusScript CBOR serialisation not implemented yet"
+    serialiseToCBOR (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1)
+                                     (PlutusScript _v s)) =
+      CBOR.serializeEncoding' $
+          CBOR.encodeListLen 2
+       <> CBOR.encodeWord 2
+       <> toCBOR s
 
     deserialiseFromCBOR AsScriptInAnyLang bs =
         CBOR.decodeAnnotator "Script" decodeScript (LBS.fromStrict bs)
@@ -416,6 +428,12 @@ instance SerialiseAsCBOR ScriptInAnyLang where
                 convert = ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
                         . SimpleScript SimpleScriptV2
                         . fromAllegraTimelock TimeLocksInSimpleScriptV2
+
+            2 -> fmap (pure . convert) fromCBOR
+              where
+                convert :: PlutusScript PlutusScriptV1 -> ScriptInAnyLang
+                convert = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1)
+                        . PlutusScript PlutusScriptV1
 
             _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag "Script" tag
 
@@ -730,21 +748,25 @@ hashScript (SimpleScript SimpleScriptV1 s) =
     -- For V1, we convert to the Shelley-era version specifically and hash that.
     -- Later ledger eras have to be compatible anyway.
     ScriptHash
-  . Shelley.hashMultiSigScript @(ShelleyLedgerEra ShelleyEra)
+  . Ledger.hashScript @(ShelleyLedgerEra ShelleyEra)
   . toShelleyMultiSig
   $ s
 
 hashScript (SimpleScript SimpleScriptV2 s) =
-    -- For V1, we convert to the Allegra-era version specifically and hash that.
+    -- For V2, we convert to the Allegra-era version specifically and hash that.
     -- Later ledger eras have to be compatible anyway.
     ScriptHash
-  . Shelley.hashScript @(ShelleyLedgerEra AllegraEra)
+  . Ledger.hashScript @(ShelleyLedgerEra AllegraEra)
   . (toAllegraTimelock :: SimpleScript SimpleScriptV2
                        -> Timelock.Timelock StandardCrypto)
   $ s
 
-hashScript (PlutusScript PlutusScriptV1 _s) =
-  error "TODO: hashScript: PlutusScript hash not implemented yet."
+hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
+    -- For Plutus V1, we convert to the Alonzo-era version specifically and
+    -- hash that. Later ledger eras have to be compatible anyway.
+    ScriptHash
+  . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
+  $ Alonzo.PlutusScript script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
 toShelleyScriptHash (ScriptHash h) =  h
@@ -824,6 +846,46 @@ adjustSimpleScriptVersion target = go
 
 
 -- ----------------------------------------------------------------------------
+-- The Plutus script language
+--
+
+-- | Plutus scripts.
+--
+data PlutusScript lang where
+     PlutusScriptSerialised :: ShortByteString -> PlutusScript lang
+
+deriving instance Eq (PlutusScript lang)
+deriving instance Show (PlutusScript lang)
+
+instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
+    data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
+    proxyToAsType _ = AsPlutusScript (proxyToAsType (Proxy :: Proxy lang))
+
+instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
+    serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
+
+    deserialiseFromRawBytes (AsPlutusScript _) bs =
+      -- TODO: validate the script syntax and fail decoding if invalid
+      Just (PlutusScriptSerialised (SBS.toShort bs))
+
+instance Typeable lang => ToCBOR (PlutusScript lang) where
+    toCBOR (PlutusScriptSerialised sbs) = toCBOR sbs
+
+instance Typeable lang => FromCBOR (PlutusScript lang) where
+    -- TODO: validate the script syntax and fail decoding if invalid
+    fromCBOR = PlutusScriptSerialised <$> fromCBOR
+
+instance (HasTypeProxy lang, Typeable lang) =>
+         SerialiseAsCBOR (PlutusScript lang)
+
+instance (IsPlutusScriptLanguage lang, Typeable lang) =>
+         HasTextEnvelope (PlutusScript lang) where
+    textEnvelopeType _ =
+      case plutusScriptVersion :: PlutusScriptVersion lang of
+        PlutusScriptV1 -> "PlutusScriptV1"
+
+
+-- ----------------------------------------------------------------------------
 -- Conversion functions
 --
 
@@ -841,9 +903,10 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV2 script)) =
       SimpleScriptV2InMary    -> toAllegraTimelock script
       SimpleScriptV2InAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
 
-toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1 _script)) =
+toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1
+                                         (PlutusScriptSerialised script))) =
     case langInEra of
-      PlutusScriptV1InAlonzo  -> error "toShelleyScript: TODO PlutusScript"
+      PlutusScriptV1InAlonzo  -> Alonzo.PlutusScript script
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
@@ -863,7 +926,15 @@ fromShelleyBasedScript era script =
       SimpleScript SimpleScriptV2 $
       fromAllegraTimelock TimeLocksInSimpleScriptV2 script
     ShelleyBasedEraAlonzo ->
-      error "fromShelleyBasedScript: Alonzo era not implemented yet"
+      case script of
+        Alonzo.TimelockScript s ->
+          ScriptInEra SimpleScriptV2InAlonzo $
+          SimpleScript SimpleScriptV2 $
+          fromAllegraTimelock TimeLocksInSimpleScriptV2 s
+        Alonzo.PlutusScript s ->
+          ScriptInEra PlutusScriptV1InAlonzo $
+          PlutusScript PlutusScriptV1 $
+          PlutusScriptSerialised s
 
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.

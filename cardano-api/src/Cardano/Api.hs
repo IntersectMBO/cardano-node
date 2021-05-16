@@ -322,6 +322,9 @@ module Cardano.Api (
     timeLocksSupported,
     adjustSimpleScriptVersion,
 
+    -- ** Plutus scripts
+    PlutusScript,
+
     -- ** Script addresses
     -- | Making addresses from scripts.
     ScriptHash,

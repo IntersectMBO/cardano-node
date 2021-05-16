@@ -95,6 +95,7 @@ module Cardano.Api.Shelley
     fromAllegraTimelock,
     toShelleyScriptHash,
     fromShelleyScriptHash,
+    PlutusScript(..),
 
     -- * Certificates
     Certificate (..),
