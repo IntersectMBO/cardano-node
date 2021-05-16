@@ -171,7 +171,6 @@ test-suite cardano-api-test
                       , time
 
   other-modules:        Test.Cardano.Api.Crypto
-                        Test.Cardano.Api.Examples
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Genesis
                         Test.Cardano.Api.Ledger
@@ -181,11 +180,9 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
                         Test.Cardano.Api.Typed.JSON
-                        Test.Cardano.Api.Typed.MultiSig.Allegra
-                        Test.Cardano.Api.Typed.MultiSig.Mary
-                        Test.Cardano.Api.Typed.MultiSig.Shelley
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
+                        Test.Cardano.Api.Typed.Script
                         Test.Cardano.Api.Typed.Value
                         Test.Tasty.Hedgehog.Group
 
