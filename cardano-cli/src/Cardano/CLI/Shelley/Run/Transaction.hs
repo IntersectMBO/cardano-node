@@ -46,6 +46,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
+import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..), readShelleyGenesis,
                    renderShelleyGenesisCmdError)
@@ -56,7 +57,7 @@ import qualified System.IO as IO
 data ShelleyTxCmdError
   = ShelleyTxCmdAesonDecodeProtocolParamsError !FilePath !Text
   | ShelleyTxCmdReadFileError !(FileError ())
-  | ShelleyTxCmdReadJsonFileError (FileError JsonDecodeError)
+  | ShelleyTxCmdScriptFileError (FileError ScriptDecodeError)
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
   | ShelleyTxCmdReadWitnessSigningDataError !ReadWitnessSigningDataError
   | ShelleyTxCmdWriteFileError !(FileError ())
@@ -96,7 +97,7 @@ renderShelleyTxCmdError err =
   case err of
     ShelleyTxCmdReadFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadTextViewFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyTxCmdReadJsonFileError  fileErr -> Text.pack (displayError fileErr)
+    ShelleyTxCmdScriptFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
@@ -410,14 +411,14 @@ validateTxAuxScripts era files =
     Nothing -> txFeatureMismatch era TxFeatureAuxScripts
     Just AuxScriptsInAllegraEra -> do
       scripts <- sequence
-        [ do script <- firstExceptT ShelleyTxCmdReadJsonFileError $
+        [ do script <- firstExceptT ShelleyTxCmdScriptFileError $
                          readFileScriptInAnyLang file
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
       return $ TxAuxScripts AuxScriptsInAllegraEra scripts
     Just AuxScriptsInMaryEra -> do
       scripts <- sequence
-        [ do script <- firstExceptT ShelleyTxCmdReadJsonFileError $
+        [ do script <- firstExceptT ShelleyTxCmdScriptFileError $
                          readFileScriptInAnyLang file
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
@@ -534,9 +535,10 @@ validateTxMintValue era (Just (val, scripts)) =
      :: Value -> [ScriptFile]
      -> ExceptT ShelleyTxCmdError IO [(PolicyId, Witness WitCtxMint era)]
    pairAllPolIdsWithScripts vals sFiles = do
-     sInLangs <- mapM (firstExceptT ShelleyTxCmdReadJsonFileError
-                         . readFileScriptInAnyLang . unScriptFile
-                      ) sFiles
+     sInLangs <- sequence
+                   [ firstExceptT ShelleyTxCmdScriptFileError $
+                       readFileScriptInAnyLang file
+                   | ScriptFile file <- sFiles ]
      let valPids = extractPolicyIds vals
      mapM (pairPolIdWithScriptWit valPids) sInLangs
 
@@ -571,7 +573,7 @@ createScriptWitness
   -> ScriptFile
   -> ExceptT ShelleyTxCmdError IO (ScriptWitness witctx era)
 createScriptWitness era (ScriptFile fp) = do
-  ScriptInAnyLang sLang script <- firstExceptT ShelleyTxCmdReadJsonFileError
+  ScriptInAnyLang sLang script <- firstExceptT ShelleyTxCmdScriptFileError
                                     $ readFileScriptInAnyLang fp
   case scriptLanguageSupportedInEra era sLang of
     Just sLangInEra ->
@@ -715,7 +717,8 @@ runTxCalculateMinValue protocolParamsSourceSpec value = do
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do
-  ScriptInAnyLang _ script <- firstExceptT ShelleyTxCmdReadJsonFileError $ readFileScriptInAnyLang sFile
+  ScriptInAnyLang _ script <- firstExceptT ShelleyTxCmdScriptFileError $
+                                readFileScriptInAnyLang sFile
   liftIO . putTextLn . serialiseToRawBytesHexText $ hashScript script
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
@@ -1045,11 +1048,6 @@ onlyInShelleyBasedEras notImplMsg (InAnyCardanoEra era x) =
 -- ----------------------------------------------------------------------------
 -- Reading other files
 --
-
-readFileScriptInAnyLang :: FilePath
-                        -> ExceptT (FileError JsonDecodeError) IO ScriptInAnyLang
-readFileScriptInAnyLang path =
-    newExceptT $ readFileJSON AsScriptInAnyLang path
 
 validateScriptSupportedInEra :: CardanoEra era
                              -> ScriptInAnyLang
