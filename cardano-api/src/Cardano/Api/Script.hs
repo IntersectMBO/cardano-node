@@ -449,9 +449,13 @@ data ScriptLanguageInEra lang era where
      SimpleScriptV1InShelley :: ScriptLanguageInEra SimpleScriptV1 ShelleyEra
      SimpleScriptV1InAllegra :: ScriptLanguageInEra SimpleScriptV1 AllegraEra
      SimpleScriptV1InMary    :: ScriptLanguageInEra SimpleScriptV1 MaryEra
+     SimpleScriptV1InAlonzo  :: ScriptLanguageInEra SimpleScriptV1 AlonzoEra
 
      SimpleScriptV2InAllegra :: ScriptLanguageInEra SimpleScriptV2 AllegraEra
      SimpleScriptV2InMary    :: ScriptLanguageInEra SimpleScriptV2 MaryEra
+     SimpleScriptV2InAlonzo  :: ScriptLanguageInEra SimpleScriptV2 AlonzoEra
+
+     PlutusScriptV1InAlonzo  :: ScriptLanguageInEra PlutusScriptV1 AlonzoEra
 
 deriving instance Eq   (ScriptLanguageInEra lang era)
 deriving instance Show (ScriptLanguageInEra lang era)
@@ -506,6 +510,12 @@ scriptLanguageSupportedInEra era lang =
       (MaryEra, SimpleScriptLanguage SimpleScriptV2) ->
         Just SimpleScriptV2InMary
 
+      (AlonzoEra, SimpleScriptLanguage SimpleScriptV2) ->
+        Just SimpleScriptV2InAlonzo
+
+      (AlonzoEra, PlutusScriptLanguage PlutusScriptV1) ->
+        Just PlutusScriptV1InAlonzo
+
       _ -> Nothing
 
 languageOfScriptLanguageInEra :: ScriptLanguageInEra lang era
@@ -515,9 +525,13 @@ languageOfScriptLanguageInEra langInEra =
       SimpleScriptV1InShelley -> SimpleScriptLanguage SimpleScriptV1
       SimpleScriptV1InAllegra -> SimpleScriptLanguage SimpleScriptV1
       SimpleScriptV1InMary    -> SimpleScriptLanguage SimpleScriptV1
+      SimpleScriptV1InAlonzo  -> SimpleScriptLanguage SimpleScriptV1
 
       SimpleScriptV2InAllegra -> SimpleScriptLanguage SimpleScriptV2
       SimpleScriptV2InMary    -> SimpleScriptLanguage SimpleScriptV2
+      SimpleScriptV2InAlonzo  -> SimpleScriptLanguage SimpleScriptV2
+
+      PlutusScriptV1InAlonzo  -> PlutusScriptLanguage PlutusScriptV1
 
 eraOfScriptLanguageInEra :: ScriptLanguageInEra lang era
                          -> ShelleyBasedEra era
@@ -530,6 +544,11 @@ eraOfScriptLanguageInEra langInEra =
 
       SimpleScriptV1InMary    -> ShelleyBasedEraMary
       SimpleScriptV2InMary    -> ShelleyBasedEraMary
+
+      SimpleScriptV1InAlonzo  -> ShelleyBasedEraAlonzo
+      SimpleScriptV2InAlonzo  -> ShelleyBasedEraAlonzo
+
+      PlutusScriptV1InAlonzo  -> ShelleyBasedEraAlonzo
 
 
 -- | Given a target era and a script in some language, check if the language is
@@ -809,14 +828,22 @@ adjustSimpleScriptVersion target = go
 --
 
 toShelleyScript :: ScriptInEra era -> Ledger.Script (ShelleyLedgerEra era)
-toShelleyScript (ScriptInEra langInEra (SimpleScript _ script)) =
+toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV1 script)) =
     case langInEra of
       SimpleScriptV1InShelley -> toShelleyMultiSig script
-
       SimpleScriptV1InAllegra -> toAllegraTimelock script
       SimpleScriptV1InMary    -> toAllegraTimelock script
+      SimpleScriptV1InAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
+
+toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV2 script)) =
+    case langInEra of
       SimpleScriptV2InAllegra -> toAllegraTimelock script
       SimpleScriptV2InMary    -> toAllegraTimelock script
+      SimpleScriptV2InAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
+
+toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1 _script)) =
+    case langInEra of
+      PlutusScriptV1InAlonzo  -> error "toShelleyScript: TODO PlutusScript"
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
