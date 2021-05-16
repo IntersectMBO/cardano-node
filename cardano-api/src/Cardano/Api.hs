@@ -348,6 +348,7 @@ module Cardano.Api (
     JsonDecodeError(..),
     readFileJSON,
     writeFileJSON,
+    prettyPrintJSON,
 
     -- ** Bech32
     SerialiseAsBech32,
