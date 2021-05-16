@@ -132,17 +132,20 @@ prop_roundtrip_signing_key_kes_CBOR :: Property
 prop_roundtrip_signing_key_kes_CBOR =
   roundtrip_CBOR (AsSigningKey AsKesKey) (genSigningKey AsKesKey)
 
-prop_roundtrip_script_shelley_CBOR :: Property
-prop_roundtrip_script_shelley_CBOR =
-  roundtrip_CBOR (AsScriptInEra AsShelleyEra) (genScriptInEra ShelleyEra)
+prop_roundtrip_script_SimpleScriptV1_CBOR :: Property
+prop_roundtrip_script_SimpleScriptV1_CBOR =
+  roundtrip_CBOR (AsScript AsSimpleScriptV1)
+                 (genScript (SimpleScriptLanguage SimpleScriptV1))
 
-prop_roundtrip_script_allegra_CBOR :: Property
-prop_roundtrip_script_allegra_CBOR =
-  roundtrip_CBOR (AsScriptInEra AsAllegraEra) (genScriptInEra AllegraEra)
+prop_roundtrip_script_SimpleScriptV2_CBOR :: Property
+prop_roundtrip_script_SimpleScriptV2_CBOR =
+  roundtrip_CBOR (AsScript AsSimpleScriptV2)
+                 (genScript (SimpleScriptLanguage SimpleScriptV2))
 
-prop_roundtrip_script_mary_CBOR :: Property
-prop_roundtrip_script_mary_CBOR =
-  roundtrip_CBOR (AsScriptInEra AsMaryEra) (genScriptInEra MaryEra)
+prop_roundtrip_script_PlutusScriptV1_CBOR :: Property
+prop_roundtrip_script_PlutusScriptV1_CBOR =
+  roundtrip_CBOR (AsScript AsPlutusScriptV1)
+                 (genScript (PlutusScriptLanguage PlutusScriptV1))
 
 -- -----------------------------------------------------------------------------
 
