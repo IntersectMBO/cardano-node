@@ -19,7 +19,6 @@ module Test.Cardano.Api.Typed.Gen
   , genScriptInAnyLang
   , genScriptInEra
   , genScriptHash
-  , canonicaliseScriptVersion
 
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
@@ -140,27 +139,6 @@ genScriptHash :: Gen ScriptHash
 genScriptHash = do
     ScriptInAnyLang _ script <- genScriptInAnyLang
     return (hashScript script)
-
-
--- | For JSON round-trip testing we need to re-tag scripts with the lowest
--- language version that they fit into.
-
--- The reason for this is that the external JSON syntax for the simple script
--- language does specify the language version and so the JSON decoder simply
--- uses the lowest version of the language that supports the concrete script.
---
-canonicaliseScriptVersion :: ScriptInEra era -> ScriptInEra era
-canonicaliseScriptVersion (ScriptInEra SimpleScriptV2InAllegra
-                                      (SimpleScript SimpleScriptV2 s))
-    | Just s' <- adjustSimpleScriptVersion SimpleScriptV1 s
-    = ScriptInEra SimpleScriptV1InAllegra (SimpleScript SimpleScriptV1 s')
-
-canonicaliseScriptVersion (ScriptInEra SimpleScriptV2InMary
-                                      (SimpleScript SimpleScriptV2 s))
-    | Just s' <- adjustSimpleScriptVersion SimpleScriptV1 s
-    = ScriptInEra SimpleScriptV1InMary (SimpleScript SimpleScriptV1 s')
-
-canonicaliseScriptVersion s = s
 
 
 ----------------------------------------------------------------------------
