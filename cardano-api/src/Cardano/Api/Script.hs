@@ -100,7 +100,6 @@ import           Control.Applicative
 import           Control.Monad
 
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Prelude as CBOR (cborError)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
@@ -380,66 +379,6 @@ instance HasTypeProxy ScriptInAnyLang where
     data AsType ScriptInAnyLang = AsScriptInAnyLang
     proxyToAsType _ = AsScriptInAnyLang
 
-instance SerialiseAsCBOR ScriptInAnyLang where
-
-    serialiseToCBOR (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
-                                     (SimpleScript _v s)) =
-      -- Note that the CBOR encoding here is compatible with the previous
-      -- serialisation format for the @Script@ type from @cardano-ledger-specs@.
-      --
-      CBOR.serializeEncoding' $
-          CBOR.encodeListLen 2
-       <> CBOR.encodeWord 0
-       <> toCBOR (toShelleyMultiSig s)
-
-    serialiseToCBOR (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
-                                     (SimpleScript _v s)) =
-      CBOR.serializeEncoding' $
-          CBOR.encodeListLen 2
-       <> CBOR.encodeWord 1
-       <> toCBOR (toAllegraTimelock s :: Timelock.Timelock StandardCrypto)
-
-    serialiseToCBOR (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1)
-                                     (PlutusScript _v s)) =
-      CBOR.serializeEncoding' $
-          CBOR.encodeListLen 2
-       <> CBOR.encodeWord 2
-       <> toCBOR s
-
-    deserialiseFromCBOR AsScriptInAnyLang bs =
-        CBOR.decodeAnnotator "Script" decodeScript (LBS.fromStrict bs)
-      where
-        decodeScript :: CBOR.Decoder s (CBOR.Annotator ScriptInAnyLang)
-        decodeScript = do
-          CBOR.decodeListLenOf 2
-          tag <- CBOR.decodeWord8
-
-          case tag of
-            0 -> fmap (fmap convert) fromCBOR
-              where
-                convert :: Shelley.MultiSig StandardCrypto -> ScriptInAnyLang
-                convert = ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
-                        . SimpleScript SimpleScriptV1
-                        . fromShelleyMultiSig
-
-            1 -> fmap (fmap convert) fromCBOR
-              where
-                convert :: Timelock.Timelock StandardCrypto -> ScriptInAnyLang
-                convert = ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
-                        . SimpleScript SimpleScriptV2
-                        . fromAllegraTimelock TimeLocksInSimpleScriptV2
-
-            2 -> fmap (pure . convert) fromCBOR
-              where
-                convert :: PlutusScript PlutusScriptV1 -> ScriptInAnyLang
-                convert = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1)
-                        . PlutusScript PlutusScriptV1
-
-            _ -> CBOR.cborError $ CBOR.DecoderErrorUnknownTag "Script" tag
-
-instance HasTextEnvelope ScriptInAnyLang where
-    textEnvelopeType _ = "Script"
-
 
 -- ----------------------------------------------------------------------------
 -- Scripts in the context of a ledger era
@@ -481,28 +420,6 @@ deriving instance Show (ScriptLanguageInEra lang era)
 instance HasTypeProxy era => HasTypeProxy (ScriptInEra era) where
     data AsType (ScriptInEra era) = AsScriptInEra (AsType era)
     proxyToAsType _ = AsScriptInEra (proxyToAsType (Proxy :: Proxy era))
-
-instance IsCardanoEra era => SerialiseAsCBOR (ScriptInEra era) where
-    serialiseToCBOR (ScriptInEra _lang s) =
-      serialiseToCBOR (toScriptInAnyLang s)
-
-    deserialiseFromCBOR (AsScriptInEra _) bs = do
-      s@(ScriptInAnyLang lang _) <- deserialiseFromCBOR AsScriptInAnyLang bs
-      case toScriptInEra cardanoEra s of
-        Just s' -> Right s'
-        Nothing ->
-          Left $ CBOR.DecoderErrorCustom
-                 (Text.pack (show (cardanoEra :: CardanoEra era)) <> " Script")
-                 ("Script language " <> Text.pack (show lang) <>
-                  " not supported in this era")
-
-instance IsShelleyBasedEra era => HasTextEnvelope (ScriptInEra era) where
-    textEnvelopeType _ =
-      case shelleyBasedEra :: ShelleyBasedEra era of
-        ShelleyBasedEraShelley -> "ScriptInEra ShelleyEra"
-        ShelleyBasedEraAllegra -> "ScriptInEra AllegraEra"
-        ShelleyBasedEraMary    -> "ScriptInEra MaryEra"
-        ShelleyBasedEraAlonzo  -> "ScriptInEra AlonzoEra"
 
 
 -- | Check if a given script language is supported in a given era, and if so
