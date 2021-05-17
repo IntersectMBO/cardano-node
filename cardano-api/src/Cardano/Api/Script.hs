@@ -97,6 +97,7 @@ import           Data.Typeable (Typeable)
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -245,6 +246,51 @@ instance Bounded AnyScriptLanguage where
     minBound = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV1)
     maxBound = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)
 
+
+data AnyPlutusScriptVersion where
+     AnyPlutusScriptVersion :: PlutusScriptVersion lang
+                            -> AnyPlutusScriptVersion
+
+deriving instance (Show AnyPlutusScriptVersion)
+
+instance Eq AnyPlutusScriptVersion where
+    a == b = fromEnum a == fromEnum b
+
+instance Ord AnyPlutusScriptVersion where
+    compare a b = compare (fromEnum a) (fromEnum b)
+
+instance Enum AnyPlutusScriptVersion where
+    toEnum 0 = AnyPlutusScriptVersion PlutusScriptV1
+    toEnum _ = error "AnyPlutusScriptVersion.toEnum: bad argument"
+
+    fromEnum (AnyPlutusScriptVersion PlutusScriptV1) = 0
+
+instance Bounded AnyPlutusScriptVersion where
+    minBound = AnyPlutusScriptVersion PlutusScriptV1
+    maxBound = AnyPlutusScriptVersion PlutusScriptV1
+
+instance ToJSON AnyPlutusScriptVersion where
+    toJSON (AnyPlutusScriptVersion PlutusScriptV1) =
+      Aeson.String "PlutusScriptV1"
+
+parsePlutusScriptVersion :: Text -> Aeson.Parser AnyPlutusScriptVersion
+parsePlutusScriptVersion t =
+  case t of
+    "PlutusScriptV1" -> return (AnyPlutusScriptVersion PlutusScriptV1)
+    _                -> fail "Expected PlutusScriptV1"
+
+instance FromJSON AnyPlutusScriptVersion where
+    parseJSON = Aeson.withText "PlutusScriptVersion" parsePlutusScriptVersion
+
+instance Aeson.FromJSONKey AnyPlutusScriptVersion where
+    fromJSONKey = Aeson.FromJSONKeyTextParser parsePlutusScriptVersion
+
+instance Aeson.ToJSONKey AnyPlutusScriptVersion where
+    toJSONKey = Aeson.ToJSONKeyText toText toAesonEncoding
+      where
+        toText :: AnyPlutusScriptVersion -> Text
+        toText (AnyPlutusScriptVersion PlutusScriptV1) = "PlutusScriptV1"
+        toAesonEncoding = Aeson.text . toText
 
 class HasTypeProxy lang => IsScriptLanguage lang where
     scriptLanguage :: ScriptLanguage lang
