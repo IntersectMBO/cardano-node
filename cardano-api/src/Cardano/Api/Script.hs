@@ -277,11 +277,14 @@ instance IsPlutusScriptLanguage PlutusScriptV1 where
 
 -- | A script in a particular language.
 --
--- See also 'ScriptInAnyLang' for a script in any of the languages that is available within
--- a particular era.
+-- See also 'ScriptInAnyLang' for a script in any of the known languages.
 --
 -- See also 'ScriptInEra' for a script in a language that is available within
 -- a particular era.
+--
+-- Note that some but not all scripts have an external JSON syntax, hence this
+-- type has no JSON serialisation instances. The 'SimpleScript' family of
+-- languages do have a JSON syntax and thus have 'ToJSON'\/'FromJSON' instances.
 --
 data Script lang where
 
@@ -772,6 +775,9 @@ adjustSimpleScriptVersion target = go
 
 -- | Plutus scripts.
 --
+-- Note that Plutus scripts have a binary serialisation but no JSON
+-- serialisation.
+--
 data PlutusScript lang where
      PlutusScriptSerialised :: ShortByteString -> PlutusScript lang
 
@@ -920,15 +926,12 @@ fromAllegraTimelock timelocks = go
 -- JSON serialisation
 --
 
-instance ToJSON (Script lang) where
-  toJSON (SimpleScript _ script) = toJSON script
-  toJSON (PlutusScript _ _) = error "TODO: toJSON PlutusScript"
-
-instance ToJSON ScriptInAnyLang where
-  toJSON (ScriptInAnyLang _ script) = toJSON script
-
-instance ToJSON (ScriptInEra era) where
-  toJSON (ScriptInEra _ script) = toJSON script
+-- Remember that Plutus scripts do not have a JSON syntax, and so do not have
+-- and JSON instances. The only JSON format they support is via the
+-- HasTextEnvelope class which just wraps the binary format.
+--
+-- Because of this the 'Script' type also does not have any JSON instances, but
+-- the 'SimpleScript' type does.
 
 instance ToJSON (SimpleScript lang) where
   toJSON (RequireSignature pKeyHash) =
@@ -953,67 +956,6 @@ instance ToJSON (SimpleScript lang) where
            , "scripts" .= map toJSON reqScripts
            ]
 
-
-instance IsScriptLanguage lang => FromJSON (Script lang) where
-  parseJSON v =
-    case scriptLanguage :: ScriptLanguage lang of
-      SimpleScriptLanguage lang -> SimpleScript lang <$>
-                                     parseSimpleScript lang v
-      PlutusScriptLanguage _ ->
-        error "TODO: parseJSON PlutusScriptLanguage"
-
-
-instance FromJSON ScriptInAnyLang where
-  parseJSON v =
-      -- The SimpleScript language has the property that it is backwards
-      -- compatible, so we can parse as the latest version and then downgrade
-      -- to the minimum version that has all the features actually used.
-      toMinimumSimpleScriptVersion <$> parseSimpleScript SimpleScriptV2 v
-    where
-      --TODO: this will need to be adjusted when more versions are added
-      -- with appropriate helper functions it can probably be done in an
-      -- era-generic style
-      toMinimumSimpleScriptVersion s =
-        case adjustSimpleScriptVersion SimpleScriptV1 s of
-          Nothing -> ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2)
-                                     (SimpleScript SimpleScriptV2 s)
-          Just s' -> ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1)
-                                     (SimpleScript SimpleScriptV1 s')
-
-
-instance IsCardanoEra era => FromJSON (ScriptInEra era) where
-  parseJSON v =
-    case cardanoEra :: CardanoEra era of
-      ByronEra   -> fail "Scripts are not supported in the Byron era"
-
-      ShelleyEra -> ScriptInEra SimpleScriptV1InShelley
-                  . SimpleScript SimpleScriptV1
-                <$> parseSimpleScript SimpleScriptV1 v
-
-      --TODO: this will need to be adjusted when more versions are added.
-      -- It can probably be done in an era-generic style, with the use of
-      -- appropriate helper functions.
-      AllegraEra -> toMinimumSimpleScriptVersion
-                <$> parseSimpleScript SimpleScriptV2 v
-        where
-          toMinimumSimpleScriptVersion s =
-            case adjustSimpleScriptVersion SimpleScriptV1 s of
-              Nothing -> ScriptInEra SimpleScriptV2InAllegra
-                                     (SimpleScript SimpleScriptV2 s)
-              Just s' -> ScriptInEra SimpleScriptV1InAllegra
-                                     (SimpleScript SimpleScriptV1 s')
-
-      MaryEra -> toMinimumSimpleScriptVersion
-             <$> parseSimpleScript SimpleScriptV2 v
-        where
-          toMinimumSimpleScriptVersion s =
-            case adjustSimpleScriptVersion SimpleScriptV1 s of
-              Nothing -> ScriptInEra SimpleScriptV2InMary
-                                     (SimpleScript SimpleScriptV2 s)
-              Just s' -> ScriptInEra SimpleScriptV1InMary
-                                     (SimpleScript SimpleScriptV1 s')
-
-      AlonzoEra -> error "JSON support for Plutus scripts not implemented"
 
 instance IsSimpleScriptLanguage lang => FromJSON (SimpleScript lang) where
   parseJSON = parseSimpleScript simpleScriptVersion
