@@ -1,10 +1,10 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 #if !defined(mingw32_HOST_OS)
@@ -21,7 +21,7 @@ import           Prelude (String)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
-import "contra-tracer" Control.Tracer
+import           "contra-tracer" Control.Tracer
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import           Data.Time.Clock (getCurrentTime)
@@ -29,7 +29,8 @@ import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (AddrInfo, Socket)
-import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
+import           System.Directory (canonicalizePath, createDirectoryIfMissing,
+                     makeAbsolute)
 import           System.Environment (lookupEnv)
 #ifdef UNIX
 import           System.Posix.Files
@@ -38,9 +39,10 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 
-import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                   mkLOMeta)
-import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
+import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..),
+                     PrivacyAnnotation (..), mkLOMeta)
+import           Cardano.BM.Data.Tracer (ToLogObject (..),
+                     TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 import           Paths_cardano_node (version)
@@ -48,39 +50,44 @@ import           Paths_cardano_node (version)
 import qualified Cardano.Crypto.Libsodium as Crypto
 
 import qualified Cardano.Logging as NL
-import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
-                   createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
+import           Cardano.Node.Configuration.Logging (LoggingLayer (..),
+                     Severity (..), createLoggingLayer, nodeBasicInfo,
+                     shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                   PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
-                   makeNodeConfiguration, parseNodeConfigurationFP)
+                     PartialNodeConfiguration (..),
+                     defaultPartialNodeConfiguration, makeNodeConfiguration,
+                     parseNodeConfigurationFP)
 import           Cardano.Node.Types
-import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
+import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
+import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
 import           Cardano.TraceDispatcher.Tracers (mkDispatchTracers)
+import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESInfo (..), HasKESMetricsData (..))
 import           Cardano.TraceDispatcher.OrphanInstances.Shelley()
 import           Cardano.TraceDispatcher.OrphanInstances.Byron()
 
-
-import           Ouroboros.Consensus.Block (BlockProtocol)
-import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
-import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                   DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
-                   StdRunNodeArgs (..))
+import           Ouroboros.Consensus.Node (DiffusionArguments (..),
+                     DiffusionTracers (..), DnsSubscriptionTarget (..),
+                     IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
+                     StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                     DiffusionMode)
 
 import qualified Cardano.Api.Protocol.Types as Protocol
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                   gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
+                     gatherConfiguredSockets, getSocketOrSocketInfoAddr,
+                     renderSocketConfigError)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
+import           Cardano.Node.Protocol (mkConsensusProtocol,
+                     renderProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
@@ -112,19 +119,19 @@ runNode cmdPc = do
 
     eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc
 
-    baseTrace <- NL.standardTracer Nothing
-
-    SomeConsensusProtocol (p :: Consensus.Protocol IO blk (BlockProtocol blk)) <-
+    p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
         Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
         Right p -> pure p
 
+    baseTrace <- NL.standardTracer Nothing
+
     eLoggingLayer <- runExceptT $ createLoggingLayer
-                       (ncTraceConfig nc)
-                       (Text.pack (showVersion version))
-                       nc
-                       p
-                       baseTrace
+                     (ncTraceConfig nc)
+                     (Text.pack (showVersion version))
+                     nc
+                     p
+                     baseTrace
 
     loggingLayer <- case eLoggingLayer of
                       Left err  -> putTextLn (show err) >> exitFailure
@@ -136,9 +143,7 @@ runNode cmdPc = do
     logTracingVerbosity nc tracer
 
     let handleNodeWithTracers
-          :: ( HasKESMetricsData blk
-             , HasKESInfo blk
-             , TraceConstraints blk
+          :: ( TraceConstraints blk
              , Protocol.Protocol IO blk
              )
           => Protocol.ProtocolInfoArgs IO blk
@@ -148,12 +153,13 @@ runNode cmdPc = do
           -- Used for ledger queries and peer connection status.
           nodeKernelData <- mkNodeKernelData
           let ProtocolInfo { pInfoConfig = cfg } = Protocol.protocolInfo runP
-          tracers <- mkTracers
+          tracers <- mkDispatchTracers
                        (Consensus.configBlock cfg)
                        (ncTraceConfig nc)
                        trace
                        nodeKernelData
                        (llEKGDirect loggingLayer)
+                       baseTrace
           Async.withAsync (handlePeersListSimple trace nodeKernelData)
               $ \_peerLogingThread ->
                 -- We ignore peer loging thread if it dies, but it will be killed
@@ -164,23 +170,6 @@ runNode cmdPc = do
 
     case p of
       SomeConsensusProtocol _ runP -> handleNodeWithTracers runP
-
-    tracers <- mkDispatchTracers
-                (Consensus.configBlock cfg)
-                (ncTraceConfig nc)
-                trace
-                nodeKernelData
-                (llEKGDirect loggingLayer)
-                baseTrace
-
-    Async.withAsync (handlePeersListSimple trace nodeKernelData)
-        $ \_peerLogingThread ->
-          -- We ignore peer loging thread if it dies, but it will be killed
-          -- when 'handleSimpleNode' terminates.
-          handleSimpleNode p trace tracers nc (setNodeKernel nodeKernelData)
-          `finally`
-          shutdownLoggingLayer loggingLayer
-
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
 logTracingVerbosity nc tracer =

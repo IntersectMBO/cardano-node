@@ -12,10 +12,12 @@ import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.TraceDispatcher.Common.ConvertTxId (ConvertTxId')
+import           Cardano.TraceDispatcher.Consensus.StateInfo (GetKESInfo (..))
 import           Cardano.Tracing.ConvertTxId(ConvertTxId)
 import           Cardano.Tracing.Queries (LedgerQueries)
 import           Cardano.Logging (LogFormatting)
-
+import           Cardano.Tracing.Metrics (HasKESInfo (..),
+                     HasKESMetricsData (..))
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.PParams (PParamsUpdate)
@@ -46,6 +48,9 @@ type TraceConstraints blk =
     , ToJSON   (TxOut (AlonzoEra StandardCrypto))
     , ToJSON   (PParamsUpdate (AlonzoEra StandardCrypto))
     , ForgeStateInfoDispatch blk
+    , HasKESMetricsData blk
+    , HasKESInfo blk
+    , GetKESInfo blk
 
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)

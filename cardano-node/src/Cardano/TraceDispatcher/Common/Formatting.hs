@@ -9,29 +9,16 @@ module Cardano.TraceDispatcher.Common.Formatting
 
 import           Cardano.Prelude ()
 import           Data.Aeson (Value (String), toJSON, (.=))
-import           Text.Show
 
 import           Cardano.Logging (LogFormatting (..), mkObject)
 import           Cardano.Prelude hiding (Show, show)
 
-import           Cardano.TraceDispatcher.Render (renderHeaderHashForDetails,
-                     showT)
+import           Cardano.TraceDispatcher.Render (renderHeaderHashForDetails)
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..))
 import           Ouroboros.Network.Block
-import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 
 
-instance
-  (  Show peer
-  ,  LogFormatting a)
-  => LogFormatting (BlockFetch.TraceLabelPeer peer a) where
-  forMachine dtal (BlockFetch.TraceLabelPeer peerid a) =
-    mkObject [ "peer" .= showT peerid ] <> forMachine dtal a
-
-  forHuman (BlockFetch.TraceLabelPeer peerid m) = "Peer is " <> showT peerid <> ". " <> forHuman m
-
-  asMetrics (BlockFetch.TraceLabelPeer _peerid m) = asMetrics m
 
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are

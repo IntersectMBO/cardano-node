@@ -278,11 +278,11 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 mkTracers
   :: forall peer localPeer blk.
      ( Consensus.RunNode blk
-     , HasKESMetricsData blk
-     , HasKESInfo blk
      , TraceConstraints blk
-     , Show peer, Eq peer, ToObject peer
-     , Show localPeer, ToObject localPeer
+     , Show peer, Eq peer
+     , Show localPeer
+     , ToObject peer
+     , ToObject localPeer
      )
   => BlockConfig blk
   -> TraceOptions
@@ -505,6 +505,7 @@ mkConsensusTracers
   :: forall blk peer localPeer.
      ( Show peer
      , Eq peer
+     , ToObject peer
      , LedgerQueries blk
      , ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
@@ -514,7 +515,6 @@ mkConsensusTracers
      , ToObject (OtherHeaderEnvelopeError blk)
      , ToObject (ValidationErr (BlockProtocol blk))
      , ToObject (ForgeStateUpdateError blk)
-     , ToObject peer
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
@@ -972,8 +972,8 @@ nodeToClientTracers'
      , Show (ApplyTxErr blk)
      , Show (GenTx blk)
      , Show localPeer
-     , ToObject localPeer
      , ShowQuery (Query blk)
+     , ToObject localPeer
      )
   => TraceSelection
   -> TracingVerbosity

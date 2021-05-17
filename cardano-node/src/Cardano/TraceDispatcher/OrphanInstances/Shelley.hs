@@ -247,6 +247,7 @@ instance ( ShelleyBasedEra era
          , LogFormatting (PredicateFailure (UTXO era))
          , LogFormatting (PredicateFailure (UTXOW era))
          , LogFormatting (PredicateFailure (Core.EraRule "LEDGER" era))
+         , LogFormatting (PredicateFailure (Core.EraRule "LEDGERS" era))
          ) => LogFormatting (BbodyPredicateFailure era) where
   forMachine _dtal (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
@@ -283,13 +284,13 @@ instance ( ShelleyBasedEra era
          , LogFormatting (PredicateFailure (UTXO era))
          , LogFormatting (PredicateFailure (Core.EraRule "UTXO" era))
          ) => LogFormatting (UtxowPredicateFailure era) where
-  forMachine _dtal (InvalidWitnessesUTXOW wits) =
+  forMachine _dtal (InvalidWitnessesUTXOW wits') =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
-             , "invalidWitnesses" .= map textShow wits
+             , "invalidWitnesses" .= map textShow wits'
              ]
-  forMachine _dtal (MissingVKeyWitnessesUTXOW (WitHashes wits)) =
+  forMachine _dtal (MissingVKeyWitnessesUTXOW (WitHashes wits')) =
     mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW"
-             , "missingWitnesses" .= wits
+             , "missingWitnesses" .= wits'
              ]
   forMachine _dtal (MissingScriptWitnessesUTXOW missingScripts) =
     mkObject [ "kind" .= String "MissingScriptWitnessesUTXOW"
@@ -601,6 +602,14 @@ instance LogFormatting (PoolPredicateFailure era) where
                     , "certificateType" .= k
                     , "error" .= String "Wrong certificate type: Unknown certificate type"
                     ]
+
+  forMachine _dtal (WrongNetworkPOOL networkId listedNetworkId poolId) =
+    mkObject [ "kind" .= String "WrongNetworkPOOL"
+             , "networkId" .= String (textShow networkId)
+             , "listedNetworkId" .= String (textShow listedNetworkId)
+             , "poolId" .= String (textShow poolId)
+             , "error" .= String "Wrong network ID in pool registration certificate"
+             ]
 
 
 instance ( LogFormatting (PredicateFailure (Core.EraRule "NEWEPOCH" era))

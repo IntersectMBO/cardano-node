@@ -15,22 +15,24 @@ module Cardano.TraceDispatcher.Network.Formatting
   ) where
 
 import           Data.Aeson (Value (String), toJSON, (.=))
+import qualified Data.IP as IP
 import           Data.Text (pack)
 import qualified Network.Socket as Socket
 import           Text.Show
 
+import           Cardano.TraceDispatcher.Common.ConvertTxId
 import           Cardano.TraceDispatcher.Common.Formatting ()
 import           Cardano.TraceDispatcher.Render
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
-import           Cardano.TraceDispatcher.Common.ConvertTxId
 
 import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader,
                      getHeader)
 import           Ouroboros.Consensus.Byron.Ledger (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId,
-                     HasTxs, extractTxs, txId)
+                     HasTxs, LedgerSupportsMempool, extractTxs,
+                     txForgetValidated, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints,
                      estimateBlockSize)
 
@@ -39,6 +41,8 @@ import           Ouroboros.Network.Block (HasHeader, Point, Serialised,
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Codec (PeerHasAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
+import qualified Ouroboros.Network.NodeToClient as NtC
+import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
@@ -47,10 +51,12 @@ import           Ouroboros.Network.Protocol.Trans.Hello.Type
                      (ClientHasAgency (..), Message (..), ServerHasAgency (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as STX
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
                      WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (SubscriptionTrace,
                      WithIPList (..))
+
 
 instance LogFormatting (AnyMessageAndAgency ps)
       => LogFormatting (TraceSendRecv ps) where
@@ -165,6 +171,7 @@ instance ( ConvertTxId' blk
          , HasTxId (GenTx blk)
          , SerialiseNodeToNodeConstraints blk
          , HasTxs blk
+         , LedgerSupportsMempool blk
          )
       => LogFormatting (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
   forMachine DBrief (AnyMessageAndAgency stok (MsgBlock blk)) =
@@ -179,7 +186,7 @@ instance ( ConvertTxId' blk
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
+             , "txIds" .= toJSON (presentTx <$> map txForgetValidated (extractTxs blk))
              ]
       where
         presentTx :: GenTx blk -> Value
@@ -281,12 +288,6 @@ instance (Show txid, Show tx)
       [ "kind" .= String "MsgDone"
       , "agency" .= String (pack $ show stok)
       ]
-  --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
-  forMachine _dtal (AnyMessageAndAgency stok _) =
-    mkObject
-      [ "kind" .= String "MsgKThxBye"
-      , "agency" .= String (pack $ show stok)
-      ]
 
 instance (Show txid, Show tx)
       => LogFormatting (AnyMessageAndAgency (TXS.TxSubmission2 txid tx)) where
@@ -343,3 +344,34 @@ instance LogFormatting (WithDomainName DnsTrace) where
                   <> ". Domain is "
                   <> pack (show dom)
                   <> "."
+
+instance LogFormatting NtN.RemoteAddress where
+    forMachine _dtal (Socket.SockAddrInet port addr) =
+        let ip = IP.fromHostAddress addr in
+        mkObject [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    forMachine _dtal (Socket.SockAddrInet6 port _ addr _) =
+        let ip = IP.fromHostAddress6 addr in
+        mkObject [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    forMachine _dtal (Socket.SockAddrUnix path) =
+        mkObject [ "path" .= show path ]
+
+
+instance LogFormatting NtN.RemoteConnectionId where
+    forMachine dtal (NtN.ConnectionId l r) =
+        mkObject [ "local" .= forMachine dtal l
+                 , "remote" .= forMachine dtal r
+                 ]
+
+instance LogFormatting LocalAddress where
+    forMachine _dtal (LocalAddress path) =
+        mkObject ["path" .= path]
+
+instance LogFormatting NtC.LocalConnectionId where
+    forMachine dtal (NtC.ConnectionId l r) =
+        mkObject [ "local" .= forMachine dtal l
+                 , "remote" .= forMachine dtal r
+                 ]

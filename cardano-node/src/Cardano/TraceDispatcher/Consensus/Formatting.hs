@@ -32,7 +32,8 @@ import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
                      (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
-                     GenTxId, HasTxId)
+                     GenTxId, HasTxId, LedgerSupportsMempool,
+                     txForgetValidated)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
                      TraceEventMempool (..))
@@ -120,7 +121,7 @@ instance ConvertRawHash blk
                , "point" .= forMachine dtal point
                ]
 
-instance Show peer
+instance (LogFormatting peer, Show peer)
       => LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
   forMachine DBrief _ = emptyObject
   forMachine _ [] = emptyObject
@@ -128,6 +129,14 @@ instance Show peer
     [ "kind"  .= String "PeersFetch"
     , "peers" .= toJSON
       (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
+
+instance (LogFormatting peer, Show peer, LogFormatting a)
+  => LogFormatting (TraceLabelPeer peer a) where
+  forMachine dtal (TraceLabelPeer peerid a) =
+    mkObject [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
+  forHuman (TraceLabelPeer peerid a) = "Peer is " <> showT peerid
+                                        <> ". " <> forHuman a
+  asMetrics (TraceLabelPeer _peerid a) = asMetrics a
 
 instance LogFormatting (FetchDecision [Point header]) where
   forMachine _dtal (Left decline) =
@@ -215,13 +224,17 @@ instance LogFormatting (TraceLocalTxSubmissionServerEvent blk) where
   forMachine _dtal (TraceReceivedTx _gtx) =
     mkObject [ "kind" .= String "ReceivedTx" ]
 
-instance ( Show (ApplyTxErr blk), LogFormatting (ApplyTxErr blk), LogFormatting (GenTx blk),
-           ToJSON (GenTxId blk)
-         ) => LogFormatting (TraceEventMempool blk) where
+instance
+  ( Show (ApplyTxErr blk)
+  , LogFormatting (ApplyTxErr blk)
+  , LogFormatting (GenTx blk)
+  , ToJSON (GenTxId blk)
+  , LedgerSupportsMempool blk
+  ) => LogFormatting (TraceEventMempool blk) where
   forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mkObject
       [ "kind" .= String "TraceMempoolAddedTx"
-      , "tx" .= forMachine dtal tx
+      , "tx" .= forMachine dtal (txForgetValidated tx)
       , "mempoolSize" .= forMachine dtal mpSzAfter
       ]
   forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz) =
@@ -234,14 +247,14 @@ instance ( Show (ApplyTxErr blk), LogFormatting (ApplyTxErr blk), LogFormatting 
   forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txs" .= map (forMachine dtal) txs
+      , "txs" .= map (forMachine dtal . txForgetValidated) txs
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
     mkObject
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
       , "txsRemoved" .= txs0
-      , "txsInvalidated" .= map (forMachine dtal) txs1
+      , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
 

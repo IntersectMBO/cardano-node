@@ -22,6 +22,7 @@ import qualified Data.Text.IO as T
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (trace)
+
 import           Cardano.TraceDispatcher.ChainDB.Combinators
 import           Cardano.TraceDispatcher.ChainDB.Docu
 import           Cardano.TraceDispatcher.ChainDB.Formatting
@@ -36,6 +37,7 @@ import           Cardano.TraceDispatcher.Network.Docu
 import           Cardano.TraceDispatcher.Network.Formatting
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
+import           Cardano.Tracing.OrphanInstances.Common(ToObject)
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
@@ -114,11 +116,13 @@ mkDispatchTracers
   :: forall peer localPeer blk.
   ( Consensus.RunNode blk
   , LogFormatting (ChainDB.InvalidBlockReason blk)
-  , GetKESInfo blk
-  , HasKESMetricsData blk
-  , HasKESInfo blk
   , TraceConstraints blk
-  , Show peer, Eq peer
+  , Show peer
+  , Eq peer
+  , LogFormatting peer
+  , LogFormatting localPeer
+  , ToObject peer
+  , ToObject localPeer
   , Show localPeer
   )
   => BlockConfig blk
@@ -139,10 +143,11 @@ mkDispatchTracers'
   :: forall peer localPeer blk.
   ( Consensus.RunNode blk
   , LogFormatting (ChainDB.InvalidBlockReason blk)
-  , GetKESInfo blk
   , TraceConstraints blk
   , Show peer
   , Show localPeer
+  , LogFormatting peer
+  , LogFormatting localPeer
   )
   => Trace IO FormattedMessage
   -> IO (Tracers peer localPeer blk)
@@ -402,10 +407,11 @@ configTracers config Tracers {..} = do
 docTracers :: forall peer localPeer blk.
   ( Consensus.RunNode blk
   , LogFormatting (ChainDB.InvalidBlockReason blk)
-  , GetKESInfo blk
   , TraceConstraints blk
   , Show peer
   , Show localPeer
+  , LogFormatting peer
+  , LogFormatting localPeer
   )
   => Proxy blk
   -> IO ()

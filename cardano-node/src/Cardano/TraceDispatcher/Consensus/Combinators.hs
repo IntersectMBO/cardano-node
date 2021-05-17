@@ -63,23 +63,34 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.Tracers
 
 
-severityChainSyncClientEvent :: TraceChainSyncClientEvent blk -> SeverityS
-severityChainSyncClientEvent TraceDownloadedHeader {}  = Info
-severityChainSyncClientEvent TraceFoundIntersection {} = Info
-severityChainSyncClientEvent TraceRolledBack {}        = Notice
-severityChainSyncClientEvent TraceException {}         = Warning
-severityChainSyncClientEvent TraceTermination {}       = Notice
+severityChainSyncClientEvent ::
+  BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk) -> SeverityS
+severityChainSyncClientEvent (BlockFetch.TraceLabelPeer _ e) =
+    severityChainSyncClientEvent' e
 
-namesForChainSyncClientEvent :: TraceChainSyncClientEvent blk -> [Text]
-namesForChainSyncClientEvent TraceDownloadedHeader {} =
+namesForChainSyncClientEvent ::
+  BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk) -> [Text]
+namesForChainSyncClientEvent (BlockFetch.TraceLabelPeer _ e) =
+    namesForChainSyncClientEvent' e
+
+
+severityChainSyncClientEvent' :: TraceChainSyncClientEvent blk -> SeverityS
+severityChainSyncClientEvent' TraceDownloadedHeader {}  = Info
+severityChainSyncClientEvent' TraceFoundIntersection {} = Info
+severityChainSyncClientEvent' TraceRolledBack {}        = Notice
+severityChainSyncClientEvent' TraceException {}         = Warning
+severityChainSyncClientEvent' TraceTermination {}       = Notice
+
+namesForChainSyncClientEvent' :: TraceChainSyncClientEvent blk -> [Text]
+namesForChainSyncClientEvent' TraceDownloadedHeader {} =
       ["DownloadedHeader"]
-namesForChainSyncClientEvent TraceFoundIntersection {} =
+namesForChainSyncClientEvent' TraceFoundIntersection {} =
       ["FoundIntersection"]
-namesForChainSyncClientEvent TraceRolledBack {} =
+namesForChainSyncClientEvent' TraceRolledBack {} =
       ["RolledBack"]
-namesForChainSyncClientEvent TraceException {} =
+namesForChainSyncClientEvent' TraceException {} =
       ["Exception"]
-namesForChainSyncClientEvent TraceTermination {} =
+namesForChainSyncClientEvent' TraceTermination {} =
       ["Termination"]
 
 severityChainSyncServerEvent :: TraceChainSyncServerEvent blk -> SeverityS
