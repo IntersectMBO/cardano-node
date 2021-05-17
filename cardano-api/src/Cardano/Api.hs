@@ -308,6 +308,8 @@ module Cardano.Api (
     Witness(..),
     KeyWitnessInCtx(..),
     ScriptWitnessInCtx(..),
+    ScriptDatum(..),
+    ScriptRedeemer,
 
     -- *** Languages supported in each era
     ScriptLanguageInEra(..),
@@ -324,6 +326,9 @@ module Cardano.Api (
 
     -- ** Plutus scripts
     PlutusScript,
+
+    -- ** Script data
+    ScriptData(..),
 
     -- ** Script addresses
     -- | Making addresses from scripts.
