@@ -1250,7 +1250,7 @@ traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
                 (ConnectionManagerCounters
                   prunableConns
                   duplexConns
-                  uniConns
+                  unidirectionalConns
                   incomingConns
                   outgoingConns
                 )
@@ -1262,8 +1262,8 @@ traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
                          "cardano.node.metrics.connectionManager.duplexConns"
                          duplexConns
         sendEKGDirectInt ekgDirect
-                         "cardano.node.metrics.connectionManager.uniConns"
-                         uniConns
+                         "cardano.node.metrics.connectionManager.unidirectionalConns"
+                         unidirectionalConns
         sendEKGDirectInt ekgDirect
                          "cardano.node.metrics.connectionManager.incomingConns"
                          incomingConns
