@@ -1250,13 +1250,13 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
           ]
       TrConnectError (Just localAddress) remoteAddress err ->
         mkObject
-          [ "king" .= String "ConnectError"
+          [ "kind" .= String "ConnectError"
           , "connectionId" .= toObject verb ConnectionId { localAddress, remoteAddress }
           , "error" .= String (pack . show $ err)
           ]
       TrConnectError Nothing remoteAddress err ->
         mkObject
-          [ "king" .= String "ConnectError"
+          [ "kind" .= String "ConnectError"
           , "remoteAddress" .= toObject verb remoteAddress
           , "error" .= String (pack . show $ err)
           ]
