@@ -35,6 +35,8 @@ module Cardano.Api.Script (
     Witness(..),
     KeyWitnessInCtx(..),
     ScriptWitnessInCtx(..),
+    ScriptDatum(..),
+    ScriptRedeemer,
 
     -- ** Languages supported in each era
     ScriptLanguageInEra(..),
@@ -50,6 +52,9 @@ module Cardano.Api.Script (
 
     -- * The Plutus script language
     PlutusScript(..),
+
+    -- * Script data
+    ScriptData(..),
 
     -- * Script execution units
     ExecutionUnits(..),
@@ -544,6 +549,14 @@ data ScriptWitness witctx era where
                          -> SimpleScript        lang
                          -> ScriptWitness witctx era
 
+     PlutusScriptWitness :: ScriptLanguageInEra  lang era
+                         -> PlutusScriptVersion  lang
+                         -> PlutusScript         lang
+                         -> ScriptDatum witctx
+                         -> ScriptRedeemer
+                         -> ExecutionUnits
+                         -> ScriptWitness witctx era
+
 deriving instance Show (ScriptWitness witctx era)
 
 -- The GADT in the SimpleScriptWitness constructor requires a custom instance
@@ -554,6 +567,29 @@ instance Eq (ScriptWitness witctx era) where
                         (languageOfScriptLanguageInEra langInEra') of
         Nothing   -> False
         Just Refl -> version == version' && script == script'
+
+    (==) (PlutusScriptWitness langInEra  version   script
+                              datum      redeemer  execUnits)
+         (PlutusScriptWitness langInEra' version'  script'
+                              datum'     redeemer' execUnits') =
+      case testEquality (languageOfScriptLanguageInEra langInEra)
+                        (languageOfScriptLanguageInEra langInEra') of
+        Nothing   -> False
+        Just Refl ->    version   == version'
+                     && script    == script'
+                     && datum     == datum'
+                     && redeemer  == redeemer'
+                     && execUnits == execUnits'
+
+    (==)  _ _ = False
+
+data ScriptDatum witctx where
+     ScriptDatumForTxIn    :: ScriptData -> ScriptDatum WitCtxTxIn
+     NoScriptDatumForMint  ::               ScriptDatum WitCtxMint
+     NoScriptDatumForStake ::               ScriptDatum WitCtxStake
+
+deriving instance Eq   (ScriptDatum witctx)
+deriving instance Show (ScriptDatum witctx)
 
 
 -- ----------------------------------------------------------------------------
@@ -588,6 +624,17 @@ deriving instance Show (KeyWitnessInCtx witctx)
 
 deriving instance Eq   (ScriptWitnessInCtx witctx)
 deriving instance Show (ScriptWitnessInCtx witctx)
+
+
+-- ----------------------------------------------------------------------------
+-- Script data
+--
+
+type ScriptRedeemer = ScriptData
+
+-- TODO Placeholder type to re-present the Alonzo.Data type
+data ScriptData = ScriptData
+  deriving (Eq, Show)
 
 
 -- ----------------------------------------------------------------------------
