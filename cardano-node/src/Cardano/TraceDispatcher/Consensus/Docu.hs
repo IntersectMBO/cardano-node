@@ -34,7 +34,7 @@ import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
 import           Ouroboros.Consensus.Forecast (OutsideForecastRange)
 import           Ouroboros.Consensus.HardFork.History (PastHorizonException)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
-                     GenTxId)
+                     GenTxId, Validated)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..),
                      TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -137,6 +137,9 @@ protoControlMessage = undefined
 protoGenTx :: GenTx blk
 protoGenTx = undefined
 
+protoValidatedGenTx :: Validated (GenTx blk)
+protoValidatedGenTx = undefined
+
 protoMempoolSize :: MempoolSize
 protoMempoolSize = undefined
 
@@ -185,28 +188,34 @@ protoPeerGSV = undefined
 
 --------------------
 
-docChainSyncClientEvent :: Documented (TraceChainSyncClientEvent blk)
+docChainSyncClientEvent ::
+  Documented (BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk))
 docChainSyncClientEvent = Documented [
     DocMsg
-      (TraceDownloadedHeader protoHeader)
+      (BlockFetch.TraceLabelPeer protoRemotePeer
+        (TraceDownloadedHeader protoHeader))
       []
       "While following a candidate chain, we rolled forward by downloading a\
       \ header."
   , DocMsg
-      (TraceRolledBack protoPoint)
+      (BlockFetch.TraceLabelPeer protoRemotePeer
+        (TraceRolledBack protoPoint))
       []
       "While following a candidate chain, we rolled back to the given point."
   , DocMsg
-      (TraceFoundIntersection protoPoint protoOurTipBlock protoTheirTipBlock)
+      (BlockFetch.TraceLabelPeer protoRemotePeer
+        (TraceFoundIntersection protoPoint protoOurTipBlock protoTheirTipBlock))
       []
       "We found an intersection between our chain fragment and the\
       \ candidate's chain."
   , DocMsg
-      (TraceException protoChainSyncClientException)
+      (BlockFetch.TraceLabelPeer protoRemotePeer
+        (TraceException protoChainSyncClientException))
       []
       "An exception was thrown by the Chain Sync Client."
   , DocMsg
-      (TraceTermination protoChainSyncClientResult)
+      (BlockFetch.TraceLabelPeer protoRemotePeer
+        (TraceTermination protoChainSyncClientResult))
       []
       "The client has terminated."
   ]
@@ -325,7 +334,7 @@ docBlockFetchServer ::
   Documented (TraceBlockFetchServerEvent blk)
 docBlockFetchServer = Documented [
     DocMsg
-      TraceBlockFetchServerSendBlock
+      (TraceBlockFetchServerSendBlock protoPoint)
       []
       "The server sent a block to the peer."
   ]
@@ -400,7 +409,7 @@ docLocalTxSubmissionServer = Documented [
 docMempool :: forall blk. Documented (TraceEventMempool blk)
 docMempool = Documented [
     DocMsg
-      (TraceMempoolAddedTx protoGenTx protoMempoolSize protoMempoolSize)
+      (TraceMempoolAddedTx protoValidatedGenTx protoMempoolSize protoMempoolSize)
       []
       "New, valid transaction that was added to the Mempool."
   , DocMsg
@@ -409,13 +418,13 @@ docMempool = Documented [
       "New, invalid transaction thas was rejected and thus not added to\
       \ the Mempool."
   , DocMsg
-      (TraceMempoolRemoveTxs [protoGenTx] protoMempoolSize)
+      (TraceMempoolRemoveTxs [protoValidatedGenTx] protoMempoolSize)
       []
       "Previously valid transactions that are no longer valid because of\
       \ changes in the ledger state. These transactions have been removed\
       \ from the Mempool."
   , DocMsg
-      (TraceMempoolManuallyRemovedTxs [protoGenTxId] [protoGenTx] protoMempoolSize)
+      (TraceMempoolManuallyRemovedTxs [protoGenTxId] [protoValidatedGenTx] protoMempoolSize)
       []
       "Transactions that have been manually removed from the Mempool."
   ]
@@ -583,7 +592,7 @@ docForge = Documented [
       \  validation and the ledger validation. This is a serious error!"
   , DocMsg
       (TraceLabelCreds protoTxt
-        (TraceAdoptedBlock protoSlotNo protoBlk [protoGenTx]))
+        (TraceAdoptedBlock protoSlotNo protoBlk [protoValidatedGenTx]))
       []
       "We adopted the block we produced, we also trace the transactions\
       \  that were adopted."

@@ -1,17 +1,17 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -25,31 +25,35 @@ import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Data.Aeson
 import           Data.SOP.Strict
 
+import           Cardano.Logging
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
-                     ForgeStateUpdateError)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
+                     ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
-                     OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
+                     (EraMismatch (..), OneEraCannotForge (..),
+                     OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
                      OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                     OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
-                     mkEraMismatch)
+                     OneEraLedgerUpdate (..), OneEraLedgerWarning (..),
+                     OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 -- import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
+import           Ouroboros.Consensus.HardFork.History
+                     (EraParams (eraEpochSize, eraSafeZone, eraSlotLength))
+import           Ouroboros.Consensus.HardFork.History.EraParams
+                     (EraParams (EraParams))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate,
+                     LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import Cardano.Logging
-import Ouroboros.Consensus.HardFork.History (EraParams (eraEpochSize, eraSlotLength, eraSafeZone))
-import Ouroboros.Consensus.HardFork.History.EraParams (EraParams(EraParams))
 
 
 --

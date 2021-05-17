@@ -378,8 +378,6 @@ severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
     severityTxSubNode'' TXS.MsgRequestTxs {}   = Info
     severityTxSubNode'' TXS.MsgReplyTxs {}     = Info
     severityTxSubNode'' TXS.MsgDone {}         = Info
-    severityTxSubNode'' _                      = Info
-    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
 
 namesForTxSubmissionNode :: BlockFetch.TraceLabelPeer peer
@@ -403,8 +401,6 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode'' TXS.MsgRequestTxs {}   = ["RequestTxs"]
     namesTxSubNode'' TXS.MsgReplyTxs {}     = ["ReplyTxs"]
     namesTxSubNode'' TXS.MsgDone {}         = ["Done"]
-    namesTxSubNode'' _                      = ["KThxBye"]
-    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
 severityTxSubmission2Node :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> SeverityS
@@ -427,8 +423,6 @@ severityTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
     severityTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})   = Info
     severityTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})     = Info
     severityTxSubNode'' (MsgTalk TXS.MsgDone {})         = Info
-    severityTxSubNode'' (MsgTalk _)                      = Info
-    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
 namesForTxSubmission2Node :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
@@ -452,8 +446,6 @@ namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})   = ["RequestTxs"]
     namesTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})     = ["ReplyTxs"]
     namesTxSubNode'' (MsgTalk TXS.MsgDone {})         = ["Done"]
-    namesTxSubNode'' (MsgTalk _)                      = ["KThxBye"]
-    -- TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
 
 severityIPSubscription ::
      WithIPList (SubscriptionTrace Socket.SockAddr)

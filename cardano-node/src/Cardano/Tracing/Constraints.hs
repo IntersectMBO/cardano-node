@@ -12,10 +12,12 @@ import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.TraceDispatcher.Common.ConvertTxId (ConvertTxId')
+import           Cardano.TraceDispatcher.Consensus.StateInfo (GetKESInfo (..))
 import           Cardano.Tracing.ConvertTxId(ConvertTxId)
 import           Cardano.Tracing.Queries (LedgerQueries)
 import           Cardano.Logging (LogFormatting)
-
+import           Cardano.Tracing.Metrics (HasKESInfo (..),
+                     HasKESMetricsData (..))
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
                      ForgeStateUpdateError, Header)
@@ -36,6 +38,9 @@ type TraceConstraints blk =
     , HasTxId (GenTx blk)
     , LedgerQueries blk
     , ToJSON   (TxId (GenTx blk))
+    , HasKESMetricsData blk
+    , HasKESInfo blk
+    , GetKESInfo blk
 
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)

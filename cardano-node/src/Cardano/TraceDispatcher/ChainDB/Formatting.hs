@@ -27,7 +27,7 @@ import Cardano.TraceDispatcher.Common.Formatting ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
-import qualified Ouroboros.Consensus.Cardano as PBFT
+import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
                      LedgerEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol

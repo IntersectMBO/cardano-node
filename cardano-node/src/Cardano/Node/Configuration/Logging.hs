@@ -1,9 +1,9 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Configuration.Logging
@@ -25,20 +25,21 @@ module Cardano.Node.Configuration.Logging
 
 import           Cardano.Prelude hiding (trace)
 
-import qualified Control.Concurrent.Async as Async
 import qualified Control.Concurrent as Conc
+import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
-import "contra-tracer" Control.Tracer
+import           "contra-tracer" Control.Tracer
 import           Data.List (nub)
 import qualified Data.Map as Map
 import           Data.Text (pack)
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Version (showVersion)
-import qualified System.Remote.Monitoring as EKG
+import           System.Metrics.Counter (Counter)
 import           System.Metrics.Gauge (Gauge)
 import           System.Metrics.Label (Label)
-import           System.Metrics.Counter (Counter)
+import qualified System.Remote.Monitoring as EKG
+
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
@@ -51,7 +52,8 @@ import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend (Backend, BackendKind (..))
-import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName)
+import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..),
+                     LoggerName)
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
@@ -67,13 +69,13 @@ import           Cardano.BM.Tracing
 import qualified Cardano.Logging as NL
 
 import qualified Cardano.Chain.Genesis as Gen
-import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
+import           Ouroboros.Consensus.Config.SupportsNode
+                     (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger
@@ -81,11 +83,13 @@ import qualified Shelley.Spec.Ledger.API as SL
 
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
-import           Cardano.Node.Types
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
+                     ncProtocol)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Types
+import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.OrphanInstances.Common ()
-import           Cardano.Tracing.Config(TraceOptions(..))
 import           Paths_cardano_node (version)
 
 --------------------------------
@@ -156,7 +160,7 @@ createLoggingLayer
   :: TraceOptions
   -> Text
   -> NodeConfiguration
-  -> Consensus.Protocol IO blk (BlockProtocol blk)
+  -> SomeConsensusProtocol
   -> NL.Trace IO NL.FormattedMessage
   -> ExceptT ConfigError IO LoggingLayer
 createLoggingLayer topt ver nodeConfig' p ntrace = do

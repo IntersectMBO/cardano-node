@@ -20,9 +20,9 @@ import           NoThunks.Class (NoThunks)
 
 import qualified Cardano.Api.Protocol.Types as Cardano
 
-import           Cardano.TraceDispatcher.Consensus.StateInfo(GetKESInfo)
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESMetricsData, HasKESInfo)
+
 
 data Protocol = ByronProtocol
               | ShelleyProtocol
@@ -47,15 +47,6 @@ instance FromJSON Protocol where
 
       _ -> fail $ "Parsing of Protocol failed. "
                 <> show str <> " is not a valid protocol"
-
-type SomeConsensusProtocolConstraints blk =
-     ( HasKESMetricsData blk
-     , HasKESInfo blk
-     , GetKESInfo blk
-     , RunNode blk
-     , TraceConstraints blk
-     )
-
 
 data SomeConsensusProtocol where
 
