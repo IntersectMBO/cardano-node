@@ -84,7 +84,7 @@ let
       }
       {
         # Stamp executables with the git revision and add shell completion
-        packages = lib.genAttrs ["cardano-node" "cardano-cli" "cardano-topology"] (name: {
+        packages = lib.genAttrs ["cardano-node" "cardano-cli" "cardano-topology" "locli" ] (name: {
           components.exes.${name}.postInstall = ''
             ${lib.optionalString stdenv.hostPlatform.isWindows setLibSodium}
             ${setGitRev}

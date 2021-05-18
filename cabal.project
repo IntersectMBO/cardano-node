@@ -11,6 +11,7 @@ packages:
     cardano-testnet
     nix/workbench/cardano-topology
     bench/tx-generator
+    nix/workbench/locli
 
 package cardano-api
   ghc-options: -Werror

@@ -1,0 +1,96 @@
+cabal-version: 2.4
+
+name:                  locli
+version:               1.27
+description:           Log parsing CLI.
+author:                IOHK
+maintainer:            operations@iohk.io
+license:               Apache-2.0
+license-files:
+  NOTICE
+build-type:            Simple
+
+library
+
+  hs-source-dirs:      src
+
+  exposed-modules:     Data.Accum
+                       Data.Distribution
+
+                       Cardano.Config.Git.Rev
+                       Cardano.Config.Git.RevFromGit
+
+                       Cardano.Profile
+
+                       Cardano.TopHandler
+
+                       Cardano.Unlog.Analysis
+                       Cardano.Unlog.Commands
+                       Cardano.Unlog.LogObject
+                       Cardano.Unlog.Parsers
+                       Cardano.Unlog.Resources
+                       Cardano.Unlog.Run
+                       Cardano.Unlog.SlotStats
+                       Cardano.Unlog.Summary
+
+  other-modules:       Paths_locli
+
+  build-depends:       base
+                     , aeson
+                     , aeson-pretty
+                     , attoparsec
+                     , attoparsec-iso8601
+                     , bytestring
+                     , cardano-prelude
+                     , containers
+                     , directory
+                     , filepath
+                     , file-embed
+                     , gnuplot
+                     , Histogram
+                     , iohk-monitoring
+                     , optparse-applicative
+                     , optparse-generic
+                     , process
+                     , scientific
+                     , split
+                     , template-haskell
+                     , text
+                     , text-short
+                     , time
+                     , transformers
+                     , transformers-except
+                     , unordered-containers
+                     , utf8-string
+                     , vector
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                       OverloadedStrings
+                       TupleSections
+
+  ghc-options:         -Wall
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -Wpartial-fields
+                       -Wcompat
+                       -Wno-all-missed-specialisations
+
+executable locli
+  hs-source-dirs:      app
+  main-is:             locli.hs
+  default-language:    Haskell2010
+  ghc-options:         -threaded
+                       -Wall
+                       -rtsopts
+                       "-with-rtsopts=-T"
+  build-depends:       base
+                     , cardano-prelude
+                     , locli
+                     , optparse-applicative
+                     , text
+                     , text-short
+                     , transformers
+                     , transformers-except
+  default-extensions:  NoImplicitPrelude
