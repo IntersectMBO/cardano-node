@@ -109,7 +109,7 @@ docker run --detach \
 docker logs -f relay
 
 docker exec relay cat /opt/cardano/logs/topologyUpdateResult
-docker exec relay cat /var/cardano/config/mainnet-topology.json
+docker exec relay cat /opt/cardano/config/mainnet-topology.json
 ```
 
 ### Check cardano-cli

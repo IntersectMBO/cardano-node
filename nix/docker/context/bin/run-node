@@ -221,6 +221,10 @@ writeRootEnv
 # The IPC socket dir is not created on demand
 mkdir -p `dirname ${CARDANO_SOCKET_PATH}`
 
+if [[ $CARDANO_UPDATE_TOPOLOGY == true ]]; then
+  topologyUpdate -l &
+fi
+
 if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
   runBlockProducerNode
 else

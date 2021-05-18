@@ -2,6 +2,9 @@
 # shellcheck disable=SC2086,SC2034
 # shellcheck source=/dev/null
 
+# https://vaneyckt.io/posts/safer_bash_scripts_with_set_euxo_pipefail
+set -eo pipefail
+
 # This is borrowed from https://github.com/cardano-community/guild-operators
 # and mainly just removes the auto-update of the script itself
 #
@@ -10,28 +13,28 @@
 # Also, this is hopefully only a temporary thing until
 # the node can take care about it's p2p2 updates itself
 
-PARENT="$(dirname $0)"
-
 ######################################
 # User Variables - Change as desired #
 ######################################
 
-#CNODE_HOSTNAME="CHANGE ME"  # (Optional) Must resolve to the IP you are requesting from
-#CUSTOM_PEERS="None"         # Additional custom peers to (IP:port[:valency]) to add to your target topology.json
-                             # eg: "10.0.0.1:3001|10.0.0.2:3002|relays.mydomain.com:3003:3"
+#CNODE_HOSTNAME="CHANGE ME" # (Optional) Must resolve to the IP you are requesting from
+#CUSTOM_PEERS="None"        # *Additional* custom peers to (IP,port[,valency]) to add to your target topology.json
+                            # eg: "10.0.0.1,3001|10.0.0.2,3002|relays.mydomain.com,3003,3"
 
 CNODE_VALENCY=1             # (Optional) for multi-IP hostnames
 MAX_PEERS=15                # Maximum number of peers to return on successful fetch
 
-if [[ ! -f ${PARENT}/env ]]; then
-  echo "[Error] Generated env file missing: ${PARENT}/env"
+CARDANO_ENV="/usr/local/bin/env"
+
+if [[ ! -f ${CARDANO_ENV} ]]; then
+  echo "[Error] Generated env file missing: ${CARDANO_ENV}"
   echo "This is a mandatory prerequisite\n"
   exit 1
 fi
 
 # source generated env variables
-if ! source ${PARENT}/env offline; then
-  echo "[Error] Cannot source: ${PARENT}/env"
+if ! source ${CARDANO_ENV}; then
+  echo "[Error] Cannot source: ${CARDANO_ENV}"
   exit 1;
 fi
 
@@ -73,14 +76,38 @@ while getopts :fpl opt; do
 done
 shift $((OPTIND -1))
 
+# Description : Helper function to validate that input is a number
+#             : $1 = number
+isNumber() {
+  [[ -z $1 ]] && return 1
+  [[ $1 =~ ^[0-9]+$ ]] && return 0 || return 1
+}
+
+# Description : Helper function to validate IPv4 address
+#             : $1 = IP
+isValidIPv4() {
+  local ip=$1
+  [[ -z ${ip} ]] && return 1
+  if [[ ${ip} =~ ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$ || ${ip} =~ ^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$ ]]; then
+    return 0
+  fi
+  return 1
+}
+
+# Description : Helper function to validate IPv6 address, works for normal IPv6 addresses, not dual incl IPv4
+#             : $1 = IP
+isValidIPv6() {
+  local ip=$1
+  [[ -z ${ip} ]] && return 1
+  ipv6_regex="^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$"
+  [[ ${ip} =~ ${ipv6_regex} ]] && return 0
+  return 1
+}
+
 if [[ ${CNODE_HOSTNAME} != "" ]]; then
   T_HOSTNAME="&hostname=${CNODE_HOSTNAME}"
 else
   T_HOSTNAME=''
-fi
-
-if [[ ${CUSTOM_PEERS} != "" ]]; then
-  CUSTOM_PEERS_PARAM="&customPeers=${CUSTOM_PEERS}"
 fi
 
 #####################################################################
@@ -129,11 +156,43 @@ fetchTopology () {
 
   if [[ ${TU_FETCH} = "Y" ]]; then
 
-    echo "curl -s -f https://api.clio.one/htopology/v1/fetch/?max=${MAX_PEERS}&magic=${NWMAGIC}${CUSTOM_PEERS_PARAM}"
-    curl -s -f -o ${TOPOLOGY}.tmp "https://api.clio.one/htopology/v1/fetch/?max=${MAX_PEERS}&magic=${NWMAGIC}${CUSTOM_PEERS_PARAM}" \
-      && mv ${TOPOLOGY}.tmp ${TOPOLOGY} && cat ${TOPOLOGY}
-  else
+    echo "curl -s -f https://api.clio.one/htopology/v1/fetch/?max=${MAX_PEERS}&magic=${NWMAGIC}"
+    curl -s -f -o ${TOPOLOGY}.tmp "https://api.clio.one/htopology/v1/fetch/?max=${MAX_PEERS}&magic=${NWMAGIC}" \
+      && cat ${TOPOLOGY}.tmp
 
+    # Check if old style CUSTOM_PEERS with colon separator is used, if so convert to use commas
+    if [[ -n ${CUSTOM_PEERS} && ${CUSTOM_PEERS} != *","* ]]; then
+      CUSTOM_PEERS=${CUSTOM_PEERS//[:]/,}
+    fi
+
+    if [[ -n "${CUSTOM_PEERS}" ]]; then
+      topo="$(cat "${TOPOLOGY}".tmp)"
+      IFS='|' read -ra cpeers <<< "${CUSTOM_PEERS}"
+      for cpeer in "${cpeers[@]}"; do
+        IFS=',' read -ra cpeer_attr <<< "${cpeer}"
+        case ${#cpeer_attr[@]} in
+          2) addr="${cpeer_attr[0]}"
+             port=${cpeer_attr[1]}
+             valency=1 ;;
+          3) addr="${cpeer_attr[0]}"
+             port=${cpeer_attr[1]}
+             valency=${cpeer_attr[2]} ;;
+          *) echo "ERROR: Invalid Custom Peer definition '${cpeer}'. Please double check CUSTOM_PEERS definition"
+             exit 1 ;;
+        esac
+        if [[ ${addr} = *.* ]]; then
+          ! isValidIPv4 "${addr}" && echo "ERROR: Invalid IPv4 address or hostname '${addr}'. Please check CUSTOM_PEERS definition" && continue
+        elif [[ ${addr} = *:* ]]; then
+          ! isValidIPv6 "${addr}" && echo "ERROR: Invalid IPv6 address '${addr}'. Please check CUSTOM_PEERS definition" && continue
+        fi
+        ! isNumber ${port} && echo "ERROR: Invalid port number '${port}'. Please check CUSTOM_PEERS definition" && continue
+        ! isNumber ${valency} && echo "ERROR: Invalid valency number '${valency}'. Please check CUSTOM_PEERS definition" && continue
+        topo=$(jq '.Producers += [{"addr": $addr, "port": $port|tonumber, "valency": $valency|tonumber}]' --arg addr "${addr}" --arg port ${port} --arg valency ${valency} <<< "${topo}")
+      done
+      echo "${topo}" | jq -r . >/dev/null 2>&1 && echo "${topo}" > "${TOPOLOGY}".tmp
+    fi
+    mv ${TOPOLOGY}.tmp ${TOPOLOGY} && echo "Topology updated: ${TOPOLOGY}"
+  else
     echo "[Warning] Topology update fetch disabled"
   fi
 }
@@ -143,7 +202,6 @@ fetchTopology () {
 # Run a single topology update cycle
 #
 if [[ ${LOOP} = "N" ]]; then
-
     pushNodeInfo
     fetchTopology
     exit 0
@@ -155,19 +213,19 @@ fi
 #
 
 MIN=`date +"%-M"`
-INITIAL_WAIT=10
+INITIAL_WAIT=5
 MIN=$(($MIN + $INITIAL_WAIT))
 if (( $MIN > 59 )); then MIN=$(($MIN - 60)); fi
 
 CRONJOB="$MIN * * * * root topologyUpdate"
 echo "Topology update: $CRONJOB"
 
-echo "Initially waiting for ${INITIAL_WAIT} minutes ..."
 sleep $(($INITIAL_WAIT * 60))
 
 while true; do
-  pushNodeInfo
-  fetchTopology
+  # Allow each ef these to fail
+  pushNodeInfo || true
+  fetchTopology || true
   sleep 3600
 done
 
