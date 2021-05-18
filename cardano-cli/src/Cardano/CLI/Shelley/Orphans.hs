@@ -129,3 +129,6 @@ instance FromJSON Alonzo.AlonzoGenesis where
         collateralPercentage,
         maxCollateralInputs
       }
+
+instance ToJSON AlonzoGenesis where
+  toJSON = panic "TODO: Fill me in"

@@ -13,8 +13,7 @@ import           Prelude (fail)
 
 import           Cardano.Api.Orphans ()
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), ToJSONKey, Value (..),
-                             withObject, (.:))
+import           Data.Aeson (FromJSON (..), ToJSON (..), ToJSONKey, Value (..), withObject, (.:))
 import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
