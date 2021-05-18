@@ -112,7 +112,7 @@ EOF
         msg "supervisor:  pid file:  $dir/supervisor/supervisord.pid"
         pstree -Ap "$(cat "$dir"/supervisor/supervisord.pid)" |
             grep 'cabal.*cardano-node' |
-            sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/' \
+            sed -e 's/^.*-+-{\?cardano-node}\?(\([0-9]*\))$/\1/' \
                 > "$dir"/supervisor/cardano-node.pids
         ;;
 

@@ -119,6 +119,7 @@ let
     function workbench-prebuild-executables() {
       ${optionalString useCabalRun
         ''
+      git log -n1 --alternate-refs --pretty=format:"%Cblue%h %Cred%cr %Cgreen%D %Creset%s"
       echo -n "workbench:  prebuilding executables (because of useCabalRun):"
       for exe in cardano-cli cardano-node cardano-topology
       do echo -n " $exe"
