@@ -37,11 +37,18 @@ let
 
       inherit JSON value;
 
-      topology    = pkgs.callPackage
-        ./topology.nix   { inherit workbench profile; };
+      topology.files =
+        runCommand "topology-${profile.name}" {}
+          "${workbench}/bin/wb topology make ${profile.JSON} $out";
 
-      node-specs  = pkgs.callPackage
-        ./node-specs.nix { inherit runWorkbench profile backend; };
+      node-specs  =
+        rec {
+          JSON = runWorkbench
+            "node-specs-${profile.name}.json"
+            "profile node-specs ${profile.JSON} ${environment.JSON}";
+
+          value = __fromJSON (__readFile JSON);
+        };
 
      inherit (pkgs.callPackage
                ./node-services.nix

@@ -3,12 +3,10 @@ usage_profile() {
     list                  List profile names (json)
     all-profiles | all    All profile contents (json)
     compose NAME..        Create a profile composed from named profiles
-    get NAME              Get contents of named profile
+    get NAME              Get contents of either named profile, or profile JSON desc
     describe NAME         Print a human description of a profile
-    node-specs PROFILE-JSON PORT-BASE STAGGER-PORTS
-                          Print node specs JSON for the given profile;
-                            If STAGGER-PORTS is true, the assigned ports will
-                            be incrementally distinc for each node spec
+    node-specs PROFILE-JSON ENV-JSON
+                          Print node specs JSON for the given profile and environment
 EOF
 }
 
@@ -27,15 +25,26 @@ case "${op}" in
         ;;
 
     all-profiles | generate-all | all )
-        (cd "$global_basedir/profiles";
+        with_era_profiles '
+          map (profiles(.; null; null; []))
+          | add
+        ';;
 
-         jq --argjson eras "$(to_jsonlist ${global_profile_eras[*]})" --null-input '
-           include "profiles";
+    all-profile-names | names | all-names )
+        with_era_profiles '
+          map (profile_names(.; null; null; []))
+          | add
+        ';;
 
-           $eras
-           | map(profiles(.; null; null; []))
-           | add
-           ');;
+    has-profile )
+        local usage="USAGE: wb profile has-profile NAME"
+        local name=${1:?$usage}
+
+        with_era_profiles '
+          map (has_profile(.; null; null; []; $name))
+          | any
+        ' --exit-status --arg name "$name" >/dev/null
+        ;;
 
     compose )
         local profile_names="$@"
@@ -52,8 +61,11 @@ case "${op}" in
         local usage="USAGE: wb profile get NAME"
         local name=${1:?$usage}
 
-        profile generate-all |
-        jq '.["'$name'"]'
+        if test -f  "$name"
+        then jq '.' "$name"
+        else profile generate-all |
+             jq '.["'$name'"]'
+        fi
         ;;
 
     describe )
@@ -70,15 +82,13 @@ case "${op}" in
           ' --raw-output);;
 
     node-specs )
-        local usage="USAGE: wb profile node-specs PROFILE-JSON PORT-BASE STAGGER-PORTS"
+        local usage="USAGE: wb profile node-specs PROFILE-JSON ENV-JSON"
         local profile_json=${1:?$usage}
-        local port_base=${2:?$usage}
-        local stagger_ports=${3:?$usage}
+        local env_json=${2:?$usage}
 
         args=(
             "$profile_json"
-            --argjson port_base     $port_base
-            --argjson stagger_ports $stagger_ports
+            --slurpfile env "$env_json"
         )
         jq '. as $prof
            | $prof.composition.n_bft_hosts  as $n_bfts
@@ -107,9 +117,9 @@ case "${op}" in
                     { name:       "node-\(.["i"])"
                     , isProducer: ([.kind == "bft", .kind == "pool"] | any)
                     , port:
-                      (if $stagger_ports
-                       then $port_base + .i
-                       else $port_base
+                      (if $env[0].staggerPorts
+                       then $env[0].basePort + .i
+                       else $env[0].basePort
                        end)
                     }))
            | map({ key: .name, value: .})
@@ -117,4 +127,16 @@ case "${op}" in
            ' "${args[@]}";;
 
     * ) usage_profile;; esac
+}
+
+with_era_profiles() {
+    local usage="USAGE: wb profile with-profiles JQEXP"
+    local jqexp=${1:?$usage}; shift
+
+    jq  -L "$global_basedir/profiles" \
+        --argjson eras "$(to_jsonlist ${global_profile_eras[*]})" \
+        --null-input '
+       include "profiles";
+
+       $eras | '"$jqexp" "$@"
 }

@@ -9,15 +9,15 @@ usage_topology() {
                           Generate the profile-induced map of node names
                             to pool density: 0, 1 or N (for dense pools)
 
-    for-local-node N TOPO-DIR PORT-BASE
+    for-local-node N TOPO-DIR BASE-PORT
                           Given TOPO-DIR, containing the full cluster topology,
                             print topology for the N-th node,
-                            while assigning it a local port number PORT-BASE+N
+                            while assigning it a local port number BASE-PORT+N
 
-    for-local-observer PROFILE TOPO-DIR PORT-BASE
+    for-local-observer PROFILE TOPO-DIR BASE-PORT
                           Given the profile and the full cluster topology,
                             print topology for the observer node,
-                            while assigning it a local port number PORT-BASE+NODE-COUNT
+                            while assigning it a local port number BASE-PORT+NODE-COUNT
 EOF
 }
 
@@ -93,13 +93,13 @@ case "${op}" in
            ' "${args[@]}";;
 
     for-local-node )
-        local usage="USAGE:  wb topology for-local-node N TOPO-DIR PORT-BASE"
+        local usage="USAGE:  wb topology for-local-node N TOPO-DIR BASE-PORT"
         local i=${1:?$usage}
         local topo_dir=${2:?$usage}
-        local port_base=${3:?$usage}
+        local basePort=${3:?$usage}
 
         args=(--slurpfile topology "$topo_dir"/topology-nixops.json
-              --argjson   port_base $port_base
+              --argjson   basePort $basePort
               --argjson   i         $i
               --null-input
              )
@@ -110,7 +110,7 @@ case "${op}" in
                 ( $prod_indices
                 | map
                   ({ addr:    "127.0.0.1"
-                   , port:    ($port_base + .)
+                   , port:    ($basePort + .)
                    , valency: 1
                    }
                   ))
@@ -120,15 +120,15 @@ case "${op}" in
            ' "${args[@]}";;
 
     for-local-observer )
-        local usage="USAGE:  wb topology for-local-observer PROFILE TOPO-DIR PORT-BASE"
+        local usage="USAGE:  wb topology for-local-observer PROFILE TOPO-DIR BASE-PORT"
         local profile=${1:?$usage}
         local topo_dir=${2:?$usage}
-        local port_base=${3:?$usage}
+        local basePort=${3:?$usage}
 
         local prof=$(profile get $profile)
 
         args=(--slurpfile topology "$topo_dir"/topology-nixops.json
-              --argjson   port_base $port_base
+              --argjson   basePort $basePort
               --null-input
              )
         jq 'def loopback_observer_topology_from_nixops_topology($topo):
@@ -137,7 +137,7 @@ case "${op}" in
                 ( $prod_indices
                 | map
                   ({ addr:    "127.0.0.1"
-                   , port:    ($port_base + .)
+                   , port:    ($basePort + .)
                    , valency: 1
                    }
                   ))

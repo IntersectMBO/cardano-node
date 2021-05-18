@@ -30,6 +30,7 @@ stack.yaml.lock
 *.stats
 /cluster
 /cluster.*
+/run
 supervisord.pid
 
 tags

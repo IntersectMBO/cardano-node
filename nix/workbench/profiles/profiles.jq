@@ -57,13 +57,13 @@
 ## ..which simply calls ./profiles.nix with {} params.
 ##
 
-include "topology"    { search: "." };
-include "defaults"    { search: "." };
-include "adhoc"       { search: "." };
-include "variants"    { search: "." };
-include "derived"     { search: "." };
+include "topology";
+include "defaults";
+include "adhoc";
+include "variants";
+include "derived";
 
-def profiles($era; $mcompo; $topo; $extra_profiles):
+def compute_profiles($era; $mcompo; $topo; $extra_profiles):
     ($mcompo // topology_composition($topo // {}) // {}) as $compo
 
   ## Profiles are variants + custom (or aux) profiles:
@@ -77,10 +77,21 @@ def profiles($era; $mcompo; $topo; $extra_profiles):
 
          ## Compute the derived params.
          | add_derived_params
+        );
 
-         ## Finally, assembly into a dictionary..
-         | { "\(.name)":
+def profiles($era; $mcompo; $topo; $extra_profiles):
+  compute_profiles($era; $mcompo; $topo; $extra_profiles)
+  | map (## Assemble into a dictionary..
+           { "\(.name)":
                ## ..and cleanup:
-               . | delpaths ([["generator", "epochs"]])}
-        )
+               . | delpaths ([["generator", "epochs"]])})
   | add;
+
+def profile_names($era; $mcompo; $topo; $extra_profiles):
+  compute_profiles($era; $mcompo; $topo; $extra_profiles)
+  | map (.name);
+
+def has_profile($era; $mcompo; $topo; $extra_profiles; $name):
+  compute_profiles($era; $mcompo; $topo; $extra_profiles)
+  | map (.name == $name)
+  | any;

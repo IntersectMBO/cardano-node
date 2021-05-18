@@ -1,6 +1,7 @@
 { lib
 , stdenv
 , pkgs
+, git
 , graphviz
 , jq
 , moreutils
@@ -38,7 +39,7 @@ let
       postFixup = ''
         wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode ${nixWbMode}" \
         --prefix PATH ":" ${pkgs.lib.makeBinPath
-          [ graphviz
+          [ git graphviz
             jq
             moreutils
 
@@ -77,18 +78,20 @@ let
     else "nix-exes+checkout-wb";
 
   shellHook = ''
-    ${optionalString workbenchDevMode
+    export WORKBENCH_BACKEND=${./.}/supervisor.sh
+
+      ${optionalString workbenchDevMode
     ''
     echo 'workbench:  dev mode enabled, calling wb directly from checkout (instead of using Nix store)' >&2
 
-    workbench_cardano_node_repo_root=$(git rev-parse --show-toplevel)
-    workbench_extra_flags=
+    WORKBENCH_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
+    WORKBENCH_EXTRA_FLAGS=
 
     function wb() {
-      $workbench_cardano_node_repo_root/nix/workbench/wb --set-mode ${checkoutWbMode} $workbench_extra_flags "$@"
+      $WORKBENCH_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WORKBENCH_EXTRA_FLAGS "$@"
     }
 
-    export workbench_cardano_node_repo_root workbench_extra_flags
+    export WORKBENCH_CARDANO_NODE_REPO_ROOT WORKBENCH_EXTRA_FLAGS
     export -f wb
 
     ''}
@@ -116,8 +119,8 @@ let
     function workbench-prebuild-executables() {
       ${optionalString useCabalRun
         ''
+      git log -n1 --alternate-refs --pretty=format:"%Cblue%h %Cred%cr %Cgreen%D %Cblue%s%Creset"
       echo -n "workbench:  prebuilding executables (because of useCabalRun):"
-      echo $PWD
       for exe in cardano-cli cardano-node cardano-topology
       do echo -n " $exe"
          cabal -v0 build exe:$exe >/dev/null || return 1
@@ -136,10 +139,10 @@ let
     ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
     , backend
 
-    ## Environmental settings:
+    ## Environment arguments:
     ##   - either affect semantics on all backends equally,
     ##   - or have no semantic effect
-    , environment
+    , envArgs
     }:
     rec {
       profile-names-json =
@@ -147,6 +150,20 @@ let
 
       profile-names =
         __fromJSON (__readFile profile-names-json);
+
+      environment =
+        ## IMPORTANT:  keep in sync with envArgs in 'supervisord-cluster/default.nix/envArgs'.
+        with envArgs; rec {
+          inherit cardanoLib stateDir;
+
+          JSON = runWorkbench "environment.json"
+          ''env compute-config \
+            --cache-dir "${cacheDir}" \
+            --base-port ${toString basePort} \
+            ${optionalString staggerPorts "--stagger-ports"} \
+          '';
+          value = __fromJSON (__readFile JSON);
+        };
 
       mkProfile =
         profileName:
@@ -164,9 +181,22 @@ let
       profilesJSON =
         runWorkbench "all-profiles.json" "profiles generate-all";
     };
+
+  initialiseProfileRunDirShellScript =
+    profile: runDir:
+      __concatStringsSep "\n"
+      (flip mapAttrsToList profile.node-services
+        (name: svc:
+          ''
+          cp -f ${svc.serviceConfig.JSON} ${runDir}/${name}/service-config.json
+          cp -f ${svc.nodeConfig.JSON}    ${runDir}/${name}/config.json
+          cp -f ${svc.topology.JSON}      ${runDir}/${name}/topology.json
+          cp -f ${svc.startupScript}      ${runDir}/${name}/start.sh
+          ''
+        ));
 in
 {
   inherit workbench runWorkbench runJq;
 
-  inherit generateProfiles shellHook;
+  inherit generateProfiles initialiseProfileRunDirShellScript shellHook;
 }

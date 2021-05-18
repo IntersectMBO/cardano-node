@@ -1,8 +1,6 @@
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
-    ls               List genesis cache entries  (in $global_cachedir)
-
-    prepare [--force] PROFILE-JSON TOPO-DIR OUTDIR
+    prepare [--force] CACHEDIR PROFILE-JSON TOPO-DIR OUTDIR
                      Prepare a genesis cache entry profile.
                        Cache entry regeneration can be --force 'd
 
@@ -23,17 +21,10 @@ EOF
 
 genesis() {
 local op=${1:-$(usage_genesis)}; shift
-local genesis_cachedir="$global_cachedir"/genesis
-
-mkdir -p "$genesis_cachedir"
 
 case "${op}" in
-    ls | list )
-        (cd "$genesis_cachedir"; ls)
-        ;;
-
     prepare )
-        local usage="USAGE:  wb genesis prepare [--force] PROFILE-JSON TOPO-DIR OUTDIR"
+        local usage="USAGE:  wb genesis prepare [--force] CACHEDIR PROFILE-JSON TOPO-DIR OUTDIR"
 
         local regenesis_causes=()
         while test $# -gt 0
@@ -41,13 +32,14 @@ case "${op}" in
                --force ) regenesis_causes+=('has--force');;
                * ) break;; esac; shift; done
 
-        local profile_json=${1:?$usage}
-        local topo_dir=${2:?$usage}
-        local outdir=${3:?$usage}
+        local cachedir=${1:?$usage}
+        local profile_json=${2:?$usage}
+        local topo_dir=${3:?$usage}
+        local outdir=${4:?$usage}
 
         local cache_key_input=$(genesis profile-cache-key-input "$profile_json")
         local cache_key=$(genesis profile-cache-key "$profile_json")
-        local cache_path="$genesis_cachedir"/$cache_key
+        local cache_path=$cachedir/$cache_key
 
         if test -f "$cache_path"/cache.key
         then cache_hit=t; cache_hit_desc='hit'
