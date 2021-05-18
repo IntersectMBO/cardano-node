@@ -712,13 +712,18 @@ instance ToObject SlotNo where
              , "slot" .= toJSON (unSlotNo slot) ]
 
 
-instance ToObject (TraceFetchClientState header) where
+instance ConvertRawHash header => ToObject (TraceFetchClientState header) where
   toObject _verb BlockFetch.AddedFetchRequest {} =
     mkObject [ "kind" .= String "AddedFetchRequest" ]
   toObject _verb BlockFetch.AcknowledgedFetchRequest {} =
     mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
-  toObject _verb BlockFetch.CompletedBlockFetch {} =
-    mkObject [ "kind" .= String "CompletedBlockFetch" ]
+  toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ _) =
+    mkObject [ "kind"  .= String "CompletedBlockFetch"
+             , "block" .= String
+               (case pt of
+                  GenesisPoint -> "Genesis"
+                  BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+             ]
   toObject _verb BlockFetch.CompletedFetchBatch {} =
     mkObject [ "kind" .= String "CompletedFetchBatch" ]
   toObject _verb BlockFetch.StartedFetchBatch {} =
