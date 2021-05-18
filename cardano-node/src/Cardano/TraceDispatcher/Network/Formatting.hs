@@ -375,3 +375,10 @@ instance LogFormatting NtC.LocalConnectionId where
         mkObject [ "local" .= forMachine dtal l
                  , "remote" .= forMachine dtal r
                  ]
+
+instance Show addr => LogFormatting (NtN.WithAddr addr NtN.ErrorPolicyTrace) where
+    forMachine _dtal (NtN.WithAddr addr ev) =
+      mkObject [ "kind" .= String "ErrorPolicyTrace"
+               , "address" .= show addr
+               , "event" .= show ev ]
+    forHuman (NtN.WithAddr addr ev) = "With address " <> showT addr <> ". " <> showT ev
