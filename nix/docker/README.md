@@ -92,6 +92,7 @@ docker run --detach \
 
 docker logs -f relay
 ```
+
 ### Run with -e CARDANO_UPDATE_TOPOLOGY
 
 ```
