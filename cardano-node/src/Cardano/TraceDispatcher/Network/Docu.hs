@@ -12,9 +12,9 @@ module Cardano.TraceDispatcher.Network.Docu
   , docTBlockFetch
   , docTTxSubmissionNode
   , docTTxSubmission2Node
-  , docIPSubscriptionTracer
-  , docDNSSubscriptionTracer
-  , docDNSResolverTracer
+  , docIPSubscription
+  , docDNSSubscription
+  , docDNSResolver
   ) where
 
 import           Cardano.Logging
@@ -42,7 +42,7 @@ import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
                      WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
-                     LocalAddresses, SubscriptionTrace (..))
+                     LocalAddresses (..), SubscriptionTrace (..))
 
 
 protoHeader :: header
@@ -79,10 +79,10 @@ protoTxId :: txid
 protoTxId = undefined
 
 protoLocalAdresses :: LocalAddresses addr
-protoLocalAdresses = undefined
+protoLocalAdresses = LocalAddresses Nothing Nothing Nothing
 
 protoSocketAddress :: Socket.SockAddr
-protoSocketAddress = undefined
+protoSocketAddress = Socket.SockAddrUnix "loopback"
 
 protoRes :: ConnectResult
 protoRes = undefined
@@ -94,7 +94,7 @@ protoException :: NoMethodError
 protoException = undefined
 
 protoDomain :: DNS.Domain
-protoDomain = undefined
+protoDomain = "www.example.org"
 
 protoSomeException :: SomeException
 protoSomeException = undefined
@@ -572,20 +572,20 @@ docTTxSubmission2Node = Documented [
   --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
   ]
 
-docIPSubscriptionTracer :: Documented (WithIPList (SubscriptionTrace Socket.SockAddr))
-docIPSubscriptionTracer = Documented $ map withIPList (undoc docSubscriptionTracer)
+docIPSubscription :: Documented (WithIPList (SubscriptionTrace Socket.SockAddr))
+docIPSubscription = Documented $ map withIPList (undoc docSubscription)
   where
     withIPList (DocMsg v nl comment) =
       DocMsg (WithIPList protoLocalAdresses [] v) nl ("IP Subscription: " <> comment)
 
-docDNSSubscriptionTracer :: Documented (WithDomainName (SubscriptionTrace Socket.SockAddr))
-docDNSSubscriptionTracer = Documented $ map withDomainName (undoc docSubscriptionTracer)
+docDNSSubscription :: Documented (WithDomainName (SubscriptionTrace Socket.SockAddr))
+docDNSSubscription = Documented $ map withDomainName (undoc docSubscription)
   where
     withDomainName (DocMsg v nl comment) =
       DocMsg (WithDomainName protoDomain v) nl ("DNS Subscription: " <> comment)
 
-docSubscriptionTracer :: Documented (SubscriptionTrace Socket.SockAddr)
-docSubscriptionTracer = Documented [
+docSubscription :: Documented (SubscriptionTrace Socket.SockAddr)
+docSubscription = Documented [
       DocMsg
         (SubscriptionTraceConnectStart protoSocketAddress)
         []
@@ -661,8 +661,8 @@ docSubscriptionTracer = Documented [
         "Closed socket to address."
   ]
 
-docDNSResolverTracer :: Documented (WithDomainName DnsTrace)
-docDNSResolverTracer = Documented [
+docDNSResolver :: Documented (WithDomainName DnsTrace)
+docDNSResolver = Documented [
       DocMsg
         (WithDomainName protoDomain
           (DnsTraceLookupException protoSomeException))

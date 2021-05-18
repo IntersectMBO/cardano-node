@@ -18,7 +18,7 @@ import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as BS
 import           Data.List (intersperse)
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text, pack, stripPrefix, null)
+import           Data.Text (Text, pack, stripPrefix)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
@@ -70,11 +70,7 @@ humanFormatter withColor application (Trace tr) = do
       \ case
         (lc, Nothing, v) -> do
           let fh = forHuman v
-          text <- if Data.Text.null fh
-                      then liftIO $ do -- if no human formatter use the machine formatter output
-                        obj <- formatContextMachine hn application lc (forMachine DRegular v)
-                        pure $ decodeUtf8 (BS.toStrict (AE.encode obj))
-                      else liftIO $ formatContextHuman withColor hn application lc fh
+          text <- liftIO $ formatContextHuman withColor hn application lc fh
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                              , Nothing
                              , Human text)
