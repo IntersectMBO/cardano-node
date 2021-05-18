@@ -44,6 +44,9 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityErrorPolicy
   , namesForErrorPolicy
 
+  , severityLocalErrorPolicy
+  , namesForLocalErrorPolicy
+
   ) where
 
 
@@ -56,6 +59,7 @@ import           Ouroboros.Network.Block (Point, Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
+import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
                      WithAddr (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..),
@@ -579,6 +583,32 @@ severityErrorPolicy (WithAddr _ ev) = case ev of
 
 namesForErrorPolicy :: WithAddr Socket.SockAddr ErrorPolicyTrace -> [Text]
 namesForErrorPolicy (WithAddr _ ev) = case ev of
+    ErrorPolicySuspendPeer {}                   -> ["SuspendPeer"]
+    ErrorPolicySuspendConsumer {}               -> ["SuspendConsumer"]
+    ErrorPolicyLocalNodeError {}                -> ["LocalNodeError"]
+    ErrorPolicyResumePeer {}                    -> ["ResumePeer"]
+    ErrorPolicyKeepSuspended {}                 -> ["KeepSuspended"]
+    ErrorPolicyResumeConsumer {}                -> ["ResumeConsumer"]
+    ErrorPolicyResumeProducer {}                -> ["ResumeProducer"]
+    ErrorPolicyUnhandledApplicationException {} -> ["UnhandledApplicationException"]
+    ErrorPolicyUnhandledConnectionException {}  -> ["UnhandledConnectionException"]
+    ErrorPolicyAcceptException {}               -> ["AcceptException"]
+
+severityLocalErrorPolicy :: WithAddr NtC.LocalAddress ErrorPolicyTrace -> SeverityS
+severityLocalErrorPolicy (WithAddr _ ev) = case ev of
+    ErrorPolicySuspendPeer {}                   -> Warning -- peer misbehaved
+    ErrorPolicySuspendConsumer {}               -> Notice -- peer temporarily not useful
+    ErrorPolicyLocalNodeError {}                -> Error
+    ErrorPolicyResumePeer {}                    -> Debug
+    ErrorPolicyKeepSuspended {}                 -> Debug
+    ErrorPolicyResumeConsumer {}                -> Debug
+    ErrorPolicyResumeProducer {}                -> Debug
+    ErrorPolicyUnhandledApplicationException {} -> Error
+    ErrorPolicyUnhandledConnectionException {}  -> Error
+    ErrorPolicyAcceptException {}               -> Error
+
+namesForLocalErrorPolicy :: WithAddr NtC.LocalAddress ErrorPolicyTrace -> [Text]
+namesForLocalErrorPolicy (WithAddr _ ev) = case ev of
     ErrorPolicySuspendPeer {}                   -> ["SuspendPeer"]
     ErrorPolicySuspendConsumer {}               -> ["SuspendConsumer"]
     ErrorPolicyLocalNodeError {}                -> ["LocalNodeError"]

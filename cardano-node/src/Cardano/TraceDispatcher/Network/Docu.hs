@@ -16,6 +16,7 @@ module Cardano.TraceDispatcher.Network.Docu
   , docDNSSubscription
   , docDNSResolver
   , docErrorPolicy
+  , docLocalErrorPolicy
   ) where
 
 import           Cardano.Logging
@@ -41,6 +42,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
+import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
                      WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
@@ -105,6 +107,8 @@ protoSomeException = undefined
 protoDNSError :: DNS.DNSError
 protoDNSError = undefined
 
+protoLocalAdress :: LocalAddress
+protoLocalAdress = LocalAddress "loopback"
 
 ------------------------------------
 
@@ -710,56 +714,62 @@ docDNSResolver = Documented [
     ]
 
 docErrorPolicy :: Documented (WithAddr Socket.SockAddr ErrorPolicyTrace)
-docErrorPolicy = Documented [
+docErrorPolicy = docErrorPolicy' protoSocketAddress
+
+docLocalErrorPolicy :: Documented (WithAddr LocalAddress ErrorPolicyTrace)
+docLocalErrorPolicy = docErrorPolicy' protoLocalAdress
+
+docErrorPolicy' :: adr -> Documented (WithAddr adr ErrorPolicyTrace)
+docErrorPolicy' adr = Documented [
       DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           (ErrorPolicySuspendPeer Nothing protoDiffTime protoDiffTime))
         []
         "Suspending peer with a given exception."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           (ErrorPolicySuspendConsumer Nothing protoDiffTime))
         []
         "Suspending consumer."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           (ErrorPolicyLocalNodeError undefined))
         []
         "caught a local exception."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           ErrorPolicyResumePeer)
         []
         "Resume a peer (both consumer and producer)."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           ErrorPolicyKeepSuspended)
         []
         "Consumer was suspended until producer will resume."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           ErrorPolicyResumeConsumer)
         []
         "Resume consumer."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           ErrorPolicyResumeProducer)
         []
         "Resume producer."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           (ErrorPolicyUnhandledApplicationException undefined))
         []
         "An application throwed an exception, which was not handled."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           (ErrorPolicyUnhandledConnectionException undefined))
         []
         "'connect' throwed an exception, which was not handled by any\
         \ 'ErrorPolicy'."
     , DocMsg
-        (WithAddr protoSocketAddress
+        (WithAddr adr
           (ErrorPolicyAcceptException undefined))
         []
-        "'accept' throwed an exception." 
+        "'accept' throwed an exception."
     ]

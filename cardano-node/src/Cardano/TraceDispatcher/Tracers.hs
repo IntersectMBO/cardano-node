@@ -96,6 +96,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
+import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
                      WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
@@ -284,7 +285,11 @@ docTracers _ = do
                 namesForErrorPolicy
                 severityErrorPolicy
                 trBase
-
+    lerrpTr <-  mkStandardTracer
+                "LocalErrorPolicy"
+                namesForLocalErrorPolicy
+                severityLocalErrorPolicy
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -312,6 +317,7 @@ docTracers _ = do
     configureTracers emptyTraceConfig docDNSSubscription      [dnssTr]
     configureTracers emptyTraceConfig docDNSResolver          [dnsrTr]
     configureTracers emptyTraceConfig docErrorPolicy          [errpTr]
+    configureTracers emptyTraceConfig docLocalErrorPolicy     [lerrpTr]
 
     cdbmTrDoc    <- documentMarkdown
                 (docChainDBTraceEvent :: Documented
@@ -447,6 +453,10 @@ docTracers _ = do
                     (docErrorPolicy :: Documented
                       (WithAddr Socket.SockAddr ErrorPolicyTrace))
                     [errpTr]
+    lerrpTrDoc  <-  documentMarkdown
+                    (docLocalErrorPolicy :: Documented
+                      (WithAddr LocalAddress ErrorPolicyTrace))
+                    [lerrpTr]
 
     let bl = cdbmTrDoc
             ++ cscTrDoc
@@ -476,6 +486,7 @@ docTracers _ = do
             ++ dnssTrDoc
             ++ dnsrTrDoc
             ++ errpTrDoc
+            ++ lerrpTrDoc
 
     res <- buildersToText bl
     T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
@@ -644,7 +655,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
                 namesForErrorPolicy
                 severityErrorPolicy
                 trBase
-
+    lerrpTr <-  mkStandardTracer
+                "LocalErrorPolicy"
+                namesForLocalErrorPolicy
+                severityLocalErrorPolicy
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -672,6 +687,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     configureTracers emptyTraceConfig docDNSSubscription      [dnssTr]
     configureTracers emptyTraceConfig docDNSResolver          [dnsrTr]
     configureTracers emptyTraceConfig docErrorPolicy          [errpTr]
+    configureTracers emptyTraceConfig docLocalErrorPolicy     [lerrpTr]
 
     pure Tracers
       { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -709,7 +725,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , dnsSubscriptionTracer= Tracer (traceWith dnssTr)
       , dnsResolverTracer = Tracer (traceWith dnsrTr)
       , errorPolicyTracer = Tracer (traceWith errpTr)
-      , localErrorPolicyTracer = nullTracer
+      , localErrorPolicyTracer = Tracer (traceWith lerrpTr)
       , acceptPolicyTracer = nullTracer
       , muxTracer = nullTracer
       , muxLocalTracer = nullTracer
