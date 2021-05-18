@@ -36,14 +36,14 @@ module Cardano.Logging.Types (
 import           Control.Tracer
 import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.Text as AE
 import           Data.Aeson ((.=))
-import qualified Data.ByteString.Lazy as BS
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text, pack)
-import           Data.Text.Encoding (decodeUtf8)
+import           Data.Text.Lazy (toStrict)
 import           GHC.Generics
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
@@ -78,14 +78,7 @@ class LogFormatting a where
   -- No human representation is represented by the empty text
   -- The default implementation returns no human representation
   forHuman :: a -> Text
-  forHuman _v = ""
-
-  -- | Returns the human readable representation. If not avalable the machine readable.
-  forHumanOrMachine :: a -> Text
-  forHumanOrMachine v =
-    case forHuman v of
-      "" -> decodeUtf8 (BS.toStrict (AE.encode (forMachine DRegular v)))
-      t -> t
+  forHuman v = toStrict (AE.encodeToLazyText (forMachine DRegular v))
 
   -- | Metrics representation.
   -- No metrics by default

@@ -5,12 +5,13 @@
 {-# LANGUAGE MonoLocalBinds        #-}
 {-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
+
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
+
 
 module Cardano.TraceDispatcher.Tracers
   ( mkDispatchTracers
@@ -19,10 +20,10 @@ module Cardano.TraceDispatcher.Tracers
 
 import           Data.Aeson (ToJSON)
 import qualified Data.Text.IO as T
+import qualified Network.Socket as Socket
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (trace)
-
 import           Cardano.TraceDispatcher.ChainDB.Combinators
 import           Cardano.TraceDispatcher.ChainDB.Docu
 import           Cardano.TraceDispatcher.ChainDB.Formatting
@@ -37,7 +38,6 @@ import           Cardano.TraceDispatcher.Network.Docu
 import           Cardano.TraceDispatcher.Network.Formatting
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
-import           Cardano.Tracing.OrphanInstances.Common(ToObject)
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
 
@@ -46,8 +46,9 @@ import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Kernel (NodeKernelData)
 import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
-import           Cardano.Tracing.Tracers (Tracers (..), mkTracers)
-import qualified "contra-tracer" Control.Tracer as T
+import           Cardano.Tracing.OrphanInstances.Common (ToObject)
+import           Cardano.Tracing.Tracers
+import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 
 import           Ouroboros.Consensus.Block (CannotForge, ConvertRawHash,
                      ForgeStateInfo, ForgeStateUpdateError, HasHeader, Header,
@@ -92,6 +93,11 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type
                      (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
+import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
+                     WithDomainName (..))
+import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
+import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound
                      (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound
@@ -110,6 +116,357 @@ mkStandardTracer name namesFor severityFor trBase = do
   pure $ withNamesAppended namesFor
           $ withSeverity severityFor trNs
 
+docTracers :: forall blk remotePeer peer t.
+  ( Show remotePeer
+  , Show peer
+  , Show t
+  , LogFormatting peer
+  , LogFormatting remotePeer
+  , Show (Header blk)
+  , forall result. Show (Query blk result)
+  , LogFormatting (LedgerUpdate blk)
+  , LogFormatting (LedgerWarning blk)
+  , LogFormatting (ApplyTxErr blk)
+  , LogFormatting (CannotForge blk)
+  , LogFormatting (Header blk)
+  , LogFormatting (ForgeStateUpdateError blk)
+  , LogFormatting (ChainDB.InvalidBlockReason blk)
+  , LogFormatting (GenTx blk)
+  , ToJSON (GenTxId blk)
+  , HasTxId (GenTx blk)
+  , LedgerSupportsProtocol blk
+  , Consensus.RunNode blk
+  , HasTxs blk
+  , ConvertTxId' blk
+  )
+  => Proxy blk -> IO ()
+docTracers _ = do
+  trBase <- standardTracer Nothing
+  cdbmTr <- mkStandardTracer
+              "ChainDB"
+              namesForChainDBTraceEvents
+              severityChainDB
+              trBase
+  cscTr  <- mkStandardTracer
+              "ChainSyncClient"
+              namesForChainSyncClientEvent
+              severityChainSyncClientEvent
+              trBase
+  csshTr <- mkStandardTracer
+              "ChainSyncServerHeader"
+              namesForChainSyncServerEvent
+              severityChainSyncServerEvent
+              trBase
+  cssbTr <- mkStandardTracer
+              "ChainSyncServerBlock"
+              namesForChainSyncServerEvent
+              severityChainSyncServerEvent
+              trBase
+  bfdTr  <- mkStandardTracer
+              "BlockFetchDecision"
+              namesForBlockFetchDecision
+              severityBlockFetchDecision
+              trBase
+  bfcTr  <- mkStandardTracer
+              "BlockFetchClient"
+              namesForBlockFetchClient
+              severityBlockFetchClient
+              trBase
+  bfsTr  <- mkStandardTracer
+              "BlockFetchServer"
+              namesForBlockFetchServer
+              severityBlockFetchServer
+              trBase
+  fsiTr  <- mkStandardTracer
+              "ForgeStateInfo"
+              namesForStateInfo
+              severityStateInfo
+              trBase
+  txiTr  <- mkStandardTracer
+              "TxInbound"
+              namesForTxInbound
+              severityTxInbound
+              trBase
+  txoTr  <- mkStandardTracer
+              "TxOutbound"
+              namesForTxOutbound
+              severityTxOutbound
+              trBase
+  ltxsTr <- mkStandardTracer
+              "LocalTxSubmissionServer"
+              namesForLocalTxSubmissionServer
+              severityLocalTxSubmissionServer
+              trBase
+  mpTr   <- mkStandardTracer
+              "Mempool"
+              namesForMempool
+              severityMempool
+              trBase
+  fTr    <- mkStandardTracer
+              "Forge"
+              namesForForge
+              severityForge
+              trBase
+  btTr   <- mkStandardTracer
+              "BlockchainTime"
+              namesForBlockchainTime
+              severityBlockchainTime
+              trBase
+  kacTr  <- mkStandardTracer
+              "KeepAliveClient"
+              namesForKeepAliveClient
+              severityKeepAliveClient
+              trBase
+  tcsTr  <-  mkStandardTracer
+              "TChainSync"
+              namesForTChainSync
+              severityTChainSync
+              trBase
+  ttsTr  <-  mkStandardTracer
+              "TTxSubmission"
+              namesForTTxSubmission
+              severityTTxSubmission
+              trBase
+  tsqTr  <-  mkStandardTracer
+              "TStateQuery"
+              namesForTStateQuery
+              severityTStateQuery
+              trBase
+  tcsnTr <-  mkStandardTracer
+              "TChainSyncNode"
+              namesForTChainSyncNode
+              severityTChainSyncNode
+              trBase
+  tcssTr <-  mkStandardTracer
+              "TChainSyncSerialised"
+              namesForTChainSyncSerialised
+              severityTChainSyncSerialised
+              trBase
+  tbfTr  <-  mkStandardTracer
+              "TBlockFetch"
+              namesForTBlockFetch
+              severityTBlockFetch
+              trBase
+  tbfsTr <-  mkStandardTracer
+              "TBlockFetchSerialised"
+              namesForTBlockFetchSerialised
+              severityTBlockFetchSerialised
+              trBase
+  tsnTr  <-  mkStandardTracer
+              "TxSubmissionTracer"
+              namesForTxSubmissionNode
+              severityTxSubmissionNode
+              trBase
+  ts2nTr  <-  mkStandardTracer
+              "TxSubmission2"
+              namesForTxSubmission2Node
+              severityTxSubmission2Node
+              trBase
+  ipsTr   <-  mkStandardTracer
+              "IpSubscription"
+              namesForIPSubscription
+              severityIPSubscription
+              trBase
+  dnssTr  <-  mkStandardTracer
+              "DnsSubscription"
+              namesForDNSSubscription
+              severityDNSSubscription
+              trBase
+  dnsrTr  <-  mkStandardTracer
+              "DNSResolver"
+              namesForDNSResolver
+              severityDNSResolver
+              trBase
+
+  configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
+  configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
+  configureTracers emptyTraceConfig docChainSyncServerEvent [csshTr]
+  configureTracers emptyTraceConfig docChainSyncServerEvent [cssbTr]
+  configureTracers emptyTraceConfig docBlockFetchDecision   [bfdTr]
+  configureTracers emptyTraceConfig docBlockFetchClient     [bfcTr]
+  configureTracers emptyTraceConfig docBlockFetchServer     [bfsTr]
+  configureTracers emptyTraceConfig docTxInbound            [txiTr]
+  configureTracers emptyTraceConfig docLocalTxSubmissionServer [ltxsTr]
+  configureTracers emptyTraceConfig docMempool              [mpTr]
+  configureTracers emptyTraceConfig docForge                [fTr]
+  configureTracers emptyTraceConfig docBlockchainTime       [btTr]
+  configureTracers emptyTraceConfig docKeepAliveClient      [kacTr]
+  configureTracers emptyTraceConfig docTChainSync           [tcsTr]
+  configureTracers emptyTraceConfig docTTxSubmission        [ttsTr]
+  configureTracers emptyTraceConfig docTStateQuery          [tsqTr]
+  configureTracers emptyTraceConfig docTChainSync           [tcsnTr]
+  configureTracers emptyTraceConfig docTChainSync           [tcssTr]
+  configureTracers emptyTraceConfig docTBlockFetch          [tbfTr]
+  configureTracers emptyTraceConfig docTBlockFetch          [tbfsTr]
+  configureTracers emptyTraceConfig docTTxSubmissionNode    [tsnTr]
+  configureTracers emptyTraceConfig docTTxSubmission2Node   [ts2nTr]
+  configureTracers emptyTraceConfig docIPSubscription       [ipsTr]
+  configureTracers emptyTraceConfig docDNSSubscription      [dnssTr]
+  configureTracers emptyTraceConfig docDNSResolver          [dnsrTr]
+
+  cdbmTrDoc    <- documentMarkdown
+              (docChainDBTraceEvent :: Documented
+                (ChainDB.TraceEvent blk))
+              [cdbmTr]
+  cscTrDoc    <- documentMarkdown
+              (docChainSyncClientEvent :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceChainSyncClientEvent blk)))
+              [cscTr]
+  csshTrDoc    <- documentMarkdown
+              (docChainSyncServerEvent :: Documented
+                (TraceChainSyncServerEvent blk))
+              [csshTr]
+  cssbTrDoc    <- documentMarkdown
+              (docChainSyncServerEvent :: Documented
+                (TraceChainSyncServerEvent blk))
+              [cssbTr]
+  bfdTrDoc    <- documentMarkdown
+              (docBlockFetchDecision :: Documented
+                [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])])
+              [bfdTr]
+  bfcTrDoc    <- documentMarkdown
+              (docBlockFetchClient :: Documented
+                (BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState (Header blk))))
+              [bfcTr]
+  _bfsTrDoc    <- documentMarkdown
+              (docBlockFetchServer :: Documented
+                (TraceBlockFetchServerEvent blk))
+              [bfsTr]
+  fsiTrDoc    <- documentMarkdown
+              (docForgeStateInfo :: Documented
+                (Consensus.TraceLabelCreds HotKey.KESInfo))
+              [fsiTr]
+  txiTrDoc    <- documentMarkdown
+              (docTxInbound :: Documented
+                (BlockFetch.TraceLabelPeer remotePeer
+                  (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
+              [txiTr]
+  txoTrDoc    <- documentMarkdown
+              (docTxOutbound :: Documented
+                (BlockFetch.TraceLabelPeer remotePeer
+                  (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))))
+              [txoTr]
+  ltxsTrDoc    <- documentMarkdown
+              (docLocalTxSubmissionServer :: Documented
+                (TraceLocalTxSubmissionServerEvent blk))
+              [ltxsTr]
+  mpTrDoc    <- documentMarkdown
+              (docMempool :: Documented
+                (TraceEventMempool blk))
+              [mpTr]
+  fTrDoc    <- documentMarkdown
+              (docForge :: Documented
+                (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk)))
+              [fTr]
+  btTrDoc   <- documentMarkdown
+              (docBlockchainTime :: Documented
+                (TraceBlockchainTimeEvent t))
+              [btTr]
+  kacTrDoc  <- documentMarkdown
+              (docKeepAliveClient :: Documented
+                (TraceKeepAliveClient remotePeer))
+              [kacTr]
+  tcsTrDoc  <- documentMarkdown
+              (docTChainSync :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (ChainSync (Serialised blk) (Point blk) (Tip blk)))))
+              [tcsTr]
+  ttsTrDoc  <-  documentMarkdown
+              (docTTxSubmission :: Documented
+                 (BlockFetch.TraceLabelPeer
+                    peer
+                    (TraceSendRecv
+                       (LTS.LocalTxSubmission
+                          (GenTx blk) (ApplyTxErr blk)))))
+              [ttsTr]
+  tsqTrDoc  <-  documentMarkdown
+              (docTStateQuery :: Documented
+                 (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (LocalStateQuery blk (Point blk) (Query blk)))))
+              [tsqTr]
+  tcsnTrDoc  <-  documentMarkdown
+              (docTChainSync :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (ChainSync (Header blk) (Point blk) (Tip blk)))))
+              [tcsnTr]
+  tcssTrDoc  <-  documentMarkdown
+              (docTChainSync :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (ChainSync (SerialisedHeader blk) (Point blk) (Tip blk)))))
+              [tcssTr]
+  tbfTrDoc  <-  documentMarkdown
+              (docTBlockFetch :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (BlockFetch blk (Point blk)))))
+              [tbfTr]
+  tbfsTrDoc  <-  documentMarkdown
+              (docTBlockFetch :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (BlockFetch (Serialised blk) (Point blk)))))
+              [tbfsTr]
+  tsnTrDoc   <-  documentMarkdown
+              (docTTxSubmissionNode :: Documented
+                (BlockFetch.TraceLabelPeer peer
+                  (TraceSendRecv
+                    (TxSubmission (GenTxId blk) (GenTx blk)))))
+              [tsnTr]
+  ts2nTrDoc  <-  documentMarkdown
+                  (docTTxSubmission2Node :: Documented
+                    (BlockFetch.TraceLabelPeer peer
+                      (TraceSendRecv
+                        (TxSubmission2 (GenTxId blk) (GenTx blk)))))
+                  [ts2nTr]
+  _ipsTrDoc   <-  documentMarkdown
+                  (docIPSubscription :: Documented
+                    (WithIPList (SubscriptionTrace Socket.SockAddr)))
+                  [ipsTr]
+  dnssTrDoc   <-  documentMarkdown
+                  (docDNSSubscription :: Documented
+                    (WithDomainName (SubscriptionTrace Socket.SockAddr)))
+                  [dnssTr]
+  dnsrTrDoc   <-  documentMarkdown
+                  (docDNSResolver :: Documented (WithDomainName DnsTrace))
+                  [dnsrTr]
+
+  let bl = cdbmTrDoc
+          ++ cscTrDoc
+          ++ csshTrDoc
+          ++ cssbTrDoc
+          ++ bfdTrDoc
+          ++ bfcTrDoc
+--          ++ bfsTrDoc
+          ++ fsiTrDoc
+          ++ txiTrDoc
+          ++ txoTrDoc
+          ++ ltxsTrDoc
+          ++ mpTrDoc
+          ++ fTrDoc
+          ++ btTrDoc
+          ++ kacTrDoc
+          ++ tcsTrDoc
+          ++ ttsTrDoc
+          ++ tsqTrDoc
+          ++ tcsnTrDoc
+          ++ tcssTrDoc
+          ++ tbfTrDoc
+          ++ tbfsTrDoc
+          ++ tsnTrDoc
+          ++ ts2nTrDoc
+--          ++ ipsTrDoc
+          ++ dnssTrDoc
+          ++ dnsrTrDoc
+
+  res <- buildersToText bl
+  T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
+  pure ()
+
 -- | Tracers for all system components.
 --
 mkDispatchTracers
@@ -117,13 +474,12 @@ mkDispatchTracers
   ( Consensus.RunNode blk
   , LogFormatting (ChainDB.InvalidBlockReason blk)
   , TraceConstraints blk
-  , Show peer
-  , Eq peer
-  , LogFormatting peer
-  , LogFormatting localPeer
+  , Show peer, Eq peer
+  , Show localPeer
   , ToObject peer
   , ToObject localPeer
-  , Show localPeer
+  , LogFormatting peer
+  , LogFormatting localPeer
   )
   => BlockConfig blk
   -> TraceOptions
@@ -133,25 +489,7 @@ mkDispatchTracers
   -> Trace IO FormattedMessage
   -> IO (Tracers peer localPeer blk)
 mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect trBase = do
-  tracers <- mkDispatchTracers' trBase
-  configTracers emptyTraceConfig tracers
-  pure tracers
-mkDispatchTracers blockConfig tOpts tr nodeKern ekgDirect _ =
-  mkTracers blockConfig tOpts tr nodeKern ekgDirect
-
-mkDispatchTracers'
-  :: forall peer localPeer blk.
-  ( Consensus.RunNode blk
-  , LogFormatting (ChainDB.InvalidBlockReason blk)
-  , TraceConstraints blk
-  , Show peer
-  , Show localPeer
-  , LogFormatting peer
-  , LogFormatting localPeer
-  )
-  => Trace IO FormattedMessage
-  -> IO (Tracers peer localPeer blk)
-mkDispatchTracers' trBase = do
+--    docTracers (Proxy :: Proxy ByronBlock)
     cdbmTr <- mkStandardTracer
                 "ChainDB"
                 namesForChainDBTraceEvents
@@ -263,7 +601,7 @@ mkDispatchTracers' trBase = do
                 severityTBlockFetchSerialised
                 trBase
     tsnTr  <-  mkStandardTracer
-                "TxSubmission"
+                "TxSubmissionTracer"
                 namesForTxSubmissionNode
                 severityTxSubmissionNode
                 trBase
@@ -287,255 +625,77 @@ mkDispatchTracers' trBase = do
                 namesForDNSResolver
                 severityDNSResolver
                 trBase
+
+    configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
+    configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
+    configureTracers emptyTraceConfig docChainSyncServerEvent [csshTr]
+    configureTracers emptyTraceConfig docChainSyncServerEvent [cssbTr]
+    configureTracers emptyTraceConfig docBlockFetchDecision   [bfdTr]
+    configureTracers emptyTraceConfig docBlockFetchClient     [bfcTr]
+    configureTracers emptyTraceConfig docBlockFetchServer     [bfsTr]
+    configureTracers emptyTraceConfig docTxInbound            [txiTr]
+    configureTracers emptyTraceConfig docLocalTxSubmissionServer [ltxsTr]
+    configureTracers emptyTraceConfig docMempool              [mpTr]
+    configureTracers emptyTraceConfig docForge                [fTr]
+    configureTracers emptyTraceConfig docBlockchainTime       [btTr]
+    configureTracers emptyTraceConfig docKeepAliveClient      [kacTr]
+    configureTracers emptyTraceConfig docTChainSync           [tcsTr]
+    configureTracers emptyTraceConfig docTTxSubmission        [ttsTr]
+    configureTracers emptyTraceConfig docTStateQuery          [tsqTr]
+    configureTracers emptyTraceConfig docTChainSync           [tcsnTr]
+    configureTracers emptyTraceConfig docTChainSync           [tcssTr]
+    configureTracers emptyTraceConfig docTBlockFetch          [tbfTr]
+    configureTracers emptyTraceConfig docTBlockFetch          [tbfsTr]
+    configureTracers emptyTraceConfig docTTxSubmissionNode    [tsnTr]
+    configureTracers emptyTraceConfig docTTxSubmission2Node   [ts2nTr]
+    configureTracers emptyTraceConfig docIPSubscription       [ipsTr]
+    configureTracers emptyTraceConfig docDNSSubscription      [dnssTr]
+    configureTracers emptyTraceConfig docDNSResolver          [dnsrTr]
+
     pure Tracers
-      { chainDBTracer = T.Tracer (traceWith cdbmTr)
+      { chainDBTracer = Tracer (traceWith cdbmTr)
       , consensusTracers = Consensus.Tracers
-        { Consensus.chainSyncClientTracer = T.Tracer (traceWith cscTr)
-        , Consensus.chainSyncServerHeaderTracer = T.Tracer (traceWith csshTr)
-        , Consensus.chainSyncServerBlockTracer = T.Tracer (traceWith cssbTr)
-        , Consensus.blockFetchDecisionTracer = T.Tracer (traceWith bfdTr)
-        , Consensus.blockFetchClientTracer = T.Tracer (traceWith bfcTr)
-        , Consensus.blockFetchServerTracer = T.Tracer (traceWith bfsTr)
+        { Consensus.chainSyncClientTracer = Tracer (traceWith cscTr)
+        , Consensus.chainSyncServerHeaderTracer = Tracer (traceWith csshTr)
+        , Consensus.chainSyncServerBlockTracer = Tracer (traceWith cssbTr)
+        , Consensus.blockFetchDecisionTracer = Tracer (traceWith bfdTr)
+        , Consensus.blockFetchClientTracer = Tracer (traceWith bfcTr)
+        , Consensus.blockFetchServerTracer = Tracer (traceWith bfsTr)
         , Consensus.forgeStateInfoTracer =
-            T.Tracer (traceWith (traceAsKESInfo (Proxy @blk) fsiTr))
-        , Consensus.txInboundTracer = T.Tracer (traceWith txiTr)
-        , Consensus.txOutboundTracer = T.Tracer (traceWith txoTr)
-        , Consensus.localTxSubmissionServerTracer = T.Tracer (traceWith ltxsTr)
-        , Consensus.mempoolTracer = T.Tracer (traceWith mpTr)
-        , Consensus.forgeTracer = T.Tracer (traceWith fTr)
-        , Consensus.blockchainTimeTracer = T.Tracer (traceWith btTr)
-        , Consensus.keepAliveClientTracer = T.Tracer (traceWith kacTr)
+            Tracer (traceWith (traceAsKESInfo (Proxy @blk) fsiTr))
+        , Consensus.txInboundTracer = Tracer (traceWith txiTr)
+        , Consensus.txOutboundTracer = Tracer (traceWith txoTr)
+        , Consensus.localTxSubmissionServerTracer = Tracer (traceWith ltxsTr)
+        , Consensus.mempoolTracer = Tracer (traceWith mpTr)
+        , Consensus.forgeTracer = Tracer (traceWith fTr)
+        , Consensus.blockchainTimeTracer = Tracer (traceWith btTr)
+        , Consensus.keepAliveClientTracer = Tracer (traceWith kacTr)
         }
       , nodeToClientTracers = NodeToClient.Tracers
-        { NodeToClient.tChainSyncTracer = T.Tracer (traceWith tcsTr)
-        , NodeToClient.tTxSubmissionTracer = T.Tracer (traceWith ttsTr)
-        , NodeToClient.tStateQueryTracer = T.Tracer (traceWith tsqTr)
+        { NodeToClient.tChainSyncTracer = Tracer (traceWith tcsTr)
+        , NodeToClient.tTxSubmissionTracer = Tracer (traceWith ttsTr)
+        , NodeToClient.tStateQueryTracer = Tracer (traceWith tsqTr)
         }
       , nodeToNodeTracers = NodeToNode.Tracers
-        { NodeToNode.tChainSyncTracer = T.Tracer (traceWith tcsnTr)
-        , NodeToNode.tChainSyncSerialisedTracer = T.Tracer (traceWith tcssTr)
-        , NodeToNode.tBlockFetchTracer = T.Tracer (traceWith tbfTr)
-        , NodeToNode.tBlockFetchSerialisedTracer = T.Tracer (traceWith tbfsTr)
-        , NodeToNode.tTxSubmissionTracer = T.Tracer (traceWith tsnTr)
-        , NodeToNode.tTxSubmission2Tracer = T.Tracer (traceWith ts2nTr)
+        { NodeToNode.tChainSyncTracer = Tracer (traceWith tcsnTr)
+        , NodeToNode.tChainSyncSerialisedTracer = Tracer (traceWith tcssTr)
+        , NodeToNode.tBlockFetchTracer = Tracer (traceWith tbfTr)
+        , NodeToNode.tBlockFetchSerialisedTracer = Tracer (traceWith tbfsTr)
+        , NodeToNode.tTxSubmissionTracer = Tracer (traceWith tsnTr)
+        , NodeToNode.tTxSubmission2Tracer = Tracer (traceWith ts2nTr)
         }
-      , ipSubscriptionTracer = T.Tracer (traceWith ipsTr)
-      , dnsSubscriptionTracer = T.Tracer (traceWith dnssTr)
-      , dnsResolverTracer = T.Tracer (traceWith dnsrTr)
-      , errorPolicyTracer = T.nullTracer
-      , localErrorPolicyTracer = T.nullTracer
-      , acceptPolicyTracer = T.nullTracer
-      , muxTracer = T.nullTracer
-      , muxLocalTracer = T.nullTracer
-      , handshakeTracer = T.nullTracer
-      , localHandshakeTracer = T.nullTracer
-      , diffusionInitializationTracer = T.nullTracer
+      , ipSubscriptionTracer = Tracer (traceWith ipsTr)
+      , dnsSubscriptionTracer= Tracer (traceWith dnssTr)
+      , dnsResolverTracer = Tracer (traceWith dnsrTr)
+      , errorPolicyTracer = nullTracer
+      , localErrorPolicyTracer = nullTracer
+      , acceptPolicyTracer = nullTracer
+      , muxTracer = nullTracer
+      , muxLocalTracer = nullTracer
+      , handshakeTracer = nullTracer
+      , localHandshakeTracer = nullTracer
+      , diffusionInitializationTracer = nullTracer
     }
 
-traceTrans ::
-  Applicative m
-  => T.Tracer m a
-  -> Trace m a
-traceTrans tr = Trace $
-   let tr' = contramap (\(_, _, v) -> v) tr
-   in  arrow (emit (T.traceWith tr'))
-
-configTracers :: forall blk peer localPeer.
-     TraceConfig
-  -> Tracers peer localPeer blk
-  -> IO ()
-configTracers config Tracers {..} = do
-    configureTracers config docChainDBTraceEvent
-      [traceTrans chainDBTracer]
-    configureTracers config docChainSyncClientEvent
-      [traceTrans (Consensus.chainSyncClientTracer consensusTracers)]
-    configureTracers config docChainSyncServerEvent
-      [traceTrans (Consensus.chainSyncServerHeaderTracer consensusTracers)]
-    configureTracers config docChainSyncServerEvent
-      [traceTrans (Consensus.chainSyncServerBlockTracer consensusTracers)]
-    configureTracers config docBlockFetchDecision
-      [traceTrans (Consensus.blockFetchDecisionTracer consensusTracers)]
-    configureTracers config docBlockFetchClient
-      [traceTrans (Consensus.blockFetchClientTracer consensusTracers)]
-    configureTracers config docBlockFetchServer
-      [traceTrans (Consensus.blockFetchServerTracer consensusTracers)]
-    -- TODO
-    -- configureTracers config docForgeStateInfo
-    --   [traceAsKESInfo (Proxy @blk) (traceTrans (Consensus.forgeStateInfoTracer consensusTracers))]
-    configureTracers config docTxInbound
-      [traceTrans (Consensus.txInboundTracer consensusTracers)]
-    configureTracers config docTxOutbound
-      [traceTrans (Consensus.txOutboundTracer consensusTracers)]
-    configureTracers config docLocalTxSubmissionServer
-      [traceTrans (Consensus.localTxSubmissionServerTracer consensusTracers)]
-    -- configureTracers config docMempool
-    --   [traceTrans (Consensus.mempoolTracer consensusTracers)]
-    configureTracers config docForge
-      [traceTrans (Consensus.forgeTracer consensusTracers)]
-    configureTracers config docBlockchainTime
-      [traceTrans (Consensus.blockchainTimeTracer consensusTracers)]
-    configureTracers config docKeepAliveClient
-      [traceTrans (Consensus.keepAliveClientTracer consensusTracers)]
-    configureTracers config docTChainSync
-
-      [traceTrans (NodeToClient.tChainSyncTracer nodeToClientTracers)]
-    configureTracers config docTTxSubmission
-      [traceTrans (NodeToClient.tTxSubmissionTracer nodeToClientTracers)]
-    configureTracers config docTStateQuery
-      [traceTrans (NodeToClient.tStateQueryTracer nodeToClientTracers)]
-    configureTracers config docTChainSync
-
-      [traceTrans (NodeToNode.tChainSyncTracer nodeToNodeTracers)]
-    configureTracers config docTChainSync
-      [traceTrans (NodeToNode.tChainSyncSerialisedTracer nodeToNodeTracers)]
-    configureTracers config docTBlockFetch
-      [traceTrans (NodeToNode.tBlockFetchTracer nodeToNodeTracers)]
-    configureTracers config docTBlockFetch
-      [traceTrans (NodeToNode.tBlockFetchSerialisedTracer nodeToNodeTracers)]
-    configureTracers config docTTxSubmissionNode
-      [traceTrans (NodeToNode.tTxSubmissionTracer nodeToNodeTracers)]
-    configureTracers config docTTxSubmission2Node
-      [traceTrans (NodeToNode.tTxSubmission2Tracer nodeToNodeTracers)]
-    configureTracers config docIPSubscriptionTracer
-      [traceTrans ipSubscriptionTracer]
-    configureTracers config docDNSSubscriptionTracer
-        [traceTrans dnsSubscriptionTracer]
-    configureTracers config docDNSResolverTracer
-        [traceTrans dnsResolverTracer]
-    pure ()
-
-docTracers :: forall peer localPeer blk.
-  ( Consensus.RunNode blk
-  , LogFormatting (ChainDB.InvalidBlockReason blk)
-  , TraceConstraints blk
-  , Show peer
-  , Show localPeer
-  , LogFormatting peer
-  , LogFormatting localPeer
-  )
-  => Proxy blk
-  -> IO ()
-docTracers prx = do
-  trBase <- standardTracer Nothing
-  tracers :: Tracers peer localPeer blk <- mkDispatchTracers' trBase
-  docTracers' prx tracers
-
-docTracers' :: forall blk localPeer peer.
-  Proxy blk -> Tracers peer localPeer blk -> IO ()
-docTracers' _ Tracers {..} = do
-  cdbmTrDoc    <- documentMarkdown docChainDBTraceEvent
-                    [traceTrans chainDBTracer]
-  cscTrDoc     <- documentMarkdown
-                    docChainSyncClientEvent
-                    [traceTrans (Consensus.chainSyncClientTracer consensusTracers)]
-  csshTrDoc    <- documentMarkdown
-                    docChainSyncServerEvent
-                    [traceTrans (Consensus.chainSyncServerHeaderTracer consensusTracers)]
-  cssbTrDoc    <- documentMarkdown
-                    docChainSyncServerEvent
-                    [traceTrans (Consensus.chainSyncServerBlockTracer consensusTracers)]
-  bfdTrDoc    <- documentMarkdown
-                    docBlockFetchDecision
-                    [traceTrans (Consensus.blockFetchDecisionTracer consensusTracers)]
-  bfcTrDoc    <- documentMarkdown
-                    docBlockFetchClient
-                    [traceTrans (Consensus.blockFetchClientTracer consensusTracers)]
-  bfsTrDoc    <- documentMarkdown
-                    docBlockFetchServer
-                    [traceTrans (Consensus.blockFetchServerTracer consensusTracers)]
-  -- TODO
-  -- fsiTrDoc    <- documentMarkdown
-  --             (docForgeStateInfo :: Documented
-  --               (Consensus.TraceLabelCreds HotKey.KESInfo))
-  --             [fsiTr]
-  txiTrDoc    <- documentMarkdown
-                    docTxInbound
-                    [traceTrans (Consensus.txInboundTracer consensusTracers)]
-  txoTrDoc    <- documentMarkdown
-                    docTxOutbound
-                    [traceTrans (Consensus.txOutboundTracer consensusTracers)]
-  ltxsTrDoc    <- documentMarkdown
-                    docLocalTxSubmissionServer
-                    [traceTrans (Consensus.localTxSubmissionServerTracer consensusTracers)]
-  -- TODO
-  -- mpTrDoc    <- documentMarkdown
-  --             (docMempool :: Documented
-  --               (TraceEventMempool blk))
-  --             [traceTrans (Consensus.mempoolTracer consensusTracers)]
-  fTrDoc    <- documentMarkdown
-                  docForge
-                  [traceTrans (Consensus.forgeTracer consensusTracers)]
-  btTrDoc   <- documentMarkdown
-                  docBlockchainTime
-                  [traceTrans (Consensus.blockchainTimeTracer consensusTracers)]
-  kacTrDoc  <- documentMarkdown
-                  docKeepAliveClient
-                  [traceTrans (Consensus.keepAliveClientTracer consensusTracers)]
-  tcsTrDoc  <- documentMarkdown
-                  docTChainSync
-                  [traceTrans (NodeToClient.tChainSyncTracer nodeToClientTracers)]
-  ttsTrDoc  <-  documentMarkdown
-                  docTTxSubmission
-                  [traceTrans (NodeToClient.tTxSubmissionTracer nodeToClientTracers)]
-  tsqTrDoc  <-  documentMarkdown
-                  docTStateQuery
-                  [traceTrans (NodeToClient.tStateQueryTracer nodeToClientTracers)]
-  tcsnTrDoc  <-  documentMarkdown
-                  docTChainSync
-                  [traceTrans (NodeToNode.tChainSyncTracer nodeToNodeTracers)]
-  tcssTrDoc  <-  documentMarkdown
-                  docTChainSync
-                  [traceTrans (NodeToNode.tChainSyncSerialisedTracer nodeToNodeTracers)]
-  tbfTrDoc  <-  documentMarkdown
-                  docTBlockFetch
-                  [traceTrans (NodeToNode.tBlockFetchTracer nodeToNodeTracers)]
-  tbfsTrDoc  <-  documentMarkdown
-                  docTBlockFetch
-                  [traceTrans (NodeToNode.tBlockFetchSerialisedTracer nodeToNodeTracers)]
-  tsnTrDoc   <-  documentMarkdown
-                  docTTxSubmissionNode
-                  [traceTrans (NodeToNode.tTxSubmissionTracer nodeToNodeTracers)]
-  ts2nTrDoc  <-  documentMarkdown
-                  docTTxSubmission2Node
-                  [traceTrans (NodeToNode.tTxSubmission2Tracer nodeToNodeTracers)]
-  ipsTrDoc   <-  documentMarkdown
-                  docIPSubscriptionTracer
-                  [traceTrans ipSubscriptionTracer]
-  dnssTrDoc  <-  documentMarkdown
-                  docDNSSubscriptionTracer
-                  [traceTrans dnsSubscriptionTracer]
-  dnsrTrDoc  <-  documentMarkdown
-                  docDNSResolverTracer
-                  [traceTrans dnsResolverTracer]
-
-  let bl = cdbmTrDoc
-          ++ cscTrDoc
-          ++ csshTrDoc
-          ++ cssbTrDoc
-          ++ bfdTrDoc
-          ++ bfcTrDoc
-          ++ bfsTrDoc
---          ++ fsiTrDoc
-          ++ txiTrDoc
-          ++ txoTrDoc
-          ++ ltxsTrDoc
---          ++ mpTrDoc
-          ++ fTrDoc
-          ++ btTrDoc
-          ++ kacTrDoc
-          ++ tcsTrDoc
-          ++ ttsTrDoc
-          ++ tsqTrDoc
-          ++ tcsnTrDoc
-          ++ tcssTrDoc
-          ++ tbfTrDoc
-          ++ tbfsTrDoc
-          ++ tsnTrDoc
-          ++ ts2nTrDoc
-          ++ ipsTrDoc
-          ++ dnssTrDoc
-          ++ dnsrTrDoc
-
-  res <- buildersToText bl
-  T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
-  pure ()
+mkDispatchTracers blockConfig tOpts tr nodeKern ekgDirect _ =
+  mkTracers blockConfig tOpts tr nodeKern ekgDirect
