@@ -142,6 +142,7 @@ library
                       , safe-exceptions
                       , scientific
                       , shelley-spec-ledger
+                      , small-steps
                       , stm
                       , text
                       , time

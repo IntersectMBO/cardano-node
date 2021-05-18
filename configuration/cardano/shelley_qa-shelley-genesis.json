@@ -55,6 +55,6 @@
     "maxTxExUnits": 42,
     "maxBlockExUnits": 42,
     "maxValueSize": 42,
-    "costModel": "configuration/cardano/alonzo/shelley_qa_cost-model.json"
+    "costModels": "configuration/cardano/alonzo/shelley_qa_cost-model.json"
 
 }
