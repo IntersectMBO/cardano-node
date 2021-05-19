@@ -3,8 +3,10 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -65,11 +67,9 @@ import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
-import           Cardano.Ledger.SafeHash (SafeToHash)
-
-import qualified Shelley.Spec.Ledger.BlockChain as Shelley
+import qualified Shelley.Spec.Ledger.BlockChain as Ledger
+import qualified Shelley.Spec.Ledger.API.Mempool as Ledger
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -148,18 +148,30 @@ getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
               Byron.bodyTxPayload = Byron.ATxPayload txs
             }
         } -> map ByronTx txs
-getBlockTxs (ShelleyBlock shelleyEra Consensus.ShelleyBlock{Consensus.shelleyBlockRaw})
-  = case shelleyEra of
-      ShelleyBasedEraShelley -> go
-      ShelleyBasedEraAllegra -> go
-      ShelleyBasedEraMary    -> go
-      ShelleyBasedEraAlonzo  ->
-        error "getBlockTxs: Alonzo era not implemented yet"
-  where
-    go :: Ledger.TxSeq (ShelleyLedgerEra era) ~ Shelley.TxSeq (ShelleyLedgerEra era)
-       => SafeToHash (Core.Witnesses (ShelleyLedgerEra era))
-       => Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => [Tx era]
-    go = case shelleyBlockRaw of Shelley.Block _header (Shelley.TxSeq txs) -> [ShelleyTx shelleyEra x | x <- toList txs]
+getBlockTxs (ShelleyBlock era Consensus.ShelleyBlock{Consensus.shelleyBlockRaw}) =
+    obtainConsensusShelleyBasedEra era $
+      getShelleyBlockTxs era shelleyBlockRaw
+
+getShelleyBlockTxs :: forall era ledgerera.
+                      ledgerera ~ ShelleyLedgerEra era
+                   => Consensus.ShelleyBasedEra ledgerera
+                   => ShelleyBasedEra era
+                   -> Ledger.Block ledgerera
+                   -> [Tx era]
+getShelleyBlockTxs era (Ledger.Block _header txs) =
+    [ ShelleyTx era (Ledger.extractTx txinblock)
+    | txinblock <- toList (Ledger.fromTxSeq @ledgerera txs) ]
+
+obtainConsensusShelleyBasedEra
+  :: forall era ledgerera a.
+     ledgerera ~ ShelleyLedgerEra era
+  => ShelleyBasedEra era
+  -> (Consensus.ShelleyBasedEra ledgerera => a) -> a
+obtainConsensusShelleyBasedEra ShelleyBasedEraShelley f = f
+obtainConsensusShelleyBasedEra ShelleyBasedEraAllegra f = f
+obtainConsensusShelleyBasedEra ShelleyBasedEraMary    f = f
+obtainConsensusShelleyBasedEra ShelleyBasedEraAlonzo  f = f
+
 
 -- ----------------------------------------------------------------------------
 -- Block in a consensus mode
@@ -247,7 +259,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
       where
         Consensus.HeaderFields {
             Consensus.headerFieldHash
-              = Consensus.ShelleyHash (Shelley.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
+              = Consensus.ShelleyHash (Ledger.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
             Consensus.headerFieldSlot,
             Consensus.headerFieldBlockNo
           } = Consensus.getHeaderFields block
