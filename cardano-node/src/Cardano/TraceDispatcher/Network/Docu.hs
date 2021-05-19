@@ -17,6 +17,7 @@ module Cardano.TraceDispatcher.Network.Docu
   , docDNSResolver
   , docErrorPolicy
   , docLocalErrorPolicy
+  , docAcceptPolicy
   ) where
 
 import           Cardano.Logging
@@ -34,6 +35,7 @@ import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
                      WithAddr (..))
+import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
@@ -773,3 +775,17 @@ docErrorPolicy' adr = Documented [
         []
         "'accept' throwed an exception."
     ]
+
+docAcceptPolicy :: Documented NtN.AcceptConnectionsPolicyTrace
+docAcceptPolicy = Documented [
+      DocMsg
+        (NtN.ServerTraceAcceptConnectionRateLimiting protoDiffTime 2)
+        []
+        "Rate limiting accepting connections,\
+        \ delaying next accept for given time, currently serving n connections."
+      , DocMsg
+        (NtN.ServerTraceAcceptConnectionHardLimit 2)
+        []
+        "Hard rate limit reached,\
+        \ waiting until the number of connections drops below n."
+  ]

@@ -89,6 +89,7 @@ import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
                      WithAddr (..))
+import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type
@@ -290,6 +291,11 @@ docTracers _ = do
                 namesForLocalErrorPolicy
                 severityLocalErrorPolicy
                 trBase
+    apTr    <-  mkStandardTracer
+                "AcceptPolicy"
+                namesForAcceptPolicy
+                severityAcceptPolicy
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -318,6 +324,7 @@ docTracers _ = do
     configureTracers emptyTraceConfig docDNSResolver          [dnsrTr]
     configureTracers emptyTraceConfig docErrorPolicy          [errpTr]
     configureTracers emptyTraceConfig docLocalErrorPolicy     [lerrpTr]
+    configureTracers emptyTraceConfig docAcceptPolicy         [apTr]
 
     cdbmTrDoc    <- documentMarkdown
                 (docChainDBTraceEvent :: Documented
@@ -457,6 +464,10 @@ docTracers _ = do
                     (docLocalErrorPolicy :: Documented
                       (WithAddr LocalAddress ErrorPolicyTrace))
                     [lerrpTr]
+    apTrDoc     <-  documentMarkdown
+                    (docAcceptPolicy :: Documented
+                       NtN.AcceptConnectionsPolicyTrace)
+                    [apTr]
 
     let bl = cdbmTrDoc
             ++ cscTrDoc
@@ -487,6 +498,7 @@ docTracers _ = do
             ++ dnsrTrDoc
             ++ errpTrDoc
             ++ lerrpTrDoc
+            ++ apTrDoc
 
     res <- buildersToText bl
     T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
@@ -660,6 +672,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
                 namesForLocalErrorPolicy
                 severityLocalErrorPolicy
                 trBase
+    apTr    <-  mkStandardTracer
+                "AcceptPolicy"
+                namesForAcceptPolicy
+                severityAcceptPolicy
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -688,6 +705,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     configureTracers emptyTraceConfig docDNSResolver          [dnsrTr]
     configureTracers emptyTraceConfig docErrorPolicy          [errpTr]
     configureTracers emptyTraceConfig docLocalErrorPolicy     [lerrpTr]
+    configureTracers emptyTraceConfig docAcceptPolicy         [apTr]
 
     pure Tracers
       { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -726,7 +744,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , dnsResolverTracer = Tracer (traceWith dnsrTr)
       , errorPolicyTracer = Tracer (traceWith errpTr)
       , localErrorPolicyTracer = Tracer (traceWith lerrpTr)
-      , acceptPolicyTracer = nullTracer
+      , acceptPolicyTracer = Tracer (traceWith apTr)
       , muxTracer = nullTracer
       , muxLocalTracer = nullTracer
       , handshakeTracer = nullTracer

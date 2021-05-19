@@ -382,3 +382,15 @@ instance Show addr => LogFormatting (NtN.WithAddr addr NtN.ErrorPolicyTrace) whe
                , "address" .= show addr
                , "event" .= show ev ]
     forHuman (NtN.WithAddr addr ev) = "With address " <> showT addr <> ". " <> showT ev
+
+instance LogFormatting NtN.AcceptConnectionsPolicyTrace where
+    forMachine _dtal (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
+      mkObject [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
+               , "delay" .= show delay
+               , "numberOfConnection" .= show numOfConnections
+               ]
+    forMachine _dtal (NtN.ServerTraceAcceptConnectionHardLimit softLimit) =
+      mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
+               , "softLimit" .= show softLimit
+               ]
+    forHuman m = showT m
