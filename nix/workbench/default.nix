@@ -123,7 +123,7 @@ let
     }
 
     function locli() {
-      ${exeCabalOp "exec" "locli"} "$@"
+      ${exeCabalOp "run" "locli"} "$@"
     }
 
     export -f cardano-cli cardano-node cardano-topology locli
