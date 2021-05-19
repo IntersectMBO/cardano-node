@@ -23,6 +23,7 @@ import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.IP as IP
 import qualified Data.Set as Set
+import qualified Data.Map.Strict as Map
 import           Data.Text (pack)
 
 import           Network.TypedProtocol.Core (ClientHasAgency,
@@ -48,7 +49,8 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..))
+import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
+                     ConnectionManagerCounters (..))
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -397,8 +399,8 @@ instance HasPrivacyAnnotation (DebugPeerSelection addr conn)
 instance HasSeverityAnnotation (DebugPeerSelection addr conn) where
   getSeverityAnnotation _ = Debug
 
-instance HasPrivacyAnnotation (PeerSelectionActionsTrace Socket.SockAddr)
-instance HasSeverityAnnotation (PeerSelectionActionsTrace Socket.SockAddr) where
+instance HasPrivacyAnnotation (PeerSelectionActionsTrace SockAddr)
+instance HasSeverityAnnotation (PeerSelectionActionsTrace SockAddr) where
   getSeverityAnnotation ev =
    case ev of
      PeerStatusChanged {}       -> Info
@@ -441,6 +443,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionTimeWait {}       -> Debug
       TrConnectionTimeWaitDone {}   -> Debug
       TrConnectionManagerCounters {} -> Info
+      TrState {}                    -> Info
 
 instance HasPrivacyAnnotation (ServerTrace addr)
 instance HasSeverityAnnotation (ServerTrace addr) where
@@ -588,22 +591,22 @@ instance Transformable Text IO TracePublicRootPeers where
 instance HasTextFormatter TracePublicRootPeers where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO (TracePeerSelection Socket.SockAddr) where
+instance Transformable Text IO (TracePeerSelection SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (TracePeerSelection Socket.SockAddr) where
+instance HasTextFormatter (TracePeerSelection SockAddr) where
   formatText a _ = pack (show a)
 
 instance Show conn
-      => Transformable Text IO (DebugPeerSelection Socket.SockAddr conn) where
+      => Transformable Text IO (DebugPeerSelection SockAddr conn) where
   trTransformer = trStructuredText
-instance HasTextFormatter (DebugPeerSelection Socket.SockAddr conn) where
+instance HasTextFormatter (DebugPeerSelection SockAddr conn) where
   -- One can only change what is logged with respect to verbosity using json
   -- format.
   formatText _ obj = pack (show obj)
 
-instance Transformable Text IO (PeerSelectionActionsTrace Socket.SockAddr) where
+instance Transformable Text IO (PeerSelectionActionsTrace SockAddr) where
   trTransformer = trStructuredText
-instance HasTextFormatter (PeerSelectionActionsTrace Socket.SockAddr) where
+instance HasTextFormatter (PeerSelectionActionsTrace SockAddr) where
   formatText a _ = pack (show a)
 
 instance Transformable Text IO PeerSelectionCounters where
@@ -611,7 +614,9 @@ instance Transformable Text IO PeerSelectionCounters where
 instance HasTextFormatter PeerSelectionCounters where
   formatText a _ = pack (show a)
 
-instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
+instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
+          Aeson.ToJSON addr
+         )
       => Transformable Text IO (ConnectionManagerTrace
                                  addr
                                  (ConnectionHandlerTrace versionNumber agreedOptions)) where
@@ -941,9 +946,13 @@ instance ToObject NtN.HandshakeTr where
 
 
 instance ToObject LocalAddress where
-    toObject _verb (LocalAddress path) =
-      mkObject [ "path" .= String (pack path) ]
+    toObject _verb addr =
+      mkObject [ "path" .= toJSON addr ]
 
+instance ToJSON LocalAddress where
+    toJSON (LocalAddress path) = String (pack path)
+
+instance Aeson.ToJSONKey LocalAddress where
 
 instance ToObject NtN.AcceptConnectionsPolicyTrace where
   toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
@@ -1067,10 +1076,33 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
 
 
 -- TODO: ouroboros-network should provide a newtype wrapper for 'SockAddr'.
-instance ToObject Socket.SockAddr where
-    toObject _verb sockAddr =
-      mkObject [ "sockAddr" .= String (pack $ show sockAddr) ]
+instance ToObject SockAddr where
+    toObject _verb (SockAddrInet port addr) =
+        let ip = IP.fromHostAddress addr in
+        mkObject [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    toObject _verb (SockAddrInet6 port _ addr _) =
+        let ip = IP.fromHostAddress6 addr in
+        mkObject [ "addr" .= show ip
+                 , "port" .= show port
+                 ]
+    toObject _verb (SockAddrUnix path) =
+        mkObject [ "path" .= show path ]
 
+instance Aeson.ToJSON SockAddr where
+    toJSON (SockAddrInet port addr) =
+        let ip = IP.fromHostAddress addr in
+        Aeson.object [ "addr" .= show ip
+                     , "port" .= show port
+                     ]
+    toJSON (SockAddrInet6 port _ addr _) =
+        let ip = IP.fromHostAddress6 addr in
+        Aeson.object [ "addr" .= show ip
+                     , "port" .= show port
+                     ]
+    toJSON (SockAddrUnix path) =
+        Aeson.object [ "path" .= show path ]
 
 instance (Show txid, Show tx)
       => ToObject (TraceTxSubmissionOutbound txid tx) where
@@ -1206,10 +1238,42 @@ instance ToObject TracePublicRootPeers where
     mkObject [ "kind" .= String "TracePublicRootPeers"
              , "event" .= show ev ]
 
-instance ToObject (TracePeerSelection Socket.SockAddr) where
+instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb ev =
     mkObject [ "kind" .= String "TracePeerSelection"
              , "event" .= show ev ]
+
+instance Aeson.ToJSON AbstractState where
+    toJSON UnknownConnectionSt =
+      Aeson.object [ "kind" .= String "UnknownConnectionSt" ]
+    toJSON ReservedOutboundSt =
+      Aeson.object [ "kind" .= String "ReservedOutboundSt" ]
+    toJSON (UnnegotiatedSt provenance) =
+      Aeson.object [ "kind" .= String "UnnegotiatedSt"
+                   , "provenance" .= String (pack . show $ provenance)
+                   ]
+    toJSON (InboundIdleSt dataFlow) =
+      Aeson.object [ "kind" .= String "InboundIdleSt"
+                   , "dataFlow" .= String (pack . show $ dataFlow)
+                   ]
+    toJSON (InboundSt dataFlow) =
+      Aeson.object [ "kind" .= String "InboundSt"
+                   , "dataFlow" .= String (pack . show $ dataFlow)
+                   ]
+    toJSON OutboundUniSt =
+      Aeson.object [ "kind" .= String "OutboundUniSt" ]
+    toJSON (OutboundDupSt timeoutExpired) =
+      Aeson.object [ "kind" .= String "OutboundDupSt"
+                   , "timeoutState" .= String (pack . show $ timeoutExpired)
+                   ]
+    toJSON DuplexSt =
+      Aeson.object [ "kind" .= String "DuplexSt" ]
+    toJSON WaitRemoteIdleSt =
+      Aeson.object [ "kind" .= String "WaitRemoteIdleSt" ]
+    toJSON TerminatingSt =
+      Aeson.object [ "kind" .= String "TerminatingSt" ]
+    toJSON TerminatedSt =
+      Aeson.object [ "kind" .= String "TerminatedSt" ]
 
 
 peerSelectionTargetsToObject :: PeerSelectionTargets -> Value
@@ -1225,7 +1289,7 @@ peerSelectionTargetsToObject
                , "active" .= targetNumberOfActivePeers
                ]
 
-instance Show peerConn => ToObject (DebugPeerSelection Socket.SockAddr peerConn) where
+instance Show peerConn => ToObject (DebugPeerSelection SockAddr peerConn) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers })
       | verb <= NormalVerbosity =
@@ -1246,7 +1310,7 @@ instance Show peerConn => ToObject (DebugPeerSelection Socket.SockAddr peerConn)
              , "peerSelectionState" .= String (pack $ show ev)
              ]
 
-instance ToObject (PeerSelectionActionsTrace Socket.SockAddr) where
+instance ToObject (PeerSelectionActionsTrace SockAddr) where
   toObject _verb ev =
     mkObject [ "kind" .= String "PeerSelectionAction"
              , "event" .= show ev ]
@@ -1256,7 +1320,8 @@ instance ToObject PeerSelectionCounters where
     mkObject [ "kind" .= String "PeerSelectionCounters"
              , "event" .= show ev ]
 
-instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
+instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
+          ToJSON addr)
       => ToObject (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
   toObject verb ev =
     case ev of
@@ -1375,6 +1440,16 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr)
         mkObject
           [ "kind"  .= String "ConnectionManagerCounters"
           , "state" .= toJSON cmCounters
+          ]
+      TrState cmState ->
+        mkObject
+          [ "kind"  .= String "ConnectionManagerState"
+          , "state" .= Aeson.listValue (\(addr, connState) ->
+                                         Aeson.object
+                                           [ "remoteAddress"   .= toJSON addr
+                                           , "connectionState" .= toJSON connState
+                                           ])
+                                       (Map.toList cmState)
           ]
 
 
