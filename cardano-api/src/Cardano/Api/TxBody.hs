@@ -878,6 +878,9 @@ data TxBody era where
           -- witnesses set, since they need to be known when building the body.
        -> [Ledger.Script (ShelleyLedgerEra era)]
 
+          --TODO: we will probably want to or need to put the Alonzo data and
+          -- redeemers in the tx body here
+
           -- The 'Ledger.AuxiliaryData' consists of one or several things,
           -- depending on era:
           -- + transaction metadata  (in Shelley and later)
