@@ -22,7 +22,8 @@ import           Prelude (map)
 #endif
 
 import           Control.Monad
-import           Data.Aeson ((.=))
+import           Data.Aeson ((.=), Value)
+import           Data.Time.Clock
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -35,9 +36,11 @@ import           Data.String
 import           GHC.Float
 import           GHC.Num
 import           GHC.Real
+import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
+import           System.IO (FilePath)
 import           Text.Read
 import           Text.Show
 
@@ -97,6 +100,35 @@ defaultTestnetOptions = TestnetOptions
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
+rewriteGenesisSpec :: TestnetOptions -> UTCTime -> FilePath -> Value -> Value
+rewriteGenesisSpec testnetOptions startTime costModelFile =
+  rewriteObject
+    $ HM.insert "adaPerUTxOWord" (J.toJSON @Int 42)
+    . HM.insert "adaPerUTxOWord" (J.toJSON @Int 42)
+    . HM.insert "executionPrices"
+      ( J.object
+        [ ("prMem", J.toJSON @Int 1)
+        , ("prSteps", J.toJSON @Int 1)
+        ]
+      )
+    . HM.insert "maxTxExUnits"
+      ( J.object
+        [ ("exUnitsMem", J.toJSON @Int 1)
+        , ("exUnitsSteps", J.toJSON @Int 1)
+        ]
+      )
+    . HM.insert "maxBlockExUnits"
+      ( J.object
+        [ ("exUnitsMem", J.toJSON @Int 1)
+        , ("exUnitsSteps", J.toJSON @Int 1)
+        ]
+      )
+    . HM.insert "maxValueSize" (J.toJSON @Int 42)
+    . HM.insert "maxMultiAssetSize" (J.toJSON @Int 42)
+    . HM.insert "costModel" (J.toJSON @String costModelFile)
+    . HM.insert "collateralPercentage" (J.toJSON @Int 1)
+    . HM.insert "maxCollateralInputs" (J.toJSON @Int 1)
+
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
   -- This script sets up a cluster that starts out in Byron, and can transition to Shelley.
@@ -150,6 +182,11 @@ testnet testnetOptions H.Conf {..} = do
   let fundsPerGenesisAddress = initSupply `div` numBftNodes testnetOptions
   let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
   let userPoolN = poolNodesN
+  let costModelFile = tempAbsPath </> "cost-model.json"
+
+  H.copyFile
+    (base </> "configuration/cardano/alonzo/shelley_qa_cost-model.json")
+    costModelFile
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodes)
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
@@ -369,6 +406,8 @@ testnet testnetOptions H.Conf {..} = do
 #endif
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "shelley"
+
+  H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.json") (rewriteGenesisSpec testnetOptions startTime costModelFile)
 
   -- Generated genesis.json
   H.cat $ tempAbsPath </> "shelley/genesis.json"

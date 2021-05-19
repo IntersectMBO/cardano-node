@@ -132,8 +132,11 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
-    showsPrec _ (ShelleyBlock ShelleyBasedEraAlonzo _) =
-      error "Show (Block era): Alonzo not implemented yet"
+    showsPrec p (ShelleyBlock ShelleyBasedEraAlonzo block) =
+      showParen (p >= 11)
+        ( showString "ShelleyBlock ShelleyBasedEraAlonzo "
+        . showsPrec 11 block
+        )
 
 getBlockTxs :: forall era . Block era -> [Tx era]
 getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =

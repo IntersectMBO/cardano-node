@@ -336,7 +336,7 @@ genTxOutValue era =
     ShelleyEra -> TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace
     AllegraEra -> TxOutAdaOnly AdaOnlyInAllegraEra <$> genLovelace
     MaryEra -> TxOutValue MultiAssetInMaryEra <$> genValueForTxOut
-    AlonzoEra -> panic "genTxOutValue: Alonzo not implemented yet"
+    AlonzoEra -> TxOutValue MultiAssetInAlonzoEra <$> genValueForTxOut
 
 genTxOut :: CardanoEra era -> Gen (TxOut era)
 genTxOut era =
@@ -351,7 +351,10 @@ genTxOut era =
       TxOut
         <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> genTxOutValue era
-    AlonzoEra -> panic "genTxOut: Alonzo not implemented yet"
+    AlonzoEra ->
+      TxOut
+        <$> (shelleyAddressInEra <$> genAddressShelley)
+        <*> genTxOutValue era
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo

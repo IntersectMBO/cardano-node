@@ -57,5 +57,4 @@
     "maxValueSize": 42,
     "maxMultiAssetSize": 42,
     "costModel": "configuration/cardano/alonzo/shelley_qa_cost-model.json"
-
 }

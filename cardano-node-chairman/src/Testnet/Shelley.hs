@@ -106,6 +106,28 @@ rewriteGenesisSpec testnetOptions startTime =
     . HM.insert "slotLength" (J.toJSON @Double (slotLength testnetOptions))
     . HM.insert "maxLovelaceSupply" (J.toJSON @Integer (maxLovelaceSupply testnetOptions))
     . HM.insert "systemStart" (J.toJSON @String (DTC.formatIso8601 startTime))
+    . HM.insert "adaPerUTxOWord" (J.toJSON @Int 42)
+    . HM.insert "executionPrices"
+      ( object
+        [ ("prMem", J.toJSON @Int 42)
+        , ("prSteps", J.toJSON @Int 42)
+        ]
+      )
+    . HM.insert "maxTxExUnits"
+      ( object
+        [ ("exUnitsMem", J.toJSON @Int 42)
+        , ("exUnitsSteps", J.toJSON @Int 42)
+        ]
+      )
+    . HM.insert "maxBlockExUnits"
+      ( object
+        [ ("exUnitsMem", J.toJSON @Int 42)
+        , ("exUnitsSteps", J.toJSON @Int 42)
+        ]
+      )
+    . HM.insert "maxValueSize" (J.toJSON @Int 42)
+    . HM.insert "maxMultiAssetSize" (J.toJSON @Int 42)
+    . HM.insert "costModel" (J.toJSON (HM.empty @String @Value))
     . flip HM.adjust "protocolParams"
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )

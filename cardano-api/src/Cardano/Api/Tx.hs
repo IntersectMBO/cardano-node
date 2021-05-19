@@ -258,8 +258,7 @@ instance Eq (KeyWitness era) where
         ShelleyBasedEraShelley -> wA == wB
         ShelleyBasedEraAllegra -> wA == wB
         ShelleyBasedEraMary    -> wA == wB
-        ShelleyBasedEraAlonzo  ->
-          error "Eq (KeyWitness era): Alonzo not implemented yet"
+        ShelleyBasedEraAlonzo  -> wA == wB
 
     (==) (ShelleyKeyWitness era wA)
          (ShelleyKeyWitness _   wB) =
@@ -267,8 +266,7 @@ instance Eq (KeyWitness era) where
         ShelleyBasedEraShelley -> wA == wB
         ShelleyBasedEraAllegra -> wA == wB
         ShelleyBasedEraMary    -> wA == wB
-        ShelleyBasedEraAlonzo  ->
-          error "Eq (KeyWitness era): Alonzo not implemented yet"
+        ShelleyBasedEraAlonzo  -> wA == wB
 
     (==) _ _ = False
 
