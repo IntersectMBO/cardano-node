@@ -30,7 +30,7 @@ import           Cardano.Slotting.Slot (fromWithOrigin)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash (..),
                    ForgeStateUpdateError, Header, RealPoint, getHeader, headerPoint, realPointHash,
-                   realPointSlot)
+                   realPointSlot, blockNo, blockPrevHash, pointHash)
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -40,7 +40,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, 
                    LedgerSupportsMempool, TxId, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
-import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server (TraceBlockFetchServerEvent)
+import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -216,7 +216,8 @@ instance (LedgerSupportsProtocol blk)
   formatText _ = pack . show . toList
 
 
-instance Transformable Text IO (TraceBlockFetchServerEvent blk) where
+instance ConvertRawHash blk
+      => Transformable Text IO (TraceBlockFetchServerEvent blk) where
   trTransformer = trStructuredText
 
 
@@ -963,9 +964,11 @@ instance ( ConvertRawHash blk
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
 
-instance ToObject (TraceBlockFetchServerEvent blk) where
-  toObject _verb _ =
-    mkObject [ "kind" .= String "TraceBlockFetchServerEvent" ]
+instance ConvertRawHash blk => ToObject (TraceBlockFetchServerEvent blk) where
+  toObject _verb (TraceBlockFetchServerSendBlock blk) =
+    mkObject [ "kind"  .= String "TraceBlockFetchServerSendBlock"
+             , "block" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) $ pointHash blk)
+             ]
 
 
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
@@ -1141,10 +1144,13 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceNodeIsLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
-  toObject _verb (TraceForgedBlock slotNo _ _ _) =
+  toObject _verb (TraceForgedBlock slotNo _ blk _) =
     mkObject
-      [ "kind" .= String "TraceForgedBlock"
-      , "slot" .= toJSON (unSlotNo slotNo)
+      [ "kind"      .= String "TraceForgedBlock"
+      , "slot"      .= toJSON (unSlotNo slotNo)
+      , "block"     .= String (renderHeaderHash (Proxy @blk) $ blockHash blk)
+      , "blockNo"   .= toJSON (unBlockNo $ blockNo blk)
+      , "blockPrev" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) $ blockPrevHash blk)
       ]
   toObject _verb (TraceDidntAdoptBlock slotNo _) =
     mkObject
