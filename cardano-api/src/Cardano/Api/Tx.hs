@@ -187,8 +187,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
         ShelleyBasedEraShelley -> serialiseShelleyBasedTx tx
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTx tx
         ShelleyBasedEraMary    -> serialiseShelleyBasedTx tx
-        ShelleyBasedEraAlonzo  ->
-          error "serialiseShelleyBasedTx: Alonzo era not implemented yet"
+        ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTx tx
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -204,7 +203,8 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
                         (ShelleyTx ShelleyBasedEraAllegra) bs
         MaryEra    -> deserialiseShelleyBasedTx
                         (ShelleyTx ShelleyBasedEraMary) bs
-        AlonzoEra  -> error "deserialiseFromCBOR: Alonzo era not implemented yet"
+        AlonzoEra  -> deserialiseShelleyBasedTx
+                        (ShelleyTx ShelleyBasedEraAlonzo) bs
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
@@ -294,8 +294,10 @@ instance Show (KeyWitness era) where
         showString "ShelleyBootstrapWitness ShelleyBasedEraMary "
       . showsPrec 11 tx
 
-    showsPrec _ (ShelleyBootstrapWitness ShelleyBasedEraAlonzo _) =
-      error "Show (KeyWitness era): Alonzo era not implemented yet"
+    showsPrec p (ShelleyBootstrapWitness ShelleyBasedEraAlonzo tx) =
+      showParen (p >= 11) $
+        showString "ShelleyBootstrapWitness ShelleyBasedEraAlonzo "
+      . showsPrec 11 tx
 
     showsPrec p (ShelleyKeyWitness ShelleyBasedEraShelley tx) =
       showParen (p >= 11) $
@@ -312,8 +314,10 @@ instance Show (KeyWitness era) where
         showString "ShelleyKeyWitness ShelleyBasedEraMary "
       . showsPrec 11 tx
 
-    showsPrec _ (ShelleyKeyWitness ShelleyBasedEraAlonzo _) =
-      error "Show (KeyWitness era): Alonzo era not implemented yet"
+    showsPrec p (ShelleyKeyWitness ShelleyBasedEraAlonzo tx) =
+      showParen (p >= 11) $
+        showString "ShelleyKeyWitness ShelleyBasedEraAlonzo "
+      . showsPrec 11 tx
 
 
 instance HasTypeProxy era => HasTypeProxy (KeyWitness era) where
@@ -360,7 +364,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
         ShelleyEra -> decodeShelleyBasedWitness ShelleyBasedEraShelley bs
         AllegraEra -> decodeShelleyBasedWitness ShelleyBasedEraAllegra bs
         MaryEra    -> decodeShelleyBasedWitness ShelleyBasedEraMary    bs
-        AlonzoEra  -> error "decodeShelleyBasedWitness: Alonzo era not implemented yet"
+        AlonzoEra  -> decodeShelleyBasedWitness ShelleyBasedEraAlonzo  bs
 
 
 encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
@@ -577,7 +581,7 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _ _) sk =
       ShelleyBasedEraMary    ->
         makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
       ShelleyBasedEraAlonzo  ->
-        error "makeShelleyBootstrapWitness: Alonzo era not implemented yet"
+        makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
 
 makeShelleyBasedBootstrapWitness :: forall era.
                                     (Ledger.HashAnnotated
@@ -686,8 +690,7 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _ _) =
       ShelleyBasedEraShelley -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraAlonzo  ->
-        error "makeShelleyKeyWitness: Alonzo era not implemented yet"
+      ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
   where
     makeShelleyBasedKeyWitness :: Shelley.ShelleyBased ledgerera
                                => ShelleyLedgerEra era ~ ledgerera
