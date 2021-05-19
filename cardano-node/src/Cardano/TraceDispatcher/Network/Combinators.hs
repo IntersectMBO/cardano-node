@@ -47,6 +47,9 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityLocalErrorPolicy
   , namesForLocalErrorPolicy
 
+  , severityAcceptPolicy
+  , namesForAcceptPolicy
+
   ) where
 
 
@@ -58,10 +61,11 @@ import qualified Network.Socket as Socket
 import           Ouroboros.Network.Block (Point, Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
-import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
-                     WithAddr (..))
+import           Ouroboros.Network.NodeToNode (DnsTrace (..),
+                     ErrorPolicyTrace (..), SubscriptionTrace (..),
+                     WithAddr (..), WithIPList (..), TraceSendRecv(..))
+import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..),
                      Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
@@ -72,11 +76,8 @@ import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello,
                      Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
-import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
-                     WithDomainName (..))
-import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (ConnectResult (..),
-                     SubscriberError, SubscriptionTrace (..))
+                     SubscriberError)
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
@@ -515,14 +516,14 @@ namesForIPSubscription ::
 namesForIPSubscription(WithIPList _ _ e) = "IP" : namesForSubscription e
 
 namesForDNSSubscription ::
-     WithDomainName (SubscriptionTrace Socket.SockAddr)
+     NtN.WithDomainName (SubscriptionTrace Socket.SockAddr)
   -> [Text]
-namesForDNSSubscription(WithDomainName _ e) = "DNS" : namesForSubscription e
+namesForDNSSubscription(NtN.WithDomainName _ e) = "DNS" : namesForSubscription e
 
 severityDNSSubscription ::
-     WithDomainName (SubscriptionTrace Socket.SockAddr)
+     NtN.WithDomainName (SubscriptionTrace Socket.SockAddr)
   -> SeverityS
-severityDNSSubscription WithDomainName {..} = case wdnEvent of
+severityDNSSubscription NtN.WithDomainName {..} = case wdnEvent of
     SubscriptionTraceConnectStart {} -> Notice
     SubscriptionTraceConnectEnd {} -> Notice
     SubscriptionTraceConnectException _ e ->
@@ -548,8 +549,8 @@ severityDNSSubscription WithDomainName {..} = case wdnEvent of
     SubscriptionTraceAllocateSocket {} -> Debug
     SubscriptionTraceCloseSocket {} -> Debug
 
-severityDNSResolver :: WithDomainName DnsTrace -> SeverityS
-severityDNSResolver (WithDomainName _ ev) = case ev of
+severityDNSResolver :: NtN.WithDomainName DnsTrace -> SeverityS
+severityDNSResolver (NtN.WithDomainName _ ev) = case ev of
     DnsTraceLookupException {}  -> Error
     DnsTraceLookupAError {}     -> Error
     DnsTraceLookupAAAAError {}  -> Error
@@ -558,8 +559,8 @@ severityDNSResolver (WithDomainName _ ev) = case ev of
     DnsTraceLookupAResult {}    -> Debug
     DnsTraceLookupAAAAResult {} -> Debug
 
-namesForDNSResolver :: WithDomainName DnsTrace -> [Text]
-namesForDNSResolver (WithDomainName _ ev) = case ev of
+namesForDNSResolver :: NtN.WithDomainName DnsTrace -> [Text]
+namesForDNSResolver (NtN.WithDomainName _ ev) = case ev of
     DnsTraceLookupException {}  -> ["LookupException"]
     DnsTraceLookupAError {}     -> ["LookupAError"]
     DnsTraceLookupAAAAError {}  -> ["LookupAAAAError"]
@@ -619,3 +620,13 @@ namesForLocalErrorPolicy (WithAddr _ ev) = case ev of
     ErrorPolicyUnhandledApplicationException {} -> ["UnhandledApplicationException"]
     ErrorPolicyUnhandledConnectionException {}  -> ["UnhandledConnectionException"]
     ErrorPolicyAcceptException {}               -> ["AcceptException"]
+
+severityAcceptPolicy :: NtN.AcceptConnectionsPolicyTrace -> SeverityS
+severityAcceptPolicy NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
+severityAcceptPolicy NtN.ServerTraceAcceptConnectionHardLimit {}    = Warning
+
+namesForAcceptPolicy :: NtN.AcceptConnectionsPolicyTrace -> [Text]
+namesForAcceptPolicy NtN.ServerTraceAcceptConnectionRateLimiting {} =
+    ["ConectionRateLimiting"]
+namesForAcceptPolicy NtN.ServerTraceAcceptConnectionHardLimit {} =
+    ["ConnectionHardLimit"]
