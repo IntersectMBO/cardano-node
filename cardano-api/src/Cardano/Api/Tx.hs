@@ -336,24 +336,13 @@ pattern AsShelleyWitness = AsKeyWitness AsShelleyEra
 instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
     serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
 
-    serialiseToCBOR (ShelleyKeyWitness era wit) =
+    serialiseToCBOR (ShelleyKeyWitness _era wit) =
       CBOR.serializeEncoding' $
-      case era of
-        ShelleyBasedEraShelley -> encodeShelleyBasedKeyWitness wit
-        ShelleyBasedEraAllegra -> encodeShelleyBasedKeyWitness wit
-        ShelleyBasedEraMary    -> encodeShelleyBasedKeyWitness wit
-        ShelleyBasedEraAlonzo  ->
-          error "serialiseToCBOR: Alonzo era not implemented yet"
+      encodeShelleyBasedKeyWitness wit
 
-    serialiseToCBOR (ShelleyBootstrapWitness era wit) =
+    serialiseToCBOR (ShelleyBootstrapWitness _era wit) =
       CBOR.serializeEncoding' $
-      case era of
-        ShelleyBasedEraShelley -> encodeShelleyBasedBootstrapWitness wit
-        ShelleyBasedEraAllegra -> encodeShelleyBasedBootstrapWitness wit
-        ShelleyBasedEraMary    -> encodeShelleyBasedBootstrapWitness wit
-        ShelleyBasedEraAlonzo  ->
-          error "serialiseToCBOR: Alonzo era not implemented yet"
-
+      encodeShelleyBasedBootstrapWitness wit
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
