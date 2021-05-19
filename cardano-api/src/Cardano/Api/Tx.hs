@@ -120,7 +120,7 @@ data Tx era where
 
      ShelleyTx
        :: ShelleyBasedEra era
-       -> Shelley.Tx (ShelleyLedgerEra era)
+       -> Ledger.Tx (ShelleyLedgerEra era)
        -> Tx era
 
 -- The GADT in the ShelleyTx case requires a custom instance
@@ -423,7 +423,7 @@ getTxBody (ShelleyTx era tx) =
                         ShelleyLedgerEra era ~ ledgerera
                      => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
                      => Shelley.ShelleyBased ledgerera
-                     => Shelley.Tx ledgerera
+                     => Ledger.Tx ledgerera
                      -> TxBody era
     getShelleyTxBody Shelley.Tx {
                        Shelley.body       = txbody,
@@ -458,7 +458,7 @@ getTxWitnesses (ShelleyTx era tx) =
                           => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
                           => ToCBOR (Ledger.Witnesses ledgerera)
                           => Shelley.ShelleyBased ledgerera
-                          => Shelley.Tx ledgerera
+                          => Ledger.Tx ledgerera
                           -> [KeyWitness era]
     getShelleyTxWitnesses Shelley.Tx {
                             Shelley.wits =
