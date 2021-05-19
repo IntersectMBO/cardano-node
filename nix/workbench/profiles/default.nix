@@ -1,5 +1,5 @@
 { pkgs
-, runCommand, runWorkbench, runJq, workbench, writeText
+, runCommand, runWorkbenchJqOnly, runJq, workbench, writeText
 
 ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
 , backend
@@ -14,7 +14,7 @@
 }:
 
 let
-  baseJSON = runWorkbench "profile-${profileName}.json"
+  baseJSON = runWorkbenchJqOnly "profile-${profileName}.json"
                           "profile get ${profileName}";
   JSON =
     if profileOverride == {}
@@ -41,11 +41,11 @@ let
         ./topology.nix   { inherit workbench profile; };
 
       node-specs  = pkgs.callPackage
-        ./node-specs.nix { inherit runWorkbench profile backend; };
+        ./node-specs.nix { inherit runWorkbenchJqOnly profile backend; };
 
      inherit (pkgs.callPackage
                ./node-services.nix
-               { inherit runJq runWorkbench backend environment profile; })
+               { inherit runJq backend environment profile; })
         node-services;
     };
 
