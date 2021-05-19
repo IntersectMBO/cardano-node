@@ -28,10 +28,10 @@
 , linuxBuild ? builtins.elem "x86_64-linux" supportedSystems
 
 # Build for macos
-, macosBuild ? builtins.elem "x86_64-darwin" supportedSystems
+# , macosBuild ? builtins.elem "x86_64-darwin" supportedSystems
 
 # Cross compilation to Windows is currently only supported on linux.
-, windowsBuild ? builtins.elem "x86_64-linux" supportedCrossSystems
+#, windowsBuild ? builtins.elem "x86_64-linux" supportedCrossSystems
 
 # A Hydra option
 , scrubJobs ? true
@@ -49,7 +49,7 @@ let
   linuxRelease = (import pkgs.iohkNix.release-lib) {
     inherit pkgs;
     supportedSystems = [ "x86_64-linux" ];
-    supportedCrossSystems = filter (s: s == "x86_64-linux" && windowsBuild) supportedCrossSystems;
+    supportedCrossSystems = filter (s: s == "x86_64-linux") supportedCrossSystems;
     inherit scrubJobs projectArgs;
     packageSet = import cardano-node;
     gitrev = cardano-node.rev;
@@ -57,7 +57,7 @@ let
   macosRelease = (import pkgs.iohkNix.release-lib) {
     inherit pkgs;
     supportedSystems = [ "x86_64-darwin" ];
-    supportedCrossSystems = filter (s: s == "x86_64-darwin" && windowsBuild) supportedCrossSystems;
+    supportedCrossSystems = filter (s: s == "x86_64-darwin") supportedCrossSystems;
     inherit scrubJobs projectArgs;
     packageSet = import cardano-node;
     gitrev = cardano-node.rev;
@@ -70,9 +70,11 @@ let
   makeScripts = cluster: let
     getScript = name: optionalAttrs linuxBuild {
       x86_64-linux = archs.x86_64-linux.scripts.${cluster}.${name};
-    } // (optionalAttrs macosBuild {
-      x86_64-darwin = archs.x86_64-darwin.scripts.${cluster}.${name};
-    });
+    }
+    #// (optionalAttrs macosBuild {
+    #  x86_64-darwin = archs.x86_64-darwin.scripts.${cluster}.${name};
+    #})
+    ;
   in {
     node = getScript "node";
   };
@@ -140,7 +142,8 @@ let
     else value
   ) project;
 
-  inherit (systems.examples) mingwW64 musl64;
+  #inherit (systems.examples) mingwW64 musl64; Temporarily disabled until plutus can be cross compiled
+  inherit (systems.examples) musl64;
 
   inherit (pkgs.commonLib) sources nixpkgs;
 
@@ -166,25 +169,28 @@ let
       platform = "linux";
       exes = collectJobs jobs.linux.musl64.exes;
     };
-  })) // (optionalAttrs macosBuild (with macosRelease; {
-    macos =
-      let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
-        if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
-        (packagePlatforms project);
-      in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
-    cardano-node-macos = import ./nix/binary-release.nix {
-      inherit pkgs project;
-      platform = "macos";
-      exes = collectJobs jobs.macos.exes;
-    };
-  })) // (optionalAttrs windowsBuild (with windowsRelease; {
-    windows = mapTestOnCross mingwW64 (packagePlatformsCross (filterProject noCrossBuild project));
-    cardano-node-win64 = import ./nix/binary-release.nix {
-      inherit pkgs project;
-      platform = "win64";
-      exes = collectJobs jobs.windows.exes;
-    };
-  })) // extraBuilds // (linuxRelease.mkRequiredJob (concatLists [
+  }))
+  #// (optionalAttrs macosBuild (with macosRelease; {
+  #  macos =
+  #    let filteredBuilds = mapAttrsRecursiveCond (a: !(isList a)) (path: value:
+  #      if (any (p: take (length p) path == p) onlyBuildOnDefaultSystem) then filter (s: !(elem s nonDefaultBuildSystems)) value else value)
+  #      (packagePlatforms project);
+  #    in (mapTestOn (__trace (__toJSON filteredBuilds) filteredBuilds));
+  #  cardano-node-macos = import ./nix/binary-release.nix {
+  #    inherit pkgs project;
+  #    platform = "macos";
+  #    exes = collectJobs jobs.macos.exes;
+  #  }; # Temporarily disabled until Plutus can be cross compiled
+  #}))
+  #// (optionalAttrs windowsBuild (with windowsRelease; {
+  #  windows = mapTestOnCross mingwW64 (packagePlatformsCross (filterProject noCrossBuild project));
+  #  cardano-node-win64 = import ./nix/binary-release.nix {
+  #    inherit pkgs project;
+  #    platform = "win64";
+  #    exes = collectJobs jobs.windows.exes;
+  #  };
+  #})) //
+  // extraBuilds // (linuxRelease.mkRequiredJob (concatLists [
     # Linux builds:
     (optionals linuxBuild (concatLists [
       (collectJobs jobs.linux.native.checks)
@@ -194,16 +200,16 @@ let
       [ jobs.cardano-node-linux ]
     ]))
     # macOS builds:
-    (optionals macosBuild (concatLists [
-      (collectJobs jobs.macos.checks)
-      (collectJobs jobs.macos.nixosTests)
-      (collectJobs jobs.macos.benchmarks)
-      (collectJobs jobs.macos.exes)
-      [ jobs.cardano-node-macos ]
-    ]))
+  #  (optionals macosBuild (concatLists [
+  #    (collectJobs jobs.macos.checks)
+  #    (collectJobs jobs.macos.nixosTests)
+  #    (collectJobs jobs.macos.benchmarks)
+  #    (collectJobs jobs.macos.exes)
+  #    [ jobs.cardano-node-macos ]
+  #  ]))
     # Windows builds:
-    (optional windowsBuild jobs.cardano-node-win64)
-    (optionals windowsBuild (collectJobs jobs.windows.checks))
+    #(optional windowsBuild jobs.cardano-node-win64)
+    #(optionals windowsBuild (collectJobs jobs.windows.checks))
     # Default system builds (linux on hydra):
     (map (cluster: collectJobs jobs.${cluster}.scripts.node.${head supportedSystems}) environments)
     [ jobs.dockerImages ]

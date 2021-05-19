@@ -58,25 +58,27 @@
           crossSystem = systems.examples.musl64;
         }).cardanoNodeProject.flake {};
 
-        windowsFlake = (import nixpkgs { inherit system overlays config;
-          crossSystem = systems.examples.mingwW64;
-        }).cardanoNodeProject.flake {};
+        # Temporarily disabled until Plutus can be cross compiled
+        # windowsFlake = (import nixpkgs { inherit system overlays config;
+        #   crossSystem = systems.examples.mingwW64;
+        # }).cardanoNodeProject.flake {};
 
         scripts = flattenTree pkgs.scripts;
 
         checkNames = attrNames flake.checks;
 
         checks =
-          # Linux only checks:
-          optionalAttrs (system == "x86_64-linux") (
-            prefixNamesWith "windows/" (removeAttrs
-              (getAttrs checkNames windowsFlake.checks)
-              ["cardano-node-chairman:test:chairman-tests"]
-            )
-            // (prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests))
-          )
-          # checks run on default system only;
-          // optionalAttrs (system == defaultSystem) {
+          # Linux only checks: Temporarily disabled until Plutus can be cross compiled
+         # optionalAttrs (system == "x86_64-linux") (
+         #   prefixNamesWith "windows/" (removeAttrs
+         #     (getAttrs checkNames windowsFlake.checks)
+         #     ["cardano-node-chairman:test:chairman-tests"]
+         #   )
+         #   // (prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests))
+         # )
+         # # checks run on default system only;
+         # //
+           optionalAttrs (system == defaultSystem) {
             hlint = pkgs.callPackage pkgs.hlintCheck {
               inherit (pkgs.cardanoNodeProject.projectModule) src;
             };
@@ -95,14 +97,14 @@
         // (prefixNamesWith "static/"
               (mapAttrs pkgs.rewriteStatic (lazyCollectExe
                 (if system == "x86_64-darwin" then flake else muslFlake).packages)))
-        # Linux only packages:
-        // optionalAttrs (system == "x86_64-linux") (
-          prefixNamesWith "windows/" (lazyCollectExe windowsFlake.packages)
-          // {
-            "dockerImage/node" = pkgs.dockerImage;
-            "dockerImage/submit-api" = pkgs.submitApiDockerImage;
-          }
-        )
+        # Linux only packages: Temporarily disabled until Plutus can be cross compiled
+       #  // optionalAttrs (system == "x86_64-linux") (
+       #    prefixNamesWith "windows/" (lazyCollectExe windowsFlake.packages)
+       #    // {
+       #      "dockerImage/node" = pkgs.dockerImage;
+       #      "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+       #    }
+       # )
         # Add checks to be able to build them individually
         // (prefixNamesWith "checks/" checks);
 
