@@ -6,11 +6,16 @@ usage_backend() {
                      Given a run directory, print the node socket path
                        for 'cardano-cli'
 
-    start RUNDIR     Start an allocated run
-
     record-extended-env-config ENV-JSON [ENV-CONFIG-OPTS..]
                      Extend the environment JSON file with backend-specific
                        environment config
+
+    describe-run RUNDIR
+    pre-run-hook RUNDIR
+    lostream-fixup-jqargs RUNDIR
+    lostream-fixup-jqexpr
+
+    start-run RUNDIR Start an allocated run
 
     assert-is BACKEND-NAME
                      Check that the current backend is as expected
@@ -25,11 +30,15 @@ local op=${1:-$(usage_backend)} # No need to shift -- backends will use the op.
 case "${op}" in
     is-running )                 $WORKBENCH_BACKEND "$@";;
     get-node-socket-path )       $WORKBENCH_BACKEND "$@";;
-    wait-for-local-node-socket ) $WORKBENCH_BACKEND "$@";;
     record-extended-env-config ) $WORKBENCH_BACKEND "$@";;
     describe-run )               $WORKBENCH_BACKEND "$@";;
     pre-run-hook )               $WORKBENCH_BACKEND "$@";;
     start-run )                  $WORKBENCH_BACKEND "$@";;
+    lostream-fixup-jqargs )      $WORKBENCH_BACKEND "$@";;
+    lostream-fixup-jqexpr )      $WORKBENCH_BACKEND "$@";;
+
+    ## Handle non-generic calls:
+    passthrough | pass )         $WORKBENCH_BACKEND "$@";;
 
     assert-is )
         local usage="USAGE: wb run $op BACKEND-NAME"

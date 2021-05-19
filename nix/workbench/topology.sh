@@ -81,7 +81,7 @@ case "${op}" in
 
         args=(--slurpfile profile  "$profile_json"
               --slurpfile topology "$topo_dir"/topology-nixops.json
-              --null-input
+              --null-input --compact-output
              )
         jq ' $topology[0] as $topo
            | $topo.coreNodes
