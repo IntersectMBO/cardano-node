@@ -25,6 +25,7 @@ import qualified Data.Text.Encoding as Text
 import           Cardano.Api.Orphans ()
 
 import           Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Alonzo.Language (Language)
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
@@ -49,6 +50,8 @@ import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.Alonzo.Translation (AlonzoGenesis (..))
 import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
+
+import           Data.MemoBytes ( MemoBytes )
 
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
@@ -131,4 +134,28 @@ instance FromJSON Alonzo.AlonzoGenesis where
       }
 
 instance ToJSON AlonzoGenesis where
-  toJSON = panic "TODO: Fill me in"
+  toJSON v = object
+      [ "adaPerUTxOWord" .= adaPerUTxOWord v
+      , "costModels" .= costmdls v
+      , "executionPrices" .= prices v
+      , "maxTxExUnits" .= maxTxExUnits v
+      , "maxBlockExUnits" .= maxBlockExUnits v
+      , "maxValueSize" .= maxValSize v
+      , "collateralPercentage" .= collateralPercentage v
+      , "maxCollateralInputs" .= maxCollateralInputs v
+      ]
+
+instance ToJSON Alonzo.ExUnits
+
+instance ToJSON Language
+
+instance ToJSONKey Language
+
+instance ToJSON Alonzo.CostModel
+
+instance ToJSON Alonzo.Prices
+
+instance ToJSON (Data.MemoBytes.MemoBytes (Map Text Integer))
+
+instance ToJSON SBS.ShortByteString where
+  toJSON = toJSON . SBS.fromShort
