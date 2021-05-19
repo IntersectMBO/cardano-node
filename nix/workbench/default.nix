@@ -22,7 +22,7 @@ let
     then "cabal-exes+nix-wb"
     else "nix-exes+nix-wb";
 
-  workbench =
+  workbench' = tools:
     stdenv.mkDerivation {
       pname = "workbench";
 
@@ -38,14 +38,7 @@ let
 
       postFixup = ''
         wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode ${nixWbMode}" \
-        --prefix PATH ":" ${pkgs.lib.makeBinPath
-          [ git graphviz
-            jq
-            moreutils
-
-            cardano-cli
-            cardano-topology
-          ]}
+        --prefix PATH ":" ${pkgs.lib.makeBinPath tools}
       '';
 
       installPhase = ''
@@ -56,10 +49,25 @@ let
       dontStrip = true;
     };
 
+  workbench = workbench'
+    [ git graphviz
+      jq
+      moreutils
+
+      cardano-cli
+      cardano-topology
+    ];
+
   runWorkbench =
     name: command:
     runCommand name {} ''
       ${workbench}/bin/wb ${command} > $out
+    '';
+
+  runWorkbenchJqOnly =
+    name: command:
+    runCommand name {} ''
+      ${workbench' [jq]}/bin/wb ${command} > $out
     '';
 
   runJq =
@@ -146,7 +154,7 @@ let
     }:
     rec {
       profile-names-json =
-        runWorkbench "profile-names.json" "profiles list";
+        runWorkbenchJqOnly "profile-names.json" "profiles list";
 
       profile-names =
         __fromJSON (__readFile profile-names-json);
@@ -170,7 +178,7 @@ let
         pkgs.callPackage ./profiles
           { inherit
               pkgs
-              runWorkbench runJq workbench
+              runWorkbenchJqOnly runJq workbench
               backend
               environment
               profileName;
