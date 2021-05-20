@@ -330,6 +330,8 @@ validateTxOuts era = mapM toTxOutInAnyEra
                     -> ExceptT ShelleyTxCmdError IO (TxOut era)
     toTxOutInAnyEra (TxOutAnyEra addr val) = TxOut <$> toAddressInAnyEra addr
                                                    <*> toTxOutValueInAnyEra val
+                                                   <*> pure TxOutDatumHashNone
+                                                   --TODO ^^ allow tx out data
 
     toAddressInAnyEra :: AddressAny -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
     toAddressInAnyEra addrAny =
@@ -423,6 +425,8 @@ validateTxAuxScripts era files =
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
       return (TxAuxScripts AuxScriptsInMaryEra scripts)
+    Just AuxScriptsInAlonzoEra ->
+      panic "TODO: validateTxAuxScripts AuxScriptsInAlonzoEra"
 
 validateTxWithdrawals
   :: forall era. IsCardanoEra era
