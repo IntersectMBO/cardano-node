@@ -287,9 +287,9 @@ parseTxIxAtto = toEnum <$> Atto.decimal
 parseTxOut :: Parser (TxOut ByronEra)
 parseTxOut =
   option
-    ( uncurry TxOut
-      . first pAddressInEra
-      . second pLovelaceTxOut
+    ( (\(addr, lovelace) -> TxOut (pAddressInEra addr)
+                                  (pLovelaceTxOut lovelace)
+                                  TxOutDatumHashNone)
       <$> auto
     )
     $ long "txout"

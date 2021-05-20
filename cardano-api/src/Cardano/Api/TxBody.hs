@@ -306,12 +306,19 @@ fromShelleyTxIn (Shelley.TxIn txid txix) =
 
 data TxOut era = TxOut (AddressInEra era)
                        (TxOutValue era)
-                       --TODO: add the data hash here 'TxOutDataHash'
+                       (TxOutDatumHash era)
   deriving Generic
 
 instance IsCardanoEra era => ToJSON (TxOut era) where
-  toJSON (TxOut addr val) =
-    object ["address" .= serialiseAddressForTxOut addr, "value" .= toJSON val]
+  toJSON (TxOut addr val TxOutDatumHashNone) =
+    object [ "address" .= serialiseAddressForTxOut addr
+           , "value"   .= toJSON val
+           ]
+  toJSON (TxOut addr val (TxOutDatumHash _ d)) =
+    object [ "address" .= serialiseAddressForTxOut addr
+           , "value"   .= toJSON val
+           , "data"    .= toJSON d
+           ]
 
 serialiseAddressForTxOut :: AddressInEra era -> Text
 serialiseAddressForTxOut (AddressInEra addrType addr) =
@@ -329,39 +336,40 @@ fromByronTxOut (Byron.TxOut addr value) =
   TxOut
     (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
     (TxOutAdaOnly AdaOnlyInByronEra (fromByronLovelace value))
+     TxOutDatumHashNone
 
 
 toByronTxOut :: TxOut ByronEra -> Maybe Byron.TxOut
 toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-                    (TxOutAdaOnly AdaOnlyInByronEra value)) =
+                    (TxOutAdaOnly AdaOnlyInByronEra value) _) =
     Byron.TxOut addr <$> toByronLovelace value
 
 toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
-                    (TxOutValue era _)) = case era of {}
+                    (TxOutValue era _) _) = case era of {}
 
 toByronTxOut (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
-                    _) = case era of {}
+                    _ _) = case era of {}
 
 
 toShelleyTxOut :: forall era ledgerera.
                  (ShelleyLedgerEra era ~ ledgerera,
                   IsShelleyBasedEra era, Ledger.ShelleyBased ledgerera)
                => TxOut era -> Ledger.TxOut ledgerera
-toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _)) =
+toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value)) =
+toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value)) =
+toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value)) =
+toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value)) =
+toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
-                 (error "TODO: toShelleyTxOut Alonzo tx out data hashes")
+                 (toAlonzoTxOutDataHash txoutdata)
 
 fromShelleyTxOut :: Shelley.TxOut StandardShelley -> TxOut ShelleyEra
 fromShelleyTxOut = fromTxOut ShelleyBasedEraShelley
@@ -373,23 +381,48 @@ fromTxOut
   -> TxOut era
 fromTxOut shelleyBasedEra' ledgerTxOut =
   case shelleyBasedEra' of
-    ShelleyBasedEraShelley -> let (Shelley.TxOut addr value) = ledgerTxOut
-                              in TxOut (fromShelleyAddr addr)
-                                       (TxOutAdaOnly AdaOnlyInShelleyEra
-                                                     (fromShelleyLovelace value))
-    ShelleyBasedEraAllegra -> let (Shelley.TxOut addr value) = ledgerTxOut
-                              in TxOut (fromShelleyAddr addr)
-                                       (TxOutAdaOnly AdaOnlyInAllegraEra
-                                                     (fromShelleyLovelace value))
-    ShelleyBasedEraMary    -> let (Shelley.TxOut addr value) = ledgerTxOut
-                              in TxOut (fromShelleyAddr addr)
-                                       (TxOutValue MultiAssetInMaryEra
-                                                   (fromMaryValue value))
-    ShelleyBasedEraAlonzo  -> let (Alonzo.TxOut addr value _datah) = ledgerTxOut
-                              in TxOut (fromShelleyAddr addr)
-                                       (TxOutValue MultiAssetInAlonzoEra
-                                                   (fromMaryValue value))
-                                       --TODO: use the data hash
+    ShelleyBasedEraShelley ->
+        TxOut (fromShelleyAddr addr)
+              (TxOutAdaOnly AdaOnlyInShelleyEra
+                            (fromShelleyLovelace value))
+               TxOutDatumHashNone
+      where
+        Shelley.TxOut addr value = ledgerTxOut
+
+    ShelleyBasedEraAllegra ->
+        TxOut (fromShelleyAddr addr)
+              (TxOutAdaOnly AdaOnlyInAllegraEra
+                            (fromShelleyLovelace value))
+               TxOutDatumHashNone
+      where
+        Shelley.TxOut addr value = ledgerTxOut
+
+    ShelleyBasedEraMary ->
+        TxOut (fromShelleyAddr addr)
+              (TxOutValue MultiAssetInMaryEra
+                          (fromMaryValue value))
+               TxOutDatumHashNone
+      where
+        Shelley.TxOut addr value = ledgerTxOut
+
+    ShelleyBasedEraAlonzo ->
+       TxOut (fromShelleyAddr addr)
+             (TxOutValue MultiAssetInAlonzoEra
+                         (fromMaryValue value))
+             (fromAlonzoTxOutDataHash ScriptDataInAlonzoEra datahash)
+      where
+        Alonzo.TxOut addr value datahash = ledgerTxOut
+
+toAlonzoTxOutDataHash :: TxOutDatumHash era
+                      -> StrictMaybe (Alonzo.DataHash StandardCrypto)
+toAlonzoTxOutDataHash TxOutDatumHashNone    = SNothing
+toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
+
+fromAlonzoTxOutDataHash :: ScriptDataSupportedInEra era
+                        -> StrictMaybe (Alonzo.DataHash StandardCrypto)
+                        -> TxOutDatumHash era
+fromAlonzoTxOutDataHash _    SNothing  = TxOutDatumHashNone
+fromAlonzoTxOutDataHash era (SJust dh) = TxOutDatumHash era (ScriptDataHash dh)
 
 
 -- ----------------------------------------------------------------------------
@@ -1576,17 +1609,17 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
     classifyRangeError :: TxOut ByronEra -> TxBodyError ByronEra
     classifyRangeError
       txout@(TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{})
-                   (TxOutAdaOnly AdaOnlyInByronEra value))
+                   (TxOutAdaOnly AdaOnlyInByronEra value) _)
       | value < 0        = TxBodyOutputNegative (lovelaceToQuantity value) txout
       | otherwise        = TxBodyOutputOverflow (lovelaceToQuantity value) txout
 
     classifyRangeError
       (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
-             (TxOutValue era _)) = case era of {}
+             (TxOutValue era _) _) = case era of {}
 
     classifyRangeError
       (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
-             _) = case era of {}
+             _ _) = case era of {}
 
 getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
@@ -1615,7 +1648,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
       [ do guard (v >= 0) ?! TxBodyOutputNegative (lovelaceToQuantity v) txout
            guard (v <= maxTxOut) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
-      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v)) <- txOuts ]
+      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v) _) <- txOuts ]
     case txMetadata of
       TxMetadataNone      -> return ()
       TxMetadataInEra _ m -> first TxBodyMetadataError (validateTxMetadata m)
@@ -1672,7 +1705,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
       [ do guard (v >= 0) ?! TxBodyOutputNegative (lovelaceToQuantity v) txout
            guard (v <= maxTxOut) ?! TxBodyOutputOverflow (lovelaceToQuantity v) txout
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
-      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v)) <- txOuts
+      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v) _) <- txOuts
       ]
     case txMetadata of
       TxMetadataNone      -> return ()
@@ -1741,7 +1774,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
       [ do allPositive
            allWithinMaxBound
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
-      , txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v)) <- txOuts
+      , txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v) _) <- txOuts
       , let allPositive       = case [ q | (_,q) <- valueToList v, q < 0 ] of
                                   []  -> Right ()
                                   q:_ -> Left (TxBodyOutputNegative q txout)
@@ -1821,7 +1854,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
       [ do allPositive
            allWithinMaxBound
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
-      , txout@(TxOut _ (TxOutValue MultiAssetInAlonzoEra v)) <- txOuts
+      , txout@(TxOut _ (TxOutValue MultiAssetInAlonzoEra v) _) <- txOuts
       , let allPositive       = case [ q | (_,q) <- valueToList v, q < 0 ] of
                                   []  -> Right ()
                                   q:_ -> Left (TxBodyOutputNegative q txout)
