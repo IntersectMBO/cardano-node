@@ -18,14 +18,21 @@ module Cardano.TraceDispatcher.Network.Docu
   , docErrorPolicy
   , docLocalErrorPolicy
   , docAcceptPolicy
+  , docMux
   ) where
 
-import           Cardano.Logging
 import           Cardano.Prelude
-import           Data.Time.Clock (DiffTime, secondsToDiffTime)
+import           Control.Monad.Class.MonadTime
+import           Data.Time.Clock (secondsToDiffTime)
 import qualified Network.DNS as DNS
+import           Network.Mux (MiniProtocolNum (..), MuxBearerState (..),
+                     MuxTrace (..), WithMuxBearer (..))
+import           Network.Mux.Types (MiniProtocolDir (..), MuxSDUHeader (..),
+                     RemoteClockModel (..))
 import qualified Network.Socket as Socket
+import           Unsafe.Coerce
 
+import           Cardano.Logging
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
 
@@ -62,7 +69,7 @@ protoTip :: Tip blk
 protoTip = undefined
 
 protoPeer :: peer
-protoPeer = undefined
+protoPeer = unsafeCoerce (NtN.ConnectionId protoSocketAddress protoSocketAddress)
 
 protoStok :: stok
 protoStok = undefined
@@ -103,14 +110,34 @@ protoException = undefined
 protoDomain :: DNS.Domain
 protoDomain = "www.example.org"
 
-protoSomeException :: SomeException
-protoSomeException = undefined
-
 protoDNSError :: DNS.DNSError
 protoDNSError = undefined
 
 protoLocalAdress :: LocalAddress
 protoLocalAdress = LocalAddress "loopback"
+
+protoMuxSDUHeader :: MuxSDUHeader
+protoMuxSDUHeader = MuxSDUHeader {
+      mhTimestamp = RemoteClockModel 1
+    , mhNum       = MiniProtocolNum 1
+    , mhDir       = InitiatorDir
+    , mhLength    = 1
+    }
+
+protoTime :: Time
+protoTime = undefined
+
+protoMuxBearerState :: MuxBearerState
+protoMuxBearerState = Mature
+
+protoMiniProtocolNum :: MiniProtocolNum
+protoMiniProtocolNum = MiniProtocolNum 1
+
+protoMiniProtocolDir :: MiniProtocolDir
+protoMiniProtocolDir = InitiatorDir
+
+protoSomeException :: SomeException
+protoSomeException = SomeException (AssertionFailed "just fooled")
 
 ------------------------------------
 
@@ -788,4 +815,139 @@ docAcceptPolicy = Documented [
         []
         "Hard rate limit reached,\
         \ waiting until the number of connections drops below n."
+  ]
+
+docMux :: Documented (WithMuxBearer peer MuxTrace)
+docMux = Documented [
+      DocMsg
+        (WithMuxBearer protoPeer
+          MuxTraceRecvHeaderStart)
+        []
+        "Bearer receive header start."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceRecvHeaderEnd protoMuxSDUHeader))
+        []
+        "Bearer receive header end."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceRecvDeltaQObservation protoMuxSDUHeader protoTime))
+        []
+        "Bearer DeltaQ observation."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceRecvDeltaQSample 1.0 1 1 1.0 1.0 1.0 1.0 ""))
+        []
+        "Bearer DeltaQ sample."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceRecvStart 1))
+        []
+        "Bearer receive start."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceRecvEnd 1))
+        []
+        "Bearer receive end."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceSendStart protoMuxSDUHeader))
+        []
+        "Bearer send start."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          MuxTraceSendEnd)
+        []
+        "Bearer send end."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceState protoMuxBearerState))
+        []
+        "State."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceCleanExit protoMiniProtocolNum protoMiniProtocolDir))
+        []
+        "Miniprotocol terminated cleanly."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceExceptionExit
+              protoMiniProtocolNum protoMiniProtocolDir protoSomeException))
+        []
+        "Miniprotocol terminated with exception."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceChannelRecvStart protoMiniProtocolNum))
+        []
+        "Channel receive start."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceChannelRecvEnd protoMiniProtocolNum 1))
+        []
+        "Channel receive end."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceChannelSendStart protoMiniProtocolNum 1))
+        []
+        "Channel send start."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceChannelSendEnd protoMiniProtocolNum))
+        []
+        "Channel send end."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          MuxTraceHandshakeStart)
+        []
+        "Handshake start."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceHandshakeClientEnd protoDiffTime))
+        []
+        "Handshake client end."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceHandshakeClientError protoSomeException protoDiffTime))
+        []
+        "Handshake client error."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceHandshakeServerError protoSomeException))
+        []
+        "Handshake server error."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          MuxTraceSDUReadTimeoutException)
+        []
+        "Timed out reading SDU."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          MuxTraceSDUWriteTimeoutException)
+        []
+        "Timed out writing SDU."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceStartEagerly protoMiniProtocolNum protoMiniProtocolDir))
+        []
+        "Eagerly started."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceStartOnDemand protoMiniProtocolNum protoMiniProtocolDir))
+        []
+        "Preparing to start."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceStartedOnDemand protoMiniProtocolNum protoMiniProtocolDir))
+        []
+        "Started on demand."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (MuxTraceTerminating protoMiniProtocolNum protoMiniProtocolDir))
+        []
+        "Terminating."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          MuxTraceShutdown)
+        []
+        "Mux shutdown."
   ]

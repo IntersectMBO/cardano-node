@@ -21,6 +21,7 @@ module Cardano.TraceDispatcher.Tracers
 import           Data.Aeson (ToJSON)
 import qualified Data.Text.IO as T
 import qualified Network.Socket as Socket
+import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (trace)
@@ -107,6 +108,8 @@ import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
                      (TraceTxSubmissionOutbound)
 
+type Peer = NtN.ConnectionId Socket.SockAddr
+
 mkStandardTracer ::
      LogFormatting evt
   => Text
@@ -120,12 +123,8 @@ mkStandardTracer name namesFor severityFor trBase = do
   pure $ withNamesAppended namesFor
           $ withSeverity severityFor trNs
 
-docTracers :: forall blk remotePeer peer t.
-  ( Show remotePeer
-  , Show peer
-  , Show t
-  , LogFormatting peer
-  , LogFormatting remotePeer
+docTracers :: forall blk t.
+  ( Show t
   , Show (Header blk)
   , forall result. Show (Query blk result)
   , LogFormatting (LedgerUpdate blk)
@@ -257,7 +256,7 @@ docTracers _ = do
                 severityTBlockFetchSerialised
                 trBase
     tsnTr  <-  mkStandardTracer
-                "TxSubmissionTracer"
+                "TxSubmission"
                 namesForTxSubmissionNode
                 severityTxSubmissionNode
                 trBase
@@ -296,6 +295,16 @@ docTracers _ = do
                 namesForAcceptPolicy
                 severityAcceptPolicy
                 trBase
+    muxTr   <-  mkStandardTracer
+                "Mux"
+                namesForMux
+                severityMux
+                trBase
+    muxLTr   <-  mkStandardTracer
+                "MuxLocal"
+                namesForMux
+                severityMux
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -325,6 +334,8 @@ docTracers _ = do
     configureTracers emptyTraceConfig docErrorPolicy          [errpTr]
     configureTracers emptyTraceConfig docLocalErrorPolicy     [lerrpTr]
     configureTracers emptyTraceConfig docAcceptPolicy         [apTr]
+    configureTracers emptyTraceConfig docMux                  [muxTr]
+    configureTracers emptyTraceConfig docMux                  [muxLTr]
 
     cdbmTrDoc    <- documentMarkdown
                 (docChainDBTraceEvent :: Documented
@@ -332,7 +343,7 @@ docTracers _ = do
                 [cdbmTr]
     cscTrDoc    <- documentMarkdown
                 (docChainSyncClientEvent :: Documented
-                  (BlockFetch.TraceLabelPeer peer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceChainSyncClientEvent blk)))
                 [cscTr]
     csshTrDoc    <- documentMarkdown
@@ -345,11 +356,11 @@ docTracers _ = do
                 [cssbTr]
     bfdTrDoc    <- documentMarkdown
                 (docBlockFetchDecision :: Documented
-                  [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])])
+                  [BlockFetch.TraceLabelPeer Peer (FetchDecision [Point (Header blk)])])
                 [bfdTr]
     bfcTrDoc    <- documentMarkdown
                 (docBlockFetchClient :: Documented
-                  (BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState (Header blk))))
+                  (BlockFetch.TraceLabelPeer Peer (BlockFetch.TraceFetchClientState (Header blk))))
                 [bfcTr]
     _bfsTrDoc    <- documentMarkdown
                 (docBlockFetchServer :: Documented
@@ -361,12 +372,12 @@ docTracers _ = do
                 [fsiTr]
     txiTrDoc    <- documentMarkdown
                 (docTxInbound :: Documented
-                  (BlockFetch.TraceLabelPeer remotePeer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
                 [txiTr]
     txoTrDoc    <- documentMarkdown
                 (docTxOutbound :: Documented
-                  (BlockFetch.TraceLabelPeer remotePeer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))))
                 [txoTr]
     ltxsTrDoc    <- documentMarkdown
@@ -387,61 +398,61 @@ docTracers _ = do
                 [btTr]
     kacTrDoc  <- documentMarkdown
                 (docKeepAliveClient :: Documented
-                  (TraceKeepAliveClient remotePeer))
+                  (TraceKeepAliveClient Peer))
                 [kacTr]
     tcsTrDoc  <- documentMarkdown
                 (docTChainSync :: Documented
-                  (BlockFetch.TraceLabelPeer peer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceSendRecv
                       (ChainSync (Serialised blk) (Point blk) (Tip blk)))))
                 [tcsTr]
     ttsTrDoc  <-  documentMarkdown
                 (docTTxSubmission :: Documented
                    (BlockFetch.TraceLabelPeer
-                      peer
+                      Peer
                       (TraceSendRecv
                          (LTS.LocalTxSubmission
                             (GenTx blk) (ApplyTxErr blk)))))
                 [ttsTr]
     tsqTrDoc  <-  documentMarkdown
                 (docTStateQuery :: Documented
-                   (BlockFetch.TraceLabelPeer peer
+                   (BlockFetch.TraceLabelPeer Peer
                     (TraceSendRecv
                       (LocalStateQuery blk (Point blk) (Query blk)))))
                 [tsqTr]
     tcsnTrDoc  <-  documentMarkdown
                 (docTChainSync :: Documented
-                  (BlockFetch.TraceLabelPeer peer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceSendRecv
                       (ChainSync (Header blk) (Point blk) (Tip blk)))))
                 [tcsnTr]
     tcssTrDoc  <-  documentMarkdown
                 (docTChainSync :: Documented
-                  (BlockFetch.TraceLabelPeer peer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceSendRecv
                       (ChainSync (SerialisedHeader blk) (Point blk) (Tip blk)))))
                 [tcssTr]
     tbfTrDoc  <-  documentMarkdown
                 (docTBlockFetch :: Documented
-                  (BlockFetch.TraceLabelPeer peer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceSendRecv
                       (BlockFetch blk (Point blk)))))
                 [tbfTr]
     tbfsTrDoc  <-  documentMarkdown
                 (docTBlockFetch :: Documented
-                  (BlockFetch.TraceLabelPeer peer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceSendRecv
                       (BlockFetch (Serialised blk) (Point blk)))))
                 [tbfsTr]
     tsnTrDoc   <-  documentMarkdown
                 (docTTxSubmissionNode :: Documented
-                  (BlockFetch.TraceLabelPeer peer
+                  (BlockFetch.TraceLabelPeer Peer
                     (TraceSendRecv
                       (TxSubmission (GenTxId blk) (GenTx blk)))))
                 [tsnTr]
     ts2nTrDoc  <-  documentMarkdown
                     (docTTxSubmission2Node :: Documented
-                      (BlockFetch.TraceLabelPeer peer
+                      (BlockFetch.TraceLabelPeer Peer
                         (TraceSendRecv
                           (TxSubmission2 (GenTxId blk) (GenTx blk)))))
                     [ts2nTr]
@@ -468,6 +479,14 @@ docTracers _ = do
                     (docAcceptPolicy :: Documented
                        NtN.AcceptConnectionsPolicyTrace)
                     [apTr]
+    muxTrDoc     <-  documentMarkdown
+                    (docMux :: Documented
+                      (WithMuxBearer Peer MuxTrace))
+                    [muxTr]
+    muxLTrDoc    <-  documentMarkdown
+                    (docMux :: Documented
+                      (WithMuxBearer Peer MuxTrace))
+                    [muxLTr]
 
     let bl = cdbmTrDoc
             ++ cscTrDoc
@@ -499,6 +518,8 @@ docTracers _ = do
             ++ errpTrDoc
             ++ lerrpTrDoc
             ++ apTrDoc
+            ++ muxTrDoc
+            ++ muxLTrDoc
 
     res <- buildersToText bl
     T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
@@ -677,6 +698,16 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
                 namesForAcceptPolicy
                 severityAcceptPolicy
                 trBase
+    muxTr   <-  mkStandardTracer
+                "Mux"
+                namesForMux
+                severityMux
+                trBase
+    muxLTr   <-  mkStandardTracer
+                "MuxLocal"
+                namesForMux
+                severityMux
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -706,6 +737,8 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     configureTracers emptyTraceConfig docErrorPolicy          [errpTr]
     configureTracers emptyTraceConfig docLocalErrorPolicy     [lerrpTr]
     configureTracers emptyTraceConfig docAcceptPolicy         [apTr]
+    configureTracers emptyTraceConfig docMux                  [muxTr]
+    configureTracers emptyTraceConfig docMux                  [muxLTr]
 
     pure Tracers
       { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -745,8 +778,8 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , errorPolicyTracer = Tracer (traceWith errpTr)
       , localErrorPolicyTracer = Tracer (traceWith lerrpTr)
       , acceptPolicyTracer = Tracer (traceWith apTr)
-      , muxTracer = nullTracer
-      , muxLocalTracer = nullTracer
+      , muxTracer = Tracer (traceWith muxTr)
+      , muxLocalTracer = Tracer (traceWith muxLTr)
       , handshakeTracer = nullTracer
       , localHandshakeTracer = nullTracer
       , diffusionInitializationTracer = nullTracer

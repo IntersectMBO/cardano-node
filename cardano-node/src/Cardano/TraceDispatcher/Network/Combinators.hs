@@ -50,12 +50,16 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityAcceptPolicy
   , namesForAcceptPolicy
 
+  , severityMux
+  , namesForMux
+
   ) where
 
 
 import           Cardano.Logging
 import           Cardano.Prelude
 
+import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
 
 import           Ouroboros.Network.Block (Point, Serialised, Tip)
@@ -64,7 +68,7 @@ import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (DnsTrace (..),
                      ErrorPolicyTrace (..), SubscriptionTrace (..),
-                     WithAddr (..), WithIPList (..), TraceSendRecv(..))
+                     TraceSendRecv (..), WithAddr (..), WithIPList (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..),
                      Message (..))
@@ -630,3 +634,67 @@ namesForAcceptPolicy NtN.ServerTraceAcceptConnectionRateLimiting {} =
     ["ConectionRateLimiting"]
 namesForAcceptPolicy NtN.ServerTraceAcceptConnectionHardLimit {} =
     ["ConnectionHardLimit"]
+
+severityMux :: WithMuxBearer peer MuxTrace -> SeverityS
+severityMux (WithMuxBearer _ mt) = severityMux' mt
+
+severityMux' :: MuxTrace -> SeverityS
+severityMux' MuxTraceRecvHeaderStart {}       = Debug
+severityMux' MuxTraceRecvHeaderEnd {}         = Debug
+severityMux' MuxTraceRecvStart {}             = Debug
+severityMux' MuxTraceRecvEnd {}               = Debug
+severityMux' MuxTraceSendStart {}             = Debug
+severityMux' MuxTraceSendEnd                  = Debug
+severityMux' MuxTraceState {}                 = Info
+severityMux' MuxTraceCleanExit {}             = Notice
+severityMux' MuxTraceExceptionExit {}         = Notice
+severityMux' MuxTraceChannelRecvStart {}      = Debug
+severityMux' MuxTraceChannelRecvEnd {}        = Debug
+severityMux' MuxTraceChannelSendStart {}      = Debug
+severityMux' MuxTraceChannelSendEnd {}        = Debug
+severityMux' MuxTraceHandshakeStart           = Debug
+severityMux' MuxTraceHandshakeClientEnd {}    = Info
+severityMux' MuxTraceHandshakeServerEnd       = Debug
+severityMux' MuxTraceHandshakeClientError {}  = Error
+severityMux' MuxTraceHandshakeServerError {}  = Error
+severityMux' MuxTraceRecvDeltaQObservation {} = Debug
+severityMux' MuxTraceRecvDeltaQSample {}      = Debug
+severityMux' MuxTraceSDUReadTimeoutException  = Notice
+severityMux' MuxTraceSDUWriteTimeoutException = Notice
+severityMux' MuxTraceStartEagerly {}          = Debug
+severityMux' MuxTraceStartOnDemand {}         = Debug
+severityMux' MuxTraceStartedOnDemand {}       = Debug
+severityMux' MuxTraceTerminating {}           = Debug
+severityMux' MuxTraceShutdown {}              = Debug
+
+namesForMux :: WithMuxBearer peer MuxTrace -> [Text]
+namesForMux (WithMuxBearer _ mt) = namesForMux' mt
+
+namesForMux' :: MuxTrace -> [Text]
+namesForMux' MuxTraceRecvHeaderStart {}       = ["RecvHeaderStart"]
+namesForMux' MuxTraceRecvHeaderEnd {}         = ["RecvHeaderEnd"]
+namesForMux' MuxTraceRecvStart {}             = ["RecvStart"]
+namesForMux' MuxTraceRecvEnd {}               = ["RecvEnd"]
+namesForMux' MuxTraceSendStart {}             = ["SendStart"]
+namesForMux' MuxTraceSendEnd                  = ["SendEnd"]
+namesForMux' MuxTraceState {}                 = ["State"]
+namesForMux' MuxTraceCleanExit {}             = ["CleanExit"]
+namesForMux' MuxTraceExceptionExit {}         = ["ExceptionExit"]
+namesForMux' MuxTraceChannelRecvStart {}      = ["ChannelRecvStart"]
+namesForMux' MuxTraceChannelRecvEnd {}        = ["ChannelRecvEnd"]
+namesForMux' MuxTraceChannelSendStart {}      = ["ChannelSendStart"]
+namesForMux' MuxTraceChannelSendEnd {}        = ["ChannelSendEnd"]
+namesForMux' MuxTraceHandshakeStart           = ["HandshakeStart "]
+namesForMux' MuxTraceHandshakeClientEnd {}    = ["HandshakeClientEnd"]
+namesForMux' MuxTraceHandshakeServerEnd       = ["HandshakeServerEnd"]
+namesForMux' MuxTraceHandshakeClientError {}  = ["HandshakeClientError"]
+namesForMux' MuxTraceHandshakeServerError {}  = ["HandshakeServerError"]
+namesForMux' MuxTraceRecvDeltaQObservation {} = ["RecvDeltaQObservation"]
+namesForMux' MuxTraceRecvDeltaQSample {}      = ["RecvDeltaQSample"]
+namesForMux' MuxTraceSDUReadTimeoutException  = ["SDUReadTimeoutException"]
+namesForMux' MuxTraceSDUWriteTimeoutException = ["SDUWriteTimeoutException"]
+namesForMux' MuxTraceStartEagerly {}          = ["StartEagerly"]
+namesForMux' MuxTraceStartOnDemand {}         = ["StartOnDemand"]
+namesForMux' MuxTraceStartedOnDemand {}       = ["StartedOnDemand"]
+namesForMux' MuxTraceTerminating {}           = ["Terminating"]
+namesForMux' MuxTraceShutdown {}              = ["Shutdown"]

@@ -17,6 +17,7 @@ module Cardano.TraceDispatcher.Network.Formatting
 import           Data.Aeson (Value (String), toJSON, (.=))
 import qualified Data.IP as IP
 import           Data.Text (pack)
+import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
 import           Text.Show
 
@@ -394,3 +395,12 @@ instance LogFormatting NtN.AcceptConnectionsPolicyTrace where
                , "softLimit" .= show softLimit
                ]
     forHuman m = showT m
+
+instance (LogFormatting peer, Show peer) =>
+    LogFormatting (WithMuxBearer peer MuxTrace) where
+  forMachine dtal (WithMuxBearer b ev) =
+    mkObject [ "kind" .= String "MuxTrace"
+             , "bearer" .= forMachine dtal b
+             , "event" .= showT ev ]
+  forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
+                                      <> ". " <> showT ev
