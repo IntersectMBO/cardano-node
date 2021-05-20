@@ -348,13 +348,30 @@ data NodeHardForkProtocolConfiguration =
      , npcTestMaryHardForkAtEpoch :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+       --
+     , npcTestMaryHardForkAtVersion :: Maybe Word
+
+       -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
        --
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestMaryHardForkAtVersion :: Maybe Word
+     , npcTestAlonzoHardForkAtEpoch :: Maybe EpochNo
 
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestAlonzoHardForkAtVersion :: Maybe Word
+     -- TODO: npcTestEnableDevelopmentHardForkEras :: Bool
      }
   deriving (Eq, Show)
 

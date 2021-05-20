@@ -47,6 +47,7 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
+import           Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
@@ -56,7 +57,6 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                    (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
-import           Cardano.Ledger.Coin
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
@@ -566,6 +566,7 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
           ShelleyBasedEraShelley -> writeUTxo fpath utxo
           ShelleyBasedEraAllegra -> writeUTxo fpath utxo
           ShelleyBasedEraMary -> writeUTxo fpath utxo
+          ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
  where
    writeUTxo fpath utxo' =
      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
@@ -582,6 +583,7 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
     ShelleyBasedEraMary    ->
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
+    ShelleyBasedEraAlonzo -> panic "printFilteredUTxOs: Alonzo era not implemented yet"
  where
    title :: Text
    title =
@@ -618,7 +620,7 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , textShowN 6 index
              , "        " <> printableValue value
              ]
-
+    ShelleyBasedEraAlonzo -> panic "printUtxo: Alonzo era not implemented yet"
  where
   textShowN :: Show a => Int -> a -> Text
   textShowN len x =
@@ -786,4 +788,6 @@ obtainLedgerEraClassConstraints
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  _ =
+  panic "obtainLedgerEraClassConstraints: Alonzo era not implemented yet"
 

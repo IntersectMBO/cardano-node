@@ -62,8 +62,10 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateShelley ledgerShelley -> ledgerUtxoSize ledgerShelley
     Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
     Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
+    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerUtxoSize ledgerAlonzo
   ledgerDelegMapSize = \case
     Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
     Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
     Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
     Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
+    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo

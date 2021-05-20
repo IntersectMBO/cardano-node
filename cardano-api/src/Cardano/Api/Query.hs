@@ -62,6 +62,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.HardFork.History as History
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import           Ouroboros.Consensus.Cardano.Block (StandardCrypto)
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -73,7 +74,6 @@ import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
 
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
@@ -213,7 +213,7 @@ instance ( IsShelleyBasedEra era
          , ShelleyLedgerEra era ~ ledgerera
          , Consensus.ShelleyBasedEra ledgerera
          , ToJSON (Core.PParams ledgerera)
-         , ToJSON (Shelley.PParamsDelta ledgerera)
+         , ToJSON (Core.PParamsDelta ledgerera)
          , ToJSON (Core.TxOut ledgerera)) => ToJSON (DebugLedgerState era) where
   toJSON (DebugLedgerState newEpochS) = object [ "lastEpoch" .= Shelley.nesEL newEpochS
                                           , "blocksBefore" .= Shelley.nesBprev newEpochS
@@ -255,6 +255,7 @@ fromUTxO eraConversion utxo =
     ShelleyBasedEraMary ->
       let Shelley.UTxO sUtxo = utxo
       in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraMary)) $ Map.toList sUtxo
+    ShelleyBasedEraAlonzo -> error "fromUTxO: Alonzo not implemented yet"
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational
@@ -297,16 +298,24 @@ toConsensusQuery :: forall mode block result.
                  => QueryInMode mode result
                  -> Some (Consensus.Query block)
 toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
-    Some (Consensus.QueryHardFork Consensus.GetCurrentEra)
+    Some $ Consensus.BlockQuery $
+      Consensus.QueryHardFork
+        Consensus.GetCurrentEra
 
 toConsensusQuery (QueryInEra ByronEraInByronMode QueryByronUpdateState) =
-    Some (Consensus.DegenQuery Consensus.GetUpdateInterfaceState)
+    Some $ Consensus.BlockQuery $
+      Consensus.DegenQuery
+        Consensus.GetUpdateInterfaceState
 
 toConsensusQuery (QueryEraHistory CardanoModeIsMultiEra) =
-    Some (Consensus.QueryHardFork Consensus.GetInterpreter)
+    Some $ Consensus.BlockQuery $
+      Consensus.QueryHardFork
+        Consensus.GetInterpreter
 
 toConsensusQuery (QueryInEra ByronEraInCardanoMode QueryByronUpdateState) =
-    Some (Consensus.QueryIfCurrentByron Consensus.GetUpdateInterfaceState)
+    Some $ Consensus.BlockQuery $
+      Consensus.QueryIfCurrentByron
+        Consensus.GetUpdateInterfaceState
 
 toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
     case erainmode of
@@ -316,6 +325,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       ShelleyEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
+      AlonzoEraInCardanoMode  -> error "toConsensusQuery: Alonzo not implemented yet"
 
 
 toConsensusQueryShelleyBased
@@ -374,14 +384,19 @@ consensusQueryInEraInMode
   => modeblock ~ Consensus.HardForkBlock xs
   => Consensus.HardForkQueryResult xs result ~ result'
   => EraInMode era mode
-  -> Consensus.Query erablock  result
+  -> Consensus.BlockQuery erablock  result
   -> Consensus.Query modeblock result'
-consensusQueryInEraInMode ByronEraInByronMode     = Consensus.DegenQuery
-consensusQueryInEraInMode ShelleyEraInShelleyMode = Consensus.DegenQuery
-consensusQueryInEraInMode ByronEraInCardanoMode   = Consensus.QueryIfCurrentByron
-consensusQueryInEraInMode ShelleyEraInCardanoMode = Consensus.QueryIfCurrentShelley
-consensusQueryInEraInMode AllegraEraInCardanoMode = Consensus.QueryIfCurrentAllegra
-consensusQueryInEraInMode MaryEraInCardanoMode    = Consensus.QueryIfCurrentMary
+consensusQueryInEraInMode erainmode =
+    Consensus.BlockQuery
+  . case erainmode of
+      ByronEraInByronMode     -> Consensus.DegenQuery
+      ShelleyEraInShelleyMode -> Consensus.DegenQuery
+      ByronEraInCardanoMode   -> Consensus.QueryIfCurrentByron
+      ShelleyEraInCardanoMode -> Consensus.QueryIfCurrentShelley
+      AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
+      MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
+      AlonzoEraInCardanoMode  ->
+        error "consensusQueryInEraInMode: Alonzo not implemented yet"
 
 
 -- ----------------------------------------------------------------------------
@@ -396,27 +411,29 @@ fromConsensusQueryResult :: forall mode block result result'.
                          -> result
 fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
     case q' of
-      Consensus.QueryHardFork Consensus.GetInterpreter -> EraHistory CardanoMode r'
+      Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetInterpreter)
+        -> EraHistory CardanoMode r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
     case q' of
-      Consensus.QueryHardFork Consensus.GetCurrentEra ->
-        anyEraInModeToAnyEra (fromConsensusEraIndex CardanoMode r')
+      Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetCurrentEra)
+        -> anyEraInModeToAnyEra (fromConsensusEraIndex CardanoMode r')
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra ByronEraInByronMode
                                      QueryByronUpdateState) q' r' =
     case (q', r') of
-      (Consensus.DegenQuery Consensus.GetUpdateInterfaceState,
-       Consensus.DegenQueryResult r'') ->
-        Right (ByronUpdateState r'')
+      (Consensus.BlockQuery (Consensus.DegenQuery Consensus.GetUpdateInterfaceState),
+       Consensus.DegenQueryResult r'')
+        -> Right (ByronUpdateState r'')
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      QueryByronUpdateState) q' r' =
     case q' of
-      Consensus.QueryIfCurrentByron Consensus.GetUpdateInterfaceState ->
-        bimap fromConsensusEraMismatch ByronUpdateState r'
+      Consensus.BlockQuery
+        (Consensus.QueryIfCurrentByron Consensus.GetUpdateInterfaceState)
+        -> bimap fromConsensusEraMismatch ByronUpdateState r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra ByronEraInByronMode
@@ -426,8 +443,10 @@ fromConsensusQueryResult (QueryInEra ByronEraInByronMode
 fromConsensusQueryResult (QueryInEra ShelleyEraInShelleyMode
                                      (QueryInShelleyBasedEra _era q)) q' r' =
     case (q', r') of
-      (Consensus.DegenQuery q'', Consensus.DegenQueryResult r'') ->
-        Right (fromConsensusQueryResultShelleyBased ShelleyBasedEraShelley q q'' r'')
+      (Consensus.BlockQuery (Consensus.DegenQuery q''),
+       Consensus.DegenQueryResult r'')
+        -> Right (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraShelley q q'' r'')
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra era _)) _ _ =
@@ -436,41 +455,47 @@ fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
 fromConsensusQueryResult (QueryInEra ShelleyEraInCardanoMode
                                      (QueryInShelleyBasedEra _era q)) q' r' =
     case q' of
-      Consensus.QueryIfCurrentShelley q'' ->
-        bimap fromConsensusEraMismatch
-              (fromConsensusQueryResultShelleyBased ShelleyBasedEraShelley q q'')
-              r'
+      Consensus.BlockQuery (Consensus.QueryIfCurrentShelley q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraShelley q q'')
+                 r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra AllegraEraInCardanoMode
                                      (QueryInShelleyBasedEra _era q)) q' r' =
     case q' of
-      Consensus.QueryIfCurrentAllegra q'' ->
-        bimap fromConsensusEraMismatch
-              (fromConsensusQueryResultShelleyBased ShelleyBasedEraAllegra q q'')
-              r'
+      Consensus.BlockQuery (Consensus.QueryIfCurrentAllegra q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraAllegra q q'')
+                 r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra MaryEraInCardanoMode
                                      (QueryInShelleyBasedEra _era q)) q' r' =
     case q' of
-      Consensus.QueryIfCurrentMary q'' ->
-        bimap fromConsensusEraMismatch
-              (fromConsensusQueryResultShelleyBased ShelleyBasedEraMary q q'')
-              r'
+      Consensus.BlockQuery (Consensus.QueryIfCurrentMary q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraMary q q'')
+                 r'
       _ -> fromConsensusQueryResultMismatch
 
+fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
+                                     (QueryInShelleyBasedEra _ _)) _ _ =
+    error "fromConsensusQueryResult: Alonzo not implemented yet"
 
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.
      ShelleyLedgerEra era ~ ledgerera
-  => Shelley.PParams ledgerera ~ Core.PParams ledgerera
-  => Shelley.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
+  => Core.PParams ledgerera ~ Shelley.PParams ledgerera
+  => Core.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
   => Consensus.ShelleyBasedEra ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
-  -> Consensus.Query (Consensus.ShelleyBlock ledgerera) result'
+  -> Consensus.BlockQuery (Consensus.ShelleyBlock ledgerera) result'
   -> result'
   -> result
 fromConsensusQueryResultShelleyBased _ QueryChainPoint q' point =

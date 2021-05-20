@@ -109,6 +109,7 @@ library
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-ledger-alonzo
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
@@ -129,6 +130,8 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , parsec
+                      , plutus-core
+                      , plutus-ledger-api
                       , shelley-spec-ledger
                       , small-steps
                       , split

@@ -52,7 +52,6 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import           Cardano.Node.Protocol.Types
 
-
 ------------------------------------------------------------------------------
 -- Shelley protocol
 --

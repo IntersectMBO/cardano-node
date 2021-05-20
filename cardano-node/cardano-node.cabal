@@ -66,11 +66,11 @@ library
                        Cardano.Node.Handlers.TopLevel
                        Cardano.Node.Orphans
                        Cardano.Node.Protocol
+                       Cardano.Node.Protocol.Alonzo
                        Cardano.Node.Protocol.Byron
                        Cardano.Node.Protocol.Cardano
                        Cardano.Node.Protocol.Shelley
                        Cardano.Node.Protocol.Types
-                       Cardano.Node.Query
                        Cardano.Node.Parsers
                        Cardano.Node.Run
                        Cardano.Node.STM
@@ -103,6 +103,7 @@ library
                       , cardano-config
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-ledger-alonzo
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
@@ -135,10 +136,13 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , plutus-core
+                      , plutus-ledger-api
                       , process
                       , safe-exceptions
                       , scientific
                       , shelley-spec-ledger
+                      , small-steps
                       , stm
                       , text
                       , time

@@ -12,6 +12,7 @@ module Cardano.Tracing.OrphanInstances.Byron () where
 
 import           Cardano.Prelude
 
+import           Data.Aeson (Value (..))
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 
@@ -22,14 +23,14 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
-                     ByronOtherHeaderEnvelopeError (..), TxId (..), byronHeaderRaw)
+                   ByronOtherHeaderEnvelopeError (..), TxId (..), byronHeaderRaw)
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
-                     ProtocolUpdate (..), UpdateState (..))
+                   ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.Chain.Block (ABlockOrBoundaryHdr (..), AHeader (..),
-                     ChainValidationError (..), delegationCertificate)
+                   ChainValidationError (..), delegationCertificate)
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Crypto.Signing (VerificationKey)

@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
 set -e
-#set -x
+# Unoffiical bash strict mode.
+# See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -u
+set -o pipefail
+
 
 # This script sets up a cluster that starts out in Byron, and can transition to Mary.
 #
@@ -97,7 +101,7 @@ pushd ${ROOT}
 # create the node directories
 for NODE in ${ALL_NODES}; do
 
-  mkdir ${NODE} ${NODE}/byron ${NODE}/shelley
+  mkdir "${NODE}" "${NODE}/byron" "${NODE}/shelley"
 
 done
 
@@ -186,7 +190,7 @@ EOF
 
 cardano-cli byron genesis genesis \
   --protocol-magic ${NETWORK_MAGIC} \
-  --start-time ${START_TIME} \
+  --start-time "${START_TIME}" \
   --k ${SECURITY_PARAM} \
   --n-poor-addresses 0 \
   --n-delegate-addresses ${NUM_BFT_NODES} \
@@ -202,8 +206,8 @@ mv byron.genesis.spec.json byron/genesis.spec.json
 # Symlink the BFT operator keys from the genesis delegates, for uniformity
 for N in ${BFT_NODES_N}; do
 
-  ln -s ../../byron/delegate-keys.00$((${N} - 1)).key     node-bft${N}/byron/delegate.key
-  ln -s ../../byron/delegation-cert.00$((${N} - 1)).json  node-bft${N}/byron/delegate.cert
+  ln -s ../../byron/delegate-keys.00$((${N} - 1)).key     "node-bft${N}/byron/delegate.key"
+  ln -s ../../byron/delegation-cert.00$((${N} - 1)).json  "node-bft${N}/byron/delegate.cert"
 
 done
 
@@ -227,7 +231,7 @@ for N in ${BFT_NODES_N}; do
     --testnet-magic 42 \
     --tx tx$((${N} - 1)).tx \
     --wallet-key byron/delegate-keys.00$((${N} - 1)).key \
-    --rich-addr-from $(head -n 1 byron/genesis-address-00$((${N} - 1))) \
+    --rich-addr-from "$(head -n 1 byron/genesis-address-00$((${N} - 1)))" \
     --txout "(\"$(head -n 1 byron/address-00$((${N} - 1)))\", $FUNDS_PER_BYRON_ADDRESS)"
 
 done
@@ -502,21 +506,21 @@ echo
 echo "In order to do the protocol updates, proceed as follows:"
 echo
 echo "  0. wait for the nodes to start producing blocks"
-echo "  1. invoke ./scripts/byron-to-mary/update-1.sh"
+echo "  1. invoke ./scripts/byron-to-alonzo/update-1.sh"
 echo "     wait for the next epoch for the update to take effect"
 echo
-echo "  2. invoke ./scripts/byron-to-mary/update-2.sh"
+echo "  2. invoke ./scripts/byron-to-alonzo/update-2.sh"
 echo "  3. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
 echo
-echo "  4. invoke ./scripts/byron-to-mary/update-3.sh <N>"
+echo "  4. invoke ./scripts/byron-to-alonzo/update-3.sh <N>"
 echo "     Here, <N> the current epoch (2 if you're quick)."
 echo "     If you provide the wrong epoch, you will see an error"
 echo "     that will tell you the current epoch, and can run"
 echo "     the script again."
 echo "  5. restart the nodes"
 echo "     wait for the next epoch for the update to take effect"
-echo "  6. invoke ./scripts/byron-to-mary/update-4.sh <N>"
+echo "  6. invoke ./scripts/byron-to-alonzo/update-4.sh <N>"
 echo "  7. restart the nodes"
 echo
 echo "You can observe the status of the updates by grepping the logs, via"
@@ -545,7 +549,27 @@ popd
 # For an automatic transition at epoch 0, specifying mary, allegra or shelley
 # will start the node in the appropriate era.
 echo ""
-if [ "$1" = "mary" ]; then
+if [ "$1" = "alonzo" ]; then
+  echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestMaryHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestAlonzoHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
+  echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
+
+  sed -i ${ROOT}/configuration.yaml \
+      -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
+
+  # Update shelley genesis with required Alonzo fields.
+  alonzogenesisparams='.+ {adaPerUTxOWord: 0, executionPrices: {prMem: 1, prSteps: 1}, maxTxExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxBlockExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxValueSize: 1000, costModels: "example/shelley/alonzo/costmodel.json", collateralPercentage: 100, maxCollateralInputs: 1}'
+  alonzogenesis=$(jq "${alonzogenesisparams}" < ${ROOT}/shelley/genesis.json)
+  echo "${alonzogenesis}" > ${ROOT}/shelley/genesis.json
+  # Copy the cost model
+  mkdir ${ROOT}/shelley/alonzo
+  cp configuration/cardano/alonzo/shelley_qa_cost-model.json ${ROOT}/shelley/alonzo/costmodel.json
+  echo "Nodes will start in Alonzo era from epoch 0"
+
+elif [ "$1" = "mary" ]; then
   echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
   echo "TestMaryHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
