@@ -28,13 +28,19 @@ let
     ''
       echo "
         Commands:
-          * nix flake update --update-input <iohkNix|haskellNix> - update imput
+          * nix flake update --update-input <iohkNix|haskellNix> - update input
           * cardano-cli - used for key generation and other operations tasks
           * wb - cluster workbench
           * start-cluster - start a local development cluster
           * stop-cluster - stop a local development cluster
 
       "
+    '';
+  # Set locale
+  setLocale =
+    ''
+      export LANG="en_US.UTF-8";
+      export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive";
     '';
 
   # This provides a development environment that can be used with nix-shell or
@@ -81,6 +87,7 @@ let
       tmux
       pkgs.git
       pkgs.hlint
+      pkgs.glibcLocales
     ]
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
@@ -112,6 +119,8 @@ let
       trap atexit EXIT
       ''}
       unset NIX_ENFORCE_PURITY
+
+      ${setLocale}
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
@@ -151,6 +160,8 @@ let
 
       # Socket path default to first node launched by "start-cluster":
       export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${cluster.stateDir})
+
+      ${setLocale}
 
       # Unless using specific network:
       ${lib.optionalString (__hasAttr "network" customConfig) ''
