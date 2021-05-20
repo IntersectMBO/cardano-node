@@ -153,6 +153,7 @@ import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Metadata as Shelley
+import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
@@ -163,7 +164,9 @@ import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
 import           Cardano.Ledger.Val (isZero)
 
+import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 
 import           Cardano.Api.Address
@@ -1739,8 +1742,100 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
 
-makeShelleyTransactionBody ShelleyBasedEraAlonzo _ =
-  error "makeShelleyTransactionBody: Alonzo era not implemented yet"
+makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
+                           txbodycontent@TxBodyContent {
+                             txIns,
+                             txOuts,
+                             txFee,
+                             txValidityRange = (lowerBound, upperBound),
+                             txMetadata,
+                             txAuxScripts,
+                             txWithdrawals,
+                             txCertificates,
+                             txUpdateProposal,
+                             txMintValue
+                           } = do
+
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ do allPositive
+           allWithinMaxBound
+      | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
+      , txout@(TxOut _ (TxOutValue MultiAssetInAlonzoEra v)) <- txOuts
+      , let allPositive       = case [ q | (_,q) <- valueToList v, q < 0 ] of
+                                  []  -> Right ()
+                                  q:_ -> Left (TxBodyOutputNegative q txout)
+            allWithinMaxBound = case [ q | (_,q) <- valueToList v, q > maxTxOut ] of
+                                  []  -> Right ()
+                                  q:_ -> Left (TxBodyOutputOverflow q txout)
+      ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
+    case txMintValue of
+      TxMintNone        -> return ()
+      TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+
+    return $
+      ShelleyTxBody era
+        (Alonzo.TxBody
+          (Set.fromList (map (toShelleyTxIn . fst) txIns))
+          (error "TODO: add support for collateral")
+          (Seq.fromList (map toShelleyTxOut txOuts))
+          (case txCertificates of
+             TxCertificatesNone    -> Seq.empty
+             TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
+          (case txWithdrawals of
+             TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
+             TxWithdrawals _ ws -> toShelleyWithdrawal ws)
+          (case txFee of
+             TxFeeImplicit era'  -> case era' of {}
+             TxFeeExplicit _ fee -> toShelleyLovelace fee)
+          (Allegra.ValidityInterval {
+             invalidBefore    = case lowerBound of
+                                          TxValidityNoLowerBound   -> SNothing
+                                          TxValidityLowerBound _ s -> SJust s,
+             invalidHereafter = case upperBound of
+                                          TxValidityNoUpperBound _ -> SNothing
+                                          TxValidityUpperBound _ s -> SJust s
+           })
+          (case txUpdateProposal of
+             TxUpdateProposalNone -> SNothing
+             TxUpdateProposal _ p -> SJust (toAlonzoUpdate p))
+          (error "TODO: Alonzo extra key hashes for required witnesses")
+          (case txMintValue of
+             TxMintNone        -> mempty
+             TxMintValue _ v _ -> toMaryValue v)
+          (error "TODO: Alonzo optional protocol param hash")
+          (maybeToStrictMaybe
+            (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
+          (error "TODO: Alonzo optional network"))
+        (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
+        txAuxData
+  where
+    txAuxData :: Maybe (Ledger.AuxiliaryData StandardAlonzo)
+    txAuxData
+      | Map.null ms
+      , null ss
+      , null ds   = Nothing
+      | otherwise = Just (toAlonzoAuxiliaryData ms ss ds)
+      where
+        ms = case txMetadata of
+               TxMetadataNone                     -> Map.empty
+               TxMetadataInEra _ (TxMetadata ms') -> ms'
+        ss = case txAuxScripts of
+               TxAuxScriptsNone   -> []
+               TxAuxScripts _ ss' -> ss'
+        ds :: [ScriptData]
+        ds = error "TODO: support the Alonzo era aux data"
+             --TODO: txAuxScriptData
+
+    toAlonzoUpdate :: UpdateProposal -> Shelley.Update ledgerera
+    toAlonzoUpdate = error "TODO: toAlonzoUpdate"
+    --TODO: ^^ and move the definition next to toShelleyUpdate
+    -- and\/or merge it with toShelleyUpdate to make it era-generic
+    -- must assume Ledger.PParamsDelta ledgerera ~ Alonzo.PParamsDelta ledgerera
+
 
 data SimpleScriptInEra era where
      SimpleScriptInEra :: ScriptLanguageInEra lang era
@@ -1831,6 +1926,25 @@ toAllegraAuxiliaryData m ss =
     Allegra.AuxiliaryData
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
+
+
+-- | In the Alonzo and later eras the auxiliary data consists of the tx metadata
+-- and the axiliary scripts, and the axiliary script data.
+--
+toAlonzoAuxiliaryData :: forall era ledgerera.
+                         ShelleyLedgerEra era ~ ledgerera
+                      => Ledger.AuxiliaryData ledgerera ~ Alonzo.AuxiliaryData ledgerera
+                      => Ledger.Script ledgerera ~ Alonzo.Script ledgerera
+                      => Ledger.Era ledgerera
+                      => Map Word64 TxMetadataValue
+                      -> [ScriptInEra era]
+                      -> [ScriptData]
+                      -> Ledger.AuxiliaryData ledgerera
+toAlonzoAuxiliaryData m ss ds =
+    Alonzo.AuxiliaryData
+      (toShelleyMetadata m)
+      (Seq.fromList (map toShelleyScript ss))
+      (Set.fromList (map toAlonzoScriptData ds))
 
 
 -- ----------------------------------------------------------------------------
