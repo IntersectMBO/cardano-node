@@ -708,6 +708,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
                 namesForMux
                 severityMux
                 trBase
+    hsTr   <-  mkStandardTracer
+                "Handshake"
+                namesForHandshake
+                severityHandshake
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -739,6 +744,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     configureTracers emptyTraceConfig docAcceptPolicy         [apTr]
     configureTracers emptyTraceConfig docMux                  [muxTr]
     configureTracers emptyTraceConfig docMux                  [muxLTr]
+    configureTracers emptyTraceConfig docHandshake            [hsTr]
 
     pure Tracers
       { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -780,7 +786,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , acceptPolicyTracer = Tracer (traceWith apTr)
       , muxTracer = Tracer (traceWith muxTr)
       , muxLocalTracer = Tracer (traceWith muxLTr)
-      , handshakeTracer = nullTracer
+      , handshakeTracer = Tracer (traceWith hsTr)
       , localHandshakeTracer = nullTracer
       , diffusionInitializationTracer = nullTracer
     }

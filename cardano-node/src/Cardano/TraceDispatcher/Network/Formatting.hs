@@ -404,3 +404,19 @@ instance (LogFormatting peer, Show peer) =>
              , "event" .= showT ev ]
   forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
                                       <> ". " <> showT ev
+
+instance LogFormatting NtC.HandshakeTr where
+  forMachine _dtal (WithMuxBearer b ev) =
+    mkObject [ "kind" .= String "LocalHandshakeTrace"
+             , "bearer" .= show b
+             , "event" .= show ev ]
+  forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
+                                      <> ". " <> showT ev
+
+instance LogFormatting NtN.HandshakeTr where
+  forMachine _dtal (WithMuxBearer b ev) =
+    mkObject [ "kind" .= String "HandshakeTrace"
+             , "bearer" .= show b
+             , "event" .= show ev ]
+  forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
+                                      <> ". " <> showT ev
