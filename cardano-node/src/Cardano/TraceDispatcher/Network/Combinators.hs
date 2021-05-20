@@ -53,11 +53,16 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityMux
   , namesForMux
 
+  , severityHandshake
+  , namesForHandshake
+
+
   ) where
 
 
 import           Cardano.Logging
 import           Cardano.Prelude
+import qualified Codec.CBOR.Term as CBOR
 
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
@@ -74,6 +79,7 @@ import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..),
                      Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
+import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello,
@@ -87,7 +93,6 @@ import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
 import           Ouroboros.Consensus.Storage.Serialisation (SerialisedHeader)
-
 
 severityTChainSync :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync (Serialised blk) (Point blk) (Tip blk))) -> SeverityS
@@ -698,3 +703,37 @@ namesForMux' MuxTraceStartOnDemand {}         = ["StartOnDemand"]
 namesForMux' MuxTraceStartedOnDemand {}       = ["StartedOnDemand"]
 namesForMux' MuxTraceTerminating {}           = ["Terminating"]
 namesForMux' MuxTraceShutdown {}              = ["Shutdown"]
+
+severityHandshake :: NtN.HandshakeTr -> SeverityS
+severityHandshake (WithMuxBearer _ e) = severityHandshake' e
+
+severityHandshake' ::
+     TraceSendRecv (HS.Handshake nt CBOR.Term)
+  -> SeverityS
+severityHandshake' (TraceSendMsg m) = severityHandshake'' m
+severityHandshake' (TraceRecvMsg m) = severityHandshake'' m
+
+severityHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> SeverityS
+severityHandshake'' (AnyMessageAndAgency _agency msg) = severityHandshake''' msg
+
+severityHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> SeverityS
+severityHandshake''' HS.MsgProposeVersions {} = Info
+severityHandshake''' HS.MsgAcceptVersion {}   = Info
+severityHandshake''' HS.MsgRefuse {}          = Info
+
+namesForHandshake :: NtN.HandshakeTr -> [Text]
+namesForHandshake (WithMuxBearer _ e) = namesForHandshake' e
+
+namesForHandshake' ::
+     TraceSendRecv (HS.Handshake nt CBOR.Term)
+  -> [Text]
+namesForHandshake' (TraceSendMsg m) = namesForHandshake'' m
+namesForHandshake' (TraceRecvMsg m) = namesForHandshake'' m
+
+namesForHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
+namesForHandshake'' (AnyMessageAndAgency _agency msg) = namesForHandshake''' msg
+
+namesForHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Text]
+namesForHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]
+namesForHandshake''' HS.MsgAcceptVersion {}   = ["AcceptVersion"]
+namesForHandshake''' HS.MsgRefuse {}          = ["Refuse"]

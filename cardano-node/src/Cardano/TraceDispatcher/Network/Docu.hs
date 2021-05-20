@@ -19,10 +19,13 @@ module Cardano.TraceDispatcher.Network.Docu
   , docLocalErrorPolicy
   , docAcceptPolicy
   , docMux
+  , docHandshake
   ) where
 
 import           Cardano.Prelude
+import qualified Codec.CBOR.Term as CBOR
 import           Control.Monad.Class.MonadTime
+import qualified Data.Map as Map
 import           Data.Time.Clock (secondsToDiffTime)
 import qualified Network.DNS as DNS
 import           Network.Mux (MiniProtocolNum (..), MuxBearerState (..),
@@ -40,12 +43,14 @@ import           Ouroboros.Network.Block (Point, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
+import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..))
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
                      WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
+import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..))
@@ -139,6 +144,14 @@ protoMiniProtocolDir = InitiatorDir
 protoSomeException :: SomeException
 protoSomeException = SomeException (AssertionFailed "just fooled")
 
+protoNodeToClientVersion :: NodeToClientVersion
+protoNodeToClientVersion = NodeToClientV_8
+
+protoNodeToNodeVersion :: NtN.NodeToNodeVersion
+protoNodeToNodeVersion = NtN.NodeToNodeV_1
+
+protoCBORTerm :: CBOR.Term
+protoCBORTerm = undefined
 ------------------------------------
 
 docTChainSync :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
@@ -951,3 +964,25 @@ docMux = Documented [
         []
         "Mux shutdown."
   ]
+
+docHandshake :: Documented NtN.HandshakeTr
+docHandshake = Documented [
+      DocMsg
+        (WithMuxBearer protoPeer
+          (TraceSendMsg
+            (AnyMessageAndAgency protoStok
+              (HS.MsgProposeVersions Map.empty))))
+        []
+        "Propose versions together with version parameters.  It must be\
+        \ encoded to a sorted list.."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (TraceSendMsg
+            (AnyMessageAndAgency protoStok
+              (HS.MsgAcceptVersion protoNodeToNodeVersion protoCBORTerm))))
+        []
+        "Propose versions together with version parameters.  It must be\
+        \ encoded to a sorted list.."
+
+
+    ]
