@@ -289,7 +289,7 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
        , srnDatabasePath                = dbPath
        , srnDiffusionArguments          = diffusionArguments
        , srnDiffusionTracers            = diffusionTracers
-       , srnEnableInDevelopmentVersions = False -- TODO get this value from the node configuration
+       , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
        , srnTraceChainDB                = chainDBTracer nodeTracers
        }
  where
