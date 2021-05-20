@@ -164,6 +164,7 @@ module Cardano.Api (
     TxOut(TxOut),
     TxOutValue(..),
     serialiseAddressForTxOut,
+    TxOutDatumHash(..),
 
     -- ** Other transaction body types
     TxFee(..),
@@ -173,6 +174,7 @@ module Cardano.Api (
     EpochSlots(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
+    TxAuxScriptData(..),
     TxWithdrawals(..),
     TxCertificates(..),
     TxUpdateProposal(..),

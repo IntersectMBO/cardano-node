@@ -43,6 +43,7 @@ module Cardano.Api.TxBody (
     TxOut(..),
     TxOutValue(..),
     serialiseAddressForTxOut,
+    TxOutDatumHash(..),
 
     -- * Other transaction body types
     TxFee(..),
@@ -50,6 +51,7 @@ module Cardano.Api.TxBody (
     TxValidityUpperBound(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
+    TxAuxScriptData(..),
     TxWithdrawals(..),
     TxCertificates(..),
     TxUpdateProposal(..),
@@ -70,6 +72,7 @@ module Cardano.Api.TxBody (
     ValidityLowerBoundSupportedInEra(..),
     TxMetadataSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
+    ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
@@ -82,6 +85,7 @@ module Cardano.Api.TxBody (
     validityLowerBoundSupportedInEra,
     txMetadataSupportedInEra,
     auxScriptsSupportedInEra,
+    scriptDataSupportedInEra,
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
@@ -602,6 +606,29 @@ auxScriptsSupportedInEra MaryEra    = Just AuxScriptsInMaryEra
 auxScriptsSupportedInEra AlonzoEra  = Just AuxScriptsInAlonzoEra
 
 
+-- | A representation of whether the era supports multi-asset transactions.
+--
+-- The Mary and subsequent eras support multi-asset transactions.
+--
+-- The negation of this is 'OnlyAdaSupportedInEra'.
+--
+data ScriptDataSupportedInEra era where
+
+     -- | Script data is supported in transactions in the 'Alonzo' era.
+     ScriptDataInAlonzoEra :: ScriptDataSupportedInEra AlonzoEra
+
+deriving instance Eq   (ScriptDataSupportedInEra era)
+deriving instance Show (ScriptDataSupportedInEra era)
+
+scriptDataSupportedInEra :: CardanoEra era
+                         -> Maybe (ScriptDataSupportedInEra era)
+scriptDataSupportedInEra ByronEra   = Nothing
+scriptDataSupportedInEra ShelleyEra = Nothing
+scriptDataSupportedInEra AllegraEra = Nothing
+scriptDataSupportedInEra MaryEra    = Nothing
+scriptDataSupportedInEra AlonzoEra  = Just ScriptDataInAlonzoEra
+
+
 -- | A representation of whether the era supports withdrawals from reward
 -- accounts.
 --
@@ -713,6 +740,23 @@ instance ToJSON (TxOutValue era) where
 
 
 -- ----------------------------------------------------------------------------
+-- Transaction output datum (era-dependent)
+--
+
+data TxOutDatumHash era where
+
+     TxOutDatumHashNone :: TxOutDatumHash era
+
+     TxOutDatumHash     :: ScriptDataSupportedInEra era
+                        -> Hash ScriptData
+                        -> TxOutDatumHash era
+
+deriving instance Eq   (TxOutDatumHash era)
+deriving instance Show (TxOutDatumHash era)
+deriving instance Generic (TxOutDatumHash era)
+
+
+-- ----------------------------------------------------------------------------
 -- Transaction fees
 --
 
@@ -787,6 +831,22 @@ data TxAuxScripts era where
 
 deriving instance Eq   (TxAuxScripts era)
 deriving instance Show (TxAuxScripts era)
+
+
+-- ----------------------------------------------------------------------------
+-- Auxiliary script data (era-dependent)
+--
+
+data TxAuxScriptData era where
+
+     TxAuxScriptDataNone :: TxAuxScriptData era
+
+     TxAuxScriptData     :: ScriptDataSupportedInEra era
+                         -> [ScriptData]
+                         -> TxAuxScriptData era
+
+deriving instance Eq   (TxAuxScriptData era)
+deriving instance Show (TxAuxScriptData era)
 
 
 -- ----------------------------------------------------------------------------
