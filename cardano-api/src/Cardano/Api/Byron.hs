@@ -13,6 +13,9 @@ module Cardano.Api.Byron
     SigningKey(..),
     SomeByronSigningKey(..),
 
+    -- * Hashes
+    Hash(..),
+
     -- * Payment addresses
     -- | Constructing and inspecting Byron payment addresses
     Address(ByronAddress),

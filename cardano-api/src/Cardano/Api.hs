@@ -55,7 +55,7 @@ module Cardano.Api (
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
     -- used in many other places.
-    Hash(..),
+    Hash,
     castHash,
 
     -- * Payment addresses

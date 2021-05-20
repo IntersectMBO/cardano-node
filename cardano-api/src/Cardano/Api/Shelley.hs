@@ -15,6 +15,9 @@ module Cardano.Api.Shelley
     VerificationKey(..),
     SigningKey(..),
 
+    -- * Hashes
+    Hash(..),
+
     -- * Payment addresses
     -- | Constructing and inspecting Shelley payment addresses
     Address(ShelleyAddress),
