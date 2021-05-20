@@ -116,12 +116,14 @@ import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (toList)
-import           Data.List (intercalate)
+import           Data.Functor.Identity
+import           Data.List (findIndex, intercalate)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as Seq
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.String (IsString)
 import           Data.Text (Text)
@@ -146,11 +148,21 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
-import           Ouroboros.Consensus.Shelley.Eras
-                   (StandardShelley, StandardAllegra,
-                    StandardMary, StandardAlonzo)
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
+import           Cardano.Ledger.Val (isZero)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardMary,
+                   StandardShelley)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import qualified Shelley.Spec.Ledger.Credential as Shelley
@@ -162,15 +174,6 @@ import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary
-import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
-import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
-import           Cardano.Ledger.Val (isZero)
-
-import qualified Cardano.Ledger.Alonzo as Alonzo
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 
 import           Cardano.Api.Address
@@ -239,7 +242,7 @@ getTxId (ByronTxBody tx) =
     impossible =
       error "getTxId: byron and shelley hash sizes do not match"
 
-getTxId (ShelleyTxBody era tx _ _) =
+getTxId (ShelleyTxBody era tx _ _ _) =
     case era of
       ShelleyBasedEraShelley -> getTxIdShelley tx
       ShelleyBasedEraAllegra -> getTxIdShelley tx
@@ -538,7 +541,7 @@ validityUpperBoundSupportedInEra ShelleyEra = Just ValidityUpperBoundInShelleyEr
 validityUpperBoundSupportedInEra AllegraEra = Just ValidityUpperBoundInAllegraEra
 validityUpperBoundSupportedInEra MaryEra    = Just ValidityUpperBoundInMaryEra
 validityUpperBoundSupportedInEra AlonzoEra  = Just ValidityUpperBoundInAlonzoEra
-  
+
 
 -- | A representation of whether the era supports transactions having /no/
 -- upper bound on the range of slots in which they are valid.
@@ -999,6 +1002,8 @@ data TxBody era where
           -- + auxiliary script data (in Allonzo and later)
        -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
 
+       -> Map Alonzo.RdmrPtr (Alonzo.Data (ShelleyLedgerEra era), Alonzo.ExUnits)
+
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
      -- The 'ShelleyLedgerEra' type family maps that to the era type from the
@@ -1011,25 +1016,30 @@ instance Eq (TxBody era) where
     (==) (ByronTxBody txbodyA)
          (ByronTxBody txbodyB) = txbodyA == txbodyB
 
-    (==) (ShelleyTxBody era txbodyA txscriptsA txmetadataA)
-         (ShelleyTxBody _   txbodyB txscriptsB txmetadataB) =
+    (==) (ShelleyTxBody era txbodyA txscriptsA txmetadataA rdmrMapA)
+         (ShelleyTxBody _   txbodyB txscriptsB txmetadataB rdmrMapB) =
          case era of
            ShelleyBasedEraShelley -> txbodyA     == txbodyB
                                   && txscriptsA  == txscriptsB
                                   && txmetadataA == txmetadataB
+                                  && rdmrMapA    == rdmrMapB
 
            ShelleyBasedEraAllegra -> txbodyA     == txbodyB
                                   && txscriptsA  == txscriptsB
                                   && txmetadataA == txmetadataB
+                                  && rdmrMapA    == rdmrMapB
 
            ShelleyBasedEraMary    -> txbodyA     == txbodyB
                                   && txscriptsA  == txscriptsB
                                   && txmetadataA == txmetadataB
+                                  && rdmrMapA    == rdmrMapB
+
            ShelleyBasedEraAlonzo  -> txbodyA     == txbodyB
                                   && txscriptsA  == txscriptsB
                                   && txmetadataA == txmetadataB
+                                  && rdmrMapA    == rdmrMapB
 
-    (==) ByronTxBody{} (ShelleyTxBody era _ _ _) = case era of {}
+    (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _) = case era of {}
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -1041,7 +1051,7 @@ instance Show (TxBody era) where
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraShelley
-                               txbody txscripts txmetadata) =
+                               txbody txscripts txmetadata _) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraShelley "
         . showsPrec 11 txbody
@@ -1052,7 +1062,7 @@ instance Show (TxBody era) where
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraAllegra
-                               txbody txscripts txmetadata) =
+                               txbody txscripts txmetadata _) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraAllegra "
         . showsPrec 11 txbody
@@ -1063,7 +1073,7 @@ instance Show (TxBody era) where
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraMary
-                               txbody txscripts txmetadata) =
+                               txbody txscripts txmetadata _) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraMary "
         . showsPrec 11 txbody
@@ -1074,7 +1084,7 @@ instance Show (TxBody era) where
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraAlonzo
-                               txbody txscripts txmetadata) =
+                               txbody txscripts txmetadata rdmrmap) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraMary "
         . showsPrec 11 txbody
@@ -1082,6 +1092,8 @@ instance Show (TxBody era) where
         . showsPrec 11 txscripts
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 rdmrmap
         )
 
 
@@ -1106,7 +1118,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
-    serialiseToCBOR (ShelleyTxBody era txbody txscripts txmetadata) =
+    serialiseToCBOR (ShelleyTxBody era txbody txscripts txmetadata _rdmrMap) =
       case era of
         -- Use the same serialisation impl, but at different types:
         ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
@@ -1133,9 +1145,10 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
         AlonzoEra  -> deserialiseShelleyBasedTxBody
                         (ShelleyTxBody ShelleyBasedEraAlonzo) bs
 
+
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
---
+-- TODO: Alonzo, serialise the redeemer map
 serialiseShelleyBasedTxBody :: forall txbody script metadata.
                                 (ToCBOR txbody, ToCBOR script, ToCBOR metadata)
                             => txbody
@@ -1149,11 +1162,11 @@ serialiseShelleyBasedTxBody txbody txscripts txmetadata =
      <> CBOR.toCBOR txscripts
      <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
-deserialiseShelleyBasedTxBody :: forall txbody script metadata pair.
+deserialiseShelleyBasedTxBody :: forall txbody script metadata pair rdmrptrs.
                                 (FromCBOR (CBOR.Annotator txbody),
                                  FromCBOR (CBOR.Annotator script),
                                  FromCBOR (CBOR.Annotator metadata))
-                              => (txbody -> [script] -> Maybe metadata -> pair)
+                              => (txbody -> [script] -> Maybe metadata -> rdmrptrs -> pair)
                               -> ByteString
                               -> Either CBOR.DecoderError pair
 deserialiseShelleyBasedTxBody mkTxBody bs =
@@ -1173,6 +1186,7 @@ deserialiseShelleyBasedTxBody mkTxBody bs =
           (CBOR.runAnnotator txbody fbs)
           (map (`CBOR.runAnnotator` fbs) txscripts)
           (CBOR.runAnnotator <$> txmetadata <*> pure fbs)
+          (error "deserialiseShelleyBasedTxBody: Redeemer pointer map")
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
     textEnvelopeType _ =
@@ -1238,7 +1252,7 @@ getTransactionBodyContent
 getTransactionBodyContent = \case
   ByronTxBody body ->
     Right $ getByronTxBodyContent body
-  ShelleyTxBody era body _scripts mAux ->
+  ShelleyTxBody era body _scripts mAux _rdmrMap ->
     fromLedgerTxBody era body mAux
 
 
@@ -1677,6 +1691,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
             (Ledger.hashAuxiliaryData @StandardShelley <$> txAuxData)))
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         txAuxData
+        mempty
   where
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardShelley)
     txAuxData
@@ -1741,6 +1756,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
           mempty) -- No minting in Allegra, only Mary
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         txAuxData
+        mempty
   where
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardAllegra)
     txAuxData
@@ -1821,6 +1837,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
              TxMintValue _ v _ -> toMaryValue v))
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         txAuxData
+        mempty
   where
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardMary)
     txAuxData
@@ -1899,13 +1916,25 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (case txMintValue of
              TxMintNone        -> mempty
              TxMintValue _ v _ -> toMaryValue v)
-          (error "TODO: Alonzo optional protocol param hash")
+          (makeTxWitnessPPDataHash era
+             (error "makeTxWitnessPPDataHash: ProtocolParameters")
+             (error "makeTxWitnessPPDataHash: Set Alonzo.Language")
+             redeemerPtrs)
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
           (error "TODO alonzo: optional network"))
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         txAuxData
+        redeemerPtrs
   where
+    redeemerPtrs :: Map Alonzo.RdmrPtr (Alonzo.Data ledgerera, Alonzo.ExUnits)
+    redeemerPtrs =
+      Map.fromList $ concat [ certifyingRedeemerPtr txCertificates
+                            , mintingRedeemerPtr txMintValue
+                            , spendingRedeemerPtr txIns
+                            , rewardingRedeemerPtr txWithdrawals
+                            ]
+
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardAlonzo)
     txAuxData
       | Map.null ms
@@ -1928,6 +1957,179 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     -- TODO alonzo: ^^ and move the definition next to toShelleyUpdate
     -- and\/or merge it with toShelleyUpdate to make it era-generic
     -- must assume Ledger.PParamsDelta ledgerera ~ Alonzo.PParamsDelta ledgerera
+
+
+makeTxWitnessPPDataHash
+  :: Ledger.Era ledgerera
+  => ShelleyLedgerEra era ~ ledgerera
+  => Ledger.PParams ledgerera ~ Alonzo.PParams' Identity ledgerera
+  => ShelleyBasedEra era
+  -> ProtocolParameters
+  -> Set Alonzo.Language
+  -> Map Alonzo.RdmrPtr (Alonzo.Data ledgerera, Alonzo.ExUnits)
+  -> StrictMaybe (Alonzo.WitnessPPDataHash (Ledger.Crypto ledgerera))
+makeTxWitnessPPDataHash sbe pParams langs rMap =
+  Alonzo.hashWitnessPPData
+    (toShelleyPParams sbe pParams)
+    langs
+    (Alonzo.Redeemers rMap)
+
+
+
+-- TODO: Better name?
+-- | To construct our redeemer pointer map, we need
+--the thing the redeemer point will point to, the redeeemer
+--and the Plutus script execution units budget.
+extractRedeemerPtrIngredients
+  :: Map a (Witness witxtc era)
+  -> [(a, Alonzo.Data ledgerera, Alonzo.ExUnits)]
+extractRedeemerPtrIngredients m =
+  [ (target, error "extractRedeemerPtrIngredients: Alonzo Data", toAlonzoExUnits exunits)
+  | ( target
+    , ScriptWitness ScriptWitnessForMinting (PlutusScriptWitness _ _ _ _ ScriptData exunits)
+    ) <- Map.toList m
+  ]
+
+-- TODO: Alonzo - wrap in an Either
+certifyingRedeemerPtr
+ :: forall era ledgerera. TxCertificates BuildTx era
+ -> [(Alonzo.RdmrPtr, (Alonzo.Data ledgerera, Alonzo.ExUnits))]
+certifyingRedeemerPtr TxCertificatesNone = []
+certifyingRedeemerPtr (TxCertificates CertificatesInAlonzoEra certs (BuildTxWith sCredMap)) = do
+  let ingreds = extractRedeemerPtrIngredients sCredMap
+  map (\(sCred, redeemer, exunits) -> (createRdmrPtr certs sCred, (redeemer, exunits))) ingreds
+ where
+   createRdmrPtr :: [Certificate] -> StakeCredential -> Alonzo.RdmrPtr
+   createRdmrPtr certs' sCred =
+     case findIndex (onCert sCred) certs' of
+       Just index ->
+         case intToWord64 index of
+             Right w64 -> Alonzo.RdmrPtr Alonzo.Cert w64
+             Left err ->
+               error $ "certifyingRedeemerPtr: Error occurred while constructing a \
+                       \certifying redeemer pointer: " <> err
+       Nothing -> error $ "certifyingRedeemerPtr: Script witness not provided\
+                          \ for stake credential: " <> show sCred
+   onCert :: StakeCredential -> Certificate -> Bool
+   onCert sCred (StakeAddressDeregistrationCertificate target) = sCred == target
+   onCert sCred (StakeAddressDelegationCertificate target _) = sCred == target
+   onCert _ _ = False
+certifyingRedeemerPtr _ = []
+
+-- TODO: Alonzo - Definitely want a property test that the constructed redeemers point to the
+--correct thing in the final tx. Also wrap in an Either
+mintingRedeemerPtr
+  :: TxMintValue BuildTx era
+  -- BuildTxWith build (Map PolicyId (Witness WitCtxMint era))
+  -- -> Value
+  -> [(Alonzo.RdmrPtr, (Alonzo.Data ledgerera, Alonzo.ExUnits))]
+mintingRedeemerPtr TxMintNone = []
+mintingRedeemerPtr (TxMintValue MultiAssetInAlonzoEra val (BuildTxWith polWitMap)) = do
+  -- get policyId, redeemer and exunits
+  let polRedExUnits = extractRedeemerPtrIngredients polWitMap
+  map (\(pid, redeemer, exunits) -> (createRdmrPtr val pid, (redeemer, exunits))) polRedExUnits
+ where
+   selectPolId :: PolicyId -> (AssetId, Quantity) -> Bool
+   selectPolId p (AssetId pid' _, _) = p == pid'
+   selectPolId _ _ = False
+
+   createRdmrPtr :: Value -> PolicyId -> Alonzo.RdmrPtr
+   createRdmrPtr val' pid  =
+     case findIndex (selectPolId pid) $ valueToList val' of
+         Just index -> do
+           case intToWord64 index of
+             Right w64 -> Alonzo.RdmrPtr Alonzo.Mint w64
+             Left err ->
+               error $ "mintingRedeemerPtr: Error occurred while constructing a \
+                       \minting redeemer pointer: " <> err
+         Nothing -> error $ "mintingRedeemerPtr: Script witness not provided.\
+                          \ PolicyId: " <> show pid
+mintingRedeemerPtr _ = []
+
+intToWord64 :: Int -> Either String Word64
+intToWord64 int = do
+       let maxW64 = fromIntegral (maxBound :: Word64) :: Int
+       if maxW64 > int
+       then Left $ "Word64 bound exceeded " <> show int
+       else Right $ fromIntegral int
+
+-- TODO: Alonzo - wrap in an Either
+spendingRedeemerPtr
+  :: forall era ledgerera. [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+  -> [(Alonzo.RdmrPtr, (Alonzo.Data ledgerera, Alonzo.ExUnits))]
+spendingRedeemerPtr txins = do
+  let rdmrPtrIngreds = extractRedeemerIngreds txins
+  map (\(txin, redeemer, exunits) -> (createRdmrPtr txin txins, (redeemer, exunits))) rdmrPtrIngreds
+ where
+   extractRedeemerIngreds
+     :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+     -> [(TxIn, Alonzo.Data ledgerera, Alonzo.ExUnits)]
+   extractRedeemerIngreds txins' =
+     [ (txin, error "extractRedeemerIngreds: Alonzo data", toAlonzoExUnits exunits')
+     | ( txin
+       , BuildTxWith (ScriptWitness ScriptWitnessForSpending (PlutusScriptWitness _ _ _ _ ScriptData exunits'))
+       ) <- txins'
+     ]
+
+   createRdmrPtr :: TxIn -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))] -> Alonzo.RdmrPtr
+   createRdmrPtr txin' txins' =
+    case findIndex (onTxIn txin') txins' of
+      Just index ->
+        case intToWord64 index of
+          Right w64 -> Alonzo.RdmrPtr Alonzo.Spend w64
+          Left err ->
+            error $ "spendingRedeemerPtr: Error occurred while constructing a \
+                    \spending redeemer pointer: " <> err
+      Nothing ->
+        error $ "spendingRedeemerPtr: A Plutus script witness has not been \
+                \provided for txin: " <> show txin'
+
+   onTxIn :: TxIn -> (TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era)) -> Bool
+   onTxIn txin (txin',_) = txin == txin'
+
+-- TODO: Alonzo - wrap in an Either
+rewardingRedeemerPtr
+  :: forall era ledgerera. TxWithdrawals BuildTx era
+  -> [(Alonzo.RdmrPtr, (Alonzo.Data ledgerera, Alonzo.ExUnits))]
+rewardingRedeemerPtr (TxWithdrawals WithdrawalsInAlonzoEra withdrwls) = do
+  let rdmrPtrIngreds = extractRedeemerIngreds withdrwls
+  map (\(sAddr, redeemer, exunits) -> (createRdmrPtr sAddr withdrwls, (redeemer, exunits))) rdmrPtrIngreds
+ where
+   extractRedeemerIngreds
+     :: [(StakeAddress, Lovelace, BuildTxWith BuildTx (Witness WitCtxStake era))]
+     -> [(StakeAddress, Alonzo.Data ledgerera, Alonzo.ExUnits)]
+   extractRedeemerIngreds wdrwls =
+     [ (sAddr, error "extractRedeemerIngreds: Alonzo data", toAlonzoExUnits exunits')
+     | ( sAddr
+       , _
+       , BuildTxWith (ScriptWitness ScriptWitnessForStakeAddr (PlutusScriptWitness _ _ _ _ ScriptData exunits'))
+       ) <- wdrwls
+     ]
+
+   -- TODO: Alonzo - wrap in an Either
+   createRdmrPtr
+     :: StakeAddress
+     -> [(StakeAddress, Lovelace, BuildTxWith BuildTx (Witness WitCtxStake era))]
+     -> Alonzo.RdmrPtr
+   createRdmrPtr sAddr withdrawals =
+     case findIndex (onStakeAddr sAddr) withdrawals of
+       Just index ->
+         case intToWord64 index of
+           Right w64 -> Alonzo.RdmrPtr Alonzo.Rewrd w64
+           Left err ->
+             error $ "rewardingRedeemerPtr: Error occurred while constructing a \
+                       \reward redeemer pointer: " <> err
+       Nothing ->
+         error $ "rewardingRedeemerPtr: No script witness supplied for Plutus locked reward withdrawal: " <> show sAddr
+
+   onStakeAddr
+     :: StakeAddress
+     -> (StakeAddress, Lovelace, BuildTxWith BuildTx (Witness WitCtxStake era))
+     -> Bool
+   onStakeAddr sA (sA', _, _) = sA == sA'
+rewardingRedeemerPtr _ = []
+
+
 
 
 data SimpleScriptInEra era where
