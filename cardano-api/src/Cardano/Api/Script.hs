@@ -75,6 +75,8 @@ module Cardano.Api.Script (
     fromAlonzoExUnits,
     toShelleyScriptHash,
     fromShelleyScriptHash,
+    toAlonzoScriptData,
+    fromAlonzoScriptData,
 
     -- * Data family instances
     AsType(..)
@@ -119,7 +121,9 @@ import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
+
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -682,6 +686,13 @@ type ScriptRedeemer = ScriptData
 -- TODO Placeholder type to re-present the Alonzo.Data type
 data ScriptData = ScriptData
   deriving (Eq, Show)
+
+
+toAlonzoScriptData :: ScriptData -> Alonzo.Data ledgerera
+toAlonzoScriptData = error "TODO: toShelleyScriptData"
+
+fromAlonzoScriptData :: Alonzo.Data ledgerera -> ScriptData
+fromAlonzoScriptData = error "TODO: fromShelleyScriptData"
 
 
 -- ----------------------------------------------------------------------------
