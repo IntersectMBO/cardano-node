@@ -50,6 +50,8 @@ let
                Protocol             = "Cardano";
                RequiresNetworkMagic = "RequiresMagic";
 
+               UseTraceDispatcher   = true;
+
                TracingVerbosity     = "NormalVerbosity";
                minSeverity          = "Debug";
 
