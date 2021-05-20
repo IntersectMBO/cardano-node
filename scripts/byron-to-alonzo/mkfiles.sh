@@ -561,7 +561,7 @@ if [ "$1" = "alonzo" ]; then
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
 
   # Update shelley genesis with required Alonzo fields.
-  alonzogenesisparams='.+ {adaPerUTxOWord: 0, executionPrices: {prMem: 1, prSteps: 1}, maxTxExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxBlockExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxValueSize: 1000, costModels: "example/shelley/alonzo/costmodel.json", collateralPercentage: 100, maxCollateralInputs: 1}'
+  alonzogenesisparams='.+ {adaPerUTxOWord: 0, executionPrices: {prMem: 1, prSteps: 1}, maxTxExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxBlockExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxValueSize: 1000, collateralPercentage: 100, maxCollateralInputs: 1}'
   alonzogenesis=$(jq "${alonzogenesisparams}" < ${ROOT}/shelley/genesis.json)
   echo "${alonzogenesis}" > ${ROOT}/shelley/genesis.json
   # Copy the cost model
