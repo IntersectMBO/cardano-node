@@ -142,12 +142,9 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary
-import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
-import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
-import           Cardano.Ledger.Val (isZero)
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras
+                   (StandardShelley, StandardAllegra,
+                    StandardMary, StandardAlonzo)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 import qualified Shelley.Spec.Ledger.Address as Shelley
@@ -159,6 +156,14 @@ import qualified Shelley.Spec.Ledger.Metadata as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
+
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
+import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
+import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
+import           Cardano.Ledger.Val (isZero)
+
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -572,6 +577,7 @@ data AuxScriptsSupportedInEra era where
 
      AuxScriptsInAllegraEra :: AuxScriptsSupportedInEra AllegraEra
      AuxScriptsInMaryEra    :: AuxScriptsSupportedInEra MaryEra
+     AuxScriptsInAlonzoEra  :: AuxScriptsSupportedInEra AlonzoEra
 
 deriving instance Eq   (AuxScriptsSupportedInEra era)
 deriving instance Show (AuxScriptsSupportedInEra era)
@@ -582,8 +588,7 @@ auxScriptsSupportedInEra ByronEra   = Nothing
 auxScriptsSupportedInEra ShelleyEra = Nothing
 auxScriptsSupportedInEra AllegraEra = Just AuxScriptsInAllegraEra
 auxScriptsSupportedInEra MaryEra    = Just AuxScriptsInMaryEra
-auxScriptsSupportedInEra AlonzoEra  =
-  error "auxScriptsSupportedInEra: Alonzo not supported yet"
+auxScriptsSupportedInEra AlonzoEra  = Just AuxScriptsInAlonzoEra
 
 
 -- | A representation of whether the era supports withdrawals from reward
@@ -694,6 +699,7 @@ deriving instance Generic (TxOutValue era)
 instance ToJSON (TxOutValue era) where
   toJSON (TxOutAdaOnly _ ll) = toJSON ll
   toJSON (TxOutValue _ val) = toJSON val
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees
@@ -1001,7 +1007,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
         ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
         ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
-        ShelleyBasedEraAlonzo  -> error "serialiseToCBOR: Alonzo era not implemented yet"
+        ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -1019,7 +1025,8 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
                         (ShelleyTxBody ShelleyBasedEraAllegra) bs
         MaryEra    -> deserialiseShelleyBasedTxBody
                         (ShelleyTxBody ShelleyBasedEraMary) bs
-        AlonzoEra    -> error "deserialiseFromCBOR: Alonzo era not implemented yet"
+        AlonzoEra  -> deserialiseShelleyBasedTxBody
+                        (ShelleyTxBody ShelleyBasedEraAlonzo) bs
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
@@ -1175,7 +1182,9 @@ checkAuxiliaryDataHash era body mAux =
         ShelleyBasedEraMary ->
           Mary.adHash' body ==
           (Ledger.hashAuxiliaryData @StandardMary <$> mAux')
-        ShelleyBasedEraAlonzo -> error "checkAuxiliaryDataHash: Alonzo era not implemented yet"
+        ShelleyBasedEraAlonzo ->
+          Alonzo.adHash' body ==
+          (Ledger.hashAuxiliaryData @StandardAlonzo <$> mAux')
 
 fromLedgerTxIns
   :: ShelleyBasedEra era
@@ -1188,7 +1197,7 @@ fromLedgerTxIns era body =
         ShelleyBasedEraShelley -> toList $ Shelley._inputs body
         ShelleyBasedEraAllegra -> toList $ Allegra.inputs' body
         ShelleyBasedEraMary    -> toList $ Mary.inputs'    body
-        ShelleyBasedEraAlonzo  -> error "fromLedgerTxIns: Alonzo era not implemented yet"
+        ShelleyBasedEraAlonzo  -> toList $ Alonzo.inputs'  body
   ]
 
 
@@ -1200,7 +1209,7 @@ fromLedgerTxOuts era body =
     ShelleyBasedEraShelley -> toList $ Shelley._outputs body
     ShelleyBasedEraAllegra -> toList $ Allegra.outputs' body
     ShelleyBasedEraMary    -> toList $ Mary.outputs'    body
-    ShelleyBasedEraAlonzo  -> error "fromLedgerTxOuts: Alonzo era not implemented yet"
+    ShelleyBasedEraAlonzo  -> toList $ Alonzo.outputs'  body
 
 
 fromLedgerTxFee
@@ -1216,7 +1225,9 @@ fromLedgerTxFee era body =
     ShelleyBasedEraMary ->
       TxFeeExplicit TxFeesExplicitInMaryEra $
       fromShelleyLovelace $ Mary.txfee' body
-    ShelleyBasedEraAlonzo -> error "fromLedgerTxFee: Alonzo era not implemented yet"
+    ShelleyBasedEraAlonzo ->
+      TxFeeExplicit TxFeesExplicitInAlonzoEra $
+      fromShelleyLovelace $ Alonzo.txfee' body
 
 fromLedgerTxValidityRange
   :: ShelleyBasedEra era
@@ -1228,6 +1239,7 @@ fromLedgerTxValidityRange era body =
       ( TxValidityNoLowerBound
       , TxValidityUpperBound ValidityUpperBoundInShelleyEra $ Shelley._ttl body
       )
+
     ShelleyBasedEraAllegra ->
       ( case invalidBefore of
           SNothing -> TxValidityNoLowerBound
@@ -1239,6 +1251,7 @@ fromLedgerTxValidityRange era body =
       where
         Allegra.ValidityInterval{invalidBefore, invalidHereafter} =
           Allegra.vldt' body
+
     ShelleyBasedEraMary ->
       ( case invalidBefore of
           SNothing -> TxValidityNoLowerBound
@@ -1249,7 +1262,17 @@ fromLedgerTxValidityRange era body =
       )
       where
         Mary.ValidityInterval{invalidBefore, invalidHereafter} = Mary.vldt' body
-    ShelleyBasedEraAlonzo -> error "fromLedgerTxValidityRange: Alonzo era not implemented yet"
+
+    ShelleyBasedEraAlonzo ->
+      ( case invalidBefore of
+          SNothing -> TxValidityNoLowerBound
+          SJust s  -> TxValidityLowerBound ValidityLowerBoundInAlonzoEra s
+      , case invalidHereafter of
+          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
+          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInAlonzoEra s
+      )
+      where
+        Mary.ValidityInterval{invalidBefore, invalidHereafter} = Alonzo.vldt' body
 
 
 fromLedgerAuxiliaryData
@@ -1319,6 +1342,7 @@ fromLedgerTxWithdrawals era body =
           fromShelleyWithdrawal withdrawals
       where
         withdrawals = Shelley._wdrls body
+
     ShelleyBasedEraAllegra
       | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
       | otherwise ->
@@ -1326,13 +1350,20 @@ fromLedgerTxWithdrawals era body =
           fromShelleyWithdrawal withdrawals
       where
         withdrawals = Allegra.wdrls' body
+
     ShelleyBasedEraMary
       | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
       | otherwise ->
           TxWithdrawals WithdrawalsInMaryEra $ fromShelleyWithdrawal withdrawals
       where
         withdrawals = Mary.wdrls' body
-    ShelleyBasedEraAlonzo -> error "fromLedgerTxWithdrawals: Alonzo era not implemented yet"
+
+    ShelleyBasedEraAlonzo
+      | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
+      | otherwise ->
+          TxWithdrawals WithdrawalsInAlonzoEra $ fromShelleyWithdrawal withdrawals
+      where
+        withdrawals = Alonzo.wdrls' body
 
 fromLedgerTxCertificates
   :: ShelleyBasedEra era
@@ -1349,6 +1380,7 @@ fromLedgerTxCertificates era body =
             ViewTx
       where
         certificates = Shelley._certs body
+
     ShelleyBasedEraAllegra
       | null certificates -> TxCertificatesNone
       | otherwise ->
@@ -1358,6 +1390,7 @@ fromLedgerTxCertificates era body =
             ViewTx
       where
         certificates = Allegra.certs' body
+
     ShelleyBasedEraMary
       | null certificates -> TxCertificatesNone
       | otherwise ->
@@ -1367,7 +1400,16 @@ fromLedgerTxCertificates era body =
             ViewTx
       where
         certificates = Mary.certs' body
-    ShelleyBasedEraAlonzo -> error "fromLedgerTxCertificates: Alonzo era not implemented yet"
+
+    ShelleyBasedEraAlonzo
+      | null certificates -> TxCertificatesNone
+      | otherwise ->
+          TxCertificates
+            CertificatesInAlonzoEra
+            (map fromShelleyCertificate $ toList certificates)
+            ViewTx
+      where
+        certificates = Alonzo.certs' body
 
 fromLedgerTxUpdateProposal
   :: ShelleyBasedEra era
@@ -1400,16 +1442,24 @@ fromLedgerTxMintValue
 fromLedgerTxMintValue era body =
   case era of
     ShelleyBasedEraShelley -> pure TxMintNone
+
     ShelleyBasedEraAllegra ->
       TxMintNone <$
       guard (isZero $ Allegra.mint' body) ?! TxBodyMintBeforeMaryError
+
     ShelleyBasedEraMary
       | isZero mint -> pure TxMintNone
       | otherwise   ->
           pure $ TxMintValue MultiAssetInMaryEra (fromMaryValue mint) ViewTx
       where
         mint = Mary.mint' body
-    ShelleyBasedEraAlonzo -> error "fromLedgerTxMintValue: Alonzo era not implemented yet"
+
+    ShelleyBasedEraAlonzo
+      | isZero mint -> pure TxMintNone
+      | otherwise   ->
+          pure $ TxMintValue MultiAssetInAlonzoEra (fromMaryValue mint) ViewTx
+      where
+        mint = Alonzo.mint' body
 
 
 makeByronTransactionBody :: TxBodyContent BuildTx ByronEra
