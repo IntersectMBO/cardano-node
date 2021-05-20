@@ -49,7 +49,7 @@ let
   linuxRelease = (import pkgs.iohkNix.release-lib) {
     inherit pkgs;
     supportedSystems = [ "x86_64-linux" ];
-    supportedCrossSystems = filter (s: s == "x86_64-linux" && windowsBuild) supportedCrossSystems;
+    supportedCrossSystems = filter (s: s == "x86_64-linux") supportedCrossSystems;
     inherit scrubJobs projectArgs;
     packageSet = import cardano-node;
     gitrev = cardano-node.rev;
@@ -57,7 +57,7 @@ let
   macosRelease = (import pkgs.iohkNix.release-lib) {
     inherit pkgs;
     supportedSystems = [ "x86_64-darwin" ];
-    supportedCrossSystems = filter (s: s == "x86_64-darwin" && windowsBuild) supportedCrossSystems;
+    supportedCrossSystems = filter (s: s == "x86_64-darwin") supportedCrossSystems;
     inherit scrubJobs projectArgs;
     packageSet = import cardano-node;
     gitrev = cardano-node.rev;
