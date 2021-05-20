@@ -27,11 +27,11 @@
 # Build for linux
 , linuxBuild ? builtins.elem "x86_64-linux" supportedSystems
 
-# Build for macos
-, macosBuild ? builtins.elem "x86_64-darwin" supportedSystems
+# PR #2657 Temporarily disable macos build
+, macosBuild ? false
 
-# Cross compilation to Windows is currently only supported on linux.
-, windowsBuild ? builtins.elem "x86_64-linux" supportedCrossSystems
+# PR #2657 Temporarily disable mingw32 cross build
+, windowsBuild ? false
 
 # A Hydra option
 , scrubJobs ? true
@@ -194,6 +194,7 @@ let
       [ jobs.cardano-node-linux ]
     ]))
     # macOS builds:
+    # NB. you can replace macosBuild with false to remove these jobs from "required"
     (optionals macosBuild (concatLists [
       (collectJobs jobs.macos.checks)
       (collectJobs jobs.macos.nixosTests)
@@ -202,6 +203,7 @@ let
       [ jobs.cardano-node-macos ]
     ]))
     # Windows builds:
+    # NB. you can replace windowsBuild with false to remove these jobs from "required"
     (optional windowsBuild jobs.cardano-node-win64)
     (optionals windowsBuild (collectJobs jobs.windows.checks))
     # Default system builds (linux on hydra):
