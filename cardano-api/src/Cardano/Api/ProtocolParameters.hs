@@ -44,6 +44,7 @@ module Cardano.Api.ProtocolParameters (
     toShelleyProposedPPUpdates,
     toShelleyUpdate,
     fromShelleyPParams,
+    toShelleyPParams,
     fromShelleyPParamsUpdate,
     fromShelleyProposedPPUpdates,
     fromShelleyUpdate,
@@ -90,11 +91,14 @@ import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 -- TODO alonzo: eliminate this import and use things re-exported from the ledger lib
 import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.Address
+import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash

@@ -39,9 +39,9 @@ import           Cardano.Api.Shelley
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import           Data.String
-import qualified Data.ByteString.Short as SBS
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
