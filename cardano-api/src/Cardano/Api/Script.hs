@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -79,7 +80,8 @@ module Cardano.Api.Script (
     fromAlonzoScriptData,
 
     -- * Data family instances
-    AsType(..)
+    AsType(..),
+    Hash(..),
   ) where
 
 import           Prelude
@@ -116,6 +118,7 @@ import           Cardano.Slotting.Slot (SlotNo)
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era  as Ledger
+import qualified Cardano.Ledger.SafeHash as Ledger
 
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
@@ -687,12 +690,34 @@ type ScriptRedeemer = ScriptData
 data ScriptData = ScriptData
   deriving (Eq, Show)
 
+instance HasTypeProxy ScriptData where
+    data AsType ScriptData = AsScriptData
+    proxyToAsType _ = AsScriptData
 
 toAlonzoScriptData :: ScriptData -> Alonzo.Data ledgerera
 toAlonzoScriptData = error "TODO: toShelleyScriptData"
 
 fromAlonzoScriptData :: Alonzo.Data ledgerera -> ScriptData
 fromAlonzoScriptData = error "TODO: fromShelleyScriptData"
+
+
+newtype instance Hash ScriptData =
+    ScriptDataHash (Alonzo.DataHash StandardCrypto)
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash ScriptData)
+
+instance SerialiseAsRawBytes (Hash ScriptData) where
+    serialiseToRawBytes (ScriptDataHash dh) =
+      Crypto.hashToBytes (Ledger.extractHash dh)
+
+    deserialiseFromRawBytes (AsHash AsScriptData) bs =
+      ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
+
+instance ToJSON (Hash ScriptData) where
+    toJSON = toJSON . serialiseToRawBytesHexText
+
+instance Aeson.ToJSONKey (Hash ScriptData) where
+    toJSONKey = Aeson.toJSONKeyText serialiseToRawBytesHexText
 
 
 -- ----------------------------------------------------------------------------
