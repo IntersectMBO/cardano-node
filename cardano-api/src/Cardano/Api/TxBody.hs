@@ -296,8 +296,9 @@ fromShelleyTxIn (Shelley.TxIn txid txix) =
 -- Transaction outputs
 --
 
-data TxOut era
-  = TxOut (AddressInEra era) (TxOutValue era)
+data TxOut era = TxOut (AddressInEra era)
+                       (TxOutValue era)
+                       --TODO: add the data hash here 'TxOutDataHash'
   deriving Generic
 
 instance IsCardanoEra era => ToJSON (TxOut era) where
@@ -337,7 +338,7 @@ toByronTxOut (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
 toShelleyTxOut :: forall era ledgerera.
                  (ShelleyLedgerEra era ~ ledgerera,
                   IsShelleyBasedEra era, Ledger.ShelleyBased ledgerera)
-               => TxOut era -> Shelley.TxOut ledgerera
+               => TxOut era -> Ledger.TxOut ledgerera
 toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _)) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
 
@@ -351,7 +352,8 @@ toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value)) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
 toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value)) =
-    Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
+    Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
+                 (error "TODO: toShelleyTxOut Alonzo tx out data hashes")
 
 fromShelleyTxOut :: Shelley.TxOut StandardShelley -> TxOut ShelleyEra
 fromShelleyTxOut = fromTxOut ShelleyBasedEraShelley
@@ -366,16 +368,21 @@ fromTxOut shelleyBasedEra' ledgerTxOut =
     ShelleyBasedEraShelley -> let (Shelley.TxOut addr value) = ledgerTxOut
                               in TxOut (fromShelleyAddr addr)
                                        (TxOutAdaOnly AdaOnlyInShelleyEra
-                                                      (fromShelleyLovelace value))
+                                                     (fromShelleyLovelace value))
     ShelleyBasedEraAllegra -> let (Shelley.TxOut addr value) = ledgerTxOut
                               in TxOut (fromShelleyAddr addr)
-                                        (TxOutAdaOnly AdaOnlyInAllegraEra
-                                                      (fromShelleyLovelace value))
+                                       (TxOutAdaOnly AdaOnlyInAllegraEra
+                                                     (fromShelleyLovelace value))
     ShelleyBasedEraMary    -> let (Shelley.TxOut addr value) = ledgerTxOut
                               in TxOut (fromShelleyAddr addr)
-                                        (TxOutValue MultiAssetInMaryEra
-                                                      (fromMaryValue value))
-    ShelleyBasedEraAlonzo  -> error "fromTxOut: Alonzo not implemented yet"
+                                       (TxOutValue MultiAssetInMaryEra
+                                                   (fromMaryValue value))
+    ShelleyBasedEraAlonzo  -> let (Alonzo.TxOut addr value _datah) = ledgerTxOut
+                              in TxOut (fromShelleyAddr addr)
+                                       (TxOutValue MultiAssetInAlonzoEra
+                                                   (fromMaryValue value))
+                                       --TODO: use the data hash
+
 
 -- ----------------------------------------------------------------------------
 -- Era-dependent transaction body features
