@@ -177,6 +177,23 @@ case "${op}" in
              { "decentralisationParam":  $p.genesis.decentralisation_param
              , "maxBlockBodySize":       $p.genesis.max_block_size
              }
+           , adaPerUTxOWord:             $p.genesis.ada_per_utxo_word
+           , executionPrices:
+             { prMem:                    $p.genesis.execution_prices.pr_mem
+             , prSteps:                  $p.genesis.execution_prices.pr_steps
+             }
+           , maxTxExUnits:
+             { exUnitsMem:               $p.genesis.max_tx_ex_units.ex_units_mem
+             , exUnitsSteps:             $p.genesis.max_tx_ex_units.ex_units_steps
+             }
+           , maxBlockExUnits:
+             { exUnitsMem:               $p.genesis.max_block_ex_units.ex_units_mem
+             , exUnitsSteps:             $p.genesis.max_block_ex_units.ex_units_mem
+             }
+           , maxValueSize:               $p.genesis.max_valueSize
+           , costModel:                  $p.genesis.cost_model
+           , collateralPercentage:       $p.genesis.collateral_percentage
+           , maxCollateralInputs:        $p.genesis.max_collateral_inputs
            }' --slurpfile prof       "$profile_json"  \
               --arg       start_time "${start_time}Z" \
                "$dir"/genesis.json |

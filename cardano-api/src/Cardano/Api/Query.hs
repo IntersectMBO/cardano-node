@@ -427,6 +427,7 @@ fromConsensusQueryResult (QueryInEra ByronEraInByronMode
       (Consensus.BlockQuery (Consensus.DegenQuery Consensus.GetUpdateInterfaceState),
        Consensus.DegenQueryResult r'')
         -> Right (ByronUpdateState r'')
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      QueryByronUpdateState) q' r' =
@@ -447,6 +448,7 @@ fromConsensusQueryResult (QueryInEra ShelleyEraInShelleyMode
        Consensus.DegenQueryResult r'')
         -> Right (fromConsensusQueryResultShelleyBased
                     ShelleyBasedEraShelley q q'' r'')
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra era _)) _ _ =

@@ -58,6 +58,7 @@ import           Cardano.Tracing.Metrics (HasKESInfo (..), HasKESMetricsData (..
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
+import           Ouroboros.Consensus.HardFork.Combinator.PartialConfig (HasPartialLedgerConfig)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
                    DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
                    StdRunNodeArgs (..))
@@ -128,6 +129,7 @@ runNode cmdPc = do
              , HasKESInfo blk
              , TraceConstraints blk
              , Protocol.Protocol IO blk
+             , HasPartialLedgerConfig blk
              )
           => Protocol.ProtocolInfoArgs IO blk
           -> IO ()
@@ -198,6 +200,7 @@ handleSimpleNode
   :: forall blk
   . ( RunNode blk
     , Protocol.Protocol IO blk
+    , HasPartialLedgerConfig blk
     )
   => SomeConsensusProtocol
   -> Protocol.ProtocolInfoArgs IO blk

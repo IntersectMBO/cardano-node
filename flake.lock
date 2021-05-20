@@ -43,7 +43,7 @@
         "narHash": "sha256-JCu5wnt3ja8UBQv5G3aRhQ+ZcAKB6+ivodv3yA6UnK8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "0ce3abcfed803ed77472488f30b299fda9d941b1",
+        "rev": "c1b9d99c3dec57d21747cbac2f937dd9f85f9d8b",
         "type": "github"
       },
       "original": {

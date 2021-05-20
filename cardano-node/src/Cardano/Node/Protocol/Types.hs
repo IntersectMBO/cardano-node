@@ -23,6 +23,8 @@ import           Cardano.Node.Orphans ()
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 
+import           Ouroboros.Consensus.HardFork.Combinator.PartialConfig (HasPartialLedgerConfig)
+
 data Protocol = ByronProtocol
               | ShelleyProtocol
               | CardanoProtocol
@@ -55,6 +57,7 @@ data SomeConsensusProtocol where
                                           , HasKESMetricsData blk
                                           , HasKESInfo blk
                                           , TraceConstraints blk
+                                          , HasPartialLedgerConfig blk
                                           )
                            => Cardano.BlockType blk
                            -> Cardano.ProtocolInfoArgs IO blk

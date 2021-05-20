@@ -8,6 +8,23 @@
     genesisParams = {
       slotLength = 0.1;
       decentralisationParam = 0.8;
+      adaPerUTxOWord = 1;
+      executionPrices = {
+        prMem = 1;
+        prSteps = 1;
+      };
+      maxTxExUnits = {
+        exUnitsMem = 1;
+        exUnitsSteps = 1;
+      };
+      maxBlockExUnits = {
+        exUnitsMem = 1;
+        exUnitsSteps = 1;
+      };
+      maxValueSize = 1;
+      costModel = 1;
+      collateralPercentage = 1;
+      maxCollateralInputs = 1;
     };
     inherit stateDir;
   };
