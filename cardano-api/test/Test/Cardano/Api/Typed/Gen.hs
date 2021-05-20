@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,10 +15,10 @@ module Test.Cardano.Api.Typed.Gen
     -- * Scripts
   , genScript
   , genSimpleScript
+  , genPlutusScript
   , genScriptInAnyLang
   , genScriptInEra
   , genScriptHash
-  , canonicaliseScriptVersion
 
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
@@ -42,6 +41,7 @@ import           Cardano.Prelude
 import           Control.Monad.Fail (fail)
 import qualified Data.Map.Strict as Map
 import           Data.String
+import qualified Data.ByteString.Short as SBS
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -82,8 +82,8 @@ genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
 genScript :: ScriptLanguage lang -> Gen (Script lang)
 genScript (SimpleScriptLanguage lang) =
     SimpleScript lang <$> genSimpleScript lang
-
-genScript (PlutusScriptLanguage lang) = case lang of {}
+genScript (PlutusScriptLanguage lang) =
+    PlutusScript lang <$> genPlutusScript lang
 
 genSimpleScript :: SimpleScriptVersion lang -> Gen (SimpleScript lang)
 genSimpleScript lang =
@@ -113,6 +113,10 @@ genSimpleScript lang =
            return (RequireMOf m ts)
       ]
 
+genPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
+genPlutusScript _ =
+    -- We make no attempt to create a valid script
+    PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
 
 -- ----------------------------------------------------------------------------
 -- Script generators for any language, or any language valid in a specific era
@@ -135,27 +139,6 @@ genScriptHash :: Gen ScriptHash
 genScriptHash = do
     ScriptInAnyLang _ script <- genScriptInAnyLang
     return (hashScript script)
-
-
--- | For JSON round-trip testing we need to re-tag scripts with the lowest
--- language version that they fit into.
-
--- The reason for this is that the external JSON syntax for the simple script
--- language does specify the language version and so the JSON decoder simply
--- uses the lowest version of the language that supports the concrete script.
---
-canonicaliseScriptVersion :: ScriptInEra era -> ScriptInEra era
-canonicaliseScriptVersion (ScriptInEra SimpleScriptV2InAllegra
-                                      (SimpleScript SimpleScriptV2 s))
-    | Just s' <- adjustSimpleScriptVersion SimpleScriptV1 s
-    = ScriptInEra SimpleScriptV1InAllegra (SimpleScript SimpleScriptV1 s')
-
-canonicaliseScriptVersion (ScriptInEra SimpleScriptV2InMary
-                                      (SimpleScript SimpleScriptV2 s))
-    | Just s' <- adjustSimpleScriptVersion SimpleScriptV1 s
-    = ScriptInEra SimpleScriptV1InMary (SimpleScript SimpleScriptV1 s')
-
-canonicaliseScriptVersion s = s
 
 
 ----------------------------------------------------------------------------

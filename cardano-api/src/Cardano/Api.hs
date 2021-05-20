@@ -285,7 +285,7 @@ module Cardano.Api (
     SimpleScriptV2,
     ScriptLanguage(..),
     SimpleScriptVersion(..),
-    PlutusScriptVersion,
+    PlutusScriptVersion(..),
     AnyScriptLanguage(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
@@ -308,6 +308,8 @@ module Cardano.Api (
     Witness(..),
     KeyWitnessInCtx(..),
     ScriptWitnessInCtx(..),
+    ScriptDatum(..),
+    ScriptRedeemer,
 
     -- *** Languages supported in each era
     ScriptLanguageInEra(..),
@@ -321,6 +323,12 @@ module Cardano.Api (
     TimeLocksSupported(..),
     timeLocksSupported,
     adjustSimpleScriptVersion,
+
+    -- ** Plutus scripts
+    PlutusScript,
+
+    -- ** Script data
+    ScriptData(..),
 
     -- ** Script addresses
     -- | Making addresses from scripts.
@@ -345,6 +353,7 @@ module Cardano.Api (
     JsonDecodeError(..),
     readFileJSON,
     writeFileJSON,
+    prettyPrintJSON,
 
     -- ** Bech32
     SerialiseAsBech32,

@@ -38,7 +38,7 @@ module Cardano.Api.Eras
   , cardanoEraStyle
 
     -- * Data family instances
-  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra,
+  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra,
            AsByron,    AsShelley,    AsAllegra,    AsMary)
   ) where
 
@@ -90,6 +90,8 @@ instance HasTypeProxy MaryEra where
 instance HasTypeProxy AlonzoEra where
     data AsType AlonzoEra = AsAlonzoEra
     proxyToAsType _ = AsAlonzoEra
+
+
 -- ----------------------------------------------------------------------------
 -- Deprecated aliases
 --

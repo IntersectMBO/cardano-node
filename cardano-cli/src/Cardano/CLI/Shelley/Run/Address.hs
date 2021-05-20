@@ -13,18 +13,15 @@ module Cardano.CLI.Shelley.Run.Address
 
 import           Cardano.Prelude hiding (putStrLn)
 
-import           Data.Aeson as Aeson
 import           System.Console.ANSI
 
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified System.Console.ANSI as ANSI
 import qualified System.IO as IO
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                   newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
@@ -33,15 +30,15 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentVerifier (..)
                    StakeVerifier (..), VerificationKeyTextOrFile,
                    VerificationKeyTextOrFileError (..), readVerificationKeyOrFile,
                    readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
+import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 import           Cardano.CLI.Types
 
 data ShelleyAddressCmdError
   = ShelleyAddressCmdAddressInfoError !ShelleyAddressInfoError
-  | ShelleyAddressCmdAesonDecodeError !FilePath !Text
   | ShelleyAddressCmdReadKeyFileError !(FileError InputDecodeError)
-  | ShelleyAddressCmdReadFileException !(FileError ())
+  | ShelleyAddressCmdReadScriptFileError !(FileError ScriptDecodeError)
   | ShelleyAddressCmdVerificationKeyTextOrFileError !VerificationKeyTextOrFileError
   | ShelleyAddressCmdWriteFileError !(FileError ())
   deriving Show
@@ -55,10 +52,9 @@ renderShelleyAddressCmdError err =
       Text.pack (displayError fileErr)
     ShelleyAddressCmdVerificationKeyTextOrFileError vkTextOrFileErr ->
       renderVerificationKeyTextOrFileError vkTextOrFileErr
+    ShelleyAddressCmdReadScriptFileError fileErr ->
+      Text.pack (displayError fileErr)
     ShelleyAddressCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
-    ShelleyAddressCmdAesonDecodeError fp decErr -> "Error decoding multisignature JSON object at: "
-                                                   <> Text.pack fp <> " Error: " <> decErr
-    ShelleyAddressCmdReadFileException fileErr -> Text.pack (displayError fileErr)
 
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
@@ -136,10 +132,9 @@ runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
       return $ serialiseAddress (addr :: AddressAny)
 
     PaymentVerifierScriptFile (ScriptFile fp) -> do
-      scriptBytes <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp) $ LBS.readFile fp
       ScriptInAnyLang _lang script <-
-        firstExceptT (ShelleyAddressCmdAesonDecodeError fp . Text.pack) $
-        hoistEither $ Aeson.eitherDecode scriptBytes
+        firstExceptT ShelleyAddressCmdReadScriptFileError $
+          readFileScriptInAnyLang fp
 
       let payCred = PaymentCredentialByScript (hashScript script)
 
@@ -165,10 +160,9 @@ makeStakeAddressRef mbStakeVerifier = do
           mstakeVKey
 
       StakeVerifierScriptFile (ScriptFile fp) -> do
-        scriptBytes <- handleIOExceptT (ShelleyAddressCmdReadFileException . FileIOError fp) $ LBS.readFile fp
         ScriptInAnyLang _lang script <-
-          firstExceptT (ShelleyAddressCmdAesonDecodeError fp . Text.pack) $
-          hoistEither $ Aeson.eitherDecode scriptBytes
+          firstExceptT ShelleyAddressCmdReadScriptFileError $
+            readFileScriptInAnyLang fp
 
         let stakeCred = StakeCredentialByScript (hashScript script)
         return (StakeAddressByValue stakeCred)

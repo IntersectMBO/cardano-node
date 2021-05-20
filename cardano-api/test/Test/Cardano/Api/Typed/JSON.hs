@@ -5,12 +5,11 @@ module Test.Cardano.Api.Typed.JSON
   ( tests
   ) where
 
-import           Cardano.Api
 import           Cardano.Prelude
 
 import           Data.Aeson
 
-import           Hedgehog (Gen, Property, discover, forAll, tripping)
+import           Hedgehog (Property, discover, forAll, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import           Test.Tasty (TestTree)
@@ -30,19 +29,6 @@ prop_roundtrip_protocol_parameters_JSON :: Property
 prop_roundtrip_protocol_parameters_JSON = H.property $ do
   pp <- forAll genProtocolParameters
   tripping pp encode eitherDecode
-
-
--- -----------------------------------------------------------------------------
-
-roundtrip_CBOR
-  :: (SerialiseAsCBOR a, Eq a, Show a)
-  => AsType a -> Gen a -> Property
-roundtrip_CBOR typeProxy gen =
-  H.property $ do
-    val <- H.forAll gen
-    H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
-
-
 
 -- -----------------------------------------------------------------------------
 
