@@ -163,6 +163,7 @@ import qualified Cardano.Ledger.ShelleyMA.TxBody as Allegra
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
 import           Cardano.Ledger.Val (isZero)
 
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 
 import           Cardano.Api.Address
@@ -866,6 +867,7 @@ data TxBodyContent build era =
                             TxValidityUpperBound era),
        txMetadata       :: TxMetadataInEra era,
        txAuxScripts     :: TxAuxScripts era,
+     --txAuxScriptData  :: TxAuxScriptData era, --TODO
        txWithdrawals    :: TxWithdrawals  build era,
        txCertificates   :: TxCertificates build era,
        txUpdateProposal :: TxUpdateProposal era,
@@ -1167,6 +1169,7 @@ fromLedgerTxBody era body mAux = do
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
+    --TODO ^^ also return TxAuxScriptData as 3rd component
 
 
 checkAuxiliaryDataHash
@@ -1296,8 +1299,11 @@ fromLedgerAuxiliaryData ShelleyBasedEraMary (Mary.AuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraMary <$> toList ss
   )
-fromLedgerAuxiliaryData ShelleyBasedEraAlonzo _ =
-  error "fromLedgerAuxiliaryData: Alonzo era not implemented yet"
+fromLedgerAuxiliaryData ShelleyBasedEraAlonzo (Alonzo.AuxiliaryData ms ss _ds) =
+  ( fromShelleyMetadata ms
+  , fromShelleyBasedScript ShelleyBasedEraAlonzo <$> toList ss
+  )
+  --TODO: cover the Alonzo era auxiliary data, see txAuxScriptData above
 
 fromLedgerTxAuxiliaryData
   :: ShelleyBasedEra era
@@ -1331,7 +1337,15 @@ fromLedgerTxAuxiliaryData era (Just auxData) =
           [] -> TxAuxScriptsNone
           _  -> TxAuxScripts AuxScriptsInMaryEra ss
       )
-    ShelleyBasedEraAlonzo -> error "fromLedgerTxAuxiliaryData: Alonzo era not implemented yet"
+    ShelleyBasedEraAlonzo ->
+      ( if null ms then
+          TxMetadataNone
+        else
+          TxMetadataInEra TxMetadataInAlonzoEra $ TxMetadata ms
+      , case ss of
+          [] -> TxAuxScriptsNone
+          _  -> TxAuxScripts AuxScriptsInAlonzoEra ss
+      )
   where
     (ms, ss) = fromLedgerAuxiliaryData era auxData
 
@@ -1429,17 +1443,27 @@ fromLedgerTxUpdateProposal era body =
         SNothing -> TxUpdateProposalNone
         SJust p ->
           TxUpdateProposal UpdateProposalInShelleyEra $ fromShelleyUpdate p
+
     ShelleyBasedEraAllegra ->
       case Allegra.update' body of
         SNothing -> TxUpdateProposalNone
         SJust p ->
           TxUpdateProposal UpdateProposalInAllegraEra $ fromShelleyUpdate p
+
     ShelleyBasedEraMary ->
       case Mary.update' body of
         SNothing -> TxUpdateProposalNone
         SJust p ->
           TxUpdateProposal UpdateProposalInMaryEra $ fromShelleyUpdate p
-    ShelleyBasedEraAlonzo -> error "fromLedgerTxUpdateProposal: Alonzo era not implemented yet"
+
+    ShelleyBasedEraAlonzo ->
+      case Alonzo.update' body of
+        SNothing -> TxUpdateProposalNone
+        SJust _p ->
+          error "fromLedgerTxUpdateProposal: Alonzo era not implemented yet"
+--        TxUpdateProposal UpdateProposalInAlonzoEra $ fromShelleyUpdate p
+--        TODO: fromShelleyUpdate currently is not era-generic and expects
+--              Ledger.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
 
 
 fromLedgerTxMintValue
