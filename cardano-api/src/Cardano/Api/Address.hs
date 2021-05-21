@@ -45,6 +45,7 @@ module Cardano.Api.Address (
     StakeExtendedKey,
 
     -- * Internal conversion functions
+    getNetworkId,
     toShelleyAddr,
     toShelleyStakeAddr,
     toShelleyStakeCredential,
@@ -81,8 +82,8 @@ import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 
 import           Cardano.Api.Eras
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
@@ -489,6 +490,11 @@ makeStakeAddress nw sc =
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
 --
+
+getNetworkId :: Address addrtype -> Shelley.Network
+getNetworkId (ByronAddress addr) =
+  Shelley.getNetwork . Shelley.AddrBootstrap $ Shelley.BootstrapAddress addr
+getNetworkId (ShelleyAddress nid _ _ ) = nid
 
 toShelleyAddr :: AddressInEra era -> Shelley.Addr StandardCrypto
 toShelleyAddr (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) =
