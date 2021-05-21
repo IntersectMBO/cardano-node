@@ -1965,7 +1965,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                  redeemers)
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
-          (error "TODO alonzo: optional network"))
+          SNothing) -- TODO alonzo: support optional network id in TxBodyContent
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         (fromAlonzoRedeemers ScriptDataInAlonzoEra redeemers)
         txAuxData
