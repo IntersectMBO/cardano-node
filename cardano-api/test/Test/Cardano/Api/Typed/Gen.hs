@@ -300,11 +300,13 @@ genByronTxOut :: Gen (TxOut ByronEra)
 genByronTxOut =
   TxOut <$> (byronAddressInEra <$> genAddressByron)
         <*> (TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace)
+        <*> pure TxOutDatumHashNone -- TODO replace with generator
 
 genShelleyTxOut :: Gen (TxOut ShelleyEra)
 genShelleyTxOut =
   TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
+        <*> pure TxOutDatumHashNone -- TODO replace with generator
 
 genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 Ledger.EraIndependentTxBody)
 genShelleyHash = return . Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
@@ -347,14 +349,17 @@ genTxOut era =
       TxOut
         <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> (TxOutAdaOnly AdaOnlyInAllegraEra <$> genLovelace)
+        <*> pure TxOutDatumHashNone -- TODO replace with generator
     MaryEra ->
       TxOut
         <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> genTxOutValue era
+        <*> pure TxOutDatumHashNone -- TODO replace with generator
     AlonzoEra ->
       TxOut
         <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> genTxOutValue era
+        <*> pure TxOutDatumHashNone -- TODO replace with generator
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo
