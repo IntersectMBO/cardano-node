@@ -1,5 +1,5 @@
 { pkgs
-, runJq, runWorkbench
+, runJq
 
 ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
 , backend
