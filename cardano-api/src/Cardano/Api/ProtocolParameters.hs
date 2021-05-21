@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,6 +25,12 @@ module Cardano.Api.ProtocolParameters (
     PraosNonce,
     makePraosNonce,
 
+    -- * Execution units, prices and cost models,
+    ExecutionUnits(..),
+    ExecutionUnitPrices(..),
+    CostModel(..),
+    validateCostModel,
+
     -- * Update proposals to change the protocol paramaters
     UpdateProposal(..),
     makeShelleyUpdateProposal,
@@ -41,6 +48,8 @@ module Cardano.Api.ProtocolParameters (
     fromShelleyProposedPPUpdates,
     fromShelleyUpdate,
     fromShelleyGenesis,
+    toAlonzoPrices,
+    fromAlonzoPrices,
 
     -- * Data family instances
     AsType(..)
@@ -48,19 +57,22 @@ module Cardano.Api.ProtocolParameters (
 
 import           Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.=))
-import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Scientific (Scientific)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (NominalDiffTime, UTCTime)
 import           GHC.Generics
 import           Numeric.Natural
 
 import           Control.Monad
+
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
+                   withText, (.!=), (.:), (.:?), (.=))
+import qualified Data.Aeson as Aeson
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -77,12 +89,18 @@ import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+--TODO: eliminate this import and use things re-exported from the ledger lib
+import qualified Plutus.V1.Ledger.Api as Plutus
+
 import           Cardano.Api.Address
+import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
@@ -212,7 +230,37 @@ data ProtocolParameters =
        --
        -- This is the \"tau\" incentives parameter from the design document.
        --
-       protocolParamTreasuryCut :: Rational
+       protocolParamTreasuryCut :: Rational,
+
+       -- | Cost in ada per word of UTxO storage.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamUTxOCostPerWord :: Maybe Lovelace,
+
+       -- | Cost models for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamCostModels :: Map AnyPlutusScriptVersion CostModel,
+
+       -- | Price of execution units for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamPrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+
+       -- | Max total script execution resources units allowed per tx
+       --
+       -- /Introduced in Alonzo/
+       protocolParamMaxTxExUnits :: Maybe ExecutionUnits,
+
+       -- | Max total script execution resources units allowed per block
+       --
+       -- /Introduced in Alonzo/
+       protocolParamMaxBlockExUnits :: Maybe ExecutionUnits,
+
+       -- | Max size of a Value in a tx ouput.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamMaxValueSize :: Maybe Natural
     }
   deriving (Eq, Generic, Show)
 
@@ -237,10 +285,17 @@ instance FromJSON ProtocolParameters where
                         <*> o .: "poolPledgeInfluence"
                         <*> o .: "monetaryExpansion"
                         <*> o .: "treasuryCut"
+                        <*> o .:? "utxoCostPerWord"
+                        <*> o .:? "costModel"           .!= Map.empty
+                        <*> o .:? "executionUnitPrices" .!= Map.empty
+                        <*> o .:? "maxTxExecUnits"
+                        <*> o .:? "maxBlockExecUnits"
+                        <*> o .:? "maxValueSize"
 
 instance ToJSON ProtocolParameters where
   toJSON pp = object [ "extraPraosEntropy" .= protocolParamExtraPraosEntropy pp
                      , "stakePoolTargetNum" .= protocolParamStakePoolTargetNum pp
+                     , "minUTxOValue" .= protocolParamMinUTxOValue pp
                      , "poolRetireMaxEpoch" .= protocolParamPoolRetireMaxEpoch pp
                      , "decentralization" .= (fromRational $ protocolParamDecentralization pp :: Scientific)
                      , "stakePoolDeposit" .= protocolParamStakePoolDeposit pp
@@ -256,7 +311,12 @@ instance ToJSON ProtocolParameters where
                                             in object ["major" .= major, "minor" .= minor]
                      , "txFeeFixed" .= protocolParamTxFeeFixed pp
                      , "txFeePerByte" .= protocolParamTxFeePerByte pp
-                     , "minUTxOValue"  .= protocolParamMinUTxOValue pp
+                     -- Alonzo era:
+                     , "costModels"  .= protocolParamCostModels pp
+                     , "executionUnitPrices" .= protocolParamPrices pp
+                     , "maxTxExecutionUnits" .= protocolParamMaxTxExUnits pp
+                     , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits pp
+                     , "maxValSize" .= protocolParamMaxValueSize pp
                      ]
 
 -- ----------------------------------------------------------------------------
@@ -376,7 +436,38 @@ data ProtocolParametersUpdate =
        --
        -- This is the \"tau\" incentives parameter from the design document.
        --
-       protocolUpdateTreasuryCut :: Maybe Rational
+       protocolUpdateTreasuryCut :: Maybe Rational,
+       -- Introduced in Alonzo
+
+       -- | Cost in ada per word of UTxO storage.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateUTxOCostPerWord :: Maybe Lovelace,
+
+       -- | Cost models for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateCostModels :: Map AnyPlutusScriptVersion CostModel,
+
+       -- | Price of execution units for script languages that use them.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdatePrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+
+       -- | Max total script execution resources units allowed per tx
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateMaxTxExUnits :: Maybe ExecutionUnits,
+
+       -- | Max total script execution resources units allowed per block
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateMaxBlockExUnits :: Maybe ExecutionUnits,
+
+       -- | Max size of a 'Value' in a tx output.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateParamMaxValueSize :: Maybe Natural
     }
   deriving (Eq, Show)
 
@@ -400,11 +491,22 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdatePoolPledgeInfluence = merge protocolUpdatePoolPledgeInfluence
       , protocolUpdateMonetaryExpansion   = merge protocolUpdateMonetaryExpansion
       , protocolUpdateTreasuryCut         = merge protocolUpdateTreasuryCut
+      -- Intoduced in Alonzo below.
+      , protocolUpdateUTxOCostPerWord     = merge protocolUpdateUTxOCostPerWord
+      , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
+      , protocolUpdatePrices              = mergeMap protocolUpdatePrices
+      , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
+      , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
+      , protocolUpdateParamMaxValueSize   = merge protocolUpdateParamMaxValueSize
       }
       where
         -- prefer the right hand side:
         merge :: (ProtocolParametersUpdate -> Maybe a) -> Maybe a
         merge f = f ppu2 `mplus` f ppu1
+
+        -- prefer the right hand side:
+        mergeMap :: Ord k => (ProtocolParametersUpdate -> Map k a) -> Map k a
+        mergeMap f = f ppu2 `Map.union` f ppu1
 
 instance Monoid ProtocolParametersUpdate where
     mempty =
@@ -426,6 +528,12 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdatePoolPledgeInfluence = Nothing
       , protocolUpdateMonetaryExpansion   = Nothing
       , protocolUpdateTreasuryCut         = Nothing
+      , protocolUpdateUTxOCostPerWord     = Nothing
+      , protocolUpdateCostModels          = mempty
+      , protocolUpdatePrices              = mempty
+      , protocolUpdateMaxTxExUnits        = Nothing
+      , protocolUpdateMaxBlockExUnits     = Nothing
+      , protocolUpdateParamMaxValueSize   = Nothing
       }
 
 
@@ -456,6 +564,77 @@ toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
 fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
 fromPraosNonce Shelley.NeutralNonce = Nothing
 fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
+
+
+-- ----------------------------------------------------------------------------
+-- Script execution unit prices and cost models
+--
+
+-- | The prices in 'Lovelace' for 'ExecutionUnits'.
+--
+-- These are used to determine the fee for the use of a script within a
+-- transaction, based on the 'ExecutionUnits' needed by the use of the script.
+--
+data ExecutionUnitPrices =
+     ExecutionUnitPrices {
+       priceExecutionSteps  :: Lovelace,
+       priceExecutionMemory :: Lovelace
+     }
+  deriving (Eq, Show)
+
+toAlonzoPrices :: ExecutionUnitPrices -> Alonzo.Prices
+toAlonzoPrices ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+  Alonzo.Prices {
+    Alonzo.prSteps = toShelleyLovelace priceExecutionSteps,
+    Alonzo.prMem   = toShelleyLovelace priceExecutionMemory
+  }
+
+fromAlonzoPrices :: Alonzo.Prices -> ExecutionUnitPrices
+fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
+  ExecutionUnitPrices {
+    priceExecutionSteps  = fromShelleyLovelace prSteps,
+    priceExecutionMemory = fromShelleyLovelace prMem
+  }
+
+instance ToJSON ExecutionUnitPrices where
+  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+    object [ "priceSteps"  .= priceExecutionSteps
+           , "priceMemory" .= priceExecutionMemory ]
+
+instance FromJSON ExecutionUnitPrices where
+  parseJSON =
+    withObject "ExecutionUnitPrices" $ \o ->
+      ExecutionUnitPrices
+        <$> o .: "priceSteps"
+        <*> o .: "priceMemory"
+
+
+-- ----------------------------------------------------------------------------
+-- Script cost models
+--
+
+newtype CostModel = CostModel (Map Text Integer)
+  deriving (Eq, Show)
+  deriving newtype (ToJSON, FromJSON)
+
+validateCostModel :: PlutusScriptVersion lang
+                  -> CostModel
+                  -> Either InvalidCostModel ()
+validateCostModel PlutusScriptV1 (CostModel m)
+    --TODO: the ledger library should export something for this, e.g. like its
+    -- existing checkCostModel function. We should not need to depend on the
+    -- Plutus library directly. That makes too many assumptions about what the
+    -- ledger library is doing.
+  | Plutus.validateCostModelParams m = Right ()
+  | otherwise                        = Left (InvalidCostModel (CostModel m))
+
+--TODO: it'd be nice if the library told us what was wrong
+newtype InvalidCostModel = InvalidCostModel CostModel
+  deriving Show
+
+instance Error InvalidCostModel where
+  displayError (InvalidCostModel cm) =
+    "Invalid cost model: " ++ show cm
 
 
 -- ----------------------------------------------------------------------------
@@ -704,6 +883,12 @@ fromShelleyPParamsUpdate
                                             strictMaybeToMaybe _rho
     , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
                                             strictMaybeToMaybe _tau
+    , protocolUpdateUTxOCostPerWord     = Nothing
+    , protocolUpdateCostModels          = mempty
+    , protocolUpdatePrices              = mempty
+    , protocolUpdateMaxTxExUnits        = Nothing
+    , protocolUpdateMaxBlockExUnits     = Nothing
+    , protocolUpdateParamMaxValueSize   = Nothing
     }
 
 
@@ -748,6 +933,12 @@ fromShelleyPParams
     , protocolParamPoolPledgeInfluence = _a0
     , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational _rho
     , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
+    , protocolParamUTxOCostPerWord     = Nothing
+    , protocolParamCostModels          = Map.empty
+    , protocolParamPrices              = Map.empty
+    , protocolParamMaxTxExUnits        = Nothing
+    , protocolParamMaxBlockExUnits     = Nothing
+    , protocolParamMaxValueSize        = Nothing
     }
 
 

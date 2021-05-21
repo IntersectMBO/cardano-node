@@ -30,7 +30,7 @@ instance Error ScriptDecodeError where
   displayError (ScriptDecodeTextEnvelopeError err) =
     "Error decoding script: " ++ displayError err
   displayError (ScriptDecodeSimpleScriptError err) =
-    "Syncax error in script: " ++ displayError err
+    "Syntax error in script: " ++ displayError err
 
 
 -- | Read a script file. The file can either be in the text envelope format
