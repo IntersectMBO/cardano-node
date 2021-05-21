@@ -165,6 +165,7 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import qualified Shelley.Spec.Ledger.Address as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Keys as Shelley
@@ -1922,11 +1923,18 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
              redeemerPtrs)
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
-          (error "TODO alonzo: optional network"))
+          (maybeToStrictMaybe $ networkId txOuts))
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         txAuxData
         redeemerPtrs
   where
+    -- Necessary for hardware wallets constructing tx bodies.
+    networkId :: [TxOut era] -> Maybe Shelley.Network
+    networkId txouts =
+      case map (\(TxOut (AddressInEra _ addr) _ _) -> getNetworkId addr) txouts of
+        nid : _ -> Just nid
+        [] -> Nothing
+
     redeemerPtrs :: Map Alonzo.RdmrPtr (Alonzo.Data ledgerera, Alonzo.ExUnits)
     redeemerPtrs =
       Map.fromList $ concat [ certifyingRedeemerPtr txCertificates

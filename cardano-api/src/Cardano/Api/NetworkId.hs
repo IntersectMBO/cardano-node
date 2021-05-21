@@ -19,12 +19,12 @@ import           Prelude
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 
-import qualified Cardano.Crypto.ProtocolMagic as Byron
-                   (ProtocolMagicId(..), RequiresNetworkMagic(..))
-import qualified Cardano.Chain.Common as Byron (NetworkMagic(..))
+import qualified Cardano.Chain.Common as Byron (NetworkMagic (..))
 import qualified Cardano.Chain.Genesis as Byron (mainnetProtocolMagicId)
+import qualified Cardano.Crypto.ProtocolMagic as Byron (ProtocolMagicId (..),
+                   RequiresNetworkMagic (..))
 
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley (Network(..))
+import qualified Shelley.Spec.Ledger.BaseTypes as Shelley (Network (..))
 
 
 -- ----------------------------------------------------------------------------
@@ -75,4 +75,5 @@ fromShelleyNetwork Shelley.Testnet nm = Testnet nm
 fromShelleyNetwork Shelley.Mainnet nm
   | nm == mainnetNetworkMagic = Mainnet
   | otherwise = error "fromShelleyNetwork Mainnet: wrong mainnet network magic"
+
 
