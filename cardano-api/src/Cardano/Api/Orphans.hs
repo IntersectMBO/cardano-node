@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -10,19 +13,28 @@
 module Cardano.Api.Orphans () where
 
 import           Prelude
-
+import           Cardano.Prelude (panic)
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-import           Data.Aeson (ToJSON (..), object, (.=))
+import           Data.Aeson (FromJSON (..), FromJSONKey(..), ToJSON (..), object, (.=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as SBS
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.MemoBytes (MemoBytes)
 import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -31,6 +43,9 @@ import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import           Cardano.Slotting.Slot (SlotNo (..))
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
+import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as Plutus
 import qualified Shelley.Spec.Ledger.API as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
@@ -278,3 +293,106 @@ instance ToJSON Shelley.RewardType where
 instance ToJSON (SafeHash.SafeHash c a) where
   toJSON = toJSON . SafeHash.extractHash
 
+instance ToJSON SBS.ShortByteString where
+  toJSON = Aeson.String
+             . Text.decodeLatin1
+             . B16.encode
+             . SBS.fromShort
+
+-- We don't render the cost model so that we can
+-- render it later in 'AlonzoGenWrapper' as a filepath
+-- and keep the cost model (which is chunky) as a separate file.
+instance ToJSON Alonzo.AlonzoGenesis where
+  toJSON v = object
+      [ "adaPerUTxOWord" .= Alonzo.adaPerUTxOWord v
+      , "costModels" .= Alonzo.costmdls v
+      , "executionPrices" .= Alonzo.prices v
+      , "maxTxExUnits" .= Alonzo.maxTxExUnits v
+      , "maxBlockExUnits" .= Alonzo.maxBlockExUnits v
+      , "maxValueSize" .= Alonzo.maxValSize v
+      , "collateralPercentage" .= Alonzo.collateralPercentage v
+      , "maxCollateralInputs" .= Alonzo.maxCollateralInputs v
+      ]
+
+----
+
+deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
+deriving instance ToJSON Alonzo.ExUnits
+deriving instance ToJSON Alonzo.Prices
+deriving instance ToJSON Alonzo.Language
+deriving instance ToJSONKey Alonzo.Language
+
+instance ToJSON Alonzo.CostModel where
+  toJSON (Alonzo.CostModel m) = toJSON m
+
+deriving instance FromJSON Alonzo.Prices
+deriving instance FromJSON Alonzo.ExUnits
+
+--- We defer parsing of the cost model so that we can
+-- read it as a filepath. This is to reduce further pollution
+-- of the genesis file.
+instance FromJSON Alonzo.AlonzoGenesis where
+  parseJSON =
+    Aeson.withObject "Alonzo Genesis" $ \o -> do
+      adaPerUTxOWord       <- o .:  "adaPerUTxOWord"
+      cModels              <- o .:? "costModels"
+      prices               <- o .:  "executionPrices"
+      maxTxExUnits         <- o .:  "maxTxExUnits"
+      maxBlockExUnits      <- o .:  "maxBlockExUnits"
+      maxValSize           <- o .:  "maxValueSize"
+      collateralPercentage <- o .:  "collateralPercentage"
+      maxCollateralInputs  <- o .:  "maxCollateralInputs"
+      case cModels of
+        Nothing ->
+          case Plutus.extractModelParams Plutus.defaultCostModel of
+            Just m ->
+              return Alonzo.AlonzoGenesis {
+                Alonzo.adaPerUTxOWord,
+                Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m),
+                Alonzo.prices,
+                Alonzo.maxTxExUnits,
+                Alonzo.maxBlockExUnits,
+                Alonzo.maxValSize,
+                Alonzo.collateralPercentage,
+                Alonzo.maxCollateralInputs
+              }
+            Nothing -> fail "Failed to extract the cost model params from Plutus.defaultCostModel"
+        Just costmdls ->
+          return Alonzo.AlonzoGenesis {
+            Alonzo.adaPerUTxOWord,
+            Alonzo.costmdls,
+            Alonzo.prices,
+            Alonzo.maxTxExUnits,
+            Alonzo.maxBlockExUnits,
+            Alonzo.maxValSize,
+            Alonzo.collateralPercentage,
+            Alonzo.maxCollateralInputs
+          }
+
+instance FromJSON Alonzo.Language where
+  parseJSON v =
+    case v of
+      Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
+      wrong -> fail $ "Error decoding Language. \
+                      \Expected a JSON string but got: " <> show wrong
+
+instance FromJSONKey Alonzo.Language where
+  fromJSONKey = Aeson.FromJSONKeyText parseLang
+   where
+     parseLang :: Text -> Alonzo.Language
+     parseLang lang =
+       case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
+         Left err -> panic $ Text.pack err
+         Right lang' -> lang'
+
+instance FromJSON Alonzo.CostModel
+instance FromJSON (Data.MemoBytes.MemoBytes (Map Text Integer))
+
+instance FromJSON SBS.ShortByteString where
+  parseJSON v = case v of
+                  Aeson.String b16 ->
+                    case B16.decode $ Text.encodeUtf8 b16 of
+                      Right decoded -> return $ SBS.toShort decoded
+                      Left err -> fail err
+                  wrong -> fail $ "Error decoding ShortByteString. \
+                                  \Expected a JSON string but got: " <> show wrong
