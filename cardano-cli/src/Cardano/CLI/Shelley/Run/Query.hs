@@ -583,7 +583,8 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
     ShelleyBasedEraMary    ->
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
-    ShelleyBasedEraAlonzo -> panic "printFilteredUTxOs: Alonzo era not implemented yet"
+    ShelleyBasedEraAlonzo ->
+      mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
  where
    title :: Text
    title =
@@ -620,7 +621,14 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , textShowN 6 index
              , "        " <> printableValue value
              ]
-    ShelleyBasedEraAlonzo -> panic "printUtxo: Alonzo era not implemented yet"
+    ShelleyBasedEraAlonzo ->
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _) = txInOutTuple
+      in Text.putStrLn $
+           mconcat
+             [ Text.decodeLatin1 (hashToBytesAsHex txhash)
+             , textShowN 6 index
+             , "        " <> printableValue value
+             ]
  where
   textShowN :: Show a => Int -> a -> Text
   textShowN len x =
