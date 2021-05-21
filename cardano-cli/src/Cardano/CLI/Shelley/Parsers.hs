@@ -2239,7 +2239,7 @@ pShelleyProtocolParametersUpdate =
     -- TODO alonzo: Add proper support for these params
     <*> pure Nothing
     <*> pure mempty
-    <*> pure mempty
+    <*> pure Nothing
     <*> pure Nothing
     <*> pure Nothing
     <*> pure Nothing

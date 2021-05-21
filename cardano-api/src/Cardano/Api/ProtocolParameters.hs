@@ -245,7 +245,7 @@ data ProtocolParameters =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolParamPrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+       protocolParamPrices :: Maybe ExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --
@@ -287,7 +287,7 @@ instance FromJSON ProtocolParameters where
                         <*> o .: "treasuryCut"
                         <*> o .:? "utxoCostPerWord"
                         <*> o .:? "costModel"           .!= Map.empty
-                        <*> o .:? "executionUnitPrices" .!= Map.empty
+                        <*> o .:? "executionUnitPrices"
                         <*> o .:? "maxTxExecUnits"
                         <*> o .:? "maxBlockExecUnits"
                         <*> o .:? "maxValueSize"
@@ -452,7 +452,7 @@ data ProtocolParametersUpdate =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolUpdatePrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+       protocolUpdatePrices :: Maybe ExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --
@@ -494,7 +494,7 @@ instance Semigroup ProtocolParametersUpdate where
       -- Intoduced in Alonzo below.
       , protocolUpdateUTxOCostPerWord     = merge protocolUpdateUTxOCostPerWord
       , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
-      , protocolUpdatePrices              = mergeMap protocolUpdatePrices
+      , protocolUpdatePrices              = merge protocolUpdatePrices
       , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
       , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
       , protocolUpdateParamMaxValueSize   = merge protocolUpdateParamMaxValueSize
@@ -530,7 +530,7 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateTreasuryCut         = Nothing
       , protocolUpdateUTxOCostPerWord     = Nothing
       , protocolUpdateCostModels          = mempty
-      , protocolUpdatePrices              = mempty
+      , protocolUpdatePrices              = Nothing
       , protocolUpdateMaxTxExUnits        = Nothing
       , protocolUpdateMaxBlockExUnits     = Nothing
       , protocolUpdateParamMaxValueSize   = Nothing
@@ -885,7 +885,7 @@ fromShelleyPParamsUpdate
                                             strictMaybeToMaybe _tau
     , protocolUpdateUTxOCostPerWord     = Nothing
     , protocolUpdateCostModels          = mempty
-    , protocolUpdatePrices              = mempty
+    , protocolUpdatePrices              = Nothing
     , protocolUpdateMaxTxExUnits        = Nothing
     , protocolUpdateMaxBlockExUnits     = Nothing
     , protocolUpdateParamMaxValueSize   = Nothing
@@ -935,7 +935,7 @@ fromShelleyPParams
     , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
     , protocolParamUTxOCostPerWord     = Nothing
     , protocolParamCostModels          = Map.empty
-    , protocolParamPrices              = Map.empty
+    , protocolParamPrices              = Nothing
     , protocolParamMaxTxExUnits        = Nothing
     , protocolParamMaxBlockExUnits     = Nothing
     , protocolParamMaxValueSize        = Nothing
