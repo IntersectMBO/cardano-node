@@ -456,6 +456,8 @@ getTxBody (ShelleyTx era tx) =
                     (Map.elems txscripts)
                     (strictMaybeToMaybe auxiliaryData)
                     rdmrPtrMap
+                    -- TODO alonzo: we will probably want to put the Alonzo data and
+                    -- in the tx body here, and so that will use the _txdats above.
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
 getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =

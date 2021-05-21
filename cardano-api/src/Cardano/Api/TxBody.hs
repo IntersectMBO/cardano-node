@@ -1924,6 +1924,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
           (maybeToStrictMaybe $ networkId txOuts))
+
+          -- (error "TODO alonzo: optional protocol param hash")
+          -- (maybeToStrictMaybe
+          --   (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
+          -- (error "TODO alonzo: optional network"))
+
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         txAuxData
         redeemerPtrs
