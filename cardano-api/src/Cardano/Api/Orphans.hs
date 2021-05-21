@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -322,9 +324,6 @@ deriving instance ToJSON Alonzo.Prices
 deriving instance ToJSON Alonzo.Language
 deriving instance ToJSONKey Alonzo.Language
 
-instance ToJSON Alonzo.CostModel where
-  toJSON (Alonzo.CostModel m) = toJSON m
-
 deriving instance FromJSON Alonzo.Prices
 deriving instance FromJSON Alonzo.ExUnits
 
@@ -385,8 +384,11 @@ instance FromJSONKey Alonzo.Language where
          Left err -> panic $ Text.pack err
          Right lang' -> lang'
 
-instance FromJSON Alonzo.CostModel
+deriving newtype instance ToJSON Alonzo.CostModel
+deriving newtype instance FromJSON Alonzo.CostModel
+
 instance FromJSON (Data.MemoBytes.MemoBytes (Map Text Integer))
+instance ToJSON (Data.MemoBytes.MemoBytes (Map Text Integer))
 
 instance FromJSON SBS.ShortByteString where
   parseJSON v = case v of
