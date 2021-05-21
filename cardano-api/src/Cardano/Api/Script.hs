@@ -14,6 +14,7 @@ module Cardano.Api.Script (
     SimpleScriptVersion(..),
     PlutusScriptVersion(..),
     AnyScriptLanguage(..),
+    AnyPlutusScriptVersion(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
 
