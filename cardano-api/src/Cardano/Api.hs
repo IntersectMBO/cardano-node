@@ -495,6 +495,9 @@ module Cardano.Api (
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
+    EraHistory(..),
+    getProgress,
+
     -- *** Common queries
     getLocalChainTip,
 
