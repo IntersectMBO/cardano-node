@@ -137,7 +137,6 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , plutus-core
-                      , plutus-ledger-api
                       , process
                       , safe-exceptions
                       , scientific
