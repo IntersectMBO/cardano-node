@@ -242,6 +242,10 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
 
   nt <- readTopologyFileOrError nc
 
+  traceNamedObject
+          (appendName "topology-file" trace)
+          (meta, LogMessage (Text.pack "Successfully read topology configuration file"))
+
   let (localRoots, publicRoots) = producerAddresses nt
 
   localRootsVar <- newTVarIO localRoots
@@ -358,24 +362,34 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
           (appendName "signal-handler" trace)
           (meta, LogMessage (Text.pack "SIGHUP signal received - Performing topology configuration update"))
 
-      nt <- readTopologyFileOrError nc
+      result <- try $ readTopologyFileOrError nc
 
-      let (localRoots, publicRoots) = producerAddresses nt
+      case result of
+        Left (FatalError err) ->
+          traceNamedObject
+              (appendName "topology-file" trace)
+              (meta, LogMessage (Text.pack "Error reading topology configuration file:" <> err))
+        Right nt -> do
+          traceNamedObject
+              (appendName "topology-file" trace)
+              (meta, LogMessage (Text.pack "Successfully read topology configuration file"))
 
-      atomically $ do
-        writeTVar localRootsVar localRoots
-        writeTVar publicRootsVar publicRoots
-        writeTVar useLedgerVar (useLedgerAfterSlot nt)
+          let (localRoots, publicRoots) = producerAddresses nt
 
-      traceNamedObject
-        (appendName "local-roots" trace)
-        (meta, LogMessage . Text.pack . show $ localRoots)
-      traceNamedObject
-        (appendName "public-roots" trace)
-        (meta, LogMessage . Text.pack . show $ publicRoots)
-      traceNamedObject
-        (appendName "use-ledger-after-slot" trace)
-        (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
+          atomically $ do
+            writeTVar localRootsVar localRoots
+            writeTVar publicRootsVar publicRoots
+            writeTVar useLedgerVar (useLedgerAfterSlot nt)
+
+          traceNamedObject
+            (appendName "local-roots" trace)
+            (meta, LogMessage . Text.pack . show $ localRoots)
+          traceNamedObject
+            (appendName "public-roots" trace)
+            (meta, LogMessage . Text.pack . show $ publicRoots)
+          traceNamedObject
+            (appendName "use-ledger-after-slot" trace)
+            (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
 
 {-# ANN handleSimpleNode ("HLint: ignore Reduce duplication" :: Text) #-}
 #endif
