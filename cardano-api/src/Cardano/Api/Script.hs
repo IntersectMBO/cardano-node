@@ -686,7 +686,7 @@ deriving instance Show (ScriptWitnessInCtx witctx)
 
 type ScriptRedeemer = ScriptData
 
--- TODO Placeholder type to re-present the Alonzo.Data type
+-- TODO alonzo: Placeholder type to re-present the Alonzo.Data type
 data ScriptData = ScriptData
   deriving (Eq, Show)
 
@@ -695,10 +695,10 @@ instance HasTypeProxy ScriptData where
     proxyToAsType _ = AsScriptData
 
 toAlonzoScriptData :: ScriptData -> Alonzo.Data ledgerera
-toAlonzoScriptData = error "TODO: toShelleyScriptData"
+toAlonzoScriptData = error "TODO alonzo: toShelleyScriptData"
 
 fromAlonzoScriptData :: Alonzo.Data ledgerera -> ScriptData
-fromAlonzoScriptData = error "TODO: fromShelleyScriptData"
+fromAlonzoScriptData = error "TODO alonzo: fromShelleyScriptData"
 
 
 newtype instance Hash ScriptData =
@@ -922,14 +922,14 @@ instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
     serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
 
     deserialiseFromRawBytes (AsPlutusScript _) bs =
-      -- TODO: validate the script syntax and fail decoding if invalid
+      -- TODO alonzo: validate the script syntax and fail decoding if invalid
       Just (PlutusScriptSerialised (SBS.toShort bs))
 
 instance Typeable lang => ToCBOR (PlutusScript lang) where
     toCBOR (PlutusScriptSerialised sbs) = toCBOR sbs
 
 instance Typeable lang => FromCBOR (PlutusScript lang) where
-    -- TODO: validate the script syntax and fail decoding if invalid
+    -- TODO alonzo: validate the script syntax and fail decoding if invalid
     fromCBOR = PlutusScriptSerialised <$> fromCBOR
 
 instance (HasTypeProxy lang, Typeable lang) =>

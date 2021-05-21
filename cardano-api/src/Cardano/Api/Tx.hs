@@ -563,8 +563,8 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody txscripts txmetadata) 
             (Set.fromList [ w | ShelleyBootstrapWitness _ w <- witnesses ])
             (Map.fromList [ (Ledger.hashScript @ledgerera sw, sw)
                           | sw <- txscripts ])
-            (error "TODO: makeAlonzoSignedTransaction: datums")
-            (error "TODO: makeAlonzoSignedTransaction: redeemers"))
+            (error "TODO alonzo: makeAlonzoSignedTransaction: datums")
+            (error "TODO alonzo: makeAlonzoSignedTransaction: redeemers"))
           (maybeToStrictMaybe txmetadata)
 
 
