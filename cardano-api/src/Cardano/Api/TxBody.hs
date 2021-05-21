@@ -963,7 +963,7 @@ data TxBodyContent build era =
                             TxValidityUpperBound era),
        txMetadata       :: TxMetadataInEra era,
        txAuxScripts     :: TxAuxScripts era,
-     --txAuxScriptData  :: TxAuxScriptData era, --TODO
+     --txAuxScriptData  :: TxAuxScriptData era, -- TODO alonzo
        txWithdrawals    :: TxWithdrawals  build era,
        txCertificates   :: TxCertificates build era,
        txUpdateProposal :: TxUpdateProposal era,
@@ -989,7 +989,7 @@ data TxBody era where
           -- witnesses set, since they need to be known when building the body.
        -> [Ledger.Script (ShelleyLedgerEra era)]
 
-          --TODO: we will probably want to or need to put the Alonzo data and
+          -- TODO alonzo: we will probably want to or need to put the Alonzo data and
           -- redeemers in the tx body here
 
           -- The 'Ledger.AuxiliaryData' consists of one or several things,
@@ -1265,7 +1265,7 @@ fromLedgerTxBody era body mAux = do
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
-    --TODO ^^ also return TxAuxScriptData as 3rd component
+    -- TODO alonzo ^^ also return TxAuxScriptData as 3rd component
 
 
 checkAuxiliaryDataHash
@@ -1399,7 +1399,7 @@ fromLedgerAuxiliaryData ShelleyBasedEraAlonzo (Alonzo.AuxiliaryData ms ss _ds) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraAlonzo <$> toList ss
   )
-  --TODO: cover the Alonzo era auxiliary data, see txAuxScriptData above
+  -- TODO alonzo: cover the Alonzo era auxiliary data, see txAuxScriptData above
 
 fromLedgerTxAuxiliaryData
   :: ShelleyBasedEra era
@@ -1558,7 +1558,7 @@ fromLedgerTxUpdateProposal era body =
         SJust _p ->
           error "fromLedgerTxUpdateProposal: Alonzo era not implemented yet"
 --        TxUpdateProposal UpdateProposalInAlonzoEra $ fromShelleyUpdate p
---        TODO: fromShelleyUpdate currently is not era-generic and expects
+--        TODO alonzo: fromShelleyUpdate currently is not era-generic and expects
 --              Ledger.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
 
 
@@ -1873,7 +1873,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
       ShelleyTxBody era
         (Alonzo.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (error "TODO: add support for collateral")
+          (error "TODO alonzo: add support for collateral")
           (Seq.fromList (map toShelleyTxOut txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
@@ -1895,14 +1895,14 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toAlonzoUpdate p))
-          (error "TODO: Alonzo extra key hashes for required witnesses")
+          (error "TODO alonzo: extra key hashes for required witnesses")
           (case txMintValue of
              TxMintNone        -> mempty
              TxMintValue _ v _ -> toMaryValue v)
           (error "TODO: Alonzo optional protocol param hash")
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
-          (error "TODO: Alonzo optional network"))
+          (error "TODO alonzo: optional network"))
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
         txAuxData
   where
@@ -1920,12 +1920,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
         ds :: [ScriptData]
-        ds = error "TODO: support the Alonzo era aux data"
-             --TODO: txAuxScriptData
+        ds = error "TODO alonzo: support the Alonzo era aux data"
+             -- TODO alonzo: txAuxScriptData
 
     toAlonzoUpdate :: UpdateProposal -> Shelley.Update ledgerera
-    toAlonzoUpdate = error "TODO: toAlonzoUpdate"
-    --TODO: ^^ and move the definition next to toShelleyUpdate
+    toAlonzoUpdate = error "TODO alonzo: toAlonzoUpdate"
+    -- TODO alonzo: ^^ and move the definition next to toShelleyUpdate
     -- and\/or merge it with toShelleyUpdate to make it era-generic
     -- must assume Ledger.PParamsDelta ledgerera ~ Alonzo.PParamsDelta ledgerera
 

@@ -155,5 +155,5 @@ data TransferDirection = TransferToReserves | TransferToTreasury
 -- era-dependent 'TxOutValue' type.
 --
 data TxOutAnyEra = TxOutAnyEra AddressAny Value
-                   --TODO: ^^ add support for tx out data
+                   -- TODO alonzo: ^^ add support for tx out data
   deriving (Eq, Show)
