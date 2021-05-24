@@ -44,14 +44,14 @@ friendlyTxBody era txbody =
     <>
     case txbody of
       ByronTxBody body -> friendlyTxBodyByron body
-      ShelleyTxBody ShelleyBasedEraShelley body _scripts aux ->
+      ShelleyTxBody ShelleyBasedEraShelley body _scripts aux _rmdrPtr ->
         addAuxData aux $ friendlyTxBodyShelley body
-      ShelleyTxBody ShelleyBasedEraAllegra body _scripts aux ->
+      ShelleyTxBody ShelleyBasedEraAllegra body _scripts aux _rmdrPtr ->
         addAuxData aux $ friendlyTxBodyAllegra body
-      ShelleyTxBody ShelleyBasedEraMary body _scripts aux ->
+      ShelleyTxBody ShelleyBasedEraMary body _scripts aux _rmdrPtr ->
         addAuxData aux $ friendlyTxBodyMary body
-      ShelleyTxBody ShelleyBasedEraAlonzo _ _ _ ->
-        panic "friendlyTxBody: Alonzo not implemented yet"
+      ShelleyTxBody ShelleyBasedEraAlonzo _ _ _ _rmdrPtr ->
+        panic "friendlyTxBody: Alonzo not implemented yet" -- TODO alonzo
 
 addAuxData :: Show a => Maybe a -> Object -> Object
 addAuxData = HashMap.insert "auxiliary data" . maybe Null (toJSON . textShow)
