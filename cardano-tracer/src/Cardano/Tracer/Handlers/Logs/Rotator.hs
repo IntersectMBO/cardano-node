@@ -94,7 +94,7 @@ fixLog
   -> LogFormat
   -> IO ()
 fixLog oneFile format =
-  isItSymLink oneFile format >>= \case
+  isItSymLink format oneFile >>= \case
     True -> do
       -- It is a single symlink, but corresponding log was deleted.
       removeFile oneFile

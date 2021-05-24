@@ -100,3 +100,47 @@ executable cardano-tracer
                        -threaded
                        -rtsopts
                        -with-rtsopts=-T
+
+test-suite cardano-tracer-test
+  import:              common-options
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             cardano-tracer-test.hs
+  other-modules:       Cardano.Tracer.Test.Types
+                       Cardano.Tracer.Test.Forwarder
+                       Cardano.Tracer.Test.Logs.File
+                       Cardano.Tracer.Test.Logs.Rotator
+                       Cardano.Tracer.Test.Logs.Rotator
+
+  build-depends:         aeson
+                       , async
+                       , base
+                       , bytestring
+                       , cardano-tracer
+                       , cborg
+                       , contra-tracer
+                       , directory
+                       , ekg-core
+                       , ekg-forward
+                       , filepath
+                       , iohk-monitoring
+                       , io-sim
+                       , io-sim-classes
+                       , network
+                       , ouroboros-network-framework
+                       , QuickCheck
+                       , serialise
+                       , stm
+                       , tasty
+                       , tasty-quickcheck
+                       , text
+                       , time
+                       , trace-forward
+                       , typed-protocols-examples
+                       , unordered-containers
+                       , vector
+
+  ghc-options:         -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+  default-extensions:  OverloadedStrings

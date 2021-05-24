@@ -1,15 +1,16 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.Logs.Log
   ( logPrefix
   , logExtension
-  , symLinkName
-  , isItSymLink
-  , doesSymLinkValid
-  , isItLog
   , createLogAndSymLink
   , createLogAndUpdateSymLink
+  , doesSymLinkValid
   , getTimeStampFromLog
+  , isItLog
+  , isItSymLink
+  , symLinkName
   ) where
 
 import qualified Data.ByteString.Lazy as LBS
@@ -17,10 +18,8 @@ import           Data.Maybe (isJust)
 import           Data.Time (UTCTime, getCurrentTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Data.Text as T
-import           System.Directory (createFileLink, doesFileExist, getSymbolicLinkTarget,
-                                   pathIsSymbolicLink, renamePath, withCurrentDirectory)
-import           System.FilePath ((</>), (<.>), takeBaseName, takeDirectory, takeFileName,
-                                  takeExtension)
+import           System.Directory
+import           System.FilePath
 
 import           Cardano.Tracer.Configuration
 
@@ -38,10 +37,10 @@ symLinkNameTmp :: LogFormat -> FilePath
 symLinkNameTmp format = symLinkName format <.> "tmp"
 
 isItSymLink
-  :: FilePath
-  -> LogFormat
+  :: LogFormat
+  -> FilePath
   -> IO Bool
-isItSymLink fileName format =
+isItSymLink format fileName =
   if takeFileName fileName == symLinkName format
     then pathIsSymbolicLink fileName
     else return False

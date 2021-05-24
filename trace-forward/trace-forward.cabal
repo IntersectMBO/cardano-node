@@ -103,10 +103,10 @@ executable demo-acceptor
                        -rtsopts
                        -with-rtsopts=-T
 
-executable demo-forwarder-mux
-  hs-source-dirs:      demo/mux
-  main-is:             forwarder.hs
-  other-modules:       Network.Forwarder
+library demo-forwarder-mux-lib
+  import:              common-options
+  hs-source-dirs:      demo/mux/src
+  exposed-modules:     Demo.Mux.Network.Forwarder
   build-depends:         async
                        , base
                        , bytestring
@@ -122,6 +122,37 @@ executable demo-forwarder-mux
                        , text
                        , time
 
+library demo-acceptor-mux-lib
+  import:              common-options
+  hs-source-dirs:      demo/mux/src
+  exposed-modules:     Demo.Mux.Network.Acceptor
+  build-depends:         async
+                       , base
+                       , bytestring
+                       , cborg
+                       , contra-tracer
+                       , ekg-core
+                       , ekg-forward
+                       , iohk-monitoring
+                       , network
+                       , ouroboros-network-framework
+                       , stm
+                       , trace-forward
+                       , text
+                       , time
+
+executable demo-forwarder-mux
+  hs-source-dirs:      demo/mux/app
+  main-is:             forwarder.hs
+  build-depends:         async
+                       , base
+                       , contra-tracer
+                       , demo-forwarder-mux-lib
+                       , ekg-forward
+                       , iohk-monitoring
+                       , text
+                       , time
+                       , trace-forward
   default-language:    Haskell2010
   ghc-options:         -Wall
                        -threaded
@@ -129,24 +160,18 @@ executable demo-forwarder-mux
                        -with-rtsopts=-T
 
 executable demo-acceptor-mux
-  hs-source-dirs:      demo/mux
+  hs-source-dirs:      demo/mux/app
   main-is:             acceptor.hs
-  other-modules:       Network.Acceptor
   build-depends:         async
                        , base
-                       , bytestring
-                       , cborg
                        , contra-tracer
-                       , ekg-core
+                       , demo-acceptor-mux-lib
                        , ekg-forward
                        , iohk-monitoring
-                       , network
-                       , ouroboros-network-framework
                        , stm
-                       , trace-forward
                        , text
                        , time
-
+                       , trace-forward
   default-language:    Haskell2010
   ghc-options:         -Wall
                        -threaded

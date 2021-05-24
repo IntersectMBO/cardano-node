@@ -8,7 +8,6 @@ module Cardano.Tracer.Handlers.Logs.File
   ( writeLogObjectsToFile
   ) where
 
-import           Control.Exception (IOException, try)
 import           Control.Monad (unless)
 import           Data.Aeson (ToJSON, Value (..), (.=), object, toJSON)
 import           Data.Aeson.Text (encodeToLazyText)
@@ -21,7 +20,6 @@ import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           System.Directory (doesFileExist, createDirectoryIfMissing, removeFile)
 import           System.FilePath ((</>))
-import           System.IO (hPutStrLn, stderr)
 
 import           Cardano.BM.Data.LogItem
 
@@ -38,22 +36,20 @@ writeLogObjectsToFile
   -> LogFormat
   -> [LogObject a]
   -> IO ()
-writeLogObjectsToFile nodeId nodeName rootDir format logObjects =
-  try (createDirectoryIfMissing True subDirForLogs) >>= \case
-    Left (e :: IOException) ->
-      hPutStrLn stderr $ "Cannot create subdir for log files: " <> show e
-    Right _ -> do
-      symLinkIsHere <- doesFileExist pathToCurrentLog
-      unless symLinkIsHere $
-        createLogAndSymLink subDirForLogs format
-      -- Symlink can be broken, check it.
-      doesSymLinkValid pathToCurrentLog >>= \case
-        True ->
-          writeLogObjects pathToCurrentLog (loFormatter format) logObjects
-        False -> do
-          -- Symlink is here, but it's broken.
-          removeFile pathToCurrentLog
-          createLogAndSymLink subDirForLogs format
+writeLogObjectsToFile nodeId nodeName rootDir format logObjects = do
+  createDirectoryIfMissing True rootDir  
+  createDirectoryIfMissing True subDirForLogs
+  symLinkIsHere <- doesFileExist pathToCurrentLog
+  unless symLinkIsHere $
+    createLogAndSymLink subDirForLogs format
+  -- Symlink can be broken, check it.
+  doesSymLinkValid pathToCurrentLog >>= \case
+    True ->
+      writeLogObjects pathToCurrentLog (loFormatter format) logObjects
+    False -> do
+      -- Symlink is here, but it's broken.
+      removeFile pathToCurrentLog
+      createLogAndSymLink subDirForLogs format
  where
   subDirForLogs = rootDir </> nodeFullId
   nodeFullId = if T.null nodeName

@@ -17,7 +17,7 @@ import qualified Trace.Forward.Configuration as TF
 
 import qualified System.Metrics.Configuration as EKGF
 
-import           Network.Forwarder (HowToConnect (..), launchForwarders)
+import           Demo.Mux.Network.Forwarder (HowToConnect (..), launchForwarders)
 
 main :: IO ()
 main = do

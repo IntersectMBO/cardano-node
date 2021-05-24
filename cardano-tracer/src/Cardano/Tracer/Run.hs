@@ -3,21 +3,24 @@
 -- | This top-level module will be used by the 'cardano-tracer' app.
 module Cardano.Tracer.Run
   ( runCardanoTracer
+  -- | For testing purposes.
+  , runCardanoTracerWithConfig
   ) where
 
 import           Control.Concurrent.Async (concurrently_)
 
 import           Cardano.Tracer.Acceptors (runAcceptors)
 import           Cardano.Tracer.CLI (TracerParams (..))
-import           Cardano.Tracer.Configuration (readTracerConfig)
+import           Cardano.Tracer.Configuration (TracerConfig, readTracerConfig)
 import           Cardano.Tracer.Handlers (runHandlers)
 import           Cardano.Tracer.Types (initAcceptedItems)
 
-runCardanoTracer
-  :: TracerParams
-  -> IO ()
-runCardanoTracer TracerParams{..} = do
-  config <- readTracerConfig tracerConfig
+runCardanoTracer :: TracerParams -> IO ()
+runCardanoTracer TracerParams{..} =
+  readTracerConfig tracerConfig >>= runCardanoTracerWithConfig
+
+runCardanoTracerWithConfig :: TracerConfig -> IO ()
+runCardanoTracerWithConfig config = do
   acceptedItems <- initAcceptedItems
   -- Run two main threads:
   -- 1. For all acceptors: they ask 'LogObject's and metrics from the node

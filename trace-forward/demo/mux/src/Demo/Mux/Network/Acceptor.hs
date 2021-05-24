@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Network.Acceptor
+module Demo.Mux.Network.Acceptor
   ( HowToConnect (..)
   , launchAcceptors
   ) where

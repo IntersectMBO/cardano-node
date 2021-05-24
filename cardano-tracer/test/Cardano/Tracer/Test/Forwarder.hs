@@ -6,9 +6,8 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Network.Forwarder
-  ( HowToConnect (..)
-  , launchForwarders
+module Cardano.Tracer.Test.Forwarder
+  ( launchForwardersSimple
   ) where
 
 import           Codec.CBOR.Term (Term)
@@ -18,9 +17,10 @@ import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO, writeTBQ
 import           Control.Exception (SomeException, try)
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
+import           Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Fixed (Pico)
-import           Data.Text (Text)
+import           Data.Text (Text, pack)
 import           Data.Time.Clock (NominalDiffTime, secondsToNominalDiffTime)
 import           Data.Void (Void)
 import           Data.Word (Word16)
@@ -32,7 +32,6 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
                                         OuroborosApplication (..), RunMiniProtocol (..),
                                         miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                                                             noTimeLimitsHandshake,
                                                              timeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                                                                    UnversionedProtocolData (..),
@@ -40,7 +39,7 @@ import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedPr
                                                                    unversionedProtocolDataCodec)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket, socketSnocket)
+import           Ouroboros.Network.Snocket (Snocket, socketSnocket)
 import           Ouroboros.Network.Socket (connectToNode, nullNetworkConnectTracers)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 import qualified System.Metrics as EKG
@@ -56,37 +55,45 @@ import           Trace.Forward.Network.Forwarder (forwardLogObjects)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder (forwardEKGMetrics)
 
-data HowToConnect
-  = LocalPipe !FilePath
-  | RemoteSocket !String !String
+type Host = String
+type Port = Word16
+type Endpoint = (Host, Port)
 
-launchForwarders
-  :: HowToConnect
-  -> Maybe Pico
-  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration (LogObject Text))
-  -> IO ()
-launchForwarders endpoint benchFillFreq configs =
-  try (launchForwarders' endpoint benchFillFreq configs) >>= \case
+launchForwardersSimple :: Endpoint -> IO ()
+launchForwardersSimple (h, p) =
+  try (launchForwarders' (h, p) Nothing (ekgConfig, tfConfig)) >>= \case
     Left (_e :: SomeException) ->
-      launchForwarders endpoint benchFillFreq configs
+      launchForwarders' (h, p) Nothing (ekgConfig, tfConfig)
     Right _ -> return ()
+ where
+  ekgConfig :: EKGF.ForwarderConfiguration
+  ekgConfig =
+    EKGF.ForwarderConfiguration
+      { EKGF.forwarderTracer    = nullTracer
+      , EKGF.acceptorEndpoint   = EKGF.RemoteSocket (pack h) p
+      , EKGF.reConnectFrequency = 1.0
+      , EKGF.actionOnRequest    = const (return ())
+      }
+
+  tfConfig :: TF.ForwarderConfiguration (LogObject Text)
+  tfConfig =
+    TF.ForwarderConfiguration
+      { TF.forwarderTracer  = nullTracer
+      , TF.acceptorEndpoint = TF.RemoteSocket (pack h) p
+      , TF.nodeBasicInfo    = return [("NodeName", "node-1")]
+      , TF.actionOnRequest  = const (return ())
+      }
 
 launchForwarders'
-  :: HowToConnect
+  :: Endpoint
   -> Maybe Pico
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration (LogObject Text))
   -> IO ()
-launchForwarders' endpoint benchFillFreq configs = withIOManager $ \iocp -> do
-  case endpoint of
-    LocalPipe localPipe -> do
-      let snocket = localSnocket iocp localPipe
-          address = localAddressFromPath localPipe
-      doConnectToAcceptor snocket address noTimeLimitsHandshake benchFillFreq configs
-    RemoteSocket host port -> do
-      acceptorAddr:_ <- Socket.getAddrInfo Nothing (Just host) (Just port)
-      let snocket = socketSnocket iocp
-          address = Socket.addrAddress acceptorAddr
-      doConnectToAcceptor snocket address timeLimitsHandshake benchFillFreq configs
+launchForwarders' (host, port) benchFillFreq configs = withIOManager $ \iocp -> do
+  acceptorAddr:_ <- Socket.getAddrInfo Nothing (Just host) (Just $ show port)
+  let snocket = socketSnocket iocp
+      address = Socket.addrAddress acceptorAddr
+  doConnectToAcceptor snocket address timeLimitsHandshake benchFillFreq configs
 
 doConnectToAcceptor
   :: Snocket IO fd addr

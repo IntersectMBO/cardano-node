@@ -4,6 +4,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Tracer.Acceptors
   ( runAcceptors
   ) where
@@ -15,7 +17,7 @@ import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
 import           Control.Exception (SomeException, try)
 import           Control.Monad (void)
-import           Control.Tracer (contramap, stdoutTracer)
+import           Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IORef (IORef, newIORef, readIORef)
 import           Data.HashMap.Strict ((!))
@@ -100,7 +102,7 @@ mkAcceptorsConfigs TracerConfig{..} stopEKG stopTF = (ekgConfig, tfConfig)
  where
   ekgConfig =
     EKGF.AcceptorConfiguration
-      { EKGF.acceptorTracer    = contramap show stdoutTracer
+      { EKGF.acceptorTracer    = nullTracer
       , EKGF.forwarderEndpoint = forEKGF acceptAt
       , EKGF.requestFrequency  = secondsToNominalDiffTime ekgRequestFreq
       , EKGF.whatToRequest     = EKGF.GetAllMetrics
@@ -112,7 +114,7 @@ mkAcceptorsConfigs TracerConfig{..} stopEKG stopTF = (ekgConfig, tfConfig)
   tfConfig :: TF.AcceptorConfiguration (LogObject Text)
   tfConfig =
     TF.AcceptorConfiguration
-      { TF.acceptorTracer    = contramap show stdoutTracer
+      { TF.acceptorTracer    = nullTracer
       , TF.forwarderEndpoint = forTF acceptAt
       , TF.whatToRequest     = TF.GetLogObjects loRequestNum
       , TF.actionOnReply     = print

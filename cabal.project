@@ -54,6 +54,9 @@ package cardano-node
 package cardano-node-chairman
   tests: True
 
+package cardano-tracer
+  tests: True
+
 package trace-forward
   tests: True
 

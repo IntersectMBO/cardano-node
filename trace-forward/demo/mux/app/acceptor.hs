@@ -21,7 +21,7 @@ import qualified Trace.Forward.Protocol.Type as TF
 import qualified System.Metrics.Configuration as EKGF
 import qualified System.Metrics.ReqResp as EKGF
 
-import           Network.Acceptor (HowToConnect (..), launchAcceptors)
+import           Demo.Mux.Network.Acceptor (HowToConnect (..), launchAcceptors)
 
 main :: IO ()
 main = do
