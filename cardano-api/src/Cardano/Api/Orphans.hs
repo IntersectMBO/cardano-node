@@ -313,8 +313,8 @@ deriving newtype instance FromJSON Alonzo.CostModel
 deriving newtype instance ToJSON Alonzo.CostModel
 
 instance FromJSON Alonzo.Language where
-  parseJSON v =
-    case v of
-      Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
-      wrong -> fail $ "Error decoding Language. \
-                      \Expected a JSON string but got: " <> show wrong
+  parseJSON v = case v of
+    Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
+    wrong -> fail $ "Error decoding Language. Expected a JSON string but got: " <> show wrong
+instance ToJSON Alonzo.Language where
+  toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
