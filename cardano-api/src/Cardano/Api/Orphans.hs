@@ -376,3 +376,18 @@ instance FromJSON Alonzo.AlonzoGenesis where
           collateralPercentage,
           maxCollateralInputs
         }
+
+-- We don't render the cost model so that we can
+-- render it later in 'AlonzoGenWrapper' as a filepath
+-- and keep the cost model (which is chunky) as a separate file.
+instance ToJSON AlonzoGenesis where
+  toJSON v = object
+      [ "adaPerUTxOWord" .= adaPerUTxOWord v
+      , "costModels" .= costmdls v
+      , "executionPrices" .= prices v
+      , "maxTxExUnits" .= maxTxExUnits v
+      , "maxBlockExUnits" .= maxBlockExUnits v
+      , "maxValueSize" .= maxValSize v
+      , "collateralPercentage" .= collateralPercentage v
+      , "maxCollateralInputs" .= maxCollateralInputs v
+      ]

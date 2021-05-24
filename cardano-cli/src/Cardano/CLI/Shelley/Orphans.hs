@@ -46,8 +46,6 @@ import           Shelley.Spec.Ledger.TxBody (TxId (..))
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 
-import           Cardano.Ledger.Alonzo.Translation (AlonzoGenesis (..))
-
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
          . Text.decodeLatin1
@@ -98,18 +96,3 @@ deriving newtype  instance ToJSON    (Ledger.Mary.PolicyID StandardCrypto)
 
 instance (ToJSONKey k, ToJSON v) => ToJSON (SetAlgebra.BiMap v k v) where
   toJSON = toJSON . SetAlgebra.forwards -- to normal Map
-
--- We don't render the cost model so that we can
--- render it later in 'AlonzoGenWrapper' as a filepath
--- and keep the cost model (which is chunky) as a separate file.
-instance ToJSON AlonzoGenesis where
-  toJSON v = object
-      [ "adaPerUTxOWord" .= adaPerUTxOWord v
-      , "costModels" .= costmdls v
-      , "executionPrices" .= prices v
-      , "maxTxExUnits" .= maxTxExUnits v
-      , "maxBlockExUnits" .= maxBlockExUnits v
-      , "maxValueSize" .= maxValSize v
-      , "collateralPercentage" .= collateralPercentage v
-      , "maxCollateralInputs" .= maxCollateralInputs v
-      ]
