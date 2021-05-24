@@ -174,9 +174,6 @@ instance ToJSON AlonzoGenesis where
       , "maxCollateralInputs" .= maxCollateralInputs v
       ]
 
-instance ToJSON Alonzo.ExUnits
-deriving instance FromJSON Alonzo.ExUnits
-
 instance ToJSON Language where
   toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
 
