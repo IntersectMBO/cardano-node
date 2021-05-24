@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fforce-recomp #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}

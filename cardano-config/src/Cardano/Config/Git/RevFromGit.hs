@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fforce-recomp #-}
+
 module Cardano.Config.Git.RevFromGit (
       gitRevFromGit
     ) where
