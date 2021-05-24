@@ -13,7 +13,6 @@ import           Prelude (fail)
 import           Cardano.Api.Orphans ()
 
 import           Data.Aeson (eitherDecode)
-import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
@@ -104,13 +103,6 @@ instance FromJSON Alonzo.AlonzoGenesis where
             collateralPercentage,
             maxCollateralInputs
           }
-
-instance FromJSON Language  where
-  parseJSON v =
-    case v of
-      Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
-      wrong -> fail $ "Error decoding Language. \
-                      \Expected a JSON string but got: " <> show wrong
 
 instance FromJSONKey Language where
   fromJSONKey = FromJSONKeyText parseLang

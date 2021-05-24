@@ -30,6 +30,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
@@ -310,3 +311,10 @@ instance ToJSON (MemoBytes (Map Text Integer))
 
 deriving newtype instance FromJSON Alonzo.CostModel
 deriving newtype instance ToJSON Alonzo.CostModel
+
+instance FromJSON Alonzo.Language where
+  parseJSON v =
+    case v of
+      Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
+      wrong -> fail $ "Error decoding Language. \
+                      \Expected a JSON string but got: " <> show wrong
