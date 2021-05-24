@@ -20,16 +20,13 @@ import           Control.Monad
 import           Control.SetAlgebra as SetAlgebra
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api.Orphans ()
 
 import           Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Alonzo.Language (Language)
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
@@ -169,12 +166,3 @@ instance ToJSON AlonzoGenesis where
       , "collateralPercentage" .= collateralPercentage v
       , "maxCollateralInputs" .= maxCollateralInputs v
       ]
-
-instance FromJSONKey Language where
-  fromJSONKey = FromJSONKeyText parseLang
-   where
-     parseLang :: Text -> Language
-     parseLang lang =
-       case eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
-         Left err -> panic $ Text.pack err
-         Right lang' -> lang'

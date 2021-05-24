@@ -12,17 +12,13 @@ import           Prelude (fail)
 
 import           Cardano.Api.Orphans ()
 
-import           Data.Aeson (eitherDecode)
 import           Data.Aeson.Types
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.Alonzo as Alonzo
-import           Cardano.Ledger.Alonzo.Language
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -101,12 +97,3 @@ instance FromJSON Alonzo.AlonzoGenesis where
             collateralPercentage,
             maxCollateralInputs
           }
-
-instance FromJSONKey Language where
-  fromJSONKey = FromJSONKeyText parseLang
-   where
-     parseLang :: Text -> Language
-     parseLang lang =
-       case eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
-         Left err -> panic $ Text.pack err
-         Right lang' -> lang'
