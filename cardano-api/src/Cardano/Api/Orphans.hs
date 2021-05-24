@@ -18,6 +18,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import           Data.Scientific
 import           Data.Text (Text)
@@ -288,3 +289,14 @@ deriving instance FromJSON Alonzo.ExUnits
 
 deriving instance ToJSON Alonzo.Prices
 deriving instance FromJSON Alonzo.Prices
+
+instance ToJSON SBS.ShortByteString where
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . SBS.fromShort
+instance FromJSON SBS.ShortByteString where
+  parseJSON v = case v of
+    Aeson.String b16 ->
+      case B16.decode $ Text.encodeUtf8 b16 of
+        Right decoded -> return $ SBS.toShort decoded
+        Left err -> fail err
+    wrong -> fail $ "Error decoding ShortByteString. \
+                    \Expected a JSON string but got: " <> show wrong
