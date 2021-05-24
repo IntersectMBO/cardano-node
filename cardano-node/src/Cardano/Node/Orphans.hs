@@ -15,9 +15,7 @@ import           Cardano.Api.Orphans ()
 import           Data.Aeson (eitherDecode)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import           Data.MemoBytes (MemoBytes)
 import qualified Data.Text as Text
@@ -129,12 +127,3 @@ instance FromJSONKey Language where
 
 instance FromJSON Alonzo.CostModel
 instance FromJSON (MemoBytes (Map Text Integer))
-
-instance FromJSON SBS.ShortByteString where
-  parseJSON v = case v of
-                  Aeson.String b16 ->
-                    case Base16.decode $ Text.encodeUtf8 b16 of
-                      Right decoded -> return $ SBS.toShort decoded
-                      Left err -> fail err
-                  wrong -> fail $ "Error decoding ShortByteString. \
-                                  \Expected a JSON string but got: " <> show wrong
