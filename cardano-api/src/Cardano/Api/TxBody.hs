@@ -50,6 +50,7 @@ module Cardano.Api.TxBody (
     TxMetadataInEra(..),
     TxAuxScripts(..),
     TxAuxScriptData(..),
+    TxExtraKeyWitnesses(..),
     TxWithdrawals(..),
     TxCertificates(..),
     TxUpdateProposal(..),
@@ -70,6 +71,7 @@ module Cardano.Api.TxBody (
     ValidityLowerBoundSupportedInEra(..),
     TxMetadataSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
+    TxExtraKeyWitnessesSupportedInEra(..),
     ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
@@ -83,6 +85,7 @@ module Cardano.Api.TxBody (
     validityLowerBoundSupportedInEra,
     txMetadataSupportedInEra,
     auxScriptsSupportedInEra,
+    extraKeyWitnessesSupportedInEra,
     scriptDataSupportedInEra,
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
@@ -643,6 +646,30 @@ auxScriptsSupportedInEra MaryEra    = Just AuxScriptsInMaryEra
 auxScriptsSupportedInEra AlonzoEra  = Just AuxScriptsInAlonzoEra
 
 
+-- | A representation of whether the era supports transactions that specify
+-- in the body that they need extra key witnesses, and where this fact is
+-- visible to scripts.
+--
+-- Extra key witnesses visible to scripts are supported from the Alonzo era
+-- onwards.
+--
+data TxExtraKeyWitnessesSupportedInEra era where
+
+     ExtraKeyWitnessesInAlonzoEra :: TxExtraKeyWitnessesSupportedInEra AlonzoEra
+
+
+deriving instance Eq   (TxExtraKeyWitnessesSupportedInEra era)
+deriving instance Show (TxExtraKeyWitnessesSupportedInEra era)
+
+extraKeyWitnessesSupportedInEra :: CardanoEra era
+                                -> Maybe (TxExtraKeyWitnessesSupportedInEra era)
+extraKeyWitnessesSupportedInEra ByronEra   = Nothing
+extraKeyWitnessesSupportedInEra ShelleyEra = Nothing
+extraKeyWitnessesSupportedInEra AllegraEra = Nothing
+extraKeyWitnessesSupportedInEra MaryEra    = Nothing
+extraKeyWitnessesSupportedInEra AlonzoEra  = Just ExtraKeyWitnessesInAlonzoEra
+
+
 -- | A representation of whether the era supports multi-asset transactions.
 --
 -- The Mary and subsequent eras support multi-asset transactions.
@@ -869,6 +896,20 @@ data TxAuxScripts era where
 deriving instance Eq   (TxAuxScripts era)
 deriving instance Show (TxAuxScripts era)
 
+-- ----------------------------------------------------------------------------
+-- Optionally required signatures (era-dependent)
+--
+
+data TxExtraKeyWitnesses era where
+
+  TxExtraKeyWitnessesNone :: TxExtraKeyWitnesses era
+
+  TxExtraKeyWitnesses     :: TxExtraKeyWitnessesSupportedInEra era
+                          -> [Hash PaymentKey]
+                          -> TxExtraKeyWitnesses era
+
+deriving instance Eq   (TxExtraKeyWitnesses era)
+deriving instance Show (TxExtraKeyWitnesses era)
 
 -- ----------------------------------------------------------------------------
 -- Auxiliary script data (era-dependent)
@@ -967,6 +1008,7 @@ data TxBodyContent build era =
                             TxValidityUpperBound era),
        txMetadata       :: TxMetadataInEra era,
        txAuxScripts     :: TxAuxScripts era,
+       txExtraKeyWits   :: TxExtraKeyWitnesses era,
      --txAuxScriptData  :: TxAuxScriptData era, -- TODO alonzo
        txProtocolParams :: BuildTxWith build (Maybe ProtocolParameters),
        txWithdrawals    :: TxWithdrawals  build era,
@@ -1323,6 +1365,7 @@ fromLedgerTxBody era body mAux =
       , txCertificates   = fromLedgerTxCertificates   era body
       , txUpdateProposal = fromLedgerTxUpdateProposal era body
       , txMintValue      = fromLedgerTxMintValue      era body
+      , txExtraKeyWits   = fromLedgerTxExtraKeyWitnesses era body
       , txProtocolParams = ViewTx
       , txMetadata
       , txAuxScripts
@@ -1485,6 +1528,20 @@ fromLedgerTxAuxiliaryData era (Just auxData) =
   where
     (ms, ss) = fromLedgerAuxiliaryData era auxData
 
+
+fromLedgerTxExtraKeyWitnesses :: ShelleyBasedEra era
+                              -> Ledger.TxBody (ShelleyLedgerEra era)
+                              -> TxExtraKeyWitnesses era
+fromLedgerTxExtraKeyWitnesses sbe body =
+  case sbe of
+    ShelleyBasedEraShelley -> TxExtraKeyWitnessesNone
+    ShelleyBasedEraAllegra -> TxExtraKeyWitnessesNone
+    ShelleyBasedEraMary    -> TxExtraKeyWitnessesNone
+    ShelleyBasedEraAlonzo  -> TxExtraKeyWitnesses
+                                ExtraKeyWitnessesInAlonzoEra
+                                [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
+                                | let keyhashes = Alonzo.reqSignerHashes body
+                                , keyhash <- Set.toList keyhashes ]
 
 fromLedgerTxWithdrawals
   :: ShelleyBasedEra era
@@ -1670,6 +1727,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
                             ValidityNoUpperBoundInByronEra),
       txMetadata       = TxMetadataNone,
       txAuxScripts     = TxAuxScriptsNone,
+      txExtraKeyWits   = TxExtraKeyWitnessesNone,
       txProtocolParams = ViewTx,
       txWithdrawals    = TxWithdrawalsNone,
       txCertificates   = TxCertificatesNone,
@@ -1895,6 +1953,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                              txValidityRange = (lowerBound, upperBound),
                              txMetadata,
                              txAuxScripts,
+                             txExtraKeyWits,
                              txProtocolParams,
                              txWithdrawals,
                              txCertificates,
@@ -1952,7 +2011,11 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toAlonzoUpdate p))
-          (error "TODO alonzo: extra key hashes for required witnesses")
+          (case txExtraKeyWits of
+             TxExtraKeyWitnessesNone   -> Set.empty
+             TxExtraKeyWitnesses _ khs -> Set.fromList
+                                            [ Shelley.coerceKeyRole kh
+                                            | PaymentKeyHash kh <- khs ])
           (case txMintValue of
              TxMintNone        -> mempty
              TxMintValue _ v _ -> toMaryValue v)

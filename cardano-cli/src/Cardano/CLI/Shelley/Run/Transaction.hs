@@ -260,6 +260,7 @@ runTxBuildRaw (AnyCardanoEra era) inputsAndScripts txouts mLowerBound
                  <*> validateTxValidityUpperBound era mUpperBound)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
         <*> validateTxAuxScripts     era scriptFiles
+        <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
         <*> pure (BuildTxWith Nothing) --TODO alonzo: support this
         <*> validateTxWithdrawals    era withdrawals
         <*> validateTxCertificates   era certFiles
