@@ -19,7 +19,6 @@ import           Cardano.Prelude
 import           Control.Monad
 import           Control.SetAlgebra as SetAlgebra
 import           Data.Aeson
-import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
@@ -171,9 +170,6 @@ instance ToJSON AlonzoGenesis where
       , "collateralPercentage" .= collateralPercentage v
       , "maxCollateralInputs" .= maxCollateralInputs v
       ]
-
-instance ToJSON Language where
-  toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
 
 instance ToJSONKey Language where
   toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . encode)
