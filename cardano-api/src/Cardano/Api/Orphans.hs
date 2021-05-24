@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -12,7 +14,7 @@ module Cardano.Api.Orphans () where
 import           Prelude
 
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-import           Data.Aeson (ToJSON (..), object, (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
@@ -23,6 +25,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -278,3 +281,7 @@ instance ToJSON Shelley.RewardType where
 instance ToJSON (SafeHash.SafeHash c a) where
   toJSON = toJSON . SafeHash.extractHash
 
+-----
+
+instance ToJSON Alonzo.ExUnits
+deriving instance FromJSON Alonzo.ExUnits
