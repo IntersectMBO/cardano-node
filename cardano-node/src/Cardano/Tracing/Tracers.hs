@@ -305,19 +305,25 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
             tracerOnOff (traceDebugPeerSelectionInitiatorResponderTracer trSel)
                         verb "DebugPeerSelection" tr,
           dtTracePeerSelectionCounters =
-            tracePeerSelectionCountersMetrics ekgDirect $
-              tracerOnOff (tracePeerSelectionCounters trSel)
-                        verb "PeerSelectionCounters" tr,
+               tracePeerSelectionCountersMetrics
+                 (tracePeerSelectionCounters trSel)
+                 ekgDirect
+            <> tracerOnOff (tracePeerSelection trSel)
+                           verb "PeerSelection" tr,
           dtPeerSelectionActionsTracer =
             tracerOnOff (tracePeerSelectionActions trSel) verb "PeerSelectionActions" tr,
           dtConnectionManagerTracer =
-            traceConnectionManagerTraceMetrics ekgDirect $
-              tracerOnOff (traceConnectionManager trSel) verb "ConnectionManager" tr,
+               traceConnectionManagerTraceMetrics
+                 (traceConnectionManagerCounters trSel)
+                 ekgDirect
+            <> tracerOnOff (traceConnectionManager trSel) verb "ConnectionManager" tr,
           dtServerTracer =
             tracerOnOff (traceServer trSel) verb "Server" tr,
           dtInboundGovernorTracer =
-            traceInboundGovernorCountersMetrics ekgDirect $
-              tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
+               traceInboundGovernorCountersMetrics
+                 (traceInboundGovernorCounters trSel)
+                 ekgDirect
+            <> tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr,
           dtLedgerPeersTracer =
             tracerOnOff (traceLedgerPeers trSel) verb "LedgerPeers" tr,
           --
@@ -1231,12 +1237,12 @@ teeTraceBlockFetchDecisionElide = elideToLogObject
 --------------------------------------------------------------------------------
 
 traceConnectionManagerTraceMetrics
-    :: Maybe EKGDirect
+    :: OnOff TraceConnectionManagerCounters
+    -> Maybe EKGDirect
     -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
-    -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
-traceConnectionManagerTraceMetrics Nothing          tracer = tracer
-traceConnectionManagerTraceMetrics (Just ekgDirect) tracer =
-    tracer <> cmtTracer
+traceConnectionManagerTraceMetrics _             Nothing         = nullTracer
+traceConnectionManagerTraceMetrics (OnOff False) _               = nullTracer
+traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
   where
     cmtTracer :: Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
     cmtTracer = Tracer $ \msg -> case msg of
@@ -1268,14 +1274,15 @@ traceConnectionManagerTraceMetrics (Just ekgDirect) tracer =
 
 
 tracePeerSelectionCountersMetrics
-    :: Maybe EKGDirect
+    :: OnOff TracePeerSelectionCounters
+    -> Maybe EKGDirect
     -> Tracer IO PeerSelectionCounters
-    -> Tracer IO PeerSelectionCounters
-tracePeerSelectionCountersMetrics Nothing tracer     = tracer
-tracePeerSelectionCountersMetrics (Just ekgDirect) _ = Tracer pscTracer
+tracePeerSelectionCountersMetrics _             Nothing          = nullTracer
+tracePeerSelectionCountersMetrics (OnOff False) _                = nullTracer
+tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
   where
-    pscTracer :: PeerSelectionCounters -> IO ()
-    pscTracer (PeerSelectionCounters cold warm hot) = do
+    pscTracer :: Tracer IO PeerSelectionCounters
+    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot) -> do
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
       sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  hot
@@ -1283,23 +1290,24 @@ tracePeerSelectionCountersMetrics (Just ekgDirect) _ = Tracer pscTracer
 
 traceInboundGovernorCountersMetrics
     :: forall addr.
-       Maybe EKGDirect
+       OnOff TraceInboundGovernorCounters
+    -> Maybe EKGDirect
     -> Tracer IO (InboundGovernorTrace addr)
-    -> Tracer IO (InboundGovernorTrace addr)
-traceInboundGovernorCountersMetrics Nothing          tracer = tracer
-traceInboundGovernorCountersMetrics (Just ekgDirect) tracer = 
-    tracer <> Tracer ipgcTracer
+traceInboundGovernorCountersMetrics _             Nothing         = nullTracer
+traceInboundGovernorCountersMetrics (OnOff False) _               = nullTracer
+traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
   where
-    ipgcTracer :: InboundGovernorTrace addr -> IO ()
-    ipgcTracer (TrInboundGovernorCounters InboundGovernorCounters {
-                  warmPeersRemote,
-                  hotPeersRemote
-                }) = do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.warm"
-                                 warmPeersRemote
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.hot"
-                                 hotPeersRemote
-    ipgcTracer _ = pure ()
+    ipgcTracer :: Tracer IO (InboundGovernorTrace addr)
+    ipgcTracer = Tracer $ \msg -> case msg of
+      (TrInboundGovernorCounters InboundGovernorCounters {
+          warmPeersRemote,
+          hotPeersRemote
+        }) -> do
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.warm"
+                                     warmPeersRemote
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.hot"
+                                     hotPeersRemote
+      _ -> return ()
 
 
 -- | get information about a chain fragment
