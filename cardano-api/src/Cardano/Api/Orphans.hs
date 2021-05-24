@@ -20,6 +20,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
@@ -318,3 +319,7 @@ instance FromJSON Alonzo.Language where
     wrong -> fail $ "Error decoding Language. Expected a JSON string but got: " <> show wrong
 instance ToJSON Alonzo.Language where
   toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
+
+-- deriving instance ToJSONKey Alonzo.Language
+instance ToJSONKey Alonzo.Language where
+  toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
