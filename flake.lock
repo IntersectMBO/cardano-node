@@ -39,11 +39,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1621507969,
-        "narHash": "sha256-wLXAv8acJ162tVLxW2hCxDrtVmYVwHELKD9aq2CVgY0=",
+        "lastModified": 1621878195,
+        "narHash": "sha256-JCu5wnt3ja8UBQv5G3aRhQ+ZcAKB6+ivodv3yA6UnK8=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "42d272e3f731ba4a8b90079d85a5ccbd985a8a9b",
+        "rev": "f7a93e5e5e20ce9dd3ea86efe2495139303b7f05",
         "type": "github"
       },
       "original": {
