@@ -1,6 +1,6 @@
 let
   basePortDefault    = 30000;
-  cacheDirDefault    = "${__getEnv "HOME"}/.cache";
+  cacheDirDefault    = "${__getEnv "HOME"}/.cache/cardano-workbench";
   stateDirDefault    = "state-cluster";
   profileNameDefault = "default-mary";
 in

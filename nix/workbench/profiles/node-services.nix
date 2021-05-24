@@ -92,6 +92,14 @@ let
              TestAllegraHardForkAtEpoch = 0;
              TestMaryHardForkAtEpoch    = 0;
            };
+         alonzo =
+           { TestShelleyHardForkAtEpoch = 0;
+             TestAllegraHardForkAtEpoch = 0;
+             TestMaryHardForkAtEpoch    = 0;
+             TestAlonzoHardForkAtEpoch  = 0;
+             TestEnableDevelopmentHardForkEras     = true;
+             TestEnableDevelopmentNetworkProtocols = true;
+           };
        }).${profile.value.era});
     };
 
