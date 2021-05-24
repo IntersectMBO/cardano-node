@@ -15,10 +15,11 @@ module Cardano.Api.Orphans () where
 
 import           Prelude
 
+import           Cardano.Prelude (panic)
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
@@ -320,6 +321,14 @@ instance FromJSON Alonzo.Language where
 instance ToJSON Alonzo.Language where
   toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
 
--- deriving instance ToJSONKey Alonzo.Language
 instance ToJSONKey Alonzo.Language where
   toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
+
+instance FromJSONKey Alonzo.Language where
+  fromJSONKey = Aeson.FromJSONKeyText parseLang
+   where
+     parseLang :: Text -> Alonzo.Language
+     parseLang lang =
+       case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
+         Left err -> panic $ Text.pack err
+         Right lang' -> lang'
