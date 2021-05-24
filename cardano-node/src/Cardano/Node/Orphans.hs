@@ -17,7 +17,6 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
-import           Data.MemoBytes (MemoBytes)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
@@ -126,4 +125,3 @@ instance FromJSONKey Language where
          Right lang' -> lang'
 
 instance FromJSON Alonzo.CostModel
-instance FromJSON (MemoBytes (Map Text Integer))

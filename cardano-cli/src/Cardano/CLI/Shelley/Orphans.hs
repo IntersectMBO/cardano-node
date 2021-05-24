@@ -61,8 +61,6 @@ import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
 import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
 import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as Plutus
 
-import           Data.MemoBytes (MemoBytes)
-
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
          . Text.decodeLatin1
@@ -186,10 +184,6 @@ instance FromJSON Language  where
 
 instance ToJSON Alonzo.CostModel
 instance FromJSON Alonzo.CostModel
-
-instance FromJSON (Data.MemoBytes.MemoBytes (Map Text Integer))
-instance ToJSON (Data.MemoBytes.MemoBytes (Map Text Integer))
-
 
 instance ToJSONKey Language where
   toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . encode)

@@ -20,6 +20,8 @@ import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
+import           Data.Map.Strict (Map)
+import           Data.MemoBytes (MemoBytes)
 import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -300,3 +302,6 @@ instance FromJSON SBS.ShortByteString where
         Left err -> fail err
     wrong -> fail $ "Error decoding ShortByteString. \
                     \Expected a JSON string but got: " <> show wrong
+
+instance FromJSON (MemoBytes (Map Text Integer))
+instance ToJSON (MemoBytes (Map Text Integer))
