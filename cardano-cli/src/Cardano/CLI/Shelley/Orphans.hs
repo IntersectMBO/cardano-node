@@ -175,13 +175,6 @@ instance ToJSON AlonzoGenesis where
 instance ToJSON Language where
   toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
 
-instance FromJSON Language  where
-  parseJSON v =
-    case v of
-      Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
-      wrong -> fail $ "Error decoding Language. \
-                      \Expected a JSON string but got: " <> show wrong
-
 instance ToJSONKey Language where
   toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . encode)
 
