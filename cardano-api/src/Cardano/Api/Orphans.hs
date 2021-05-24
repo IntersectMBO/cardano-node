@@ -285,3 +285,6 @@ instance ToJSON (SafeHash.SafeHash c a) where
 
 instance ToJSON Alonzo.ExUnits
 deriving instance FromJSON Alonzo.ExUnits
+
+deriving instance ToJSON Alonzo.Prices
+deriving instance FromJSON Alonzo.Prices

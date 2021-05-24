@@ -51,14 +51,11 @@ instance FromJSON TracingVerbosity where
 deriving instance Show TracingVerbosity
 
 deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
-deriving instance ToJSON Alonzo.Prices
 deriving instance ToJSON Alonzo.Language
 deriving instance ToJSONKey Alonzo.Language
 
 instance ToJSON Alonzo.CostModel where
   toJSON (Alonzo.CostModel m) = toJSON m
-
-deriving instance FromJSON Alonzo.Prices
 
 instance ToJSON (Shelley.CompactAddr StandardCrypto) where
   toJSON = toJSON . Shelley.decompactAddr
