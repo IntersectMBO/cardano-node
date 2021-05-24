@@ -203,11 +203,6 @@ instance FromJSONKey Language where
          Left err -> panic $ Text.pack err
          Right lang' -> lang'
 
-
-
-instance ToJSON Alonzo.Prices
-deriving instance FromJSON Alonzo.Prices
-
 instance ToJSON SBS.ShortByteString where
   toJSON = Aeson.String
              . Text.decodeLatin1
