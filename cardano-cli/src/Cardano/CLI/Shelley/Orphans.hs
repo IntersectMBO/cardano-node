@@ -16,12 +16,10 @@ module Cardano.CLI.Shelley.Orphans () where
 
 import           Cardano.Prelude
 
-import           Control.Monad
 import           Control.SetAlgebra as SetAlgebra
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS
-import qualified Data.Map.Strict as Map
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api.Orphans ()
@@ -48,13 +46,7 @@ import           Shelley.Spec.Ledger.TxBody (TxId (..))
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.Alonzo.Translation (AlonzoGenesis (..))
-import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
-
-import qualified PlutusCore.Evaluation.Machine.ExBudgeting as Plutus
-import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as Plutus
 
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
@@ -106,51 +98,6 @@ deriving newtype  instance ToJSON    (Ledger.Mary.PolicyID StandardCrypto)
 
 instance (ToJSONKey k, ToJSON v) => ToJSON (SetAlgebra.BiMap v k v) where
   toJSON = toJSON . SetAlgebra.forwards -- to normal Map
-
-
-
-
--- We defer parsing of the cost model so that we can
--- read it as a filepath. This is to reduce further pollution
--- of the genesis file.
-instance FromJSON Alonzo.AlonzoGenesis where
-  parseJSON =
-    withObject "Alonzo Genesis" $ \o -> do
-      adaPerUTxOWord       <- o .:  "adaPerUTxOWord"
-      cModels              <- o .:? "costModels"
-      prices               <- o .:  "executionPrices"
-      maxTxExUnits         <- o .:  "maxTxExUnits"
-      maxBlockExUnits      <- o .:  "maxBlockExUnits"
-      maxValSize           <- o .:  "maxValueSize"
-      collateralPercentage <- o .:  "collateralPercentage"
-      maxCollateralInputs  <- o .:  "maxCollateralInputs"
-      case cModels of
-        Nothing ->
-          case Plutus.extractModelParams Plutus.defaultCostModel of
-            Just m ->
-              return Alonzo.AlonzoGenesis {
-                adaPerUTxOWord,
-                costmdls = Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m),
-                prices,
-                maxTxExUnits,
-                maxBlockExUnits,
-                maxValSize,
-                collateralPercentage,
-                maxCollateralInputs
-              }
-            Nothing -> fail "Failed to extract the cost model params from Plutus.defaultCostModel"
-        Just costmdls ->
-          return Alonzo.AlonzoGenesis {
-            adaPerUTxOWord,
-            costmdls,
-            prices,
-            maxTxExUnits,
-            maxBlockExUnits,
-            maxValSize,
-            collateralPercentage,
-            maxCollateralInputs
-          }
-
 
 -- We don't render the cost model so that we can
 -- render it later in 'AlonzoGenWrapper' as a filepath
