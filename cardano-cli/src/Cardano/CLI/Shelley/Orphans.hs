@@ -182,9 +182,6 @@ instance FromJSON Language  where
       wrong -> fail $ "Error decoding Language. \
                       \Expected a JSON string but got: " <> show wrong
 
-instance ToJSON Alonzo.CostModel
-instance FromJSON Alonzo.CostModel
-
 instance ToJSONKey Language where
   toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . encode)
 

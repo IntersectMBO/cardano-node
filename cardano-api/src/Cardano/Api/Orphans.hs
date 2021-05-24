@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -305,3 +307,6 @@ instance FromJSON SBS.ShortByteString where
 
 instance FromJSON (MemoBytes (Map Text Integer))
 instance ToJSON (MemoBytes (Map Text Integer))
+
+deriving newtype instance FromJSON Alonzo.CostModel
+deriving newtype instance ToJSON Alonzo.CostModel

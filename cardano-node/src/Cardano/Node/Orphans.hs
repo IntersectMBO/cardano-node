@@ -51,9 +51,6 @@ deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto)
 deriving instance ToJSON Alonzo.Language
 deriving instance ToJSONKey Alonzo.Language
 
-instance ToJSON Alonzo.CostModel where
-  toJSON (Alonzo.CostModel m) = toJSON m
-
 instance ToJSON (Shelley.CompactAddr StandardCrypto) where
   toJSON = toJSON . Shelley.decompactAddr
 
@@ -123,5 +120,3 @@ instance FromJSONKey Language where
        case eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
          Left err -> panic $ Text.pack err
          Right lang' -> lang'
-
-instance FromJSON Alonzo.CostModel
