@@ -596,7 +596,7 @@ printUtxo
 printUtxo shelleyBasedEra' txInOutTuple =
   case shelleyBasedEra' of
     ShelleyBasedEraShelley ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)
@@ -605,7 +605,7 @@ printUtxo shelleyBasedEra' txInOutTuple =
              ]
 
     ShelleyBasedEraAllegra ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)
@@ -613,7 +613,7 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , "        " <> printableValue value
              ]
     ShelleyBasedEraMary ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value) = txInOutTuple
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)

@@ -55,7 +55,7 @@ module Cardano.Api (
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
     -- used in many other places.
-    Hash(..),
+    Hash,
     castHash,
 
     -- * Payment addresses
@@ -164,6 +164,7 @@ module Cardano.Api (
     TxOut(TxOut),
     TxOutValue(..),
     serialiseAddressForTxOut,
+    TxOutDatumHash(..),
 
     -- ** Other transaction body types
     TxFee(..),
@@ -173,6 +174,7 @@ module Cardano.Api (
     EpochSlots(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
+    TxAuxScriptData(..),
     TxWithdrawals(..),
     TxCertificates(..),
     TxUpdateProposal(..),

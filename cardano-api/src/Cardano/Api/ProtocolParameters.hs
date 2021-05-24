@@ -90,7 +90,7 @@ import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
---TODO: eliminate this import and use things re-exported from the ledger lib
+-- TODO alonzo: eliminate this import and use things re-exported from the ledger lib
 import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.Address
@@ -245,7 +245,7 @@ data ProtocolParameters =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolParamPrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+       protocolParamPrices :: Maybe ExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --
@@ -287,7 +287,7 @@ instance FromJSON ProtocolParameters where
                         <*> o .: "treasuryCut"
                         <*> o .:? "utxoCostPerWord"
                         <*> o .:? "costModel"           .!= Map.empty
-                        <*> o .:? "executionUnitPrices" .!= Map.empty
+                        <*> o .:? "executionUnitPrices"
                         <*> o .:? "maxTxExecUnits"
                         <*> o .:? "maxBlockExecUnits"
                         <*> o .:? "maxValueSize"
@@ -452,7 +452,7 @@ data ProtocolParametersUpdate =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolUpdatePrices :: Map AnyPlutusScriptVersion ExecutionUnitPrices,
+       protocolUpdatePrices :: Maybe ExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --
@@ -494,7 +494,7 @@ instance Semigroup ProtocolParametersUpdate where
       -- Intoduced in Alonzo below.
       , protocolUpdateUTxOCostPerWord     = merge protocolUpdateUTxOCostPerWord
       , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
-      , protocolUpdatePrices              = mergeMap protocolUpdatePrices
+      , protocolUpdatePrices              = merge protocolUpdatePrices
       , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
       , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
       , protocolUpdateParamMaxValueSize   = merge protocolUpdateParamMaxValueSize
@@ -530,7 +530,7 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateTreasuryCut         = Nothing
       , protocolUpdateUTxOCostPerWord     = Nothing
       , protocolUpdateCostModels          = mempty
-      , protocolUpdatePrices              = mempty
+      , protocolUpdatePrices              = Nothing
       , protocolUpdateMaxTxExUnits        = Nothing
       , protocolUpdateMaxBlockExUnits     = Nothing
       , protocolUpdateParamMaxValueSize   = Nothing
@@ -621,14 +621,14 @@ validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
                   -> Either InvalidCostModel ()
 validateCostModel PlutusScriptV1 (CostModel m)
-    --TODO: the ledger library should export something for this, e.g. like its
+    -- TODO alonzo: the ledger library should export something for this, e.g. like its
     -- existing checkCostModel function. We should not need to depend on the
     -- Plutus library directly. That makes too many assumptions about what the
     -- ledger library is doing.
   | Plutus.validateCostModelParams m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
 
---TODO: it'd be nice if the library told us what was wrong
+-- TODO alonzo: it'd be nice if the library told us what was wrong
 newtype InvalidCostModel = InvalidCostModel CostModel
   deriving Show
 
@@ -885,7 +885,7 @@ fromShelleyPParamsUpdate
                                             strictMaybeToMaybe _tau
     , protocolUpdateUTxOCostPerWord     = Nothing
     , protocolUpdateCostModels          = mempty
-    , protocolUpdatePrices              = mempty
+    , protocolUpdatePrices              = Nothing
     , protocolUpdateMaxTxExUnits        = Nothing
     , protocolUpdateMaxBlockExUnits     = Nothing
     , protocolUpdateParamMaxValueSize   = Nothing
@@ -935,7 +935,7 @@ fromShelleyPParams
     , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
     , protocolParamUTxOCostPerWord     = Nothing
     , protocolParamCostModels          = Map.empty
-    , protocolParamPrices              = Map.empty
+    , protocolParamPrices              = Nothing
     , protocolParamMaxTxExUnits        = Nothing
     , protocolParamMaxBlockExUnits     = Nothing
     , protocolParamMaxValueSize        = Nothing
