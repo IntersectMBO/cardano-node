@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -586,6 +587,10 @@ data ExecutionUnitPrices =
        priceExecutionMemory :: Lovelace
      }
   deriving (Eq, Show)
+
+-- TODO alonzo: This instance is to get the code to compile.  Check if this instance is actually valid.
+instance Semigroup ExecutionUnitPrices where
+  ExecutionUnitPrices as am <> ExecutionUnitPrices bs bm = ExecutionUnitPrices (as <> bs) (am <> bm)
 
 toAlonzoPrices :: ExecutionUnitPrices -> Alonzo.Prices
 toAlonzoPrices ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
