@@ -36,12 +36,16 @@ let
 
       "
     '';
-  # Set locale
+  # Test cases will assume a UTF-8 locale and provide text in this character encoding.
+  # So force the character encoding to UTF-8 and provide locale data.
   setLocale =
     ''
-      export LANG="en_US.UTF-8";
-      export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive";
+      export LANG="en_US.UTF-8"
+    '' + lib.optionalString haveGlibcLocales ''
+      export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
     '';
+
+  haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";        
 
   # This provides a development environment that can be used with nix-shell or
   # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
@@ -87,8 +91,7 @@ let
       tmux
       pkgs.git
       pkgs.hlint
-      pkgs.glibcLocales
-    ]
+    ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
     [
