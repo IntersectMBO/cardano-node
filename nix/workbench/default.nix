@@ -171,7 +171,7 @@ let
         with envArgs; rec {
           inherit cardanoLib stateDir;
 
-          JSON = runWorkbench "environment.json"
+          JSON = runWorkbenchJqOnly "environment.json"
           ''env compute-config \
             --cache-dir "${cacheDir}" \
             --base-port ${toString basePort} \
@@ -194,7 +194,7 @@ let
       profiles = genAttrs profile-names mkProfile;
 
       profilesJSON =
-        runWorkbench "all-profiles.json" "profiles generate-all";
+        runWorkbenchJqOnly "all-profiles.json" "profiles generate-all";
     };
 
   initialiseProfileRunDirShellScript =
