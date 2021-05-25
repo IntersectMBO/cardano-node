@@ -1,7 +1,12 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -11,18 +16,26 @@ module Cardano.Api.Orphans () where
 
 import           Prelude
 
+import           Cardano.Prelude (panic)
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-import           Data.Aeson (ToJSON (..), object, (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
+import           Data.Map.Strict (Map)
+import           Data.MemoBytes (MemoBytes)
 import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Alonzo.Translation as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -31,6 +44,7 @@ import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import           Cardano.Slotting.Slot (SlotNo (..))
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
+import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Shelley.Spec.Ledger.API as Shelley
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
@@ -278,3 +292,99 @@ instance ToJSON Shelley.RewardType where
 instance ToJSON (SafeHash.SafeHash c a) where
   toJSON = toJSON . SafeHash.extractHash
 
+-----
+
+instance ToJSON Alonzo.ExUnits
+deriving instance FromJSON Alonzo.ExUnits
+
+deriving instance ToJSON Alonzo.Prices
+deriving instance FromJSON Alonzo.Prices
+
+-- TODO alonzo: This ShortByteString instances should be deleted
+-- See https://github.com/input-output-hk/cardano-node/pull/2740
+instance ToJSON SBS.ShortByteString where
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . SBS.fromShort
+instance FromJSON SBS.ShortByteString where
+  parseJSON v = case v of
+    Aeson.String b16 -> case B16.decode $ Text.encodeUtf8 b16 of
+      Right decoded -> return $ SBS.toShort decoded
+      Left err -> fail err
+    wrong -> fail $ "Error decoding ShortByteString. Expected a JSON string but got: " <> show wrong
+
+-- TODO alonzo: Try to get cardano-ledger-specs to provide these instances
+-- See https://github.com/input-output-hk/cardano-node/pull/2740
+instance FromJSON (MemoBytes (Map Text Integer))
+instance ToJSON (MemoBytes (Map Text Integer))
+
+deriving newtype instance FromJSON Alonzo.CostModel
+deriving newtype instance ToJSON Alonzo.CostModel
+
+instance FromJSON Alonzo.Language where
+  parseJSON v = case v of
+    Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
+    wrong -> fail $ "Error decoding Language. Expected a JSON string but got: " <> show wrong
+instance ToJSON Alonzo.Language where
+  toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
+
+instance ToJSONKey Alonzo.Language where
+  toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
+
+instance FromJSONKey Alonzo.Language where
+  fromJSONKey = Aeson.FromJSONKeyText parseLang
+   where
+     parseLang :: Text -> Alonzo.Language
+     parseLang lang = case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
+        Left err -> panic $ Text.pack err
+        Right lang' -> lang'
+
+-- We defer parsing of the cost model so that we can
+-- read it as a filepath. This is to reduce further pollution
+-- of the genesis file.
+instance FromJSON Alonzo.AlonzoGenesis where
+  parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
+    adaPerUTxOWord       <- o .:  "adaPerUTxOWord"
+    cModels              <- o .:? "costModels"
+    prices               <- o .:  "executionPrices"
+    maxTxExUnits         <- o .:  "maxTxExUnits"
+    maxBlockExUnits      <- o .:  "maxBlockExUnits"
+    maxValSize           <- o .:  "maxValueSize"
+    collateralPercentage <- o .:  "collateralPercentage"
+    maxCollateralInputs  <- o .:  "maxCollateralInputs"
+    case cModels of
+      Nothing -> case Plutus.defaultCostModelParams of
+        Just m -> return Alonzo.AlonzoGenesis
+          { Alonzo.adaPerUTxOWord
+          , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
+          , Alonzo.prices
+          , Alonzo.maxTxExUnits
+          , Alonzo.maxBlockExUnits
+          , Alonzo.maxValSize
+          , Alonzo.collateralPercentage
+          , Alonzo.maxCollateralInputs
+          }
+        Nothing -> fail "Failed to extract the cost model params from Plutus.defaultCostModel"
+      Just costmdls -> return Alonzo.AlonzoGenesis
+        { adaPerUTxOWord
+        , costmdls
+        , prices
+        , maxTxExUnits
+        , maxBlockExUnits
+        , maxValSize
+        , collateralPercentage
+        , maxCollateralInputs
+        }
+
+-- We don't render the cost model so that we can
+-- render it later in 'AlonzoGenWrapper' as a filepath
+-- and keep the cost model (which is chunky) as a separate file.
+instance ToJSON AlonzoGenesis where
+  toJSON v = object
+      [ "adaPerUTxOWord" .= adaPerUTxOWord v
+      , "costModels" .= costmdls v
+      , "executionPrices" .= prices v
+      , "maxTxExUnits" .= maxTxExUnits v
+      , "maxBlockExUnits" .= maxBlockExUnits v
+      , "maxValueSize" .= maxValSize v
+      , "collateralPercentage" .= collateralPercentage v
+      , "maxCollateralInputs" .= maxCollateralInputs v
+      ]
