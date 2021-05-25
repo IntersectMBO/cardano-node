@@ -123,7 +123,7 @@ import           Data.List (intercalate)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe, catMaybes, maybeToList)
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.String (IsString)
@@ -173,6 +173,7 @@ import           Cardano.Ledger.Val (isZero)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
@@ -1968,9 +1969,14 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
           (error "TODO alonzo: optional network"))
         (map toShelleySimpleScript (collectTxBodySimpleScripts txbodycontent))
-        TxBodyNoRedeemers --TODO alonzo: provide the redeemers here
+        (fromAlonzoRedeemers ScriptDataInAlonzoEra redeemers)
         txAuxData
   where
+    redeemers :: Alonzo.Redeemers StandardAlonzo
+    redeemers = makeAlonzoRedeemers
+                  txIns txWithdrawals
+                  txCertificates txMintValue
+
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardAlonzo)
     txAuxData
       | Map.null ms
@@ -1993,6 +1999,111 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     -- TODO alonzo: ^^ and move the definition next to toShelleyUpdate
     -- and\/or merge it with toShelleyUpdate to make it era-generic
     -- must assume Ledger.PParamsDelta ledgerera ~ Alonzo.PParamsDelta ledgerera
+
+
+makeAlonzoRedeemers :: Ledger.Era (ShelleyLedgerEra era)
+                    => [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+                    -> TxWithdrawals BuildTx era
+                    -> TxCertificates BuildTx era
+                    -> TxMintValue BuildTx era
+                    -> Alonzo.Redeemers (ShelleyLedgerEra era)
+makeAlonzoRedeemers txIns txWithdrawals
+                    txCertificates txMintValue =
+  Alonzo.Redeemers $
+      makeAlonzoRedeemersTxIns        txIns
+   <> makeAlonzoRedeemersWithdrawals  txWithdrawals
+   <> makeAlonzoRedeemersCertificates txCertificates
+   <> makeAlonzoRedeemersMinting      txMintValue
+
+
+type RedeemerMap era =
+       Map Alonzo.RdmrPtr (Alonzo.Data (ShelleyLedgerEra era), Alonzo.ExUnits)
+
+redeemerMapEntry :: Alonzo.Tag
+                 -> Word64
+                 -> Witness witctx era
+                 -> Maybe ( Alonzo.RdmrPtr
+                          , (Alonzo.Data ledgerera, Alonzo.ExUnits)
+                          )
+redeemerMapEntry _   _   KeyWitness{}                           = Nothing
+redeemerMapEntry _   _  (ScriptWitness _ SimpleScriptWitness{}) = Nothing
+redeemerMapEntry tag ix (ScriptWitness _
+                          (PlutusScriptWitness _ _ _ _ scriptdata exunits)) =
+    Just (redmrptr, (scriptdata', exunits'))
+  where
+    redmrptr    = Alonzo.RdmrPtr tag ix
+    scriptdata' = toAlonzoScriptData scriptdata
+    exunits'    = toAlonzoExUnits exunits
+
+
+makeAlonzoRedeemersTxIns :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+                         -> RedeemerMap era
+makeAlonzoRedeemersTxIns txins =
+    Map.fromList $
+      catMaybes
+        [ redeemerMapEntry Alonzo.Spend ix witness
+          -- The tx ins are indexed in the map order by txid
+        | (ix, BuildTxWith witness) <- zip [0..] (sortNub txins)
+        ]
+  where
+    -- This relies on the TxId Ord instance being consistent with the
+    -- Shelley.TxId Ord instance via the toShelleyTxId conversion
+    -- TODO: add a QC property to ensure this
+    sortNub :: Ord k => [(k, v)] -> [v]
+    sortNub = Map.elems . Map.fromList
+
+
+makeAlonzoRedeemersWithdrawals :: TxWithdrawals BuildTx era
+                               -> RedeemerMap era
+makeAlonzoRedeemersWithdrawals  TxWithdrawalsNone = Map.empty
+makeAlonzoRedeemersWithdrawals (TxWithdrawals _ withdrawals) =
+    Map.fromList $
+      catMaybes
+        [ redeemerMapEntry Alonzo.Rewrd ix witness
+          -- The withdrawals are indexed in the map order by stake credential
+        | (ix, BuildTxWith witness) <- zip [0..] (sortNub withdrawals)
+        ]
+  where
+    -- This relies on the StakeAddress Ord instance being consistent with the
+    -- Shelley.RewardAcnt Ord instance via the toShelleyStakeAddr conversion
+    -- TODO: add a QC property to ensure this
+    sortNub :: Ord k => [(k, x, v)] -> [v]
+    sortNub = Map.elems . Map.fromList . map (\(k, _, v) -> (k, v))
+
+
+makeAlonzoRedeemersCertificates :: TxCertificates BuildTx era
+                                -> RedeemerMap era
+makeAlonzoRedeemersCertificates  TxCertificatesNone = Map.empty
+makeAlonzoRedeemersCertificates (TxCertificates _ certs (BuildTxWith witnesses)) =
+    Map.fromList $
+      catMaybes
+        [ redeemerMapEntry Alonzo.Cert ix witness
+          -- The certs are indexed in list order
+        | (ix, cert) <- zip [0..] certs
+        , witness    <- maybeToList $ do
+                          stakecred <- selectStakeCredential cert
+                          Map.lookup stakecred witnesses
+        ]
+  where
+    selectStakeCredential cert =
+      case cert of
+        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
+        StakeAddressDelegationCertificate     stakecred _ -> Just stakecred
+        _                                                 -> Nothing
+
+
+makeAlonzoRedeemersMinting :: TxMintValue BuildTx era
+                           -> RedeemerMap era
+makeAlonzoRedeemersMinting  TxMintNone = Map.empty
+makeAlonzoRedeemersMinting (TxMintValue _ value (BuildTxWith witnesses)) =
+    Map.fromList $
+      catMaybes
+        [ redeemerMapEntry Alonzo.Mint ix witness
+          -- The minting policies are indexed in policy id order in the value
+        | let ValueNestedRep bundle = valueToNestedRep value
+        , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
+        , witness <- maybeToList (Map.lookup policyid witnesses)
+        ]
 
 
 data SimpleScriptInEra era where
