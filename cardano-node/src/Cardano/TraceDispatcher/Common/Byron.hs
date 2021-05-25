@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
-module Cardano.TraceDispatcher.OrphanInstances.Byron () where
+module Cardano.TraceDispatcher.Common.Byron () where
 
 -- TODO: Temporary hack for toJSON instances
 import Cardano.Tracing.OrphanInstances.Byron ()

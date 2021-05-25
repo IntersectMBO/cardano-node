@@ -1,5 +1,5 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -15,7 +15,8 @@ import           Cardano.Prelude hiding (Show, show)
 
 import           Cardano.TraceDispatcher.Render (renderHeaderHashForDetails)
 
-import           Ouroboros.Consensus.Block (ConvertRawHash (..))
+import           Ouroboros.Consensus.Block (ConvertRawHash (..), RealPoint,
+                     realPointHash, realPointSlot)
 import           Ouroboros.Network.Block
 
 
@@ -47,3 +48,10 @@ instance forall blk. ConvertRawHash blk
       , "slot" .= toJSON (unSlotNo slot)
       , "headerHash" .= renderHeaderHashForDetails (Proxy @blk) dtal h
       ]
+
+instance ConvertRawHash blk
+      => LogFormatting (RealPoint blk) where
+  forMachine dtal p = mkObject
+        [ "kind" .= String "Point"
+        , "slot" .= unSlotNo (realPointSlot p)
+        , "hash" .= renderHeaderHashForDetails (Proxy @blk) dtal (realPointHash p) ]

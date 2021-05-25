@@ -35,7 +35,6 @@ import           Cardano.TraceDispatcher.Consensus.StateInfo
 import           Cardano.TraceDispatcher.Network.Combinators
 import           Cardano.TraceDispatcher.Network.Docu
 import           Cardano.TraceDispatcher.Network.Formatting ()
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 
 import           Cardano.Node.Configuration.Logging (EKGDirect)
@@ -575,7 +574,6 @@ mkDispatchTracers
   -> Trace IO FormattedMessage
   -> IO (Tracers peer localPeer blk)
 mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect trBase = do
---    docTracers (Proxy :: Proxy ByronBlock)
     cdbmTr <- mkStandardTracer
                 "ChainDB"
                 namesForChainDBTraceEvents

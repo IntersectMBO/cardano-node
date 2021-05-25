@@ -15,7 +15,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Cardano.TraceDispatcher.OrphanInstances.HardFork ()
+module Cardano.TraceDispatcher.Common.HardFork ()
   where
 
 import           Cardano.Prelude hiding (All)
@@ -26,7 +26,6 @@ import           Data.Aeson
 import           Data.SOP.Strict
 
 import           Cardano.Logging
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,

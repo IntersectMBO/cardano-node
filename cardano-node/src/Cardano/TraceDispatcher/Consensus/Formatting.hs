@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
@@ -21,9 +22,8 @@ import           Text.Show
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Cardano.TraceDispatcher.Common.Formatting ()
-import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
+import           Cardano.TraceDispatcher.Common.Byron ()
+import           Cardano.TraceDispatcher.Common.Shelley ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
@@ -31,6 +31,8 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
                      (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Ledger.Inspect (
+                     LedgerEvent (..), LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
                      GenTxId, HasTxId, LedgerSupportsMempool,
                      txForgetValidated)
@@ -57,6 +59,11 @@ import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
 
 
+instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
+      => LogFormatting (LedgerEvent blk) where
+  forMachine dtal = \case
+    LedgerUpdate  update  -> forMachine dtal update
+    LedgerWarning warning -> forMachine dtal warning
 
 instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
