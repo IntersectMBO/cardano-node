@@ -39,20 +39,18 @@ profiles:
 profile-names:
 	@./nix/workbench/wb profile-names
 
-CLUSTER_PROFILE    = default-mary
-CLUSTER_ARGS_EXTRA =
+CLUSTER_PROFILE     = default-mary
+CLUSTER_ARGS_EXTRA ?=
 
 cluster-shell:
-	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true
+	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true ${CLUSTER_ARGS_EXTRA}
 
-cluster-shell-dev:
-	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true --arg 'workbenchDevMode' true
-
-cluster-shell-trace:             CLUSTER_ARGS_EXTRA = --trace
-large-state-cluster-shell-trace: CLUSTER_ARGS_EXTRA = --trace
+cluster-shell-dev:               CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true
+cluster-shell-trace:             CLUSTER_ARGS_EXTRA += --trace
+large-state-cluster-shell-trace: CLUSTER_ARGS_EXTRA += --trace
 large-state-cluster-shell:       CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
 large-state-cluster-shell-trace: CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
-cluster-shell-trace large-state-cluster-shell large-state-cluster-shell-trace: cluster-shell
+cluster-shell-dev cluster-shell-trace large-state-cluster-shell large-state-cluster-shell-trace: cluster-shell
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@

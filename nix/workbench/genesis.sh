@@ -44,7 +44,7 @@ case "${op}" in
         if test -f "$cache_path"/cache.key
         then cache_hit=t; cache_hit_desc='hit'
         else cache_hit=;  cache_hit_desc='miss'; fi
-        msg "genesis: preparing cache entry $cache_key:  $cache_hit_desc"
+        msg "genesis: preparing cache entry $cache_key:  $cache_hit_desc ($cache_path)"
 
         if   test -z "$cache_hit"
         then regenesis_causes+=('cache-miss')
@@ -144,6 +144,26 @@ case "${op}" in
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
         cardano-cli genesis create-staked "${params[@]}"
+
+        ## TODO: temporary step for Alonzo
+        jq_fmutate ""$dir"/genesis.json" '. *
+          { adaPerUTxOWord: 0
+          , executionPrices:
+            { prMem:              1
+            , prSteps:            1
+            }
+          , maxTxExUnits:
+            { exUnitsMem:         1
+            , exUnitsSteps:       1
+            }
+          , maxBlockExUnits:
+            { exUnitsMem:         1
+            , exUnitsSteps:       1
+            }
+          , maxValueSize:         1000
+          , collateralPercentage: 100
+          , maxCollateralInputs:  1
+          }'
 
         ## TODO: try to get rid of this step:
         Massage_the_key_file_layout_to_match_AWS "$profile_json" "$topo_dir" "$dir";;
