@@ -20,6 +20,7 @@ module Cardano.TraceDispatcher.Network.Docu
   , docAcceptPolicy
   , docMux
   , docHandshake
+  , docLocalHandshake
   ) where
 
 import           Cardano.Prelude
@@ -47,6 +48,7 @@ import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..))
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
                      WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
@@ -152,6 +154,14 @@ protoNodeToNodeVersion = NtN.NodeToNodeV_1
 
 protoCBORTerm :: CBOR.Term
 protoCBORTerm = undefined
+
+protoRefuseReason :: HS.RefuseReason NtN.NodeToNodeVersion
+protoRefuseReason = HS.Refused protoNodeToNodeVersion "hello"
+
+protoLocalRefuseReason :: HS.RefuseReason NtC.NodeToClientVersion
+protoLocalRefuseReason = HS.Refused protoNodeToClientVersion "hello"
+
+
 ------------------------------------
 
 docTChainSync :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
@@ -981,8 +991,40 @@ docHandshake = Documented [
             (AnyMessageAndAgency protoStok
               (HS.MsgAcceptVersion protoNodeToNodeVersion protoCBORTerm))))
         []
+        "The remote end decides which version to use and sends chosen version.\
+        \The server is allowed to modify version parameters."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (TraceSendMsg
+            (AnyMessageAndAgency protoStok
+              (HS.MsgRefuse protoRefuseReason))))
+        []
+        "It refuses to run any version."
+    ]
+
+docLocalHandshake :: Documented NtC.HandshakeTr
+docLocalHandshake = Documented [
+      DocMsg
+        (WithMuxBearer protoPeer
+          (TraceSendMsg
+            (AnyMessageAndAgency protoStok
+              (HS.MsgProposeVersions Map.empty))))
+        []
         "Propose versions together with version parameters.  It must be\
         \ encoded to a sorted list.."
-
-
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (TraceSendMsg
+            (AnyMessageAndAgency protoStok
+              (HS.MsgAcceptVersion protoNodeToClientVersion protoCBORTerm))))
+        []
+        "The remote end decides which version to use and sends chosen version.\
+        \The server is allowed to modify version parameters."
+    , DocMsg
+        (WithMuxBearer protoPeer
+          (TraceSendMsg
+            (AnyMessageAndAgency protoStok
+              (HS.MsgRefuse protoLocalRefuseReason))))
+        []
+        "It refuses to run any version."
     ]

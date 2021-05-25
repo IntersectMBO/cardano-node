@@ -20,8 +20,8 @@ module Cardano.TraceDispatcher.Tracers
 
 import           Data.Aeson (ToJSON)
 import qualified Data.Text.IO as T
-import qualified Network.Socket as Socket
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
+import qualified Network.Socket as Socket
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (trace)
@@ -74,8 +74,8 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
                      (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                      (TraceLocalTxSubmissionServerEvent (..))
-import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
-import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
+import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
+import qualified Ouroboros.Consensus.Network.NodeToNode as NtN
 import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Block
@@ -88,6 +88,7 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
                      WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -305,6 +306,16 @@ docTracers _ = do
                 namesForMux
                 severityMux
                 trBase
+    hsTr   <-  mkStandardTracer
+                "Handshake"
+                namesForHandshake
+                severityHandshake
+                trBase
+    lhsTr  <-  mkStandardTracer
+                "LocalHandshake"
+                namesForLocalHandshake
+                severityLocalHandshake
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -336,6 +347,8 @@ docTracers _ = do
     configureTracers emptyTraceConfig docAcceptPolicy         [apTr]
     configureTracers emptyTraceConfig docMux                  [muxTr]
     configureTracers emptyTraceConfig docMux                  [muxLTr]
+    configureTracers emptyTraceConfig docHandshake            [hsTr]
+    configureTracers emptyTraceConfig docLocalHandshake       [lhsTr]
 
     cdbmTrDoc    <- documentMarkdown
                 (docChainDBTraceEvent :: Documented
@@ -487,6 +500,12 @@ docTracers _ = do
                     (docMux :: Documented
                       (WithMuxBearer Peer MuxTrace))
                     [muxLTr]
+    hsTrDoc      <-  documentMarkdown
+                    (docHandshake :: Documented NtN.HandshakeTr)
+                    [hsTr]
+    lhsTrDoc      <-  documentMarkdown
+                    (docLocalHandshake :: Documented NtC.HandshakeTr)
+                    [lhsTr]
 
     let bl = cdbmTrDoc
             ++ cscTrDoc
@@ -520,6 +539,8 @@ docTracers _ = do
             ++ apTrDoc
             ++ muxTrDoc
             ++ muxLTrDoc
+            ++ hsTrDoc
+            ++ lhsTrDoc
 
     res <- buildersToText bl
     T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
@@ -713,6 +734,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
                 namesForHandshake
                 severityHandshake
                 trBase
+    lhsTr  <-  mkStandardTracer
+                "LocalHandshake"
+                namesForLocalHandshake
+                severityLocalHandshake
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -745,6 +771,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     configureTracers emptyTraceConfig docMux                  [muxTr]
     configureTracers emptyTraceConfig docMux                  [muxLTr]
     configureTracers emptyTraceConfig docHandshake            [hsTr]
+    configureTracers emptyTraceConfig docLocalHandshake       [lhsTr]
 
     pure Tracers
       { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -765,18 +792,18 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
         , Consensus.blockchainTimeTracer = Tracer (traceWith btTr)
         , Consensus.keepAliveClientTracer = Tracer (traceWith kacTr)
         }
-      , nodeToClientTracers = NodeToClient.Tracers
-        { NodeToClient.tChainSyncTracer = Tracer (traceWith tcsTr)
-        , NodeToClient.tTxSubmissionTracer = Tracer (traceWith ttsTr)
-        , NodeToClient.tStateQueryTracer = Tracer (traceWith tsqTr)
+      , nodeToClientTracers = NtC.Tracers
+        { NtC.tChainSyncTracer = Tracer (traceWith tcsTr)
+        , NtC.tTxSubmissionTracer = Tracer (traceWith ttsTr)
+        , NtC.tStateQueryTracer = Tracer (traceWith tsqTr)
         }
-      , nodeToNodeTracers = NodeToNode.Tracers
-        { NodeToNode.tChainSyncTracer = Tracer (traceWith tcsnTr)
-        , NodeToNode.tChainSyncSerialisedTracer = Tracer (traceWith tcssTr)
-        , NodeToNode.tBlockFetchTracer = Tracer (traceWith tbfTr)
-        , NodeToNode.tBlockFetchSerialisedTracer = Tracer (traceWith tbfsTr)
-        , NodeToNode.tTxSubmissionTracer = Tracer (traceWith tsnTr)
-        , NodeToNode.tTxSubmission2Tracer = Tracer (traceWith ts2nTr)
+      , nodeToNodeTracers = NtN.Tracers
+        { NtN.tChainSyncTracer = Tracer (traceWith tcsnTr)
+        , NtN.tChainSyncSerialisedTracer = Tracer (traceWith tcssTr)
+        , NtN.tBlockFetchTracer = Tracer (traceWith tbfTr)
+        , NtN.tBlockFetchSerialisedTracer = Tracer (traceWith tbfsTr)
+        , NtN.tTxSubmissionTracer = Tracer (traceWith tsnTr)
+        , NtN.tTxSubmission2Tracer = Tracer (traceWith ts2nTr)
         }
       , ipSubscriptionTracer = Tracer (traceWith ipsTr)
       , dnsSubscriptionTracer= Tracer (traceWith dnssTr)
@@ -787,7 +814,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , muxTracer = Tracer (traceWith muxTr)
       , muxLocalTracer = Tracer (traceWith muxLTr)
       , handshakeTracer = Tracer (traceWith hsTr)
-      , localHandshakeTracer = nullTracer
+      , localHandshakeTracer = Tracer (traceWith lhsTr)
       , diffusionInitializationTracer = nullTracer
     }
 
