@@ -20,23 +20,28 @@ import           Text.Show
 
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
-import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
-import Cardano.TraceDispatcher.Common.Formatting ()
+import           Cardano.TraceDispatcher.Common.Formatting ()
+import           Cardano.TraceDispatcher.Common.Byron ()
+import           Cardano.TraceDispatcher.Common.Shelley ()
 import           Cardano.TraceDispatcher.Render
 
 import           Ouroboros.Consensus.Block
-import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import           Ouroboros.Consensus.HeaderValidation (HeaderEnvelopeError (..),
+                     HeaderError (..), OtherHeaderEnvelopeError)
+import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
+import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError (..))
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
                      LedgerEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                      (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
+import           Ouroboros.Consensus.Util.Condense (condense)
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
@@ -57,6 +62,67 @@ kindContext toAdd = insertWith f "kind" (String toAdd)
     f (String new) (String old) = String (new <> "." <> old)
     f (String new) _            = String new
     f _ o                       = o
+
+
+instance ( StandardHash blk
+         , LogFormatting (ValidationErr (BlockProtocol blk))
+         , LogFormatting (OtherHeaderEnvelopeError blk)
+         )
+      => LogFormatting (HeaderError blk) where
+  forMachine dtal (HeaderProtocolError err) =
+    mkObject
+      [ "kind" .= String "HeaderProtocolError"
+      , "error" .= forMachine dtal err
+      ]
+  forMachine dtal (HeaderEnvelopeError err) =
+    mkObject
+      [ "kind" .= String "HeaderEnvelopeError"
+      , "error" .= forMachine dtal err
+      ]
+
+instance ( StandardHash blk
+         , LogFormatting (OtherHeaderEnvelopeError blk)
+         )
+      => LogFormatting (HeaderEnvelopeError blk) where
+  forMachine _dtal (UnexpectedBlockNo expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedBlockNo"
+      , "expected" .= condense expect
+      , "actual" .= condense act
+      ]
+  forMachine _dtal (UnexpectedSlotNo expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedSlotNo"
+      , "expected" .= condense expect
+      , "actual" .= condense act
+      ]
+  forMachine _dtal (UnexpectedPrevHash expect act) =
+    mkObject
+      [ "kind" .= String "UnexpectedPrevHash"
+      , "expected" .= String (Text.pack $ show expect)
+      , "actual" .= String (Text.pack $ show act)
+      ]
+  forMachine dtal (OtherHeaderEnvelopeError err) =
+    forMachine dtal err
+
+
+instance (   LogFormatting (LedgerError blk)
+           , LogFormatting (HeaderError blk))
+        => LogFormatting (ExtValidationError blk) where
+    forMachine dtal (ExtValidationErrorLedger err) = forMachine dtal err
+    forMachine dtal (ExtValidationErrorHeader err) = forMachine dtal err
+
+    forHuman (ExtValidationErrorLedger err) =  forHuman err
+    forHuman (ExtValidationErrorHeader err) =  forHuman err
+
+    asMetrics (ExtValidationErrorLedger err) =  asMetrics err
+    asMetrics (ExtValidationErrorHeader err) =  asMetrics err
+
+instance LogFormatting LedgerDB.DiskSnapshot where
+  forMachine DDetailed snap =
+    mkObject [ "kind" .= String "snapshot"
+             , "snapshot" .= String (Text.pack $ show snap) ]
+  forMachine _ _snap = mkObject [ "kind" .= String "snapshot" ]
 
 instance (  LogFormatting (Header blk)
           , LogFormatting (LedgerEvent blk)
@@ -639,3 +705,23 @@ instance StandardHash blk => LogFormatting (VolDB.TraceEvent blk) where
       mkObject [ "kind" .= String "InvalidFileNames"
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
+
+instance ( ConvertRawHash blk
+         , StandardHash blk
+         , LogFormatting (LedgerError blk)
+         , LogFormatting (RealPoint blk)
+         , LogFormatting (OtherHeaderEnvelopeError blk)
+         , LogFormatting (ExtValidationError blk)
+         , LogFormatting (ValidationErr (BlockProtocol blk))
+         )
+      => LogFormatting (ChainDB.InvalidBlockReason blk) where
+  forMachine dtal (ChainDB.ValidationError extvalerr) =
+    mkObject
+      [ "kind" .= String "ValidationError"
+      , "error" .= forMachine dtal extvalerr
+      ]
+  forMachine dtal (ChainDB.InFutureExceedsClockSkew point) =
+    mkObject
+      [ "kind" .= String "InFutureExceedsClockSkew"
+      , "point" .= forMachine dtal point
+      ]

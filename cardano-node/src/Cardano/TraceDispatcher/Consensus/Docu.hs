@@ -57,9 +57,8 @@ import           Ouroboros.Network.Mux (ControlMessage)
 import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
 
-import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
-import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
-import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
+import           Cardano.TraceDispatcher.Common.Byron ()
+import           Cardano.TraceDispatcher.Common.Shelley ()
 
 
 protoHeader :: Header blk

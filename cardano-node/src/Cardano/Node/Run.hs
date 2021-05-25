@@ -58,8 +58,8 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                      defaultPartialNodeConfiguration, makeNodeConfiguration,
                      parseNodeConfigurationFP)
 import           Cardano.Node.Types
-import           Cardano.TraceDispatcher.OrphanInstances.Byron ()
-import           Cardano.TraceDispatcher.OrphanInstances.Shelley ()
+import           Cardano.TraceDispatcher.Common.Byron ()
+import           Cardano.TraceDispatcher.Common.Shelley ()
 import           Cardano.TraceDispatcher.Tracers (mkDispatchTracers)
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
