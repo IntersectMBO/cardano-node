@@ -4,7 +4,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 module Cardano.Unlog.Summary
   ( AnalysisCmdError
@@ -17,6 +16,7 @@ import           Cardano.Prelude
 
 import           Control.Arrow ((&&&), (***))
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Control.Concurrent.Async (mapConcurrently)
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson
@@ -27,19 +27,24 @@ import qualified Data.Text as Text
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vec
 
+import qualified System.FilePath as F
+
 import qualified Graphics.Histogram as Hist
 import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
 
 import           Data.Time.Clock (NominalDiffTime)
 import           Text.Printf
 
+import           Ouroboros.Network.Block (SlotNo(..))
+
 import           Data.Distribution
-import           Cardano.Profile
-import           Cardano.Unlog.Analysis
+import           Cardano.Analysis.Profile
+import           Cardano.Unlog.BlockProp
 import           Cardano.Unlog.Commands
 import           Cardano.Unlog.LogObject hiding (Text)
 import           Cardano.Unlog.Resources
 import           Cardano.Unlog.SlotStats
+import           Cardano.Unlog.Timeline
 
 
 data AnalysisCmdError
@@ -74,30 +79,71 @@ renderAnalysisCmdError cmd err =
 --
 
 runAnalysisCommand :: AnalysisCommand -> ExceptT AnalysisCmdError IO ()
-runAnalysisCommand (PerfTimeline genesisFile metaFile logfiles outputFiles) = do
+runAnalysisCommand (MachineTimeline genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
     ChainInfo
-      <$> (firstExceptT (RunMetaParseError metaFile . Text.pack) $ newExceptT $
-             Aeson.eitherDecode @Profile <$> LBS.readFile (unJsonRunMetafile metaFile))
-      <*> (firstExceptT (GenesisParseError genesisFile . Text.pack) $ newExceptT $
-             Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
+      <$> firstExceptT (RunMetaParseError metaFile . Text.pack)
+                       (newExceptT $
+                         Aeson.eitherDecode @Profile <$> LBS.readFile (unJsonRunMetafile metaFile))
+      <*> firstExceptT (GenesisParseError genesisFile . Text.pack)
+                       (newExceptT $
+                         Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
   firstExceptT AnalysisCmdError $
-    runPerfTimeline chainInfo logfiles outputFiles
+    runMachineTimeline chainInfo logfiles oFiles
+runAnalysisCommand (BlockPropagation genesisFile metaFile logfiles oFiles) = do
+  chainInfo <-
+    ChainInfo
+      <$> firstExceptT (RunMetaParseError metaFile . Text.pack)
+                       (newExceptT $
+                        Aeson.eitherDecode @Profile <$> LBS.readFile (unJsonRunMetafile metaFile))
+      <*> firstExceptT (GenesisParseError genesisFile . Text.pack)
+                       (newExceptT $
+                         Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
+  firstExceptT AnalysisCmdError $
+    runBlockPropagation chainInfo logfiles oFiles
 runAnalysisCommand SubstringKeys =
   liftIO $ mapM_ putStrLn logObjectStreamInterpreterKeys
 
-runPerfTimeline ::
-  ChainInfo -> [JsonLogfile] -> AnalysisOutputFiles -> ExceptT Text IO ()
-runPerfTimeline chainInfo logfiles AnalysisOutputFiles{..} = do
+runBlockPropagation ::
+  ChainInfo -> [JsonLogfile] -> BlockPropagationOutputFiles -> ExceptT Text IO ()
+runBlockPropagation chainInfo logfiles BlockPropagationOutputFiles{..} = do
+  liftIO $ do
+    putStrLn ("runBlockPropagation: lifting LO streams" :: Text)
+    -- 0. Recover LogObjects
+    objLists :: [(JsonLogfile, [LogObject])] <- flip mapConcurrently logfiles
+      (joinT . (pure &&& readLogObjectStream))
+
+    forM_ bpofLogObjects . const $ do
+      putStrLn ("runBlockPropagation: dumping LO streams" :: Text)
+      flip mapConcurrently objLists $
+        \(JsonLogfile f, objs) ->
+            dumpLOStream objs
+              (JsonOutputFile $ F.dropExtension f <> ".logobjects.json")
+
+    chainBlockEvents <- blockProp chainInfo objLists
+
+    putStrLn ("runBlockPropagation: dumping analyses" :: Text)
+    forM_ bpofAnalysis $
+      \(JsonOutputFile f) ->
+        withFile f WriteMode $ \hnd ->
+          forM_ chainBlockEvents $ \x->
+            LBS.hPutStrLn hnd (Aeson.encode x)
+ where
+   joinT :: (IO a, IO b) -> IO (a, b)
+   joinT (a, b) = (,) <$> a <*> b
+
+runMachineTimeline ::
+  ChainInfo -> [JsonLogfile] -> MachineTimelineOutputFiles -> ExceptT Text IO ()
+runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
   liftIO $ do
     -- 0. Recover LogObjects
     objs :: [LogObject] <- concat <$> mapM readLogObjectStream logfiles
-    forM_ ofLogObjects
+    forM_ mtofLogObjects
       (dumpLOStream objs)
 
     -- 1. Derive the basic scalars and vectors
-    let (,) runStats noisySlotStats = analyseLogObjects chainInfo objs
-    forM_ ofSlotStats $
+    let (,) runStats noisySlotStats = timelineFromLogObjects chainInfo objs
+    forM_ mtofSlotStats $
       \(JsonOutputFile f) ->
         withFile f WriteMode $ \hnd ->
           forM_ noisySlotStats $ LBS.hPutStrLn hnd . Aeson.encode
@@ -110,27 +156,27 @@ runPerfTimeline chainInfo logfiles AnalysisOutputFiles{..} = do
         (,) drvVectors0 _drvVectors1 = computeDerivedVectors slotStats
         summary :: Summary
         summary = slotStatsSummary chainInfo slotStats
-        analysisOutput :: LBS.ByteString
-        analysisOutput = Aeson.encode summary
+        timelineOutput :: LBS.ByteString
+        timelineOutput = Aeson.encode summary
 
     -- 4. Render various outputs
-    forM_ ofTimelinePretty
+    forM_ mtofTimelinePretty
       (renderPrettySummary slotStats summary logfiles)
-    forM_ ofStatsCsv
+    forM_ mtofStatsCsv
       (renderExportStats runStats summary)
-    forM_ ofTimelineCsv
+    forM_ mtofTimelineCsv
        (renderExportTimeline slotStats)
-    forM_ ofDerivedVectors0Csv
+    forM_ mtofDerivedVectors0Csv
        (renderDerivedSlots drvVectors0)
-    forM_ ofHistogram
+    forM_ mtofHistogram
       (renderHistogram "CPU usage spans over 85%" "Span length"
         (toList $ Seq.sort $ sSpanLensCPU85 summary))
 
-    flip (maybe $ LBS.putStrLn analysisOutput) ofAnalysis $
+    flip (maybe $ LBS.putStrLn timelineOutput) mtofAnalysis $
       \case
         JsonOutputFile f ->
           withFile f WriteMode $ \hnd ->
-            LBS.hPutStrLn hnd analysisOutput
+            LBS.hPutStrLn hnd timelineOutput
  where
    renderHistogram :: Integral a
      => String -> String -> [a] -> OutputFile -> IO ()
@@ -169,17 +215,17 @@ runPerfTimeline chainInfo logfiles AnalysisOutputFiles{..} = do
        forM_ (toDistribLines statFmt propFmt summary) $
          hPutStrLn hnd
 
-   dumpLOStream :: [LogObject] -> JsonOutputFile -> IO ()
-   dumpLOStream objs o =
-     withFile (unJsonOutputFile o) WriteMode $ \hnd -> do
-       forM_ objs $ LBS.hPutStrLn hnd . Aeson.encode
-
    renderDerivedSlots :: Seq DerivedSlot -> CsvOutputFile -> IO ()
    renderDerivedSlots slots (CsvOutputFile o) = do
      withFile o WriteMode $ \hnd -> do
        hPutStrLn hnd derivedSlotsHeader
        forM_ slots $
          hPutStrLn hnd . renderDerivedSlot
+
+dumpLOStream :: [LogObject] -> JsonOutputFile -> IO ()
+dumpLOStream objs o =
+  withFile (unJsonOutputFile o) WriteMode $ \hnd -> do
+    forM_ objs $ LBS.hPutStrLn hnd . Aeson.encode
 
 data Summary
   = Summary
@@ -307,7 +353,7 @@ slotStatsSummary CInfo{} slots =
      . ((s >) . slEpochSlot . Vec.head &&&
         (s <) . slEpochSlot . Vec.last)
    spanLen :: Vector SlotStats -> Int
-   spanLen = fromIntegral . uncurry (-) . (slSlot *** slSlot) . (Vec.last &&& Vec.head)
+   spanLen = fromIntegral . unSlotNo . uncurry (-) . (slSlot *** slSlot) . (Vec.last &&& Vec.head)
    resDistProjs     =
      Resources
      { rCentiCpu    = rCentiCpu   . slResources

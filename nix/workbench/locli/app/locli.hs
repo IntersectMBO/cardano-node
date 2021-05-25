@@ -5,9 +5,9 @@ import           Cardano.Prelude hiding (option)
 import           Control.Monad.Trans.Except.Exit (orDie)
 import qualified Options.Applicative as Opt
 
+import           Cardano.Analysis.TopHandler
 import           Cardano.Unlog.Parsers (opts, pref)
 import           Cardano.Unlog.Run (renderCommandError, runCommand)
-import           Cardano.TopHandler
 
 
 main :: IO ()

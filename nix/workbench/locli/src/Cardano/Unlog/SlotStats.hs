@@ -17,6 +17,8 @@ import           Data.List.Split (splitOn)
 import           Data.Time.Clock (UTCTime, NominalDiffTime)
 import           Text.Printf
 
+import           Ouroboros.Network.Block (SlotNo(..))
+
 import           Data.Accum
 import           Cardano.Unlog.Resources
 
@@ -25,7 +27,7 @@ import           Cardano.Unlog.Resources
 
 data SlotStats
   = SlotStats
-    { slSlot         :: !Word64
+    { slSlot         :: !SlotNo
     , slEpoch        :: !Word64
     , slEpochSlot    :: !Word64
     , slStart        :: !UTCTime
@@ -66,7 +68,7 @@ slotLine :: Bool -> Text -> SlotStats -> Text
 slotLine exportMode leadershipF SlotStats{..} = Text.pack $
   printf (Text.unpack leadershipF)
          sl epsl epo blk blkl chks  lds cdbsn rejtx spanC spanL subdt scol sacc srej dens cpu gc mut majg ming   pro rss hea liv alc atm mpo utx start
- where sl    = slSlot
+ where sl    = unSlotNo slSlot
        epsl  = slEpochSlot
        epo   = slEpoch
        blk   = slBlockNo

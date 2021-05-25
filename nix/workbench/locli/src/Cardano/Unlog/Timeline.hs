@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
-module Cardano.Unlog.Analysis (module Cardano.Unlog.Analysis) where
+module Cardano.Unlog.Timeline (module Cardano.Unlog.Timeline) where
 
 import           Prelude (String, error)
 import           Cardano.Prelude
@@ -18,8 +18,10 @@ import qualified Data.Map.Strict as Map
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Time.Clock as Time
 
+import           Ouroboros.Network.Block (SlotNo(..))
+
 import           Data.Accum
-import           Cardano.Profile
+import           Cardano.Analysis.Profile
 import           Cardano.Unlog.LogObject
 import           Cardano.Unlog.Resources
 import           Cardano.Unlog.SlotStats
@@ -27,13 +29,13 @@ import           Cardano.Unlog.SlotStats
 
 -- The "fold" state that accumulates as we process 'LogObject's into a stream
 -- of 'SlotStats'.
-data Analysis
-  = Analysis
+data TimelineAccum
+  = TimelineAccum
   { aResAccums     :: ResAccums
   , aResTimestamp  :: UTCTime
   , aMempoolTxs    :: Word64
   , aBlockNo       :: Word64
-  , aLastBlockSlot :: Word64
+  , aLastBlockSlot :: SlotNo
   , aSlotStats     :: [SlotStats]
   , aRunScalars    :: RunScalars
   , aTxsCollectedAt:: Map.Map TId UTCTime
@@ -46,14 +48,14 @@ data RunScalars
   , rsThreadwiseTps :: Maybe (Vector Float)
   }
 
-analyseLogObjects :: ChainInfo -> [LogObject] -> (RunScalars, Seq SlotStats)
-analyseLogObjects ci =
+timelineFromLogObjects :: ChainInfo -> [LogObject] -> (RunScalars, Seq SlotStats)
+timelineFromLogObjects ci =
   (aRunScalars &&& Seq.reverse . Seq.fromList . aSlotStats)
-  . foldl (analysisStep ci) zeroAnalysis
+  . foldl (timelineStep ci) zeroTimelineAccum
  where
-   zeroAnalysis :: Analysis
-   zeroAnalysis =
-     Analysis
+   zeroTimelineAccum :: TimelineAccum
+   zeroTimelineAccum =
+     TimelineAccum
      { aResAccums     = mkResAccums
      , aResTimestamp  = zeroUTCTime
      , aMempoolTxs    = 0
@@ -66,8 +68,8 @@ analyseLogObjects ci =
    zeroRunScalars :: RunScalars
    zeroRunScalars = RunScalars Nothing Nothing Nothing
 
-analysisStep :: ChainInfo -> Analysis -> LogObject -> Analysis
-analysisStep ci a@Analysis{aSlotStats=cur:rSLs, ..} = \case
+timelineStep :: ChainInfo -> TimelineAccum -> LogObject -> TimelineAccum
+timelineStep ci a@TimelineAccum{aSlotStats=cur:rSLs, ..} = \case
   lo@LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot _ _} ->
     if slSlot cur > slot
     -- Slot log entry for a slot we've supposedly done processing.
@@ -84,7 +86,7 @@ analysisStep ci a@Analysis{aSlotStats=cur:rSLs, ..} = \case
     then a { aSlotStats = onLeadershipCheck loAt cur : rSLs
            }
     else if slot - slSlot cur > 1
-    then let gap = slot - slSlot cur - 1
+    then let gap = unSlotNo $ slot - slSlot cur - 1
              gapStartSlot = slSlot cur + 1 in
          updateOnNewSlot lo $ -- We have a slot check gap to patch:
          patchSlotCheckGap gap gapStartSlot a
@@ -174,9 +176,9 @@ analysisStep ci a@Analysis{aSlotStats=cur:rSLs, ..} = \case
       }
   _ -> a
  where
-   updateOnNewSlot :: LogObject -> Analysis -> Analysis
+   updateOnNewSlot :: LogObject -> TimelineAccum -> TimelineAccum
    updateOnNewSlot LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot utxo density} a' =
-     extendAnalysis ci slot loAt 1 utxo density a'
+     extendTimelineAccum ci slot loAt 1 utxo density a'
    updateOnNewSlot _ _ =
      error "Internal invariant violated: updateSlot called for a non-LOTraceStartLeadershipCheck LogObject."
 
@@ -192,21 +194,21 @@ analysisStep ci a@Analysis{aSlotStats=cur:rSLs, ..} = \case
         , slSpanLead  = max 0 $ now `Time.diffUTCTime` (slSpanCheck `Time.addUTCTime` slStart)
         }
 
-   patchSlotCheckGap :: Word64 -> Word64 -> Analysis -> Analysis
+   patchSlotCheckGap :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
    patchSlotCheckGap 0 _ a' = a'
-   patchSlotCheckGap n slot a'@Analysis{aSlotStats=cur':_} =
+   patchSlotCheckGap n slot a'@TimelineAccum{aSlotStats=cur':_} =
      patchSlotCheckGap (n - 1) (slot + 1) $
-     extendAnalysis ci slot (slotStart ci slot) 0 (slUtxoSize cur') (slDensity cur') a'
+     extendTimelineAccum ci slot (slotStart ci slot) 0 (slUtxoSize cur') (slDensity cur') a'
    patchSlotCheckGap _ _ _ =
-     error "Internal invariant violated: patchSlotCheckGap called with empty Analysis chain."
-analysisStep _ a = const a
+     error "Internal invariant violated: patchSlotCheckGap called with empty TimelineAccum chain."
+timelineStep _ a = const a
 
-extendAnalysis ::
+extendTimelineAccum ::
      ChainInfo
-  -> Word64 -> UTCTime -> Word64 -> Word64 -> Float
-  -> Analysis -> Analysis
-extendAnalysis ci@CInfo{..} slot time checks utxo density a@Analysis{..} =
-  let (epoch, epochSlot) = slot `divMod` epoch_length gsis in
+  -> SlotNo -> UTCTime -> Word64 -> Word64 -> Float
+  -> TimelineAccum -> TimelineAccum
+extendTimelineAccum ci@CInfo{..} slot time checks utxo density a@TimelineAccum{..} =
+  let (epoch, epochSlot) = unSlotNo slot `divMod` epoch_length gsis in
     a { aSlotStats = SlotStats
         { slSlot        = slot
         , slEpoch       = epoch
@@ -229,7 +231,7 @@ extendAnalysis ci@CInfo{..} slot time checks utxo density a@Analysis{..} =
         , slChainDBSnap = 0
         , slRejectedTx  = 0
         , slBlockNo     = aBlockNo
-        , slBlockless   = slot - aLastBlockSlot
+        , slBlockless   = unSlotNo $ slot - aLastBlockSlot
         , slResources   = maybeDiscard
                           <$> discardObsoleteValues
                           <*> extractResAccums aResAccums
@@ -238,15 +240,9 @@ extendAnalysis ci@CInfo{..} slot time checks utxo density a@Analysis{..} =
     where maybeDiscard :: (Word64 -> Maybe Word64) -> Word64 -> Maybe Word64
           maybeDiscard f = f
 
-slotStart :: ChainInfo -> Word64 -> UTCTime
-slotStart CInfo{..} =
-  flip Time.addUTCTime system_start
-  . (* slot_duration gsis)
-  . fromIntegral
-
 data DerivedSlot
   = DerivedSlot
-  { dsSlot      :: Word64
+  { dsSlot      :: SlotNo
   , dsBlockless :: Word64
   }
 
@@ -257,7 +253,7 @@ derivedSlotsHeader =
 renderDerivedSlot :: DerivedSlot -> String
 renderDerivedSlot DerivedSlot{..} =
   mconcat
-  [ show dsSlot, ",", show dsBlockless
+  [ show (unSlotNo dsSlot), ",", show dsBlockless
   ]
 
 computeDerivedVectors :: Seq SlotStats -> (Seq DerivedSlot, Seq DerivedSlot)

@@ -20,37 +20,51 @@ import           Cardano.Unlog.LogObject hiding (Text)
 -- | All the CLI subcommands under \"analysis\".
 --
 data AnalysisCommand
-  = PerfTimeline
+  = MachineTimeline
       JsonGenesisFile
       JsonRunMetafile
       [JsonLogfile]
-      AnalysisOutputFiles
+      MachineTimelineOutputFiles
+  | BlockPropagation
+      JsonGenesisFile
+      JsonRunMetafile
+      [JsonLogfile]
+      BlockPropagationOutputFiles
   | SubstringKeys
   deriving (Show)
 
-data AnalysisOutputFiles
-  = AnalysisOutputFiles
-  { ofLogObjects         :: Maybe JsonOutputFile
-  , ofSlotStats          :: Maybe JsonOutputFile
-  , ofTimelinePretty     :: Maybe TextOutputFile
-  , ofTimelineCsv        :: Maybe  CsvOutputFile
-  , ofStatsCsv           :: Maybe  CsvOutputFile
-  , ofHistogram          :: Maybe     OutputFile
-  , ofAnalysis           :: Maybe JsonOutputFile
-  , ofDerivedVectors0Csv :: Maybe  CsvOutputFile
-  , ofDerivedVectors1Csv :: Maybe  CsvOutputFile
+data MachineTimelineOutputFiles
+  = MachineTimelineOutputFiles
+  { mtofLogObjects         :: Maybe JsonOutputFile
+  , mtofSlotStats          :: Maybe JsonOutputFile
+  , mtofTimelinePretty     :: Maybe TextOutputFile
+  , mtofTimelineCsv        :: Maybe  CsvOutputFile
+  , mtofStatsCsv           :: Maybe  CsvOutputFile
+  , mtofHistogram          :: Maybe     OutputFile
+  , mtofAnalysis           :: Maybe JsonOutputFile
+  , mtofDerivedVectors0Csv :: Maybe  CsvOutputFile
+  , mtofDerivedVectors1Csv :: Maybe  CsvOutputFile
+  }
+  deriving (Show)
+
+data BlockPropagationOutputFiles
+  = BlockPropagationOutputFiles
+  { bpofLogObjects         :: Maybe JsonOutputFile
+  , bpofTimelinePretty     :: Maybe TextOutputFile
+  , bpofAnalysis           :: Maybe JsonOutputFile
   }
   deriving (Show)
 
 renderAnalysisCommand :: AnalysisCommand -> Text
 renderAnalysisCommand sc =
   case sc of
-    PerfTimeline {}  -> "analyse perf-timeline"
-    SubstringKeys {} -> "analyse substring-keys"
+    MachineTimeline {}  -> "analyse machine-timeline"
+    BlockPropagation {} -> "analyse block-propagation"
+    SubstringKeys {}    -> "analyse substring-keys"
 
-parseAnalysisOutputFiles :: Parser AnalysisOutputFiles
-parseAnalysisOutputFiles =
-  AnalysisOutputFiles
+parseMachineTimelineOutputFiles :: Parser MachineTimelineOutputFiles
+parseMachineTimelineOutputFiles =
+  MachineTimelineOutputFiles
     <$> optional
         (argJsonOutputFile "logobjects-json"
            "Dump the entire input LogObject stream")
@@ -79,18 +93,40 @@ parseAnalysisOutputFiles =
         (argCsvOutputFile "derived-vectors-1-csv"
            "Dump CSV of vectors derived from the timeline")
 
+parseBlockPropagationOutputFiles :: Parser BlockPropagationOutputFiles
+parseBlockPropagationOutputFiles =
+  BlockPropagationOutputFiles
+    <$> optional
+        (argJsonOutputFile "logobjects-json"
+           "Dump the entire input LogObject stream")
+    <*> optional
+        (argTextOutputFile "timeline-pretty"
+           "Dump pretty timeline of extracted slot leadership summaries, as a side-effect of log analysis")
+    <*> optional
+        (argJsonOutputFile "analysis-json"
+           "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
+
 parseAnalysisCommands :: Parser AnalysisCommand
 parseAnalysisCommands =
   Opt.subparser $
     mconcat
-      [ Opt.command "perf-timeline"
-          (Opt.info (PerfTimeline
+      [ Opt.command "machine-timeline"
+          (Opt.info (MachineTimeline
                        <$> argJsonGenesisFile "genesis"
                               "Genesis file of the run"
                        <*> argJsonRunMetafile "run-metafile"
                               "The meta.json file from the benchmark run"
                        <*> some argJsonLogfile
-                       <*> parseAnalysisOutputFiles) $
+                       <*> parseMachineTimelineOutputFiles) $
+            Opt.progDesc "Analyse leadership checks")
+      , Opt.command "block-propagation"
+          (Opt.info (BlockPropagation
+                       <$> argJsonGenesisFile "genesis"
+                              "Genesis file of the run"
+                       <*> argJsonRunMetafile "run-metafile"
+                              "The meta.json file from the benchmark run"
+                       <*> some argJsonLogfile
+                       <*> parseBlockPropagationOutputFiles) $
             Opt.progDesc "Analyse leadership checks")
       , Opt.command "substring-keys"
           (Opt.info (pure SubstringKeys) $

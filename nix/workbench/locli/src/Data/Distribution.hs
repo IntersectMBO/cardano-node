@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -19,7 +18,7 @@ module Data.Distribution
   , spans
   ) where
 
-import           Prelude (String)
+import           Prelude (String, id)
 import           Cardano.Prelude
 
 import           Control.Arrow
@@ -86,9 +85,9 @@ computeDistribution percentiles (Seq.sort -> sorted) =
       \spec ->
         let (sampleIndex :: Int, sample) =
               if size == 0
-              then (0, fromInteger 0)
+              then (0, 0)
               else floor (fromIntegral (size - 1) * psFrac spec) &
-                   ((\x->x) &&& Seq.index sorted)
+                   (id &&& Seq.index sorted)
         in Percentile
              spec
              (size - sampleIndex)
@@ -98,7 +97,7 @@ computeDistribution percentiles (Seq.sort -> sorted) =
   where size   = Seq.length sorted
         (,) mini maxi =
           if size == 0
-          then (0, fromInteger 0)
+          then (0, 0)
           else (index sorted 0, index sorted $ size - 1)
 
 class RealFrac b => ToRealFrac a b where

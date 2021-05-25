@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
-module Cardano.Profile (module Cardano.Profile) where
+module Cardano.Analysis.Profile (module Cardano.Analysis.Profile) where
 
 import           Prelude (String)
 import           Cardano.Prelude
@@ -16,9 +16,13 @@ import qualified Data.Attoparsec.Text as Atto
 import qualified Data.Attoparsec.Time as Iso8601
 import           Data.Text (intercalate, pack)
 import           Data.Time.Clock (UTCTime, NominalDiffTime)
+import qualified Data.Time.Clock as Time
 import qualified Data.Time.Clock.POSIX as Time
 import           Options.Applicative
 import qualified Options.Applicative as Opt
+
+import           Ouroboros.Network.Block (SlotNo(..))
+
 
 data GenesisProfile
   = GenesisProfile
@@ -69,7 +73,7 @@ renderChainInfoExport CInfo{..} =
   ,[ "UTxO",       show $ utxo gsis]
   ]
 
-data Genesis
+newtype Genesis
   = Genesis
   { systemStart  :: UTCTime
   }
@@ -109,6 +113,13 @@ instance FromJSON Profile where
       <*> gener .: "era"
       <*> ((meta .: "timestamp" :: Aeson.Parser Integer)
            <&> Time.posixSecondsToUTCTime . realToFrac)
+
+slotStart :: ChainInfo -> SlotNo -> UTCTime
+slotStart CInfo{..} =
+  flip Time.addUTCTime system_start
+  . (* slot_duration gsis)
+  . fromIntegral
+  . unSlotNo
 
 -- pChainParams :: Parser ChainParams
 -- pChainParams =

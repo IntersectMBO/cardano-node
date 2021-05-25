@@ -2,7 +2,7 @@ cabal-version: 2.4
 
 name:                  locli
 version:               1.27
-description:           Log parsing CLI.
+description:           Cardano log analysis CLI.
 author:                IOHK
 maintainer:            operations@iohk.io
 license:               Apache-2.0
@@ -17,14 +17,10 @@ library
   exposed-modules:     Data.Accum
                        Data.Distribution
 
-                       Cardano.Config.Git.Rev
-                       Cardano.Config.Git.RevFromGit
+                       Cardano.Analysis.Profile
+                       Cardano.Analysis.TopHandler
 
-                       Cardano.Profile
-
-                       Cardano.TopHandler
-
-                       Cardano.Unlog.Analysis
+                       Cardano.Unlog.BlockProp
                        Cardano.Unlog.Commands
                        Cardano.Unlog.LogObject
                        Cardano.Unlog.Parsers
@@ -32,15 +28,18 @@ library
                        Cardano.Unlog.Run
                        Cardano.Unlog.SlotStats
                        Cardano.Unlog.Summary
+                       Cardano.Unlog.Timeline
 
   other-modules:       Paths_locli
 
   build-depends:       base
                      , aeson
                      , aeson-pretty
+                     , async
                      , attoparsec
                      , attoparsec-iso8601
                      , bytestring
+                     , cardano-config
                      , cardano-prelude
                      , containers
                      , directory
@@ -51,6 +50,7 @@ library
                      , iohk-monitoring
                      , optparse-applicative
                      , optparse-generic
+                     , ouroboros-network
                      , process
                      , scientific
                      , split

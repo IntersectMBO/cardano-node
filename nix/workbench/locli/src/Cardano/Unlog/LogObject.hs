@@ -6,19 +6,24 @@
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
 import           Prelude (error)
+import qualified Prelude
 import           Cardano.Prelude hiding (Text)
 
 import           Control.Monad (fail)
 import           Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:))
 import           Data.Aeson.Types (Parser)
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.Types as AE
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as LText
 import qualified Data.Text.Short as Text
 import           Data.Text.Short (ShortText, fromText, toText)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Map as Map
 import           Data.Vector (Vector)
+
+import           Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 
 import           Cardano.BM.Stats.Resources
 
@@ -62,6 +67,7 @@ data LogObject
   = LogObject
     { loAt   :: !UTCTime
     , loKind :: !Text
+    , loHost :: !Host
     , loBody :: !LOBody
     }
   deriving (Generic, Show)
@@ -80,6 +86,22 @@ instance Print ShortText where
 
 newtype TId = TId { unTId :: ShortText }
   deriving (Eq, Ord, Show, FromJSON, ToJSON)
+
+newtype Hash = Hash { unHash :: ShortText }
+  deriving (Eq, Ord, FromJSON, ToJSON)
+
+instance Show Hash where show = LText.unpack . toText . unHash
+
+instance AE.ToJSONKey Hash where
+  toJSONKey = AE.toJSONKeyText (toText . unHash)
+
+newtype Host = Host { unHost :: ShortText }
+  deriving (Eq, Ord, Show, FromJSON, ToJSON)
+
+instance FromJSON BlockNo where
+  parseJSON o = BlockNo <$> parseJSON o
+instance ToJSON BlockNo where
+  toJSON (BlockNo x) = toJSON x
 
 --
 -- LogObject stream interpretation
@@ -147,15 +169,55 @@ interpreters = Map.fromList
             <$> pure tid
             <*> v .: "accepted"
             <*> v .: "rejected"
+
+  , (,) "TraceForgedBlock" $
+    \v _ -> LOBlockForged
+            <$> v .: "block"
+            <*> v .: "blockPrev"
+            <*> v .: "blockNo"
+            <*> v .: "slot"
+  , (,) "TraceAddBlockEvent.AddedToCurrentChain" $
+    \v _ -> LOBlockAddedToCurrentChain
+            <$> ((v .: "newtip")     <&> hashFromPoint)
+            <*> v .: "chainLengthDelta"
+  -- TODO: we should clarify the distinction between the two cases (^ and v).
+  , (,) "TraceAdoptedBlock" $
+    \v _ -> LOBlockAddedToCurrentChain
+            <$> v .: "blockHash"
+            <*> pure 1
+  , (,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" $
+    \v _ -> LOChainSyncServerSendHeader
+            <$> v .: "block"
+            <*> v .: "blockNo"
+            <*> v .: "slot"
+  , (,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" $
+    \v _ -> LOChainSyncServerSendHeader
+            <$> v .: "block"
+            <*> v .: "blockNo"
+            <*> v .: "slot"
+  , (,) "TraceBlockFetchServerSendBlock" $
+    \v _ -> LOBlockFetchServerSend
+            <$> v .: "block"
+  , (,) "ChainSyncClientEvent.TraceDownloadedHeader" $
+    \v _ -> LOChainSyncClientSeenHeader
+            <$> v .: "block"
+            <*> v .: "blockNo"
+            <*> v .: "slot"
+  , (,) "CompletedBlockFetch" $
+    \v _ -> LOBlockFetchClientCompletedFetch
+            <$> v .: "block"
   ]
+ where
+   hashFromPoint :: LText.Text -> Hash
+   hashFromPoint = Hash . fromText . Prelude.head . LText.splitOn "@"
 
 logObjectStreamInterpreterKeys :: [Text]
 logObjectStreamInterpreterKeys = Map.keys interpreters
 
 data LOBody
-  = LOTraceStartLeadershipCheck !Word64 !Word64 !Float
-  | LOTraceNodeIsLeader !Word64
-  | LOTraceNodeNotLeader !Word64
+  = LOTraceStartLeadershipCheck !SlotNo !Word64 !Float
+  | LOTraceNodeIsLeader !SlotNo
+  | LOTraceNodeNotLeader !SlotNo
   | LOResources !ResourceStats
   | LOMempoolTxs !Word64
   | LOMempoolRejectedTx
@@ -165,6 +227,32 @@ data LOBody
   | LOTxsAcked !(Vector Text)
   | LOTxsCollected !TId !Word64
   | LOTxsProcessed !TId !Word64 !Int
+  | LOBlockForged
+    { loBlock            :: !Hash
+    , loPrev             :: !Hash
+    , loBlockNo          :: !BlockNo
+    , loSlotNo           :: !SlotNo
+    }
+  | LOBlockAddedToCurrentChain
+    { loBlock            :: !Hash
+    , loChainLengthDelta :: !Int
+    }
+  | LOChainSyncServerSendHeader
+    { loBlock            :: !Hash
+    , loBlockNo          :: !BlockNo
+    , loSlotNo           :: !SlotNo
+    }
+  | LOBlockFetchServerSend
+    { loBlock            :: !Hash
+    }
+  | LOChainSyncClientSeenHeader
+    { loBlock            :: !Hash
+    , loBlockNo          :: !BlockNo
+    , loSlotNo           :: !SlotNo
+    }
+  | LOBlockFetchClientCompletedFetch
+    { loBlock            :: !Hash
+    }
   | LOAny !Object
   deriving (Generic, Show)
 
@@ -179,6 +267,7 @@ instance FromJSON LogObject where
     LogObject
       <$> v .: "at"
       <*> pure kind
+      <*> v .: "host"
       <*> case Map.lookup kind interpreters of
             Just interp -> interp unwrapped tid
             Nothing -> pure $ LOAny unwrapped
