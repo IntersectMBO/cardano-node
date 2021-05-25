@@ -59,6 +59,9 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityLocalHandshake
   , namesForLocalHandshake
 
+  , severityDiffusionInit
+  , namesForDiffusionInit
+
 
   ) where
 
@@ -73,6 +76,7 @@ import qualified Network.Socket as Socket
 import           Ouroboros.Network.Block (Point, Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
+import qualified Ouroboros.Network.Diffusion as ND
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (DnsTrace (..),
                      ErrorPolicyTrace (..), SubscriptionTrace (..),
@@ -774,3 +778,52 @@ namesForLocalHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Tex
 namesForLocalHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]
 namesForLocalHandshake''' HS.MsgAcceptVersion {}   = ["AcceptVersion"]
 namesForLocalHandshake''' HS.MsgRefuse {}          = ["Refuse"]
+
+severityDiffusionInit :: ND.DiffusionInitializationTracer -> SeverityS
+severityDiffusionInit ND.RunServer {}                         = Info
+severityDiffusionInit ND.RunLocalServer {}                    = Info
+severityDiffusionInit ND.UsingSystemdSocket {}                = Info
+severityDiffusionInit ND.CreateSystemdSocketForSnocketPath {} = Info
+severityDiffusionInit ND.CreatedLocalSocket {}                = Info
+severityDiffusionInit ND.ConfiguringLocalSocket {}            = Info
+severityDiffusionInit ND.ListeningLocalSocket {}              = Info
+severityDiffusionInit ND.LocalSocketUp  {}                    = Info
+severityDiffusionInit ND.CreatingServerSocket {}              = Info
+severityDiffusionInit ND.ConfiguringServerSocket {}           = Info
+severityDiffusionInit ND.ListeningServerSocket {}             = Info
+severityDiffusionInit ND.ServerSocketUp {}                    = Info
+severityDiffusionInit ND.UnsupportedLocalSystemdSocket {}     = Info
+severityDiffusionInit ND.UnsupportedReadySocketCase {}        = Info
+severityDiffusionInit ND.DiffusionErrored {}                  = Info
+
+namesForDiffusionInit  :: ND.DiffusionInitializationTracer -> [Text]
+namesForDiffusionInit  ND.RunServer {}                         =
+  ["RunServer"]
+namesForDiffusionInit  ND.RunLocalServer {}                    =
+  ["RunLocalServer"]
+namesForDiffusionInit  ND.UsingSystemdSocket {}                =
+  ["UsingSystemdSocket"]
+namesForDiffusionInit  ND.CreateSystemdSocketForSnocketPath {} =
+  ["CreateSystemdSocketForSnocketPath"]
+namesForDiffusionInit  ND.CreatedLocalSocket {}                =
+  ["CreatedLocalSocket"]
+namesForDiffusionInit  ND.ConfiguringLocalSocket {}            =
+  ["ConfiguringLocalSocket"]
+namesForDiffusionInit  ND.ListeningLocalSocket {}              =
+  ["ListeningLocalSocket"]
+namesForDiffusionInit  ND.LocalSocketUp  {}                    =
+  ["LocalSocketUp"]
+namesForDiffusionInit  ND.CreatingServerSocket {}              =
+  ["CreatingServerSocket"]
+namesForDiffusionInit  ND.ConfiguringServerSocket {}           =
+  ["ConfiguringServerSocket"]
+namesForDiffusionInit  ND.ListeningServerSocket {}             =
+  ["ListeningServerSocket"]
+namesForDiffusionInit  ND.ServerSocketUp {}                    =
+  ["ServerSocketUp"]
+namesForDiffusionInit  ND.UnsupportedLocalSystemdSocket {}     =
+  ["UnsupportedLocalSystemdSocket"]
+namesForDiffusionInit  ND.UnsupportedReadySocketCase {}        =
+  ["UnsupportedReadySocketCase"]
+namesForDiffusionInit  ND.DiffusionErrored {}                  =
+  ["DiffusionErrored"]

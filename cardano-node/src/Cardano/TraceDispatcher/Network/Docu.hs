@@ -21,6 +21,7 @@ module Cardano.TraceDispatcher.Network.Docu
   , docMux
   , docHandshake
   , docLocalHandshake
+  , docDiffusionInit
   ) where
 
 import           Cardano.Prelude
@@ -35,6 +36,7 @@ import           Network.Mux.Types (MiniProtocolDir (..), MuxSDUHeader (..),
                      RemoteClockModel (..))
 import qualified Network.Socket as Socket
 import           Unsafe.Coerce
+import           System.IO.Unsafe (unsafePerformIO)
 
 import           Cardano.Logging
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
@@ -43,12 +45,13 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
 import           Ouroboros.Network.Block (Point, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
+import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.NodeToClient (NodeToClientVersion (..))
+import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..),
                      WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.Protocol.BlockFetch.Type
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync (..),
                      Message (..))
@@ -58,7 +61,8 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.Trans.Hello.Type (Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission.Type as TXS
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
-import           Ouroboros.Network.Snocket (LocalAddress (..))
+import           Ouroboros.Network.Snocket (FileDescriptor,
+                     LocalAddress (..), socketFileDescriptor)
 import           Ouroboros.Network.Subscription.Dns (DnsTrace (..),
                      WithDomainName (..))
 import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
@@ -76,7 +80,7 @@ protoTip :: Tip blk
 protoTip = undefined
 
 protoPeer :: peer
-protoPeer = unsafeCoerce (NtN.ConnectionId protoSocketAddress protoSocketAddress)
+protoPeer = unsafeCoerce (NtN.ConnectionId protoSockAddr protoSockAddr)
 
 protoStok :: stok
 protoStok = undefined
@@ -101,9 +105,6 @@ protoTxId = undefined
 
 protoLocalAdresses :: LocalAddresses addr
 protoLocalAdresses = LocalAddresses Nothing Nothing Nothing
-
-protoSocketAddress :: Socket.SockAddr
-protoSocketAddress = Socket.SockAddrUnix "loopback"
 
 protoRes :: ConnectResult
 protoRes = undefined
@@ -160,6 +161,22 @@ protoRefuseReason = HS.Refused protoNodeToNodeVersion "hello"
 
 protoLocalRefuseReason :: HS.RefuseReason NtC.NodeToClientVersion
 protoLocalRefuseReason = HS.Refused protoNodeToClientVersion "hello"
+
+protoSockAddr :: Socket.SockAddr
+protoSockAddr = Socket.SockAddrUnix "loopback"
+
+protoLocalAddress :: LocalAddress
+protoLocalAddress = LocalAddress "loopback"
+
+protoFilePath :: FilePath
+protoFilePath = "loopback"
+
+protoFileDescriptor :: FileDescriptor
+protoFileDescriptor =
+  unsafePerformIO $ do
+    sock <- Socket.mkSocket 111
+    socketFileDescriptor sock
+
 
 
 ------------------------------------
@@ -647,27 +664,27 @@ docDNSSubscription = Documented $ map withDomainName (undoc docSubscription)
 docSubscription :: Documented (SubscriptionTrace Socket.SockAddr)
 docSubscription = Documented [
       DocMsg
-        (SubscriptionTraceConnectStart protoSocketAddress)
+        (SubscriptionTraceConnectStart protoSockAddr)
         []
         "Connection Attempt Start with destination."
     , DocMsg
-        (SubscriptionTraceConnectEnd protoSocketAddress protoRes)
+        (SubscriptionTraceConnectEnd protoSockAddr protoRes)
         []
         "Connection Attempt end with destination and outcome."
     , DocMsg
-        (SubscriptionTraceSocketAllocationException protoSocketAddress protoException)
+        (SubscriptionTraceSocketAllocationException protoSockAddr protoException)
         []
         "Socket Allocation Exception with destination and the exception."
     , DocMsg
-        (SubscriptionTraceConnectException protoSocketAddress protoException)
+        (SubscriptionTraceConnectException protoSockAddr protoException)
         []
         "Connection Attempt Exception with destination and exception."
     , DocMsg
-        (SubscriptionTraceTryConnectToPeer protoSocketAddress)
+        (SubscriptionTraceTryConnectToPeer protoSockAddr)
         []
         "Trying to connect to peer with address."
     , DocMsg
-        (SubscriptionTraceSkippingPeer protoSocketAddress)
+        (SubscriptionTraceSkippingPeer protoSockAddr)
         []
         "Skipping peer with address."
     , DocMsg
@@ -696,11 +713,11 @@ docSubscription = Documented [
         "Restarting Subscription after duration with desired valency and\
         \ current valency."
     , DocMsg
-        (SubscriptionTraceConnectionExist protoSocketAddress)
+        (SubscriptionTraceConnectionExist protoSockAddr)
         []
         "Connection exists to destination."
     , DocMsg
-        (SubscriptionTraceUnsupportedRemoteAddr protoSocketAddress)
+        (SubscriptionTraceUnsupportedRemoteAddr protoSockAddr)
         []
         "Unsupported remote target address."
     , DocMsg
@@ -708,15 +725,15 @@ docSubscription = Documented [
         []
         "Missing local address."
     , DocMsg
-        (SubscriptionTraceApplicationException protoSocketAddress protoException)
+        (SubscriptionTraceApplicationException protoSockAddr protoException)
         []
         "Application Exception occured."
     , DocMsg
-        (SubscriptionTraceAllocateSocket protoSocketAddress)
+        (SubscriptionTraceAllocateSocket protoSockAddr)
         []
         "Allocate socket to address."
     , DocMsg
-        (SubscriptionTraceCloseSocket protoSocketAddress)
+        (SubscriptionTraceCloseSocket protoSockAddr)
         []
         "Closed socket to address."
   ]
@@ -755,18 +772,18 @@ docDNSResolver = Documented [
         "Returning IPv6 address first."
     , DocMsg
         (WithDomainName protoDomain
-          (DnsTraceLookupAResult [protoSocketAddress]))
+          (DnsTraceLookupAResult [protoSockAddr]))
         []
         "Lookup A result."
     , DocMsg
         (WithDomainName protoDomain
-          (DnsTraceLookupAAAAResult [protoSocketAddress]))
+          (DnsTraceLookupAAAAResult [protoSockAddr]))
         []
         "Lookup AAAA result."
     ]
 
 docErrorPolicy :: Documented (WithAddr Socket.SockAddr ErrorPolicyTrace)
-docErrorPolicy = docErrorPolicy' protoSocketAddress
+docErrorPolicy = docErrorPolicy' protoSockAddr
 
 docLocalErrorPolicy :: Documented (WithAddr LocalAddress ErrorPolicyTrace)
 docLocalErrorPolicy = docErrorPolicy' protoLocalAdress
@@ -1028,3 +1045,67 @@ docLocalHandshake = Documented [
         []
         "It refuses to run any version."
     ]
+
+docDiffusionInit :: Documented ND.DiffusionInitializationTracer
+docDiffusionInit = Documented [
+    DocMsg
+      (ND.RunServer protoSockAddr)
+      []
+      "RunServer TODO"
+  , DocMsg
+      (ND.RunLocalServer protoLocalAddress)
+      []
+      "RunLocalServer TODO"
+  , DocMsg
+      (ND.UsingSystemdSocket protoFilePath)
+      []
+      "UsingSystemdSocket TODO"
+  , DocMsg
+      (ND.CreateSystemdSocketForSnocketPath protoFilePath)
+      []
+      "CreateSystemdSocketForSnocketPath TODO"
+  , DocMsg
+      (ND.CreatedLocalSocket protoFilePath)
+      []
+      "CreatedLocalSocket TODO"
+  , DocMsg
+      (ND.ConfiguringLocalSocket protoFilePath protoFileDescriptor)
+      []
+      "ConfiguringLocalSocket TODO"
+  , DocMsg
+      (ND.ListeningLocalSocket protoFilePath protoFileDescriptor)
+      []
+      "ListeningLocalSocket TODO"
+  , DocMsg
+      (ND.LocalSocketUp protoFilePath protoFileDescriptor)
+      []
+      "LocalSocketUp TODO"
+  , DocMsg
+      (ND.CreatingServerSocket protoSockAddr)
+      []
+      "CreatingServerSocket TODO"
+  , DocMsg
+      (ND.ConfiguringServerSocket protoSockAddr)
+      []
+      "ConfiguringServerSocket TODO"
+  , DocMsg
+      (ND.ListeningServerSocket protoSockAddr)
+      []
+      "ListeningServerSocket TODO"
+  , DocMsg
+      (ND.ServerSocketUp protoSockAddr)
+      []
+      "ServerSocketUp TODO"
+  , DocMsg
+      (ND.UnsupportedLocalSystemdSocket protoSockAddr)
+      []
+      "UnsupportedLocalSystemdSocket TODO"
+  , DocMsg
+      ND.UnsupportedReadySocketCase
+      []
+      "UnsupportedReadySocketCase TODO"
+  , DocMsg
+      (ND.DiffusionErrored protoSomeException)
+      []
+      "DiffusionErrored TODO"
+  ]
