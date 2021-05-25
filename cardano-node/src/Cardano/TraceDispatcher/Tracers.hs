@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 
-{-# OPTIONS_GHC -Wno-unused-imports  #-}
+-- {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
 
 module Cardano.TraceDispatcher.Tracers
@@ -27,16 +27,14 @@ import           Cardano.Logging
 import           Cardano.Prelude hiding (trace)
 import           Cardano.TraceDispatcher.ChainDB.Combinators
 import           Cardano.TraceDispatcher.ChainDB.Docu
-import           Cardano.TraceDispatcher.ChainDB.Formatting
 import           Cardano.TraceDispatcher.Common.ConvertTxId
-import           Cardano.TraceDispatcher.Common.Formatting
+import           Cardano.TraceDispatcher.Common.Formatting ()
 import           Cardano.TraceDispatcher.Consensus.Combinators
 import           Cardano.TraceDispatcher.Consensus.Docu
-import           Cardano.TraceDispatcher.Consensus.Formatting
 import           Cardano.TraceDispatcher.Consensus.StateInfo
 import           Cardano.TraceDispatcher.Network.Combinators
 import           Cardano.TraceDispatcher.Network.Docu
-import           Cardano.TraceDispatcher.Network.Formatting
+import           Cardano.TraceDispatcher.Network.Formatting ()
 import           Cardano.TraceDispatcher.OrphanInstances.Consensus ()
 
 
@@ -46,23 +44,20 @@ import qualified Cardano.BM.Data.Trace as Old
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Kernel (NodeKernelData)
-import           Cardano.Tracing.Metrics (HasKESInfo, HasKESMetricsData)
 import           Cardano.Tracing.OrphanInstances.Common (ToObject)
 import           Cardano.Tracing.Tracers
-import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
+import           "contra-tracer" Control.Tracer (Tracer (..))
 
-import           Ouroboros.Consensus.Block (CannotForge, ConvertRawHash,
-                     ForgeStateInfo, ForgeStateUpdateError, HasHeader, Header,
+import           Ouroboros.Consensus.Block (CannotForge, ForgeStateUpdateError,
                      Point)
-import           Ouroboros.Consensus.Block.Forging (ForgeStateInfo)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
                      (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, Query)
 import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
-import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger,
-                     LedgerUpdate, LedgerWarning)
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate,
+                     LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
-                     GenTxId, HasTxId, HasTxs, TxId)
+                     GenTxId, HasTxId, HasTxs)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
                      (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
@@ -86,6 +81,7 @@ import           Ouroboros.Consensus.Storage.Serialisation (SerialisedHeader)
 import           Ouroboros.Network.Block (Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
+import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -316,6 +312,11 @@ docTracers _ = do
                 namesForLocalHandshake
                 severityLocalHandshake
                 trBase
+    diTr   <-  mkStandardTracer
+                "DiffusionInit"
+                namesForDiffusionInit
+                severityDiffusionInit
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -349,6 +350,8 @@ docTracers _ = do
     configureTracers emptyTraceConfig docMux                  [muxLTr]
     configureTracers emptyTraceConfig docHandshake            [hsTr]
     configureTracers emptyTraceConfig docLocalHandshake       [lhsTr]
+    configureTracers emptyTraceConfig docLocalHandshake       [lhsTr]
+    configureTracers emptyTraceConfig docDiffusionInit        [diTr]
 
     cdbmTrDoc    <- documentMarkdown
                 (docChainDBTraceEvent :: Documented
@@ -503,9 +506,12 @@ docTracers _ = do
     hsTrDoc      <-  documentMarkdown
                     (docHandshake :: Documented NtN.HandshakeTr)
                     [hsTr]
-    lhsTrDoc      <-  documentMarkdown
+    lhsTrDoc     <-  documentMarkdown
                     (docLocalHandshake :: Documented NtC.HandshakeTr)
                     [lhsTr]
+    diTrDoc      <-  documentMarkdown
+                    (docDiffusionInit :: Documented ND.DiffusionInitializationTracer)
+                    [diTr]
 
     let bl = cdbmTrDoc
             ++ cscTrDoc
@@ -541,6 +547,7 @@ docTracers _ = do
             ++ muxLTrDoc
             ++ hsTrDoc
             ++ lhsTrDoc
+            ++ diTrDoc
 
     res <- buildersToText bl
     T.writeFile "/home/yupanqui/IOHK/CardanoLogging.md" res
@@ -739,6 +746,11 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
                 namesForLocalHandshake
                 severityLocalHandshake
                 trBase
+    diTr   <-  mkStandardTracer
+                "DiffusionInit"
+                namesForDiffusionInit
+                severityDiffusionInit
+                trBase
 
     configureTracers emptyTraceConfig docChainDBTraceEvent    [cdbmTr]
     configureTracers emptyTraceConfig docChainSyncClientEvent [cscTr]
@@ -772,6 +784,8 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
     configureTracers emptyTraceConfig docMux                  [muxLTr]
     configureTracers emptyTraceConfig docHandshake            [hsTr]
     configureTracers emptyTraceConfig docLocalHandshake       [lhsTr]
+    configureTracers emptyTraceConfig docDiffusionInit        [diTr]
+
 
     pure Tracers
       { chainDBTracer = Tracer (traceWith cdbmTr)
@@ -815,7 +829,7 @@ mkDispatchTracers _blockConfig (TraceDispatcher _trSel) _tr _nodeKern _ekgDirect
       , muxLocalTracer = Tracer (traceWith muxLTr)
       , handshakeTracer = Tracer (traceWith hsTr)
       , localHandshakeTracer = Tracer (traceWith lhsTr)
-      , diffusionInitializationTracer = nullTracer
+      , diffusionInitializationTracer = Tracer (traceWith diTr)
     }
 
 mkDispatchTracers blockConfig tOpts tr nodeKern ekgDirect _ =

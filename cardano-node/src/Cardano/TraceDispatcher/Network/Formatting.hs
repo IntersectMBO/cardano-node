@@ -41,6 +41,7 @@ import           Ouroboros.Network.Block (HasHeader, Point, Serialised,
                      blockHash)
 import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.Codec (PeerHasAgency (..))
+import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -420,3 +421,70 @@ instance LogFormatting NtN.HandshakeTr where
              , "event" .= show ev ]
   forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
                                       <> ". " <> showT ev
+
+
+instance LogFormatting ND.DiffusionInitializationTracer where
+  forMachine _dtal (ND.RunServer sockAddr) = mkObject
+    [ "kind" .= String "RunServer"
+    , "socketAddress" .= String (pack (show sockAddr))
+    ]
+
+  forMachine _dtal (ND.RunLocalServer localAddress) = mkObject
+    [ "kind" .= String "RunLocalServer"
+    , "localAddress" .= String (pack (show localAddress))
+    ]
+  forMachine _dtal (ND.UsingSystemdSocket path) = mkObject
+    [ "kind" .= String "UsingSystemdSocket"
+    , "path" .= String (pack path)
+    ]
+
+  forMachine _dtal (ND.CreateSystemdSocketForSnocketPath path) = mkObject
+    [ "kind" .= String "CreateSystemdSocketForSnocketPath"
+    , "path" .= String (pack path)
+    ]
+  forMachine _dtal (ND.CreatedLocalSocket path) = mkObject
+    [ "kind" .= String "CreatedLocalSocket"
+    , "path" .= String (pack path)
+    ]
+  forMachine _dtal (ND.ConfiguringLocalSocket path socket) = mkObject
+    [ "kind" .= String "ConfiguringLocalSocket"
+    , "path" .= String (pack path)
+    , "socket" .= String (pack (show socket))
+    ]
+  forMachine _dtal (ND.ListeningLocalSocket path socket) = mkObject
+    [ "kind" .= String "ListeningLocalSocket"
+    , "path" .= String (pack path)
+    , "socket" .= String (pack (show socket))
+    ]
+  forMachine _dtal (ND.LocalSocketUp path fd) = mkObject
+    [ "kind" .= String "LocalSocketUp"
+    , "path" .= String (pack path)
+    , "socket" .= String (pack (show fd))
+    ]
+  forMachine _dtal (ND.CreatingServerSocket socket) = mkObject
+    [ "kind" .= String "CreatingServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  forMachine _dtal (ND.ListeningServerSocket socket) = mkObject
+    [ "kind" .= String "ListeningServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  forMachine _dtal (ND.ServerSocketUp socket) = mkObject
+    [ "kind" .= String "ServerSocketUp"
+    , "socket" .= String (pack (show socket))
+    ]
+  forMachine _dtal (ND.ConfiguringServerSocket socket) = mkObject
+    [ "kind" .= String "ConfiguringServerSocket"
+    , "socket" .= String (pack (show socket))
+    ]
+  forMachine _dtal (ND.UnsupportedLocalSystemdSocket path) = mkObject
+    [ "kind" .= String "UnsupportedLocalSystemdSocket"
+    , "path" .= String (pack (show path))
+    ]
+  forMachine _dtal ND.UnsupportedReadySocketCase = mkObject
+    [ "kind" .= String "UnsupportedReadySocketCase"
+    ]
+  forMachine _dtal (ND.DiffusionErrored exception) = mkObject
+    [ "kind" .= String "DiffusionErrored"
+    , "path" .= String (pack (show exception))
+    ]
