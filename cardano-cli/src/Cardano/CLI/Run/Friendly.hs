@@ -44,13 +44,13 @@ friendlyTxBody era txbody =
     <>
     case txbody of
       ByronTxBody body -> friendlyTxBodyByron body
-      ShelleyTxBody ShelleyBasedEraShelley body _scripts aux ->
+      ShelleyTxBody ShelleyBasedEraShelley body _scripts _ aux ->
         addAuxData aux $ friendlyTxBodyShelley body
-      ShelleyTxBody ShelleyBasedEraAllegra body _scripts aux ->
+      ShelleyTxBody ShelleyBasedEraAllegra body _scripts _ aux ->
         addAuxData aux $ friendlyTxBodyAllegra body
-      ShelleyTxBody ShelleyBasedEraMary body _scripts aux ->
+      ShelleyTxBody ShelleyBasedEraMary body _scripts _ aux ->
         addAuxData aux $ friendlyTxBodyMary body
-      ShelleyTxBody ShelleyBasedEraAlonzo _ _ _ ->
+      ShelleyTxBody ShelleyBasedEraAlonzo _ _ _ _ ->
         panic "friendlyTxBody: Alonzo not implemented yet" -- TODO alonzo
 
 addAuxData :: Show a => Maybe a -> Object -> Object
