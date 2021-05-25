@@ -56,6 +56,9 @@ module Cardano.TraceDispatcher.Network.Combinators
   , severityHandshake
   , namesForHandshake
 
+  , severityLocalHandshake
+  , namesForLocalHandshake
+
 
   ) where
 
@@ -284,7 +287,7 @@ severityTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) = severityTChainSyn
 namesForTChainSyncSerialised :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync (SerialisedHeader blk) (Point blk) (Tip blk))) -> [Text]
 namesForTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : "Serialised" : namesTChainSync v
+  "NodeToNode" : namesTChainSync v
   where
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
     namesTChainSync (TraceRecvMsg msg) = "Recieve" : namesTChainSync' msg
@@ -360,7 +363,7 @@ severityTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) = severityTBlockFe
 namesForTBlockFetchSerialised :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (BlockFetch (Serialised blk) (Point blk))) -> [Text]
 namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : "Serialised" : namesTBlockFetch v
+  "NodeToNode" : namesTBlockFetch v
   where
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
     namesTBlockFetch (TraceRecvMsg msg) = "Recieve" : namesTBlockFetch' msg
@@ -401,7 +404,7 @@ severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
 namesForTxSubmissionNode :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> [Text]
 namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : "TxSubmission" : namesTxSubNode v
+  "NodeToNode" : namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
     namesTxSubNode (TraceRecvMsg msg) = "Recieve" : namesTxSubNode' msg
@@ -445,7 +448,7 @@ severityTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
 namesForTxSubmission2Node :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
 namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : "TxSubmission2" : namesTxSubNode v
+  "NodeToNode" : namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
     namesTxSubNode (TraceRecvMsg msg) = "Recieve" : namesTxSubNode' msg
@@ -737,3 +740,37 @@ namesForHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Text]
 namesForHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]
 namesForHandshake''' HS.MsgAcceptVersion {}   = ["AcceptVersion"]
 namesForHandshake''' HS.MsgRefuse {}          = ["Refuse"]
+
+severityLocalHandshake :: NtC.HandshakeTr -> SeverityS
+severityLocalHandshake (WithMuxBearer _ e) = severityLocalHandshake' e
+
+severityLocalHandshake' ::
+     TraceSendRecv (HS.Handshake nt CBOR.Term)
+  -> SeverityS
+severityLocalHandshake' (TraceSendMsg m) = severityLocalHandshake'' m
+severityLocalHandshake' (TraceRecvMsg m) = severityLocalHandshake'' m
+
+severityLocalHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> SeverityS
+severityLocalHandshake'' (AnyMessageAndAgency _agency msg) = severityLocalHandshake''' msg
+
+severityLocalHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> SeverityS
+severityLocalHandshake''' HS.MsgProposeVersions {} = Info
+severityLocalHandshake''' HS.MsgAcceptVersion {}   = Info
+severityLocalHandshake''' HS.MsgRefuse {}          = Info
+
+namesForLocalHandshake :: NtC.HandshakeTr -> [Text]
+namesForLocalHandshake (WithMuxBearer _ e) = namesForLocalHandshake' e
+
+namesForLocalHandshake' ::
+     TraceSendRecv (HS.Handshake nt CBOR.Term)
+  -> [Text]
+namesForLocalHandshake' (TraceSendMsg m) = namesForLocalHandshake'' m
+namesForLocalHandshake' (TraceRecvMsg m) = namesForLocalHandshake'' m
+
+namesForLocalHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
+namesForLocalHandshake'' (AnyMessageAndAgency _agency msg) = namesForLocalHandshake''' msg
+
+namesForLocalHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Text]
+namesForLocalHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]
+namesForLocalHandshake''' HS.MsgAcceptVersion {}   = ["AcceptVersion"]
+namesForLocalHandshake''' HS.MsgRefuse {}          = ["Refuse"]
