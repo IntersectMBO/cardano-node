@@ -6,7 +6,7 @@ let
   mkNodeScript = envConfig: let
     defaultConfig = {
       cardanoNodePkgs = pkgs;
-      hostAddr = "127.0.0.1";
+      hostAddr = "0.0.0.0";
       port = 3001;
       signingKey = null;
       delegationCertificate = null;
@@ -40,19 +40,6 @@ let
       // (builtins.removeAttrs customConfig ["nodeConfig"])
       // { inherit nodeConfig; };
 
-    topologyFile = let
-      edgePort = if config.useProxy then config.proxyPort else config.edgePort;
-      edgeHost = if config.useProxy then config.proxyHost else config.edgeHost;
-      hasCustomEdgeNodes = __hasAttr "edgeNodes" customConfig;
-      hasRelaysNew = __hasAttr "relaysNew" config;
-      edgeNodes = let
-        relaysNodes = [ config.relaysNew ];
-        edgeNodes' = if (hasCustomEdgeNodes || !hasRelaysNew) then config.edgeNodes else relaysNodes;
-      in if config.useProxy then [] else edgeNodes';
-    in config.topologyFile or mkEdgeTopology {
-      inherit (config) hostAddr port;
-      inherit edgeNodes edgeHost edgePort;
-    };
     serviceConfig = {
       inherit environments;
       inherit (config)
@@ -77,9 +64,9 @@ let
         ;
       runtimeDir = null;
       environment = envConfig.name;
-      topology = topologyFile;
-      nodeConfigFile = "${__toFile "config-${toString config.nodeId}.json" (__toJSON envConfig.nodeConfig)}";
-    };
+    } // (optionalAttrs (envConfig ? topology || customConfig ? topology) {
+      topology = customConfig.topology or envConfig.topology;
+    });
     nodeConf = { config.services.cardano-node = serviceConfig; };
     nodeScript = (modules.evalModules {
       prefix = [];
