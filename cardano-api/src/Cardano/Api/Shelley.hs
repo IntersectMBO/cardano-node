@@ -99,6 +99,10 @@ module Cardano.Api.Shelley
     toShelleyScriptHash,
     fromShelleyScriptHash,
     PlutusScript(..),
+    toPlutusData,
+    fromPlutusData,
+    toAlonzoData,
+    fromAlonzoData,
 
     -- * Certificates
     Certificate (..),

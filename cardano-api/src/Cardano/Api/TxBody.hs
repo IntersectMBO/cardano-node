@@ -2134,7 +2134,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
 
     datums :: [Alonzo.Data StandardAlonzo]
     datums =
-      [ toAlonzoScriptData d
+      [ toAlonzoData d
       | (_, AnyScriptWitness
               (PlutusScriptWitness
                  _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
@@ -2144,7 +2144,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     redeemers =
       Alonzo.Redeemers $
         Map.fromList
-          [ (ptr, (toAlonzoScriptData d, toAlonzoExUnits e))
+          [ (ptr, (toAlonzoData d, toAlonzoExUnits e))
           | (ptr, AnyScriptWitness
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
@@ -2321,7 +2321,7 @@ toAlonzoAuxiliaryData m ss ds =
     Alonzo.AuxiliaryData
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
-      (Set.fromList (map toAlonzoScriptData ds))
+      (Set.fromList (map toAlonzoData ds))
 
 
 -- ----------------------------------------------------------------------------
