@@ -4,11 +4,9 @@ module Cardano.Node.Protocol
   ( mkConsensusProtocol
   , SomeConsensusProtocol(..)
   , ProtocolInstantiationError(..)
-  , renderProtocolInstantiationError
   ) where
 
 import           Cardano.Prelude
-import qualified Data.Text as T
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
@@ -63,14 +61,8 @@ data ProtocolInstantiationError =
   deriving Show
 
 
-renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
-renderProtocolInstantiationError pie =
-  case pie of
-    ByronProtocolInstantiationError bpie ->
-      renderByronProtocolInstantiationError bpie
+instance Error ProtocolInstantiationError where
+  displayError (ByronProtocolInstantiationError   err) = displayError err
+  displayError (ShelleyProtocolInstantiationError err) = displayError err
+  displayError (CardanoProtocolInstantiationError err) = displayError err
 
-    ShelleyProtocolInstantiationError spie ->
-      T.pack (displayError spie)
-
-    CardanoProtocolInstantiationError cpie ->
-      renderCardanoProtocolInstantiationError cpie

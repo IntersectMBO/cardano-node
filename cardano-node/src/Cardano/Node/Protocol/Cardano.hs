@@ -11,14 +11,12 @@ module Cardano.Node.Protocol.Cardano
 
     -- * Errors
   , CardanoProtocolInstantiationError(..)
-  , renderCardanoProtocolInstantiationError
   ) where
 
 import           Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import qualified Data.Text as T
 
 import qualified Cardano.Chain.Update as Byron
 
@@ -37,8 +35,8 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Cardano.Node.Protocol.Alonzo (AlonzoProtocolInstantiationError, readAlonzoGenesis,
-                   renderAlonzoProtocolInstantiationError)
+import           Cardano.Node.Protocol.Alonzo
+                   (AlonzoProtocolInstantiationError, readAlonzoGenesis)
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
 
@@ -269,20 +267,12 @@ data CardanoProtocolInstantiationError =
          AlonzoProtocolInstantiationError
   deriving Show
 
-renderCardanoProtocolInstantiationError :: CardanoProtocolInstantiationError
-                                        -> T.Text
-renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationErrorByron err) =
-    Byron.renderByronProtocolInstantiationError err
-
-renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationGenesisReadError err) =
-    T.pack (displayError err)
-
-renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
-    T.pack (displayError err)
-
-renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationErrorAlonzo err) =
-    renderAlonzoProtocolInstantiationError err
+instance Error CardanoProtocolInstantiationError where
+  displayError (CardanoProtocolInstantiationErrorByron err) =
+    displayError err
+  displayError (CardanoProtocolInstantiationGenesisReadError err) =
+    displayError err
+  displayError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
+    displayError err
+  displayError (CardanoProtocolInstantiationErrorAlonzo err) =
+    displayError err

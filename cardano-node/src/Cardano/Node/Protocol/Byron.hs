@@ -4,7 +4,6 @@ module Cardano.Node.Protocol.Byron
   ( mkSomeConsensusProtocolByron
     -- * Errors
   , ByronProtocolInstantiationError(..)
-  , renderByronProtocolInstantiationError
 
     -- * Reusable parts
   , readGenesis
@@ -177,23 +176,27 @@ data ByronProtocolInstantiationError =
   | SigningKeyFilepathNotSpecified
   deriving Show
 
-
-renderByronProtocolInstantiationError :: ByronProtocolInstantiationError -> Text
-renderByronProtocolInstantiationError pie =
-  case pie of
-    CanonicalDecodeFailure fp failure -> "Canonical decode failure in " <> toS fp
-                                         <> " Canonical failure: " <> failure
-    GenesisHashMismatch actual expected ->
+instance Error ByronProtocolInstantiationError where
+  displayError (CanonicalDecodeFailure fp failure) =
+        "Canonical decode failure in " <> fp
+     <> " Canonical failure: " <> Text.unpack failure
+  displayError (GenesisHashMismatch actual expected) =
         "Wrong Byron genesis file: the actual hash is " <> show actual
      <> ", but the expected Byron genesis hash given in the node configuration "
      <> "file is " <> show expected
-    DelegationCertificateFilepathNotSpecified -> "Delegation certificate filepath not specified"
+  displayError DelegationCertificateFilepathNotSpecified =
+        "Delegation certificate filepath not specified"
     --TODO: Implement configuration error render function in cardano-ledger
-    GenesisConfigurationError fp genesisConfigError -> "Genesis configuration error in: " <> toS fp
-                                                       <> " Error: " <> Text.pack (show genesisConfigError)
-    GenesisReadError fp err ->  "There was an error parsing the genesis file: " <> toS fp
-                                <> " Error: " <> Text.pack (show err)
+  displayError (GenesisConfigurationError fp genesisConfigError) =
+        "Genesis configuration error in: " <> toS fp
+     <> " Error: " <> show genesisConfigError
+  displayError (GenesisReadError fp err) =
+        "There was an error parsing the genesis file: " <> toS fp
+     <> " Error: " <> show err
     -- TODO: Implement ByronLeaderCredentialsError render function in ouroboros-network
-    CredentialsError byronLeaderCredentialsError -> "Byron leader credentials error: " <> Text.pack (show byronLeaderCredentialsError)
-    SigningKeyDeserialiseFailure fp -> "Signing key deserialisation error in: " <> toS fp
-    SigningKeyFilepathNotSpecified -> "Signing key filepath not specified"
+  displayError (CredentialsError byronLeaderCredentialsError) =
+        "Byron leader credentials error: " <> show byronLeaderCredentialsError
+  displayError (SigningKeyDeserialiseFailure fp) =
+        "Signing key deserialisation error in: " <> toS fp
+  displayError SigningKeyFilepathNotSpecified =
+        "Signing key filepath not specified"
