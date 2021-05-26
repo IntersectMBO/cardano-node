@@ -120,9 +120,9 @@ let
 
   # Paths or prefixes of paths of derivations to build only on the default system (ie. linux on hydra):
   onlyBuildOnDefaultSystem = [
-    ["checks" "hlint"] ["dockerImage"] ["clusterTests"] ["nixosTests"]
+    ["checks" "hlint"] ["dockerImage"] ["submitApiDockerImage"] ["clusterTests"] ["nixosTests"]
     [ "haskellPackages" "cardano-node-chairman" "checks" ]
-    [ "cardano-node-profiled" "components" "exes" ]
+    [ "cardano-node-profiled" ] [ "cardano-node-eventlogged" ]
     [ "checks" "tests" "cardano-node-chairman" ]
     [ "workbench" ] [ "profiles" ]
   ];

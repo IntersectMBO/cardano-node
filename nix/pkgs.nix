@@ -37,7 +37,7 @@ final: prev: with final;
     eventlog = true;
   }).hsPkgs;
   cardanoNodeAssertedHaskellPackages = (import ./haskell.nix {
-    inherit config
+    inherit compiler
       pkgs
       lib
       stdenv
