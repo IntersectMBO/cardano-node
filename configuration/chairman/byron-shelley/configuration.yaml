@@ -8,6 +8,7 @@
 
 ByronGenesisFile: byron/genesis.json
 ShelleyGenesisFile: shelley/genesis.json
+AlonzoGenesisFile: shelley/genesis.alonzo.json
 SocketPath: db/node.socket
 
 ##### Blockfetch Protocol

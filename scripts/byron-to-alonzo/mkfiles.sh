@@ -80,6 +80,7 @@ sed -i ${ROOT}/configuration.yaml \
     -e 's/minSeverity: Info/minSeverity: Debug/' \
     -e 's|GenesisFile: genesis.json|ByronGenesisFile: byron/genesis.json|' \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
+    -e '/ByronGenesisFile/ aAlonzoGenesisFile: shelley/genesis.alonzo.json' \
     -e 's/RequiresNoMagic/RequiresMagic/' \
     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
     -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
@@ -319,12 +320,11 @@ echo
 ls -1 shelley/*
 echo "====================================================================="
 
-echo "Generated genesis.json:"
+echo "Generated shelley/genesis.json:"
 echo
 cat shelley/genesis.json
 echo
 echo "====================================================================="
-
 
 # Make the pool operator cold keys
 # This was done already for the BFT nodes as part of the genesis creation
@@ -560,10 +560,6 @@ if [ "$1" = "alonzo" ]; then
   sed -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
 
-  # Update shelley genesis with required Alonzo fields.
-  alonzogenesisparams='.+ {adaPerUTxOWord: 0, executionPrices: {prMem: 1, prSteps: 1}, maxTxExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxBlockExUnits: {exUnitsMem: 1, exUnitsSteps: 1}, maxValueSize: 1000, collateralPercentage: 100, maxCollateralInputs: 1}'
-  alonzogenesis=$(jq "${alonzogenesisparams}" < ${ROOT}/shelley/genesis.json)
-  echo "${alonzogenesis}" > ${ROOT}/shelley/genesis.json
   # Copy the cost model
   mkdir ${ROOT}/shelley/alonzo
   cp configuration/cardano/alonzo/shelley_qa_cost-model.json ${ROOT}/shelley/alonzo/costmodel.json

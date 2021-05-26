@@ -356,13 +356,16 @@ runGenesisCreate (GenesisDir rootdir)
   utxoAddrs <- readInitialFundAddresses utxodir network
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
 
-  let finalGenesis = updateTemplate
-                       -- Shelley genesis parameters
-                       start genDlgs mAmount utxoAddrs mempty (Lovelace 0) [] [] template
-                       -- Alono genesis parameters TODO: Parameterize
-                       (Lovelace 10) (Lovelace 1, Lovelace 1) (1,1) (1,1) 1 1 1
+  let (shelleyGenesis, alonzoGenesis) =
+        updateTemplate
+          -- Shelley genesis parameters
+          start genDlgs mAmount utxoAddrs mempty (Lovelace 0) [] [] template
+          -- Alono genesis parameters TODO: Parameterize
+          (Lovelace 10) (Lovelace 1, Lovelace 1) (1,1) (1,1) 1 1 1
 
-  writeShelleyGenesis (rootdir </> "genesis.json") finalGenesis
+  writeFileGenesis (rootdir </> "genesis.json")        shelleyGenesis
+  writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
+  --TODO: rationalise the naming convention on these genesis json files.
   where
     adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
     gendir  = rootdir </> "genesis-keys"
@@ -443,13 +446,18 @@ runGenesisCreateStaked (GenesisDir rootdir)
   let poolMap :: Map (Ledger.KeyHash Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
       poolMap = Map.fromList $ mkDelegationMapEntry <$> delegations
       delegAddrs = dInitialUtxoAddr <$> delegations
-      finalGenesis = updateTemplate
-                       -- Shelley genesis parameters
-                       start genDlgs mNonDlgAmount nonDelegAddrs poolMap stDlgAmount delegAddrs stuffedUtxoAddrs template
-                       -- Alonzo genesis parameters TODO: Parameterize
-                       (Lovelace 10) (Lovelace 1, Lovelace 1) (1,1) (1,1) 1 1 1
+      (shelleyGenesis, alonzoGenesis) =
+        updateTemplate
+          -- Shelley genesis parameters
+          start genDlgs mNonDlgAmount nonDelegAddrs poolMap
+          stDlgAmount delegAddrs stuffedUtxoAddrs template
+          -- Alonzo genesis parameters TODO: Parameterize
+          (Lovelace 10) (Lovelace 1, Lovelace 1) (1,1) (1,1) 1 1 1
 
-  writeShelleyGenesis (rootdir </> "genesis.json") finalGenesis
+  writeFileGenesis (rootdir </> "genesis.json")        shelleyGenesis
+  writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
+  --TODO: rationalise the naming convention on these genesis json files.
+
   liftIO $ Text.putStrLn $ mconcat $
     [ "generated genesis with: "
     , textShow genNumGenesisKeys, " genesis keys, "
@@ -824,23 +832,16 @@ updateTemplate (SystemStart start)
     unLovelace :: Integral a => Lovelace -> a
     unLovelace (Lovelace coin) = fromIntegral coin
 
--- We need to include Alonzo genesis parameters
-writeShelleyGenesis
-  :: FilePath
-  -> (ShelleyGenesis StandardShelley, Alonzo.AlonzoGenesis)
+writeFileGenesis
+  :: ToJSON genesis
+  => FilePath
+  -> genesis
   -> ExceptT ShelleyGenesisCmdError IO ()
-writeShelleyGenesis fpath (sg, ag) = do
-  let sgValue = toJSON sg
-      agValue = toJSON ag
-  genesisCombined <- hoistEither $ combineAndEncode sgValue agValue
-  handleIOExceptT
-    (ShelleyGenesisCmdGenesisFileError . FileIOError fpath)
-    $ LBS.writeFile fpath genesisCombined
- where
-  combineAndEncode :: Aeson.Value -> Aeson.Value -> Either ShelleyGenesisCmdError LBS.ByteString
-  combineAndEncode (Object sgO) (Object agO) = Right $ encodePretty $ sgO <> agO
-  combineAndEncode _sgWrong _agWrong = panic "combineAndEncode: Implement ShelleyGenesisCmdError constuctor"
--- -------------------------------------------------------------------------------------------------
+writeFileGenesis fpath genesis =
+  handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
+    LBS.writeFile fpath (encodePretty genesis)
+
+-- ----------------------------------------------------------------------------
 
 readGenDelegsMap :: FilePath -> FilePath
                  -> ExceptT ShelleyGenesisCmdError IO
