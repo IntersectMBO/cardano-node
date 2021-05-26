@@ -86,7 +86,8 @@ module Cardano.Api.Script (
 
 import           Prelude
 
-import           Data.Word (Word64)
+import           Data.Bifunctor (bimap)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
@@ -98,11 +99,12 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
+import           Data.Word (Word64)
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
 import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -117,7 +119,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (SlotNo)
 
 import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Era  as Ledger
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as Ledger
 
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
@@ -125,8 +127,12 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+
+-- TODO: This should be exposed by ledger-specs
+import qualified PlutusTx as Plutus
+
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -686,20 +692,44 @@ deriving instance Show (ScriptWitnessInCtx witctx)
 
 type ScriptRedeemer = ScriptData
 
--- TODO alonzo: Placeholder type to re-present the Alonzo.Data type
-data ScriptData = ScriptData
-  deriving (Eq, Show)
+data ScriptData = ScriptDataConstructor Integer [ScriptData]
+                | ScriptDataMap         [(ScriptData, ScriptData)]
+                | ScriptDataList        [ScriptData]
+                | ScriptDataNumber      Integer
+                | ScriptDataBytes       BS.ByteString
+  deriving (Eq, Ord, Show)
 
 instance HasTypeProxy ScriptData where
     data AsType ScriptData = AsScriptData
     proxyToAsType _ = AsScriptData
 
 toAlonzoScriptData :: ScriptData -> Alonzo.Data ledgerera
-toAlonzoScriptData = error "TODO alonzo: toShelleyScriptData"
+toAlonzoScriptData (ScriptDataConstructor int scriptData) =
+  Alonzo.Data $ Plutus.Constr int $ map (toPlutusData . toAlonzoScriptData) scriptData
+toAlonzoScriptData (ScriptDataMap sDataMap) =
+  let m = map (bimap (toPlutusData . toAlonzoScriptData) (toPlutusData . toAlonzoScriptData)) sDataMap
+  in Alonzo.Data $ Plutus.Map m
+toAlonzoScriptData (ScriptDataList scriptData) =
+  Alonzo.Data . Plutus.List $ map (toPlutusData . toAlonzoScriptData) scriptData
+toAlonzoScriptData (ScriptDataNumber n) = Alonzo.Data $ Plutus.I n
+toAlonzoScriptData (ScriptDataBytes bs) = Alonzo.Data $ Plutus.B bs
 
 fromAlonzoScriptData :: Alonzo.Data ledgerera -> ScriptData
-fromAlonzoScriptData = error "TODO alonzo: fromShelleyScriptData"
+fromAlonzoScriptData (Alonzo.Data pData) = fromPlutusData pData
+fromAlonzoScriptData (Alonzo.DataConstr _) = error "toPlutusData: DataConstr"
 
+toPlutusData :: Alonzo.Data ledgerera -> Plutus.Data
+toPlutusData (Alonzo.Data pData) = pData
+toPlutusData (Alonzo.DataConstr _) = error "toPlutusData: DataConstr"
+
+fromPlutusData :: Plutus.Data -> ScriptData
+fromPlutusData (Plutus.Constr int dataList) =
+  ScriptDataConstructor int $ map fromPlutusData dataList
+fromPlutusData (Plutus.Map dataMap) =
+  ScriptDataMap $ map (bimap fromPlutusData fromPlutusData) dataMap
+fromPlutusData (Plutus.List dataList) = ScriptDataList $ map fromPlutusData dataList
+fromPlutusData (Plutus.I i) = ScriptDataNumber i
+fromPlutusData (Plutus.B bs) = ScriptDataBytes bs
 
 newtype instance Hash ScriptData =
     ScriptDataHash (Alonzo.DataHash StandardCrypto)

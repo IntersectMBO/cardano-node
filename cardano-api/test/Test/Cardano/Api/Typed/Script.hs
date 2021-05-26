@@ -10,7 +10,7 @@ import           Data.Aeson
 
 import           Cardano.Api
 
-import           Hedgehog (Property, discover)
+import           Hedgehog (Property, discover, (===))
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Aeson
 import           Test.Tasty (TestTree)
@@ -121,6 +121,12 @@ prop_roundtrip_SimpleScriptV2_JSON =
   H.property $ do
     mss <- H.forAll $ genSimpleScript SimpleScriptV2
     H.tripping mss encode eitherDecode
+
+prop_roundtrip_ScriptData :: Property
+prop_roundtrip_ScriptData =
+  H.property $ do
+    sData <- H.forAll genScriptData
+    sData === fromAlonzoScriptData (toAlonzoScriptData sData)
 
 -- -----------------------------------------------------------------------------
 

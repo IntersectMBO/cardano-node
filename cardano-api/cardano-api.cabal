@@ -124,6 +124,7 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , plutus-ledger-api
+                      , plutus-tx
                       , scientific
                       , shelley-spec-ledger
                       , small-steps

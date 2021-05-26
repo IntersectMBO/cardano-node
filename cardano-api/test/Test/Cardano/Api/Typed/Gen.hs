@@ -19,6 +19,7 @@ module Test.Cardano.Api.Typed.Gen
   , genScriptInAnyLang
   , genScriptInEra
   , genScriptHash
+  , genScriptData
 
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
@@ -39,9 +40,10 @@ import           Cardano.Api.Shelley
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import           Data.String
-import qualified Data.ByteString.Short as SBS
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -117,6 +119,39 @@ genPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
 genPlutusScript _ =
     -- We make no attempt to create a valid script
     PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
+
+genScriptData :: Gen ScriptData
+genScriptData =
+    Gen.recursive
+      Gen.choice
+        [ ScriptDataNumber <$> genInteger
+        , ScriptDataBytes <$> genByteString
+        ]
+        [ ScriptDataConstructor <$> genInteger <*> Gen.list (Range.linear 0 10) genScriptData
+        , ScriptDataList <$> Gen.scale (`div` 2) genScriptDataList
+        , ScriptDataMap <$> Gen.scale (`div` 2) genScriptDataMap
+        ]
+  where
+    genInteger :: Gen Integer
+    genInteger = Gen.integral
+                  (Range.linear
+                    (-fromIntegral (maxBound :: Word64) :: Integer)
+                    ( fromIntegral (maxBound :: Word64) :: Integer))
+
+    genByteString :: Gen ByteString
+    genByteString = BS.pack <$> Gen.list (Range.linear 0 64)
+                                         (Gen.word8 Range.constantBounded)
+
+    genScriptDataList :: Gen [ScriptData]
+    genScriptDataList =
+      Gen.sized $ \sz ->
+        Gen.list (Range.linear 0 (fromIntegral sz)) genScriptData
+
+    genScriptDataMap  :: Gen [(ScriptData, ScriptData)]
+    genScriptDataMap =
+      Gen.sized $ \sz ->
+        Gen.list (Range.linear 0 (fromIntegral sz)) $
+          (,) <$> genScriptData <*> genScriptData
 
 -- ----------------------------------------------------------------------------
 -- Script generators for any language, or any language valid in a specific era

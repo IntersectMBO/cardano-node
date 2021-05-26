@@ -31,7 +31,9 @@ library
   exposed-modules:      Test.Cardano.Api.Typed.Gen
 
   other-modules:        Test.Cardano.Api.Metadata
+                        Test.Cardano.Api.Typed.Script
                         Test.Tasty.Hedgehog.Group
+
 
   build-depends:        aeson             >= 1.5.6.0
                       , base16-bytestring
@@ -45,6 +47,7 @@ library
                       , cardano-prelude
                       , containers
                       , hedgehog
+                      , hedgehog-extras
                       , shelley-spec-ledger
                       , tasty
                       , tasty-hedgehog
