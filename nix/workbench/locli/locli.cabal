@@ -54,6 +54,7 @@ library
                      , process
                      , scientific
                      , split
+                     , statistics
                      , template-haskell
                      , text
                      , text-short

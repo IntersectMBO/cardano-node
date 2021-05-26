@@ -20,17 +20,17 @@ import           Cardano.Unlog.LogObject hiding (Text)
 -- | All the CLI subcommands under \"analysis\".
 --
 data AnalysisCommand
-  = MachineTimeline
+  = MachineTimelineCmd
       JsonGenesisFile
       JsonRunMetafile
       [JsonLogfile]
       MachineTimelineOutputFiles
-  | BlockPropagation
+  | BlockPropagationCmd
       JsonGenesisFile
       JsonRunMetafile
       [JsonLogfile]
       BlockPropagationOutputFiles
-  | SubstringKeys
+  | SubstringKeysCmd
   deriving (Show)
 
 data MachineTimelineOutputFiles
@@ -58,9 +58,9 @@ data BlockPropagationOutputFiles
 renderAnalysisCommand :: AnalysisCommand -> Text
 renderAnalysisCommand sc =
   case sc of
-    MachineTimeline {}  -> "analyse machine-timeline"
-    BlockPropagation {} -> "analyse block-propagation"
-    SubstringKeys {}    -> "analyse substring-keys"
+    MachineTimelineCmd {}  -> "analyse machine-timeline"
+    BlockPropagationCmd {} -> "analyse block-propagation"
+    SubstringKeysCmd {}    -> "analyse substring-keys"
 
 parseMachineTimelineOutputFiles :: Parser MachineTimelineOutputFiles
 parseMachineTimelineOutputFiles =
@@ -111,7 +111,7 @@ parseAnalysisCommands =
   Opt.subparser $
     mconcat
       [ Opt.command "machine-timeline"
-          (Opt.info (MachineTimeline
+          (Opt.info (MachineTimelineCmd
                        <$> argJsonGenesisFile "genesis"
                               "Genesis file of the run"
                        <*> argJsonRunMetafile "run-metafile"
@@ -120,7 +120,7 @@ parseAnalysisCommands =
                        <*> parseMachineTimelineOutputFiles) $
             Opt.progDesc "Analyse leadership checks")
       , Opt.command "block-propagation"
-          (Opt.info (BlockPropagation
+          (Opt.info (BlockPropagationCmd
                        <$> argJsonGenesisFile "genesis"
                               "Genesis file of the run"
                        <*> argJsonRunMetafile "run-metafile"
@@ -129,7 +129,7 @@ parseAnalysisCommands =
                        <*> parseBlockPropagationOutputFiles) $
             Opt.progDesc "Analyse leadership checks")
       , Opt.command "substring-keys"
-          (Opt.info (pure SubstringKeys) $
+          (Opt.info (pure SubstringKeysCmd) $
             Opt.progDesc "Dump substrings that narrow logs to relevant subset")
       ]
 

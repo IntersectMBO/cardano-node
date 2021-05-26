@@ -78,7 +78,7 @@ renderAnalysisCmdError cmd err =
 --
 
 runAnalysisCommand :: AnalysisCommand -> ExceptT AnalysisCmdError IO ()
-runAnalysisCommand (MachineTimeline genesisFile metaFile logfiles oFiles) = do
+runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
     ChainInfo
       <$> firstExceptT (RunMetaParseError metaFile . Text.pack)
@@ -89,7 +89,7 @@ runAnalysisCommand (MachineTimeline genesisFile metaFile logfiles oFiles) = do
                          Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
   firstExceptT AnalysisCmdError $
     runMachineTimeline chainInfo logfiles oFiles
-runAnalysisCommand (BlockPropagation genesisFile metaFile logfiles oFiles) = do
+runAnalysisCommand (BlockPropagationCmd genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
     ChainInfo
       <$> firstExceptT (RunMetaParseError metaFile . Text.pack)
@@ -100,7 +100,7 @@ runAnalysisCommand (BlockPropagation genesisFile metaFile logfiles oFiles) = do
                          Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
   firstExceptT AnalysisCmdError $
     runBlockPropagation chainInfo logfiles oFiles
-runAnalysisCommand SubstringKeys =
+runAnalysisCommand SubstringKeysCmd =
   liftIO $ mapM_ putStrLn logObjectStreamInterpreterKeys
 
 runBlockPropagation ::
@@ -119,14 +119,13 @@ runBlockPropagation chainInfo logfiles BlockPropagationOutputFiles{..} = do
             dumpLOStream objs
               (JsonOutputFile $ F.dropExtension f <> ".logobjects.json")
 
-    chainBlockEvents <- blockProp chainInfo objLists
+    blockPropagation <- blockProp chainInfo objLists
 
     putStrLn ("runBlockPropagation: dumping analyses" :: Text)
     forM_ bpofAnalysis $
       \(JsonOutputFile f) ->
         withFile f WriteMode $ \hnd ->
-          forM_ chainBlockEvents $ \x->
-            LBS.hPutStrLn hnd (Aeson.encode x)
+          LBS.hPutStrLn hnd (Aeson.encode blockPropagation)
  where
    joinT :: (IO a, IO b) -> IO (a, b)
    joinT (a, b) = (,) <$> a <*> b
@@ -300,41 +299,31 @@ slotStatsSummary CInfo{} slots =
   , sSpanLensCPU85EBnd = sSpanLensCPU85EBnd
   , sSpanLensCPU85Rwd  = sSpanLensCPU85Rwd
   --
-  , sMissDistrib      = computeDistribution pctiles missRatios
+  , sMissDistrib      = computeDistribution stdPercentiles missRatios
   , sLeadsDistrib     =
-      computeDistribution pctiles (slCountLeads <$> slots)
+      computeDistribution stdPercentiles (slCountLeads <$> slots)
   , sUtxoDistrib      =
-      computeDistribution pctiles (slUtxoSize <$> slots)
+      computeDistribution stdPercentiles (slUtxoSize <$> slots)
   , sDensityDistrib   =
-      computeDistribution pctiles (slDensity <$> slots)
+      computeDistribution stdPercentiles (slDensity <$> slots)
   , sSpanCheckDistrib =
-      computeDistribution pctiles (slSpanCheck <$> slots)
+      computeDistribution stdPercentiles (slSpanCheck <$> slots)
   , sSpanLeadDistrib =
-      computeDistribution pctiles (slSpanLead <$> slots)
+      computeDistribution stdPercentiles (slSpanLead <$> slots)
   , sBlocklessDistrib =
-      computeDistribution pctiles (slBlockless <$> slots)
+      computeDistribution stdPercentiles (slBlockless <$> slots)
   , sSpanLensCPU85Distrib
-                      = computeDistribution pctiles spanLensCPU85
+                      = computeDistribution stdPercentiles spanLensCPU85
   , sResourceDistribs =
-      computeResDistrib pctiles resDistProjs slots
-  , sSpanLensCPU85EBndDistrib = computeDistribution pctiles sSpanLensCPU85EBnd
-  , sSpanLensCPU85RwdDistrib  = computeDistribution pctiles sSpanLensCPU85Rwd
+      computeResDistrib stdPercentiles resDistProjs slots
+  , sSpanLensCPU85EBndDistrib = computeDistribution stdPercentiles sSpanLensCPU85EBnd
+  , sSpanLensCPU85RwdDistrib  = computeDistribution stdPercentiles sSpanLensCPU85Rwd
   }
  where
    sSpanLensCPU85EBnd = Vec.length <$>
                         filter (spanContainsEpochSlot 3) spansCPU85
    sSpanLensCPU85Rwd  = Vec.length <$>
                         filter (spanContainsEpochSlot 803) spansCPU85
-   pctiles = sortBy (compare `on` psFrac)
-     [ Perc 0.01, Perc 0.05
-     , Perc 0.1, Perc 0.2, Perc 0.3, Perc 0.4
-     , Perc 0.5, Perc 0.6
-     , Perc 0.7, Perc 0.75
-     , Perc 0.8, Perc 0.85, Perc 0.875
-     , Perc 0.9, Perc 0.925, Perc 0.95, Perc 0.97, Perc 0.98, Perc 0.99
-     , Perc 0.995, Perc 0.997, Perc 0.998, Perc 0.999
-     , Perc 0.9995, Perc 0.9997, Perc 0.9998, Perc 0.9999
-     ]
 
    checkCounts      = slCountChecks <$> slots
    maxChecks        = if length checkCounts == 0
@@ -414,7 +403,7 @@ toDistribLines :: Text -> Text -> Summary -> [Text]
 toDistribLines statsF distPropsF s@Summary{..} =
   distribLine
    <$> ZipList (pctSpec <$> dPercentiles sMissDistrib)
-   <*> ZipList (max 1 . ceiling . (* fromIntegral (dCount sMissDistrib))
+   <*> ZipList (max 1 . ceiling . (* fromIntegral (dSize sMissDistrib))
                     . (1.0 -) . pctFrac
                     <$> dPercentiles sMissDistrib)
    <*> ZipList (pctSample <$> dPercentiles sMissDistrib)
@@ -438,8 +427,8 @@ toDistribLines statsF distPropsF s@Summary{..} =
    <*> ZipList (pctSample <$> dPercentiles sSpanLensCPU85EBndDistrib)
    <*> ZipList (pctSample <$> dPercentiles sSpanLensCPU85RwdDistrib)
   & getZipList
-  & (<> [ mapSummary distPropsF s "size"    (fromIntegral . dCount)
-        , mapSummary distPropsF s "avg"     dAverage
+  & (<> [ mapSummary distPropsF s "size" (fromIntegral . dSize)
+        , mapSummary distPropsF s "mean" dMean
         ])
  where
    distribLine ::

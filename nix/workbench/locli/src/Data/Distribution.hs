@@ -1,41 +1,48 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wwarn #-}
 
 module Data.Distribution
   ( ToRealFrac(..)
   , Distribution(..)
   , computeDistribution
+  , computeDistributionStats
+  , mapToDistribution
   , zeroDistribution
   , PercSpec(..)
   , renderPercSpec
   , Percentile(..)
   , pctFrac
+  , stdPercentiles
   -- Aux
   , spans
   ) where
 
-import           Prelude (String, (!!), id)
-import           Cardano.Prelude
+import           Prelude (String, (!!), head, last, id)
+import           Cardano.Prelude hiding (head)
 
 import           Control.Arrow
 import           Data.Aeson (ToJSON(..))
-import qualified Data.Foldable as F
 import           Data.List (span)
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vec
+import qualified Statistics.Sample as Stat
 import           Text.Printf (PrintfArg, printf)
 
 data Distribution a b =
   Distribution
-  { dAverage      :: a
-  , dCount        :: Int
+  { dSize         :: Int
+  , dMean         :: a
   , dPercentiles  :: [Percentile a b]
   }
-  deriving (Generic, Show)
+  deriving (Functor, Generic, Show)
 
 instance (ToJSON a, ToJSON b) => ToJSON (Distribution a b)
 
@@ -48,14 +55,24 @@ renderPercSpec width = \case
 data Percentile a b =
   Percentile
   { pctSpec        :: !(PercSpec a)
-  , pctSampleIndex :: !Int
-  , pctSamplePrev  :: !Int
   , pctSample      :: !b
   }
-  deriving (Generic, Show)
+  deriving (Functor, Generic, Show)
 
 pctFrac :: Percentile a b -> a
 pctFrac = psFrac . pctSpec
+
+stdPercentiles :: [PercSpec Float]
+stdPercentiles =
+  [ Perc 0.01, Perc 0.05
+  , Perc 0.1, Perc 0.2, Perc 0.3, Perc 0.4
+  , Perc 0.5, Perc 0.6
+  , Perc 0.7, Perc 0.75
+  , Perc 0.8, Perc 0.85, Perc 0.875
+  , Perc 0.9, Perc 0.925, Perc 0.95, Perc 0.97, Perc 0.98, Perc 0.99
+  , Perc 0.995, Perc 0.997, Perc 0.998, Perc 0.999
+  , Perc 0.9995, Perc 0.9997, Perc 0.9998, Perc 0.9999
+  ]
 
 instance (ToJSON a) => ToJSON (PercSpec a)
 instance (ToJSON a, ToJSON b) => ToJSON (Percentile a b)
@@ -63,40 +80,63 @@ instance (ToJSON a, ToJSON b) => ToJSON (Percentile a b)
 zeroDistribution :: Num a => Distribution a b
 zeroDistribution =
   Distribution
-  { dAverage     = 0
-  , dCount       = 0
+  { dSize        = 0
+  , dMean        = 0
   , dPercentiles = mempty
   }
 
-countSeq :: Eq a => a -> [a] -> Int
-countSeq x = foldl' (\n e -> if e == x then n + 1 else n) 0
+-- | For a list of distributions, compute a distribution of averages and rel stddev
+-- (aka. coefficient of variance).
+computeDistributionStats ::
+    forall a v
+  . ( v ~ Double -- 'v' is fixed by Stat.stdDev
+    -- , RealFrac a, Real v, Fractional v, ToRealFrac v a
+    , Num a
+    )
+  => [Distribution a v]
+  -> Either String (Distribution a v, Distribution a v)
+computeDistributionStats xs = do
+  let distPcts    = dPercentiles <$> xs
+      pctDistVals = transpose distPcts
+  unless (all (pctLen ==) (length <$> distPcts)) $
+    Left ("Distributions with different percentile counts: " <> show (length <$> distPcts))
+  pure $ (join (***) (Distribution (length xs) 0)
+          :: ([Percentile a v], [Percentile a v]) -> (Distribution a v, Distribution a v))
+       $ unzip (pctsMeanCoV <$> pctDistVals)
+ where
+   pctLen = length . dPercentiles $ head xs
 
-computeDistribution :: (RealFrac a, Real v, ToRealFrac v a) => [PercSpec a] -> [v] -> Distribution a v
+   pctsMeanCoV :: [Percentile a v] -> (Percentile a v, Percentile a v)
+   pctsMeanCoV xs' = (join (***) (Percentile . pctSpec $ head xs'))
+     (mean, Stat.stdDev vec / mean)
+    where
+      vec = Vec.fromList $ pctSample <$> xs'
+      mean = Stat.mean vec
+
+mapToDistribution :: (Real v, ToRealFrac v a) => (b -> v) -> [PercSpec a] -> [b] -> Distribution a v
+mapToDistribution f pspecs xs = computeDistribution pspecs (f <$> xs)
+
+computeDistribution :: (Real v, ToRealFrac v a) => [PercSpec a] -> [v] -> Distribution a v
 computeDistribution percentiles (sort -> sorted) =
   Distribution
-  { dAverage     = toRealFrac (F.sum sorted) / fromIntegral (size `max` 1)
-  , dCount       = size
+  { dSize        = size
+  , dMean        = toRealFrac $ sorted !! indexAtFrac 0.5
   , dPercentiles =
-    (Percentile     (Perc 0)   size (countSeq mini sorted) mini:) .
-    (<> [Percentile (Perc 1.0) 1    (countSeq maxi sorted) maxi]) $
+    (Percentile     (Perc 0)   mini:) .
+    (<> [Percentile (Perc 1.0) maxi]) $
     percentiles <&>
       \spec ->
-        let (sampleIndex :: Int, sample) =
-              if size == 0
-              then (0, 0)
-              else floor (fromIntegral (size - 1) * psFrac spec) &
-                   (id &&& (sorted !!))
-        in Percentile
-             spec
-             (size - sampleIndex)
-             (countSeq sample sorted)
-             sample
+        let sample = if size == 0
+                     then 0
+                     else sorted !! (indexAtFrac (psFrac spec))
+        in Percentile spec sample
   }
-  where size = length sorted
-        (,) mini maxi =
-          if size == 0
-          then (0, 0)
-          else (sorted !! 0, sorted !! (size - 1))
+ where size = length sorted
+       indexAtFrac f = floor (fromIntegral (size - 1) * f)
+       (,) mini maxi =
+         if size == 0
+         then (0,           0)
+         else (head sorted, last sorted)
 
 class RealFrac b => ToRealFrac a b where
   toRealFrac :: a -> b
