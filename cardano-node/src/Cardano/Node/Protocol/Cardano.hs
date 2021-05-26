@@ -60,6 +60,7 @@ import           Cardano.Node.Protocol.Types
 mkSomeConsensusProtocolCardano
   :: NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
+  -> NodeAlonzoProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
@@ -77,6 +78,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                            NodeShelleyProtocolConfiguration {
                              npcShelleyGenesisFile,
                              npcShelleyGenesisFileHash
+                           }
+                           NodeAlonzoProtocolConfiguration {
+                             npcAlonzoGenesisFile,
+                             npcAlonzoGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
                              npcTestEnableDevelopmentHardForkEras,
@@ -107,8 +112,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     (alonzoGenesis, _alonzoGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationGenesisReadError $
-        Alonzo.readGenesis npcShelleyGenesisFile
-                           npcShelleyGenesisFileHash
+        Alonzo.readGenesis npcAlonzoGenesisFile
+                           npcAlonzoGenesisFileHash
 
     shelleyLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $

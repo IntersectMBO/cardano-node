@@ -42,11 +42,13 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig, ncProtocolFiles} =
 
       NodeProtocolConfigurationCardano byronConfig
                                        shelleyConfig
+                                       alonzoConfig
                                        hardForkConfig ->
         firstExceptT CardanoProtocolInstantiationError $
           mkSomeConsensusProtocolCardano
             byronConfig
             shelleyConfig
+            alonzoConfig
             hardForkConfig
             (Just ncProtocolFiles)
 

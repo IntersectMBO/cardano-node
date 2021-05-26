@@ -165,6 +165,7 @@ instance FromJSON PartialNodeConfiguration where
           CardanoProtocol ->
             Last . Just  <$> (NodeProtocolConfigurationCardano <$> parseByronProtocol v
                                                                <*> parseShelleyProtocol v
+                                                               <*> parseAlonzoProtocol v
                                                                <*> parseHardForkProtocol v)
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -240,6 +241,15 @@ instance FromJSON PartialNodeConfiguration where
         pure NodeShelleyProtocolConfiguration {
                npcShelleyGenesisFile
              , npcShelleyGenesisFileHash
+             }
+
+      parseAlonzoProtocol v = do
+        npcAlonzoGenesisFile     <- v .:  "AlonzoGenesisFile"
+        npcAlonzoGenesisFileHash <- v .:? "AlonzoGenesisHash"
+
+        pure NodeAlonzoProtocolConfiguration {
+               npcAlonzoGenesisFile
+             , npcAlonzoGenesisFileHash
              }
 
       parseHardForkProtocol v = do
