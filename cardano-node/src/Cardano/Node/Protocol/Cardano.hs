@@ -35,10 +35,9 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Cardano.Node.Protocol.Alonzo
-                   (AlonzoProtocolInstantiationError, readAlonzoGenesis)
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
+import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 
 import           Cardano.Node.Protocol.Types
 
@@ -106,15 +105,14 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         Shelley.readGenesis npcShelleyGenesisFile
                             npcShelleyGenesisFileHash
 
+    (alonzoGenesis, _alonzoGenesisHash) <-
+      firstExceptT CardanoProtocolInstantiationGenesisReadError $
+        Alonzo.readGenesis npcShelleyGenesisFile
+                           npcShelleyGenesisFileHash
+
     shelleyLeaderCredentials <-
       firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
         Shelley.readLeaderCredentials files
-
-    -- We choose to include the Alonzo relevant fields in the Shelley genesis
-    -- and therefore avoid creating a separate Alonzo genesis file
-    let GenesisFile shelleyGenFile = npcShelleyGenesisFile
-    alonzoGenesis <- firstExceptT CardanoProtocolInstantiationErrorAlonzo
-                   $ readAlonzoGenesis shelleyGenFile
 
     --TODO: all these protocol versions below are confusing and unnecessary.
     -- It could and should all be automated and these config entries eliminated.
@@ -264,7 +262,7 @@ data CardanoProtocolInstantiationError =
          Shelley.PraosLeaderCredentialsError
 
      | CardanoProtocolInstantiationErrorAlonzo
-         AlonzoProtocolInstantiationError
+         Alonzo.AlonzoProtocolInstantiationError
   deriving Show
 
 instance Error CardanoProtocolInstantiationError where
