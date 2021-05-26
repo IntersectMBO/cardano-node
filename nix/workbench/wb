@@ -43,6 +43,7 @@ usage_extra() {
     cat >&2 <<EOF
   Other OPs:
 
+    reanalyse    (rea)    Re-analyse a cluster run (synonym for analyse --re)
     call ARGS..           Call internal functions with arguments
     mode                  Report mode set by --set-mode
 
@@ -95,6 +96,8 @@ main() {
 
         ## Internals:
         #
+        reanalyse | rea | re )
+            analyse --reanalyse "$@";;
         backend )
             backend "$@";;
         call )

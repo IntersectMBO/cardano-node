@@ -133,7 +133,8 @@ let
     function workbench-prebuild-executables() {
       ${optionalString useCabalRun
         ''
-      git log -n1 --alternate-refs --pretty=format:"%Cblue%h %Cred%cr %Cgreen%D %Cblue%s%Creset"
+      git log -n1 --alternate-refs --pretty=format:"%Cred%cr %Cblue%h %Cgreen%D %Cblue%s%Creset" --color | sed "s/^/$(git diff --exit-code --quiet && echo ' ' || echo '[31mlocal changes + ')/"
+      echo
       echo -n "workbench:  prebuilding executables (because of useCabalRun):"
       for exe in cardano-cli cardano-node cardano-topology locli
       do echo -n " $exe"

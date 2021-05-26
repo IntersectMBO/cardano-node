@@ -152,7 +152,8 @@ EOF
         usage="USAGE: wb supervisor $op RUN-DIR"
         dir=${1:?$usage}
 
-        echo --compact-output --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
+        echo --compact-output --argjson mapp2n '[{}]';;# --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
+        #echo --compact-output --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
 
     lostream-fixup-jqexpr )
         usage="USAGE: wb supervisor $op"
