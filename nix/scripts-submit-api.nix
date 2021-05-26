@@ -27,4 +27,4 @@ let
   scripts = forEnvironments (environment: recurseIntoAttrs {
     submit-api = mkScript environment;
   });
-in removeAttrs scripts ["selfnode" "shelley_selfnode"]
+in scripts
