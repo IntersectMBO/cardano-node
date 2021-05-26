@@ -7,12 +7,16 @@ module Cardano.Node.Protocol.Shelley
 
     -- * Errors
   , ShelleyProtocolInstantiationError(..)
-  , renderShelleyProtocolInstantiationError
+  , GenesisReadError(..)
+  , GenesisValidationError(..)
+  , PraosLeaderCredentialsError(..)
 
     -- * Reusable parts
   , readGenesis
+  , readGenesisAny
   , readLeaderCredentials
   , genesisHashToPraosNonce
+  , validateGenesis
   ) where
 
 import           Cardano.Prelude
@@ -34,8 +38,7 @@ import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShe
                    ProtocolParamsShelleyBased (..), TPraosLeaderCredentials (..))
 import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto, TPraosCanBeLeader (..))
 
-import           Shelley.Spec.Ledger.Genesis (ValidationErr (..), describeValidationErr,
-                   validateGenesis)
+import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import           Shelley.Spec.Ledger.Keys (coerceKeyRole)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 
@@ -71,10 +74,12 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
                                   npcShelleyGenesisFileHash
                                 }
                           files = do
-    (genesis, genesisHash) <- readGenesis npcShelleyGenesisFile
+    (genesis, genesisHash) <- firstExceptT GenesisReadError $
+                              readGenesis npcShelleyGenesisFile
                                           npcShelleyGenesisFileHash
-    firstExceptT GenesisValidationFailure . hoistEither $ validateGenesis genesis
-    leaderCredentials <- readLeaderCredentials files
+    firstExceptT GenesisValidationError $ validateGenesis genesis
+    leaderCredentials <- firstExceptT PraosLeaderCredentialsError $
+                         readLeaderCredentials files
 
     return $ SomeConsensusProtocol Protocol.ShelleyBlockType $ Protocol.ProtocolInfoArgsShelley
       Consensus.ProtocolParamsShelleyBased {
@@ -93,10 +98,16 @@ genesisHashToPraosNonce (GenesisHash h) = Nonce (Crypto.castHash h)
 
 readGenesis :: GenesisFile
             -> Maybe GenesisHash
-            -> ExceptT ShelleyProtocolInstantiationError IO
+            -> ExceptT GenesisReadError IO
                        (ShelleyGenesis StandardShelley, GenesisHash)
-readGenesis (GenesisFile file) mbExpectedGenesisHash = do
-    content <- handleIOExceptT (GenesisReadError file) $
+readGenesis = readGenesisAny
+
+readGenesisAny :: FromJSON genesis
+               => GenesisFile
+               -> Maybe GenesisHash
+               -> ExceptT GenesisReadError IO (genesis, GenesisHash)
+readGenesisAny (GenesisFile file) mbExpectedGenesisHash = do
+    content <- handleIOExceptT (GenesisReadFileError file) $
                  BS.readFile file
     let genesisHash = GenesisHash (Crypto.hashWith id content)
     checkExpectedGenesisHash genesisHash
@@ -105,15 +116,21 @@ readGenesis (GenesisFile file) mbExpectedGenesisHash = do
     return (genesis, genesisHash)
   where
     checkExpectedGenesisHash :: GenesisHash
-                             -> ExceptT ShelleyProtocolInstantiationError IO ()
+                             -> ExceptT GenesisReadError IO ()
     checkExpectedGenesisHash actual =
       case mbExpectedGenesisHash of
         Just expected | actual /= expected
           -> throwError (GenesisHashMismatch actual expected)
         _ -> return ()
 
+validateGenesis :: ShelleyGenesis StandardShelley
+                -> ExceptT GenesisValidationError IO ()
+validateGenesis genesis =
+    firstExceptT GenesisValidationErrors . hoistEither $
+      Shelley.validateGenesis genesis
+
 readLeaderCredentials :: Maybe ProtocolFilepaths
-                      -> ExceptT ShelleyProtocolInstantiationError IO
+                      -> ExceptT PraosLeaderCredentialsError IO
                                  [TPraosLeaderCredentials StandardCrypto]
 readLeaderCredentials Nothing = return []
 readLeaderCredentials (Just pfp) =
@@ -124,7 +141,7 @@ readLeaderCredentials (Just pfp) =
 
 readLeaderCredentialsSingleton ::
      ProtocolFilepaths ->
-     ExceptT ShelleyProtocolInstantiationError IO
+     ExceptT PraosLeaderCredentialsError IO
              [TPraosLeaderCredentials StandardCrypto]
 -- It's OK to supply none of the files on the CLI
 readLeaderCredentialsSingleton
@@ -162,14 +179,14 @@ data ShelleyCredentials
 
 readLeaderCredentialsBulk ::
      ProtocolFilepaths
-  -> ExceptT ShelleyProtocolInstantiationError IO
+  -> ExceptT PraosLeaderCredentialsError IO
              [TPraosLeaderCredentials StandardCrypto]
 readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
   mapM parseShelleyCredentials =<< readBulkFile mfp
  where
    parseShelleyCredentials ::
         ShelleyCredentials
-     -> ExceptT ShelleyProtocolInstantiationError IO
+     -> ExceptT PraosLeaderCredentialsError IO
                 (TPraosLeaderCredentials StandardCrypto)
    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
      mkPraosLeaderCredentials
@@ -178,7 +195,7 @@ readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
        <*> parseEnvelope (AsSigningKey AsKesKey) scKes
 
    readBulkFile :: Maybe FilePath
-                -> ExceptT ShelleyProtocolInstantiationError IO
+                -> ExceptT PraosLeaderCredentialsError IO
                            [ShelleyCredentials]
    readBulkFile Nothing = pure []
    readBulkFile (Just fp) = do
@@ -220,7 +237,7 @@ parseEnvelope ::
      HasTextEnvelope a
   => AsType a
   -> (TextEnvelope, String)
-  -> ExceptT ShelleyProtocolInstantiationError IO a
+  -> ExceptT PraosLeaderCredentialsError IO a
 parseEnvelope as (te, loc) =
   firstExceptT (FileError . Api.FileError loc) . hoistEither $
     deserialiseFromTextEnvelope as te
@@ -231,11 +248,48 @@ parseEnvelope as (te, loc) =
 --
 
 data ShelleyProtocolInstantiationError =
-       GenesisReadError !FilePath !IOException
+       GenesisReadError GenesisReadError
+     | GenesisValidationError GenesisValidationError
+     | PraosLeaderCredentialsError PraosLeaderCredentialsError
+  deriving Show
+
+instance Error ShelleyProtocolInstantiationError where
+  displayError (GenesisReadError err) = displayError err
+  displayError (GenesisValidationError err) = displayError err
+  displayError (PraosLeaderCredentialsError err) = displayError err
+
+
+data GenesisReadError =
+       GenesisReadFileError !FilePath !IOException
      | GenesisHashMismatch !GenesisHash !GenesisHash -- actual, expected
      | GenesisDecodeError !FilePath !String
-     | GenesisValidationFailure ![ValidationErr]
-     | CredentialsReadError !FilePath !IOException
+  deriving Show
+
+instance Error GenesisReadError where
+  displayError (GenesisReadFileError fp err) =
+        "There was an error reading the genesis file: "
+     <> toS fp <> " Error: " <> show err
+
+  displayError (GenesisHashMismatch actual expected) =
+        "Wrong Shelley genesis file: the actual hash is " <> show actual
+     <> ", but the expected Shelley genesis hash given in the node "
+     <> "configuration file is " <> show expected
+
+  displayError (GenesisDecodeError fp err) =
+        "There was an error parsing the genesis file: "
+     <> toS fp <> " Error: " <> show err
+
+
+newtype GenesisValidationError = GenesisValidationErrors [Shelley.ValidationErr]
+  deriving Show
+
+instance Error GenesisValidationError where
+  displayError (GenesisValidationErrors vErrs) =
+    T.unpack (unlines (map Shelley.describeValidationErr vErrs))
+
+
+data PraosLeaderCredentialsError =
+       CredentialsReadError !FilePath !IOException
      | EnvelopeParseError !FilePath !String
      | FileError !(Api.FileError TextEnvelopeError)
 --TODO: pick a less generic constructor than FileError
@@ -243,41 +297,23 @@ data ShelleyProtocolInstantiationError =
      | OCertNotSpecified
      | VRFKeyNotSpecified
      | KESKeyNotSpecified
-     deriving Show
+  deriving Show
 
-
-renderShelleyProtocolInstantiationError :: ShelleyProtocolInstantiationError
-                                        -> Text
-renderShelleyProtocolInstantiationError pie =
-  case pie of
-    GenesisReadError fp err ->
-        "There was an error reading the genesis file: "
-     <> toS fp <> " Error: " <> T.pack (show err)
-
-    GenesisHashMismatch actual expected ->
-        "Wrong Shelley genesis file: the actual hash is " <> show actual
-     <> ", but the expected Shelley genesis hash given in the node "
-     <> "configuration file is " <> show expected
-
-    GenesisDecodeError fp err ->
-        "There was an error parsing the genesis file: "
-     <> toS fp <> " Error: " <> T.pack (show err)
-
-    GenesisValidationFailure vErrs -> T.unlines $ map describeValidationErr vErrs
-
-    CredentialsReadError fp err ->
+instance Error PraosLeaderCredentialsError where
+  displayError (CredentialsReadError fp err) =
         "There was an error reading a credentials file: "
-     <> toS fp <> " Error: " <> T.pack (show err)
+     <> toS fp <> " Error: " <> show err
 
-    EnvelopeParseError fp err ->
+  displayError (EnvelopeParseError fp err) =
         "There was an error parsing a credentials envelope: "
-     <> toS fp <> " Error: " <> T.pack (show err)
+     <> toS fp <> " Error: " <> show err
 
-    FileError fileErr -> T.pack $ displayError fileErr
+  displayError (FileError fileErr) = displayError fileErr
 
-    OCertNotSpecified  -> missingFlagMessage "shelley-operational-certificate"
-    VRFKeyNotSpecified -> missingFlagMessage "shelley-vrf-key"
-    KESKeyNotSpecified -> missingFlagMessage "shelley-kes-key"
-  where
-    missingFlagMessage flag =
-      "To create blocks, the --" <> flag <> " must also be specified"
+  displayError OCertNotSpecified  = missingFlagMessage "shelley-operational-certificate"
+  displayError VRFKeyNotSpecified = missingFlagMessage "shelley-vrf-key"
+  displayError KESKeyNotSpecified = missingFlagMessage "shelley-kes-key"
+
+missingFlagMessage :: String -> String
+missingFlagMessage flag =
+  "To create blocks, the --" <> flag <> " must also be specified"

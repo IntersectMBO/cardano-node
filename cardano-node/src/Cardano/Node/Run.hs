@@ -64,15 +64,16 @@ import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTra
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
 
+import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
+
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Protocol (mkConsensusProtocol, renderProtocolInstantiationError)
+import           Cardano.Node.Protocol (mkConsensusProtocol)
 import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Peer
@@ -106,7 +107,7 @@ runNode cmdPc = do
 
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
-        Left err -> putTextLn (renderProtocolInstantiationError err) >> exitFailure
+        Left err -> putStrLn (displayError err) >> exitFailure
         Right p -> pure p
 
     eLoggingLayer <- runExceptT $ createLoggingLayer

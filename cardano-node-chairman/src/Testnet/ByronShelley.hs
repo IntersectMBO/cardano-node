@@ -370,8 +370,12 @@ testnet testnetOptions H.Conf {..} = do
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "shelley"
 
-  -- Generated genesis.json
+  -- Generated shelley/genesis.json
   H.cat $ tempAbsPath </> "shelley/genesis.json"
+
+  -- Generated alonzo/genesis.json
+  --TODO: rationalise the naming convention on these genesis json files.
+  H.cat $ tempAbsPath </> "shelley/genesis.alonzo.json"
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation

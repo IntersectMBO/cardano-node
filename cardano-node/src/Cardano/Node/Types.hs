@@ -43,6 +43,7 @@ module Cardano.Node.Types
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
+  , NodeAlonzoProtocolConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , protocolName
   , renderVRFPrivateKeyFilePermissionError
@@ -59,11 +60,11 @@ import qualified Data.Text.Encoding as Text
 import qualified Network.DNS as DNS (Domain)
 import           Network.Socket (PortNumber, SockAddr (..))
 
+import           Cardano.Api
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Protocol.Types (Protocol (..))
-import           Cardano.Slotting.Slot (EpochNo)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAddress (..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
@@ -261,6 +262,7 @@ data NodeProtocolConfiguration =
      | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
      | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
                                         NodeShelleyProtocolConfiguration
+                                        NodeAlonzoProtocolConfiguration
                                         NodeHardForkProtocolConfiguration
   deriving (Eq, Show)
 
@@ -268,6 +270,13 @@ data NodeShelleyProtocolConfiguration =
      NodeShelleyProtocolConfiguration {
        npcShelleyGenesisFile     :: !GenesisFile
      , npcShelleyGenesisFileHash :: !(Maybe GenesisHash)
+     }
+  deriving (Eq, Show)
+
+data NodeAlonzoProtocolConfiguration =
+     NodeAlonzoProtocolConfiguration {
+       npcAlonzoGenesisFile     :: !GenesisFile
+     , npcAlonzoGenesisFileHash :: !(Maybe GenesisHash)
      }
   deriving (Eq, Show)
 
@@ -408,9 +417,10 @@ instance AdjustFilePaths NodeProtocolConfiguration where
   adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
     NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pch) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pch) =
     NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                      (adjustFilePaths f pcs)
+                                     (adjustFilePaths f pca)
                                      pch
 
 instance AdjustFilePaths NodeByronProtocolConfiguration where
@@ -424,6 +434,12 @@ instance AdjustFilePaths NodeShelleyProtocolConfiguration where
                         npcShelleyGenesisFile
                       } =
     x { npcShelleyGenesisFile = adjustFilePaths f npcShelleyGenesisFile }
+
+instance AdjustFilePaths NodeAlonzoProtocolConfiguration where
+  adjustFilePaths f x@NodeAlonzoProtocolConfiguration {
+                        npcAlonzoGenesisFile
+                      } =
+    x { npcAlonzoGenesisFile = adjustFilePaths f npcAlonzoGenesisFile }
 
 instance AdjustFilePaths SocketPath where
   adjustFilePaths f (SocketPath p) = SocketPath (f p)

@@ -11,14 +11,12 @@ module Cardano.Node.Protocol.Cardano
 
     -- * Errors
   , CardanoProtocolInstantiationError(..)
-  , renderCardanoProtocolInstantiationError
   ) where
 
 import           Prelude
 
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import qualified Data.Text as T
 
 import qualified Cardano.Chain.Update as Byron
 
@@ -29,6 +27,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
 import           Ouroboros.Consensus.Cardano.Condense ()
 
+import           Cardano.Api
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Protocol.Types
 import           Cardano.Node.Types
@@ -36,10 +35,9 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Cardano.Node.Protocol.Alonzo (AlonzoProtocolInstantiationError, readAlonzoGenesis,
-                   renderAlonzoProtocolInstantiationError)
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
+import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 
 import           Cardano.Node.Protocol.Types
 
@@ -62,6 +60,7 @@ import           Cardano.Node.Protocol.Types
 mkSomeConsensusProtocolCardano
   :: NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
+  -> NodeAlonzoProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
@@ -79,6 +78,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                            NodeShelleyProtocolConfiguration {
                              npcShelleyGenesisFile,
                              npcShelleyGenesisFileHash
+                           }
+                           NodeAlonzoProtocolConfiguration {
+                             npcAlonzoGenesisFile,
+                             npcAlonzoGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
                              npcTestEnableDevelopmentHardForkEras,
@@ -103,19 +106,18 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         Byron.readLeaderCredentials byronGenesis files
 
     (shelleyGenesis, shelleyGenesisHash) <-
-      firstExceptT CardanoProtocolInstantiationErrorShelley $
+      firstExceptT CardanoProtocolInstantiationGenesisReadError $
         Shelley.readGenesis npcShelleyGenesisFile
                             npcShelleyGenesisFileHash
 
-    shelleyLeaderCredentials <-
-      firstExceptT CardanoProtocolInstantiationErrorShelley $
-        Shelley.readLeaderCredentials files
+    (alonzoGenesis, _alonzoGenesisHash) <-
+      firstExceptT CardanoProtocolInstantiationGenesisReadError $
+        Alonzo.readGenesis npcAlonzoGenesisFile
+                           npcAlonzoGenesisFileHash
 
-    -- We choose to include the Alonzo relevant fields in the Shelley genesis
-    -- and therefore avoid creating a separate Alonzo genesis file
-    let GenesisFile shelleyGenFile = npcShelleyGenesisFile
-    alonzoGenesis <- firstExceptT CardanoProtocolInstantiationErrorAlonzo
-                   $ readAlonzoGenesis shelleyGenFile
+    shelleyLeaderCredentials <-
+      firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
+        Shelley.readLeaderCredentials files
 
     --TODO: all these protocol versions below are confusing and unnecessary.
     -- It could and should all be automated and these config entries eliminated.
@@ -147,10 +149,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
             byronLeaderCredentials
         }
         Consensus.ProtocolParamsShelleyBased {
-          shelleyBasedGenesis = shelleyGenesis,
-          shelleyBasedInitialNonce =
-            Shelley.genesisHashToPraosNonce shelleyGenesisHash,
-            shelleyBasedLeaderCredentials = shelleyLeaderCredentials
+          shelleyBasedGenesis           = shelleyGenesis,
+          shelleyBasedInitialNonce      = Shelley.genesisHashToPraosNonce
+                                            shelleyGenesisHash,
+          shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
         Consensus.ProtocolParamsShelley {
           -- This is /not/ the Shelley protocol version. It is the protocol
@@ -258,22 +260,22 @@ data CardanoProtocolInstantiationError =
        CardanoProtocolInstantiationErrorByron
          Byron.ByronProtocolInstantiationError
 
-     | CardanoProtocolInstantiationErrorShelley
-         Shelley.ShelleyProtocolInstantiationError
+     | CardanoProtocolInstantiationGenesisReadError
+         Shelley.GenesisReadError
+
+     | CardanoProtocolInstantiationPraosLeaderCredentialsError
+         Shelley.PraosLeaderCredentialsError
+
      | CardanoProtocolInstantiationErrorAlonzo
-         AlonzoProtocolInstantiationError
+         Alonzo.AlonzoProtocolInstantiationError
   deriving Show
 
-renderCardanoProtocolInstantiationError :: CardanoProtocolInstantiationError
-                                        -> T.Text
-renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationErrorByron err) =
-    Byron.renderByronProtocolInstantiationError err
-
-renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationErrorShelley err) =
-    Shelley.renderShelleyProtocolInstantiationError err
-
-renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationErrorAlonzo err) =
-    renderAlonzoProtocolInstantiationError err
+instance Error CardanoProtocolInstantiationError where
+  displayError (CardanoProtocolInstantiationErrorByron err) =
+    displayError err
+  displayError (CardanoProtocolInstantiationGenesisReadError err) =
+    displayError err
+  displayError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
+    displayError err
+  displayError (CardanoProtocolInstantiationErrorAlonzo err) =
+    displayError err

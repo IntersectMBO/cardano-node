@@ -4,12 +4,13 @@ module Cardano.Node.Protocol
   ( mkConsensusProtocol
   , SomeConsensusProtocol(..)
   , ProtocolInstantiationError(..)
-  , renderProtocolInstantiationError
   ) where
 
 import           Cardano.Prelude
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
+
+import           Cardano.Api
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
@@ -19,6 +20,8 @@ import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Shelley
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+
+
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
 --
@@ -39,11 +42,13 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig, ncProtocolFiles} =
 
       NodeProtocolConfigurationCardano byronConfig
                                        shelleyConfig
+                                       alonzoConfig
                                        hardForkConfig ->
         firstExceptT CardanoProtocolInstantiationError $
           mkSomeConsensusProtocolCardano
             byronConfig
             shelleyConfig
+            alonzoConfig
             hardForkConfig
             (Just ncProtocolFiles)
 
@@ -58,14 +63,8 @@ data ProtocolInstantiationError =
   deriving Show
 
 
-renderProtocolInstantiationError :: ProtocolInstantiationError -> Text
-renderProtocolInstantiationError pie =
-  case pie of
-    ByronProtocolInstantiationError bpie ->
-      renderByronProtocolInstantiationError bpie
+instance Error ProtocolInstantiationError where
+  displayError (ByronProtocolInstantiationError   err) = displayError err
+  displayError (ShelleyProtocolInstantiationError err) = displayError err
+  displayError (CardanoProtocolInstantiationError err) = displayError err
 
-    ShelleyProtocolInstantiationError spie ->
-      renderShelleyProtocolInstantiationError spie
-
-    CardanoProtocolInstantiationError cpie ->
-      renderCardanoProtocolInstantiationError cpie
