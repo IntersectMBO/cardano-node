@@ -20,7 +20,6 @@ import qualified Data.Aeson as AE
 import           Data.Function (on)
 import           Data.Either (partitionEithers, isLeft, isRight)
 import           Data.Maybe (catMaybes, mapMaybe)
-import qualified Data.Sequence as Seq
 import           Data.Tuple (swap)
 import           Data.Vector (Vector)
 import qualified Data.Map.Strict as Map
@@ -151,6 +150,25 @@ data BlockEvents
 -- | Ordered list of all block events of a chain.
 type ChainBlockEvents
   =  [BlockEvents]
+
+mapChainToBlockObservationCDF ::
+     (BlockObservation -> Maybe UTCTime)
+  -> ChainBlockEvents
+  -> [PercSpec Float]
+  -> Distribution Float NominalDiffTime
+mapChainToBlockObservationCDF proj cbe percs =
+  undefined
+ where
+   allDistributions :: [(BlockEvents, Distribution Float NominalDiffTime)]
+   allDistributions = fmap (fmap $ computeDistribution percs) allObservations
+
+   allObservations :: [(BlockEvents, [NominalDiffTime])]
+   allObservations = mapMaybe blockObservations cbe
+
+   blockObservations :: BlockEvents -> Maybe (BlockEvents, [NominalDiffTime])
+   blockObservations be =
+     (be,)
+     . fmap (`Time.diffUTCTime` beSlotStart be) <$> mapM proj (beObservations be)
 
 blockProp :: ChainInfo -> [(JsonLogfile, [LogObject])] -> IO ChainBlockEvents
 blockProp ci xs = do

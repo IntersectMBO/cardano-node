@@ -22,7 +22,6 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vec
@@ -152,7 +151,7 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
     let slotStats = cleanupSlotStats noisySlotStats
 
     -- 3. Derive the summary
-    let drvVectors0, _drvVectors1 :: Seq DerivedSlot
+    let drvVectors0, _drvVectors1 :: [DerivedSlot]
         (,) drvVectors0 _drvVectors1 = computeDerivedVectors slotStats
         summary :: Summary
         summary = slotStatsSummary chainInfo slotStats
@@ -170,7 +169,7 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
        (renderDerivedSlots drvVectors0)
     forM_ mtofHistogram
       (renderHistogram "CPU usage spans over 85%" "Span length"
-        (toList $ Seq.sort $ sSpanLensCPU85 summary))
+        (toList $ sort $ sSpanLensCPU85 summary))
 
     flip (maybe $ LBS.putStrLn timelineOutput) mtofAnalysis $
       \case
@@ -188,7 +187,7 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
              Hist.defOpts hist
 
    renderPrettySummary ::
-        Seq SlotStats -> Summary -> [JsonLogfile] -> TextOutputFile -> IO ()
+        [SlotStats] -> Summary -> [JsonLogfile] -> TextOutputFile -> IO ()
    renderPrettySummary xs s srcs o =
      withFile (unTextOutputFile o) WriteMode $ \hnd -> do
        hPutStrLn hnd . Text.pack $
@@ -204,7 +203,7 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
            renderChainInfoExport chainInfo
            <>
            renderRunScalars rs
-   renderExportTimeline :: Seq SlotStats -> CsvOutputFile -> IO ()
+   renderExportTimeline :: [SlotStats] -> CsvOutputFile -> IO ()
    renderExportTimeline xs (CsvOutputFile o) =
      withFile o WriteMode $
        renderSlotTimeline slotHeadE slotFormatE True xs
@@ -215,7 +214,7 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
        forM_ (toDistribLines statFmt propFmt summary) $
          hPutStrLn hnd
 
-   renderDerivedSlots :: Seq DerivedSlot -> CsvOutputFile -> IO ()
+   renderDerivedSlots :: [DerivedSlot] -> CsvOutputFile -> IO ()
    renderDerivedSlots slots (CsvOutputFile o) = do
      withFile o WriteMode $ \hnd -> do
        hPutStrLn hnd derivedSlotsHeader
@@ -230,10 +229,10 @@ dumpLOStream objs o =
 data Summary
   = Summary
     { sMaxChecks         :: !Word64
-    , sSlotMisses        :: !(Seq Word64)
-    , sSpanLensCPU85     :: !(Seq Int)
-    , sSpanLensCPU85EBnd :: !(Seq Int)
-    , sSpanLensCPU85Rwd  :: !(Seq Int)
+    , sSlotMisses        :: ![Word64]
+    , sSpanLensCPU85     :: ![Int]
+    , sSpanLensCPU85EBnd :: ![Int]
+    , sSpanLensCPU85Rwd  :: ![Int]
     -- distributions
     , sMissDistrib       :: !(Distribution Float Float)
     , sLeadsDistrib      :: !(Distribution Float Word64)
@@ -271,7 +270,7 @@ instance ToJSON Summary where
         , "xs" .= toJSON sSpanLensCPU85]
     , Aeson.Object $ HashMap.fromList
         [ "kind" .= String "spanLensCPU85Sorted"
-        , "xs" .= toJSON (Seq.sort sSpanLensCPU85)]
+        , "xs" .= toJSON (sort sSpanLensCPU85)]
     , extendObject "kind" "spancheck" $ toJSON sSpanCheckDistrib
     , extendObject "kind" "spanlead"  $ toJSON sSpanLeadDistrib
     , extendObject "kind" "cpu"       $ toJSON (rCentiCpu sResourceDistribs)
@@ -292,7 +291,7 @@ instance ToJSON Summary where
                                         toJSON sSpanLensCPU85RwdDistrib
     ]
 
-slotStatsSummary :: ChainInfo -> Seq SlotStats -> Summary
+slotStatsSummary :: ChainInfo -> [SlotStats] -> Summary
 slotStatsSummary CInfo{} slots =
   Summary
   { sMaxChecks        = maxChecks
@@ -322,9 +321,9 @@ slotStatsSummary CInfo{} slots =
   , sSpanLensCPU85RwdDistrib  = computeDistribution pctiles sSpanLensCPU85Rwd
   }
  where
-   sSpanLensCPU85EBnd = Seq.fromList $ Vec.length <$>
+   sSpanLensCPU85EBnd = Vec.length <$>
                         filter (spanContainsEpochSlot 3) spansCPU85
-   sSpanLensCPU85Rwd  = Seq.fromList $ Vec.length <$>
+   sSpanLensCPU85Rwd  = Vec.length <$>
                         filter (spanContainsEpochSlot 803) spansCPU85
    pctiles = sortBy (compare `on` psFrac)
      [ Perc 0.01, Perc 0.05
@@ -346,7 +345,7 @@ slotStatsSummary CInfo{} slots =
    spansCPU85       = spans
                         ((/= Just False) . fmap (>=85) . rCentiCpu . slResources)
                         (toList slots)
-   spanLensCPU85    = Seq.fromList $ spanLen <$> spansCPU85
+   spanLensCPU85    = spanLen <$> spansCPU85
    spanContainsEpochSlot :: Word64 -> Vector SlotStats -> Bool
    spanContainsEpochSlot s =
      uncurry (&&)

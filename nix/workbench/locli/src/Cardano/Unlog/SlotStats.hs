@@ -10,8 +10,8 @@ import qualified Prelude as P
 import           Cardano.Prelude
 
 import           Data.Aeson
-import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
+import           Data.List (dropWhileEnd)
 import           Data.List.Split (splitOn)
 
 import           Data.Time.Clock (UTCTime, NominalDiffTime)
@@ -118,7 +118,7 @@ slotLine exportMode leadershipF SlotStats{..} = Text.pack $
          Just x  -> Text.pack $ printf ("%0."<>show width<>"f") x
          Nothing -> mconcat (replicate width "-")
 
-renderSlotTimeline :: Text -> Text -> Bool -> Seq SlotStats -> Handle -> IO ()
+renderSlotTimeline :: Text -> Text -> Bool -> [SlotStats] -> Handle -> IO ()
 renderSlotTimeline leadHead fmt exportMode slotStats hnd = do
   forM_ (zip (toList slotStats) [(0 :: Int)..]) $ \(l, i) -> do
     when (i `mod` 33 == 0 && (i == 0 || not exportMode)) $
@@ -132,11 +132,11 @@ renderSlotTimeline leadHead fmt exportMode slotStats hnd = do
 --   they start getting non-zero chain density reported.
 --
 --   On the trailing part, we drop everything since the last leadership check.
-cleanupSlotStats :: Seq SlotStats -> Seq SlotStats
+cleanupSlotStats :: [SlotStats] -> [SlotStats]
 cleanupSlotStats =
-  -- Seq.dropWhileL ((== 0) . slDensity) .
-  Seq.dropWhileL ((/= 500) . slSlot) .
-  Seq.dropWhileR ((== 0)   . slCountChecks)
+  -- dropWhile ((== 0) . slDensity) .
+  dropWhile    ((/= 500) . slSlot) .
+  dropWhileEnd ((== 0)   . slCountChecks)
 
 zeroSlotStats :: SlotStats
 zeroSlotStats =

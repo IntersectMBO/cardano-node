@@ -11,7 +11,6 @@ import           Prelude (String, error)
 import           Cardano.Prelude
 
 import           Control.Arrow ((&&&))
-import qualified Data.Sequence as Seq
 import           Data.Vector (Vector)
 import qualified Data.Map.Strict as Map
 
@@ -48,9 +47,9 @@ data RunScalars
   , rsThreadwiseTps :: Maybe (Vector Float)
   }
 
-timelineFromLogObjects :: ChainInfo -> [LogObject] -> (RunScalars, Seq SlotStats)
+timelineFromLogObjects :: ChainInfo -> [LogObject] -> (RunScalars, [SlotStats])
 timelineFromLogObjects ci =
-  (aRunScalars &&& Seq.reverse . Seq.fromList . aSlotStats)
+  (aRunScalars &&& reverse . aSlotStats)
   . foldl (timelineStep ci) zeroTimelineAccum
  where
    zeroTimelineAccum :: TimelineAccum
@@ -256,19 +255,16 @@ renderDerivedSlot DerivedSlot{..} =
   [ show (unSlotNo dsSlot), ",", show dsBlockless
   ]
 
-computeDerivedVectors :: Seq SlotStats -> (Seq DerivedSlot, Seq DerivedSlot)
+computeDerivedVectors :: [SlotStats] -> ([DerivedSlot], [DerivedSlot])
 computeDerivedVectors ss =
-  (\(_,_,d0,d1) -> ( Seq.fromList d0
-                   , Seq.fromList d1
-                   )) $
-  Seq.foldrWithIndex step (0, 0, [], []) ss
+  (\(_,_,d0,d1) -> (d0, d1)) $
+  foldr step (0, 0, [], []) ss
  where
    step ::
-        Int
-     -> SlotStats
+        SlotStats
      -> (Word64, Word64, [DerivedSlot], [DerivedSlot])
      -> (Word64, Word64, [DerivedSlot], [DerivedSlot])
-   step _ SlotStats{..} (lastBlockless, spanBLSC, accD0, accD1) =
+   step SlotStats{..} (lastBlockless, spanBLSC, accD0, accD1) =
      if lastBlockless < slBlockless
      then ( slBlockless
           , slBlockless
