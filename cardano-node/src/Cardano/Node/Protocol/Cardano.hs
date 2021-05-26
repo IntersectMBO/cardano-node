@@ -29,6 +29,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
 import           Ouroboros.Consensus.Cardano.Condense ()
 
+import           Cardano.Api
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Protocol.Types
 import           Cardano.Node.Types
@@ -103,12 +104,12 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         Byron.readLeaderCredentials byronGenesis files
 
     (shelleyGenesis, shelleyGenesisHash) <-
-      firstExceptT CardanoProtocolInstantiationErrorShelley $
+      firstExceptT CardanoProtocolInstantiationGenesisReadError $
         Shelley.readGenesis npcShelleyGenesisFile
                             npcShelleyGenesisFileHash
 
     shelleyLeaderCredentials <-
-      firstExceptT CardanoProtocolInstantiationErrorShelley $
+      firstExceptT CardanoProtocolInstantiationPraosLeaderCredentialsError $
         Shelley.readLeaderCredentials files
 
     -- We choose to include the Alonzo relevant fields in the Shelley genesis
@@ -147,10 +148,10 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
             byronLeaderCredentials
         }
         Consensus.ProtocolParamsShelleyBased {
-          shelleyBasedGenesis = shelleyGenesis,
-          shelleyBasedInitialNonce =
-            Shelley.genesisHashToPraosNonce shelleyGenesisHash,
-            shelleyBasedLeaderCredentials = shelleyLeaderCredentials
+          shelleyBasedGenesis           = shelleyGenesis,
+          shelleyBasedInitialNonce      = Shelley.genesisHashToPraosNonce
+                                            shelleyGenesisHash,
+          shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
         Consensus.ProtocolParamsShelley {
           -- This is /not/ the Shelley protocol version. It is the protocol
@@ -258,8 +259,12 @@ data CardanoProtocolInstantiationError =
        CardanoProtocolInstantiationErrorByron
          Byron.ByronProtocolInstantiationError
 
-     | CardanoProtocolInstantiationErrorShelley
-         Shelley.ShelleyProtocolInstantiationError
+     | CardanoProtocolInstantiationGenesisReadError
+         Shelley.GenesisReadError
+
+     | CardanoProtocolInstantiationPraosLeaderCredentialsError
+         Shelley.PraosLeaderCredentialsError
+
      | CardanoProtocolInstantiationErrorAlonzo
          AlonzoProtocolInstantiationError
   deriving Show
@@ -271,8 +276,12 @@ renderCardanoProtocolInstantiationError
     Byron.renderByronProtocolInstantiationError err
 
 renderCardanoProtocolInstantiationError
-  (CardanoProtocolInstantiationErrorShelley err) =
-    Shelley.renderShelleyProtocolInstantiationError err
+  (CardanoProtocolInstantiationGenesisReadError err) =
+    T.pack (displayError err)
+
+renderCardanoProtocolInstantiationError
+  (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
+    T.pack (displayError err)
 
 renderCardanoProtocolInstantiationError
   (CardanoProtocolInstantiationErrorAlonzo err) =

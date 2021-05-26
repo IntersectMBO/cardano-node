@@ -8,8 +8,11 @@ module Cardano.Node.Protocol
   ) where
 
 import           Cardano.Prelude
+import qualified Data.Text as T
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
+
+import           Cardano.Api
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
@@ -19,6 +22,8 @@ import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Shelley
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+
+
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
 --
@@ -65,7 +70,7 @@ renderProtocolInstantiationError pie =
       renderByronProtocolInstantiationError bpie
 
     ShelleyProtocolInstantiationError spie ->
-      renderShelleyProtocolInstantiationError spie
+      T.pack (displayError spie)
 
     CardanoProtocolInstantiationError cpie ->
       renderCardanoProtocolInstantiationError cpie
