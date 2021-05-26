@@ -18,7 +18,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import           System.IO.Error (isDoesNotExistError)
 
-import qualified Cardano.Ledger.Alonzo.Translation as Alonzo
+import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 
 
 import           Cardano.Node.Orphans ()

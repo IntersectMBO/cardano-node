@@ -33,7 +33,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Alonzo.Translation as Alonzo
+import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
@@ -351,7 +351,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
     collateralPercentage <- o .:  "collateralPercentage"
     maxCollateralInputs  <- o .:  "maxCollateralInputs"
     case cModels of
-      Nothing -> case Plutus.defaultCostModelParams of
+      Nothing -> case Plutus.defaultCekCostModelParams of
         Just m -> return Alonzo.AlonzoGenesis
           { Alonzo.adaPerUTxOWord
           , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
@@ -364,27 +364,27 @@ instance FromJSON Alonzo.AlonzoGenesis where
           }
         Nothing -> fail "Failed to extract the cost model params from Plutus.defaultCostModel"
       Just costmdls -> return Alonzo.AlonzoGenesis
-        { adaPerUTxOWord
-        , costmdls
-        , prices
-        , maxTxExUnits
-        , maxBlockExUnits
-        , maxValSize
-        , collateralPercentage
-        , maxCollateralInputs
+        { Alonzo.adaPerUTxOWord
+        , Alonzo.costmdls
+        , Alonzo.prices
+        , Alonzo.maxTxExUnits
+        , Alonzo.maxBlockExUnits
+        , Alonzo.maxValSize
+        , Alonzo.collateralPercentage
+        , Alonzo.maxCollateralInputs
         }
 
 -- We don't render the cost model so that we can
 -- render it later in 'AlonzoGenWrapper' as a filepath
 -- and keep the cost model (which is chunky) as a separate file.
-instance ToJSON AlonzoGenesis where
+instance ToJSON Alonzo.AlonzoGenesis where
   toJSON v = object
-      [ "adaPerUTxOWord" .= adaPerUTxOWord v
-      , "costModels" .= costmdls v
-      , "executionPrices" .= prices v
-      , "maxTxExUnits" .= maxTxExUnits v
-      , "maxBlockExUnits" .= maxBlockExUnits v
-      , "maxValueSize" .= maxValSize v
-      , "collateralPercentage" .= collateralPercentage v
-      , "maxCollateralInputs" .= maxCollateralInputs v
+      [ "adaPerUTxOWord" .= Alonzo.adaPerUTxOWord v
+      , "costModels" .= Alonzo.costmdls v
+      , "executionPrices" .= Alonzo.prices v
+      , "maxTxExUnits" .= Alonzo.maxTxExUnits v
+      , "maxBlockExUnits" .= Alonzo.maxBlockExUnits v
+      , "maxValueSize" .= Alonzo.maxValSize v
+      , "collateralPercentage" .= Alonzo.collateralPercentage v
+      , "maxCollateralInputs" .= Alonzo.maxCollateralInputs v
       ]
