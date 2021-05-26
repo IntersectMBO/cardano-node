@@ -28,13 +28,46 @@ let
           (era: epoch:
             { "Test${era}HardForkAtEpoch" = epoch;
             })
-          cfg.forceHardForks));
+          cfg.forceHardForks))
+      // (optionalAttrs cfg.useNewTopology {
+        EnableP2P = true;
+        TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+        TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+        TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+        TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+      });
+    nodeConfigFile = toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
     realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml"
       else if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
-      else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
-    topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON {
-      Producers = cfg.producers ++ (cfg.instanceProducers i);
-    });
+      else nodeConfigFile;
+    newTopology = {
+      LocalRoots = {
+        groups = map (g: {
+          localRoots = {
+            inherit (g) addrs;
+            advertise = g.advertise or false;
+          };
+          valency = g.valency or (length g.addrs);
+        }) (cfg.producers ++ (cfg.instanceProducers i));
+      };
+      PublicRoots = map (g: {
+        publicRoots = {
+          inherit (g) addrs;
+          advertise = g.advertise or false;
+        };
+      }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
+    } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
+      useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
+    };
+    oldTopology = {
+      Producers = concatMap (g: map (a: a // { valency = a.valency or 1; }) g.addrs) (
+        cfg.producers ++ (cfg.instanceProducers i) ++ cfg.publicProducers ++ (cfg.instancePublicProducers i)
+      );
+    };
+    topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON (
+      if (cfg.useNewTopology) then newTopology
+      else oldTopology
+    ));
     consensusParams = {
       RealPBFT = [
         "${lib.optionalString (cfg.signingKey != null)
@@ -83,18 +116,18 @@ let
         ${lib.optionalString (cfg.environment == "selfnode") ''
           echo "Wiping all data in ${cfg.stateDir}"
           rm -rf ${cfg.stateDir}/*
-          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
+          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${nodeConfigFile})
           START_TIME=$(date +%s --date="30 seconds")
           ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime|tonumber}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
-          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
+          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${nodeConfigFile} > ${realNodeConfigFile}
         ''}
         ${lib.optionalString (cfg.environment == "shelley_selfnode") ''
           echo "Wiping all data in ${cfg.stateDir}"
           rm -rf ${cfg.stateDir}/*
-          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${cfg.nodeConfigFile})
+          GENESIS_FILE=$(${pkgs.jq}/bin/jq -r .GenesisFile < ${nodeConfigFile})
           START_TIME=$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="30 seconds")
           ${pkgs.jq}/bin/jq -r --arg startTime "''${START_TIME}" '. + {startTime: $startTime}' < $GENESIS_FILE > ${cfg.stateDir}/genesis.json
-          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${cfg.nodeConfigFile} > ${realNodeConfigFile}
+          ${pkgs.jq}/bin/jq -r --arg GenesisFile genesis.json '. + {GenesisFile: $GenesisFile}' < ${nodeConfigFile} > ${realNodeConfigFile}
         ''}
         ${lib.optionalString (i > 0) ''
         # If exist copy state from existing instance instead of syncing from scratch:
@@ -357,14 +390,36 @@ in {
         '';
       };
 
-      producers = mkOption {
+      publicProducers = mkOption {
+        type = types.listOf types.attrs;
         default = [{
-          addr = envConfig.relaysNew;
-          port = envConfig.edgePort;
+          addrs = [{
+            addr = envConfig.relaysNew;
+            port = envConfig.edgePort;
+          }];
+          advertise = false;
+        }];
+        description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot'';
+      };
+
+      instancePublicProducers = mkOption {
+        # type = types.functionTo (types.listOf types.attrs);
+        default = _: [];
+        description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot and specific to a given instance (when multiple instances are used).'';
+      };
+
+      producers = mkOption {
+        type = types.listOf types.attrs;
+        default = [];
+        example = [{
+          addrs = [{
+            addr = "127.0.0.1";
+            port = 3001;
+          }];
+          advertise = false;
           valency = 1;
         }];
-        type = types.listOf types.attrs;
-        description = ''Static routes to peers.'';
+        description = ''Static routes to local peers.'';
       };
 
       instanceProducers = mkOption {
@@ -372,7 +427,26 @@ in {
         # type = types.functionTo (types.listOf types.attrs);
         default = _: [];
         description = ''
-          Static routes to peers, specific to a given instance (when multiple instances are used).
+          Static routes to local peers, specific to a given instance (when multiple instances are used).
+        '';
+      };
+
+      useNewTopology = mkOption {
+        type = types.bool;
+        default = cfg.nodeConfig.EnableP2P or false;
+        description = ''
+          Use new, p2p/ledger peers combatible topology.
+        '';
+      };
+
+      usePeersFromLedgerAfterSlot = mkOption {
+        type = types.nullOr types.int;
+        default = if cfg.kesKey != null then null
+          else envConfig.usePeersFromLedgerAfterSlot or null;
+        description = ''
+          If set, bootstraps from public roots until it reaches given slot,
+          then it switches to using the ledger as a source of peers. It maintains a connection to its local roots.
+          Default to null for block producers.
         '';
       };
 
@@ -390,6 +464,38 @@ in {
         };
         default = envConfig.nodeConfig;
         description = ''Internal representation of the config.'';
+      };
+
+      targetNumberOfRootPeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfRootPeers or 60;
+        description = "Limits the maximum number of root peers the node will know about";
+      };
+
+      targetNumberOfKnownPeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfKnownPeers or cfg.targetNumberOfRootPeers;
+        description = ''
+          Target number for known peers (root peers + peers known through gossip).
+          Default to targetNumberOfRootPeers.
+        '';
+      };
+
+      targetNumberOfEstablishedPeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfEstablishedPeers
+          or (2 * cfg.targetNumberOfKnownPeers / 3);
+        description = ''Number of peers the node will be connected to, but not necessarily following their chain.
+          Default to 2/3 of targetNumberOfKnownPeers.
+        '';
+      };
+
+      targetNumberOfActivePeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfActivePeers or (cfg.targetNumberOfEstablishedPeers / 2);
+        description = ''Number of peers your node is actively downloading headers and blocks from.
+          Default to half of targetNumberOfEstablishedPeers.
+        '';
       };
 
       nodeConfigFile = mkOption {
@@ -450,6 +556,7 @@ in {
         description = "cardano-node node daemon user";
         uid = 10016;
         group = "cardano-node";
+        isSystemUser = true;
       };
 
       ## TODO:  use http://hackage.haskell.org/package/systemd for:
