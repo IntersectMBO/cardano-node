@@ -51,8 +51,8 @@ import           Ouroboros.Consensus.Block (CannotForge, ForgeStateUpdateError,
                      Point)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util
                      (TraceBlockchainTimeEvent (..))
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, Query)
 import           Ouroboros.Consensus.Byron.Ledger.Config (BlockConfig)
+import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate,
                      LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,

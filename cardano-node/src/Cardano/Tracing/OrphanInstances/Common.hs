@@ -58,7 +58,6 @@ import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                    Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                    Transformable (..))
-import qualified Cardano.Chain.Update as Update
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))

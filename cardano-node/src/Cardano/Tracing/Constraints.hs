@@ -35,8 +35,6 @@ import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
-import           Cardano.Logging
-
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =
     ( ConvertTxId' blk
@@ -47,7 +45,6 @@ type TraceConstraints blk =
     , ToJSON   (TxId (GenTx blk))
     , ToJSON   (TxOut (AlonzoEra StandardCrypto))
     , ToJSON   (PParamsUpdate (AlonzoEra StandardCrypto))
-    , ForgeStateInfoDispatch blk
     , HasKESMetricsData blk
     , HasKESInfo blk
     , GetKESInfo blk
@@ -78,6 +75,9 @@ type TraceConstraints blk =
     , LogFormatting (ValidationErr (BlockProtocol blk))
     , LogFormatting (CannotForge blk)
     , LogFormatting (ForgeStateUpdateError blk)
+    , LogFormatting (UtxoPredicateFailure (AlonzoEra StandardCrypto))
+    , LogFormatting (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
+    , LogFormatting (AlonzoPredFail (AlonzoEra StandardCrypto))
 
     , Show blk
     , Show (Header blk)

@@ -30,7 +30,7 @@ import           Cardano.Prelude hiding (Show, show)
 
 import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader,
                      getHeader)
-import           Ouroboros.Consensus.Byron.Ledger (Query)
+import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId,
                      HasTxs, LedgerSupportsMempool, extractTxs,
                      txForgetValidated, txId)

@@ -39,13 +39,17 @@ import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
+import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 -- import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Core
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
+import           Cardano.Ledger.Alonzo (AlonzoEra)
+import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
+import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 -- import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 
 -- TODO: this should be exposed via Cardano.Api
@@ -159,21 +163,21 @@ instance ( ShelleyBasedEra era
              ]
 
 instance ( ShelleyBasedEra era
-         , ToJSON (Shelley.PParamsDelta era)
+         , ToJSON (Core.PParamsDelta era)
          ) => LogFormatting (ShelleyLedgerUpdate era) where
   forMachine dtal (ShelleyUpdatedProtocolUpdates updates) =
     mkObject [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
              , "updates" .= map (forMachine dtal) updates
              ]
 
-instance ToJSON (Shelley.PParamsDelta era)
+instance ToJSON (Core.PParamsDelta era)
          => LogFormatting (ProtocolUpdate era) where
   forMachine dtal ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
     mkObject [ "proposal" .= forMachine dtal protocolUpdateProposal
              , "state"    .= forMachine dtal protocolUpdateState
              ]
 
-instance ToJSON (Shelley.PParamsDelta era)
+instance ToJSON (Core.PParamsDelta era)
          => LogFormatting (UpdateProposal era) where
   forMachine _dtal UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
     mkObject [ "params"  .= proposalParams
@@ -772,6 +776,15 @@ instance LogFormatting (UpecPredicateFailure era) where
              , "totalOutstanding" .=  String (textShow totalOutstanding)
              , "depositPot" .= String (textShow depositPot)
              ]
+
+instance LogFormatting (Alonzo.UtxoPredicateFailure (AlonzoEra StandardCrypto)) where
+  forMachine _ _ = panic "ToJSON: UtxoPredicateFailure not implemented yet"
+
+instance LogFormatting (AlonzoBbodyPredFail (AlonzoEra StandardCrypto)) where
+  forMachine _ _ = panic "ToJSON: AlonzoBbodyPredFail not implemented yet"
+
+instance LogFormatting (AlonzoPredFail (AlonzoEra StandardCrypto)) where
+  forMachine _ _ = panic "ToJSON: AlonzoPredFail not implemented yet"
 
 --------------------------------------------------------------------------------
 -- Helper functions
