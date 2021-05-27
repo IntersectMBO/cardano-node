@@ -26,7 +26,7 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderHeaderHash,
                    renderHeaderHashForVerbosity, renderPoint, renderPointAsPhrase,
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
-                   renderTipBlockNo, renderTipForVerbosity, renderTipHash, renderWithOrigin)
+                   renderTipBlockNo, renderTipHash, renderWithOrigin)
 import           Cardano.Slotting.Slot (fromWithOrigin)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash (..),
@@ -59,7 +59,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
-                   blockHash, pointSlot)
+                   Tip (..), blockHash, pointSlot, legacyTip)
 import           Ouroboros.Network.Point (withOrigin)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -974,13 +974,26 @@ instance ConvertRawHash blk => ToObject (TraceBlockFetchServerEvent blk) where
              , "block" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) $ pointHash blk)
              ]
 
+tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> [(Text, Value)]
+tipToObject = \case
+  TipGenesis ->
+    [ "slot"    .= toJSON (0 :: Int)
+    , "block"   .= String "genesis"
+    , "blockNo" .= toJSON ((-1) :: Int)
+    ]
+  Tip slot hash blockno ->
+    [ "slot"    .= slot
+    , "block"   .= String (renderHeaderHash (Proxy @blk) hash)
+    , "blockNo" .= blockno
+    ]
 
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => ToObject (TraceChainSyncClientEvent blk) where
   toObject verb ev = case ev of
-    TraceDownloadedHeader pt ->
-      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceDownloadedHeader"
-               , "block" .= toObject verb (headerPoint pt) ]
+    TraceDownloadedHeader h ->
+      mkObject $
+               [ "kind" .= String "ChainSyncClientEvent.TraceDownloadedHeader"
+               ] <> tipToObject (legacyTip (headerPoint h) (blockNo h))
     TraceRolledBack tip ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceRolledBack"
                , "tip" .= toObject verb tip ]
@@ -992,30 +1005,25 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     TraceTermination _ ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceTermination" ]
 
-
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
   toObject verb ev = case ev of
-    TraceChainSyncServerRead tip (AddBlock hdr) ->
-      mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
-               , "tip" .= String (renderTipForVerbosity verb tip)
-               , "addedBlock" .= String (renderPointForVerbosity verb hdr)
-               ]
-    TraceChainSyncServerRead tip (RollBack pt) ->
-      mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.RollBack"
-               , "tip" .= String (renderTipForVerbosity verb tip)
-               , "rolledBackBlock" .= String (renderPointForVerbosity verb pt)
-               ]
-    TraceChainSyncServerReadBlocked tip (AddBlock hdr) ->
-      mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock"
-               , "tip" .= String (renderTipForVerbosity verb tip)
-               , "addedBlock" .= String (renderPointForVerbosity verb hdr)
-               ]
-    TraceChainSyncServerReadBlocked tip (RollBack pt) ->
-      mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.RollBack"
-               , "tip" .= String (renderTipForVerbosity verb tip)
-               , "rolledBackBlock" .= String (renderPointForVerbosity verb pt)
-               ]
+    TraceChainSyncServerRead tip AddBlock{} ->
+      mkObject $
+        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
+        ] <> tipToObject tip
+    TraceChainSyncServerRead tip RollBack{} ->
+      mkObject $
+        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.RollBack"
+        ] <> tipToObject tip
+    TraceChainSyncServerReadBlocked tip AddBlock{} ->
+      mkObject $
+        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock"
+        ] <> tipToObject tip
+    TraceChainSyncServerReadBlocked tip RollBack{} ->
+      mkObject $
+        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.RollBack"
+        ] <> tipToObject tip
 
     TraceChainSyncRollForward point ->
       mkObject [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncRollForward"
