@@ -98,7 +98,7 @@ let
   };
 
   # Environments we want to build scripts for on hydra
-  environments = [ "mainnet" "testnet" "staging" "shelley_qa" ];
+  environments = [ "mainnet" "testnet" "staging" "shelley_qa" "alonzo-blue" ];
 
   extraBuilds = {
     # Environments listed in Network Configuration page
