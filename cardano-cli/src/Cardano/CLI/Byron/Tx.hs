@@ -159,6 +159,7 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
             )
             TxMetadataNone
             TxAuxScriptsNone
+            (BuildTxWith Nothing)
             TxWithdrawalsNone
             TxCertificatesNone
             TxUpdateProposalNone
@@ -194,6 +195,7 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                      )
                      TxMetadataNone
                      TxAuxScriptsNone
+                     (BuildTxWith Nothing)
                      TxWithdrawalsNone
                      TxCertificatesNone
                      TxUpdateProposalNone

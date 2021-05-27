@@ -122,6 +122,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, catMaybes, maybeToList)
 import qualified Data.Sequence.Strict as Seq
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.String (IsString)
 import           Data.Text (Text)
@@ -170,6 +171,7 @@ import           Cardano.Ledger.Val (isZero)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
@@ -966,6 +968,7 @@ data TxBodyContent build era =
        txMetadata       :: TxMetadataInEra era,
        txAuxScripts     :: TxAuxScripts era,
      --txAuxScriptData  :: TxAuxScriptData era, -- TODO alonzo
+       txProtocolParams :: BuildTxWith build (Maybe ProtocolParameters),
        txWithdrawals    :: TxWithdrawals  build era,
        txCertificates   :: TxCertificates build era,
        txUpdateProposal :: TxUpdateProposal era,
@@ -1256,6 +1259,7 @@ data TxBodyError era =
      | TxBodyMintAdaError
      | TxBodyAuxDataHashInvalidError
      | TxBodyMintBeforeMaryError
+     | TxBodyMissingProtocolParams
      deriving Show
 
 instance Error (TxBodyError era) where
@@ -1280,6 +1284,9 @@ instance Error (TxBodyError era) where
       "Transaction can mint in Mary era or later"
     displayError TxBodyAuxDataHashInvalidError =
       "Auxiliary data hash is invalid"
+    displayError TxBodyMissingProtocolParams =
+      "Transaction uses Plutus scripts but does not provide the protocol " ++
+      "parameters to hash"
 
 
 makeTransactionBody :: forall era.
@@ -1316,6 +1323,7 @@ fromLedgerTxBody era body mAux =
       , txCertificates   = fromLedgerTxCertificates   era body
       , txUpdateProposal = fromLedgerTxUpdateProposal era body
       , txMintValue      = fromLedgerTxMintValue      era body
+      , txProtocolParams = ViewTx
       , txMetadata
       , txAuxScripts
       }
@@ -1662,6 +1670,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
                             ValidityNoUpperBoundInByronEra),
       txMetadata       = TxMetadataNone,
       txAuxScripts     = TxAuxScriptsNone,
+      txProtocolParams = ViewTx,
       txWithdrawals    = TxWithdrawalsNone,
       txCertificates   = TxCertificatesNone,
       txUpdateProposal = TxUpdateProposalNone,
@@ -1886,6 +1895,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                              txValidityRange = (lowerBound, upperBound),
                              txMetadata,
                              txAuxScripts,
+                             txProtocolParams,
                              txWithdrawals,
                              txCertificates,
                              txUpdateProposal,
@@ -1911,6 +1921,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     case txMintValue of
       TxMintNone        -> return ()
       TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+    case txProtocolParams of
+      BuildTxWith Just{}  -> return ()
+      BuildTxWith Nothing -> guard (not (Set.null languages))
+                               ?! TxBodyMissingProtocolParams
 
     return $
       ShelleyTxBody era
@@ -1942,7 +1956,13 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (case txMintValue of
              TxMintNone        -> mempty
              TxMintValue _ v _ -> toMaryValue v)
-          (error "TODO: Alonzo optional protocol param hash")
+          (case txProtocolParams of
+             BuildTxWith Nothing        -> SNothing
+             BuildTxWith (Just pparams) ->
+               Alonzo.hashWitnessPPData
+                 (toLedgerPParams ShelleyBasedEraAlonzo pparams)
+                 languages
+                 redeemers)
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
           (error "TODO alonzo: optional network"))
@@ -1952,6 +1972,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
   where
     redeemers :: Alonzo.Redeemers StandardAlonzo
     redeemers = makeAlonzoRedeemers
+                  txIns txWithdrawals
+                  txCertificates txMintValue
+
+    languages :: Set Alonzo.Language
+    languages = Set.map toAlonzoLanguage  $
+                collectTxBodyPlutusScriptVersions
                   txIns txWithdrawals
                   txCertificates txMintValue
 
@@ -1978,6 +2004,48 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     -- and\/or merge it with toShelleyUpdate to make it era-generic
     -- must assume Ledger.PParamsDelta ledgerera ~ Alonzo.PParamsDelta ledgerera
 
+collectTxBodyPlutusScriptVersions
+  :: forall era.
+     [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+  -> TxWithdrawals BuildTx era
+  -> TxCertificates BuildTx era
+  -> TxMintValue BuildTx era
+  -> Set AnyPlutusScriptVersion
+collectTxBodyPlutusScriptVersions txIns txWithdrawals
+                                  txCertificates txMintValue =
+    mconcat
+      [ scriptWitnessVersions witness
+      | (_, BuildTxWith witness) <- txIns ]
+ <> mconcat
+      [ scriptWitnessVersions witness
+      | TxWithdrawals _ withdrawals <- pure txWithdrawals
+      , (_, _, BuildTxWith witness) <- withdrawals ]
+ <> mconcat
+      [ scriptWitnessVersions witness
+      | TxCertificates _ certs (BuildTxWith witnesses) <- pure txCertificates
+      , cert    <- certs
+      , witness <- maybeToList $ do
+                     stakecred <- selectStakeCredential cert
+                     Map.lookup stakecred witnesses
+      ]
+ <> mconcat
+      [ scriptWitnessVersions witness
+      | TxMintValue _ value (BuildTxWith witnesses) <- pure txMintValue
+      ,  let ValueNestedRep bundle = valueToNestedRep value
+      , ValueNestedBundle policyid _ <- bundle
+      , witness <- maybeToList (Map.lookup policyid witnesses)
+      ]
+  where
+    scriptWitnessVersions :: forall witctx. Witness witctx era -> Set AnyPlutusScriptVersion
+    scriptWitnessVersions (ScriptWitness _ (PlutusScriptWitness _ v _ _ _ _)) =
+      Set.singleton (AnyPlutusScriptVersion v)
+    scriptWitnessVersions _ = Set.empty
+
+    selectStakeCredential cert =
+      case cert of
+        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
+        StakeAddressDelegationCertificate     stakecred _ -> Just stakecred
+        _                                                 -> Nothing
 
 makeAlonzoRedeemers :: Ledger.Era (ShelleyLedgerEra era)
                     => [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]

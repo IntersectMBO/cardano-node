@@ -78,6 +78,8 @@ module Cardano.Api.Script (
     fromShelleyScriptHash,
     toAlonzoScriptData,
     fromAlonzoScriptData,
+    toAlonzoLanguage,
+    fromAlonzoLanguage,
 
     -- * Data family instances
     AsType(..),
@@ -125,8 +127,9 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -299,6 +302,13 @@ instance Aeson.ToJSONKey AnyPlutusScriptVersion where
         toText :: AnyPlutusScriptVersion -> Text
         toText (AnyPlutusScriptVersion PlutusScriptV1) = "PlutusScriptV1"
         toAesonEncoding = Aeson.text . toText
+
+toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
+
+fromAlonzoLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
+fromAlonzoLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
+
 
 class HasTypeProxy lang => IsScriptLanguage lang where
     scriptLanguage :: ScriptLanguage lang

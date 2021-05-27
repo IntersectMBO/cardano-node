@@ -514,6 +514,7 @@ genTxBodyContent era = do
   validityRange <- genTxValidityRange era
   txMd <- genTxMetadataInEra era
   auxScripts <- genTxAuxScripts era
+  mpparams <- Gen.maybe genProtocolParameters
   withdrawals <- genTxWithdrawals era
   certs <- genTxCertificates era
   updateProposal <- genTxUpdateProposal era
@@ -526,6 +527,7 @@ genTxBodyContent era = do
     , txValidityRange = validityRange
     , txMetadata = txMd
     , txAuxScripts = auxScripts
+    , txProtocolParams = BuildTxWith mpparams
     , txWithdrawals = withdrawals
     , txCertificates = certs
     , txUpdateProposal = updateProposal
