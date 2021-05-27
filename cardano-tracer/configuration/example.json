@@ -1,0 +1,28 @@
+{
+  "acceptAt": {
+    "tag": "RemoteSocket",
+    "contents": [
+      "127.0.0.1",
+      3000
+    ]
+  },
+  "loRequestNum": 1,
+  "ekgRequestFreq": 1,
+  "hasEKG": null,
+  "hasPrometheus": [
+    "127.0.0.1",
+    12798
+  ],
+  "logging": [
+    {
+      "logRoot": "/tmp/cardano-tracer-logs",
+      "logMode": "FileMode",
+      "logFormat": "AsJSON"
+    }
+  ],
+  "rotation": {
+    "rpKeepFilesNum": 1,
+    "rpLogLimitBytes": 50000,
+    "rpMaxAgeHours": 1
+  }
+}
