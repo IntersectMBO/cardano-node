@@ -89,6 +89,9 @@ package goblins
 package io-sim-classes
   tests: False
 
+package cardano-ledger-alonzo-test
+  tests: False
+
 -- ---------------------------------------------------------
 
 -- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
