@@ -909,67 +909,119 @@ toLedgerPParams sbe pparams =
     ShelleyBasedEraAlonzo  -> toAlonzoPParams  pparams
 
 toShelleyPParams :: ProtocolParameters -> Shelley.PParams ledgerera
-toShelleyPParams pparams =
+toShelleyPParams ProtocolParameters {
+                   protocolParamProtocolVersion,
+                   protocolParamDecentralization,
+                   protocolParamExtraPraosEntropy,
+                   protocolParamMaxBlockHeaderSize,
+                   protocolParamMaxBlockBodySize,
+                   protocolParamMaxTxSize,
+                   protocolParamTxFeeFixed,
+                   protocolParamTxFeePerByte,
+                   protocolParamMinUTxOValue,
+                   protocolParamStakeAddressDeposit,
+                   protocolParamStakePoolDeposit,
+                   protocolParamMinPoolCost,
+                   protocolParamPoolRetireMaxEpoch,
+                   protocolParamStakePoolTargetNum,
+                   protocolParamPoolPledgeInfluence,
+                   protocolParamMonetaryExpansion,
+                   protocolParamTreasuryCut
+                 } =
    Shelley.PParams
-     { Shelley._protocolVersion = let (maj, minor) = protocolParamProtocolVersion pparams
-                                  in Shelley.ProtVer maj minor
-     , Shelley._d = Shelley.unitIntervalFromRational $ protocolParamDecentralization pparams
-     , Shelley._extraEntropy  = toShelleyNonce $ protocolParamExtraPraosEntropy pparams
-     , Shelley._maxBHSize = protocolParamMaxBlockHeaderSize pparams
-     , Shelley._maxBBSize = protocolParamMaxBlockBodySize pparams
-     , Shelley._maxTxSize = protocolParamMaxTxSize pparams
-     , Shelley._minfeeB = protocolParamTxFeeFixed pparams
-     , Shelley._minfeeA = protocolParamTxFeePerByte pparams
-     , Shelley._minUTxOValue = toShelleyLovelace $ protocolParamMinUTxOValue pparams
-     , Shelley._keyDeposit = toShelleyLovelace $ protocolParamStakeAddressDeposit pparams
-     , Shelley._poolDeposit = toShelleyLovelace $ protocolParamStakePoolDeposit pparams
-     , Shelley._minPoolCost = toShelleyLovelace $ protocolParamMinPoolCost pparams
-     , Shelley._eMax = protocolParamPoolRetireMaxEpoch pparams
-     , Shelley._nOpt = protocolParamStakePoolTargetNum pparams
-     , Shelley._a0 = protocolParamPoolPledgeInfluence pparams
-     , Shelley._rho = Shelley.unitIntervalFromRational $ protocolParamMonetaryExpansion pparams
-     , Shelley._tau = Shelley.unitIntervalFromRational $ protocolParamTreasuryCut pparams
+     { Shelley._protocolVersion
+                             = let (maj, minor) = protocolParamProtocolVersion
+                                in Shelley.ProtVer maj minor
+     , Shelley._d            = Shelley.unitIntervalFromRational
+                                 protocolParamDecentralization
+     , Shelley._extraEntropy = toShelleyNonce protocolParamExtraPraosEntropy
+     , Shelley._maxBHSize    = protocolParamMaxBlockHeaderSize
+     , Shelley._maxBBSize    = protocolParamMaxBlockBodySize
+     , Shelley._maxTxSize    = protocolParamMaxTxSize
+     , Shelley._minfeeB      = protocolParamTxFeeFixed
+     , Shelley._minfeeA      = protocolParamTxFeePerByte
+     , Shelley._minUTxOValue = toShelleyLovelace protocolParamMinUTxOValue
+     , Shelley._keyDeposit   = toShelleyLovelace protocolParamStakeAddressDeposit
+     , Shelley._poolDeposit  = toShelleyLovelace protocolParamStakePoolDeposit
+     , Shelley._minPoolCost  = toShelleyLovelace protocolParamMinPoolCost
+     , Shelley._eMax         = protocolParamPoolRetireMaxEpoch
+     , Shelley._nOpt         = protocolParamStakePoolTargetNum
+     , Shelley._a0           = protocolParamPoolPledgeInfluence
+     , Shelley._rho          = Shelley.unitIntervalFromRational
+                                 protocolParamMonetaryExpansion
+     , Shelley._tau          = Shelley.unitIntervalFromRational
+                                 protocolParamTreasuryCut
      }
 
 toAlonzoPParams :: ProtocolParameters -> Alonzo.PParams ledgerera
-toAlonzoPParams pparams =
-   Alonzo.PParams
-     { Alonzo._protocolVersion = let (maj, minor) = protocolParamProtocolVersion pparams
-                                 in Alonzo.ProtVer maj minor
-     , Alonzo._d = Shelley.unitIntervalFromRational $ protocolParamDecentralization pparams
-     , Alonzo._extraEntropy  = toShelleyNonce $ protocolParamExtraPraosEntropy pparams
-     , Alonzo._maxBHSize = protocolParamMaxBlockHeaderSize pparams
-     , Alonzo._maxBBSize = protocolParamMaxBlockBodySize pparams
-     , Alonzo._maxTxSize = protocolParamMaxTxSize pparams
-     , Alonzo._minfeeB = protocolParamTxFeeFixed pparams
-     , Alonzo._minfeeA = protocolParamTxFeePerByte pparams
-     , Alonzo._keyDeposit = toShelleyLovelace $ protocolParamStakeAddressDeposit pparams
-     , Alonzo._poolDeposit = toShelleyLovelace $ protocolParamStakePoolDeposit pparams
-     , Alonzo._minPoolCost = toShelleyLovelace $ protocolParamMinPoolCost pparams
-     , Alonzo._eMax = protocolParamPoolRetireMaxEpoch pparams
-     , Alonzo._nOpt = protocolParamStakePoolTargetNum pparams
-     , Alonzo._a0 = protocolParamPoolPledgeInfluence pparams
-     , Alonzo._rho = Shelley.unitIntervalFromRational $ protocolParamMonetaryExpansion pparams
-     , Alonzo._tau = Shelley.unitIntervalFromRational $ protocolParamTreasuryCut pparams
-     , Alonzo._adaPerUTxOWord = case protocolParamUTxOCostPerWord pparams of
-                                  Just costPerByte ->  toShelleyLovelace costPerByte
-                                  Nothing -> error "fromProtocolParamsAlonzo: Must specify _adaPerUTxOByte"
-     , Alonzo._costmdls = toAlonzoCostModels $ protocolParamCostModels pparams
-     , Alonzo._prices = case protocolParamPrices pparams of
-                          Just prices -> toAlonzoPrices prices
-                          Nothing -> error "fromProtocolParamsAlonzo: Must specify _prices"
-     , Alonzo._maxTxExUnits = case protocolParamMaxTxExUnits pparams of
-                                Just eUnits -> toAlonzoExUnits eUnits
-                                Nothing -> error "fromProtocolParamsAlonzo: Must specify _maxTxExUnits"
-     , Alonzo._maxBlockExUnits = case protocolParamMaxBlockExUnits pparams of
-                                   Just eUnits -> toAlonzoExUnits eUnits
-                                   Nothing -> error "fromProtocolParamsAlonzo: Must specify _maxBlockExUnits"
-     , Alonzo._maxValSize = case protocolParamMaxValueSize pparams of
-                              Just maxSize -> maxSize
-                              Nothing -> error "fromProtocolParamsAlonzo: Must specify _maxValSize"
-     , Alonzo._collateralPercentage = error "TODO alonzo: toAlonzoPParams collateralPercentage"
-     , Alonzo._maxCollateralInputs = error "TODO alonzo: toAlonzoPParams maxCollateralInputs"
-     }
+toAlonzoPParams ProtocolParameters {
+                   protocolParamProtocolVersion,
+                   protocolParamDecentralization,
+                   protocolParamExtraPraosEntropy,
+                   protocolParamMaxBlockHeaderSize,
+                   protocolParamMaxBlockBodySize,
+                   protocolParamMaxTxSize,
+                   protocolParamTxFeeFixed,
+                   protocolParamTxFeePerByte,
+                   protocolParamStakeAddressDeposit,
+                   protocolParamStakePoolDeposit,
+                   protocolParamMinPoolCost,
+                   protocolParamPoolRetireMaxEpoch,
+                   protocolParamStakePoolTargetNum,
+                   protocolParamPoolPledgeInfluence,
+                   protocolParamMonetaryExpansion,
+                   protocolParamTreasuryCut,
+                   protocolParamUTxOCostPerWord = Just utxoCostPerWord,
+                   protocolParamCostModels,
+                   protocolParamPrices          = Just prices,
+                   protocolParamMaxTxExUnits    = Just maxTxExUnits,
+                   protocolParamMaxBlockExUnits = Just maxBlockExUnits,
+                   protocolParamMaxValueSize    = Just maxValueSize
+                 } =
+    Alonzo.PParams {
+      Alonzo._protocolVersion
+                           = let (maj, minor) = protocolParamProtocolVersion
+                              in Alonzo.ProtVer maj minor
+    , Alonzo._d            = Shelley.unitIntervalFromRational
+                               protocolParamDecentralization
+    , Alonzo._extraEntropy = toShelleyNonce protocolParamExtraPraosEntropy
+    , Alonzo._maxBHSize    = protocolParamMaxBlockHeaderSize
+    , Alonzo._maxBBSize    = protocolParamMaxBlockBodySize
+    , Alonzo._maxTxSize    = protocolParamMaxTxSize
+    , Alonzo._minfeeB      = protocolParamTxFeeFixed
+    , Alonzo._minfeeA      = protocolParamTxFeePerByte
+    , Alonzo._keyDeposit   = toShelleyLovelace protocolParamStakeAddressDeposit
+    , Alonzo._poolDeposit  = toShelleyLovelace protocolParamStakePoolDeposit
+    , Alonzo._minPoolCost  = toShelleyLovelace protocolParamMinPoolCost
+    , Alonzo._eMax         = protocolParamPoolRetireMaxEpoch
+    , Alonzo._nOpt         = protocolParamStakePoolTargetNum
+    , Alonzo._a0           = protocolParamPoolPledgeInfluence
+    , Alonzo._rho          = Shelley.unitIntervalFromRational
+                               protocolParamMonetaryExpansion
+    , Alonzo._tau          = Shelley.unitIntervalFromRational
+                               protocolParamTreasuryCut
+
+      -- New params in Alonzo:
+    , Alonzo._adaPerUTxOWord  = toShelleyLovelace utxoCostPerWord
+    , Alonzo._costmdls        = toAlonzoCostModels protocolParamCostModels
+    , Alonzo._prices          = toAlonzoPrices prices
+    , Alonzo._maxTxExUnits    = toAlonzoExUnits maxTxExUnits
+    , Alonzo._maxBlockExUnits = toAlonzoExUnits maxBlockExUnits
+    , Alonzo._maxValSize      = maxValueSize
+    , Alonzo._collateralPercentage = error "TODO alonzo: toAlonzoPParams collateralPercentage"
+    , Alonzo._maxCollateralInputs  = error "TODO alonzo: toAlonzoPParams maxCollateralInputs"
+    }
+toAlonzoPParams ProtocolParameters { protocolParamUTxOCostPerWord = Nothing } =
+  error "fromProtocolParamsAlonzo: must specify protocolParamUTxOCostPerWord"
+toAlonzoPParams ProtocolParameters { protocolParamPrices          = Nothing } =
+  error "fromProtocolParamsAlonzo: must specify protocolParamPrices"
+toAlonzoPParams ProtocolParameters { protocolParamMaxTxExUnits    = Nothing } =
+  error "fromProtocolParamsAlonzo: must specify protocolParamMaxTxExUnits"
+toAlonzoPParams ProtocolParameters { protocolParamMaxBlockExUnits = Nothing } =
+  error "fromProtocolParamsAlonzo: must specify protocolParamMaxBlockExUnits"
+toAlonzoPParams ProtocolParameters { protocolParamMaxValueSize    = Nothing } =
+    error "fromProtocolParamsAlonzo: must specify protocolParamMaxValueSize"
+
 
 toAlonzoCostModels
   :: Map AnyPlutusScriptVersion CostModel
