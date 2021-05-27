@@ -14,6 +14,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 
 -- | Transaction bodies
@@ -21,15 +22,11 @@
 module Cardano.Api.TxBody (
 
     -- * Transaction bodies
-    TxBody(..),
-    getTransactionBodyContent,
+    TxBody(.., TxBody),
     makeTransactionBody,
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyRedeemers(..),
-
-    -- ** Transitional utils
-    makeByronTransaction,
 
     -- * Transaction Ids
     TxId(..),
@@ -1295,12 +1292,12 @@ makeTransactionBody =
       ShelleyBasedEra era -> makeShelleyTransactionBody era
 
 
-getTransactionBodyContent
-  :: TxBody era -> Either (TxBodyError era) (TxBodyContent ViewTx era)
-getTransactionBodyContent = \case
-  ByronTxBody body ->
-    Right $ getByronTxBodyContent body
-  ShelleyTxBody era body _scripts _redeemers mAux ->
+pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
+pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
+
+getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
+getTxBodyContent (ByronTxBody body) = getByronTxBodyContent body
+getTxBodyContent (ShelleyTxBody era body _scripts _redeemers mAux) =
     fromLedgerTxBody era body mAux
 
 
@@ -1308,11 +1305,8 @@ fromLedgerTxBody
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
-  -> Either (TxBodyError era) (TxBodyContent ViewTx era)
-fromLedgerTxBody era body mAux = do
-  checkAuxiliaryDataHash era body mAux
-  txMintValue <- fromLedgerTxMintValue era body
-  pure
+  -> TxBodyContent ViewTx era
+fromLedgerTxBody era body mAux =
     TxBodyContent
       { txIns            = fromLedgerTxIns            era body
       , txOuts           = fromLedgerTxOuts           era body
@@ -1321,7 +1315,7 @@ fromLedgerTxBody era body mAux = do
       , txWithdrawals    = fromLedgerTxWithdrawals    era body
       , txCertificates   = fromLedgerTxCertificates   era body
       , txUpdateProposal = fromLedgerTxUpdateProposal era body
-      , txMintValue
+      , txMintValue      = fromLedgerTxMintValue      era body
       , txMetadata
       , txAuxScripts
       }
@@ -1329,30 +1323,6 @@ fromLedgerTxBody era body mAux = do
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
     -- TODO alonzo ^^ also return TxAuxScriptData as 3rd component
 
-
-checkAuxiliaryDataHash
-  :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
-  -> Either (TxBodyError era) ()
-checkAuxiliaryDataHash era body mAux =
-  guard hashEquality ?! TxBodyAuxDataHashInvalidError
-  where
-    mAux' = maybeToStrictMaybe mAux
-    hashEquality =
-      case era of
-        ShelleyBasedEraShelley ->
-          Shelley._mdHash body ==
-          (Ledger.hashAuxiliaryData @StandardShelley <$> mAux')
-        ShelleyBasedEraAllegra ->
-          Allegra.adHash' body ==
-          (Ledger.hashAuxiliaryData @StandardAllegra <$> mAux')
-        ShelleyBasedEraMary ->
-          Mary.adHash' body ==
-          (Ledger.hashAuxiliaryData @StandardMary <$> mAux')
-        ShelleyBasedEraAlonzo ->
-          Alonzo.adHash' body ==
-          (Ledger.hashAuxiliaryData @StandardAlonzo <$> mAux')
 
 fromLedgerTxIns
   :: ShelleyBasedEra era
@@ -1627,26 +1597,22 @@ fromLedgerTxUpdateProposal era body =
 fromLedgerTxMintValue
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> Either (TxBodyError era) (TxMintValue ViewTx era)
+  -> TxMintValue ViewTx era
 fromLedgerTxMintValue era body =
   case era of
-    ShelleyBasedEraShelley -> pure TxMintNone
-
-    ShelleyBasedEraAllegra ->
-      TxMintNone <$
-      guard (isZero $ Allegra.mint' body) ?! TxBodyMintBeforeMaryError
-
+    ShelleyBasedEraShelley -> TxMintNone
+    ShelleyBasedEraAllegra -> TxMintNone
     ShelleyBasedEraMary
-      | isZero mint -> pure TxMintNone
-      | otherwise   ->
-          pure $ TxMintValue MultiAssetInMaryEra (fromMaryValue mint) ViewTx
+      | isZero mint        -> TxMintNone
+      | otherwise          -> TxMintValue MultiAssetInMaryEra
+                                          (fromMaryValue mint) ViewTx
       where
         mint = Mary.mint' body
 
     ShelleyBasedEraAlonzo
-      | isZero mint -> pure TxMintNone
-      | otherwise   ->
-          pure $ TxMintValue MultiAssetInAlonzoEra (fromMaryValue mint) ViewTx
+      | isZero mint         -> TxMintNone
+      | otherwise           -> TxMintValue MultiAssetInAlonzoEra
+                                           (fromMaryValue mint) ViewTx
       where
         mint = Alonzo.mint' body
 
@@ -1686,9 +1652,21 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
 getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
 getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
-  makeByronTransactionBodyContent
-    [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
-    (fromByronTxOut <$> toList txOutputs)
+    TxBodyContent {
+      txIns            = [ (fromByronTxIn input, ViewTx)
+                         | input <- toList txInputs],
+      txOuts           = fromByronTxOut <$> toList txOutputs,
+      txFee            = TxFeeImplicit TxFeesImplicitInByronEra,
+      txValidityRange  = (TxValidityNoLowerBound,
+                          TxValidityNoUpperBound
+                            ValidityNoUpperBoundInByronEra),
+      txMetadata       = TxMetadataNone,
+      txAuxScripts     = TxAuxScriptsNone,
+      txWithdrawals    = TxWithdrawalsNone,
+      txCertificates   = TxCertificatesNone,
+      txUpdateProposal = TxUpdateProposalNone,
+      txMintValue      = TxMintNone
+    }
 
 makeShelleyTransactionBody :: ShelleyBasedEra era
                            -> TxBodyContent BuildTx era
@@ -2214,44 +2192,6 @@ toAlonzoAuxiliaryData m ss ds =
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
       (Set.fromList (map toAlonzoScriptData ds))
-
-
--- ----------------------------------------------------------------------------
--- Transitional utility functions for making transaction bodies
---
-
--- | Transitional function to help the CLI move to the updated TxBody API.
---
-makeByronTransaction :: [TxIn]
-                     -> [TxOut ByronEra]
-                     -> Either (TxBodyError ByronEra) (TxBody ByronEra)
-makeByronTransaction txIns txOuts =
-  makeTransactionBody $
-    makeByronTransactionBodyContent
-      [(txin, BuildTxWith (KeyWitness KeyWitnessForSpending)) | txin <- txIns]
-      txOuts
-{-# DEPRECATED makeByronTransaction "Use makeTransactionBody" #-}
-
-
-makeByronTransactionBodyContent
-  :: [(TxIn, BuildTxWith build (Witness WitCtxTxIn ByronEra))]
-  -> [TxOut ByronEra]
-  -> TxBodyContent build ByronEra
-makeByronTransactionBodyContent txIns txOuts =
-  TxBodyContent {
-    txIns,
-    txOuts,
-    txFee            = TxFeeImplicit TxFeesImplicitInByronEra,
-    txValidityRange  = (TxValidityNoLowerBound,
-                        TxValidityNoUpperBound
-                          ValidityNoUpperBoundInByronEra),
-    txMetadata       = TxMetadataNone,
-    txAuxScripts     = TxAuxScriptsNone,
-    txWithdrawals    = TxWithdrawalsNone,
-    txCertificates   = TxCertificatesNone,
-    txUpdateProposal = TxUpdateProposalNone,
-    txMintValue      = TxMintNone
-  }
 
 
 -- ----------------------------------------------------------------------------

@@ -146,8 +146,7 @@ module Cardano.Api (
     -- | Constructing and inspecting transactions
 
     -- ** Transaction bodies
-    TxBody,
-    getTransactionBodyContent,
+    TxBody(TxBody),
     makeTransactionBody,
     TxBodyContent(..),
     TxBodyError(..),
@@ -225,7 +224,6 @@ module Cardano.Api (
     makeSignedTransaction,
     KeyWitness,
     makeByronKeyWitness,
-    makeByronTransaction,
     ShelleyWitnessSigningKey(..),
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,
