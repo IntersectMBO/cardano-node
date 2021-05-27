@@ -49,12 +49,12 @@ standardTracer mbFilePath = do
       -> Maybe TraceControl
       -> FormattedMessage
       -> m ()
-    output stateRef LoggingContext {} Nothing (Human msg) = liftIO $ do
+    output stateRef LoggingContext {} Nothing (FormattedHuman msg) = liftIO $ do
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} Nothing (Machine msg) = liftIO $ do
+    output stateRef LoggingContext {} Nothing (FormattedMachine msg) = liftIO $ do
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
@@ -64,10 +64,10 @@ standardTracer mbFilePath = do
       case stRunning st of
         Nothing -> initLogging stateRef
         Just _  -> pure ()
-    output _ lk (Just c@Document {}) (Human msg) =
-       docIt (StandardBackend mbFilePath) (Human "") (lk, Just c, msg)
-    output _ lk (Just c@Document {}) (Machine msg) =
-       docIt (StandardBackend mbFilePath) (Machine "") (lk, Just c, msg)
+    output _ lk (Just c@Document {}) (FormattedHuman msg) =
+       docIt (Stdout HumanFormat) (FormattedHuman "") (lk, Just c, msg)
+    output _ lk (Just c@Document {}) (FormattedMachine msg) =
+       docIt (Stdout MachineFormat) (FormattedMachine "") (lk, Just c, msg)
     output _stateRef LoggingContext {} _ _a = pure ()
 
 initLogging :: IORef (StandardTracerState a) -> IO ()

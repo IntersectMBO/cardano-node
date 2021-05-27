@@ -45,11 +45,11 @@ metricsFormatter application (Trace tr) = do
           let metrics =  asMetrics v
           in T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                                 , Nothing
-                                , Metrics metrics)
+                                , FormattedMetrics metrics)
         (lc, Just ctrl, _v) ->
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                              , Just ctrl
-                             , Metrics [])
+                             , FormattedMetrics [])
 
 
 -- | Format this trace for human readability
@@ -73,11 +73,11 @@ humanFormatter withColor application (Trace tr) = do
           text <- liftIO $ formatContextHuman withColor hn application lc fh
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                              , Nothing
-                             , Human text)
+                             , FormattedHuman text)
         (lc, Just ctrl, _v) -> do
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                              , Just ctrl
-                             , Human "")
+                             , FormattedHuman "")
 
 formatContextHuman ::
      Bool
@@ -136,11 +136,11 @@ machineFormatter detailLevel application (Trace tr) = do
           obj <- liftIO $ formatContextMachine hn application lc (forMachine detailLevel v)
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                              , Nothing
-                             , Machine (decodeUtf8 (BS.toStrict (AE.encode obj))))
+                             , FormattedMachine (decodeUtf8 (BS.toStrict (AE.encode obj))))
         (lc, Just c, _v) -> do
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                              , Just c
-                             , Machine "")
+                             , FormattedMachine "")
 
 formatContextMachine ::
      String

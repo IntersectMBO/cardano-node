@@ -22,6 +22,7 @@ module Cardano.Logging.Types (
   , SeverityS(..)
   , SeverityF(..)
   , ConfigOption(..)
+  , Format(..)
   , TraceConfig(..)
   , emptyTraceConfig
   , FormattedMessage(..)
@@ -53,7 +54,6 @@ newtype Trace m a = Trace
   {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
 
 -- | Contramap lifted to Trace
--- If you carry a typed formatter a with the TODO
 instance Monad m => Contravariant (Trace m) where
     contramap f (Trace tr) = Trace $
       T.contramap (\ (lc, mbC, a) -> (lc, mbC, f a)) tr
@@ -65,7 +65,6 @@ instance Monad m => Semigroup (Trace m a) where
 instance Monad m => Monoid (Trace m a) where
     mappend = (<>)
     mempty  = Trace T.nullTracer
-
 
 -- | Every message needs this to define how to represent itself
 class LogFormatting a where
@@ -132,7 +131,6 @@ data LoggingContext = LoggingContext {
 emptyLoggingContext :: LoggingContext
 emptyLoggingContext = LoggingContext [] Nothing Nothing Nothing
 
-
 -- | Formerly known as verbosity
 data DetailLevel =
       DBrief
@@ -171,11 +169,28 @@ data SeverityF
     | SilenceF                 -- ^ Don't show anything
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
+-- | Used for ForwarderTracer
+data TraceObject = TraceObject {
+    toContext :: LoggingContext
+  , toHuman   :: Maybe Text
+  , toMachine :: Maybe Text
+} deriving (Eq, Show)
+
 data FormattedMessage =
-      Human Text
-    | Machine Text
-    | Metrics [Metric]
+      FormattedHuman Text
+    | FormattedMachine Text
+    | FormattedMetrics [Metric]
+    | FormattedForwarder TraceObject
   deriving (Eq, Show)
+
+data Backend =
+    Forwarder
+  | Stdout Format
+  | EKGBackend
+  deriving (Eq, Ord, Show, Generic)
+
+data Format = HumanFormat | MachineFormat
+  deriving (Eq, Ord, Show, Generic)
 
 -- Configuration options for individual namespace elements
 data ConfigOption =
@@ -183,31 +198,13 @@ data ConfigOption =
     CoSeverity SeverityF
     -- | Detail level (Default is DRegular)
   | CoDetail DetailLevel
-    -- | Privacy level (Default is Public)
-  | CoPrivacy Privacy
+  -- | To which backend to pass (Default is BothBackends)
+  | CoBackend Backend
   deriving (Eq, Ord, Show, Generic)
 
 data TraceConfig = TraceConfig {
-
      -- | Options specific to a certain namespace
     tcOptions :: Map.Map Namespace [ConfigOption]
-
-  --  Forwarder:
-     -- Can their only be one forwarder? Use one of:
-
-     --  Forward messages to the following address
---  ,  tcForwardTo :: RemoteAddr
-
-     --  Forward messages to the following address
---  ,  tcForwardTo :: Map TracerName RemoteAddr
-
-  --  EKG:
-     --  Port for EKG server
---  ,  tcPortEKG :: Int
-
-  -- Prometheus:
-    --  Host/port to bind Prometheus server at
---  ,  tcBindAddrPrometheus :: Maybe (String,Int)
 }
   deriving (Eq, Ord, Show, Generic)
 
@@ -239,11 +236,6 @@ data LogDoc = LogDoc {
 emptyLogDoc :: Text -> LogDoc
 emptyLogDoc d = LogDoc d [] [] [] [] []
 
-data Backend =
-    EKGBackend
-  | StandardBackend (Maybe FilePath)
-  deriving(Eq, Show, Generic)
-
 -- | Type for a Fold
 newtype Folding a b = Folding b
 
@@ -270,17 +262,47 @@ instance LogFormatting Integer where
 instance AE.ToJSON DetailLevel where
     toEncoding = AE.genericToEncoding AE.defaultOptions
 
+instance AE.FromJSON DetailLevel where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
 instance AE.ToJSON Privacy where
     toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON Privacy where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
 
 instance AE.ToJSON SeverityS where
     toEncoding = AE.genericToEncoding AE.defaultOptions
 
+instance AE.FromJSON SeverityS where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
 instance AE.ToJSON SeverityF where
     toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON SeverityF where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
 
 instance AE.ToJSON ConfigOption where
     toEncoding = AE.genericToEncoding AE.defaultOptions
 
+instance AE.FromJSON ConfigOption where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
 instance AE.ToJSON TraceConfig where
     toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON TraceConfig where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
+instance AE.ToJSON Backend where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON Backend where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
+instance AE.ToJSON Format where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON Format where
+    parseJSON = AE.genericParseJSON AE.defaultOptions

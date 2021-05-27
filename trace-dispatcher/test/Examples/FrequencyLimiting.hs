@@ -7,29 +7,28 @@ module Examples.FrequencyLimiting (
 ) where
 
 import           Control.Concurrent
-import           Data.Functor.Contravariant (Contravariant (..))
-import           GHC.Generics
+import           Data.Aeson
 
 import           Cardano.Logging
 import           Examples.TestObjects
 
 data LOX = LOS (TraceForgeEvent LogBlock) | LOL LimitingMessage
 
-instance LogFormata LOX where
-  forMachine _ (TraceForgeEvent LogBlock) =
+instance LogFormatting LOX where
+  forMachine _ (LOS _) =
       mkObject
         [ "kind" .= String "TraceForgeEvent"
         ]
   forMachine _ (LOL (StartLimiting text)) =
       mkObject
         [ "kind" .= String "StartLimiting"
-          "msg"  .= String msg
+        , "msg"  .= String text
         ]
   forMachine _ (LOL (StopLimiting msg num)) =
       mkObject
         [ "kind" .= String "StopLimiting"
-          "msg"  .= String msg
-          "numSuppressed" .= Int num
+        , "msg"  .= String msg
+        , "numSuppressed" .= num
         ]
 
 repeated :: Trace IO (TraceForgeEvent LogBlock) -> Int -> Int -> IO ()

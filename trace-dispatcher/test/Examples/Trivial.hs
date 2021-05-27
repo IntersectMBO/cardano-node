@@ -13,8 +13,8 @@ import           Examples.TestObjects
 --   for every path element
 test1 :: IO ()
 test1 = do
-    stdoutTracer <- standardTracer Nothing
-    simpleTracer <- machineFormatter DRegular "cardano" stdoutTracer
+    stdoutTracer' <- standardTracer Nothing
+    simpleTracer <- machineFormatter DRegular "cardano" stdoutTracer'
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
     let simpleTracer1 = filterTraceBySeverity (Just WarningF) simpleTracer
     let simpleTracerC1 = appendName "Outer1" simpleTracer1
@@ -29,8 +29,8 @@ test1 = do
 
 test2 :: IO ()
 test2 = do
-    stdoutTracer <- standardTracer Nothing
-    simpleTracer <- humanFormatter True "cardano" stdoutTracer
+    stdoutTracer' <- standardTracer Nothing
+    simpleTracer <- humanFormatter True "cardano" stdoutTracer'
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
     let simpleTracer1  = withSeverity loSeverity
                             (filterTraceBySeverity (Just WarningF) simpleTracer)

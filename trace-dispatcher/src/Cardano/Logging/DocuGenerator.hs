@@ -188,13 +188,13 @@ documentMarkdown (Documented documented) tracers = do
                                 (map backendFormatToText l))
 
     backendFormatToText :: (Backend, FormattedMessage) -> Builder
-    backendFormatToText (be, Metrics _) = asCode (fromString (show be))
+    backendFormatToText (be, FormattedMetrics _) = asCode (fromString (show be))
                             <> fromText " / "
                             <> asCode "Metrics"
-    backendFormatToText (be, Human _) = asCode (fromString (show be))
+    backendFormatToText (be, FormattedHuman _) = asCode (fromString (show be))
                             <> fromText " / "
                             <> asCode "Human"
-    backendFormatToText (be, Machine _) = asCode (fromString (show be))
+    backendFormatToText (be, FormattedMachine _) = asCode (fromString (show be))
                             <> fromText " / "
                             <> asCode "Machine"
 

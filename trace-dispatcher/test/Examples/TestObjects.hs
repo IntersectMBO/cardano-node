@@ -15,7 +15,7 @@
 module Examples.TestObjects (
     traceForgeEventDocu
   , TraceForgeEvent(..)
-  , LogBlock
+  , LogBlock(..)
   , SlotNo(..)
   , withSeverityTraceForgeEvent
   , message1

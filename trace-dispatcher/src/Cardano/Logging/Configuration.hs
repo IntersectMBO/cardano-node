@@ -1,24 +1,110 @@
 {-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 
 module Cardano.Logging.Configuration
   ( configureTracers
   , withNamespaceConfig
   , filterSeverityFromConfig
-  , filterPrivacyFromConfig
+  , readRepresentation
   ) where
 
+import           Control.Exception (throwIO)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
+import qualified Data.Aeson as AE
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as BS
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import           Data.List (maximumBy, nub)
+import           Data.List (foldl', maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Text (Text, split)
+import           Data.Yaml
+import           GHC.Generics
 
-import           Cardano.Logging.Trace (filterTraceByPrivacy,
-                     filterTraceBySeverity)
+import           Cardano.Logging.Trace (filterTraceBySeverity)
 import           Cardano.Logging.Types
+
+data TraceOptionSeverity = TraceOptionSeverity {
+      nsS      :: Text
+    , severity :: SeverityF
+    } deriving (Eq, Ord, Show, Generic)
+
+instance AE.ToJSON TraceOptionSeverity where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON TraceOptionSeverity where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
+data TraceOptionDetail = TraceOptionDetail {
+      nsD      :: Text
+    , details  :: DetailLevel
+    } deriving (Eq, Ord, Show, Generic)
+
+instance AE.ToJSON TraceOptionDetail where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON TraceOptionDetail where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
+data TraceOptionBackend = TraceOptionBackend {
+      nsB      :: Text
+    , backend  :: Backend
+    } deriving (Eq, Ord, Show, Generic)
+
+instance AE.ToJSON TraceOptionBackend where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON TraceOptionBackend where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
+data ConfigRepresentation =
+    CRSeverity TraceOptionSeverity
+  | CRDetails  TraceOptionDetail
+  | CRBackend  TraceOptionBackend
+  deriving (Eq, Ord, Show, Generic)
+
+instance AE.ToJSON ConfigRepresentation where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+
+instance AE.FromJSON ConfigRepresentation where
+    parseJSON = AE.genericParseJSON AE.defaultOptions
+
+readRepresentation :: FilePath -> IO TraceConfig
+readRepresentation fp =
+    either throwIO pure =<< parseRepresentation <$> BS.readFile fp
+
+parseRepresentation :: ByteString -> Either ParseException TraceConfig
+parseRepresentation bs = fill (decodeEither' bs)
+  where
+    fill ::
+         Either ParseException [ConfigRepresentation]
+      -> Either ParseException TraceConfig
+    fill (Left e)   = Left e
+    fill (Right rl) = Right $ foldl' fill' emptyTraceConfig rl
+    fill' :: TraceConfig -> ConfigRepresentation -> TraceConfig
+    fill' (TraceConfig tc) (CRSeverity (TraceOptionSeverity ns severity')) =
+      let ns' = split (=='.') ns
+      in case Map.lookup ns' tc of
+            Nothing -> TraceConfig (Map.insert ns' [CoSeverity severity'] tc)
+            Just oa -> TraceConfig (Map.insert ns' (CoSeverity severity' : oa) tc)
+    fill' (TraceConfig tc) (CRDetails (TraceOptionDetail ns detail)) =
+      let ns' = split (=='.') ns
+      in case Map.lookup ns' tc of
+            Nothing -> TraceConfig (Map.insert ns' [CoDetail detail] tc)
+            Just oa -> TraceConfig (Map.insert ns' (CoDetail detail : oa) tc)
+    fill' (TraceConfig tc) (CRBackend (TraceOptionBackend ns backend')) =
+      let ns' = split (=='.') ns
+      in case Map.lookup ns' tc of
+            Nothing -> TraceConfig (Map.insert ns' [CoBackend backend'] tc)
+            Just oa -> TraceConfig (Map.insert ns' (CoBackend backend' : oa) tc)
+
+
 
 -- | Call this function at initialisation, and later for reconfiguration
 configureTracers :: Monad m => TraceConfig -> Documented a -> [Trace m a]-> m ()
@@ -135,12 +221,6 @@ filterSeverityFromConfig :: (MonadIO m) =>
   -> m (Trace m a)
 filterSeverityFromConfig = withNamespaceConfig getSeverity filterTraceBySeverity
 
--- | Filter a trace by severity and take the filter value from the config
-filterPrivacyFromConfig :: (MonadIO m) =>
-     Trace m a
-  -> m (Trace m a)
-filterPrivacyFromConfig = withNamespaceConfig getPrivacy filterTraceByPrivacy
-
 --------------------------------------------------------
 -- Internal
 
@@ -152,15 +232,6 @@ getSeverity config context =
     severitySelector :: ConfigOption -> Maybe SeverityF
     severitySelector (CoSeverity s) = Just s
     severitySelector _              = Nothing
-
--- | If no privacy can be found in the config, it is set to Public
-getPrivacy :: TraceConfig -> Namespace -> Privacy
-getPrivacy config context =
-  fromMaybe Public (getOption privacySelector config context)
-  where
-    privacySelector :: ConfigOption -> Maybe Privacy
-    privacySelector (CoPrivacy s) = Just s
-    privacySelector _             = Nothing
 
 -- | Searches in the config to find an option
 getOption :: (ConfigOption -> Maybe a) -> TraceConfig -> Namespace -> Maybe a

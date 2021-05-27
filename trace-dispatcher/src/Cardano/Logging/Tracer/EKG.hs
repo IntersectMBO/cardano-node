@@ -25,10 +25,10 @@ ekgTracer storeOrServer = liftIO $ do
     registeredLabels <- newIORef Map.empty
     pure $ Trace $ T.arrow $ T.emit $ output registeredGauges registeredLabels
   where
-    output registeredGauges registeredLabels (LoggingContext{..}, Nothing, Metrics m) =
+    output registeredGauges registeredLabels (LoggingContext{..}, Nothing, FormattedMetrics m) =
       liftIO $ mapM_ (setIt registeredGauges registeredLabels lcNamespace) m
-    output _ _ p@(_, Just Document {}, Metrics m) =
-      docIt EKGBackend (Metrics m) p
+    output _ _ p@(_, Just Document {}, FormattedMetrics m) =
+      docIt EKGBackend (FormattedMetrics m) p
     output _ _ (LoggingContext{}, Just _c, _v) =
       pure ()
 
