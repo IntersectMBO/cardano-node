@@ -7,8 +7,8 @@ cardano-cli/README.md                                         @fsancheziohk @nah
 cabal.project                                                 @LaurenceIO
 
 # General reviewers per PR
-#                       David          Duncan   Jordan     Erik   John
-*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy
+#                       David          Duncan   Jordan     Erik   John      Marcin Karl
+*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy @coot  @karknu
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -32,7 +32,7 @@ nix                                                           @devops
 *.nix                                                         @devops
 flake.lock                                                    @devops
 bors.toml                                                     @devops
-cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops
+cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops @coot @karknu
 cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
 cardano-node/src/Cardano/Node/Configuration/Socket.hs         @devops
 cardano-node/src/Cardano/Node/Run.hs                          @devops
