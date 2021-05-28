@@ -229,4 +229,5 @@ package cardano-ledger-alonzo-test
 
 allow-newer:
   monoidal-containers:aeson,
-  size-based:template-haskell
+  size-based:template-haskell,
+  inline-r:base
