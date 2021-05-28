@@ -192,6 +192,7 @@ renderFeature TxFeatureMintValue            = "Asset minting"
 renderFeature TxFeatureMultiAssetOutputs    = "Multi-Asset outputs"
 renderFeature TxFeatureScriptWitnesses      = "Script witnesses"
 renderFeature TxFeatureShelleyKeys          = "Shelley keys"
+renderFeature TxFeatureCollateral           = "Collateral inputs"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -254,6 +255,7 @@ runTxBuildRaw (AnyCardanoEra era) inputsAndScripts txouts mLowerBound
     txBodyContent <-
       TxBodyContent
         <$> validateTxIns  era inputsAndScripts
+        <*> pure TxInsCollateralNone --TODO alonzo: support this
         <*> validateTxOuts era txouts
         <*> validateTxFee  era mFee
         <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
@@ -295,6 +297,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureMultiAssetOutputs
                | TxFeatureScriptWitnesses
                | TxFeatureShelleyKeys
+               | TxFeatureCollateral
   deriving Show
 
 txFeatureMismatch :: CardanoEra era

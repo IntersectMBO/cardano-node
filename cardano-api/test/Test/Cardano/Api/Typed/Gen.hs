@@ -522,6 +522,7 @@ genTxBodyContent era = do
 
   pure $ TxBodyContent
     { txIns = map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) trxIns
+    , txInsCollateral = TxInsCollateralNone --TODO: Alonzo era: Generate collateral inputs.
     , txOuts = trxOuts
     , txFee = fee
     , txValidityRange = validityRange

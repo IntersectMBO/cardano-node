@@ -166,6 +166,7 @@ module Cardano.Api (
     TxOutDatumHash(..),
 
     -- ** Other transaction body types
+    TxInsCollateral(..),
     TxFee(..),
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
@@ -186,6 +187,7 @@ module Cardano.Api (
     ViewTx,
 
     -- ** Era-dependent transaction body features
+    CollateralSupportedInEra(..),
     MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
     TxFeesExplicitInEra(..),
@@ -201,6 +203,7 @@ module Cardano.Api (
     UpdateProposalSupportedInEra(..),
 
     -- ** Feature availability functions
+    collateralSupportedInEra,
     multiAssetSupportedInEra,
     txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,

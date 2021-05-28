@@ -43,6 +43,7 @@ module Cardano.Api.TxBody (
     TxOutDatumHash(..),
 
     -- * Other transaction body types
+    TxInsCollateral(..),
     TxFee(..),
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
@@ -61,6 +62,7 @@ module Cardano.Api.TxBody (
     ViewTx,
 
     -- * Era-dependent transaction body features
+    CollateralSupportedInEra(..),
     MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
     TxFeesExplicitInEra(..),
@@ -77,6 +79,7 @@ module Cardano.Api.TxBody (
     UpdateProposalSupportedInEra(..),
 
     -- ** Feature availability functions
+    collateralSupportedInEra,
     multiAssetSupportedInEra,
     txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,
@@ -437,6 +440,27 @@ fromAlonzoTxOutDataHash era (SJust dh) = TxOutDatumHash era (ScriptDataHash dh)
 -- Era-dependent transaction body features
 --
 
+-- | A representation of whether the era supports transactions with inputs used
+-- only for collateral for script fees.
+--
+-- The Alonzo and subsequent eras support collateral inputs.
+--
+data CollateralSupportedInEra era where
+
+     CollateralInAlonzoEra :: CollateralSupportedInEra AlonzoEra
+
+deriving instance Eq   (CollateralSupportedInEra era)
+deriving instance Show (CollateralSupportedInEra era)
+
+collateralSupportedInEra :: CardanoEra era
+                         -> Maybe (CollateralSupportedInEra era)
+collateralSupportedInEra ByronEra   = Nothing
+collateralSupportedInEra ShelleyEra = Nothing
+collateralSupportedInEra AllegraEra = Nothing
+collateralSupportedInEra MaryEra    = Nothing
+collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
+
+
 -- | A representation of whether the era supports multi-asset transactions.
 --
 -- The Mary and subsequent eras support multi-asset transactions.
@@ -786,6 +810,24 @@ deriving instance Show a => Show (BuildTxWith build a)
 
 
 -- ----------------------------------------------------------------------------
+-- Transaction input values (era-dependent)
+--
+
+type TxIns build era = [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))]
+
+data TxInsCollateral era where
+
+     TxInsCollateralNone :: TxInsCollateral era
+
+     TxInsCollateral     :: CollateralSupportedInEra era
+                         -> [TxIn] -- Only key witnesses, no scripts.
+                         -> TxInsCollateral era
+
+deriving instance Eq   (TxInsCollateral era)
+deriving instance Show (TxInsCollateral era)
+
+
+-- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
 --
 
@@ -1002,7 +1044,8 @@ deriving instance Show (TxMintValue build era)
 
 data TxBodyContent build era =
      TxBodyContent {
-       txIns            :: [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))],
+       txIns            :: TxIns build era,
+       txInsCollateral  :: TxInsCollateral era,
        txOuts           :: [TxOut era],
        txFee            :: TxFee era,
        txValidityRange  :: (TxValidityLowerBound era,
@@ -1359,6 +1402,7 @@ fromLedgerTxBody
 fromLedgerTxBody era body mAux =
     TxBodyContent
       { txIns            = fromLedgerTxIns            era body
+      , txInsCollateral  = fromLedgerTxInsCollateral  era body
       , txOuts           = fromLedgerTxOuts           era body
       , txFee            = fromLedgerTxFee            era body
       , txValidityRange  = fromLedgerTxValidityRange  era body
@@ -1377,18 +1421,42 @@ fromLedgerTxBody era body mAux =
 
 
 fromLedgerTxIns
-  :: ShelleyBasedEra era
+  :: forall era.
+     ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> [(TxIn,BuildTxWith ViewTx (Witness WitCtxTxIn era))]
 fromLedgerTxIns era body =
-  [ (fromShelleyTxIn input, ViewTx)
-  | input <-
-      case era of
-        ShelleyBasedEraShelley -> toList $ Shelley._inputs body
-        ShelleyBasedEraAllegra -> toList $ Allegra.inputs' body
-        ShelleyBasedEraMary    -> toList $ Mary.inputs'    body
-        ShelleyBasedEraAlonzo  -> toList $ Alonzo.inputs'  body
-  ]
+    [ (fromShelleyTxIn input, ViewTx)
+    | input <- Set.toList (inputs era body) ]
+  where
+    inputs :: ShelleyBasedEra era
+           -> Ledger.TxBody (ShelleyLedgerEra era)
+           -> Set (Shelley.TxIn StandardCrypto)
+    inputs ShelleyBasedEraShelley = Shelley._inputs
+    inputs ShelleyBasedEraAllegra = Allegra.inputs'
+    inputs ShelleyBasedEraMary    = Mary.inputs'
+    inputs ShelleyBasedEraAlonzo  = Alonzo.inputs'
+
+
+fromLedgerTxInsCollateral
+  :: forall era.
+     ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxInsCollateral era
+fromLedgerTxInsCollateral era body =
+    case collateralSupportedInEra (shelleyBasedToCardanoEra era) of
+      Nothing        -> TxInsCollateralNone
+      Just supported -> TxInsCollateral supported
+                          [ fromShelleyTxIn input
+                          | input <- Set.toList (collateral era body) ]
+  where
+    collateral :: ShelleyBasedEra era
+               -> Ledger.TxBody (ShelleyLedgerEra era)
+               -> Set (Shelley.TxIn StandardCrypto)
+    collateral ShelleyBasedEraShelley = const Set.empty
+    collateral ShelleyBasedEraAllegra = const Set.empty
+    collateral ShelleyBasedEraMary    = const Set.empty
+    collateral ShelleyBasedEraAlonzo  = Alonzo.collateral'
 
 
 fromLedgerTxOuts
@@ -1721,6 +1789,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
     TxBodyContent {
       txIns            = [ (fromByronTxIn input, ViewTx)
                          | input <- toList txInputs],
+      txInsCollateral  = TxInsCollateralNone,
       txOuts           = fromByronTxOut <$> toList txOutputs,
       txFee            = TxFeeImplicit TxFeesImplicitInByronEra,
       txValidityRange  = (TxValidityNoLowerBound,
@@ -1949,6 +2018,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
 makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                            txbodycontent@TxBodyContent {
                              txIns,
+                             txInsCollateral,
                              txOuts,
                              txFee,
                              txValidityRange = (lowerBound, upperBound),
@@ -1990,7 +2060,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
       ShelleyTxBody era
         (Alonzo.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (error "TODO alonzo: add support for collateral")
+          (case txInsCollateral of
+             TxInsCollateralNone     -> Set.empty
+             TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins))
           (Seq.fromList (map toShelleyTxOut txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
