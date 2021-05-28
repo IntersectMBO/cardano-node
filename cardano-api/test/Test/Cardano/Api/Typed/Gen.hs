@@ -514,6 +514,7 @@ genTxBodyContent era = do
   validityRange <- genTxValidityRange era
   txMd <- genTxMetadataInEra era
   auxScripts <- genTxAuxScripts era
+  mpparams <- Gen.maybe genProtocolParameters
   withdrawals <- genTxWithdrawals era
   certs <- genTxCertificates era
   updateProposal <- genTxUpdateProposal era
@@ -526,6 +527,8 @@ genTxBodyContent era = do
     , txValidityRange = validityRange
     , txMetadata = txMd
     , txAuxScripts = auxScripts
+    , txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
+    , txProtocolParams = BuildTxWith mpparams
     , txWithdrawals = withdrawals
     , txCertificates = certs
     , txUpdateProposal = updateProposal
