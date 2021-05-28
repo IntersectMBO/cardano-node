@@ -212,7 +212,6 @@ source-repository-package
     plutus-core
     plutus-ledger-api
     plutus-tx
-    plutus-tx-plugin
     prettyprinter-configurable
 
 constraints:
