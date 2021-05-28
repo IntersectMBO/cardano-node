@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
+
 module Cardano.Logging.Types (
     LogFormatting(..)
   , Metric(..)
@@ -36,13 +37,13 @@ module Cardano.Logging.Types (
 
 import           Control.Tracer
 import qualified Control.Tracer as T
+import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Text as AE
-import           Data.Aeson ((.=))
+import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text, pack)
 import           Data.Text.Lazy (toStrict)
 import           GHC.Generics
@@ -138,11 +139,15 @@ data DetailLevel =
     | DDetailed
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
 
+instance AE.ToJSON DetailLevel where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+instance AE.FromJSON DetailLevel
+
 -- | Privacy of a message. Default is Public
 data Privacy =
       Public                    -- ^ can be public.
     | Confidential              -- ^ confidential information - handle with care
-  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+  deriving (Show, Eq, Ord, Bounded, Enum)
 
 -- | Severity of a message
 data SeverityS
@@ -154,7 +159,7 @@ data SeverityS
     | Critical                -- ^ Severe situations
     | Alert                   -- ^ Take immediate action
     | Emergency               -- ^ System is unusable
-  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+  deriving (Show, Eq, Ord, Bounded, Enum)
 
 -- | Severity for a filter
 data SeverityF
@@ -168,6 +173,10 @@ data SeverityF
     | EmergencyF               -- ^ System is unusable
     | SilenceF                 -- ^ Don't show anything
   deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+
+instance AE.ToJSON SeverityF where
+    toEncoding = AE.genericToEncoding AE.defaultOptions
+instance AE.FromJSON SeverityF
 
 -- | Used for ForwarderTracer
 data TraceObject = TraceObject {
@@ -189,8 +198,20 @@ data Backend =
   | EKGBackend
   deriving (Eq, Ord, Show, Generic)
 
+instance AE.ToJSON Backend where
+  toJSON Forwarder  = AE.String "Forwarder"
+  toJSON EKGBackend = AE.String "EKGBackend"
+  toJSON (Stdout f) = AE.String $ "Stdout " <> (pack . show) f
+
+instance AE.FromJSON Backend where
+  parseJSON (AE.String "Forwarder")            = pure Forwarder
+  parseJSON (AE.String "EKGBackend")           = pure EKGBackend
+  parseJSON (AE.String "Stdout HumanFormat")   = pure $ Stdout HumanFormat
+  parseJSON (AE.String "Stdout MachineFormat") = pure $ Stdout MachineFormat
+  parseJSON other = error (show other)
+
 data Format = HumanFormat | MachineFormat
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show)
 
 -- Configuration options for individual namespace elements
 data ConfigOption =
@@ -199,14 +220,14 @@ data ConfigOption =
     -- | Detail level (Default is DRegular)
   | CoDetail DetailLevel
   -- | To which backend to pass (Default is BothBackends)
-  | CoBackend Backend
-  deriving (Eq, Ord, Show, Generic)
+  | CoBackend [Backend]
+  deriving (Eq, Ord, Show)
 
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
     tcOptions :: Map.Map Namespace [ConfigOption]
 }
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show)
 
 emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
@@ -258,51 +279,3 @@ instance LogFormatting Integer where
   forMachine i _ = mkObject [ "val" .= AE.String ((pack . show) i)]
   forHuman i     = (pack . show) i
   asMetrics i    = [IntM Nothing i]
-
-instance AE.ToJSON DetailLevel where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON DetailLevel where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
-
-instance AE.ToJSON Privacy where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON Privacy where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
-
-instance AE.ToJSON SeverityS where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON SeverityS where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
-
-instance AE.ToJSON SeverityF where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON SeverityF where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
-
-instance AE.ToJSON ConfigOption where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON ConfigOption where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
-
-instance AE.ToJSON TraceConfig where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON TraceConfig where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
-
-instance AE.ToJSON Backend where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON Backend where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
-
-instance AE.ToJSON Format where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-
-instance AE.FromJSON Format where
-    parseJSON = AE.genericParseJSON AE.defaultOptions

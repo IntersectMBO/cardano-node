@@ -10,7 +10,7 @@ module Cardano.Logging.Configuration
   ( configureTracers
   , withNamespaceConfig
   , filterSeverityFromConfig
-  , readRepresentation
+  , readConfiguration
   ) where
 
 import           Control.Exception (throwIO)
@@ -33,78 +33,104 @@ import           Cardano.Logging.Types
 data TraceOptionSeverity = TraceOptionSeverity {
       nsS      :: Text
     , severity :: SeverityF
-    } deriving (Eq, Ord, Show, Generic)
+    } deriving (Eq, Ord, Show)
 
 instance AE.ToJSON TraceOptionSeverity where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
+    toJSON tos = object [ "ns" .= nsS tos
+                        , "severity" .= AE.toJSON (severity tos)
+                        ]
 
 instance AE.FromJSON TraceOptionSeverity where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
+    parseJSON (Object obj) = TraceOptionSeverity
+                           <$> obj .: "ns"
+                           <*> obj .: "severity"
 
 data TraceOptionDetail = TraceOptionDetail {
-      nsD      :: Text
-    , details  :: DetailLevel
+      nsD     :: Text
+    , detail :: DetailLevel
     } deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON TraceOptionDetail where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
+    toJSON tos = object [ "ns" .= nsD tos
+                        , "detail" .= AE.toJSON (detail tos)
+                        ]
 
 instance AE.FromJSON TraceOptionDetail where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
+    parseJSON (Object obj) = TraceOptionDetail
+                           <$> obj .: "ns"
+                           <*> obj .: "detail"
 
 data TraceOptionBackend = TraceOptionBackend {
-      nsB      :: Text
-    , backend  :: Backend
+      nsB     :: Text
+    , backends :: [Backend]
     } deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON TraceOptionBackend where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
+    toJSON tos = object [ "ns" .= nsB tos
+                        , "backends" .= AE.toJSON (backends tos)
+                        ]
 
 instance AE.FromJSON TraceOptionBackend where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
+    parseJSON (Object obj) = TraceOptionBackend
+                           <$> obj .: "ns"
+                           <*> obj .: "backends"
 
-data ConfigRepresentation =
-    CRSeverity TraceOptionSeverity
-  | CRDetails  TraceOptionDetail
-  | CRBackend  TraceOptionBackend
-  deriving (Eq, Ord, Show, Generic)
+data ConfigRepresentation = ConfigRepresentation {
+    traceOptionSeverity :: [TraceOptionSeverity]
+  , traceOptionDetail   :: [TraceOptionDetail]
+  , traceOptionBackend  :: [TraceOptionBackend]
+  }
+  deriving (Eq, Ord, Show)
 
-instance AE.ToJSON ConfigRepresentation where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
+--instance AE.ToJSON ConfigRepresentation where
+    -- toJSON tos = object [ "traceOptionSeverity" .= AE.toJSON $ traceOptionSeverity tos
+    --                     , "traceOptionDetail"   .= AE.toJSON $ traceOptionDetail tos
+    --                     , "traceOptionBackend"  .= AE.toJSON $ traceOptionBackend tos
+    --                     ]
 
 instance AE.FromJSON ConfigRepresentation where
-    parseJSON = AE.genericParseJSON AE.defaultOptions
+    parseJSON (Object obj) = ConfigRepresentation
+                           <$> obj .: "TraceOptionSeverity"
+                           <*> obj .: "TraceOptionDetail"
+                           <*> obj .: "TraceOptionBackend"
 
-readRepresentation :: FilePath -> IO TraceConfig
-readRepresentation fp =
+readConfiguration :: FilePath -> IO TraceConfig
+readConfiguration fp =
     either throwIO pure =<< parseRepresentation <$> BS.readFile fp
+--
+-- -- | Reads the tracer's configuration file (path is passed via '--config' CLI option).
+-- readTracerConfig :: FilePath -> IO TraceConfig
+-- readTracerConfig pathToConfig =
+--   eitherDecodeFileStrict' pathToConfig >>= \case
+--     Left e -> Ex.die $ "Invalid tracer's configuration: " <> show e
+--     Right (config :: TracerConfig) -> return config
 
 parseRepresentation :: ByteString -> Either ParseException TraceConfig
 parseRepresentation bs = fill (decodeEither' bs)
   where
     fill ::
-         Either ParseException [ConfigRepresentation]
+         Either ParseException ConfigRepresentation
       -> Either ParseException TraceConfig
     fill (Left e)   = Left e
-    fill (Right rl) = Right $ foldl' fill' emptyTraceConfig rl
+    fill (Right rl) = Right $ fill' emptyTraceConfig rl
     fill' :: TraceConfig -> ConfigRepresentation -> TraceConfig
-    fill' (TraceConfig tc) (CRSeverity (TraceOptionSeverity ns severity')) =
-      let ns' = split (=='.') ns
-      in case Map.lookup ns' tc of
-            Nothing -> TraceConfig (Map.insert ns' [CoSeverity severity'] tc)
-            Just oa -> TraceConfig (Map.insert ns' (CoSeverity severity' : oa) tc)
-    fill' (TraceConfig tc) (CRDetails (TraceOptionDetail ns detail)) =
-      let ns' = split (=='.') ns
-      in case Map.lookup ns' tc of
-            Nothing -> TraceConfig (Map.insert ns' [CoDetail detail] tc)
-            Just oa -> TraceConfig (Map.insert ns' (CoDetail detail : oa) tc)
-    fill' (TraceConfig tc) (CRBackend (TraceOptionBackend ns backend')) =
-      let ns' = split (=='.') ns
-      in case Map.lookup ns' tc of
-            Nothing -> TraceConfig (Map.insert ns' [CoBackend backend'] tc)
-            Just oa -> TraceConfig (Map.insert ns' (CoBackend backend' : oa) tc)
-
-
+    fill' (TraceConfig tc) cr =
+      let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
+                          let ns' = split (=='.') ns
+                          in Map.insertWith (++) ns' [CoSeverity severity'] tci)
+                        tc
+                        (traceOptionSeverity cr)
+          tc'' = foldl' (\ tci (TraceOptionDetail ns detail') ->
+                          let ns' = split (=='.') ns
+                          in Map.insertWith (++) ns' [CoDetail detail'] tci)
+                        tc'
+                        (traceOptionDetail cr)
+          tc''' = foldl' (\ tci (TraceOptionBackend ns backend') ->
+                          let ns' = split (=='.') ns
+                          in Map.insertWith (++) ns' [CoBackend backend'] tci)
+                        tc''
+                        (traceOptionBackend cr)
+      in TraceConfig tc'''
 
 -- | Call this function at initialisation, and later for reconfiguration
 configureTracers :: Monad m => TraceConfig -> Documented a -> [Trace m a]-> m ()
