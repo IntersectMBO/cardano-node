@@ -27,7 +27,7 @@ import qualified Cardano.Chain.UTxO as Byron
 import           Cardano.Ledger.Shelley as Ledger (ShelleyEra)
 import           Cardano.Ledger.ShelleyMA (MaryOrAllegra (Allegra, Mary), ShelleyMAEra)
 import qualified Cardano.Ledger.ShelleyMA.TxBody as ShelleyMA
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Shelley.Spec.Ledger.API (Addr (..), TxOut (TxOut))
 import qualified Shelley.Spec.Ledger.API as Shelley
 

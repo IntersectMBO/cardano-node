@@ -59,7 +59,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
-                   Tip (..), blockHash, pointSlot, legacyTip)
+                   Tip (..), blockHash, pointSlot, tipFromHeader)
 import           Ouroboros.Network.Point (withOrigin)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -993,7 +993,7 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     TraceDownloadedHeader h ->
       mkObject $
                [ "kind" .= String "ChainSyncClientEvent.TraceDownloadedHeader"
-               ] <> tipToObject (legacyTip (headerPoint h) (blockNo h))
+               ] <> tipToObject (tipFromHeader h)
     TraceRolledBack tip ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceRolledBack"
                , "tip" .= toObject verb tip ]

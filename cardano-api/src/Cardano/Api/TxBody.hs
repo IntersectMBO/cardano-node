@@ -131,9 +131,8 @@ import           GHC.Generics
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
-import qualified Shelley.Spec.Ledger.Serialization as CBOR (decodeNullMaybe, encodeNullMaybe)
-
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Serialization as CBOR (decodeNullMaybe, encodeNullMaybe)
 import           Cardano.Slotting.Slot (SlotNo (..))
 
 import qualified Cardano.Chain.Common as Byron
@@ -146,16 +145,12 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
-import           Ouroboros.Consensus.Shelley.Eras
-                   (StandardShelley, StandardAllegra,
-                    StandardMary, StandardAlonzo)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import qualified Cardano.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Address as Shelley
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
-import qualified Shelley.Spec.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Metadata as Shelley
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
@@ -191,7 +186,11 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import           Ouroboros.Consensus.Shelley.Eras
+                   (StandardShelley, StandardAllegra,
+                    StandardMary, StandardAlonzo)
 
 -- ----------------------------------------------------------------------------
 -- Transaction Ids

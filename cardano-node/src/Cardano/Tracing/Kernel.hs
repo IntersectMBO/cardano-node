@@ -17,8 +17,9 @@ module Cardano.Tracing.Kernel
 
 import           Cardano.Prelude
 
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
+
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger, LedgerState)

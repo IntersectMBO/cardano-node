@@ -52,10 +52,10 @@ import           Network.Socket (PortNumber)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo (..))
 
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
 import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
 import qualified Shelley.Spec.Ledger.TxBody as Shelley

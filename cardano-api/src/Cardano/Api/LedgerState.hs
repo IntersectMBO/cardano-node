@@ -73,6 +73,8 @@ import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Crypto.ProtocolMagic
+import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
+import qualified Cardano.Ledger.Keys as Shelley.Spec
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
 import           Network.TypedProtocol.Pipelined (Nat (..))
@@ -98,10 +100,8 @@ import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
                    ClientPipelinedStIdle (CollectResponse, SendMsgDone, SendMsgRequestNextPipelined),
                    ClientStNext (..))
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley.Spec
 import qualified Shelley.Spec.Ledger.Credential as Shelley.Spec
 import qualified Shelley.Spec.Ledger.Genesis as Shelley.Spec
-import qualified Shelley.Spec.Ledger.Keys as Shelley.Spec
 import qualified Shelley.Spec.Ledger.PParams as Shelley.Spec
 
 data InitialLedgerStateError
