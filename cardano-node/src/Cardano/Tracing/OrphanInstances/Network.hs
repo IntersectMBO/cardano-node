@@ -94,6 +94,7 @@ instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
 instance HasPrivacyAnnotation (TraceFetchClientState header)
 instance HasSeverityAnnotation (TraceFetchClientState header) where
   getSeverityAnnotation BlockFetch.AddedFetchRequest {} = Info
+  getSeverityAnnotation BlockFetch.SendFetchRequest {} = Info
   getSeverityAnnotation BlockFetch.AcknowledgedFetchRequest {} = Info
   getSeverityAnnotation BlockFetch.StartedFetchBatch {} = Info
   getSeverityAnnotation BlockFetch.CompletedBlockFetch {} = Info
@@ -716,6 +717,8 @@ instance ToObject SlotNo where
 instance ConvertRawHash header => ToObject (TraceFetchClientState header) where
   toObject _verb BlockFetch.AddedFetchRequest {} =
     mkObject [ "kind" .= String "AddedFetchRequest" ]
+  toObject _verb BlockFetch.SendFetchRequest {} =
+    mkObject [ "kind" .= String "SendFetchRequest" ]
   toObject _verb BlockFetch.AcknowledgedFetchRequest {} =
     mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
   toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ _) =

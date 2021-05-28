@@ -13,11 +13,11 @@ import           Cardano.Prelude
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
 
+import           Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 
-import           Shelley.Spec.Ledger.BaseTypes as Ledger
 import           Shelley.Spec.Ledger.PParams as Ledger (PParams' (..), emptyPParams)
 
 

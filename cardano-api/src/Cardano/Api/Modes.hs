@@ -40,6 +40,7 @@ module Cardano.Api.Modes (
 import           Prelude
 
 import           Cardano.Api.Eras
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Data.SOP.Strict (K (K), NS (S, Z))
 import           Data.Text (Text)
@@ -51,7 +52,6 @@ import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex 
                    eraIndexZero)
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))

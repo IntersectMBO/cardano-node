@@ -42,8 +42,6 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Random as Crypto
 import           Crypto.Random as Crypto
 
-import           Cardano.Ledger.Crypto (ADDRHASH, Crypto)
-
 import           System.Directory (createDirectoryIfMissing, listDirectory)
 import           System.FilePath (takeExtension, takeExtensions, (</>))
 import           System.IO.Error (isDoesNotExistError)
@@ -59,19 +57,19 @@ import           Cardano.Api.Shelley
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 
 import qualified Plutus.V1.Ledger.Api as Plutus
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.API as Ledger
-import qualified Shelley.Spec.Ledger.BaseTypes as Ledger
-import qualified Shelley.Spec.Ledger.Keys as Ledger
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
+import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.Era ()
 
 import           Cardano.CLI.Helpers (textShow)
