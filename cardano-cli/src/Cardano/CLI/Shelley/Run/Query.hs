@@ -48,17 +48,17 @@ import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
 import           Cardano.Ledger.Coin
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
+import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                    (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.EpochBoundary
-import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 
@@ -491,7 +491,7 @@ writeStakeSnapshot (StakePoolKeyHash hk) qState =
         }
 
 -- | Sum all the stake that is held by the pool
-getPoolStake :: KeyHash Shelley.Spec.Ledger.Keys.StakePool crypto -> SnapShot crypto -> Integer
+getPoolStake :: KeyHash Cardano.Ledger.Keys.StakePool crypto -> SnapShot crypto -> Integer
 getPoolStake hash ss = pStake
   where
     Coin pStake = fold s

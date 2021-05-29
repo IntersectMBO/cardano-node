@@ -18,7 +18,7 @@ import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Shelley.Spec.Ledger.CompactAddr as Shelley
 
 instance FromJSON TracingVerbosity where

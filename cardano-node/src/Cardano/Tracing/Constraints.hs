@@ -19,6 +19,7 @@ import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import           Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import           Cardano.Ledger.Alonzo.TxBody (TxOut)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
                    Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -27,7 +28,6 @@ import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
 
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =

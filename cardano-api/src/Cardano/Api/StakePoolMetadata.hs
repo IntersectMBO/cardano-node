@@ -27,8 +27,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
-import qualified Shelley.Spec.Ledger.Keys as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -40,6 +38,9 @@ import           Cardano.Api.KeysPraos
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Ledger.Crypto (StandardCrypto)
+
+import qualified Cardano.Ledger.Keys as Shelley
 
 
 -- ----------------------------------------------------------------------------

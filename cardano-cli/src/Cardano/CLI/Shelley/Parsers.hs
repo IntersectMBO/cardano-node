@@ -26,7 +26,7 @@ import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..)
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
-
+import qualified Cardano.Ledger.BaseTypes as Shelley
 import           Control.Monad.Fail (fail)
 import           Data.Attoparsec.Combinator ((<?>))
 import           Data.Time.Clock (UTCTime)
@@ -50,7 +50,6 @@ import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.String as Parsec
 
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 --

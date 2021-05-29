@@ -11,7 +11,7 @@ import           Cardano.Api.Protocol.Types (ProtocolClient(..),
                      SomeNodeClientProtocol (..))
 import           Cardano.Chain.Slotting (EpochSlots)
 import           Ouroboros.Consensus.Cardano.Block (CardanoBlock)
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
 mkNodeClientProtocolCardano :: EpochSlots
                             -> ProtocolClientInfoArgs (CardanoBlock StandardCrypto)

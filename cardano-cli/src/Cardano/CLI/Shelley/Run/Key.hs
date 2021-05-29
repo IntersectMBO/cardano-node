@@ -24,11 +24,10 @@ import qualified Codec.Binary.Bech32 as Bech32
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Signing as Byron.Crypto
+import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto
-
-import qualified Cardano.Crypto.Signing as Byron
-import qualified Shelley.Spec.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Keys as Shelley
 
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))

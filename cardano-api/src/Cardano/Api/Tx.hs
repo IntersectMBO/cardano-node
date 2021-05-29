@@ -82,17 +82,16 @@ import qualified Cardano.Crypto.Signing as Byron
 --
 -- Shelley imports
 --
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
-
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
-import           Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import qualified Shelley.Spec.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 
 import qualified Cardano.Ledger.Alonzo as Alonzo

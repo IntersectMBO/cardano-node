@@ -19,13 +19,13 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShell
 import           Ouroboros.Consensus.Shelley.Node (emptyGenesisStaking)
 import           Ouroboros.Consensus.Util.Time
 
-import           Shelley.Spec.Ledger.Address (Addr (..))
-import           Shelley.Spec.Ledger.BaseTypes (Network (..), truncateUnitInterval)
+import           Cardano.Ledger.BaseTypes (Network (..), truncateUnitInterval)
 import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
+                   VerKeyVRF)
+import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.Credential (Credential (..), PaymentCredential,
                    StakeCredential, StakeReference (..))
-import           Shelley.Spec.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
-                   VerKeyVRF)
 import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 
 exampleShelleyGenesis :: ShelleyGenesis StandardShelley

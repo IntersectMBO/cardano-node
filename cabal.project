@@ -1,4 +1,4 @@
-index-state: 2021-03-15T00:00:00Z
+index-state: 2021-04-30T00:00:00Z
 
 packages:
     cardano-api
@@ -89,6 +89,9 @@ package goblins
 package io-sim-classes
   tests: False
 
+package cardano-ledger-alonzo-test
+  tests: False
+
 -- ---------------------------------------------------------
 
 -- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
@@ -125,10 +128,11 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 2d8560792d5306627a5add27d76fc2a26feea669
-  --sha256: 09wqfcbmzmrm73ik91ld2b46pv537w9y0i8y3alvlx1hinids10l
+  tag: a3ef848542961079b7cd53d599e5385198a3035c
+  --sha256: 02iwn2lcfcfvrnvcqnx586ncdnma23vdqvicxgr4f39vcacalzpd
   subdir:
     alonzo/impl
+    alonzo/test
     byron/chain/executable-spec
     byron/crypto
     byron/crypto/test
@@ -141,7 +145,6 @@ source-repository-package
     shelley/chain-and-ledger/dependencies/non-integer
     shelley/chain-and-ledger/executable-spec
     shelley/chain-and-ledger/shelley-spec-ledger-test
-    shelley-ma/shelley-ma-test
     shelley-ma/impl
     shelley-ma/shelley-ma-test
 
@@ -178,14 +181,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/Win32-network
-  tag: 82f4afb8c240b8446a1db6c6b50901a42028ce0f
-  --sha256: 0ljxjzywk6xh9n4mfg21am65z65anlrq47z6zyzcav3h6iasvfq2
+  tag: 94153b676617f8f33abe8d8182c37377d2784bd1
+  --sha256: 0pb7bg0936fldaa5r08nqbxvi2g8pcy4w3c7kdcg7pdgmimr30ss
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 127baaceb8e96355af0d0b0a135595df59c53519
-  --sha256: 19wj983wdb2s6wpv5grvwhy80da525qjbkz8fscihvd5v3mzva58
+  tag: 42cd78a6513730d6f42227e3baec49616c2ab543
+  --sha256: 1h47w69wah7mqq92gnj739b9104y0wvg08kiz7yry8cbm169x9ns
   subdir:
     io-sim
     io-sim-classes
@@ -203,8 +206,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 0b23a51891a83690222888e891c0b0a6d80501d2
-  --sha256: 188s6fmib0zpzr9wxsa0qvdk2k8scld0lsvzpfrsnir4s5ixjjrn
+  tag: ece86104c6ed590daa3249e4154dd7b62ebf0f05
+  --sha256: 0z59lxbw20afb80wnz8kspl83gb1i3m50a32jfm8jdfndvwwj3wg
   subdir:
     plutus-core
     plutus-ledger-api
@@ -222,6 +225,9 @@ constraints:
 
 package comonad
   flags: -test-doctests
+
+package cardano-ledger-alonzo-test
+  tests: False
 
 allow-newer:
   monoidal-containers:aeson,

@@ -47,10 +47,10 @@ import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto.HD
-
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN)
-import           Ouroboros.Consensus.Shelley.Protocol.Crypto (StandardCrypto)
-import qualified Shelley.Spec.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Keys as Shelley
+
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
