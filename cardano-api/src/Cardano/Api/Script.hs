@@ -39,6 +39,7 @@ module Cardano.Api.Script (
     ScriptWitnessInCtx(..),
     ScriptDatum(..),
     ScriptRedeemer,
+    scriptWitnessScript,
 
     -- ** Languages supported in each era
     ScriptLanguageInEra(..),
@@ -654,6 +655,14 @@ data ScriptDatum witctx where
 
 deriving instance Eq   (ScriptDatum witctx)
 deriving instance Show (ScriptDatum witctx)
+
+
+scriptWitnessScript :: ScriptWitness witctx era -> ScriptInEra era
+scriptWitnessScript (SimpleScriptWitness langInEra version script) =
+    ScriptInEra langInEra (SimpleScript version script)
+
+scriptWitnessScript (PlutusScriptWitness langInEra version script _ _ _) =
+    ScriptInEra langInEra (PlutusScript version script)
 
 
 -- ----------------------------------------------------------------------------
