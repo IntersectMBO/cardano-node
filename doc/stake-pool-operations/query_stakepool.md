@@ -32,7 +32,7 @@ before the start of the current epoch.
 This command is for debugging purposes only and may fail when used in a memory constrained
 environment due to the size of the ledger state.
 
-# Querying for pool pparameters
+# Querying for pool parameters
 
 The pool parameters command returns three pieces of information: current parameters, future
 parameters and retiring information.
