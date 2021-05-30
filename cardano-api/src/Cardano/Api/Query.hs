@@ -239,25 +239,17 @@ toShelleyAddrSet era =
   . Set.toList
 
 
-fromUTxO
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> Shelley.UTxO ledgerera
-  -> UTxO era
-fromUTxO eraConversion utxo =
-  case eraConversion of
-    ShelleyBasedEraShelley ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn fromShelleyTxOut) $ Map.toList sUtxo
-    ShelleyBasedEraAllegra ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraAllegra)) $ Map.toList sUtxo
-    ShelleyBasedEraMary ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraMary)) $ Map.toList sUtxo
-    ShelleyBasedEraAlonzo ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraAlonzo)) $ Map.toList sUtxo
+fromUTxO :: ShelleyLedgerEra era ~ ledgerera
+         => Ledger.Crypto ledgerera ~ StandardCrypto
+         => ShelleyBasedEra era
+         -> Shelley.UTxO ledgerera
+         -> UTxO era
+fromUTxO era (Shelley.UTxO utxo) =
+    UTxO
+  . Map.fromList
+  . map (bimap fromShelleyTxIn (fromTxOut era))
+  . Map.toList
+  $ utxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational
