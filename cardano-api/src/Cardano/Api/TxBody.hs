@@ -1050,8 +1050,8 @@ data TxBodyContent build era =
                             TxValidityUpperBound era),
        txMetadata       :: TxMetadataInEra era,
        txAuxScripts     :: TxAuxScripts era,
+       txAuxScriptData  :: TxAuxScriptData era,
        txExtraKeyWits   :: TxExtraKeyWitnesses era,
-     --txAuxScriptData  :: TxAuxScriptData era, -- TODO alonzo
        txProtocolParams :: BuildTxWith build (Maybe ProtocolParameters),
        txWithdrawals    :: TxWithdrawals  build era,
        txCertificates   :: TxCertificates build era,
@@ -1087,7 +1087,10 @@ data TxBody era where
           -- depending on era:
           -- + transaction metadata  (in Shelley and later)
           -- + auxiliary scripts     (in Allegra and later)
-          -- + auxiliary script data (in Allonzo and later)
+          -- Note that there is no auxiliary script data as such, because the
+          -- extra script data has to be passed to scripts and hence is needed
+          -- for validation. It is thus part of the witness data, not the
+          -- auxiliary data.
        -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
 
        -> TxBody era
@@ -1103,6 +1106,10 @@ data TxBodyScriptData era where
                         -> [Alonzo.Data (ShelleyLedgerEra era)]
                         -> Alonzo.Redeemers (ShelleyLedgerEra era)
                         -> TxBodyScriptData era
+     -- TODO alonzo: the supplementary script data will probably need to live
+     -- here, since it is part of the transaction witness data, not part of the
+     -- transaction auxiliary data. Completing this feature depends on the
+     -- support in the ledger lib being completed.
 
 deriving instance Eq   (TxBodyScriptData era)
 deriving instance Show (TxBodyScriptData era)
@@ -1410,10 +1417,10 @@ fromLedgerTxBody era body mAux =
       , txProtocolParams = ViewTx
       , txMetadata
       , txAuxScripts
+      , txAuxScriptData  = error "TODO alonzo: txAuxScriptData"
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
-    -- TODO alonzo ^^ also return TxAuxScriptData as 3rd component
 
 
 fromLedgerTxIns
@@ -1547,7 +1554,6 @@ fromLedgerAuxiliaryData ShelleyBasedEraAlonzo (Alonzo.AuxiliaryData ms ss _ds) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraAlonzo <$> toList ss
   )
-  -- TODO alonzo: cover the Alonzo era auxiliary data, see txAuxScriptData above
 
 fromLedgerTxAuxiliaryData
   :: ShelleyBasedEra era
@@ -1793,6 +1799,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
                             ValidityNoUpperBoundInByronEra),
       txMetadata       = TxMetadataNone,
       txAuxScripts     = TxAuxScriptsNone,
+      txAuxScriptData  = TxAuxScriptDataNone,
       txExtraKeyWits   = TxExtraKeyWitnessesNone,
       txProtocolParams = ViewTx,
       txWithdrawals    = TxWithdrawalsNone,
@@ -2122,6 +2129,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         scripts
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
         txAuxData
+        -- TODO alonzo: support the supplementary script data
   where
     witnesses :: [(Alonzo.RdmrPtr, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent
@@ -2159,9 +2167,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardAlonzo)
     txAuxData
       | Map.null ms
-      , null ss
-      , null ds   = Nothing
-      | otherwise = Just (toAlonzoAuxiliaryData ms ss ds)
+      , null ss   = Nothing
+      | otherwise = Just (toAlonzoAuxiliaryData ms ss)
       where
         ms = case txMetadata of
                TxMetadataNone                     -> Map.empty
@@ -2169,9 +2176,6 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         ss = case txAuxScripts of
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
-        ds :: [ScriptData]
-        ds = error "TODO alonzo: support the Alonzo era aux data"
-             -- TODO alonzo: txAuxScriptData
 
     toAlonzoUpdate :: UpdateProposal -> Shelley.Update ledgerera
     toAlonzoUpdate = error "TODO alonzo: toAlonzoUpdate"
@@ -2315,13 +2319,14 @@ toAlonzoAuxiliaryData :: forall era ledgerera.
                       => Ledger.Era ledgerera
                       => Map Word64 TxMetadataValue
                       -> [ScriptInEra era]
-                      -> [ScriptData]
                       -> Ledger.AuxiliaryData ledgerera
-toAlonzoAuxiliaryData m ss ds =
+toAlonzoAuxiliaryData m ss =
     Alonzo.AuxiliaryData
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
-      (Set.fromList (map toAlonzoData ds))
+       Set.empty --TODO alonzo: the script data is expected to move from the
+                 -- aux data section, to a separate supplementary data field
+                 -- in the witness section
 
 
 -- ----------------------------------------------------------------------------

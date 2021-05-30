@@ -570,6 +570,7 @@ genTxBodyContent era = do
     , txValidityRange = validityRange
     , txMetadata = txMd
     , txAuxScripts = auxScripts
+    , txAuxScriptData = TxAuxScriptDataNone    --TODO: Alonzo era: Generate extra script data
     , txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
     , txProtocolParams = BuildTxWith mpparams
     , txWithdrawals = withdrawals
