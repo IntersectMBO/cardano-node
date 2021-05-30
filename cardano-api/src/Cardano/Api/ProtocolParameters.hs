@@ -87,10 +87,16 @@ import qualified Cardano.Ledger.Era as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Shelley.Spec.Ledger.Genesis as Shelley
-import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Keys as Ledger
+import qualified Shelley.Spec.Ledger.PParams as Ledger
+                   (Update(..), ProposedPPUpdates(..), ProtVer(..))
+-- Some of the things from Shelley.Spec.Ledger.PParams are generic across all
+-- eras, and some are specific to the Shelley era (and other pre-Alonzo eras).
+-- So we import in twice under different names.
 import qualified Shelley.Spec.Ledger.PParams as Shelley
+                   (PParams, PParams'(..), PParamsUpdate)
+import qualified Shelley.Spec.Ledger.Genesis as Shelley
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
@@ -584,7 +590,7 @@ instance Monoid ProtocolParametersUpdate where
 -- Praos nonce
 --
 
-newtype PraosNonce = PraosNonce (Shelley.Hash StandardCrypto ByteString)
+newtype PraosNonce = PraosNonce (Ledger.Hash StandardCrypto ByteString)
   deriving (Eq, Ord, Show, Generic)
 
 instance ToJSON PraosNonce where
@@ -600,13 +606,13 @@ instance FromJSON PraosNonce where
 makePraosNonce :: ByteString -> PraosNonce
 makePraosNonce = PraosNonce . Crypto.hashWith id
 
-toShelleyNonce :: Maybe PraosNonce -> Shelley.Nonce
-toShelleyNonce Nothing               = Shelley.NeutralNonce
-toShelleyNonce (Just (PraosNonce h)) = Shelley.Nonce (Crypto.castHash h)
+toLedgerNonce :: Maybe PraosNonce -> Ledger.Nonce
+toLedgerNonce Nothing               = Ledger.NeutralNonce
+toLedgerNonce (Just (PraosNonce h)) = Ledger.Nonce (Crypto.castHash h)
 
-fromPraosNonce :: Shelley.Nonce -> Maybe PraosNonce
-fromPraosNonce Shelley.NeutralNonce = Nothing
-fromPraosNonce (Shelley.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
+fromLedgerNonce :: Ledger.Nonce -> Maybe PraosNonce
+fromLedgerNonce Ledger.NeutralNonce = Nothing
+fromLedgerNonce (Ledger.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
 
 
 -- ----------------------------------------------------------------------------
@@ -787,9 +793,10 @@ toShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
                    , Ledger.PParamsDelta ledgerera
                      ~ Shelley.PParamsUpdate ledgerera
                    )
-                => UpdateProposal -> Shelley.Update ledgerera
+                => UpdateProposal
+                -> Ledger.Update ledgerera
 toShelleyUpdate (UpdateProposal ppup epochno) =
-    Shelley.Update (toShelleyProposedPPUpdates ppup) epochno
+    Ledger.Update (toShelleyProposedPPUpdates ppup) epochno
 
 
 toShelleyProposedPPUpdates :: forall ledgerera.
@@ -798,9 +805,9 @@ toShelleyProposedPPUpdates :: forall ledgerera.
                                 ~ Shelley.PParamsUpdate ledgerera
                               )
                             => Map (Hash GenesisKey) ProtocolParametersUpdate
-                            -> Shelley.ProposedPPUpdates ledgerera
+                            -> Ledger.ProposedPPUpdates ledgerera
 toShelleyProposedPPUpdates =
-    Shelley.ProposedPPUpdates
+    Ledger.ProposedPPUpdates
   . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
   . Map.map (toShelleyPParamsUpdate @ledgerera)
 
@@ -840,15 +847,15 @@ toShelleyPParamsUpdate
     , Shelley._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
     , Shelley._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
     , Shelley._a0          = maybeToStrictMaybe protocolUpdatePoolPledgeInfluence
-    , Shelley._rho         = Shelley.unitIntervalFromRational <$>
+    , Shelley._rho         = Ledger.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateMonetaryExpansion
-    , Shelley._tau         = Shelley.unitIntervalFromRational <$>
+    , Shelley._tau         = Ledger.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateTreasuryCut
-    , Shelley._d           = Shelley.unitIntervalFromRational <$>
+    , Shelley._d           = Ledger.unitIntervalFromRational <$>
                                maybeToStrictMaybe protocolUpdateDecentralization
-    , Shelley._extraEntropy    = toShelleyNonce <$>
+    , Shelley._extraEntropy    = toLedgerNonce <$>
                                    maybeToStrictMaybe protocolUpdateExtraPraosEntropy
-    , Shelley._protocolVersion = uncurry Shelley.ProtVer <$>
+    , Shelley._protocolVersion = uncurry Ledger.ProtVer <$>
                                    maybeToStrictMaybe protocolUpdateProtocolVersion
     , Shelley._minUTxOValue    = toShelleyLovelace <$>
                                    maybeToStrictMaybe protocolUpdateMinUTxOValue
@@ -860,8 +867,9 @@ fromShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
                      , Ledger.PParamsDelta ledgerera
                        ~ Shelley.PParamsUpdate ledgerera
                      )
-                  => Shelley.Update ledgerera -> UpdateProposal
-fromShelleyUpdate (Shelley.Update ppup epochno) =
+                  => Ledger.Update ledgerera
+                  -> UpdateProposal
+fromShelleyUpdate (Ledger.Update ppup epochno) =
     UpdateProposal (fromShelleyProposedPPUpdates ppup) epochno
 
 
@@ -869,12 +877,12 @@ fromShelleyProposedPPUpdates :: ( Ledger.Crypto ledgerera ~ StandardCrypto
                                 , Ledger.PParamsDelta ledgerera
                                   ~ Shelley.PParamsUpdate ledgerera
                                 )
-                             => Shelley.ProposedPPUpdates ledgerera
+                             => Ledger.ProposedPPUpdates ledgerera
                              -> Map (Hash GenesisKey) ProtocolParametersUpdate
 fromShelleyProposedPPUpdates =
     Map.map fromShelleyPParamsUpdate
   . Map.mapKeysMonotonic GenesisKeyHash
-  . (\(Shelley.ProposedPPUpdates ppup) -> ppup)
+  . (\(Ledger.ProposedPPUpdates ppup) -> ppup)
 
 
 fromShelleyPParamsUpdate :: Shelley.PParamsUpdate ledgerera
@@ -900,11 +908,11 @@ fromShelleyPParamsUpdate
     , Shelley._minPoolCost
     } =
     ProtocolParametersUpdate {
-      protocolUpdateProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b)) <$>
+      protocolUpdateProtocolVersion     = (\(Ledger.ProtVer a b) -> (a,b)) <$>
                                           strictMaybeToMaybe _protocolVersion
-    , protocolUpdateDecentralization    = Shelley.unitIntervalToRational <$>
+    , protocolUpdateDecentralization    = Ledger.unitIntervalToRational <$>
                                             strictMaybeToMaybe _d
-    , protocolUpdateExtraPraosEntropy   = fromPraosNonce <$>
+    , protocolUpdateExtraPraosEntropy   = fromLedgerNonce <$>
                                             strictMaybeToMaybe _extraEntropy
     , protocolUpdateMaxBlockHeaderSize  = strictMaybeToMaybe _maxBHSize
     , protocolUpdateMaxBlockBodySize    = strictMaybeToMaybe _maxBBSize
@@ -922,9 +930,9 @@ fromShelleyPParamsUpdate
     , protocolUpdatePoolRetireMaxEpoch  = strictMaybeToMaybe _eMax
     , protocolUpdateStakePoolTargetNum  = strictMaybeToMaybe _nOpt
     , protocolUpdatePoolPledgeInfluence = strictMaybeToMaybe _a0
-    , protocolUpdateMonetaryExpansion   = Shelley.unitIntervalToRational <$>
+    , protocolUpdateMonetaryExpansion   = Ledger.unitIntervalToRational <$>
                                             strictMaybeToMaybe _rho
-    , protocolUpdateTreasuryCut         = Shelley.unitIntervalToRational <$>
+    , protocolUpdateTreasuryCut         = Ledger.unitIntervalToRational <$>
                                             strictMaybeToMaybe _tau
     , protocolUpdateUTxOCostPerWord     = Nothing
     , protocolUpdateCostModels          = mempty
@@ -971,10 +979,10 @@ toShelleyPParams ProtocolParameters {
    Shelley.PParams
      { Shelley._protocolVersion
                              = let (maj, minor) = protocolParamProtocolVersion
-                                in Shelley.ProtVer maj minor
-     , Shelley._d            = Shelley.unitIntervalFromRational
+                                in Ledger.ProtVer maj minor
+     , Shelley._d            = Ledger.unitIntervalFromRational
                                  protocolParamDecentralization
-     , Shelley._extraEntropy = toShelleyNonce protocolParamExtraPraosEntropy
+     , Shelley._extraEntropy = toLedgerNonce protocolParamExtraPraosEntropy
      , Shelley._maxBHSize    = protocolParamMaxBlockHeaderSize
      , Shelley._maxBBSize    = protocolParamMaxBlockBodySize
      , Shelley._maxTxSize    = protocolParamMaxTxSize
@@ -987,9 +995,9 @@ toShelleyPParams ProtocolParameters {
      , Shelley._eMax         = protocolParamPoolRetireMaxEpoch
      , Shelley._nOpt         = protocolParamStakePoolTargetNum
      , Shelley._a0           = protocolParamPoolPledgeInfluence
-     , Shelley._rho          = Shelley.unitIntervalFromRational
+     , Shelley._rho          = Ledger.unitIntervalFromRational
                                  protocolParamMonetaryExpansion
-     , Shelley._tau          = Shelley.unitIntervalFromRational
+     , Shelley._tau          = Ledger.unitIntervalFromRational
                                  protocolParamTreasuryCut
      }
 toShelleyPParams ProtocolParameters { protocolParamMinUTxOValue = Nothing } =
@@ -1026,9 +1034,9 @@ toAlonzoPParams ProtocolParameters {
       Alonzo._protocolVersion
                            = let (maj, minor) = protocolParamProtocolVersion
                               in Alonzo.ProtVer maj minor
-    , Alonzo._d            = Shelley.unitIntervalFromRational
+    , Alonzo._d            = Ledger.unitIntervalFromRational
                                protocolParamDecentralization
-    , Alonzo._extraEntropy = toShelleyNonce protocolParamExtraPraosEntropy
+    , Alonzo._extraEntropy = toLedgerNonce protocolParamExtraPraosEntropy
     , Alonzo._maxBHSize    = protocolParamMaxBlockHeaderSize
     , Alonzo._maxBBSize    = protocolParamMaxBlockBodySize
     , Alonzo._maxTxSize    = protocolParamMaxTxSize
@@ -1040,9 +1048,9 @@ toAlonzoPParams ProtocolParameters {
     , Alonzo._eMax         = protocolParamPoolRetireMaxEpoch
     , Alonzo._nOpt         = protocolParamStakePoolTargetNum
     , Alonzo._a0           = protocolParamPoolPledgeInfluence
-    , Alonzo._rho          = Shelley.unitIntervalFromRational
+    , Alonzo._rho          = Ledger.unitIntervalFromRational
                                protocolParamMonetaryExpansion
-    , Alonzo._tau          = Shelley.unitIntervalFromRational
+    , Alonzo._tau          = Ledger.unitIntervalFromRational
                                protocolParamTreasuryCut
 
       -- New params in Alonzo:
@@ -1108,10 +1116,10 @@ fromShelleyPParams
     , Shelley._minPoolCost
     } =
     ProtocolParameters {
-      protocolParamProtocolVersion     = (\(Shelley.ProtVer a b) -> (a,b))
+      protocolParamProtocolVersion     = (\(Ledger.ProtVer a b) -> (a,b))
                                            _protocolVersion
-    , protocolParamDecentralization    = Shelley.unitIntervalToRational _d
-    , protocolParamExtraPraosEntropy   = fromPraosNonce _extraEntropy
+    , protocolParamDecentralization    = Ledger.unitIntervalToRational _d
+    , protocolParamExtraPraosEntropy   = fromLedgerNonce _extraEntropy
     , protocolParamMaxBlockHeaderSize  = _maxBHSize
     , protocolParamMaxBlockBodySize    = _maxBBSize
     , protocolParamMaxTxSize           = _maxTxSize
@@ -1124,8 +1132,8 @@ fromShelleyPParams
     , protocolParamPoolRetireMaxEpoch  = _eMax
     , protocolParamStakePoolTargetNum  = _nOpt
     , protocolParamPoolPledgeInfluence = _a0
-    , protocolParamMonetaryExpansion   = Shelley.unitIntervalToRational _rho
-    , protocolParamTreasuryCut         = Shelley.unitIntervalToRational _tau
+    , protocolParamMonetaryExpansion   = Ledger.unitIntervalToRational _rho
+    , protocolParamTreasuryCut         = Ledger.unitIntervalToRational _tau
     , protocolParamUTxOCostPerWord     = Nothing
     , protocolParamCostModels          = Map.empty
     , protocolParamPrices              = Nothing
