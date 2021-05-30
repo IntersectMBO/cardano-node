@@ -20,7 +20,7 @@ import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Crypto.Hashing as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 
-import           Cardano.Api hiding (UpdateProposal)
+import           Cardano.Api hiding (UpdateProposal, GenesisParameters)
 import           Cardano.Api.Byron (SomeByronSigningKey (..), Tx (..), VerificationKey (..))
 
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
