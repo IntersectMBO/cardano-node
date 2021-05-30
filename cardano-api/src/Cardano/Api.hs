@@ -470,6 +470,7 @@ module Cardano.Api (
     LocalStateQueryClient(..),
     QueryInMode(..),
     QueryInEra(..),
+    QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
     -- *** Common queries
