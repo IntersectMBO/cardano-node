@@ -327,7 +327,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       ShelleyEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
-      AlonzoEraInCardanoMode  -> error "toConsensusQuery: Alonzo not implemented yet"
+      AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
 
 
 toConsensusQueryShelleyBased
@@ -397,8 +397,7 @@ consensusQueryInEraInMode erainmode =
       ShelleyEraInCardanoMode -> Consensus.QueryIfCurrentShelley
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
-      AlonzoEraInCardanoMode  ->
-        error "consensusQueryInEraInMode: Alonzo not implemented yet"
+      AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
 
 
 -- ----------------------------------------------------------------------------
@@ -485,8 +484,14 @@ fromConsensusQueryResult (QueryInEra MaryEraInCardanoMode
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
-                                     (QueryInShelleyBasedEra _ _)) _ _ =
-    error "fromConsensusQueryResult: Alonzo not implemented yet"
+                                     (QueryInShelleyBasedEra _era q)) q' r' =
+    case q' of
+      Consensus.BlockQuery (Consensus.QueryIfCurrentAlonzo q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraAlonzo q q'')
+                 r'
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.
