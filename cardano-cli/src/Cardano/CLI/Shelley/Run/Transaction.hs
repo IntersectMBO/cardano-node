@@ -721,7 +721,12 @@ runTxCalculateMinValue protocolParamsSourceSpec value = do
         firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
     ParamsFromFile f -> readProtocolParameters f
 
-  let minValues = calcMinimumDeposit value (protocolParamMinUTxOValue pp)
+  let minValues =
+        case protocolParamMinUTxOValue pp of
+          Nothing -> panic "TODO alonzo: runTxCalculateMinValue using new protocol params"
+          --TODO alonzo: there is a new formula for the min amount of ada in
+          -- a tx output, which uses a new param protocolParamUTxOCostPerWord
+          Just minUTxOValue -> calcMinimumDeposit value minUTxOValue
 
   liftIO $ IO.print minValues
 

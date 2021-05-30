@@ -193,7 +193,7 @@ data ProtocolParameters =
        -- | The minimum permitted value for new UTxO entries, ie for
        -- transaction outputs.
        --
-       protocolParamMinUTxOValue :: Lovelace,
+       protocolParamMinUTxOValue :: Maybe Lovelace,
 
        -- | The deposit required to register a stake address.
        --
@@ -926,7 +926,7 @@ toShelleyPParams ProtocolParameters {
                    protocolParamMaxTxSize,
                    protocolParamTxFeeFixed,
                    protocolParamTxFeePerByte,
-                   protocolParamMinUTxOValue,
+                   protocolParamMinUTxOValue = Just minUTxOValue,
                    protocolParamStakeAddressDeposit,
                    protocolParamStakePoolDeposit,
                    protocolParamMinPoolCost,
@@ -948,7 +948,7 @@ toShelleyPParams ProtocolParameters {
      , Shelley._maxTxSize    = protocolParamMaxTxSize
      , Shelley._minfeeB      = protocolParamTxFeeFixed
      , Shelley._minfeeA      = protocolParamTxFeePerByte
-     , Shelley._minUTxOValue = toShelleyLovelace protocolParamMinUTxOValue
+     , Shelley._minUTxOValue = toShelleyLovelace minUTxOValue
      , Shelley._keyDeposit   = toShelleyLovelace protocolParamStakeAddressDeposit
      , Shelley._poolDeposit  = toShelleyLovelace protocolParamStakePoolDeposit
      , Shelley._minPoolCost  = toShelleyLovelace protocolParamMinPoolCost
@@ -960,6 +960,8 @@ toShelleyPParams ProtocolParameters {
      , Shelley._tau          = Shelley.unitIntervalFromRational
                                  protocolParamTreasuryCut
      }
+toShelleyPParams ProtocolParameters { protocolParamMinUTxOValue = Nothing } =
+  error "toShelleyPParams: must specify protocolParamMinUTxOValue"
 
 toAlonzoPParams :: ProtocolParameters -> Alonzo.PParams ledgerera
 toAlonzoPParams ProtocolParameters {
@@ -1020,15 +1022,15 @@ toAlonzoPParams ProtocolParameters {
     , Alonzo._maxCollateralInputs  = error "TODO alonzo: toAlonzoPParams maxCollateralInputs"
     }
 toAlonzoPParams ProtocolParameters { protocolParamUTxOCostPerWord = Nothing } =
-  error "fromProtocolParamsAlonzo: must specify protocolParamUTxOCostPerWord"
+  error "toAlonzoPParams: must specify protocolParamUTxOCostPerWord"
 toAlonzoPParams ProtocolParameters { protocolParamPrices          = Nothing } =
-  error "fromProtocolParamsAlonzo: must specify protocolParamPrices"
+  error "toAlonzoPParams: must specify protocolParamPrices"
 toAlonzoPParams ProtocolParameters { protocolParamMaxTxExUnits    = Nothing } =
-  error "fromProtocolParamsAlonzo: must specify protocolParamMaxTxExUnits"
+  error "toAlonzoPParams: must specify protocolParamMaxTxExUnits"
 toAlonzoPParams ProtocolParameters { protocolParamMaxBlockExUnits = Nothing } =
-  error "fromProtocolParamsAlonzo: must specify protocolParamMaxBlockExUnits"
+  error "toAlonzoPParams: must specify protocolParamMaxBlockExUnits"
 toAlonzoPParams ProtocolParameters { protocolParamMaxValueSize    = Nothing } =
-    error "fromProtocolParamsAlonzo: must specify protocolParamMaxValueSize"
+    error "toAlonzoPParams: must specify protocolParamMaxValueSize"
 
 
 toAlonzoCostModels
@@ -1077,7 +1079,7 @@ fromShelleyPParams
     , protocolParamMaxTxSize           = _maxTxSize
     , protocolParamTxFeeFixed          = _minfeeB
     , protocolParamTxFeePerByte        = _minfeeA
-    , protocolParamMinUTxOValue        = fromShelleyLovelace _minUTxOValue
+    , protocolParamMinUTxOValue        = Just (fromShelleyLovelace _minUTxOValue)
     , protocolParamStakeAddressDeposit = fromShelleyLovelace _keyDeposit
     , protocolParamStakePoolDeposit    = fromShelleyLovelace _poolDeposit
     , protocolParamMinPoolCost         = fromShelleyLovelace _minPoolCost

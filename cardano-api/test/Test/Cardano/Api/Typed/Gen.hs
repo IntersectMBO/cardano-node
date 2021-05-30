@@ -708,7 +708,7 @@ genProtocolParameters =
     <*> genNat
     <*> genNat
     <*> genNat
-    <*> genLovelace
+    <*> Gen.maybe genLovelace
     <*> genLovelace
     <*> genLovelace
     <*> genLovelace
