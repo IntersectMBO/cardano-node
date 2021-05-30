@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -270,59 +271,66 @@ data ProtocolParameters =
   deriving (Eq, Generic, Show)
 
 instance FromJSON ProtocolParameters where
-  parseJSON = withObject "ProtocolParameters" $ \o -> do
-                v <- o .: "protocolVersion"
-                ProtocolParameters
-                        <$> ((,) <$> v .: "major" <*> v .: "minor")
-                        <*> o .: "decentralization"
-                        <*> o .: "extraPraosEntropy"
-                        <*> o .: "maxBlockHeaderSize"
-                        <*> o .: "maxBlockBodySize"
-                        <*> o .: "maxTxSize"
-                        <*> o .: "txFeeFixed"
-                        <*> o .: "txFeePerByte"
-                        <*> o .: "minUTxOValue"
-                        <*> o .: "stakeAddressDeposit"
-                        <*> o .: "stakePoolDeposit"
-                        <*> o .: "minPoolCost"
-                        <*> o .: "poolRetireMaxEpoch"
-                        <*> o .: "stakePoolTargetNum"
-                        <*> o .: "poolPledgeInfluence"
-                        <*> o .: "monetaryExpansion"
-                        <*> o .: "treasuryCut"
-                        <*> o .:? "utxoCostPerWord"
-                        <*> o .:? "costModel"           .!= Map.empty
-                        <*> o .:? "executionUnitPrices"
-                        <*> o .:? "maxTxExecUnits"
-                        <*> o .:? "maxBlockExecUnits"
-                        <*> o .:? "maxValueSize"
+  parseJSON =
+    withObject "ProtocolParameters" $ \o -> do
+      v <- o .: "protocolVersion"
+      ProtocolParameters
+        <$> ((,) <$> v .: "major" <*> v .: "minor")
+        <*> o .: "decentralization"
+        <*> o .: "extraPraosEntropy"
+        <*> o .: "maxBlockHeaderSize"
+        <*> o .: "maxBlockBodySize"
+        <*> o .: "maxTxSize"
+        <*> o .: "txFeeFixed"
+        <*> o .: "txFeePerByte"
+        <*> o .: "minUTxOValue"
+        <*> o .: "stakeAddressDeposit"
+        <*> o .: "stakePoolDeposit"
+        <*> o .: "minPoolCost"
+        <*> o .: "poolRetireMaxEpoch"
+        <*> o .: "stakePoolTargetNum"
+        <*> o .: "poolPledgeInfluence"
+        <*> o .: "monetaryExpansion"
+        <*> o .: "treasuryCut"
+        <*> o .:? "utxoCostPerWord"
+        <*> o .:? "costModel" .!= Map.empty
+        <*> o .:? "executionUnitPrices"
+        <*> o .:? "maxTxExecUnits"
+        <*> o .:? "maxBlockExecUnits"
+        <*> o .:? "maxValueSize"
 
 instance ToJSON ProtocolParameters where
-  toJSON pp = object [ "extraPraosEntropy" .= protocolParamExtraPraosEntropy pp
-                     , "stakePoolTargetNum" .= protocolParamStakePoolTargetNum pp
-                     , "minUTxOValue" .= protocolParamMinUTxOValue pp
-                     , "poolRetireMaxEpoch" .= protocolParamPoolRetireMaxEpoch pp
-                     , "decentralization" .= (fromRational $ protocolParamDecentralization pp :: Scientific)
-                     , "stakePoolDeposit" .= protocolParamStakePoolDeposit pp
-                     , "maxBlockHeaderSize" .= protocolParamMaxBlockHeaderSize pp
-                     , "maxBlockBodySize" .= protocolParamMaxBlockBodySize pp
-                     , "maxTxSize" .= protocolParamMaxTxSize pp
-                     , "treasuryCut" .= (fromRational $ protocolParamTreasuryCut pp :: Scientific)
-                     , "minPoolCost" .= protocolParamMinPoolCost pp
-                     , "monetaryExpansion" .= (fromRational $ protocolParamMonetaryExpansion pp :: Scientific)
-                     , "stakeAddressDeposit" .= protocolParamStakeAddressDeposit pp
-                     , "poolPledgeInfluence" .= (fromRational $ protocolParamPoolPledgeInfluence pp :: Scientific)
-                     , "protocolVersion" .= let (major, minor) = protocolParamProtocolVersion pp
-                                            in object ["major" .= major, "minor" .= minor]
-                     , "txFeeFixed" .= protocolParamTxFeeFixed pp
-                     , "txFeePerByte" .= protocolParamTxFeePerByte pp
-                     -- Alonzo era:
-                     , "costModels"  .= protocolParamCostModels pp
-                     , "executionUnitPrices" .= protocolParamPrices pp
-                     , "maxTxExecutionUnits" .= protocolParamMaxTxExUnits pp
-                     , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits pp
-                     , "maxValSize" .= protocolParamMaxValueSize pp
-                     ]
+  toJSON ProtocolParameters{..} =
+    object
+      [ "extraPraosEntropy"   .= protocolParamExtraPraosEntropy
+      , "stakePoolTargetNum"  .= protocolParamStakePoolTargetNum
+      , "minUTxOValue"        .= protocolParamMinUTxOValue
+      , "poolRetireMaxEpoch"  .= protocolParamPoolRetireMaxEpoch
+      , "decentralization"    .= (fromRational protocolParamDecentralization
+                                            :: Scientific)
+      , "stakePoolDeposit"    .= protocolParamStakePoolDeposit
+      , "maxBlockHeaderSize"  .= protocolParamMaxBlockHeaderSize
+      , "maxBlockBodySize"    .= protocolParamMaxBlockBodySize
+      , "maxTxSize"           .= protocolParamMaxTxSize
+      , "treasuryCut"         .= (fromRational protocolParamTreasuryCut
+                                            :: Scientific)
+      , "minPoolCost"         .= protocolParamMinPoolCost
+      , "monetaryExpansion"   .= (fromRational protocolParamMonetaryExpansion
+                                            :: Scientific)
+      , "stakeAddressDeposit" .= protocolParamStakeAddressDeposit
+      , "poolPledgeInfluence" .= (fromRational protocolParamPoolPledgeInfluence
+                                            :: Scientific)
+      , "protocolVersion"     .= let (major, minor) = protocolParamProtocolVersion
+                                  in object ["major" .= major, "minor" .= minor]
+      , "txFeeFixed"          .= protocolParamTxFeeFixed
+      , "txFeePerByte"        .= protocolParamTxFeePerByte
+      -- Alonzo era:
+      , "costModels"             .= protocolParamCostModels
+      , "executionUnitPrices"    .= protocolParamPrices
+      , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
+      , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits
+      , "maxValSize"             .= protocolParamMaxValueSize
+      ]
 
 -- ----------------------------------------------------------------------------
 -- Updates to the protocol paramaters
