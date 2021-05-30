@@ -623,6 +623,19 @@ data ExecutionUnitPrices =
      }
   deriving (Eq, Show)
 
+instance ToJSON ExecutionUnitPrices where
+  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+    object [ "priceSteps"  .= priceExecutionSteps
+           , "priceMemory" .= priceExecutionMemory ]
+
+instance FromJSON ExecutionUnitPrices where
+  parseJSON =
+    withObject "ExecutionUnitPrices" $ \o ->
+      ExecutionUnitPrices
+        <$> o .: "priceSteps"
+        <*> o .: "priceMemory"
+
+
 toAlonzoPrices :: ExecutionUnitPrices -> Alonzo.Prices
 toAlonzoPrices ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
   Alonzo.Prices {
@@ -636,18 +649,6 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
     priceExecutionSteps  = fromShelleyLovelace prSteps,
     priceExecutionMemory = fromShelleyLovelace prMem
   }
-
-instance ToJSON ExecutionUnitPrices where
-  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
-    object [ "priceSteps"  .= priceExecutionSteps
-           , "priceMemory" .= priceExecutionMemory ]
-
-instance FromJSON ExecutionUnitPrices where
-  parseJSON =
-    withObject "ExecutionUnitPrices" $ \o ->
-      ExecutionUnitPrices
-        <$> o .: "priceSteps"
-        <*> o .: "priceMemory"
 
 
 -- ----------------------------------------------------------------------------
@@ -676,6 +677,21 @@ newtype InvalidCostModel = InvalidCostModel CostModel
 instance Error InvalidCostModel where
   displayError (InvalidCostModel cm) =
     "Invalid cost model: " ++ show cm
+
+
+toAlonzoCostModels
+  :: Map AnyPlutusScriptVersion CostModel
+  -> Map Alonzo.Language Alonzo.CostModel
+toAlonzoCostModels =
+    Map.fromList
+  . map (bimap toAlonzoScriptLanguage toAlonzoCostModel)
+  . Map.toList
+
+toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
+
+toAlonzoCostModel :: CostModel -> Alonzo.CostModel
+toAlonzoCostModel (CostModel m) = Alonzo.CostModel m
 
 
 -- ----------------------------------------------------------------------------
@@ -711,7 +727,7 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 
 
 -- ----------------------------------------------------------------------------
--- Conversion functions
+-- Conversion functions: updates to ledger types
 --
 
 toShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
@@ -787,6 +803,11 @@ toShelleyPParamsUpdate
     , Shelley._minPoolCost     = toShelleyLovelace <$>
                                    maybeToStrictMaybe protocolUpdateMinPoolCost
     }
+
+
+-- ----------------------------------------------------------------------------
+-- Conversion functions: updates from ledger types
+--
 
 fromShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
                      , Ledger.PParamsDelta ledgerera
@@ -870,12 +891,16 @@ fromShelleyPParamsUpdate
     }
 
 
+-- ----------------------------------------------------------------------------
+-- Conversion functions: protocol paramaters to ledger types
+--
+
 toLedgerPParams
   :: ShelleyBasedEra era
   -> ProtocolParameters
   -> Ledger.PParams (ShelleyLedgerEra era)
-toLedgerPParams sbe pparams =
-  case sbe of
+toLedgerPParams era pparams =
+  case era of
     ShelleyBasedEraShelley -> toShelleyPParams pparams
     ShelleyBasedEraAllegra -> toShelleyPParams pparams
     ShelleyBasedEraMary    -> toShelleyPParams pparams
@@ -1004,19 +1029,9 @@ toAlonzoPParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing 
     error "toAlonzoPParams: must specify protocolParamMaxCollateralInputs"
 
 
-toAlonzoCostModels
-  :: Map AnyPlutusScriptVersion CostModel
-  -> Map Alonzo.Language Alonzo.CostModel
-toAlonzoCostModels =
-    Map.fromList
-  . map (bimap toAlonzoScriptLanguage toAlonzoCostModel)
-  . Map.toList
-
-toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
-toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
-
-toAlonzoCostModel :: CostModel -> Alonzo.CostModel
-toAlonzoCostModel (CostModel m) = Alonzo.CostModel m
+-- ----------------------------------------------------------------------------
+-- Conversion functions: protocol paramaters from ledger types
+--
 
 fromShelleyPParams :: Shelley.PParams ledgerera
                    -> ProtocolParameters
