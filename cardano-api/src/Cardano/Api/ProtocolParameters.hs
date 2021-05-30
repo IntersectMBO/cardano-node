@@ -329,7 +329,7 @@ instance ToJSON ProtocolParameters where
       , "executionUnitPrices"    .= protocolParamPrices
       , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
       , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits
-      , "maxValSize"             .= protocolParamMaxValueSize
+      , "maxValueSize"           .= protocolParamMaxValueSize
       ]
 
 -- ----------------------------------------------------------------------------
