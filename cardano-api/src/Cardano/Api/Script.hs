@@ -716,6 +716,9 @@ data ScriptData = ScriptDataConstructor Integer [ScriptData]
                 | ScriptDataNumber      Integer
                 | ScriptDataBytes       BS.ByteString
   deriving (Eq, Ord, Show)
+  -- Note the order of constructors is the same as the Plutus definitions
+  -- so that the Ord instance is consistent with the Plutus one.
+  -- This is checked by prop_ord_distributive_ScriptData
 
 instance HasTypeProxy ScriptData where
     data AsType ScriptData = AsScriptData

@@ -2210,7 +2210,7 @@ collectTxBodyScriptWitnesses TxBodyContent {
 
     -- This relies on the TxId Ord instance being consistent with the
     -- Shelley.TxId Ord instance via the toShelleyTxId conversion
-    -- TODO: add a QC property to ensure this
+    -- This is checked by prop_ord_distributive_TxId
     orderTxIns :: Ord k => [(k, v)] -> [v]
     orderTxIns = Map.elems . Map.fromList
 
@@ -2227,7 +2227,7 @@ collectTxBodyScriptWitnesses TxBodyContent {
 
     -- This relies on the StakeAddress Ord instance being consistent with the
     -- Shelley.RewardAcnt Ord instance via the toShelleyStakeAddr conversion
-    -- TODO: add a QC property to ensure this
+    -- This is checked by prop_ord_distributive_StakeAddress
     orderStakeAddrs :: Ord k => [(k, x, v)] -> [v]
     orderStakeAddrs = Map.elems . Map.fromList . map (\(k, _, v) -> (k, v))
 

@@ -11,6 +11,7 @@ import qualified Test.Cardano.Api.Typed.Bech32
 import qualified Test.Cardano.Api.Typed.CBOR
 import qualified Test.Cardano.Api.Typed.Envelope
 import qualified Test.Cardano.Api.Typed.JSON
+import qualified Test.Cardano.Api.Typed.Ord
 import qualified Test.Cardano.Api.Typed.Script
 import qualified Test.Cardano.Api.Typed.RawBytes
 import qualified Test.Cardano.Api.Typed.Value
@@ -32,6 +33,7 @@ tests =
     , Test.Cardano.Api.Typed.CBOR.tests
     , Test.Cardano.Api.Typed.Envelope.tests
     , Test.Cardano.Api.Typed.JSON.tests
+    , Test.Cardano.Api.Typed.Ord.tests
     , Test.Cardano.Api.Typed.Script.tests
     , Test.Cardano.Api.Typed.RawBytes.tests
     ]

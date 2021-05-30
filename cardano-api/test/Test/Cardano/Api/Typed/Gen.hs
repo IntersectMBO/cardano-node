@@ -12,6 +12,10 @@ module Test.Cardano.Api.Typed.Gen
   , genValueNestedBundle
   , genByronKeyWitness
 
+  , genTxId
+  , genTxIn
+  , genTxOut
+
     -- * Scripts
   , genScript
   , genSimpleScript

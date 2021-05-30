@@ -181,6 +181,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
                         Test.Cardano.Api.Typed.JSON
+                        Test.Cardano.Api.Typed.Ord
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
                         Test.Cardano.Api.Typed.Script
