@@ -266,7 +266,18 @@ data ProtocolParameters =
        -- | Max size of a Value in a tx ouput.
        --
        -- /Introduced in Alonzo/
-       protocolParamMaxValueSize :: Maybe Natural
+       protocolParamMaxValueSize :: Maybe Natural,
+
+       -- | The percentage of the script contribution to the txfee that must be
+       -- provided as collateral inputs when including Plutus scripts.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamCollateralPercent :: Maybe Natural,
+
+       -- | The maximum number of collateral inputs allowed in a transaction.
+       --
+       -- /Introduced in Alonzo/
+       protocolParamMaxCollateralInputs :: Maybe Natural
     }
   deriving (Eq, Generic, Show)
 
@@ -298,6 +309,8 @@ instance FromJSON ProtocolParameters where
         <*> o .:? "maxTxExecUnits"
         <*> o .:? "maxBlockExecUnits"
         <*> o .:? "maxValueSize"
+        <*> o .:? "collateralPercentage"
+        <*> o .:? "maxCollateralInputs"
 
 instance ToJSON ProtocolParameters where
   toJSON ProtocolParameters{..} =
@@ -330,6 +343,8 @@ instance ToJSON ProtocolParameters where
       , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
       , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits
       , "maxValueSize"           .= protocolParamMaxValueSize
+      , "collateralPercentage"   .= protocolParamCollateralPercent
+      , "maxCollateralInputs"    .= protocolParamMaxCollateralInputs
       ]
 
 -- ----------------------------------------------------------------------------
@@ -480,7 +495,18 @@ data ProtocolParametersUpdate =
        -- | Max size of a 'Value' in a tx output.
        --
        -- /Introduced in Alonzo/
-       protocolUpdateParamMaxValueSize :: Maybe Natural
+       protocolUpdateParamMaxValueSize :: Maybe Natural,
+
+       -- | The percentage of the script contribution to the txfee that must be
+       -- provided as collateral inputs when including Plutus scripts.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateCollateralPercent :: Maybe Natural,
+
+       -- | The maximum number of collateral inputs allowed in a transaction.
+       --
+       -- /Introduced in Alonzo/
+       protocolUpdateMaxCollateralInputs :: Maybe Natural
     }
   deriving (Eq, Show)
 
@@ -511,6 +537,8 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
       , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
       , protocolUpdateParamMaxValueSize   = merge protocolUpdateParamMaxValueSize
+      , protocolUpdateCollateralPercent   = merge protocolUpdateCollateralPercent
+      , protocolUpdateMaxCollateralInputs = merge protocolUpdateMaxCollateralInputs
       }
       where
         -- prefer the right hand side:
@@ -547,6 +575,8 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateMaxTxExUnits        = Nothing
       , protocolUpdateMaxBlockExUnits     = Nothing
       , protocolUpdateParamMaxValueSize   = Nothing
+      , protocolUpdateCollateralPercent   = Nothing
+      , protocolUpdateMaxCollateralInputs = Nothing
       }
 
 
@@ -902,6 +932,8 @@ fromShelleyPParamsUpdate
     , protocolUpdateMaxTxExUnits        = Nothing
     , protocolUpdateMaxBlockExUnits     = Nothing
     , protocolUpdateParamMaxValueSize   = Nothing
+    , protocolUpdateCollateralPercent   = Nothing
+    , protocolUpdateMaxCollateralInputs = Nothing
     }
 
 
@@ -986,7 +1018,9 @@ toAlonzoPParams ProtocolParameters {
                    protocolParamPrices          = Just prices,
                    protocolParamMaxTxExUnits    = Just maxTxExUnits,
                    protocolParamMaxBlockExUnits = Just maxBlockExUnits,
-                   protocolParamMaxValueSize    = Just maxValueSize
+                   protocolParamMaxValueSize    = Just maxValueSize,
+                   protocolParamCollateralPercent   = Just collateralPercentage,
+                   protocolParamMaxCollateralInputs = Just maxCollateralInputs
                  } =
     Alonzo.PParams {
       Alonzo._protocolVersion
@@ -1018,8 +1052,8 @@ toAlonzoPParams ProtocolParameters {
     , Alonzo._maxTxExUnits    = toAlonzoExUnits maxTxExUnits
     , Alonzo._maxBlockExUnits = toAlonzoExUnits maxBlockExUnits
     , Alonzo._maxValSize      = maxValueSize
-    , Alonzo._collateralPercentage = error "TODO alonzo: toAlonzoPParams collateralPercentage"
-    , Alonzo._maxCollateralInputs  = error "TODO alonzo: toAlonzoPParams maxCollateralInputs"
+    , Alonzo._collateralPercentage = collateralPercentage
+    , Alonzo._maxCollateralInputs  = maxCollateralInputs
     }
 toAlonzoPParams ProtocolParameters { protocolParamUTxOCostPerWord = Nothing } =
   error "toAlonzoPParams: must specify protocolParamUTxOCostPerWord"
@@ -1031,6 +1065,10 @@ toAlonzoPParams ProtocolParameters { protocolParamMaxBlockExUnits = Nothing } =
   error "toAlonzoPParams: must specify protocolParamMaxBlockExUnits"
 toAlonzoPParams ProtocolParameters { protocolParamMaxValueSize    = Nothing } =
     error "toAlonzoPParams: must specify protocolParamMaxValueSize"
+toAlonzoPParams ProtocolParameters { protocolParamCollateralPercent = Nothing } =
+    error "toAlonzoPParams: must specify protocolParamCollateralPercent"
+toAlonzoPParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing } =
+    error "toAlonzoPParams: must specify protocolParamMaxCollateralInputs"
 
 
 toAlonzoCostModels
@@ -1094,6 +1132,8 @@ fromShelleyPParams
     , protocolParamMaxTxExUnits        = Nothing
     , protocolParamMaxBlockExUnits     = Nothing
     , protocolParamMaxValueSize        = Nothing
+    , protocolParamCollateralPercent   = Nothing
+    , protocolParamMaxCollateralInputs = Nothing
     }
 
 

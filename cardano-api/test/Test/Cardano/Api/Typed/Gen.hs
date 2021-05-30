@@ -724,4 +724,6 @@ genProtocolParameters =
     <*> return Nothing
     <*> return Nothing
     <*> return Nothing
+    <*> return Nothing
+    <*> return Nothing
 

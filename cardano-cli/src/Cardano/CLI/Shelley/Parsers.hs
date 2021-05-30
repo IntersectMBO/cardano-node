@@ -2242,6 +2242,8 @@ pShelleyProtocolParametersUpdate =
     <*> pure Nothing
     <*> pure Nothing
     <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
 
 pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =
