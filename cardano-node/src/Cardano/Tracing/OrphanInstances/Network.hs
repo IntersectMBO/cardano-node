@@ -31,6 +31,7 @@ import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), txForgetValidated,
                    txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
+import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState,
                    TraceLabelPeer (..))
@@ -43,6 +44,7 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
                    WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
@@ -713,14 +715,26 @@ instance ToObject SlotNo where
     mkObject [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
 
-
-instance ConvertRawHash header => ToObject (TraceFetchClientState header) where
+instance (HasHeader header, ConvertRawHash header)
+  => ToObject (TraceFetchClientState header) where
   toObject _verb BlockFetch.AddedFetchRequest {} =
     mkObject [ "kind" .= String "AddedFetchRequest" ]
-  toObject _verb BlockFetch.SendFetchRequest {} =
-    mkObject [ "kind" .= String "SendFetchRequest" ]
   toObject _verb BlockFetch.AcknowledgedFetchRequest {} =
     mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
+  toObject _verb (BlockFetch.SendFetchRequest af) =
+    mkObject [ "kind" .= String "SendFetchRequest"
+             , "head" .= String (renderChainHash
+                                  (renderHeaderHash (Proxy @header))
+                                  (AF.headHash af))
+             , "length" .= toJSON (fragmentLength af)]
+   where
+     fragmentLength :: AF.AnchoredFragment header -> Int
+     fragmentLength f = fromIntegral blockLength
+      where
+        headNo = unBlockNo (fromWithOrigin (BlockNo 0) (AF.headBlockNo f))
+        blockLength = case unBlockNo . blockNo <$> AF.last f of
+                        Left _  -> headNo
+                        Right b -> headNo - b + 1
   toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ _) =
     mkObject [ "kind"  .= String "CompletedBlockFetch"
              , "block" .= String
