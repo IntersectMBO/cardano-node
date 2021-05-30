@@ -156,7 +156,6 @@ import qualified Shelley.Spec.Ledger.Address as Shelley
 import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Metadata as Shelley
-import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import qualified Shelley.Spec.Ledger.UTxO as Shelley
@@ -1706,28 +1705,29 @@ fromLedgerTxUpdateProposal era body =
       case Shelley._txUpdate body of
         SNothing -> TxUpdateProposalNone
         SJust p ->
-          TxUpdateProposal UpdateProposalInShelleyEra $ fromShelleyUpdate p
+          TxUpdateProposal UpdateProposalInShelleyEra
+                           (fromLedgerUpdate era p)
 
     ShelleyBasedEraAllegra ->
       case Allegra.update' body of
         SNothing -> TxUpdateProposalNone
         SJust p ->
-          TxUpdateProposal UpdateProposalInAllegraEra $ fromShelleyUpdate p
+          TxUpdateProposal UpdateProposalInAllegraEra
+                           (fromLedgerUpdate era p)
 
     ShelleyBasedEraMary ->
       case Mary.update' body of
         SNothing -> TxUpdateProposalNone
         SJust p ->
-          TxUpdateProposal UpdateProposalInMaryEra $ fromShelleyUpdate p
+          TxUpdateProposal UpdateProposalInMaryEra
+                           (fromLedgerUpdate era p)
 
     ShelleyBasedEraAlonzo ->
       case Alonzo.update' body of
         SNothing -> TxUpdateProposalNone
-        SJust _p ->
-          error "fromLedgerTxUpdateProposal: Alonzo era not implemented yet"
---        TxUpdateProposal UpdateProposalInAlonzoEra $ fromShelleyUpdate p
---        TODO alonzo: fromShelleyUpdate currently is not era-generic and expects
---              Ledger.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
+        SJust p ->
+          TxUpdateProposal UpdateProposalInAlonzoEra
+                           (fromLedgerUpdate era p)
 
 
 fromLedgerTxMintValue
@@ -1852,7 +1852,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
              TxValidityUpperBound _ ttl  -> ttl)
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
-             TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
+             TxUpdateProposal _ p -> SJust (toLedgerUpdate era p))
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardShelley <$> txAuxData)))
         scripts
@@ -1923,7 +1923,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
            })
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
-             TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
+             TxUpdateProposal _ p -> SJust (toLedgerUpdate era p))
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAllegra <$> txAuxData))
           mempty) -- No minting in Allegra, only Mary
@@ -2009,7 +2009,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
            })
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
-             TxUpdateProposal _ p -> SJust (toShelleyUpdate p))
+             TxUpdateProposal _ p -> SJust (toLedgerUpdate era p))
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardMary <$> txAuxData))
           (case txMintValue of
@@ -2107,7 +2107,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
            })
           (case txUpdateProposal of
              TxUpdateProposalNone -> SNothing
-             TxUpdateProposal _ p -> SJust (toAlonzoUpdate p))
+             TxUpdateProposal _ p -> SJust (toLedgerUpdate era p))
           (case txExtraKeyWits of
              TxExtraKeyWitnessesNone   -> Set.empty
              TxExtraKeyWitnesses _ khs -> Set.fromList
@@ -2176,12 +2176,6 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         ss = case txAuxScripts of
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
-
-    toAlonzoUpdate :: UpdateProposal -> Shelley.Update ledgerera
-    toAlonzoUpdate = error "TODO alonzo: toAlonzoUpdate"
-    -- TODO alonzo: ^^ and move the definition next to toShelleyUpdate
-    -- and\/or merge it with toShelleyUpdate to make it era-generic
-    -- must assume Ledger.PParamsDelta ledgerera ~ Alonzo.PParamsDelta ledgerera
 
 
 data AnyScriptWitness era where

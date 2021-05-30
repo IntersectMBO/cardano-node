@@ -76,7 +76,6 @@ import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
@@ -492,8 +491,6 @@ fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.
      ShelleyLedgerEra era ~ ledgerera
-  => Core.PParams ledgerera ~ Shelley.PParams ledgerera
-  => Core.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
   => Consensus.ShelleyBasedEra ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
   => ShelleyBasedEra era
@@ -517,14 +514,14 @@ fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
                                       (Consensus.getCompactGenesis r')
       _                          -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryProtocolParameters q' r' =
+fromConsensusQueryResultShelleyBased era QueryProtocolParameters q' r' =
     case q' of
-      Consensus.GetCurrentPParams -> fromShelleyPParams r'
+      Consensus.GetCurrentPParams -> fromLedgerPParams era r'
       _                           -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryProtocolParametersUpdate q' r' =
+fromConsensusQueryResultShelleyBased era QueryProtocolParametersUpdate q' r' =
     case q' of
-      Consensus.GetProposedPParamsUpdates -> fromShelleyProposedPPUpdates r'
+      Consensus.GetProposedPParamsUpdates -> fromLedgerProposedPPUpdates era r'
       _                                   -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryStakeDistribution q' r' =

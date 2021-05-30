@@ -4,7 +4,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | The various Cardano protocol parameters, including:
@@ -37,14 +36,13 @@ module Cardano.Api.ProtocolParameters (
     makeShelleyUpdateProposal,
 
     -- * Internal conversion functions
-    toShelleyPParamsUpdate,
-    toShelleyProposedPPUpdates,
-    toShelleyUpdate,
+    toLedgerUpdate,
+    fromLedgerUpdate,
+    toLedgerProposedPPUpdates,
+    fromLedgerProposedPPUpdates,
     toLedgerPParams,
+    fromLedgerPParams,
     fromShelleyPParams,
-    fromShelleyPParamsUpdate,
-    fromShelleyProposedPPUpdates,
-    fromShelleyUpdate,
     toAlonzoPrices,
     fromAlonzoPrices,
 
@@ -75,14 +73,13 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
 
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
-
-import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
+
 import qualified Shelley.Spec.Ledger.PParams as Ledger
                    (Update(..), ProposedPPUpdates(..), ProtVer(..))
 -- Some of the things from Shelley.Spec.Ledger.PParams are generic across all
@@ -712,9 +709,12 @@ instance HasTextEnvelope UpdateProposal where
     textEnvelopeType _ = "UpdateProposalShelley"
 
 instance SerialiseAsCBOR UpdateProposal where
-    serialiseToCBOR = CBOR.serializeEncoding' . toCBOR . toShelleyUpdate @StandardShelley
+    --TODO alonzo: we can no longer use this Shelley-specific encoding
+    serialiseToCBOR = CBOR.serializeEncoding'
+                    . toCBOR
+                    . toLedgerUpdate ShelleyBasedEraShelley
     deserialiseFromCBOR _ bs =
-      fromShelleyUpdate @StandardShelley <$> CBOR.decodeFull (LBS.fromStrict bs)
+      fromLedgerUpdate ShelleyBasedEraShelley <$> CBOR.decodeFull (LBS.fromStrict bs)
 
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
@@ -730,27 +730,36 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 -- Conversion functions: updates to ledger types
 --
 
-toShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                   , Ledger.PParamsDelta ledgerera
-                     ~ Shelley.PParamsUpdate ledgerera
-                   )
-                => UpdateProposal
-                -> Ledger.Update ledgerera
-toShelleyUpdate (UpdateProposal ppup epochno) =
-    Ledger.Update (toShelleyProposedPPUpdates ppup) epochno
+toLedgerUpdate :: forall era ledgerera.
+                  ShelleyLedgerEra era ~ ledgerera
+               => Ledger.Crypto ledgerera ~ StandardCrypto
+               => ShelleyBasedEra era
+               -> UpdateProposal
+               -> Ledger.Update ledgerera
+toLedgerUpdate era (UpdateProposal ppup epochno) =
+    Ledger.Update (toLedgerProposedPPUpdates era ppup) epochno
 
 
-toShelleyProposedPPUpdates :: forall ledgerera.
-                              ( Ledger.Crypto ledgerera ~ StandardCrypto
-                              , Ledger.PParamsDelta ledgerera
-                                ~ Shelley.PParamsUpdate ledgerera
-                              )
-                            => Map (Hash GenesisKey) ProtocolParametersUpdate
-                            -> Ledger.ProposedPPUpdates ledgerera
-toShelleyProposedPPUpdates =
+toLedgerProposedPPUpdates :: forall era ledgerera.
+                             ShelleyLedgerEra era ~ ledgerera
+                          => Ledger.Crypto ledgerera ~ StandardCrypto
+                          => ShelleyBasedEra era
+                          -> Map (Hash GenesisKey) ProtocolParametersUpdate
+                          -> Ledger.ProposedPPUpdates ledgerera
+toLedgerProposedPPUpdates era =
     Ledger.ProposedPPUpdates
   . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
-  . Map.map (toShelleyPParamsUpdate @ledgerera)
+  . Map.map (toLedgerPParamsDelta era)
+
+
+toLedgerPParamsDelta :: ShelleyBasedEra era
+                     -> ProtocolParametersUpdate
+                     -> Ledger.PParamsDelta (ShelleyLedgerEra era)
+toLedgerPParamsDelta ShelleyBasedEraShelley = toShelleyPParamsUpdate
+toLedgerPParamsDelta ShelleyBasedEraAllegra = toShelleyPParamsUpdate
+toLedgerPParamsDelta ShelleyBasedEraMary    = toShelleyPParamsUpdate
+toLedgerPParamsDelta ShelleyBasedEraAlonzo  =
+    error "TODO alonzo: toShelleyPParamsUpdate"
 
 
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
@@ -809,26 +818,36 @@ toShelleyPParamsUpdate
 -- Conversion functions: updates from ledger types
 --
 
-fromShelleyUpdate :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                     , Ledger.PParamsDelta ledgerera
-                       ~ Shelley.PParamsUpdate ledgerera
-                     )
-                  => Ledger.Update ledgerera
-                  -> UpdateProposal
-fromShelleyUpdate (Ledger.Update ppup epochno) =
-    UpdateProposal (fromShelleyProposedPPUpdates ppup) epochno
+fromLedgerUpdate :: forall era ledgerera.
+                    ShelleyLedgerEra era ~ ledgerera
+                 => Ledger.Crypto ledgerera ~ StandardCrypto
+                 => ShelleyBasedEra era
+                 -> Ledger.Update ledgerera
+                 -> UpdateProposal
+fromLedgerUpdate era (Ledger.Update ppup epochno) =
+    UpdateProposal (fromLedgerProposedPPUpdates era ppup) epochno
 
 
-fromShelleyProposedPPUpdates :: ( Ledger.Crypto ledgerera ~ StandardCrypto
-                                , Ledger.PParamsDelta ledgerera
-                                  ~ Shelley.PParamsUpdate ledgerera
-                                )
-                             => Ledger.ProposedPPUpdates ledgerera
-                             -> Map (Hash GenesisKey) ProtocolParametersUpdate
-fromShelleyProposedPPUpdates =
-    Map.map fromShelleyPParamsUpdate
+fromLedgerProposedPPUpdates :: forall era ledgerera.
+                               ShelleyLedgerEra era ~ ledgerera
+                            => Ledger.Crypto ledgerera ~ StandardCrypto
+                            => ShelleyBasedEra era
+                            -> Ledger.ProposedPPUpdates ledgerera
+                            -> Map (Hash GenesisKey) ProtocolParametersUpdate
+fromLedgerProposedPPUpdates era =
+    Map.map (fromLedgerPParamsDelta era)
   . Map.mapKeysMonotonic GenesisKeyHash
   . (\(Ledger.ProposedPPUpdates ppup) -> ppup)
+
+
+fromLedgerPParamsDelta :: ShelleyBasedEra era
+                       -> Ledger.PParamsDelta (ShelleyLedgerEra era)
+                       -> ProtocolParametersUpdate
+fromLedgerPParamsDelta ShelleyBasedEraShelley = fromShelleyPParamsUpdate
+fromLedgerPParamsDelta ShelleyBasedEraAllegra = fromShelleyPParamsUpdate
+fromLedgerPParamsDelta ShelleyBasedEraMary    = fromShelleyPParamsUpdate
+fromLedgerPParamsDelta ShelleyBasedEraAlonzo  =
+    error "TODO alonzo: fromAlonzoPParamsUpdate"
 
 
 fromShelleyPParamsUpdate :: Shelley.PParamsUpdate ledgerera
@@ -899,12 +918,10 @@ toLedgerPParams
   :: ShelleyBasedEra era
   -> ProtocolParameters
   -> Ledger.PParams (ShelleyLedgerEra era)
-toLedgerPParams era pparams =
-  case era of
-    ShelleyBasedEraShelley -> toShelleyPParams pparams
-    ShelleyBasedEraAllegra -> toShelleyPParams pparams
-    ShelleyBasedEraMary    -> toShelleyPParams pparams
-    ShelleyBasedEraAlonzo  -> toAlonzoPParams  pparams
+toLedgerPParams ShelleyBasedEraShelley = toShelleyPParams
+toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
+toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
+toLedgerPParams ShelleyBasedEraAlonzo  = toAlonzoPParams
 
 toShelleyPParams :: ProtocolParameters -> Shelley.PParams ledgerera
 toShelleyPParams ProtocolParameters {
@@ -1032,6 +1049,17 @@ toAlonzoPParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol paramaters from ledger types
 --
+
+fromLedgerPParams
+  :: ShelleyBasedEra era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> ProtocolParameters
+fromLedgerPParams ShelleyBasedEraShelley = fromShelleyPParams
+fromLedgerPParams ShelleyBasedEraAllegra = fromShelleyPParams
+fromLedgerPParams ShelleyBasedEraMary    = fromShelleyPParams
+fromLedgerPParams ShelleyBasedEraAlonzo  =
+    error "TODO alonzo: fromAlonzoPParams  pparams"
+
 
 fromShelleyPParams :: Shelley.PParams ledgerera
                    -> ProtocolParameters
