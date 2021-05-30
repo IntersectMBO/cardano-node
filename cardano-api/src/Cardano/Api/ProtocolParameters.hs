@@ -490,7 +490,7 @@ data ProtocolParametersUpdate =
        -- | Max size of a 'Value' in a tx output.
        --
        -- /Introduced in Alonzo/
-       protocolUpdateParamMaxValueSize :: Maybe Natural,
+       protocolUpdateMaxValueSize :: Maybe Natural,
 
        -- | The percentage of the script contribution to the txfee that must be
        -- provided as collateral inputs when including Plutus scripts.
@@ -531,7 +531,7 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdatePrices              = merge protocolUpdatePrices
       , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
       , protocolUpdateMaxBlockExUnits     = merge protocolUpdateMaxBlockExUnits
-      , protocolUpdateParamMaxValueSize   = merge protocolUpdateParamMaxValueSize
+      , protocolUpdateMaxValueSize        = merge protocolUpdateMaxValueSize
       , protocolUpdateCollateralPercent   = merge protocolUpdateCollateralPercent
       , protocolUpdateMaxCollateralInputs = merge protocolUpdateMaxCollateralInputs
       }
@@ -569,7 +569,7 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdatePrices              = Nothing
       , protocolUpdateMaxTxExUnits        = Nothing
       , protocolUpdateMaxBlockExUnits     = Nothing
-      , protocolUpdateParamMaxValueSize   = Nothing
+      , protocolUpdateMaxValueSize        = Nothing
       , protocolUpdateCollateralPercent   = Nothing
       , protocolUpdateMaxCollateralInputs = Nothing
       }
@@ -904,7 +904,7 @@ fromShelleyPParamsUpdate
     , protocolUpdatePrices              = Nothing
     , protocolUpdateMaxTxExUnits        = Nothing
     , protocolUpdateMaxBlockExUnits     = Nothing
-    , protocolUpdateParamMaxValueSize   = Nothing
+    , protocolUpdateMaxValueSize        = Nothing
     , protocolUpdateCollateralPercent   = Nothing
     , protocolUpdateMaxCollateralInputs = Nothing
     }
