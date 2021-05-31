@@ -153,6 +153,7 @@ test-suite cardano-api-test
                       , cardano-crypto-class
                       , cardano-crypto-test
                       , cardano-crypto-tests
+                      , cardano-ledger-alonzo
                       , cardano-ledger-byron-test
                       , cardano-ledger-core
                       , cardano-prelude
@@ -174,6 +175,7 @@ test-suite cardano-api-test
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.Gen
                         Test.Cardano.Api.Genesis
+                        Test.Cardano.Api.Json
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.Metadata
                         Test.Cardano.Api.Typed.Bech32

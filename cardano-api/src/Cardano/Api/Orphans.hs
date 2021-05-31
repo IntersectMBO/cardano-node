@@ -14,40 +14,39 @@
 
 module Cardano.Api.Orphans () where
 
-import           Prelude
-
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import           Cardano.Prelude (panic)
+import           Cardano.Slotting.Slot (SlotNo (..))
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
-import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
-import           Data.Scientific
+import           Data.Scientific (Scientific)
 import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
+import           Prelude
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import           Cardano.Slotting.Slot (SlotNo (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import qualified Shelley.Spec.Ledger.Rewards as Shelley
 import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
 
@@ -369,3 +368,5 @@ instance ToJSON Alonzo.AlonzoGenesis where
       , "collateralPercentage" .= Alonzo.collateralPercentage v
       , "maxCollateralInputs" .= Alonzo.maxCollateralInputs v
       ]
+
+deriving instance Show Alonzo.AlonzoGenesis
