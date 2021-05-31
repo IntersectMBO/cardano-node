@@ -359,7 +359,7 @@ runGenesisCreate (GenesisDir rootdir)
           -- Shelley genesis parameters
           start genDlgs mAmount utxoAddrs mempty (Lovelace 0) [] [] template
           -- Alono genesis parameters TODO: Parameterize
-          (Lovelace 10) (Lovelace 1, Lovelace 1) (1,1) (1,1) 1 1 1
+          (Lovelace 10) (Lovelace 1, Lovelace 1) (1,1) (1,1) 100 1 1
 
   writeFileGenesis (rootdir </> "genesis.json")        shelleyGenesis
   writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
