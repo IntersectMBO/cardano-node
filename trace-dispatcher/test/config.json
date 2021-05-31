@@ -1,6 +1,7 @@
 {
-  "ApplicationName": "cardano-sl"
+    "ApplicationName": "cardano-sl"
   , "ApplicationVersion": 0
+
   , "TraceOptionSeverity": [
     {ns: "", severity: "InfoF"}
   , {ns: "Cardano.Node.AcceptPolicy", severity: "SilenceF"}
@@ -14,4 +15,5 @@
     {ns: "", backends: ["Stdout HumanFormat", "Forwarder", "EKGBackend"]}
   , {ns: "Cardano.Node.ChainDB", backends: ["Forwarder"]}
   ],
+  "TraceOptionForwarder": {host: "loopback", port: 46}
 }

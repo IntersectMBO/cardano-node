@@ -23,6 +23,7 @@ module Cardano.Logging.Types (
   , SeverityS(..)
   , SeverityF(..)
   , ConfigOption(..)
+  , RemoteAddr(..)
   , Format(..)
   , TraceConfig(..)
   , emptyTraceConfig
@@ -40,12 +41,14 @@ import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Text as AE
+import           Data.Foldable (asum)
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Text (Text, pack)
 import           Data.Text.Lazy (toStrict)
+import           Data.Word (Word16)
 import           GHC.Generics
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
@@ -208,7 +211,7 @@ instance AE.FromJSON Backend where
   parseJSON (AE.String "EKGBackend")           = pure EKGBackend
   parseJSON (AE.String "Stdout HumanFormat")   = pure $ Stdout HumanFormat
   parseJSON (AE.String "Stdout MachineFormat") = pure $ Stdout MachineFormat
-  parseJSON other = error (show other)
+  parseJSON other                              = error (show other)
 
 data Format = HumanFormat | MachineFormat
   deriving (Eq, Ord, Show)
@@ -223,14 +226,29 @@ data ConfigOption =
   | CoBackend [Backend]
   deriving (Eq, Ord, Show)
 
+data RemoteAddr
+  = LocalPipe FilePath
+  | RemoteSocket Text Word16
+  deriving (Eq, Ord, Show)
+
+instance AE.FromJSON RemoteAddr where
+  parseJSON = AE.withObject "RemoteAddr" $ \o -> asum
+                [ LocalPipe <$> o AE..: "filePath"
+                , RemoteSocket <$> o AE..: "host" <*> o AE..: "port"
+                ]
+
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
-    tcOptions :: Map.Map Namespace [ConfigOption]
+    tcOptions   :: Map.Map Namespace [ConfigOption]
+  , tcForwarder :: RemoteAddr
 }
   deriving (Eq, Ord, Show)
 
 emptyTraceConfig :: TraceConfig
-emptyTraceConfig = TraceConfig {tcOptions = Map.empty}
+emptyTraceConfig = TraceConfig {
+    tcOptions = Map.empty
+  , tcForwarder = LocalPipe "forwarder.log"
+  }
 
 -- | When configuring a net of tracers, it should be run with Config on all
 -- entry points first, and then with Optimize. When reconfiguring it needs to

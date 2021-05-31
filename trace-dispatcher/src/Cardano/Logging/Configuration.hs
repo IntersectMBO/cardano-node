@@ -46,7 +46,7 @@ instance AE.FromJSON TraceOptionSeverity where
                            <*> obj .: "severity"
 
 data TraceOptionDetail = TraceOptionDetail {
-      nsD     :: Text
+      nsD    :: Text
     , detail :: DetailLevel
     } deriving (Eq, Ord, Show, Generic)
 
@@ -61,7 +61,7 @@ instance AE.FromJSON TraceOptionDetail where
                            <*> obj .: "detail"
 
 data TraceOptionBackend = TraceOptionBackend {
-      nsB     :: Text
+      nsB      :: Text
     , backends :: [Backend]
     } deriving (Eq, Ord, Show, Generic)
 
@@ -76,34 +76,23 @@ instance AE.FromJSON TraceOptionBackend where
                            <*> obj .: "backends"
 
 data ConfigRepresentation = ConfigRepresentation {
-    traceOptionSeverity :: [TraceOptionSeverity]
-  , traceOptionDetail   :: [TraceOptionDetail]
-  , traceOptionBackend  :: [TraceOptionBackend]
+    traceOptionSeverity  :: [TraceOptionSeverity]
+  , traceOptionDetail    :: [TraceOptionDetail]
+  , traceOptionBackend   :: [TraceOptionBackend]
+  , traceOptionForwarder :: RemoteAddr
   }
   deriving (Eq, Ord, Show)
-
---instance AE.ToJSON ConfigRepresentation where
-    -- toJSON tos = object [ "traceOptionSeverity" .= AE.toJSON $ traceOptionSeverity tos
-    --                     , "traceOptionDetail"   .= AE.toJSON $ traceOptionDetail tos
-    --                     , "traceOptionBackend"  .= AE.toJSON $ traceOptionBackend tos
-    --                     ]
 
 instance AE.FromJSON ConfigRepresentation where
     parseJSON (Object obj) = ConfigRepresentation
                            <$> obj .: "TraceOptionSeverity"
                            <*> obj .: "TraceOptionDetail"
                            <*> obj .: "TraceOptionBackend"
+                           <*> obj .: "TraceOptionForwarder"
 
 readConfiguration :: FilePath -> IO TraceConfig
 readConfiguration fp =
     either throwIO pure =<< parseRepresentation <$> BS.readFile fp
---
--- -- | Reads the tracer's configuration file (path is passed via '--config' CLI option).
--- readTracerConfig :: FilePath -> IO TraceConfig
--- readTracerConfig pathToConfig =
---   eitherDecodeFileStrict' pathToConfig >>= \case
---     Left e -> Ex.die $ "Invalid tracer's configuration: " <> show e
---     Right (config :: TracerConfig) -> return config
 
 parseRepresentation :: ByteString -> Either ParseException TraceConfig
 parseRepresentation bs = fill (decodeEither' bs)
@@ -114,7 +103,7 @@ parseRepresentation bs = fill (decodeEither' bs)
     fill (Left e)   = Left e
     fill (Right rl) = Right $ fill' emptyTraceConfig rl
     fill' :: TraceConfig -> ConfigRepresentation -> TraceConfig
-    fill' (TraceConfig tc) cr =
+    fill' (TraceConfig tc _fc) cr =
       let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
                           let ns' = split (=='.') ns
                           in Map.insertWith (++) ns' [CoSeverity severity'] tci)
@@ -130,7 +119,7 @@ parseRepresentation bs = fill (decodeEither' bs)
                           in Map.insertWith (++) ns' [CoBackend backend'] tci)
                         tc''
                         (traceOptionBackend cr)
-      in TraceConfig tc'''
+      in TraceConfig tc''' (traceOptionForwarder cr)
 
 -- | Call this function at initialisation, and later for reconfiguration
 configureTracers :: Monad m => TraceConfig -> Documented a -> [Trace m a]-> m ()
