@@ -34,6 +34,7 @@ module Cardano.Logging.Types (
   , emptyLogDoc
   , Backend(..)
   , Folding(..)
+  , TraceObject(..)
 ) where
 
 import           Control.Tracer

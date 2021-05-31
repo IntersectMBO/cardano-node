@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Logging.Tracer.StandardTracer (
+module Cardano.Logging.Tracer.Standard (
     standardTracer
 ) where
 

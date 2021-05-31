@@ -8,6 +8,7 @@ import           Cardano.Logging.Formatter as X
 import           Cardano.Logging.FrequencyLimiter as X
 import           Cardano.Logging.Trace as X
 import           Cardano.Logging.Tracer.EKG as X
-import           Cardano.Logging.Tracer.StandardTracer as X
+import           Cardano.Logging.Tracer.Standard as X
+import           Cardano.Logging.Tracer.Forward as X
 import           Cardano.Logging.Types as X
 import           Control.Tracer as X hiding (traceWith, nullTracer, Tracer)

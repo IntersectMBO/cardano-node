@@ -21,7 +21,8 @@ library
                       Cardano.Logging.Formatter
                       Cardano.Logging.FrequencyLimiter
                       Cardano.Logging.Tracer.EKG
-                      Cardano.Logging.Tracer.StandardTracer
+                      Cardano.Logging.Tracer.Standard
+                      Cardano.Logging.Tracer.Forward
                       Control.Tracer.Arrow
                       Control.Tracer
   default-language:   Haskell2010
@@ -29,10 +30,14 @@ library
   build-depends:      base >=4.12 && <5
                       , aeson
                       , bytestring
+                      , cborg
                       , containers
                       , ekg
                       , ekg-core
+                      , ekg-forward
                       , hostname
+                      , network
+                      , ouroboros-network-framework
                       , stm
                       , text
                       , time
