@@ -192,6 +192,7 @@ renderFeature TxFeatureMintValue            = "Asset minting"
 renderFeature TxFeatureMultiAssetOutputs    = "Multi-Asset outputs"
 renderFeature TxFeatureScriptWitnesses      = "Script witnesses"
 renderFeature TxFeatureShelleyKeys          = "Shelley keys"
+renderFeature TxFeatureCollateral           = "Collateral inputs"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -254,12 +255,14 @@ runTxBuildRaw (AnyCardanoEra era) inputsAndScripts txouts mLowerBound
     txBodyContent <-
       TxBodyContent
         <$> validateTxIns  era inputsAndScripts
+        <*> pure TxInsCollateralNone --TODO alonzo: support this
         <*> validateTxOuts era txouts
         <*> validateTxFee  era mFee
         <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
                  <*> validateTxValidityUpperBound era mUpperBound)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
         <*> validateTxAuxScripts     era scriptFiles
+        <*> pure TxAuxScriptDataNone     --TODO alonzo: support this
         <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
         <*> pure (BuildTxWith Nothing) --TODO alonzo: support this
         <*> validateTxWithdrawals    era withdrawals
@@ -295,6 +298,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureMultiAssetOutputs
                | TxFeatureScriptWitnesses
                | TxFeatureShelleyKeys
+               | TxFeatureCollateral
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -717,7 +721,12 @@ runTxCalculateMinValue protocolParamsSourceSpec value = do
         firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
     ParamsFromFile f -> readProtocolParameters f
 
-  let minValues = calcMinimumDeposit value (protocolParamMinUTxOValue pp)
+  let minValues =
+        case protocolParamMinUTxOValue pp of
+          Nothing -> panic "TODO alonzo: runTxCalculateMinValue using new protocol params"
+          --TODO alonzo: there is a new formula for the min amount of ada in
+          -- a tx output, which uses a new param protocolParamUTxOCostPerWord
+          Just minUTxOValue -> calcMinimumDeposit value minUTxOValue
 
   liftIO $ IO.print minValues
 

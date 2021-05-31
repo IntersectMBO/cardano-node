@@ -99,6 +99,10 @@ module Cardano.Api.Shelley
     toShelleyScriptHash,
     fromShelleyScriptHash,
     PlutusScript(..),
+    toPlutusData,
+    fromPlutusData,
+    toAlonzoData,
+    fromAlonzoData,
 
     -- * Certificates
     Certificate (..),
@@ -160,7 +164,6 @@ module Cardano.Api.Shelley
 
 
     -- ** Local State Query
-    QueryInShelleyBasedEra(..),
     DebugLedgerState(..),
     ProtocolState(..),
     SerialisedDebugLedgerState(..),

@@ -12,6 +12,10 @@ module Test.Cardano.Api.Typed.Gen
   , genValueNestedBundle
   , genByronKeyWitness
 
+  , genTxId
+  , genTxIn
+  , genTxOut
+
     -- * Scripts
   , genScript
   , genSimpleScript
@@ -19,6 +23,7 @@ module Test.Cardano.Api.Typed.Gen
   , genScriptInAnyLang
   , genScriptInEra
   , genScriptHash
+  , genScriptData
 
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
@@ -41,6 +46,7 @@ import           Cardano.Prelude
 import           Control.Monad.Fail (fail)
 import qualified Data.Map.Strict as Map
 import           Data.String
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 
 import qualified Cardano.Binary as CBOR
@@ -117,6 +123,42 @@ genPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
 genPlutusScript _ =
     -- We make no attempt to create a valid script
     PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
+
+genScriptData :: Gen ScriptData
+genScriptData =
+    Gen.recursive
+      Gen.choice
+        [ ScriptDataNumber <$> genInteger
+        , ScriptDataBytes  <$> genByteString
+        ]
+        -- The Gen.recursive combinator calls these with the size halved
+        [ ScriptDataConstructor <$> genInteger
+                                <*> genScriptDataList
+        , ScriptDataList <$> genScriptDataList
+        , ScriptDataMap  <$> genScriptDataMap
+        ]
+  where
+    genInteger :: Gen Integer
+    genInteger = Gen.integral
+                  (Range.linear
+                    (-fromIntegral (maxBound :: Word64) :: Integer)
+                    ( fromIntegral (maxBound :: Word64) :: Integer))
+
+    genByteString :: Gen ByteString
+    genByteString = BS.pack <$> Gen.list (Range.linear 0 64)
+                                         (Gen.word8 Range.constantBounded)
+
+    genScriptDataList :: Gen [ScriptData]
+    genScriptDataList =
+      Gen.sized $ \sz ->
+        Gen.list (Range.linear 0 (fromIntegral sz)) genScriptData
+
+    genScriptDataMap  :: Gen [(ScriptData, ScriptData)]
+    genScriptDataMap =
+      Gen.sized $ \sz ->
+        Gen.list (Range.linear 0 (fromIntegral sz)) $
+          (,) <$> genScriptData <*> genScriptData
+
 
 -- ----------------------------------------------------------------------------
 -- Script generators for any language, or any language valid in a specific era
@@ -522,11 +564,13 @@ genTxBodyContent era = do
 
   pure $ TxBodyContent
     { txIns = map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) trxIns
+    , txInsCollateral = TxInsCollateralNone --TODO: Alonzo era: Generate collateral inputs.
     , txOuts = trxOuts
     , txFee = fee
     , txValidityRange = validityRange
     , txMetadata = txMd
     , txAuxScripts = auxScripts
+    , txAuxScriptData = TxAuxScriptDataNone    --TODO: Alonzo era: Generate extra script data
     , txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
     , txProtocolParams = BuildTxWith mpparams
     , txWithdrawals = withdrawals
@@ -664,7 +708,7 @@ genProtocolParameters =
     <*> genNat
     <*> genNat
     <*> genNat
-    <*> genLovelace
+    <*> Gen.maybe genLovelace
     <*> genLovelace
     <*> genLovelace
     <*> genLovelace
@@ -676,6 +720,8 @@ genProtocolParameters =
     -- TODO alonzo: Add proper support for these generators.
     <*> return Nothing
     <*> return mempty
+    <*> return Nothing
+    <*> return Nothing
     <*> return Nothing
     <*> return Nothing
     <*> return Nothing

@@ -166,6 +166,7 @@ module Cardano.Api (
     TxOutDatumHash(..),
 
     -- ** Other transaction body types
+    TxInsCollateral(..),
     TxFee(..),
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
@@ -186,6 +187,7 @@ module Cardano.Api (
     ViewTx,
 
     -- ** Era-dependent transaction body features
+    CollateralSupportedInEra(..),
     MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
     TxFeesExplicitInEra(..),
@@ -201,6 +203,7 @@ module Cardano.Api (
     UpdateProposalSupportedInEra(..),
 
     -- ** Feature availability functions
+    collateralSupportedInEra,
     multiAssetSupportedInEra,
     txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,
@@ -467,6 +470,7 @@ module Cardano.Api (
     LocalStateQueryClient(..),
     QueryInMode(..),
     QueryInEra(..),
+    QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
     -- *** Common queries
@@ -489,6 +493,9 @@ module Cardano.Api (
     GenesisDelegateExtendedKey,
     GenesisUTxOKey,
     genesisUTxOPseudoTxIn,
+
+    -- ** Genesis paramaters
+    GenesisParameters(..),
 
     -- * Special transactions
     -- | There are various additional things that can be embedded in a
@@ -523,6 +530,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Fees
+import           Cardano.Api.GenesisParameters
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.IPC

@@ -57,6 +57,7 @@ library
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees
+                        Cardano.Api.GenesisParameters
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.IPC
@@ -181,6 +182,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Envelope
                         Test.Cardano.Api.Typed.Gen
                         Test.Cardano.Api.Typed.JSON
+                        Test.Cardano.Api.Typed.Ord
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
                         Test.Cardano.Api.Typed.Script

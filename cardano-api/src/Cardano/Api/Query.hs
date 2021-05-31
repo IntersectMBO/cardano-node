@@ -76,12 +76,12 @@ import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.GenesisParameters
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
@@ -239,25 +239,17 @@ toShelleyAddrSet era =
   . Set.toList
 
 
-fromUTxO
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> Shelley.UTxO ledgerera
-  -> UTxO era
-fromUTxO eraConversion utxo =
-  case eraConversion of
-    ShelleyBasedEraShelley ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn fromShelleyTxOut) $ Map.toList sUtxo
-    ShelleyBasedEraAllegra ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraAllegra)) $ Map.toList sUtxo
-    ShelleyBasedEraMary ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraMary)) $ Map.toList sUtxo
-    ShelleyBasedEraAlonzo ->
-      let Shelley.UTxO sUtxo = utxo
-      in UTxO . Map.fromList . map (bimap fromShelleyTxIn (fromTxOut ShelleyBasedEraAlonzo)) $ Map.toList sUtxo
+fromUTxO :: ShelleyLedgerEra era ~ ledgerera
+         => Ledger.Crypto ledgerera ~ StandardCrypto
+         => ShelleyBasedEra era
+         -> Shelley.UTxO ledgerera
+         -> UTxO era
+fromUTxO era (Shelley.UTxO utxo) =
+    UTxO
+  . Map.fromList
+  . map (bimap fromShelleyTxIn (fromTxOut era))
+  . Map.toList
+  $ utxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational
@@ -327,7 +319,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       ShelleyEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
-      AlonzoEraInCardanoMode  -> error "toConsensusQuery: Alonzo not implemented yet"
+      AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
 
 
 toConsensusQueryShelleyBased
@@ -397,8 +389,7 @@ consensusQueryInEraInMode erainmode =
       ShelleyEraInCardanoMode -> Consensus.QueryIfCurrentShelley
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
-      AlonzoEraInCardanoMode  ->
-        error "consensusQueryInEraInMode: Alonzo not implemented yet"
+      AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
 
 
 -- ----------------------------------------------------------------------------
@@ -485,14 +476,18 @@ fromConsensusQueryResult (QueryInEra MaryEraInCardanoMode
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
-                                     (QueryInShelleyBasedEra _ _)) _ _ =
-    error "fromConsensusQueryResult: Alonzo not implemented yet"
+                                     (QueryInShelleyBasedEra _era q)) q' r' =
+    case q' of
+      Consensus.BlockQuery (Consensus.QueryIfCurrentAlonzo q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraAlonzo q q'')
+                 r'
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.
      ShelleyLedgerEra era ~ ledgerera
-  => Core.PParams ledgerera ~ Shelley.PParams ledgerera
-  => Core.PParamsDelta ledgerera ~ Shelley.PParamsUpdate ledgerera
   => Consensus.ShelleyBasedEra ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
   => ShelleyBasedEra era
@@ -516,14 +511,14 @@ fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
                                       (Consensus.getCompactGenesis r')
       _                          -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryProtocolParameters q' r' =
+fromConsensusQueryResultShelleyBased era QueryProtocolParameters q' r' =
     case q' of
-      Consensus.GetCurrentPParams -> fromShelleyPParams r'
+      Consensus.GetCurrentPParams -> fromLedgerPParams era r'
       _                           -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryProtocolParametersUpdate q' r' =
+fromConsensusQueryResultShelleyBased era QueryProtocolParametersUpdate q' r' =
     case q' of
-      Consensus.GetProposedPParamsUpdates -> fromShelleyProposedPPUpdates r'
+      Consensus.GetProposedPParamsUpdates -> fromLedgerProposedPPUpdates era r'
       _                                   -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryStakeDistribution q' r' =

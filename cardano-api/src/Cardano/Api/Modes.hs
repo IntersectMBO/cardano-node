@@ -50,7 +50,11 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHFC)
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
                    eraIndexZero)
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras
+                   (StandardShelley,
+                    StandardAllegra,
+                    StandardMary,
+                    StandardAlonzo)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
 
@@ -130,6 +134,7 @@ toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
 toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
 toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
+toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
 toEraInMode _ _                    = Nothing
 
 
@@ -222,6 +227,7 @@ type family ConsensusBlockForEra era where
   ConsensusBlockForEra ShelleyEra = Consensus.ShelleyBlock StandardShelley
   ConsensusBlockForEra AllegraEra = Consensus.ShelleyBlock StandardAllegra
   ConsensusBlockForEra MaryEra    = Consensus.ShelleyBlock StandardMary
+  ConsensusBlockForEra AlonzoEra  = Consensus.ShelleyBlock StandardAlonzo
 
 
 

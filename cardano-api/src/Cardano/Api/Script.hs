@@ -39,6 +39,7 @@ module Cardano.Api.Script (
     ScriptWitnessInCtx(..),
     ScriptDatum(..),
     ScriptRedeemer,
+    scriptWitnessScript,
 
     -- ** Languages supported in each era
     ScriptLanguageInEra(..),
@@ -76,8 +77,10 @@ module Cardano.Api.Script (
     fromAlonzoExUnits,
     toShelleyScriptHash,
     fromShelleyScriptHash,
-    toAlonzoScriptData,
-    fromAlonzoScriptData,
+    toPlutusData,
+    fromPlutusData,
+    toAlonzoData,
+    fromAlonzoData,
     toAlonzoLanguage,
     fromAlonzoLanguage,
 
@@ -89,6 +92,7 @@ module Cardano.Api.Script (
 import           Prelude
 
 import           Data.Word (Word64)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
@@ -130,6 +134,8 @@ import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+
+import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -656,6 +662,14 @@ deriving instance Eq   (ScriptDatum witctx)
 deriving instance Show (ScriptDatum witctx)
 
 
+scriptWitnessScript :: ScriptWitness witctx era -> ScriptInEra era
+scriptWitnessScript (SimpleScriptWitness langInEra version script) =
+    ScriptInEra langInEra (SimpleScript version script)
+
+scriptWitnessScript (PlutusScriptWitness langInEra version script _ _ _) =
+    ScriptInEra langInEra (PlutusScript version script)
+
+
 -- ----------------------------------------------------------------------------
 -- The kind of witness to use, key (signature) or script
 --
@@ -696,19 +710,50 @@ deriving instance Show (ScriptWitnessInCtx witctx)
 
 type ScriptRedeemer = ScriptData
 
--- TODO alonzo: Placeholder type to re-present the Alonzo.Data type
-data ScriptData = ScriptData
-  deriving (Eq, Show)
+data ScriptData = ScriptDataConstructor Integer [ScriptData]
+                | ScriptDataMap         [(ScriptData, ScriptData)]
+                | ScriptDataList        [ScriptData]
+                | ScriptDataNumber      Integer
+                | ScriptDataBytes       BS.ByteString
+  deriving (Eq, Ord, Show)
+  -- Note the order of constructors is the same as the Plutus definitions
+  -- so that the Ord instance is consistent with the Plutus one.
+  -- This is checked by prop_ord_distributive_ScriptData
 
 instance HasTypeProxy ScriptData where
     data AsType ScriptData = AsScriptData
     proxyToAsType _ = AsScriptData
 
-toAlonzoScriptData :: ScriptData -> Alonzo.Data ledgerera
-toAlonzoScriptData = error "TODO alonzo: toShelleyScriptData"
+toAlonzoData :: ScriptData -> Alonzo.Data ledgerera
+toAlonzoData = Alonzo.Data . toPlutusData
 
-fromAlonzoScriptData :: Alonzo.Data ledgerera -> ScriptData
-fromAlonzoScriptData = error "TODO alonzo: fromShelleyScriptData"
+fromAlonzoData :: Alonzo.Data ledgerera -> ScriptData
+fromAlonzoData = fromPlutusData . Alonzo.getPlutusData
+
+
+toPlutusData :: ScriptData -> Plutus.Data
+toPlutusData (ScriptDataConstructor int xs)
+                                  = Plutus.Constr int
+                                      [ toPlutusData x | x <- xs ]
+toPlutusData (ScriptDataMap  kvs) = Plutus.Map
+                                      [ (toPlutusData k, toPlutusData v)
+                                      | (k,v) <- kvs ]
+toPlutusData (ScriptDataList  xs) = Plutus.List
+                                      [ toPlutusData x | x <- xs ]
+toPlutusData (ScriptDataNumber n) = Plutus.I n
+toPlutusData (ScriptDataBytes bs) = Plutus.B bs
+
+fromPlutusData :: Plutus.Data -> ScriptData
+fromPlutusData (Plutus.Constr int xs)
+                                = ScriptDataConstructor int
+                                    [ fromPlutusData x | x <- xs ]
+fromPlutusData (Plutus.Map kvs) = ScriptDataMap
+                                    [ (fromPlutusData k, fromPlutusData v)
+                                    | (k,v) <- kvs ]
+fromPlutusData (Plutus.List xs) = ScriptDataList
+                                    [ fromPlutusData x | x <- xs ]
+fromPlutusData (Plutus.I     n) = ScriptDataNumber n
+fromPlutusData (Plutus.B    bs) = ScriptDataBytes bs
 
 
 newtype instance Hash ScriptData =

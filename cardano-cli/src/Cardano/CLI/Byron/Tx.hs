@@ -152,6 +152,7 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
             [ (fromByronTxIn txIn
               , BuildTxWith (KeyWitness KeyWitnessForSpending))
             ]
+            TxInsCollateralNone
             outs
             (TxFeeImplicit TxFeesImplicitInByronEra)
             ( TxValidityNoLowerBound
@@ -159,6 +160,7 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
             )
             TxMetadataNone
             TxAuxScriptsNone
+            TxAuxScriptDataNone
             TxExtraKeyWitnessesNone
             (BuildTxWith Nothing)
             TxWithdrawalsNone
@@ -189,6 +191,7 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                        , BuildTxWith (KeyWitness KeyWitnessForSpending)
                        ) | txIn <- txIns
                      ]
+                     TxInsCollateralNone
                      outs
                      (TxFeeImplicit TxFeesImplicitInByronEra)
                      ( TxValidityNoLowerBound
@@ -196,6 +199,7 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                      )
                      TxMetadataNone
                      TxAuxScriptsNone
+                     TxAuxScriptDataNone
                      TxExtraKeyWitnessesNone
                      (BuildTxWith Nothing)
                      TxWithdrawalsNone
