@@ -43,9 +43,9 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 --
 -- 1. From the protocol's point of view, two peers talk to each other:
 --    the forwarder and the acceptor.
--- 2. The forwarder is an application that collects 'LogObject's and sends
+-- 2. The forwarder is an application that collects 'TraceObject's and sends
 --    them to the acceptor by request.
--- 3. The acceptor is an application that receives 'LogObject's from the
+-- 3. The acceptor is an application that receives 'TraceObject's from the
 --    forwarder.
 -- 4. You can this of the forwarder as a client, and the acceptor as a server:
 --    4.1. The client is "initially active side", because it establishes the
@@ -53,13 +53,13 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 --    4.2. The server is "initially passive side", because it accepts the
 --    connection from the client.
 -- 5. But after the connection is established, the roles are REVERSED:
---    the acceptor becomes an active side because it asks 'LogObject's, the
+--    the acceptor becomes an active side because it asks 'TraceObject's, the
 --    forwarder becomes a passive side because it waits for the request from
---    the acceptor, collects the 'LogObject's and sends them to the acceptor.
+--    the acceptor, collects the 'TraceObject's and sends them to the acceptor.
 
--- | The request for N 'LogObject's.
+-- | The request for N 'TraceObject's.
 -- The acceptor will send this request to the forwarder.
-newtype Request = GetLogObjects Word16
+newtype Request = GetTraceObjects Word16
   deriving (Eq, Generic, Show)
 
 instance ShowProxy Request
@@ -68,7 +68,7 @@ instance Serialise Request
 data TraceForward lo where
 
   -- | Both acceptor and forwarder are in idle state. The acceptor can send a
-  -- request for node's basic info or for a list of 'LogObject's, the forwarder
+  -- request for node's basic info or for a list of 'TraceObject's, the forwarder
   -- is waiting for some request.
   --
   -- Node's basic info is a fundamental information about the node, such as
@@ -81,9 +81,9 @@ data TraceForward lo where
   -- reply with node's basic info.
   StNodeInfoBusy :: TraceForward lo
 
-  -- | The acceptor has sent a next request for 'LogObject's. The acceptor is
+  -- | The acceptor has sent a next request for 'TraceObject's. The acceptor is
   -- now waiting for a reply, and the forwarder is busy getting ready to send a
-  -- reply with new list of 'LogObject's.
+  -- reply with new list of 'TraceObject's.
   --
   -- There are two sub-states for this, for blocking and non-blocking cases.
   StBusy :: StBlockingStyle -> TraceForward lo
@@ -151,11 +151,11 @@ instance Protocol (TraceForward lo) where
       :: NodeInfo
       -> Message (TraceForward lo) 'StNodeInfoBusy 'StIdle
 
-    -- | Request the list of 'LogObject's from the forwarder.
+    -- | Request the list of 'TraceObject's from the forwarder.
     --   State: Idle -> Busy.
     --
     -- With 'TokBlocking' this is a a blocking operation: the reply will
-    -- always have at least one 'LogObject', and it does not expect a prompt
+    -- always have at least one 'TraceObject', and it does not expect a prompt
     -- reply: there is no timeout. This covers the case when there
     -- is nothing else to do but wait.
     --
@@ -166,7 +166,7 @@ instance Protocol (TraceForward lo) where
       -> Request
       -> Message (TraceForward lo) 'StIdle ('StBusy blocking)
 
-    -- | Reply with a list of 'LogObject's for the acceptor.
+    -- | Reply with a list of 'TraceObject's for the acceptor.
     -- State: Busy -> Idle.
     MsgReply
       :: BlockingReplyList blocking lo
@@ -180,9 +180,9 @@ instance Protocol (TraceForward lo) where
   -- in each state.
   --
   -- 1. When both peers are in Idle state, the acceptor can send a message
-  --    to the forwarder (request for new 'LogObject's),
+  --    to the forwarder (request for new 'TraceObject's),
   -- 2. When both peers are in Busy state, the forwarder is expected to send
-  --    a reply to the acceptor (list of new 'LogObject's).
+  --    a reply to the acceptor (list of new 'TraceObject's).
   --
   -- So we assume that, from __interaction__ point of view:
   -- 1. ClientHasAgency (from 'Network.TypedProtocol.Core') corresponds to acceptor's agency.

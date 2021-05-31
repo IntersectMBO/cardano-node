@@ -37,7 +37,6 @@ library
   exposed-modules:     Trace.Forward.Acceptor
                        Trace.Forward.Configuration
                        Trace.Forward.Forwarder
-                       Trace.Forward.LogObject
                        Trace.Forward.Queue
 
                        Trace.Forward.Network.Acceptor
@@ -49,167 +48,15 @@ library
                        Trace.Forward.Protocol.Limits
                        Trace.Forward.Protocol.Type
 
-  build-depends:         aeson
-                       , async
+  build-depends:         async
                        , bytestring
                        , cborg
                        , contra-tracer
                        , io-sim-classes
-                       , iohk-monitoring
                        , network
                        , ouroboros-network-framework
-                       , scientific
                        , serialise
                        , stm
                        , text
                        , time
                        , typed-protocols
-                       , unordered-containers
-
-executable demo-forwarder
-  hs-source-dirs:      demo
-  main-is:             forwarder.hs
-  build-depends:         async
-                       , base
-                       , contra-tracer
-                       , iohk-monitoring
-                       , ouroboros-network-framework
-                       , stm
-                       , trace-forward
-                       , text
-                       , time
-
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -threaded
-                       -rtsopts
-                       -with-rtsopts=-T
-
-executable demo-acceptor
-  hs-source-dirs:      demo
-  main-is:             acceptor.hs
-  build-depends:         base
-                       , contra-tracer
-                       , iohk-monitoring
-                       , ouroboros-network-framework
-                       , stm
-                       , trace-forward
-                       , text
-                       , time
-
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -threaded
-                       -rtsopts
-                       -with-rtsopts=-T
-
-library demo-forwarder-mux-lib
-  import:              common-options
-  hs-source-dirs:      demo/mux/src
-  exposed-modules:     Demo.Mux.Network.Forwarder
-  build-depends:         async
-                       , base
-                       , bytestring
-                       , cborg
-                       , contra-tracer
-                       , ekg-core
-                       , ekg-forward
-                       , iohk-monitoring
-                       , network
-                       , ouroboros-network-framework
-                       , stm
-                       , trace-forward
-                       , text
-                       , time
-
-library demo-acceptor-mux-lib
-  import:              common-options
-  hs-source-dirs:      demo/mux/src
-  exposed-modules:     Demo.Mux.Network.Acceptor
-  build-depends:         async
-                       , base
-                       , bytestring
-                       , cborg
-                       , contra-tracer
-                       , ekg-core
-                       , ekg-forward
-                       , iohk-monitoring
-                       , network
-                       , ouroboros-network-framework
-                       , stm
-                       , trace-forward
-                       , text
-                       , time
-
-executable demo-forwarder-mux
-  hs-source-dirs:      demo/mux/app
-  main-is:             forwarder.hs
-  build-depends:         async
-                       , base
-                       , contra-tracer
-                       , demo-forwarder-mux-lib
-                       , ekg-forward
-                       , iohk-monitoring
-                       , text
-                       , time
-                       , trace-forward
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -threaded
-                       -rtsopts
-                       -with-rtsopts=-T
-
-executable demo-acceptor-mux
-  hs-source-dirs:      demo/mux/app
-  main-is:             acceptor.hs
-  build-depends:         async
-                       , base
-                       , contra-tracer
-                       , demo-acceptor-mux-lib
-                       , ekg-forward
-                       , iohk-monitoring
-                       , stm
-                       , text
-                       , time
-                       , trace-forward
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -threaded
-                       -rtsopts
-                       -with-rtsopts=-T
-
-test-suite trace-forward-test
-  import:              common-options
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             trace-forward-test.hs
-  other-modules:       Trace.Forward.Test.Codec
-                       Trace.Forward.Test.Demo
-                       Trace.Forward.Test.MkConfig
-                       Trace.Forward.Test.Types
-
-  build-depends:         aeson
-                       , base
-                       , bytestring
-                       , cborg
-                       , contra-tracer
-                       , iohk-monitoring
-                       , io-sim
-                       , io-sim-classes
-                       , ouroboros-network-framework
-                       , QuickCheck
-                       , serialise
-                       , stm
-                       , tasty
-                       , tasty-quickcheck
-                       , text
-                       , time
-                       , trace-forward
-                       , typed-protocols-examples
-                       , unordered-containers
-                       , vector
-
-  ghc-options:         -threaded
-                       -rtsopts
-                       -with-rtsopts=-N
-  default-extensions:  OverloadedStrings

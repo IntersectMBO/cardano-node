@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- This top-level module will be used by the forwarder app
--- (the app that collects 'LogObject's and sends them to the acceptor).
+-- (the app that collects 'TraceObject's and sends them to the acceptor).
 module Trace.Forward.Forwarder
   ( runTraceForwarder
   ) where
@@ -24,7 +24,7 @@ runTraceForwarder
       ShowProxy lo,
       Typeable lo)
   => ForwarderConfiguration lo -- ^ Forwarder configuration.
-  -> TBQueue lo                -- ^ The queue the forwarder will take 'LogObject's from.
+  -> TBQueue lo                -- ^ The queue the forwarder will take 'TraceObject's from.
   -> IO ()
 runTraceForwarder config loQueue =
   try (connectToAcceptor config loQueue) >>= \case

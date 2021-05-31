@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This top-level module will be used by the acceptor app
--- (the app that asks 'LogObject's from the forwarder app).
+-- (the app that asks 'TraceObject's from the forwarder app).
 module Trace.Forward.Acceptor
   ( runTraceAcceptor
   ) where
@@ -26,7 +26,7 @@ runTraceAcceptor
       ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor configuration.
-  -> TBQueue lo               -- ^ The queue all received 'LogObject's will be written in.
+  -> TBQueue lo               -- ^ The queue all received 'TraceObject's will be written in.
   -> NodeInfoStore            -- ^ The store node's basic info will be written in.
   -> IO ()
 runTraceAcceptor config loQueue niStore =

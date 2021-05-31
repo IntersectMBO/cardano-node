@@ -12,6 +12,7 @@ packages:
     cardano-tracer
     trace-dispatcher
     trace-forward
+    trace-forward-demo
     nix/workbench/cardano-topology
 
 package cardano-api
@@ -98,9 +99,6 @@ package trace-dispatcher
   tests: False
 
 package cardano-tracer
-  tests: False
-
-package trace-forward
   tests: False
 
 -- ---------------------------------------------------------

@@ -32,12 +32,14 @@ library
                       , bytestring
                       , cborg
                       , containers
+                      , contra-tracer
                       , ekg
                       , ekg-core
                       , ekg-forward
                       , hostname
                       , network
                       , ouroboros-network-framework
+                      , serialise
                       , stm
                       , text
                       , time

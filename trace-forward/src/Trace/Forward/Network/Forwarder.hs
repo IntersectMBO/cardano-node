@@ -4,7 +4,7 @@
 module Trace.Forward.Network.Forwarder
   ( connectToAcceptor
   -- | Export this function for Mux purpose.
-  , forwardLogObjects
+  , forwardTraceObjects
   ) where
 
 import           Codec.CBOR.Term (Term)
@@ -66,7 +66,7 @@ connectToAcceptor config@ForwarderConfiguration{..} loQueue = withIOManager $ \i
           [ MiniProtocol
               { miniProtocolNum    = MiniProtocolNum 1
               , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-              , miniProtocolRun    = forwardLogObjects config loQueue
+              , miniProtocolRun    = forwardTraceObjects config loQueue
               }
           ]
 
@@ -91,13 +91,13 @@ doConnectToAcceptor snocket address timeLimits app =
     Nothing
     address
 
-forwardLogObjects
+forwardTraceObjects
   :: (CBOR.Serialise lo,
       ShowProxy lo)
   => ForwarderConfiguration lo
   -> TBQueue lo
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-forwardLogObjects config loQueue =
+forwardTraceObjects config loQueue =
   InitiatorProtocolOnly $
     MuxPeerRaw $ \channel -> do
       cv <- newEmptyTMVarIO

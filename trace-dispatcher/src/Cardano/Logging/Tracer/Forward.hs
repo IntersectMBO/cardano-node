@@ -1,8 +1,11 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -12,20 +15,20 @@ module Cardano.Logging.Tracer.Forward
   ) where
 
 import           Codec.CBOR.Term (Term)
-import           Control.Concurrent (threadDelay)
+import           Codec.Serialise (Serialise (..))
 import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO,
                      writeTBQueue)
 import           Control.Exception (SomeException, try)
-import           Control.Monad (forever)
 import           Control.Monad.IO.Class
 import           Control.Monad.STM (atomically)
-import           Control.Tracer (contramap, stdoutTracer)
+import           GHC.Generics (Generic)
+
+-- Temporary solution, to avoid conflicts with trace-dispatcher.
+import "contra-tracer" Control.Tracer (contramap, stdoutTracer)
 import qualified Control.Tracer as T
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Fixed (Pico)
 import           Data.IORef
-import           Data.Text (Text, pack, unpack)
-import           Data.Time.Clock (NominalDiffTime, secondsToNominalDiffTime)
+import           Data.Text (unpack)
 import           Data.Void (Void)
 import           Data.Word (Word16)
 import qualified Network.Socket as Socket
@@ -56,10 +59,27 @@ import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder (forwardEKGMetrics)
 import qualified Trace.Forward.Configuration as TF
-import           Trace.Forward.Network.Forwarder (forwardLogObjects)
+import           Trace.Forward.Network.Forwarder (forwardTraceObjects)
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
+
+-- Instances for 'TraceObject' to forward it using 'trace-forward' library.
+
+deriving instance Generic Privacy
+deriving instance Generic SeverityS
+deriving instance Generic LoggingContext
+deriving instance Generic TraceObject
+
+instance Serialise DetailLevel
+instance Serialise Privacy
+instance Serialise SeverityS
+instance Serialise LoggingContext
+instance Serialise TraceObject
+
+instance ShowProxy TraceObject
+
+---------------------------------------------------------------------------
 
 newtype ForwardTracerState = ForwardTracerState {
     ftQueue   :: TBQueue TraceObject
@@ -82,7 +102,7 @@ forwardTracer config = do
     output stateRef LoggingContext {} Nothing (FormattedForwarder lo) = liftIO $ do
       st  <- readIORef stateRef
       atomically $ writeTBQueue (ftQueue st) lo
-    output stateRef LoggingContext {} (Just Reset) _msg = liftIO $ do
+    output _stateRef LoggingContext {} (Just Reset) _msg = liftIO $ do
       -- TODO discuss reconfiguration
       pure ()
     output _ lk (Just c@Document {}) (FormattedForwarder lo) = do
@@ -173,7 +193,7 @@ doConnectToAcceptor snocket address timeLimits (ekgConfig, tfConfig) = do
        UnversionedProtocol
        UnversionedProtocolData $
          forwarderApp [ (forwardEKGMetrics ekgConfig store,  1)
-                      , (forwardLogObjects tfConfig tfQueue, 2)
+                      , (forwardTraceObjects tfConfig tfQueue, 2)
                       ]
     )
     Nothing

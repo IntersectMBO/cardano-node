@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module Trace.Forward.Configuration
   ( AcceptorConfiguration (..)
   , ForwarderConfiguration (..)
@@ -6,7 +8,8 @@ module Trace.Forward.Configuration
   , Port
   ) where
 
-import           Control.Tracer (Tracer)
+-- Temporary solution, to avoid conflicts with trace-dispatcher.
+import "contra-tracer" Control.Tracer (Tracer)
 import           Data.IORef (IORef)
 import           Data.Text (Text)
 import           Data.Word (Word16)
@@ -25,11 +28,10 @@ data HowToConnect
 -- | Acceptor configuration.
 data AcceptorConfiguration lo = AcceptorConfiguration
   { -- | The tracer that will be used by the acceptor in its network layer.
-    -- For more info about tracers please read its [documentation](https://github.com/input-output-hk/iohk-monitoring-framework/tree/master/contra-tracer).
     acceptorTracer    :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
     -- | The endpoint that will be used to listen to the forwarder.
   , forwarderEndpoint :: !HowToConnect
-    -- | The request specifies how many 'LogObject's will be requested.
+    -- | The request specifies how many 'TraceObject's will be requested.
   , whatToRequest     :: !Request
     -- | Additional action that will be performed every time the acceptor will
     -- receive the reply from the forwarder.

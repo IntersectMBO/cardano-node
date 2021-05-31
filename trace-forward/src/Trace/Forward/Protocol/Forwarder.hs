@@ -18,14 +18,14 @@ import           Trace.Forward.Protocol.Type
 -- point of view: it establishes network connection with the acceptor.
 -- But after the connection is established, the forwarder becomes a server
 -- from the __interaction__ point of view: the acceptor sends a request for
--- new 'LogObject's, the forwarder replies to the acceptor.
+-- new 'TraceObject's, the forwarder replies to the acceptor.
 --
 data TraceForwarder lo m a = TraceForwarder
   { -- | The acceptor sent us a request for node's basic info.
     recvMsgNodeInfoRequest
       :: m (NodeInfo, TraceForwarder lo m a)
 
-    -- | The acceptor sent us a request for new 'LogObject's.
+    -- | The acceptor sent us a request for new 'TraceObject's.
   , recvMsgRequest
       :: forall blocking. TokBlockingStyle blocking
       -> Request
@@ -56,7 +56,7 @@ traceForwarderPeer TraceForwarder{..} =
                      (MsgNodeInfoReply reply)
                      (traceForwarderPeer next)
 
-    -- The acceptor sent us a request for new 'LogObject's, so now we're
+    -- The acceptor sent us a request for new 'TraceObject's, so now we're
     -- in the 'StBusy' state which means it's the forwarder's turn to send
     -- a reply.
     MsgRequest blocking request -> Effect $ do

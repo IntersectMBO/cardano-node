@@ -23,7 +23,7 @@ import           Trace.Forward.Protocol.Type
 -- point of view: the forwarder establishes network connection with the acceptor.
 -- But after the connection is established, the acceptor becomes a client
 -- from the __interaction__ point of view: it sends a request for new
--- 'LogObject's, the forwarder replies to the acceptor.
+-- 'TraceObject's, the forwarder replies to the acceptor.
 --
 data TraceAcceptor lo m a where
   SendMsgNodeInfoRequest
@@ -58,7 +58,7 @@ traceAcceptorPeer = \case
           traceAcceptorPeer <$> next reply
 
   SendMsgRequest TokBlocking request next ->
-    -- Send our message (request for new 'LogObject's from the forwarder).
+    -- Send our message (request for new 'TraceObject's from the forwarder).
     Yield (ClientAgency TokIdle) (MsgRequest TokBlocking request) $
       -- We're now into the 'StBusy' state, and now we'll wait for a reply
       -- from the forwarder.
@@ -67,11 +67,11 @@ traceAcceptorPeer = \case
           traceAcceptorPeer <$> next reply
 
   SendMsgRequest TokNonBlocking request next ->
-    -- Send our message (request for new 'LogObject's from the forwarder).
+    -- Send our message (request for new 'TraceObject's from the forwarder).
     Yield (ClientAgency TokIdle) (MsgRequest TokNonBlocking request) $
       -- We're now into the 'StBusy' state, and now we'll wait for a reply
       -- from the forwarder. It is assuming that the forwarder will reply
-      -- immediately (even there are no 'LogObject's).
+      -- immediately (even there are no 'TraceObject's).
       Await (ServerAgency (TokBusy TokNonBlocking)) $ \(MsgReply reply) ->
         Effect $
           traceAcceptorPeer <$> next reply

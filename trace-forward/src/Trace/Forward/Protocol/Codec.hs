@@ -100,9 +100,8 @@ codecTraceForward encodeRequest   decodeRequest
       (2, 1, ClientAgency TokIdle) ->
         return $ SomeMessage MsgDone
 
-      (3, 2, ServerAgency TokNodeInfoBusy) -> do
-        reply <- decodeNIReply
-        return $ SomeMessage (MsgNodeInfoReply reply)
+      (3, 2, ServerAgency TokNodeInfoBusy) ->
+        SomeMessage . MsgNodeInfoReply <$> decodeNIReply
 
       (4, 2, ServerAgency (TokBusy blocking)) -> do
         replyList <- decodeReplyList

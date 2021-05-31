@@ -4,7 +4,7 @@
 module Trace.Forward.Network.Acceptor
   ( listenToForwarder
   -- | Export this function for Mux purpose.
-  , acceptLogObjects
+  , acceptTraceObjects
   ) where
 
 import           Codec.CBOR.Term (Term)
@@ -51,7 +51,7 @@ import qualified Trace.Forward.Protocol.Acceptor as Acceptor
 import qualified Trace.Forward.Protocol.Codec as Acceptor
 import           Trace.Forward.Protocol.Limits (byteLimitsTraceForward, timeLimitsTraceForward)
 import           Trace.Forward.Protocol.Type
-import           Trace.Forward.Queue (logObjectsFromReply, writeLogObjectsToQueue)
+import           Trace.Forward.Queue (logObjectsFromReply, writeTraceObjectsToQueue)
 import           Trace.Forward.Configuration (AcceptorConfiguration (..), HowToConnect (..))
 
 listenToForwarder
@@ -78,7 +78,7 @@ listenToForwarder config@AcceptorConfiguration{..} loQueue niStore = withIOManag
           [ MiniProtocol
               { miniProtocolNum    = MiniProtocolNum 1
               , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-              , miniProtocolRun    = acceptLogObjects config loQueue niStore
+              , miniProtocolRun    = acceptTraceObjects config loQueue niStore
               }
           ]
 
@@ -111,7 +111,7 @@ doListenToForwarder snocket address timeLimits app = do
       $ \_ serverAsync -> wait serverAsync -- Block until async exception.
   void $ waitAnyCancel [nsAsync, clAsync]
 
-acceptLogObjects
+acceptTraceObjects
   :: (CBOR.Serialise lo,
       ShowProxy lo,
       Typeable lo)
@@ -119,7 +119,7 @@ acceptLogObjects
   -> TBQueue lo
   -> NodeInfoStore
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-acceptLogObjects config loQueue niStore =
+acceptTraceObjects config loQueue niStore =
   ResponderProtocolOnly $
     MuxPeerRaw $ \channel -> do
       sv <- newEmptyTMVarIO
@@ -157,16 +157,16 @@ acceptorActions
   -> Bool
   -> Acceptor.TraceAcceptor lo IO ()
 acceptorActions config@AcceptorConfiguration{..} loQueue niStore askForNI False =
-  -- We can send request for the node's basic info or for the new 'LogObject's.
+  -- We can send request for the node's basic info or for the new 'TraceObject's.
   -- But request for node's info should be sent only once (in the beginning of session).
   if askForNI
     then
       Acceptor.SendMsgNodeInfoRequest $ \reply -> do
-        atomicModifyIORef' niStore $ const $ (reply, ())
+        atomicModifyIORef' niStore $ const (reply, ())
         readIORef shouldWeStop <&> acceptorActions config loQueue niStore False
     else
       Acceptor.SendMsgRequest TokBlocking whatToRequest $ \reply -> do
-        writeLogObjectsToQueue reply loQueue
+        writeTraceObjectsToQueue reply loQueue
         actionOnReply $ logObjectsFromReply reply
         readIORef shouldWeStop <&> acceptorActions config loQueue niStore False
 
