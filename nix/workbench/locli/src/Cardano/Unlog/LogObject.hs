@@ -195,6 +195,7 @@ interpreters = Map.fromList
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
+  -- v, but not ^ -- how is that possible?
   , (,) "TraceBlockFetchServerSendBlock" $
     \v _ -> LOBlockFetchServerSend
             <$> v .: "block"

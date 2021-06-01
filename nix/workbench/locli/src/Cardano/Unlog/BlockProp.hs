@@ -7,12 +7,13 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
 module Cardano.Unlog.BlockProp (module Cardano.Unlog.BlockProp) where
 
-import           Prelude (String, error, head, tail, id)
-import           Cardano.Prelude hiding (head)
+import           Prelude (String, (!!), error, head, id, show, tail)
+import           Cardano.Prelude hiding (head, show)
 
 import           Control.Arrow ((&&&), (***))
 import           Control.Concurrent.Async (mapConcurrently)
@@ -20,6 +21,7 @@ import           Data.Aeson (toJSON)
 import qualified Data.Aeson as AE
 import           Data.Function (on)
 import           Data.Either (partitionEithers, isLeft, isRight)
+import           Data.List (dropWhileEnd)
 import           Data.Maybe (catMaybes, mapMaybe)
 import           Data.Tuple (swap)
 import           Data.Vector (Vector)
@@ -29,49 +31,73 @@ import qualified Data.Map.Strict as Map
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Time.Clock as Time
 
+import           Text.Printf (printf)
+
 import           Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 
 import           Data.Accum
 import           Data.Distribution
 import           Cardano.Analysis.Profile
-import           Cardano.Unlog.LogObject
+import           Cardano.Unlog.LogObject hiding (Text)
+import           Cardano.Unlog.Render
 import           Cardano.Unlog.Resources
 import           Cardano.Unlog.SlotStats
 
 import qualified Debug.Trace as D
-import qualified Text.Printf as D
 
 
 data BlockPropagation
   = BlockPropagation
-    { sForgerForges        :: !(Distribution Float NominalDiffTime)
-    , sForgerAdoptions     :: !(Distribution Float NominalDiffTime)
-    , sForgerAnnouncements :: !(Distribution Float NominalDiffTime)
-    , sForgerSends         :: !(Distribution Float NominalDiffTime)
-    , sPeerNotices         :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
-    , sPeerFetches         :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
-    , sPeerAdoptions       :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
-    , sPeerAnnouncements   :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
-    , sPeerSends           :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
+    { bpForgerForges        :: !(Distribution Float NominalDiffTime)
+    , bpForgerAdoptions     :: !(Distribution Float NominalDiffTime)
+    , bpForgerAnnouncements :: !(Distribution Float NominalDiffTime)
+    , bpForgerSends         :: !(Distribution Float NominalDiffTime)
+    , bpPeerNotices         :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
+    , bpPeerFetches         :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
+    , bpPeerAdoptions       :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
+    , bpPeerAnnouncements   :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
+    , bpPeerSends           :: !(Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
     }
   deriving Show
 
+instance RenderDistributions BlockPropagation where
+  rdFields =
+    --  Width LeftPad
+    [ Field 6 0 (f!!0) "Forge"   $ DDeltaT bpForgerForges
+    , Field 6 0 (f!!1) "Adopt"   $ DDeltaT bpForgerAdoptions
+    , Field 6 0 (f!!2) "Ann-ce"  $ DDeltaT bpForgerAnnouncements
+    , Field 6 0 (f!!3) "Sent"    $ DDeltaT bpForgerSends
+    , Field 4 1 (p!!0) " Noti" $ DDeltaT (fst . bpPeerNotices)
+    , Field 4 0 (p!!1) "ced  " $ DDeltaT (snd . bpPeerNotices)
+    , Field 4 1 (p!!2) " Fetc" $ DDeltaT (fst . bpPeerFetches)
+    , Field 4 0 (p!!3) "hed  " $ DDeltaT (snd . bpPeerFetches)
+    , Field 4 1 (p!!4) " Adop" $ DDeltaT (fst . bpPeerAdoptions)
+    , Field 4 0 (p!!5) "ted  " $ DDeltaT (snd . bpPeerAdoptions)
+    , Field 4 1 (p!!6) "Annou" $ DDeltaT (fst . bpPeerAnnouncements)
+    , Field 4 0 (p!!7) "nced " $ DDeltaT (snd . bpPeerAnnouncements)
+    , Field 4 1 (p!!8) "   Se" $ DDeltaT (fst . bpPeerSends)
+    , Field 4 0 (p!!9) "nt   " $ DDeltaT (snd . bpPeerSends)
+    ]
+   where
+     f = nChunksEachOf  4 7 "Forger event Δt:"
+     p = nChunksEachOf 10 5 "Peer event Δt, and coefficients of variation:"
+
 instance AE.ToJSON BlockPropagation where
   toJSON BlockPropagation{..} = AE.Array $ Vec.fromList
-    [ extendObject "kind" "forgerForges"        $ toJSON sForgerForges
-    , extendObject "kind" "forgerAdoptions"     $ toJSON sForgerAdoptions
-    , extendObject "kind" "forgerAnnouncements" $ toJSON sForgerAnnouncements
-    , extendObject "kind" "forgerSends"         $ toJSON sForgerSends
-    , extendObject "kind" "peerNoticesMean"       $ toJSON (fst sPeerNotices)
-    , extendObject "kind" "peerNoticesCoV"        $ toJSON (snd sPeerNotices)
-    , extendObject "kind" "peerFetchesMean"       $ toJSON (fst sPeerFetches)
-    , extendObject "kind" "peerFetchesCoV"        $ toJSON (snd sPeerFetches)
-    , extendObject "kind" "peerAdoptionsMean"     $ toJSON (fst sPeerAdoptions)
-    , extendObject "kind" "peerAdoptionsCoV"      $ toJSON (snd sPeerAdoptions)
-    , extendObject "kind" "peerAnnouncementsMean" $ toJSON (fst sPeerAnnouncements)
-    , extendObject "kind" "peerAnnouncementsCoV"  $ toJSON (snd sPeerAnnouncements)
-    , extendObject "kind" "peerSendsMean"         $ toJSON (fst sPeerSends)
-    , extendObject "kind" "peerSendsCoV"          $ toJSON (snd sPeerSends)
+    [ extendObject "kind" "forgerForges"        $ toJSON bpForgerForges
+    , extendObject "kind" "forgerAdoptions"     $ toJSON bpForgerAdoptions
+    , extendObject "kind" "forgerAnnouncements" $ toJSON bpForgerAnnouncements
+    , extendObject "kind" "forgerSends"         $ toJSON bpForgerSends
+    , extendObject "kind" "peerNoticesMean"       $ toJSON (fst bpPeerNotices)
+    , extendObject "kind" "peerNoticesCoV"        $ toJSON (snd bpPeerNotices)
+    , extendObject "kind" "peerFetchesMean"       $ toJSON (fst bpPeerFetches)
+    , extendObject "kind" "peerFetchesCoV"        $ toJSON (snd bpPeerFetches)
+    , extendObject "kind" "peerAdoptionsMean"     $ toJSON (fst bpPeerAdoptions)
+    , extendObject "kind" "peerAdoptionsCoV"      $ toJSON (snd bpPeerAdoptions)
+    , extendObject "kind" "peerAnnouncementsMean" $ toJSON (fst bpPeerAnnouncements)
+    , extendObject "kind" "peerAnnouncementsCoV"  $ toJSON (snd bpPeerAnnouncements)
+    , extendObject "kind" "peerSendsMean"         $ toJSON (fst bpPeerSends)
+    , extendObject "kind" "peerSendsCoV"          $ toJSON (snd bpPeerSends)
     ]
 
 -- | Block's events, as seen by its forger.
@@ -116,9 +142,6 @@ data BlockObserverEvents
 -- | Sum of observer and forger events alike.
 type MachBlockEvents = Either BlockObserverEvents BlockForgerEvents
 
-mbeIsForger :: MachBlockEvents -> Bool
-mbeIsForger = isRight
-
 ordBlockEv :: MachBlockEvents -> MachBlockEvents -> Ordering
 ordBlockEv l r
   | (on (>) $ either boeBlockNo bfeBlockNo) l r = GT
@@ -126,6 +149,20 @@ ordBlockEv l r
   | isRight l = GT
   | isRight r = LT
   | otherwise = EQ
+
+mbeAdopted, mbeAnnounced, mbeSent, mbeNoticed :: MachBlockEvents -> Maybe UTCTime
+mbeAdopted = \case
+  Left  BlockObserverEvents{..} -> boeAdopted
+  Right BlockForgerEvents  {..} -> bfeAdopted
+mbeAnnounced = \case
+  Left  BlockObserverEvents{..} -> boeAnnounced
+  Right BlockForgerEvents  {..} -> bfeAnnounced
+mbeSent = \case
+  Left  BlockObserverEvents{..} -> boeSent
+  Right BlockForgerEvents  {..} -> bfeSent
+mbeNoticed = \case
+  Left  BlockObserverEvents{..} -> boeNoticed
+  Right BlockForgerEvents  {}   -> error "Called mbeNoticed on a BFE."
 
 mbeBlockHash :: MachBlockEvents -> Hash
 mbeBlockHash = either boeBlock bfeBlock
@@ -201,12 +238,14 @@ mapChainToPeerBlockObservationCDFs ::
      [PercSpec Float]
   -> ChainBlockEvents
   -> (BlockObservation -> Maybe UTCTime)
+  -> String
   -> (Distribution Float NominalDiffTime, Distribution Float NominalDiffTime)
-mapChainToPeerBlockObservationCDFs percs cbe proj =
+mapChainToPeerBlockObservationCDFs percs cbe proj desc =
   (means, covs)
  where
    means, covs :: Distribution Float NominalDiffTime
-   (,) means covs = computeDistributionStats (fmap realToFrac <$> allDistributions)
+   (,) means covs = computeDistributionStats desc
+                      (fmap realToFrac <$> allDistributions)
                     & either error id
                     & join (***) (fmap realToFrac)
 
@@ -214,11 +253,11 @@ mapChainToPeerBlockObservationCDFs percs cbe proj =
    allDistributions = computeDistribution percs <$> allObservations
 
    allObservations :: [[NominalDiffTime]]
-   allObservations = mapMaybe blockObservations cbe
+   allObservations = blockObservations <$> cbe
 
-   blockObservations :: BlockEvents -> Maybe [NominalDiffTime]
+   blockObservations :: BlockEvents -> [NominalDiffTime]
    blockObservations be =
-     fmap (`Time.diffUTCTime` beSlotStart be) <$> mapM proj (beObservations be)
+     (`Time.diffUTCTime` beSlotStart be) <$> mapMaybe proj (beObservations be)
 
 blockProp :: ChainInfo -> [(JsonLogfile, [LogObject])] -> IO BlockPropagation
 blockProp ci xs = do
@@ -235,12 +274,12 @@ doBlockProp eventMaps = do
                                else Nothing))
     (forgerEventsCDF    (Just . beAnnounced))
     (forgerEventsCDF    (Just . beSent))
-    (observerEventsCDFs (Just . boNoticed))
-    (observerEventsCDFs (Just . boFetched))
+    (observerEventsCDFs (Just . boNoticed) "peer noticed")
+    (observerEventsCDFs (Just . boFetched) "peer fetched")
     (observerEventsCDFs (\x -> if boChainDelta x == 1 then boAdopted x
-                               else Nothing))
-    (observerEventsCDFs boAnnounced)
-    (observerEventsCDFs boSent)
+                               else Nothing) "peer adopted")
+    (observerEventsCDFs boAnnounced "peer announced")
+    (observerEventsCDFs boSent      "peer sent")
  where
    forgerEventsCDF    = mapChainToForgerEventCDF           stdPercentiles chain
    observerEventsCDFs = mapChainToPeerBlockObservationCDFs stdPercentiles chain
@@ -323,25 +362,27 @@ blockPropMachEventsStep ci fp bMap = \case
   LogObject{loAt, loHost, loBody=LOBlockAddedToCurrentChain{loBlock,loChainLengthDelta}} ->
     let mbe0 = Map.lookup loBlock bMap & fromMaybe
                (err loHost loBlock "LOBlockAddedToCurrentChain leads")
-    in Map.insert loBlock (mbeSetAdoptedDelta loAt loChainLengthDelta mbe0) bMap
+    in if isJust $ mbeAdopted mbe0 then bMap
+       else Map.insert loBlock (mbeSetAdoptedDelta loAt loChainLengthDelta mbe0) bMap
   LogObject{loAt, loHost, loBody=LOChainSyncServerSendHeader{loBlock}} ->
     let mbe0 = Map.lookup loBlock bMap & fromMaybe
                (err loHost loBlock "LOChainSyncServerSendHeader leads")
-    in Map.insert loBlock (mbeSetAnnounced loAt mbe0) bMap
+    in if isJust $ mbeAnnounced mbe0 then bMap
+       else Map.insert loBlock (mbeSetAnnounced loAt mbe0) bMap
   LogObject{loAt, loHost, loBody=LOBlockFetchServerSend{loBlock}} ->
-    -- D.trace (D.printf "mbeSetSent %s %s" (show loHost :: String) (show loBlock :: String)) $
+    -- D.trace (printf "mbeSetSent %s %s" (show loHost :: String) (show loBlock :: String)) $
     let mbe0 = Map.lookup loBlock bMap & fromMaybe
                (err loHost loBlock "LOBlockFetchServerSend leads")
-    in Map.insert loBlock (mbeSetSent loAt mbe0) bMap
+    in if isJust $ mbeSent mbe0 then bMap
+       else Map.insert loBlock (mbeSetSent loAt mbe0) bMap
   LogObject{loAt, loHost, loBody=LOChainSyncClientSeenHeader{loBlock,loBlockNo,loSlotNo}} ->
-    case Map.lookup loBlock bMap of
-      -- We only record the first ChainSync observation of a block.
-      Nothing -> Map.insert loBlock
-                 (Left $
-                  (mbe0observ loHost loBlock loBlockNo loSlotNo)
-                  { boeNoticed = Just loAt })
-                 bMap
-      Just{}  -> bMap
+    let mbe0 = Map.lookup loBlock bMap
+    in if isJust mbe0 then bMap
+       else Map.insert loBlock
+              (Left $
+               (mbe0observ loHost loBlock loBlockNo loSlotNo)
+               { boeNoticed = Just loAt })
+              bMap
   LogObject{loAt, loHost, loBody=LOBlockFetchClientCompletedFetch{loBlock}} ->
     flip (Map.insert loBlock) bMap $
     Left (mbmGetObserver loHost loBlock bMap  "LOBlockFetchClientCompletedFetch")

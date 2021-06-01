@@ -24,6 +24,7 @@ library
                        Cardano.Unlog.Commands
                        Cardano.Unlog.LogObject
                        Cardano.Unlog.Parsers
+                       Cardano.Unlog.Render
                        Cardano.Unlog.Resources
                        Cardano.Unlog.Run
                        Cardano.Unlog.SlotStats
