@@ -31,8 +31,6 @@ instance FromJSON TracingVerbosity where
 
 deriving instance Show TracingVerbosity
 
--- deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
-
 instance ToJSON (Shelley.CompactAddr StandardCrypto) where
   toJSON = toJSON . Shelley.decompactAddr
 

@@ -3,8 +3,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -18,7 +18,7 @@ import           Prelude
 
 import           Cardano.Prelude (panic)
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
@@ -30,16 +30,19 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import           Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as Shelley
+import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
@@ -51,8 +54,8 @@ import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import qualified Shelley.Spec.Ledger.Rewards as Shelley
 import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
+import qualified Shelley.Spec.Ledger.Rewards as Shelley
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -110,8 +113,7 @@ instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          , ToJSON (Core.PParamsDelta era)
          ) => ToJSON (Shelley.UTxOState era) where
-  toJSON utxoState = object [ "utxo" .= Shelley._utxo utxoState
-                            , "deposited" .= Shelley._deposited utxoState
+  toJSON utxoState = object [ "deposited" .= Shelley._deposited utxoState
                             , "fees" .= Shelley._fees utxoState
                             , "ppups" .= Shelley._ppups utxoState
                             ]
@@ -213,6 +215,18 @@ instance ( Consensus.ShelleyBasedEra era
       [ "address" .= addr
       , "amount" .= amount
       ]
+
+instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
+    => ToJSON (Alonzo.TxOut era) where
+  toJSON (Alonzo.TxOut addr v dataHash) =
+    object [ "address" .= toJSON addr
+           , "value" .= toJSON v
+           , "datahash" .= case strictMaybeToMaybe dataHash of
+                             Nothing -> Aeson.Null
+                             Just dHash ->
+                               Aeson.String . Crypto.hashToTextAsHex
+                                 $ SafeHash.extractHash dHash
+           ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.TxIn crypto) where
   toJSON = toJSON . txInToText
@@ -433,37 +447,36 @@ instance FromJSON (Alonzo.PParams era) where
         <*> obj .: "collateralPercentage"
         <*> obj .: "maxCollateralInputs"
 
-deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
 
--- instance ToJSON (Alonzo.PParamsUpdate era) where
---   toJSON pp =
---     Aeson.object $
---         [ "minFeeA"               .= x | x <- mbfield (Alonzo._minfeeA pp) ]
---      ++ [ "minFeeB"               .= x | x <- mbfield (Alonzo._minfeeB pp) ]
---      ++ [ "maxBlockBodySize"      .= x | x <- mbfield (Alonzo._maxBBSize pp) ]
---      ++ [ "maxTxSize"             .= x | x <- mbfield (Alonzo._maxTxSize pp) ]
---      ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (Alonzo._maxBHSize pp) ]
---      ++ [ "keyDeposit"            .= x | x <- mbfield (Alonzo._keyDeposit pp) ]
---      ++ [ "poolDeposit"           .= x | x <- mbfield (Alonzo._poolDeposit pp) ]
---      ++ [ "eMax"                  .= x | x <- mbfield (Alonzo._eMax pp) ]
---      ++ [ "nOpt"                  .= x | x <- mbfield (Alonzo._nOpt pp) ]
---      ++ [ "a0"                    .= (fromRational x :: Scientific)
---                                        | x <- mbfield (Alonzo._a0 pp) ]
---      ++ [ "rho"                   .= x | x <- mbfield (Alonzo._rho pp) ]
---      ++ [ "tau"                   .= x | x <- mbfield (Alonzo._tau pp) ]
---      ++ [ "decentralisationParam" .= x | x <- mbfield (Alonzo._d pp) ]
---      ++ [ "extraEntropy"          .= x | x <- mbfield (Alonzo._extraEntropy pp) ]
---      ++ [ "protocolVersion"       .= x | x <- mbfield (Alonzo._protocolVersion pp) ]
---      ++ [ "minPoolCost"           .= x | x <- mbfield (Alonzo._minPoolCost pp) ]
---      ++ [ "adaPerUTxOWord"        .= x | x <- mbfield (Alonzo._adaPerUTxOWord pp) ]
+instance ToJSON (Alonzo.PParamsUpdate era) where
+  toJSON pp =
+    Aeson.object $
+        [ "minFeeA"               .= x | x <- mbfield (Alonzo._minfeeA pp) ]
+     ++ [ "minFeeB"               .= x | x <- mbfield (Alonzo._minfeeB pp) ]
+     ++ [ "maxBlockBodySize"      .= x | x <- mbfield (Alonzo._maxBBSize pp) ]
+     ++ [ "maxTxSize"             .= x | x <- mbfield (Alonzo._maxTxSize pp) ]
+     ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (Alonzo._maxBHSize pp) ]
+     ++ [ "keyDeposit"            .= x | x <- mbfield (Alonzo._keyDeposit pp) ]
+     ++ [ "poolDeposit"           .= x | x <- mbfield (Alonzo._poolDeposit pp) ]
+     ++ [ "eMax"                  .= x | x <- mbfield (Alonzo._eMax pp) ]
+     ++ [ "nOpt"                  .= x | x <- mbfield (Alonzo._nOpt pp) ]
+     ++ [ "a0"                    .= (fromRational x :: Scientific)
+                                       | x <- mbfield (Alonzo._a0 pp) ]
+     ++ [ "rho"                   .= x | x <- mbfield (Alonzo._rho pp) ]
+     ++ [ "tau"                   .= x | x <- mbfield (Alonzo._tau pp) ]
+     ++ [ "decentralisationParam" .= x | x <- mbfield (Alonzo._d pp) ]
+     ++ [ "extraEntropy"          .= x | x <- mbfield (Alonzo._extraEntropy pp) ]
+     ++ [ "protocolVersion"       .= x | x <- mbfield (Alonzo._protocolVersion pp) ]
+     ++ [ "minPoolCost"           .= x | x <- mbfield (Alonzo._minPoolCost pp) ]
+     ++ [ "adaPerUTxOWord"        .= x | x <- mbfield (Alonzo._adaPerUTxOWord pp) ]
 
---      ++ [ "costmdls"              .= x | x <- mbfield (Alonzo._costmdls pp) ]
---      ++ [ "prices"                .= x | x <- mbfield (Alonzo._prices pp) ]
---      ++ [ "maxTxExUnits"          .= x | x <- mbfield (Alonzo._maxTxExUnits pp) ]
---      ++ [ "maxBlockExUnits"       .= x | x <- mbfield (Alonzo._maxBlockExUnits pp) ]
---      ++ [ "maxValSize"            .= x | x <- mbfield (Alonzo._maxValSize pp) ]
---      ++ [ "collateralPercentage"  .= x | x <- mbfield (Alonzo._collateralPercentage pp) ]
---      ++ [ "maxCollateralInputs"   .= x | x <- mbfield (Alonzo._maxCollateralInputs pp) ]
---     where
---       mbfield SNothing  = []
---       mbfield (SJust x) = [x]
+     ++ [ "costmdls"              .= x | x <- mbfield (Alonzo._costmdls pp) ]
+     ++ [ "prices"                .= x | x <- mbfield (Alonzo._prices pp) ]
+     ++ [ "maxTxExUnits"          .= x | x <- mbfield (Alonzo._maxTxExUnits pp) ]
+     ++ [ "maxBlockExUnits"       .= x | x <- mbfield (Alonzo._maxBlockExUnits pp) ]
+     ++ [ "maxValSize"            .= x | x <- mbfield (Alonzo._maxValSize pp) ]
+     ++ [ "collateralPercentage"  .= x | x <- mbfield (Alonzo._collateralPercentage pp) ]
+     ++ [ "maxCollateralInputs"   .= x | x <- mbfield (Alonzo._maxCollateralInputs pp) ]
+    where
+      mbfield SNothing  = []
+      mbfield (SJust x) = [x]

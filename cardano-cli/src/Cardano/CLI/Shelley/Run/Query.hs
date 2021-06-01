@@ -3,8 +3,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -51,7 +51,6 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
-import qualified Cardano.Ledger.Alonzo as Alonzo
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -63,13 +62,13 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
                    (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
-import           Shelley.Spec.Ledger.EpochBoundary
 import qualified Shelley.Spec.Ledger.CompactAddr as Shelley
+import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 
-import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Data.Text.IO as T
+import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified System.IO as IO
 
 {- HLINT ignore "Reduce duplication" -}
@@ -204,7 +203,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
   case mOutFile of
     Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
     Nothing                 -> liftIO $ LBS.putStrLn        output
-    
+
   where
     tuple3Fst :: (a, b, c) -> a
     tuple3Fst (a, _, _) = a
@@ -804,5 +803,5 @@ obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 
-deriving instance ToJSON (Alonzo.TxOut (Alonzo.AlonzoEra StandardCrypto))
 deriving newtype instance ToJSON (Shelley.CompactAddr StandardCrypto)
+

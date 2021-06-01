@@ -62,10 +62,10 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.HardFork.History as History
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 
-import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import           Ouroboros.Consensus.Cardano.Block (StandardCrypto)
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised)
 
@@ -215,13 +215,14 @@ instance ( IsShelleyBasedEra era
          , ToJSON (Core.PParams ledgerera)
          , ToJSON (Core.PParamsDelta ledgerera)
          , ToJSON (Core.TxOut ledgerera)) => ToJSON (DebugLedgerState era) where
-  toJSON (DebugLedgerState newEpochS) = object [ "lastEpoch" .= Shelley.nesEL newEpochS
-                                          , "blocksBefore" .= Shelley.nesBprev newEpochS
-                                          , "blocksCurrent" .= Shelley.nesBcur newEpochS
-                                          , "stateBefore" .= Shelley.nesEs newEpochS
-                                          , "possibleRewardUpdate" .= Shelley.nesRu newEpochS
-                                          , "stakeDistrib" .= Shelley.nesPd newEpochS
-                                          ]
+  toJSON (DebugLedgerState newEpochS) =
+    object [ "lastEpoch" .= Shelley.nesEL newEpochS
+           , "blocksBefore" .= Shelley.nesBprev newEpochS
+           , "blocksCurrent" .= Shelley.nesBcur newEpochS
+           , "stateBefore" .= Shelley.nesEs newEpochS
+           , "possibleRewardUpdate" .= Shelley.nesRu newEpochS
+           , "stakeDistrib" .= Shelley.nesPd newEpochS
+           ]
 
 newtype ProtocolState era
   = ProtocolState (Serialised (Shelley.ChainDepState (Ledger.Crypto (ShelleyLedgerEra era))))
