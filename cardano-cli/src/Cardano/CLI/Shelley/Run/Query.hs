@@ -1,12 +1,16 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.CLI.Shelley.Run.Query
   ( ShelleyQueryCmdError
@@ -47,6 +51,7 @@ import           Cardano.CLI.Types
 import           Cardano.Binary (decodeFull)
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 
+import qualified Cardano.Ledger.Alonzo as Alonzo
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -59,6 +64,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQu
                    (AcquireFailure (..))
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.EpochBoundary
+import qualified Shelley.Spec.Ledger.CompactAddr as Shelley
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 
@@ -796,6 +802,7 @@ obtainLedgerEraClassConstraints
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  _ =
-  panic "obtainLedgerEraClassConstraints: Alonzo era not implemented yet"
+obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 
+deriving instance ToJSON (Alonzo.TxOut (Alonzo.AlonzoEra StandardCrypto))
+deriving newtype instance ToJSON (Shelley.CompactAddr StandardCrypto)

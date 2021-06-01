@@ -16,8 +16,6 @@ import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
-import qualified Cardano.Ledger.Alonzo as Alonzo
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Shelley.Spec.Ledger.CompactAddr as Shelley
 
@@ -33,7 +31,7 @@ instance FromJSON TracingVerbosity where
 
 deriving instance Show TracingVerbosity
 
-deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
+-- deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
 
 instance ToJSON (Shelley.CompactAddr StandardCrypto) where
   toJSON = toJSON . Shelley.decompactAddr
