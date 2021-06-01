@@ -1,6 +1,8 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.CLI.Types
   ( CBORObject (..)
@@ -11,6 +13,10 @@ module Cardano.CLI.Types
   , SigningKeyFile (..)
   , SocketPath (..)
   , ScriptFile (..)
+  , ScriptDataOrFile (..)
+  , ScriptRedeemerOrFile
+  , ScriptWitnessFiles (..)
+  , ScriptDatumOrFile (..)
   , TransferDirection(..)
   , TxOutAnyEra (..)
   , UpdateProposalFile (..)
@@ -144,6 +150,39 @@ newtype VerificationKeyFile
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
+
+data ScriptDataOrFile = ScriptDataFile  FilePath   -- ^ By reference to a file
+                      | ScriptDataValue ScriptData -- ^ By value
+  deriving (Eq, Show)
+
+type ScriptRedeemerOrFile = ScriptDataOrFile
+
+-- | This type is like 'ScriptWitness', but the file paths from which to load
+-- the script witness data representation.
+--
+-- It is era-independent, but witness context-dependent.
+--
+data ScriptWitnessFiles witctx where
+     SimpleScriptWitnessFile  :: ScriptFile
+                              -> ScriptWitnessFiles witctx
+
+     PlutusScriptWitnessFiles :: ScriptFile
+                              -> ScriptDatumOrFile witctx
+                              -> ScriptRedeemerOrFile
+                              -> ExecutionUnits
+                              -> ScriptWitnessFiles witctx
+
+deriving instance Show (ScriptWitnessFiles witctx)
+
+data ScriptDatumOrFile witctx where
+     ScriptDatumOrFileForTxIn    :: ScriptDataOrFile
+                                 -> ScriptDatumOrFile WitCtxTxIn
+
+     NoScriptDatumOrFileForMint  :: ScriptDatumOrFile WitCtxMint
+     NoScriptDatumOrFileForStake :: ScriptDatumOrFile WitCtxStake
+
+deriving instance Show (ScriptDatumOrFile witctx)
+
 
 -- | Determines the direction in which the MIR certificate will transfer ADA.
 data TransferDirection = TransferToReserves | TransferToTreasury

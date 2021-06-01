@@ -311,6 +311,7 @@ module Cardano.Api (
 
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
+    WitCtx(..),
     ScriptWitness(..),
     Witness(..),
     KeyWitnessInCtx(..),
@@ -337,6 +338,9 @@ module Cardano.Api (
 
     -- ** Script data
     ScriptData(..),
+
+    -- * Script execution units
+    ExecutionUnits(..),
 
     -- ** Script addresses
     -- | Making addresses from scripts.

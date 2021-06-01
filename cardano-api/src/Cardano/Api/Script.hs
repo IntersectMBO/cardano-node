@@ -33,6 +33,7 @@ module Cardano.Api.Script (
 
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
+    WitCtx(..),
     ScriptWitness(..),
     Witness(..),
     KeyWitnessInCtx(..),
@@ -598,6 +599,17 @@ data WitCtxMint
 -- both certificates and withdrawals.
 --
 data WitCtxStake
+
+
+-- | This GADT provides a value-level representation of all the witness
+-- contexts. This enables pattern matching on the context to allow them to be
+-- treated in a non-uniform way.
+--
+data WitCtx witctx where
+     WitCtxTxIn  :: WitCtx WitCtxTxIn
+     WitCtxMint  :: WitCtx WitCtxMint
+     WitCtxStake :: WitCtx WitCtxStake
+
 
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be

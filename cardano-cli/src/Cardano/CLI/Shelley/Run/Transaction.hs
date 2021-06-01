@@ -234,7 +234,7 @@ runTransactionCmd cmd =
 
 runTxBuildRaw
   :: AnyCardanoEra
-  -> [(TxIn, Maybe ScriptFile)]
+  -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ TxIn with potential script witness
   -> [TxOutAnyEra]
   -> Maybe SlotNo
@@ -243,11 +243,11 @@ runTxBuildRaw
   -- ^ Tx upper bound
   -> Maybe Lovelace
   -- ^ Tx fee
-  -> Maybe (Value, [ScriptFile])
+  -> Maybe (Value, [ScriptWitnessFiles WitCtxMint])
   -- ^ Multi-Asset value(s)
-  -> [(CertificateFile, Maybe ScriptFile)]
+  -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -- ^ Certificate with potential script witness
-  -> [(StakeAddress, Lovelace, Maybe ScriptFile)]
+  -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
@@ -316,19 +316,22 @@ txFeatureMismatch era feature =
     left (ShelleyTxCmdTxFeatureMismatch (anyCardanoEra era) feature)
 
 validateTxIns
-  :: forall era. IsCardanoEra era
+  :: forall era.
+     IsCardanoEra era
   => CardanoEra era
-  -> [(TxIn, Maybe ScriptFile)]
-  -> ExceptT ShelleyTxCmdError IO [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+  -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
+  -> ExceptT ShelleyTxCmdError IO
+             [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
 validateTxIns era = mapM convert
  where
    convert
-     :: (TxIn, Maybe ScriptFile)
-     -> ExceptT ShelleyTxCmdError IO (TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))
-   convert (txin, mScriptFile) =
-     case mScriptFile of
-       Just sFp -> do
-         sWit <- createScriptWitness era sFp
+     :: (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))
+     -> ExceptT ShelleyTxCmdError IO
+                (TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))
+   convert (txin, mScriptWitnessFiles) =
+     case mScriptWitnessFiles of
+       Just scriptWitnessFiles -> do
+         sWit <- createScriptWitness era scriptWitnessFiles
          return ( txin
                 , BuildTxWith $ ScriptWitness ScriptWitnessForSpending sWit
                 )
@@ -445,7 +448,7 @@ validateTxAuxScripts era files =
 validateTxWithdrawals
   :: forall era. IsCardanoEra era
   => CardanoEra era
-  -> [(StakeAddress, Lovelace, Maybe ScriptFile)]
+  -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
   -> ExceptT ShelleyTxCmdError IO (TxWithdrawals BuildTx era)
 validateTxWithdrawals _ [] = return TxWithdrawalsNone
 validateTxWithdrawals era withdrawals =
@@ -456,13 +459,15 @@ validateTxWithdrawals era withdrawals =
       return (TxWithdrawals supported convWithdrawals)
  where
   convert
-    :: (StakeAddress, Lovelace, Maybe ScriptFile)
+    :: (StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))
     -> ExceptT ShelleyTxCmdError IO
-           (StakeAddress, Lovelace, BuildTxWith BuildTx (Witness WitCtxStake era))
-  convert (sAddr, ll, mScriptFile) =
-    case mScriptFile of
-      Just sFp -> do
-        sWit <- createScriptWitness era sFp
+              (StakeAddress,
+               Lovelace,
+               BuildTxWith BuildTx (Witness WitCtxStake era))
+  convert (sAddr, ll, mScriptWitnessFiles) =
+    case mScriptWitnessFiles of
+      Just scriptWitnessFiles -> do
+        sWit <- createScriptWitness era scriptWitnessFiles
         return ( sAddr
                , ll
                , BuildTxWith $ ScriptWitness ScriptWitnessForStakeAddr sWit
@@ -472,7 +477,7 @@ validateTxWithdrawals era withdrawals =
 validateTxCertificates
   :: forall era. IsCardanoEra era
   => CardanoEra era
-  -> [(CertificateFile, Maybe ScriptFile)]
+  -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -> ExceptT ShelleyTxCmdError IO (TxCertificates BuildTx era)
 validateTxCertificates era certFiles =
   case certificatesSupportedInEra era of
@@ -502,16 +507,17 @@ validateTxCertificates era certFiles =
        _ -> return Nothing
 
    convert
-     :: (CertificateFile, Maybe ScriptFile)
-     -> ExceptT ShelleyTxCmdError IO (Maybe (StakeCredential, Witness WitCtxStake era))
-   convert (cert, mScript) = do
+     :: (CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))
+     -> ExceptT ShelleyTxCmdError IO
+                (Maybe (StakeCredential, Witness WitCtxStake era))
+   convert (cert, mScriptWitnessFiles) = do
      mStakeCred <- deriveStakeCredentialWitness cert
      case mStakeCred of
        Nothing -> return Nothing
        Just sCred ->
-         case mScript of
-           Just sFp -> do
-            sWit <- createScriptWitness era sFp
+         case mScriptWitnessFiles of
+           Just scriptWitnessFiles -> do
+            sWit <- createScriptWitness era scriptWitnessFiles
             return $ Just ( sCred
                           , ScriptWitness ScriptWitnessForStakeAddr sWit
                           )
@@ -533,10 +539,10 @@ validateTxUpdateProposal era (Just (UpdateProposalFile file)) =
 
 validateTxMintValue :: forall era. IsCardanoEra era
                     => CardanoEra era
-                    -> Maybe (Value, [ScriptFile])
+                    -> Maybe (Value, [ScriptWitnessFiles WitCtxMint])
                     -> ExceptT ShelleyTxCmdError IO (TxMintValue BuildTx era)
 validateTxMintValue _ Nothing = return TxMintNone
-validateTxMintValue era (Just (val, scripts)) =
+validateTxMintValue era (Just (val, scriptWitnessFiles)) =
     case multiAssetSupportedInEra era of
       Left _ -> txFeatureMismatch era TxFeatureMintValue
       Right supported -> do
@@ -546,7 +552,7 @@ validateTxMintValue era (Just (val, scripts)) =
               Set.fromList [ pid | (AssetId pid _, _) <- valueToList val ]
 
         -- The set (and map) of policy ids for which we have witnesses:
-        witnesses <- mapM (createScriptWitness era) scripts
+        witnesses <- mapM (createScriptWitness era) scriptWitnessFiles
         let witnessesProvidedMap :: Map PolicyId (ScriptWitness WitCtxMint era)
             witnessesProvidedMap = Map.fromList
                                      [ (scriptWitnessPolicyId witness, witness)
@@ -580,9 +586,9 @@ scriptWitnessPolicyId witness =
 createScriptWitness
   :: IsCardanoEra era
   => CardanoEra era
-  -> ScriptFile
+  -> ScriptWitnessFiles witctx
   -> ExceptT ShelleyTxCmdError IO (ScriptWitness witctx era)
-createScriptWitness era (ScriptFile fp) = do
+createScriptWitness era (SimpleScriptWitnessFile (ScriptFile fp)) = do
   ScriptInAnyLang sLang script <- firstExceptT ShelleyTxCmdScriptFileError
                                     $ readFileScriptInAnyLang fp
   case scriptLanguageSupportedInEra era sLang of
