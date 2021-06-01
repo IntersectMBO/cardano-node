@@ -105,6 +105,7 @@ module Cardano.Api (
     -- ** Multi-asset values
     Quantity(..),
     PolicyId(..),
+    scriptPolicyId,
     AssetName(..),
     AssetId(..),
     Value,
@@ -316,6 +317,7 @@ module Cardano.Api (
     ScriptWitnessInCtx(..),
     ScriptDatum(..),
     ScriptRedeemer,
+    scriptWitnessScript,
 
     -- *** Languages supported in each era
     ScriptLanguageInEra(..),

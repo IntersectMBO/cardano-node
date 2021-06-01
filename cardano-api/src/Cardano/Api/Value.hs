@@ -13,6 +13,7 @@ module Cardano.Api.Value
     -- * Multi-asset values
   , Quantity(..)
   , PolicyId(..)
+  , scriptPolicyId
   , AssetName(..)
   , AssetId(..)
   , Value
@@ -144,6 +145,10 @@ instance SerialiseAsRawBytes PolicyId where
     serialiseToRawBytes (PolicyId sh) = serialiseToRawBytes sh
     deserialiseFromRawBytes AsPolicyId bs =
       PolicyId <$> deserialiseFromRawBytes AsScriptHash bs
+
+scriptPolicyId :: Script lang -> PolicyId
+scriptPolicyId = PolicyId . hashScript
+
 
 newtype AssetName = AssetName ByteString
     deriving stock (Eq, Ord)

@@ -19,6 +19,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..))
 
@@ -84,7 +85,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdWitnessEraMismatch AnyCardanoEra AnyCardanoEra WitnessFile
   | ShelleyTxCmdScriptLanguageNotSupportedInEra AnyScriptLanguage AnyCardanoEra
   | ShelleyTxCmdGenesisCmdError !ShelleyGenesisCmdError
-  | ShelleyTxCmdPolicyIdNotSpecified PolicyId
+  | ShelleyTxCmdPolicyIdsMissing [PolicyId]
+  | ShelleyTxCmdPolicyIdsExcess  [PolicyId]
   deriving Show
 
 data SomeTxBodyError where
@@ -165,10 +167,16 @@ renderShelleyTxCmdError err =
        "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
        ") is not supported in the " <> renderMode mode <> " consensus mode."
     ShelleyTxCmdGenesisCmdError e -> renderShelleyGenesisCmdError e
-    ShelleyTxCmdPolicyIdNotSpecified sWit ->
-      "A script provided to witness minting does not correspond to the policy id \
-      \of any asset specified in the \"--mint\" field. The script hash is: "
-      <> serialiseToRawBytesHexText sWit
+    ShelleyTxCmdPolicyIdsMissing policyids ->
+      "The \"--mint\" flag specifies an asset with a policy Id, but no \
+      \corresponding monetary policy script has been provided as a witness \
+      \(via the \"--minting-script-file\" flag). The policy Id in question is: "
+      <> Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+
+    ShelleyTxCmdPolicyIdsExcess policyids ->
+      "A script provided to witness minting does not correspond to the policy \
+      \id of any asset specified in the \"--mint\" field. The script hash is: "
+      <> Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -530,50 +538,43 @@ validateTxMintValue :: forall era. IsCardanoEra era
 validateTxMintValue _ Nothing = return TxMintNone
 validateTxMintValue era (Just (val, scripts)) =
     case multiAssetSupportedInEra era of
-       Left _ -> txFeatureMismatch era TxFeatureMintValue
-       Right supported -> do
-         pidsAndWits <- pairAllPolIdsWithScripts val scripts
-         return (TxMintValue supported val
-                   . BuildTxWith $ Map.fromList pidsAndWits
-                )
+      Left _ -> txFeatureMismatch era TxFeatureMintValue
+      Right supported -> do
+        -- The set of policy ids for which we need witnesses:
+        let witnessesNeededSet :: Set PolicyId
+            witnessesNeededSet =
+              Set.fromList [ pid | (AssetId pid _, _) <- valueToList val ]
+
+        -- The set (and map) of policy ids for which we have witnesses:
+        witnesses <- mapM (createScriptWitness era) scripts
+        let witnessesProvidedMap :: Map PolicyId (ScriptWitness WitCtxMint era)
+            witnessesProvidedMap = Map.fromList
+                                     [ (scriptWitnessPolicyId witness, witness)
+                                     | witness <- witnesses ]
+            witnessesProvidedSet = Map.keysSet witnessesProvidedMap
+
+        -- Check not too many, nor too few:
+        validateAllWitnessesProvided   witnessesNeededSet witnessesProvidedSet
+        validateNoUnnecessaryWitnesses witnessesNeededSet witnessesProvidedSet
+
+        return (TxMintValue supported val (BuildTxWith witnessesProvidedMap))
  where
-   extractPolicyIds :: Value -> [PolicyId]
-   extractPolicyIds v = map (\(AssetId polId _, _) -> polId) (valueToList v)
+    validateAllWitnessesProvided witnessesNeeded witnessesProvided
+      | null witnessesMissing = return ()
+      | otherwise = left (ShelleyTxCmdPolicyIdsMissing witnessesMissing)
+      where
+        witnessesMissing = Set.elems (witnessesNeeded Set.\\ witnessesProvided)
 
+    validateNoUnnecessaryWitnesses witnessesNeeded witnessesProvided
+      | null witnessesExtra = return ()
+      | otherwise = left (ShelleyTxCmdPolicyIdsExcess witnessesExtra)
+      where
+        witnessesExtra = Set.elems (witnessesProvided Set.\\ witnessesNeeded)
 
-   pairAllPolIdsWithScripts
-     :: Value -> [ScriptFile]
-     -> ExceptT ShelleyTxCmdError IO [(PolicyId, ScriptWitness WitCtxMint era)]
-   pairAllPolIdsWithScripts vals sFiles = do
-     sInLangs <- sequence
-                   [ firstExceptT ShelleyTxCmdScriptFileError $
-                       readFileScriptInAnyLang file
-                   | ScriptFile file <- sFiles ]
-     let valPids = extractPolicyIds vals
-     mapM (pairPolIdWithScriptWit valPids) sInLangs
-
-   -- Check that the script hash exists in the minted multi asset
-   pairPolIdWithScriptWit
-     :: [PolicyId]
-     -> ScriptInAnyLang
-     -> ExceptT ShelleyTxCmdError IO (PolicyId, ScriptWitness WitCtxMint era)
-   pairPolIdWithScriptWit valuePids (ScriptInAnyLang sLang script) = do
-     let scriptHash = PolicyId $ hashScript script
-     if scriptHash `elem` valuePids
-     then case scriptLanguageSupportedInEra era sLang of
-            Nothing -> left $ ShelleyTxCmdScriptLanguageNotSupportedInEra
-                                (AnyScriptLanguage sLang)
-                                (AnyCardanoEra era)
-            Just sLangInEra ->
-              case script of
-                SimpleScript sVer sScript ->
-                  return ( scriptHash
-                         , SimpleScriptWitness sLangInEra sVer sScript
-                         )
-                PlutusScript _ _ ->
-                  panic "TODO alonzo: reateScriptWitness: Plutus scripts not supported yet."
-
-     else left $ ShelleyTxCmdPolicyIdNotSpecified scriptHash
+scriptWitnessPolicyId :: ScriptWitness witctx era -> PolicyId
+scriptWitnessPolicyId witness =
+  case scriptWitnessScript witness of
+    ScriptInEra _ script -> scriptPolicyId script
 
 
 createScriptWitness
