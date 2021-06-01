@@ -169,6 +169,21 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
 
               pure (ipv4', ipv6')
 
+            -- When IPv4 host is specified, try IPv6, but do not fail if missing.
+            -- Very relevant if operator is using RFC4941 on their block producing-node.
+            (_, Nothing) -> do
+              info <- nodeAddressInfo Nothing ncNodePortNumber
+              let ipv6' = SocketInfo <$> find ((== AF_INET6) . addrFamily) info
+              
+              pure (ipv4, ipv6')
+
+            -- When IPv6 host is specified, try IPv4, but do not fail if missing.
+            (Nothing, _) -> do
+              info <- nodeAddressInfo Nothing ncNodePortNumber
+              let ipv4' = SocketInfo <$> find ((== AF_INET)  . addrFamily) info
+              
+              pure (ipv4', ipv6)
+
             _ -> pure (ipv4, ipv6)
 
 
