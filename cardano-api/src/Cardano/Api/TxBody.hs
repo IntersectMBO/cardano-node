@@ -1028,7 +1028,8 @@ data TxMintValue build era where
 
      TxMintValue :: MultiAssetSupportedInEra era
                  -> Value
-                 -> BuildTxWith build (Map PolicyId (Witness WitCtxMint era))
+                 -> BuildTxWith build
+                      (Map PolicyId (ScriptWitness WitCtxMint era))
                  -> TxMintValue build era
 
 deriving instance Eq   (TxMintValue build era)
@@ -2257,7 +2258,7 @@ collectTxBodyScriptWitnesses TxBodyContent {
           -- The minting policies are indexed in policy id order in the value
         | let ValueNestedRep bundle = valueToNestedRep value
         , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
-        , ScriptWitness _ witness <- maybeToList (Map.lookup policyid witnesses)
+        , witness <- maybeToList (Map.lookup policyid witnesses)
         ]
 
 

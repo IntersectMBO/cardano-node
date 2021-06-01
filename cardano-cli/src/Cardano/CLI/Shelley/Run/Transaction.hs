@@ -543,7 +543,7 @@ validateTxMintValue era (Just (val, scripts)) =
 
    pairAllPolIdsWithScripts
      :: Value -> [ScriptFile]
-     -> ExceptT ShelleyTxCmdError IO [(PolicyId, Witness WitCtxMint era)]
+     -> ExceptT ShelleyTxCmdError IO [(PolicyId, ScriptWitness WitCtxMint era)]
    pairAllPolIdsWithScripts vals sFiles = do
      sInLangs <- sequence
                    [ firstExceptT ShelleyTxCmdScriptFileError $
@@ -556,7 +556,7 @@ validateTxMintValue era (Just (val, scripts)) =
    pairPolIdWithScriptWit
      :: [PolicyId]
      -> ScriptInAnyLang
-     -> ExceptT ShelleyTxCmdError IO (PolicyId, Witness WitCtxMint era)
+     -> ExceptT ShelleyTxCmdError IO (PolicyId, ScriptWitness WitCtxMint era)
    pairPolIdWithScriptWit valuePids (ScriptInAnyLang sLang script) = do
      let scriptHash = PolicyId $ hashScript script
      if scriptHash `elem` valuePids
@@ -568,8 +568,7 @@ validateTxMintValue era (Just (val, scripts)) =
               case script of
                 SimpleScript sVer sScript ->
                   return ( scriptHash
-                         , ScriptWitness ScriptWitnessForMinting
-                             $ SimpleScriptWitness sLangInEra sVer sScript
+                         , SimpleScriptWitness sLangInEra sVer sScript
                          )
                 PlutusScript _ _ ->
                   panic "TODO alonzo: reateScriptWitness: Plutus scripts not supported yet."
