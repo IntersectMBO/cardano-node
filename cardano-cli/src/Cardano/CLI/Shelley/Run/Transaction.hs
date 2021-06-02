@@ -317,8 +317,7 @@ txFeatureMismatch era feature =
 
 validateTxIns
   :: forall era.
-     IsCardanoEra era
-  => CardanoEra era
+     CardanoEra era
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -> ExceptT ShelleyTxCmdError IO
              [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
@@ -446,8 +445,8 @@ validateTxAuxScripts era files =
       panic "TODO alonzo: validateTxAuxScripts AuxScriptsInAlonzoEra"
 
 validateTxWithdrawals
-  :: forall era. IsCardanoEra era
-  => CardanoEra era
+  :: forall era.
+     CardanoEra era
   -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
   -> ExceptT ShelleyTxCmdError IO (TxWithdrawals BuildTx era)
 validateTxWithdrawals _ [] = return TxWithdrawalsNone
@@ -475,8 +474,8 @@ validateTxWithdrawals era withdrawals =
       Nothing -> return (sAddr,ll, BuildTxWith $ KeyWitness KeyWitnessForStakeAddr)
 
 validateTxCertificates
-  :: forall era. IsCardanoEra era
-  => CardanoEra era
+  :: forall era.
+     CardanoEra era
   -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -> ExceptT ShelleyTxCmdError IO (TxCertificates BuildTx era)
 validateTxCertificates era certFiles =
@@ -537,8 +536,8 @@ validateTxUpdateProposal era (Just (UpdateProposalFile file)) =
          return (TxUpdateProposal supported prop)
 
 
-validateTxMintValue :: forall era. IsCardanoEra era
-                    => CardanoEra era
+validateTxMintValue :: forall era.
+                       CardanoEra era
                     -> Maybe (Value, [ScriptWitnessFiles WitCtxMint])
                     -> ExceptT ShelleyTxCmdError IO (TxMintValue BuildTx era)
 validateTxMintValue _ Nothing = return TxMintNone
@@ -584,8 +583,7 @@ scriptWitnessPolicyId witness =
 
 
 createScriptWitness
-  :: IsCardanoEra era
-  => CardanoEra era
+  :: CardanoEra era
   -> ScriptWitnessFiles witctx
   -> ExceptT ShelleyTxCmdError IO (ScriptWitness witctx era)
 createScriptWitness era (SimpleScriptWitnessFile (ScriptFile fp)) = do
@@ -601,7 +599,7 @@ createScriptWitness era (SimpleScriptWitnessFile (ScriptFile fp)) = do
     Nothing ->
       left $ ShelleyTxCmdScriptLanguageNotSupportedInEra
                (AnyScriptLanguage sLang)
-               (AnyCardanoEra era)
+               (anyCardanoEra era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction signing
