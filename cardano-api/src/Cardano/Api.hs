@@ -335,6 +335,8 @@ module Cardano.Api (
 
     -- ** Plutus scripts
     PlutusScript,
+    examplePlutusScriptAlwaysSucceeds,
+    examplePlutusScriptAlwaysFails,
 
     -- ** Script data
     ScriptData(..),

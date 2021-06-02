@@ -56,6 +56,8 @@ module Cardano.Api.Script (
 
     -- * The Plutus script language
     PlutusScript(..),
+    examplePlutusScriptAlwaysSucceeds,
+    examplePlutusScriptAlwaysFails,
 
     -- * Script data
     ScriptData(..),
@@ -105,6 +107,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
+import           Numeric.Natural (Natural)
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -137,6 +140,7 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified Plutus.V1.Ledger.Examples as Plutus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -1007,6 +1011,49 @@ instance (IsPlutusScriptLanguage lang, Typeable lang) =>
     textEnvelopeType _ =
       case plutusScriptVersion :: PlutusScriptVersion lang of
         PlutusScriptV1 -> "PlutusScriptV1"
+
+
+-- | An example Plutus script that always succeeds, irrespective of inputs.
+--
+-- For example, if one were to use this for a payment address then it would
+-- allow anyone to spend from it.
+--
+-- The exact script depends on the context in which it is to be used.
+--
+examplePlutusScriptAlwaysSucceeds :: WitCtx witctx
+                                  -> PlutusScript PlutusScriptV1
+examplePlutusScriptAlwaysSucceeds =
+    PlutusScriptSerialised
+  . Plutus.alwaysSucceedingNAryFunction
+  . scriptArityForWitCtx
+
+-- | An example Plutus script that always fails, irrespective of inputs.
+--
+-- For example, if one were to use this for a payment address then it would
+-- be impossible for anyone to ever spend from it.
+--
+-- The exact script depends on the context in which it is to be used.
+--
+examplePlutusScriptAlwaysFails :: WitCtx witctx
+                               -> PlutusScript PlutusScriptV1
+examplePlutusScriptAlwaysFails =
+    PlutusScriptSerialised
+  . Plutus.alwaysFailingNAryFunction
+  . scriptArityForWitCtx
+
+-- | The expected arity of the Plutus function, depending on the context in
+-- which it is used.
+--
+-- The script inputs consist of
+--
+-- * the optional datum (for txins)
+-- * the redeemer
+-- * the Plutus representation of the tx and environment
+--
+scriptArityForWitCtx :: WitCtx witctx -> Natural
+scriptArityForWitCtx WitCtxTxIn  = 3
+scriptArityForWitCtx WitCtxMint  = 2
+scriptArityForWitCtx WitCtxStake = 2
 
 
 -- ----------------------------------------------------------------------------
