@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Shelley.Parsers
@@ -211,13 +212,64 @@ pScriptFor name help = ScriptFile <$> Opt.strOption
   <> Opt.completer (Opt.bashCompleter "file")
   )
 
-pScriptWitnessFiles :: WitCtx witctx
+pScriptWitnessFiles :: forall witctx.
+                       WitCtx witctx
                     -> String
                     -> String
                     -> Parser (ScriptWitnessFiles witctx)
-pScriptWitnessFiles _ name help =
-    -- Just the simple case for now. TODO: extend to Plutus witnesses.
-    SimpleScriptWitnessFile <$> pScriptFor name help
+pScriptWitnessFiles witctx scriptFlagPrefix help =
+    toScriptWitnessFiles
+      <$> pScriptFor (scriptFlagPrefix ++ "-script-file")
+                     ("The file containing the script to witness " ++ help)
+      <*> optional ((,,) <$> pScriptDatumOrFile
+                         <*> pScriptRedeemerOrFile
+                         <*> pExecutionUnits)
+  where
+    toScriptWitnessFiles :: ScriptFile
+                         -> Maybe (ScriptDatumOrFile witctx,
+                                   ScriptRedeemerOrFile,
+                                   ExecutionUnits)
+                         -> ScriptWitnessFiles witctx
+    toScriptWitnessFiles sf Nothing        = SimpleScriptWitnessFile  sf
+    toScriptWitnessFiles sf (Just (d,r,e)) = PlutusScriptWitnessFiles sf d r e
+
+    pScriptDatumOrFile :: Parser (ScriptDatumOrFile witctx)
+    pScriptDatumOrFile =
+      case witctx of
+        WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$> pScriptDataOrFile "datum"
+        WitCtxMint  -> pure NoScriptDatumOrFileForMint
+        WitCtxStake -> pure NoScriptDatumOrFileForStake
+
+    pScriptRedeemerOrFile :: Parser ScriptDataOrFile
+    pScriptRedeemerOrFile = pScriptDataOrFile "redeemer"
+
+    pScriptDataOrFile :: String -> Parser ScriptDataOrFile
+    pScriptDataOrFile dataFlagPrefix =
+          ScriptDataFile  <$> pScriptDataFile  dataFlagPrefix
+      <|> ScriptDataValue <$> pScriptDataValue dataFlagPrefix
+
+    pScriptDataFile dataFlagPrefix =
+      Opt.strOption
+        (  Opt.long (dataFlagPrefix ++ "-file")
+        <> Opt.metavar "FILE"
+        <> Opt.help ("The file containing the script input "
+                    ++ dataFlagPrefix ++ ".")
+        )
+
+    pScriptDataValue dataFlagPrefix =
+      Opt.option (fail "TODO alonzo: use proper JSON parsing here")
+        (  Opt.long (dataFlagPrefix ++ "-value")
+        <> Opt.metavar "JSON"
+        <> Opt.help ("The value for the script input " ++ dataFlagPrefix ++ ".")
+        )
+
+    pExecutionUnits =
+      uncurry ExecutionUnits <$>
+      Opt.option Opt.auto
+        (  Opt.long "execution-units"
+        <> Opt.metavar "(INT, INT)"
+        <> Opt.help "The time and space units needed by the script."
+        )
 
 pStakeAddressCmd :: Parser StakeAddressCmd
 pStakeAddressCmd =
@@ -1105,8 +1157,8 @@ pCertificateFile =
           )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
-                      "certificate-script-file"
-                      "Filepath of the certificate script witness")
+                      "certificate"
+                      "the use of the certificate.")
  where
    helpText = "Filepath of the certificate. This encompasses all \
               \types of certificates (stake pool certificates, \
@@ -1179,8 +1231,8 @@ pWithdrawal =
             )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
-                      "withdrawal-script-file"
-                      "Filepath of the withdrawal script witness.")
+                      "withdrawal"
+                      "the withdrawal of rewards.")
  where
    helpText = "The reward withdrawal as StakeAddress+Lovelace where \
               \StakeAddress is the Bech32-encoded stake address \
@@ -1634,8 +1686,8 @@ pTxIn =
                )
          <*> optional (pScriptWitnessFiles
                          WitCtxTxIn
-                         "txin-script-file"
-                         "Filepath of the spending script witness")
+                         "txin"
+                         "the spending of the transaction input.")
 
 parseTxIn :: Atto.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
@@ -1689,8 +1741,8 @@ pMintMultiAsset =
               )
       <*> some (pScriptWitnessFiles
                   WitCtxMint
-                  "minting-script-file"
-                  "Filepath of the multi-asset witness script.")
+                  "minting"
+                  "the minting of assets for a particular policy Id.")
 
  where
    helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
