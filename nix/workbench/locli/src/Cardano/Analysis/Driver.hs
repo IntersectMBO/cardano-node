@@ -188,13 +188,14 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
      withFile (unTextOutputFile o) WriteMode $ \hnd -> do
        hPutStrLn hnd . T.pack $
          printf "--- input: %s" (intercalate " " $ unJsonLogfile <$> srcs)
-       renderMachTimelineCDF  statsHeadP statsFormatP statsFormatPF s hnd
+       mapM_ (T.hPutStrLn hnd) (renderDistributions s)
+       -- renderMachTimelineCDF  statsHeadP statsFormatP statsFormatPF s hnd
        renderSlotTimeline slotHeadP slotFormatP False xs hnd
    renderExportStats :: RunScalars -> MachTimeline -> CsvOutputFile -> IO ()
-   renderExportStats rs s (CsvOutputFile o) =
+   renderExportStats rs _s (CsvOutputFile o) =
      withFile o WriteMode $
        \h -> do
-         renderMachTimelineCDF statsHeadE statsFormatE statsFormatEF s h
+         -- renderMachTimelineCDF statsHeadE statsFormatE statsFormatEF s h
          mapM_ (hPutStrLn h) $
            renderChainInfoExport chainInfo
            <>
@@ -203,12 +204,6 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
    renderExportTimeline xs (CsvOutputFile o) =
      withFile o WriteMode $
        renderSlotTimeline slotHeadE slotFormatE True xs
-
-   renderMachTimelineCDF :: Text -> Text -> Text -> MachTimeline -> Handle -> IO ()
-   renderMachTimelineCDF statHead statFmt propFmt timeline hnd = do
-       hPutStrLn hnd statHead
-       forM_ (toDistribLines statFmt propFmt timeline) $
-         hPutStrLn hnd
 
    renderDerivedSlots :: [DerivedSlot] -> CsvOutputFile -> IO ()
    renderDerivedSlots slots (CsvOutputFile o) = do

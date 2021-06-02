@@ -7,18 +7,16 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) where
 
-import           Prelude (String, error)
+import           Prelude (String, (!!), error)
 import           Cardano.Prelude
 
 import           Control.Arrow ((&&&), (***))
 import qualified Data.Aeson as AE
 import           Data.Aeson
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Text as T
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vec
 import qualified Data.Map.Strict as Map
-import           Text.Printf (printf)
 
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Time.Clock as Time
@@ -30,6 +28,7 @@ import           Data.Distribution
 
 import           Cardano.Analysis.Profile
 import           Cardano.Unlog.LogObject hiding (Text)
+import           Cardano.Unlog.Render
 import           Cardano.Unlog.Resources
 import           Cardano.Unlog.SlotStats
 
@@ -56,6 +55,30 @@ data MachTimeline
     , sResourceDistribs  :: !(Resources (Distribution Float Word64))
     }
   deriving Show
+
+instance RenderDistributions MachTimeline where
+  rdFields =
+    --  Width LeftPad
+    [ Field 4 0 "Miss" "ratio"   $ DFloat sMissDistrib
+    , Field 6 0 "" "ChkΔt"   $ DDeltaT sSpanCheckDistrib
+    , Field 6 0 "" "LeadΔt"   $ DDeltaT sSpanLeadDistrib
+    , Field 4 0 "Block" "gap"   $ DWord64   sBlocklessDistrib
+    , Field 5 0 "Dens" "ity"   $ DFloat sDensityDistrib
+    , Field 3 0 "CPU" "%"   $ DWord64 (rCentiCpu . sResourceDistribs)
+    , Field 3 0 "GC" "%"   $ DWord64 (rCentiGC . sResourceDistribs)
+    , Field 3 0 "MUT" "%"   $ DWord64 (rCentiMut . sResourceDistribs)
+    , Field 3 0 "GC " "Maj"   $ DWord64 (rGcsMajor . sResourceDistribs)
+    , Field 3 0 "flt " "Min"   $ DWord64 (rGcsMinor . sResourceDistribs)
+    , Field 5 0 (m!!0) "RSS"   $ DWord64 (rRSS . sResourceDistribs)
+    , Field 5 0 (m!!1) "Heap"   $ DWord64 (rHeap . sResourceDistribs)
+    , Field 5 0 (m!!2) "Live"   $ DWord64 (rLive . sResourceDistribs)
+    , Field 5 0 "Alloc" "MB/s"   $ DWord64 (rAlloc . sResourceDistribs)
+    , Field 5 0 (c!!0) "All"   $ DInt sSpanLensCPU85Distrib
+    , Field 5 0 (c!!1) "EBnd"   $ DInt sSpanLensCPU85EBndDistrib
+    ]
+   where
+     m = nChunksEachOf  3 6 "Memory usage, MB"
+     c = nChunksEachOf  2 6 "CPU85% spans"
 
 instance ToJSON MachTimeline where
   toJSON MachTimeline{..} = AE.Array $ Vec.fromList
@@ -175,92 +198,6 @@ slotStatsMachTimeline CInfo{} slots =
 
    missRatio :: Word64 -> Float
    missRatio = (/ fromIntegral maxChecks) . fromIntegral
-
-mapMachTimeline ::
-     Text
-  -> MachTimeline
-  -> Text
-  -> (forall a. Num a => Distribution Float a -> Float)
-  -> Text
-mapMachTimeline statsF MachTimeline{..} desc f =
-  distribPropertyLine desc
-    (f sMissDistrib)
-    (f sSpanCheckDistrib)
-    (f sSpanLeadDistrib)
-    (f sBlocklessDistrib)
-    (f sDensityDistrib)
-    (f (rCentiCpu sResourceDistribs))
-    (f (rCentiGC sResourceDistribs))
-    (f (rCentiMut sResourceDistribs))
-    (f (rGcsMajor sResourceDistribs))
-    (f (rGcsMinor sResourceDistribs))
-    (f (rRSS sResourceDistribs))
-    (f (rHeap sResourceDistribs))
-    (f (rLive sResourceDistribs))
-    (f (rAlloc sResourceDistribs))
-    (f sSpanLensCPU85Distrib)
-    (f sSpanLensCPU85EBndDistrib)
-    (f sSpanLensCPU85RwdDistrib)
- where
-   distribPropertyLine ::
-        Text
-     -> Float -> Float -> Float -> Float
-     -> Float -> Float -> Float
-     -> Float -> Float
-     -> Float -> Float -> Float -> Float
-     -> Float -> Float -> Float
-     -> Float
-     -> Text
-   distribPropertyLine descr miss chkdt leaddt blkl dens cpu gc mut majg ming rss hea liv alc cpu85Sp cpu85SpEBnd cpu85SpRwd = T.pack $
-     printf (T.unpack statsF)
-    descr miss chkdt leaddt blkl dens cpu gc mut majg ming     rss hea liv alc cpu85Sp cpu85SpEBnd cpu85SpRwd
-
-toDistribLines :: Text -> Text -> MachTimeline -> [Text]
-toDistribLines statsF distPropsF s@MachTimeline{..} =
-  distribLine
-   <$> ZipList (pctSpec <$> dPercentiles sMissDistrib)
-   <*> ZipList (max 1 . ceiling . (* fromIntegral (dSize sMissDistrib))
-                    . (1.0 -) . pctFrac
-                    <$> dPercentiles sMissDistrib)
-   <*> ZipList (pctSample <$> dPercentiles sMissDistrib)
-   <*> ZipList (pctSample <$> dPercentiles sSpanCheckDistrib)
-   <*> ZipList (pctSample <$> dPercentiles sSpanLeadDistrib)
-   <*> ZipList (pctSample <$> dPercentiles sBlocklessDistrib)
-   <*> ZipList (pctSample <$> dPercentiles sDensityDistrib)
-   <*> ZipList (pctSample <$> dPercentiles (rCentiCpu sResourceDistribs))
-   <*> ZipList (min 999 . -- workaround for ghc-8.10.x
-                pctSample <$> dPercentiles (rCentiGC sResourceDistribs))
-   <*> ZipList (min 999 . -- workaround for ghc-8.10.x
-                pctSample <$> dPercentiles (rCentiMut sResourceDistribs))
-   <*> ZipList (pctSample <$> dPercentiles (rGcsMajor sResourceDistribs))
-   <*> ZipList (pctSample <$> dPercentiles (rGcsMinor sResourceDistribs))
-    -- <*> ZipList (pctSample <$> dPercentiles ( sResourceDistribs))
-   <*> ZipList (pctSample <$> dPercentiles (rRSS sResourceDistribs))
-   <*> ZipList (pctSample <$> dPercentiles (rHeap sResourceDistribs))
-   <*> ZipList (pctSample <$> dPercentiles (rLive sResourceDistribs))
-   <*> ZipList (pctSample <$> dPercentiles (rAlloc sResourceDistribs))
-   <*> ZipList (pctSample <$> dPercentiles sSpanLensCPU85Distrib)
-   <*> ZipList (pctSample <$> dPercentiles sSpanLensCPU85EBndDistrib)
-   <*> ZipList (pctSample <$> dPercentiles sSpanLensCPU85RwdDistrib)
-  & getZipList
-  & (<> [ mapMachTimeline distPropsF s "size" (fromIntegral . dSize)
-        , mapMachTimeline distPropsF s "avg"  dAverage
-        ])
- where
-   distribLine ::
-        PercSpec Float -> Int
-     -> Float -> NominalDiffTime -> NominalDiffTime -> Word64 -> Float
-     -> Word64 -> Word64 -> Word64
-     -> Word64 -> Word64
-     -> Word64 -> Word64 -> Word64 -> Word64
-     -> Int -> Int -> Int
-     -> Text
-   distribLine ps count miss chkdt' leaddt' blkl dens cpu gc mut
-     majg ming rss hea liv alc cpu85Sp cpu85SpEBnd cpu85SpRwd = T.pack $
-     printf (T.unpack statsF)
-    (renderPercSpec 6 ps) count miss chkdt leaddt blkl dens cpu gc mut majg ming     rss hea liv alc cpu85Sp cpu85SpEBnd cpu85SpRwd
-    where chkdt  = T.init $ show chkdt' :: Text
-          leaddt = T.init $ show leaddt' :: Text
 
 -- The "fold" state that accumulates as we process 'LogObject's into a stream
 -- of 'SlotStats'.

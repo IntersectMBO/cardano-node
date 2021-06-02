@@ -5,9 +5,10 @@
 {-# LANGUAGE ViewPatterns #-}
 module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
 
-import           Prelude (head, show)
+import           Prelude (head, tail, show)
 import           Cardano.Prelude hiding (head, show)
 
+import           Control.Arrow ((&&&))
 import           Data.List (dropWhileEnd)
 import qualified Data.Text as T
 import           Data.Time.Clock (NominalDiffTime)
@@ -46,7 +47,7 @@ mapSomeFieldDistribution f a = \case
   DDeltaT s -> f (s a)
 
 renderDistributions :: forall a. RenderDistributions a => a -> [Text]
-renderDistributions x = (catMaybes [head1, head2]) <> pLines
+renderDistributions x = (catMaybes [head1, head2]) <> pLines <> sizeAvg
   where
     pLines :: [Text]
     pLines = fLine <$> [0..(nPercs - 1)]
@@ -60,16 +61,31 @@ renderDistributions x = (catMaybes [head1, head2]) <> pLines
        in T.pack $ case fSelect of
          DInt    (($x)->d) -> printf ('%':(w++"d")) (getCapPerc d)
          DWord64 (($x)->d) -> printf ('%':(w++"d")) (getCapPerc d)
-         DFloat  (($x)->d) -> printf ('%':(w++"f")) (getCapPerc d)
-         DDeltaT (($x)->d) -> printf ('%':(w++"s"))
-                              (take fWidth . dropWhileEnd (== 's')
-                               . show $ getCapPerc d)
+         DFloat  (($x)->d) -> take fWidth $
+                                printf ('%':'.':((show $ fWidth - 2)++"F")) $
+                                  getCapPerc d
+         DDeltaT (($x)->d) -> take fWidth . dropWhileEnd (== 's') . show $
+                                getCapPerc d
 
     head1, head2 :: Maybe Text
     head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
-            else Just (renderLineHead1 fHead1)
+            else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
     head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
-            else Just (renderLineHead2 fHead2)
+            else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
+
+    sizeAvg :: [Text]
+    sizeAvg = fmap (T.intercalate " ")
+      [ (T.center (fWidth (head fields)) ' ' "avg" :) $
+        (\f -> flip (renderField fLeftPad fWidth) f $ const $
+                 mapSomeFieldDistribution
+                   (T.take (fWidth f) .T.pack . printf "%F" . dAverage)  x (fSelect f))
+        <$> tail fields
+      , (T.center (fWidth (head fields)) ' ' "size" :) $
+        (\f -> flip (renderField fLeftPad fWidth) f $ const $
+                 mapSomeFieldDistribution
+                   (T.take (fWidth f) . T.pack . show . dSize)    x (fSelect f))
+        <$> tail fields
+      ]
 
     renderLineHead1 = mconcat . renderLine' (const 0) ((+ 1) . fWidth)
     renderLineHead2 = mconcat . renderLine' fLeftPad  ((+ 1) . fWidth)
@@ -77,9 +93,8 @@ renderDistributions x = (catMaybes [head1, head2]) <> pLines
 
     renderLine' ::
       (Field a -> Int) -> (Field a -> Int) -> (Field a -> Text) -> [Text]
-    renderLine' lpfn wfn rfn = flip fmap fields $
-      \f ->
-        (T.replicate (lpfn f) " ") <> T.center (wfn f) ' ' (rfn f)
+    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
+    renderField lpfn wfn rfn f = (T.replicate (lpfn f) " ") <> T.center (wfn f) ' ' (rfn f)
 
     fields :: [Field a]
     fields = percField : rdFields
