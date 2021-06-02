@@ -72,6 +72,7 @@ library
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Script
+                        Cardano.Api.ScriptData
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
