@@ -14,11 +14,13 @@
 
 module Cardano.Api.Orphans () where
 
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Prelude (panic)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.:), (.:?))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
+import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import           Data.Scientific (Scientific)
 import           Data.Text (Text)
@@ -28,14 +30,18 @@ import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
@@ -368,5 +374,79 @@ instance ToJSON Alonzo.AlonzoGenesis where
       , "collateralPercentage" .= Alonzo.collateralPercentage v
       , "maxCollateralInputs" .= Alonzo.maxCollateralInputs v
       ]
+
+instance ToJSON (Alonzo.PParams era) where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= Alonzo._minfeeA pp
+      , "minFeeB" .= Alonzo._minfeeB pp
+      , "maxBlockBodySize" .= Alonzo._maxBBSize pp
+      , "maxTxSize" .= Alonzo._maxTxSize pp
+      , "maxBlockHeaderSize" .= Alonzo._maxBHSize pp
+      , "keyDeposit" .= Alonzo._keyDeposit pp
+      , "poolDeposit" .= Alonzo._poolDeposit pp
+      , "eMax" .= Alonzo._eMax pp
+      , "nOpt" .= Alonzo._nOpt pp
+      , "a0" .= (fromRational (Alonzo._a0 pp) :: Scientific)
+      , "rho" .= Alonzo._rho pp
+      , "tau" .= Alonzo._tau pp
+      , "decentralisationParam" .= Alonzo._d pp
+      , "extraEntropy" .= Alonzo._extraEntropy pp
+      , "protocolVersion" .= Alonzo._protocolVersion pp
+      , "minPoolCost" .= Alonzo._minPoolCost pp
+      , "adaPerUTxOWord" .= Alonzo._adaPerUTxOWord pp
+      , "costmdls" .= Alonzo._costmdls pp
+      , "prices" .= Alonzo._prices pp
+      , "maxTxExUnits" .= Alonzo._maxTxExUnits pp
+      , "maxBlockExUnits" .= Alonzo._maxBlockExUnits pp
+      , "maxValSize" .= Alonzo._maxValSize pp
+      , "collateralPercentage" .= Alonzo._collateralPercentage pp
+      , "maxCollateralInputs " .= Alonzo._maxCollateralInputs pp
+      ]
+
+instance FromJSON (Alonzo.PParams era) where
+  parseJSON =
+    Aeson.withObject "PParams" $ \obj ->
+      Alonzo.PParams
+        <$> obj .: "minFeeA"
+        <*> obj .: "minFeeB"
+        <*> obj .: "maxBlockBodySize"
+        <*> obj .: "maxTxSize"
+        <*> obj .: "maxBlockHeaderSize"
+        <*> obj .: "keyDeposit"
+        <*> obj .: "poolDeposit"
+        <*> obj .: "eMax"
+        <*> obj .: "nOpt"
+        <*> ( (toRational :: Scientific -> Rational)
+                <$> obj .: "a0"
+            )
+        <*> obj .: "rho"
+        <*> obj .: "tau"
+        <*> obj .: "decentralisationParam"
+        <*> obj .: "extraEntropy"
+        <*> obj .: "protocolVersion"
+        <*> obj .: "minPoolCost" .!= mempty
+        <*> obj .: "adaPerUTxOWord"
+        <*> obj .: "costmdls"
+        <*> obj .: "prices"
+        <*> obj .: "maxTxExUnits"
+        <*> obj .: "maxBlockExUnits"
+        <*> obj .: "maxValSize"
+        <*> obj .: "collateralPercentage"
+        <*> obj .: "maxCollateralInputs"
+
+deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
+
+instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
+    => ToJSON (Alonzo.TxOut era) where
+  toJSON (Alonzo.TxOut addr v dataHash) =
+    object [ "address" .= toJSON addr
+           , "value" .= toJSON v
+           , "datahash" .= case strictMaybeToMaybe dataHash of
+                             Nothing -> Aeson.Null
+                             Just dHash ->
+                               Aeson.String . Crypto.hashToTextAsHex
+                                 $ SafeHash.extractHash dHash
+           ]
 
 deriving instance Show Alonzo.AlonzoGenesis

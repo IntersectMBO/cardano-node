@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.CLI.Shelley.Run.Query
   ( ShelleyQueryCmdError
@@ -796,6 +797,4 @@ obtainLedgerEraClassConstraints
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  _ =
-  panic "obtainLedgerEraClassConstraints: Alonzo era not implemented yet"
-
+obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f

@@ -54,13 +54,11 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
@@ -977,19 +975,6 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
 
 instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject _ _ = panic "ToJSON: AlonzoBbodyPredFail not implemented yet"
-
-instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
-    => ToJSON (Alonzo.TxOut era) where
-  toJSON (Alonzo.TxOut addr v dataHash) =
-    object [ "address" .= toJSON addr
-           , "value" .= toJSON v
-           , "datahash" .= case strictMaybeToMaybe dataHash of
-                             Nothing -> Aeson.Null
-                             Just dHash ->
-                               Aeson.String . Crypto.hashToTextAsHex
-                                 $ SafeHash.extractHash dHash
-           ]
-
 
 --------------------------------------------------------------------------------
 -- Helper functions
