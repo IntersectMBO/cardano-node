@@ -337,7 +337,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
     collateralPercentage <- o .:  "collateralPercentage"
     maxCollateralInputs  <- o .:  "maxCollateralInputs"
     case cModels of
-      Nothing -> case Plutus.defaultCekCostModelParams of
+      Nothing -> case Plutus.defaultCostModelParams of
         Just m -> return Alonzo.AlonzoGenesis
           { Alonzo.adaPerUTxOWord
           , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
@@ -348,7 +348,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
           , Alonzo.collateralPercentage
           , Alonzo.maxCollateralInputs
           }
-        Nothing -> fail "Failed to extract the cost model params from Plutus.defaultCostModel"
+        Nothing -> fail "Failed to extract the cost model params from Plutus.defaultCostModelParams"
       Just costmdls -> return Alonzo.AlonzoGenesis
         { Alonzo.adaPerUTxOWord
         , Alonzo.costmdls
