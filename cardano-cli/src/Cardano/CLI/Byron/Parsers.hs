@@ -55,7 +55,7 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
                    checkApplicationName, checkSystemTag)
 
 import           Cardano.Api hiding (UpdateProposal, GenesisParameters)
-import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..), Lovelace (..),
+import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..),
                    toByronLovelace)
 
 import           Cardano.CLI.Byron.Commands

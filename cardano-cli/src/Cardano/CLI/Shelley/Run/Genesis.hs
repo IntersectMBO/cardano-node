@@ -696,7 +696,6 @@ getCurrentTimePlus30 =
     plus30sec :: UTCTime -> UTCTime
     plus30sec = addUTCTime (30 :: NominalDiffTime)
 
-
 readShelleyGenesis
   :: FilePath
   -> (ShelleyGenesis StandardShelley -> ShelleyGenesis StandardShelley)
@@ -975,8 +974,8 @@ readInitialFundAddresses utxodir nw = do
 
 
 -- | Hash a genesis file
-runGenesisHashFile :: GenesisFile -> ExceptT ShelleyGenesisCmdError IO ()
-runGenesisHashFile (GenesisFile fpath) = do
+runGenesisHashFile :: ShelleyGenesisFile -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisHashFile (ShelleyGenesisFile fpath) = do
    content <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
               BS.readFile fpath
    let gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
@@ -994,13 +993,14 @@ runGenesisHashFile (GenesisFile fpath) = do
 
 readAlonzoGenesis
   :: FilePath
+  -> (Alonzo.AlonzoGenesis -> Alonzo.AlonzoGenesis)
   -> ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
-readAlonzoGenesis fpath = do
+readAlonzoGenesis fpath adjustDefaults = do
   readAndDecode
     `catchError` \err ->
       case err of
         ShelleyGenesisCmdGenesisFileError (FileIOError _ ioe)
-          | isDoesNotExistError ioe -> panic "Shelley genesis file not found."
+          | isDoesNotExistError ioe -> writeDefault
         _                           -> left err
 
  where
@@ -1009,3 +1009,11 @@ readAlonzoGenesis fpath = do
       lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
       firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
         . hoistEither $ Aeson.eitherDecode' lbs
+
+  defaults :: Alonzo.AlonzoGenesis
+  defaults = adjustDefaults alonzoGenesisDefaults
+
+  writeDefault = do
+       handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
+         LBS.writeFile fpath (encodePretty defaults)
+       return defaults

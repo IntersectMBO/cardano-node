@@ -36,6 +36,7 @@ module Cardano.Api.ProtocolParameters (
     makeShelleyUpdateProposal,
 
     -- * Internal conversion functions
+    calcMinimumDeposit,
     toLedgerUpdate,
     fromLedgerUpdate,
     toLedgerProposedPPUpdates,
@@ -45,12 +46,14 @@ module Cardano.Api.ProtocolParameters (
     fromShelleyPParams,
     toAlonzoPrices,
     fromAlonzoPrices,
+    fromAlonzoCostModels,
 
     -- * Data family instances
     AsType(..)
   ) where
 
 import           Prelude
+import           Cardano.Prelude (HeapWords(..))
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -73,13 +76,18 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
 
+import           Cardano.Ledger.Coin
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
+import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Val as Val
+import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
 
+import           Shelley.Spec.Ledger.TxBody ()
 import qualified Shelley.Spec.Ledger.PParams as Ledger
                    (Update(..), ProposedPPUpdates(..), ProtVer(..))
 -- Some of the things from Shelley.Spec.Ledger.PParams are generic across all
@@ -1323,3 +1331,36 @@ fromAlonzoPParams
     , protocolParamMaxCollateralInputs = Just _maxCollateralInputs
     }
 
+-- | Calculate cost of making a UTxO entry for a given 'Value' and
+-- mininimum UTxO value derived from the 'ProtocolParameters'
+calcMinimumDeposit :: ProtocolParameters -> Value -> Lovelace
+calcMinimumDeposit pp v  =
+  case protocolParamMinUTxOValue pp of
+    Nothing ->
+      case protocolParamUTxOCostPerWord pp of
+        Nothing ->
+          error "calcMinimumDeposit: uTxOCostPerWord and minUTxOValue protocol parameters were not found"
+        Just (Lovelace cPerWord) ->
+          -- TODO: Alonzo - ledger should expose a function to calculate the required deposit
+          Lovelace $ max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size (toMaryValue v)) * cPerWord
+    Just minUTxOValue ->
+      fromShelleyLovelace $ Shelley.scaledMinDeposit (toMaryValue v) (toShelleyLovelace minUTxOValue)
+
+ where
+    -- TODO: Copied from ledger. Ledger should expose a function for this
+
+    -- lengths obtained from tracing on HeapWords of inputs and outputs
+    -- obtained experimentally, and number used here
+    -- units are Word64s
+    txoutLenNoVal = 14
+    txinLen = 7
+    -- size of UTxO entry excluding the Value part
+    utxoEntrySizeWithoutVal :: Integer
+    utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
+
+    -- unpacked CompactCoin Word64 size in Word64s
+    coinSize :: Integer
+    coinSize = fromIntegral $ heapWords (CompactCoin 0)
+
+    -- size of commont UTxO with only ada and no datum
+    adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize

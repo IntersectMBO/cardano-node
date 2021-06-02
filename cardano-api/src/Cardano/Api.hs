@@ -100,7 +100,7 @@ module Cardano.Api (
 
     -- * Currency values
     -- ** Ada \/ Lovelace
-    Lovelace,
+    Lovelace(..),
 
     -- ** Multi-asset values
     Quantity(..),

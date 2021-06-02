@@ -5,6 +5,7 @@
 
 module Cardano.Api.Shelley.Genesis
   ( ShelleyGenesis(..)
+  , alonzoGenesisDefaults
   , shelleyGenesisDefaults
   ) where
 
@@ -14,12 +15,20 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
 
 import           Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import           Cardano.Slotting.Slot (EpochSize (..))
+import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 
 import           Shelley.Spec.Ledger.PParams as Ledger (PParams' (..), emptyPParams)
 
+import           Cardano.Api
+import           Cardano.Api.Value
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Script
 
 -- | Some reasonable starting defaults for constructing a 'ShelleyGenesis'.
 --
@@ -72,3 +81,19 @@ shelleyGenesisDefaults =
   where
     k = 2160
     zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
+
+
+alonzoGenesisDefaults :: Alonzo.AlonzoGenesis
+alonzoGenesisDefaults =
+  case Plutus.defaultCekCostModelParams of
+        Just m -> Alonzo.AlonzoGenesis
+                    { Alonzo.adaPerUTxOWord = toShelleyLovelace $ Lovelace 10
+                    , Alonzo.costmdls =  Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
+                    , Alonzo.prices = toAlonzoPrices $ ExecutionUnitPrices (Lovelace 1) (Lovelace 1)
+                    , Alonzo.maxTxExUnits = toAlonzoExUnits $ ExecutionUnits 1 1
+                    , Alonzo.maxBlockExUnits = toAlonzoExUnits $ ExecutionUnits 1 1
+                    , Alonzo.maxValSize = 100
+                    , Alonzo.collateralPercentage = 1
+                    , Alonzo.maxCollateralInputs = 1
+                    }
+        Nothing -> panic "alonzoGenesisDefaults: defaultCekCostModelParams failed."

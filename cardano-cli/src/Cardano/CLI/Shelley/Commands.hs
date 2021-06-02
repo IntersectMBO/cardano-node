@@ -206,11 +206,8 @@ data InputTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
 
 data ProtocolParamsSourceSpec
-  = ParamsFromGenesis !GenesisFile
-    -- ^ We allow an appropriately forewarned user to obtain protocol params
-    --   directly from the genesis file, which allows them to avoid running
-    --   the node in case they would like to estimate the fee using the
-    --   blockchain's initial protocol parameters.
+  = ParamsFromShelleyGenesis !ShelleyGenesisFile
+  | ParamsForAlonzoEra !ShelleyGenesisFile !AlonzoGenesisFile
   | ParamsFromFile !ProtocolParamsFile
     -- ^ Obtain protocol parameters from a file structured by the
     --   'cardano-api' 'ProtocolParameters' data type.
@@ -360,7 +357,7 @@ data GenesisCmd
   | GenesisVerKey VerificationKeyFile SigningKeyFile
   | GenesisTxIn VerificationKeyFile NetworkId (Maybe OutputFile)
   | GenesisAddr VerificationKeyFile NetworkId (Maybe OutputFile)
-  | GenesisHashFile GenesisFile
+  | GenesisHashFile ShelleyGenesisFile
   deriving Show
 
 renderGenesisCmd :: GenesisCmd -> Text

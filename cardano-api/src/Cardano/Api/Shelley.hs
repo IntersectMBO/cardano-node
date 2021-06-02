@@ -9,6 +9,7 @@ module Cardano.Api.Shelley
     -- * Genesis
     ShelleyGenesis(..),
     shelleyGenesisDefaults,
+    alonzoGenesisDefaults,
 
     -- * Cryptographic key interface
     -- $keys
@@ -173,7 +174,9 @@ module Cardano.Api.Shelley
     --TODO: arrange not to export these
     toShelleyNetwork,
     fromShelleyPParams,
-
+    fromAlonzoCostModels,
+    fromAlonzoExUnits,
+    fromAlonzoPrices
   ) where
 
 import           Cardano.Api

@@ -28,6 +28,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
+import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
 
 --TODO: do this nicely via the API too:
@@ -49,7 +50,7 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAn
 import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..), readShelleyGenesis,
-                   renderShelleyGenesisCmdError)
+                   renderShelleyGenesisCmdError, readAlonzoGenesis)
 import           Cardano.CLI.Types
 
 import qualified System.IO as IO
@@ -689,7 +690,11 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
     pparams <-
       case protocolParamsSourceSpec of
-        ParamsFromGenesis (GenesisFile f) ->
+        ParamsForAlonzoEra (ShelleyGenesisFile sGenFp) (AlonzoGenesisFile aGenFp) -> do
+          alonzoGenesis <- firstExceptT ShelleyTxCmdGenesisCmdError $ readAlonzoGenesis aGenFp identity
+          shelleyGenesis <- firstExceptT ShelleyTxCmdGenesisCmdError $ readShelleyGenesis sGenFp identity
+          return $ alonzoEraProtocolParams alonzoGenesis shelleyGenesis
+        ParamsFromShelleyGenesis (ShelleyGenesisFile f) ->
           fromShelleyPParams . sgProtocolParams <$>
             firstExceptT ShelleyTxCmdGenesisCmdError
               (readShelleyGenesis f identity)
@@ -706,6 +711,24 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
     liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
+
+alonzoEraProtocolParams
+  :: Alonzo.AlonzoGenesis
+  -> ShelleyGenesis StandardShelley
+  -> ProtocolParameters
+alonzoEraProtocolParams aGenesis sGenesis =
+  let pparams = fromShelleyPParams $ sgProtocolParams sGenesis
+  in pparams
+       { protocolParamUTxOCostPerWord = Just . fromShelleyLovelace $ Alonzo.adaPerUTxOWord aGenesis
+       , protocolParamCostModels = fromAlonzoCostModels $ Alonzo.costmdls aGenesis
+       , protocolParamPrices = Just . fromAlonzoPrices $ Alonzo.prices aGenesis
+       , protocolParamMaxTxExUnits = Just . fromAlonzoExUnits $ Alonzo.maxTxExUnits aGenesis
+       , protocolParamMaxBlockExUnits = Just . fromAlonzoExUnits $ Alonzo.maxBlockExUnits aGenesis
+       , protocolParamMaxValueSize = Just $ Alonzo.maxValSize aGenesis
+       , protocolParamCollateralPercent = Just $ Alonzo.collateralPercentage aGenesis
+       , protocolParamMaxCollateralInputs = Just $ Alonzo.maxCollateralInputs aGenesis
+       }
+
 -- ----------------------------------------------------------------------------
 -- Transaction fee calculation
 --
@@ -716,19 +739,16 @@ runTxCalculateMinValue
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCalculateMinValue protocolParamsSourceSpec value = do
   pp <- case protocolParamsSourceSpec of
-    ParamsFromGenesis (GenesisFile f) ->
-      fromShelleyPParams . sgProtocolParams <$>
-        firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
+    ParamsForAlonzoEra (ShelleyGenesisFile sGenFp) (AlonzoGenesisFile aGenFp) -> do
+      alonzoGenesis <- firstExceptT ShelleyTxCmdGenesisCmdError $ readAlonzoGenesis aGenFp identity
+      shelleyGenesis <- firstExceptT ShelleyTxCmdGenesisCmdError $ readShelleyGenesis sGenFp identity
+      return $ alonzoEraProtocolParams alonzoGenesis shelleyGenesis
+    ParamsFromShelleyGenesis (ShelleyGenesisFile f) -> do
+      sGen <- firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
+      return . fromShelleyPParams $ sgProtocolParams sGen
     ParamsFromFile f -> readProtocolParameters f
 
-  let minValues =
-        case protocolParamMinUTxOValue pp of
-          Nothing -> panic "TODO alonzo: runTxCalculateMinValue using new protocol params"
-          --TODO alonzo: there is a new formula for the min amount of ada in
-          -- a tx output, which uses a new param protocolParamUTxOCostPerWord
-          Just minUTxOValue -> calcMinimumDeposit value minUTxOValue
-
-  liftIO $ IO.print minValues
+  liftIO $ IO.print $ calcMinimumDeposit pp value
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do

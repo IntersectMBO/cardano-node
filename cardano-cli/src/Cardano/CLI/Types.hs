@@ -3,7 +3,8 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Cardano.CLI.Types
-  ( CBORObject (..)
+  ( AlonzoGenesisFile (..)
+  , CBORObject (..)
   , CertificateFile (..)
   , GenesisFile (..)
   , OutputFormat (..)
@@ -15,6 +16,7 @@ module Cardano.CLI.Types
   , TxOutAnyEra (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
+  , ShelleyGenesisFile (..)
   , Stakes (..)
   , Params (..)
   ) where
@@ -55,6 +57,24 @@ newtype GenesisFile = GenesisFile
 instance FromJSON GenesisFile where
   parseJSON (Aeson.String genFp) = pure . GenesisFile $ Text.unpack genFp
   parseJSON invalid = panic $ "Parsing of GenesisFile failed due to type mismatch. "
+                           <> "Encountered: " <> Text.pack (show invalid)
+
+newtype ShelleyGenesisFile = ShelleyGenesisFile
+  { unShelleyGenesisFile :: FilePath
+  } deriving Show
+
+instance FromJSON ShelleyGenesisFile where
+  parseJSON (Aeson.String genFp) = pure . ShelleyGenesisFile $ Text.unpack genFp
+  parseJSON invalid = panic $ "Parsing of ShelleyGenesisFile failed due to type mismatch. "
+                           <> "Encountered: " <> Text.pack (show invalid)
+
+newtype AlonzoGenesisFile = AlonzoGenesisFile
+  { unAlonzoGenesisFile :: FilePath
+  } deriving Show
+
+instance FromJSON AlonzoGenesisFile where
+  parseJSON (Aeson.String genFp) = pure . AlonzoGenesisFile $ Text.unpack genFp
+  parseJSON invalid = panic $ "Parsing of AlonzoGenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> Text.pack (show invalid)
 
 -- | The desired output format.

@@ -565,7 +565,7 @@ pTransaction =
 
   pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
   pProtocolParamsSourceSpec =
-    ParamsFromGenesis <$>
+    ParamsFromShelleyGenesis <$>
       pGenesisFile
         "[TESTING] The genesis file to take initial protocol parameters from.  For test clusters only, since the parameters are going to be obsolete for production clusters."
     <|>
@@ -1275,9 +1275,9 @@ pEpochNoUpdateProp =
       <> Opt.help "The epoch number in which the update proposal is valid."
       )
 
-pGenesisFile :: String -> Parser GenesisFile
+pGenesisFile :: String -> Parser ShelleyGenesisFile
 pGenesisFile desc =
-  GenesisFile <$>
+  ShelleyGenesisFile <$>
     Opt.strOption
       (  Opt.long "genesis"
       <> Opt.metavar "FILE"
