@@ -84,6 +84,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdNotImplemented Text
   | ShelleyTxCmdWitnessEraMismatch AnyCardanoEra AnyCardanoEra WitnessFile
   | ShelleyTxCmdScriptLanguageNotSupportedInEra AnyScriptLanguage AnyCardanoEra
+  | ShelleyTxCmdScriptExpectedSimple FilePath AnyScriptLanguage
+  | ShelleyTxCmdScriptExpectedPlutus FilePath AnyScriptLanguage
   | ShelleyTxCmdGenesisCmdError !ShelleyGenesisCmdError
   | ShelleyTxCmdPolicyIdsMissing [PolicyId]
   | ShelleyTxCmdPolicyIdsExcess  [PolicyId]
@@ -163,6 +165,17 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdScriptLanguageNotSupportedInEra (AnyScriptLanguage lang) era ->
       "The script language " <> show lang <> " is not supported in the " <>
       renderEra era <> " era."
+
+    ShelleyTxCmdScriptExpectedSimple file (AnyScriptLanguage lang) ->
+      Text.pack file <> ": expected a script in the simple script language, " <>
+      "but it is actually using " <> show lang <> ". Alternatively, to use " <>
+      "a Plutus script, you must also specify the redeemer " <>
+      "(datum if appropriate) and script execution units."
+
+    ShelleyTxCmdScriptExpectedPlutus file (AnyScriptLanguage lang) ->
+      Text.pack file <> ": expected a script in the Plutus script language, " <>
+      "but it is actually using " <> show lang <> "."
+
     ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
        "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
        ") is not supported in the " <> renderMode mode <> " consensus mode."
@@ -586,20 +599,70 @@ createScriptWitness
   :: CardanoEra era
   -> ScriptWitnessFiles witctx
   -> ExceptT ShelleyTxCmdError IO (ScriptWitness witctx era)
-createScriptWitness era (SimpleScriptWitnessFile (ScriptFile fp)) = do
-  ScriptInAnyLang sLang script <- firstExceptT ShelleyTxCmdScriptFileError
-                                    $ readFileScriptInAnyLang fp
-  case scriptLanguageSupportedInEra era sLang of
-    Just sLangInEra ->
-      case script of
-        SimpleScript sVer sScript ->
-          return $ SimpleScriptWitness sLangInEra sVer sScript
-        PlutusScript _ _ -> panic "TODO alonzo: createScriptWitness: Plutus scripts not supported yet."
+createScriptWitness era (SimpleScriptWitnessFile (ScriptFile scriptFile)) = do
+    script@(ScriptInAnyLang lang _) <- firstExceptT ShelleyTxCmdScriptFileError $
+                                         readFileScriptInAnyLang scriptFile
+    ScriptInEra langInEra script'   <- validateScriptSupportedInEra era script
+    case script' of
+      SimpleScript version sscript ->
+        return $ SimpleScriptWitness
+                   langInEra version sscript
 
-    Nothing ->
-      left $ ShelleyTxCmdScriptLanguageNotSupportedInEra
-               (AnyScriptLanguage sLang)
-               (anyCardanoEra era)
+      -- If the supplied cli flags were for a simple script (i.e. the user did
+      -- not supply the datum, redeemer or ex units), but the script file turns
+      -- out to be a valid plutus script, then we must fail.
+      PlutusScript{} ->
+        left $ ShelleyTxCmdScriptExpectedSimple
+                 scriptFile
+                 (AnyScriptLanguage lang)
+
+createScriptWitness era (PlutusScriptWitnessFiles
+                          (ScriptFile scriptFile)
+                          datumOrFile
+                          redeemerOrFile
+                          execUnits) = do
+    script@(ScriptInAnyLang lang _) <- firstExceptT ShelleyTxCmdScriptFileError $
+                                         readFileScriptInAnyLang scriptFile
+    ScriptInEra langInEra script'   <- validateScriptSupportedInEra era script
+    case script' of
+      PlutusScript version pscript -> do
+        datum    <- readScriptDatumOrFile    datumOrFile
+        redeemer <- readScriptRedeemerOrFile redeemerOrFile
+        return $ PlutusScriptWitness
+                   langInEra version pscript
+                   datum
+                   redeemer
+                   execUnits
+
+      -- If the supplied cli flags were for a plutus script (i.e. the user did
+      -- supply the datum, redeemer and ex units), but the script file turns
+      -- out to be a valid simple script, then we must fail.
+      SimpleScript{} ->
+        left $ ShelleyTxCmdScriptExpectedPlutus
+                 scriptFile
+                 (AnyScriptLanguage lang)
+
+
+readScriptDatumOrFile :: ScriptDatumOrFile witctx
+                      -> ExceptT ShelleyTxCmdError IO (ScriptDatum witctx)
+readScriptDatumOrFile (ScriptDatumOrFileForTxIn df) = ScriptDatumForTxIn <$>
+                                                        readScriptDataOrFile df
+readScriptDatumOrFile NoScriptDatumOrFileForMint    = pure NoScriptDatumForMint
+readScriptDatumOrFile NoScriptDatumOrFileForStake   = pure NoScriptDatumForStake
+
+readScriptRedeemerOrFile :: ScriptRedeemerOrFile
+                         -> ExceptT ShelleyTxCmdError IO ScriptRedeemer
+readScriptRedeemerOrFile = readScriptDataOrFile
+
+readScriptDataOrFile :: ScriptDataOrFile
+                     -> ExceptT ShelleyTxCmdError IO ScriptData
+readScriptDataOrFile (ScriptDataValue d) = return d
+readScriptDataOrFile (ScriptDataFile _f) = do
+    panic "TODO alonzo: readScriptDataOrFile"
+    -- This needs the JSON instance, or TxMetadata-like JSON schema support
+    --firstExceptT ShelleyTxCmdScriptDataFileError $
+    --  newExceptT $ readFileJSON AsScriptData f
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction signing
