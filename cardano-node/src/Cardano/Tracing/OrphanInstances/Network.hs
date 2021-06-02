@@ -32,6 +32,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..),
                    txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState,
                    TraceLabelPeer (..))
@@ -44,7 +45,6 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
                    WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
@@ -728,13 +728,15 @@ instance (HasHeader header, ConvertRawHash header)
                                   (AF.headHash af))
              , "length" .= toJSON (fragmentLength af)]
    where
+     -- NOTE: this ignores the Byron era with its EBB complication:
+     -- the length would be underestimated by 1, if the AF is anchored
+     -- at the epoch boundary.
      fragmentLength :: AF.AnchoredFragment header -> Int
-     fragmentLength f = fromIntegral blockLength
-      where
-        headNo = unBlockNo (fromWithOrigin (BlockNo 0) (AF.headBlockNo f))
-        blockLength = case unBlockNo . blockNo <$> AF.last f of
-                        Left _  -> headNo
-                        Right b -> headNo - b + 1
+     fragmentLength f = fromIntegral . unBlockNo $
+        case (f, f) of
+          (AS.Empty{}, AS.Empty{}) -> 0
+          (firstHdr AS.:< _, _ AS.:> lastHdr) ->
+            blockNo lastHdr - blockNo firstHdr + 1
   toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ _) =
     mkObject [ "kind"  .= String "CompletedBlockFetch"
              , "block" .= String
