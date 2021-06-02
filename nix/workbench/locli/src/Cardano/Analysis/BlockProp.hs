@@ -10,7 +10,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
-module Cardano.Unlog.BlockProp (module Cardano.Unlog.BlockProp) where
+module Cardano.Analysis.BlockProp (module Cardano.Analysis.BlockProp) where
 
 import           Prelude (String, (!!), error, head, id, show, tail)
 import           Cardano.Prelude hiding (head, show)

@@ -20,7 +20,10 @@ library
                        Cardano.Analysis.Profile
                        Cardano.Analysis.TopHandler
 
-                       Cardano.Unlog.BlockProp
+                       Cardano.Analysis.BlockProp
+                       Cardano.Analysis.Driver
+                       Cardano.Analysis.MachTimeline
+
                        Cardano.Unlog.Commands
                        Cardano.Unlog.LogObject
                        Cardano.Unlog.Parsers
@@ -28,8 +31,6 @@ library
                        Cardano.Unlog.Resources
                        Cardano.Unlog.Run
                        Cardano.Unlog.SlotStats
-                       Cardano.Unlog.Summary
-                       Cardano.Unlog.Timeline
 
   other-modules:       Paths_locli
 

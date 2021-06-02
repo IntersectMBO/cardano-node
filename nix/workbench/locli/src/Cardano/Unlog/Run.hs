@@ -12,9 +12,9 @@ import           Cardano.Prelude
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import qualified Data.Text as Text
 
-import           Cardano.Unlog.Commands (AnalysisCommand)
-import           Cardano.Unlog.Summary (AnalysisCmdError, renderAnalysisCmdError,
+import           Cardano.Analysis.Driver (AnalysisCmdError, renderAnalysisCmdError,
                      runAnalysisCommand)
+import           Cardano.Unlog.Commands (AnalysisCommand)
 
 import           Cardano.Config.Git.Rev (gitRev)
 import           Data.Version (showVersion)
