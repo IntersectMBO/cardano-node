@@ -574,6 +574,7 @@ pTransaction =
   pTransactionBuild :: Parser TransactionCmd
   pTransactionBuild = TxBuildRaw <$> pCardanoEra
                                  <*> some pTxIn
+                                 <*> many pTxInCollateral
                                  <*> many pTxOut
                                  <*> optional pMintMultiAsset
                                  <*> optional pInvalidBefore
@@ -1695,6 +1696,14 @@ pTxIn =
                          WitCtxTxIn
                          "txin"
                          "the spending of the transaction input.")
+
+pTxInCollateral :: Parser TxIn
+pTxInCollateral =
+    Opt.option (readerFromAttoParser parseTxIn)
+      (  Opt.long "tx-in-collateral"
+      <> Opt.metavar "TX-IN"
+      <> Opt.help "TxId#TxIx"
+      )
 
 parseTxIn :: Atto.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)

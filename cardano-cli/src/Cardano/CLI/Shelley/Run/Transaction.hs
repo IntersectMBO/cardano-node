@@ -232,10 +232,10 @@ renderFeature TxFeatureCollateral           = "Collateral inputs"
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuildRaw era txins txouts mValue mLowBound mUpperBound
+    TxBuildRaw era txins txinsc txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mUpProp out ->
-      runTxBuildRaw era txins txouts mLowBound mUpperBound
+      runTxBuildRaw era txins txinsc txouts mLowBound mUpperBound
                     fee mValue certs wdrls metadataSchema
                     scriptFiles metadataFiles mUpProp out
     TxSign txinfile skfiles network txoutfile ->
@@ -263,6 +263,8 @@ runTxBuildRaw
   :: AnyCardanoEra
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ TxIn with potential script witness
+  -> [TxIn]
+  -- ^ TxIn for collateral
   -> [TxOutAnyEra]
   -> Maybe SlotNo
   -- ^ Tx lower bound
@@ -281,8 +283,10 @@ runTxBuildRaw
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuildRaw (AnyCardanoEra era) inputsAndScripts txouts mLowerBound
-              mUpperBound mFee mValue
+runTxBuildRaw (AnyCardanoEra era)
+              inputsAndScripts inputsCollateral txouts
+              mLowerBound mUpperBound
+              mFee mValue
               certFiles withdrawals
               metadataSchema scriptFiles
               metadataFiles mUpdatePropFile
@@ -290,7 +294,8 @@ runTxBuildRaw (AnyCardanoEra era) inputsAndScripts txouts mLowerBound
     txBodyContent <-
       TxBodyContent
         <$> validateTxIns  era inputsAndScripts
-        <*> pure TxInsCollateralNone --TODO alonzo: support this
+        <*> validateTxInsCollateral
+                           era inputsCollateral
         <*> validateTxOuts era txouts
         <*> validateTxFee  era mFee
         <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
@@ -362,6 +367,17 @@ validateTxIns era = mapM convert
                 , BuildTxWith $ ScriptWitness ScriptWitnessForSpending sWit
                 )
        Nothing -> return (txin, BuildTxWith $ KeyWitness KeyWitnessForSpending)
+
+
+validateTxInsCollateral :: CardanoEra era
+                        -> [TxIn]
+                        -> ExceptT ShelleyTxCmdError IO (TxInsCollateral era)
+validateTxInsCollateral _   []    = return TxInsCollateralNone
+validateTxInsCollateral era txins =
+    case collateralSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureCollateral
+      Just supported -> return (TxInsCollateral supported txins)
+
 
 validateTxOuts :: forall era.
                   CardanoEra era

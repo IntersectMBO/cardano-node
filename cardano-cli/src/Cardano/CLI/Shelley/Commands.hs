@@ -164,6 +164,8 @@ data TransactionCmd
       AnyCardanoEra
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Transaction inputs with optional spending scripts
+      [TxIn]
+      -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
       [TxOutAnyEra]
       (Maybe (Value, [ScriptWitnessFiles WitCtxMint]))
       -- ^ Multi-Asset value with script witness
