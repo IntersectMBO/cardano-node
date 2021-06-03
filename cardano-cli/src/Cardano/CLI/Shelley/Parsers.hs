@@ -45,6 +45,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
+import qualified Data.Aeson.Parser as Aeson.Parser
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Options.Applicative as Opt
 import qualified Text.Parsec as Parsec
@@ -257,11 +258,17 @@ pScriptWitnessFiles witctx scriptFlagPrefix help =
         )
 
     pScriptDataValue dataFlagPrefix =
-      Opt.option (fail "TODO alonzo: use proper JSON parsing here")
+      Opt.option readerScriptData
         (  Opt.long (dataFlagPrefix ++ "-value")
         <> Opt.metavar "JSON"
         <> Opt.help ("The value for the script input " ++ dataFlagPrefix ++ ".")
         )
+
+    readerScriptData = do
+      v <- readerFromAttoParser Aeson.Parser.json
+      case scriptDataFromJson ScriptDataJsonNoSchema v of
+        Left err -> fail (displayError err)
+        Right sd -> return sd
 
     pExecutionUnits =
       uncurry ExecutionUnits <$>
