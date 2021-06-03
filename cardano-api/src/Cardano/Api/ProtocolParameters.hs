@@ -7,6 +7,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+
 -- | The various Cardano protocol parameters, including:
 --
 -- * the current values of updateable protocol parameters: 'ProtocolParameters'
@@ -851,10 +854,7 @@ toLedgerProposedPPUpdates :: forall era ledgerera.
                           => ShelleyBasedEra era
                           -> Map (Hash GenesisKey) ProtocolParametersUpdate
                           -> Ledger.ProposedPPUpdates ledgerera
-toLedgerProposedPPUpdates era =
-    Ledger.ProposedPPUpdates
-  . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
-  . Map.map (toLedgerPParamsDelta era)
+toLedgerProposedPPUpdates _era = undefined
 
 
 toLedgerPParamsDelta :: ShelleyBasedEra era
