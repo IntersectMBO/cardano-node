@@ -4,7 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) where
 
 import           Prelude (String, (!!), error)
@@ -59,22 +59,22 @@ data MachTimeline
 instance RenderDistributions MachTimeline where
   rdFields =
     --  Width LeftPad
-    [ Field 4 0 "Miss" "ratio"   $ DFloat sMissDistrib
-    , Field 6 0 "" "ChkΔt"   $ DDeltaT sSpanCheckDistrib
-    , Field 6 0 "" "LeadΔt"   $ DDeltaT sSpanLeadDistrib
-    , Field 4 0 "Block" "gap"   $ DWord64   sBlocklessDistrib
-    , Field 5 0 "Dens" "ity"   $ DFloat sDensityDistrib
-    , Field 3 0 "CPU" "%"   $ DWord64 (rCentiCpu . sResourceDistribs)
-    , Field 3 0 "GC" "%"   $ DWord64 (rCentiGC . sResourceDistribs)
-    , Field 3 0 "MUT" "%"   $ DWord64 (rCentiMut . sResourceDistribs)
-    , Field 3 0 "GC " "Maj"   $ DWord64 (rGcsMajor . sResourceDistribs)
-    , Field 3 0 "flt " "Min"   $ DWord64 (rGcsMinor . sResourceDistribs)
-    , Field 5 0 (m!!0) "RSS"   $ DWord64 (rRSS . sResourceDistribs)
-    , Field 5 0 (m!!1) "Heap"   $ DWord64 (rHeap . sResourceDistribs)
-    , Field 5 0 (m!!2) "Live"   $ DWord64 (rLive . sResourceDistribs)
-    , Field 5 0 "Alloc" "MB/s"   $ DWord64 (rAlloc . sResourceDistribs)
-    , Field 5 0 (c!!0) "All"   $ DInt sSpanLensCPU85Distrib
-    , Field 5 0 (c!!1) "EBnd"   $ DInt sSpanLensCPU85EBndDistrib
+    [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   sMissDistrib
+    , Field 6 0 "CheckΔ"   ""      "ChkΔt"  $ DDeltaT  sSpanCheckDistrib
+    , Field 6 0 "LeadΔ"    ""      "LeadΔt" $ DDeltaT  sSpanLeadDistrib
+    , Field 4 0 "BlkGap"   "Block" "gap"    $ DWord64  sBlocklessDistrib
+    , Field 5 0 "chDensity" "Dens" "ity"    $ DFloat   sDensityDistrib
+    , Field 3 0 "CPU"      "CPU"   "%"      $ DWord64 (rCentiCpu . sResourceDistribs)
+    , Field 3 0 "GC"       "GC"    "%"      $ DWord64 (rCentiGC . sResourceDistribs)
+    , Field 3 0 "MUT"      "MUT"    "%"     $ DWord64 (fmap (min 999) . rCentiMut . sResourceDistribs)
+    , Field 3 0 "GcMaj"    "GC "   "Maj"    $ DWord64 (rGcsMajor . sResourceDistribs)
+    , Field 3 0 "GcMin"    "flt "  "Min"    $ DWord64 (rGcsMinor . sResourceDistribs)
+    , Field 5 0 "RSS"      (m!!0)  "RSS"    $ DWord64 (rRSS . sResourceDistribs)
+    , Field 5 0 "Heap"     (m!!1)  "Heap"   $ DWord64 (rHeap . sResourceDistribs)
+    , Field 5 0 "Live"     (m!!2)  "Live"   $ DWord64 (rLive . sResourceDistribs)
+    , Field 5 0 "Allocd"   "Alloc" "MB"     $ DWord64 (rAlloc . sResourceDistribs)
+    , Field 5 0 "CPU85%LensAll"  (c!!0) "All"   $ DInt     sSpanLensCPU85Distrib
+    , Field 5 0 "CPU85%LensEBnd" (c!!1) "EBnd"  $ DInt     sSpanLensCPU85EBndDistrib
     ]
    where
      m = nChunksEachOf  3 6 "Memory usage, MB"
@@ -113,21 +113,6 @@ instance ToJSON MachTimeline where
     , extendObject "kind" "spanLensCPU85RwdDistrib"  $
                                         toJSON sSpanLensCPU85RwdDistrib
     ]
-
-statsHeadE, statsFormatE, statsFormatEF :: Text
-statsHeadP, statsFormatP, statsFormatPF :: Text
-statsHeadP =
-  "%tile Count MissR  CheckΔt  LeadΔt BlkLess Density  CPU  GC MUT Maj Min   RSS  Heap  Live Alloc CPU85%Lens/EBnd/Rwd"
-statsHeadE =
-  "%tile,Count,MissR,CheckΔ,LeadΔ,Blockless,ChainDensity,CPU,GC,MUT,GcMaj,GcMin,RSS,Heap,Live,Alloc,CPU85%Lens,/EpochBoundary,/Rewards"
-statsFormatP =
-  "%6s %5d %0.2f   %6s   %6s  %3d     %0.3f  %3d %3d %3d  %2d %3d %5d %5d %5d %5d    %4d   %4d %4d"
-statsFormatE =
-  "%s,%d,%0.2f,%s,%s,%d,%0.3f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d"
-statsFormatPF =
-  "%6s %.2f %.2f   %.2f   %.2f  %.2f     %.2f  %.2f %.2f %.2f %.2f %.2f %.2f      %.2f %.2f %.2f %.2f %.2f"
-statsFormatEF =
-  "%s,0,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f"
 
 slotStatsMachTimeline :: ChainInfo -> [SlotStats] -> MachTimeline
 slotStatsMachTimeline CInfo{} slots =

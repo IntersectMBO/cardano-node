@@ -12,7 +12,7 @@ module Cardano.Analysis.Driver
   , runAnalysisCommand
   ) where
 
-import           Prelude (String)
+import           Prelude (String, error)
 import           Cardano.Prelude
 
 import           Control.Arrow ((&&&))
@@ -68,9 +68,8 @@ renderAnalysisCmdError cmd err =
               ]
 
 --
--- CLI shelley command dispatch
+-- Analysis command dispatch
 --
-
 runAnalysisCommand :: AnalysisCommand -> ExceptT AnalysisCmdError IO ()
 runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
@@ -116,7 +115,7 @@ runBlockPropagation chainInfo logfiles BlockPropagationOutputFiles{..} = do
         withFile f WriteMode $ \hnd -> do
           putStrLn ("runBlockPropagation: dumping pretty timeline" :: Text)
           hPutStrLn hnd . T.pack $ printf "--- input: %s" f
-          mapM_ (T.hPutStrLn hnd) (renderDistributions blockPropagation)
+          mapM_ (T.hPutStrLn hnd) (renderDistributions RenderPretty blockPropagation)
 
     forM_ bpofAnalysis $
       \(JsonOutputFile f) ->
@@ -188,22 +187,25 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
      withFile (unTextOutputFile o) WriteMode $ \hnd -> do
        hPutStrLn hnd . T.pack $
          printf "--- input: %s" (intercalate " " $ unJsonLogfile <$> srcs)
-       mapM_ (T.hPutStrLn hnd) (renderDistributions s)
-       -- renderMachTimelineCDF  statsHeadP statsFormatP statsFormatPF s hnd
-       renderSlotTimeline slotHeadP slotFormatP False xs hnd
+       mapM_ (T.hPutStrLn hnd)
+         (renderDistributions RenderPretty s)
+       mapM_ (T.hPutStrLn hnd)
+         (renderTimeline xs)
    renderExportStats :: RunScalars -> MachTimeline -> CsvOutputFile -> IO ()
-   renderExportStats rs _s (CsvOutputFile o) =
+   renderExportStats rs s (CsvOutputFile o) =
      withFile o WriteMode $
        \h -> do
-         -- renderMachTimelineCDF statsHeadE statsFormatE statsFormatEF s h
+         mapM_ (hPutStrLn h)
+           (renderDistributions RenderCsv s)
          mapM_ (hPutStrLn h) $
            renderChainInfoExport chainInfo
            <>
            renderRunScalars rs
    renderExportTimeline :: [SlotStats] -> CsvOutputFile -> IO ()
-   renderExportTimeline xs (CsvOutputFile o) =
-     withFile o WriteMode $
-       renderSlotTimeline slotHeadE slotFormatE True xs
+   renderExportTimeline _xs (CsvOutputFile _o) =
+     error "Timeline export is not supported."
+     -- withFile o WriteMode $
+     --   mapM_ (T.hPutStrLn hnd) (renderTimeline xs)
 
    renderDerivedSlots :: [DerivedSlot] -> CsvOutputFile -> IO ()
    renderDerivedSlots slots (CsvOutputFile o) = do

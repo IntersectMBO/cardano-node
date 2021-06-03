@@ -5,8 +5,8 @@
 {-# LANGUAGE ViewPatterns #-}
 module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
 
-import           Prelude (head, tail, show)
-import           Cardano.Prelude hiding (head, show)
+import           Prelude (head, id, tail)
+import           Cardano.Prelude hiding (head)
 
 import           Control.Arrow ((&&&))
 import           Data.List (dropWhileEnd)
@@ -17,27 +17,43 @@ import           Text.Printf (printf)
 import           Data.Distribution
 
 
+data RenderMode
+  = RenderPretty
+  | RenderCsv
+  deriving (Eq, Show)
+
 class Show a => RenderDistributions a where
-  rdFields :: [Field a]
+  rdFields :: [DField a]
 
 class Show a => RenderTimeline a where
-  rtFields :: [Field a]
+  rtFields :: [IField a]
 
 -- | Incapsulate all information necessary to render a column.
-data Field a
+data Field s a
   = Field
   { fWidth   :: Int
   , fLeftPad :: Int
+  , fId      :: Text
   , fHead1   :: Text
   , fHead2   :: Text
-  , fSelect  :: DSelect a
+  , fSelect  :: s a
   }
+
+type DField a = Field DSelect a
+type IField a = Field ISelect a
 
 data DSelect a
   = DInt    (a -> Distribution Float Int)
   | DWord64 (a -> Distribution Float Word64)
   | DFloat  (a -> Distribution Float Float)
   | DDeltaT (a -> Distribution Float NominalDiffTime)
+
+data ISelect a
+  = IInt    (a -> Int)
+  | IWord64 (a -> Word64)
+  | IFloat  (a -> Float)
+  | IDeltaT (a -> NominalDiffTime)
+  | IText   (a -> Text)
 
 mapSomeFieldDistribution :: (forall b. Distribution Float b -> c) -> a -> DSelect a -> c
 mapSomeFieldDistribution f a = \case
@@ -46,63 +62,112 @@ mapSomeFieldDistribution f a = \case
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderDistributions :: forall a. RenderDistributions a => a -> [Text]
-renderDistributions x = (catMaybes [head1, head2]) <> pLines <> sizeAvg
-  where
-    pLines :: [Text]
-    pLines = fLine <$> [0..(nPercs - 1)]
+renderTimeline :: forall a. RenderTimeline a => [a] -> [Text]
+renderTimeline xs =
+  concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
+ where
+   fLine :: a -> Int -> [Text]
+   fLine l i = (if i `mod` 33 == 0 then catMaybes [head1, head2] else [])
+               <> [ entry l ]
 
-    fLine :: Int -> Text
-    fLine pctIx = renderLineDist $
+   entry :: a -> Text
+   entry v = renderLineDist $
      \Field{..} ->
        let w = show fWidth
-           getCapPerc :: forall b c. Distribution b c -> c
-           getCapPerc d = dPercIx d pctIx
-       in T.pack $ case fSelect of
-         DInt    (($x)->d) -> printf ('%':(w++"d")) (getCapPerc d)
-         DWord64 (($x)->d) -> printf ('%':(w++"d")) (getCapPerc d)
-         DFloat  (($x)->d) -> take fWidth $
-                                printf ('%':'.':((show $ fWidth - 2)++"F")) $
-                                  getCapPerc d
-         DDeltaT (($x)->d) -> take fWidth . dropWhileEnd (== 's') . show $
-                                getCapPerc d
+       in case fSelect of
+         IInt    (($v)->x) -> T.pack $ printf ('%':(w++"d")) x
+         IWord64 (($v)->x) -> T.pack $ printf ('%':(w++"d")) x
+         IFloat  (($v)->x) -> T.take fWidth $ T.pack $
+                              printf ('%':'.':((show $ fWidth - 2)++"F")) x
+         IDeltaT (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ show $ x
+         IText   (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ x
 
-    head1, head2 :: Maybe Text
-    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
-            else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
-    head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
-            else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
+   fields :: [IField a]
+   fields = rtFields
 
-    sizeAvg :: [Text]
-    sizeAvg = fmap (T.intercalate " ")
-      [ (T.center (fWidth (head fields)) ' ' "avg" :) $
-        (\f -> flip (renderField fLeftPad fWidth) f $ const $
-                 mapSomeFieldDistribution
-                   (T.take (fWidth f) .T.pack . printf "%F" . dAverage)  x (fSelect f))
-        <$> tail fields
-      , (T.center (fWidth (head fields)) ' ' "size" :) $
-        (\f -> flip (renderField fLeftPad fWidth) f $ const $
-                 mapSomeFieldDistribution
-                   (T.take (fWidth f) . T.pack . show . dSize)    x (fSelect f))
-        <$> tail fields
-      ]
+   head1, head2 :: Maybe Text
+   head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
+           else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
+   head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
+           else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
 
-    renderLineHead1 = mconcat . renderLine' (const 0) ((+ 1) . fWidth)
-    renderLineHead2 = mconcat . renderLine' fLeftPad  ((+ 1) . fWidth)
-    renderLineDist = T.intercalate " " . renderLine' fLeftPad fWidth
+   renderLineHead1 = mconcat . renderLine' (const 0) ((+ 1) . fWidth)
+   renderLineHead2 = mconcat . renderLine' fLeftPad  ((+ 1) . fWidth)
+   renderLineDist = T.intercalate " " . renderLine' fLeftPad fWidth
 
-    renderLine' ::
-      (Field a -> Int) -> (Field a -> Int) -> (Field a -> Text) -> [Text]
-    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
-    renderField lpfn wfn rfn f = (T.replicate (lpfn f) " ") <> T.center (wfn f) ' ' (rfn f)
+   renderLine' ::
+     (IField a -> Int) -> (IField a -> Int) -> (IField a -> Text) -> [Text]
+   renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
+   renderField lpfn wfn rfn f = (T.replicate (lpfn f) " ") <> T.center (wfn f) ' ' (rfn f)
 
-    fields :: [Field a]
-    fields = percField : rdFields
-    percField :: Field a
-    percField = Field 6 0 "" "%tile" (DFloat $ const percsDistrib)
-    nPercs = length $ dPercentiles percsDistrib
-    percsDistrib = mapSomeFieldDistribution
-                     distribPercsAsDistrib x (fSelect $ head rdFields)
+renderDistributions :: forall a. RenderDistributions a => RenderMode -> a -> [Text]
+renderDistributions mode x =
+  case mode of
+    RenderPretty -> (catMaybes [head1, head2]) <> pLines <> sizeAvg
+    RenderCsv    -> headCsv : pLines
+ where
+   pLines :: [Text]
+   pLines = fLine <$> [0..(nPercs - 1)]
+
+   fLine :: Int -> Text
+   fLine pctIx = (if mode == RenderPretty
+                  then renderLineDistPretty
+                  else renderLineDistCsv) $
+    \Field{..} ->
+      let getCapPerc :: forall b c. Distribution b c -> c
+          getCapPerc d = dPercIx d pctIx
+      in T.pack $ case fSelect of
+        DInt    (($x)->d) -> (if mode == RenderPretty
+                              then printf "%*d" fWidth
+                              else printf "%d") (getCapPerc d)
+        DWord64 (($x)->d) -> (if mode == RenderPretty
+                              then printf "%*d" fWidth
+                              else printf "%d") (getCapPerc d)
+        DFloat  (($x)->d) -> (if mode == RenderPretty
+                              then take fWidth . printf "%*F" (fWidth - 2)
+                              else printf "%F") (getCapPerc d)
+        DDeltaT (($x)->d) -> (if mode == RenderPretty
+                              then take fWidth else id)
+                             . dropWhileEnd (== 's') . show $ getCapPerc d
+
+   head1, head2 :: Maybe Text
+   head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
+           else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
+   head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
+           else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
+   headCsv = T.intercalate "," $ fId <$> fields
+
+   sizeAvg :: [Text]
+   sizeAvg = fmap (T.intercalate " ")
+     [ (T.center (fWidth (head fields)) ' ' "avg" :) $
+       (\f -> flip (renderField fLeftPad fWidth) f $ const $
+                mapSomeFieldDistribution
+                  (T.take (fWidth f) .T.pack . printf "%F" . dAverage)  x (fSelect f))
+       <$> tail fields
+     , (T.center (fWidth (head fields)) ' ' "size" :) $
+       (\f -> flip (renderField fLeftPad fWidth) f $ const $
+                mapSomeFieldDistribution
+                  (T.take (fWidth f) . T.pack . show . dSize)    x (fSelect f))
+       <$> tail fields
+     ]
+
+   renderLineHead1 = mconcat . renderLine' (const 0) ((+ 1) . fWidth)
+   renderLineHead2 = mconcat . renderLine' fLeftPad  ((+ 1) . fWidth)
+   renderLineDistPretty = T.intercalate " " . renderLine' fLeftPad fWidth
+   renderLineDistCsv    = T.intercalate "," . renderLine' (const 0) (const 0)
+
+   renderLine' ::
+     (DField a -> Int) -> (DField a -> Int) -> (DField a -> Text) -> [Text]
+   renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
+   renderField lpfn wfn rfn f = (T.replicate (lpfn f) " ") <> T.center (wfn f) ' ' (rfn f)
+
+   fields :: [DField a]
+   fields = percField : rdFields
+   percField :: DField a
+   percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
+   nPercs = length $ dPercentiles percsDistrib
+   percsDistrib = mapSomeFieldDistribution
+                    distribPercsAsDistrib x (fSelect $ head rdFields)
 
 -- * Auxiliaries
 --

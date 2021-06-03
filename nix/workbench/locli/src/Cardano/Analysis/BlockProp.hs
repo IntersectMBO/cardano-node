@@ -63,20 +63,20 @@ data BlockPropagation
 instance RenderDistributions BlockPropagation where
   rdFields =
     --  Width LeftPad
-    [ Field 6 0 (f!!0) "Forge"   $ DDeltaT bpForgerForges
-    , Field 6 0 (f!!1) "Adopt"   $ DDeltaT bpForgerAdoptions
-    , Field 6 0 (f!!2) "Ann-ce"  $ DDeltaT bpForgerAnnouncements
-    , Field 6 0 (f!!3) "Sent"    $ DDeltaT bpForgerSends
-    , Field 4 1 (p!!0) " Noti" $ DDeltaT (fst . bpPeerNotices)
-    , Field 4 0 (p!!1) "ced  " $ DDeltaT (snd . bpPeerNotices)
-    , Field 4 1 (p!!2) " Fetc" $ DDeltaT (fst . bpPeerFetches)
-    , Field 4 0 (p!!3) "hed  " $ DDeltaT (snd . bpPeerFetches)
-    , Field 4 1 (p!!4) " Adop" $ DDeltaT (fst . bpPeerAdoptions)
-    , Field 4 0 (p!!5) "ted  " $ DDeltaT (snd . bpPeerAdoptions)
-    , Field 4 1 (p!!6) "Annou" $ DDeltaT (fst . bpPeerAnnouncements)
-    , Field 4 0 (p!!7) "nced " $ DDeltaT (snd . bpPeerAnnouncements)
-    , Field 4 1 (p!!8) "   Se" $ DDeltaT (fst . bpPeerSends)
-    , Field 4 0 (p!!9) "nt   " $ DDeltaT (snd . bpPeerSends)
+    [ Field 6 0 "forged"        (f!!0) "Forge"   $ DDeltaT bpForgerForges
+    , Field 6 0 "fAdopted"      (f!!1) "Adopt"   $ DDeltaT bpForgerAdoptions
+    , Field 6 0 "fAnnounced"    (f!!2) "Ann-ce"  $ DDeltaT bpForgerAnnouncements
+    , Field 6 0 "fSendStart"    (f!!3) "Sending" $ DDeltaT bpForgerSends
+    , Field 4 1 "noticedVal"    (p!!0) " Noti"   $ DDeltaT (fst . bpPeerNotices)
+    , Field 4 0 "noticedCoV"    (p!!1) "ced  "   $ DDeltaT (snd . bpPeerNotices)
+    , Field 4 1 "fetchedVal"    (p!!2) " Fetc"   $ DDeltaT (fst . bpPeerFetches)
+    , Field 4 0 "fetchedCoV"    (p!!3) "hed  "   $ DDeltaT (snd . bpPeerFetches)
+    , Field 4 1 "pAdoptedVal"   (p!!4) " Adop"   $ DDeltaT (fst . bpPeerAdoptions)
+    , Field 4 0 "pAdoptedCoV"   (p!!5) "ted  "   $ DDeltaT (snd . bpPeerAdoptions)
+    , Field 4 1 "pAnnouncedVal" (p!!6) "Annou" $ DDeltaT (fst . bpPeerAnnouncements)
+    , Field 4 0 "pAnnouncedCoV" (p!!7) "nced " $ DDeltaT (snd . bpPeerAnnouncements)
+    , Field 4 1 "pSendStartVal" (p!!8) " Send" $ DDeltaT (fst . bpPeerSends)
+    , Field 4 0 "pSendStartCoV" (p!!9) "ing  " $ DDeltaT (snd . bpPeerSends)
     ]
    where
      f = nChunksEachOf  4 7 "Forger event Δt:"
@@ -170,9 +170,9 @@ mbeBlockHash = either boeBlock bfeBlock
 mbeSetAdoptedDelta :: UTCTime -> Int -> MachBlockEvents -> MachBlockEvents
 mbeSetAdoptedDelta   v d = either (\x -> Left x { boeAdopted=Just v, boeChainDelta=d })   (\x -> Right x { bfeAdopted=Just v, bfeChainDelta=d })
 
-mbeSetAnnounced, mbeSetSent :: UTCTime -> MachBlockEvents -> MachBlockEvents
+mbeSetAnnounced, mbeSetSending :: UTCTime -> MachBlockEvents -> MachBlockEvents
 mbeSetAnnounced v = either (\x -> Left x { boeAnnounced=Just v }) (\x -> Right x { bfeAnnounced=Just v })
-mbeSetSent      v = either (\x -> Left x { boeSent=Just v })      (\x -> Right x { bfeSent=Just v })
+mbeSetSending   v = either (\x -> Left x { boeSent=Just v })      (\x -> Right x { bfeSent=Just v })
 
 -- | Machine's private view of all the blocks.
 type MachBlockMap
@@ -369,12 +369,12 @@ blockPropMachEventsStep ci fp bMap = \case
                (err loHost loBlock "LOChainSyncServerSendHeader leads")
     in if isJust $ mbeAnnounced mbe0 then bMap
        else Map.insert loBlock (mbeSetAnnounced loAt mbe0) bMap
-  LogObject{loAt, loHost, loBody=LOBlockFetchServerSend{loBlock}} ->
-    -- D.trace (printf "mbeSetSent %s %s" (show loHost :: String) (show loBlock :: String)) $
+  LogObject{loAt, loHost, loBody=LOBlockFetchServerSending{loBlock}} ->
+    -- D.trace (printf "mbeSetSending %s %s" (show loHost :: String) (show loBlock :: String)) $
     let mbe0 = Map.lookup loBlock bMap & fromMaybe
-               (err loHost loBlock "LOBlockFetchServerSend leads")
+               (err loHost loBlock "LOBlockFetchServerSending leads")
     in if isJust $ mbeSent mbe0 then bMap
-       else Map.insert loBlock (mbeSetSent loAt mbe0) bMap
+       else Map.insert loBlock (mbeSetSending loAt mbe0) bMap
   LogObject{loAt, loHost, loBody=LOChainSyncClientSeenHeader{loBlock,loBlockNo,loSlotNo}} ->
     let mbe0 = Map.lookup loBlock bMap
     in if isJust mbe0 then bMap

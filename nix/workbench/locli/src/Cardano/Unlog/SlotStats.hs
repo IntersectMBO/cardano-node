@@ -6,11 +6,11 @@
 
 module Cardano.Unlog.SlotStats (module Cardano.Unlog.SlotStats) where
 
-import qualified Prelude as P
+import           Prelude ((!!))
 import           Cardano.Prelude
 
 import           Data.Aeson
-import qualified Data.Text as Text
+import qualified Data.Text as T
 import           Data.List (dropWhileEnd)
 import           Data.List.Split (splitOn)
 
@@ -20,6 +20,7 @@ import           Text.Printf
 import           Ouroboros.Network.Block (SlotNo(..))
 
 import           Data.Accum
+import           Cardano.Unlog.Render
 import           Cardano.Unlog.Resources
 
 
@@ -52,78 +53,70 @@ data SlotStats
     }
   deriving (Generic, Show)
 
+instance RenderTimeline SlotStats where
+  rtFields =
+    --  Width LeftPad
+    [ Field 5 0 "abs.slot"     "abs."  "slot#"   $ IWord64 (unSlotNo . slSlot)
+    , Field 4 0 "slot"         "  epo" "slot"    $ IWord64 slEpochSlot
+    , Field 2 0 "epoch"        "ch "   "#"       $ IWord64 slEpoch
+    , Field 5 0 "block"        "block" "no."     $ IWord64 slBlockNo
+    , Field 5 0 "blockGap"     "block" "gap"     $ IWord64 slBlockless
+    , Field 3 0 "leadChecks"   "lead"  "chk"     $ IWord64 slCountChecks
+    , Field 3 0 "leadShips"    "ship"  "win"     $ IWord64 slCountLeads
+    , Field 4 0 "CDBSnap"      "CDB"   "snap"    $ IWord64 slChainDBSnap
+    , Field 3 0 "rejTxs"       "rej"   "txs"     $ IWord64 slRejectedTx
+    , Field 7 0 "checkSpan"    "check" "span"    $ IDeltaT slSpanCheck
+    , Field 5 0 "leadSpan"     "lead"  "span"    $ IDeltaT slSpanLead
+    , Field 4 0 "mempoolTxSpan" (t 4!!0) "span"  $ IText (maybe "" show.slTxsMemSpan)
+    , Field 4 0 "txsColl"     (t 4!!1) "cold"    $ IWord64 slTxsCollected
+    , Field 4 0 "txsAcc"      (t 4!!2) "accd"    $ IWord64 slTxsAccepted
+    , Field 4 0 "txsRej"      (t 4!!3) "rejd"    $ IWord64 slTxsRejected
+    , Field 5 1 "chDensity"    "chain" "dens."   $ IFloat  slDensity
+    , Field 3 0 "CPU%"        (c 3!!0) "all"     $ IText (d 3.rCentiCpu.slResources)
+    , Field 3 0 "GC%"         (c 3!!1) "GC"      $ IText (d 3.fmap (min 999).rCentiGC.slResources)
+    , Field 3 0 "MUT%"        (c 3!!2) "mut"     $ IText (d 3.fmap (min 999).rCentiMut.slResources)
+    , Field 3 0 "majFlt"      (g 3!!0) "maj"     $ IText (d 3.rGcsMajor.slResources)
+    , Field 3 0 "minFlt"      (g 3!!1) "min"     $ IText (d 3.rGcsMinor.slResources)
+    , Field 6 0 "productiv"   "Produc" "tivity"  $ IText
+      (\SlotStats{..}->
+          f 4 $ calcProd <$> (min 6 . -- workaround for ghc-8.10.2
+                              fromIntegral <$> rCentiMut slResources :: Maybe Float)
+          <*> (fromIntegral <$> rCentiCpu slResources))
+    , Field 5 0 "rssMB"       (m 5!!0) "RSS"     $ IText (d 5.rRSS  .slResources)
+    , Field 5 0 "heapMB"      (m 5!!1) "Heap"    $ IText (d 5.rHeap .slResources)
+    , Field 5 0 "liveMB"      (m 5!!2) "Live"    $ IText (d 5.rLive .slResources)
+    , Field 5 0 "allocatedMB"  "Allocd" "MB"     $ IText (d 5.rAlloc.slResources)
+    , Field 6 0 "allocMut"     "Alloc/" "mutSec" $ IText
+      (\SlotStats{..}->
+          d 5 $
+          (ceiling :: Float -> Int)
+          <$> ((/) <$> (fromIntegral . (100 *) <$> rAlloc slResources)
+                <*> (fromIntegral . max 1 . (1024 *) <$> rCentiMut slResources)))
+    , Field 7 0 "mempoolTxs"   "Mempool" "txs"   $ IWord64 slMempoolTxs
+    , Field 9 0 "utxoEntries"  "UTxO"  "entries" $ IWord64 slUtxoSize
+    , Field 10 0 "absSlotTime" "Absolute" "slot time" $ IText
+      (\SlotStats{..}->
+         T.pack $ " " `splitOn` show slStart !! 1)
+    ]
+   where
+     t w = nChunksEachOf 4 (w + 1) "mempool tx"
+     c w = nChunksEachOf 3 (w + 1) "%CPU"
+     g w = nChunksEachOf 2 (w + 1) "GCs"
+     m w = nChunksEachOf 3 (w + 1) "Memory use, MB"
+
+     d, f :: PrintfArg a => Int -> Maybe a -> Text
+     d width = \case
+       Just x  -> T.pack $ printf ("%"<>"" --(if exportMode then "0" else "")
+                                      <>show width<>"d") x
+       Nothing -> mconcat (replicate width "-")
+     f width = \case
+       Just x  -> T.pack $ printf ("%0."<>show width<>"f") x
+       Nothing -> mconcat (replicate width "-")
+
+     calcProd :: Float -> Float -> Float
+     calcProd mut' cpu' = if cpu' == 0 then 1 else mut' / cpu'
+
 instance ToJSON SlotStats
-
-slotHeadE, slotFormatE :: Text
-slotHeadP, slotFormatP :: Text
-slotHeadP =
-  "abs.  slot    block block lead  leader CDB rej  check  lead    mempool tx       chain      %CPU      GCs   Produc-    Memory use, kB      Alloc rate  Mempool  UTxO  Absolute" <>"\n"<>
-  "slot#   epoch  no. -less checks ships snap txs  span   span  span col acc rej  density all/ GC/mut maj/min tivity   RSS  Heap  Live Alloc /mut sec,kB  txs   entries  slot time"
-slotHeadE =
-  "abs.slot#,slot,epoch,block,blockless,checkSpan,leadSpan,leadShips,cdbSnap,rejTx,checkSpan,mempoolTxSpan,chainDens,%CPU,%GC,%MUT,Productiv,MemLiveKb,MemAllocKb,MemRSSKb,AllocRate/Mut,MempoolTxs,UTxO"
-slotFormatP = "%5d %4d:%2d %4d    %2d    %2d   %2d    %2d  %2d %7s %5s %5s  %2d  %2d  %2d   %0.3f  %3s %3s %3s  %2s %4s %5s %5s %5s %5s %4s  %8s   %4d %9d %s"
-slotFormatE = "%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%s,%d,%d%0.3f,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d,%d,%s"
-
-slotLine :: Bool -> Text -> SlotStats -> Text
-slotLine exportMode leadershipF SlotStats{..} = Text.pack $
-  printf (Text.unpack leadershipF)
-         sl epsl epo blk blkl chks  lds cdbsn rejtx spanC spanL subdt scol sacc srej dens cpu gc mut majg ming   pro rss hea liv alc atm mpo utx start
- where sl    = unSlotNo slSlot
-       epsl  = slEpochSlot
-       epo   = slEpoch
-       blk   = slBlockNo
-       blkl  = slBlockless
-       chks  = slCountChecks
-       lds   = slCountLeads
-       cdbsn = slChainDBSnap
-       rejtx = slRejectedTx
-       subdt = maybe "" (Text.init . show) slTxsMemSpan
-       scol  = slTxsCollected
-       sacc  = slTxsAccepted
-       srej  = slTxsRejected
-       spanC = Text.init $ show slSpanCheck
-       spanL = Text.init $ show slSpanLead
-       cpu   = d 3 $ rCentiCpu slResources
-       dens  = slDensity
-       gc    = d 2 $ min 999 -- workaround for ghc-8.10.x
-                  <$> rCentiGC  slResources
-       mut   = d 2 $ min 999 -- workaround for ghc-8.10.x
-                  <$> rCentiMut slResources
-       majg  = d 2 $ rGcsMajor slResources
-       ming  = d 2 $ rGcsMinor slResources
-       pro   = f 2 $ calcProd <$> (min 6 . -- workaround for ghc-8.10.2
-                                   fromIntegral <$> rCentiMut slResources :: Maybe Float)
-                              <*> (fromIntegral <$> rCentiCpu slResources)
-       rss   = d 5 (rRSS      slResources)
-       hea   = d 5 (rHeap     slResources)
-       liv   = d 5 (rLive     slResources)
-       alc   = d 5 (rAlloc    slResources)
-       atm   = d 8 $
-               (ceiling :: Float -> Int)
-               <$> ((/) <$> (fromIntegral . (100 *) <$> rAlloc slResources)
-                        <*> (fromIntegral . max 1 . (1024 *) <$> rCentiMut slResources))
-       mpo   = slMempoolTxs
-       utx   = slUtxoSize
-       start = " " `splitOn` show slStart P.!! 1
-
-       calcProd :: Float -> Float -> Float
-       calcProd mut' cpu' = if cpu' == 0 then 1 else mut' / cpu'
-
-       d, f :: PrintfArg a => Int -> Maybe a -> Text
-       d width = \case
-         Just x  -> Text.pack $ printf ("%"<>(if exportMode then "0" else "")
-                                           <>show width<>"d") x
-         Nothing -> mconcat (replicate width "-")
-       f width = \case
-         Just x  -> Text.pack $ printf ("%0."<>show width<>"f") x
-         Nothing -> mconcat (replicate width "-")
-
-renderSlotTimeline :: Text -> Text -> Bool -> [SlotStats] -> Handle -> IO ()
-renderSlotTimeline leadHead fmt exportMode slotStats hnd = do
-  forM_ (zip (toList slotStats) [(0 :: Int)..]) $ \(l, i) -> do
-    when (i `mod` 33 == 0 && (i == 0 || not exportMode)) $
-      hPutStrLn hnd leadHead
-    hPutStrLn hnd $ slotLine exportMode fmt l
 
 -- | Initial and trailing data are noisy outliers: drop that.
 --

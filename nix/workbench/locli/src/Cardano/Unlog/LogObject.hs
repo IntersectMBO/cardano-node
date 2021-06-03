@@ -197,7 +197,7 @@ interpreters = Map.fromList
             <*> v .: "slot"
   -- v, but not ^ -- how is that possible?
   , (,) "TraceBlockFetchServerSendBlock" $
-    \v _ -> LOBlockFetchServerSend
+    \v _ -> LOBlockFetchServerSending
             <$> v .: "block"
   , (,) "ChainSyncClientEvent.TraceDownloadedHeader" $
     \v _ -> LOChainSyncClientSeenHeader
@@ -243,7 +243,7 @@ data LOBody
     , loBlockNo          :: !BlockNo
     , loSlotNo           :: !SlotNo
     }
-  | LOBlockFetchServerSend
+  | LOBlockFetchServerSending
     { loBlock            :: !Hash
     }
   | LOChainSyncClientSeenHeader
