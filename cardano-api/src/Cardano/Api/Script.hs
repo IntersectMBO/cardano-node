@@ -109,6 +109,7 @@ import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.List as L
 import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
@@ -134,6 +135,8 @@ import qualified Shelley.Spec.Ledger.Scripts as Shelley
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+
+import qualified Data.ByteString.Base16 as Base16
 
 import qualified Plutus.V1.Ledger.Api as Plutus
 
@@ -719,6 +722,74 @@ data ScriptData = ScriptDataConstructor Integer [ScriptData]
   -- Note the order of constructors is the same as the Plutus definitions
   -- so that the Ord instance is consistent with the Plutus one.
   -- This is checked by prop_ord_distributive_ScriptData
+
+instance ToJSON ScriptData where
+  toJSON v = case v of
+    ScriptDataConstructor tag arguments -> Aeson.object
+      [ "type" .= toJSON @Text "constructor"
+      , "tag" .= toJSON tag
+      , "arguments" .= toJSON arguments
+      ]
+    ScriptDataMap entries -> Aeson.object
+      [ "type" .= toJSON @Text "map"
+      , "entries" .= toJSON entries
+      ]
+    ScriptDataList elements -> Aeson.object
+      [ "type" .= toJSON @Text "list"
+      , "elements" .= toJSON elements
+      ]
+    ScriptDataNumber value -> Aeson.object
+      [ "type" .= toJSON @Text "number"
+      , "value" .= toJSON value
+      ]
+    ScriptDataBytes bs -> Aeson.object
+      [ "type" .= toJSON @Text "bytes"
+      , "hex" .= toJSON (Base16.encode bs)
+      ]
+
+instance FromJSON ScriptData where
+  parseJSON = Aeson.withObject "ScriptData" $ \obj -> do
+    type_ :: Text <- obj .: "type"
+    case snd <$> L.find ((== type_) . fst) constructors of
+      Just p -> p obj
+      Nothing -> fail $ "Excepted \"type\" in " <> show (fmap fst constructors)
+    where
+        constructors :: [(Text, Aeson.Object -> Aeson.Parser ScriptData)]
+        constructors =
+          [ ("constructor", parseScriptDataConstructor)
+          , ("map"        , parseScriptDataMap        )
+          , ("list"       , parseScriptDataList       )
+          , ("number"     , parseScriptDataNumber     )
+          , ("bytes"      , parseScriptDataBytes      )
+          ]
+
+        parseScriptDataConstructor :: Aeson.Object -> Aeson.Parser ScriptData
+        parseScriptDataConstructor obj = do
+          tag <- obj .: "tag"
+          arguments <- obj .: "arguments"
+          return $ ScriptDataConstructor tag arguments
+
+        parseScriptDataMap :: Aeson.Object -> Aeson.Parser ScriptData
+        parseScriptDataMap obj = do
+          entries <- obj .: "entries"
+          return $ ScriptDataMap entries
+
+        parseScriptDataList :: Aeson.Object -> Aeson.Parser ScriptData
+        parseScriptDataList obj = do
+          elements <- obj .: "elements"
+          return $ ScriptDataList elements
+
+        parseScriptDataNumber :: Aeson.Object -> Aeson.Parser ScriptData
+        parseScriptDataNumber obj = do
+          value <- obj .: "value"
+          return $ ScriptDataNumber value
+
+        parseScriptDataBytes :: Aeson.Object -> Aeson.Parser ScriptData
+        parseScriptDataBytes obj = do
+          hex <- obj .: "hex"
+          case Base16.decode hex of
+            Right bs -> return (ScriptDataBytes bs)
+            Left msg -> fail msg
 
 instance HasTypeProxy ScriptData where
     data AsType ScriptData = AsScriptData
