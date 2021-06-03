@@ -200,6 +200,7 @@ module Cardano.Api (
     TxMetadataSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
+    ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
@@ -217,6 +218,7 @@ module Cardano.Api (
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
+    scriptDataSupportedInEra,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.

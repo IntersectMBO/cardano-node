@@ -228,16 +228,17 @@ renderFeature TxFeatureMultiAssetOutputs    = "Multi-Asset outputs"
 renderFeature TxFeatureScriptWitnesses      = "Script witnesses"
 renderFeature TxFeatureShelleyKeys          = "Shelley keys"
 renderFeature TxFeatureCollateral           = "Collateral inputs"
+renderFeature TxFeatureProtocolParameters   = "Protocol parameters"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
     TxBuildRaw era txins txinsc txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
-               metadataFiles mUpProp out ->
+               metadataFiles mpparams mUpProp out ->
       runTxBuildRaw era txins txinsc txouts mLowBound mUpperBound
                     fee mValue certs wdrls metadataSchema
-                    scriptFiles metadataFiles mUpProp out
+                    scriptFiles metadataFiles mpparams mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
@@ -280,6 +281,7 @@ runTxBuildRaw
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
+  -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
@@ -289,7 +291,7 @@ runTxBuildRaw (AnyCardanoEra era)
               mFee mValue
               certFiles withdrawals
               metadataSchema scriptFiles
-              metadataFiles mUpdatePropFile
+              metadataFiles mpparams mUpdatePropFile
               (TxBodyFile fpath) = do
     txBodyContent <-
       TxBodyContent
@@ -304,7 +306,7 @@ runTxBuildRaw (AnyCardanoEra era)
         <*> validateTxAuxScripts     era scriptFiles
         <*> pure TxAuxScriptDataNone     --TODO alonzo: support this
         <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
-        <*> pure (BuildTxWith Nothing) --TODO alonzo: support this
+        <*> validateProtocolParameters era mpparams
         <*> validateTxWithdrawals    era withdrawals
         <*> validateTxCertificates   era certFiles
         <*> validateTxUpdateProposal era mUpdatePropFile
@@ -339,6 +341,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureScriptWitnesses
                | TxFeatureShelleyKeys
                | TxFeatureCollateral
+               | TxFeatureProtocolParameters
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -566,6 +569,18 @@ validateTxCertificates era certFiles =
 
            Nothing -> return $ Just (sCred, KeyWitness KeyWitnessForStakeAddr)
 
+validateProtocolParameters
+  :: CardanoEra era
+  -> Maybe ProtocolParamsSourceSpec
+  -> ExceptT ShelleyTxCmdError IO
+            (BuildTxWith BuildTx (Maybe ProtocolParameters))
+validateProtocolParameters _ Nothing = return (BuildTxWith Nothing)
+validateProtocolParameters era (Just pparamsspec) =
+    case scriptDataSupportedInEra era of
+      Nothing -> txFeatureMismatch era TxFeatureProtocolParameters
+      Just _  -> BuildTxWith . Just <$>
+                   readProtocolParametersSourceSpec pparamsspec
+
 validateTxUpdateProposal :: CardanoEra era
                          -> Maybe UpdateProposalFile
                          -> ExceptT ShelleyTxCmdError IO (TxUpdateProposal era)
@@ -792,13 +807,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
           onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions"
       =<< readFileTxBody txbodyFile
 
-    pparams <-
-      case protocolParamsSourceSpec of
-        ParamsFromGenesis (GenesisFile f) ->
-          fromShelleyPParams . sgProtocolParams <$>
-            firstExceptT ShelleyTxCmdGenesisCmdError
-              (readShelleyGenesis f identity)
-        ParamsFromFile f -> readProtocolParameters f
+    pparams <- readProtocolParametersSourceSpec protocolParamsSourceSpec
 
     let tx = makeSignedTransaction [] txbody
         Lovelace fee = estimateTransactionFee
@@ -820,11 +829,7 @@ runTxCalculateMinValue
   -> Value
   -> ExceptT ShelleyTxCmdError IO ()
 runTxCalculateMinValue protocolParamsSourceSpec value = do
-  pp <- case protocolParamsSourceSpec of
-    ParamsFromGenesis (GenesisFile f) ->
-      fromShelleyPParams . sgProtocolParams <$>
-        firstExceptT ShelleyTxCmdGenesisCmdError (readShelleyGenesis f identity)
-    ParamsFromFile f -> readProtocolParameters f
+  pp <- readProtocolParametersSourceSpec protocolParamsSourceSpec
 
   let minValues =
         case protocolParamMinUTxOValue pp of
@@ -840,6 +845,16 @@ runTxCreatePolicyId (ScriptFile sFile) = do
   ScriptInAnyLang _ script <- firstExceptT ShelleyTxCmdScriptFileError $
                                 readFileScriptInAnyLang sFile
   liftIO . putTextLn . serialiseToRawBytesHexText $ hashScript script
+
+readProtocolParametersSourceSpec :: ProtocolParamsSourceSpec
+                                 -> ExceptT ShelleyTxCmdError IO
+                                            ProtocolParameters
+readProtocolParametersSourceSpec (ParamsFromGenesis (GenesisFile f)) =
+    fromShelleyPParams . sgProtocolParams <$>
+      firstExceptT ShelleyTxCmdGenesisCmdError
+        (readShelleyGenesis f identity)
+readProtocolParametersSourceSpec (ParamsFromFile f) =
+    readProtocolParameters f
 
 --TODO: eliminate this and get only the necessary params, and get them in a more
 -- helpful way rather than requiring them as a local file.

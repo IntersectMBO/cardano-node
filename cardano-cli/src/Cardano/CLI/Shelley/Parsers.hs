@@ -587,6 +587,7 @@ pTransaction =
                                              "auxiliary-script-file"
                                              "Filepath of auxiliary script(s)")
                                  <*> many pMetadataFile
+                                 <*> optional pProtocolParamsSourceSpec
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
 

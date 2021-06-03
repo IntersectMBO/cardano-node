@@ -182,6 +182,7 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxillary scripts
       [MetadataFile]
+      (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
