@@ -115,7 +115,10 @@ runBlockPropagation chainInfo logfiles BlockPropagationOutputFiles{..} = do
         withFile f WriteMode $ \hnd -> do
           putStrLn ("runBlockPropagation: dumping pretty timeline" :: Text)
           hPutStrLn hnd . T.pack $ printf "--- input: %s" f
-          mapM_ (T.hPutStrLn hnd) (renderDistributions RenderPretty blockPropagation)
+          mapM_ (T.hPutStrLn hnd)
+            (renderDistributions RenderPretty blockPropagation)
+          mapM_ (T.hPutStrLn hnd)
+            (renderTimeline $ bpChainBlockEvents blockPropagation)
 
     forM_ bpofAnalysis $
       \(JsonOutputFile f) ->
