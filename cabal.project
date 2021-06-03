@@ -187,8 +187,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 42cd78a6513730d6f42227e3baec49616c2ab543
-  --sha256: 1h47w69wah7mqq92gnj739b9104y0wvg08kiz7yry8cbm169x9ns
+  tag: e50613562d6d4a0f933741fcf590b0f69a1eda67
+  --sha256: 0i192ksa69lpzjhzmhd2h1mramkvvikw04pqws18h5dly55f4z3k
   subdir:
     io-sim
     io-sim-classes
@@ -206,8 +206,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: ece86104c6ed590daa3249e4154dd7b62ebf0f05
-  --sha256: 0z59lxbw20afb80wnz8kspl83gb1i3m50a32jfm8jdfndvwwj3wg
+  tag: 13da6d416b2b47cdb6f287ff078b9e759bb90b7f
+  --sha256: 11jpcjdr05l2yyhy9zp3hpkq8bhipx5w3y9bjzg2hzh0fay8571w
   subdir:
     plutus-core
     plutus-ledger-api

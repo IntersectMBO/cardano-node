@@ -337,7 +337,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
     collateralPercentage <- o .:  "collateralPercentage"
     maxCollateralInputs  <- o .:  "maxCollateralInputs"
     case cModels of
-      Nothing -> case Plutus.defaultCekCostModelParams of
+      Nothing -> case Plutus.defaultCostModelParams of
         Just m -> return Alonzo.AlonzoGenesis
           { Alonzo.adaPerUTxOWord
           , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
