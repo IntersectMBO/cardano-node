@@ -1121,6 +1121,7 @@ readFileInAnyCardanoEra
      , HasTextEnvelope (thing ShelleyEra)
      , HasTextEnvelope (thing AllegraEra)
      , HasTextEnvelope (thing MaryEra)
+     , HasTextEnvelope (thing AlonzoEra)
      )
   => (forall era. AsType era -> AsType (thing era))
   -> FilePath
@@ -1134,6 +1135,7 @@ readFileInAnyCardanoEra asThing file =
       , FromSomeType (asThing AsShelleyEra) (InAnyCardanoEra ShelleyEra)
       , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
       , FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
+      , FromSomeType (asThing AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
       ]
       file
 
