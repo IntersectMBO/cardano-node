@@ -338,8 +338,19 @@ module Cardano.Api (
     examplePlutusScriptAlwaysSucceeds,
     examplePlutusScriptAlwaysFails,
 
-    -- ** Script data
+    -- * Script data
     ScriptData(..),
+
+    -- ** Validation
+    ScriptDataRangeError (..),
+    validateScriptData,
+
+    -- ** Conversion to\/from JSON
+    ScriptDataJsonSchema (..),
+    scriptDataFromJson,
+    scriptDataToJson,
+    ScriptDataJsonError (..),
+    ScriptDataJsonSchemaError (..),
 
     -- * Script execution units
     ExecutionUnits(..),
@@ -553,6 +564,7 @@ import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query (SlotsInEpoch(..), SlotsToEpochEnd(..), slotToEpoch)
 import           Cardano.Api.Script
+import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON

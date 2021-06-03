@@ -70,6 +70,9 @@ data ShelleyTxCmdError
   | ShelleyTxCmdMetadataJsonParseError !FilePath !String
   | ShelleyTxCmdMetadataConversionError !FilePath !TxMetadataJsonError
   | ShelleyTxCmdMetaValidationError !FilePath ![(Word64, TxMetadataRangeError)]
+  | ShelleyTxCmdScriptDataJsonParseError  FilePath String
+  | ShelleyTxCmdScriptDataConversionError FilePath ScriptDataJsonError
+  | ShelleyTxCmdScriptDataValidationError FilePath ScriptDataRangeError
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
@@ -119,6 +122,17 @@ renderShelleyTxCmdError err =
       Text.intercalate "\n"
         [ "key " <> show k <> ":" <> Text.pack (displayError valErr)
         | (k, valErr) <- errs ]
+
+    ShelleyTxCmdScriptDataJsonParseError  fp jsonErr ->
+       "Invalid JSON format in file: " <> show fp <>
+       "\nJSON parse error: " <> Text.pack jsonErr
+    ShelleyTxCmdScriptDataConversionError fp cerr ->
+       "Error reading metadata at: " <> show fp
+                             <> "\n" <> Text.pack (displayError cerr)
+    ShelleyTxCmdScriptDataValidationError fp verr ->
+      "Error validating script data at: " <> show fp <> ":\n" <>
+      Text.pack (displayError verr)
+
     ShelleyTxCmdSocketEnvError envSockErr -> renderEnvSocketError envSockErr
     ShelleyTxCmdAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> show fp
@@ -657,11 +671,19 @@ readScriptRedeemerOrFile = readScriptDataOrFile
 readScriptDataOrFile :: ScriptDataOrFile
                      -> ExceptT ShelleyTxCmdError IO ScriptData
 readScriptDataOrFile (ScriptDataValue d) = return d
-readScriptDataOrFile (ScriptDataFile _f) = do
-    panic "TODO alonzo: readScriptDataOrFile"
-    -- This needs the JSON instance, or TxMetadata-like JSON schema support
-    --firstExceptT ShelleyTxCmdScriptDataFileError $
-    --  newExceptT $ readFileJSON AsScriptData f
+readScriptDataOrFile (ScriptDataFile fp) = do
+    bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
+            LBS.readFile fp
+    v  <- firstExceptT (ShelleyTxCmdScriptDataJsonParseError fp) $
+            hoistEither $
+              Aeson.eitherDecode' bs
+    sd <- firstExceptT (ShelleyTxCmdScriptDataConversionError fp) $
+            hoistEither $
+              scriptDataFromJson ScriptDataJsonDetailedSchema v
+    firstExceptT (ShelleyTxCmdScriptDataValidationError fp) $
+      hoistEither $
+        validateScriptData sd
+    return sd
 
 
 -- ----------------------------------------------------------------------------
