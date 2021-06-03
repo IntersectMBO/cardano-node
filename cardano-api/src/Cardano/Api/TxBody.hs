@@ -2077,9 +2077,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
       TxMintNone        -> return ()
       TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
     case txProtocolParams of
-      BuildTxWith Just{}  -> return ()
-      BuildTxWith Nothing -> guard (not (Set.null languages))
-                               ?! TxBodyMissingProtocolParams
+      BuildTxWith Nothing | not (Set.null languages)
+        -> Left TxBodyMissingProtocolParams
+      _ -> return ()
 
     return $
       ShelleyTxBody era
