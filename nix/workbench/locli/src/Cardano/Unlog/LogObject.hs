@@ -5,7 +5,7 @@
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
-import           Prelude (error)
+import           Prelude (String, error, id)
 import qualified Prelude
 import           Cardano.Prelude hiding (Text)
 
@@ -27,13 +27,19 @@ import           Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 
 import           Cardano.BM.Stats.Resources
 
+import           Data.Accum (zeroUTCTime)
+
 
 type Text = ShortText
 
 readLogObjectStream :: JsonLogfile -> IO [LogObject]
 readLogObjectStream (JsonLogfile f) =
   LBS.readFile f
-    <&> catMaybes . fmap AE.decode . LBS.split (fromIntegral $ fromEnum '\n')
+    <&>
+    fmap (either (LogObject zeroUTCTime "DecodeError" "" (TId "0") . LODecodeError)
+                 id
+          . AE.eitherDecode)
+    . LBS.split (fromIntegral $ fromEnum '\n')
 
 newtype JsonRunMetafile
   = JsonRunMetafile { unJsonRunMetafile :: FilePath }
@@ -68,6 +74,7 @@ data LogObject
     { loAt   :: !UTCTime
     , loKind :: !Text
     , loHost :: !Host
+    , loTid  :: !TId
     , loBody :: !LOBody
     }
   deriving (Generic, Show)
@@ -90,13 +97,16 @@ newtype TId = TId { unTId :: ShortText }
 newtype Hash = Hash { unHash :: ShortText }
   deriving (Eq, Ord, FromJSON, ToJSON)
 
+shortHash :: Hash -> LText.Text
+shortHash = toText . Text.take 6 . unHash
+
 instance Show Hash where show = LText.unpack . toText . unHash
 
 instance AE.ToJSONKey Hash where
   toJSONKey = AE.toJSONKeyText (toText . unHash)
 
 newtype Host = Host { unHost :: ShortText }
-  deriving (Eq, Ord, Show, FromJSON, ToJSON)
+  deriving (Eq, IsString, Ord, Show, FromJSON, ToJSON)
 
 instance FromJSON BlockNo where
   parseJSON o = BlockNo <$> parseJSON o
@@ -107,44 +117,44 @@ instance ToJSON BlockNo where
 -- LogObject stream interpretation
 --
 
-interpreters :: Map Text (Object -> TId -> Parser LOBody)
+interpreters :: Map Text (Object -> Parser LOBody)
 interpreters = Map.fromList
   [ (,) "TraceStartLeadershipCheck" $
-    \v _ -> LOTraceStartLeadershipCheck
+    \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
             <*> v .: "utxoSize"
             <*> v .: "chainDensity"
 
   , (,) "TraceBlockContext" $
-    \v _ -> LOBlockContext
+    \v -> LOBlockContext
             <$> v .: "tipBlockNo"
 
   , (,) "TraceNodeIsLeader" $
-    \v _ -> LOTraceNodeIsLeader
+    \v -> LOTraceNodeIsLeader
             <$> v .: "slot"
 
   , (,) "TraceNodeNotLeader" $
-    \v _ -> LOTraceNodeNotLeader
+    \v -> LOTraceNodeNotLeader
             <$> v .: "slot"
 
   , (,) "TraceMempoolAddedTx" $
-    \v _ -> do
+    \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
   , (,) "TraceMempoolRemoveTxs" $
-    \v _ -> do
+    \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
   , (,) "TraceMempoolRejectedTx" $
-    \_ _ -> pure LOMempoolRejectedTx
+    \_ -> pure LOMempoolRejectedTx
 
   , (,) "TraceLedgerEvent.TookSnapshot" $
-    \_ _ -> pure LOLedgerTookSnapshot
+    \_ -> pure LOLedgerTookSnapshot
 
   , (,) "TraceBenchTxSubSummary" $
-    \v _ -> do
+    \v -> do
        x :: Object <- v .: "summary"
        LOGeneratorSummary
          <$> ((x .: "ssFailures" :: Parser [Text])
@@ -154,58 +164,60 @@ interpreters = Map.fromList
          <*> x .: "ssThreadwiseTps"
 
   , (,) "TraceBenchTxSubServAck" $
-    \v _ -> LOTxsAcked <$> v .: "txIds"
+    \v -> LOTxsAcked <$> v .: "txIds"
 
   , (,) "Resources" $
-    \v _ -> LOResources <$> parsePartialResourceStates (Object v)
+    \v -> LOResources <$> parsePartialResourceStates (Object v)
 
   , (,) "TraceTxSubmissionCollected" $
-    \v tid -> LOTxsCollected
-            <$> pure tid
-            <*> v .: "count"
+    \v -> LOTxsCollected
+            <$> v .: "count"
 
   , (,) "TraceTxSubmissionProcessed" $
-    \v tid -> LOTxsProcessed
-            <$> pure tid
-            <*> v .: "accepted"
+    \v -> LOTxsProcessed
+            <$> v .: "accepted"
             <*> v .: "rejected"
 
   , (,) "TraceForgedBlock" $
-    \v _ -> LOBlockForged
+    \v -> LOBlockForged
             <$> v .: "block"
             <*> v .: "blockPrev"
             <*> v .: "blockNo"
             <*> v .: "slot"
   , (,) "TraceAddBlockEvent.AddedToCurrentChain" $
-    \v _ -> LOBlockAddedToCurrentChain
+    \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
             <*> v .: "chainLengthDelta"
   -- TODO: we should clarify the distinction between the two cases (^ and v).
   , (,) "TraceAdoptedBlock" $
-    \v _ -> LOBlockAddedToCurrentChain
+    \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
             <*> pure 1
   , (,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" $
-    \v _ -> LOChainSyncServerSendHeader
+    \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
   , (,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" $
-    \v _ -> LOChainSyncServerSendHeader
+    \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
   -- v, but not ^ -- how is that possible?
   , (,) "TraceBlockFetchServerSendBlock" $
-    \v _ -> LOBlockFetchServerSending
+    \v -> LOBlockFetchServerSending
             <$> v .: "block"
+  , (,) "SendFetchRequest" $
+    \v -> LOBlockFetchClientRequested
+            <$> v .: "head"
+            <*> v .: "length"
   , (,) "ChainSyncClientEvent.TraceDownloadedHeader" $
-    \v _ -> LOChainSyncClientSeenHeader
+    \v -> LOChainSyncClientSeenHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
   , (,) "CompletedBlockFetch" $
-    \v _ -> LOBlockFetchClientCompletedFetch
+    \v -> LOBlockFetchClientCompletedFetch
             <$> v .: "block"
   ]
  where
@@ -226,8 +238,8 @@ data LOBody
   | LOBlockContext !Word64
   | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Float)
   | LOTxsAcked !(Vector Text)
-  | LOTxsCollected !TId !Word64
-  | LOTxsProcessed !TId !Word64 !Int
+  | LOTxsCollected !Word64
+  | LOTxsProcessed !Word64 !Int
   | LOBlockForged
     { loBlock            :: !Hash
     , loPrev             :: !Hash
@@ -236,7 +248,7 @@ data LOBody
     }
   | LOBlockAddedToCurrentChain
     { loBlock            :: !Hash
-    , loChainLengthDelta :: !Int
+    , loLength           :: !Int
     }
   | LOChainSyncServerSendHeader
     { loBlock            :: !Hash
@@ -245,6 +257,10 @@ data LOBody
     }
   | LOBlockFetchServerSending
     { loBlock            :: !Hash
+    }
+  | LOBlockFetchClientRequested
+    { loBlock            :: !Hash
+    , loLength           :: !Int
     }
   | LOChainSyncClientSeenHeader
     { loBlock            :: !Hash
@@ -255,6 +271,7 @@ data LOBody
     { loBlock            :: !Hash
     }
   | LOAny !Object
+  | LODecodeError !String
   deriving (Generic, Show)
 
 instance ToJSON LOBody
@@ -262,15 +279,15 @@ instance ToJSON LOBody
 instance FromJSON LogObject where
   parseJSON = AE.withObject "LogObject" $ \v -> do
     body :: Object <- v .: "data"
-    tid  :: TId <- v .: "thread"
     -- XXX:  fix node causing the need for this workaround
     (,) unwrapped kind <- unwrap "credentials" "val" body
     LogObject
       <$> v .: "at"
       <*> pure kind
       <*> v .: "host"
+      <*> v .: "thread"
       <*> case Map.lookup kind interpreters of
-            Just interp -> interp unwrapped tid
+            Just interp -> interp unwrapped
             Nothing -> pure $ LOAny unwrapped
    where
      unwrap :: Text -> Text -> Object -> Parser (Object, Text)

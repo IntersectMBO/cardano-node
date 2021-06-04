@@ -295,7 +295,7 @@ timelineStep ci a@TimelineAccum{aSlotStats=cur:rSLs, ..} = \case
         , rsSubmitted     = Just sent
         }
       }
-  LogObject{loBody=LOTxsCollected tid coll, loAt} ->
+  LogObject{loBody=LOTxsCollected coll, loTid, loAt} ->
     a { aTxsCollectedAt =
         aTxsCollectedAt &
         (\case
@@ -303,18 +303,18 @@ timelineStep ci a@TimelineAccum{aSlotStats=cur:rSLs, ..} = \case
             --   error $ mconcat
             --   ["Duplicate LOTxsCollected for tid ", show tid, " at ", show loAt]
             Nothing -> Just loAt)
-        `Map.alter` tid
+        `Map.alter` loTid
       , aSlotStats      =
         cur
         { slTxsCollected = slTxsCollected cur + max 0 (fromIntegral coll)
         } : rSLs
       }
-  LogObject{loBody=LOTxsProcessed tid acc rej, loAt} ->
-    a { aTxsCollectedAt = tid `Map.delete` aTxsCollectedAt
+  LogObject{loBody=LOTxsProcessed acc rej, loTid, loAt} ->
+    a { aTxsCollectedAt = loTid `Map.delete` aTxsCollectedAt
       , aSlotStats      =
         cur
         { slTxsMemSpan =
-          case tid `Map.lookup` aTxsCollectedAt of
+          case loTid `Map.lookup` aTxsCollectedAt of
             Nothing ->
               -- error $ mconcat
               -- ["LOTxsProcessed missing LOTxsCollected for tid", show tid, " at ", show loAt]
@@ -342,20 +342,20 @@ timelineStep ci a@TimelineAccum{aSlotStats=cur:rSLs, ..} = \case
    onLeadershipCheck :: UTCTime -> SlotStats -> SlotStats
    onLeadershipCheck now sl@SlotStats{..} =
      sl { slCountChecks = slCountChecks + 1
-        , slSpanCheck = max 0 $ now `Time.diffUTCTime` slStart
+        , slSpanCheck = max 0 $ now `sinceSlot` slStart
         }
 
    onLeadershipCertainty :: UTCTime -> Bool -> SlotStats -> SlotStats
    onLeadershipCertainty now lead sl@SlotStats{..} =
      sl { slCountLeads = slCountLeads + if lead then 1 else 0
-        , slSpanLead  = max 0 $ now `Time.diffUTCTime` (slSpanCheck `Time.addUTCTime` slStart)
+        , slSpanLead  = max 0 $ now `Time.diffUTCTime` (slSpanCheck `Time.addUTCTime` unSlotStart slStart)
         }
 
    patchSlotCheckGap :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
    patchSlotCheckGap 0 _ a' = a'
    patchSlotCheckGap n slot a'@TimelineAccum{aSlotStats=cur':_} =
      patchSlotCheckGap (n - 1) (slot + 1) $
-     extendTimelineAccum ci slot (slotStart ci slot) 0 (slUtxoSize cur') (slDensity cur') a'
+     extendTimelineAccum ci slot (unSlotStart $ slotStart ci slot) 0 (slUtxoSize cur') (slDensity cur') a'
    patchSlotCheckGap _ _ _ =
      error "Internal invariant violated: patchSlotCheckGap called with empty TimelineAccum chain."
 timelineStep _ a = const a
@@ -370,13 +370,13 @@ extendTimelineAccum ci@CInfo{..} slot time checks utxo density a@TimelineAccum{.
         { slSlot        = slot
         , slEpoch       = epoch
         , slEpochSlot   = epochSlot
-        , slStart       = slotStart ci slot
+        , slStart       = slStart
         , slEarliest    = time
         , slOrderViol   = 0
           -- Updated as we see repeats:
         , slCountChecks = checks
         , slCountLeads  = 0
-        , slSpanCheck   = max 0 $ time `Time.diffUTCTime` slotStart ci slot
+        , slSpanCheck   = max 0 $ time `sinceSlot` slStart
         , slSpanLead    = 0
         , slTxsMemSpan  = Nothing
         , slTxsCollected= 0
@@ -396,6 +396,8 @@ extendTimelineAccum ci@CInfo{..} slot time checks utxo density a@TimelineAccum{.
       }
     where maybeDiscard :: (Word64 -> Maybe Word64) -> Word64 -> Maybe Word64
           maybeDiscard f = f
+
+          slStart = slotStart ci slot
 
 data DerivedSlot
   = DerivedSlot

@@ -20,6 +20,7 @@ import           Text.Printf
 import           Ouroboros.Network.Block (SlotNo(..))
 
 import           Data.Accum
+import           Cardano.Analysis.Profile
 import           Cardano.Unlog.Render
 import           Cardano.Unlog.Resources
 
@@ -31,7 +32,7 @@ data SlotStats
     { slSlot         :: !SlotNo
     , slEpoch        :: !Word64
     , slEpochSlot    :: !Word64
-    , slStart        :: !UTCTime
+    , slStart        :: !SlotStart
     , slCountChecks  :: !Word64
     , slCountLeads   :: !Word64
     , slChainDBSnap  :: !Word64
@@ -137,7 +138,7 @@ zeroSlotStats =
   { slSlot = 0
   , slEpoch = 0
   , slEpochSlot = 0
-  , slStart = zeroUTCTime
+  , slStart = SlotStart zeroUTCTime
   , slCountChecks = 0
   , slCountLeads = 0
   , slOrderViol = 0

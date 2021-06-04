@@ -74,19 +74,23 @@ runAnalysisCommand :: AnalysisCommand -> ExceptT AnalysisCmdError IO ()
 runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
     ChainInfo
-      <$> (firstExceptT (RunMetaParseError metaFile . T.pack) $ newExceptT $
-             AE.eitherDecode @Profile <$> LBS.readFile (unJsonRunMetafile metaFile))
-      <*> (firstExceptT (GenesisParseError genesisFile . T.pack) $ newExceptT $
-             AE.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
+      <$> firstExceptT (RunMetaParseError metaFile . T.pack)
+                       (newExceptT $
+                        AE.eitherDecode @Profile <$> LBS.readFile (unJsonRunMetafile metaFile))
+      <*> firstExceptT (GenesisParseError genesisFile . T.pack)
+                       (newExceptT $
+                        AE.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
   firstExceptT AnalysisCmdError $
     runMachineTimeline chainInfo logfiles oFiles
 runAnalysisCommand (BlockPropagationCmd genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
     ChainInfo
-      <$> (firstExceptT (RunMetaParseError metaFile . T.pack) $ newExceptT $
-             AE.eitherDecode @Profile <$> LBS.readFile (unJsonRunMetafile metaFile))
-      <*> (firstExceptT (GenesisParseError genesisFile . T.pack) $ newExceptT $
-             AE.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
+      <$> firstExceptT (RunMetaParseError metaFile . T.pack)
+                       (newExceptT $
+                         AE.eitherDecode @Profile <$> LBS.readFile (unJsonRunMetafile metaFile))
+      <*> firstExceptT (GenesisParseError genesisFile . T.pack)
+                       (newExceptT $
+                        AE.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
   firstExceptT AnalysisCmdError $
     runBlockPropagation chainInfo logfiles oFiles
 runAnalysisCommand SubstringKeysCmd =

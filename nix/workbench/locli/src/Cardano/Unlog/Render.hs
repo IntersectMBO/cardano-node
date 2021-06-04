@@ -26,7 +26,9 @@ class Show a => RenderDistributions a where
   rdFields :: [DField a]
 
 class Show a => RenderTimeline a where
-  rtFields :: [IField a]
+  rtFields     :: [IField a]
+  rtCommentary :: a -> [Text]
+  rtCommentary _ = []
 
 -- | Incapsulate all information necessary to render a column.
 data Field s a
@@ -68,7 +70,7 @@ renderTimeline xs =
  where
    fLine :: a -> Int -> [Text]
    fLine l i = (if i `mod` 33 == 0 then catMaybes [head1, head2] else [])
-               <> [ entry l ]
+               <> (entry l : rtCommentary l)
 
    entry :: a -> Text
    entry v = renderLineDist $

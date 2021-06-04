@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving#-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -114,12 +115,20 @@ instance FromJSON Profile where
       <*> ((meta .: "timestamp" :: Aeson.Parser Integer)
            <&> Time.posixSecondsToUTCTime . realToFrac)
 
-slotStart :: ChainInfo -> SlotNo -> UTCTime
+newtype SlotStart =
+  SlotStart { unSlotStart :: UTCTime }
+  deriving (Eq, Aeson.FromJSON, Generic, Show, Aeson.ToJSON)
+
+slotStart :: ChainInfo -> SlotNo -> SlotStart
 slotStart CInfo{..} =
-  flip Time.addUTCTime system_start
+  SlotStart
+  . flip Time.addUTCTime system_start
   . (* slot_duration gsis)
   . fromIntegral
   . unSlotNo
+
+sinceSlot :: UTCTime -> SlotStart -> NominalDiffTime
+sinceSlot t (SlotStart start) = Time.diffUTCTime t start
 
 -- pChainParams :: Parser ChainParams
 -- pChainParams =

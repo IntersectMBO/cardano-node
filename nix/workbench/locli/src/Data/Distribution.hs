@@ -27,7 +27,7 @@ module Data.Distribution
   , spans
   ) where
 
-import Prelude (String, (!!), id, head, last, show)
+import Prelude (String, (!!), head, last, show)
 import Cardano.Prelude hiding (head, show)
 
 import Control.Arrow
