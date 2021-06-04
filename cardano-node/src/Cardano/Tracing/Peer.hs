@@ -28,7 +28,6 @@ import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Node (remoteAddress)
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as Net
@@ -37,6 +36,7 @@ import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
                      PeerFetchStatus (..), readFetchClientState)
+import           Ouroboros.Network.NodeToClient (ConnectionId(..))
 
 import           Cardano.Tracing.Kernel
 
