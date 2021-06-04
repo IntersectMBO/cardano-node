@@ -15,6 +15,7 @@ import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
@@ -49,6 +50,7 @@ testPartialYamlConfig =
     , pncSocketPath = Last Nothing
     , pncDiffusionMode = Last Nothing
     , pncSnapshotInterval = mempty
+    , pncTestEnableDevelopmentNetworkProtocols = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
     , pncLoggingSwitch = Last $ Just True
@@ -70,6 +72,7 @@ testPartialYamlConfig =
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Example partial configuration theoretically created
@@ -86,6 +89,7 @@ testPartialCliConfig =
     , pncSocketPath   = mempty
     , pncDiffusionMode = mempty
     , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
+    , pncTestEnableDevelopmentNetworkProtocols = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
     , pncShutdownIPC = Last $ Just Nothing
@@ -102,6 +106,7 @@ testPartialCliConfig =
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Expected final NodeConfiguration
@@ -124,6 +129,7 @@ expectedConfig =
     , ncSocketPath = Nothing
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
+    , ncTestEnableDevelopmentNetworkProtocols = True
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
     , ncLoggingSwitch = True
@@ -135,6 +141,7 @@ expectedConfig =
     , ncTargetNumberOfKnownPeers = 5
     , ncTargetNumberOfEstablishedPeers = 2
     , ncTargetNumberOfActivePeers = 1
+    , ncEnableP2P = DisabledP2PMode
     }
 
 -- -----------------------------------------------------------------------------
