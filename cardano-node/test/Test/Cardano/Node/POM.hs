@@ -15,6 +15,7 @@ import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
@@ -71,6 +72,7 @@ testPartialYamlConfig =
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Example partial configuration theoretically created
@@ -104,6 +106,7 @@ testPartialCliConfig =
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Expected final NodeConfiguration
@@ -138,6 +141,7 @@ expectedConfig =
     , ncTargetNumberOfKnownPeers = 5
     , ncTargetNumberOfEstablishedPeers = 2
     , ncTargetNumberOfActivePeers = 1
+    , ncEnableP2P = DisabledP2PMode
     }
 
 -- -----------------------------------------------------------------------------
