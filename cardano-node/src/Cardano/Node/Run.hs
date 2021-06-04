@@ -346,7 +346,7 @@ handleSimpleNodeNonP2P scp runP trace nodeTracers nc onKernel = do
           , srnDatabasePath                = dbPath
           , srnDiffusionArguments          = diffusionArguments
           , srnDiffusionTracers            = diffusionTracers
-          , srnEnableInDevelopmentVersions = False -- ncTestEnableDevelopmentNetworkProtocols nc
+          , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
           , srnTraceChainDB                = chainDBTracer nodeTracers
           }
  where
@@ -647,8 +647,7 @@ createDiffusionArgumentsNonP2P
   publicIPv4SocketsOrAddrs
   publicIPv6SocketsOrAddrs
   mLocalSocketOrPath
-  diffusionMode
-  ipProducers dnsProducers =
+  =
   mkDiffusionArgumentsNonP2P
     -- This is not elegant, but it will change once `coot/connection-manager` is
     -- merged into `ouroboros-networ`.
@@ -663,9 +662,6 @@ createDiffusionArgumentsNonP2P
       , acceptedConnectionsSoftLimit = 384
       , acceptedConnectionsDelay     = 5
      })
-    diffusionMode
-    ipProducers
-    dnsProducers
   where
     eitherSocketOrSocketInfo :: SocketOrSocketInfo a b -> Either a b
     eitherSocketOrSocketInfo (ActualSocket a) = Left a
