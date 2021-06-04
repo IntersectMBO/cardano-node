@@ -38,7 +38,7 @@ import           Network.Socket (SockAddr (..))
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
-import           Cardano.Node.Configuration.Topology (UseLedger (..))
+import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
@@ -53,9 +53,9 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
-import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
-                     ConnectionManagerCounters (..), ConnectionManagerTrace (..))
+import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..)
+                     , ConnectionManagerTrace (..), ConnectionManagerCounters (..))
+import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace(..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -63,12 +63,22 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendR
                    WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor
-                    (PeerSelectionState (..), PeerSelectionTargets (..),
-                     DebugPeerSelection (..), TracePeerSelection (..),
-                     PeerSelectionCounters (..))
+                     ( PeerSelectionState (..)
+                     , PeerSelectionTargets (..)
+                     , DebugPeerSelection (..)
+                     , TracePeerSelection(..)
+                     , PeerSelectionCounters(..)
+                     )
 import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
+import           Ouroboros.Network.PeerSelection.RootPeersDNS
+                     ( TraceLocalRootPeers(..)
+                     , TracePublicRootPeers(..)
+                     )
+import           Ouroboros.Network.PeerSelection.PeerStateActions
+                     ( PeerSelectionActionsTrace(..)
+                     )
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
@@ -88,8 +98,6 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
 import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
                    TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
-import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers, TracePublicRootPeers)
 import           Ouroboros.Network.Server2 (ServerTrace)
 import qualified Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace)
@@ -105,8 +113,8 @@ import qualified Ouroboros.Network.Diffusion as ND
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance HasPrivacyAnnotation ND.InitializationTracer
-instance HasSeverityAnnotation ND.InitializationTracer where
+instance HasPrivacyAnnotation (ND.InitializationTracer ntnAddr ntcAddr)
+instance HasSeverityAnnotation (ND.InitializationTracer ntnAddr ntcAddr) where
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation NtC.HandshakeTr
@@ -478,6 +486,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrMuxCleanExit {}            -> Debug
       InboundGovernor.TrMuxErrored {}              -> Info
       InboundGovernor.TrInboundGovernorCounters {} -> Info
+      InboundGovernor.TrRemoteState {}             -> Debug
 
 --
 -- | instances of @Transformable@
@@ -1321,6 +1330,10 @@ instance Aeson.ToJSON AbstractState where
     toJSON (OutboundDupSt timeoutExpired) =
       Aeson.object [ "kind" .= String "OutboundDupSt"
                    , "timeoutState" .= String (pack . show $ timeoutExpired)
+                   ]
+    toJSON (OutboundIdleSt dataFlow) =
+      Aeson.object [ "kind" .= String "OutboundIdleSt"
+                   , "dataFlow" .= String (pack . show $ dataFlow)
                    ]
     toJSON DuplexSt =
       Aeson.object [ "kind" .= String "DuplexSt" ]

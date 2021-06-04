@@ -77,6 +77,11 @@ type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
 type TraceTxSubmission2Protocol = ("TraceTxSubmission2Protocol" :: Symbol)
+-- TODO: Non P2P
+type TraceIpSubscriptionTracer = ("TraceIpSubscriptionTracer" :: Symbol)
+type TraceDnsSubscriptionTracer = ("TraceDnsSubscriptionTracer" :: Symbol)
+type TraceErrorPolicy = ("TraceErrorPolicy" :: Symbol)
+type TraceLocalErrorPolicy = ("TraceLocalErrorPolicy" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -138,6 +143,11 @@ data TraceSelection
   , traceTxOutbound :: OnOff TraceTxOutbound
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
   , traceTxSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
+  -- TODO: Non P2P
+  , traceIpSubscription :: OnOff TraceIpSubscriptionTracer
+  , traceDnsSubscription :: OnOff TraceDnsSubscriptionTracer
+  , traceErrorPolicy :: OnOff TraceErrorPolicy
+  , traceLocalErrorPolicy :: OnOff TraceLocalErrorPolicy
   } deriving (Eq, Show)
 
 
@@ -234,7 +244,17 @@ traceConfigParser v =
       txSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
       txSubmissionProtocol = OnOff False
       txSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
-      txSubmission2Protocol = OnOff False in
+      txSubmission2Protocol = OnOff False
+      -- TODO: Non P2P
+      ipSubscription :: OnOff TraceIpSubscriptionTracer
+      ipSubscription = OnOff True
+      dnsSubscription :: OnOff TraceDnsSubscriptionTracer
+      dnsSubscription = OnOff True
+      errorPolicy :: OnOff TraceErrorPolicy
+      errorPolicy = OnOff True
+      localErrorPolicy :: OnOff TraceLocalErrorPolicy
+      localErrorPolicy = OnOff True
+      in
 
   TracingOn <$> (TraceSelection
     <$> v .:? "TracingVerbosity" .!= NormalVerbosity
@@ -286,4 +306,10 @@ traceConfigParser v =
     <*> v .:? getName txInbound .!= txInbound
     <*> v .:? getName txOutbound .!= txOutbound
     <*> v .:? getName txSubmissionProtocol .!= txSubmissionProtocol
-    <*> v .:? getName txSubmission2Protocol .!= txSubmission2Protocol)
+    <*> v .:? getName txSubmission2Protocol .!= txSubmission2Protocol
+    -- TODO: Non P2P
+    <*> v .:? getName ipSubscription .!= ipSubscription
+    <*> v .:? getName dnsSubscription .!= dnsSubscription
+    <*> v .:? getName errorPolicy .!= errorPolicy
+    <*> v .:? getName localErrorPolicy .!= localErrorPolicy
+    )
