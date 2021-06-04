@@ -30,6 +30,8 @@ import Shelley.Spec.Ledger.BaseTypes (maybeToStrictMaybe)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate, emptyPParamsUpdate, _maxBBSize)
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
+import Cardano.Ledger.Pivo.Update.Proposal as Proposal
+import Cardano.Ledger.Pivo.Update.Payload.SIP (SIP)
 import qualified Cardano.Ledger.Pivo.Update as Pivo.Update
 import qualified Cardano.Ledger.Pivo.Update.Payload.SIP as SIP
 import qualified Cardano.Ledger.Pivo.Update.Payload.Implementation as IMP
@@ -117,8 +119,8 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
           { Pivo.Update.sipVotes       = singleton
                                        $ SIP.mkVote @StandardPivo
                                            vk
-                                           (SIP._id (mkProposal votedProposalText votedProposalVPD))
-                                           SIP.For
+                                           (Proposal._id (mkProposal votedProposalText votedProposalVPD))
+                                           Proposal.For
           }
     runPivoCmd (IMP IMPCommit { impCommiterKeyFile, impCommitSIPText, impCommitVersion, impCommitNewBBSize }) = do
       vk <- readUpdateKeyFile impCommiterKeyFile
@@ -147,8 +149,8 @@ runGovernanceCmd (PivoCmd pivoCmd (OutputFile outFile)) = runPivoCmd pivoCmd
           { Pivo.Update.impVotes       =
               singleton $ IMP.mkVote @StandardPivo
                             vk
-                            (SIP._id $ mkImplementation impVotedSIPText impVotedVersion ppUpdate)
-                            SIP.For
+                            (Proposal._id $ mkImplementation impVotedSIPText impVotedVersion ppUpdate)
+                            Proposal.For
           }
     runPivoCmd (END ENDCmd { endorserKeyFile, endorsedVersion }) = do
       vk <- readUpdateKeyFile endorserKeyFile
@@ -175,8 +177,8 @@ mkProposal
   => Text
   -> SlotNo
   -- ^ Proposal's voting period duration
-  -> SIP.Proposal era
-mkProposal text duration = SIP.mkProposal text duration
+  -> SIP era
+mkProposal text duration = SIP.mkSIP text duration
 
 -- TODO: add support for specifying the salt through the command line.
 constSalt :: Int
@@ -189,7 +191,7 @@ mkImplementation
   => Text -> Word -> PParamsUpdate era -> IMP.Implementation era
 mkImplementation sipText impVersion ppUpdate =
   IMP.mkImplementation
-    (SIP.unProposalId $ SIP._id proposal) constVotingPeriodDuration protocol
+    (SIP.unSIPId $ Proposal._id proposal) constVotingPeriodDuration protocol
   where
     proposal = mkProposal sipText constVotingPeriodDuration
     protocol = IMP.mkProtocol impVersion IMP.protocolZero ppUpdate
