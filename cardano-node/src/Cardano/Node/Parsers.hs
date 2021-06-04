@@ -72,6 +72,7 @@ nodeRunParser = do
            , pncSocketPath   = socketFp
            , pncDiffusionMode = mempty
            , pncSnapshotInterval = snapshotInterval
+           , pncTestEnableDevelopmentNetworkProtocols = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
              , byronKeyFile
@@ -95,6 +96,7 @@ nodeRunParser = do
            , pncTargetNumberOfKnownPeers = mempty
            , pncTargetNumberOfEstablishedPeers = mempty
            , pncTargetNumberOfActivePeers = mempty
+           , pncEnableP2P = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath
