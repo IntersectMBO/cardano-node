@@ -39,6 +39,7 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytesOverride (
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Ouroboros.Consensus.Node ( NetworkP2PMode (..) )
 
 import qualified Data.Aeson.Types as Aeson
 
@@ -78,6 +79,8 @@ data NodeConfiguration
          --
          -- This flag should be set to 'True' when testing the new protocol
          -- versions.
+         --
+         -- TODO: Non P2P
        , ncTestEnableDevelopmentNetworkProtocols :: !Bool
 
          -- BlockFetch configuration
@@ -105,6 +108,9 @@ data NodeConfiguration
        , ncTargetNumberOfKnownPeers       :: Int
        , ncTargetNumberOfEstablishedPeers :: Int
        , ncTargetNumberOfActivePeers      :: Int
+
+         -- Enable experimental P2P mode
+       , ncEnableP2P :: NetworkP2PMode
        } deriving (Eq, Show)
 
 
@@ -131,6 +137,8 @@ data PartialNodeConfiguration
        , pncSocketPath       :: !(Last SocketPath)
        , pncDiffusionMode    :: !(Last DiffusionMode)
        , pncSnapshotInterval :: !(Last SnapshotInterval)
+
+         -- TODO: Non P2P
        , pncTestEnableDevelopmentNetworkProtocols :: !(Last Bool)
 
          -- BlockFetch configuration
@@ -154,6 +162,9 @@ data PartialNodeConfiguration
        , pncTargetNumberOfKnownPeers       :: !(Last Int)
        , pncTargetNumberOfEstablishedPeers :: !(Last Int)
        , pncTargetNumberOfActivePeers      :: !(Last Int)
+
+         -- Enable experimental P2P mode
+       , pncEnableP2P :: !(Last NetworkP2PMode)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -175,7 +186,7 @@ instance FromJSON PartialNodeConfiguration where
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
-      pncTestEnableDevelopmentNetworkProtocols
+      pncTestEnableDevelopmentNetworkProtocols'
         <- Last <$> v .:? "TestEnableDevelopmentNetworkProtocols"
 
       -- Blockfetch parameters
@@ -214,17 +225,26 @@ instance FromJSON PartialNodeConfiguration where
       pncTargetNumberOfEstablishedPeers <- Last <$> v .:? "TargetNumberOfEstablishedPeers"
       pncTargetNumberOfActivePeers      <- Last <$> v .:? "TargetNumberOfActivePeers"
 
+      -- Enable P2P switch
+      p2pSwitch <- v .:? "EnableP2P" .!= Just False
+      let pncEnableP2P =
+            case p2pSwitch of
+              Nothing    -> mempty
+              Just False -> Last $ Just DisabledP2PMode
+              Just True  -> Last $ Just EnabledP2PMode
+
       pure PartialNodeConfiguration {
-             pncProtocolConfig
-           , pncSocketPath
-           , pncDiffusionMode
-           , pncSnapshotInterval
-           , pncTestEnableDevelopmentNetworkProtocols
-           , pncMaxConcurrencyBulkSync
-           , pncMaxConcurrencyDeadline
-           , pncLoggingSwitch
-           , pncLogMetrics
-           , pncTraceConfig
+             pncProtocolConfig = pncProtocolConfig'
+           , pncSocketPath = pncSocketPath'
+           , pncDiffusionMode = pncDiffusionMode'
+           , pncSnapshotInterval = pncSnapshotInterval'
+           , pncTestEnableDevelopmentNetworkProtocols =
+              pncTestEnableDevelopmentNetworkProtocols'
+           , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
+           , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
+           , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
+           , pncLogMetrics = pncLogMetrics'
+           , pncTraceConfig = pncTraceConfig'
            , pncNodeIPv4Addr = mempty
            , pncNodeIPv6Addr = mempty
            , pncNodePortNumber = mempty
@@ -242,6 +262,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfKnownPeers
            , pncTargetNumberOfEstablishedPeers
            , pncTargetNumberOfActivePeers
+           , pncEnableP2P
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -382,6 +403,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfKnownPeers       = Last (Just 5)
     , pncTargetNumberOfEstablishedPeers = Last (Just 2)
     , pncTargetNumberOfActivePeers      = Last (Just 1)
+    , pncEnableP2P                      = Last (Just DisabledP2PMode)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -405,6 +427,11 @@ makeNodeConfiguration pnc = do
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
+
+  testEnableDevelopmentNetworkProtocols <-
+    lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
+      pncTestEnableDevelopmentNetworkProtocols pnc
+
   ncTargetNumberOfRootPeers <-
     lastToEither "Missing TargetNumberOfRootPeers"
     $ pncTargetNumberOfRootPeers pnc
@@ -423,6 +450,9 @@ makeNodeConfiguration pnc = do
   ncTimeWaitTimeout <-
     lastToEither "Missing TimeWaitTimeout"
     $ pncTimeWaitTimeout pnc
+  ncEnableP2P <-
+    lastToEither "Missing EnableP2P"
+    $ pncEnableP2P pnc
 
   testEnableDevelopmentNetworkProtocols <-
     lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
@@ -456,6 +486,7 @@ makeNodeConfiguration pnc = do
              , ncTargetNumberOfKnownPeers
              , ncTargetNumberOfEstablishedPeers
              , ncTargetNumberOfActivePeers
+             , ncEnableP2P
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
