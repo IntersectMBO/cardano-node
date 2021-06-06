@@ -139,7 +139,7 @@ Check out the latest version of cardano-node (choose the tag with the highest ve
 
 We explicitly use the GHC version that we installed earlier.  This avoids defaulting to a system version of GHC that might be older than the one you have installed.
 
-    cabal configure --with-compiler=ghc-8.10.4
+    cabal configure --with-compiler=ghc-8.10.2
 
 Note, that for a development build you can avoid installing the custom `libsodium` library and add the following lines to the local project file:
 
