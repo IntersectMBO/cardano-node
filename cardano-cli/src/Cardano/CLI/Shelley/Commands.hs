@@ -162,10 +162,12 @@ renderKeyCmd cmd =
 data TransactionCmd
   = TxBuildRaw
       AnyCardanoEra
-      [(TxIn, Maybe ScriptFile)]
+      [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Transaction inputs with optional spending scripts
+      [TxIn]
+      -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
       [TxOutAnyEra]
-      (Maybe (Value, [ScriptFile]))
+      (Maybe (Value, [ScriptWitnessFiles WitCtxMint]))
       -- ^ Multi-Asset value with script witness
       (Maybe SlotNo)
       -- ^ Transaction lower bound
@@ -173,13 +175,14 @@ data TransactionCmd
       -- ^ Transaction upper bound
       (Maybe Lovelace)
       -- ^ Tx fee
-      [(CertificateFile, Maybe ScriptFile)]
+      [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
       -- ^ Certificates with potential script witness
-      [(StakeAddress, Lovelace, Maybe ScriptFile)]
+      [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
       TxMetadataJsonSchema
       [ScriptFile]
       -- ^ Auxillary scripts
       [MetadataFile]
+      (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
       TxBodyFile
   | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile

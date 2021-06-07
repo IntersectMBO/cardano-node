@@ -16,6 +16,7 @@ module Cardano.Api (
     ShelleyEra,
     AllegraEra,
     MaryEra,
+    AlonzoEra,
     CardanoEra(..),
     IsCardanoEra(..),
     AnyCardanoEra(..),
@@ -105,6 +106,7 @@ module Cardano.Api (
     -- ** Multi-asset values
     Quantity(..),
     PolicyId(..),
+    scriptPolicyId,
     AssetName(..),
     AssetId(..),
     Value,
@@ -198,6 +200,7 @@ module Cardano.Api (
     TxMetadataSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
+    ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
@@ -215,6 +218,7 @@ module Cardano.Api (
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
+    scriptDataSupportedInEra,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -310,12 +314,14 @@ module Cardano.Api (
 
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
+    WitCtx(..),
     ScriptWitness(..),
     Witness(..),
     KeyWitnessInCtx(..),
     ScriptWitnessInCtx(..),
     ScriptDatum(..),
     ScriptRedeemer,
+    scriptWitnessScript,
 
     -- *** Languages supported in each era
     ScriptLanguageInEra(..),
@@ -332,9 +338,25 @@ module Cardano.Api (
 
     -- ** Plutus scripts
     PlutusScript,
+    examplePlutusScriptAlwaysSucceeds,
+    examplePlutusScriptAlwaysFails,
 
-    -- ** Script data
+    -- * Script data
     ScriptData(..),
+
+    -- ** Validation
+    ScriptDataRangeError (..),
+    validateScriptData,
+
+    -- ** Conversion to\/from JSON
+    ScriptDataJsonSchema (..),
+    scriptDataFromJson,
+    scriptDataToJson,
+    ScriptDataJsonError (..),
+    ScriptDataJsonSchemaError (..),
+
+    -- * Script execution units
+    ExecutionUnits(..),
 
     -- ** Script addresses
     -- | Making addresses from scripts.
@@ -545,6 +567,7 @@ import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query (SlotsInEpoch(..), SlotsToEpochEnd(..), slotToEpoch)
 import           Cardano.Api.Script
+import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON

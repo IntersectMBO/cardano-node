@@ -33,6 +33,7 @@ module Cardano.Api.Script (
 
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
+    WitCtx(..),
     ScriptWitness(..),
     Witness(..),
     KeyWitnessInCtx(..),
@@ -55,6 +56,8 @@ module Cardano.Api.Script (
 
     -- * The Plutus script language
     PlutusScript(..),
+    examplePlutusScriptAlwaysSucceeds,
+    examplePlutusScriptAlwaysFails,
 
     -- * Script data
     ScriptData(..),
@@ -92,7 +95,6 @@ module Cardano.Api.Script (
 import           Prelude
 
 import           Data.Word (Word64)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
@@ -104,6 +106,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
+import           Numeric.Natural (Natural)
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -124,23 +127,22 @@ import           Cardano.Slotting.Slot (SlotNo)
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era  as Ledger
-import qualified Cardano.Ledger.SafeHash as Ledger
 
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as Timelock
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Scripts as Shelley
 
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified Plutus.V1.Ledger.Examples as Plutus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
+import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
@@ -599,6 +601,17 @@ data WitCtxMint
 --
 data WitCtxStake
 
+
+-- | This GADT provides a value-level representation of all the witness
+-- contexts. This enables pattern matching on the context to allow them to be
+-- treated in a non-uniform way.
+--
+data WitCtx witctx where
+     WitCtxTxIn  :: WitCtx WitCtxTxIn
+     WitCtxMint  :: WitCtx WitCtxMint
+     WitCtxStake :: WitCtx WitCtxStake
+
+
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
 --
@@ -653,6 +666,8 @@ instance Eq (ScriptWitness witctx era) where
 
     (==)  _ _ = False
 
+type ScriptRedeemer = ScriptData
+
 data ScriptDatum witctx where
      ScriptDatumForTxIn    :: ScriptData -> ScriptDatum WitCtxTxIn
      NoScriptDatumForMint  ::               ScriptDatum WitCtxMint
@@ -702,77 +717,6 @@ deriving instance Show (KeyWitnessInCtx witctx)
 
 deriving instance Eq   (ScriptWitnessInCtx witctx)
 deriving instance Show (ScriptWitnessInCtx witctx)
-
-
--- ----------------------------------------------------------------------------
--- Script data
---
-
-type ScriptRedeemer = ScriptData
-
-data ScriptData = ScriptDataConstructor Integer [ScriptData]
-                | ScriptDataMap         [(ScriptData, ScriptData)]
-                | ScriptDataList        [ScriptData]
-                | ScriptDataNumber      Integer
-                | ScriptDataBytes       BS.ByteString
-  deriving (Eq, Ord, Show)
-  -- Note the order of constructors is the same as the Plutus definitions
-  -- so that the Ord instance is consistent with the Plutus one.
-  -- This is checked by prop_ord_distributive_ScriptData
-
-instance HasTypeProxy ScriptData where
-    data AsType ScriptData = AsScriptData
-    proxyToAsType _ = AsScriptData
-
-toAlonzoData :: ScriptData -> Alonzo.Data ledgerera
-toAlonzoData = Alonzo.Data . toPlutusData
-
-fromAlonzoData :: Alonzo.Data ledgerera -> ScriptData
-fromAlonzoData = fromPlutusData . Alonzo.getPlutusData
-
-
-toPlutusData :: ScriptData -> Plutus.Data
-toPlutusData (ScriptDataConstructor int xs)
-                                  = Plutus.Constr int
-                                      [ toPlutusData x | x <- xs ]
-toPlutusData (ScriptDataMap  kvs) = Plutus.Map
-                                      [ (toPlutusData k, toPlutusData v)
-                                      | (k,v) <- kvs ]
-toPlutusData (ScriptDataList  xs) = Plutus.List
-                                      [ toPlutusData x | x <- xs ]
-toPlutusData (ScriptDataNumber n) = Plutus.I n
-toPlutusData (ScriptDataBytes bs) = Plutus.B bs
-
-fromPlutusData :: Plutus.Data -> ScriptData
-fromPlutusData (Plutus.Constr int xs)
-                                = ScriptDataConstructor int
-                                    [ fromPlutusData x | x <- xs ]
-fromPlutusData (Plutus.Map kvs) = ScriptDataMap
-                                    [ (fromPlutusData k, fromPlutusData v)
-                                    | (k,v) <- kvs ]
-fromPlutusData (Plutus.List xs) = ScriptDataList
-                                    [ fromPlutusData x | x <- xs ]
-fromPlutusData (Plutus.I     n) = ScriptDataNumber n
-fromPlutusData (Plutus.B    bs) = ScriptDataBytes bs
-
-
-newtype instance Hash ScriptData =
-    ScriptDataHash (Alonzo.DataHash StandardCrypto)
-  deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash ScriptData)
-
-instance SerialiseAsRawBytes (Hash ScriptData) where
-    serialiseToRawBytes (ScriptDataHash dh) =
-      Crypto.hashToBytes (Ledger.extractHash dh)
-
-    deserialiseFromRawBytes (AsHash AsScriptData) bs =
-      ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
-
-instance ToJSON (Hash ScriptData) where
-    toJSON = toJSON . serialiseToRawBytesHexText
-
-instance Aeson.ToJSONKey (Hash ScriptData) where
-    toJSONKey = Aeson.toJSONKeyText serialiseToRawBytesHexText
 
 
 -- ----------------------------------------------------------------------------
@@ -995,6 +939,49 @@ instance (IsPlutusScriptLanguage lang, Typeable lang) =>
     textEnvelopeType _ =
       case plutusScriptVersion :: PlutusScriptVersion lang of
         PlutusScriptV1 -> "PlutusScriptV1"
+
+
+-- | An example Plutus script that always succeeds, irrespective of inputs.
+--
+-- For example, if one were to use this for a payment address then it would
+-- allow anyone to spend from it.
+--
+-- The exact script depends on the context in which it is to be used.
+--
+examplePlutusScriptAlwaysSucceeds :: WitCtx witctx
+                                  -> PlutusScript PlutusScriptV1
+examplePlutusScriptAlwaysSucceeds =
+    PlutusScriptSerialised
+  . Plutus.alwaysSucceedingNAryFunction
+  . scriptArityForWitCtx
+
+-- | An example Plutus script that always fails, irrespective of inputs.
+--
+-- For example, if one were to use this for a payment address then it would
+-- be impossible for anyone to ever spend from it.
+--
+-- The exact script depends on the context in which it is to be used.
+--
+examplePlutusScriptAlwaysFails :: WitCtx witctx
+                               -> PlutusScript PlutusScriptV1
+examplePlutusScriptAlwaysFails =
+    PlutusScriptSerialised
+  . Plutus.alwaysFailingNAryFunction
+  . scriptArityForWitCtx
+
+-- | The expected arity of the Plutus function, depending on the context in
+-- which it is used.
+--
+-- The script inputs consist of
+--
+-- * the optional datum (for txins)
+-- * the redeemer
+-- * the Plutus representation of the tx and environment
+--
+scriptArityForWitCtx :: WitCtx witctx -> Natural
+scriptArityForWitCtx WitCtxTxIn  = 3
+scriptArityForWitCtx WitCtxMint  = 2
+scriptArityForWitCtx WitCtxStake = 2
 
 
 -- ----------------------------------------------------------------------------

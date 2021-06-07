@@ -27,6 +27,12 @@ module Cardano.Api.TxMetadata (
     toShelleyMetadata,
     fromShelleyMetadata,
 
+    -- * Shared parsing utils
+    parseAll,
+    pUnsigned,
+    pSigned,
+    pBytes,
+
     -- * Data family instances
     AsType(..)
   ) where

@@ -1028,7 +1028,8 @@ data TxMintValue build era where
 
      TxMintValue :: MultiAssetSupportedInEra era
                  -> Value
-                 -> BuildTxWith build (Map PolicyId (Witness WitCtxMint era))
+                 -> BuildTxWith build
+                      (Map PolicyId (ScriptWitness WitCtxMint era))
                  -> TxMintValue build era
 
 deriving instance Eq   (TxMintValue build era)
@@ -1267,14 +1268,24 @@ serialiseShelleyBasedTxBody
   -> TxBodyScriptData era
   -> Maybe (Ledger.AuxiliaryData ledgerera)
   -> ByteString
-serialiseShelleyBasedTxBody _era txbody txscripts redeemers txmetadata =
+serialiseShelleyBasedTxBody _era txbody txscripts
+                            TxBodyNoScriptData txmetadata =
+    -- Backwards compat for pre-Alonzo era tx body files
+    CBOR.serializeEncoding' $
+        CBOR.encodeListLen 3
+     <> CBOR.toCBOR txbody
+     <> CBOR.toCBOR txscripts
+     <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
+
+serialiseShelleyBasedTxBody _era txbody txscripts
+                            (TxBodyScriptData _ datums redeemers)
+                            txmetadata =
     CBOR.serializeEncoding' $
         CBOR.encodeListLen 5
      <> CBOR.toCBOR txbody
      <> CBOR.toCBOR txscripts
-     <> (case redeemers of
-          TxBodyNoScriptData       -> CBOR.encodeNull <> CBOR.encodeNull
-          TxBodyScriptData _ ds rs -> CBOR.toCBOR ds <> CBOR.toCBOR rs)
+     <> CBOR.toCBOR datums
+     <> CBOR.toCBOR redeemers
      <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
 deserialiseShelleyBasedTxBody
@@ -1340,6 +1351,7 @@ instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
 
 data TxBodyError era =
        TxBodyEmptyTxIns
+     | TxBodyEmptyTxInsCollateral
      | TxBodyEmptyTxOuts
      | TxBodyOutputNegative Quantity (TxOut era)
      | TxBodyOutputOverflow Quantity (TxOut era)
@@ -1352,6 +1364,8 @@ data TxBodyError era =
 
 instance Error (TxBodyError era) where
     displayError TxBodyEmptyTxIns  = "Transaction body has no inputs"
+    displayError TxBodyEmptyTxInsCollateral =
+      "Transaction body has no collateral inputs, but uses Plutus scripts"
     displayError TxBodyEmptyTxOuts = "Transaction body has no outputs"
     displayError (TxBodyOutputNegative (Quantity q) txout) =
       "Negative quantity (" ++ show q ++ ") in transaction output: " ++
@@ -2075,10 +2089,14 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     case txMintValue of
       TxMintNone        -> return ()
       TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+    case txInsCollateral of
+      TxInsCollateralNone | not (Set.null languages)
+        -> Left TxBodyEmptyTxInsCollateral
+      _ -> return ()
     case txProtocolParams of
-      BuildTxWith Just{}  -> return ()
-      BuildTxWith Nothing -> guard (not (Set.null languages))
-                               ?! TxBodyMissingProtocolParams
+      BuildTxWith Nothing | not (Set.null languages)
+        -> Left TxBodyMissingProtocolParams
+      _ -> return ()
 
     return $
       ShelleyTxBody era
@@ -2257,7 +2275,7 @@ collectTxBodyScriptWitnesses TxBodyContent {
           -- The minting policies are indexed in policy id order in the value
         | let ValueNestedRep bundle = valueToNestedRep value
         , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
-        , ScriptWitness _ witness <- maybeToList (Map.lookup policyid witnesses)
+        , witness <- maybeToList (Map.lookup policyid witnesses)
         ]
 
 
