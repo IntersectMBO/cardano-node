@@ -1268,14 +1268,24 @@ serialiseShelleyBasedTxBody
   -> TxBodyScriptData era
   -> Maybe (Ledger.AuxiliaryData ledgerera)
   -> ByteString
-serialiseShelleyBasedTxBody _era txbody txscripts redeemers txmetadata =
+serialiseShelleyBasedTxBody _era txbody txscripts
+                            TxBodyNoScriptData txmetadata =
+    -- Backwards compat for pre-Alonzo era tx body files
+    CBOR.serializeEncoding' $
+        CBOR.encodeListLen 3
+     <> CBOR.toCBOR txbody
+     <> CBOR.toCBOR txscripts
+     <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
+
+serialiseShelleyBasedTxBody _era txbody txscripts
+                            (TxBodyScriptData _ datums redeemers)
+                            txmetadata =
     CBOR.serializeEncoding' $
         CBOR.encodeListLen 5
      <> CBOR.toCBOR txbody
      <> CBOR.toCBOR txscripts
-     <> (case redeemers of
-          TxBodyNoScriptData       -> CBOR.encodeNull <> CBOR.encodeNull
-          TxBodyScriptData _ ds rs -> CBOR.toCBOR ds <> CBOR.toCBOR rs)
+     <> CBOR.toCBOR datums
+     <> CBOR.toCBOR redeemers
      <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
 deserialiseShelleyBasedTxBody
