@@ -72,11 +72,13 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseRaw
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Api.SerialiseUsing
+
 
 -- ----------------------------------------------------------------------------
 -- Lovelace

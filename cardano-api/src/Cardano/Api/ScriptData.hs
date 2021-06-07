@@ -69,6 +69,7 @@ import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata (parseAll, pSigned, pBytes)
 
 

@@ -59,6 +59,7 @@ import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 
 
 -- | Byron-era payment keys. Used for Byron addresses and witnessing
