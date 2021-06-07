@@ -3,7 +3,8 @@
 -- | Raw binary serialisation
 --
 module Cardano.Api.SerialiseUsing
-  ( UsingRawBytesHex(..)
+  ( UsingRawBytes(..)
+  , UsingRawBytesHex(..)
   ) where
 
 import           Prelude
@@ -18,9 +19,31 @@ import           Data.Aeson (ToJSONKey(..), FromJSONKey(..))
 import qualified Data.Aeson.Types as Aeson
 
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 
+
+
+-- | For use with @deriving via@, to provide 'ToCBOR' and 'FromCBOR' instances,
+-- based on the 'SerialiseAsRawBytes' instance.
+--
+-- > deriving (ToCBOR, FromCBOR) via (UsingRawBytes Blah)
+--
+newtype UsingRawBytes a = UsingRawBytes a
+
+instance (SerialiseAsRawBytes a, Typeable a) => ToCBOR (UsingRawBytes a) where
+    toCBOR (UsingRawBytes x) = toCBOR (serialiseToRawBytes x)
+
+instance (SerialiseAsRawBytes a, Typeable a) => FromCBOR (UsingRawBytes a) where
+    fromCBOR = do
+      bs <- fromCBOR
+      case deserialiseFromRawBytes ttoken bs of
+        Just x  -> return (UsingRawBytes x)
+        Nothing -> fail ("cannot deserialise as a " ++ tname)
+      where
+        ttoken = proxyToAsType (Proxy :: Proxy a)
+        tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
 
 -- | For use with @deriving via@, to provide instances for any\/all of 'Show',
