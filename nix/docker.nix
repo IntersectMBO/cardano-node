@@ -82,7 +82,7 @@ let
   # To choose a network, use `-e NETWORK testnet`
     clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: ''
       elif [[ "$NETWORK" == "${env}" ]]; then
-        exec ${scripts.${script}}
+        exec ${scripts.${script}}/bin/${exe}-${env}
     '') scripts);
   nodeDockerImage = let
     entry-point = writeScriptBin "entry-point" ''
