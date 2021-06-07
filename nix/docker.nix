@@ -80,9 +80,11 @@ let
   };
   # Image with all iohk-nix network configs or utilizes a configuration volume mount
   # To choose a network, use `-e NETWORK testnet`
-    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: ''
+    clusterStatements = lib.concatStringsSep "\n" (lib.mapAttrsToList (env: scripts: let
+      scriptBin = scripts.${script};
+    in ''
       elif [[ "$NETWORK" == "${env}" ]]; then
-        exec ${scripts.${script}}
+        exec ${scriptBin}/bin/${scriptBin.name} $@
     '') scripts);
   nodeDockerImage = let
     entry-point = writeScriptBin "entry-point" ''
