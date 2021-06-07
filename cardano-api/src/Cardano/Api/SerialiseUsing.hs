@@ -11,9 +11,14 @@ import           Prelude
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import           Data.String (IsString (..))
+import qualified Data.Text.Encoding as Text
 import           Data.Typeable
 
+import           Data.Aeson (ToJSONKey(..), FromJSONKey(..))
+import qualified Data.Aeson.Types as Aeson
+
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 
 
@@ -41,3 +46,22 @@ instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
       where
         ttoken :: AsType a
         ttoken = proxyToAsType Proxy
+
+instance SerialiseAsRawBytes a => ToJSON (UsingRawBytesHex a) where
+    toJSON (UsingRawBytesHex x) = toJSON (serialiseToRawBytesHexText x)
+
+instance (SerialiseAsRawBytes a, Typeable a) => FromJSON (UsingRawBytesHex a) where
+    parseJSON =
+      Aeson.withText tname $ \str ->
+        case Base16.decode (Text.encodeUtf8 str) of
+          Right raw -> case deserialiseFromRawBytes ttoken raw of
+            Just x  -> return (UsingRawBytesHex x)
+            Nothing -> fail ("cannot deserialise " ++ show str)
+          Left msg  -> fail ("invalid hex " ++ show str ++ ", " ++ msg)
+      where
+        ttoken = proxyToAsType (Proxy :: Proxy a)
+        tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
+
+instance SerialiseAsRawBytes a => ToJSONKey (UsingRawBytesHex a)
+instance (SerialiseAsRawBytes a, Typeable a) => FromJSONKey (UsingRawBytesHex a)
+
