@@ -199,7 +199,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
   case mOutFile of
     Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
     Nothing                 -> liftIO $ LBS.putStrLn        output
-    
+
   where
     tuple3Fst :: (a, b, c) -> a
     tuple3Fst (a, _, _) = a
@@ -623,12 +623,12 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , "        " <> printableValue value
              ]
     ShelleyBasedEraAlonzo ->
-      let (TxIn (TxId txhash) (TxIx index), TxOut _ value _) = txInOutTuple
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value mDatum) = txInOutTuple
       in Text.putStrLn $
            mconcat
              [ Text.decodeLatin1 (hashToBytesAsHex txhash)
              , textShowN 6 index
-             , "        " <> printableValue value
+             , "        " <> printableValue value <> " + " <> Text.pack (show mDatum)
              ]
  where
   textShowN :: Show a => Int -> a -> Text

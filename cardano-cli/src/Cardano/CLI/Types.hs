@@ -19,10 +19,12 @@ module Cardano.CLI.Types
   , ScriptDatumOrFile (..)
   , TransferDirection(..)
   , TxOutAnyEra (..)
+  , TxOutAnyEra' (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
   , Stakes (..)
   , Params (..)
+  , toTxOutanyEra
   ) where
 
 import           Cardano.Prelude
@@ -193,6 +195,21 @@ data TransferDirection = TransferToReserves | TransferToTreasury
 -- values passed on the command line. It can be converted into the
 -- era-dependent 'TxOutValue' type.
 --
-data TxOutAnyEra = TxOutAnyEra AddressAny Value
-                   -- TODO alonzo: ^^ add support for tx out data
+
+
+toTxOutanyEra :: TxOutAnyEra' -> Maybe Text ->  TxOutAnyEra
+toTxOutanyEra (TxOutAnyEra' addr v) mHash = TxOutAnyEra addr v mHash
+
+data TxOutAnyEra = TxOutAnyEra
+                     AddressAny
+                     Value
+                     -- Datum hash
+                     (Maybe Text)
+  deriving (Eq, Show)
+
+
+data TxOutAnyEra' = TxOutAnyEra'
+                     AddressAny
+                     Value
+
   deriving (Eq, Show)
