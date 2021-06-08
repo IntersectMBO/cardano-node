@@ -3,6 +3,7 @@
 module Test.Cardano.Api.Metadata
   ( tests
   , genTxMetadata
+  , genTxMetadataValue
   ) where
 
 import           Cardano.Prelude
