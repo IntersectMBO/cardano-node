@@ -104,6 +104,7 @@ let
     contents = [ entry-point ];
     config = {
       EntryPoint = [ "${entry-point}/bin/entry-point" ];
+      StopSignal = "SIGINT";
     };
   };
 
