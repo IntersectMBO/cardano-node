@@ -165,12 +165,16 @@ pAddressCmd =
 pPaymentVerifier :: Parser PaymentVerifier
 pPaymentVerifier =
         PaymentVerifierKey <$> pPaymentVerificationKeyTextOrFile
-    <|> PaymentVerifierScriptFile <$> pScriptFor "payment-script-file" "Filepath of the payment script."
+    <|> PaymentVerifierScriptFile <$>
+          pScriptFor "payment-script-file" Nothing
+                     "Filepath of the payment script."
 
 pStakeVerifier :: Parser StakeVerifier
 pStakeVerifier =
         StakeVerifierKey <$> pStakeVerificationKeyOrFile
-    <|> StakeVerifierScriptFile <$> pScriptFor "stake-script-file" "Filepath of the staking script."
+    <|> StakeVerifierScriptFile <$>
+          pScriptFor "stake-script-file" Nothing
+                     "Filepath of the staking script."
 
 pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
@@ -203,24 +207,34 @@ pPaymentVerificationKeyFile =
     )
 
 pScript :: Parser ScriptFile
-pScript = pScriptFor "script-file" "Filepath of the script."
+pScript = pScriptFor "script-file" Nothing "Filepath of the script."
 
-pScriptFor :: String -> String -> Parser ScriptFile
-pScriptFor name help = ScriptFile <$> Opt.strOption
-  (  Opt.long name
-  <> Opt.metavar "FILE"
-  <> Opt.help help
-  <> Opt.completer (Opt.bashCompleter "file")
-  )
+pScriptFor :: String -> Maybe String -> String -> Parser ScriptFile
+pScriptFor name Nothing help =
+  ScriptFile <$> Opt.strOption
+    (  Opt.long name
+    <> Opt.metavar "FILE"
+    <> Opt.help help
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
+
+pScriptFor name (Just deprecated) help =
+      pScriptFor name Nothing help
+  <|> ScriptFile <$> Opt.strOption
+        (  Opt.long deprecated
+        <> Opt.internal
+        )
 
 pScriptWitnessFiles :: forall witctx.
                        WitCtx witctx
                     -> String
+                    -> Maybe String
                     -> String
                     -> Parser (ScriptWitnessFiles witctx)
-pScriptWitnessFiles witctx scriptFlagPrefix help =
+pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
     toScriptWitnessFiles
       <$> pScriptFor (scriptFlagPrefix ++ "-script-file")
+                     ((++ "-script-file") <$> scriptFlagPrefixDeprecated)
                      ("The file containing the script to witness " ++ help)
       <*> optional ((,,) <$> pScriptDatumOrFile
                          <*> pScriptRedeemerOrFile
@@ -586,6 +600,7 @@ pTransaction =
                                  <*> pTxMetadataJsonSchema
                                  <*> many (pScriptFor
                                              "auxiliary-script-file"
+                                             Nothing
                                              "Filepath of auxiliary script(s)")
                                  <*> many pMetadataFile
                                  <*> optional pProtocolParamsSourceSpec
@@ -1167,7 +1182,7 @@ pCertificateFile =
           )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
-                      "certificate"
+                      "certificate" Nothing
                       "the use of the certificate.")
  where
    helpText = "Filepath of the certificate. This encompasses all \
@@ -1241,7 +1256,7 @@ pWithdrawal =
             )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
-                      "withdrawal"
+                      "withdrawal" Nothing
                       "the withdrawal of rewards.")
  where
    helpText = "The reward withdrawal as StakeAddress+Lovelace where \
@@ -1696,7 +1711,7 @@ pTxIn =
                )
          <*> optional (pScriptWitnessFiles
                          WitCtxTxIn
-                         "txin"
+                         "tx-in" (Just "txin")
                          "the spending of the transaction input.")
 
 pTxInCollateral :: Parser TxIn
@@ -1759,7 +1774,7 @@ pMintMultiAsset =
               )
       <*> some (pScriptWitnessFiles
                   WitCtxMint
-                  "minting"
+                  "mint" (Just "minting")
                   "the minting of assets for a particular policy Id.")
 
  where
