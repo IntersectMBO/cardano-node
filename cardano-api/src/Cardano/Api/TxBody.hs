@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -112,7 +112,7 @@ module Cardano.Api.TxBody (
 import           Prelude
 
 import           Control.Monad (guard)
-import           Data.Aeson (ToJSON (..), object, (.=))
+import           Data.Aeson (object, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.Bifunctor (first)
@@ -190,8 +190,10 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
@@ -206,12 +208,11 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 --
 
 newtype TxId = TxId (Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody)
-  deriving stock (Eq, Ord, Show)
-  deriving newtype (IsString)
-               -- We use the Shelley representation and convert the Byron one
-
-instance ToJSON TxId where
-  toJSON = Aeson.String . serialiseToRawBytesHexText
+  -- We use the Shelley representation and convert to/from the Byron one
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString)         via UsingRawBytesHex TxId
+  deriving (ToJSON, FromJSON)       via UsingRawBytesHex TxId
+  deriving (ToJSONKey, FromJSONKey) via UsingRawBytesHex TxId
 
 instance HasTypeProxy TxId where
     data AsType TxId = AsTxId
@@ -285,7 +286,7 @@ renderTxIn (TxIn txId (TxIx ix)) =
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
   deriving newtype (Enum)
-  deriving newtype ToJSON
+  deriving newtype (ToJSON, FromJSON)
 
 fromByronTxIn :: Byron.TxIn -> TxIn
 fromByronTxIn (Byron.TxInUtxo txId index) =
@@ -317,6 +318,9 @@ data TxOut era = TxOut (AddressInEra era)
                        (TxOutDatumHash era)
   deriving Generic
 
+deriving instance Eq   (TxOut era)
+deriving instance Show (TxOut era)
+
 instance IsCardanoEra era => ToJSON (TxOut era) where
   toJSON (TxOut addr val TxOutDatumHashNone) =
     object [ "address" .= serialiseAddressForTxOut addr
@@ -333,10 +337,6 @@ serialiseAddressForTxOut (AddressInEra addrType addr) =
   case addrType of
     ByronAddressInAnyEra  -> serialiseToRawBytesHexText addr
     ShelleyAddressInEra _ -> serialiseToBech32 addr
-
-
-deriving instance Eq   (TxOut era)
-deriving instance Show (TxOut era)
 
 
 fromByronTxOut :: Byron.TxOut -> TxOut ByronEra

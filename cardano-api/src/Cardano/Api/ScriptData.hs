@@ -51,7 +51,6 @@ import qualified Data.Vector as Vector
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Text as Aeson.Text
-import qualified Data.Aeson.Types as Aeson
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 
 import           Control.Applicative (Alternative (..))
@@ -99,7 +98,9 @@ instance HasTypeProxy ScriptData where
 newtype instance Hash ScriptData =
     ScriptDataHash (Alonzo.DataHash StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash ScriptData)
+  deriving (Show, IsString)         via UsingRawBytesHex (Hash ScriptData)
+  deriving (ToJSON, FromJSON)       via UsingRawBytesHex (Hash ScriptData)
+  deriving (ToJSONKey, FromJSONKey) via UsingRawBytesHex (Hash ScriptData)
 
 instance SerialiseAsRawBytes (Hash ScriptData) where
     serialiseToRawBytes (ScriptDataHash dh) =
@@ -107,12 +108,6 @@ instance SerialiseAsRawBytes (Hash ScriptData) where
 
     deserialiseFromRawBytes (AsHash AsScriptData) bs =
       ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
-
-instance ToJSON (Hash ScriptData) where
-    toJSON = toJSON . serialiseToRawBytesHexText
-
-instance Aeson.ToJSONKey (Hash ScriptData) where
-    toJSONKey = Aeson.toJSONKeyText serialiseToRawBytesHexText
 
 
 -- ----------------------------------------------------------------------------

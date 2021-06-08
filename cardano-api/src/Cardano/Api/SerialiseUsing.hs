@@ -17,7 +17,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable
 
-import           Data.Aeson (ToJSONKey(..), FromJSONKey(..))
 import qualified Data.Aeson.Types as Aeson
 
 import           Cardano.Api.Error

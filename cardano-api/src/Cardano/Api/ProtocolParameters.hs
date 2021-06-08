@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -56,17 +56,16 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.String (IsString)
 import           Data.Scientific (Scientific)
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           GHC.Generics
 import           Numeric.Natural
 
 import           Control.Monad
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
-                   withText, (.!=), (.:), (.:?), (.=))
-import qualified Data.Aeson as Aeson
+                   (.!=), (.:), (.:?), (.=))
 import           Data.Bifunctor (bimap)
 
 import qualified Cardano.Binary as CBOR
@@ -103,7 +102,9 @@ import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
@@ -580,17 +581,22 @@ instance Monoid ProtocolParametersUpdate where
 --
 
 newtype PraosNonce = PraosNonce (Ledger.Hash StandardCrypto ByteString)
-  deriving (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Generic)
+  deriving (Show, IsString)   via UsingRawBytesHex PraosNonce
+  deriving (ToJSON, FromJSON) via UsingRawBytesHex PraosNonce
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes    PraosNonce
 
-instance ToJSON PraosNonce where
-  toJSON (PraosNonce h) =
-    Aeson.String $ Crypto.hashToTextAsHex h
+instance HasTypeProxy PraosNonce where
+    data AsType PraosNonce = AsPraosNonce
+    proxyToAsType _ = AsPraosNonce
 
-instance FromJSON PraosNonce where
-  parseJSON = withText "PraosNonce" $ \h ->
-                case Crypto.hashFromTextAsHex h of
-                  Nothing -> fail $ "Failed to decode PraosNonce: " <> Text.unpack h
-                  Just nonce -> return $ PraosNonce nonce
+instance SerialiseAsRawBytes PraosNonce where
+    serialiseToRawBytes (PraosNonce h) =
+      Crypto.hashToBytes h
+
+    deserialiseFromRawBytes AsPraosNonce bs =
+      PraosNonce <$> Crypto.hashFromBytes bs
+
 
 makePraosNonce :: ByteString -> PraosNonce
 makePraosNonce = PraosNonce . Crypto.hashWith id

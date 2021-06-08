@@ -137,7 +137,7 @@ quantityToLovelace (Quantity x) = Lovelace x
 
 newtype PolicyId = PolicyId ScriptHash
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex PolicyId
+  deriving (Show, IsString, ToJSON, FromJSON) via UsingRawBytesHex PolicyId
 
 instance HasTypeProxy PolicyId where
     data AsType PolicyId = AsPolicyId
