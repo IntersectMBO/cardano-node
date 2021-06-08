@@ -65,3 +65,7 @@
 - ignore:
     name: Use camelCase
     within: Test.Cardano.Api.KeysByron
+- ignore:
+    name: Use camelCase
+    within: Test.Cardano.Api.Typed.JSON
+

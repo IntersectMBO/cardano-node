@@ -7,6 +7,7 @@ module Test.Cardano.Api.Typed.Gen
   ( genAddressByron
   , genAddressShelley
   , genMaybePraosNonce
+  , genPraosNonce
   , genProtocolParameters
   , genValueNestedRep
   , genValueNestedBundle
@@ -693,9 +694,11 @@ genRational = Gen.realFrac_ (Range.linearFrac 0 1)
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
 
+genPraosNonce :: Gen PraosNonce
+genPraosNonce = makePraosNonce <$> Gen.bytes (Range.linear 0 32)
+
 genMaybePraosNonce :: Gen (Maybe PraosNonce)
-genMaybePraosNonce =
-  Gen.maybe (makePraosNonce <$> Gen.bytes (Range.linear 0 32))
+genMaybePraosNonce = Gen.maybe genPraosNonce
 
 genProtocolParameters :: Gen ProtocolParameters
 genProtocolParameters =
