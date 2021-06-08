@@ -61,3 +61,7 @@
 
 # To generate a suitable file for HLint do:
 # $ hlint --default > .hlint.yaml
+
+- ignore:
+    name: Use camelCase
+    within: Test.Cardano.Api.KeysByron
