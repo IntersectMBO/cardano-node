@@ -270,6 +270,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix help =
         Left err -> fail (displayError err)
         Right sd -> return sd
 
+    pExecutionUnits :: Parser ExecutionUnits
     pExecutionUnits =
       uncurry ExecutionUnits <$>
       Opt.option Opt.auto
@@ -890,7 +891,7 @@ pGovernanceCmd =
                         <$> pOutputFile
                         <*> pEpochNoUpdateProp
                         <*> some pGenesisVerificationKeyFile
-                        <*> pShelleyProtocolParametersUpdate
+                        <*> pProtocolParametersUpdate
 
 pTransferAmt :: Parser Lovelace
 pTransferAmt =
@@ -2313,8 +2314,8 @@ pStakePoolRetirementCert =
     <*> pOutputFile
 
 
-pShelleyProtocolParametersUpdate :: Parser ProtocolParametersUpdate
-pShelleyProtocolParametersUpdate =
+pProtocolParametersUpdate :: Parser ProtocolParametersUpdate
+pProtocolParametersUpdate =
   ProtocolParametersUpdate
     <$> optional pProtocolVersion
     <*> optional pDecentralParam
@@ -2333,15 +2334,14 @@ pShelleyProtocolParametersUpdate =
     <*> optional pPoolInfluence
     <*> optional pMonetaryExpansion
     <*> optional pTreasuryExpansion
-    -- TODO alonzo: Add proper support for these params
-    <*> pure Nothing
-    <*> pure mempty
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
+    <*> optional pUTxOCostPerWord
+    <*> pure mempty -- TODO alonzo: separate support for cost model files
+    <*> optional pExecutionUnitPrices
+    <*> optional pMaxTxExecutionUnits
+    <*> optional pMaxBlockExecutionUnits
+    <*> optional pMaxValueSize
+    <*> optional pCollateralPercent
+    <*> optional pMaxCollateralInputs
 
 pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =
@@ -2364,7 +2364,7 @@ pMinUTxOValue =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "min-utxo-value"
       <> Opt.metavar "NATURAL"
-      <> Opt.help "The minimum allowed UTxO value."
+      <> Opt.help "The minimum allowed UTxO value (Shelley to Mary eras)."
       )
 
 pMinPoolCost :: Parser Lovelace
@@ -2484,6 +2484,76 @@ pExtraEntropy =
                       . B16.decode
                     =<< Atto.takeWhile1 Char.isHexDigit
 
+pUTxOCostPerWord :: Parser Lovelace
+pUTxOCostPerWord =
+    Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "min-utxo-value"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "Cost in lovelace per unit of UTxO storage (from Alonzo era)."
+      )
+
+pExecutionUnitPrices :: Parser ExecutionUnitPrices
+pExecutionUnitPrices = ExecutionUnitPrices
+  <$> Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "price-execution-steps"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "Step price of execution units for script languages that use \
+                  \them (from Alonzo era)."
+      )
+  <*> Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "price-execution-memory"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "Memory price of execution units for script languages that \
+                  \use them (from Alonzo era)."
+      )
+
+pMaxTxExecutionUnits :: Parser ExecutionUnits
+pMaxTxExecutionUnits =
+  uncurry ExecutionUnits <$>
+  Opt.option Opt.auto
+    (  Opt.long "max-tx-execution-units"
+    <> Opt.metavar "(INT, INT)"
+    <> Opt.help "Max total script execution resources units allowed per tx \
+                \(from Alonzo era)."
+    )
+
+pMaxBlockExecutionUnits :: Parser ExecutionUnits
+pMaxBlockExecutionUnits =
+  uncurry ExecutionUnits <$>
+  Opt.option Opt.auto
+    (  Opt.long "max-block-execution-units"
+    <> Opt.metavar "(INT, INT)"
+    <> Opt.help "Max total script execution resources units allowed per block \
+                \(from Alonzo era)."
+    )
+
+pMaxValueSize :: Parser Natural
+pMaxValueSize =
+  Opt.option Opt.auto
+    (  Opt.long "max-value-size"
+    <> Opt.metavar "INT"
+    <> Opt.help "Max size of a multi-asset value in a tx output (from Alonzo \
+                \era)."
+    )
+
+pCollateralPercent :: Parser Natural
+pCollateralPercent =
+  Opt.option Opt.auto
+    (  Opt.long "collateral-percent"
+    <> Opt.metavar "INT"
+    <> Opt.help "The percentage of the script contribution to the txfee that \
+                \must be provided as collateral inputs when including Plutus \
+                \scripts (from Alonzo era)."
+    )
+
+pMaxCollateralInputs :: Parser Natural
+pMaxCollateralInputs =
+  Opt.option Opt.auto
+    (  Opt.long "max-collateral-inputs"
+    <> Opt.metavar "INT"
+    <> Opt.help "The maximum number of collateral inputs allowed in a \
+                \transaction (from Alonzo era)."
+    )
 
 pConsensusModeParams :: Parser AnyConsensusModeParams
 pConsensusModeParams = asum
