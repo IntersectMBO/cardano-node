@@ -139,6 +139,8 @@ newtype instance Hash PaymentKey =
     PaymentKeyHash (Shelley.KeyHash Shelley.Payment StandardCrypto)
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash PaymentKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash PaymentKey) where
     serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
@@ -278,7 +280,9 @@ instance SerialiseAsBech32 (SigningKey PaymentExtendedKey) where
 newtype instance Hash PaymentExtendedKey =
     PaymentExtendedKeyHash (Shelley.KeyHash Shelley.Payment StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentExtendedKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash PaymentExtendedKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
     serialiseToRawBytes (PaymentExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -378,7 +382,9 @@ instance SerialiseAsBech32 (SigningKey StakeKey) where
 newtype instance Hash StakeKey =
     StakeKeyHash (Shelley.KeyHash Shelley.Staking StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash StakeKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakeKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash StakeKey) where
     serialiseToRawBytes (StakeKeyHash (Shelley.KeyHash vkh)) =
@@ -518,7 +524,9 @@ instance SerialiseAsBech32 (SigningKey StakeExtendedKey) where
 newtype instance Hash StakeExtendedKey =
     StakeExtendedKeyHash (Shelley.KeyHash Shelley.Staking StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash StakeExtendedKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakeExtendedKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash StakeExtendedKey) where
     serialiseToRawBytes (StakeExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -610,7 +618,9 @@ instance SerialiseAsRawBytes (SigningKey GenesisKey) where
 newtype instance Hash GenesisKey =
     GenesisKeyHash (Shelley.KeyHash Shelley.Genesis StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisKey) where
     serialiseToRawBytes (GenesisKeyHash (Shelley.KeyHash vkh)) =
@@ -739,7 +749,9 @@ instance SerialiseAsRawBytes (SigningKey GenesisExtendedKey) where
 newtype instance Hash GenesisExtendedKey =
     GenesisExtendedKeyHash (Shelley.KeyHash Shelley.Staking StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisExtendedKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisExtendedKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisExtendedKey) where
     serialiseToRawBytes (GenesisExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -832,7 +844,9 @@ instance SerialiseAsRawBytes (SigningKey GenesisDelegateKey) where
 newtype instance Hash GenesisDelegateKey =
     GenesisDelegateKeyHash (Shelley.KeyHash Shelley.GenesisDelegate StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisDelegateKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisDelegateKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
     serialiseToRawBytes (GenesisDelegateKeyHash (Shelley.KeyHash vkh)) =
@@ -969,7 +983,9 @@ instance SerialiseAsRawBytes (SigningKey GenesisDelegateExtendedKey) where
 newtype instance Hash GenesisDelegateExtendedKey =
     GenesisDelegateExtendedKeyHash (Shelley.KeyHash Shelley.Staking StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisDelegateExtendedKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisDelegateExtendedKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisDelegateExtendedKey) where
     serialiseToRawBytes (GenesisDelegateExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -1062,7 +1078,9 @@ instance SerialiseAsRawBytes (SigningKey GenesisUTxOKey) where
 newtype instance Hash GenesisUTxOKey =
     GenesisUTxOKeyHash (Shelley.KeyHash Shelley.Payment StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisUTxOKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisUTxOKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
     serialiseToRawBytes (GenesisUTxOKeyHash (Shelley.KeyHash vkh)) =
@@ -1166,7 +1184,9 @@ instance SerialiseAsBech32 (SigningKey StakePoolKey) where
 newtype instance Hash StakePoolKey =
     StakePoolKeyHash (Shelley.KeyHash Shelley.StakePool StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash StakePoolKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakePoolKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash StakePoolKey) where
     serialiseToRawBytes (StakePoolKeyHash (Shelley.KeyHash vkh)) =

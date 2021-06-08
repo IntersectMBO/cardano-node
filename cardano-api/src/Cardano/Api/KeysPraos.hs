@@ -118,7 +118,9 @@ newtype instance Hash KesKey =
     KesKeyHash (Shelley.Hash StandardCrypto
                              (Shelley.VerKeyKES StandardCrypto))
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash VrfKey)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash KesKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash KesKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash KesKey) where
     serialiseToRawBytes (KesKeyHash vkh) =
@@ -213,6 +215,8 @@ newtype instance Hash VrfKey =
                              (Shelley.VerKeyVRF StandardCrypto))
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash VrfKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash VrfKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash VrfKey) where
     serialiseToRawBytes (VrfKeyHash vkh) =
