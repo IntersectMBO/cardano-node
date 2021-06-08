@@ -2096,7 +2096,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     case txProtocolParams of
       BuildTxWith Nothing | not (Set.null languages)
         -> Left TxBodyMissingProtocolParams
-      _ -> return ()
+      _ -> return () --TODO alonzo: validate protocol params for the Alonzo era.
+                     --             All the necessary params must be provided.
 
     return $
       ShelleyTxBody era

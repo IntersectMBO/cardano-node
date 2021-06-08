@@ -36,6 +36,8 @@ module Test.Cardano.Api.Typed.Gen
   , genValue
   , genValueDefault
   , genVerificationKey
+  , genUpdateProposal
+  , genProtocolParametersUpdate
   ) where
 
 import           Cardano.Api
@@ -45,7 +47,6 @@ import           Cardano.Api.Shelley
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
-import qualified Data.Map.Strict as Map
 import           Data.String
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
@@ -54,7 +55,6 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
-
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
@@ -513,27 +513,13 @@ genTxCertificates era =
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal era =
-  case era of
-    ByronEra -> pure TxUpdateProposalNone
-    ShelleyEra ->
+  case updateProposalSupportedInEra era of
+    Nothing -> pure TxUpdateProposalNone
+    Just supported ->
       Gen.choice
         [ pure TxUpdateProposalNone
-        , pure (TxUpdateProposal UpdateProposalInShelleyEra emptyUpdateProposal) -- TODO: Generate proposals
+        , TxUpdateProposal supported <$> genUpdateProposal
         ]
-    AllegraEra ->
-      Gen.choice
-        [ pure TxUpdateProposalNone
-        , pure (TxUpdateProposal UpdateProposalInAllegraEra emptyUpdateProposal) -- TODO: Generate proposals
-        ]
-    MaryEra ->
-      Gen.choice
-        [ pure TxUpdateProposalNone
-        , pure (TxUpdateProposal UpdateProposalInMaryEra emptyUpdateProposal) -- TODO: Generate proposals
-        ]
-    AlonzoEra -> panic "genTxUpdateProposal: Alonzo not implemented yet"
-  where
-    emptyUpdateProposal :: UpdateProposal
-    emptyUpdateProposal = UpdateProposal Map.empty (EpochNo 0)
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue era =
@@ -630,6 +616,10 @@ genTx era =
 genVerificationKey :: Key keyrole => AsType keyrole -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
+genVerificationKeyHash :: Key keyrole => AsType keyrole -> Gen (Hash keyrole)
+genVerificationKeyHash roletoken =
+  verificationKeyHash <$> genVerificationKey roletoken
+
 genByronKeyWitness :: Gen (KeyWitness ByronEra)
 genByronKeyWitness = do
   pmId <- genProtocolMagicId
@@ -689,7 +679,14 @@ genNat :: Gen Natural
 genNat = Gen.integral (Range.linear 0 10)
 
 genRational :: Gen Rational
-genRational = Gen.realFrac_ (Range.linearFrac 0 1)
+genRational =
+    (\d -> ratioToRational (1 % d)) <$> genDenominator
+  where
+    genDenominator :: Gen Word64
+    genDenominator = Gen.integral (Range.linear 1 maxBound)
+
+    ratioToRational :: Ratio Word64 -> Rational
+    ratioToRational = toRational
 
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
@@ -720,13 +717,73 @@ genProtocolParameters =
     <*> genRational
     <*> genRational
     <*> genRational
-    -- TODO alonzo: Add proper support for these generators.
-    <*> return Nothing
-    <*> return mempty
-    <*> return Nothing
-    <*> return Nothing
-    <*> return Nothing
-    <*> return Nothing
-    <*> return Nothing
-    <*> return Nothing
+    <*> Gen.maybe genLovelace
+    <*> genCostModels
+    <*> Gen.maybe genExecutionUnitPrices
+    <*> Gen.maybe genExecutionUnits
+    <*> Gen.maybe genExecutionUnits
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+
+genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
+genProtocolParametersUpdate =
+  ProtocolParametersUpdate
+    <$> Gen.maybe ((,) <$> genNat <*> genNat)
+    <*> Gen.maybe genRational
+    <*> Gen.maybe genMaybePraosNonce
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genLovelace
+    <*> Gen.maybe genLovelace
+    <*> Gen.maybe genLovelace
+    <*> Gen.maybe genLovelace
+    <*> Gen.maybe genEpochNo
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genRational
+    <*> Gen.maybe genRational
+    <*> Gen.maybe genRational
+    <*> Gen.maybe genLovelace
+    <*> genCostModels
+    <*> Gen.maybe genExecutionUnitPrices
+    <*> Gen.maybe genExecutionUnits
+    <*> Gen.maybe genExecutionUnits
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+    <*> Gen.maybe genNat
+
+
+genUpdateProposal :: Gen UpdateProposal
+genUpdateProposal =
+  UpdateProposal
+    <$> Gen.map (Range.constant 1 3)
+                ((,) <$> genVerificationKeyHash AsGenesisKey
+                     <*> genProtocolParametersUpdate)
+    <*> genEpochNo
+
+genCostModel :: Gen CostModel
+genCostModel =
+  CostModel
+    <$> Gen.map (Range.constant 1 10)
+                ((,) <$> Gen.text (Range.constant 1 10) Gen.alphaNum
+                     <*> Gen.integral (Range.linear 0 5000))
+
+genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
+genCostModels =
+    Gen.map (Range.linear 0 (length plutusScriptVersions))
+            ((,) <$> Gen.element plutusScriptVersions
+                 <*> genCostModel)
+  where
+    plutusScriptVersions :: [AnyPlutusScriptVersion]
+    plutusScriptVersions = [minBound..maxBound]
+
+genExecutionUnits :: Gen ExecutionUnits
+genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
+                                   <*> Gen.integral (Range.constant 0 1000)
+
+genExecutionUnitPrices :: Gen ExecutionUnitPrices
+genExecutionUnitPrices = ExecutionUnitPrices <$> genLovelace <*> genLovelace
 

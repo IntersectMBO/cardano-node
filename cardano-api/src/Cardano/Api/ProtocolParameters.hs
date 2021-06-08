@@ -57,7 +57,7 @@ import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
-import           Data.Scientific (Scientific)
+import qualified Data.Scientific as Scientific
 import           Data.Text (Text)
 import           GHC.Generics
 import           Numeric.Natural
@@ -66,6 +66,7 @@ import           Control.Monad
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
                    (.!=), (.:), (.:?), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (bimap)
 
 import qualified Cardano.Binary as CBOR
@@ -300,10 +301,10 @@ instance FromJSON ProtocolParameters where
         <*> o .: "monetaryExpansion"
         <*> o .: "treasuryCut"
         <*> o .:? "utxoCostPerWord"
-        <*> o .:? "costModel" .!= Map.empty
+        <*> o .:? "costModels" .!= Map.empty
         <*> o .:? "executionUnitPrices"
-        <*> o .:? "maxTxExecUnits"
-        <*> o .:? "maxBlockExecUnits"
+        <*> o .:? "maxTxExecutionUnits"
+        <*> o .:? "maxBlockExecutionUnits"
         <*> o .:? "maxValueSize"
         <*> o .:? "collateralPercentage"
         <*> o .:? "maxCollateralInputs"
@@ -315,25 +316,22 @@ instance ToJSON ProtocolParameters where
       , "stakePoolTargetNum"  .= protocolParamStakePoolTargetNum
       , "minUTxOValue"        .= protocolParamMinUTxOValue
       , "poolRetireMaxEpoch"  .= protocolParamPoolRetireMaxEpoch
-      , "decentralization"    .= (fromRational protocolParamDecentralization
-                                            :: Scientific)
+      , "decentralization"    .= toRationalJSON protocolParamDecentralization
       , "stakePoolDeposit"    .= protocolParamStakePoolDeposit
       , "maxBlockHeaderSize"  .= protocolParamMaxBlockHeaderSize
       , "maxBlockBodySize"    .= protocolParamMaxBlockBodySize
       , "maxTxSize"           .= protocolParamMaxTxSize
-      , "treasuryCut"         .= (fromRational protocolParamTreasuryCut
-                                            :: Scientific)
+      , "treasuryCut"         .= toRationalJSON protocolParamTreasuryCut
       , "minPoolCost"         .= protocolParamMinPoolCost
-      , "monetaryExpansion"   .= (fromRational protocolParamMonetaryExpansion
-                                            :: Scientific)
+      , "monetaryExpansion"   .= toRationalJSON protocolParamMonetaryExpansion
       , "stakeAddressDeposit" .= protocolParamStakeAddressDeposit
-      , "poolPledgeInfluence" .= (fromRational protocolParamPoolPledgeInfluence
-                                            :: Scientific)
+      , "poolPledgeInfluence" .= toRationalJSON protocolParamPoolPledgeInfluence
       , "protocolVersion"     .= let (major, minor) = protocolParamProtocolVersion
                                   in object ["major" .= major, "minor" .= minor]
       , "txFeeFixed"          .= protocolParamTxFeeFixed
       , "txFeePerByte"        .= protocolParamTxFeePerByte
       -- Alonzo era:
+      , "utxoCostPerWord"        .= protocolParamUTxOCostPerWord
       , "costModels"             .= protocolParamCostModels
       , "executionUnitPrices"    .= protocolParamPrices
       , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
@@ -342,6 +340,19 @@ instance ToJSON ProtocolParameters where
       , "collateralPercentage"   .= protocolParamCollateralPercent
       , "maxCollateralInputs"    .= protocolParamMaxCollateralInputs
       ]
+    where
+      -- Rationals and JSON are an awkward mix. We cannot convert rationals
+      -- like @1/3@ to JSON numbers. But _most_ of the numbers we want to use
+      -- in practice have simple decimal representations. Our solution here is
+      -- to use simple decimal representations where we can and representation
+      -- in a @{"numerator": 1, "denominator": 3}@ style otherwise.
+      --
+      toRationalJSON :: Rational -> Aeson.Value
+      toRationalJSON r =
+        case Scientific.fromRationalRepetend (Just 5) r of
+          Right (s, Nothing) -> toJSON s
+          _                  -> toJSON r
+
 
 -- ----------------------------------------------------------------------------
 -- Updates to the protocol paramaters
@@ -821,6 +832,8 @@ makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> UpdateProposal
 makeShelleyUpdateProposal params genesisKeyHashes =
     --TODO decide how to handle parameter validation
+    --     for example we need to validate the Rational values can convert
+    --     into the UnitInterval type ok.
     UpdateProposal (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
 
 
