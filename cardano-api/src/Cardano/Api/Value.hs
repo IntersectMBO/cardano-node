@@ -76,6 +76,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Script
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 
@@ -85,8 +86,8 @@ import           Cardano.Api.SerialiseUsing
 --
 
 newtype Lovelace = Lovelace Integer
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, Enum, Num, ToJSON, FromJSON)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (Enum, Num, ToJSON, FromJSON, ToCBOR, FromCBOR)
 
 instance Semigroup Lovelace where
   Lovelace a <> Lovelace b = Lovelace (a + b)

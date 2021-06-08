@@ -290,6 +290,17 @@ instance Bounded AnyPlutusScriptVersion where
     minBound = AnyPlutusScriptVersion PlutusScriptV1
     maxBound = AnyPlutusScriptVersion PlutusScriptV1
 
+instance ToCBOR AnyPlutusScriptVersion where
+    toCBOR = toCBOR . fromEnum
+
+instance FromCBOR AnyPlutusScriptVersion where
+    fromCBOR = do
+      n <- fromCBOR
+      if n >= fromEnum (minBound :: AnyPlutusScriptVersion) &&
+         n <= fromEnum (maxBound :: AnyPlutusScriptVersion)
+        then return $! toEnum n
+        else fail "plutus script version out of bounds"
+
 instance ToJSON AnyPlutusScriptVersion where
     toJSON (AnyPlutusScriptVersion PlutusScriptV1) =
       Aeson.String "PlutusScriptV1"
@@ -741,6 +752,19 @@ data ExecutionUnits =
         executionMemory :: Word64
      }
   deriving (Eq, Show)
+
+instance ToCBOR ExecutionUnits where
+  toCBOR ExecutionUnits{executionSteps, executionMemory} =
+      CBOR.encodeListLen 2
+   <> toCBOR executionSteps
+   <> toCBOR executionMemory
+
+instance FromCBOR ExecutionUnits where
+  fromCBOR = do
+    CBOR.enforceSize "ExecutionUnits" 2
+    ExecutionUnits
+      <$> fromCBOR
+      <*> fromCBOR
 
 instance ToJSON ExecutionUnits where
   toJSON ExecutionUnits{executionSteps, executionMemory} =

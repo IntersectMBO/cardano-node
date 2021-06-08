@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -53,7 +54,6 @@ module Cardano.Api.ProtocolParameters (
 import           Prelude
 
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
@@ -575,6 +575,65 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateMaxCollateralInputs = Nothing
       }
 
+instance ToCBOR ProtocolParametersUpdate where
+    toCBOR ProtocolParametersUpdate{..} =
+        CBOR.encodeListLen 25
+     <> toCBOR protocolUpdateProtocolVersion
+     <> toCBOR protocolUpdateDecentralization
+     <> toCBOR protocolUpdateExtraPraosEntropy
+     <> toCBOR protocolUpdateMaxBlockHeaderSize
+     <> toCBOR protocolUpdateMaxBlockBodySize
+     <> toCBOR protocolUpdateMaxTxSize
+     <> toCBOR protocolUpdateTxFeeFixed
+     <> toCBOR protocolUpdateTxFeePerByte
+     <> toCBOR protocolUpdateMinUTxOValue
+     <> toCBOR protocolUpdateStakeAddressDeposit
+     <> toCBOR protocolUpdateStakePoolDeposit
+     <> toCBOR protocolUpdateMinPoolCost
+     <> toCBOR protocolUpdatePoolRetireMaxEpoch
+     <> toCBOR protocolUpdateStakePoolTargetNum
+     <> toCBOR protocolUpdatePoolPledgeInfluence
+     <> toCBOR protocolUpdateMonetaryExpansion
+     <> toCBOR protocolUpdateTreasuryCut
+     <> toCBOR protocolUpdateUTxOCostPerWord
+     <> toCBOR protocolUpdateCostModels
+     <> toCBOR protocolUpdatePrices
+     <> toCBOR protocolUpdateMaxTxExUnits
+     <> toCBOR protocolUpdateMaxBlockExUnits
+     <> toCBOR protocolUpdateMaxValueSize
+     <> toCBOR protocolUpdateCollateralPercent
+     <> toCBOR protocolUpdateMaxCollateralInputs
+
+instance FromCBOR ProtocolParametersUpdate where
+    fromCBOR = do
+      CBOR.enforceSize "ProtocolParametersUpdate" 25
+      ProtocolParametersUpdate
+        <$> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
@@ -626,6 +685,19 @@ data ExecutionUnitPrices =
      }
   deriving (Eq, Show)
 
+instance ToCBOR ExecutionUnitPrices where
+  toCBOR ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+      CBOR.encodeListLen 2
+   <> toCBOR priceExecutionSteps
+   <> toCBOR priceExecutionMemory
+
+instance FromCBOR ExecutionUnitPrices where
+  fromCBOR = do
+    CBOR.enforceSize "ExecutionUnitPrices" 2
+    ExecutionUnitPrices
+      <$> fromCBOR
+      <*> fromCBOR
+
 instance ToJSON ExecutionUnitPrices where
   toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
     object [ "priceSteps"  .= priceExecutionSteps
@@ -661,6 +733,7 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 newtype CostModel = CostModel (Map Text Integer)
   deriving (Eq, Show)
   deriving newtype (ToJSON, FromJSON)
+  deriving newtype (ToCBOR, FromCBOR)
 
 validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
@@ -720,6 +793,7 @@ data UpdateProposal =
        !(Map (Hash GenesisKey) ProtocolParametersUpdate)
        !EpochNo
     deriving stock (Eq, Show)
+    deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy UpdateProposal where
     data AsType UpdateProposal = AsUpdateProposal
@@ -728,14 +802,18 @@ instance HasTypeProxy UpdateProposal where
 instance HasTextEnvelope UpdateProposal where
     textEnvelopeType _ = "UpdateProposalShelley"
 
-instance SerialiseAsCBOR UpdateProposal where
-    --TODO alonzo: we can no longer use this Shelley-specific encoding
-    serialiseToCBOR = CBOR.serializeEncoding'
-                    . toCBOR
-                    . toLedgerUpdate ShelleyBasedEraShelley
-    deserialiseFromCBOR _ bs =
-      fromLedgerUpdate ShelleyBasedEraShelley <$> CBOR.decodeFull (LBS.fromStrict bs)
+instance ToCBOR UpdateProposal where
+    toCBOR (UpdateProposal ppup epochno) =
+        CBOR.encodeListLen 2
+     <> toCBOR ppup
+     <> toCBOR epochno
 
+instance FromCBOR UpdateProposal where
+    fromCBOR = do
+      CBOR.enforceSize "ProtocolParametersUpdate" 2
+      UpdateProposal
+        <$> fromCBOR
+        <*> fromCBOR
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> [Hash GenesisKey]
