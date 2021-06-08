@@ -26,6 +26,8 @@ module Cardano.Api.TxMetadata (
     -- * Internal conversion functions
     toShelleyMetadata,
     fromShelleyMetadata,
+    toShelleyMetadatum,
+    fromShelleyMetadatum,
 
     -- * Shared parsing utils
     parseAll,
@@ -83,12 +85,15 @@ import           Cardano.Api.SerialiseCBOR
 newtype TxMetadata = TxMetadata (Map Word64 TxMetadataValue)
     deriving (Eq, Show)
 
-data TxMetadataValue = TxMetaNumber Integer -- -2^64 .. 2^64-1
+data TxMetadataValue = TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
+                     | TxMetaList   [TxMetadataValue]
+                     | TxMetaNumber Integer -- -2^64 .. 2^64-1
                      | TxMetaBytes  ByteString
                      | TxMetaText   Text
-                     | TxMetaList   [TxMetadataValue]
-                     | TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
     deriving (Eq, Ord, Show)
+  -- Note the order of constructors is the same as the ledger definitions
+  -- so that the Ord instance is consistent with the ledger one.
+  -- This is checked by prop_ord_distributive_TxMetadata
 
 -- | Merge metadata maps. When there are clashing entries the left hand side
 -- takes precedence.
@@ -131,31 +136,31 @@ makeTransactionMetadata = TxMetadata
 
 toShelleyMetadata :: Map Word64 TxMetadataValue -> Map Word64 Shelley.Metadatum
 toShelleyMetadata = Map.map toShelleyMetadatum
-  where
-    toShelleyMetadatum :: TxMetadataValue -> Shelley.Metadatum
-    toShelleyMetadatum (TxMetaNumber x) = Shelley.I x
-    toShelleyMetadatum (TxMetaBytes  x) = Shelley.B x
-    toShelleyMetadatum (TxMetaText   x) = Shelley.S x
-    toShelleyMetadatum (TxMetaList  xs) = Shelley.List
-                                            [ toShelleyMetadatum x | x <- xs ]
-    toShelleyMetadatum (TxMetaMap   xs) = Shelley.Map
-                                            [ (toShelleyMetadatum k,
-                                               toShelleyMetadatum v)
-                                            | (k,v) <- xs ]
+
+toShelleyMetadatum :: TxMetadataValue -> Shelley.Metadatum
+toShelleyMetadatum (TxMetaNumber x) = Shelley.I x
+toShelleyMetadatum (TxMetaBytes  x) = Shelley.B x
+toShelleyMetadatum (TxMetaText   x) = Shelley.S x
+toShelleyMetadatum (TxMetaList  xs) = Shelley.List
+                                        [ toShelleyMetadatum x | x <- xs ]
+toShelleyMetadatum (TxMetaMap   xs) = Shelley.Map
+                                        [ (toShelleyMetadatum k,
+                                           toShelleyMetadatum v)
+                                        | (k,v) <- xs ]
 
 fromShelleyMetadata :: Map Word64 Shelley.Metadatum -> Map Word64 TxMetadataValue
 fromShelleyMetadata = Map.Lazy.map fromShelleyMetadatum
-  where
-    fromShelleyMetadatum :: Shelley.Metadatum -> TxMetadataValue
-    fromShelleyMetadatum (Shelley.I     x) = TxMetaNumber x
-    fromShelleyMetadatum (Shelley.B     x) = TxMetaBytes  x
-    fromShelleyMetadatum (Shelley.S     x) = TxMetaText   x
-    fromShelleyMetadatum (Shelley.List xs) = TxMetaList
-                                               [ fromShelleyMetadatum x | x <- xs ]
-    fromShelleyMetadatum (Shelley.Map  xs) = TxMetaMap
-                                               [ (fromShelleyMetadatum k,
-                                                  fromShelleyMetadatum v)
-                                               | (k,v) <- xs ]
+
+fromShelleyMetadatum :: Shelley.Metadatum -> TxMetadataValue
+fromShelleyMetadatum (Shelley.I     x) = TxMetaNumber x
+fromShelleyMetadatum (Shelley.B     x) = TxMetaBytes  x
+fromShelleyMetadatum (Shelley.S     x) = TxMetaText   x
+fromShelleyMetadatum (Shelley.List xs) = TxMetaList
+                                           [ fromShelleyMetadatum x | x <- xs ]
+fromShelleyMetadatum (Shelley.Map  xs) = TxMetaMap
+                                           [ (fromShelleyMetadatum k,
+                                              fromShelleyMetadatum v)
+                                           | (k,v) <- xs ]
 
 
 -- ----------------------------------------------------------------------------

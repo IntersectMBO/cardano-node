@@ -15,6 +15,7 @@ import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import           Test.Cardano.Api.Typed.Gen
+import           Test.Cardano.Api.Metadata (genTxMetadataValue)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -46,6 +47,10 @@ prop_ord_distributive_Address =
 prop_ord_distributive_StakeAddress :: Property
 prop_ord_distributive_StakeAddress =
     ord_distributive genStakeAddress toShelleyStakeAddr
+
+prop_ord_distributive_TxMetadata :: Property
+prop_ord_distributive_TxMetadata =
+    ord_distributive genTxMetadataValue toShelleyMetadatum
 
 prop_ord_distributive_ScriptData :: Property
 prop_ord_distributive_ScriptData =
