@@ -20,7 +20,6 @@ import           Prelude (String)
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Mary.TxOutParser (parseTxOutAnyEra)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
@@ -1736,7 +1735,7 @@ renderTxIn (TxIn txid (TxIx txix)) =
 
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
-  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "Transaction ID (hexadecimal)"
+  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "transaction id (hexadecimal)"
   case deserialiseFromRawBytesHex AsTxId (BSC.pack str) of
     Just addr -> return addr
     Nothing -> fail $ "Incorrect transaction id format:: " ++ show str
@@ -1747,10 +1746,9 @@ parseTxIx = TxIx . fromIntegral <$> decimal
 
 pTxOut :: Parser TxOutAnyEra
 pTxOut =
-  toTxOutanyEra
-    <$> Opt.option (readerFromParsecParser parseTxOutAnyEra)
+        Opt.option (readerFromParsecParser parseTxOutAnyEra)
           (  Opt.long "tx-out"
-          <> Opt.metavar "TX-OUT"
+          <> Opt.metavar "ADDRESS VALUE"
           -- TODO alonzo: Update the help text to describe the new syntax as well.
           <> Opt.help "The transaction output as Address+Lovelace where Address is \
                       \the Bech32-encoded address followed by the amount in \
@@ -1759,18 +1757,21 @@ pTxOut =
     <*> optional pDatumHash
 
 
-pDatumHash :: Parser Text
+pDatumHash :: Parser (Hash ScriptData)
 pDatumHash  =
-  Opt.option (readerFromParsecParser parseHex)
+  Opt.option (readerFromParsecParser parseHashScriptData)
     (  Opt.long "datum-hash"
     <> Opt.metavar "HASH"
     <> Opt.help "Required datum hash for tx inputs intended \
                \to be utilizied by a Plutus script."
     )
-
-parseHex :: Parsec.Parser Text
-parseHex =
-  Text.pack <$> Parsec.many1 Parsec.hexDigit
+  where
+    parseHashScriptData :: Parsec.Parser (Hash ScriptData)
+    parseHashScriptData = do
+      str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "script data hash"
+      case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
+        Just sdh -> return sdh
+        Nothing  -> fail $ "Invalid datum hash: " ++ show str
 
 
 pMultiAsset :: Parser Value
@@ -2669,6 +2670,16 @@ parseStakeAddress = do
     case deserialiseAddress AsStakeAddress str of
       Nothing   -> fail $ "invalid address: " <> Text.unpack str
       Just addr -> pure addr
+
+parseTxOutAnyEra :: Parsec.Parser (Maybe (Hash ScriptData) -> TxOutAnyEra)
+parseTxOutAnyEra = do
+    addr <- parseAddressAny
+    Parsec.spaces
+    -- Accept the old style of separating the address and value in a
+    -- transaction output:
+    Parsec.option () (Parsec.char '+' >> Parsec.spaces)
+    val <- parseValue
+    return (TxOutAnyEra addr val)
 
 lexPlausibleAddressString :: Parsec.Parser Text
 lexPlausibleAddressString =
