@@ -1563,7 +1563,7 @@ fromLedgerAuxiliaryData ShelleyBasedEraMary (Mary.AuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraMary <$> toList ss
   )
-fromLedgerAuxiliaryData ShelleyBasedEraAlonzo (Alonzo.AuxiliaryData ms ss _ds) =
+fromLedgerAuxiliaryData ShelleyBasedEraAlonzo (Alonzo.AuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraAlonzo <$> toList ss
   )
@@ -2141,14 +2141,15 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                Alonzo.hashWitnessPPData
                  (toLedgerPParams ShelleyBasedEraAlonzo pparams)
                  languages
-                 redeemers)
+                 redeemers
+                  -- TODO alonzo: support the supplementary script data here:
+                 (Alonzo.TxDats Map.empty))
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
           SNothing) -- TODO alonzo: support optional network id in TxBodyContent
         scripts
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
         txAuxData
-        -- TODO alonzo: support the supplementary script data
   where
     witnesses :: [(Alonzo.RdmrPtr, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent
@@ -2337,9 +2338,6 @@ toAlonzoAuxiliaryData m ss =
     Alonzo.AuxiliaryData
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
-       Set.empty --TODO alonzo: the script data is expected to move from the
-                 -- aux data section, to a separate supplementary data field
-                 -- in the witness section
 
 
 -- ----------------------------------------------------------------------------

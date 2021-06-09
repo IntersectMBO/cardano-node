@@ -447,7 +447,7 @@ getTxBody (ShelleyTx era tx) =
                                      _addrWits
                                      _bootWits
                                      txscripts
-                                     txdats
+                                     (Alonzo.TxDats' txdats)
                                      redeemers,
                       Shelley.auxiliaryData = auxiliaryData
                     } =
@@ -570,7 +570,8 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
             (Set.fromList [ w | ShelleyBootstrapWitness _ w <- witnesses ])
             (Map.fromList [ (Ledger.hashScript @ledgerera sw, sw)
                           | sw <- txscripts ])
-            datums
+            -- TODO alonzo: support the supplementary script data here:
+            (Alonzo.TxDats datums)
             redeemers)
           (maybeToStrictMaybe txmetadata)
       where
