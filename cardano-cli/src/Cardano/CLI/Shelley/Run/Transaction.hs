@@ -483,22 +483,13 @@ validateTxAuxScripts _ [] = return TxAuxScriptsNone
 validateTxAuxScripts era files =
   case auxScriptsSupportedInEra era of
     Nothing -> txFeatureMismatch era TxFeatureAuxScripts
-    Just AuxScriptsInAllegraEra -> do
+    Just supported -> do
       scripts <- sequence
         [ do script <- firstExceptT ShelleyTxCmdScriptFileError $
                          readFileScriptInAnyLang file
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
-      return $ TxAuxScripts AuxScriptsInAllegraEra scripts
-    Just AuxScriptsInMaryEra -> do
-      scripts <- sequence
-        [ do script <- firstExceptT ShelleyTxCmdScriptFileError $
-                         readFileScriptInAnyLang file
-             validateScriptSupportedInEra era script
-        | ScriptFile file <- files ]
-      return (TxAuxScripts AuxScriptsInMaryEra scripts)
-    Just AuxScriptsInAlonzoEra ->
-      panic "TODO alonzo: validateTxAuxScripts AuxScriptsInAlonzoEra"
+      return $ TxAuxScripts supported scripts
 
 validateTxWithdrawals
   :: forall era.
