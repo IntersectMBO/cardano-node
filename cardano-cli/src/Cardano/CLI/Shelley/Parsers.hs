@@ -54,6 +54,8 @@ import qualified Text.Parsec.Token as Parsec
 
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
+{- HLINT ignore "Use <$>" -}
+
 --
 -- Shelley CLI command parsers
 --
