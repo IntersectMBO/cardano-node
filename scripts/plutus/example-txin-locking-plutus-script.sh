@@ -15,14 +15,16 @@ set -o pipefail
 
 plutusscriptaddr=$(cardano-cli address build --payment-script-file scripts/plutus/always-succeeds-txin.plutus  --testnet-magic 42)
 
+mkdir -p example/work
+
 utxovkey=example/shelley/utxo-keys/utxo1.vkey
 utxoskey=example/shelley/utxo-keys/utxo1.skey
 
 utxoaddr=$(cardano-cli address build --testnet-magic 42 --payment-verification-key-file $utxovkey)
 
-utxo=$(cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --out-file utxo.json)
+utxo=$(cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --out-file example/work/utxo.json)
 
-txin=$(jq -r 'keys[]' utxo.json)
+txin=$(jq -r 'keys[]' example/work/utxo.json)
 
 cardano-cli transaction build-raw \
   --alonzo-era \
@@ -30,16 +32,16 @@ cardano-cli transaction build-raw \
   --tx-in $txin \
   --tx-out $plutusscriptaddr+500000000 --datum-hash 9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b \
   --tx-out $utxoaddr+500000000 \
-  --out-file create-datum-output.body
+  --out-file example/work/create-datum-output.body
 
 cardano-cli transaction sign \
-  --tx-body-file create-datum-output.body \
+  --tx-body-file example/work/create-datum-output.body \
   --testnet-magic 42 \
   --signing-key-file $utxoskey\
-  --out-file create-datum-output.tx
+  --out-file example/work/create-datum-output.tx
 
 # SUBMIT
-cardano-cli transaction submit --tx-file create-datum-output.tx --testnet-magic 42
+cardano-cli transaction submit --tx-file example/work/create-datum-output.tx --testnet-magic 42
 
 echo "Pausing for 5 seconds..."
 sleep 5
@@ -48,11 +50,11 @@ sleep 5
 # After "locking" the tx output at the script address, we can now can attempt to spend
 # the "locked" tx output below.
 
-cardano-cli query utxo --address $plutusscriptaddr --testnet-magic 42 --out-file plutusutxo.json
-plutusutxotxin=$(jq -r 'keys[]' plutusutxo.json)
+cardano-cli query utxo --address $plutusscriptaddr --testnet-magic 42 --out-file example/work/plutusutxo.json
+plutusutxotxin=$(jq -r 'keys[]' example/work/plutusutxo.json)
 
-cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --out-file utxo.json
-txinCollateral=$(jq -r 'keys[]' utxo.json)
+cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --out-file example/work/utxo.json
+txinCollateral=$(jq -r 'keys[]' example/work/utxo.json)
 
 echo "Plutus TxIn"
 echo $plutusutxotxin
@@ -73,14 +75,14 @@ cardano-cli transaction build-raw \
   --protocol-params-file example/pparams.json\
   --redeemer-value 42 \
   --execution-units "(0,0)" \
-  --out-file test-alonzo.body
+  --out-file example/work/test-alonzo.body
 
 cardano-cli transaction sign \
-  --tx-body-file test-alonzo.body \
+  --tx-body-file example/work/test-alonzo.body \
   --testnet-magic 42 \
   --signing-key-file example/shelley/utxo-keys/utxo1.skey \
-  --out-file alonzo.tx
+  --out-file example/work/alonzo.tx
 
-# SUBMIT alonzo.tx
+# SUBMIT example/work/alonzo.tx
 echo "Manually submit the tx with:"
-echo "cardano-cli transaction submit --tx-file alonzo.tx --testnet-magic 42"
+echo "cardano-cli transaction submit --tx-file example/work/alonzo.tx --testnet-magic 42"
