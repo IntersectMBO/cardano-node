@@ -7,25 +7,25 @@ import           Prelude
 import           Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Control.Applicative
 
-import           Control.Applicative (some)
 import           Text.Parsec (option, satisfy, (<?>))
 import           Text.Parsec.Char (char, spaces)
 import           Text.Parsec.String (Parser)
 
 import           Cardano.Api (AddressAny (..), AsType (..), deserialiseAddress)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
-import           Cardano.CLI.Types (TxOutAnyEra (..))
+import           Cardano.CLI.Types (TxOutAnyEra' (..))
 
 
-parseTxOutAnyEra :: Parser TxOutAnyEra
+parseTxOutAnyEra :: Parser TxOutAnyEra'
 parseTxOutAnyEra = do
     addr <- parseAddressAny
     spaces
     -- Accept the old style of separating the address and value in a
     -- transaction output:
     option () (char '+' >> spaces)
-    TxOutAnyEra addr <$> parseValue
+    TxOutAnyEra' addr <$> parseValue
 
 parseAddressAny :: Parser AddressAny
 parseAddressAny = do

@@ -1746,14 +1746,31 @@ parseTxIx = toEnum <$> Atto.decimal
 
 pTxOut :: Parser TxOutAnyEra
 pTxOut =
-    Opt.option (readerFromParsecParser parseTxOutAnyEra)
-      (  Opt.long "tx-out"
-      <> Opt.metavar "TX-OUT"
-      -- TODO: Update the help text to describe the new syntax as well.
-      <> Opt.help "The transaction output as Address+Lovelace where Address is \
-                  \the Bech32-encoded address followed by the amount in \
-                  \Lovelace."
-      )
+  toTxOutanyEra
+    <$> Opt.option (readerFromParsecParser parseTxOutAnyEra)
+          (  Opt.long "tx-out"
+          <> Opt.metavar "TX-OUT"
+          -- TODO alonzo: Update the help text to describe the new syntax as well.
+          <> Opt.help "The transaction output as Address+Lovelace where Address is \
+                      \the Bech32-encoded address followed by the amount in \
+                      \Lovelace."
+          )
+    <*> optional pDatumHash
+
+
+pDatumHash :: Parser Text
+pDatumHash  =
+  Opt.option (readerFromAttoParser parseHex)
+    (  Opt.long "datum-hash"
+    <> Opt.metavar "HASH"
+    <> Opt.help "Required datum hash for tx inputs intended \
+               \to be utilizied by a Plutus script."
+    )
+
+parseHex :: Atto.Parser Text
+parseHex =
+  Text.decodeUtf8 <$> Atto.takeWhile1 Char.isHexDigit
+
 
 pMultiAsset :: Parser Value
 pMultiAsset =

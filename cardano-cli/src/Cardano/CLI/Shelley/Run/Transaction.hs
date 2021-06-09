@@ -21,6 +21,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..))
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
@@ -47,10 +48,10 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
-import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..), readShelleyGenesis,
                    renderShelleyGenesisCmdError)
+import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Types
 
 import qualified System.IO as IO
@@ -92,6 +93,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdGenesisCmdError !ShelleyGenesisCmdError
   | ShelleyTxCmdPolicyIdsMissing [PolicyId]
   | ShelleyTxCmdPolicyIdsExcess  [PolicyId]
+  | ShelleyTxCmdDataHashSerializationError Text
   deriving Show
 
 data SomeTxBodyError where
@@ -204,6 +206,8 @@ renderShelleyTxCmdError err =
       "A script provided to witness minting does not correspond to the policy \
       \id of any asset specified in the \"--mint\" field. The script hash is: "
       <> Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
+    ShelleyTxCmdDataHashSerializationError dHash ->
+      "Error deserializing datum hash: " <> dHash
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -390,10 +394,26 @@ validateTxOuts era = mapM toTxOutInAnyEra
   where
     toTxOutInAnyEra :: TxOutAnyEra
                     -> ExceptT ShelleyTxCmdError IO (TxOut era)
-    toTxOutInAnyEra (TxOutAnyEra addr val) = TxOut <$> toAddressInAnyEra addr
-                                                   <*> toTxOutValueInAnyEra val
-                                                   <*> pure TxOutDatumHashNone
-                                                   -- TODO alonzo ^^ allow tx out data
+    toTxOutInAnyEra (TxOutAnyEra addr val mDatumHash) =
+      case scriptDataSupportedInEra era of
+        Nothing ->
+          TxOut <$> toAddressInAnyEra addr
+                <*> toTxOutValueInAnyEra val
+                <*> pure TxOutDatumHashNone
+        Just supported ->
+          case mDatumHash of
+            Nothing ->
+              TxOut <$> toAddressInAnyEra addr
+                             <*> toTxOutValueInAnyEra val
+                             <*> pure TxOutDatumHashNone
+            Just datHashText ->
+              case deserialiseFromRawBytesHex (AsHash AsScriptData) (Text.encodeUtf8 datHashText) of
+                Just sDataHash ->
+                  TxOut <$> toAddressInAnyEra addr
+                        <*> toTxOutValueInAnyEra val
+                        <*> pure (TxOutDatumHash supported sDataHash)
+                Nothing ->
+                  left $ ShelleyTxCmdDataHashSerializationError datHashText
 
     toAddressInAnyEra :: AddressAny -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
     toAddressInAnyEra addrAny =
