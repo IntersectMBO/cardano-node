@@ -30,7 +30,8 @@ cardano-cli transaction build-raw \
   --alonzo-era \
   --fee 0 \
   --tx-in $txin \
-  --tx-out $plutusscriptaddr+500000000 --datum-hash 9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b \
+  --tx-out $plutusscriptaddr+500000000 \
+  --tx-out-datum-hash 9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b \
   --tx-out $utxoaddr+500000000 \
   --out-file example/work/create-datum-output.body
 
@@ -70,7 +71,7 @@ cardano-cli transaction build-raw \
   --tx-in $plutusutxotxin \
   --tx-in-collateral $txinCollateral \
   --tx-out $utxoaddr+500000000 \
-  --txin-script-file ./scripts/plutus/always-succeeds-txin.plutus \
+  --tx-in-script-file ./scripts/plutus/always-succeeds-txin.plutus \
   --datum-value 42 \
   --protocol-params-file example/pparams.json\
   --redeemer-value 42 \
