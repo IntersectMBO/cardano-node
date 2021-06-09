@@ -1760,7 +1760,7 @@ pTxOut =
 pDatumHash :: Parser (Hash ScriptData)
 pDatumHash  =
   Opt.option (readerFromParsecParser parseHashScriptData)
-    (  Opt.long "datum-hash"
+    (  Opt.long "tx-out-datum-hash"
     <> Opt.metavar "HASH"
     <> Opt.help "Required datum hash for tx inputs intended \
                \to be utilizied by a Plutus script."
