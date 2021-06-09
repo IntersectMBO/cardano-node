@@ -165,12 +165,16 @@ pAddressCmd =
 pPaymentVerifier :: Parser PaymentVerifier
 pPaymentVerifier =
         PaymentVerifierKey <$> pPaymentVerificationKeyTextOrFile
-    <|> PaymentVerifierScriptFile <$> pScriptFor "payment-script-file" "Filepath of the payment script."
+    <|> PaymentVerifierScriptFile <$>
+          pScriptFor "payment-script-file" Nothing
+                     "Filepath of the payment script."
 
 pStakeVerifier :: Parser StakeVerifier
 pStakeVerifier =
         StakeVerifierKey <$> pStakeVerificationKeyOrFile
-    <|> StakeVerifierScriptFile <$> pScriptFor "stake-script-file" "Filepath of the staking script."
+    <|> StakeVerifierScriptFile <$>
+          pScriptFor "stake-script-file" Nothing
+                     "Filepath of the staking script."
 
 pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
@@ -203,24 +207,34 @@ pPaymentVerificationKeyFile =
     )
 
 pScript :: Parser ScriptFile
-pScript = pScriptFor "script-file" "Filepath of the script."
+pScript = pScriptFor "script-file" Nothing "Filepath of the script."
 
-pScriptFor :: String -> String -> Parser ScriptFile
-pScriptFor name help = ScriptFile <$> Opt.strOption
-  (  Opt.long name
-  <> Opt.metavar "FILE"
-  <> Opt.help help
-  <> Opt.completer (Opt.bashCompleter "file")
-  )
+pScriptFor :: String -> Maybe String -> String -> Parser ScriptFile
+pScriptFor name Nothing help =
+  ScriptFile <$> Opt.strOption
+    (  Opt.long name
+    <> Opt.metavar "FILE"
+    <> Opt.help help
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
+
+pScriptFor name (Just deprecated) help =
+      pScriptFor name Nothing help
+  <|> ScriptFile <$> Opt.strOption
+        (  Opt.long deprecated
+        <> Opt.internal
+        )
 
 pScriptWitnessFiles :: forall witctx.
                        WitCtx witctx
                     -> String
+                    -> Maybe String
                     -> String
                     -> Parser (ScriptWitnessFiles witctx)
-pScriptWitnessFiles witctx scriptFlagPrefix help =
+pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
     toScriptWitnessFiles
       <$> pScriptFor (scriptFlagPrefix ++ "-script-file")
+                     ((++ "-script-file") <$> scriptFlagPrefixDeprecated)
                      ("The file containing the script to witness " ++ help)
       <*> optional ((,,) <$> pScriptDatumOrFile
                          <*> pScriptRedeemerOrFile
@@ -270,6 +284,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix help =
         Left err -> fail (displayError err)
         Right sd -> return sd
 
+    pExecutionUnits :: Parser ExecutionUnits
     pExecutionUnits =
       uncurry ExecutionUnits <$>
       Opt.option Opt.auto
@@ -585,6 +600,7 @@ pTransaction =
                                  <*> pTxMetadataJsonSchema
                                  <*> many (pScriptFor
                                              "auxiliary-script-file"
+                                             Nothing
                                              "Filepath of auxiliary script(s)")
                                  <*> many pMetadataFile
                                  <*> optional pProtocolParamsSourceSpec
@@ -890,7 +906,7 @@ pGovernanceCmd =
                         <$> pOutputFile
                         <*> pEpochNoUpdateProp
                         <*> some pGenesisVerificationKeyFile
-                        <*> pShelleyProtocolParametersUpdate
+                        <*> pProtocolParametersUpdate
 
 pTransferAmt :: Parser Lovelace
 pTransferAmt =
@@ -1166,7 +1182,7 @@ pCertificateFile =
           )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
-                      "certificate"
+                      "certificate" Nothing
                       "the use of the certificate.")
  where
    helpText = "Filepath of the certificate. This encompasses all \
@@ -1240,7 +1256,7 @@ pWithdrawal =
             )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
-                      "withdrawal"
+                      "withdrawal" Nothing
                       "the withdrawal of rewards.")
  where
    helpText = "The reward withdrawal as StakeAddress+Lovelace where \
@@ -1695,7 +1711,7 @@ pTxIn =
                )
          <*> optional (pScriptWitnessFiles
                          WitCtxTxIn
-                         "txin"
+                         "tx-in" (Just "txin")
                          "the spending of the transaction input.")
 
 pTxInCollateral :: Parser TxIn
@@ -1758,7 +1774,7 @@ pMintMultiAsset =
               )
       <*> some (pScriptWitnessFiles
                   WitCtxMint
-                  "minting"
+                  "mint" (Just "minting")
                   "the minting of assets for a particular policy Id.")
 
  where
@@ -2313,8 +2329,8 @@ pStakePoolRetirementCert =
     <*> pOutputFile
 
 
-pShelleyProtocolParametersUpdate :: Parser ProtocolParametersUpdate
-pShelleyProtocolParametersUpdate =
+pProtocolParametersUpdate :: Parser ProtocolParametersUpdate
+pProtocolParametersUpdate =
   ProtocolParametersUpdate
     <$> optional pProtocolVersion
     <*> optional pDecentralParam
@@ -2333,15 +2349,14 @@ pShelleyProtocolParametersUpdate =
     <*> optional pPoolInfluence
     <*> optional pMonetaryExpansion
     <*> optional pTreasuryExpansion
-    -- TODO alonzo: Add proper support for these params
-    <*> pure Nothing
-    <*> pure mempty
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
-    <*> pure Nothing
+    <*> optional pUTxOCostPerWord
+    <*> pure mempty -- TODO alonzo: separate support for cost model files
+    <*> optional pExecutionUnitPrices
+    <*> optional pMaxTxExecutionUnits
+    <*> optional pMaxBlockExecutionUnits
+    <*> optional pMaxValueSize
+    <*> optional pCollateralPercent
+    <*> optional pMaxCollateralInputs
 
 pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =
@@ -2364,7 +2379,7 @@ pMinUTxOValue =
     Opt.option (readerFromAttoParser parseLovelace)
       (  Opt.long "min-utxo-value"
       <> Opt.metavar "NATURAL"
-      <> Opt.help "The minimum allowed UTxO value."
+      <> Opt.help "The minimum allowed UTxO value (Shelley to Mary eras)."
       )
 
 pMinPoolCost :: Parser Lovelace
@@ -2484,6 +2499,76 @@ pExtraEntropy =
                       . B16.decode
                     =<< Atto.takeWhile1 Char.isHexDigit
 
+pUTxOCostPerWord :: Parser Lovelace
+pUTxOCostPerWord =
+    Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "min-utxo-value"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "Cost in lovelace per unit of UTxO storage (from Alonzo era)."
+      )
+
+pExecutionUnitPrices :: Parser ExecutionUnitPrices
+pExecutionUnitPrices = ExecutionUnitPrices
+  <$> Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "price-execution-steps"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "Step price of execution units for script languages that use \
+                  \them (from Alonzo era)."
+      )
+  <*> Opt.option (readerFromAttoParser parseLovelace)
+      (  Opt.long "price-execution-memory"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "Memory price of execution units for script languages that \
+                  \use them (from Alonzo era)."
+      )
+
+pMaxTxExecutionUnits :: Parser ExecutionUnits
+pMaxTxExecutionUnits =
+  uncurry ExecutionUnits <$>
+  Opt.option Opt.auto
+    (  Opt.long "max-tx-execution-units"
+    <> Opt.metavar "(INT, INT)"
+    <> Opt.help "Max total script execution resources units allowed per tx \
+                \(from Alonzo era)."
+    )
+
+pMaxBlockExecutionUnits :: Parser ExecutionUnits
+pMaxBlockExecutionUnits =
+  uncurry ExecutionUnits <$>
+  Opt.option Opt.auto
+    (  Opt.long "max-block-execution-units"
+    <> Opt.metavar "(INT, INT)"
+    <> Opt.help "Max total script execution resources units allowed per block \
+                \(from Alonzo era)."
+    )
+
+pMaxValueSize :: Parser Natural
+pMaxValueSize =
+  Opt.option Opt.auto
+    (  Opt.long "max-value-size"
+    <> Opt.metavar "INT"
+    <> Opt.help "Max size of a multi-asset value in a tx output (from Alonzo \
+                \era)."
+    )
+
+pCollateralPercent :: Parser Natural
+pCollateralPercent =
+  Opt.option Opt.auto
+    (  Opt.long "collateral-percent"
+    <> Opt.metavar "INT"
+    <> Opt.help "The percentage of the script contribution to the txfee that \
+                \must be provided as collateral inputs when including Plutus \
+                \scripts (from Alonzo era)."
+    )
+
+pMaxCollateralInputs :: Parser Natural
+pMaxCollateralInputs =
+  Opt.option Opt.auto
+    (  Opt.long "max-collateral-inputs"
+    <> Opt.metavar "INT"
+    <> Opt.help "The maximum number of collateral inputs allowed in a \
+                \transaction (from Alonzo era)."
+    )
 
 pConsensusModeParams :: Parser AnyConsensusModeParams
 pConsensusModeParams = asum

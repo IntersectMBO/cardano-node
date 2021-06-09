@@ -4,9 +4,11 @@
 module Cardano.Api.SerialiseJSON
   ( serialiseToJSON
   , ToJSON(..)
+  , ToJSONKey
   , deserialiseFromJSON
   , prettyPrintJSON
   , FromJSON(..)
+  , FromJSONKey
   , JsonDecodeError(..)
   , readFileJSON
   , writeFileJSON
@@ -16,7 +18,7 @@ import           Prelude
 
 import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
-import           Data.Aeson (FromJSON (..), ToJSON (..))
+import           Data.Aeson (FromJSON (..), ToJSON (..), ToJSONKey, FromJSONKey)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.ByteString (ByteString)

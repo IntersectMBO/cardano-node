@@ -6,6 +6,7 @@ import           Test.Tasty (TestTree, defaultMain, testGroup)
 
 import qualified Test.Cardano.Api.Crypto
 import qualified Test.Cardano.Api.Json
+import qualified Test.Cardano.Api.KeysByron
 import qualified Test.Cardano.Api.Ledger
 import qualified Test.Cardano.Api.Metadata
 import qualified Test.Cardano.Api.Typed.Bech32
@@ -26,9 +27,9 @@ main = do
 tests :: TestTree
 tests =
   testGroup "Cardano.Api"
-    [ Test.Cardano.Api.Typed.Value.tests
-    , Test.Cardano.Api.Crypto.tests
+    [ Test.Cardano.Api.Crypto.tests
     , Test.Cardano.Api.Json.tests
+    , Test.Cardano.Api.KeysByron.tests
     , Test.Cardano.Api.Ledger.tests
     , Test.Cardano.Api.Metadata.tests
     , Test.Cardano.Api.Typed.Bech32.tests
@@ -36,6 +37,7 @@ tests =
     , Test.Cardano.Api.Typed.Envelope.tests
     , Test.Cardano.Api.Typed.JSON.tests
     , Test.Cardano.Api.Typed.Ord.tests
-    , Test.Cardano.Api.Typed.Script.tests
     , Test.Cardano.Api.Typed.RawBytes.tests
+    , Test.Cardano.Api.Typed.Script.tests
+    , Test.Cardano.Api.Typed.Value.tests
     ]

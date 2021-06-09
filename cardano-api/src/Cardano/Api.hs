@@ -297,6 +297,7 @@ module Cardano.Api (
     SimpleScriptVersion(..),
     PlutusScriptVersion(..),
     AnyScriptLanguage(..),
+    AnyPlutusScriptVersion(..),
     IsScriptLanguage(..),
     IsSimpleScriptLanguage(..),
 
@@ -357,6 +358,9 @@ module Cardano.Api (
 
     -- * Script execution units
     ExecutionUnits(..),
+    ExecutionUnitPrices(..),
+    CostModel(..),
+    validateCostModel,
 
     -- ** Script addresses
     -- | Making addresses from scripts.

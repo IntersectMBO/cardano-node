@@ -72,19 +72,22 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Script
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Api.SerialiseUsing
+
 
 -- ----------------------------------------------------------------------------
 -- Lovelace
 --
 
 newtype Lovelace = Lovelace Integer
-  deriving stock (Show)
-  deriving newtype (Eq, Ord, Enum, Num, ToJSON, FromJSON)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (Enum, Num, ToJSON, FromJSON, ToCBOR, FromCBOR)
 
 instance Semigroup Lovelace where
   Lovelace a <> Lovelace b = Lovelace (a + b)
@@ -135,7 +138,7 @@ quantityToLovelace (Quantity x) = Lovelace x
 
 newtype PolicyId = PolicyId ScriptHash
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex PolicyId
+  deriving (Show, IsString, ToJSON, FromJSON) via UsingRawBytesHex PolicyId
 
 instance HasTypeProxy PolicyId where
     data AsType PolicyId = AsPolicyId

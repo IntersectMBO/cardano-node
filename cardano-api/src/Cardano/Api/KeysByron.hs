@@ -59,6 +59,7 @@ import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 
 
 -- | Byron-era payment keys. Used for Byron addresses and witnessing
@@ -154,6 +155,8 @@ instance SerialiseAsRawBytes (SigningKey ByronKey) where
 newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
   deriving (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKey)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash ByronKey) where
     serialiseToRawBytes (ByronKeyHash (Byron.KeyHash vkh)) =
@@ -223,6 +226,8 @@ instance HasTextEnvelope (SigningKey ByronKeyLegacy) where
 newtype instance Hash ByronKeyLegacy = ByronKeyHashLegacy Byron.KeyHash
   deriving (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKeyLegacy)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKeyLegacy)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash ByronKeyLegacy) where
     serialiseToRawBytes (ByronKeyHashLegacy (Byron.KeyHash vkh)) =

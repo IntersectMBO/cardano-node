@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -147,6 +148,7 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 
 {- HLINT ignore "Use section" -}
 
@@ -287,6 +289,17 @@ instance Enum AnyPlutusScriptVersion where
 instance Bounded AnyPlutusScriptVersion where
     minBound = AnyPlutusScriptVersion PlutusScriptV1
     maxBound = AnyPlutusScriptVersion PlutusScriptV1
+
+instance ToCBOR AnyPlutusScriptVersion where
+    toCBOR = toCBOR . fromEnum
+
+instance FromCBOR AnyPlutusScriptVersion where
+    fromCBOR = do
+      n <- fromCBOR
+      if n >= fromEnum (minBound :: AnyPlutusScriptVersion) &&
+         n <= fromEnum (maxBound :: AnyPlutusScriptVersion)
+        then return $! toEnum n
+        else fail "plutus script version out of bounds"
 
 instance ToJSON AnyPlutusScriptVersion where
     toJSON (AnyPlutusScriptVersion PlutusScriptV1) =
@@ -740,6 +753,19 @@ data ExecutionUnits =
      }
   deriving (Eq, Show)
 
+instance ToCBOR ExecutionUnits where
+  toCBOR ExecutionUnits{executionSteps, executionMemory} =
+      CBOR.encodeListLen 2
+   <> toCBOR executionSteps
+   <> toCBOR executionMemory
+
+instance FromCBOR ExecutionUnits where
+  fromCBOR = do
+    CBOR.enforceSize "ExecutionUnits" 2
+    ExecutionUnits
+      <$> fromCBOR
+      <*> fromCBOR
+
 instance ToJSON ExecutionUnits where
   toJSON ExecutionUnits{executionSteps, executionMemory} =
     object [ "steps"  .= executionSteps
@@ -778,7 +804,8 @@ fromAlonzoExUnits Alonzo.ExUnits{Alonzo.exUnitsSteps, Alonzo.exUnitsMem} =
 --
 newtype ScriptHash = ScriptHash (Shelley.ScriptHash StandardCrypto)
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex ScriptHash
+  deriving (Show, IsString)   via UsingRawBytesHex ScriptHash
+  deriving (ToJSON, FromJSON) via UsingRawBytesHex ScriptHash
 
 instance HasTypeProxy ScriptHash where
     data AsType ScriptHash = AsScriptHash
@@ -909,9 +936,12 @@ adjustSimpleScriptVersion target = go
 --
 data PlutusScript lang where
      PlutusScriptSerialised :: ShortByteString -> PlutusScript lang
-
-deriving instance Eq (PlutusScript lang)
-deriving instance Show (PlutusScript lang)
+  deriving stock (Eq, Ord)
+  deriving stock (Show) -- TODO: would be nice to use via UsingRawBytesHex
+                        -- however that adds an awkward HasTypeProxy lang =>
+                        -- constraint to other Show instances elsewhere
+  deriving (ToCBOR, FromCBOR) via (UsingRawBytes (PlutusScript lang))
+  deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
     data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
@@ -923,16 +953,6 @@ instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
     deserialiseFromRawBytes (AsPlutusScript _) bs =
       -- TODO alonzo: validate the script syntax and fail decoding if invalid
       Just (PlutusScriptSerialised (SBS.toShort bs))
-
-instance Typeable lang => ToCBOR (PlutusScript lang) where
-    toCBOR (PlutusScriptSerialised sbs) = toCBOR sbs
-
-instance Typeable lang => FromCBOR (PlutusScript lang) where
-    -- TODO alonzo: validate the script syntax and fail decoding if invalid
-    fromCBOR = PlutusScriptSerialised <$> fromCBOR
-
-instance (HasTypeProxy lang, Typeable lang) =>
-         SerialiseAsCBOR (PlutusScript lang)
 
 instance (IsPlutusScriptLanguage lang, Typeable lang) =>
          HasTextEnvelope (PlutusScript lang) where

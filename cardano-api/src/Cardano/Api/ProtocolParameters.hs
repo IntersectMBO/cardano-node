@@ -1,5 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -53,19 +54,18 @@ module Cardano.Api.ProtocolParameters (
 import           Prelude
 
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Scientific (Scientific)
+import           Data.String (IsString)
+import qualified Data.Scientific as Scientific
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           GHC.Generics
 import           Numeric.Natural
 
 import           Control.Monad
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
-                   withText, (.!=), (.:), (.:?), (.=))
+                   (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (bimap)
 
@@ -103,7 +103,9 @@ import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value
@@ -299,10 +301,10 @@ instance FromJSON ProtocolParameters where
         <*> o .: "monetaryExpansion"
         <*> o .: "treasuryCut"
         <*> o .:? "utxoCostPerWord"
-        <*> o .:? "costModel" .!= Map.empty
+        <*> o .:? "costModels" .!= Map.empty
         <*> o .:? "executionUnitPrices"
-        <*> o .:? "maxTxExecUnits"
-        <*> o .:? "maxBlockExecUnits"
+        <*> o .:? "maxTxExecutionUnits"
+        <*> o .:? "maxBlockExecutionUnits"
         <*> o .:? "maxValueSize"
         <*> o .:? "collateralPercentage"
         <*> o .:? "maxCollateralInputs"
@@ -314,25 +316,22 @@ instance ToJSON ProtocolParameters where
       , "stakePoolTargetNum"  .= protocolParamStakePoolTargetNum
       , "minUTxOValue"        .= protocolParamMinUTxOValue
       , "poolRetireMaxEpoch"  .= protocolParamPoolRetireMaxEpoch
-      , "decentralization"    .= (fromRational protocolParamDecentralization
-                                            :: Scientific)
+      , "decentralization"    .= toRationalJSON protocolParamDecentralization
       , "stakePoolDeposit"    .= protocolParamStakePoolDeposit
       , "maxBlockHeaderSize"  .= protocolParamMaxBlockHeaderSize
       , "maxBlockBodySize"    .= protocolParamMaxBlockBodySize
       , "maxTxSize"           .= protocolParamMaxTxSize
-      , "treasuryCut"         .= (fromRational protocolParamTreasuryCut
-                                            :: Scientific)
+      , "treasuryCut"         .= toRationalJSON protocolParamTreasuryCut
       , "minPoolCost"         .= protocolParamMinPoolCost
-      , "monetaryExpansion"   .= (fromRational protocolParamMonetaryExpansion
-                                            :: Scientific)
+      , "monetaryExpansion"   .= toRationalJSON protocolParamMonetaryExpansion
       , "stakeAddressDeposit" .= protocolParamStakeAddressDeposit
-      , "poolPledgeInfluence" .= (fromRational protocolParamPoolPledgeInfluence
-                                            :: Scientific)
+      , "poolPledgeInfluence" .= toRationalJSON protocolParamPoolPledgeInfluence
       , "protocolVersion"     .= let (major, minor) = protocolParamProtocolVersion
                                   in object ["major" .= major, "minor" .= minor]
       , "txFeeFixed"          .= protocolParamTxFeeFixed
       , "txFeePerByte"        .= protocolParamTxFeePerByte
       -- Alonzo era:
+      , "utxoCostPerWord"        .= protocolParamUTxOCostPerWord
       , "costModels"             .= protocolParamCostModels
       , "executionUnitPrices"    .= protocolParamPrices
       , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
@@ -341,6 +340,19 @@ instance ToJSON ProtocolParameters where
       , "collateralPercentage"   .= protocolParamCollateralPercent
       , "maxCollateralInputs"    .= protocolParamMaxCollateralInputs
       ]
+    where
+      -- Rationals and JSON are an awkward mix. We cannot convert rationals
+      -- like @1/3@ to JSON numbers. But _most_ of the numbers we want to use
+      -- in practice have simple decimal representations. Our solution here is
+      -- to use simple decimal representations where we can and representation
+      -- in a @{"numerator": 1, "denominator": 3}@ style otherwise.
+      --
+      toRationalJSON :: Rational -> Aeson.Value
+      toRationalJSON r =
+        case Scientific.fromRationalRepetend (Just 5) r of
+          Right (s, Nothing) -> toJSON s
+          _                  -> toJSON r
+
 
 -- ----------------------------------------------------------------------------
 -- Updates to the protocol paramaters
@@ -574,23 +586,87 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateMaxCollateralInputs = Nothing
       }
 
+instance ToCBOR ProtocolParametersUpdate where
+    toCBOR ProtocolParametersUpdate{..} =
+        CBOR.encodeListLen 25
+     <> toCBOR protocolUpdateProtocolVersion
+     <> toCBOR protocolUpdateDecentralization
+     <> toCBOR protocolUpdateExtraPraosEntropy
+     <> toCBOR protocolUpdateMaxBlockHeaderSize
+     <> toCBOR protocolUpdateMaxBlockBodySize
+     <> toCBOR protocolUpdateMaxTxSize
+     <> toCBOR protocolUpdateTxFeeFixed
+     <> toCBOR protocolUpdateTxFeePerByte
+     <> toCBOR protocolUpdateMinUTxOValue
+     <> toCBOR protocolUpdateStakeAddressDeposit
+     <> toCBOR protocolUpdateStakePoolDeposit
+     <> toCBOR protocolUpdateMinPoolCost
+     <> toCBOR protocolUpdatePoolRetireMaxEpoch
+     <> toCBOR protocolUpdateStakePoolTargetNum
+     <> toCBOR protocolUpdatePoolPledgeInfluence
+     <> toCBOR protocolUpdateMonetaryExpansion
+     <> toCBOR protocolUpdateTreasuryCut
+     <> toCBOR protocolUpdateUTxOCostPerWord
+     <> toCBOR protocolUpdateCostModels
+     <> toCBOR protocolUpdatePrices
+     <> toCBOR protocolUpdateMaxTxExUnits
+     <> toCBOR protocolUpdateMaxBlockExUnits
+     <> toCBOR protocolUpdateMaxValueSize
+     <> toCBOR protocolUpdateCollateralPercent
+     <> toCBOR protocolUpdateMaxCollateralInputs
+
+instance FromCBOR ProtocolParametersUpdate where
+    fromCBOR = do
+      CBOR.enforceSize "ProtocolParametersUpdate" 25
+      ProtocolParametersUpdate
+        <$> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
 --
 
 newtype PraosNonce = PraosNonce (Ledger.Hash StandardCrypto ByteString)
-  deriving (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Generic)
+  deriving (Show, IsString)   via UsingRawBytesHex PraosNonce
+  deriving (ToJSON, FromJSON) via UsingRawBytesHex PraosNonce
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes    PraosNonce
 
-instance ToJSON PraosNonce where
-  toJSON (PraosNonce h) =
-    Aeson.String $ Crypto.hashToTextAsHex h
+instance HasTypeProxy PraosNonce where
+    data AsType PraosNonce = AsPraosNonce
+    proxyToAsType _ = AsPraosNonce
 
-instance FromJSON PraosNonce where
-  parseJSON = withText "PraosNonce" $ \h ->
-                case Crypto.hashFromTextAsHex h of
-                  Nothing -> fail $ "Failed to decode PraosNonce: " <> Text.unpack h
-                  Just nonce -> return $ PraosNonce nonce
+instance SerialiseAsRawBytes PraosNonce where
+    serialiseToRawBytes (PraosNonce h) =
+      Crypto.hashToBytes h
+
+    deserialiseFromRawBytes AsPraosNonce bs =
+      PraosNonce <$> Crypto.hashFromBytes bs
+
 
 makePraosNonce :: ByteString -> PraosNonce
 makePraosNonce = PraosNonce . Crypto.hashWith id
@@ -619,6 +695,19 @@ data ExecutionUnitPrices =
        priceExecutionMemory :: Lovelace
      }
   deriving (Eq, Show)
+
+instance ToCBOR ExecutionUnitPrices where
+  toCBOR ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+      CBOR.encodeListLen 2
+   <> toCBOR priceExecutionSteps
+   <> toCBOR priceExecutionMemory
+
+instance FromCBOR ExecutionUnitPrices where
+  fromCBOR = do
+    CBOR.enforceSize "ExecutionUnitPrices" 2
+    ExecutionUnitPrices
+      <$> fromCBOR
+      <*> fromCBOR
 
 instance ToJSON ExecutionUnitPrices where
   toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
@@ -655,6 +744,7 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 newtype CostModel = CostModel (Map Text Integer)
   deriving (Eq, Show)
   deriving newtype (ToJSON, FromJSON)
+  deriving newtype (ToCBOR, FromCBOR)
 
 validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
@@ -714,6 +804,7 @@ data UpdateProposal =
        !(Map (Hash GenesisKey) ProtocolParametersUpdate)
        !EpochNo
     deriving stock (Eq, Show)
+    deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy UpdateProposal where
     data AsType UpdateProposal = AsUpdateProposal
@@ -722,14 +813,18 @@ instance HasTypeProxy UpdateProposal where
 instance HasTextEnvelope UpdateProposal where
     textEnvelopeType _ = "UpdateProposalShelley"
 
-instance SerialiseAsCBOR UpdateProposal where
-    --TODO alonzo: we can no longer use this Shelley-specific encoding
-    serialiseToCBOR = CBOR.serializeEncoding'
-                    . toCBOR
-                    . toLedgerUpdate ShelleyBasedEraShelley
-    deserialiseFromCBOR _ bs =
-      fromLedgerUpdate ShelleyBasedEraShelley <$> CBOR.decodeFull (LBS.fromStrict bs)
+instance ToCBOR UpdateProposal where
+    toCBOR (UpdateProposal ppup epochno) =
+        CBOR.encodeListLen 2
+     <> toCBOR ppup
+     <> toCBOR epochno
 
+instance FromCBOR UpdateProposal where
+    fromCBOR = do
+      CBOR.enforceSize "ProtocolParametersUpdate" 2
+      UpdateProposal
+        <$> fromCBOR
+        <*> fromCBOR
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> [Hash GenesisKey]
@@ -737,6 +832,8 @@ makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> UpdateProposal
 makeShelleyUpdateProposal params genesisKeyHashes =
     --TODO decide how to handle parameter validation
+    --     for example we need to validate the Rational values can convert
+    --     into the UnitInterval type ok.
     UpdateProposal (Map.fromList [ (kh, params) | kh <- genesisKeyHashes ])
 
 

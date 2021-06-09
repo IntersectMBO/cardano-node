@@ -1,22 +1,27 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Api.Typed.JSON
   ( tests
   ) where
 
 import           Cardano.Prelude
-
 import           Data.Aeson
-
 import           Hedgehog (Property, discover, forAll, tripping)
-import qualified Hedgehog as H
-import qualified Hedgehog.Gen as Gen
+import           Test.Cardano.Api.Typed.Gen
+import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog.Group (fromGroup)
 
-import           Test.Cardano.Api.Typed.Gen
-
+import qualified Hedgehog as H
+import qualified Hedgehog.Gen as Gen
 
 {- HLINT ignore "Use camelCase" -}
 
