@@ -8,11 +8,11 @@ module Test.Cardano.Api.Typed.Envelope
 
 import           Cardano.Api
 import           Cardano.Prelude
+import           Gen.Cardano.Api.Typed
+import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover)
-import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import qualified Hedgehog as H
 

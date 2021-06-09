@@ -4,20 +4,17 @@ module Test.Cardano.Api.Typed.Script
   ( tests
   ) where
 
-import           Cardano.Prelude
-
-import           Data.Aeson
-
 import           Cardano.Api
 import           Cardano.Api.Shelley
-
+import           Cardano.Prelude
+import           Data.Aeson
+import           Gen.Cardano.Api.Typed
+import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover, (===))
-import qualified Hedgehog as H
 import           Hedgehog.Extras.Aeson
 import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog.Group (fromGroup)
 
-import           Test.Cardano.Api.Typed.Gen
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 

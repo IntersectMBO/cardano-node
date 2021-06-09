@@ -1,4 +1,4 @@
-module Test.Tasty.Hedgehog.Group
+module Gen.Tasty.Hedgehog.Group
   ( fromGroup
   )
 where

@@ -6,14 +6,12 @@ module Test.Cardano.Api.Typed.CBOR
   ) where
 
 import           Cardano.Api
-import           Cardano.Prelude
-import           Hedgehog (Gen, Property, discover)
-import           Test.Cardano.Api.Typed.Gen
+import           Gen.Cardano.Api.Typed
+import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
+import           Gen.Tasty.Hedgehog.Group (fromGroup)
+import           Hedgehog (Property, discover)
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog.Group (fromGroup)
-
-import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -150,19 +148,6 @@ prop_roundtrip_script_PlutusScriptV1_CBOR =
 prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR =
   roundtrip_CBOR AsUpdateProposal genUpdateProposal
-
-
--- -----------------------------------------------------------------------------
-
-roundtrip_CBOR
-  :: (SerialiseAsCBOR a, Eq a, Show a)
-  => AsType a -> Gen a -> Property
-roundtrip_CBOR typeProxy gen =
-  H.property $ do
-    val <- H.forAll gen
-    H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
-
-
 
 -- -----------------------------------------------------------------------------
 

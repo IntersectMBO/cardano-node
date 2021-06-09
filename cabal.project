@@ -2,7 +2,6 @@ index-state: 2021-04-30T00:00:00Z
 
 packages:
     cardano-api
-    cardano-api/test
     cardano-cli
     cardano-client-demo
     cardano-config

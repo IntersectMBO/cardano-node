@@ -1,4 +1,4 @@
-cabal-version: 2.4
+cabal-version: 3.0
 
 name:                   cardano-submit-api
 version:                3.1.2

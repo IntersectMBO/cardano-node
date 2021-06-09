@@ -16,7 +16,7 @@ import           Cardano.CLI.Mary.RenderValue (defaultRenderPrettyValueOptions,
                      defaultRenderValueOptions, renderPrettyValue, renderValue)
 import           Cardano.CLI.Mary.ValueParser (parseValue)
 
-import           Test.Cardano.Api.Typed.Gen (genValueDefault)
+import           Gen.Cardano.Api.Typed (genValueDefault)
 
 prop_roundtrip_Value_parse_render :: Property
 prop_roundtrip_Value_parse_render =

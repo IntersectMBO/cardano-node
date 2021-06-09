@@ -4,18 +4,16 @@ module Test.Cardano.Api.Typed.Ord
   ( tests
   ) where
 
-import           Prelude
-
 import           Cardano.Api
+import           Prelude
 import           Cardano.Api.Shelley
-
+import           Gen.Cardano.Api.Typed
+import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover, (===))
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog.Group (fromGroup)
-
-import           Test.Cardano.Api.Typed.Gen
 import           Test.Cardano.Api.Metadata (genTxMetadataValue)
+import           Test.Tasty (TestTree)
+
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 

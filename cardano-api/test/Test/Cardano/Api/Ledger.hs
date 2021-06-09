@@ -7,13 +7,13 @@ module Test.Cardano.Api.Ledger
   ) where
 
 import           Cardano.Prelude
+import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Test.Cardano.Api.Genesis
 import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
 import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Aeson as H

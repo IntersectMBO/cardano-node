@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module Test.Cardano.Api.Typed.Gen
+module Gen.Cardano.Api.Typed
   ( genAddressByron
   , genAddressShelley
   , genMaybePraosNonce
@@ -60,7 +60,7 @@ import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           Test.Cardano.Api.Metadata (genTxMetadata)
+import           Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 

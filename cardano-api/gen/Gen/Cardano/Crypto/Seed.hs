@@ -1,4 +1,4 @@
-module Test.Cardano.Crypto.Seed.Gen
+module Gen.Cardano.Crypto.Seed
   ( genSeed
   , genSeedForKey
   ) where

@@ -68,4 +68,6 @@
 - ignore:
     name: Use camelCase
     within: Test.Cardano.Api.Typed.JSON
-
+- ignore:
+    name: Use camelCase
+    within: Gen.Hedgehog.Roundtrip.CBOR

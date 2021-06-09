@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Api.Gen
+module Gen.Cardano.Api
   ( genMetadata
   , genAlonzoGenesis
   ) where

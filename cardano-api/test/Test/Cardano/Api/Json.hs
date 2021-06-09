@@ -6,12 +6,12 @@ module Test.Cardano.Api.Json
   ) where
 
 import           Cardano.Api.Orphans ()
-import           Cardano.Prelude ( ($) )
-import           Data.Aeson ( eitherDecode, encode )
+import           Cardano.Prelude (($))
+import           Data.Aeson (eitherDecode, encode)
+import           Gen.Cardano.Api (genAlonzoGenesis)
+import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover, forAll, tripping)
-import           Test.Cardano.Api.Gen ( genAlonzoGenesis )
 import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog.Group (fromGroup)
 
 import qualified Hedgehog as H
 

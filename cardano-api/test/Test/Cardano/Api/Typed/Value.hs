@@ -4,19 +4,16 @@ module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
-import           Prelude
-
+import           Cardano.Api.Shelley
 import           Data.Aeson
 import           Data.List (groupBy, sort)
-import qualified Data.Map.Strict as Map
-
-import           Cardano.Api.Shelley
-
+import           Gen.Cardano.Api.Typed
+import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover, forAll, property, tripping, (===))
-import           Test.Cardano.Api.Typed.Gen
-
+import           Prelude
 import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog.Group (fromGroup)
+
+import qualified Data.Map.Strict as Map
 
 {- HLINT ignore "Use map once" -}
 
