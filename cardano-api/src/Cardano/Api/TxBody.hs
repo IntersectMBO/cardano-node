@@ -49,7 +49,7 @@ module Cardano.Api.TxBody (
     TxValidityUpperBound(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
-    TxAuxScriptData(..),
+    TxExtraScriptData(..),
     TxExtraKeyWitnesses(..),
     TxWithdrawals(..),
     TxCertificates(..),
@@ -955,16 +955,16 @@ deriving instance Show (TxExtraKeyWitnesses era)
 -- Auxiliary script data (era-dependent)
 --
 
-data TxAuxScriptData era where
+data TxExtraScriptData era where
 
-     TxAuxScriptDataNone :: TxAuxScriptData era
+     TxExtraScriptDataNone :: TxExtraScriptData era
 
-     TxAuxScriptData     :: ScriptDataSupportedInEra era
-                         -> [ScriptData]
-                         -> TxAuxScriptData era
+     TxExtraScriptData     :: ScriptDataSupportedInEra era
+                           -> [ScriptData]
+                           -> TxExtraScriptData era
 
-deriving instance Eq   (TxAuxScriptData era)
-deriving instance Show (TxAuxScriptData era)
+deriving instance Eq   (TxExtraScriptData era)
+deriving instance Show (TxExtraScriptData era)
 
 
 -- ----------------------------------------------------------------------------
@@ -1050,7 +1050,7 @@ data TxBodyContent build era =
                             TxValidityUpperBound era),
        txMetadata       :: TxMetadataInEra era,
        txAuxScripts     :: TxAuxScripts era,
-       txAuxScriptData  :: TxAuxScriptData era,
+       txExtraScriptData:: BuildTxWith build (TxExtraScriptData era),
        txExtraKeyWits   :: TxExtraKeyWitnesses era,
        txProtocolParams :: BuildTxWith build (Maybe ProtocolParameters),
        txWithdrawals    :: TxWithdrawals  build era,
@@ -1103,13 +1103,9 @@ data TxBody era where
 data TxBodyScriptData era where
      TxBodyNoScriptData :: TxBodyScriptData era
      TxBodyScriptData   :: ScriptDataSupportedInEra era
-                        -> [Alonzo.Data (ShelleyLedgerEra era)]
+                        -> Alonzo.TxDats (ShelleyLedgerEra era)
                         -> Alonzo.Redeemers (ShelleyLedgerEra era)
                         -> TxBodyScriptData era
-     -- TODO alonzo: the supplementary script data will probably need to live
-     -- here, since it is part of the transaction witness data, not part of the
-     -- transaction auxiliary data. Completing this feature depends on the
-     -- support in the ledger lib being completed.
 
 deriving instance Eq   (TxBodyScriptData era)
 deriving instance Show (TxBodyScriptData era)
@@ -1259,7 +1255,7 @@ serialiseShelleyBasedTxBody
      ShelleyLedgerEra era ~ ledgerera
   => ToCBOR (Ledger.TxBody ledgerera)
   => ToCBOR (Ledger.Script ledgerera)
-  => ToCBOR (Alonzo.Data   ledgerera)
+  => ToCBOR (Alonzo.TxDats ledgerera)
   => ToCBOR (Alonzo.Redeemers ledgerera)
   => ToCBOR (Ledger.AuxiliaryData ledgerera)
   => ShelleyBasedEra era
@@ -1293,7 +1289,7 @@ deserialiseShelleyBasedTxBody
      ShelleyLedgerEra era ~ ledgerera
   => FromCBOR (CBOR.Annotator (Ledger.TxBody ledgerera))
   => FromCBOR (CBOR.Annotator (Ledger.Script ledgerera))
-  => FromCBOR (CBOR.Annotator (Alonzo.Data   ledgerera))
+  => FromCBOR (CBOR.Annotator (Alonzo.TxDats ledgerera))
   => FromCBOR (CBOR.Annotator (Alonzo.Redeemers ledgerera))
   => FromCBOR (CBOR.Annotator (Ledger.AuxiliaryData ledgerera))
   => ShelleyBasedEra era
@@ -1320,11 +1316,11 @@ deserialiseShelleyBasedTxBody era bs =
                    CBOR.decodeNull
                    return (return TxBodyNoScriptData)
                  Just supported -> do
-                   datums    <- CBOR.decodeListWith fromCBOR
+                   datums    <- fromCBOR
                    redeemers <- fromCBOR
                    return $ CBOR.Annotator $ \fbs ->
                      TxBodyScriptData supported
-                       (map (flip CBOR.runAnnotator fbs) datums)
+                       (flip CBOR.runAnnotator fbs datums)
                        (flip CBOR.runAnnotator fbs redeemers)
           _ -> fail "expected tx body tuple of size 3 or 5"
       txmetadata <- CBOR.decodeNullMaybe fromCBOR
@@ -1430,7 +1426,7 @@ fromLedgerTxBody era body mAux =
       , txProtocolParams = ViewTx
       , txMetadata
       , txAuxScripts
-      , txAuxScriptData  = error "TODO alonzo: txAuxScriptData"
+      , txExtraScriptData = ViewTx
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
@@ -1813,7 +1809,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
                             ValidityNoUpperBoundInByronEra),
       txMetadata       = TxMetadataNone,
       txAuxScripts     = TxAuxScriptsNone,
-      txAuxScriptData  = TxAuxScriptDataNone,
+      txExtraScriptData= ViewTx,
       txExtraKeyWits   = TxExtraKeyWitnessesNone,
       txProtocolParams = ViewTx,
       txWithdrawals    = TxWithdrawalsNone,
@@ -2062,6 +2058,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                              txValidityRange = (lowerBound, upperBound),
                              txMetadata,
                              txAuxScripts,
+                             txExtraScriptData,
                              txExtraKeyWits,
                              txProtocolParams,
                              txWithdrawals,
@@ -2142,8 +2139,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                  (toLedgerPParams ShelleyBasedEraAlonzo pparams)
                  languages
                  redeemers
-                  -- TODO alonzo: support the supplementary script data here:
-                 (Alonzo.TxDats Map.empty))
+                 datums)
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
           SNothing) -- TODO alonzo: support optional network id in TxBodyContent
@@ -2160,13 +2156,22 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
-    datums :: [Alonzo.Data StandardAlonzo]
+    datums :: Alonzo.TxDats StandardAlonzo
     datums =
-      [ toAlonzoData d
-      | (_, AnyScriptWitness
-              (PlutusScriptWitness
-                 _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
-      ]
+      Alonzo.TxDats $
+        Map.fromList
+          [ (Alonzo.hashData d', d')
+          | d <- scriptdata
+          , let d' = toAlonzoData d
+          ]
+
+    scriptdata :: [ScriptData]
+    scriptdata =
+        [ d | BuildTxWith (TxExtraScriptData _ ds) <- [txExtraScriptData], d <- ds ]
+     ++ [ d | (_, AnyScriptWitness
+                    (PlutusScriptWitness
+                       _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
+            ]
 
     redeemers :: Alonzo.Redeemers StandardAlonzo
     redeemers =
