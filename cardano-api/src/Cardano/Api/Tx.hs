@@ -399,6 +399,7 @@ pattern Tx :: Ledger.Era era => TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
   where
     Tx txbody ws = makeSignedTransaction ws txbody
+{-# COMPLETE Tx #-}
 
 getTxBodyAndWitnesses :: Tx era -> (TxBody era, [KeyWitness era])
 getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)

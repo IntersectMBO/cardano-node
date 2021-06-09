@@ -1403,6 +1403,7 @@ makeTransactionBody =
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
 pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
+{-# COMPLETE TxBody #-}
 
 getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
 getTxBodyContent (ByronTxBody body) = getByronTxBodyContent body
