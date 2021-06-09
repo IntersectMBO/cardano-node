@@ -29,7 +29,6 @@ import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..)
 import           Cardano.CLI.Types
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import           Control.Monad.Fail (fail)
-import           Data.Attoparsec.Combinator ((<?>))
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 import           Network.Socket (PortNumber)
@@ -38,19 +37,21 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.Char as Char
 import qualified Data.IP as IP
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Parser as Aeson.Parser
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Options.Applicative as Opt
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.String as Parsec
+import qualified Text.Parsec.Language as Parsec
+import qualified Text.Parsec.Token as Parsec
 
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
@@ -279,7 +280,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
         )
 
     readerScriptData = do
-      v <- readerFromAttoParser Aeson.Parser.json
+      v <- readerJSON
       case scriptDataFromJson ScriptDataJsonNoSchema v of
         Left err -> fail (displayError err)
         Right sd -> return sd
@@ -910,7 +911,7 @@ pGovernanceCmd =
 
 pTransferAmt :: Parser Lovelace
 pTransferAmt =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "transfer"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The amount to transfer."
@@ -918,7 +919,7 @@ pTransferAmt =
 
 pRewardAmt :: Parser Lovelace
 pRewardAmt =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "reward"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The reward for the relevant reward account."
@@ -1249,7 +1250,7 @@ pWithdrawal :: Parser (StakeAddress,
                        Maybe (ScriptWitnessFiles WitCtxStake))
 pWithdrawal =
     (\(stakeAddr,lovelace) maybeScriptFp -> (stakeAddr, lovelace, maybeScriptFp))
-      <$> Opt.option (readerFromAttoParser parseWithdrawal)
+      <$> Opt.option (readerFromParsecParser parseWithdrawal)
             (  Opt.long "withdrawal"
             <> Opt.metavar "WITHDRAWAL"
             <> Opt.help helpText
@@ -1264,9 +1265,9 @@ pWithdrawal =
               \followed by the amount in Lovelace. Optionally specify \
               \a script witness."
 
-   parseWithdrawal :: Atto.Parser (StakeAddress, Lovelace)
+   parseWithdrawal :: Parsec.Parser (StakeAddress, Lovelace)
    parseWithdrawal =
-     (,) <$> parseStakeAddress <* Atto.char '+' <*> parseLovelace
+     (,) <$> parseStakeAddress <* Parsec.char '+' <*> parseLovelace
 
 
 pUpdateProposalFile :: Parser UpdateProposalFile
@@ -1704,7 +1705,7 @@ pCardanoEra = asum
 
 pTxIn :: Parser (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))
 pTxIn =
-     (,) <$> Opt.option (readerFromAttoParser parseTxIn)
+     (,) <$> Opt.option (readerFromParsecParser parseTxIn)
                (  Opt.long "tx-in"
                 <> Opt.metavar "TX-IN"
                <> Opt.help "TxId#TxIx"
@@ -1716,14 +1717,14 @@ pTxIn =
 
 pTxInCollateral :: Parser TxIn
 pTxInCollateral =
-    Opt.option (readerFromAttoParser parseTxIn)
+    Opt.option (readerFromParsecParser parseTxIn)
       (  Opt.long "tx-in-collateral"
       <> Opt.metavar "TX-IN"
       <> Opt.help "TxId#TxIx"
       )
 
-parseTxIn :: Atto.Parser TxIn
-parseTxIn = TxIn <$> parseTxId <*> (Atto.char '#' *> parseTxIx)
+parseTxIn :: Parsec.Parser TxIn
+parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
 
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txid (TxIx txix)) =
@@ -1733,15 +1734,15 @@ renderTxIn (TxIn txid (TxIx txix)) =
     , Text.pack (show txix)
     ]
 
-parseTxId :: Atto.Parser TxId
-parseTxId = (<?> "Transaction ID (hexadecimal)") $ do
-  bstr <- Atto.takeWhile1 Char.isHexDigit
-  case deserialiseFromRawBytesHex AsTxId bstr of
+parseTxId :: Parsec.Parser TxId
+parseTxId = do
+  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "Transaction ID (hexadecimal)"
+  case deserialiseFromRawBytesHex AsTxId (BSC.pack str) of
     Just addr -> return addr
-    Nothing -> fail $ "Incorrect transaction id format:: " ++ show bstr
+    Nothing -> fail $ "Incorrect transaction id format:: " ++ show str
 
-parseTxIx :: Atto.Parser TxIx
-parseTxIx = toEnum <$> Atto.decimal
+parseTxIx :: Parsec.Parser TxIx
+parseTxIx = TxIx . fromIntegral <$> decimal
 
 
 pTxOut :: Parser TxOutAnyEra
@@ -1760,16 +1761,16 @@ pTxOut =
 
 pDatumHash :: Parser Text
 pDatumHash  =
-  Opt.option (readerFromAttoParser parseHex)
+  Opt.option (readerFromParsecParser parseHex)
     (  Opt.long "datum-hash"
     <> Opt.metavar "HASH"
     <> Opt.help "Required datum hash for tx inputs intended \
                \to be utilizied by a Plutus script."
     )
 
-parseHex :: Atto.Parser Text
+parseHex :: Parsec.Parser Text
 parseHex =
-  Text.decodeUtf8 <$> Atto.takeWhile1 Char.isHexDigit
+  Text.pack <$> Parsec.many1 Parsec.hexDigit
 
 
 pMultiAsset :: Parser Value
@@ -1953,7 +1954,7 @@ pQueryFilter = pAddresses <|> pure NoFilter
 
 pFilterByAddress :: Parser AddressAny
 pFilterByAddress =
-    Opt.option (readerFromAttoParser parseAddressAny)
+    Opt.option (readerFromParsecParser parseAddressAny)
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
@@ -1961,7 +1962,7 @@ pFilterByAddress =
 
 pFilterByStakeAddress :: Parser StakeAddress
 pFilterByStakeAddress =
-    Opt.option (readerFromAttoParser parseStakeAddress)
+    Opt.option (readerFromParsecParser parseStakeAddress)
       (  Opt.long "address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
@@ -1993,7 +1994,7 @@ pAddress =
 
 pStakeAddress :: Parser StakeAddress
 pStakeAddress =
-    Opt.option (readerFromAttoParser parseStakeAddress)
+    Opt.option (readerFromParsecParser parseStakeAddress)
       (  Opt.long "stake-address"
       <> Opt.metavar "ADDRESS"
       <> Opt.help "Target stake address (bech32 format)."
@@ -2197,7 +2198,7 @@ pPoolOwnerVerificationKeyOrFile =
 
 pPoolPledge :: Parser Lovelace
 pPoolPledge =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "pool-pledge"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The stake pool's pledge."
@@ -2206,7 +2207,7 @@ pPoolPledge =
 
 pPoolCost :: Parser Lovelace
 pPoolCost =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "pool-cost"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "The stake pool's cost."
@@ -2393,7 +2394,7 @@ pMinFeeConstantFactor =
 
 pMinUTxOValue :: Parser Lovelace
 pMinUTxOValue =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "min-utxo-value"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The minimum allowed UTxO value (Shelley to Mary eras)."
@@ -2401,7 +2402,7 @@ pMinUTxOValue =
 
 pMinPoolCost :: Parser Lovelace
 pMinPoolCost =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "min-pool-cost"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The minimum allowed cost parameter for stake pools."
@@ -2433,7 +2434,7 @@ pMaxBlockHeaderSize =
 
 pKeyRegistDeposit :: Parser Lovelace
 pKeyRegistDeposit =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "key-reg-deposit-amt"
       <> Opt.metavar "NATURAL"
       <> Opt.help "Key registration deposit amount."
@@ -2441,7 +2442,7 @@ pKeyRegistDeposit =
 
 pPoolDeposit :: Parser Lovelace
 pPoolDeposit =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "pool-reg-deposit"
       <> Opt.metavar "NATURAL"
       <> Opt.help "The amount of a pool registration deposit."
@@ -2498,7 +2499,7 @@ pDecentralParam =
 
 pExtraEntropy :: Parser (Maybe PraosNonce)
 pExtraEntropy =
-      Opt.option (Just <$> readerFromAttoParser parsePraosNonce)
+      Opt.option (Just <$> readerFromParsecParser parsePraosNonce)
         (  Opt.long "extra-entropy"
         <> Opt.metavar "HEX"
         <> Opt.help "Praos extra entropy, as a hex byte string."
@@ -2508,17 +2509,17 @@ pExtraEntropy =
         <> Opt.help "Reset the Praos extra entropy to none."
         )
   where
-    parsePraosNonce :: Atto.Parser PraosNonce
+    parsePraosNonce :: Parsec.Parser PraosNonce
     parsePraosNonce = makePraosNonce <$> parseEntropyBytes
 
-    parseEntropyBytes :: Atto.Parser ByteString
+    parseEntropyBytes :: Parsec.Parser ByteString
     parseEntropyBytes = either fail return
-                      . B16.decode
-                    =<< Atto.takeWhile1 Char.isHexDigit
+                      . B16.decode . BSC.pack
+                    =<< Parsec.many1 Parsec.hexDigit
 
 pUTxOCostPerWord :: Parser Lovelace
 pUTxOCostPerWord =
-    Opt.option (readerFromAttoParser parseLovelace)
+    Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "min-utxo-value"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "Cost in lovelace per unit of UTxO storage (from Alonzo era)."
@@ -2526,13 +2527,13 @@ pUTxOCostPerWord =
 
 pExecutionUnitPrices :: Parser ExecutionUnitPrices
 pExecutionUnitPrices = ExecutionUnitPrices
-  <$> Opt.option (readerFromAttoParser parseLovelace)
+  <$> Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "price-execution-steps"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "Step price of execution units for script languages that use \
                   \them (from Alonzo era)."
       )
-  <*> Opt.option (readerFromAttoParser parseLovelace)
+  <*> Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "price-execution-memory"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "Memory price of execution units for script languages that \
@@ -2648,30 +2649,30 @@ pProtocolVersion =
 -- Shelley CLI flag field parsers
 --
 
-parseLovelace :: Atto.Parser Lovelace
+parseLovelace :: Parsec.Parser Lovelace
 parseLovelace = do
-  i <- Atto.decimal
+  i <- decimal
   if i > toInteger (maxBound :: Word64)
   then fail $ show i <> " lovelace exceeds the Word64 upper bound"
   else return $ Lovelace i
 
-parseAddressAny :: Atto.Parser AddressAny
+parseAddressAny :: Parsec.Parser AddressAny
 parseAddressAny = do
     str <- lexPlausibleAddressString
     case deserialiseAddress AsAddressAny str of
       Nothing   -> fail "invalid address"
       Just addr -> pure addr
 
-parseStakeAddress :: Atto.Parser StakeAddress
+parseStakeAddress :: Parsec.Parser StakeAddress
 parseStakeAddress = do
     str <- lexPlausibleAddressString
     case deserialiseAddress AsStakeAddress str of
       Nothing   -> fail $ "invalid address: " <> Text.unpack str
       Just addr -> pure addr
 
-lexPlausibleAddressString :: Atto.Parser Text
+lexPlausibleAddressString :: Parsec.Parser Text
 lexPlausibleAddressString =
-    Text.decodeLatin1 <$> Atto.takeWhile1 isPlausibleAddressChar
+    Text.pack <$> Parsec.many1 (Parsec.satisfy isPlausibleAddressChar)
   where
     -- Covers both base58 and bech32 (with constrained prefixes)
     isPlausibleAddressChar c =
@@ -2680,6 +2681,8 @@ lexPlausibleAddressString =
       || (c >= '0' && c <= '9')
       || c == '_'
 
+decimal :: Parsec.Parser Integer
+Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
 
 --------------------------------------------------------------------------------
 -- Helpers
@@ -2739,6 +2742,9 @@ readRationalUnitInterval = readRational >>= checkUnitInterval
 
 readRational :: Opt.ReadM Rational
 readRational = toRational <$> readerFromAttoParser Atto.scientific
+
+readerJSON :: Opt.ReadM Aeson.Value
+readerJSON = readerFromAttoParser Aeson.Parser.json
 
 readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
 readerFromAttoParser p =
