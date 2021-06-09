@@ -102,11 +102,10 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) MaryEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
-toConsensusGenTx (TxInMode (ShelleyTx _ _tx) AlonzoEraInCardanoMode) =
+toConsensusGenTx (TxInMode (ShelleyTx _ tx) AlonzoEraInCardanoMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))
   where
-    tx' = error "toConsensusGenTx: Alonzo not implemented yet"
-    -- Consensus needs to expose a function that can make create Alonzo txs
+    tx' = Consensus.mkShelleyTx tx
 
 
 

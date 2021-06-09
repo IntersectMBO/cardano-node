@@ -198,7 +198,7 @@ data TransferDirection = TransferToReserves | TransferToTreasury
 
 
 toTxOutanyEra :: TxOutAnyEra' -> Maybe Text ->  TxOutAnyEra
-toTxOutanyEra (TxOutAnyEra' addr v) mHash = TxOutAnyEra addr v mHash
+toTxOutanyEra (TxOutAnyEra' addr v) = TxOutAnyEra addr v
 
 data TxOutAnyEra = TxOutAnyEra
                      AddressAny

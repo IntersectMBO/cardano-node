@@ -1750,7 +1750,7 @@ pTxOut =
     <$> Opt.option (readerFromParsecParser parseTxOutAnyEra)
           (  Opt.long "tx-out"
           <> Opt.metavar "TX-OUT"
-          -- TODO: Update the help text to describe the new syntax as well.
+          -- TODO alonzo: Update the help text to describe the new syntax as well.
           <> Opt.help "The transaction output as Address+Lovelace where Address is \
                       \the Bech32-encoded address followed by the amount in \
                       \Lovelace."
