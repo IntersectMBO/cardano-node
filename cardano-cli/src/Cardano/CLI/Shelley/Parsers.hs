@@ -267,7 +267,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
 
     pScriptDataFile dataFlagPrefix =
       Opt.strOption
-        (  Opt.long (dataFlagPrefix ++ "-file")
+        (  Opt.long (scriptFlagPrefix ++ "-" ++ dataFlagPrefix ++ "-file")
         <> Opt.metavar "FILE"
         <> Opt.help ("The file containing the script input "
                     ++ dataFlagPrefix ++ ".")
@@ -275,7 +275,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
 
     pScriptDataValue dataFlagPrefix =
       Opt.option readerScriptData
-        (  Opt.long (dataFlagPrefix ++ "-value")
+        (  Opt.long (scriptFlagPrefix ++ "-" ++ dataFlagPrefix ++ "-value")
         <> Opt.metavar "JSON"
         <> Opt.help ("The value for the script input " ++ dataFlagPrefix ++ ".")
         )
@@ -290,7 +290,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
     pExecutionUnits =
       uncurry ExecutionUnits <$>
       Opt.option Opt.auto
-        (  Opt.long "execution-units"
+        (  Opt.long (scriptFlagPrefix ++ "-execution-units")
         <> Opt.metavar "(INT, INT)"
         <> Opt.help "The time and space units needed by the script."
         )
