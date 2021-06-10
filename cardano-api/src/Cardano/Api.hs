@@ -346,6 +346,7 @@ module Cardano.Api (
 
     -- * Script data
     ScriptData(..),
+    hashScriptData,
 
     -- ** Validation
     ScriptDataRangeError (..),
