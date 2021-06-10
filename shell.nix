@@ -56,6 +56,7 @@ let
     { useCabalRun }:
     callPackage ./nix/supervisord-cluster
       { inherit useCabalRun;
+        profileName = clusterProfile;
         workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
       };
 

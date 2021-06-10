@@ -14,6 +14,7 @@ global_profile_eras=(
     shelley
     allegra
     mary
+    alonzo
 )
 
 profile() {
