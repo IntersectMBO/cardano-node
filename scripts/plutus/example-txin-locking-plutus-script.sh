@@ -13,7 +13,9 @@ set -o pipefail
 # by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
 # in order to accomodate this.
 
-plutusscriptaddr=$(cardano-cli address build --payment-script-file scripts/plutus/always-succeeds-txin.plutus  --testnet-magic 42)
+plutusscriptinuse=scripts/plutus/untyped-always-succeeds-txin.plutus
+
+plutusscriptaddr=$(cardano-cli address build --payment-script-file $plutusscriptinuse  --testnet-magic 42)
 
 mkdir -p example/work
 
@@ -65,17 +67,19 @@ echo $txinCollateral
 
 cardano-cli query protocol-parameters --testnet-magic 42 --out-file example/pparams.json
 
+dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
+
 cardano-cli transaction build-raw \
   --alonzo-era \
-  --fee 0 \
+  --fee 400000000 \
   --tx-in $plutusutxotxin \
   --tx-in-collateral $txinCollateral \
-  --tx-out $utxoaddr+500000000 \
-  --tx-in-script-file ./scripts/plutus/always-succeeds-txin.plutus \
-  --datum-value 42 \
+  --tx-out "$dummyaddress+100000000" \
+  --tx-in-script-file $plutusscriptinuse \
+  --tx-in-datum-value 42 \
   --protocol-params-file example/pparams.json\
-  --redeemer-value 42 \
-  --execution-units "(0,0)" \
+  --tx-in-redeemer-value 42 \
+  --tx-in-execution-units "(200000000,200000000)" \
   --out-file example/work/test-alonzo.body
 
 cardano-cli transaction sign \
