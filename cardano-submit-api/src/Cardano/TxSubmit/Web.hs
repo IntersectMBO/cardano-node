@@ -12,11 +12,10 @@ module Cardano.TxSubmit.Web
 
 import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra),
                    AnyConsensusMode (AnyConsensusMode), AnyConsensusModeParams (..),
-                   AsType (AsAllegraEra, AsByronEra, AsMaryEra, AsShelleyEra, AsTx), ByronEra,
-                   CardanoEra (AllegraEra, ByronEra, MaryEra, ShelleyEra), Error (..),
+                   AsType (..), CardanoEra (..), Error (..),
                    FromSomeType (..), HasTypeProxy (AsType), InAnyCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
-                   MaryEra, NetworkId, SerialiseAsCBOR (..), ShelleyEra, ToJSON, Tx, TxId (..),
+                   NetworkId, SerialiseAsCBOR (..), ShelleyEra, ToJSON, Tx, TxId (..),
                    TxInMode (TxInMode),
                    TxValidationErrorInMode (TxValidationEraMismatch, TxValidationErrorInMode),
                    consensusModeOnly, getTxBody, getTxId, submitTxToNodeLocal, toEraInMode)
@@ -131,6 +130,7 @@ readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyO
   , FromSomeType (AsTx AsShelleyEra) (InAnyCardanoEra ShelleyEra)
   , FromSomeType (AsTx AsAllegraEra) (InAnyCardanoEra AllegraEra)
   , FromSomeType (AsTx AsMaryEra)    (InAnyCardanoEra MaryEra)
+  , FromSomeType (AsTx AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
   ]
 
 txSubmitPost
