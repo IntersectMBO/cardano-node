@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Gen.Cardano.Api.Typed
   ( genAddressByron
@@ -38,6 +39,8 @@ module Gen.Cardano.Api.Typed
   , genVerificationKey
   , genUpdateProposal
   , genProtocolParametersUpdate
+  , genScriptDataSupportedInAlonzoEra
+  , genTxOutDatumHash
   ) where
 
 import           Cardano.Api
@@ -47,6 +50,7 @@ import           Cardano.Api.Shelley
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
+import           Data.Coerce
 import           Data.String
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
@@ -63,6 +67,8 @@ import qualified Hedgehog.Range as Range
 import           Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import qualified Cardano.Crypto.Hash.Class as CRYPTO
+import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -343,13 +349,31 @@ genByronTxOut :: Gen (TxOut ByronEra)
 genByronTxOut =
   TxOut <$> (byronAddressInEra <$> genAddressByron)
         <*> (TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace)
-        <*> pure TxOutDatumHashNone -- TODO alonzo replace with generator
+        <*> genTxOutDatumHash ByronEra
 
 genShelleyTxOut :: Gen (TxOut ShelleyEra)
 genShelleyTxOut =
   TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
         <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
-        <*> pure TxOutDatumHashNone -- TODO alonzo replace with generator
+        <*> genTxOutDatumHash ShelleyEra
+
+genAllegraTxOut :: Gen (TxOut AllegraEra)
+genAllegraTxOut =
+  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
+        <*> genTxOutValue AllegraEra
+        <*> genTxOutDatumHash AllegraEra
+
+genMaryTxOut :: Gen (TxOut MaryEra)
+genMaryTxOut =
+  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
+        <*> genTxOutValue MaryEra
+        <*> genTxOutDatumHash MaryEra
+
+genAlonzoTxOut :: Gen (TxOut AlonzoEra)
+genAlonzoTxOut =
+  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
+        <*> genTxOutValue AlonzoEra
+        <*> genTxOutDatumHash AlonzoEra
 
 genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 Ledger.EraIndependentTxBody)
 genShelleyHash = return . Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
@@ -388,21 +412,9 @@ genTxOut era =
   case era of
     ByronEra -> genByronTxOut
     ShelleyEra -> genShelleyTxOut
-    AllegraEra ->
-      TxOut
-        <$> (shelleyAddressInEra <$> genAddressShelley)
-        <*> (TxOutAdaOnly AdaOnlyInAllegraEra <$> genLovelace)
-        <*> pure TxOutDatumHashNone -- TODO alonzo replace with generator
-    MaryEra ->
-      TxOut
-        <$> (shelleyAddressInEra <$> genAddressShelley)
-        <*> genTxOutValue era
-        <*> pure TxOutDatumHashNone -- TODO alonzo replace with generator
-    AlonzoEra ->
-      TxOut
-        <$> (shelleyAddressInEra <$> genAddressShelley)
-        <*> genTxOutValue era
-        <*> pure TxOutDatumHashNone -- TODO alonzo replace with generator
+    AllegraEra -> genAllegraTxOut
+    MaryEra -> genMaryTxOut
+    AlonzoEra -> genAlonzoTxOut
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo
@@ -533,7 +545,6 @@ genTxMintValue era =
         , TxMintValue MultiAssetInMaryEra <$> genValueForMinting <*> return (BuildTxWith mempty)
         ]
     AlonzoEra -> panic "genTxMintValue: Alonzo not implemented yet"
-
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
@@ -787,3 +798,22 @@ genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
 genExecutionUnitPrices :: Gen ExecutionUnitPrices
 genExecutionUnitPrices = ExecutionUnitPrices <$> genLovelace <*> genLovelace
 
+genTxOutDatumHash :: CardanoEra era -> Gen (TxOutDatumHash era)
+genTxOutDatumHash era = case era of
+    ByronEra -> pure TxOutDatumHashNone
+    ShelleyEra -> pure TxOutDatumHashNone
+    AllegraEra -> pure TxOutDatumHashNone
+    MaryEra -> pure TxOutDatumHashNone
+    AlonzoEra -> Gen.choice
+      [ pure TxOutDatumHashNone
+      , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
+      ]
+
+mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
+mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR
+
+genHashScriptData :: Gen (Cardano.Api.Hash ScriptData)
+genHashScriptData = ScriptDataHash . unsafeMakeSafeHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
+
+genScriptDataSupportedInAlonzoEra :: Gen (ScriptDataSupportedInEra AlonzoEra)
+genScriptDataSupportedInAlonzoEra = pure ScriptDataInAlonzoEra
