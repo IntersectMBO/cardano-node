@@ -1,4 +1,4 @@
-cabal-version: 2.4
+cabal-version: 3.0
 
 name:                   cardano-api
 version:                1.27.0
@@ -140,59 +140,3 @@ library
                       , unordered-containers >= 0.2.11
                       , vector
                       , yaml
-
-test-suite cardano-api-test
-  import:               base, project-config
-  hs-source-dirs:       test
-  main-is:              cardano-api-test.hs
-  type:                 exitcode-stdio-1.0
-
-  build-depends:        aeson             >= 1.5.6.0
-                      , base16-bytestring
-                      , bytestring
-                      , cardano-api
-                      , cardano-binary
-                      , cardano-crypto
-                      , cardano-crypto-class
-                      , cardano-crypto-test
-                      , cardano-crypto-tests
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-byron-test
-                      , cardano-ledger-core
-                      , cardano-prelude
-                      , cardano-slotting
-                      , containers
-                      , hedgehog
-                      , hedgehog-extras
-                      , ouroboros-consensus
-                      , ouroboros-consensus-shelley
-                      , QuickCheck
-                      , shelley-spec-ledger
-                      , shelley-spec-ledger-test
-                      , tasty
-                      , tasty-hedgehog
-                      , tasty-quickcheck
-                      , text
-                      , time
-
-  other-modules:        Test.Cardano.Api.Crypto
-                        Test.Cardano.Api.Gen
-                        Test.Cardano.Api.Genesis
-                        Test.Cardano.Api.Json
-                        Test.Cardano.Api.KeysByron
-                        Test.Cardano.Api.Ledger
-                        Test.Cardano.Api.Metadata
-                        Test.Cardano.Api.Typed.Bech32
-                        Test.Cardano.Api.Typed.CBOR
-                        Test.Cardano.Api.Typed.Envelope
-                        Test.Cardano.Api.Typed.Gen
-                        Test.Cardano.Api.Typed.JSON
-                        Test.Cardano.Api.Typed.Ord
-                        Test.Cardano.Api.Typed.Orphans
-                        Test.Cardano.Api.Typed.RawBytes
-                        Test.Cardano.Api.Typed.Script
-                        Test.Cardano.Api.Typed.Value
-                        Test.Cardano.Crypto.Seed.Gen
-                        Test.Tasty.Hedgehog.Group
-
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

@@ -1,4 +1,5 @@
-cabal-version:       2.4
+cabal-version: 3.0
+
 name:                cardano-client-demo
 version:             0.1.0.0
 synopsis:            A simple demo cardano-node client application
