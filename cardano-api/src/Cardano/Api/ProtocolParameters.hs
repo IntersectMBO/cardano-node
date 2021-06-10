@@ -91,8 +91,6 @@ import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
--- TODO alonzo: eliminate this import and use things re-exported from the ledger lib
-import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
@@ -754,7 +752,7 @@ validateCostModel PlutusScriptV1 (CostModel m)
     -- existing checkCostModel function. We should not need to depend on the
     -- Plutus library directly. That makes too many assumptions about what the
     -- ledger library is doing.
-  | Plutus.validateCostModelParams m = Right ()
+  | Alonzo.validateCostModelParams m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
