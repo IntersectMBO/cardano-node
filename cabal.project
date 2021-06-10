@@ -128,8 +128,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: a3ef848542961079b7cd53d599e5385198a3035c
-  --sha256: 02iwn2lcfcfvrnvcqnx586ncdnma23vdqvicxgr4f39vcacalzpd
+  tag: 91dc8868db4d7b9aa48b8e8c7a912378489ac373
+  --sha256: 1byq0mkgn1b2vkw159g2xsykwvhwn8zjgarywysjdp36z83ic4gw
   subdir:
     alonzo/impl
     alonzo/test
@@ -181,14 +181,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/Win32-network
-  tag: 94153b676617f8f33abe8d8182c37377d2784bd1
-  --sha256: 0pb7bg0936fldaa5r08nqbxvi2g8pcy4w3c7kdcg7pdgmimr30ss
+  tag: 82f4afb8c240b8446a1db6c6b50901a42028ce0f
+  --sha256: 0ljxjzywk6xh9n4mfg21am65z65anlrq47z6zyzcav3h6iasvfq2
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: e50613562d6d4a0f933741fcf590b0f69a1eda67
-  --sha256: 0i192ksa69lpzjhzmhd2h1mramkvvikw04pqws18h5dly55f4z3k
+  tag: 47b94669555fb3e4f5f3b985f5d804090cfb60c4
+  --sha256: 1y20brl7scppf55037bq5rnq6vdab2f6x56nqsg8grj2gipihkdp
   subdir:
     io-sim
     io-sim-classes

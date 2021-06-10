@@ -95,7 +95,6 @@ import qualified Cardano.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import           Cardano.Api.Address
@@ -454,9 +453,7 @@ getTxBody (ShelleyTx era tx) =
                     } =
       ShelleyTxBody era txbody
                     (Map.elems txscripts)
-                    (TxBodyScriptData scriptDataInEra
-                      (Map.elems txdats)
-                      redeemers)
+                    (TxBodyScriptData scriptDataInEra txdats redeemers)
                     (strictMaybeToMaybe auxiliaryData)
 
 
@@ -575,24 +572,10 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
             redeemers)
           (maybeToStrictMaybe txmetadata)
       where
-        (datums, redeemers) = toAlonzoScriptData txscriptdata
-
-
-toAlonzoScriptData
-  :: forall era ledgerera.
-     ShelleyLedgerEra era ~ ledgerera
-  => Ledger.Era ledgerera
-  => Ledger.Crypto ledgerera ~ StandardCrypto
-  => TxBodyScriptData era
-  -> ( Map.Map (Alonzo.DataHash StandardCrypto) (Alonzo.Data ledgerera)
-     , Alonzo.Redeemers ledgerera
-     )
-toAlonzoScriptData TxBodyNoScriptData =
-    (Map.empty, Alonzo.Redeemers Map.empty)
-
-toAlonzoScriptData (TxBodyScriptData _ ds r) =
-    ( Map.fromList [ (Alonzo.hashData @ledgerera d, d) | d <- ds ]
-    , r)
+        (datums, redeemers) =
+          case txscriptdata of
+            TxBodyScriptData _ ds rs -> (ds, rs)
+            TxBodyNoScriptData       -> (mempty, Alonzo.Redeemers mempty)
 
 makeByronKeyWitness :: forall key.
                        IsByronKey key

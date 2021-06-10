@@ -302,10 +302,10 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
     mkObject [ "kind" .= String "UnRedeemableScripts"
              , "scripts" .= renderUnredeemableScripts scripts
              ]
-  toObject _ (DataHashSetsDontAgree fromTx fromUtxo) =
-    mkObject [ "kind" .= String "DataHashSetsDontAgree"
-             , "fromTx" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList fromTx)
-             , "fromUtxo" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList fromUtxo)
+  toObject _ (MissingRequiredDatums required) =
+    mkObject [ "kind" .= String "MissingRequiredDatums"
+             , "reqired" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+                                (Set.toList required)
              ]
   toObject _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
     mkObject [ "kind" .= String "PPViewHashesDontMatch"

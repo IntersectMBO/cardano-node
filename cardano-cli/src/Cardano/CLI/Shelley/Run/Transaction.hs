@@ -305,7 +305,7 @@ runTxBuildRaw (AnyCardanoEra era)
                  <*> validateTxValidityUpperBound era mUpperBound)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
         <*> validateTxAuxScripts     era scriptFiles
-        <*> pure TxAuxScriptDataNone     --TODO alonzo: support this
+        <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
         <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
         <*> validateProtocolParameters era mpparams
         <*> validateTxWithdrawals    era withdrawals
@@ -483,22 +483,13 @@ validateTxAuxScripts _ [] = return TxAuxScriptsNone
 validateTxAuxScripts era files =
   case auxScriptsSupportedInEra era of
     Nothing -> txFeatureMismatch era TxFeatureAuxScripts
-    Just AuxScriptsInAllegraEra -> do
+    Just supported -> do
       scripts <- sequence
         [ do script <- firstExceptT ShelleyTxCmdScriptFileError $
                          readFileScriptInAnyLang file
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
-      return $ TxAuxScripts AuxScriptsInAllegraEra scripts
-    Just AuxScriptsInMaryEra -> do
-      scripts <- sequence
-        [ do script <- firstExceptT ShelleyTxCmdScriptFileError $
-                         readFileScriptInAnyLang file
-             validateScriptSupportedInEra era script
-        | ScriptFile file <- files ]
-      return (TxAuxScripts AuxScriptsInMaryEra scripts)
-    Just AuxScriptsInAlonzoEra ->
-      panic "TODO alonzo: validateTxAuxScripts AuxScriptsInAlonzoEra"
+      return $ TxAuxScripts supported scripts
 
 validateTxWithdrawals
   :: forall era.

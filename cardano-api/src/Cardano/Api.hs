@@ -176,7 +176,7 @@ module Cardano.Api (
     EpochSlots(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
-    TxAuxScriptData(..),
+    TxExtraScriptData(..),
     TxExtraKeyWitnesses(..),
     TxWithdrawals(..),
     TxCertificates(..),
