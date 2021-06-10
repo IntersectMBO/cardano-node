@@ -539,6 +539,9 @@ scriptLanguageSupportedInEra era lang =
       (MaryEra, SimpleScriptLanguage SimpleScriptV2) ->
         Just SimpleScriptV2InMary
 
+      (AlonzoEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InAlonzo
+
       (AlonzoEra, SimpleScriptLanguage SimpleScriptV2) ->
         Just SimpleScriptV2InAlonzo
 
