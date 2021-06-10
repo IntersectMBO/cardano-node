@@ -168,7 +168,7 @@ test-suite cardano-cli-test
                       , bytestring
                       , base16-bytestring
                       , cardano-api
-                      , cardano-api:gen
+                      , cardano-api-gen
                       , cardano-cli
                       , cardano-node
                       , cardano-prelude

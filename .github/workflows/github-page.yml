@@ -62,7 +62,7 @@ jobs:
       run: |
         cabal build all --dependencies-only --dry-run
         mkdir ./haddocks
-        DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
+        DRY_RUN=1 bash -x ./scripts/haddocs.sh ./haddocks true
 
     - name: Record dependencies
       run: |
