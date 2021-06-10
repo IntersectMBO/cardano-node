@@ -128,7 +128,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: a3ef848542961079b7cd53d599e5385198a3035c
+  tag: 7b715c28466d4d26bb80a31846119228ab380e0c
   --sha256: 02iwn2lcfcfvrnvcqnx586ncdnma23vdqvicxgr4f39vcacalzpd
   subdir:
     alonzo/impl
@@ -187,8 +187,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: e50613562d6d4a0f933741fcf590b0f69a1eda67
-  --sha256: 0i192ksa69lpzjhzmhd2h1mramkvvikw04pqws18h5dly55f4z3k
+  tag: 191836610aa3307133a1417205fdfba73e0a5c10
+  --sha256: 1ymh4jx5b99x7nf35sq8shjjips5brb1mhak1df0ngx49ympkf58
   subdir:
     io-sim
     io-sim-classes
@@ -212,6 +212,7 @@ source-repository-package
     plutus-core
     plutus-ledger-api
     plutus-tx
+    plutus-tx-plugin
     prettyprinter-configurable
 
 constraints:
