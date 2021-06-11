@@ -473,6 +473,7 @@ genTxMintValue era =
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
   trxIns <- Gen.list (Range.constant 1 10) genTxIn
+  txInCollateral' <- genTxInsCollateral era
   trxOuts <- Gen.list (Range.constant 1 10) (genTxOut era)
   fee <- genTxFee era
   validityRange <- genTxValidityRange era
@@ -486,7 +487,7 @@ genTxBodyContent era = do
 
   pure $ TxBodyContent
     { txIns = map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) trxIns
-    , txInsCollateral = TxInsCollateralNone --TODO: Alonzo era: Generate collateral inputs.
+    , txInsCollateral = txInCollateral'
     , txOuts = trxOuts
     , txFee = fee
     , txValidityRange = validityRange
@@ -500,6 +501,18 @@ genTxBodyContent era = do
     , txUpdateProposal = updateProposal
     , txMintValue = mintValue
     }
+
+genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
+genTxInsCollateral era =
+  case era of
+    ByronEra -> pure TxInsCollateralNone
+    ShelleyEra -> pure TxInsCollateralNone
+    AllegraEra -> pure TxInsCollateralNone
+    MaryEra -> pure TxInsCollateralNone
+    AlonzoEra -> Gen.choice
+      [ pure TxInsCollateralNone
+      , TxInsCollateral CollateralInAlonzoEra <$> Gen.list (Range.linear 0 10) genTxIn
+      ]
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)
 genTxFee era =
