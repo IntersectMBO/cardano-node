@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -43,9 +44,15 @@ module Gen.Cardano.Api.Typed
   , genTxOutDatumHash
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Byron
-import           Cardano.Api.Shelley
+import           Cardano.Api hiding (txIns)
+import qualified Cardano.Api as Api
+import           Cardano.Api.Byron (Lovelace(Lovelace), KeyWitness(ByronKeyWitness),
+                    WitnessNetworkIdOrByronAddress(..) )
+import           Cardano.Api.Shelley (Hash(ScriptDataHash), KESPeriod(KESPeriod),
+                    StakePoolKey, PlutusScript(PlutusScriptSerialised),
+                    StakeCredential(StakeCredentialByKey),
+                    ProtocolParameters(ProtocolParameters),
+                    OperationalCertificateIssueCounter(OperationalCertificateIssueCounter) )
 
 import           Cardano.Prelude
 
@@ -472,34 +479,36 @@ genTxMintValue era =
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
-  trxIns <- Gen.list (Range.constant 1 10) genTxIn
-  txInCollateral' <- genTxInsCollateral era
-  trxOuts <- Gen.list (Range.constant 1 10) (genTxOut era)
-  fee <- genTxFee era
-  validityRange <- genTxValidityRange era
-  txMd <- genTxMetadataInEra era
-  auxScripts <- genTxAuxScripts era
-  mpparams <- Gen.maybe genProtocolParameters
-  withdrawals <- genTxWithdrawals era
-  certs <- genTxCertificates era
-  updateProposal <- genTxUpdateProposal era
-  mintValue <- genTxMintValue era
+  txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
+  txInsCollateral <- genTxInsCollateral era
+  txOuts <- Gen.list (Range.constant 1 10) (genTxOut era)
+  txFee <- genTxFee era
+  txValidityRange <- genTxValidityRange era
+  txMetadata <- genTxMetadataInEra era
+  txAuxScripts <- genTxAuxScripts era
+  let txExtraScriptData = BuildTxWith TxExtraScriptDataNone --TODO: Alonzo era: Generate extra script data
+  let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
+  txProtocolParams <- BuildTxWith <$> Gen.maybe genProtocolParameters
+  txWithdrawals <- genTxWithdrawals era
+  txCertificates <- genTxCertificates era
+  txUpdateProposal <- genTxUpdateProposal era
+  txMintValue <- genTxMintValue era
 
   pure $ TxBodyContent
-    { txIns = map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) trxIns
-    , txInsCollateral = txInCollateral'
-    , txOuts = trxOuts
-    , txFee = fee
-    , txValidityRange = validityRange
-    , txMetadata = txMd
-    , txAuxScripts = auxScripts
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone --TODO: Alonzo era: Generate extra script data
-    , txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
-    , txProtocolParams = BuildTxWith mpparams
-    , txWithdrawals = withdrawals
-    , txCertificates = certs
-    , txUpdateProposal = updateProposal
-    , txMintValue = mintValue
+    { Api.txIns
+    , Api.txInsCollateral
+    , Api.txOuts
+    , Api.txFee
+    , Api.txValidityRange
+    , Api.txMetadata
+    , Api.txAuxScripts
+    , Api.txExtraScriptData
+    , Api.txExtraKeyWits
+    , Api.txProtocolParams
+    , Api.txWithdrawals
+    , Api.txCertificates
+    , Api.txUpdateProposal
+    , Api.txMintValue
     }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
