@@ -116,9 +116,10 @@ final: prev: with final;
 
   submitApiDockerImage = let
     defaultConfig = {
-      socketPath = "/ipc/node.socket";
+      socketPath = "/node-ipc/node.socket";
+      listenAddress = "0.0.0.0";
     };
-  in callPackage ./docker {
+  in callPackage ./docker/submit-api.nix {
     exe = "cardano-submit-api";
     scripts = import ./scripts-submit-api.nix {
       inherit pkgs;
