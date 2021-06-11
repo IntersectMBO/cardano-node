@@ -105,6 +105,10 @@ module Cardano.Api.Shelley
     fromPlutusData,
     toAlonzoData,
     fromAlonzoData,
+    toAlonzoPrices,
+    fromAlonzoPrices,
+    toAlonzoExUnits,
+    fromAlonzoExUnits,
 
     -- * Certificates
     Certificate (..),
