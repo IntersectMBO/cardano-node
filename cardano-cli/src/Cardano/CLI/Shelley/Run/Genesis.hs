@@ -763,7 +763,7 @@ updateTemplate
 updateTemplate (SystemStart start)
                genDelegMap mAmountNonDeleg utxoAddrsNonDeleg
                poolSpecs (Lovelace amountDeleg) utxoAddrsDeleg stuffedUtxoAddrs
-               template  adaPerUTxOWord prices maxTxExUnits maxBlockExUnits
+               template coinsPerUTxOWord prices maxTxExUnits maxBlockExUnits
                maxValueSize collateralPercentage maxCollateralInputs = do
 
     let shelleyGenesis = template
@@ -792,7 +792,7 @@ updateTemplate (SystemStart start)
 
                    Nothing -> panic "updateTemplate: Could not extract cost model params from Plutus.defaultCostModel"
         alonzoGenesis = Alonzo.AlonzoGenesis
-          { Alonzo.adaPerUTxOWord       = toShelleyLovelace adaPerUTxOWord
+          { Alonzo.coinsPerUTxOWord     = toShelleyLovelace coinsPerUTxOWord
           , Alonzo.costmdls             = cModel
           , Alonzo.prices               = toAlonzoPrices prices
           , Alonzo.maxTxExUnits         = toAlonzoExUnits maxTxExUnits

@@ -129,11 +129,10 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 91dc8868db4d7b9aa48b8e8c7a912378489ac373
-  --sha256: 1byq0mkgn1b2vkw159g2xsykwvhwn8zjgarywysjdp36z83ic4gw
+  tag: d6b3d6b8ed16b2c69684fa44218f4e7060f166d3
+  --sha256: 1afsvxv8a24rpd3inr4m323l1dx5xg6kmfnjkzb6jw72ykcgpsyz
   subdir:
     alonzo/impl
-    alonzo/test
     byron/chain/executable-spec
     byron/crypto
     byron/crypto/test
@@ -148,6 +147,8 @@ source-repository-package
     shelley/chain-and-ledger/shelley-spec-ledger-test
     shelley-ma/impl
     shelley-ma/shelley-ma-test
+--TODO: disabled until it drops its dep on plutus-tx-plugin
+--  alonzo/test
 
 source-repository-package
   type: git
@@ -207,13 +208,21 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 13da6d416b2b47cdb6f287ff078b9e759bb90b7f
-  --sha256: 11jpcjdr05l2yyhy9zp3hpkq8bhipx5w3y9bjzg2hzh0fay8571w
+  tag: bd0dec6dbbf87a14b54384cc083be2bfaf8d5ca6
+  --sha256: 09qhhiks1qj3x0h3vhr3j7p8kfnbrp2sqi2gc6d16s5zy2pyjbqh
   subdir:
     plutus-core
     plutus-ledger-api
     plutus-tx
     prettyprinter-configurable
+    word-array
+
+-- Drops an instance breaking our code. Should be released to Hackage eventually.
+source-repository-package
+  type: git
+  location: https://github.com/Quid2/flat.git
+  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
+  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
 
 constraints:
     hedgehog >= 1.0

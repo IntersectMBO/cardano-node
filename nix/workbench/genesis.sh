@@ -147,7 +147,7 @@ case "${op}" in
 
         ## TODO: temporary step for Alonzo
         jq_fmutate ""$dir"/genesis.json" '. *
-          { adaPerUTxOWord: 0
+          { lovelacePerUTxOWord: 0
           , executionPrices:
             { prMem:              1
             , prSteps:            1
