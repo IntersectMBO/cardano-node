@@ -34,6 +34,8 @@ import qualified PlutusTx
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 
 
+{- HLINT ignore "Avoid lambda" -}
+
 {-# INLINABLE mkPolicy #-}
 mkPolicy :: PubKeyHash -> ScriptContext -> Bool
 mkPolicy ownerPkh ctx =
