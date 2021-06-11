@@ -974,7 +974,9 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
           ]
 
 instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
-  toObject _ _ = panic "ToJSON: AlonzoBbodyPredFail not implemented yet"
+  toObject _ err = mkObject [ "kind" .= String "AlonzoBbodyPredFail"
+                            , "error" .= String (show err)
+                            ]
 
 --------------------------------------------------------------------------------
 -- Helper functions
