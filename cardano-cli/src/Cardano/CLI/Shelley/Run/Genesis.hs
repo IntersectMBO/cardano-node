@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -1008,25 +1009,25 @@ alonzoGenesisDefaultExecutionPrices =
 alonzoGenesisDefaultMaxTxExecutionUnits :: ExecutionUnits
 alonzoGenesisDefaultMaxTxExecutionUnits =
     ExecutionUnits {
-      executionSteps  = 1,
-      executionMemory = 1
+      executionSteps  = 10_000_000_000,
+      executionMemory = 10_000_000_000
     }
 
 alonzoGenesisDefaultMaxBlockExecutionUnits :: ExecutionUnits
 alonzoGenesisDefaultMaxBlockExecutionUnits =
     ExecutionUnits {
-      executionSteps  = 1,
-      executionMemory = 1
+      executionSteps  = 100_000_000_000,
+      executionMemory = 100_000_000_000
     }
 
 alonzoGenesisDefaultMaxValueSize :: Natural
-alonzoGenesisDefaultMaxValueSize = 100
+alonzoGenesisDefaultMaxValueSize = 4000
 
 alonzoGenesisDefaultCollateralPercent :: Natural
 alonzoGenesisDefaultCollateralPercent = 1 --TODO change to 100%
 
 alonzoGenesisDefaultMaxCollateralInputs :: Natural
-alonzoGenesisDefaultMaxCollateralInputs = 1
+alonzoGenesisDefaultMaxCollateralInputs = 5
 
 
 readAlonzoGenesis
