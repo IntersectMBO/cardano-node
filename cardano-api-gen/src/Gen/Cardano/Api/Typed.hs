@@ -504,15 +504,12 @@ genTxBodyContent era = do
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
 genTxInsCollateral era =
-  case era of
-    ByronEra -> pure TxInsCollateralNone
-    ShelleyEra -> pure TxInsCollateralNone
-    AllegraEra -> pure TxInsCollateralNone
-    MaryEra -> pure TxInsCollateralNone
-    AlonzoEra -> Gen.choice
-      [ pure TxInsCollateralNone
-      , TxInsCollateral CollateralInAlonzoEra <$> Gen.list (Range.linear 0 10) genTxIn
-      ]
+    case collateralSupportedInEra era of
+      Nothing        -> pure TxInsCollateralNone
+      Just supported -> Gen.choice
+                          [ pure TxInsCollateralNone
+                          , TxInsCollateral supported <$> Gen.list (Range.linear 0 10) genTxIn
+                          ]
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)
 genTxFee era =
