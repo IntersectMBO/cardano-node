@@ -21,6 +21,7 @@ module Cardano.Api.Address (
     makeShelleyAddress,
     PaymentCredential(..),
     StakeAddressReference(..),
+    StakeAddressPointer(..),
 
     -- ** Addresses in any era
     AddressAny(..),
@@ -441,9 +442,10 @@ data StakeAddressReference
        | NoStakeAddress
   deriving (Eq, Show)
 
---TODO: wrap this type properly and export it
-type StakeAddressPointer = Shelley.Ptr
-
+newtype StakeAddressPointer = StakeAddressPointer
+  { unStakeAddressPointer :: Shelley.Ptr
+  }
+  deriving (Eq, Show)
 
 instance HasTypeProxy StakeAddress where
     data AsType StakeAddress = AsStakeAddress
@@ -522,7 +524,7 @@ toShelleyStakeReference :: StakeAddressReference
 toShelleyStakeReference (StakeAddressByValue stakecred) =
     Shelley.StakeRefBase (toShelleyStakeCredential stakecred)
 toShelleyStakeReference (StakeAddressByPointer ptr) =
-    Shelley.StakeRefPtr ptr
+    Shelley.StakeRefPtr (unStakeAddressPointer ptr)
 toShelleyStakeReference  NoStakeAddress =
     Shelley.StakeRefNull
 
@@ -559,6 +561,6 @@ fromShelleyStakeReference :: Shelley.StakeReference StandardCrypto
 fromShelleyStakeReference (Shelley.StakeRefBase stakecred) =
   StakeAddressByValue (fromShelleyStakeCredential stakecred)
 fromShelleyStakeReference (Shelley.StakeRefPtr ptr) =
-  StakeAddressByPointer ptr
+  StakeAddressByPointer (StakeAddressPointer ptr)
 fromShelleyStakeReference Shelley.StakeRefNull =
   NoStakeAddress
