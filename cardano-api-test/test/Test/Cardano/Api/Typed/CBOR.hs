@@ -34,6 +34,10 @@ prop_roundtrip_txbody_mary_CBOR :: Property
 prop_roundtrip_txbody_mary_CBOR =
   roundtrip_CBOR (AsTxBody AsMaryEra) (genTxBody MaryEra)
 
+prop_roundtrip_txbody_alonzo_CBOR :: Property
+prop_roundtrip_txbody_alonzo_CBOR =
+  roundtrip_CBOR (AsTxBody AsAlonzoEra) (genTxBody AlonzoEra)
+
 prop_roundtrip_tx_byron_CBOR :: Property
 prop_roundtrip_tx_byron_CBOR =
   roundtrip_CBOR (AsTx AsByronEra) (genTx ByronEra)
@@ -41,6 +45,18 @@ prop_roundtrip_tx_byron_CBOR =
 prop_roundtrip_tx_shelley_CBOR :: Property
 prop_roundtrip_tx_shelley_CBOR =
   roundtrip_CBOR (AsTx AsShelleyEra) (genTx ShelleyEra)
+
+prop_roundtrip_tx_allegra_CBOR :: Property
+prop_roundtrip_tx_allegra_CBOR =
+  roundtrip_CBOR (AsTx AsAllegraEra) (genTx AllegraEra)
+
+prop_roundtrip_tx_mary_CBOR :: Property
+prop_roundtrip_tx_mary_CBOR =
+  roundtrip_CBOR (AsTx AsMaryEra) (genTx MaryEra)
+
+prop_roundtrip_tx_alonzo_CBOR :: Property
+prop_roundtrip_tx_alonzo_CBOR =
+  roundtrip_CBOR (AsTx AsAlonzoEra) (genTx AlonzoEra)
 
 prop_roundtrip_witness_byron_CBOR :: Property
 prop_roundtrip_witness_byron_CBOR =
@@ -57,6 +73,10 @@ prop_roundtrip_witness_allegra_CBOR =
 prop_roundtrip_witness_mary_CBOR :: Property
 prop_roundtrip_witness_mary_CBOR =
   roundtrip_CBOR (AsKeyWitness AsMaryEra) (genShelleyWitness MaryEra)
+
+prop_roundtrip_witness_alonzo_CBOR :: Property
+prop_roundtrip_witness_alonzo_CBOR =
+  roundtrip_CBOR (AsKeyWitness AsAlonzoEra) (genShelleyWitness AlonzoEra)
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR =

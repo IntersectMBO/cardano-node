@@ -81,6 +81,18 @@ genAddressShelley = makeShelleyAddress <$> genNetworkId
                                        <*> genPaymentCredential
                                        <*> genStakeAddressReference
 
+genAddressInEra :: CardanoEra era -> Gen (AddressInEra era)
+genAddressInEra era =
+  case cardanoEraStyle era of
+    LegacyByronEra ->
+      byronAddressInEra <$> genAddressByron
+
+    ShelleyBasedEra _ ->
+      Gen.choice
+        [ byronAddressInEra   <$> genAddressByron
+        , shelleyAddressInEra <$> genAddressShelley
+        ]
+
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 
@@ -338,56 +350,11 @@ genStakeCredential = do
   vKey <- genVerificationKey AsStakeKey
   return . StakeCredentialByKey $ verificationKeyHash vKey
 
-genTxBodyShelley :: Gen (TxBody ShelleyEra)
-genTxBodyShelley = do
-  res <- makeTransactionBody <$> genTxBodyContent ShelleyEra
-  case res of
-    Left err -> fail (show err) -- TODO: Render function for TxBodyError
-    Right txBody -> pure txBody
-
-genByronTxOut :: Gen (TxOut ByronEra)
-genByronTxOut =
-  TxOut <$> (byronAddressInEra <$> genAddressByron)
-        <*> (TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace)
-        <*> genTxOutDatumHash ByronEra
-
-genShelleyTxOut :: Gen (TxOut ShelleyEra)
-genShelleyTxOut =
-  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
-        <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace)
-        <*> genTxOutDatumHash ShelleyEra
-
-genAllegraTxOut :: Gen (TxOut AllegraEra)
-genAllegraTxOut =
-  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
-        <*> genTxOutValue AllegraEra
-        <*> genTxOutDatumHash AllegraEra
-
-genMaryTxOut :: Gen (TxOut MaryEra)
-genMaryTxOut =
-  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
-        <*> genTxOutValue MaryEra
-        <*> genTxOutDatumHash MaryEra
-
-genAlonzoTxOut :: Gen (TxOut AlonzoEra)
-genAlonzoTxOut =
-  TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
-        <*> genTxOutValue AlonzoEra
-        <*> genTxOutDatumHash AlonzoEra
-
 genShelleyHash :: Gen (Crypto.Hash Crypto.Blake2b_256 Ledger.EraIndependentTxBody)
 genShelleyHash = return . Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
 
 genSlotNo :: Gen SlotNo
 genSlotNo = SlotNo <$> Gen.word64 Range.constantBounded
-
--- TODO: Should probably have a naive generator that generates no inputs, no outputs etc
-genTxBodyByron :: Gen (TxBody ByronEra)
-genTxBodyByron = do
-  res <- makeTransactionBody <$> genTxBodyContent ByronEra
-  case res of
-    Left err -> fail (show err)
-    Right txBody -> pure txBody
 
 genTxIn :: Gen TxIn
 genTxIn = TxIn <$> genTxId <*> genTxIndex
@@ -400,21 +367,15 @@ genTxIndex = TxIx <$> Gen.word Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
 genTxOutValue era =
-  case era of
-    ByronEra -> TxOutAdaOnly AdaOnlyInByronEra <$> genLovelace
-    ShelleyEra -> TxOutAdaOnly AdaOnlyInShelleyEra <$> genLovelace
-    AllegraEra -> TxOutAdaOnly AdaOnlyInAllegraEra <$> genLovelace
-    MaryEra -> TxOutValue MultiAssetInMaryEra <$> genValueForTxOut
-    AlonzoEra -> TxOutValue MultiAssetInAlonzoEra <$> genValueForTxOut
+  case multiAssetSupportedInEra era of
+    Left adaOnlyInEra     -> TxOutAdaOnly adaOnlyInEra <$> genLovelace
+    Right multiAssetInEra -> TxOutValue multiAssetInEra <$> genValueForTxOut
 
 genTxOut :: CardanoEra era -> Gen (TxOut era)
 genTxOut era =
-  case era of
-    ByronEra -> genByronTxOut
-    ShelleyEra -> genShelleyTxOut
-    AllegraEra -> genAllegraTxOut
-    MaryEra -> genMaryTxOut
-    AlonzoEra -> genAlonzoTxOut
+  TxOut <$> genAddressInEra era
+        <*> genTxOutValue era
+        <*> genTxOutDatumHash era
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo
@@ -422,22 +383,23 @@ genTtl = genSlotNo
 -- TODO: Accept a range for generating ttl.
 genTxValidityLowerBound :: CardanoEra era -> Gen (TxValidityLowerBound era)
 genTxValidityLowerBound era =
-  case era of
-    ByronEra -> pure TxValidityNoLowerBound
-    ShelleyEra -> pure TxValidityNoLowerBound
-    AllegraEra -> TxValidityLowerBound ValidityLowerBoundInAllegraEra <$> genTtl
-    MaryEra -> TxValidityLowerBound ValidityLowerBoundInMaryEra <$> genTtl
-    AlonzoEra -> panic "genTxValidityLowerBound: Alonzo not implemented yet "
+  case validityLowerBoundSupportedInEra era of
+    Nothing        -> pure TxValidityNoLowerBound
+    Just supported -> TxValidityLowerBound supported <$> genTtl
 
 -- TODO: Accept a range for generating ttl.
 genTxValidityUpperBound :: CardanoEra era -> Gen (TxValidityUpperBound era)
 genTxValidityUpperBound era =
-  case era of
-    ByronEra -> pure (TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
-    ShelleyEra -> TxValidityUpperBound ValidityUpperBoundInShelleyEra <$> genTtl
-    AllegraEra -> TxValidityUpperBound ValidityUpperBoundInAllegraEra <$> genTtl
-    MaryEra -> TxValidityUpperBound ValidityUpperBoundInMaryEra <$> genTtl
-    AlonzoEra -> panic "genTxValidityUpperBound: Alonzo not implemented yet "
+  case (validityUpperBoundSupportedInEra era,
+       validityNoUpperBoundSupportedInEra era) of
+    (Just supported, _) ->
+      TxValidityUpperBound supported <$> genTtl
+
+    (Nothing, Just supported) ->
+      pure (TxValidityNoUpperBound supported)
+
+    (Nothing, Nothing) ->
+      panic "genTxValidityUpperBound: unexpected era support combination"
 
 genTxValidityRange
   :: CardanoEra era
@@ -449,79 +411,44 @@ genTxValidityRange era =
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra era =
-  case era of
-    ByronEra -> pure TxMetadataNone
-    ShelleyEra ->
+  case txMetadataSupportedInEra era of
+    Nothing -> pure TxMetadataNone
+    Just supported ->
       Gen.choice
         [ pure TxMetadataNone
-        , TxMetadataInEra TxMetadataInShelleyEra <$> genTxMetadata
+        , TxMetadataInEra supported <$> genTxMetadata
         ]
-    AllegraEra ->
-      Gen.choice
-        [ pure TxMetadataNone
-        , TxMetadataInEra TxMetadataInAllegraEra <$> genTxMetadata
-        ]
-    MaryEra ->
-      Gen.choice
-        [ pure TxMetadataNone
-        , TxMetadataInEra TxMetadataInMaryEra <$> genTxMetadata
-        ]
-    AlonzoEra -> panic "genTxMetadataInEra: Alonzo not implemented yet"
 
 genTxAuxScripts :: CardanoEra era -> Gen (TxAuxScripts era)
 genTxAuxScripts era =
-  case era of
-    ByronEra   -> pure TxAuxScriptsNone
-    ShelleyEra -> pure TxAuxScriptsNone
-    AllegraEra -> TxAuxScripts AuxScriptsInAllegraEra
-                           <$> Gen.list (Range.linear 0 3)
-                                        (genScriptInEra AllegraEra)
-    MaryEra    -> TxAuxScripts AuxScriptsInMaryEra
-                           <$> Gen.list (Range.linear 0 3)
-                                        (genScriptInEra MaryEra)
-    AlonzoEra -> panic "genTxAuxScripts: Alonzo not implemented yet"
+  case auxScriptsSupportedInEra era of
+    Nothing -> pure TxAuxScriptsNone
+    Just supported ->
+      TxAuxScripts supported <$>
+        Gen.list (Range.linear 0 3)
+                 (genScriptInEra era)
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals era =
-  case era of
-    ByronEra -> pure TxWithdrawalsNone
-    ShelleyEra ->
+  case withdrawalsSupportedInEra era of
+    Nothing -> pure TxWithdrawalsNone
+    Just supported ->
       Gen.choice
         [ pure TxWithdrawalsNone
-        , pure (TxWithdrawals WithdrawalsInShelleyEra mempty) -- TODO: Generate withdrawals
+        , pure (TxWithdrawals supported mempty)
+          -- TODO: Generate withdrawals
         ]
-    AllegraEra ->
-      Gen.choice
-        [ pure TxWithdrawalsNone
-        , pure (TxWithdrawals WithdrawalsInAllegraEra mempty) -- TODO: Generate withdrawals
-        ]
-    MaryEra ->
-      Gen.choice
-        [ pure TxWithdrawalsNone
-        , pure (TxWithdrawals WithdrawalsInMaryEra mempty) -- TODO: Generate withdrawals
-        ]
-    AlonzoEra -> panic "genTxWithdrawals: Alonzo not implemented yet"
 
 genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates era =
-  case era of
-    ByronEra -> pure TxCertificatesNone
-    ShelleyEra ->
+  case certificatesSupportedInEra era of
+    Nothing -> pure TxCertificatesNone
+    Just supported ->
       Gen.choice
         [ pure TxCertificatesNone
-        , pure (TxCertificates CertificatesInShelleyEra mempty $ BuildTxWith mempty) -- TODO: Generate certificates
+        , pure (TxCertificates supported mempty $ BuildTxWith mempty)
+          -- TODO: Generate certificates
         ]
-    AllegraEra ->
-      Gen.choice
-        [ pure TxCertificatesNone
-        , pure (TxCertificates CertificatesInAllegraEra mempty $ BuildTxWith mempty) -- TODO: Generate certificates
-        ]
-    MaryEra ->
-      Gen.choice
-        [ pure TxCertificatesNone
-        , pure (TxCertificates CertificatesInMaryEra mempty $ BuildTxWith mempty) -- TODO: Generate certificates
-        ]
-    AlonzoEra -> panic "genTxCertificates: Alonzo not implemented yet"
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal era =
@@ -535,16 +462,13 @@ genTxUpdateProposal era =
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue era =
-  case era of
-    ByronEra -> pure TxMintNone
-    ShelleyEra -> pure TxMintNone
-    AllegraEra -> pure TxMintNone
-    MaryEra ->
+  case multiAssetSupportedInEra era of
+    Left _ -> pure TxMintNone
+    Right supported ->
       Gen.choice
         [ pure TxMintNone
-        , TxMintValue MultiAssetInMaryEra <$> genValueForMinting <*> return (BuildTxWith mempty)
+        , TxMintValue supported <$> genValueForMinting <*> return (BuildTxWith mempty)
         ]
-    AlonzoEra -> panic "genTxMintValue: Alonzo not implemented yet"
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
@@ -579,49 +503,32 @@ genTxBodyContent era = do
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)
 genTxFee era =
-  case era of
-    ByronEra -> pure (TxFeeImplicit TxFeesImplicitInByronEra)
-    ShelleyEra -> TxFeeExplicit TxFeesExplicitInShelleyEra <$> genLovelace
-    AllegraEra -> TxFeeExplicit TxFeesExplicitInAllegraEra <$> genLovelace
-    MaryEra -> TxFeeExplicit TxFeesExplicitInMaryEra <$> genLovelace
-    AlonzoEra -> panic "genTxFee: Alonzo not implemented yet"
+  case txFeesExplicitInEra era of
+    Left  supported -> pure (TxFeeImplicit supported)
+    Right supported -> TxFeeExplicit supported <$> genLovelace
 
-genTxBody :: CardanoEra era -> Gen (TxBody era)
-genTxBody era =
-  case era of
-    ByronEra -> genTxBodyByron
-    ShelleyEra -> genTxBodyShelley
-    AllegraEra -> do
-      res <- makeTransactionBody <$> genTxBodyContent AllegraEra
-      case res of
-        Left err -> fail (show err) -- TODO: Render function for TxBodyError
-        Right txBody -> pure txBody
-    MaryEra -> do
-      res <- makeTransactionBody <$> genTxBodyContent MaryEra
-      case res of
-        Left err -> fail (show err) -- TODO: Render function for TxBodyError
-        Right txBody -> pure txBody
-    AlonzoEra -> panic "genTxBody: Alonzo not implemented yet"
+genTxBody :: IsCardanoEra era => CardanoEra era -> Gen (TxBody era)
+genTxBody era = do
+  res <- makeTransactionBody <$> genTxBodyContent era
+  case res of
+    Left err -> fail (displayError err)
+    Right txBody -> pure txBody
 
-genTx :: forall era. CardanoEra era -> Gen (Tx era)
+genTx :: forall era. IsCardanoEra era => CardanoEra era -> Gen (Tx era)
 genTx era =
   makeSignedTransaction
-    <$> genWitnessList
+    <$> genWitnesses era
     <*> genTxBody era
-  where
-    genWitnessList :: Gen [KeyWitness era]
-    genWitnessList =
-      case era of
-        ByronEra -> Gen.list (Range.constant 1 10) genByronKeyWitness
-        ShelleyEra -> genShelleyBasedWitnessList
-        AllegraEra -> genShelleyBasedWitnessList
-        MaryEra -> genShelleyBasedWitnessList
-        AlonzoEra -> panic "genTx: Alonzo not implemented yet"
 
-    genShelleyBasedWitnessList :: IsShelleyBasedEra era => Gen [KeyWitness era]
-    genShelleyBasedWitnessList = do
-      bsWits <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness era)
-      keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness era)
+genWitnesses :: CardanoEra era -> Gen [KeyWitness era]
+genWitnesses era =
+  case cardanoEraStyle era of
+    LegacyByronEra    -> Gen.list (Range.constant 1 10) genByronKeyWitness
+    ShelleyBasedEra _ -> do
+      bsWits  <- Gen.list (Range.constant 0 10)
+                          (genShelleyBootstrapWitness era)
+      keyWits <- Gen.list (Range.constant 0 10)
+                          (genShelleyKeyWitness era)
       return $ bsWits ++ keyWits
 
 genVerificationKey :: Key keyrole => AsType keyrole -> Gen (VerificationKey keyrole)
