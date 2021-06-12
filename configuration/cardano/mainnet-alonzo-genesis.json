@@ -1,5 +1,5 @@
 {
-  "adaPerUTxOWord": 0,
+  "lovelacePerUTxOWord": 0,
   "executionPrices": {
     "prMem": 1,
     "prSteps": 1

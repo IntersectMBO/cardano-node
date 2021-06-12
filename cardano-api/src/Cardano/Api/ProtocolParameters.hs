@@ -976,7 +976,7 @@ toAlonzoPParamsUpdate
                                   maybeToStrictMaybe protocolUpdateProtocolVersion
     , Alonzo._minPoolCost     = toShelleyLovelace <$>
                                   maybeToStrictMaybe protocolUpdateMinPoolCost
-    , Alonzo._adaPerUTxOWord  = toShelleyLovelace <$>
+    , Alonzo._coinsPerUTxOWord= toShelleyLovelace <$>
                                   maybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Alonzo._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
@@ -1108,7 +1108,7 @@ fromAlonzoPParamsUpdate
     , Alonzo._extraEntropy
     , Alonzo._protocolVersion
     , Alonzo._minPoolCost
-    , Alonzo._adaPerUTxOWord
+    , Alonzo._coinsPerUTxOWord
     , Alonzo._costmdls
     , Alonzo._prices
     , Alonzo._maxTxExUnits
@@ -1144,7 +1144,7 @@ fromAlonzoPParamsUpdate
     , protocolUpdateTreasuryCut         = Ledger.unitIntervalToRational <$>
                                             strictMaybeToMaybe _tau
     , protocolUpdateUTxOCostPerWord     = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe _adaPerUTxOWord
+                                            strictMaybeToMaybe _coinsPerUTxOWord
     , protocolUpdateCostModels          = maybe mempty fromAlonzoCostModels
                                                (strictMaybeToMaybe _costmdls)
     , protocolUpdatePrices              = fromAlonzoPrices <$>
@@ -1270,7 +1270,7 @@ toAlonzoPParams ProtocolParameters {
                                protocolParamTreasuryCut
 
       -- New params in Alonzo:
-    , Alonzo._adaPerUTxOWord  = toShelleyLovelace utxoCostPerWord
+    , Alonzo._coinsPerUTxOWord= toShelleyLovelace utxoCostPerWord
     , Alonzo._costmdls        = toAlonzoCostModels protocolParamCostModels
     , Alonzo._prices          = toAlonzoPrices prices
     , Alonzo._maxTxExUnits    = toAlonzoExUnits maxTxExUnits
@@ -1380,7 +1380,7 @@ fromAlonzoPParams
     , Alonzo._extraEntropy
     , Alonzo._protocolVersion
     , Alonzo._minPoolCost
-    , Alonzo._adaPerUTxOWord
+    , Alonzo._coinsPerUTxOWord
     , Alonzo._costmdls
     , Alonzo._prices
     , Alonzo._maxTxExUnits
@@ -1408,7 +1408,7 @@ fromAlonzoPParams
     , protocolParamPoolPledgeInfluence = _a0
     , protocolParamMonetaryExpansion   = Ledger.unitIntervalToRational _rho
     , protocolParamTreasuryCut         = Ledger.unitIntervalToRational _tau
-    , protocolParamUTxOCostPerWord     = Just (fromShelleyLovelace _adaPerUTxOWord)
+    , protocolParamUTxOCostPerWord     = Just (fromShelleyLovelace _coinsPerUTxOWord)
     , protocolParamCostModels          = fromAlonzoCostModels _costmdls
     , protocolParamPrices              = Just (fromAlonzoPrices _prices)
     , protocolParamMaxTxExUnits        = Just (fromAlonzoExUnits _maxTxExUnits)

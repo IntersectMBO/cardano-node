@@ -14,18 +14,26 @@
 
 module Cardano.Api.Orphans () where
 
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Prelude (panic)
-import           Cardano.Slotting.Slot (SlotNo (..))
-import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
+import           Prelude
+
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Map.Strict as Map
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Scientific (Scientific)
-import           Data.Text (Text)
-import           Prelude
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
+
+import           Control.Applicative
+import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
+
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Slotting.Slot (SlotNo (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
@@ -42,17 +50,13 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import qualified Shelley.Spec.Ledger.Rewards as Shelley
 import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
 
@@ -316,19 +320,21 @@ instance ToJSONKey Alonzo.Language where
   toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
 
 instance FromJSONKey Alonzo.Language where
-  fromJSONKey = Aeson.FromJSONKeyText parseLang
+  fromJSONKey = Aeson.FromJSONKeyTextParser parseLang
    where
-     parseLang :: Text -> Alonzo.Language
-     parseLang lang = case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
-        Left err -> panic $ Text.pack err
-        Right lang' -> lang'
+     parseLang :: Text -> Aeson.Parser Alonzo.Language
+     parseLang lang =
+       case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
+         Left err -> fail (show err)
+         Right lang' -> return lang'
 
 -- We defer parsing of the cost model so that we can
 -- read it as a filepath. This is to reduce further pollution
 -- of the genesis file.
 instance FromJSON Alonzo.AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
-    adaPerUTxOWord       <- o .:  "adaPerUTxOWord"
+    coinsPerUTxOWord     <- o .:  "lovelacePerUTxOWord"
+                        <|> o .:  "adaPerUTxOWord" --TODO: deprecate
     cModels              <- o .:? "costModels"
     prices               <- o .:  "executionPrices"
     maxTxExUnits         <- o .:  "maxTxExUnits"
@@ -339,7 +345,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
     case cModels of
       Nothing -> case Plutus.defaultCostModelParams of
         Just m -> return Alonzo.AlonzoGenesis
-          { Alonzo.adaPerUTxOWord
+          { Alonzo.coinsPerUTxOWord
           , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
           , Alonzo.prices
           , Alonzo.maxTxExUnits
@@ -350,7 +356,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
           }
         Nothing -> fail "Failed to extract the cost model params from Plutus.defaultCostModel"
       Just costmdls -> return Alonzo.AlonzoGenesis
-        { Alonzo.adaPerUTxOWord
+        { Alonzo.coinsPerUTxOWord
         , Alonzo.costmdls
         , Alonzo.prices
         , Alonzo.maxTxExUnits
@@ -365,7 +371,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
 -- and keep the cost model (which is chunky) as a separate file.
 instance ToJSON Alonzo.AlonzoGenesis where
   toJSON v = object
-      [ "adaPerUTxOWord" .= Alonzo.adaPerUTxOWord v
+      [ "lovelacePerUTxOWord" .= Alonzo.coinsPerUTxOWord v
       , "costModels" .= Alonzo.costmdls v
       , "executionPrices" .= Alonzo.prices v
       , "maxTxExUnits" .= Alonzo.maxTxExUnits v
@@ -394,7 +400,7 @@ instance ToJSON (Alonzo.PParams era) where
       , "extraEntropy" .= Alonzo._extraEntropy pp
       , "protocolVersion" .= Alonzo._protocolVersion pp
       , "minPoolCost" .= Alonzo._minPoolCost pp
-      , "adaPerUTxOWord" .= Alonzo._adaPerUTxOWord pp
+      , "lovelacePerUTxOWord" .= Alonzo._coinsPerUTxOWord pp
       , "costmdls" .= Alonzo._costmdls pp
       , "prices" .= Alonzo._prices pp
       , "maxTxExUnits" .= Alonzo._maxTxExUnits pp
@@ -426,7 +432,7 @@ instance FromJSON (Alonzo.PParams era) where
         <*> obj .: "extraEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "adaPerUTxOWord"
+        <*> obj .: "lovelacePerUTxOWord"
         <*> obj .: "costmdls"
         <*> obj .: "prices"
         <*> obj .: "maxTxExUnits"

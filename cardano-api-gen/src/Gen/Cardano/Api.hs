@@ -77,7 +77,7 @@ genCostModel r gt gi = do
 
 genAlonzoGenesis :: MonadGen m => m Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
-  adaPerUTxOWord' <- genCoin (Range.linear 0 5)
+  coinsPerUTxOWord <- genCoin (Range.linear 0 5)
   costmdls' <- Gen.map (Range.linear 0 5) $ (,)
     <$> genLanguage
     <*> genCostModel (Range.linear 0 5)
@@ -91,7 +91,7 @@ genAlonzoGenesis = do
   maxCollateralInputs' <- Gen.integral (Range.linear 0 10)
 
   return Alonzo.AlonzoGenesis
-    { Alonzo.adaPerUTxOWord = adaPerUTxOWord'
+    { Alonzo.coinsPerUTxOWord = coinsPerUTxOWord
     , Alonzo.costmdls = costmdls'
     , Alonzo.prices = prices'
     , Alonzo.maxTxExUnits = maxTxExUnits'

@@ -1,31 +1,8 @@
 index-state: 2021-04-30T00:00:00Z
 
 packages:
-    cardano-api
-    cardano-api-gen
-    cardano-api-test
-    cardano-cli
-    cardano-client-demo
-    cardano-config
-    cardano-node
-    cardano-node-chairman
-    cardano-submit-api
-    nix/workbench/cardano-topology
-
-package cardano-api
-  ghc-options: -Werror
-
-package cardano-cli
-  ghc-options: -Werror
-
-package cardano-config
-  ghc-options: -Werror
-
-package cardano-node
-  ghc-options: -Werror
-
-package cardano-node-chairman
-  ghc-options: -Werror
+    plutus-example
+    ../cardano-api
 
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
@@ -38,67 +15,6 @@ package cryptonite
 tests: False
 
 test-show-details: direct
-
--- Then enable specific tests in this repo
-
-package cardano-api
-  tests: True
-
-package cardano-cli
-  tests: True
-
-package cardano-node
-  tests: True
-
-package cardano-node-chairman
-  tests: True
-
--- The following is needed because Nix is doing something crazy.
-package byron-spec-ledger
-  tests: False
-
-package iohk-monitoring
-  tests: False
-
-package ouroboros-consensus-test
-  tests: False
-
-package ouroboros-consensus-cardano-test
-  tests: False
-
-package ouroboros-network
-  tests: False
-
-package ouroboros-network-framework
-  tests: False
-
-package plutus-tx
-  tests: False
-
-package prettyprinter-configurable
-  tests: False
-
-package small-steps
-  tests: False
-
-package small-steps-test
-  tests: False
-
-package goblins
-  tests: False
-
-package io-sim-classes
-  tests: False
-
-package cardano-ledger-alonzo-test
-  tests: False
-
--- ---------------------------------------------------------
-
--- The two following one-liners will cut off / restore the remainder of this file (for nix-shell users):
--- when using the "cabal" wrapper script provided by nix-shell.
--- --------------------------- 8< --------------------------
--- Please do not put any `source-repository-package` clause above this line.
 
 source-repository-package
   type: git
@@ -129,10 +45,11 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: d6b3d6b8ed16b2c69684fa44218f4e7060f166d3
-  --sha256: 1afsvxv8a24rpd3inr4m323l1dx5xg6kmfnjkzb6jw72ykcgpsyz
+  tag: 91dc8868db4d7b9aa48b8e8c7a912378489ac373
+  --sha256: 1byq0mkgn1b2vkw159g2xsykwvhwn8zjgarywysjdp36z83ic4gw
   subdir:
     alonzo/impl
+    alonzo/test
     byron/chain/executable-spec
     byron/crypto
     byron/crypto/test
@@ -147,8 +64,6 @@ source-repository-package
     shelley/chain-and-ledger/shelley-spec-ledger-test
     shelley-ma/impl
     shelley-ma/shelley-ma-test
---TODO: disabled until it drops its dep on plutus-tx-plugin
---  alonzo/test
 
 source-repository-package
   type: git
@@ -208,21 +123,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: bd0dec6dbbf87a14b54384cc083be2bfaf8d5ca6
-  --sha256: 09qhhiks1qj3x0h3vhr3j7p8kfnbrp2sqi2gc6d16s5zy2pyjbqh
+  tag: 13da6d416b2b47cdb6f287ff078b9e759bb90b7f
+  --sha256: 11jpcjdr05l2yyhy9zp3hpkq8bhipx5w3y9bjzg2hzh0fay8571w
   subdir:
     plutus-core
+    plutus-ledger
     plutus-ledger-api
     plutus-tx
+    plutus-tx-plugin
     prettyprinter-configurable
-    word-array
-
--- Drops an instance breaking our code. Should be released to Hackage eventually.
-source-repository-package
-  type: git
-  location: https://github.com/Quid2/flat.git
-  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
-  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
 
 constraints:
     hedgehog >= 1.0
@@ -240,5 +149,4 @@ package cardano-ledger-alonzo-test
   tests: False
 
 allow-newer:
-  monoidal-containers:aeson,
   size-based:template-haskell

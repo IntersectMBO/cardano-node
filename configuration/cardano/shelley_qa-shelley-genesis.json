@@ -50,7 +50,7 @@
     "maxKESEvolutions": 62,
     "securityParam": 36,
 
-    "adaPerUTxOWord": 42,
+    "lovelacePerUTxOWord": 42,
     "executionPrices": 42,
     "maxTxExUnits": 42,
     "maxBlockExUnits": 42,
