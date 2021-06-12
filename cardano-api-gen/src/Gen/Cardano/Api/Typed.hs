@@ -699,6 +699,18 @@ genRational =
     ratioToRational :: Ratio Word64 -> Rational
     ratioToRational = toRational
 
+-- TODO: consolidate this back to just genRational once this is merged:
+-- https://github.com/input-output-hk/cardano-ledger-specs/pull/2330
+genRationalInt64 :: Gen Rational
+genRationalInt64 =
+    (\d -> ratioToRational (1 % d)) <$> genDenominator
+  where
+    genDenominator :: Gen Int64
+    genDenominator = Gen.integral (Range.linear 1 maxBound)
+
+    ratioToRational :: Ratio Int64 -> Rational
+    ratioToRational = toRational
+
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
 
@@ -725,7 +737,7 @@ genProtocolParameters =
     <*> genLovelace
     <*> genEpochNo
     <*> genNat
-    <*> genRational
+    <*> genRationalInt64
     <*> genRational
     <*> genRational
     <*> Gen.maybe genLovelace
@@ -754,7 +766,7 @@ genProtocolParametersUpdate =
     <*> Gen.maybe genLovelace
     <*> Gen.maybe genEpochNo
     <*> Gen.maybe genNat
-    <*> Gen.maybe genRational
+    <*> Gen.maybe genRationalInt64
     <*> Gen.maybe genRational
     <*> Gen.maybe genRational
     <*> Gen.maybe genLovelace
