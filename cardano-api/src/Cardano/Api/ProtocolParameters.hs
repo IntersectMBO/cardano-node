@@ -748,10 +748,6 @@ validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
                   -> Either InvalidCostModel ()
 validateCostModel PlutusScriptV1 (CostModel m)
-    -- TODO alonzo: the ledger library should export something for this, e.g. like its
-    -- existing checkCostModel function. We should not need to depend on the
-    -- Plutus library directly. That makes too many assumptions about what the
-    -- ledger library is doing.
   | Alonzo.validateCostModelParams m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
 
@@ -976,7 +972,7 @@ toAlonzoPParamsUpdate
                                   maybeToStrictMaybe protocolUpdateProtocolVersion
     , Alonzo._minPoolCost     = toShelleyLovelace <$>
                                   maybeToStrictMaybe protocolUpdateMinPoolCost
-    , Alonzo._coinsPerUTxOWord= toShelleyLovelace <$>
+    , Alonzo._coinsPerUTxOWord  = toShelleyLovelace <$>
                                   maybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Alonzo._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
@@ -1270,7 +1266,7 @@ toAlonzoPParams ProtocolParameters {
                                protocolParamTreasuryCut
 
       -- New params in Alonzo:
-    , Alonzo._coinsPerUTxOWord= toShelleyLovelace utxoCostPerWord
+    , Alonzo._coinsPerUTxOWord  = toShelleyLovelace utxoCostPerWord
     , Alonzo._costmdls        = toAlonzoCostModels protocolParamCostModels
     , Alonzo._prices          = toAlonzoPrices prices
     , Alonzo._maxTxExUnits    = toAlonzoExUnits maxTxExUnits

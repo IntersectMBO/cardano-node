@@ -73,11 +73,6 @@ import qualified Data.Text.Encoding as Text
 
 import           Control.Applicative
 
-import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import qualified Shelley.Spec.Ledger.Address as Shelley
-import qualified Shelley.Spec.Ledger.Credential as Shelley
-
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
@@ -90,7 +85,10 @@ import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.BaseTypes as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import qualified Shelley.Spec.Ledger.Address as Shelley
+import qualified Shelley.Spec.Ledger.Credential as Shelley
 
 -- ----------------------------------------------------------------------------
 -- Address Serialisation
