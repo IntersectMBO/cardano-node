@@ -16,8 +16,9 @@ import           Prelude hiding (($))
 
 import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
 
+import           Codec.Serialise
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
-import qualified Flat
 
 import qualified Plutus.V1.Ledger.Scripts as Plutus
 import           PlutusTx (Data (..))
@@ -35,7 +36,7 @@ script :: Plutus.Script
 script = Plutus.unValidatorScript validator
 
 untypedLockingScriptAsShortBs :: SBS.ShortByteString
-untypedLockingScriptAsShortBs =  SBS.toShort $ Flat.flat script
+untypedLockingScriptAsShortBs = SBS.toShort . LBS.toStrict $ serialise script
 
 apiExampleUntypedPlutusLockingScript :: PlutusScript PlutusScriptV1
 apiExampleUntypedPlutusLockingScript = PlutusScriptSerialised untypedLockingScriptAsShortBs

@@ -13,7 +13,9 @@ set -o pipefail
 # by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
 # in order to accomodate this.
 
-plutusscriptinuse=scripts/plutus/untyped-always-succeeds-txin.plutus
+# This is the end to end always succeeds plutus script example
+plutusscriptinuse=scripts/plutus/always-succeeds-txin.plutus
+
 
 plutusscriptaddr=$(cardano-cli address build --payment-script-file $plutusscriptinuse  --testnet-magic 42)
 
@@ -89,5 +91,5 @@ cardano-cli transaction sign \
   --out-file example/work/alonzo.tx
 
 # SUBMIT example/work/alonzo.tx
-echo "Manually submit the tx with:"
+echo "Manually submit the tx with plutus script via:"
 echo "cardano-cli transaction submit --tx-file example/work/alonzo.tx --testnet-magic 42"

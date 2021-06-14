@@ -50,7 +50,6 @@ library
 
   build-depends:        bytestring
                       , cardano-api
-                      , flat
                       , plutus-core
                       , plutus-ledger
                       , plutus-ledger-api
