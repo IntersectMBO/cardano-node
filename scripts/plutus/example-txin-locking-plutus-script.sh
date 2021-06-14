@@ -14,7 +14,7 @@ set -o pipefail
 # in order to accomodate this.
 
 # This is the end to end always succeeds plutus script example
-plutusscriptinuse=scripts/plutus/always-succeeds-txin.plutus
+plutusscriptinuse=scripts/plutus/untyped-always-succeeds-txin.plutus
 
 
 plutusscriptaddr=$(cardano-cli address build --payment-script-file $plutusscriptinuse  --testnet-magic 42)
