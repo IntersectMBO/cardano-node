@@ -1,5 +1,0 @@
-{
-    "type": "PlutusScriptV1",
-    "description": "An example Plutus script (for tx in context) that always succeeds",
-    "cborHex": "4b0100002002002002000011"
-}
