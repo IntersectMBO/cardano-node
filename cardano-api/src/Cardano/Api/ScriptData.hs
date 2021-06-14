@@ -7,6 +7,9 @@ module Cardano.Api.ScriptData (
     -- * Script data
     ScriptData(..),
 
+    -- * Script data hashes
+    hashScriptData,
+
     -- * Validating metadata
     validateScriptData,
     ScriptDataRangeError (..),
@@ -57,7 +60,7 @@ import           Control.Applicative (Alternative (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.SafeHash as Ledger
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardAlonzo)
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Plutus.V1.Ledger.Api as Plutus
 
@@ -108,6 +111,12 @@ instance SerialiseAsRawBytes (Hash ScriptData) where
 
     deserialiseFromRawBytes (AsHash AsScriptData) bs =
       ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
+
+
+hashScriptData :: ScriptData -> Hash ScriptData
+hashScriptData = ScriptDataHash
+               . Alonzo.hashData
+               . (toAlonzoData :: ScriptData -> Alonzo.Data StandardAlonzo)
 
 
 -- ----------------------------------------------------------------------------

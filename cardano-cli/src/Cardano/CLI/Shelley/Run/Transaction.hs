@@ -249,6 +249,7 @@ runTransactionCmd cmd =
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                            nShelleyKeyWitnesses nByronKeyWitnesses
     TxCalculateMinValue pParamSpec txOuts -> runTxCalculateMinValue pParamSpec txOuts
+    TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
     TxView txinfile -> runTxView txinfile
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
@@ -866,6 +867,11 @@ readProtocolParameters (ProtocolParamsFile fpath) = do
   firstExceptT (ShelleyTxCmdAesonDecodeProtocolParamsError fpath . Text.pack) . hoistEither $
     Aeson.eitherDecode' pparams
 
+
+-- ----------------------------------------------------------------------------
+-- Witness handling
+--
+
 data SomeWitness
   = AByronSigningKey           (SigningKey ByronKey) (Maybe (Address ByronAddr))
   | APaymentSigningKey         (SigningKey PaymentKey)
@@ -1046,6 +1052,15 @@ mkShelleyBootstrapWitnesses mnw txBody =
   mapM (mkShelleyBootstrapWitness mnw txBody)
 
 
+-- ----------------------------------------------------------------------------
+-- Other misc small commands
+--
+
+runTxHashScriptData :: ScriptDataOrFile -> ExceptT ShelleyTxCmdError IO ()
+runTxHashScriptData scriptDataOrFile = do
+    d <- readScriptDataOrFile scriptDataOrFile
+    liftIO $ BS.putStrLn $ serialiseToRawBytesHex (hashScriptData d)
+
 runTxGetTxId :: InputTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId txfile = do
     InAnyCardanoEra _era txbody <-
@@ -1066,6 +1081,11 @@ runTxView txfile = do
         InAnyCardanoEra era tx <- readFileTx txFile
         return . InAnyCardanoEra era $ getTxBody tx
   liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
+
+
+-- ----------------------------------------------------------------------------
+-- Witness commands
+--
 
 runTxCreateWitness
   :: TxBodyFile

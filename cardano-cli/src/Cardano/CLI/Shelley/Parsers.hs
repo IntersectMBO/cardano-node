@@ -253,38 +253,13 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
     pScriptDatumOrFile :: Parser (ScriptDatumOrFile witctx)
     pScriptDatumOrFile =
       case witctx of
-        WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$> pScriptDataOrFile "datum"
+        WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$>
+                         pScriptDataOrFile (scriptFlagPrefix ++ "-datum")
         WitCtxMint  -> pure NoScriptDatumOrFileForMint
         WitCtxStake -> pure NoScriptDatumOrFileForStake
 
     pScriptRedeemerOrFile :: Parser ScriptDataOrFile
-    pScriptRedeemerOrFile = pScriptDataOrFile "redeemer"
-
-    pScriptDataOrFile :: String -> Parser ScriptDataOrFile
-    pScriptDataOrFile dataFlagPrefix =
-          ScriptDataFile  <$> pScriptDataFile  dataFlagPrefix
-      <|> ScriptDataValue <$> pScriptDataValue dataFlagPrefix
-
-    pScriptDataFile dataFlagPrefix =
-      Opt.strOption
-        (  Opt.long (scriptFlagPrefix ++ "-" ++ dataFlagPrefix ++ "-file")
-        <> Opt.metavar "FILE"
-        <> Opt.help ("The file containing the script input "
-                    ++ dataFlagPrefix ++ ".")
-        )
-
-    pScriptDataValue dataFlagPrefix =
-      Opt.option readerScriptData
-        (  Opt.long (scriptFlagPrefix ++ "-" ++ dataFlagPrefix ++ "-value")
-        <> Opt.metavar "JSON"
-        <> Opt.help ("The value for the script input " ++ dataFlagPrefix ++ ".")
-        )
-
-    readerScriptData = do
-      v <- readerJSON
-      case scriptDataFromJson ScriptDataJsonNoSchema v of
-        Left err -> fail (displayError err)
-        Right sd -> return sd
+    pScriptRedeemerOrFile = pScriptDataOrFile (scriptFlagPrefix ++ "-redeemer")
 
     pExecutionUnits :: Parser ExecutionUnits
     pExecutionUnits =
@@ -294,6 +269,32 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
         <> Opt.metavar "(INT, INT)"
         <> Opt.help "The time and space units needed by the script."
         )
+
+pScriptDataOrFile :: String -> Parser ScriptDataOrFile
+pScriptDataOrFile dataFlagPrefix =
+      ScriptDataFile  <$> pScriptDataFile
+  <|> ScriptDataValue <$> pScriptDataValue
+  where
+    pScriptDataFile =
+      Opt.strOption
+        (  Opt.long (dataFlagPrefix ++ "-file")
+        <> Opt.metavar "FILE"
+        <> Opt.help "The file containing the script data."
+        )
+
+    pScriptDataValue =
+      Opt.option readerScriptData
+        (  Opt.long (dataFlagPrefix ++ "-value")
+        <> Opt.metavar "JSON"
+        <> Opt.help "The value (in JSON syntax) for the script data."
+        )
+
+    readerScriptData = do
+      v <- readerJSON
+      case scriptDataFromJson ScriptDataJsonNoSchema v of
+        Left err -> fail (displayError err)
+        Right sd -> return sd
+
 
 pStakeAddressCmd :: Parser StakeAddressCmd
 pStakeAddressCmd =
@@ -572,6 +573,9 @@ pTransaction =
         (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
     , subParser "calculate-min-value"
         (Opt.info pTransactionCalculateMinValue $ Opt.progDesc "Calculate the minimum value for a transaction")
+
+    , subParser "hash-script-data"
+        (Opt.info pTxHashScriptData $ Opt.progDesc "Calculate the hash of script data")
     , subParser "txid"
         (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
     , subParser "view" $
@@ -659,6 +663,9 @@ pTransaction =
         "[TESTING] The genesis file to take initial protocol parameters from.  For test clusters only, since the parameters are going to be obsolete for production clusters."
     <|>
     ParamsFromFile <$> pProtocolParamsFile
+
+  pTxHashScriptData :: Parser TransactionCmd
+  pTxHashScriptData = TxHashScriptData <$> pScriptDataOrFile "script-data"
 
   pTransactionId  :: Parser TransactionCmd
   pTransactionId = TxGetTxId <$> pInputTxFile
