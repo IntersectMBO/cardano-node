@@ -201,6 +201,8 @@ data TransactionCmd
   | TxCalculateMinValue
       ProtocolParamsSourceSpec
       Value
+  | TxHashScriptData
+      ScriptDataOrFile
   | TxGetTxId InputTxFile
   | TxView InputTxFile
   deriving Show
@@ -230,6 +232,7 @@ renderTransactionCmd cmd =
     TxMintedPolicyId {} -> "transaction policyid"
     TxCalculateMinFee {} -> "transaction calculate-min-fee"
     TxCalculateMinValue {} -> "transaction calculate-min-value"
+    TxHashScriptData {} -> "transaction hash-script-data"
     TxGetTxId {} -> "transaction txid"
     TxView {} -> "transaction view"
 
