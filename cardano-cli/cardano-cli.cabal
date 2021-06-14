@@ -130,7 +130,6 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , parsec
-                      , plutus-core
                       , plutus-ledger-api
                       , shelley-spec-ledger
                       , small-steps

@@ -59,8 +59,6 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 
-import qualified Plutus.V1.Ledger.Api as Plutus
-
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -784,13 +782,13 @@ updateTemplate (SystemStart start)
               , sgsStake = Ledger._poolId <$> poolSpecs
               }
           }
-        cModel = case Plutus.defaultCostModelParams of
-                   Just m ->
+        cModel = case Alonzo.defaultCostModel of
+                   Just (Alonzo.CostModel m) ->
                      if Alonzo.validateCostModelParams m
-                     then Map.singleton Alonzo.PlutusV1 $ Alonzo.CostModel m
-                     else panic "updateTemplate: Plutus.defaultCostModel is invalid"
+                     then Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
+                     else panic "updateTemplate: defaultCostModel is invalid"
 
-                   Nothing -> panic "updateTemplate: Could not extract cost model params from Plutus.defaultCostModel"
+                   Nothing -> panic "updateTemplate: Could not extract cost model params from defaultCostModel"
         alonzoGenesis = Alonzo.AlonzoGenesis
           { Alonzo.coinsPerUTxOWord     = toShelleyLovelace coinsPerUTxOWord
           , Alonzo.costmdls             = cModel

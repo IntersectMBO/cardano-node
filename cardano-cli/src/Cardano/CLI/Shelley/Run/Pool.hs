@@ -16,14 +16,12 @@ import qualified Data.ByteString.Char8 as BS
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-
-import qualified Shelley.Spec.Ledger.Slot as Shelley
-
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
                      readVerificationKeyOrFile)
 import           Cardano.CLI.Types (OutputFormat (..))
 
+import qualified Shelley.Spec.Ledger.Slot as Shelley
 
 data ShelleyPoolCmdError
   = ShelleyPoolCmdReadFileError !(FileError TextEnvelopeError)
