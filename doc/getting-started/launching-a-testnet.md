@@ -26,21 +26,21 @@ Available options:
 
 Commands:
   byron
-  byron-shelley
+  cardano-shelley
   shelley
 ```
 
 Then create the testnet.  For example:
 
 ```bash
-$ cabal run cardano-testnet byron-shelley
+$ cabal run cardano-testnet cardano-shelley
   ✗ <interactive> failed at testnet/Testnet/Run.hs:34:3
     after 1 test.
 
-        ┏━━ src/Testnet/ByronShelley.hs ━━━
+        ┏━━ src/Testnet/CardanoShelley.hs ━━━
      68 ┃ testnet :: H.Conf -> H.Integration [String]
      69 ┃ testnet H.Conf {..} = do
-     70 ┃   -- This script sets up a cluster that starts out in Byron, and can transition to Shelley.
+     70 ┃   -- This script sets up a cluster that starts out in Cardano, and can transition to Shelley.
      71 ┃   --
 ...
        ┏━━ testnet/Testnet/Run.hs ━━━

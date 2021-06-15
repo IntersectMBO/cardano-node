@@ -42,7 +42,7 @@ common common-modules
   other-modules:        Test.Base
                         Test.Process
                         Testnet.Byron
-                        Testnet.ByronShelley
+                        Testnet.CardanoShelley
                         Testnet.Conf
                         Testnet.List
                         Testnet.Shelley
@@ -120,7 +120,7 @@ test-suite chairman-tests
 
   other-modules:        Spec.Chairman.Chairman
                         Spec.Chairman.Byron
-                        Spec.Chairman.ByronShelley
+                        Spec.Chairman.CardanoShelley
                         Spec.Chairman.Shelley
                         Spec.Network
 
@@ -160,7 +160,7 @@ executable cardano-testnet
   other-modules:        Paths_cardano_node_chairman
                         Testnet.Commands
                         Testnet.Commands.Byron
-                        Testnet.Commands.ByronShelley
+                        Testnet.Commands.CardanoShelley
                         Testnet.Commands.Shelley
                         Testnet.Commands.Version
                         Testnet.Run

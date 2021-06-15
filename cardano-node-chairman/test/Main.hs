@@ -13,7 +13,7 @@ import qualified Test.Tasty.Hedgehog as H
 
 import qualified Spec.Network
 import qualified Spec.Chairman.Byron
-import qualified Spec.Chairman.ByronShelley
+import qualified Spec.Chairman.CardanoShelley
 import qualified Spec.Chairman.Shelley
 
 tests :: IO T.TestTree
@@ -21,14 +21,14 @@ tests = do
   let t0 = H.testProperty "isPortOpen False" Spec.Network.hprop_isPortOpen_False
   let t1 = H.testProperty "isPortOpen True" Spec.Network.hprop_isPortOpen_True
   let t2 = H.testProperty "chairman" Spec.Chairman.Byron.hprop_chairman
-  let t3 = H.testProperty "chairman" Spec.Chairman.ByronShelley.hprop_chairman
+  let t3 = H.testProperty "chairman" Spec.Chairman.CardanoShelley.hprop_chairman
   let t4 = H.testProperty "chairman" Spec.Chairman.Shelley.hprop_chairman
 
   pure $ T.testGroup "test/Spec.hs"
     [ T.testGroup "Spec"
       [ T.testGroup "Chairman"
         [ T.testGroup "Byron" [t2]
-        , T.testGroup "ByronShelley" [t3]
+        , T.testGroup "CardanoShelley" [t3]
         , T.testGroup "Shelley" [t4]
         ]
       , T.testGroup "Network" [t0, t1]
