@@ -776,7 +776,7 @@ updateTemplate (SystemStart start)
               , sgsStake = Ledger._poolId <$> poolSpecs
               }
           }
-        cModel = case Plutus.defaultCostModelParams of
+        cModel = case Plutus.defaultCekCostModelParams of
                    Just m ->
                      if Alonzo.validateCostModelParams m
                      then Map.singleton Alonzo.PlutusV1 $ Alonzo.CostModel m
