@@ -3,7 +3,7 @@ self: {
   localCluster = {
     cacheDir    = "${self.localCluster.stateDir}/.cache";
     stateDir    = "state-cluster";
-    profileName = "default-mary";
+    profileName = "default-alzo";
     basePort    = 30000;
     autoStartCluster = false;
     enableEKG        = true;

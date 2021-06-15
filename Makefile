@@ -39,7 +39,7 @@ profiles:
 profile-names:
 	@./nix/workbench/wb profile-names
 
-CLUSTER_PROFILE     = default-mary
+CLUSTER_PROFILE     = default-alzo
 CLUSTER_ARGS_EXTRA ?=
 
 cluster-shell:
