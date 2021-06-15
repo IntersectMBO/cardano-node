@@ -52,6 +52,7 @@ let
       finaliseNodeConfig =
         { port, ... }: cfg: recursiveUpdate cfg
           ({
+            AlonzoGenesisFile    = "../genesis/alonzo-genesis.json";
             ShelleyGenesisFile   = "../genesis/genesis.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs enableEKG {

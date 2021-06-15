@@ -146,8 +146,8 @@ case "${op}" in
         cardano-cli genesis create-staked "${params[@]}"
 
         ## TODO: temporary step for Alonzo
-        jq_fmutate ""$dir"/genesis.json" '. *
-          { lovelacePerUTxOWord: 0
+        jq '
+          { adaPerUTxOWord: 0
           , executionPrices:
             { prMem:              1
             , prSteps:            1
@@ -163,7 +163,7 @@ case "${op}" in
           , maxValueSize:         1000
           , collateralPercentage: 100
           , maxCollateralInputs:  1
-          }'
+          }' --null-input > "$dir"/alonzo-genesis.json
 
         ## TODO: try to get rid of this step:
         Massage_the_key_file_layout_to_match_AWS "$profile_json" "$topo_dir" "$dir";;
