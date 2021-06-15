@@ -2530,7 +2530,7 @@ pExtraEntropy =
 pUTxOCostPerWord :: Parser Lovelace
 pUTxOCostPerWord =
     Opt.option (readerFromParsecParser parseLovelace)
-      (  Opt.long "min-utxo-value"
+      (  Opt.long "utxo-cost-per-word"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "Cost in lovelace per unit of UTxO storage (from Alonzo era)."
       )
