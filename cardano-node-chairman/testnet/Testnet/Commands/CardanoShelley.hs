@@ -1,7 +1,7 @@
-module Testnet.Commands.ByronShelley
-  ( ByronShelleyOptions(..)
-  , cmdByronShelley
-  , runByronShelleyOptions
+module Testnet.Commands.CardanoShelley
+  ( CardanoShelleyOptions(..)
+  , cmdCardanoShelley
+  , runCardanoShelleyOptions
   ) where
 
 import           Data.Eq
@@ -11,14 +11,14 @@ import           Data.Maybe
 import           Data.Semigroup
 import           Options.Applicative
 import           System.IO (IO)
-import           Testnet.ByronShelley
+import           Testnet.CardanoShelley
 import           Testnet.Run (runTestnet)
 import           Text.Read (readEither)
 import           Text.Show
 
 import qualified Options.Applicative as OA
 
-data ByronShelleyOptions = ByronShelleyOptions
+data CardanoShelleyOptions = CardanoShelleyOptions
   { maybeTestnetMagic :: Maybe Int
   , testnetOptions :: TestnetOptions
   } deriving (Eq, Show)
@@ -61,8 +61,8 @@ optsTestnet = TestnetOptions
       <>  OA.value (forkPoint defaultTestnetOptions)
       )
 
-optsByronShelley :: Parser ByronShelleyOptions
-optsByronShelley = ByronShelleyOptions
+optsCardanoShelley :: Parser CardanoShelleyOptions
+optsCardanoShelley = CardanoShelleyOptions
   <$> optional
       ( OA.option auto
         (   long "testnet-magic"
@@ -72,9 +72,9 @@ optsByronShelley = ByronShelleyOptions
       )
   <*> optsTestnet
 
-runByronShelleyOptions :: ByronShelleyOptions -> IO ()
-runByronShelleyOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.ByronShelley.testnet (testnetOptions options)
+runCardanoShelleyOptions :: CardanoShelleyOptions -> IO ()
+runCardanoShelleyOptions options = runTestnet (maybeTestnetMagic options) $
+  Testnet.CardanoShelley.testnet (testnetOptions options)
 
-cmdByronShelley :: Mod CommandFields (IO ())
-cmdByronShelley = command "byron-shelley"  $ flip info idm $ runByronShelleyOptions <$> optsByronShelley
+cmdCardanoShelley :: Mod CommandFields (IO ())
+cmdCardanoShelley = command "cardano-shelley"  $ flip info idm $ runCardanoShelleyOptions <$> optsCardanoShelley
