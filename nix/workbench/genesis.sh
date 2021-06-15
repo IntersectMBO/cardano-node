@@ -153,12 +153,12 @@ case "${op}" in
             , prSteps:            1
             }
           , maxTxExUnits:
-            { exUnitsMem:         1
-            , exUnitsSteps:       1
+            { exUnitsMem:         2000000000
+            , exUnitsSteps:       2000000000
             }
           , maxBlockExUnits:
-            { exUnitsMem:         1
-            , exUnitsSteps:       1
+            { exUnitsMem:         200000000000
+            , exUnitsSteps:       200000000000
             }
           , maxValueSize:         1000
           , collateralPercentage: 100
