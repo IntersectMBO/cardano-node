@@ -80,6 +80,7 @@ sed -i ${ROOT}/configuration.yaml \
     -e 's/minSeverity: Info/minSeverity: Debug/' \
     -e 's|GenesisFile: genesis.json|ByronGenesisFile: byron/genesis.json|' \
     -e '/ByronGenesisFile/ aShelleyGenesisFile: shelley/genesis.json' \
+    -e '/ByronGenesisFile/ aAlonzoGenesisFile: shelley/genesis.alonzo.json' \
     -e 's/RequiresNoMagic/RequiresMagic/' \
     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 1/' \
     -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
@@ -171,7 +172,7 @@ cat > byron.genesis.spec.json <<EOF
   "maxProposalSize": "700",
   "mpcThd": "20000000000000",
   "scriptVersion": 0,
-  "slotDuration": "2000",
+  "slotDuration": "1000",
   "softforkRule": {
     "initThd": "900000000000000",
     "minThd": "600000000000000",
@@ -558,7 +559,7 @@ for NODE in ${BFT_NODES}; do
   echo "  --port                            $(cat ${NODE}/port) \\"
   echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
   echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee ${ROOT}/${NODE}.log"
 
 done
 for NODE in ${POOL_NODES}; do
@@ -572,7 +573,7 @@ for NODE in ${POOL_NODES}; do
   echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
   echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
   echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  | tee ${NODE}.log"
+  echo "  | tee ${ROOT}/${NODE}.log"
 
 done
 echo "To transfer funds out of the genesis UTxO to a regular address"
@@ -591,7 +592,7 @@ echo "To submit votes on the update proposal"
 echo
 for N in ${BFT_NODES_N}; do
     echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
-    echo "cardano-cli byron submit-proposal-vote  --testnet-magic 42 --filepath example/update-vote.00$((${N} - 1))"
+    echo "cardano-cli byron submit-proposal-vote  --testnet-magic 42 --filepath ${ROOT}/update-vote.00$((${N} - 1))"
 done
 echo
 echo "To submit the update proposal for the transition to version 2"
@@ -606,7 +607,7 @@ echo "To submit votes on the update proposal"
 echo
 for N in ${BFT_NODES_N}; do
     echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
-    echo "cardano-cli byron submit-proposal-vote  --testnet-magic 42 --filepath example/update-vote-1.00$((${N} - 1))"
+    echo "cardano-cli byron submit-proposal-vote  --testnet-magic 42 --filepath ${ROOT}/update-vote-1.00$((${N} - 1))"
 done
 echo
 echo "To submit the transaction that registers the pool, in the Shelley era"
@@ -619,7 +620,7 @@ echo
 echo "Then wait until epoch #2 (counting from 0) starting at slot 3000"
 echo "and query the stake distribution, and see if the pool node creates blocks"
 echo
-echo "CARDANO_NODE_SOCKET_PATH=example/node-bft1/node.sock \\"
+echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-bft1/node.sock \\"
 echo "  cardano-cli query stake-distribution --testnet-magic 42"
 echo
 
