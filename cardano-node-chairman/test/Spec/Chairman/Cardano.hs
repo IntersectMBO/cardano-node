@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Spec.Chairman.CardanoShelley
+module Spec.Chairman.Cardano
   ( hprop_chairman
   ) where
 
@@ -11,7 +11,7 @@ import           Spec.Chairman.Chairman (chairmanOver)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Test.Base as H
-import qualified Testnet.CardanoShelley as H
+import qualified Testnet.Cardano as H
 import qualified Testnet.Conf as H
 
 {- HLINT ignore "Reduce duplication" -}

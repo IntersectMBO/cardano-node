@@ -5,8 +5,7 @@ import           Data.Monoid
 import           Options.Applicative
 import           System.IO (IO)
 import           Testnet.Commands.Byron
-import           Testnet.Commands.CardanoShelley
-import           Testnet.Commands.CardanoAlonzo
+import           Testnet.Commands.Cardano
 import           Testnet.Commands.Shelley
 import           Testnet.Commands.Version
 
@@ -16,14 +15,13 @@ commands :: Parser (IO ())
 commands = commandsTestnet <|> commandsGeneral
 
 commandsTestnet :: Parser (IO ())
-commandsTestnet = subparser $ mempty
+commandsTestnet = hsubparser $ mempty
   <>  commandGroup "Testnets:"
   <>  cmdByron
-  <>  cmdCardanoShelley
-  <>  cmdCardanoAlonzo
+  <>  cmdCardano
   <>  cmdShelley
 
 commandsGeneral :: Parser (IO ())
-commandsGeneral = subparser $ mempty
+commandsGeneral = hsubparser $ mempty
   <>  commandGroup "General:"
   <>  cmdVersion

@@ -9,10 +9,12 @@
 #define UNIX
 #endif
 
-module Testnet.CardanoShelley
+module Testnet.Cardano
   ( ForkPoint(..)
   , TestnetOptions(..)
   , defaultTestnetOptions
+
+  , Era(..)
 
   , testnet
   ) where
@@ -21,17 +23,22 @@ module Testnet.CardanoShelley
 import           Prelude (map)
 #endif
 
+import           Control.Applicative (pure)
 import           Control.Monad
-import           Data.Aeson ((.=))
+import           Data.Aeson ((.=), Value)
+import           Data.Bool
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Int
 import           Data.List ((\\))
 import           Data.Maybe
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Either
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String
+import           GHC.Enum
 import           GHC.Float
 import           GHC.Num
 import           GHC.Real
@@ -42,6 +49,7 @@ import           Text.Read
 import           Text.Show
 
 import qualified Data.Aeson as J
+import qualified Data.Yaml as Y
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -71,27 +79,33 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
+{- HLINT ignore "Redundant id" -}
+{- HLINT ignore "Use let" -}
 
 data ForkPoint
   = AtVersion Int
   | AtEpoch Int
   deriving (Show, Eq, Read)
 
+data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded, Read, Show)
+
 data TestnetOptions = TestnetOptions
   { numBftNodes :: Int
   , numPoolNodes :: Int
-  , activeSlotsCoeff :: Double
+  , era :: Era
   , epochLength :: Int
-  , forkPoint :: ForkPoint
+  , slotLength :: Double
+  , activeSlotsCoeff :: Double
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
   { numBftNodes = 2
   , numPoolNodes = 1
-  , activeSlotsCoeff = 0.1
+  , era = Alonzo
   , epochLength = 1500
-  , forkPoint = AtVersion 1
+  , slotLength = 0.2
+  , activeSlotsCoeff = 0.2
   }
 
 ifaceAddress :: String
@@ -99,42 +113,6 @@ ifaceAddress = "127.0.0.1"
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
-  -- This script sets up a cluster that starts out in Byron, and can transition to Shelley.
-  --
-  -- The script generates all the files needed for the setup, and prints commands
-  -- to be run manually (to start the nodes, post transactions, etc.).
-  --
-  -- There are three ways of triggering the transition to Shelley:
-  -- 1. Trigger transition at protocol version 2.0.0 (as on mainnet)
-  --    The system starts at 0.0.0, and we can only increase it by 1 in the major
-  --    version, so this does require to
-  --    a) post an update proposal and votes to transition to 1.0.0
-  --    b) wait for the protocol to change (end of the epoch, or end of the last
-  --      epoch if it's posted near the end of the epoch)
-  --    c) change configuration.yaml to have 'LastKnownBlockVersion-Major: 2',
-  --      and restart the nodes
-  --    d) post an update proposal and votes to transition to 2.0.0
-  --    This is what will happen on the mainnet, so it's vital to test this, but
-  --    it does contain some manual steps.
-  -- 2. Trigger transition at protocol version 2.0.0
-  --    For testing purposes, we can also modify the system to do the transition to
-  --    Shelley at protocol version 1.0.0, by uncommenting the line containing
-  --    'TestShelleyHardForkAtVersion' below. Then, we just need to execute step a)
-  --    above in order to trigger the transition.
-  --    This is still close to the procedure on the mainnet, and requires less
-  --    manual steps.
-  -- 3. Schedule transition in the configuration
-  --    To do this, uncomment the line containing 'TestShelleyHardForkAtEpoch'
-  --    below. It's good for a quick test, and does not rely on posting update
-  --    proposals to the chain.
-  --    This is quite convenient, but it does not test that we can do the
-  --    transition by posting update proposals to the network.
-  --
-  -- TODO: The script allows transitioning to Shelley, but not yet to register a
-  -- pool and delegate, so all blocks will still be produced by the BFT nodes.
-  -- We will need CLI support for Byron witnesses in Shelley transactions to do
-  -- that.
-
   void $ H.note OS.os
   env <- H.evalIO IO.getEnvironment
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -158,14 +136,53 @@ testnet testnetOptions H.Conf {..} = do
 
   H.createDirectoryIfMissing logDir
 
-  -- Choose one of the following fork methods:
-  forkMethod <- H.noteShow $ case forkPoint testnetOptions of
-    AtVersion n -> ["TestShelleyHardForkAtVersion: " <> show @Int n]
-    AtEpoch n -> ["TestShelleyHardForkAtEpoch: " <> show @Int n]
-
-  H.readFile (base </> "configuration/chairman/byron-shelley/configuration.yaml")
-    <&> L.unlines . (<> forkMethod) . L.lines
+  H.readFile (base </> "configuration/defaults/byron-mainnet/configuration.yaml")
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
+
+  forkOptions <- pure $ case era testnetOptions of
+    Byron -> id
+      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
+
+    Shelley -> id
+      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 2)
+
+    Allegra -> id
+      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 3)
+
+    Mary -> id
+      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 4)
+
+    Alonzo -> id
+      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
+      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 5)
+
+  -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
+  -- and K=10, but we'll keep long KES periods so we don't have to bother
+  -- cycling KES keys
+  H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
+    $ HM.insert "Protocol" (J.toJSON @String "Cardano")
+    . HM.insert "PBftSignatureThreshold" (J.toJSON @Double 0.6)
+    . HM.insert "minSeverity" (J.toJSON @String "Debug")
+    . HM.insert "ByronGenesisFile" (J.toJSON @String "byron/genesis.json")
+    . HM.insert "ShelleyGenesisFile" (J.toJSON @String "shelley/genesis.json")
+    . HM.insert "AlonzoGenesisFile" (J.toJSON @String "shelley/genesis.alonzo.json")
+    . HM.insert "RequiresNetworkMagic" (J.toJSON @String "RequiresMagic")
+    . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
+    . HM.insert "LastKnownBlockVersion-Minor" (J.toJSON @Int 0)
+    . HM.insert "TraceBlockchainTime" (J.toJSON True)
+    . HM.delete "GenesisFile"
+    . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
+    . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON @Bool True)
+    . forkOptions
 
   forM_ allNodes $ \node -> do
     H.createDirectoryIfMissing $ tempAbsPath </> node
@@ -196,7 +213,7 @@ testnet testnetOptions H.Conf {..} = do
     , "maxProposalSize" .= J.toJSON @String "700"
     , "mpcThd" .= J.toJSON @String "20000000000000"
     , "scriptVersion" .= J.toJSON @Int 0
-    , "slotDuration" .= J.toJSON @String "2000"
+    , "slotDuration" .= J.toJSON @String "1000"
     , "softforkRule" .= J.object
       [ "initThd" .= J.toJSON @String "900000000000000"
       , "minThd" .= J.toJSON @String "600000000000000"
@@ -369,6 +386,16 @@ testnet testnetOptions H.Conf {..} = do
 #endif
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "shelley"
+
+  H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.json") . J.rewriteObject
+    $ flip HM.adjust "protocolParams"
+      ( J.rewriteObject
+        ( flip HM.adjust "protocolVersion" 
+          ( J.rewriteObject (HM.insert "major" (J.toJSON @Int 2))
+          )
+        )
+      )
+    . HM.insert "updateQuorum" (J.toJSON @Int 2)
 
   -- Generated shelley/genesis.json
   H.cat $ tempAbsPath </> "shelley/genesis.json"

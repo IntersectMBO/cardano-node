@@ -1,9 +1,12 @@
-module Testnet.Commands.CardanoAlonzo
-  ( CardanoAlonzoOptions(..)
-  , cmdCardanoAlonzo
-  , runCardanoAlonzoOptions
+{-# LANGUAGE TypeApplications #-}
+
+module Testnet.Commands.Cardano
+  ( CardanoOptions(..)
+  , cmdCardano
+  , runCardanoOptions
   ) where
 
+import           GHC.Enum
 import           Data.Eq
 import           Data.Function
 import           Data.Int
@@ -11,14 +14,14 @@ import           Data.Maybe
 import           Data.Semigroup
 import           Options.Applicative
 import           System.IO (IO)
-import           Testnet.CardanoAlonzo
+import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
-import           Text.Read (readEither)
+import           Text.Read
 import           Text.Show
 
 import qualified Options.Applicative as OA
 
-data CardanoAlonzoOptions = CardanoAlonzoOptions
+data CardanoOptions = CardanoOptions
   { maybeTestnetMagic :: Maybe Int
   , testnetOptions :: TestnetOptions
   } deriving (Eq, Show)
@@ -39,12 +42,12 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (numPoolNodes defaultTestnetOptions)
       )
-  <*> OA.option auto
-      (   OA.long "active-slots-coeff"
-      <>  OA.help "Active slots co-efficient"
-      <>  OA.metavar "DOUBLE"
+  <*> OA.option (OA.eitherReader readEither)
+      (   OA.long "era"
+      <>  OA.help ("Era to upgrade to.  " <> show @[Era] [minBound .. maxBound])
+      <>  OA.metavar "ERA"
       <>  OA.showDefault
-      <>  OA.value (activeSlotsCoeff defaultTestnetOptions)
+      <>  OA.value (era defaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "epoch-length"
@@ -53,16 +56,23 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (epochLength defaultTestnetOptions)
       )
-  <*> OA.option (OA.eitherReader readEither)
-      (   OA.long "fork-point"
-      <>  OA.help "Fork Point.  Valid values are: 'AtVersion <n>' and 'AtEpoch <n>'"
-      <>  OA.metavar "FORKPOINT"
+  <*> OA.option auto
+      (   OA.long "slot-length"
+      <>  OA.help "Slot length"
+      <>  OA.metavar "SECONDS"
       <>  OA.showDefault
-      <>  OA.value (forkPoint defaultTestnetOptions)
+      <>  OA.value (slotLength defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "active-slots-coeff"
+      <>  OA.help "Active slots co-efficient"
+      <>  OA.metavar "DOUBLE"
+      <>  OA.showDefault
+      <>  OA.value (activeSlotsCoeff defaultTestnetOptions)
       )
 
-optsCardanoAlonzo :: Parser CardanoAlonzoOptions
-optsCardanoAlonzo = CardanoAlonzoOptions
+optsCardano :: Parser CardanoOptions
+optsCardano = CardanoOptions
   <$> optional
       ( OA.option auto
         (   long "testnet-magic"
@@ -72,9 +82,9 @@ optsCardanoAlonzo = CardanoAlonzoOptions
       )
   <*> optsTestnet
 
-runCardanoAlonzoOptions :: CardanoAlonzoOptions -> IO ()
-runCardanoAlonzoOptions options = runTestnet (maybeTestnetMagic options) $
-  Testnet.CardanoAlonzo.testnet (testnetOptions options)
+runCardanoOptions :: CardanoOptions -> IO ()
+runCardanoOptions options = runTestnet (maybeTestnetMagic options) $
+  Testnet.Cardano.testnet (testnetOptions options)
 
-cmdCardanoAlonzo :: Mod CommandFields (IO ())
-cmdCardanoAlonzo = command "cardano-alonzo"  $ flip info idm $ runCardanoAlonzoOptions <$> optsCardanoAlonzo
+cmdCardano :: Mod CommandFields (IO ())
+cmdCardano = command "cardano"  $ flip info idm $ runCardanoOptions <$> optsCardano
