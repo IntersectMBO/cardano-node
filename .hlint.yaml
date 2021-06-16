@@ -71,3 +71,12 @@
 - ignore:
     name: Use camelCase
     within: Gen.Hedgehog.Roundtrip.CBOR
+- ignore:
+    name: Redundant <&>
+    within: Testnet.CardanoAlonzo
+- ignore:
+    name: Redundant flip
+    within: Testnet.CardanoAlonzo
+- ignore:
+    name: Redundant duplication
+    within: Testnet.CardanoAlonzo
