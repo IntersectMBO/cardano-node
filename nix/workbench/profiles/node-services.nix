@@ -76,7 +76,8 @@ let
                LastKnownBlockVersion-Minor = 0;
                LastKnownBlockVersion-Alt   = 0;
              })
-           [ "ByronGenesisHash"
+           [ "AlonzoGenesisHash"
+             "ByronGenesisHash"
              "ShelleyGenesisHash"
            ])
        //

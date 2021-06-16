@@ -2,7 +2,7 @@ let
   basePortDefault    = 30000;
   cacheDirDefault    = "${__getEnv "HOME"}/.cache/cardano-workbench";
   stateDirDefault    = "state-cluster";
-  profileNameDefault = "default-mary";
+  profileNameDefault = "default-alzo";
 in
 { pkgs
 , workbench
@@ -52,6 +52,7 @@ let
       finaliseNodeConfig =
         { port, ... }: cfg: recursiveUpdate cfg
           ({
+            AlonzoGenesisFile    = "../genesis/alonzo-genesis.json";
             ShelleyGenesisFile   = "../genesis/genesis.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs enableEKG {

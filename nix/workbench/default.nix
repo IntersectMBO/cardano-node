@@ -139,6 +139,7 @@ let
     }
     export -f workbench-prebuild-executables
 
+    export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
     '';
 
   generateProfiles =
