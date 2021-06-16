@@ -43,6 +43,7 @@ common common-modules
                         Test.Process
                         Testnet.Byron
                         Testnet.CardanoShelley
+                        Testnet.CardanoAlonzo
                         Testnet.Conf
                         Testnet.List
                         Testnet.Shelley
@@ -88,6 +89,7 @@ executable cardano-node-chairman
                       , text
                       , time
                       , unordered-containers
+                      , yaml
 
 test-suite chairman-tests
   import:               base, project-config
@@ -117,6 +119,7 @@ test-suite chairman-tests
                       , time
                       , unliftio
                       , unordered-containers
+                      , yaml
 
   other-modules:        Spec.Chairman.Chairman
                         Spec.Chairman.Byron
@@ -156,11 +159,13 @@ executable cardano-testnet
                       , text
                       , time
                       , unordered-containers
+                      , yaml
 
   other-modules:        Paths_cardano_node_chairman
                         Testnet.Commands
                         Testnet.Commands.Byron
                         Testnet.Commands.CardanoShelley
+                        Testnet.Commands.CardanoAlonzo
                         Testnet.Commands.Shelley
                         Testnet.Commands.Version
                         Testnet.Run
