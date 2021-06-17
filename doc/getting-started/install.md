@@ -27,7 +27,7 @@ To download the source code and build it, you need the following packages and to
 * developer libraries for `ncurses`,
 * `ncurses` compatibility libraries,
 * the Haskell build tool `cabal`,
-* the GHC Haskell compiler (version `8.10.2` or above).
+* the GHC Haskell compiler (version `8.10.4` or above).
 
 In Redhat, Fedora, and Centos:
 
@@ -82,14 +82,14 @@ Create a working directory for your builds:
 
  Download and install the latest version of GHC:
 
-    wget https://downloads.haskell.org/ghc/8.10.2/ghc-8.10.2-x86_64-deb9-linux.tar.xz
-    tar -xf ghc-8.10.2-x86_64-deb9-linux.tar.xz
-    rm ghc-8.10.2-x86_64-deb9-linux.tar.xz
-    cd ghc-8.10.2
+    wget https://downloads.haskell.org/ghc/8.10.4/ghc-8.10.4-x86_64-deb9-linux.tar.xz
+    tar -xf ghc-8.10.4-x86_64-deb9-linux.tar.xz
+    rm ghc-8.10.4-x86_64-deb9-linux.tar.xz
+    cd ghc-8.10.4
     ./configure
     sudo make install
 
-This assumes GHC 8.10.2 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions. Note that using a newer version than the one specified may produce compilation errors.
+This assumes GHC 8.10.4 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions. Note that using a newer version than the one specified may produce compilation errors.
 
 #### Installing Libsodium
 
