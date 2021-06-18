@@ -22,6 +22,7 @@ module Cardano.Api.Query (
     QueryInMode(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
+    QueryUTxOFilter(..),
     UTxO(..),
 
     -- * Internal conversion functions

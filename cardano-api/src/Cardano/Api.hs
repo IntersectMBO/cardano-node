@@ -500,6 +500,8 @@ module Cardano.Api (
     QueryInMode(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
+    QueryUTxOFilter(..),
+    UTxO(..),
     queryNodeLocalState,
 
     -- *** Common queries
@@ -572,7 +574,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query (SlotsInEpoch(..), SlotsToEpochEnd(..), slotToEpoch)
+import           Cardano.Api.Query
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32

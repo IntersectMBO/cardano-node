@@ -802,7 +802,7 @@ pQueryCmd =
     pQueryUTxO =
       QueryUTxO'
         <$> pConsensusModeParams
-        <*> pQueryFilter
+        <*> pQueryUTxOFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -1955,20 +1955,23 @@ pTxByronWitnessCount =
       <> Opt.value 0
       )
 
-pQueryFilter :: Parser QueryFilter
-pQueryFilter = pAddresses <|> pure NoFilter
+pQueryUTxOFilter :: Parser QueryUTxOFilter
+pQueryUTxOFilter =
+      pQueryUTxOWhole
+  <|> pQueryUTxOByAddress
   where
-    pAddresses :: Parser QueryFilter
-    pAddresses = FilterByAddress . Set.fromList <$>
-                   some pFilterByAddress
+    pQueryUTxOWhole = pure QueryUTxOWhole
 
-pFilterByAddress :: Parser AddressAny
-pFilterByAddress =
-    Opt.option (readerFromParsecParser parseAddressAny)
-      (  Opt.long "address"
-      <> Opt.metavar "ADDRESS"
-      <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
-      )
+    pQueryUTxOByAddress :: Parser QueryUTxOFilter
+    pQueryUTxOByAddress = QueryUTxOByAddress . Set.fromList <$> some pByAddress
+
+    pByAddress :: Parser AddressAny
+    pByAddress =
+        Opt.option (readerFromParsecParser parseAddressAny)
+          (  Opt.long "address"
+          <> Opt.metavar "ADDRESS"
+          <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
+          )
 
 pFilterByStakeAddress :: Parser StakeAddress
 pFilterByStakeAddress =

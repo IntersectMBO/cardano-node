@@ -234,7 +234,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
 runQueryUTxO
   :: AnyConsensusModeParams
-  -> QueryFilter
+  -> QueryUTxOFilter
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
@@ -249,7 +249,8 @@ runQueryUTxO (AnyConsensusModeParams cModeParams)
 
   case toEraInMode era cMode of
     Just eInMode -> do
-      qInMode <- createQuery sbe eInMode
+      let query   = QueryInShelleyBasedEra sbe (QueryUTxO qfilter)
+          qInMode = QueryInEra eInMode query
       result <- executeQuery
                   era
                   cModeParams
@@ -257,19 +258,6 @@ runQueryUTxO (AnyConsensusModeParams cModeParams)
                   qInMode
       writeFilteredUTxOs sbe mOutFile result
     Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
- where
-  createQuery
-    :: ShelleyBasedEra era
-    -> EraInMode era mode
-    -> ExceptT ShelleyQueryCmdError IO (QueryInMode mode (Either EraMismatch (UTxO era)))
-  createQuery sbe e = do
-    let mFilter = maybeFiltered qfilter
-        query = QueryInShelleyBasedEra sbe $ QueryUTxO mFilter
-    return $ QueryInEra e query
-
-  maybeFiltered :: QueryFilter -> Maybe (Set AddressAny)
-  maybeFiltered (FilterByAddress as) = Just as
-  maybeFiltered NoFilter = Nothing
 
 
 -- | Query the current and future parameters for a stake pool, including the retirement date.
