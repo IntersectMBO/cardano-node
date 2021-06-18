@@ -1959,6 +1959,7 @@ pQueryUTxOFilter :: Parser QueryUTxOFilter
 pQueryUTxOFilter =
       pQueryUTxOWhole
   <|> pQueryUTxOByAddress
+  <|> pQueryUTxOByTxIn
   where
     pQueryUTxOWhole = pure QueryUTxOWhole
 
@@ -1972,6 +1973,17 @@ pQueryUTxOFilter =
           <> Opt.metavar "ADDRESS"
           <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
           )
+
+    pQueryUTxOByTxIn :: Parser QueryUTxOFilter
+    pQueryUTxOByTxIn = QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
+
+    pByTxIn :: Parser TxIn
+    pByTxIn =
+      Opt.option (readerFromParsecParser parseTxIn)
+        (  Opt.long "tx-in"
+        <> Opt.metavar "TX-IN"
+        <> Opt.help "Filter by transaction input (TxId#TxIx)."
+        )
 
 pFilterByStakeAddress :: Parser StakeAddress
 pFilterByStakeAddress =
