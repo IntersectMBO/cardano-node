@@ -773,8 +773,8 @@ pQueryCmd =
                                                         \reward accounts filtered by stake \
                                                         \address.")
     , subParser "utxo"
-        (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
-                                            \filtering by address(es)")
+        (Opt.info pQueryUTxO $ Opt.progDesc "Get a portion of the current UTxO: \
+                                            \by tx in, by address or the whole.")
     , subParser "ledger-state"
         (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
     , subParser "protocol-state"
@@ -1961,7 +1961,11 @@ pQueryUTxOFilter =
   <|> pQueryUTxOByAddress
   <|> pQueryUTxOByTxIn
   where
-    pQueryUTxOWhole = pure QueryUTxOWhole
+    pQueryUTxOWhole =
+      Opt.flag' QueryUTxOWhole
+        (  Opt.long "--whole-utxo"
+        <> Opt.help "Return the whole UTxO (only appropriate on small testnets)."
+        )
 
     pQueryUTxOByAddress :: Parser QueryUTxOFilter
     pQueryUTxOByAddress = QueryUTxOByAddress . Set.fromList <$> some pByAddress
