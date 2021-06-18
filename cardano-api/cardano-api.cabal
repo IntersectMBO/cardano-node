@@ -140,3 +140,84 @@ library
                       , unordered-containers >= 0.2.11
                       , vector
                       , yaml
+
+library gen
+  import:               base, project-config
+
+  visibility:           public
+
+  hs-source-dirs:       gen
+
+  exposed-modules:      Gen.Cardano.Api
+                        Gen.Cardano.Api.Metadata
+                        Gen.Cardano.Api.Typed
+                        Gen.Cardano.Crypto.Seed
+                        Gen.Hedgehog.Roundtrip.Bech32
+                        Gen.Hedgehog.Roundtrip.CBOR
+                        Gen.Tasty.Hedgehog.Group
+
+  build-depends:        aeson             >= 1.5.6.0
+                      , base16-bytestring
+                      , bytestring
+                      , cardano-api
+                      , cardano-binary
+                      , cardano-crypto-class
+                      , cardano-crypto-test
+                      , cardano-ledger-alonzo
+                      , cardano-ledger-byron-test
+                      , cardano-ledger-core
+                      , cardano-prelude
+                      , containers
+                      , hedgehog
+                      , shelley-spec-ledger
+                      , tasty
+                      , tasty-hedgehog
+                      , text
+
+test-suite cardano-api-test
+  import:               base, project-config
+  hs-source-dirs:       test
+  main-is:              cardano-api-test.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        aeson             >= 1.5.6.0
+                      , bytestring
+                      , cardano-api
+                      , cardano-api:gen
+                      , cardano-binary
+                      , cardano-crypto
+                      , cardano-crypto-class
+                      , cardano-crypto-test
+                      , cardano-crypto-tests
+                      , cardano-ledger-core
+                      , cardano-prelude
+                      , cardano-slotting
+                      , containers
+                      , hedgehog
+                      , hedgehog-extras
+                      , ouroboros-consensus
+                      , ouroboros-consensus-shelley
+                      , QuickCheck
+                      , shelley-spec-ledger
+                      , shelley-spec-ledger-test
+                      , tasty
+                      , tasty-quickcheck
+                      , time
+
+  other-modules:        Test.Cardano.Api.Crypto
+                        Test.Cardano.Api.Genesis
+                        Test.Cardano.Api.Json
+                        Test.Cardano.Api.KeysByron
+                        Test.Cardano.Api.Ledger
+                        Test.Cardano.Api.Metadata
+                        Test.Cardano.Api.Typed.Bech32
+                        Test.Cardano.Api.Typed.CBOR
+                        Test.Cardano.Api.Typed.Envelope
+                        Test.Cardano.Api.Typed.JSON
+                        Test.Cardano.Api.Typed.Ord
+                        Test.Cardano.Api.Typed.Orphans
+                        Test.Cardano.Api.Typed.RawBytes
+                        Test.Cardano.Api.Typed.Script
+                        Test.Cardano.Api.Typed.Value
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

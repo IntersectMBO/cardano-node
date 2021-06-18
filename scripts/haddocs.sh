@@ -54,7 +54,6 @@ HADDOCK_OPTS=(
 if [ ${REGENERATE} == "true" ]; then
   cabal haddock "${HADDOCK_OPTS[@]}" \
     cardano-api \
-    cardano-api-gen \
     cardano-cli \
     cardano-config \
     cardano-node \
