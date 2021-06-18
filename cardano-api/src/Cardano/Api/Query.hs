@@ -35,6 +35,7 @@ module Cardano.Api.Query (
     DebugLedgerState(..),
 
     EraHistory(..),
+    SystemStart(..),
 
     SlotsInEpoch(..),
     SlotsToEpochEnd(..),
@@ -70,6 +71,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised)
 
 import           Cardano.Binary
+import           Cardano.Slotting.Time (SystemStart(..))
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
@@ -109,6 +111,9 @@ data QueryInMode mode result where
   QueryEraHistory
     :: ConsensusModeIsMultiEra mode
     -> QueryInMode mode (EraHistory mode)
+
+  QuerySystemStart
+    :: QueryInMode mode SystemStart
 
 --TODO: add support for these
 --     QueryEraStart   :: ConsensusModeIsMultiEra mode
@@ -164,7 +169,7 @@ data QueryInShelleyBasedEra era result where
        :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
 
      QueryUTxO
-       :: Maybe (Set AddressAny)
+       :: QueryUTxOFilter
        -> QueryInShelleyBasedEra era (UTxO era)
 
      QueryStakeAddresses
@@ -173,7 +178,14 @@ data QueryInShelleyBasedEra era result where
        -> QueryInShelleyBasedEra era (Map StakeAddress Lovelace,
                                       Map StakeAddress PoolId)
 
-     -- TODO: Need to update ledger-specs dependency to access RewardProvenance
+     QueryStakePools
+       :: QueryInShelleyBasedEra era (Set PoolId)
+
+     QueryStakePoolParameters
+       :: Set PoolId
+       -> QueryInShelleyBasedEra era (Map PoolId StakePoolParameters)
+
+     -- TODO: add support for RewardProvenance
      -- QueryPoolRanking
      --   :: QueryInShelleyBasedEra era RewardProvenance
 
@@ -185,9 +197,28 @@ data QueryInShelleyBasedEra era result where
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
+
 -- ----------------------------------------------------------------------------
 -- Wrapper types used in queries
 --
+
+-- | Getting the /whole/ UTxO is obviously not efficient since the result can
+-- be huge. Filtering by address is also not efficient because it requires a
+-- linear search.
+--
+-- The 'QueryUTxOFilterByTxIn' is efficient since it fits with the structure of
+-- the UTxO (which is indexed by 'TxIn').
+--
+data QueryUTxOFilter =
+     -- | /O(n) time and space/ for utxo size n
+     QueryUTxOWhole
+
+     -- | /O(n) time, O(m) space/ for utxo size n, and address set size m
+   | QueryUTxOByAddress (Set AddressAny)
+
+     -- | /O(m log n) time, O(m) space/ for utxo size n, and address set size m
+   | QueryUTxOByTxIn (Set TxIn)
+  deriving (Eq, Show)
 
 --TODO: provide appropriate instances for these types as needed, e.g. JSON
 
@@ -306,6 +337,8 @@ toConsensusQuery (QueryEraHistory CardanoModeIsMultiEra) =
       Consensus.QueryHardFork
         Consensus.GetInterpreter
 
+toConsensusQuery QuerySystemStart = Some Consensus.GetSystemStart
+
 toConsensusQuery (QueryInEra ByronEraInCardanoMode QueryByronUpdateState) =
     Some $ Consensus.BlockQuery $
       Consensus.QueryIfCurrentByron
@@ -349,14 +382,20 @@ toConsensusQueryShelleyBased erainmode QueryProtocolParametersUpdate =
 toConsensusQueryShelleyBased erainmode QueryStakeDistribution =
     Some (consensusQueryInEraInMode erainmode Consensus.GetStakeDistribution)
 
-toConsensusQueryShelleyBased erainmode (QueryUTxO Nothing) =
-    Some (consensusQueryInEraInMode erainmode Consensus.GetUTxO)
+toConsensusQueryShelleyBased erainmode (QueryUTxO QueryUTxOWhole) =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetUTxOWhole)
 
-toConsensusQueryShelleyBased erainmode (QueryUTxO (Just addrs)) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetFilteredUTxO addrs'))
+toConsensusQueryShelleyBased erainmode (QueryUTxO (QueryUTxOByAddress addrs)) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetUTxOByAddress addrs'))
   where
     addrs' :: Set (Shelley.Addr Consensus.StandardCrypto)
     addrs' = toShelleyAddrSet (eraInModeToEra erainmode) addrs
+
+toConsensusQueryShelleyBased erainmode (QueryUTxO (QueryUTxOByTxIn txins)) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetUTxOByTxIn txins'))
+  where
+    txins' :: Set (Shelley.TxIn Consensus.StandardCrypto)
+    txins' = Set.map toShelleyTxIn txins
 
 toConsensusQueryShelleyBased erainmode (QueryStakeAddresses creds _nId) =
     Some (consensusQueryInEraInMode erainmode
@@ -364,6 +403,15 @@ toConsensusQueryShelleyBased erainmode (QueryStakeAddresses creds _nId) =
   where
     creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
     creds' = Set.map toShelleyStakeCredential creds
+
+toConsensusQueryShelleyBased erainmode QueryStakePools =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetStakePools)
+
+toConsensusQueryShelleyBased erainmode (QueryStakePoolParameters poolids) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetStakePoolParams poolids'))
+  where
+    poolids' :: Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
+    poolids' = Set.map (\(StakePoolKeyHash kh) -> kh) poolids
 
 toConsensusQueryShelleyBased erainmode QueryDebugLedgerState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugNewEpochState))
@@ -408,6 +456,12 @@ fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
         -> EraHistory CardanoMode r'
       _ -> fromConsensusQueryResultMismatch
 
+fromConsensusQueryResult QuerySystemStart q' r' =
+    case q' of
+      Consensus.GetSystemStart
+        -> r'
+      _ -> fromConsensusQueryResultMismatch
+
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
     case q' of
       Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetCurrentEra)
@@ -420,6 +474,7 @@ fromConsensusQueryResult (QueryInEra ByronEraInByronMode
       (Consensus.BlockQuery (Consensus.DegenQuery Consensus.GetUpdateInterfaceState),
        Consensus.DegenQueryResult r'')
         -> Right (ByronUpdateState r'')
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      QueryByronUpdateState) q' r' =
@@ -440,6 +495,7 @@ fromConsensusQueryResult (QueryInEra ShelleyEraInShelleyMode
        Consensus.DegenQueryResult r'')
         -> Right (fromConsensusQueryResultShelleyBased
                     ShelleyBasedEraShelley q q'' r'')
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra era _)) _ _ =
@@ -526,15 +582,20 @@ fromConsensusQueryResultShelleyBased _ QueryStakeDistribution q' r' =
       Consensus.GetStakeDistribution -> fromShelleyPoolDistr r'
       _                              -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased shelleyBasedEra' (QueryUTxO Nothing) q' utxo' =
+fromConsensusQueryResultShelleyBased era (QueryUTxO QueryUTxOWhole) q' utxo' =
     case q' of
-      Consensus.GetUTxO -> fromUTxO shelleyBasedEra' utxo'
-      _                 -> fromConsensusQueryResultMismatch
+      Consensus.GetUTxOWhole -> fromUTxO era utxo'
+      _                      -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased shelleyBasedEra' (QueryUTxO Just{}) q' utxo' =
+fromConsensusQueryResultShelleyBased era (QueryUTxO QueryUTxOByAddress{}) q' utxo' =
     case q' of
-      Consensus.GetFilteredUTxO{} -> fromUTxO shelleyBasedEra' utxo'
-      _                           -> fromConsensusQueryResultMismatch
+      Consensus.GetUTxOByAddress{} -> fromUTxO era utxo'
+      _                            -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased era (QueryUTxO QueryUTxOByTxIn{}) q' utxo' =
+    case q' of
+      Consensus.GetUTxOByTxIn{} -> fromUTxO era utxo'
+      _                         -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ (QueryStakeAddresses _ nId) q' r' =
     case q' of
@@ -544,6 +605,18 @@ fromConsensusQueryResultShelleyBased _ (QueryStakeAddresses _ nId) q' r' =
               , Map.mapKeys (makeStakeAddress nId) $ fromShelleyDelegations delegs
               )
       _ -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryStakePools q' poolids' =
+    case q' of
+      Consensus.GetStakePools -> Set.map StakePoolKeyHash poolids'
+      _                       -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryStakePoolParameters{} q' poolparams' =
+    case q' of
+      Consensus.GetStakePoolParams{} -> Map.map fromShelleyPoolParams
+                                      . Map.mapKeysMonotonic StakePoolKeyHash
+                                      $ poolparams'
+      _                              -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryDebugLedgerState{} q' r' =
     case q' of

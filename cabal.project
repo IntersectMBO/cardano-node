@@ -131,8 +131,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 810298f87d91a8ab6573d10710baedf35825a3b5
-  --sha256: 0msp9wm8vvz2yj5nzp3r48cf3b423w0qj8f10acamcyp6wfvlr61
+  tag: 8e8e8c890792fd935736dbc260e33c7e678fdcdc
+  --sha256: 0dd75944f1ww0bnr1l02igwkiwbwkvrlv6yldlgakdpqyfn1np9d
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -191,11 +191,12 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 47b94669555fb3e4f5f3b985f5d804090cfb60c4
-  --sha256: 1y20brl7scppf55037bq5rnq6vdab2f6x56nqsg8grj2gipihkdp
+  tag: b749bc878bb05478f924d6e2d4970d1bdaef94ef
+  --sha256: 1k1cc5sqq9h6jrr5psi4vzs1ay3wafj42gpfv8b67cpnxfivj4m6
   subdir:
     io-sim
     io-sim-classes
+    monoidal-synchronisation
     network-mux
     ouroboros-consensus
     ouroboros-consensus-byron
@@ -210,14 +211,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: bd0dec6dbbf87a14b54384cc083be2bfaf8d5ca6
-  --sha256: 09qhhiks1qj3x0h3vhr3j7p8kfnbrp2sqi2gc6d16s5zy2pyjbqh
+  tag: c89e13e66c5bef628a1f7ea3a3732951be8be8ba
+  --sha256: 0hdck39i4yv656phxjy5ppqgzrq7x3q4b5rf8vj7hrzcs0aggl8r
   subdir:
     plutus-core
     plutus-ledger-api
     plutus-tx
     prettyprinter-configurable
-    word-array
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
