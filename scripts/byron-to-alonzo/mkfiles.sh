@@ -50,7 +50,7 @@ POOL_NODES="node-pool1"
 
 ALL_NODES="${BFT_NODES} ${POOL_NODES}"
 
-INIT_SUPPLY=1002000000
+INIT_SUPPLY=10020000000
 FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
 FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} - 1000000))
 # We need to allow for a fee to transfer the funds out of the genesis.
@@ -301,7 +301,7 @@ sed -i shelley/genesis.spec.json \
     -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
     -e 's/"epochLength": 432000/"epochLength": 1500/' \
-    -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000/' \
+    -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000000/' \
     -e 's/"decentralisationParam": 1/"decentralisationParam": 0.7/' \
     -e 's/"major": 0/"major": 2/' \
     -e 's/"updateQuorum": 5/"updateQuorum": 2/'

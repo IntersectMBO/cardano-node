@@ -7,12 +7,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.PlutusExample.LockingScript
-  ( apiExampleUntypedPlutusLockingScript
-  , untypedLockingScriptAsShortBs
+module Cardano.PlutusExample.Untyped.DatumRedeemerGuess
+  ( datumRedeemerGuessScript
+  , datumRedeemerGuessScriptShortBs
   ) where
 
-import           Prelude hiding (($))
+import           Prelude hiding (($), (&&), (==))
 
 import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
 
@@ -27,7 +27,9 @@ import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Data -> Data -> Data -> ()
-mkValidator _ _ _ = ()
+mkValidator datum redeemer _txContext
+  | datum == PlutusTx.I 42 && redeemer == PlutusTx.I 42 = ()
+  | otherwise = traceError "Incorrect datum. Expected 42."
 
 validator :: Plutus.Validator
 validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
@@ -35,9 +37,9 @@ validator = Plutus.mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
 script :: Plutus.Script
 script = Plutus.unValidatorScript validator
 
-untypedLockingScriptAsShortBs :: SBS.ShortByteString
-untypedLockingScriptAsShortBs = SBS.toShort . LBS.toStrict $ serialise script
+datumRedeemerGuessScriptShortBs :: SBS.ShortByteString
+datumRedeemerGuessScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
 
-apiExampleUntypedPlutusLockingScript :: PlutusScript PlutusScriptV1
-apiExampleUntypedPlutusLockingScript = PlutusScriptSerialised untypedLockingScriptAsShortBs
+datumRedeemerGuessScript :: PlutusScript PlutusScriptV1
+datumRedeemerGuessScript = PlutusScriptSerialised datumRedeemerGuessScriptShortBs
 

@@ -1007,15 +1007,15 @@ alonzoGenesisDefaultExecutionPrices =
 alonzoGenesisDefaultMaxTxExecutionUnits :: ExecutionUnits
 alonzoGenesisDefaultMaxTxExecutionUnits =
     ExecutionUnits {
-      executionSteps  = 10_000_000_000,
-      executionMemory = 10_000_000_000
+      executionSteps  = 500_000_000_000,
+      executionMemory = 500_000_000_000
     }
 
 alonzoGenesisDefaultMaxBlockExecutionUnits :: ExecutionUnits
 alonzoGenesisDefaultMaxBlockExecutionUnits =
     ExecutionUnits {
-      executionSteps  = 100_000_000_000,
-      executionMemory = 100_000_000_000
+      executionSteps  = 500_000_000_000,
+      executionMemory = 500_000_000_000
     }
 
 alonzoGenesisDefaultMaxValueSize :: Natural
