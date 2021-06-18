@@ -77,6 +77,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.SerialiseCBOR
 
+{- HLINT ignore "Use lambda-case" -}
 
 -- ----------------------------------------------------------------------------
 -- TxMetadata types

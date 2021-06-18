@@ -406,7 +406,19 @@ Byron vote submission:
 Development
 ===========
 
+GHCID
+-----
+
 run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
+
+Haskell Language Server
+-----------------------
+
+When using Haskell Langague Server with Visual Studio Code, you may find that
+`HLINT annotations are ignored<https://github.com/haskell/haskell-language-server/issues/638>`.
+
+To work around this, you may run the script `./scripts/reconfigure-hlint.sh` to generate a `.hlint.yaml`
+file with HLINT ignore rules derived from the source code.
 
 Testing
 ========

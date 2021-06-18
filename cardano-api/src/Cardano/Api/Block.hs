@@ -78,8 +78,8 @@ import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Tx
 
-{-# ANN module ("HLint: ignore Use lambda" :: String) #-}
-
+{- HLINT ignore "Use lambda" -}
+{- HLINT ignore "Use lambda-case" -}
 
 -- ----------------------------------------------------------------------------
 -- Blocks in an era
