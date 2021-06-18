@@ -1,6 +1,6 @@
 # plutus-example
 
-This library demonstates end to end examples of creating and executing Plutus scripts on chain.
+This library demonstrates end to end examples of creating and executing Plutus scripts on chain.
 
 This is done roughly in the following steps:
 
@@ -17,16 +17,15 @@ The off chain code is used for transaction construction. In this case we constru
 
 ### Where can I learn about Plutus scripts in more detail?
 
-Our education director, Lars Brünjes, has an excellent series of [tutorials](https://youtu.be/IEn6jUo-0vU) on youtube. We will not attempt to provide an indepth explanation of Plutus in this repository.
+Our education director, Lars Brünjes, has an excellent series of [tutorials](https://youtu.be/IEn6jUo-0vU) on youtube. We will not attempt to provide an indepth explanation of [Plutus](https://docs.cardano.org/projects/plutus/en/latest/) in this repository.
 
 ## Tutorials
 
-We demonstate the following scripts:
+We demonstrate the following scripts:
 
-1. Simple transaction output ["locking" Plutus script](plutus-example/plutus-example/src/Cardano/PlutusExample/LockingScript.hs) that always succeeds.
+1. Always succeeds [Plutus script](src/Cardano/PlutusExample/Untyped/AlwaysSucceeds.hs).
 2. Simple minting Plutus script (In progress).
 
-The `plutus-example` executable outputs a text envelope formatted txin locking plutus script that always succeeds.
 
-More to come...
+
 
