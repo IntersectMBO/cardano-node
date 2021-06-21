@@ -12,6 +12,7 @@ import           Control.Concurrent.MVar
 
 import           Cardano.Api
 
+import           Cardano.Benchmarking.Types (NumberOfOutputsPerTx(..), NumberOfTxs(..))
 import           Cardano.Benchmarking.GeneratorTx.Tx as Tx hiding (Fund)
 import           Cardano.Benchmarking.FundSet as FundSet
 
@@ -134,10 +135,22 @@ benchmarkTransaction :: forall era. IsShelleyBasedEra era
   -> Int
   -> Target
   -> Either String (Wallet, Tx era)
-benchmarkTransaction wallet numInputs targetNode = do
+benchmarkTransaction wallet numInputs targetNode =
+  walletTransaction wallet numInputs targetNode fundsToTx
+ where
+  fundsToTx w inputFunds outValues
+    = genTx (walletKey w) (walletNetworkId w) inputFunds outValues
+
+walletTransaction :: forall era. IsShelleyBasedEra era
+  => Wallet
+  -> Int
+  -> Target
+  -> (Wallet -> [Fund] -> [Lovelace] -> Either String (Tx era, TxId) )
+  -> Either String (Wallet, Tx era)
+walletTransaction wallet numInputs targetNode fundsToTx = do
   inputFunds <- findInputFunds (walletFunds wallet) targetNode
   let outValues = map getFundLovelace inputFunds
-  (tx, txId) <- genTx (walletKey wallet) (walletNetworkId wallet) inputFunds outValues
+  (tx, txId) <- fundsToTx wallet inputFunds outValues
   let
     newFunds = zipWith (mkNewFund txId) [TxIx 0 ..] outValues
     newWallet = (walletUpdateFunds wallet newFunds inputFunds) {walletSeqNumber = newSeqNumber}
@@ -173,16 +186,17 @@ data WalletStep era
 benchmarkWalletScript :: forall era .
      IsShelleyBasedEra era
   => WalletRef
-  -> SeqNumber
-  -> Int
+  -> NumberOfTxs
+  -> NumberOfOutputsPerTx
+  -- in this version : numberOfInputs == numberOfOutputs
   -> Target
   -> WalletScript era
-benchmarkWalletScript wRef maxCount numInputs targetNode
+benchmarkWalletScript wRef (NumberOfTxs maxCount) (NumberOfOutputsPerTx numInputs) targetNode
   = WalletScript (modifyMVarMasked wRef nextTx)
   where
-    nextCall = benchmarkWalletScript wRef maxCount numInputs targetNode
+    nextCall = benchmarkWalletScript wRef (NumberOfTxs maxCount) (NumberOfOutputsPerTx numInputs) targetNode
     nextTx :: Wallet -> IO (Wallet, WalletStep era)
-    nextTx w = if walletSeqNumber w > maxCount
+    nextTx w = if walletSeqNumber w > SeqNumber (fromIntegral maxCount)
       then return (w, Done)
       else case benchmarkTransaction w numInputs targetNode of
         Right (wNew, tx) -> return (wNew, NextTx nextCall tx)

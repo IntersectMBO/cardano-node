@@ -22,7 +22,6 @@ module Cardano.Benchmarking.Types
   , TPSRate(..)
   , UnAcked(..)
   , Unav(..)
-  , UnReqd(..)
   ) where
 
 
@@ -104,9 +103,6 @@ instance ToJSON TxAdditionalSize where
   toJSON     = genericToJSON myJsonOptions
   toEncoding = genericToEncoding myJsonOptions
 instance FromJSON TxAdditionalSize where parseJSON = genericParseJSON myJsonOptions
-
--- | Transactions not yet even announced.
-newtype UnReqd  tx = UnReqd  [tx]
 
 -- | Transactions we decided to announce now.
 newtype ToAnnce tx = ToAnnce [tx]

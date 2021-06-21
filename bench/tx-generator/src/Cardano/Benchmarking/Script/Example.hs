@@ -54,6 +54,9 @@ testScript =
   , AsyncBenchmark threadName txList (TPSRate 10)
   , WaitForEra $ AnyCardanoEra ByronEra
   , CancelBenchmark threadName
+  , ImportGenesisFund passPartout passPartout
+  , CreateChange (quantityToLovelace 10000) 1000
+  , RunBenchmark (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)
   , Reserved []
   ]
  where
