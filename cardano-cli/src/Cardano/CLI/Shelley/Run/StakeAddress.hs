@@ -42,8 +42,8 @@ runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash v
 runStakeAddressCmd (StakeAddressBuild vk nw mOutputFp) = runStakeAddressBuild vk nw mOutputFp
 runStakeAddressCmd (StakeRegistrationCert stakeVerifier outputFp) =
   runStakeCredentialRegistrationCert stakeVerifier outputFp
-runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyOrFp stkPoolVerKeyHashOrFp outputFp) =
-  runStakeKeyDelegationCert stkKeyVerKeyOrFp stkPoolVerKeyHashOrFp outputFp
+runStakeAddressCmd (StakeCredentialDelegationCert stakeVerifier stkPoolVerKeyHashOrFp outputFp) =
+  runStakeCredentialDelegationCert stakeVerifier stkPoolVerKeyHashOrFp outputFp
 runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeVerifier outputFp) =
   runStakeCredentialDeRegistrationCert stakeVerifier outputFp
 
@@ -129,32 +129,43 @@ runStakeCredentialRegistrationCert stakeVerifier (OutputFile oFp) =
   regCertDesc = "Stake Address Registration Certificate"
 
 
-runStakeKeyDelegationCert
-  :: VerificationKeyOrFile StakeKey
-  -- ^ Delegator stake verification key or verification key file.
+runStakeCredentialDelegationCert
+  :: StakeVerifier
+  -- ^ Delegator stake verification key, verification key file or script file.
   -> VerificationKeyOrHashOrFile StakePoolKey
   -- ^ Delegatee stake pool verification key or verification key file or
   -- verification key hash.
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeKeyDelegationCert stakeVerKeyOrFile poolVKeyOrHashOrFile (OutputFile outFp) = do
-    stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
-      . newExceptT
-      $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
+runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile outFp) = do
+  poolStakeVKeyHash <-
+    firstExceptT
+      ShelleyStakeAddressCmdReadKeyFileError
+      (newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
 
-    poolStakeVKeyHash <-
-      firstExceptT
-        ShelleyStakeAddressCmdReadKeyFileError
-        (newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
-
-    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
-        delegCert = makeStakeAddressDelegationCertificate
-                      stakeCred
-                      poolStakeVKeyHash
-    firstExceptT ShelleyStakeAddressCmdWriteFileError
-      . newExceptT
-      $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
+  case stakeVerifier of
+    StakeVerifierScriptFile (ScriptFile sFile) -> do
+      ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError
+                                    $ readFileScriptInAnyLang sFile
+      let stakeCred = StakeCredentialByScript $ hashScript script
+      writeDelegationCert stakeCred poolStakeVKeyHash
+    StakeVerifierKey stakeVerKeyOrFile -> do
+      stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
+        . newExceptT
+        $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
+      let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
+      writeDelegationCert stakeCred poolStakeVKeyHash
   where
+    writeDelegationCert
+      :: StakeCredential
+      -> Hash StakePoolKey
+      -> ExceptT ShelleyStakeAddressCmdError IO ()
+    writeDelegationCert sCred poolStakeVKeyHash = do
+      let delegCert = makeStakeAddressDelegationCertificate sCred poolStakeVKeyHash
+      firstExceptT ShelleyStakeAddressCmdWriteFileError
+        . newExceptT
+        $ writeFileTextEnvelope outFp (Just delegCertDesc) delegCert
+
     delegCertDesc :: TextEnvelopeDescr
     delegCertDesc = "Stake Address Delegation Certificate"
 
