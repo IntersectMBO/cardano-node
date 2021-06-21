@@ -20,35 +20,49 @@ import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.IO.Class
 import           Control.Concurrent (threadDelay)
-import           Control.Tracer (traceWith)
+import           Control.Tracer (traceWith, nullTracer)
 
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
-import           Cardano.Api ( AsType(..), CardanoEra(..), InAnyCardanoEra(..), AnyCardanoEra(..), IsShelleyBasedEra, Tx
+import           Cardano.Api ( AlonzoEra, AsType(..), CardanoEra(..), InAnyCardanoEra(..), AnyCardanoEra(..), IsShelleyBasedEra, Tx
                              , Lovelace, NetworkId(..), cardanoEra
                              , CardanoMode, LocalNodeConnectInfo
                              , PaymentKey
+                             , PlutusScriptVersion(..)
+                             , QueryInMode(..)
+                             , EraInMode(..)
+                             , QueryInEra(..)
+                             , QueryInShelleyBasedEra(..)
+                             , Script(PlutusScript)
+                             , ShelleyBasedEra(..)
                              , SigningKey
                              , TxInMode
                              , TxValidationErrorInMode
+                             , TxMetadataInEra (..)
                              , getLocalChainTip, queryNodeLocalState, QueryInMode( QueryCurrentEra), ConsensusModeIsMultiEra( CardanoModeIsMultiEra )
                              , chainTipToChainPoint )
+import           Cardano.Api.Shelley ( ProtocolParameters)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
-import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), liftAnyEra )
-import           Cardano.Benchmarking.GeneratorTx as Core
-                   (AsyncBenchmarkControl, asyncBenchmark, waitBenchmark, walletBenchmark
-                   , readSigningKey, secureGenesisFund, splitFunds, txGenerator, TxGenError)
+import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), Variant(..), liftAnyEra )
+import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx
+                   (asyncBenchmark, waitBenchmark, walletBenchmark
+                   , readSigningKey, secureGenesisFund, splitFunds, txGenerator)
+import           Cardano.Benchmarking.GeneratorTx as GeneratorTx
+                   (AsyncBenchmarkControl, TxGenError)
 
-import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, txInModeCardano)
 import           Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition as Core (startProtocol)
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient, benchmarkConnectTxSubmit)
+import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
+import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, txInModeCardano)
+
 import           Cardano.Benchmarking.OuroborosImports as Core
                    (LocalSubmitTx, SigningKeyFile
                    , getGenesis, protocolToNetworkId, protocolToCodecConfig, makeLocalConnectInfo, submitTxToNodeLocal)
+import           Cardano.Benchmarking.PlutusExample as PlutusExample
 import           Cardano.Benchmarking.Tracer as Core
                    ( TraceBenchTxSubmit (..)
-                   , createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission_)
-import           Cardano.Benchmarking.Types as Core (NumberOfTxs(..), SubmissionErrorPolicy(..), TPSRate)
+                   , createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
+import           Cardano.Benchmarking.Types as Core (NumberOfTxs(..), SubmissionErrorPolicy(..), TPSRate, TxAdditionalSize(..))
 import           Cardano.Benchmarking.Wallet
 
 import           Cardano.Benchmarking.Script.Env
@@ -81,7 +95,7 @@ startProtocol filePath = do
 
 readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
-  liftIO ( runExceptT $ Core.readSigningKey filePath) >>= \case
+  liftIO ( runExceptT $ GeneratorTx.readSigningKey filePath) >>= \case
     Left err -> liftTxGenError err
     Right key -> setName name key
 
@@ -107,7 +121,7 @@ secureGenesisFund fundName destKey genesisKeyName = do
     coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO Store.Fund
     coreCall _proxy = do
       let addr = Core.keyAddress @ era networkId fundKey
-      f <- Core.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
+      f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
   liftCoreWithEra coreCall >>= \case
     Left err -> liftTxGenError err
@@ -132,7 +146,7 @@ splitFundN count destKeyName sourceFund = do
     coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO [Store.Fund]
     coreCall _proxy = do
       let addr = Core.keyAddress @ era networkId fundKey
-      f <- Core.splitFunds tracer localSubmit fee count txIn fundKey addr fund
+      f <- GeneratorTx.splitFunds tracer localSubmit fee count txIn fundKey addr fund
       return $ zip f $ repeat destKey
   liftCoreWithEra coreCall >>= \case
     Left err -> liftTxGenError err
@@ -180,7 +194,7 @@ prepareTxList name destKey srcFundName = do
     coreCall _proxy = do
       let addr = Core.keyAddress @ era networkId key
       ----------------------------------------------------TODO : Constant 1 ???
-      l <- Core.txGenerator tracer fee count txIn txOut payload addr (snd $ head fundList) 1 (map fst fundList)
+      l <- GeneratorTx.txGenerator tracer fee count txIn txOut payload addr (snd $ head fundList) 1 (map fst fundList)
       return $ InAnyCardanoEra cardanoEra $ TxList l
   liftCoreWithEra coreCall >>= \case
     Left err -> liftTxGenError err
@@ -189,30 +203,34 @@ prepareTxList name destKey srcFundName = do
 waitBenchmarkCore :: AsyncBenchmarkControl ->  ActionM ()
 waitBenchmarkCore ctl = do
   tracers  <- get BenchTracers
-  _ <- liftIO $ runExceptT $ Core.waitBenchmark (btTxSubmit_ tracers) ctl
+  _ <- liftIO $ runExceptT $ GeneratorTx.waitBenchmark (btTxSubmit_ tracers) ctl
   return ()
+
+getConnectClient :: ActionM ConnectClient
+getConnectClient = do
+  tracers  <- get BenchTracers
+  (Testnet networkMagic) <- get NetworkId
+  protocol <- get Protocol
+  void $ return $(btSubmission2_ tracers)
+  ioManager <- askIOManager
+  return $ benchmarkConnectTxSubmit
+                       ioManager
+                       (btConnect_ tracers)
+                       nullTracer -- (btSubmission2_ tracers)
+                       (protocolToCodecConfig protocol)
+                       networkMagic
 
 -- This the benchmark based on transaction lists.
 -- It is obsolte when the tx-list are replaced with the wallet data type.
 asyncBenchmarkCore :: ThreadName -> TxListName -> TPSRate -> ActionM AsyncBenchmarkControl
 asyncBenchmarkCore (ThreadName threadName) transactions tps = do
   tracers  <- get BenchTracers
-  targets  <- getUser TTargets
   txs      <- getName transactions
-  (Testnet networkMagic) <- get NetworkId
-  protocol <- get Protocol
-  ioManager <- askIOManager
+  targets  <- getUser TTargets
+  connectClient <- getConnectClient
   let
-    connectClient :: ConnectClient
-    connectClient  = benchmarkConnectTxSubmit
-                       ioManager
-                       (btConnect_ tracers)
-                       (btSubmission_ tracers)
-                       (protocolToCodecConfig protocol)
-                       networkMagic
-
     coreCall :: forall era. IsShelleyBasedEra era => [Tx era] -> ExceptT TxGenError IO AsyncBenchmarkControl
-    coreCall l = Core.asyncBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient threadName targets tps LogErrors l
+    coreCall l = GeneratorTx.asyncBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient threadName targets tps LogErrors l
   ret <- liftIO $ runExceptT $ case txs of
     InAnyCardanoEra AlonzoEra  (TxList l) -> coreCall l
     InAnyCardanoEra MaryEra    (TxList l) -> coreCall l
@@ -247,6 +265,17 @@ queryEra = do
     Right era -> return era
     Left err -> throwE $ ApiError $ show err
 
+queryProtocolParameters :: ActionM ProtocolParameters
+queryProtocolParameters = do
+  localNodeConnectInfo <- getLocalConnectInfo
+  chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
+  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip)
+                    $ QueryInEra AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
+  case ret of
+    Right (Right pp) -> return pp
+    Right (Left err) -> throwE $ ApiError $ show err
+    Left err -> throwE $ ApiError $ show err
+
 waitForEra :: AnyCardanoEra -> ActionM ()
 waitForEra era = do
   currentEra <- queryEra
@@ -257,6 +286,19 @@ waitForEra era = do
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
+localTestWalletScript :: forall era.
+     IsShelleyBasedEra era
+  => WalletScript era
+  -> ActionM ()
+localTestWalletScript s = do
+  step <- liftIO $ runWalletScript s
+  case step of
+    Done -> return ()
+    Error err -> throwE $ ApiError $ show err
+    NextTx nextScript tx -> do
+      void $ localSubmitTx $ txInModeCardano tx
+      localTestWalletScript nextScript
+
 localSubmitTx :: TxInMode CardanoMode -> ActionM (SubmitResult (TxValidationErrorInMode CardanoMode))
 localSubmitTx tx = do
   submitTracer <- btTxSubmit_ <$> get BenchTracers
@@ -264,42 +306,70 @@ localSubmitTx tx = do
   ret <- liftIO $ submit tx
   let
     msg = case ret of
-      SubmitSuccess -> mconcat
-        [ "local submit success (" , show tx , ")"]
+      SubmitSuccess -> "local submit success."
       SubmitFail e -> mconcat
         [ "local submit failed: " , show e , " (" , show tx , ")"]
   liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug msg
   return ret
 
+makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)
+makeMetadata = do
+  payloadSize <- getUser TTxAdditionalSize
+  case mkMetadata $ unTxAdditionalSize payloadSize of
+    Right m -> return m
+    Left err -> throwE $ MetadataError err
+
+-- TODO use withEra here!
 runBenchmark :: ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
-runBenchmark (ThreadName threadName) txCount tps = do
+runBenchmark threadName txCount tps
+  = withEra $ runBenchmarkInEra threadName txCount tps
+
+runBenchmarkInEra :: forall era. IsShelleyBasedEra era => ThreadName -> NumberOfTxs -> TPSRate -> AsType era -> ActionM ()
+runBenchmarkInEra (ThreadName threadName) txCount tps era = do
   tracers  <- get BenchTracers
   targets  <- getUser TTargets
-  (Testnet networkMagic) <- get NetworkId
-  protocol <- get Protocol
-  ioManager <- askIOManager
-  era <- get $ User TEra
   walletRef <- get GlobalWallet
+  metadata <- makeMetadata
+  connectClient <- getConnectClient
   let
-    connectClient :: ConnectClient
-    connectClient  = benchmarkConnectTxSubmit
-                       ioManager
-                       (btConnect_ tracers)
-                       (btSubmission_ tracers)
-                       (protocolToCodecConfig protocol)
-                       networkMagic
-    walletScript :: forall era. IsShelleyBasedEra era => FundSet.Target -> WalletScript era
-    walletScript = benchmarkWalletScript walletRef txCount 2
+    walletScript :: FundSet.Target -> WalletScript era
+    walletScript = benchmarkWalletScript walletRef metadata txCount 2
 
-    coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
-    coreCall eraProxy = Core.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
+    coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
+    coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
                                                threadName targets tps LogErrors eraProxy txCount walletScript
-  ret <- liftIO $ runExceptT $ case era of
-    AnyCardanoEra AlonzoEra  -> coreCall AsAlonzoEra
-    AnyCardanoEra MaryEra    -> coreCall AsMaryEra
-    AnyCardanoEra AllegraEra -> coreCall AsAllegraEra
-    AnyCardanoEra ShelleyEra -> coreCall AsShelleyEra
-    AnyCardanoEra ByronEra   -> error "byron not supported"
+  ret <- liftIO $ runExceptT $ coreCall era
+  case ret of
+    Left err -> liftTxGenError err
+    Right ctl -> do
+      setName (ThreadName threadName) ctl
+
+runPlutusBenchmark :: ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
+runPlutusBenchmark (ThreadName threadName) txCount tps = do
+  tracers  <- get BenchTracers
+  targets  <- getUser TTargets
+  networkId <- get NetworkId
+  protocolParameters <- queryProtocolParameters
+  walletRef <- get GlobalWallet
+  fundKey <- getName $ KeyName "pass-partout"
+  (PlutusScript PlutusScriptV1 script) <- liftIO $ PlutusExample.readScript "bench/script/sum1ToN.plutus"
+  collateral <- liftIO ( askWalletRef walletRef (FundSet.selectCollateral . walletFunds)) >>= \case
+    -- TODO !! FIX THIS BUG !
+    -- This just selects one UTxO as colleteral, but I have to also remove it from the wallet.
+    -- Otherwise it may be spend accidentially
+    Right c -> return c
+    Left err -> throwE $ WalletError err
+  connectClient <- getConnectClient
+  let
+    walletScript :: FundSet.Target -> WalletScript AlonzoEra
+    walletScript = plutusWalletScript fundKey script networkId protocolParameters collateral walletRef txCount
+
+--  TODO: this is useful for debugging: add to JSON scripting language
+--  localTestWalletScript $ walletScript $ FundSet.Target "local"
+
+  ret <- liftIO $ runExceptT $
+           GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
+                                       threadName targets tps LogErrors AsAlonzoEra txCount walletScript
   case ret of
     Left err -> liftTxGenError err
     Right ctl -> do
@@ -324,7 +394,7 @@ importGenesisFund genesisKeyName destKey= do
     coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO Store.Fund
     coreCall _proxy = do
       let addr = Core.keyAddress @ era networkId fundKey
-      f <- Core.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
+      f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
   liftCoreWithEra coreCall >>= \case
     Left err -> liftTxGenError err
@@ -342,21 +412,52 @@ initGlobalWallet networkId key ((txIn, outVal), skey) = do
   , _fundVal = value
   , _fundSigningKey = skey
   , _fundValidity = Confirmed
+  , _fundVariant = PlainOldFund
   }
+
+localCreateScriptFunds :: Lovelace -> Int -> ActionM ()
+localCreateScriptFunds value count = do
+  walletRef <- get GlobalWallet
+  networkId <- get NetworkId
+  fundKey <- getName $ KeyName "pass-partout"
+  let scriptData = PlutusExample.toScriptHash "e88bd757ad5b9bedf372d8d3f0cf6c962a469db61a265f6418e1ffed86da29ec"
+  script <- liftIO $ PlutusExample.readScript "bench/script/sum1ToN.plutus"
+
+  let
+    createCoins coins = do
+      tx <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (PlutusExample.payToScript fundKey (script, scriptData) networkId) coins)
+      return $ fmap txInModeCardano tx
+  createChangeGeneric createCoins value count
 
 createChange :: Lovelace -> Int -> ActionM ()
 createChange value count = do
-  wallet <- get GlobalWallet
+  networkId <- get NetworkId
+  fundKey <- getName $ KeyName "pass-partout"
+  walletRef <- get GlobalWallet
+  era <- get $ User TEra
+  let
+    createCoinsGen :: forall era. IsShelleyBasedEra era => AsType era -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
+    createCoinsGen _proxy coins = do
+      (tx :: Either String (Tx era)) <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (genTx fundKey networkId TxMetadataNone) coins)
+      return $ fmap txInModeCardano tx
+
+    createCoins :: ([Lovelace] -> ActionM (Either String (TxInMode CardanoMode)))
+    createCoins = case era of
+      AnyCardanoEra AlonzoEra  -> createCoinsGen AsAlonzoEra
+      AnyCardanoEra MaryEra    -> createCoinsGen AsMaryEra
+      AnyCardanoEra AllegraEra -> createCoinsGen AsAllegraEra
+      AnyCardanoEra ShelleyEra -> createCoinsGen AsShelleyEra
+      AnyCardanoEra ByronEra   -> error "byron not supported"
+  createChangeGeneric createCoins value count
+
+createChangeGeneric :: ([Lovelace] -> ActionM (Either String (TxInMode CardanoMode))) -> Lovelace -> Int -> ActionM ()
+createChangeGeneric createCoins value count = do
   let
     coinsList = replicate count value
     maxTxSize = 30
     chunks = chunkList maxTxSize coinsList
-    createCoins :: forall era. IsShelleyBasedEra era => [Lovelace] -> AsType era -> ActionM (Either String (TxInMode CardanoMode))
-    createCoins coins _proxy = do
-      (tx :: Either String (Tx era)) <- liftIO $ walletRefCreateCoins wallet coins
-      return $ fmap txInModeCardano tx
   forM_ chunks $ \coins -> do
-    gen <- withEra $ createCoins coins
+    gen <- createCoins coins
     case gen of
       Left (_err :: String) -> return ()
       Right tx -> void $ localSubmitTx tx
@@ -370,6 +471,21 @@ This is for dirty hacking and testing and quick-fixes.
 Its a function that can be called from the JSON scripts
 and for which the JSON encoding is "reserved".
 -}
+{-
 reserved :: [String] -> ActionM ()
 reserved _ = do
   throwE $ UserError "no dirty hack is implemented"
+
+-}
+reserved :: [String] -> ActionM ()
+reserved _ = do
+  -- create some regular change first
+  -- genesis holds  100000000000000
+  createChange            800000000000 100
+  createChange              1492000000 1 -- magic value to tag collateral UTxO
+   -- max-tx-size 30 => ca 66 transcaction to create 2000 outputs
+  localCreateScriptFunds   20000000000 2000
+  delay 60
+  runPlutusBenchmark (ThreadName "plutusBenchmark") 1000 10
+  waitBenchmark (ThreadName "plutusBenchmark")
+  return ()
