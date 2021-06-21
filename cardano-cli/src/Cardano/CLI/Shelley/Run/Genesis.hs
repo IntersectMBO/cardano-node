@@ -785,7 +785,7 @@ updateTemplate (SystemStart start)
         cModel = case Alonzo.defaultCostModel of
                    Just (Alonzo.CostModel m) ->
                      if Alonzo.validateCostModelParams m
-                     then Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
+                     then Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel $ Map.map (const 0) m)
                      else panic "updateTemplate: defaultCostModel is invalid"
 
                    Nothing -> panic "updateTemplate: Could not extract cost model params from defaultCostModel"

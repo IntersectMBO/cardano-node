@@ -48,8 +48,8 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Options.Applicative as Opt
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
-import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Language as Parsec
+import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
 
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
@@ -328,7 +328,7 @@ pStakeAddressCmd =
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
     pStakeAddressRegistrationCert = StakeKeyRegistrationCert
-                                      <$> pStakeVerificationKeyOrFile
+                                      <$> pStakeVerifier
                                       <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
@@ -336,6 +336,8 @@ pStakeAddressCmd =
                                         <$> pStakeVerificationKeyOrFile
                                         <*> pOutputFile
 
+    -- TODO: Alonzo - Update pStakeAddressDelegationCert to also accept a script
+    -- as a verifier.
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
     pStakeAddressDelegationCert = StakeKeyDelegationCert
                                     <$> pStakeVerificationKeyOrFile
