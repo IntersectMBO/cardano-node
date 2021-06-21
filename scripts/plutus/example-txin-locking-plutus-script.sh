@@ -100,8 +100,9 @@ cardano-cli transaction build-raw \
   --tx-in-datum-file "$datumfilepath"  \
   --protocol-params-file example/pparams.json\
   --tx-in-redeemer-file "$redeemerfilepath" \
-  --tx-in-execution-units "($plutusrequiredtime, $plutusrequiredspace)" \
+  --tx-in-execution-units "(0, 0)" \
   --out-file example/work/test-alonzo.body
+#  --tx-in-execution-units "($plutusrequiredtime, $plutusrequiredspace)" \
 
 cardano-cli transaction sign \
   --tx-body-file example/work/test-alonzo.body \
