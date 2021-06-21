@@ -38,6 +38,7 @@ library
                        Cardano.Benchmarking.GeneratorTx.SizedMetadata
                        Cardano.Benchmarking.GeneratorTx.Tx.Byron
                        Cardano.Benchmarking.GeneratorTx.Submission
+                       Cardano.Benchmarking.GeneratorTx.SubmissionClient
                        Cardano.Benchmarking.GeneratorTx.CLI.Parsers
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script

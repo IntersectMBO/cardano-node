@@ -17,12 +17,12 @@ import           Data.Functor.Identity
 import           Data.Dependent.Sum (DSum(..))
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
-import           Cardano.Api (AnyCardanoEra)
+import           Cardano.Api (AnyCardanoEra, Lovelace)
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Core
-import           Cardano.Benchmarking.Types (TPSRate)
+import           Cardano.Benchmarking.Types (TPSRate, NumberOfTxs)
 
 data Action where
   Set                :: !SetKeyVal -> Action
@@ -34,7 +34,10 @@ data Action where
   SplitFund          :: [FundName] -> !KeyName -> !FundName -> Action
   SplitFundToList    :: !FundListName -> !KeyName -> !FundName -> Action
   PrepareTxList      :: !TxListName -> !KeyName -> !FundListName -> Action
-  AsyncBenchmark     :: !ThreadName -> !TxListName -> TPSRate -> Action
+  AsyncBenchmark     :: !ThreadName -> !TxListName -> !TPSRate -> Action
+  ImportGenesisFund  :: !KeyName -> !KeyName -> Action
+  CreateChange       :: !Lovelace -> !Int -> Action
+  RunBenchmark       :: !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
@@ -54,6 +57,9 @@ action a = case a of
   Delay t -> delay t
   PrepareTxList name key fund -> prepareTxList name key fund
   AsyncBenchmark thread txs tps -> asyncBenchmark thread txs tps
+  ImportGenesisFund genesisKey fundKey -> importGenesisFund genesisKey fundKey
+  CreateChange value count -> createChange value count
+  RunBenchmark thread count tps -> runBenchmark thread count tps
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era

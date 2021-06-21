@@ -19,6 +19,7 @@ module Cardano.Benchmarking.GeneratorTx
   , TPSRate(..)
   , TxAdditionalSize(..)
   , TxGenError
+  , walletBenchmark
   , asyncBenchmark
   , readSigningKey
   , runBenchmark
@@ -29,11 +30,13 @@ module Cardano.Benchmarking.GeneratorTx
   ) where
 
 import           Cardano.Prelude
-import           Prelude (id, String)
+import           Prelude (error, id, String)
 
+import qualified Control.Concurrent.STM as STM
 import           Control.Monad (fail)
 import           Control.Monad.Trans.Except.Extra (left, newExceptT, right)
 import           Control.Tracer (Tracer, traceWith)
+import qualified Data.Time.Clock as Clock
 
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -53,9 +56,12 @@ import           Cardano.Benchmarking.GeneratorTx.Error
 import           Cardano.Benchmarking.GeneratorTx.Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission
+import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
 import           Cardano.Benchmarking.GeneratorTx.Tx
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.Tracer
+import           Cardano.Benchmarking.Wallet
+import qualified Cardano.Benchmarking.FundSet as FundSet
 
 import           Shelley.Spec.Ledger.API (ShelleyGenesis)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
@@ -273,63 +279,64 @@ asyncBenchmark
   targets
   tpsRate
   errorPolicy
-  finalTransactions
-  = do
-  let
-    traceDebug :: String -> ExceptT TxGenError IO ()
-    traceDebug =   liftIO . traceWith traceSubmit . TraceBenchTxSubDebug
-
+  transactions
+  = liftIO $ do
   traceDebug "******* Tx generator, phase 2: pay to recipients *******"
 
-  remoteAddresses <- forM targets $ \targetNodeAddress -> do
-    let targetNodeHost =
-          show . unNodeHostIPv4Address $ naHostAddress targetNodeAddress
-
-    let targetNodePort = show $ naPort targetNodeAddress
-
-    let hints :: AddrInfo
-        hints = defaultHints
-          { addrFlags      = [AI_PASSIVE]
-          , addrFamily     = AF_INET
-          , addrSocketType = Stream
-          , addrCanonName  = Nothing
-          }
-
-    (remoteAddr:_) <- liftIO $ getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
-    return remoteAddr
-
+  remoteAddresses <- forM targets lookupNodeAddress
   let numTargets :: Natural = fromIntegral $ NE.length targets
 
   traceDebug $ "******* Tx generator, launching Tx peers:  " ++ show (NE.length remoteAddresses) ++ " of them"
-  liftIO $ do
-    submission :: Submission IO era  <- mkSubmission traceSubmit $
-                    SubmissionParams
-                    { spTps           = tpsRate
-                    , spTargets       = numTargets
-                    , spQueueLen      = 32
-                    , spErrorPolicy   = errorPolicy
-                    }
-    allAsyncs <- forM (zip [0..] $ NE.toList remoteAddresses) $
-      \(i, remoteAddr) ->
-        launchTxPeer
-              traceSubmit
-              traceN2N
-              connectClient
-              remoteAddr
-              submission
-              i
-    tpsFeeder <- async $ tpsLimitedTxFeeder submission finalTransactions
-    let tpsFeederShutdown = do
-          cancel tpsFeeder
-          liftIO $ tpsLimitedTxFeederShutdown submission
 
-    return (tpsFeeder, allAsyncs, mkSubmissionSummary threadName submission, tpsFeederShutdown)
+  startTime <- Clock.getCurrentTime
+  txSendQueue <- STM.newTBQueueIO 32
+
+  reportRefs <- STM.atomically $ replicateM (fromIntegral numTargets) STM.newEmptyTMVar
+
+  allAsyncs <- forM (zip reportRefs $ NE.toList remoteAddresses) $
+    \(reportRef, remoteAddr) -> do
+      let errorHandler = handleTxSubmissionClientError traceSubmit remoteAddr reportRef errorPolicy
+          client = txSubmissionClient
+                     traceN2N
+                     traceSubmit
+                     (legacyTxSource txSendQueue)
+                     (submitSubmissionThreadStats reportRef)
+      async $ handle errorHandler (connectClient remoteAddr client)
+
+  tpsFeeder <- async $ tpsLimitedTxFeeder traceSubmit numTargets txSendQueue tpsRate transactions
+
+  let tpsFeederShutdown = do
+        cancel tpsFeeder
+        liftIO $ tpsLimitedTxFeederShutdown numTargets txSendQueue
+
+  return (tpsFeeder, allAsyncs, mkSubmissionSummary threadName startTime reportRefs, tpsFeederShutdown)
+ where
+  traceDebug :: String -> IO ()
+  traceDebug =   traceWith traceSubmit . TraceBenchTxSubDebug
 
 -- | At this moment 'sourceAddress' contains a huge amount of money (lets call it A).
 --   Now we have to split this amount to N equal parts, as a result we'll have
 --   N UTxO entries, and alltogether these entries will contain the same amount A.
 --   E.g. (1 entry * 1000 ADA) -> (10 entries * 100 ADA).
 --   Technically all splitting transactions will send money back to 'sourceAddress'.
+
+lookupNodeAddress ::
+  NodeAddress' NodeHostIPv4Address -> IO AddrInfo
+lookupNodeAddress node = do
+  (remoteAddr:_) <- getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
+  return remoteAddr
+ where
+  targetNodeHost = show . unNodeHostIPv4Address $ naHostAddress node
+  targetNodePort = show $ naPort node
+  hints :: AddrInfo
+  hints = defaultHints
+    { addrFlags      = [AI_PASSIVE]
+    , addrFamily     = AF_INET
+    , addrSocketType = Stream
+    , addrCanonName  = Nothing
+    }
+
+
 
 -----------------------------------------------------------------------------------------
 -- | Work with tx generator thread (for Phase 2).
@@ -439,36 +446,84 @@ txGenerator
 -- Txs for submission.
 ---------------------------------------------------------------------------------------------------
 
--- | To get higher performance we need to hide latency of getting and
--- forwarding (in sufficient numbers) transactions.
---
--- TODO: transform comments into haddocks.
---
-launchTxPeer
-  :: forall era
-  .  IsShelleyBasedEra era
+handleTxSubmissionClientError ::
+     Tracer IO (TraceBenchTxSubmit TxId)
+  -> Network.Socket.AddrInfo
+  -> ReportRef
+  -> SubmissionErrorPolicy
+  -> SomeException
+  -> IO ()
+handleTxSubmissionClientError
+  traceSubmit
+  remoteAddr
+  reportRef
+  errorPolicy
+  (SomeException err) = do
+    submitThreadReport reportRef (Left errDesc)
+    case errorPolicy of
+      FailOnError -> throwIO err
+      LogErrors   -> traceWith traceSubmit $
+        TraceBenchTxSubError (pack errDesc)
+   where
+    errDesc = mconcat
+      [ "Exception while talking to peer "
+      , " (", show (addrAddress remoteAddr), "): "
+      , show err]
+
+walletBenchmark :: forall era. IsShelleyBasedEra era
   => Tracer IO (TraceBenchTxSubmit TxId)
   -> Tracer IO NodeToNodeSubmissionTrace
   -> ConnectClient
-  -> Network.Socket.AddrInfo
-  -- Remote address
-  -> Submission IO  era
-  -- Mutable state shared between submission threads
-  -> Natural
-  -- Thread index
-  -> IO (Async ())
-launchTxPeer traceSubmit traceN2N connectClient remoteAddr sub tix =
-  async $
-   handle
-     (\(SomeException err) -> do
-         let errDesc = mconcat
-               [ "Exception while talking to peer #", show tix
-               , " (", show (addrAddress remoteAddr), "): "
-               , show err]
-         submitThreadReport sub tix (Left errDesc)
-         case spErrorPolicy $ sParams sub of
-           FailOnError -> throwIO err
-           LogErrors   -> traceWith traceSubmit $
-             TraceBenchTxSubError (pack errDesc))
-     $ connectClient remoteAddr
-        (txSubmissionClient traceN2N traceSubmit sub tix)
+  -> String
+  -> NonEmpty NodeIPv4Address
+  -> TPSRate
+  -> SubmissionErrorPolicy
+  -> AsType era
+  -> NumberOfTxs
+  -> (FundSet.Target -> WalletScript era)
+  -> ExceptT TxGenError IO AsyncBenchmarkControl
+walletBenchmark
+  traceSubmit
+  traceN2N
+  connectClient
+  threadName
+  targets
+  tpsRate
+  errorPolicy
+  _era
+  count
+  walletScript
+  = liftIO $ do
+  traceDebug "******* Tx generator, phase 2: pay to recipients *******"
+
+  remoteAddresses <- forM targets lookupNodeAddress
+  let numTargets :: Natural = fromIntegral $ NE.length targets
+
+  traceDebug $ "******* Tx generator, launching Tx peers:  " ++ show (NE.length remoteAddresses) ++ " of them"
+
+  startTime <- Clock.getCurrentTime
+  txSendQueue <- STM.newTBQueueIO 32
+
+  reportRefs <- STM.atomically $ replicateM (fromIntegral numTargets) STM.newEmptyTMVar
+
+  allAsyncs <- forM (zip reportRefs $ NE.toList remoteAddresses) $
+    \(reportRef, remoteAddr) -> do
+      let errorHandler = handleTxSubmissionClientError traceSubmit remoteAddr reportRef errorPolicy
+          client = txSubmissionClient
+                     traceN2N
+                     traceSubmit
+                     (walletTxSource (walletScript (FundSet.Target $ show remoteAddr)) txSendQueue)
+                     (submitSubmissionThreadStats reportRef)
+      async $ handle errorHandler (connectClient remoteAddr client)
+
+  tpsFeeder <- async $ tpsLimitedTxFeeder traceSubmit numTargets txSendQueue tpsRate
+                        $ replicate (fromIntegral $ unNumberOfTxs count) (error "dummy transaction" :: Tx era)
+
+  let tpsFeederShutdown = do
+        cancel tpsFeeder
+        liftIO $ tpsLimitedTxFeederShutdown numTargets txSendQueue
+
+  return (tpsFeeder, allAsyncs, mkSubmissionSummary threadName startTime reportRefs, tpsFeederShutdown)
+ where
+  traceDebug :: String -> IO ()
+  traceDebug =   traceWith traceSubmit . TraceBenchTxSubDebug

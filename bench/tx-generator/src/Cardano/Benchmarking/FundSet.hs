@@ -29,7 +29,7 @@ data Validity
   | InFlight !Target !SeqNumber
   deriving  (Show, Eq, Ord)
 
-newtype Target = Traget String
+newtype Target = Target String
   deriving  (Show, Eq, Ord)
 
 newtype SeqNumber = SeqNumber Int

@@ -29,7 +29,7 @@ import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
-import           Cardano.Benchmarking.Types (TPSRate(..))
+import           Cardano.Benchmarking.Types (NumberOfTxs(..), TPSRate(..))
 
 testJSONRoundTrip :: [Action] -> Maybe String
 testJSONRoundTrip l = case fromJSON $ toJSON l of
@@ -53,6 +53,7 @@ instance FromJSON AnyCardanoEra where
     "Shelley" -> return $ AnyCardanoEra ShelleyEra
     "Allegra" -> return $ AnyCardanoEra AllegraEra
     "Mary"    -> return $ AnyCardanoEra MaryEra
+    "Alonzo"    -> return $ AnyCardanoEra AlonzoEra
     era -> parseFail ("Error: Cannot parse JSON value '" <> Text.unpack era <> "' to AnyCardanoEra.")
 
 instance ToJSON (DSum Tag Identity) where
@@ -84,6 +85,12 @@ actionToJSON a = case a of
     -> object ["prepareTxList" .= name, "newKey" .= key, "fundList" .= fund ]
   AsyncBenchmark (ThreadName t) (TxListName txs) (TPSRate tps) 
     -> object ["asyncBenchmark" .= t, "txList" .= txs, "tps" .= tps]
+  ImportGenesisFund (KeyName genesisKey) (KeyName fundKey)
+    -> object ["importGenesisFund" .= genesisKey, "fundKey" .= fundKey ]
+  CreateChange value count
+    -> object ["createChange" .= value, "count" .= count]
+  RunBenchmark (ThreadName t) (NumberOfTxs txCount) (TPSRate tps)
+    -> object ["runBenchmark" .= t, "txCount" .= txCount, "tps" .= tps]
   WaitBenchmark (ThreadName t) ->  singleton "waitBenchmark" t
   CancelBenchmark (ThreadName t) ->  singleton "cancelBenchmark" t
   WaitForEra era -> singleton "waitForEra" era
@@ -119,6 +126,9 @@ objectToAction obj = case obj of
   (HashMap.lookup "delay"             -> Just v) -> Delay <$> parseJSON v
   (HashMap.lookup "prepareTxList"     -> Just v) -> parsePrepareTxList v
   (HashMap.lookup "asyncBenchmark"    -> Just v) -> parseAsyncBenchmark v
+  (HashMap.lookup "importGenesisFund" -> Just v) -> parseImportGenesisFund v
+  (HashMap.lookup "createChange"      -> Just v) -> parseCreateChange v
+  (HashMap.lookup "runBenchmark"      -> Just v) -> parseRunBenchmark v
   (HashMap.lookup "waitBenchmark"     -> Just v) -> WaitBenchmark <$> parseThreadName v
   (HashMap.lookup "cancelBenchmark"   -> Just v) -> CancelBenchmark <$> parseThreadName v
   (HashMap.lookup "waitForEra"        -> Just v) -> WaitForEra <$> parseJSON v
@@ -166,6 +176,19 @@ objectToAction obj = case obj of
     <$> ( ThreadName <$> parseJSON v )
     <*> ( TxListName <$> parseField obj "txList" )
     <*> ( TPSRate <$> parseField obj "tps" )   
+
+  parseRunBenchmark v = RunBenchmark
+    <$> ( ThreadName <$> parseJSON v )
+    <*> ( NumberOfTxs <$> parseField obj "txCount" )
+    <*> ( TPSRate <$> parseField obj "tps" )
+
+  parseImportGenesisFund v = ImportGenesisFund
+    <$> ( KeyName <$> parseJSON v )
+    <*> parseKey "fundKey"
+
+  parseCreateChange v = CreateChange
+    <$> parseJSON v
+    <*> parseField obj "count"
 
 parseScriptFile :: FilePath -> IO [Action]
 parseScriptFile filePath = do
