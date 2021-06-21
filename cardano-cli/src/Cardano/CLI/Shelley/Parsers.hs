@@ -773,8 +773,8 @@ pQueryCmd =
                                                         \reward accounts filtered by stake \
                                                         \address.")
     , subParser "utxo"
-        (Opt.info pQueryUTxO $ Opt.progDesc "Get the node's current UTxO with the option of \
-                                            \filtering by address(es)")
+        (Opt.info pQueryUTxO $ Opt.progDesc "Get a portion of the current UTxO: \
+                                            \by tx in, by address or the whole.")
     , subParser "ledger-state"
         (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
     , subParser "protocol-state"
@@ -802,7 +802,7 @@ pQueryCmd =
     pQueryUTxO =
       QueryUTxO'
         <$> pConsensusModeParams
-        <*> pQueryFilter
+        <*> pQueryUTxOFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -1955,20 +1955,39 @@ pTxByronWitnessCount =
       <> Opt.value 0
       )
 
-pQueryFilter :: Parser QueryFilter
-pQueryFilter = pAddresses <|> pure NoFilter
+pQueryUTxOFilter :: Parser QueryUTxOFilter
+pQueryUTxOFilter =
+      pQueryUTxOWhole
+  <|> pQueryUTxOByAddress
+  <|> pQueryUTxOByTxIn
   where
-    pAddresses :: Parser QueryFilter
-    pAddresses = FilterByAddress . Set.fromList <$>
-                   some pFilterByAddress
+    pQueryUTxOWhole =
+      Opt.flag' QueryUTxOWhole
+        (  Opt.long "--whole-utxo"
+        <> Opt.help "Return the whole UTxO (only appropriate on small testnets)."
+        )
 
-pFilterByAddress :: Parser AddressAny
-pFilterByAddress =
-    Opt.option (readerFromParsecParser parseAddressAny)
-      (  Opt.long "address"
-      <> Opt.metavar "ADDRESS"
-      <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
-      )
+    pQueryUTxOByAddress :: Parser QueryUTxOFilter
+    pQueryUTxOByAddress = QueryUTxOByAddress . Set.fromList <$> some pByAddress
+
+    pByAddress :: Parser AddressAny
+    pByAddress =
+        Opt.option (readerFromParsecParser parseAddressAny)
+          (  Opt.long "address"
+          <> Opt.metavar "ADDRESS"
+          <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
+          )
+
+    pQueryUTxOByTxIn :: Parser QueryUTxOFilter
+    pQueryUTxOByTxIn = QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
+
+    pByTxIn :: Parser TxIn
+    pByTxIn =
+      Opt.option (readerFromParsecParser parseTxIn)
+        (  Opt.long "tx-in"
+        <> Opt.metavar "TX-IN"
+        <> Opt.help "Filter by transaction input (TxId#TxIx)."
+        )
 
 pFilterByStakeAddress :: Parser StakeAddress
 pFilterByStakeAddress =

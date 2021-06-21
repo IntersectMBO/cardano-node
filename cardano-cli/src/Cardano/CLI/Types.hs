@@ -9,7 +9,6 @@ module Cardano.CLI.Types
   , CertificateFile (..)
   , GenesisFile (..)
   , OutputFormat (..)
-  , QueryFilter (..)
   , SigningKeyFile (..)
   , SocketPath (..)
   , ScriptFile (..)
@@ -67,12 +66,6 @@ instance FromJSON GenesisFile where
 data OutputFormat
   = OutputFormatHex
   | OutputFormatBech32
-  deriving (Eq, Show)
-
--- | UTxO query filtering options.
-data QueryFilter
-  = FilterByAddress !(Set AddressAny)
-  | NoFilter
   deriving (Eq, Show)
 
 -- | This data structure is used to allow nicely formatted output within the query stake-snapshot command.

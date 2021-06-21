@@ -30,6 +30,7 @@ module Cardano.Api.Certificate (
     toShelleyCertificate,
     fromShelleyCertificate,
     toShelleyPoolParams,
+    fromShelleyPoolParams,
 
     -- * Data family instances
     AsType(..)
