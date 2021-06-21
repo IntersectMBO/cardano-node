@@ -44,8 +44,8 @@ runStakeAddressCmd (StakeRegistrationCert stakeVerifier outputFp) =
   runStakeCredentialRegistrationCert stakeVerifier outputFp
 runStakeAddressCmd (StakeKeyDelegationCert stkKeyVerKeyOrFp stkPoolVerKeyHashOrFp outputFp) =
   runStakeKeyDelegationCert stkKeyVerKeyOrFp stkPoolVerKeyHashOrFp outputFp
-runStakeAddressCmd (StakeKeyDeRegistrationCert stkKeyVerKeyOrFp outputFp) =
-  runStakeKeyDeRegistrationCert stkKeyVerKeyOrFp outputFp
+runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeVerifier outputFp) =
+  runStakeCredentialDeRegistrationCert stakeVerifier outputFp
 
 
 --
@@ -159,19 +159,32 @@ runStakeKeyDelegationCert stakeVerKeyOrFile poolVKeyOrHashOrFile (OutputFile out
     delegCertDesc = "Stake Address Delegation Certificate"
 
 
-runStakeKeyDeRegistrationCert
-  :: VerificationKeyOrFile StakeKey
+runStakeCredentialDeRegistrationCert
+  :: StakeVerifier
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeKeyDeRegistrationCert stakeVerKeyOrFile (OutputFile oFp) = do
-    stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
-      . newExceptT
-      $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
-    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
-        deRegCert = makeStakeAddressDeregistrationCertificate stakeCred
-    firstExceptT ShelleyStakeAddressCmdWriteFileError
-      . newExceptT
-      $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
+runStakeCredentialDeRegistrationCert stakeVerifier (OutputFile oFp) =
+  case stakeVerifier of
+    StakeVerifierScriptFile (ScriptFile sFile) -> do
+      ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError
+                                    $ readFileScriptInAnyLang sFile
+      let stakeCred = StakeCredentialByScript $ hashScript script
+      writeDeregistrationCert stakeCred
+    StakeVerifierKey stakeVerKeyOrFile -> do
+      stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
+        . newExceptT
+        $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
+      let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
+      writeDeregistrationCert stakeCred
   where
+    writeDeregistrationCert
+      :: StakeCredential
+      -> ExceptT ShelleyStakeAddressCmdError IO ()
+    writeDeregistrationCert sCred = do
+      let deRegCert = makeStakeAddressDeregistrationCertificate sCred
+      firstExceptT ShelleyStakeAddressCmdWriteFileError
+        . newExceptT
+        $ writeFileTextEnvelope oFp (Just deregCertDesc) deRegCert
+
     deregCertDesc :: TextEnvelopeDescr
     deregCertDesc = "Stake Address Deregistration Certificate"

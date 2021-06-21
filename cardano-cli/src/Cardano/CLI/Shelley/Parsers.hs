@@ -332,8 +332,8 @@ pStakeAddressCmd =
                                       <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
-    pStakeAddressDeregistrationCert = StakeKeyDeRegistrationCert
-                                        <$> pStakeVerificationKeyOrFile
+    pStakeAddressDeregistrationCert = StakeCredentialDeRegistrationCert
+                                        <$> pStakeVerifier
                                         <*> pOutputFile
 
     pStakeAddressDelegationCert :: Parser StakeAddressCmd

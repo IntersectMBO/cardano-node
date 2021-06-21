@@ -123,7 +123,7 @@ data StakeAddressCmd
       (VerificationKeyOrFile StakeKey)
       (VerificationKeyOrHashOrFile StakePoolKey)
       OutputFile
-  | StakeKeyDeRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
+  | StakeCredentialDeRegistrationCert StakeVerifier OutputFile
   deriving Show
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text
@@ -134,7 +134,7 @@ renderStakeAddressCmd cmd =
     StakeAddressBuild {} -> "stake-address build"
     StakeRegistrationCert {} -> "stake-address registration-certificate"
     StakeKeyDelegationCert {} -> "stake-address delegation-certificate"
-    StakeKeyDeRegistrationCert {} -> "stake-address deregistration-certificate"
+    StakeCredentialDeRegistrationCert {} -> "stake-address deregistration-certificate"
 
 data KeyCmd
   = KeyGetVerificationKey SigningKeyFile VerificationKeyFile
