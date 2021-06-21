@@ -48,8 +48,8 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Options.Applicative as Opt
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
-import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Language as Parsec
+import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
 
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
@@ -327,8 +327,8 @@ pStakeAddressCmd =
                                            <*> pMaybeOutputFile
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
-    pStakeAddressRegistrationCert = StakeKeyRegistrationCert
-                                      <$> pStakeVerificationKeyOrFile
+    pStakeAddressRegistrationCert = StakeRegistrationCert
+                                      <$> pStakeVerifier
                                       <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd

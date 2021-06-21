@@ -118,7 +118,7 @@ data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
   | StakeAddressBuild (VerificationKeyOrFile StakeKey) NetworkId (Maybe OutputFile)
-  | StakeKeyRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
+  | StakeRegistrationCert StakeVerifier OutputFile
   | StakeKeyDelegationCert
       (VerificationKeyOrFile StakeKey)
       (VerificationKeyOrHashOrFile StakePoolKey)
@@ -132,7 +132,7 @@ renderStakeAddressCmd cmd =
     StakeAddressKeyGen {} -> "stake-address key-gen"
     StakeAddressKeyHash {} -> "stake-address key-hash"
     StakeAddressBuild {} -> "stake-address build"
-    StakeKeyRegistrationCert {} -> "stake-address registration-certificate"
+    StakeRegistrationCert {} -> "stake-address registration-certificate"
     StakeKeyDelegationCert {} -> "stake-address delegation-certificate"
     StakeKeyDeRegistrationCert {} -> "stake-address deregistration-certificate"
 
