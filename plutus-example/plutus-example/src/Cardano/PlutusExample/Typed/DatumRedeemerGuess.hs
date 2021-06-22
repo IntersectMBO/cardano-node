@@ -25,7 +25,6 @@ import qualified Data.ByteString.Short as SBS
 import           Ledger.Contexts (ScriptContext (..))
 import qualified Ledger.Typed.Scripts as Scripts
 import qualified Plutus.V1.Ledger.Scripts as Plutus
-import           PlutusTx (Data (..))
 import qualified PlutusTx
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 

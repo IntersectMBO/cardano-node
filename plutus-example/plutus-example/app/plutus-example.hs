@@ -5,8 +5,6 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Coin as Shelley
 import           Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Plutus.V1.Ledger.Api as Plutus
