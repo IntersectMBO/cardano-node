@@ -1963,7 +1963,7 @@ pQueryUTxOFilter =
   where
     pQueryUTxOWhole =
       Opt.flag' QueryUTxOWhole
-        (  Opt.long "--whole-utxo"
+        (  Opt.long "whole-utxo"
         <> Opt.help "Return the whole UTxO (only appropriate on small testnets)."
         )
 
