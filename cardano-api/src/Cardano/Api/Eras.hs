@@ -68,9 +68,8 @@ data AllegraEra
 -- | A type used as a tag to distinguish the Mary era.
 data MaryEra
 
--- | A type used as a tag to distingush the Alonzo era.
+-- | A type used as a tag to distinguish the Alonzo era.
 data AlonzoEra
-
 
 instance HasTypeProxy ByronEra where
     data AsType ByronEra = AsByronEra

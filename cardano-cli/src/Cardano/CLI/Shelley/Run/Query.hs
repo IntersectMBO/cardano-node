@@ -1,10 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -13,10 +15,12 @@ module Cardano.CLI.Shelley.Run.Query
   ( ShelleyQueryCmdError
   , renderShelleyQueryCmdError
   , runQueryCmd
+  , percentage
   ) where
 
 import           Cardano.Prelude hiding (atomically)
-import           Prelude (String)
+import           Control.Concurrent.STM
+import           Prelude (String, id)
 
 import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
@@ -31,6 +35,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
+import           Data.Time.Clock
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 
@@ -54,6 +59,7 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..), SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -62,13 +68,13 @@ import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
+import           Text.Printf(printf)
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
-import qualified Data.Text.IO as T
-import qualified System.IO as IO
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
 {- HLINT ignore "Reduce duplication" -}
-
 
 data ShelleyQueryCmdError
   = ShelleyQueryCmdEnvVarSocketErr !EnvSocketError
@@ -162,14 +168,30 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
         handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath) $
           LBS.writeFile fpath (encodePretty pparams)
 
-logExceptContinue :: MonadIO m => (e -> Text) -> ExceptT e m a -> ExceptT e m (Maybe a)
-logExceptContinue renderError f = do
-  r <- lift $ runExceptT f
-  case r of
-    Left e -> do
-      liftIO $ T.hPutStrLn IO.stderr (renderError e)
-      return Nothing
-    Right a -> return (Just a)
+-- | Calculate the percentage sync rendered as text.
+percentage
+  :: RelativeTime
+  -- ^ 'tolerance'.  If 'b' - 'a' < 'tolerance', then 100% is reported.  This even if we are 'tolerance' seconds
+  -- behind, we are still considered fully synced.
+  -> RelativeTime
+  -- ^ 'nowTime'.  The time of the most recently synced block.
+  -> RelativeTime
+  -- ^ 'tipTime'.  The time of the tip of the block chain to which we need to sync.
+  -> Text
+percentage tolerance a b = Text.pack (printf "%.2f" pc)
+  where -- All calculations are in seconds (Integer)
+        t  = relativeTimeSeconds tolerance
+        -- Plus 1 to prevent division by zero.  The 's' prefix stands for strictly-positive.
+        sa = relativeTimeSeconds a + 1
+        sb = relativeTimeSeconds b + 1
+        -- Fast forward the 'nowTime` by the tolerance, but don't let the result exceed the tip time.
+        ua = min (sa + t) sb
+        ub = sb
+        -- Final percentage to render as text.
+        pc = id @Double (fromIntegral ua / fromIntegral  ub) * 100.0
+
+relativeTimeSeconds :: RelativeTime -> Integer
+relativeTimeSeconds (RelativeTime dt) = floor (nominalDiffTimeToSeconds dt)
 
 runQueryTip
   :: AnyConsensusModeParams
@@ -188,45 +210,99 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
         ChainTipAtGenesis -> 0
         ChainTip slotNo _ _ -> slotNo
 
-  mEpoch <- mSlotToEpoch consensusMode localNodeConnInfo tipSlotNo
-    & fmap tuple3Fst
-    & logExceptContinue renderShelleyQueryCmdError
-
-  let output = encodePretty
-        . toObject "era" (Just (toJSON anyEra))
-        . toObject "epoch" (Just mEpoch)
-        $ toJSON tip
-  case mOutFile of
-    Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
-    Nothing                 -> liftIO $ LBS.putStrLn        output
-
-  where
-    tuple3Fst :: (a, b, c) -> a
-    tuple3Fst (a, _, _) = a
-
-    mSlotToEpoch
-      :: ConsensusMode mode
-      -> LocalNodeConnectInfo mode
-      -> SlotNo
-      -> ExceptT ShelleyQueryCmdError IO (EpochNo, SlotsInEpoch, SlotsToEpochEnd)
-    mSlotToEpoch cMode lNodeConnInfo slotNo = case cMode of
-      CardanoMode -> do
-        let epochQuery = QueryEraHistory CardanoModeIsMultiEra
-        eResult <- liftIO $ queryNodeLocalState lNodeConnInfo Nothing epochQuery
+  case consensusMode of
+    CardanoMode -> do
+        eResult <- liftIO $ queryEraHistoryAndSystemStart localNodeConnInfo Nothing
         case eResult of
           Left acqFail -> left (ShelleyQueryCmdAcquireFailure acqFail)
-          Right eraHistory -> case slotToEpoch slotNo eraHistory of
-            Left e -> throwE (ShelleyQueryCmdPastHorizon e)
-            Right a -> return a
+          Right (eraHistory, systemStart') ->
+            case slotToEpoch tipSlotNo eraHistory of
+              Left e -> throwE (ShelleyQueryCmdPastHorizon e)
+              Right (epochNo, _, _) -> do
+                let tipTimeResult = first toJsonPastHorizonException $
+                                fst <$> getProgress tipSlotNo eraHistory
 
-      mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
+                let systemStart = getSystemStart systemStart'
 
+                let jsonTipTime = either identity (toJSON . relativeTimeSeconds) tipTimeResult
+
+                nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
+
+                let tolerance = RelativeTime (secondsToNominalDiffTime 600)
+                let jsonSyncProgress = either
+                      identity (toJSON . flip (percentage tolerance) nowSeconds) tipTimeResult
+
+                let output = encodePretty
+                      . toObject "era" (Just (toJSON anyEra))
+                      . toObject "epoch" (Just (toJSON epochNo))
+                      . toObject "tipTime" (Just jsonTipTime)
+                      . toObject "now" (Just (relativeTimeSeconds nowSeconds))
+                      . toObject "syncProgress" (Just jsonSyncProgress)
+                      . toObject "systemStart" (Just systemStart)
+                      $ toJSON tip
+
+                case mOutFile of
+                  Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
+                  Nothing                 -> liftIO $ LBS.putStrLn        output
+
+    mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
+
+  where
     toObject :: ToJSON a => Text -> Maybe a -> Aeson.Value -> Aeson.Value
     toObject name (Just a) (Aeson.Object obj) =
       Aeson.Object $ obj <> HMS.fromList [name .= toJSON a]
     toObject name Nothing (Aeson.Object obj) =
       Aeson.Object $ obj <> HMS.fromList [name .= Aeson.Null]
     toObject _ _ _ = Aeson.Null
+
+queryEraHistoryAndSystemStart
+  :: LocalNodeConnectInfo CardanoMode
+  -> Maybe ChainPoint
+  -> IO (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
+queryEraHistoryAndSystemStart connctInfo mpoint = do
+    resultVar <- newEmptyTMVarIO
+    connectToLocalNode
+      connctInfo
+      LocalNodeClientProtocols
+      { localChainSyncClient    = NoLocalChainSyncClient
+      , localStateQueryClient   = Just (singleQuery mpoint resultVar)
+      , localTxSubmissionClient = Nothing
+      }
+    atomically (takeTMVar resultVar)
+  where
+    singleQuery
+      :: Maybe ChainPoint
+      -> TMVar (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
+      -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint
+                                         (QueryInMode CardanoMode) IO ()
+    singleQuery mPointVar' resultVar' =
+      LocalStateQueryClient $ do
+      pure . Net.Query.SendMsgAcquire mPointVar' $
+        Net.Query.ClientStAcquiring
+        { Net.Query.recvMsgAcquired =
+          pure $ Net.Query.SendMsgQuery (QueryEraHistory CardanoModeIsMultiEra) $
+            Net.Query.ClientStQuerying
+            { Net.Query.recvMsgResult = \result1 -> do
+              pure $ Net.Query.SendMsgQuery QuerySystemStart $
+                Net.Query.ClientStQuerying
+                { Net.Query.recvMsgResult = \result2 -> do
+                  atomically $ putTMVar resultVar' (Right (result1, result2))
+
+                  pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+                }
+            }
+        , Net.Query.recvMsgFailure = \failure -> do
+            atomically $ putTMVar resultVar' (Left failure)
+            pure $ Net.Query.SendMsgDone ()
+        }
+
+toJsonPastHorizonException :: Qry.PastHorizonException -> Aeson.Value
+toJsonPastHorizonException e = Aeson.object
+  [ "error" .= Aeson.String "Past Horizon"
+  , "callStack" .= toJSON @String (show (Qry.pastHorizonCallStack e))
+  , "expression" .= toJSON @String (show (Qry.pastHorizonExpression e))
+  , "summary" .= toJSON @String (show (Qry.pastHorizonSummary e))
+  ]
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.

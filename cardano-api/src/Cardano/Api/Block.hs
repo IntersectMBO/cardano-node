@@ -52,8 +52,6 @@ import           Data.Foldable (Foldable (toList))
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (EpochNo, SlotNo)
 
-import qualified Ouroboros.Network.Block as Consensus
-
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
 import qualified Ouroboros.Consensus.Block as Consensus
@@ -64,6 +62,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
+import qualified Ouroboros.Network.Block as Consensus
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
