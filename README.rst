@@ -32,7 +32,7 @@ The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardan
 How to build
 ============
 
-Documentation for building the node can be found `here <https://docs.cardano.org/projects/cardano-node/en/latest/getting-started/install.html>`_.
+Documentation for building the node can be found `here <https://docs.cardano.org/getting-started/installing-the-cardano-node>`_.
 
 Linux Executable
 ==================
