@@ -1,11 +1,27 @@
 #!/usr/bin/env bash
 
-for cabal_project_files in $(find . -name 'cabal.project' | grep  -v dist-newstyle | sort); do
-  cabal_project_path="$(dirname "$cabal_project_files")"
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
 
-  (
-    echo "Building in $cabal_project_path"
-    cd "$cabal_project_path"
-    cabal "$@"
-  )
-done
+build() {
+  echo -e "${CYAN}[ Building project ]${NC}"
+  cabal build all --write-ghc-environment-files=ghc8.4.4+ --enable-tests
+
+  echo -e "${CYAN}[ Building plutus-example] ${NC}"
+  cd plutus-example
+  cabal build all --write-ghc-environment-files=ghc8.4.4+ --enable-tests
+}
+
+test() {
+  echo -e "${CYAN}[ Testing project ]${NC}"
+  cabal test all --write-ghc-environment-files=ghc8.4.4+ --enable-tests --test-show-details=direct
+
+  echo -e "${CYAN}[ Testing plutus-example ]${NC}"
+  cd plutus-example
+  cabal test all --write-ghc-environment-files=ghc8.4.4+ --enable-tests --test-show-details=direct
+}
+
+case "$1" in
+  build ) build ;;
+  test  ) test  ;;
+esac

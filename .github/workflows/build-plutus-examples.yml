@@ -1,0 +1,117 @@
+name: Plutus Examples
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ["8.10.4"]
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: 3.4.0.0
+
+    - name: Set cache version
+      run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v2
+
+    - name: Add build script path
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
+
+    - name: Install pkgconfiglite
+      if: matrix.os == 'windows-latest'
+      run: retry 2 choco install -y pkgconfiglite
+
+    - name: Install libsodium (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        curl -Ls \
+          --connect-timeout 5 \
+          --max-time 10 \
+          --retry 5 \
+          --retry-delay 0 \
+          --retry-max-time 40 \
+          https://download.libsodium.org/libsodium/releases/libsodium-1.0.18-mingw.tar.gz -o libsodium-1.0.18-mingw.tar.gz
+        tar zxvf libsodium-1.0.18-mingw.tar.gz
+
+        sed -i "s|/d/a/1/s/|D:/a/cardano-node/cardano-node/|g" libsodium-win64/lib/pkgconfig/libsodium.pc
+
+        export PKG_CONFIG_PATH="$(readlink -f libsodium-win64/lib/pkgconfig)"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        export LIBSODIUM_PATH="$(readlink -f libsodium-win64/bin | sed 's|^/d|D:|g' | tr / '\\')"
+        echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
+        echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
+
+    - name: Install libsodium (MacOS)
+      if: matrix.os == 'macos-latest'
+      run: brew install libsodium
+
+    - name: Setup Github Scripts
+      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
+
+    - name: Configure to use libsodium
+      run: |
+        cd plutus-example
+        cat >> cabal.project <<EOF
+        package cardano-crypto-praos
+          flags: -external-libsodium-vrf
+        EOF
+
+    - name: Haskell versions
+      run: |
+        ghc --version
+        cabal --version
+
+    - name: Install build environment
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install libsodium23 libsodium-dev
+        sudo apt-get -y install libsystemd0 libsystemd-dev
+        sudo apt-get -y remove --purge software-properties-common
+        sudo apt-get -y autoremove
+
+    - name: Cabal update
+      run: retry 2 cabal update
+
+    - name: Record dependencies
+      run: |
+        cd plutus-example
+        cabal build plutus-example --only-dependencies --dry-run
+        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
+        date > date.txt
+
+    - uses: actions/cache@v2
+      name: Cache cabal store
+      with:
+        path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('plutus-example/dependencies.txt') }}-${{ hashFiles('date.txt') }}
+        restore-keys: |
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('plutus-example/dependencies.txt') }}-${{ hashFiles('date.txt') }}
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('plutus-example/dependencies.txt') }}
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
+
+    - name: Build
+      run: |
+        cd plutus-example
+        retry 2 cabal build plutus-example
+
+    - name: Run tests
+      run: |
+        cd plutus-example
+        retry 2 cabal test plutus-example
