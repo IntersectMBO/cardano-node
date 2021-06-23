@@ -111,8 +111,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 6c3544ffcf0740f92c97cec04328c506be119681
-  --sha256: 1aa8mkj4dla7c4yn31c3f2kmg4g6krg04qd9sbx0rzaz3spahjr8
+  tag: 3626206b45e68499d7869a4aeeac6ed5889a490d
+  --sha256: 1pbnbqgjkc8r8jahd2fc439igcb11a9bv27wywaf6pwqm7zifwhb
   subdir:
     byron/chain/executable-spec
     byron/crypto
@@ -132,8 +132,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/decentralized-software-updates
-  tag: c515878a15e89cb4a8749159a66a5ef82102a188
-  --sha256: 10sjj3ld1zisj3gjx9a4f4vm37983g6jnvf3rrgv0ccn73cxcp9b
+  tag: e8325a440782a9c362a121340cea64a37e876e2a
+  --sha256: 1l2gaqynlcagzb9svj4nsaml6243lvs602w0ffinxf7qd4b44r2h
   subdir: executable-spec
 
 source-repository-package
@@ -175,8 +175,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 011a3ad10750aa5634564b07c8f95d3b6829d8eb
-  --sha256: 0vd81mddr7ifs6qvfk9kw6xmzp28py4yxmvz9bi5b3w9grgghhia
+  tag: 035e65bdfc2d79ccd4a204e1735c16e8307991cb
+  --sha256: 0i8kw9077i70fjxg5c2kqzmz9q1psq2qlsn4h00z2pva0sdc575z
   subdir:
     io-sim
     io-sim-classes
