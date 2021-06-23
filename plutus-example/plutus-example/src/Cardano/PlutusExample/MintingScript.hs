@@ -18,6 +18,7 @@
 
 module Cardano.PlutusExample.MintingScript
   ( apiExamplePlutusMintingScript
+  , mintingScriptShortBs
   ) where
 
 import           Prelude hiding (($))
@@ -31,37 +32,29 @@ import qualified Data.ByteString.Short as SBS
 import           Ledger hiding (singleton)
 import qualified Ledger.Typed.Scripts as Scripts
 import qualified PlutusTx
+import           PlutusTx (Data)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 
 
 {- HLINT ignore "Avoid lambda" -}
 
 {-# INLINABLE mkPolicy #-}
-mkPolicy :: PubKeyHash -> () -> ScriptContext -> Bool
-mkPolicy ownerPkh () ctx =
-    traceIfFalse "Only owner can mint" mustBeSignedBy'
-  where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+mkPolicy :: Data -> ScriptContext -> Bool
+mkPolicy _redeemer _ctx = True
 
-    mustBeSignedBy' :: Bool
-    mustBeSignedBy' = txSignedBy info ownerPkh
 
-policy :: PubKeyHash -> Scripts.MintingPolicy
-policy ownerPkh = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| \ownerPkh' -> Scripts.wrapMintingPolicy (mkPolicy ownerPkh') ||])
-    `PlutusTx.applyCode`
-    PlutusTx.liftCode ownerPkh
+policy :: Scripts.MintingPolicy
+policy = mkMintingPolicyScript
+    $$(PlutusTx.compile [|| Scripts.wrapMintingPolicy mkPolicy ||])
+
 
 plutusScript :: Script
 plutusScript =
-  unMintingPolicyScript
-    $ policy "e7dc13db93c1f56b3fd51752c14d5fdd20157334b9f0a0186d8dbd39"
+  unMintingPolicyScript policy
 
 validator :: Validator
 validator =
-  Validator . unMintingPolicyScript
-    $ policy "e7dc13db93c1f56b3fd51752c14d5fdd20157334b9f0a0186d8dbd39"
+  Validator $ unMintingPolicyScript policy
 
 scriptAsCbor :: LB.ByteString
 scriptAsCbor = serialise validator
@@ -69,4 +62,6 @@ scriptAsCbor = serialise validator
 apiExamplePlutusMintingScript :: PlutusScript PlutusScriptV1
 apiExamplePlutusMintingScript = PlutusScriptSerialised . SBS.toShort $ LB.toStrict scriptAsCbor
 
+mintingScriptShortBs :: SBS.ShortByteString
+mintingScriptShortBs = SBS.toShort . LB.toStrict $ scriptAsCbor
 
