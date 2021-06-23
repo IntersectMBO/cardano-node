@@ -112,8 +112,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 27f93e64a7d6aa78bfcd1072f0f5c088c79c99fe
-  --sha256: 0pblaq2jxcacd0iwm36l18kndzgbyb2587d7370ixqc5fv67qb39
+  tag: 2f929598148f338ccde88e89a9a7204fd2842f75
+  --sha256: 06l06mmb8cd4q37bnvfpgx1c5zgsl4xaf106dqva98738i8asj7j
   subdir:
     binary
     binary/test
