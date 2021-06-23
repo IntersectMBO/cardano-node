@@ -7,10 +7,10 @@ module Test.Cardano.Api.Ledger
   ) where
 
 import           Cardano.Prelude
+import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Test.Cardano.Api.Genesis
 import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
 import           Test.Tasty (TestTree)

@@ -111,8 +111,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: a715c7f420770b70bbe95ca51d3dec83866cb1bd
-  --sha256: 06l06mmb8cd4q37bnvfpgx1c5zgsl4xaf106dqva98738i8asj7j
+  tag: 27f93e64a7d6aa78bfcd1072f0f5c088c79c99fe
+  --sha256: 0pblaq2jxcacd0iwm36l18kndzgbyb2587d7370ixqc5fv67qb39
   subdir:
     binary
     binary/test
@@ -125,14 +125,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-crypto
-  tag: ce8f1934e4b6252084710975bd9bbc0a4648ece4
-  --sha256: 1v2laq04piyj511b2m77hxjh9l1yd6k9kc7g6bjala4w3zdwa4ni
+  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
+  --sha256: 06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 8e8e8c890792fd935736dbc260e33c7e678fdcdc
-  --sha256: 0dd75944f1ww0bnr1l02igwkiwbwkvrlv6yldlgakdpqyfn1np9d
+  tag: 60a47ae42b7d465160a310d5d7f125f73d19c705
+  --sha256: 1gvl7a5h8rrspnwa1vk42fy1ns94y8llfsxahxz0ykdap7w6kwmm
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -170,8 +170,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 808724ff8a19a33d0ed06f9ef59fbd900b08553c
-  --sha256: 0298dpl29gxzs9as9ha6y0w18hqwc00ipa3hzkxv7nlfrjjz8hmz
+  tag: 46f994e216a1f8b36fe4669b47b2a7011b0e153c
+  --sha256: 1il8fx3misp3650ryj368b3x95ksz01zz3x0z9k00807j93d0ka0
   subdir:
     contra-tracer
     iohk-monitoring
@@ -191,7 +191,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: b749bc878bb05478f924d6e2d4970d1bdaef94ef
+  tag: 8a0ff387541a612b787a6e6b6f02baa9ac8d4c71
   --sha256: 1k1cc5sqq9h6jrr5psi4vzs1ay3wafj42gpfv8b67cpnxfivj4m6
   subdir:
     io-sim
