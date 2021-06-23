@@ -5,7 +5,7 @@
 /cabal.project.old
 configuration/defaults/simpleview/genesis/
 configuration/defaults/liveview/genesis/
-/dist-newstyle/
+dist-newstyle
 dist/
 *~
 \#*
