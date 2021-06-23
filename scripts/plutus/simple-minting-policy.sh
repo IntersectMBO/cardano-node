@@ -13,7 +13,7 @@ set -o pipefail
 
 # Step 1 - Send ADA to token script owner
 
-export CARDANO_NODE_SOCKET_PATH=example/node-bft1/node.sock
+export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
 
 utxovkey=example/shelley/utxo-keys/utxo1.vkey
 utxoskey=example/shelley/utxo-keys/utxo1.skey
