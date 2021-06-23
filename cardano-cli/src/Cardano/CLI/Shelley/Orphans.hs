@@ -33,9 +33,9 @@ import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
 import           Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 
+import qualified Cardano.Ledger.Credential as Ledger
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.BlockChain (HashHeader (..))
-import qualified Shelley.Spec.Ledger.Credential as Ledger
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Ledger
 import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
 import qualified Shelley.Spec.Ledger.Rewards as Ledger

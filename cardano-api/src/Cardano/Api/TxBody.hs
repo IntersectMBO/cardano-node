@@ -143,8 +143,10 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hashing as Byron
 
+import qualified Cardano.Ledger.Address as Shelley
 import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import qualified Cardano.Ledger.Credential as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
@@ -152,8 +154,6 @@ import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
-import qualified Shelley.Spec.Ledger.Address as Shelley
-import qualified Shelley.Spec.Ledger.Credential as Shelley
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 import qualified Shelley.Spec.Ledger.Metadata as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley

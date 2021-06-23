@@ -21,7 +21,7 @@ import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFil
                      readVerificationKeyOrFile)
 import           Cardano.CLI.Types (OutputFormat (..))
 
-import qualified Shelley.Spec.Ledger.Slot as Shelley
+import qualified Cardano.Ledger.Slot as Shelley
 
 data ShelleyPoolCmdError
   = ShelleyPoolCmdReadFileError !(FileError TextEnvelopeError)
