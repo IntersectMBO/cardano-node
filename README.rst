@@ -411,6 +411,14 @@ GHCID
 
 run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
 
+Note: When developing locally, for any package you are working on, in **cabal.project** set, *ghc-options* to ``-Wwarn`` and set the ``development`` flag, e.g.::
+
+  package cardano-node
+    ghc-options: -Wwarn
+    flags: +development
+  
+Otherwise GHC might complain about unused packages.
+
 Haskell Language Server
 -----------------------
 
