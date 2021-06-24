@@ -279,14 +279,14 @@ pScriptDataOrFile dataFlagPrefix =
       Opt.strOption
         (  Opt.long (dataFlagPrefix ++ "-file")
         <> Opt.metavar "FILE"
-        <> Opt.help "The file containing the script data."
+        <> Opt.help "The JSON file containing the script data."
         )
 
     pScriptDataValue =
       Opt.option readerScriptData
         (  Opt.long (dataFlagPrefix ++ "-value")
-        <> Opt.metavar "JSON"
-        <> Opt.help "The value (in JSON syntax) for the script data."
+        <> Opt.metavar "JSON VALUE"
+        <> Opt.help "The JSON value for the script data. Supported JSON data types: string, number, object & array."
         )
 
     readerScriptData = do
