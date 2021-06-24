@@ -96,7 +96,7 @@ The general synopsis is as follows:
 
 * ``--byron-delegation-certificate`` - Optional path to the Byron delegation certificate. The delegation certificate allows the delegator (the issuer of said certificate) to give his/her own block signing rights to somebody else (the delegatee). The delegatee can then sign blocks on behalf of the delegator.
 
-* ``--byron-signing-key`` - Optional path to the Bryon signing key.
+* ``--byron-signing-key`` - Optional path to the Byron signing key.
 
 * ``--shelley-signing-key`` - Optional path to the Shelley signing key.
 
