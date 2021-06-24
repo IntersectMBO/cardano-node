@@ -55,6 +55,9 @@ module Cardano.Api.IPC (
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
+    EraHistory(..),
+    getProgress,
+
     -- *** Common queries
     getLocalChainTip,
 
@@ -496,7 +499,6 @@ queryNodeLocalState connctInfo mpoint query = do
               atomically $ putTMVar resultVar' (Left failure)
               pure $ Net.Query.SendMsgDone ()
           }
-
 
 submitTxToNodeLocal :: forall mode.
                        LocalNodeConnectInfo mode

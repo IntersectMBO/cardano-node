@@ -504,6 +504,9 @@ module Cardano.Api (
     UTxO(..),
     queryNodeLocalState,
 
+    EraHistory(..),
+    getProgress,
+
     -- *** Common queries
     getLocalChainTip,
 
@@ -574,7 +577,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query
+import           Cardano.Api.Query hiding (LedgerState(..))
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32

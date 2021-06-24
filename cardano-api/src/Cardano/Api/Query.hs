@@ -42,6 +42,10 @@ module Cardano.Api.Query (
     SlotsToEpochEnd(..),
 
     slotToEpoch,
+
+    LedgerState(..),
+
+    getProgress,
   ) where
 
 import           Data.Aeson (ToJSON (..), object, (.=))
@@ -64,15 +68,17 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.HardFork.History as History
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 
-import qualified Ouroboros.Consensus.Ledger.Query as Consensus
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import           Ouroboros.Consensus.Cardano.Block (StandardCrypto)
+import           Ouroboros.Consensus.Cardano.Block (StandardCrypto, LedgerState(..))
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised)
 
 import           Cardano.Binary
 import           Cardano.Slotting.Time (SystemStart(..))
+
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
@@ -116,6 +122,16 @@ data QueryInMode mode result where
   QuerySystemStart
     :: QueryInMode mode SystemStart
 
+data EraHistory mode where
+  EraHistory
+    :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
+    => ConsensusMode mode
+    -> History.Interpreter xs
+    -> EraHistory mode
+
+getProgress :: SlotNo -> EraHistory mode -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
+getProgress slotNo (EraHistory _ interpreter) = Qry.interpretQuery interpreter (Qry.slotToWallclock slotNo)
+
 --TODO: add support for these
 --     QueryEraStart   :: ConsensusModeIsMultiEra mode
 --                     -> EraInMode era mode
@@ -124,13 +140,6 @@ data QueryInMode mode result where
 newtype SlotsInEpoch = SlotsInEpoch Word64
 
 newtype SlotsToEpochEnd = SlotsToEpochEnd Word64
-
-data EraHistory mode where
-  EraHistory
-    :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
-    => ConsensusMode mode
-    -> History.Interpreter xs
-    -> EraHistory mode
 
 slotToEpoch :: SlotNo -> EraHistory mode -> Either Qry.PastHorizonException (EpochNo, SlotsInEpoch, SlotsToEpochEnd)
 slotToEpoch slotNo (EraHistory _ interpreter) = case Qry.interpretQuery interpreter (Qry.slotToEpoch slotNo) of
@@ -439,7 +448,6 @@ consensusQueryInEraInMode erainmode =
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
       AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
-
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
