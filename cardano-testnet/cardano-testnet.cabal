@@ -1,0 +1,88 @@
+cabal-version: 3.0
+
+name:                   cardano-testnet
+version:                1.27.0
+description:            The cardano full node
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+
+common base                         { build-depends: base                             >= 4.14       && < 4.15     }
+
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+
+common maybe-unix
+  if !os(windows)
+      build-depends:    unix
+
+library
+  import:               base, project-config
+                      , maybe-unix
+
+  build-depends:        aeson
+                      , containers
+                      , directory
+                      , exceptions
+                      , filepath
+                      , hedgehog
+                      , hedgehog-extras
+                      , process
+                      , random
+                      , resourcet
+                      , text
+                      , time
+                      , unordered-containers
+                      , yaml
+
+  hs-source-dirs:       src
+  exposed-modules:      Test.Base
+                        Test.Process
+                        Testnet.Byron
+                        Testnet.Cardano
+                        Testnet.Conf
+                        Testnet.List
+                        Testnet.Shelley
+
+executable cardano-testnet
+  import:               base, project-config
+
+  hs-source-dirs:       testnet
+
+  main-is:              Main.hs
+
+  build-depends:        ansi-terminal
+                      , cardano-config
+                      , cardano-testnet
+                      , hedgehog
+                      , hedgehog-extras
+                      , optparse-applicative
+                      , resourcet
+                      , stm
+                      , text
+
+
+  other-modules:        Paths_cardano_testnet
+                        Testnet.Commands
+                        Testnet.Commands.Byron
+                        Testnet.Commands.Cardano
+                        Testnet.Commands.Shelley
+                        Testnet.Commands.Version
+                        Testnet.Run
+
+  autogen-modules:      Paths_cardano_testnet
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
