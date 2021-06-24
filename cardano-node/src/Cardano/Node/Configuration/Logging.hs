@@ -40,6 +40,7 @@ import           System.Metrics.Counter (Counter)
 
 import           Cardano.BM.Backend.Aggregation (plugin)
 import           Cardano.BM.Backend.EKGView (plugin)
+import           Cardano.BM.Backend.Kafka (plugin)
 import           Cardano.BM.Backend.Monitoring (plugin)
 import           Cardano.BM.Backend.Switchboard (Switchboard)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
@@ -235,6 +236,8 @@ createLoggingLayer ver nodeConfig' p = do
      Cardano.BM.Backend.Aggregation.plugin logConfig trace switchBoard
        >>= loadPlugin switchBoard
      Cardano.BM.Backend.Monitoring.plugin logConfig trace switchBoard
+       >>= loadPlugin switchBoard
+     Cardano.BM.Backend.Kafka.plugin logConfig trace switchBoard
        >>= loadPlugin switchBoard
 
 #if defined(SYSTEMD)

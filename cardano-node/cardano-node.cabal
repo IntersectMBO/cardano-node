@@ -123,6 +123,7 @@ library
                       , iohk-monitoring
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg
+                      , lobemo-backend-kafka
                       , lobemo-backend-monitoring
                       , lobemo-backend-trace-forwarder
                       , network
