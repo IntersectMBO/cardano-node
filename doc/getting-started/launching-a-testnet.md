@@ -17,7 +17,7 @@ $ cabal build cardano-cli cardano-node cardano-node-chairman cardano-testnet
 Then get a list of available testnets to run:
 
 ```bash
-$ cd cardano-node-chairman
+$ cd cardano-testnet
 $ cabal run cardano-testnet
 Usage: cardano-testnet COMMAND
 
@@ -26,18 +26,18 @@ Available options:
 
 Commands:
   byron
-  cardano-shelley
+  cardano
   shelley
 ```
 
 Then create the testnet.  For example:
 
 ```bash
-$ cabal run cardano-testnet cardano-shelley
+$ cabal run cardano-testnet cardano --era shelley
   ✗ <interactive> failed at testnet/Testnet/Run.hs:34:3
     after 1 test.
 
-        ┏━━ src/Testnet/CardanoShelley.hs ━━━
+        ┏━━ src/Testnet/Cardano.hs ━━━
      68 ┃ testnet :: H.Conf -> H.Integration [String]
      69 ┃ testnet H.Conf {..} = do
      70 ┃   -- This script sets up a cluster that starts out in Cardano, and can transition to Shelley.
