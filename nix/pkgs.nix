@@ -1,7 +1,7 @@
 # our packages overlay
 final: prev: with final;
   let
-    compiler = config.haskellNix.compiler or "ghc8104";
+    compiler = config.haskellNix.compiler or "ghc8105";
   in {
   cardanoNodeProject = import ./haskell.nix {
     inherit compiler
