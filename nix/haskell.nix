@@ -130,7 +130,7 @@ let
           export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}
           export CARDANO_NODE_SRC=${src}
         ";
-      }
+      })
       ({ pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
         # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
         # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
