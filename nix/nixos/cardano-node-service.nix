@@ -29,12 +29,12 @@ let
             { "Test${era}HardForkAtEpoch" = epoch;
             })
           cfg.forceHardForks))
-      // {
+      // (optionalAttrs cfg.useNewTopology {
         TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
         TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
         TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
         TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-      };
+      });
     nodeConfigFile = toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
     realNodeConfigFile = if (cfg.environment == "selfnode" || cfg.environment == "shelley_selfnode") then "${cfg.stateDir}/config.yaml"
       else if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
