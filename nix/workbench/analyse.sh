@@ -31,6 +31,8 @@ case "$op" in
         local name=${1:-current}
         local dir=$(run get "$name")
         local adir=$dir/analysis
+        if test -z "$dir"
+        then fail "malformed run: $name"; fi
 
         msg "analysing run $(jq .meta.tag "$dir"/meta.json --raw-output)"
         mkdir -p "$adir"
@@ -53,9 +55,8 @@ case "$op" in
                 '"$(wb backend lostream-fixup-jqexpr)"
             )
             for d in "${logdirs[@]}"
-            do ## TODO: supervisor-specific logfile layout
-                grep -hFf "$keyfile" $(ls "$d"/stdout* | tac) | jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")" > \
-                "$adir"/logs-$(basename "$d").flt.json &
+            do grep -hFf "$keyfile" $(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null) | jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")" > \
+                 "$adir"/logs-$(basename "$d").flt.json &
             done
             wait
         fi
@@ -123,7 +124,7 @@ case "$op" in
         locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
 
         ## 1. enumerate logs, filter by keyfile & consolidate
-        local logs=("$dir"/$mach/stdout) consolidated="$adir"/logs-$mach.json
+        local logs=($(ls "$dir"/$mach/stdout* 2>/dev/null | tac) $(ls "$dir"/$mach/node-*.json 2>/dev/null)) consolidated="$adir"/logs-$mach.json
         if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-$mach.json 2>/dev/null)"
         then
             grep -hFf "$keyfile" "${logs[@]}"  > "$consolidated"

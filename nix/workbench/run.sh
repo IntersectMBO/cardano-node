@@ -50,11 +50,25 @@ case "$op" in
         if test "$(tr -d / <<<$tag)" != "$tag"
         then fatal "run tag has slashes:  $tag"; fi
 
-        for f in "$dir"/{profile,env,meta}.json
-        do if ! jq_check_json "$f"
-           then fatal "run $tag (at $dir) missing a file:  $(basename "$f")"
-           fi
-        done;;
+        jq_check_json "$dir"/meta.json ||
+            fatal "run $tag (at $dir) missing a file:  meta.json"
+
+        if test ! -f "$dir"/profile.json
+        then # Legacy run structure, fix up:
+            msg "fixing up legacy run in:  $dir"
+            jq '.meta.profile_content' "$dir"/meta.json > "$dir"/profile.json
+
+            for logdir in "$dir"/logs-*/ "$dir"/logs-explorer
+            do local fixed=$(basename "$logdir" | cut -c6-)
+               mv "$logdir" "$dir"/$fixed; done
+
+            cp "$global_envjson" "$dir"/env.json
+            jq_fmutate "$dir"/env.json '. *
+              { type:         "legacy"
+              , staggerPorts: false
+              }
+            '
+        fi;;
 
     get-path | get )
         local usage="USAGE: wb run $op TAG"

@@ -62,7 +62,8 @@ case "$op" in
             --argjson port_shift_prometheus "$port_shift_prometheus"
         )
         jq_fmutate "$env_json" '. *
-          { port_shift_ekg:        $port_shift_ekg
+          { type:                  "supervisor"
+          , port_shift_ekg:        $port_shift_ekg
           , port_shift_prometheus: $port_shift_prometheus
           }
         ' "${args[@]}"
