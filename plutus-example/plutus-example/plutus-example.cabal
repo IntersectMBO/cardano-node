@@ -52,7 +52,6 @@ library
 
   build-depends:        bytestring
                       , cardano-api
-                      , plutus-core
                       , plutus-ledger
                       , plutus-ledger-api
                       , plutus-tx
@@ -69,7 +68,6 @@ executable plutus-example
                       , bytestring
                       , cardano-api
                       , cardano-ledger-alonzo
-                      , cardano-ledger-core
                       , plutus-example
                       , plutus-ledger-api
                       , plutus-tx

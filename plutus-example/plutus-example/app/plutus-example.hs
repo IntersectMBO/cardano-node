@@ -15,6 +15,7 @@ import           Cardano.PlutusExample.Untyped.AlwaysSucceeds (alwaysSucceedsScr
                    alwaysSucceedsScriptShortBs)
 import           Cardano.PlutusExample.Untyped.DatumRedeemerGuess (datumRedeemerGuessScript,
                    datumRedeemerGuessScriptShortBs)
+import           Cardano.PlutusExample.MintingScript (apiExamplePlutusMintingScript, mintingScriptShortBs)
 
 
 main :: IO ()
@@ -29,16 +30,18 @@ main = do
               alwaysSucceedsUntyped = calculateBudgetUntyped pData pData alwaysSucceedsScriptShortBs m
               datumGuessTyped = calculateBudgetTyped typedDatum typedRedeemer typeddatumRedeemerGuessScriptAsShortBs m
               datumGuess = calculateBudgetUntyped pData pData datumRedeemerGuessScriptShortBs m
-
+              mintingGuess = calculateBudgetUntyped pData pData mintingScriptShortBs m
           in do printBudgetResult alwaysSucceedsUntyped "Untyped always succeeds script"
                 printBudgetResult datumGuessTyped "Typed Datum guess"
                 printBudgetResult datumGuess "Untyped Datum guess script"
+                printBudgetResult mintingGuess "Minting script"
 
         Nothing -> error "defaultCostModelParams failed"
 
   untypedAlwaysSucceedsResult <- writeFileTextEnvelope "untyped-always-succeeds-txin.plutus" Nothing alwaysSucceedsScript
   alwaysSucceedsTypedResult <- writeFileTextEnvelope "typed-redeemer-42-datum-42.plutus" Nothing typeddatumRedeemerGuessScript
   datumGuessResult <- writeFileTextEnvelope "untyped-redeemer-42-datum-42.plutus" Nothing datumRedeemerGuessScript
+  mintingExample <- writeFileTextEnvelope "minting.plutus" Nothing apiExamplePlutusMintingScript
   mapM_ print [untypedAlwaysSucceedsResult, alwaysSucceedsTypedResult, datumGuessResult]
 
 
