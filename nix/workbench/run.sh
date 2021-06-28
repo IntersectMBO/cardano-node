@@ -1,6 +1,5 @@
-global_runsdir_def=$PWD/run
-global_runsdir=$global_runsdir_def
-global_envjson=$global_runsdir/env.json
+global_rundir_def=$PWD/run
+global_rundir_alt_def=$PWD/../cardano-ops/runs
 
 usage_run() {
      usage "run" "Managing cluster runs" <<EOF
@@ -18,29 +17,42 @@ usage_run() {
 
   Options:
 
-    --runsdir DIR         Set the runs directory.  Defaults to $global_runsdir_def
+    --rundir DIR          Set the runs directory.  Defaults to $global_rundir_def,
+                            if it exists, otherwise to \$WORKBENCH_RUNDIR, if that
+                            exists, and finally unconditionally to $global_rundir_def.
 EOF
 }
 
 run() {
+set -eu
+if   test -d "$global_rundir_def"
+then global_rundir=$global_rundir_def
+## Allow compatibility with cardano-ops legacy runs directory layout:
+elif test -v "WORKBENCH_RUNDIR" && test -d "$WORKBENCH_RUNDIR"
+then global_rundir=$WORKBENCH_RUNDIR
+else global_rundir=$global_rundir_def
+     mkdir "$global_rundir"
+fi
+
 while test $# -gt 0
 do case "$1" in
-       --runsdir )
-           global_runsdir=$2; global_envjson=$global_runsdir/env.json; shift;;
+       --rundir ) global_rundir=$2; shift;;
        * ) break;; esac; shift; done
+
+global_envjson=$global_rundir/env.json
 
 local op=${1:-list}; test $# -gt 0 && shift
 
 case "$op" in
     list | ls )
-        test -d "$global_runsdir" && cd "$global_runsdir" &&
+        test -d "$global_rundir" && cd "$global_rundir" &&
             ls | {
                 ## Filter out aliases:
                 grep -v 'current\|env\.json' || true; }
         ;;
 
     compute-path )
-        echo -n "$global_runsdir/$1";;
+        echo -n "$global_rundir/$1";;
 
     check )
         local usage="USAGE: wb run $op TAG"
@@ -58,9 +70,16 @@ case "$op" in
             msg "fixing up legacy run in:  $dir"
             jq '.meta.profile_content' "$dir"/meta.json > "$dir"/profile.json
 
-            for logdir in "$dir"/logs-*/ "$dir"/logs-explorer
-            do local fixed=$(basename "$logdir" | cut -c6-)
-               mv "$logdir" "$dir"/$fixed; done
+            local topdirs=$(ls -d "$dir"/logs-*/ 2>/dev/null || true)
+            local anadirs=$(ls -d "$dir"/analysis/logs-*/ 2>/dev/null || true)
+            if test -n "$topdirs"
+            then for logdir in $topdirs
+                 do local fixed=$(basename "$logdir" | cut -c6-)
+                    mv "$logdir" "$dir"/$fixed; done
+            elif test -n "$anadirs"
+            then for logdir in $anadirs
+                 do local fixed=$(basename "$logdir" | cut -c6-)
+                    mv "$logdir" "$dir"/analysis/$fixed; done; fi
 
             cp "$global_envjson" "$dir"/env.json
             jq_fmutate "$dir"/env.json '. *
@@ -87,11 +106,11 @@ case "$op" in
         local tag=${1:?$usage}
         local dir=$(run get "$tag")
 
-        rm -f      "$global_runsdir"/current
-        ln -s $tag "$global_runsdir"/current;;
+        rm -f      "$global_rundir"/current
+        ln -s $tag "$global_rundir"/current;;
 
     current-run-path | current-path | path )
-        realpath "$global_runsdir"/current;;
+        realpath "$global_rundir"/current;;
 
     current-run-tag | current-tag | tag | current )
         basename "$(run current-path)";;
@@ -119,10 +138,10 @@ case "$op" in
         local timestamp=$(date +'%s' --utc)
         local date=$(date +'%Y'-'%m'-'%d'-'%H.%M' --date=@$timestamp --utc)
         local tag=$date.$batch.$prof
-        local dir=$global_runsdir/$tag
+        local dir=$global_rundir/$tag
         local realdir=$(realpath --canonicalize-missing "$dir")
 
-        if test "$(dirname "$realdir")" != "$(realpath "$global_runsdir")"
+        if test "$(dirname "$realdir")" != "$(realpath "$global_rundir")"
         then fatal "bad tag/run dir:  $tag @ $dir"; fi
 
         if test -e "$dir"
@@ -196,10 +215,17 @@ case "$op" in
         msg "current run is:  $tag / $dir"
         ;;
 
+    list-hosts | hosts )
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        local dir=$global_rundir/$tag
+
+        jq '.hostname | keys | .[]' -r "$dir"/meta.json;;
+
     describe )
         local usage="USAGE: wb run $op TAG"
         local tag=${1:?$usage}
-        local dir=$global_runsdir/$tag
+        local dir=$global_rundir/$tag
 
         if ! run check "$tag"
         then fatal "run fails sanity checks:  $tag at $dir"; fi

@@ -42,7 +42,7 @@ case "$op" in
         locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
 
         ## 1. enumerate logs, filter by keyfile & consolidate
-        local logdirs=("$dir"/node-*/)
+        local logdirs=("$dir"/node-*/ "$dir"/analysis/node-*/)
 
         if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-node-*.flt.json 2>/dev/null)"
         then
@@ -55,8 +55,12 @@ case "$op" in
                 '"$(wb backend lostream-fixup-jqexpr)"
             )
             for d in "${logdirs[@]}"
-            do grep -hFf "$keyfile" $(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null) | jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")" > \
-                 "$adir"/logs-$(basename "$d").flt.json &
+            do local logfiles="$(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null)"
+               if test -z "$logfiles"
+               then msg "no logs in $d, skipping.."; fi
+               grep -hFf "$keyfile" $logfiles |
+               jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")" \
+                 > "$adir"/logs-$(basename "$d").flt.json &
             done
             wait
         fi
@@ -124,7 +128,11 @@ case "$op" in
         locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
 
         ## 1. enumerate logs, filter by keyfile & consolidate
-        local logs=($(ls "$dir"/$mach/stdout* 2>/dev/null | tac) $(ls "$dir"/$mach/node-*.json 2>/dev/null)) consolidated="$adir"/logs-$mach.json
+        local logs=($(ls "$dir"/$mach/stdout* 2>/dev/null | tac) $(ls "$dir"/$mach/node-*.json 2>/dev/null) $(ls "$dir"/analysis/$mach/node-*.json 2>/dev/null)) consolidated="$adir"/logs-$mach.json
+
+        if test -z "${logs[*]}"
+        then fail "no logs for $mach in run $name"; fi
+
         if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-$mach.json 2>/dev/null)"
         then
             grep -hFf "$keyfile" "${logs[@]}"  > "$consolidated"
