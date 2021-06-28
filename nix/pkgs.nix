@@ -130,7 +130,7 @@ final: prev: with final;
   python38 = prev.python38.override {
     packageOverrides = pythonFinal: pythonPrev: {
       uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
-        disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" ];
+        disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" "tests/test_dns.py" ];
       });
     };
   };
