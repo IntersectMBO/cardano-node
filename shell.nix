@@ -93,6 +93,7 @@ let
       tmux
       pkgs.git
       pkgs.hlint
+      pkgs.moreutils
     ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
