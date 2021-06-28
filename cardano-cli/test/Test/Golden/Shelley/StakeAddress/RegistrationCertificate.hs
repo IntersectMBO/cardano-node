@@ -18,7 +18,7 @@ golden_shelleyStakeAddressRegistrationCertificate = propertyOnce . H.moduleWorks
   keyGenStakingVerificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
   registrationCertFile <- noteTempFile tempDir "registration.cert"
   scriptRegistrationCertFile <- noteTempFile tempDir "script-registration.cert"
-  exampleScript <- noteInputFile "../scripts/plutus/scripts/typed-guessing-game-redeemer-42-datum-42.plutus"
+  exampleScript <- noteInputFile "test/data/plutus/scripts/typed-guessing-game-redeemer-42-datum-42.plutus"
 
   void $ execCardanoCLI
     [ "stake-address","registration-certificate"
