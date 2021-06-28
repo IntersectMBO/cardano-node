@@ -19,7 +19,6 @@ let
 in pkgs.runCommand name {
     buildInputs = with pkgs.buildPackages; [
       zip
-      haskellBuildUtils.package
     ];
   } ''
   mkdir -p $out release

@@ -72,7 +72,8 @@ let
     tools = {
       haskell-language-server = {
         version = "latest";
-        inherit (cardanoNodeProject) index-state;
+        index-state = "2021-06-22T00:00:00Z";
+        # inherit (cardanoNodeProject) index-state;
       };
     };
 
