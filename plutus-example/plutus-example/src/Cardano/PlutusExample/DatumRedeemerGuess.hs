@@ -7,8 +7,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.PlutusExample.Untyped.DatumRedeemerGuess
-  ( datumRedeemerGuessScript
+module Cardano.PlutusExample.DatumRedeemerGuess
+  ( guessScript
   , datumRedeemerGuessScriptShortBs
   ) where
 
@@ -40,6 +40,6 @@ script = Plutus.unValidatorScript validator
 datumRedeemerGuessScriptShortBs :: SBS.ShortByteString
 datumRedeemerGuessScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
 
-datumRedeemerGuessScript :: PlutusScript PlutusScriptV1
-datumRedeemerGuessScript = PlutusScriptSerialised datumRedeemerGuessScriptShortBs
+guessScript :: PlutusScript PlutusScriptV1
+guessScript = PlutusScriptSerialised datumRedeemerGuessScriptShortBs
 
