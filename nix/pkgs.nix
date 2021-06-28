@@ -125,4 +125,13 @@ final: prev: with final;
   };
 
   clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
+
+  # Disable failing python uvloop tests
+  python38 = prev.python38.override {
+    packageOverrides = pythonFinal: pythonPrev: {
+      uvloop = pythonPrev.uvloop.overrideAttrs (attrs: {
+        disabledTestPaths = [ "tests/test_tcp.py" "tests/test_sourcecode.py" ];
+      });
+    };
+  };
 }
