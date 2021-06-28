@@ -41,15 +41,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1628178596,
-        "narHash": "sha256-aItlEml9qhoGAruPYjKKNnZwsyRXQ3vW0e+zb6hyYRg=",
+        "lastModified": 1629128484,
+        "narHash": "sha256-goSEOsNZrdIZe1pSmNmqaPgLAX93ZiL390b+S692TtA=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "ced24db2fbed1e56563e17fd2d47436c3a4649f3",
+        "rev": "287caf1fdc2e20b17c4a8e61ac5de66b4fcb631b",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
+        "ref": "libsodium-bump",
         "repo": "iohk-nix",
         "type": "github"
       }

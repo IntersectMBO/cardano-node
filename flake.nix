@@ -10,7 +10,7 @@
     };
     utils.url = "github:numtide/flake-utils";
     iohkNix = {
-      url = "github:input-output-hk/iohk-nix";
+      url = "github:input-output-hk/iohk-nix/libsodium-bump";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     customConfig = {
