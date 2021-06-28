@@ -127,36 +127,51 @@ case "$op" in
         local keyfile=$adir/substring-keys
         locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
 
-        ## 1. enumerate logs, filter by keyfile & consolidate
-        local logs=($(ls "$dir"/$mach/stdout* 2>/dev/null | tac) $(ls "$dir"/$mach/node-*.json 2>/dev/null) $(ls "$dir"/analysis/$mach/node-*.json 2>/dev/null)) consolidated="$adir"/logs-$mach.json
+        if test "$mach" = 'all'
+        then local machs=($(wb run list-hosts $name))
+        else local machs=($mach); fi
 
-        if test -z "${logs[*]}"
-        then fail "no logs for $mach in run $name"; fi
+        local num_jobs="\j"
+        local num_threads=$(grep processor /proc/cpuinfo | wc -l)
+        for mach in ${machs[*]}
+        do ## Limit parallelism:
+           sleep 0.5s
+           while ((${num_jobs@P} >= num_threads - 4))
+           do wait -n; sleep 0.$(((RANDOM % 5) + 1))s; done
+           (
+           ## 1. enumerate logs, filter by keyfile & consolidate
+           local logs=($(ls "$dir"/$mach/stdout* 2>/dev/null | tac) $(ls "$dir"/$mach/node-*.json 2>/dev/null) $(ls "$dir"/analysis/$mach/node-*.json 2>/dev/null)) consolidated="$adir"/logs-$mach.json
 
-        if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-$mach.json 2>/dev/null)"
-        then
-            grep -hFf "$keyfile" "${logs[@]}"  > "$consolidated"
-        fi
+           if test -z "${logs[*]}"
+           then msg "no logs for $mach in run $name"; continue; fi
 
-        msg "analysing logs of:  $mach  (lines: $(wc -l "$consolidated"))"
-        local locli_args=(
-            --genesis         "$dir"/genesis.json
-            --run-metafile    "$dir"/meta.json
-            ## ->
-            --slotstats-json  "$adir"/logs-$mach.slotstats.json
-            --timeline-pretty "$adir"/logs-$mach.timeline.txt
-            --stats-csv       "$adir"/logs-$mach.stats.csv
-            --analysis-json   "$adir"/logs-$mach.analysis.json
-            # --timeline-csv            "$adir"/logs-$mach.timeline.csv
-            # --cpu-spans-histogram-png "$adir"/logs-"$mach".cpu85-span-lens.png
-            # --derived-vectors-0-csv   "$adir"/logs-$mach".derived.1.csv
-            # --derived-vectors-1-csv   "$adir"/logs-$mach.derived.1.csv
-        )
-        if test -n "$dump_logobjects"; then
-            locli_args+=(--logobjects-json "$adir"/logs-$mach.logobjects.json); fi
+           if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-$mach.json 2>/dev/null)"
+           then grep -hFf "$keyfile" "${logs[@]}"  > "$consolidated"; fi
 
-        ${time} locli 'analyse' 'machine-timeline' \
-            "${locli_args[@]}" "$consolidated";;
+           msg "analysing logs of:  $mach  (lines: $(wc -l "$consolidated"))"
+           local locli_args=(
+               --genesis         "$dir"/genesis.json
+               --run-metafile    "$dir"/meta.json
+               ## ->
+               --timeline-pretty "$adir"/logs-$mach.timeline.txt
+               --stats-csv       "$adir"/logs-$mach.stats.csv
+               --analysis-json   "$adir"/logs-$mach.analysis.json
+               # --slotstats-json  "$adir"/logs-$mach.slotstats.json
+               # --timeline-csv            "$adir"/logs-$mach.timeline.csv
+               # --cpu-spans-histogram-png "$adir"/logs-"$mach".cpu85-span-lens.png
+               # --derived-vectors-0-csv   "$adir"/logs-$mach".derived.1.csv
+               # --derived-vectors-1-csv   "$adir"/logs-$mach.derived.1.csv
+           )
+           if test -n "$dump_logobjects"; then
+               locli_args+=(--logobjects-json "$adir"/logs-$mach.logobjects.json); fi
+
+           ${time} locli 'analyse' 'machine-timeline' \
+                   "${locli_args[@]}" "$consolidated"
+           ) &
+        done
+
+        wait
+        msg "analysis machine-timeline:  All done.";;
 
     * ) usage_analyse;; esac
 }
