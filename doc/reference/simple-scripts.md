@@ -1,4 +1,4 @@
-# Scripts
+# Simple Scripts
 
 From the Shelley era onwards, Cardano has supported scripts and script
 addresses.
