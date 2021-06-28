@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Spec.Chairman.Cardano
@@ -22,6 +23,6 @@ hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
   conf <- H.mkConf tempAbsPath' Nothing
 
-  allNodes <- H.testnet H.defaultTestnetOptions conf
+  H.TestnetRuntime { H.allNodes } <- H.testnet H.defaultTestnetOptions conf
 
   chairmanOver 120 50 conf allNodes
