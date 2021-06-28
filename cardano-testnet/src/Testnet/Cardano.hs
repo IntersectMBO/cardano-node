@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,6 +16,8 @@ module Testnet.Cardano
   , defaultTestnetOptions
 
   , Era(..)
+  , TestnetRuntime (..)
+  , Wallet(..)
 
   , testnet
   ) where
@@ -45,6 +48,7 @@ import           GHC.Real
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
+import           System.IO (FilePath)
 import           Text.Read
 import           Text.Show
 
@@ -108,10 +112,22 @@ defaultTestnetOptions = TestnetOptions
   , activeSlotsCoeff = 0.2
   }
 
+data TestnetRuntime = TestnetRuntime
+  { testnetMagic :: Int
+  , allNodes :: [String]
+  , bftSprockets :: [Sprocket]
+  , wallets :: [Wallet]
+  } deriving (Eq, Show)
+
+data Wallet = Wallet
+  { paymentVKey :: FilePath
+  , paymentSKey :: FilePath
+  } deriving (Eq, Show)
+
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
-testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
+testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
   env <- H.evalIO IO.getEnvironment
@@ -462,12 +478,15 @@ testnet testnetOptions H.Conf {..} = do
 
   H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
 
-  forM_ addrs $ \addr -> do
+  wallets <- forM addrs $ \addr -> do
+    let paymentSKey = tempAbsPath </> "addresses/" <> addr <> ".skey"
+    let paymentVKey = tempAbsPath </> "addresses/" <> addr <> ".vkey"
+
     -- Payment address keys
     void $ H.execCli
       [ "address", "key-gen"
-      , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> ".vkey"
-      , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> ".skey"
+      , "--verification-key-file", paymentVKey
+      , "--signing-key-file", paymentSKey
       ]
 
     -- Stake address keys
@@ -500,6 +519,11 @@ testnet testnetOptions H.Conf {..} = do
       , "--stake-verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
+
+    pure $ Wallet
+      { paymentSKey
+      , paymentVKey
+      }
 
   -- user N will delegate to pool N
   forM_ userPoolN $ \n -> do
@@ -624,7 +648,7 @@ testnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  forM_ bftNodes $ \node -> do
+  bftSprockets <- forM bftNodes $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
@@ -667,6 +691,8 @@ testnet testnetOptions H.Conf {..} = do
 
     when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+
+    pure sprocket
 
   H.threadDelay 100000
 
@@ -726,4 +752,9 @@ testnet testnetOptions H.Conf {..} = do
 
   H.noteShowIO_ DTC.getCurrentTime
 
-  return allNodes
+  return TestnetRuntime
+    { testnetMagic
+    , allNodes
+    , bftSprockets
+    , wallets
+    }

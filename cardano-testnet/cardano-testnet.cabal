@@ -74,7 +74,6 @@ executable cardano-testnet
                       , stm
                       , text
 
-
   other-modules:        Paths_cardano_testnet
                         Testnet.Commands
                         Testnet.Commands.Byron
@@ -86,3 +85,28 @@ executable cardano-testnet
   autogen-modules:      Paths_cardano_testnet
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+test-suite cardano-testnet-tests
+  import:               base, project-config
+
+  hs-source-dirs:       test
+
+  main-is:              Main.hs
+
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        cardano-testnet
+                      , directory
+                      , hedgehog
+                      , hedgehog-extras
+                      , filepath
+                      , tasty
+                      , tasty-expected-failure
+                      , tasty-hedgehog
+
+  other-modules:        Spec.Plutus
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+  build-tool-depends:   cardano-node:cardano-node
+                      , cardano-cli:cardano-cli
