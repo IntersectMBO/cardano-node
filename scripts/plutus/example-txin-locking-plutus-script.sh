@@ -32,7 +32,7 @@ if [ "$1" == "guessinggame" ]; then
  echo "Script at: $plutusscriptinuse"
 
 elif [ "$1" == "" ]; then
- plutusscriptinuse="$BASE/scripts/plutus/scripts/untyped-always-succeeds-txin.plutus"
+ plutusscriptinuse="$BASE/scripts/plutus/scripts/always-succeeds-spending.plutus"
  # This datum hash is the hash of the untyped 42
  scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
  plutusrequiredspace=70000000
@@ -87,7 +87,7 @@ sleep 5
 # the "locked" tx output below.
 
 $CARDANO_CLI query utxo --address $plutusscriptaddr --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/plutusutxo.json
-cat $WORK/plutusutxo.json
+
 plutusutxotxin=$(jq -r 'keys[]' $WORK/plutusutxo.json)
 
 $CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-2.json

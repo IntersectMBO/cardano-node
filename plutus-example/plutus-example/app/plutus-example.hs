@@ -17,7 +17,7 @@ main = do
   let dir = "generated-plutus-scripts"
   createDirectory dir
 
-  _ <- writeFileTextEnvelope (dir </> "always-succeeds-txin.plutus") Nothing alwaysSucceedsScript
+  _ <- writeFileTextEnvelope (dir </> "always-succeeds-spending.plutus") Nothing alwaysSucceedsScript
   _ <- writeFileTextEnvelope (dir </> "guess-42-datum-42-txin.plutus") Nothing guessScript
   _ <- writeFileTextEnvelope (dir </> "custom-guess-42-datum-42.plutus") Nothing customGuessScript
   _ <- writeFileTextEnvelope (dir </> "anyone-can-mint.plutus") Nothing apiExamplePlutusMintingScript
