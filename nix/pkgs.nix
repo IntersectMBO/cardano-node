@@ -1,10 +1,10 @@
 # our packages overlay
 final: prev: with final;
   let
-    compiler = config.haskellNix.compiler or "ghc8105";
+    compiler-nix-name = config.haskellNix.compiler or "ghc8105";
   in {
   cardanoNodeProject = import ./haskell.nix {
-    inherit compiler
+    inherit compiler-nix-name
       pkgs
       lib
       stdenv
@@ -15,7 +15,7 @@ final: prev: with final;
   };
   cardanoNodeHaskellPackages = cardanoNodeProject.hsPkgs;
   cardanoNodeProfiledHaskellPackages = (import ./haskell.nix {
-    inherit compiler
+    inherit compiler-nix-name
       pkgs
       lib
       stdenv
@@ -28,7 +28,7 @@ final: prev: with final;
     profiling = true;
   }).hsPkgs;
   cardanoNodeEventlogHaskellPackages = (import ./haskell.nix {
-    inherit compiler
+    inherit compiler-nix-name
       pkgs
       lib
       stdenv
@@ -41,7 +41,7 @@ final: prev: with final;
     eventlog = true;
   }).hsPkgs;
   cardanoNodeAssertedHaskellPackages = (import ./haskell.nix {
-    inherit compiler
+    inherit compiler-nix-name
       pkgs
       lib
       stdenv
@@ -76,13 +76,18 @@ final: prev: with final;
   inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
   inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
 
-  cabal = haskell-nix.tool compiler "cabal" {
+  cabal = haskell-nix.tool compiler-nix-name "cabal" {
     version = "latest";
     inherit (cardanoNodeProject) index-state;
   };
 
-  hlint = haskell-nix.tool compiler "hlint" {
+  hlint = haskell-nix.tool compiler-nix-name "hlint" {
     version = "3.2.7";
+    inherit (cardanoNodeProject) index-state;
+  };
+
+  haskellBuildUtils = prev.haskellBuildUtils.override {
+    inherit compiler-nix-name;
     inherit (cardanoNodeProject) index-state;
   };
 

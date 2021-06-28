@@ -7,7 +7,7 @@
 , haskell-nix
 , buildPackages
 # GHC attribute name
-, compiler
+, compiler-nix-name
 # Enable profiling
 , profiling ? false
 # Link with -eventlog
@@ -35,8 +35,7 @@
 
 , projectPackages ? lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
     (haskell-nix.cabalProject' {
-      inherit src cabalProjectLocal;
-      compiler-nix-name = compiler;
+      inherit src cabalProjectLocal compiler-nix-name;
     }).hsPkgs)
 }:
 let
@@ -44,8 +43,7 @@ let
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
   pkgSet = haskell-nix.cabalProject' ({
-    inherit src cabalProjectLocal;
-    compiler-nix-name = compiler;
+    inherit src cabalProjectLocal compiler-nix-name;
     modules = [
       # Allow reinstallation of Win32
       ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
