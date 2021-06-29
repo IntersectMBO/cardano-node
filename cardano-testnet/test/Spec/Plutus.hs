@@ -8,6 +8,7 @@ module Spec.Plutus
 
 import           Control.Monad
 import           Data.Function
+import           Data.Functor ((<$>))
 import           Data.Int
 import           Data.Maybe
 import           Hedgehog (Property)
@@ -20,6 +21,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
+import qualified System.Environment as IO
 import qualified Test.Base as H
 import qualified Testnet.Cardano as H
 import qualified Testnet.Conf as H
@@ -33,6 +35,8 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   cardanoCli <- H.binFlex "cardano-cli" "CARDANO_CLI"
 
+  path <- H.evalIO $ fromMaybe "" <$> IO.lookupEnv "PATH"
+
   let execConfig = H.ExecConfig
         { H.execConfigEnv = Just
           [ ("CARDANO_CLI", cardanoCli)
@@ -42,6 +46,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
           , ("UTXO_SKEY", tempAbsPath </> "shelley/utxo-keys/utxo1.skey")
           , ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           , ("TESTNET_MAGIC", show @Int testnetMagic)
+          , ("PATH", path)
           ]
         , H.execConfigCwd = Just tempBaseAbsPath
         }
