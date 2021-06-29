@@ -24,10 +24,10 @@ plutusscriptinuse="scripts/plutus/scripts/$PV/anyone-can-mint.plutus"
 utxovkey=example/utxo-keys/utxo1.vkey
 utxoskey=example/utxo-keys/utxo1.skey
 utxoaddr=$(cardano-cli address build --testnet-magic 42 --payment-verification-key-file $utxovkey)
-cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --out-file utxo.json
-txin=$(jq -r 'keys[]' utxo.json)
+cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --out-file "$work/utxo.json"
+txin=$(jq -r 'keys[]' "$work/utxo.json")
 
-lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" utxo.json)
+lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" "$work/utxo.json")
 lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
 
 cardano-cli address key-gen \
