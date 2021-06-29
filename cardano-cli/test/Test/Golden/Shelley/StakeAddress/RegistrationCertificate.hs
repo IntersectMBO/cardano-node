@@ -6,19 +6,23 @@ module Test.Golden.Shelley.StakeAddress.RegistrationCertificate
 
 import           Cardano.Prelude
 import           Hedgehog (Property)
+import           System.FilePath ((</>))
 import           Test.OptParse
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Process as H
 
 {- HLINT ignore "Use camelCase" -}
 
 golden_shelleyStakeAddressRegistrationCertificate :: Property
 golden_shelleyStakeAddressRegistrationCertificate = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
+  base <- H.getProjectBase
+
   keyGenStakingVerificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
   registrationCertFile <- noteTempFile tempDir "registration.cert"
   scriptRegistrationCertFile <- noteTempFile tempDir "script-registration.cert"
-  exampleScript <- noteInputFile "../scripts/plutus/scripts/typed-guessing-game-redeemer-42-datum-42.plutus"
+  exampleScript <- noteInputFile $ base </> "scripts/plutus/scripts/typed-guessing-game-redeemer-42-datum-42.plutus"
 
   void $ execCardanoCLI
     [ "stake-address","registration-certificate"
@@ -35,6 +39,5 @@ golden_shelleyStakeAddressRegistrationCertificate = propertyOnce . H.moduleWorks
     ]
 
   H.assertFileOccurences 1 "Stake Address Registration Certificate" scriptRegistrationCertFile
-
 
   H.assertEndsWithSingleNewline registrationCertFile

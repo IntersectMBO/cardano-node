@@ -209,6 +209,7 @@ test-suite cardano-cli-golden
                       , Diff
                       , directory
                       , exceptions
+                      , filepath
                       , hedgehog
                       , hedgehog-extras
                       , text
