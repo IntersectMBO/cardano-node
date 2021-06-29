@@ -75,11 +75,13 @@ import           Text.Printf (printf)
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
+import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 
 import qualified Data.Text.IO as T
 import qualified System.IO as IO
 
 {- HLINT ignore "Reduce duplication" -}
+{- HLINT ignore "Use let" -}
 
 data ShelleyQueryCmdError
   = ShelleyQueryCmdEnvVarSocketErr !EnvSocketError
@@ -208,26 +210,35 @@ runQueryTip
 runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
-      consensusMode = consensusModeOnly cModeParams
-
-  anyEra <- determineEra cModeParams localNodeConnInfo
-  tip <- liftIO $ getLocalChainTip localNodeConnInfo
-
-  let tipSlotNo = case tip of
-        ChainTipAtGenesis -> 0
-        ChainTip slotNo _ _ -> slotNo
+  let consensusMode = consensusModeOnly cModeParams
 
   case consensusMode of
     CardanoMode -> do
-        eResult <- liftIO $ queryEraHistoryAndSystemStart localNodeConnInfo Nothing
-        case eResult of
-          Left acqFail -> left (ShelleyQueryCmdAcquireFailure acqFail)
-          Right (eraHistory, mSystemStart) ->
+        (chainTip, result) <- liftIO $ queryChainTipAndEraHistoryAndSystemStart localNodeConnInfo Nothing
+
+        let tipSlotNo = case chainTip of
+              ChainTipAtGenesis -> 0
+              ChainTip slotNo _ _ -> slotNo
+
+        case join (either (const Nothing) Just <$> result) of
+          Nothing -> do
+            let output = encodePretty $ O.QueryTipOutput
+                  { O.chainTip = chainTip
+                  , O.era = Nothing
+                  , O.epoch = Nothing
+                  , O.syncProgress = Nothing
+                  }
+
+            case mOutFile of
+              Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
+              Nothing                 -> liftIO $ LBS.putStrLn        output
+
+          Just (anyEra, eraHistory, systemStart') ->
             case slotToEpoch tipSlotNo eraHistory of
               Left e -> throwE (ShelleyQueryCmdPastHorizon e)
               Right (epochNo, _, _) -> do
                 syncProgressResult <- runExceptT $ do
-                  systemStart <- fmap getSystemStart mSystemStart & hoistMaybe ShelleyQueryCmdSystemStartUnavailable
+                  systemStart <- fmap getSystemStart systemStart' & hoistMaybe ShelleyQueryCmdSystemStartUnavailable
                   nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
                   tipTimeResult <- getProgress tipSlotNo eraHistory & bimap ShelleyQueryCmdPastHorizon fst & except
 
@@ -238,9 +249,9 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
                   liftIO . T.hPutStrLn IO.stderr $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
 
                 let output = encodePretty $ O.QueryTipOutput
-                      { O.chainTip = tip
-                      , O.era = anyEra
-                      , O.epoch = epochNo
+                      { O.chainTip = chainTip
+                      , O.era = Just anyEra
+                      , O.epoch = Just epochNo
                       , O.syncProgress = mSyncProgress
                       }
 
@@ -249,55 +260,98 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
                   Nothing                 -> liftIO $ LBS.putStrLn        output
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
 
-queryEraHistoryAndSystemStart
+queryChainTipAndEraHistoryAndSystemStart
   :: LocalNodeConnectInfo CardanoMode
   -> Maybe ChainPoint
-  -> IO (Either Net.Query.AcquireFailure (EraHistory CardanoMode, Maybe SystemStart))
-queryEraHistoryAndSystemStart connctInfo mpoint = do
-    resultVar <- newEmptyTMVarIO
+  -> IO (ChainTip, Maybe (Either Net.Query.AcquireFailure (AnyCardanoEra, EraHistory CardanoMode, Maybe SystemStart)))
+queryChainTipAndEraHistoryAndSystemStart connectInfo mpoint = do
+    resultVarEraHistoryAndSystemStart <- newEmptyTMVarIO
+    resultVarChainTip <- newEmptyTMVarIO
+
+    waitResult <- pure $ (,)
+      <$> readTMVar resultVarChainTip
+      <*> readTMVar resultVarEraHistoryAndSystemStart
+
     connectToLocalNodeWithVersion
-      connctInfo
+      connectInfo
       (\ntcVersion ->
         LocalNodeClientProtocols
-        { localChainSyncClient    = NoLocalChainSyncClient
-        , localStateQueryClient   = Just (singleQuery mpoint resultVar ntcVersion)
+        { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult resultVarChainTip
+        , localStateQueryClient   = Just (singleQuery waitResult mpoint resultVarEraHistoryAndSystemStart ntcVersion)
         , localTxSubmissionClient = Nothing
         }
       )
-    atomically (takeTMVar resultVar)
+
+    atomically waitResult
   where
+    chainSyncGetCurrentTip
+      :: forall mode a
+      .  STM a
+      -> TMVar  ChainTip
+      -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+    chainSyncGetCurrentTip waitDone tipVar =
+      ChainSyncClient $ pure clientStIdle
+      where
+        clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
+        clientStIdle =
+          Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
+
+        clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+        clientStNext = Net.Sync.ClientStNext
+          { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
+              void . atomically $ putTMVar tipVar tip
+              void $ atomically waitDone
+              pure $ Net.Sync.SendMsgDone ()
+          , Net.Sync.recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
+              void . atomically $ putTMVar tipVar tip
+              void $ atomically waitDone
+              pure $ Net.Sync.SendMsgDone ()
+          }
+
     singleQuery
-      :: Maybe ChainPoint
-      -> TMVar (Either Net.Query.AcquireFailure (EraHistory CardanoMode, Maybe SystemStart))
+      :: STM a
+      -> Maybe ChainPoint
+      -> TMVar (Maybe (Either Net.Query.AcquireFailure (AnyCardanoEra, EraHistory CardanoMode, Maybe SystemStart)))
       -> NodeToClientVersion
       -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint
                                          (QueryInMode CardanoMode) IO ()
-    singleQuery mPointVar' resultVar' ntcVersion =
-      LocalStateQueryClient $ do
-      pure . Net.Query.SendMsgAcquire mPointVar' $
-        Net.Query.ClientStAcquiring
-        { Net.Query.recvMsgAcquired =
-          pure $ Net.Query.SendMsgQuery (QueryEraHistory CardanoModeIsMultiEra) $
-            Net.Query.ClientStQuerying
-            { Net.Query.recvMsgResult = \result1 -> do
-              if ntcVersion >= NodeToClientV_9
-                then do
-                  pure $ Net.Query.SendMsgQuery QuerySystemStart $
-                    Net.Query.ClientStQuerying
-                    { Net.Query.recvMsgResult = \result2 -> do
-                      atomically $ putTMVar resultVar' (Right (result1, Just result2))
-
-                      pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
-                    }
-                else do
-                  atomically $ putTMVar resultVar' (Right (result1, Nothing))
-
-                  pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
-            }
-        , Net.Query.recvMsgFailure = \failure -> do
-            atomically $ putTMVar resultVar' (Left failure)
+    singleQuery waitDone mPointVar' resultVar' ntcVersion =
+      LocalStateQueryClient $
+        if ntcVersion >= NodeToClientV_8
+          then do
+            pure . Net.Query.SendMsgAcquire mPointVar' $
+              Net.Query.ClientStAcquiring
+              { Net.Query.recvMsgAcquired =
+                pure $ Net.Query.SendMsgQuery (QueryCurrentEra CardanoModeIsMultiEra) $
+                  Net.Query.ClientStQuerying
+                  { Net.Query.recvMsgResult = \result1 -> do
+                    pure $ Net.Query.SendMsgQuery (QueryEraHistory CardanoModeIsMultiEra) $
+                      Net.Query.ClientStQuerying
+                      { Net.Query.recvMsgResult = \result2 -> do
+                        if ntcVersion >= NodeToClientV_9
+                          then do
+                            pure $ Net.Query.SendMsgQuery QuerySystemStart $
+                              Net.Query.ClientStQuerying
+                              { Net.Query.recvMsgResult = \result3 -> do
+                                atomically $ putTMVar resultVar' (Just (Right (result1, result2, Just result3)))
+                                void $ atomically waitDone
+                                pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+                              }
+                          else do
+                            atomically $ putTMVar resultVar' (Just (Right (result1, result2, Nothing)))
+                            void $ atomically waitDone
+                            pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+                      }
+                  }
+              , Net.Query.recvMsgFailure = \failure -> do
+                  atomically $ putTMVar resultVar' (Just (Left failure))
+                  void $ atomically waitDone
+                  pure $ Net.Query.SendMsgDone ()
+              }
+          else do
+            atomically $ putTMVar resultVar' Nothing
+            void $ atomically waitDone
             pure $ Net.Query.SendMsgDone ()
-        }
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.

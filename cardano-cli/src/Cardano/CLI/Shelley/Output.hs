@@ -17,8 +17,8 @@ import qualified Data.Aeson.Encoding as JE
 
 data QueryTipOutput = QueryTipOutput
   { chainTip :: ChainTip
-  , era :: AnyCardanoEra
-  , epoch :: EpochNo
+  , era :: Maybe AnyCardanoEra
+  , epoch :: Maybe EpochNo
   , syncProgress :: Maybe Text
   } deriving (Eq, Show)
 
@@ -40,8 +40,8 @@ instance ToJSON QueryTipOutput where
         ( ("slot" ..= slot)
         . ("hash" ..= serialiseToRawBytesHexText headerHash)
         . ("block" ..= bNum)
-        . ("era" ..= era a)
-        . ("epoch" ..= epoch a)
+        . ("era" ..=? era a)
+        . ("epoch" ..=? epoch a)
         . ("syncProgress" ..=? syncProgress a)
         ) []
   toEncoding a = case chainTip a of
@@ -51,7 +51,7 @@ instance ToJSON QueryTipOutput where
         ( ("slot" ..= slot)
         . ("hash" ..= serialiseToRawBytesHexText headerHash)
         . ("block" ..= bNum)
-        . ("era" ..= era a)
-        . ("epoch" ..= epoch a)
+        . ("era" ..=? era a)
+        . ("epoch" ..=? epoch a)
         . ("syncProgress" ..=? syncProgress a)
         ) []
