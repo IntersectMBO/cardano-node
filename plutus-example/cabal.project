@@ -19,14 +19,14 @@ test-show-details: direct
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: ccb5648ad3c93744f67e244706a7a3e36dcfbab0
-  --sha256: 0p9jgpj9cjkg184y1rswz90sw0nq13rld80fa5s59xcyvsa31p7y
+  tag: 2f28e62f1508f07bb628963ee9bb23dc19ec0e03
+  --sha256: 0sjlk19v0dg63v8dawg844y3wzm1nmq0qxpvhip81x5yi091jjmm
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: a715c7f420770b70bbe95ca51d3dec83866cb1bd
-  --sha256: 06l06mmb8cd4q37bnvfpgx1c5zgsl4xaf106dqva98738i8asj7j
+  tag: b6a215c42a28dc8b71b42946fe30256a333d34af
+  --sha256: 1l9nqsg6kfkfadlbvyl4afdf8v408zf0fn6dkihqf56g2mnk4i04
   subdir:
     binary
     binary/test
@@ -38,14 +38,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-crypto
-  tag: ce8f1934e4b6252084710975bd9bbc0a4648ece4
-  --sha256: 1v2laq04piyj511b2m77hxjh9l1yd6k9kc7g6bjala4w3zdwa4ni
+  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
+  --sha256: 06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 0fa5a737aa5bed6f835402526f0b2d541ed83dab
-  --sha256: 0dd75944f1ww0bnr1l02igwkiwbwkvrlv6yldlgakdpqyfn1np9d
+  tag: ec9c77edbf5700a4b2ece8f97a1e313df06abc97
+  --sha256: 1ia8x9dnw36y0xazg7xg263ax9mamw9w4sg460cmibj3wv49im4w
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -102,11 +102,11 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: b749bc878bb05478f924d6e2d4970d1bdaef94ef
-  --sha256: 1k1cc5sqq9h6jrr5psi4vzs1ay3wafj42gpfv8b67cpnxfivj4m6
+  tag: e338f2cf8e1078fbda9555dd2b169c6737ef6774
+  --sha256: 12x81hpjyw2cpkazfalz6bw2wgr6ax7bnmlxl2rlfakkvsjfgaqd
   subdir:
     io-sim
-    io-sim-classes
+    io-classes
     monoidal-synchronisation
     network-mux
     ouroboros-consensus
@@ -122,8 +122,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: e11d59a181f558fb5d2e5b0a2a32afd496660bc1
-  --sha256: 0hdck39i4yv656phxjy5ppqgzrq7x3q4b5rf8vj7hrzcs0aggl8r
+  tag: 523f349f3d68db07c98150734793ed7003d1f562
+  --sha256: 0vp6wiv1fz5bzvw90pdwv96nck78m5s91xiwjhkksq06l1yqr3ps
   subdir:
     plutus-core
     plutus-ledger

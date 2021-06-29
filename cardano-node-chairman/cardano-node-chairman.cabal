@@ -46,7 +46,7 @@ executable cardano-node-chairman
                       , cardano-prelude
                       , containers
                       , contra-tracer
-                      , io-sim-classes
+                      , io-classes
                       , network-mux
                       , optparse-applicative
                       , ouroboros-consensus
