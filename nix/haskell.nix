@@ -69,6 +69,8 @@ let
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
         packages.cardano-cli.components.tests.cardano-cli-golden.build-tools =
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
+        packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
+          lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
       }
       {
         # make sure that libsodium DLLs are available for windows binaries:
@@ -129,6 +131,13 @@ let
           export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
           export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
           export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}
+          export CARDANO_NODE_SRC=${src}
+        ";
+
+        # cardano-testnet needs access to the git repository source
+        packages.cardano-testnet.preCheck = "
+          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
+          export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
           export CARDANO_NODE_SRC=${src}
         ";
       })
