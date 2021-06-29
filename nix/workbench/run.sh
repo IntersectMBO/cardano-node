@@ -4,7 +4,6 @@ global_envjson=$global_runsdir/env.json
 
 usage_run() {
      usage "run" "Managing cluster runs" <<EOF
-
     list                  List cluster runs
 
     allocate BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..]
@@ -14,7 +13,7 @@ usage_run() {
                           A unique name would be allocated for this run,
                             and a run alias 'current' will be created for it.
 
-    start-run NAME BACKEND-ARGS..
+    start-run TAG BACKEND-ARGS..
                           Start the named run, passing thru any extra backend args
 
   Options:
@@ -33,54 +32,54 @@ do case "$1" in
 local op=${1:-list}; test $# -gt 0 && shift
 
 case "$op" in
-    list )
+    list | ls )
         test -d "$global_runsdir" && cd "$global_runsdir" &&
             ls | {
                 ## Filter out aliases:
                 grep -v 'current\|env\.json' || true; }
         ;;
 
-    show | s )
-        local usage="USAGE: wb run $op RUN-NAME"
-        local name=${1:?$usage}
-
-        local dir=$global_runsdir/$name
-        jq '.' "$dir"/meta.json
-        ;;
+    compute-path )
+        echo -n "$global_runsdir/$1";;
 
     check )
-        local usage="USAGE: wb run $op RUN-NAME"
-        local name=${1:?$usage}
-        local dir=$global_runsdir/$name
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        local dir=$(run compute-path "$tag")
 
-        if test "$(tr -d / <<<$name)" != "$name"
-        then fatal "run name has slashes:  $name"; fi
+        if test "$(tr -d / <<<$tag)" != "$tag"
+        then fatal "run tag has slashes:  $tag"; fi
 
         for f in "$dir"/{profile,env,meta}.json
         do if ! jq_check_json "$f"
-           then return 1
+           then fatal "run $tag (at $dir) missing a file:  $(basename "$f")"
            fi
-        done
-        ;;
+        done;;
+
+    get-path | get )
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        run check        "$tag"
+        run compute-path "$tag";;
+
+    show-meta | show | meta | s )
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+
+        jq '.' "$(run get "$tag")"/meta.json;;
 
     set-current | set )
-        local usage="USAGE: wb run $op RUN-NAME"
-        local name=${1:?$usage}
-        local dir=$global_runsdir/$name
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        local dir=$(run get "$tag")
 
-        if ! run check "$name"
-        then fatal "run fails sanity checks:  $name at $dir"; fi
-
-        rm -f       "$global_runsdir"/current
-        ln -s $name "$global_runsdir"/current
-
-        msg "current run is:  $name at:  $dir"
-        ;;
+        rm -f      "$global_runsdir"/current
+        ln -s $tag "$global_runsdir"/current;;
 
     current-run-path | current-path | path )
         realpath "$global_runsdir"/current;;
 
-    current-run-name | current-name | name | current )
+    current-run-tag | current-tag | tag | current )
         basename "$(run current-path)";;
 
     current-run-meta | current-meta | meta )
@@ -103,17 +102,17 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
-        local epoch=$(date +'%s' --utc)
-        local time=$(date +'%Y'-'%m'-'%d'-'%H.%M' --date=@$epoch --utc)
-        local name=$time.$batch.$prof
-        local dir=$global_runsdir/$name
+        local timestamp=$(date +'%s' --utc)
+        local date=$(date +'%Y'-'%m'-'%d'-'%H.%M' --date=@$timestamp --utc)
+        local tag=$date.$batch.$prof
+        local dir=$global_runsdir/$tag
         local realdir=$(realpath --canonicalize-missing "$dir")
 
         if test "$(dirname "$realdir")" != "$(realpath "$global_runsdir")"
-        then fatal "bad run name/run dir:  $name @ $dir"; fi
+        then fatal "bad tag/run dir:  $tag @ $dir"; fi
 
         if test -e "$dir"
-        then fatal "run name busy:  $name @ $dir"; fi
+        then fatal "tag busy:  $tag @ $dir"; fi
 
         if ! profile has-profile          "$prof"
         then fatal      "no such profile:  $prof"; fi
@@ -142,19 +141,28 @@ case "$op" in
         profile get "$prof" > "$dir"/profile.json
         profile node-specs    "$dir"/profile.json "$global_envjson" > "$dir"/node-specs.json
 
+        ## TODO:  AWS
+        local node_commit_desc=$(git_repo_commit_description '.')
+
         local args=(
-            --arg name      $name
-            --arg batch     $batch
-            --arg prof      $prof
-            --arg epoch     $epoch
-            --arg time      $time
+            --arg       tag              $tag
+            --arg       batch            $batch
+            --arg       profile          $prof
+            --argjson   timestamp        $timestamp
+            --arg       date             $date
+            --arg       node_commit_desc $node_commit_desc
+            --slurpfile profile_content  "$dir"/profile.json
         )
         jq_fmutate "$dir"/meta.json '. *
-           { name:      $name
-           , batch:     $batch
-           , profile:   $prof
-           , epoch:     $epoch
-           , time:      $time
+           { meta:
+             { tag:              $tag
+             , batch:            $batch
+             , profile:          $profile
+             , timestamp:        $timestamp
+             , date:             $date
+             , node_commit_desc: $node_commit_desc
+             , profile_content:  $profile_content[0]
+             }
            }
            ' "${args[@]}"
 
@@ -166,22 +174,24 @@ case "$op" in
            jq '.["'"$node"'"]' "$dir"/node-specs.json > "$node_dir"/node-spec.json
         done
 
-        run     describe "$name"
+        run     describe "$tag"
         profile describe "$dir"/profile.json
 
-        run  set-current "$name"
+        run  set-current "$tag"
+
+        msg "current run is:  $tag / $dir"
         ;;
 
     describe )
-        local usage="USAGE: wb run $op RUN-NAME"
-        local name=${1:?$usage}
-        local dir=$global_runsdir/$name
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        local dir=$global_runsdir/$tag
 
-        if ! run check "$name"
-        then fatal "run fails sanity checks:  $name at $dir"; fi
+        if ! run check "$tag"
+        then fatal "run fails sanity checks:  $tag at $dir"; fi
 
         cat <<EOF
-workbench:  run $name params:
+workbench:  run $tag params:
   - run dir:         $dir
   - profile JSON:    $dir/profile.json
   - node specs:      $dir/node-specs.json
@@ -191,27 +201,52 @@ EOF
         backend describe-run "$dir"
         ;;
 
+    compat-meta-fixups | compat-f )
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        local dir=$(run get "$tag")
+
+        local compat_args=(
+            --rawfile genesis_cache_key "$dir/genesis/cache.key"
+        )
+        jq_fmutate "$dir"/meta.json '
+           def compat_fixups:
+             { genesis:
+               { dense_pool_density: .composition.dense_pool_density
+               , n_pools:            .composition.n_pools
+               }
+             , generator:
+               { era:                .era
+               }
+             };
+           . * { meta:
+                 { profile_content:   (.meta.profile_content | compat_fixups)
+                 , genesis_cache_id:  $genesis_cache_key
+                 }
+               }' "${compat_args[@]}";;
+
     start )
-        local usage="USAGE: wb run $op RUN-NAME BACKEND-ARGS.."
-        local name=${1:-?$usage}; shift
+        local usage="USAGE: wb run $op TAG BACKEND-ARGS.."
+        local tag=${1:-?$usage}; shift
+        local dir=$(run get "$tag")
 
-        run set-current "$name"
-        local currentRunPath=$(run current-path)
+        run set-current "$tag"
         local cacheDir=$(jq -r .cacheDir "$global_envjson")
-
         if test "$cacheDir" = 'null'
-        then fatal "invalid meta.json in current run:  $currentRunPath/meta.json"; fi
+        then fatal "invalid meta.json in current run:  $dir/meta.json"; fi
 
         local genesis_args=(
             ## Positionals:
             "$cacheDir"/genesis
-            "$currentRunPath"/profile.json
-            "$currentRunPath"/topology
-            "$currentRunPath"/genesis
+            "$dir"/profile.json
+            "$dir"/topology
+            "$dir"/genesis
         )
         genesis prepare "${genesis_args[@]}"
 
-        backend start-run "${currentRunPath}" "$@"
+        backend start-run "$dir" "$@"
+
+        run compat-meta-fixups "$tag"
         ;;
 
     * ) usage_run;; esac

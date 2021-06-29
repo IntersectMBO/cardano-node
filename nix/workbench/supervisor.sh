@@ -9,6 +9,18 @@ usage_supervisor() {
     get-node-socket-path STATE-DIR
                      Given a state dir, print the default node socket path
                        for 'cardano-cli'
+
+    record-extended-env-config ENV-JSON [ENV-CONFIG-OPTS..]
+                     Extend the env JSON with the backend-specific
+                       environment config options
+
+    describe-run RUN-DIR
+    pre-run-hook RUN-DIR
+    start-run RUN-DIR
+
+    Supervisor-specific:
+
+    save-pids RUN-DIR
 EOF
 }
 
@@ -18,9 +30,11 @@ case "$op" in
     name )
         echo 'supervisor';;
 
+    passthrough | pass )
+        $0 "$@";;
+
     is-running )
-        test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0"
-        ;;
+        test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0";;
 
     get-node-socket-path )
         usage="USAGE: wb supervisor $op STATE-DIR"
@@ -78,6 +92,34 @@ EOF
         then echo "workbench ERROR:  state directory exists, but is not a symlink -- please remove it or choose another:  $dir"; exit 1; fi
         ;;
 
+    save-pids )
+        usage="USAGE: wb supervisor $op RUN-DIR"
+        dir=${1:?$usage}; shift
+
+        svpid=$dir/supervisor/supervisord.pid pstree=$dir/supervisor/ps.tree
+        pstree -Ap "$(cat "$svpid")" > "$pstree"
+
+        pidsfile="$dir"/supervisor/cardano-node.pids
+        grep 'cabal.*cardano-node' "$pstree" |
+            sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/' \
+                > "$pidsfile"
+
+        mapn2p="$dir"/supervisor/node2pid.map; echo '{}' > "$mapn2p"
+        mapp2n="$dir"/supervisor/pid2node.map; echo '{}' > "$mapp2n"
+        for node in $(jq_tolist keys "$dir"/node-specs.json)
+        do cabalpid=$(supervisorctl pid $node)
+           pid=$(fgrep -e "-cabal($cabalpid)-" "$pstree" |
+                 sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/')
+           jq_fmutate "$mapn2p" '. * { "'$node'": '$pid' }'
+           jq_fmutate "$mapp2n" '. * { "'$pid'": "'$node'" }'
+        done
+
+        msg "supervisor:  pid file:      $svpid"
+        msg "supervisor:  process tree:  $pstree"
+        msg "supervisor:  node pids:     $pidsfile"
+        msg "supervisor:  node pid maps: $mapn2p $mapp2n"
+        ;;
+
     start-run )
         usage="USAGE: wb supervisor $op RUN-DIR"
         dir=${1:?$usage}; shift
@@ -104,11 +146,17 @@ EOF
            sleep 5
         done
 
-        msg "supervisor:  pid file:  $dir/supervisor/supervisord.pid"
-        pstree -Ap "$(cat "$dir"/supervisor/supervisord.pid)" |
-            grep 'cabal.*cardano-node' |
-            sed -e 's/^.*-+-{\?cardano-node}\?(\([0-9]*\))$/\1/' \
-                > "$dir"/supervisor/cardano-node.pids
-        ;;
+        $0 save-pids "$dir";;
+
+    lostream-fixup-jqargs )
+        usage="USAGE: wb supervisor $op RUN-DIR"
+        dir=${1:?$usage}
+
+        echo --compact-output --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
+
+    lostream-fixup-jqexpr )
+        usage="USAGE: wb supervisor $op"
+
+        echo '| $mapp2n[0] as $map | . * { host: $map[.pid] }';;
 
     * ) usage_supervisor;; esac

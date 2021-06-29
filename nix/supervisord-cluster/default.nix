@@ -148,7 +148,7 @@ let
     wb_run_start_args=(
         --supervisor-conf      "${backend.supervisord.mkSupervisorConf profile}"
       )
-    wb run start $(wb run current-name) "''${wb_run_start_args[@]}"
+    wb run start $(wb run current-tag) "''${wb_run_start_args[@]}"
 
     echo 'workbench:  cluster started. Run `stop-cluster` to stop'
   '';

@@ -12,6 +12,7 @@ global_mode='unknown'
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
 . "$global_basedir"/run.sh
+. "$global_basedir"/analyse.sh
 . "$global_basedir"/explain-mode.sh
 
 . "$global_basedir"/backend.sh
@@ -26,6 +27,7 @@ usage_main() {
     profile      (p)      Cluster profile ops.  Default op is 'list'
     cluster      (c)      Cluster state ops
     run          (r)      Managing cluster runs.  Default op is 'list'
+    analyse      (a)      Analyse cluster runs
 
     explain-mode (x)      Explain current mode
 
@@ -84,6 +86,9 @@ main() {
             cluster "$@";;
         run | runs | r )
             run "$@";;
+
+        analyse | a )
+            analyse "$@";;
 
         explain-mode | x )
             explain-mode $global_mode;;

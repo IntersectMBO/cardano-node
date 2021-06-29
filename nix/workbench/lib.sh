@@ -52,3 +52,16 @@ fatal() {
 jqtest() {
     jq --exit-status "$@" > /dev/null
 }
+
+git_repo_commit_description() {
+    local repo=$1
+    local commit=$(git -C "$repo" rev-parse 'HEAD' 2>/dev/null || true)
+
+    test -d "$repo/.git" && {
+        git -C "$repo" fetch
+        git -C "$repo" describe --match '[0-9].*' --tags $commit 2>/dev/null |
+            cut -d'-' -f1,2 | tr -d '\n'
+        git -C "$repo" diff --exit-code --quiet || echo '-modified'
+    } || true
+}
+
