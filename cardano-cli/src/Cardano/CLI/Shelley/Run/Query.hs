@@ -264,14 +264,12 @@ queryChainTipAndEraHistoryAndSystemStart
   -> Maybe ChainPoint
   -> IO (ChainTip, Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
 queryChainTipAndEraHistoryAndSystemStart connctInfo mpoint = do
-    resultVarEraHistoryAndSystemStart <- newTVarIO Nothing
-    resultVarChainTip <- newTVarIO Nothing
-    waitResult <- pure $ do
-      ma <- readTVar resultVarChainTip
-      mb <- readTVar resultVarEraHistoryAndSystemStart
-      maybe retry return $ (,)
-        <$> ma
-        <*> mb
+    resultVarEraHistoryAndSystemStart <- newEmptyTMVarIO
+    resultVarChainTip <- newEmptyTMVarIO
+
+    waitResult <- pure $ (,)
+      <$> readTMVar resultVarChainTip
+      <*> readTMVar resultVarEraHistoryAndSystemStart
 
     connectToLocalNode
       connctInfo
@@ -286,7 +284,7 @@ queryChainTipAndEraHistoryAndSystemStart connctInfo mpoint = do
     chainSyncGetCurrentTip
       :: forall mode a
       .  STM a
-      -> TVar (Maybe ChainTip)
+      -> TMVar  ChainTip
       -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
     chainSyncGetCurrentTip waitDone tipVar =
       ChainSyncClient $ pure clientStIdle
@@ -298,11 +296,11 @@ queryChainTipAndEraHistoryAndSystemStart connctInfo mpoint = do
         clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
         clientStNext = Net.Sync.ClientStNext
           { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
-              void . atomically $ writeTVar tipVar (Just tip)
+              void . atomically $ putTMVar tipVar tip
               void $ atomically waitDone
               pure $ Net.Sync.SendMsgDone ()
           , Net.Sync.recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
-              void . atomically $ writeTVar tipVar (Just tip)
+              void . atomically $ putTMVar tipVar tip
               void $ atomically waitDone
               pure $ Net.Sync.SendMsgDone ()
           }
@@ -310,7 +308,7 @@ queryChainTipAndEraHistoryAndSystemStart connctInfo mpoint = do
     singleQuery
       :: STM a
       -> Maybe ChainPoint
-      -> TVar (Maybe (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart)))
+      -> TMVar (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
       -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint
                                          (QueryInMode CardanoMode) IO ()
     singleQuery waitDone mPointVar' resultVar' =
@@ -324,13 +322,13 @@ queryChainTipAndEraHistoryAndSystemStart connctInfo mpoint = do
               pure $ Net.Query.SendMsgQuery QuerySystemStart $
                 Net.Query.ClientStQuerying
                 { Net.Query.recvMsgResult = \result2 -> do
-                  atomically $ writeTVar resultVar' (Just (Right (result1, result2)))
+                  atomically $ putTMVar resultVar' (Right (result1, result2))
                   void $ atomically waitDone
                   pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
                 }
             }
         , Net.Query.recvMsgFailure = \failure -> do
-            atomically $ writeTVar resultVar' (Just (Left failure))
+            atomically $ putTMVar resultVar' (Left failure)
             void $ atomically waitDone
             pure $ Net.Query.SendMsgDone ()
         }
