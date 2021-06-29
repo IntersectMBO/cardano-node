@@ -38,6 +38,8 @@
       inherit src cabalProjectLocal;
       compiler-nix-name = compiler;
     }).hsPkgs)
+, makeWrapper
+, config
 }:
 let
 
@@ -69,10 +71,23 @@ let
         # Coreutils because we need 'paste'.
         packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
-        packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
-          lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
         packages.cardano-cli.components.tests.cardano-cli-golden.build-tools =
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
+        packages.cardano-testnet.components.tests.cardano-testnet-tests =
+          let
+            cardano-cli = config.hsPkgs.cardano-cli.components.exes.cardano-cli;
+            exeExt = pkgs.stdenv.hostPlatform.extensions.executable;
+            testDeps = [ buildPackages.jq buildPackages.coreutils buildPackages.shellcheck cardano-cli ];
+          in {
+            build-tools = [ makeWrapper ];
+            postInstall = ''
+              wrapProgram $out/bin/* \
+                --set CARDANO_CLI ${cardano-cli}/bin/cardano-cli${exeExt} \
+                --set CARDANO_NODE_SRC ${src} \
+                --prefix PATH : ${lib.makeBinPath testDeps}
+            '';
+          };
+
       }
       {
         # make sure that libsodium DLLs are available for windows binaries:
