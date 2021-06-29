@@ -38,8 +38,6 @@
       inherit src cabalProjectLocal;
       compiler-nix-name = compiler;
     }).hsPkgs)
-, makeWrapper
-, config
 }:
 let
 
@@ -67,29 +65,6 @@ let
         ];
       })
       {
-        # Needed for the CLI tests.
-        # Coreutils because we need 'paste'.
-        packages.cardano-cli.components.tests.cardano-cli-test.build-tools =
-          lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
-        packages.cardano-cli.components.tests.cardano-cli-golden.build-tools =
-          lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
-        packages.cardano-testnet.components.tests.cardano-testnet-tests =
-          let
-            cardano-cli = config.hsPkgs.cardano-cli.components.exes.cardano-cli;
-            exeExt = pkgs.stdenv.hostPlatform.extensions.executable;
-            testDeps = [ buildPackages.jq buildPackages.coreutils buildPackages.shellcheck cardano-cli ];
-          in {
-            build-tools = [ makeWrapper ];
-            postInstall = ''
-              wrapProgram $out/bin/* \
-                --set CARDANO_CLI ${cardano-cli}/bin/cardano-cli${exeExt} \
-                --set CARDANO_NODE_SRC ${src} \
-                --prefix PATH : ${lib.makeBinPath testDeps}
-            '';
-          };
-
-      }
-      {
         # make sure that libsodium DLLs are available for windows binaries:
         packages = lib.genAttrs projectPackages (name: {
           postInstall = lib.optionalString stdenv.hostPlatform.isWindows ''
@@ -114,7 +89,7 @@ let
           '';
         });
       }
-      ({ pkgs, config, ... }: {
+      {
         # Packages we wish to ignore version bounds of.
         # This is similar to jailbreakCabal, however it
         # does not require any messing with cabal files.
@@ -130,31 +105,45 @@ let
 
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
+      }
 
-        # cardano-cli-test depends on cardano-cli
-        packages.cardano-cli.preCheck = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
+      ({ config, pkgs, ... }: with pkgs.buildPackages; let
+        # Provide dependenciesNeeded for the CLI tests.
+        inherit (config.hsPkgs.cardano-cli.components.exes) cardano-cli;
+        inherit (config.hsPkgs.cardano-node.components.exes) cardano-node;
+        baseEnv = { CARDANO_NODE_SRC = src; };
 
-        packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
-          lib.mkForce [
-            config.hsPkgs.cardano-node.components.exes.cardano-node
-            config.hsPkgs.cardano-cli.components.exes.cardano-cli
-            config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman];
+        testDeps = [ jq coreutils shellcheck ];
+        wrappedTest = testEnv: {
+          build-tools = [ makeWrapper ];
+          postInstall = ''
+            wrapProgram $out/bin/* \
+              --prefix PATH : ${lib.makeBinPath testDeps} \
+              ${lib.concatStringsSep " " (lib.mapAttrsToList (name: exe: "--set ${name} ${exe}${pkgs.stdenv.hostPlatform.extensions.executable}") (baseEnv // testEnv))}
+          '';
+        };
+      in {
+        packages.cardano-cli.components.tests.cardano-cli-test = wrappedTest {
+          # cardano-cli-test depends on cardano-cli
+          CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
+        };
+        packages.cardano-cli.components.tests.cardano-cli-golden = wrappedTest {
+          # cardano-cli-test depends on cardano-cli
+          CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
+        };
+        packages.cardano-testnet.components.tests.cardano-testnet-tests = wrappedTest {
+          CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
+          CARDANO_NODE = "${cardano-node}/bin/cardano-node";
+        };
 
+        packages.cardano-node-chairman.components.tests.chairman-tests = wrappedTest {
         # cardano-node-chairman depends on cardano-node and cardano-cli
-        packages.cardano-node-chairman.preCheck = "
-          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE_SRC=${src}
-        ";
-
-        # cardano-testnet needs access to the git repository source
-        packages.cardano-testnet.preCheck = "
-          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
-          export CARDANO_NODE_SRC=${src}
-        ";
+          CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
+          CARDANO_NODE = "${cardano-node}/bin/cardano-node";
+          CARDANO_NODE_CHAIRMAN = "${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman";
+        };
       })
+
       {
         packages = lib.genAttrs projectPackages
           (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
