@@ -101,7 +101,6 @@ test-suite cardano-testnet-tests
                       , hedgehog-extras
                       , filepath
                       , tasty
-                      , tasty-expected-failure
                       , tasty-hedgehog
 
   other-modules:        Spec.Plutus

@@ -7,7 +7,6 @@ module Spec.Plutus
   ) where
 
 import           Control.Monad
-import           Control.Monad.IO.Class (liftIO)
 import           Data.Function
 import           Data.Int
 import           Data.Maybe
@@ -16,6 +15,7 @@ import           Prelude (head)
 import           System.FilePath ((</>))
 import           Text.Show (Show(..))
 
+import qualified Hedgehog.Internal.Property as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
@@ -25,10 +25,9 @@ import qualified Testnet.Cardano as H
 import qualified Testnet.Conf as H
 
 hprop_plutus :: Property
-hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  void $ H.note tempAbsPath'
-  conf <- H.mkConf tempAbsPath' Nothing
-  projectBase <- liftIO $ IO.makeAbsolute (H.base conf)
+hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+  projectBase <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
 
   H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
 
@@ -38,18 +37,20 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
         { H.execConfigEnv = Just
           [ ("CARDANO_CLI", cardanoCli)
           , ("BASE", projectBase)
-          , ("WORK", tempAbsPath')
-          , ("UTXO_VKEY", tempAbsPath' </> "shelley/utxo-keys/utxo1.vkey")
-          , ("UTXO_SKEY", tempAbsPath' </> "shelley/utxo-keys/utxo1.skey")
+          , ("WORK", tempAbsPath)
+          , ("UTXO_VKEY", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey")
+          , ("UTXO_SKEY", tempAbsPath </> "shelley/utxo-keys/utxo1.skey")
           , ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           , ("TESTNET_MAGIC", show @Int testnetMagic)
           ]
-        , H.execConfigCwd = Just (H.tempBaseAbsPath conf)
+        , H.execConfigCwd = Just tempBaseAbsPath
         }
 
-  H.exec_ execConfig "/bin/bash"
+  scriptPath <- H.eval $ projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"
+
+  H.exec_ execConfig "bash"
     [ "-x"
-    , projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"
+    , scriptPath
     ]
 
   return ()
