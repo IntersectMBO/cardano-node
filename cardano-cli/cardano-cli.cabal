@@ -73,6 +73,7 @@ library
                         Cardano.CLI.Shelley.Commands
                         Cardano.CLI.Shelley.Key
                         Cardano.CLI.Shelley.Orphans
+                        Cardano.CLI.Shelley.Output
                         Cardano.CLI.Shelley.Parsers
                         Cardano.CLI.Shelley.Run
                         Cardano.CLI.Shelley.Run.Address

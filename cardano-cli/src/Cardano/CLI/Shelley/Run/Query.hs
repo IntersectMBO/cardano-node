@@ -26,7 +26,6 @@ import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.HashMap.Strict as HMS
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -47,6 +46,7 @@ import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, ren
 import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Mary.RenderValue (defaultRenderValueOptions, renderValue)
 import           Cardano.CLI.Shelley.Orphans ()
+import qualified Cardano.CLI.Shelley.Output as O
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
 
@@ -224,36 +224,23 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
                 let systemStart = getSystemStart systemStart'
 
-                let jsonTipTime = either identity (toJSON . relativeTimeSeconds) tipTimeResult
-
                 nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
 
                 let tolerance = RelativeTime (secondsToNominalDiffTime 600)
-                let jsonSyncProgress = either
-                      identity (toJSON . flip (percentage tolerance) nowSeconds) tipTimeResult
+                let jsonSyncProgress = fmap (flip (percentage tolerance) nowSeconds) tipTimeResult
 
-                let output = encodePretty
-                      . toObject "era" (Just (toJSON anyEra))
-                      . toObject "epoch" (Just (toJSON epochNo))
-                      . toObject "tipTime" (Just jsonTipTime)
-                      . toObject "now" (Just (relativeTimeSeconds nowSeconds))
-                      . toObject "syncProgress" (Just jsonSyncProgress)
-                      . toObject "systemStart" (Just systemStart)
-                      $ toJSON tip
+                let output = encodePretty $ O.QueryTipOutput
+                      { O.chainTip = tip
+                      , O.era = anyEra
+                      , O.epoch = epochNo
+                      , O.syncProgress = jsonSyncProgress
+                      }
 
                 case mOutFile of
                   Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
                   Nothing                 -> liftIO $ LBS.putStrLn        output
 
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
-
-  where
-    toObject :: ToJSON a => Text -> Maybe a -> Aeson.Value -> Aeson.Value
-    toObject name (Just a) (Aeson.Object obj) =
-      Aeson.Object $ obj <> HMS.fromList [name .= toJSON a]
-    toObject name Nothing (Aeson.Object obj) =
-      Aeson.Object $ obj <> HMS.fromList [name .= Aeson.Null]
-    toObject _ _ _ = Aeson.Null
 
 queryEraHistoryAndSystemStart
   :: LocalNodeConnectInfo CardanoMode
