@@ -10,6 +10,8 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
+{- HLINT ignore "Use head" -}
+{- HLINT ignore "Avoid lambda" -}
 module Cardano.Analysis.BlockProp (module Cardano.Analysis.BlockProp) where
 
 import           Prelude (String, (!!), error, head, id, show, tail)
@@ -31,7 +33,6 @@ import qualified Data.Text as T
 import           Data.Tuple (swap)
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vec
-import qualified Data.Map.Strict as Map
 
 import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
 
@@ -579,11 +580,11 @@ blockPropMachEventsStep ci (JsonLogfile fp) bMap lo = case lo of
   LogObject{loAt, loHost, loBody=LOChainSyncClientSeenHeader{loBlock,loBlockNo,loSlotNo}} ->
     let mbe0 = Map.lookup loBlock bMap
     in if isJust mbe0 then bMap else
-      (MOE $
-       ObserverEvents
-         loHost loBlock loBlockNo loSlotNo
-         (slotStart ci loSlotNo) (Just loAt)
-         Nothing Nothing Nothing 0 Nothing Nothing [])
+      MOE
+       (ObserverEvents
+        loHost loBlock loBlockNo loSlotNo
+        (slotStart ci loSlotNo) (Just loAt)
+        Nothing Nothing Nothing 0 Nothing Nothing [])
       & doInsert loBlock
   -- 1. Request (observer only)
   LogObject{loAt, loHost, loBody=LOBlockFetchClientRequested{loBlock,loLength}} ->

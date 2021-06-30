@@ -80,8 +80,8 @@ renderTimeline xs =
          IInt    (($v)->x) -> T.pack $ printf ('%':(w++"d")) x
          IWord64 (($v)->x) -> T.pack $ printf ('%':(w++"d")) x
          IFloat  (($v)->x) -> T.take fWidth $ T.pack $
-                              printf ('%':'.':((show $ fWidth - 2)++"F")) x
-         IDeltaT (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ show $ x
+                              printf ('%':'.':(show (fWidth - 2)++"F")) x
+         IDeltaT (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ show x
          IText   (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ x
 
    fields :: [IField a]
@@ -100,12 +100,12 @@ renderTimeline xs =
    renderLine' ::
      (IField a -> Int) -> (IField a -> Int) -> (IField a -> Text) -> [Text]
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
-   renderField lpfn wfn rfn f = (T.replicate (lpfn f) " ") <> T.center (wfn f) ' ' (rfn f)
+   renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
 renderDistributions :: forall a. RenderDistributions a => RenderMode -> a -> [Text]
 renderDistributions mode x =
   case mode of
-    RenderPretty -> (catMaybes [head1, head2]) <> pLines <> sizeAvg
+    RenderPretty -> catMaybes [head1, head2] <> pLines <> sizeAvg
     RenderCsv    -> headCsv : pLines
  where
    pLines :: [Text]
@@ -161,7 +161,7 @@ renderDistributions mode x =
    renderLine' ::
      (DField a -> Int) -> (DField a -> Int) -> (DField a -> Text) -> [Text]
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
-   renderField lpfn wfn rfn f = (T.replicate (lpfn f) " ") <> T.center (wfn f) ' ' (rfn f)
+   renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
    fields :: [DField a]
    fields = percField : rdFields

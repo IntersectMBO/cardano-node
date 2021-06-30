@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
+{- HLINT ignore "Use head" -}
 module Cardano.Unlog.SlotStats (module Cardano.Unlog.SlotStats) where
 
 import           Prelude ((!!))

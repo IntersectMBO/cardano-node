@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
+{- HLINT ignore "Use head" -}
 module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) where
 
 import           Prelude (String, (!!), error)

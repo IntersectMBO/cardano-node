@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
@@ -114,7 +113,7 @@ computeDistributionStats desc xs = do
    pctLen = length . dPercentiles $ head xs
 
    pctsMeanCoV :: [Percentile a v] -> (Percentile a v, Percentile a v)
-   pctsMeanCoV xs' = (join (***) (Percentile . pctSpec $ head xs'))
+   pctsMeanCoV xs' = join (***) (Percentile . pctSpec $ head xs')
      (mean, Stat.stdDev vec / mean)
     where
       vec = Vec.fromList $ pctSample <$> xs'
@@ -135,7 +134,7 @@ computeDistribution percentiles (sort -> sorted) =
       \spec ->
         let sample = if size == 0
                      then 0
-                     else sorted !! (indexAtFrac (psFrac spec))
+                     else sorted !! indexAtFrac (psFrac spec)
         in Percentile spec sample
   }
  where size = length sorted
