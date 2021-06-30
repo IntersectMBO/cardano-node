@@ -145,12 +145,12 @@ case "$op" in
         local node_commit_desc=$(git_repo_commit_description '.')
 
         local args=(
-            --arg       tag              $tag
-            --arg       batch            $batch
-            --arg       profile          $prof
-            --argjson   timestamp        $timestamp
-            --arg       date             $date
-            --arg       node_commit_desc $node_commit_desc
+            --arg       tag              "$tag"
+            --arg       batch            "$batch"
+            --arg       profile          "$prof"
+            --argjson   timestamp        "$timestamp"
+            --arg       date             "$date"
+            --arg       node_commit_desc "$node_commit_desc"
             --slurpfile profile_content  "$dir"/profile.json
         )
         jq_fmutate "$dir"/meta.json '. *
