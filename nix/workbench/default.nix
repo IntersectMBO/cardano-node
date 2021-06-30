@@ -69,7 +69,7 @@ let
   runWorkbenchJqOnly =
     name: command:
     runCommand name {} ''
-      ${workbench' [jq]}/bin/wb ${command} > $out
+      ${workbench' [jq moreutils]}/bin/wb ${command} > $out
     '';
 
   runJq =
@@ -133,7 +133,8 @@ let
     function workbench-prebuild-executables() {
       ${optionalString useCabalRun
         ''
-      git log -n1 --alternate-refs --pretty=format:"%Cblue%h %Cred%cr %Cgreen%D %Cblue%s%Creset"
+      git log -n1 --alternate-refs --pretty=format:"%Cred%cr %Cblue%h %Cgreen%D %Cblue%s%Creset" --color | sed "s/^/$(git diff --exit-code --quiet && echo ' ' || echo '[31mlocal changes + ')/"
+      echo
       echo -n "workbench:  prebuilding executables (because of useCabalRun):"
       for exe in cardano-cli cardano-node cardano-topology locli
       do echo -n " $exe"
@@ -171,7 +172,7 @@ let
         with envArgs; rec {
           inherit cardanoLib stateDir;
 
-          JSON = runWorkbench "environment.json"
+          JSON = runWorkbenchJqOnly "environment.json"
           ''env compute-config \
             --cache-dir "${cacheDir}" \
             --base-port ${toString basePort} \
@@ -194,7 +195,7 @@ let
       profiles = genAttrs profile-names mkProfile;
 
       profilesJSON =
-        runWorkbench "all-profiles.json" "profiles generate-all";
+        runWorkbenchJqOnly "all-profiles.json" "profiles generate-all";
     };
 
   initialiseProfileRunDirShellScript =

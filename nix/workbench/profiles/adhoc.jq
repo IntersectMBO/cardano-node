@@ -12,6 +12,16 @@ def adhoc_profiles:
                , init_cooldown: 25 }
   , tolerances: { finish_patience: 4 }
   }
+, { name: "10"
+  , composition:
+    { n_singular_hosts:               10
+    , n_dense_hosts:                  0
+    }
+  , genesis:
+    { genesis_future_offset: "10 seconds"
+    , utxo:                  0
+    }
+  }
 , { name: "default"
   , genesis:
     { verbatim:

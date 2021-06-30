@@ -53,7 +53,7 @@ let
         { port, ... }: cfg: recursiveUpdate cfg
           ({
             AlonzoGenesisFile    = "../genesis/alonzo-genesis.json";
-            ShelleyGenesisFile   = "../genesis/genesis.json";
+            ShelleyGenesisFile   = "../genesis.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs enableEKG {
             hasEKG               = port + supervisord.portShiftEkg;

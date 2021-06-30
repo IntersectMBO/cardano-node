@@ -62,7 +62,8 @@ case "$op" in
             --argjson port_shift_prometheus "$port_shift_prometheus"
         )
         jq_fmutate "$env_json" '. *
-          { port_shift_ekg:        $port_shift_ekg
+          { type:                  "supervisor"
+          , port_shift_ekg:        $port_shift_ekg
           , port_shift_prometheus: $port_shift_prometheus
           }
         ' "${args[@]}"
@@ -152,11 +153,12 @@ EOF
         usage="USAGE: wb supervisor $op RUN-DIR"
         dir=${1:?$usage}
 
-        echo --compact-output --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
+        echo --compact-output --argjson mapp2n '[{}]';;# --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
+        #echo --compact-output --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
 
     lostream-fixup-jqexpr )
         usage="USAGE: wb supervisor $op"
 
-        echo '| $mapp2n[0] as $map | . * { host: $map[.pid] }';;
+        echo '| $mapp2n[0] as $map | . * { host: ($map[.pid] // $dirHostname) }';;
 
     * ) usage_supervisor;; esac

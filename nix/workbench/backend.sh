@@ -33,7 +33,8 @@ case "${op}" in
     record-extended-env-config ) $WORKBENCH_BACKEND "$@";;
     describe-run )               $WORKBENCH_BACKEND "$@";;
     pre-run-hook )               $WORKBENCH_BACKEND "$@";;
-    start-run )                  $WORKBENCH_BACKEND "$@";;
+    start-run )                  cp "$2"/genesis/genesis.json "$2"/genesis.json
+                                 $WORKBENCH_BACKEND "$@";;
     lostream-fixup-jqargs )      $WORKBENCH_BACKEND "$@";;
     lostream-fixup-jqexpr )      $WORKBENCH_BACKEND "$@";;
 
