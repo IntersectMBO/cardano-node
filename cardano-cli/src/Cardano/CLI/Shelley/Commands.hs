@@ -118,12 +118,12 @@ data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
   | StakeAddressBuild (VerificationKeyOrFile StakeKey) NetworkId (Maybe OutputFile)
-  | StakeKeyRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
-  | StakeKeyDelegationCert
-      (VerificationKeyOrFile StakeKey)
+  | StakeRegistrationCert StakeVerifier OutputFile
+  | StakeCredentialDelegationCert
+      StakeVerifier
       (VerificationKeyOrHashOrFile StakePoolKey)
       OutputFile
-  | StakeKeyDeRegistrationCert (VerificationKeyOrFile StakeKey) OutputFile
+  | StakeCredentialDeRegistrationCert StakeVerifier OutputFile
   deriving Show
 
 renderStakeAddressCmd :: StakeAddressCmd -> Text
@@ -132,9 +132,9 @@ renderStakeAddressCmd cmd =
     StakeAddressKeyGen {} -> "stake-address key-gen"
     StakeAddressKeyHash {} -> "stake-address key-hash"
     StakeAddressBuild {} -> "stake-address build"
-    StakeKeyRegistrationCert {} -> "stake-address registration-certificate"
-    StakeKeyDelegationCert {} -> "stake-address delegation-certificate"
-    StakeKeyDeRegistrationCert {} -> "stake-address deregistration-certificate"
+    StakeRegistrationCert {} -> "stake-address registration-certificate"
+    StakeCredentialDelegationCert {} -> "stake-address delegation-certificate"
+    StakeCredentialDeRegistrationCert {} -> "stake-address deregistration-certificate"
 
 data KeyCmd
   = KeyGetVerificationKey SigningKeyFile VerificationKeyFile

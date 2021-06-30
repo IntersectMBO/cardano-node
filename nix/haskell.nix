@@ -113,7 +113,10 @@ let
         packages.ekg.components.library.enableSeparateDataOutput = true;
 
         # cardano-cli-test depends on cardano-cli
-        packages.cardano-cli.preCheck = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
+        packages.cardano-cli.preCheck = "
+          export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
+          export CARDANO_NODE_SRC=${src}
+        ";
 
         packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
           lib.mkForce [
