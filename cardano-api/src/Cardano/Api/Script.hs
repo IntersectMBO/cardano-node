@@ -749,13 +749,20 @@ deriving instance Show (ScriptWitnessInCtx witctx)
 data ExecutionUnits =
      ExecutionUnits {
         -- | This corresponds roughly to the time to execute a script.
-        executionSteps  :: Word64,
+        executionSteps  :: !Word64,
 
         -- | This corresponds roughly to the peak memory used during script
         -- execution.
-        executionMemory :: Word64
+        executionMemory :: !Word64
      }
   deriving (Eq, Show)
+
+instance Semigroup ExecutionUnits where
+  ExecutionUnits a1 b1 <> ExecutionUnits a2 b2 =
+    ExecutionUnits (a1 + a2) (b1 + b2)
+
+instance Monoid ExecutionUnits where
+  mempty = ExecutionUnits 0 0
 
 instance ToCBOR ExecutionUnits where
   toCBOR ExecutionUnits{executionSteps, executionMemory} =

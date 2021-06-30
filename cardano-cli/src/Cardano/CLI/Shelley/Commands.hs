@@ -185,6 +185,34 @@ data TransactionCmd
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
       TxBodyFile
+
+    -- | Like 'TxBuildRaw' but without the fee, and with a change output.
+  | TxBuild
+      AnyCardanoEra
+      [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
+      -- ^ Transaction inputs with optional spending scripts
+      [TxIn]
+      -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
+      [TxOutAnyEra]
+      -- ^ Normal outputs
+      TxOutChangeAddress
+      -- ^ A change output
+      (Maybe (Value, [ScriptWitnessFiles WitCtxMint]))
+      -- ^ Multi-Asset value with script witness
+      (Maybe SlotNo)
+      -- ^ Transaction lower bound
+      (Maybe SlotNo)
+      -- ^ Transaction upper bound
+      [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
+      -- ^ Certificates with potential script witness
+      [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
+      TxMetadataJsonSchema
+      [ScriptFile]
+      -- ^ Auxillary scripts
+      [MetadataFile]
+      (Maybe ProtocolParamsSourceSpec)
+      (Maybe UpdateProposalFile)
+      TxBodyFile
   | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
@@ -225,6 +253,7 @@ renderTransactionCmd :: TransactionCmd -> Text
 renderTransactionCmd cmd =
   case cmd of
     TxBuildRaw {} -> "transaction build-raw"
+    TxBuild {} -> "transaction build"
     TxSign {} -> "transaction sign"
     TxCreateWitness {} -> "transaction witness"
     TxAssembleTxBodyWitness {} -> "transaction sign-witness"

@@ -742,21 +742,18 @@ data ShelleyWitnessSigningKey =
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
 
 
-makeShelleyKeyWitness :: forall era
-                      .  IsShelleyBasedEra era
+makeShelleyKeyWitness :: forall era.
+                         IsShelleyBasedEra era
                       => TxBody era
                       -> ShelleyWitnessSigningKey
                       -> KeyWitness era
 makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _) =
-    case era of
-      ShelleyBasedEraShelley -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
+    obtainLedgerEraClassConstraints era $
+      makeShelleyBasedKeyWitness txbody
   where
-    makeShelleyBasedKeyWitness :: Shelley.ShelleyBased ledgerera
-                               => ShelleyLedgerEra era ~ ledgerera
-                               => Ledger.TxBody ledgerera
+    makeShelleyBasedKeyWitness :: Shelley.ShelleyBased (ShelleyLedgerEra era)
+                               => Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+                               => Ledger.TxBody (ShelleyLedgerEra era)
                                -> ShelleyWitnessSigningKey
                                -> KeyWitness era
     makeShelleyBasedKeyWitness txbody' =

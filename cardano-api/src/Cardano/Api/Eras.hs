@@ -1,5 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -33,6 +36,7 @@ module Cardano.Api.Eras
 
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
+  , obtainLedgerEraClassConstraints
 
     -- * Cardano eras, as Byron vs Shelley-based
   , CardanoEraStyle(..)
@@ -48,10 +52,12 @@ import           Prelude
 import           Data.Aeson (ToJSON, toJSON)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
-import           Cardano.Ledger.Era as Ledger (Crypto)
+import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
-import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardAlonzo,
-                   StandardCrypto, StandardMary, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras as Ledger
+                   (StandardCrypto, StandardShelley, StandardMary,
+                    StandardAllegra, StandardAlonzo)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -249,8 +255,7 @@ deriving instance Show (ShelleyBasedEra era)
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
 -- the 'ShelleyBasedEra' constructors.
 --
-class (IsCardanoEra era, Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto)
-   => IsShelleyBasedEra era where
+class IsCardanoEra era => IsShelleyBasedEra era where
    shelleyBasedEra :: ShelleyBasedEra era
 
 instance IsShelleyBasedEra ShelleyEra where
@@ -332,4 +337,16 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
   ShelleyLedgerEra MaryEra    = Ledger.StandardMary
   ShelleyLedgerEra AlonzoEra  = Ledger.StandardAlonzo
+
+obtainLedgerEraClassConstraints
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (   Ledger.ShelleyBased ledgerera
+      => Ledger.Crypto ledgerera ~ StandardCrypto
+      => a)
+  -> a
+obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 

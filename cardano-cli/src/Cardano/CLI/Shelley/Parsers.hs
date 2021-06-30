@@ -229,6 +229,7 @@ pScriptFor name (Just deprecated) help =
 
 pScriptWitnessFiles :: forall witctx.
                        WitCtx witctx
+                    -> Bool -- ^ Use the @execution-units@ flag.
                     -> String
                     -> Maybe String
                     -> String

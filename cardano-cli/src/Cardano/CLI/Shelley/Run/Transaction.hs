@@ -321,6 +321,48 @@ runTxBuildRaw (AnyCardanoEra era)
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
 
+runTxBuild = do
+    SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
+
+    txBodyContent <-
+      TxBodyContent ...
+
+    txBody <-
+      firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError) . hoistEither $
+        makeTransactionBody txBodyContent
+
+    let txins :: Set TxIn
+        txins = Set.fromList [ txin | (txin, _) <- txIns txBodyContent ]
+        query = QueryUTxO (QueryUTxOByTxIn txins)
+
+    utxo <- executeQuery
+              era
+              cModeParams
+              LocalNodeConnectInfo {
+                localConsensusModeParams = cModeParams,
+                localNodeNetworkId       = network,
+                localNodeSocketPath      = sockPath
+              }
+              (QueryInEra eraInMode (QueryInShelleyBasedEra era query))
+
+    pparams <- 
+    
+    -- Steps:
+    -- 1. evaluate all the scripts to get the exec units, update with ex units
+    -- 2. figure out the overall min fees
+    -- 3. update tx with fees
+    -- 4. balance the transaction and update tx change output
+
+    case makeTransactionBodyAutoBalance pparams utxo txBody of
+      Right v
+        | Just l <- valueToLovelace v ->
+          
+
+        | Nothing -> .. -- mismatch in non-ada assets
+          
+
+
+
 -- ----------------------------------------------------------------------------
 -- Transaction body validation and conversion
 --
