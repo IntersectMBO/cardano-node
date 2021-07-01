@@ -220,7 +220,9 @@ case "$op" in
         local tag=${1:?$usage}
         local dir=$global_rundir/$tag
 
-        jq '.hostname | keys | .[]' -r "$dir"/meta.json;;
+        if test -f "$dir"/node-specs.json
+        then jq             'keys | .[]' -r "$dir"/node-specs.json
+        else jq '.hostname | keys | .[]' -r "$dir"/meta.json; fi;;
 
     describe )
         local usage="USAGE: wb run $op TAG"
