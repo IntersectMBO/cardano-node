@@ -6,7 +6,7 @@ Setting this up for testing and for actual use on a real network.
 ### Pre-requisites
 
 You will need some a cardano network with payment address and keys.  This may be on `mainnet`, official `testnet`
-or a testnet that you've set up yourself.  We will assume these files are in a direction called `playground`:
+or a testnet that you've set up yourself.  We will assume these files are in a directory called `playground`:
 
 * `user-1-payment.addr` - User 1 payment address.  This address must have sufficient funds.
 * `user-1-payment.vkey` - User 1 verification key.
@@ -14,8 +14,8 @@ or a testnet that you've set up yourself.  We will assume these files are in a d
 * `magic.flag` - The network magic flag.  This will be `--testnet-magic <magic>` or `--mainnet`
   dependening on the network you are using.
 * `node.socket` - The socket file for your network, or a symlink to that socket file.  If you
-  have a node running (for example, `mainnet` or `testnet` Daedalus), you can the socket file
-  using `ps aux | grep cardano-node` and looking for the `--node-socket`.
+  have a node running (for example, `mainnet` or `testnet` Daedalus), you can find the socket file
+  by running the command `ps aux | grep cardano-node` and looking for the `--node-socket` option.
 
 You will also need to have `yj` installed.  This can be done via `brew`, `apt-get` or `snap`.
 
