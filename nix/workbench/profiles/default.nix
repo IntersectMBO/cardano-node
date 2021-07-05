@@ -30,7 +30,7 @@ let
   value = __fromJSON (__readFile JSON);
 
   profile =
-    {
+    rec {
       name = profileName;
 
       inherit environment;
@@ -50,10 +50,15 @@ let
           value = __fromJSON (__readFile JSON);
         };
 
-     inherit (pkgs.callPackage
+      inherit (pkgs.callPackage
                ./node-services.nix
                { inherit runJq backend environment profile; })
         node-services;
+
+      inherit (pkgs.callPackage
+               ./generator-service.nix
+               { inherit runJq backend environment profile; })
+        generator-service;
     };
 
 in profile

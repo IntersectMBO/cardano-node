@@ -26,7 +26,7 @@ def era_defaults($era):
     ## UTxO & delegation
     , total_balance:                  900000000000000
     , pools_balance:                  800000000000000
-    , utxo:                           1000000
+    , utxo:                           0
     , decentralisation_param:         0
 
     ## Blockchain time & block density

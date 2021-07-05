@@ -3,6 +3,7 @@
 , stateDir
 , basePort
 , node-services
+, generator-service
   ## Last-moment overrides:
 , extraSupervisorConfig
 }:
@@ -10,19 +11,6 @@
 with lib;
 
 let
-  ##
-  ## nodeSvcSupervisorProgram :: NodeService -> SupervisorConfSection
-  ##
-  ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
-  ##
-  nodeSvcSupervisorProgram = { nodeSpec, service, startupScript, ... }:
-    nameValuePair "program:${nodeSpec.value.name}" {
-      directory      = "${service.value.stateDir}";
-      command        = "${startupScript}";
-      stdout_logfile = "${service.value.stateDir}/stdout";
-      stderr_logfile = "${service.value.stateDir}/stderr";
-    };
-
   ##
   ## supervisorConf :: SupervisorConf
   ##
@@ -48,6 +36,13 @@ let
       (mapAttrsToList (_: nodeSvcSupervisorProgram) node-services)
     //
     {
+      "program:generator" = {
+        directory      = "${stateDir}/generator";
+        command        = "${generator-service.startupScript}";
+        stdout_logfile = "${stateDir}/generator/stdout";
+        stderr_logfile = "${stateDir}/generator/stderr";
+        autostart      = false;
+      };
       "program:webserver" = {
         command = "${pkgs.python3}/bin/python -m http.server ${toString (basePort - 1)}";
         directory = "${stateDir}/shelley/webserver";
@@ -55,6 +50,19 @@ let
     }
     //
     extraSupervisorConfig;
+
+  ##
+  ## nodeSvcSupervisorProgram :: NodeService -> SupervisorConfSection
+  ##
+  ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
+  ##
+  nodeSvcSupervisorProgram = { nodeSpec, service, startupScript, ... }:
+    nameValuePair "program:${nodeSpec.value.name}" {
+      directory      = "${service.value.stateDir}";
+      command        = "${startupScript}";
+      stdout_logfile = "${service.value.stateDir}/stdout";
+      stderr_logfile = "${service.value.stateDir}/stderr";
+    };
 
 in
   pkgs.writeText "supervisor.conf"

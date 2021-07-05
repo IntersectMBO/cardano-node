@@ -126,7 +126,11 @@ let
       ${exeCabalOp "run" "locli"} "$@"
     }
 
-    export -f cardano-cli cardano-node cardano-topology locli
+    function tx-generator() {
+      ${exeCabalOp "run" "tx-generator"} "$@"
+    }
+
+    export -f cardano-cli cardano-node cardano-topology locli tx-generator
 
     ''}
 
@@ -209,7 +213,16 @@ let
           cp -f ${svc.topology.JSON}      ${runDir}/${name}/topology.json
           cp -f ${svc.startupScript}      ${runDir}/${name}/start.sh
           ''
-        ));
+        )
+      ++
+      [ (let svc = profile.generator-service;
+         in
+          ''
+          cp -f ${svc.serviceConfig.JSON} ${runDir}/generator/service-config.json
+          cp -f ${svc.nodeConfig.JSON}    ${runDir}/generator/config.json
+          cp -f ${svc.startupScript}      ${runDir}/generator/start.sh
+          '')
+      ]);
 in
 {
   inherit workbench runWorkbench runJq;

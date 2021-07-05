@@ -207,6 +207,9 @@ case "$op" in
            jq '.["'"$node"'"]' "$dir"/node-specs.json > "$node_dir"/node-spec.json
         done
 
+        gen_dir="$dir"/generator
+        mkdir -p "$gen_dir"
+
         run     describe "$tag"
         profile describe "$dir"/profile.json
 

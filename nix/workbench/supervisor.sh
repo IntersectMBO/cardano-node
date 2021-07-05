@@ -147,6 +147,8 @@ EOF
            sleep 5
         done
 
+        supervisorctl start generator
+
         $0 save-pids "$dir";;
 
     lostream-fixup-jqargs )

@@ -19,6 +19,7 @@ in
 , pkgs ? import ./nix {
     inherit config sourcesOverride customConfig;
   }
+, origPkgs ? import (builtins.getFlake (toString ./.)).inputs.nixpkgs {}
 }:
 with pkgs;
 let
@@ -62,7 +63,7 @@ let
       };
 
   rstudio = pkgs.rstudioWrapper.override {
-    packages = with pkgs.rPackages; [ car dplyr ggplot2 reshape2 ];
+    packages = with origPkgs.rPackages; [ car dplyr ggplot2 reshape2 ];
   };
 
   shell =
