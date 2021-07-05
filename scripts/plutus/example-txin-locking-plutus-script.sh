@@ -55,11 +55,11 @@ mkdir -p $WORK
 
 utxoaddr=$($CARDANO_CLI address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file $UTXO_VKEY)
 
-$CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo.json
-cat $WORK/utxo.json
+$CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-1.json
+cat $WORK/utxo-1.json
 
-txin=$(jq -r 'keys[]' $WORK/utxo.json)
-lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo.json)
+txin=$(jq -r 'keys[]' $WORK/utxo-1.json)
+lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
 lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
 
 $CARDANO_CLI transaction build-raw \
@@ -90,9 +90,9 @@ $CARDANO_CLI query utxo --address $plutusscriptaddr --testnet-magic "$TESTNET_MA
 cat $WORK/plutusutxo.json
 plutusutxotxin=$(jq -r 'keys[]' $WORK/plutusutxo.json)
 
-$CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo.json
-cat $WORK/utxo.json
-txinCollateral=$(jq -r 'keys[]' $WORK/utxo.json)
+$CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-2.json
+cat $WORK/utxo-2.json
+txinCollateral=$(jq -r 'keys[]' $WORK/utxo-2.json)
 
 $CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
 
