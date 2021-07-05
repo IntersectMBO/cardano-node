@@ -471,36 +471,74 @@ echo " * Query the node's ledger state"
 echo
 echo "To start the nodes, in separate terminals use:"
 echo
+
+mkdir -p run
+
 for NODE in ${BFT_NODES}; do
+  (
+    echo "cardano-node run \\"
+    echo "  --config                          ${ROOT}/configuration.yaml \\"
+    echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
+    echo "  --database-path                   ${ROOT}/${NODE}/db \\"
+    echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
+    echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
+    echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
+    echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+    echo "  --port                            $(cat ${NODE}/port) \\"
+    echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
+    echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
+    echo "  | tee -a ${ROOT}/${NODE}/node.log"
+  ) > run/${NODE}.cmd
 
-  echo "cardano-node run \\"
-  echo "  --config                          ${ROOT}/configuration.yaml \\"
-  echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
-  echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-  echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
-  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
-  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
-  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
-  echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  --delegation-certificate          ${ROOT}/${NODE}/byron/delegate.cert \\"
-  echo "  --signing-key                     ${ROOT}/${NODE}/byron/delegate.key \\"
-  echo "  | tee -a ${ROOT}/${NODE}/node.log"
-
+  cat run/${NODE}.cmd
 done
+
 for NODE in ${POOL_NODES}; do
+  (
+    echo "cardano-node run \\"
+    echo "  --config                          ${ROOT}/configuration.yaml \\"
+    echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
+    echo "  --database-path                   ${ROOT}/${NODE}/db \\"
+    echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
+    echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
+    echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
+    echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
+    echo "  --port                            $(cat ${NODE}/port) \\"
+    echo "  | tee -a ${ROOT}/${NODE}/node.log"
+  ) > run/${NODE}.cmd
 
-  echo "cardano-node run \\"
-  echo "  --config                          ${ROOT}/configuration.yaml \\"
-  echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
-  echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-  echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
-  echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
-  echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
-  echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
-  echo "  --port                            $(cat ${NODE}/port) \\"
-  echo "  | tee -a ${ROOT}/${NODE}/node.log"
-
+  cat run/${NODE}.cmd
 done
+
+echo "#!/usr/bin/env bash" > run/all.sh
+echo "" >> run/all.sh
+
+chmod a+x run/all.sh
+
+for NODE in ${BFT_NODES}; do
+  (
+    echo "("
+    cat run/${NODE}.cmd
+    echo ") &"
+  ) >> run/all.sh
+done
+
+for NODE in ${POOL_NODES}; do
+  (
+    echo "("
+    cat run/${NODE}.cmd
+    echo ") &"
+  ) >> run/all.sh
+done
+
+echo "" >> run/all.sh
+echo "wait" >> run/all.sh
+
+chmod a+x run/all.sh
+
+echo
+echo "Alternatively, you can run $ROOT/run/all.sh to run all the nodes in one go."
+
 
 echo
 echo "In order to do the protocol updates, proceed as follows:"
