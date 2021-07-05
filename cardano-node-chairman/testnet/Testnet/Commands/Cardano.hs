@@ -7,6 +7,7 @@ module Testnet.Commands.Cardano
   ) where
 
 import           GHC.Enum
+import           Data.Bool
 import           Data.Eq
 import           Data.Function
 import           Data.Int
@@ -70,6 +71,7 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (activeSlotsCoeff defaultTestnetOptions)
       )
+  <*> pure False
 
 optsCardano :: Parser CardanoOptions
 optsCardano = CardanoOptions

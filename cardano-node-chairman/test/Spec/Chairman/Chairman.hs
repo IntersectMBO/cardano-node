@@ -75,7 +75,7 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
         )
       )
 
-    chairmanResult <- H.waitSecondsForProcess (timeoutSeconds + 10) hProcess
+    chairmanResult <- H.waitSecondsForProcess (timeoutSeconds + 60) hProcess
 
     case chairmanResult of
       Right ExitSuccess -> return ()

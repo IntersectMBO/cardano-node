@@ -32,6 +32,7 @@ import           Control.Applicative (pure)
 import           Control.Monad
 import           Data.Aeson ((.=), Value)
 import           Data.Bool
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -53,6 +54,11 @@ import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
 import           Text.Read
 import           Text.Show
+
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Data.Aeson as J
 import qualified Data.Yaml as Y
@@ -102,6 +108,7 @@ data TestnetOptions = TestnetOptions
   , epochLength :: Int
   , slotLength :: Double
   , activeSlotsCoeff :: Double
+  , enableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -112,6 +119,7 @@ defaultTestnetOptions = TestnetOptions
   , epochLength = 1500
   , slotLength = 0.2
   , activeSlotsCoeff = 0.2
+  , enableP2P = False
   }
 
 data TestnetRuntime = TestnetRuntime
@@ -127,8 +135,49 @@ data Wallet = Wallet
   , paymentSKey :: FilePath
   } deriving (Eq, Show)
 
+-- | Rewrite a line in the configuration file
+rewriteConfiguration :: Bool -> String -> String
+rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
+rewriteConfiguration False "EnableP2P: True" = "EnableP2P: False"
+rewriteConfiguration _ s                     = s
+
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
+
+mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
+mkTopologyConfig numNodes allPorts port False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        [ NonP2P.RemoteAddress (fromString ifaceAddress)
+                               (fromIntegral peerPort)
+                               (numNodes - 1)
+        | peerPort <- allPorts \\ [port]
+        ]
+mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
+  where
+    rootAddress :: P2P.RootAddress
+    rootAddress =
+      P2P.RootAddress
+        [ RelayAddress (fromString ifaceAddress)
+                       (fromIntegral peerPort)
+        | peerPort <- allPorts \\ [port]
+        ]
+        P2P.DoNotAdvertisePeer
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeers rootAddress
+                             (numNodes - 1)
+        ]
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
+
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
@@ -188,6 +237,7 @@ testnet testnetOptions H.Conf {..} = do
           . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 5)
 
+<<<<<<< HEAD:cardano-testnet/src/Testnet/Cardano.hs
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
@@ -205,6 +255,7 @@ testnet testnetOptions H.Conf {..} = do
     . HM.delete "GenesisFile"
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
     . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON @Bool True)
+    . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
     . forkOptions
 
   forM_ allNodes $ \node -> do
@@ -215,26 +266,8 @@ testnet testnetOptions H.Conf {..} = do
   -- Make topology files
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
-      J.object
-      [ "LocalRoots" .= J.object
-        [ "groups" .= J.toJSON
-          [ J.object
-            [ "localRoots" .= J.object
-              [ "addrs" .= J.toJSON
-                [ J.object
-                  [ "addr" .= J.toJSON @String ifaceAddress
-                  , "port" .= J.toJSON @Int peerPort
-                  ]
-                | peerPort <- allPorts \\ [port]
-                ]
-              , "advertise" .= J.toJSON @Bool False
-              ]
-            , "valency" .= J.toJSON @Int 1
-            ]
-          ]
-        ]
-      ]
+    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
+      mkTopologyConfig (numBftNodes testnetOptions + numPoolNodes testnetOptions) allPorts port (enableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
