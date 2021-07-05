@@ -25,6 +25,7 @@ import           Prelude (Bool (..))
 
 import           Control.Monad
 import           Data.Aeson ((.=))
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -48,6 +49,7 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
+import qualified Data.Vector as V
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.File as IO
@@ -85,6 +87,7 @@ data TestnetOptions = TestnetOptions
   , activeSlotsCoeff :: Double
   , epochLength :: Int
   , forkPoint :: ForkPoint
+  , enableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -94,10 +97,54 @@ defaultTestnetOptions = TestnetOptions
   , activeSlotsCoeff = 0.1
   , epochLength = 1500
   , forkPoint = AtVersion 1
+  , enableP2P = True
   }
+
+-- | Rewrite a line in the configuration file
+rewriteConfiguration :: Bool -> String -> String
+rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
+rewriteConfiguration False "EnableP2P: True" = "EnableP2P: False"
+rewriteConfiguration _ s                     = s
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
+
+mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
+mkTopologyConfig numBftNodes allPorts port False =
+  J.encode
+  $ J.object
+      [ "Producers" .= J.toJSON
+        [ J.object
+          [ "addr" .= J.toJSON @String ifaceAddress
+          , "port" .= J.toJSON @Int peerPort
+          , "valency" .= J.toJSON @Int (numBftNodes - 1)
+          ]
+        | peerPort <- allPorts \\ [port]
+        ]
+      ]
+mkTopologyConfig numBftNodes allPorts port True =
+  J.encode
+  $ J.object
+      [ "LocalRoots" .= J.object
+        [ "groups" .= J.toJSON
+          [ J.object
+            [ "localRoots" .= J.object
+              [ "addrs" .= J.toJSON
+                [ J.object
+                  [ "addr" .= J.toJSON @String ifaceAddress
+                  , "port" .= J.toJSON @Int peerPort
+                  ]
+                | peerPort <- allPorts \\ [port]
+                ]
+              , "advertise" .= J.toJSON @Bool False
+              ]
+            , "valency" .= J.toJSON @Int (numBftNodes - 1)
+            ]
+          ]
+        ]
+      , "PublicRoots" .= J.Array V.empty
+      ]
+
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
@@ -166,7 +213,7 @@ testnet testnetOptions H.Conf {..} = do
     AtEpoch n -> ["TestShelleyHardForkAtEpoch: " <> show @Int n]
 
   H.readFile (base </> "configuration/chairman/byron-shelley/configuration.yaml")
-    <&> L.unlines . (<> forkMethod) . L.lines
+    <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions)) . (<> forkMethod) . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   forM_ allNodes $ \node -> do
@@ -177,26 +224,8 @@ testnet testnetOptions H.Conf {..} = do
   -- Make topology files
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
-      J.object
-      [ "LocalRoots" .= J.object
-        [ "groups" .= J.toJSON
-          [ J.object
-            [ "localRoots" .= J.object
-              [ "addrs" .= J.toJSON
-                [ J.object
-                  [ "addr" .= J.toJSON @String ifaceAddress
-                  , "port" .= J.toJSON @Int peerPort
-                  ]
-                | peerPort <- allPorts \\ [port]
-                ]
-              , "advertise" .= J.toJSON @Bool False
-              ]
-            , "valency" .= J.toJSON @Int 1
-            ]
-          ]
-        ]
-      ]
+    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
+      mkTopologyConfig (numBftNodes testnetOptions) allPorts port (enableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 

@@ -65,6 +65,8 @@ TurnOnLogging: True
 TurnOnLogMetrics: True
 SocketPath:
 
+#####    P2P Mode    #####
+EnableP2P: True
 
 
 #####    Update Parameters    #####

@@ -17,15 +17,16 @@ module Testnet.Shelley
   ) where
 
 #ifdef UNIX
-import           Prelude (Integer, map, Bool(..))
+import           Prelude (Integer, map, Bool(..), (-))
 #else
-import           Prelude (Integer, Bool(..))
+import           Prelude (Integer, Bool(..), (-))
 #endif
 
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -48,6 +49,7 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
+import qualified Data.Vector as V
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
@@ -81,6 +83,7 @@ data TestnetOptions = TestnetOptions
   , epochLength :: Int
   , slotLength :: Double
   , maxLovelaceSupply :: Integer
+  , enableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -92,7 +95,14 @@ defaultTestnetOptions = TestnetOptions
   , epochLength = 1000
   , slotLength = 0.2
   , maxLovelaceSupply = 1000000000
+  , enableP2P = False
   }
+
+-- | Rewrite a line in the configuration file
+rewriteConfiguration :: Bool -> String -> String
+rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
+rewriteConfiguration False "EnableP2P: True" = "EnableP2P: False"
+rewriteConfiguration _ s                     = s
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
@@ -109,6 +119,42 @@ rewriteGenesisSpec testnetOptions startTime =
     . flip HM.adjust "protocolParams"
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
+
+mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
+mkTopologyConfig numPraosNodes allPorts port False =
+  J.encode
+  $ J.object
+      [ "Producers" .= J.toJSON
+        [ J.object
+          [ "addr" .= J.toJSON @String ifaceAddress
+          , "port" .= J.toJSON @Int peerPort
+          , "valency" .= J.toJSON @Int (numPraosNodes - 1)
+          ]
+        | peerPort <- allPorts \\ [port]
+        ]
+      ]
+mkTopologyConfig numPraosNodes allPorts port True =
+  J.encode
+  $ J.object
+      [ "LocalRoots" .= J.object
+        [ "groups" .= J.toJSON
+          [ J.object
+            [ "localRoots" .= J.object
+              [ "addrs" .= J.toJSON
+                [ J.object
+                  [ "addr" .= J.toJSON @String ifaceAddress
+                  , "port" .= J.toJSON @Int peerPort
+                  ]
+                | peerPort <- allPorts \\ [port]
+                ]
+              , "advertise" .= J.toJSON @Bool False
+              ]
+            , "valency" .= J.toJSON @Int (numPraosNodes - 1)
+            ]
+          ]
+        ]
+      , "PublicRoots" .= J.Array V.empty
+      ]
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
@@ -130,10 +176,6 @@ testnet testnetOptions H.Conf {..} = do
   let userAddrs = ("user" <>) <$> userPoolN
   let poolAddrs = ("pool-owner" <>) <$> poolNodesN
   let addrs = userAddrs <> poolAddrs
-
-  H.copyFile
-    (base </> "configuration/chairman/shelley-only/configuration.yaml")
-    (tempAbsPath </> "configuration.yaml")
 
   -- Set up our template
   void $ H.execCli
@@ -217,26 +259,8 @@ testnet testnetOptions H.Conf {..} = do
   -- Make topology files
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
-      J.object
-      [ "LocalRoots" .= J.object
-        [ "groups" .= J.toJSON
-          [ J.object
-            [ "localRoots" .= J.object
-              [ "addrs" .= J.toJSON
-                [ J.object
-                  [ "addr" .= J.toJSON @String ifaceAddress
-                  , "port" .= J.toJSON @Int peerPort
-                  ]
-                | peerPort <- allPorts \\ [port]
-                ]
-              , "advertise" .= J.toJSON @Bool False
-              ]
-            , "valency" .= J.toJSON @Int 1
-            ]
-          ]
-        ]
-      ]
+    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
+      mkTopologyConfig numPraosNodes allPorts port (enableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
@@ -378,6 +402,10 @@ testnet testnetOptions H.Conf {..} = do
   -- Launch cluster of three nodes
 
   H.createDirectoryIfMissing logDir
+
+  H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
+    <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions)) . L.lines
+    >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   forM_ allNodes $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node

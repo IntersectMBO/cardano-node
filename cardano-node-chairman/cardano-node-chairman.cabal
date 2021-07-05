@@ -88,6 +88,7 @@ executable cardano-node-chairman
                       , text
                       , time
                       , unordered-containers
+                      , vector
 
 test-suite chairman-tests
   import:               base, project-config
@@ -101,6 +102,7 @@ test-suite chairman-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson             >= 1.5.6.0
+                      , bytestring
                       , containers
                       , directory
                       , exceptions
@@ -117,6 +119,7 @@ test-suite chairman-tests
                       , time
                       , unliftio
                       , unordered-containers
+                      , vector
 
   other-modules:        Spec.Chairman.Chairman
                         Spec.Chairman.Byron
@@ -140,6 +143,7 @@ executable cardano-testnet
   main-is:              Main.hs
 
   build-depends:        aeson             >= 1.5.6.0
+                      , bytestring
                       , ansi-terminal
                       , cardano-config
                       , containers
@@ -156,6 +160,7 @@ executable cardano-testnet
                       , text
                       , time
                       , unordered-containers
+                      , vector
 
   other-modules:        Paths_cardano_node_chairman
                         Testnet.Commands
