@@ -22,6 +22,7 @@ import           Data.Time (NominalDiffTime, UTCTime)
 
 import           Cardano.Slotting.Slot (EpochSize (..))
 
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Shelley.Spec.Ledger.Genesis as Shelley
 
 import           Cardano.Api.NetworkId
@@ -123,7 +124,8 @@ fromShelleyGenesis
       protocolParamSystemStart            = sgSystemStart
     , protocolParamNetworkId              = fromShelleyNetwork sgNetworkId
                                               (NetworkMagic sgNetworkMagic)
-    , protocolParamActiveSlotsCoefficient = sgActiveSlotsCoeff
+    , protocolParamActiveSlotsCoefficient = Ledger.unboundRational
+                                              sgActiveSlotsCoeff
     , protocolParamSecurity               = fromIntegral sgSecurityParam
     , protocolParamEpochLength            = sgEpochLength
     , protocolParamSlotLength             = sgSlotLength
@@ -135,4 +137,3 @@ fromShelleyGenesis
     , protocolInitialUpdateableProtocolParameters = fromShelleyPParams
                                                       sgProtocolParams
     }
-

@@ -15,6 +15,7 @@ import           Hedgehog (MonadGen, Range)
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Data.Map.Strict as Map
 import qualified Hedgehog.Gen as Gen
@@ -48,13 +49,20 @@ genCoin r = do
   unCoin' <- Gen.integral r
   return $ Ledger.Coin unCoin'
 
+genPrice :: MonadGen m => Range Double -> m Ledger.NonNegativeInterval
+genPrice r = do
+  unPrice <- Gen.double r
+  case Ledger.boundRational $ toRational unPrice of
+    Nothing -> pure minBound
+    Just p -> pure p
+
 genLanguage :: MonadGen m => m Alonzo.Language
 genLanguage = return Alonzo.PlutusV1
 
 genPrices :: MonadGen m => m Alonzo.Prices
 genPrices = do
-  prMem' <- genCoin (Range.linear 0 10)
-  prSteps' <- genCoin (Range.linear 0 10)
+  prMem' <- genPrice (Range.linearFrac 0 10)
+  prSteps' <- genPrice (Range.linearFrac 0 10)
 
   return Alonzo.Prices
     { Alonzo.prMem = prMem'

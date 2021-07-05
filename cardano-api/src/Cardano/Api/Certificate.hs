@@ -344,13 +344,16 @@ toShelleyPoolParams StakePoolParameters {
                     , stakePoolRelays
                     , stakePoolMetadata
                     } =
-    --TODO: validate pool parameters
+    --TODO: validate pool parameters such as the PoolMargin below, but also
+    -- do simple client-side sanity checks, e.g. on the pool metadata url
     Shelley.PoolParams {
       Shelley._poolId     = poolkh
     , Shelley._poolVrf    = vrfkh
     , Shelley._poolPledge = toShelleyLovelace stakePoolPledge
     , Shelley._poolCost   = toShelleyLovelace stakePoolCost
-    , Shelley._poolMargin = Shelley.unitIntervalFromRational stakePoolMargin
+    , Shelley._poolMargin = fromMaybe
+                              (error "toShelleyPoolParams: invalid PoolMargin")
+                              (Shelley.boundRational stakePoolMargin)
     , Shelley._poolRAcnt  = toShelleyStakeAddr stakePoolRewardAccount
     , Shelley._poolOwners = Set.fromList
                               [ kh | StakeKeyHash kh <- stakePoolOwners ]
@@ -414,7 +417,7 @@ fromShelleyPoolParams
       stakePoolId            = StakePoolKeyHash _poolId
     , stakePoolVRF           = VrfKeyHash _poolVrf
     , stakePoolCost          = fromShelleyLovelace _poolCost
-    , stakePoolMargin        = Shelley.unitIntervalToRational _poolMargin
+    , stakePoolMargin        = Shelley.unboundRational _poolMargin
     , stakePoolRewardAccount = fromShelleyStakeAddr _poolRAcnt
     , stakePoolPledge        = fromShelleyLovelace _poolPledge
     , stakePoolOwners        = map StakeKeyHash (Set.toList _poolOwners)

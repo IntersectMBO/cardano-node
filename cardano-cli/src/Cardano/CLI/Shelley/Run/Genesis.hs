@@ -636,7 +636,7 @@ buildPool nw dir index = do
       , Ledger._poolVrf    = Ledger.hashVerKeyVRF poolVrfVK
       , Ledger._poolPledge = Ledger.Coin 0
       , Ledger._poolCost   = Ledger.Coin 0
-      , Ledger._poolMargin = Ledger.truncateUnitInterval 0
+      , Ledger._poolMargin = minBound
       , Ledger._poolRAcnt  =
           toShelleyStakeAddr $ makeStakeAddress nw $ StakeCredentialByKey (verificationKeyHash rewardsSVK)
       , Ledger._poolOwners = mempty
@@ -789,10 +789,15 @@ updateTemplate (SystemStart start)
                      else panic "updateTemplate: defaultCostModel is invalid"
 
                    Nothing -> panic "updateTemplate: Could not extract cost model params from defaultCostModel"
+        --TODO: we need a better validation story. We also ought to wrap the
+        -- genesis type in the API properly.
+        prices' = case toAlonzoPrices prices of
+                    Nothing -> panic "updateTemplate: invalid prices"
+                    Just p  -> p
         alonzoGenesis = Alonzo.AlonzoGenesis
           { Alonzo.coinsPerUTxOWord     = toShelleyLovelace coinsPerUTxOWord
           , Alonzo.costmdls             = cModel
-          , Alonzo.prices               = toAlonzoPrices prices
+          , Alonzo.prices               = prices'
           , Alonzo.maxTxExUnits         = toAlonzoExUnits maxTxExUnits
           , Alonzo.maxBlockExUnits      = toAlonzoExUnits maxBlockExUnits
           , Alonzo.maxValSize           = maxValueSize
