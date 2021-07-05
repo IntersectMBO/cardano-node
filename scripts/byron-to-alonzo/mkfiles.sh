@@ -588,11 +588,16 @@ popd
 # For an automatic transition at epoch 0, specifying mary, allegra or shelley
 # will start the node in the appropriate era.
 echo ""
+
+# These are needed for cardano-submit-api
+echo "EnableLogMetrics: False" >> ${ROOT}/configuration.yaml
+echo "EnableLogging: True" >> ${ROOT}/configuration.yaml
+
 if [ "$1" = "alonzo" ]; then
-  echo "TestShelleyHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  echo "TestAllegraHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  echo "TestMaryHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
-  echo "TestAlonzoHardForkAtEpoch: 0"  >> ${ROOT}/configuration.yaml
+  echo "TestShelleyHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestAllegraHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestMaryHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestAlonzoHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
   echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
 

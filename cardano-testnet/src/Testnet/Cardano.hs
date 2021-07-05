@@ -155,31 +155,34 @@ testnet testnetOptions H.Conf {..} = do
   H.readFile (base </> "configuration/defaults/byron-mainnet/configuration.yaml")
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
-  forkOptions <- pure $ case era testnetOptions of
-    Byron -> id
-      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
+  forkOptions <- pure $ id
+    . HM.insert "EnableLogMetrics" (J.toJSON False)
+    . HM.insert "EnableLogging" (J.toJSON True)
+    . case era testnetOptions of
+        Byron -> id
+          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
 
-    Shelley -> id
-      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 2)
+        Shelley -> id
+          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 2)
 
-    Allegra -> id
-      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 3)
+        Allegra -> id
+          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 3)
 
-    Mary -> id
-      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 4)
+        Mary -> id
+          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 4)
 
-    Alonzo -> id
-      . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
-      . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 5)
+        Alonzo -> id
+          . HM.insert "TestShelleyHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
+          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 5)
 
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
