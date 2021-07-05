@@ -48,6 +48,9 @@ LastKnownBlockVersion-Alt: 0
 ApplicationName: cardano-sl
 ApplicationVersion: 1
 
+##### Enable P2P Mode #####
+EnableP2P: False
+TestEnableDevelopmentNetworkProtocols: True
 
 ##### Logging configuration #####
 
@@ -208,6 +211,10 @@ TraceHandshake: True
 
 # Trace IP Subscription messages.
 TraceIpSubscription: True
+
+# Trace Connection Manager messages.
+# P2P Only
+TraceConnectionManager: True
 
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False

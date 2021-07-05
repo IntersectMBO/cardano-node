@@ -4,6 +4,7 @@ module Testnet.Commands.ByronShelley
   , runByronShelleyOptions
   ) where
 
+import           Data.Bool
 import           Data.Eq
 import           Data.Function
 import           Data.Int
@@ -60,6 +61,7 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (forkPoint defaultTestnetOptions)
       )
+  <*> pure False
 
 optsByronShelley :: Parser ByronShelleyOptions
 optsByronShelley = ByronShelleyOptions
