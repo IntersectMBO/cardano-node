@@ -1,5 +1,6 @@
 module Test.Process
   ( execCli
+  , execCli'
   , procCli
   , procNode
   , procChairman
@@ -11,6 +12,7 @@ import           Data.Function
 import           Data.String
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
+import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           System.Process (CreateProcess)
 
 import qualified GHC.Stack as GHC
@@ -22,6 +24,14 @@ execCli
   => [String]
   -> m String
 execCli = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI"
+
+-- | Run cardano-cli, returning the stdout
+execCli'
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => ExecConfig
+  -> [String]
+  -> m String
+execCli' execConfig = GHC.withFrozenCallStack $ H.execFlex' execConfig "cardano-cli" "CARDANO_CLI"
 
 -- | Create a 'CreateProcess' describing how to start the cardano-cli process
 -- and an argument list.
