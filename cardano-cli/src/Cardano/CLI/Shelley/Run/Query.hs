@@ -32,9 +32,9 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
+import           Data.Time.Clock
 import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
-import           Data.Time.Clock
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 
@@ -59,7 +59,8 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..), SystemStart (..), toRelativeTime)
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
+                   SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -68,7 +69,7 @@ import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
-import           Text.Printf(printf)
+import           Text.Printf (printf)
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
@@ -215,54 +216,67 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
         eResult <- liftIO $ queryEraHistoryAndSystemStart localNodeConnInfo Nothing
         case eResult of
           Left acqFail -> left (ShelleyQueryCmdAcquireFailure acqFail)
-          Right (eraHistory, systemStart') ->
+          Right (eraHistory, mSystemStart) ->
             case slotToEpoch tipSlotNo eraHistory of
               Left e -> throwE (ShelleyQueryCmdPastHorizon e)
               Right (epochNo, _, _) -> do
                 let tipTimeResult = first toJsonPastHorizonException $
                                 fst <$> getProgress tipSlotNo eraHistory
 
-                let systemStart = getSystemStart systemStart'
+                case fmap getSystemStart mSystemStart of
+                  Just systemStart -> do
+                    nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
 
-                nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
+                    let tolerance = RelativeTime (secondsToNominalDiffTime 600)
+                    let jsonSyncProgress = fmap (flip (percentage tolerance) nowSeconds) tipTimeResult
 
-                let tolerance = RelativeTime (secondsToNominalDiffTime 600)
-                let jsonSyncProgress = fmap (flip (percentage tolerance) nowSeconds) tipTimeResult
+                    let output = encodePretty $ O.QueryTipOutput
+                          { O.chainTip = tip
+                          , O.era = anyEra
+                          , O.epoch = epochNo
+                          , O.syncProgress = jsonSyncProgress
+                          }
 
-                let output = encodePretty $ O.QueryTipOutput
-                      { O.chainTip = tip
-                      , O.era = anyEra
-                      , O.epoch = epochNo
-                      , O.syncProgress = jsonSyncProgress
-                      }
+                    case mOutFile of
+                      Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
+                      Nothing                 -> liftIO $ LBS.putStrLn        output
+                  Nothing -> do
+                    let output = encodePretty $ O.QueryTipOutput
+                          { O.chainTip = tip
+                          , O.era = anyEra
+                          , O.epoch = epochNo
+                          , O.syncProgress = Left "No progress information available"
+                          }
 
-                case mOutFile of
-                  Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
-                  Nothing                 -> liftIO $ LBS.putStrLn        output
-
+                    case mOutFile of
+                      Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
+                      Nothing                 -> liftIO $ LBS.putStrLn        output
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
 
 queryEraHistoryAndSystemStart
   :: LocalNodeConnectInfo CardanoMode
   -> Maybe ChainPoint
-  -> IO (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
+  -> IO (Either Net.Query.AcquireFailure (EraHistory CardanoMode, Maybe SystemStart))
 queryEraHistoryAndSystemStart connctInfo mpoint = do
     resultVar <- newEmptyTMVarIO
-    connectToLocalNode
+    connectToLocalNodeWithVersion
       connctInfo
-      LocalNodeClientProtocols
-      { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just (singleQuery mpoint resultVar)
-      , localTxSubmissionClient = Nothing
-      }
+      (\ntcVersion ->
+        LocalNodeClientProtocols
+        { localChainSyncClient    = NoLocalChainSyncClient
+        , localStateQueryClient   = Just (singleQuery mpoint resultVar ntcVersion)
+        , localTxSubmissionClient = Nothing
+        }
+      )
     atomically (takeTMVar resultVar)
   where
     singleQuery
       :: Maybe ChainPoint
-      -> TMVar (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
+      -> TMVar (Either Net.Query.AcquireFailure (EraHistory CardanoMode, Maybe SystemStart))
+      -> NodeToClientVersion
       -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint
                                          (QueryInMode CardanoMode) IO ()
-    singleQuery mPointVar' resultVar' =
+    singleQuery mPointVar' resultVar' ntcVersion =
       LocalStateQueryClient $ do
       pure . Net.Query.SendMsgAcquire mPointVar' $
         Net.Query.ClientStAcquiring
@@ -270,13 +284,19 @@ queryEraHistoryAndSystemStart connctInfo mpoint = do
           pure $ Net.Query.SendMsgQuery (QueryEraHistory CardanoModeIsMultiEra) $
             Net.Query.ClientStQuerying
             { Net.Query.recvMsgResult = \result1 -> do
-              pure $ Net.Query.SendMsgQuery QuerySystemStart $
-                Net.Query.ClientStQuerying
-                { Net.Query.recvMsgResult = \result2 -> do
-                  atomically $ putTMVar resultVar' (Right (result1, result2))
+              if ntcVersion >= NodeToClientV_9
+                then do
+                  pure $ Net.Query.SendMsgQuery QuerySystemStart $
+                    Net.Query.ClientStQuerying
+                    { Net.Query.recvMsgResult = \result2 -> do
+                      atomically $ putTMVar resultVar' (Right (result1, Just result2))
+
+                      pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+                    }
+                else do
+                  atomically $ putTMVar resultVar' (Right (result1, Nothing))
 
                   pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
-                }
             }
         , Net.Query.recvMsgFailure = \failure -> do
             atomically $ putTMVar resultVar' (Left failure)

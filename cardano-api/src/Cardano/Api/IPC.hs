@@ -18,6 +18,7 @@ module Cardano.Api.IPC (
     -- * Node interaction
     -- | Operations that involve talking to a local Cardano node.
     connectToLocalNode,
+    connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
     localConsensusMode,
     LocalNodeClientProtocols(..),
@@ -65,6 +66,8 @@ module Cardano.Api.IPC (
     --TODO: These should be exported via Cardano.Api.Mode
     ConsensusMode(..),
     consensusModeOnly,
+
+    NodeToClientVersion(..)
   ) where
 
 import           Prelude
@@ -78,12 +81,12 @@ import           Control.Concurrent.STM
 import           Control.Monad (void)
 import           Control.Tracer (nullTracer)
 
-
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
                    NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as Net
+import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
@@ -179,7 +182,17 @@ consensusModeOnly CardanoModeParams{} = CardanoMode
 connectToLocalNode :: LocalNodeConnectInfo mode
                    -> LocalNodeClientProtocolsInMode mode
                    -> IO ()
-connectToLocalNode LocalNodeConnectInfo {
+connectToLocalNode localNodeConnectInfo handlers
+  = connectToLocalNodeWithVersion localNodeConnectInfo (const handlers)
+
+-- | Establish a connection to a local node and execute the given set of
+-- protocol handlers parameterized on the negotiated node-to-client protocol
+-- version.
+--
+connectToLocalNodeWithVersion :: LocalNodeConnectInfo mode
+                              -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode mode)
+                              -> IO ()
+connectToLocalNodeWithVersion LocalNodeConnectInfo {
                      localNodeSocketPath,
                      localNodeNetworkId,
                      localConsensusModeParams
@@ -209,7 +222,7 @@ mkVersionedProtocols :: forall block.
                         )
                      => NetworkId
                      -> ProtocolClientInfoArgs block
-                     -> LocalNodeClientProtocolsForBlock block
+                     -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
                      -> Net.Versions
                           Net.NodeToClientVersion
                           Net.NodeToClientVersionData
@@ -217,12 +230,7 @@ mkVersionedProtocols :: forall block.
                              Net.InitiatorMode
                              Net.LocalAddress
                              LBS.ByteString IO () Void)
-mkVersionedProtocols networkid ptcl
-                     LocalNodeClientProtocolsForBlock {
-                       localChainSyncClientForBlock,
-                       localTxSubmissionClientForBlock,
-                       localStateQueryClientForBlock
-                     } =
+mkVersionedProtocols networkid ptcl unversionedClients =
      --TODO: really we should construct specific combinations of
      -- protocols for the versions we know about, with different protocol
      -- versions taking different sets of typed client protocols.
@@ -233,16 +241,24 @@ mkVersionedProtocols networkid ptcl
             NodeToClientVersionData {
               networkMagic = toNetworkMagic networkid
             }
-            (\_connid _ctl -> protocols ptclBlockVersion ptclVersion))
+            (\_connid _ctl -> protocols (unversionedClients ptclVersion) ptclBlockVersion ptclVersion))
       (Map.toList (Consensus.supportedNodeToClientVersions proxy))
   where
     proxy :: Proxy block
     proxy = Proxy
 
-    protocols :: Consensus.BlockNodeToClientVersion block
-              -> Consensus.NodeToClientVersion
+    protocols :: LocalNodeClientProtocolsForBlock block
+              -> Consensus.BlockNodeToClientVersion block
+              -> NodeToClientVersion
               -> NodeToClientProtocols Net.InitiatorMode LBS.ByteString IO () Void
-    protocols ptclBlockVersion ptclVersion =
+    protocols
+      LocalNodeClientProtocolsForBlock {
+        localChainSyncClientForBlock,
+        localTxSubmissionClientForBlock,
+        localStateQueryClientForBlock
+      }
+      ptclBlockVersion
+      ptclVersion =
         NodeToClientProtocols {
           localChainSyncProtocol =
             Net.InitiatorProtocolOnly $ case localChainSyncClientForBlock of
@@ -310,7 +326,7 @@ data LocalNodeClientParams where
            ProtocolClient block
            )
        => ProtocolClientInfoArgs block
-       -> LocalNodeClientProtocolsForBlock block
+       -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
        -> LocalNodeClientParams
 
 data LocalNodeClientProtocolsForBlock block =
@@ -339,7 +355,7 @@ data LocalNodeClientProtocolsForBlock block =
 mkLocalNodeClientParams :: forall mode block.
                            ConsensusBlockForMode mode ~ block
                         => ConsensusModeParams mode
-                        -> LocalNodeClientProtocolsInMode mode
+                        -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode mode)
                         -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =
     -- For each of the possible consensus modes we pick the concrete block type
@@ -357,17 +373,17 @@ mkLocalNodeClientParams modeparams clients =
       ByronModeParams epochSlots ->
         LocalNodeClientParams
           (ProtocolClientInfoArgsByron epochSlots)
-          (convLocalNodeClientProtocols ByronMode clients)
+          (convLocalNodeClientProtocols ByronMode . clients)
 
       ShelleyModeParams ->
         LocalNodeClientParams
           ProtocolClientInfoArgsShelley
-          (convLocalNodeClientProtocols ShelleyMode clients)
+          (convLocalNodeClientProtocols ShelleyMode . clients)
 
       CardanoModeParams epochSlots ->
         LocalNodeClientParams
           (ProtocolClientInfoArgsCardano epochSlots)
-          (convLocalNodeClientProtocols CardanoMode clients)
+          (convLocalNodeClientProtocols CardanoMode . clients)
 
 
 convLocalNodeClientProtocols :: forall mode block.
@@ -512,7 +528,6 @@ submitTxToNodeLocal connctInfo tx = do
         localChainSyncClient    = NoLocalChainSyncClient,
         localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar),
         localStateQueryClient   = Nothing
-
       }
     atomically (takeTMVar resultVar)
   where
