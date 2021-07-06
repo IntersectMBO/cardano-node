@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Plutus
+module Spec.Plutus.Script.TxInLockingPlutus
   ( hprop_plutus
   ) where
 
@@ -11,6 +11,7 @@ import           Data.Function
 import           Data.Functor ((<$>))
 import           Data.Int
 import           Data.Maybe
+import           Data.Monoid
 import           Hedgehog (Property)
 import           Prelude (head)
 import           System.FilePath ((</>))
@@ -38,7 +39,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   path <- H.evalIO $ fromMaybe "" <$> IO.lookupEnv "PATH"
 
   let execConfig = H.ExecConfig
-        { H.execConfigEnv = Just
+        { H.execConfigEnv = Last $ Just
           [ ("CARDANO_CLI", cardanoCli)
           , ("BASE", projectBase)
           , ("WORK", tempAbsPath)
@@ -48,7 +49,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
           , ("TESTNET_MAGIC", show @Int testnetMagic)
           , ("PATH", path)
           ]
-        , H.execConfigCwd = Just tempBaseAbsPath
+        , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
   scriptPath <- H.eval $ projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"

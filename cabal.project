@@ -57,6 +57,9 @@ package cardano-node
 package cardano-node-chairman
   tests: True
 
+package cardano-testnet
+  tests: True
+
 -- The following is needed because Nix is doing something crazy.
 package byron-spec-ledger
   tests: False
@@ -107,7 +110,7 @@ package cardano-ledger-alonzo-test
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: 2f28e62f1508f07bb628963ee9bb23dc19ec0e03
+  tag: 7ffbd217bb969d7c01f1e70cf58535df06e5d9a8
   --sha256: 0sjlk19v0dg63v8dawg844y3wzm1nmq0qxpvhip81x5yi091jjmm
 
 source-repository-package
