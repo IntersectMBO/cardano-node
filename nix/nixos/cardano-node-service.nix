@@ -30,6 +30,7 @@ let
             })
           cfg.forceHardForks))
       // (optionalAttrs cfg.useNewTopology {
+        EnableP2P = true;
         TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
         TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
         TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
@@ -432,7 +433,7 @@ in {
 
       useNewTopology = mkOption {
         type = types.bool;
-        default = true;
+        default = cfg.nodeConfig.EnableP2P or false;
         description = ''
           Use new, p2p/ledger peers combatible topology.
         '';
