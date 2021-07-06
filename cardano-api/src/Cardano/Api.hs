@@ -465,6 +465,7 @@ module Cardano.Api (
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
+    connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
     AnyConsensusMode(..),
     renderMode,
@@ -556,6 +557,8 @@ module Cardano.Api (
     SlotsInEpoch(..),
     SlotsToEpochEnd(..),
     slotToEpoch,
+
+    NodeToClientVersion(..)
   ) where
 
 import           Cardano.Api.Address
@@ -577,7 +580,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query hiding (LedgerState(..))
+import           Cardano.Api.Query hiding (LedgerState (..))
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32

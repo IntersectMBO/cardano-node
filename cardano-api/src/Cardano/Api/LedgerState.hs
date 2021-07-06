@@ -72,9 +72,9 @@ import qualified Cardano.Crypto
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
-import qualified Cardano.Ledger.Credential as Shelley.Spec
 import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
+import qualified Cardano.Ledger.Credential as Shelley.Spec
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
