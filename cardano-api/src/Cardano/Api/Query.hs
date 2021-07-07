@@ -46,6 +46,10 @@ module Cardano.Api.Query (
     LedgerState(..),
 
     getProgress,
+
+    -- * Internal conversion functions
+    toLedgerUTxO,
+    fromLedgerUTxO,
   ) where
 
 import           Data.Aeson (ToJSON (..), object, (.=))
@@ -280,15 +284,27 @@ toShelleyAddrSet era =
   . Set.toList
 
 
-fromUTxO :: ShelleyLedgerEra era ~ ledgerera
-         => Ledger.Crypto ledgerera ~ StandardCrypto
-         => ShelleyBasedEra era
-         -> Shelley.UTxO ledgerera
-         -> UTxO era
-fromUTxO era (Shelley.UTxO utxo) =
+toLedgerUTxO :: ShelleyLedgerEra era ~ ledgerera
+             => Ledger.Crypto ledgerera ~ StandardCrypto
+             => ShelleyBasedEra era
+             -> UTxO era
+             -> Shelley.UTxO ledgerera
+toLedgerUTxO era (UTxO utxo) =
+    Shelley.UTxO
+  . Map.fromList
+  . map (bimap toShelleyTxIn (toShelleyTxOut era))
+  . Map.toList
+  $ utxo
+
+fromLedgerUTxO :: ShelleyLedgerEra era ~ ledgerera
+               => Ledger.Crypto ledgerera ~ StandardCrypto
+               => ShelleyBasedEra era
+               -> Shelley.UTxO ledgerera
+               -> UTxO era
+fromLedgerUTxO era (Shelley.UTxO utxo) =
     UTxO
   . Map.fromList
-  . map (bimap fromShelleyTxIn (fromTxOut era))
+  . map (bimap fromShelleyTxIn (fromShelleyTxOut era))
   . Map.toList
   $ utxo
 
@@ -593,17 +609,17 @@ fromConsensusQueryResultShelleyBased _ QueryStakeDistribution q' r' =
 
 fromConsensusQueryResultShelleyBased era (QueryUTxO QueryUTxOWhole) q' utxo' =
     case q' of
-      Consensus.GetUTxOWhole -> fromUTxO era utxo'
+      Consensus.GetUTxOWhole -> fromLedgerUTxO era utxo'
       _                      -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased era (QueryUTxO QueryUTxOByAddress{}) q' utxo' =
     case q' of
-      Consensus.GetUTxOByAddress{} -> fromUTxO era utxo'
+      Consensus.GetUTxOByAddress{} -> fromLedgerUTxO era utxo'
       _                            -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased era (QueryUTxO QueryUTxOByTxIn{}) q' utxo' =
     case q' of
-      Consensus.GetUTxOByTxIn{} -> fromUTxO era utxo'
+      Consensus.GetUTxOByTxIn{} -> fromLedgerUTxO era utxo'
       _                         -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ (QueryStakeAddresses _ nId) q' r' =
