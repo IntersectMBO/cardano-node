@@ -327,13 +327,13 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                   ekgDirect
              <> tracerOnOff (traceConnectionManager trSel) verb "ConnectionManager" tr)
              (tracerOnOff (traceServer trSel) verb "Server" tr)
-             (tracerOnOff (traceLocalInboundGovernor trSel) verb "LocalInboundGovernor" tr)
-             (tracerOnOff (traceLocalConnectionManager trSel) verb "LocalConnectionManager" tr)
-             (tracerOnOff (traceLocalServer trSel) verb "LocalServer" tr)
              ( traceInboundGovernorCountersMetrics
                   (traceInboundGovernorCounters trSel)
                   ekgDirect
              <> tracerOnOff (traceInboundGovernor trSel) verb "InboundGovernor" tr)
+             (tracerOnOff (traceLocalConnectionManager trSel) verb "LocalConnectionManager" tr)
+             (tracerOnOff (traceLocalServer trSel) verb "LocalServer" tr)
+             (tracerOnOff (traceLocalInboundGovernor trSel) verb "LocalInboundGovernor" tr)
        DisabledP2PMode ->
          mkDiffusionTracersNonP2P
            muxTracer
