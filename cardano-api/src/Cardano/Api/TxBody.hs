@@ -100,7 +100,6 @@ module Cardano.Api.TxBody (
     fromShelleyTxId,
     fromShelleyTxIn,
     fromShelleyTxOut,
-    fromTxOut,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
@@ -360,35 +359,32 @@ toByronTxOut (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
 
 
 toShelleyTxOut :: forall era ledgerera.
-                 (ShelleyLedgerEra era ~ ledgerera,
-                  IsShelleyBasedEra era, Ledger.ShelleyBased ledgerera)
-               => TxOut era -> Ledger.TxOut ledgerera
-toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
-    case shelleyBasedEra :: ShelleyBasedEra era of {}
+                  ShelleyLedgerEra era ~ ledgerera
+               => ShelleyBasedEra era
+               -> TxOut era
+               -> Ledger.TxOut ledgerera
+toShelleyTxOut era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
+    case era of {}
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
 
-fromShelleyTxOut :: Shelley.TxOut StandardShelley -> TxOut ShelleyEra
-fromShelleyTxOut = fromTxOut ShelleyBasedEraShelley
-
-fromTxOut
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> Core.TxOut ledgerera
-  -> TxOut era
-fromTxOut shelleyBasedEra' ledgerTxOut =
-  case shelleyBasedEra' of
+fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
+                 => ShelleyBasedEra era
+                 -> Core.TxOut ledgerera
+                 -> TxOut era
+fromShelleyTxOut era ledgerTxOut =
+  case era of
     ShelleyBasedEraShelley ->
         TxOut (fromShelleyAddr addr)
               (TxOutAdaOnly AdaOnlyInShelleyEra
@@ -1475,7 +1471,7 @@ fromLedgerTxInsCollateral era body =
 fromLedgerTxOuts
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> [TxOut era]
 fromLedgerTxOuts era body =
-  fromTxOut era <$>
+  fromShelleyTxOut era <$>
   case era of
     ShelleyBasedEraShelley -> toList $ Shelley._outputs body
     ShelleyBasedEraAllegra -> toList $ Allegra.outputs' body
@@ -1848,7 +1844,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
       ShelleyTxBody era
         (Shelley.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -1914,7 +1910,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
       ShelleyTxBody era
         (Allegra.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -2000,7 +1996,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
       ShelleyTxBody era
         (Allegra.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -2104,7 +2100,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (case txInsCollateral of
              TxInsCollateralNone     -> Set.empty
              TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
