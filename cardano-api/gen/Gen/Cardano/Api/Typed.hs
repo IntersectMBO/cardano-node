@@ -42,6 +42,8 @@ module Gen.Cardano.Api.Typed
   , genProtocolParametersUpdate
   , genScriptDataSupportedInAlonzoEra
   , genTxOutDatumHash
+
+  , genRational
   ) where
 
 import           Cardano.Api hiding (txIns)

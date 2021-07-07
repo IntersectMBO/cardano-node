@@ -30,6 +30,7 @@ import qualified Data.Aeson.Types as Aeson
 import           Control.Applicative
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
 
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -300,8 +301,27 @@ instance ToJSON (SafeHash.SafeHash c a) where
 instance ToJSON Alonzo.ExUnits
 deriving instance FromJSON Alonzo.ExUnits
 
-deriving instance ToJSON Alonzo.Prices
-deriving instance FromJSON Alonzo.Prices
+instance ToJSON Alonzo.Prices where
+  toJSON Alonzo.Prices { Alonzo.prSteps, Alonzo.prMem } =
+    -- We cannot round-trip via NonNegativeInterval, so we go via Rational
+    object [ "prSteps" .= Ledger.unboundRational prSteps
+           , "prMem"   .= Ledger.unboundRational prMem
+           ]
+
+instance FromJSON Alonzo.Prices where
+  parseJSON =
+    Aeson.withObject "prices" $ \o -> do
+      steps <- o .: "prSteps"
+      mem   <- o .: "prMem"
+      prSteps <- checkBoundedRational steps
+      prMem   <- checkBoundedRational mem
+      return Alonzo.Prices { Alonzo.prSteps, Alonzo.prMem }
+    where
+      -- We cannot round-trip via NonNegativeInterval, so we go via Rational
+      checkBoundedRational r =
+        case Ledger.boundRational r of
+          Nothing -> fail ("too much precision for bounded rational: " ++ show r)
+          Just s  -> return s
 
 deriving newtype instance FromJSON Alonzo.CostModel
 deriving newtype instance ToJSON Alonzo.CostModel
