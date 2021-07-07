@@ -7,11 +7,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.PlutusExample.Typed.DatumRedeemerGuess
-  ( MyTypedDatum(..)
-  , MyTypedRedeemer(..)
-  , typeddatumRedeemerGuessScript
-  , typeddatumRedeemerGuessScriptAsShortBs
+module Cardano.PlutusExample.CustomDatumRedeemerGuess
+  ( MyCustomDatum(..)
+  , MyCustomRedeemer(..)
+  , customGuessScript
+  , customDatumRedeemerGuessScriptAsShortBs
   ) where
 
 import           Prelude hiding (($), (&&), (==))
@@ -28,20 +28,20 @@ import qualified Plutus.V1.Ledger.Scripts as Plutus
 import qualified PlutusTx
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 
-newtype MyTypedDatum = MyTypedDatum Integer
-newtype MyTypedRedeemer = MyTypedRedeemer Integer
+newtype MyCustomDatum = MyCustomDatum Integer
+newtype MyCustomRedeemer = MyCustomRedeemer Integer
 
-PlutusTx.unstableMakeIsData ''MyTypedDatum
-PlutusTx.unstableMakeIsData ''MyTypedRedeemer
+PlutusTx.unstableMakeIsData ''MyCustomDatum
+PlutusTx.unstableMakeIsData ''MyCustomRedeemer
 
 data ExampleTypedValidator
 instance Scripts.ValidatorTypes ExampleTypedValidator where
-    type instance DatumType ExampleTypedValidator    = MyTypedDatum
-    type instance RedeemerType ExampleTypedValidator = MyTypedRedeemer
+    type instance DatumType ExampleTypedValidator    = MyCustomDatum
+    type instance RedeemerType ExampleTypedValidator = MyCustomRedeemer
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: MyTypedDatum-> MyTypedRedeemer -> ScriptContext -> Bool
-mkValidator (MyTypedDatum d) (MyTypedRedeemer r) _ =
+mkValidator :: MyCustomDatum-> MyCustomRedeemer -> ScriptContext -> Bool
+mkValidator (MyCustomDatum d) (MyCustomRedeemer r) _ =
   d == 42 && r == 42
 
 inst :: Scripts.TypedValidator ExampleTypedValidator
@@ -49,7 +49,7 @@ inst = Scripts.mkTypedValidator @ExampleTypedValidator
     $$(PlutusTx.compile [|| mkValidator ||])
     $$(PlutusTx.compile [|| wrap ||])
   where
-    wrap = Scripts.wrapValidator @MyTypedDatum @MyTypedRedeemer
+    wrap = Scripts.wrapValidator @MyCustomDatum @MyCustomRedeemer
 
 validator :: Plutus.Validator
 validator = Scripts.validatorScript inst
@@ -57,9 +57,9 @@ validator = Scripts.validatorScript inst
 script :: Plutus.Script
 script = Plutus.unValidatorScript validator
 
-typeddatumRedeemerGuessScriptAsShortBs :: SBS.ShortByteString
-typeddatumRedeemerGuessScriptAsShortBs = SBS.toShort . LBS.toStrict $ serialise script
+customDatumRedeemerGuessScriptAsShortBs :: SBS.ShortByteString
+customDatumRedeemerGuessScriptAsShortBs = SBS.toShort . LBS.toStrict $ serialise script
 
-typeddatumRedeemerGuessScript :: PlutusScript PlutusScriptV1
-typeddatumRedeemerGuessScript = PlutusScriptSerialised typeddatumRedeemerGuessScriptAsShortBs
+customGuessScript :: PlutusScript PlutusScriptV1
+customGuessScript = PlutusScriptSerialised customDatumRedeemerGuessScriptAsShortBs
 

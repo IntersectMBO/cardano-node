@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.PlutusExample.Untyped.AlwaysSucceeds
+module Cardano.PlutusExample.AlwaysSucceeds
   ( alwaysSucceedsScript
   , alwaysSucceedsScriptShortBs
   ) where
