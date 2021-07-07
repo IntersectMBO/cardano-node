@@ -100,8 +100,8 @@ dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
 lovelaceatplutusscriptaddr=$(jq -r ".[\"$plutusutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
-txfee=$(expr $plutusrequiredtime + $plutusrequiredtime)
-spendable=$(expr $lovelaceatplutusscriptaddr - $plutusrequiredtime - $plutusrequiredtime)
+txfee=$(expr $plutusrequiredspace + $plutusrequiredtime)
+spendable=$(expr $lovelaceatplutusscriptaddr - $plutusrequiredspace - $plutusrequiredtime)
 
 $CARDANO_CLI transaction build-raw \
   --alonzo-era \
