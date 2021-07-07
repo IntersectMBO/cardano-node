@@ -38,7 +38,7 @@ To register your stake pool you will need to:
       "homepage": "https://teststakepool.com"
       }
 
-Store the file in the url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ). You can use a GIST in Github to store the definition and git.io to make it short. Ensure that the URL is less than 65 characters long.
+Store the file in the url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ). You can use a GIST in Github to store the definition and git.io to make it short. Ensure that the Stake pool metadata consists of at most 512 bytes, with the URL being less than 65 characters long.
 
 Example:
 
