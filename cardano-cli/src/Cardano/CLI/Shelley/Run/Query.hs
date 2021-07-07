@@ -36,6 +36,7 @@ import           Data.Time.Clock
 import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
 
+import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 
 import           Cardano.Api
@@ -43,7 +44,7 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError, nothingThrowE, hushM)
 import           Cardano.CLI.Mary.RenderValue (defaultRenderValueOptions, renderValue)
 import           Cardano.CLI.Shelley.Orphans ()
 import qualified Cardano.CLI.Shelley.Output as O
@@ -75,6 +76,9 @@ import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
+import qualified Data.Text.IO as T
+import qualified System.IO as IO
+
 {- HLINT ignore "Reduce duplication" -}
 
 data ShelleyQueryCmdError
@@ -89,6 +93,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdEraMismatch !EraMismatch
   | ShelleyQueryCmdUnsupportedMode !AnyConsensusMode
   | ShelleyQueryCmdPastHorizon !Qry.PastHorizonException
+  | ShelleyQueryCmdSystemStartUnavailable
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -109,6 +114,7 @@ renderShelleyQueryCmdError err =
       "\nCurrent ledger era: " <> ledgerEra
     ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e
+    ShelleyQueryCmdSystemStartUnavailable -> "System start unavailable"
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -220,37 +226,27 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
             case slotToEpoch tipSlotNo eraHistory of
               Left e -> throwE (ShelleyQueryCmdPastHorizon e)
               Right (epochNo, _, _) -> do
-                let tipTimeResult = first toJsonPastHorizonException $
-                                fst <$> getProgress tipSlotNo eraHistory
+                syncProgressResult <- runExceptT $ do
+                  systemStart <- fmap getSystemStart mSystemStart & nothingThrowE ShelleyQueryCmdSystemStartUnavailable
+                  nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
+                  tipTimeResult <- getProgress tipSlotNo eraHistory & bimap ShelleyQueryCmdPastHorizon fst & except
 
-                case fmap getSystemStart mSystemStart of
-                  Just systemStart -> do
-                    nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
+                  let tolerance = RelativeTime (secondsToNominalDiffTime 600)
+                  return $ flip (percentage tolerance) nowSeconds tipTimeResult
 
-                    let tolerance = RelativeTime (secondsToNominalDiffTime 600)
-                    let jsonSyncProgress = fmap (flip (percentage tolerance) nowSeconds) tipTimeResult
+                mSyncProgress <- hushM syncProgressResult $ \e -> do
+                  liftIO . T.hPutStrLn IO.stderr $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
 
-                    let output = encodePretty $ O.QueryTipOutput
-                          { O.chainTip = tip
-                          , O.era = anyEra
-                          , O.epoch = epochNo
-                          , O.syncProgress = jsonSyncProgress
-                          }
+                let output = encodePretty $ O.QueryTipOutput
+                      { O.chainTip = tip
+                      , O.era = anyEra
+                      , O.epoch = epochNo
+                      , O.syncProgress = mSyncProgress
+                      }
 
-                    case mOutFile of
-                      Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
-                      Nothing                 -> liftIO $ LBS.putStrLn        output
-                  Nothing -> do
-                    let output = encodePretty $ O.QueryTipOutput
-                          { O.chainTip = tip
-                          , O.era = anyEra
-                          , O.epoch = epochNo
-                          , O.syncProgress = Left "No progress information available"
-                          }
-
-                    case mOutFile of
-                      Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
-                      Nothing                 -> liftIO $ LBS.putStrLn        output
+                case mOutFile of
+                  Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
+                  Nothing                 -> liftIO $ LBS.putStrLn        output
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
 
 queryEraHistoryAndSystemStart
@@ -302,14 +298,6 @@ queryEraHistoryAndSystemStart connctInfo mpoint = do
             atomically $ putTMVar resultVar' (Left failure)
             pure $ Net.Query.SendMsgDone ()
         }
-
-toJsonPastHorizonException :: Qry.PastHorizonException -> Aeson.Value
-toJsonPastHorizonException e = Aeson.object
-  [ "error" .= Aeson.String "Past Horizon"
-  , "callStack" .= toJSON @String (show (Qry.pastHorizonCallStack e))
-  , "expression" .= toJSON @String (show (Qry.pastHorizonExpression e))
-  , "summary" .= toJSON @String (show (Qry.pastHorizonSummary e))
-  ]
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.

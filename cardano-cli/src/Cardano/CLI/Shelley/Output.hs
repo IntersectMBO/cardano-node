@@ -4,11 +4,11 @@ module Cardano.CLI.Shelley.Output
 
 import           Cardano.Api (AnyCardanoEra, ChainTip (..), EpochNo, serialiseToRawBytesHexText)
 import           Cardano.CLI.Shelley.Orphans ()
-import           Cardano.Prelude (Either, Eq, Show, Text)
+import           Cardano.Prelude (Eq, Show, Text)
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Data.Aeson (ToJSON (..), (.=))
-import           Data.Either (either)
-import           Data.Function (($), id)
+import           Data.Function (($))
+import           Data.Maybe
 import           Data.Monoid (mconcat)
 import           Shelley.Spec.Ledger.Scripts ()
 
@@ -19,7 +19,7 @@ data QueryTipOutput = QueryTipOutput
   { chainTip :: ChainTip
   , era :: AnyCardanoEra
   , epoch :: EpochNo
-  , syncProgress :: Either J.Value Text
+  , syncProgress :: Maybe Text
   } deriving (Eq, Show)
 
 instance ToJSON QueryTipOutput where
@@ -32,7 +32,7 @@ instance ToJSON QueryTipOutput where
         , "block" .= bNum
         , "era" .= era a
         , "epoch" .= epoch a
-        , "syncProgress" .= either id toJSON (syncProgress a)
+        , "syncProgress" .= syncProgress a
         ]
   toEncoding a = case chainTip a of
     ChainTipAtGenesis -> JE.null_
@@ -43,5 +43,5 @@ instance ToJSON QueryTipOutput where
         , "block" .= bNum
         , "era" .= era a
         , "epoch" .= epoch a
-        , "syncProgress" .= either id toJSON (syncProgress a)
+        , "syncProgress" .= syncProgress a
         ]

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
@@ -10,6 +11,8 @@ module Cardano.CLI.Helpers
   , renderHelpersError
   , textShow
   , validateCBOR
+  , nothingThrowE
+  , hushM
   ) where
 
 import           Cardano.Prelude
@@ -21,7 +24,6 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
-import           System.Directory (doesPathExist)
 
 import           Cardano.Binary (Decoder, fromCBOR)
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
@@ -30,6 +32,7 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
 import           Cardano.CLI.Types
 
+import qualified System.Directory as IO
 
 data HelpersError
   = CBORPrettyPrintError !DeserialiseFailure
@@ -58,7 +61,7 @@ decodeCBOR bs decoder =
 -- | Checks if a path exists and throws and error if it does.
 ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT HelpersError IO ()
 ensureNewFile writer outFile blob = do
-  exists <- liftIO $ doesPathExist outFile
+  exists <- liftIO $ IO.doesPathExist outFile
   when exists $
     left $ OutputMustNotAlreadyExist outFile
   liftIO $ writer outFile blob
@@ -104,6 +107,16 @@ validateCBOR cborObject bs =
       () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
 
-
 textShow :: Show a => a -> Text
 textShow = Text.pack . show
+
+-- | Return the value in Just or throw the specified error value.
+nothingThrowE :: Monad m => e -> Maybe a -> ExceptT e m a
+nothingThrowE e = maybe (throwE e) return
+
+-- | Convert an Either to a Maybe and executed the supplied handler
+-- in the Left case.
+hushM :: forall e m a. MonadIO m => Either e a -> (e -> m ()) -> m (Maybe a)
+hushM r f = case r of
+  Right a -> return (Just a)
+  Left e -> f e >> return Nothing
