@@ -28,7 +28,7 @@ let
     ''
       echo "
         Commands:
-          * nix flake update --update-input <iohkNix|haskellNix> - update input
+          * nix flake lock --update-input <iohkNix|haskellNix> - update nix build input
           * cardano-cli - used for key generation and other operations tasks
           * wb - cluster workbench
           * start-cluster - start a local development cluster
@@ -45,7 +45,7 @@ let
       export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
     '';
 
-  haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";        
+  haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
   # This provides a development environment that can be used with nix-shell or
   # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
