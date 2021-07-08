@@ -59,6 +59,7 @@ import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import qualified Data.Scientific as Scientific
 import           Data.Text (Text)
+import           Data.Maybe (fromMaybe)
 import           GHC.Generics
 import           Numeric.Natural
 
@@ -682,15 +683,15 @@ fromLedgerNonce (Ledger.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
 -- Script execution unit prices and cost models
 --
 
--- | The prices in 'Lovelace' for 'ExecutionUnits'.
+-- | The prices for 'ExecutionUnits' as a fraction of a 'Lovelace'.
 --
 -- These are used to determine the fee for the use of a script within a
 -- transaction, based on the 'ExecutionUnits' needed by the use of the script.
 --
 data ExecutionUnitPrices =
      ExecutionUnitPrices {
-       priceExecutionSteps  :: Lovelace,
-       priceExecutionMemory :: Lovelace
+       priceExecutionSteps  :: Rational,
+       priceExecutionMemory :: Rational
      }
   deriving (Eq, Show)
 
@@ -720,18 +721,23 @@ instance FromJSON ExecutionUnitPrices where
         <*> o .: "priceMemory"
 
 
-toAlonzoPrices :: ExecutionUnitPrices -> Alonzo.Prices
-toAlonzoPrices ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
-  Alonzo.Prices {
-    Alonzo.prSteps = toShelleyLovelace priceExecutionSteps,
-    Alonzo.prMem   = toShelleyLovelace priceExecutionMemory
+toAlonzoPrices :: ExecutionUnitPrices -> Maybe Alonzo.Prices
+toAlonzoPrices ExecutionUnitPrices {
+                 priceExecutionSteps,
+                 priceExecutionMemory
+               } = do
+  prSteps <- Ledger.boundRational priceExecutionSteps
+  prMem   <- Ledger.boundRational priceExecutionMemory
+  return Alonzo.Prices {
+    Alonzo.prSteps,
+    Alonzo.prMem
   }
 
 fromAlonzoPrices :: Alonzo.Prices -> ExecutionUnitPrices
 fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
   ExecutionUnitPrices {
-    priceExecutionSteps  = fromShelleyLovelace prSteps,
-    priceExecutionMemory = fromShelleyLovelace prMem
+    priceExecutionSteps  = Ledger.unboundRational prSteps,
+    priceExecutionMemory = Ledger.unboundRational prMem
   }
 
 
@@ -866,6 +872,8 @@ toLedgerPParamsDelta ShelleyBasedEraMary    = toShelleyPParamsUpdate
 toLedgerPParamsDelta ShelleyBasedEraAlonzo  = toAlonzoPParamsUpdate
 
 
+--TODO: we should do validation somewhere, not just silently drop changes that
+-- are not valid. Specifically, see Ledger.boundRational below.
 toShelleyPParamsUpdate :: ProtocolParametersUpdate
                        -> Shelley.PParamsUpdate ledgerera
 toShelleyPParamsUpdate
@@ -900,13 +908,14 @@ toShelleyPParamsUpdate
                                maybeToStrictMaybe protocolUpdateStakePoolDeposit
     , Shelley._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
     , Shelley._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
-    , Shelley._a0          = maybeToStrictMaybe protocolUpdatePoolPledgeInfluence
-    , Shelley._rho         = Ledger.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateMonetaryExpansion
-    , Shelley._tau         = Ledger.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateTreasuryCut
-    , Shelley._d           = Ledger.unitIntervalFromRational <$>
-                               maybeToStrictMaybe protocolUpdateDecentralization
+    , Shelley._a0          = maybeToStrictMaybe $ Ledger.boundRational =<<
+                              protocolUpdatePoolPledgeInfluence
+    , Shelley._rho         = maybeToStrictMaybe $ Ledger.boundRational =<<
+                                protocolUpdateMonetaryExpansion
+    , Shelley._tau         = maybeToStrictMaybe $ Ledger.boundRational =<<
+                                protocolUpdateTreasuryCut
+    , Shelley._d           = maybeToStrictMaybe $ Ledger.boundRational =<<
+                                protocolUpdateDecentralization
     , Shelley._extraEntropy    = toLedgerNonce <$>
                                    maybeToStrictMaybe protocolUpdateExtraPraosEntropy
     , Shelley._protocolVersion = uncurry Ledger.ProtVer <$>
@@ -959,13 +968,14 @@ toAlonzoPParamsUpdate
                               maybeToStrictMaybe protocolUpdateStakePoolDeposit
     , Alonzo._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
     , Alonzo._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
-    , Alonzo._a0          = maybeToStrictMaybe protocolUpdatePoolPledgeInfluence
-    , Alonzo._rho         = Ledger.unitIntervalFromRational <$>
-                              maybeToStrictMaybe protocolUpdateMonetaryExpansion
-    , Alonzo._tau         = Ledger.unitIntervalFromRational <$>
-                              maybeToStrictMaybe protocolUpdateTreasuryCut
-    , Alonzo._d           = Ledger.unitIntervalFromRational <$>
-                              maybeToStrictMaybe protocolUpdateDecentralization
+    , Alonzo._a0          = maybeToStrictMaybe $ Ledger.boundRational =<<
+                              protocolUpdatePoolPledgeInfluence
+    , Alonzo._rho         = maybeToStrictMaybe $ Ledger.boundRational =<<
+                               protocolUpdateMonetaryExpansion
+    , Alonzo._tau         = maybeToStrictMaybe $ Ledger.boundRational =<<
+                               protocolUpdateTreasuryCut
+    , Alonzo._d           = maybeToStrictMaybe $ Ledger.boundRational =<<
+                               protocolUpdateDecentralization
     , Alonzo._extraEntropy    = toLedgerNonce <$>
                                   maybeToStrictMaybe protocolUpdateExtraPraosEntropy
     , Alonzo._protocolVersion = uncurry Ledger.ProtVer <$>
@@ -978,8 +988,8 @@ toAlonzoPParamsUpdate
                                   then Ledger.SNothing
                                   else Ledger.SJust
                                          (toAlonzoCostModels protocolUpdateCostModels)
-    , Alonzo._prices          = toAlonzoPrices  <$>
-                                  maybeToStrictMaybe protocolUpdatePrices
+    , Alonzo._prices          = maybeToStrictMaybe $
+                                  toAlonzoPrices =<< protocolUpdatePrices
     , Alonzo._maxTxExUnits    = toAlonzoExUnits  <$>
                                   maybeToStrictMaybe protocolUpdateMaxTxExUnits
     , Alonzo._maxBlockExUnits = toAlonzoExUnits  <$>
@@ -1050,7 +1060,7 @@ fromShelleyPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion     = (\(Ledger.ProtVer a b) -> (a,b)) <$>
                                           strictMaybeToMaybe _protocolVersion
-    , protocolUpdateDecentralization    = Ledger.unitIntervalToRational <$>
+    , protocolUpdateDecentralization    = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _d
     , protocolUpdateExtraPraosEntropy   = fromLedgerNonce <$>
                                             strictMaybeToMaybe _extraEntropy
@@ -1069,10 +1079,11 @@ fromShelleyPParamsUpdate
                                             strictMaybeToMaybe _minPoolCost
     , protocolUpdatePoolRetireMaxEpoch  = strictMaybeToMaybe _eMax
     , protocolUpdateStakePoolTargetNum  = strictMaybeToMaybe _nOpt
-    , protocolUpdatePoolPledgeInfluence = strictMaybeToMaybe _a0
-    , protocolUpdateMonetaryExpansion   = Ledger.unitIntervalToRational <$>
+    , protocolUpdatePoolPledgeInfluence = Ledger.unboundRational <$>
+                                            strictMaybeToMaybe _a0
+    , protocolUpdateMonetaryExpansion   = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _rho
-    , protocolUpdateTreasuryCut         = Ledger.unitIntervalToRational <$>
+    , protocolUpdateTreasuryCut         = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _tau
     , protocolUpdateUTxOCostPerWord     = Nothing
     , protocolUpdateCostModels          = mempty
@@ -1116,7 +1127,7 @@ fromAlonzoPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion     = (\(Ledger.ProtVer a b) -> (a,b)) <$>
                                           strictMaybeToMaybe _protocolVersion
-    , protocolUpdateDecentralization    = Ledger.unitIntervalToRational <$>
+    , protocolUpdateDecentralization    = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _d
     , protocolUpdateExtraPraosEntropy   = fromLedgerNonce <$>
                                             strictMaybeToMaybe _extraEntropy
@@ -1134,10 +1145,11 @@ fromAlonzoPParamsUpdate
                                             strictMaybeToMaybe _minPoolCost
     , protocolUpdatePoolRetireMaxEpoch  = strictMaybeToMaybe _eMax
     , protocolUpdateStakePoolTargetNum  = strictMaybeToMaybe _nOpt
-    , protocolUpdatePoolPledgeInfluence = strictMaybeToMaybe _a0
-    , protocolUpdateMonetaryExpansion   = Ledger.unitIntervalToRational <$>
+    , protocolUpdatePoolPledgeInfluence = Ledger.unboundRational <$>
+                                            strictMaybeToMaybe _a0
+    , protocolUpdateMonetaryExpansion   = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _rho
-    , protocolUpdateTreasuryCut         = Ledger.unitIntervalToRational <$>
+    , protocolUpdateTreasuryCut         = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _tau
     , protocolUpdateUTxOCostPerWord     = fromShelleyLovelace <$>
                                             strictMaybeToMaybe _coinsPerUTxOWord
@@ -1159,6 +1171,9 @@ fromAlonzoPParamsUpdate
 -- Conversion functions: protocol paramaters to ledger types
 --
 
+--TODO: this has to be a Maybe or Either for some of the parameter validation.
+-- Both parameters that must be present or absent in specific eras,
+-- and parameter values that need validation, such as the Rational values
 toLedgerPParams
   :: ShelleyBasedEra era
   -> ProtocolParameters
@@ -1192,8 +1207,9 @@ toShelleyPParams ProtocolParameters {
      { Shelley._protocolVersion
                              = let (maj, minor) = protocolParamProtocolVersion
                                 in Ledger.ProtVer maj minor
-     , Shelley._d            = Ledger.unitIntervalFromRational
-                                 protocolParamDecentralization
+     , Shelley._d            = fromMaybe
+                                 (error "toAlonzoPParams: invalid Decentralization value")
+                                 (Ledger.boundRational protocolParamDecentralization)
      , Shelley._extraEntropy = toLedgerNonce protocolParamExtraPraosEntropy
      , Shelley._maxBHSize    = protocolParamMaxBlockHeaderSize
      , Shelley._maxBBSize    = protocolParamMaxBlockBodySize
@@ -1206,11 +1222,15 @@ toShelleyPParams ProtocolParameters {
      , Shelley._minPoolCost  = toShelleyLovelace protocolParamMinPoolCost
      , Shelley._eMax         = protocolParamPoolRetireMaxEpoch
      , Shelley._nOpt         = protocolParamStakePoolTargetNum
-     , Shelley._a0           = protocolParamPoolPledgeInfluence
-     , Shelley._rho          = Ledger.unitIntervalFromRational
-                                 protocolParamMonetaryExpansion
-     , Shelley._tau          = Ledger.unitIntervalFromRational
-                                 protocolParamTreasuryCut
+     , Shelley._a0           = fromMaybe
+                                 (error "toAlonzoPParams: invalid PoolPledgeInfluence value")
+                                 (Ledger.boundRational protocolParamPoolPledgeInfluence)
+     , Shelley._rho          = fromMaybe
+                                 (error "toAlonzoPParams: invalid MonetaryExpansion value")
+                                 (Ledger.boundRational protocolParamMonetaryExpansion)
+     , Shelley._tau          = fromMaybe
+                                 (error "toAlonzoPParams: invalid TreasuryCut value")
+                                 (Ledger.boundRational protocolParamTreasuryCut)
      }
 toShelleyPParams ProtocolParameters { protocolParamMinUTxOValue = Nothing } =
   error "toShelleyPParams: must specify protocolParamMinUTxOValue"
@@ -1246,8 +1266,9 @@ toAlonzoPParams ProtocolParameters {
       Alonzo._protocolVersion
                            = let (maj, minor) = protocolParamProtocolVersion
                               in Alonzo.ProtVer maj minor
-    , Alonzo._d            = Ledger.unitIntervalFromRational
-                               protocolParamDecentralization
+    , Alonzo._d            = fromMaybe
+                               (error "toAlonzoPParams: invalid Decentralization value")
+                               (Ledger.boundRational protocolParamDecentralization)
     , Alonzo._extraEntropy = toLedgerNonce protocolParamExtraPraosEntropy
     , Alonzo._maxBHSize    = protocolParamMaxBlockHeaderSize
     , Alonzo._maxBBSize    = protocolParamMaxBlockBodySize
@@ -1259,16 +1280,22 @@ toAlonzoPParams ProtocolParameters {
     , Alonzo._minPoolCost  = toShelleyLovelace protocolParamMinPoolCost
     , Alonzo._eMax         = protocolParamPoolRetireMaxEpoch
     , Alonzo._nOpt         = protocolParamStakePoolTargetNum
-    , Alonzo._a0           = protocolParamPoolPledgeInfluence
-    , Alonzo._rho          = Ledger.unitIntervalFromRational
-                               protocolParamMonetaryExpansion
-    , Alonzo._tau          = Ledger.unitIntervalFromRational
-                               protocolParamTreasuryCut
+    , Alonzo._a0           = fromMaybe
+                               (error "toAlonzoPParams: invalid PoolPledgeInfluence value")
+                               (Ledger.boundRational protocolParamPoolPledgeInfluence)
+    , Alonzo._rho          = fromMaybe
+                               (error "toAlonzoPParams: invalid MonetaryExpansion value")
+                               (Ledger.boundRational protocolParamMonetaryExpansion)
+    , Alonzo._tau          = fromMaybe
+                               (error "toAlonzoPParams: invalid TreasuryCut value")
+                               (Ledger.boundRational protocolParamTreasuryCut)
 
       -- New params in Alonzo:
     , Alonzo._coinsPerUTxOWord  = toShelleyLovelace utxoCostPerWord
     , Alonzo._costmdls        = toAlonzoCostModels protocolParamCostModels
-    , Alonzo._prices          = toAlonzoPrices prices
+    , Alonzo._prices          = fromMaybe
+                                  (error "toAlonzoPParams: invalid Price values")
+                                  (toAlonzoPrices prices)
     , Alonzo._maxTxExUnits    = toAlonzoExUnits maxTxExUnits
     , Alonzo._maxBlockExUnits = toAlonzoExUnits maxBlockExUnits
     , Alonzo._maxValSize      = maxValueSize
@@ -1330,7 +1357,7 @@ fromShelleyPParams
     ProtocolParameters {
       protocolParamProtocolVersion     = (\(Ledger.ProtVer a b) -> (a,b))
                                            _protocolVersion
-    , protocolParamDecentralization    = Ledger.unitIntervalToRational _d
+    , protocolParamDecentralization    = Ledger.unboundRational _d
     , protocolParamExtraPraosEntropy   = fromLedgerNonce _extraEntropy
     , protocolParamMaxBlockHeaderSize  = _maxBHSize
     , protocolParamMaxBlockBodySize    = _maxBBSize
@@ -1343,9 +1370,9 @@ fromShelleyPParams
     , protocolParamMinPoolCost         = fromShelleyLovelace _minPoolCost
     , protocolParamPoolRetireMaxEpoch  = _eMax
     , protocolParamStakePoolTargetNum  = _nOpt
-    , protocolParamPoolPledgeInfluence = _a0
-    , protocolParamMonetaryExpansion   = Ledger.unitIntervalToRational _rho
-    , protocolParamTreasuryCut         = Ledger.unitIntervalToRational _tau
+    , protocolParamPoolPledgeInfluence = Ledger.unboundRational _a0
+    , protocolParamMonetaryExpansion   = Ledger.unboundRational _rho
+    , protocolParamTreasuryCut         = Ledger.unboundRational _tau
     , protocolParamUTxOCostPerWord     = Nothing
     , protocolParamCostModels          = Map.empty
     , protocolParamPrices              = Nothing
@@ -1388,7 +1415,7 @@ fromAlonzoPParams
     ProtocolParameters {
       protocolParamProtocolVersion     = (\(Ledger.ProtVer a b) -> (a,b))
                                            _protocolVersion
-    , protocolParamDecentralization    = Ledger.unitIntervalToRational _d
+    , protocolParamDecentralization    = Ledger.unboundRational _d
     , protocolParamExtraPraosEntropy   = fromLedgerNonce _extraEntropy
     , protocolParamMaxBlockHeaderSize  = _maxBHSize
     , protocolParamMaxBlockBodySize    = _maxBBSize
@@ -1401,9 +1428,9 @@ fromAlonzoPParams
     , protocolParamMinPoolCost         = fromShelleyLovelace _minPoolCost
     , protocolParamPoolRetireMaxEpoch  = _eMax
     , protocolParamStakePoolTargetNum  = _nOpt
-    , protocolParamPoolPledgeInfluence = _a0
-    , protocolParamMonetaryExpansion   = Ledger.unitIntervalToRational _rho
-    , protocolParamTreasuryCut         = Ledger.unitIntervalToRational _tau
+    , protocolParamPoolPledgeInfluence = Ledger.unboundRational _a0
+    , protocolParamMonetaryExpansion   = Ledger.unboundRational _rho
+    , protocolParamTreasuryCut         = Ledger.unboundRational _tau
     , protocolParamUTxOCostPerWord     = Just (fromShelleyLovelace _coinsPerUTxOWord)
     , protocolParamCostModels          = fromAlonzoCostModels _costmdls
     , protocolParamPrices              = Just (fromAlonzoPrices _prices)
@@ -1413,4 +1440,3 @@ fromAlonzoPParams
     , protocolParamCollateralPercent   = Just _collateralPercentage
     , protocolParamMaxCollateralInputs = Just _maxCollateralInputs
     }
-

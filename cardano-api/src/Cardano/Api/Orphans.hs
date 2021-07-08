@@ -26,11 +26,11 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.Aeson.Types as Aeson
-import           Data.Scientific (Scientific)
 
 import           Control.Applicative
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
 
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -145,8 +145,7 @@ instance ToJSON (PParamsUpdate era) where
      ++ [ "poolDeposit"           .= x | x <- mbfield (Shelley._poolDeposit pp) ]
      ++ [ "eMax"                  .= x | x <- mbfield (Shelley._eMax pp) ]
      ++ [ "nOpt"                  .= x | x <- mbfield (Shelley._nOpt pp) ]
-     ++ [ "a0" .= (fromRational x :: Scientific)
-                                       | x <- mbfield (Shelley._a0 pp) ]
+     ++ [ "a0"                    .= x | x <- mbfield (Shelley._a0 pp) ]
      ++ [ "rho"                   .= x | x <- mbfield (Shelley._rho pp) ]
      ++ [ "tau"                   .= x | x <- mbfield (Shelley._tau pp) ]
      ++ [ "decentralisationParam" .= x | x <- mbfield (Shelley._d pp) ]
@@ -302,8 +301,27 @@ instance ToJSON (SafeHash.SafeHash c a) where
 instance ToJSON Alonzo.ExUnits
 deriving instance FromJSON Alonzo.ExUnits
 
-deriving instance ToJSON Alonzo.Prices
-deriving instance FromJSON Alonzo.Prices
+instance ToJSON Alonzo.Prices where
+  toJSON Alonzo.Prices { Alonzo.prSteps, Alonzo.prMem } =
+    -- We cannot round-trip via NonNegativeInterval, so we go via Rational
+    object [ "prSteps" .= Ledger.unboundRational prSteps
+           , "prMem"   .= Ledger.unboundRational prMem
+           ]
+
+instance FromJSON Alonzo.Prices where
+  parseJSON =
+    Aeson.withObject "prices" $ \o -> do
+      steps <- o .: "prSteps"
+      mem   <- o .: "prMem"
+      prSteps <- checkBoundedRational steps
+      prMem   <- checkBoundedRational mem
+      return Alonzo.Prices { Alonzo.prSteps, Alonzo.prMem }
+    where
+      -- We cannot round-trip via NonNegativeInterval, so we go via Rational
+      checkBoundedRational r =
+        case Ledger.boundRational r of
+          Nothing -> fail ("too much precision for bounded rational: " ++ show r)
+          Just s  -> return s
 
 deriving newtype instance FromJSON Alonzo.CostModel
 deriving newtype instance ToJSON Alonzo.CostModel
@@ -392,7 +410,7 @@ instance ToJSON (Alonzo.PParams era) where
       , "poolDeposit" .= Alonzo._poolDeposit pp
       , "eMax" .= Alonzo._eMax pp
       , "nOpt" .= Alonzo._nOpt pp
-      , "a0" .= (fromRational (Alonzo._a0 pp) :: Scientific)
+      , "a0"  .= Alonzo._a0 pp
       , "rho" .= Alonzo._rho pp
       , "tau" .= Alonzo._tau pp
       , "decentralisationParam" .= Alonzo._d pp
@@ -422,9 +440,7 @@ instance FromJSON (Alonzo.PParams era) where
         <*> obj .: "poolDeposit"
         <*> obj .: "eMax"
         <*> obj .: "nOpt"
-        <*> ( (toRational :: Scientific -> Rational)
-                <$> obj .: "a0"
-            )
+        <*> obj .: "a0"
         <*> obj .: "rho"
         <*> obj .: "tau"
         <*> obj .: "decentralisationParam"

@@ -8,10 +8,11 @@ module Cardano.Api.Shelley.Genesis
   , shelleyGenesisDefaults
   ) where
 
-import           Cardano.Prelude
+import           Prelude
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Time as Time
+import           Data.Maybe (fromMaybe)
 
 import           Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Slotting.Slot (EpochSize (..))
@@ -43,7 +44,9 @@ shelleyGenesisDefaults =
 
       -- consensus protocol parameters
     , sgSlotLength            = 1.0 :: Time.NominalDiffTime -- 1s slots
-    , sgActiveSlotsCoeff      = 1/20                -- 20s block times on average
+    , sgActiveSlotsCoeff      = fromMaybe
+                                  (error "shelleyGenesisDefaults: impossible")
+                                  (Ledger.boundRational (1/20))  -- 20s block times on average
     , sgSecurityParam         = k
     , sgEpochLength           = EpochSize (k * 10 * 20) -- 10k/f
     , sgSlotsPerKESPeriod     = 60 * 60 * 36        -- 1.5 days with 1s slots
@@ -53,10 +56,7 @@ shelleyGenesisDefaults =
     -- ledger protocol parameters
     , sgProtocolParams        =
         Ledger.emptyPParams
-        { Ledger._d =
-              Ledger.truncateUnitInterval
-            . realToFrac
-            $ (1 :: Double)
+        { Ledger._d = maxBound
         , Ledger._maxBHSize = 1100                  -- TODO: compute from crypto
         , Ledger._maxBBSize = 64 * 1024             -- max 64kb blocks
         , Ledger._maxTxSize = 16 * 1024             -- max 16kb txs

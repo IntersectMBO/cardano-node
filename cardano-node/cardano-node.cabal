@@ -120,7 +120,7 @@ library
                       , generic-data
                       , hostname
                       , iproute
-                      , io-sim-classes
+                      , io-classes
                       , iohk-monitoring
                       , lobemo-backend-aggregation
                       , lobemo-backend-ekg

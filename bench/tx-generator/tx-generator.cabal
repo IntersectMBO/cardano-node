@@ -80,7 +80,7 @@ library
                      , formatting
                      , generic-monoid
                      , ghc-prim
-                     , io-sim-classes
+                     , io-classes
                      , iohk-monitoring
                      , ixset-typed
                      , network

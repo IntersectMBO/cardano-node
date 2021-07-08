@@ -9,25 +9,31 @@ module Gen.Cardano.Api
   ) where
 
 import           Cardano.Prelude
-import           Shelley.Spec.Ledger.Metadata (Metadata (..), Metadatum (..))
-import           Hedgehog (MonadGen, Range)
+import           Control.Monad (MonadFail(fail))
+import qualified Data.Map.Strict as Map
 
+--TODO: why do we have this odd split? We can get rid of the old name "typed"
+import           Gen.Cardano.Api.Typed (genRational)
+
+import           Shelley.Spec.Ledger.Metadata (Metadata (..), Metadatum (..))
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
-import qualified Data.Map.Strict as Map
+
+import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-genMetadata :: MonadGen m => m (Metadata era)
+genMetadata :: Gen (Metadata era)
 genMetadata = do
   numberOfIndicies <- Gen.integral (Range.linear 1 15)
   let indexes = map (\i -> fromIntegral i :: Word64) [1..numberOfIndicies]
   mDatums <- Gen.list (Range.singleton numberOfIndicies) genMetadatum
   return . Metadata . Map.fromList $ zip indexes mDatums
 
-genMetadatum :: MonadGen m => m Metadatum
+genMetadatum :: Gen Metadatum
 genMetadatum = do
   int <- Gen.list (Range.linear 1 5) (I <$> Gen.integral (Range.linear 1 100))
   bytes <- Gen.list (Range.linear 1 5) (B <$> Gen.bytes (Range.linear 1 20))
@@ -43,25 +49,32 @@ genMetadatum = do
     , Map [(singleMetadatum, List mDatumList)]
     ]
 
-genCoin :: MonadGen m => Range Integer -> m Ledger.Coin
+genCoin :: Range Integer -> Gen Ledger.Coin
 genCoin r = do
   unCoin' <- Gen.integral r
   return $ Ledger.Coin unCoin'
 
-genLanguage :: MonadGen m => m Alonzo.Language
+genPrice :: Gen Ledger.NonNegativeInterval
+genPrice = do
+  unPrice <- genRational
+  case Ledger.boundRational unPrice of
+    Nothing -> fail "genPrice: genRational should give us a bounded rational"
+    Just p -> pure p
+
+genLanguage :: Gen Alonzo.Language
 genLanguage = return Alonzo.PlutusV1
 
-genPrices :: MonadGen m => m Alonzo.Prices
+genPrices :: Gen Alonzo.Prices
 genPrices = do
-  prMem' <- genCoin (Range.linear 0 10)
-  prSteps' <- genCoin (Range.linear 0 10)
+  prMem'   <- genPrice
+  prSteps' <- genPrice
 
   return Alonzo.Prices
     { Alonzo.prMem = prMem'
     , Alonzo.prSteps = prSteps'
     }
 
-genExUnits :: MonadGen m => m Alonzo.ExUnits
+genExUnits :: Gen Alonzo.ExUnits
 genExUnits = do
   exUnitsMem' <- Gen.word64 (Range.linear 0 10)
   exUnitsSteps' <- Gen.word64 (Range.linear 0 10)
@@ -70,12 +83,12 @@ genExUnits = do
     , Alonzo.exUnitsSteps = exUnitsSteps'
     }
 
-genCostModel :: MonadGen m => Range Int -> m Text -> m Integer ->  m Alonzo.CostModel
+genCostModel :: Range Int -> Gen Text -> Gen Integer -> Gen Alonzo.CostModel
 genCostModel r gt gi = do
   map' <- Gen.map r ((,) <$> gt <*> gi)
   return $ Alonzo.CostModel map'
 
-genAlonzoGenesis :: MonadGen m => m Alonzo.AlonzoGenesis
+genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
   costmdls' <- Gen.map (Range.linear 0 5) $ (,)

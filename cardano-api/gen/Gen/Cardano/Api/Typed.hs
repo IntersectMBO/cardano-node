@@ -42,6 +42,8 @@ module Gen.Cardano.Api.Typed
   , genProtocolParametersUpdate
   , genScriptDataSupportedInAlonzoEra
   , genTxOutDatumHash
+
+  , genRational
   ) where
 
 import           Cardano.Api hiding (txIns)
@@ -734,7 +736,7 @@ genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
                                    <*> Gen.integral (Range.constant 0 1000)
 
 genExecutionUnitPrices :: Gen ExecutionUnitPrices
-genExecutionUnitPrices = ExecutionUnitPrices <$> genLovelace <*> genLovelace
+genExecutionUnitPrices = ExecutionUnitPrices <$> genRational <*> genRational
 
 genTxOutDatumHash :: CardanoEra era -> Gen (TxOutDatumHash era)
 genTxOutDatumHash era = case era of

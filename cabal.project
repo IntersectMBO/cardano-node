@@ -91,7 +91,7 @@ package small-steps-test
 package goblins
   tests: False
 
-package io-sim-classes
+package io-classes
   tests: False
 
 package cardano-ledger-alonzo-test
@@ -113,8 +113,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 27f93e64a7d6aa78bfcd1072f0f5c088c79c99fe
-  --sha256: 0pblaq2jxcacd0iwm36l18kndzgbyb2587d7370ixqc5fv67qb39
+  tag: b6a215c42a28dc8b71b42946fe30256a333d34af
+  --sha256: 1l9nqsg6kfkfadlbvyl4afdf8v408zf0fn6dkihqf56g2mnk4i04
   subdir:
     binary
     binary/test
@@ -133,8 +133,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 60a47ae42b7d465160a310d5d7f125f73d19c705
-  --sha256: 1gvl7a5h8rrspnwa1vk42fy1ns94y8llfsxahxz0ykdap7w6kwmm
+  tag: ec9c77edbf5700a4b2ece8f97a1e313df06abc97
+  --sha256: 1ia8x9dnw36y0xazg7xg263ax9mamw9w4sg460cmibj3wv49im4w
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -193,11 +193,11 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 8a0ff387541a612b787a6e6b6f02baa9ac8d4c71
-  --sha256: 1k1cc5sqq9h6jrr5psi4vzs1ay3wafj42gpfv8b67cpnxfivj4m6
+  tag: e338f2cf8e1078fbda9555dd2b169c6737ef6774
+  --sha256: 12x81hpjyw2cpkazfalz6bw2wgr6ax7bnmlxl2rlfakkvsjfgaqd
   subdir:
     io-sim
-    io-sim-classes
+    io-classes
     monoidal-synchronisation
     network-mux
     ouroboros-consensus
@@ -213,13 +213,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: c89e13e66c5bef628a1f7ea3a3732951be8be8ba
-  --sha256: 0hdck39i4yv656phxjy5ppqgzrq7x3q4b5rf8vj7hrzcs0aggl8r
+  tag: 523f349f3d68db07c98150734793ed7003d1f562
+  --sha256: 0vp6wiv1fz5bzvw90pdwv96nck78m5s91xiwjhkksq06l1yqr3ps
   subdir:
     plutus-core
     plutus-ledger-api
     plutus-tx
     prettyprinter-configurable
+    word-array
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package

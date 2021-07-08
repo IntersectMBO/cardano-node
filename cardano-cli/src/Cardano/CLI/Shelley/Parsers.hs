@@ -2556,13 +2556,13 @@ pUTxOCostPerWord =
 
 pExecutionUnitPrices :: Parser ExecutionUnitPrices
 pExecutionUnitPrices = ExecutionUnitPrices
-  <$> Opt.option (readerFromParsecParser parseLovelace)
+  <$> Opt.option readRational
       (  Opt.long "price-execution-steps"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "Step price of execution units for script languages that use \
                   \them (from Alonzo era)."
       )
-  <*> Opt.option (readerFromParsecParser parseLovelace)
+  <*> Opt.option readRational
       (  Opt.long "price-execution-memory"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "Memory price of execution units for script languages that \
