@@ -96,6 +96,7 @@ module Cardano.Api.TxBody (
     -- * Inspecting 'ScriptWitnesses'
     AnyScriptWitness(..),
     ScriptWitnessIndex(..),
+    collectTxBodyScriptWitnesses,
 
     -- * Internal conversion functions & types
     toShelleyTxId,
@@ -124,7 +125,8 @@ import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (toList)
-import           Data.List (intercalate)
+import           Data.Function (on)
+import           Data.List (intercalate, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -2150,7 +2152,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
         txAuxData
   where
-    witnesses :: [(Alonzo.RdmrPtr, AnyScriptWitness AlonzoEra)]
+    witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardAlonzo]
@@ -2180,8 +2182,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     redeemers =
       Alonzo.Redeemers $
         Map.fromList
-          [ (ptr, (toAlonzoData d, toAlonzoExUnits e))
-          | (ptr, AnyScriptWitness
+          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+          | (idx, AnyScriptWitness
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
 
@@ -2255,7 +2257,7 @@ fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
 
 collectTxBodyScriptWitnesses :: forall era.
                                 TxBodyContent BuildTx era
-                             -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+                             -> [(ScriptWitnessIndex, AnyScriptWitness era)]
 collectTxBodyScriptWitnesses TxBodyContent {
                                txIns,
                                txWithdrawals,
@@ -2271,42 +2273,31 @@ collectTxBodyScriptWitnesses TxBodyContent {
   where
     scriptWitnessesTxIns
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesTxIns txins =
-        [ (Alonzo.RdmrPtr Alonzo.Spend ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexTxIn ix, AnyScriptWitness witness)
           -- The tx ins are indexed in the map order by txid
-        | (ix, BuildTxWith (ScriptWitness _ witness)) <- zip [0..] (orderTxIns txins)
+        | (ix, (_, BuildTxWith (ScriptWitness _ witness)))
+            <- zip [0..] (orderTxIns txins)
         ]
-
-    -- This relies on the TxId Ord instance being consistent with the
-    -- Shelley.TxId Ord instance via the toShelleyTxId conversion
-    -- This is checked by prop_ord_distributive_TxId
-    orderTxIns :: Ord k => [(k, v)] -> [v]
-    orderTxIns = Map.elems . Map.fromList
 
     scriptWitnessesWithdrawals
       :: TxWithdrawals BuildTx era
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesWithdrawals  TxWithdrawalsNone = []
     scriptWitnessesWithdrawals (TxWithdrawals _ withdrawals) =
-        [ (Alonzo.RdmrPtr Alonzo.Rewrd ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexWithdrawal ix, AnyScriptWitness witness)
           -- The withdrawals are indexed in the map order by stake credential
-        | (ix, BuildTxWith (ScriptWitness _ witness))
+        | (ix, (_, _, BuildTxWith (ScriptWitness _ witness)))
              <- zip [0..] (orderStakeAddrs withdrawals)
         ]
 
-    -- This relies on the StakeAddress Ord instance being consistent with the
-    -- Shelley.RewardAcnt Ord instance via the toShelleyStakeAddr conversion
-    -- This is checked by prop_ord_distributive_StakeAddress
-    orderStakeAddrs :: Ord k => [(k, x, v)] -> [v]
-    orderStakeAddrs = Map.elems . Map.fromList . map (\(k, _, v) -> (k, v))
-
     scriptWitnessesCertificates
       :: TxCertificates BuildTx era
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesCertificates  TxCertificatesNone = []
     scriptWitnessesCertificates (TxCertificates _ certs (BuildTxWith witnesses)) =
-        [ (Alonzo.RdmrPtr Alonzo.Cert ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexCertificate ix, AnyScriptWitness witness)
           -- The certs are indexed in list order
         | (ix, cert) <- zip [0..] certs
         , ScriptWitness _ witness <- maybeToList $ do
@@ -2322,15 +2313,27 @@ collectTxBodyScriptWitnesses TxBodyContent {
 
     scriptWitnessesMinting
       :: TxMintValue BuildTx era
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesMinting  TxMintNone = []
     scriptWitnessesMinting (TxMintValue _ value (BuildTxWith witnesses)) =
-        [ (Alonzo.RdmrPtr Alonzo.Mint ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexMint ix, AnyScriptWitness witness)
           -- The minting policies are indexed in policy id order in the value
         | let ValueNestedRep bundle = valueToNestedRep value
         , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
         , witness <- maybeToList (Map.lookup policyid witnesses)
         ]
+
+-- This relies on the TxId Ord instance being consistent with the
+-- Shelley.TxId Ord instance via the toShelleyTxId conversion
+-- This is checked by prop_ord_distributive_TxId
+orderTxIns :: [(TxIn, v)] -> [(TxIn, v)]
+orderTxIns = sortBy (compare `on` fst)
+
+-- This relies on the StakeAddress Ord instance being consistent with the
+-- Shelley.RewardAcnt Ord instance via the toShelleyStakeAddr conversion
+-- This is checked by prop_ord_distributive_StakeAddress
+orderStakeAddrs :: [(StakeAddress, x, v)] -> [(StakeAddress, x, v)]
+orderStakeAddrs = sortBy (compare `on` (\(k, _, _) -> k))
 
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace, a)] -> Shelley.Wdrl StandardCrypto
