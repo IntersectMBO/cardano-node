@@ -93,6 +93,10 @@ module Cardano.Api.TxBody (
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
 
+    -- * Inspecting 'ScriptWitnesses'
+    AnyScriptWitness(..),
+    ScriptWitnessIndex(..),
+
     -- * Internal conversion functions & types
     toShelleyTxId,
     toShelleyTxIn,
@@ -100,6 +104,8 @@ module Cardano.Api.TxBody (
     fromShelleyTxId,
     fromShelleyTxIn,
     fromShelleyTxOut,
+    toAlonzoRdmrPtr,
+    fromAlonzoRdmrPtr,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
@@ -2200,8 +2206,52 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                TxAuxScripts _ ss' -> ss'
 
 
+-- ----------------------------------------------------------------------------
+-- Script witnesses within the tx body
+--
+
+-- | A 'ScriptWitness' in any 'WitCtx'. This lets us handle heterogeneous
+-- collections of script witnesses from multiple contexts.
+--
 data AnyScriptWitness era where
      AnyScriptWitness :: ScriptWitness witctx era -> AnyScriptWitness era
+
+-- | Identify the location of a 'ScriptWitness' within the context of a
+-- 'TxBody'. These are indexes of the objects within the transaction that
+-- need or can use script witnesses: inputs, minted assets, withdrawals and
+-- certificates. These are simple numeric indices, enumerated from zero.
+-- Thus the indices are not stable if the transaction body is modified.
+--
+data ScriptWitnessIndex =
+
+     -- | The n'th transaction input, in the order of the 'TxId's.
+     ScriptWitnessIndexTxIn !Word
+
+     -- | The n'th minting 'PolicyId', in the order of the 'PolicyId's.
+   | ScriptWitnessIndexMint !Word
+
+     -- | The n'th certificate, in the list order of the certificates.
+   | ScriptWitnessIndexCertificate !Word
+
+     -- | The n'th withdrawal, in the order of the 'StakeAddress's.
+   | ScriptWitnessIndexWithdrawal !Word
+  deriving (Eq, Ord, Show)
+
+toAlonzoRdmrPtr :: ScriptWitnessIndex -> Alonzo.RdmrPtr
+toAlonzoRdmrPtr widx =
+    case widx of
+      ScriptWitnessIndexTxIn        n -> Alonzo.RdmrPtr Alonzo.Spend (fromIntegral n)
+      ScriptWitnessIndexMint        n -> Alonzo.RdmrPtr Alonzo.Mint  (fromIntegral n)
+      ScriptWitnessIndexCertificate n -> Alonzo.RdmrPtr Alonzo.Cert  (fromIntegral n)
+      ScriptWitnessIndexWithdrawal  n -> Alonzo.RdmrPtr Alonzo.Rewrd (fromIntegral n)
+
+fromAlonzoRdmrPtr :: Alonzo.RdmrPtr -> ScriptWitnessIndex
+fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
+    case tag of
+      Alonzo.Spend -> ScriptWitnessIndexTxIn        (fromIntegral n)
+      Alonzo.Mint  -> ScriptWitnessIndexMint        (fromIntegral n)
+      Alonzo.Cert  -> ScriptWitnessIndexCertificate (fromIntegral n)
+      Alonzo.Rewrd -> ScriptWitnessIndexWithdrawal  (fromIntegral n)
 
 collectTxBodyScriptWitnesses :: forall era.
                                 TxBodyContent BuildTx era
