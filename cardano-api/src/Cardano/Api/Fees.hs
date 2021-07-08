@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,6 +18,7 @@ module Cardano.Api.Fees (
     transactionFee,
     estimateTransactionFee,
     evaluateTransactionFee,
+    estimateTransactionKeyWitnessCount,
 
     -- * Transaction balance
     evaluateTransactionBalance,
@@ -27,6 +29,7 @@ import           Prelude
 import qualified Data.ByteString as BS
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import           GHC.Records (HasField (..))
 import           Numeric.Natural
 import           Data.Sequence.Strict (StrictSeq(..))
@@ -206,6 +209,58 @@ evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
     withLedgerConstraints ShelleyBasedEraAllegra f = f
     withLedgerConstraints ShelleyBasedEraMary    f = f
     withLedgerConstraints ShelleyBasedEraAlonzo  f = f
+
+-- | Give an approximate count of the number of key witnesses (i.e. signatures)
+-- a transaction will need.
+--
+-- This is an estimate not a precise count in that it can over-estimate: it
+-- makes conservative assumptions such as all inputs are from distinct
+-- addresses, but in principle multiple inputs can use the same address and we
+-- only need a witness per address.
+--
+-- Similarly there can be overlap between the regular and collateral inputs,
+-- but we conservatively assume they are distinct.
+--
+-- TODO: it is worth us considering a more precise count that relies on the
+-- UTxO to resolve which inputs are for distinct addresses, and also to count
+-- the number of Shelley vs Byron style witnesses.
+--
+estimateTransactionKeyWitnessCount :: TxBodyContent BuildTx era -> Word
+estimateTransactionKeyWitnessCount TxBodyContent {
+                                     txIns,
+                                     txInsCollateral,
+                                     txExtraKeyWits,
+                                     txWithdrawals,
+                                     txCertificates,
+                                     txUpdateProposal
+                                   } =
+  fromIntegral $
+    length [ () | (_txin, BuildTxWith KeyWitness{}) <- txIns ]
+
+  + case txInsCollateral of
+      TxInsCollateral _ txins
+        -> length txins
+      _ -> 0
+
+  + case txExtraKeyWits of
+      TxExtraKeyWitnesses _ khs
+        -> length khs
+      _ -> 0
+
+  + case txWithdrawals of
+      TxWithdrawals _ withdrawals
+        -> length [ () | (_, _, BuildTxWith KeyWitness{}) <- withdrawals ]
+      _ -> 0
+
+  + case txCertificates of
+      TxCertificates _ _ (BuildTxWith witnesses)
+        -> length [ () | KeyWitness{} <- Map.elems witnesses ]
+      _ -> 0
+
+  + case txUpdateProposal of
+      TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _)
+        -> Map.size updatePerGenesisKey
+      _ -> 0
 
 
 -- ----------------------------------------------------------------------------
