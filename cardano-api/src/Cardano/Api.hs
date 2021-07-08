@@ -244,6 +244,13 @@ module Cardano.Api (
     estimateTransactionFee,
     evaluateTransactionFee,
     estimateTransactionKeyWitnessCount,
+
+    -- ** Script execution units
+    evaluateTransactionExecutionUnits,
+    ScriptExecutionError(..),
+    TransactionValidityIntervalError,
+
+    -- ** Transaction balance
     evaluateTransactionBalance,
 
     -- * Transaction metadata

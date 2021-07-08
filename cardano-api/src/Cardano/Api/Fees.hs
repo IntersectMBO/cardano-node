@@ -20,6 +20,11 @@ module Cardano.Api.Fees (
     evaluateTransactionFee,
     estimateTransactionKeyWitnessCount,
 
+    -- * Script execution units
+    evaluateTransactionExecutionUnits,
+    ScriptExecutionError(..),
+    TransactionValidityIntervalError(..),
+
     -- * Transaction balance
     evaluateTransactionBalance,
   ) where
@@ -27,14 +32,24 @@ module Cardano.Api.Fees (
 import           Prelude
 
 import qualified Data.ByteString as BS
+import           Data.Bifunctor (bimap, first)
+import qualified Data.Array as Array
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as Text
+import           Data.Map (Map)
 import qualified Data.Map as Map
 import           GHC.Records (HasField (..))
 import           Numeric.Natural
 import           Data.Sequence.Strict (StrictSeq(..))
 
+import qualified Data.Text.Prettyprint.Doc as PP
+import qualified Data.Text.Prettyprint.Doc.Render.String as PP
+import           Control.Monad.Trans.Except
+
 import qualified Cardano.Binary as CBOR
+import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
+
 import qualified Cardano.Chain.Common as Byron
 
 import qualified Cardano.Ledger.Coin as Ledger
@@ -42,17 +57,29 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era  as Ledger.Era (Crypto)
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
-
 import qualified Shelley.Spec.Ledger.API as Ledger (CLI, TxIn, DCert, Wdrl)
 import qualified Shelley.Spec.Ledger.API.Wallet as Ledger
                    (evaluateTransactionBalance, evaluateTransactionFee)
 
 import           Shelley.Spec.Ledger.PParams (PParams'(..))
+
 import qualified Cardano.Ledger.Mary.Value as Mary
+
 import           Cardano.Ledger.Alonzo.PParams (PParams'(..))
+import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
+
+import qualified Plutus.V1.Ledger.Api as Plutus
+
+import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -261,6 +288,218 @@ estimateTransactionKeyWitnessCount TxBodyContent {
       TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _)
         -> Map.size updatePerGenesisKey
       _ -> 0
+
+
+-- ----------------------------------------------------------------------------
+-- Script execution units
+--
+
+-- | The different possible reasons that executing a script can fail,
+-- as reported by 'evaluateTransactionExecutionUnits'.
+--
+-- The first three of these are about failures before we even get to execute
+-- the script, and two are the result of execution.
+--
+data ScriptExecutionError =
+
+       -- | The script depends on a 'TxIn' that has not been provided in the
+       -- given 'UTxO' subset. The given 'UTxO' must cover all the inputs
+       -- the transaction references.
+       ScriptErrorMissingTxIn TxIn
+
+       -- | The 'TxIn' the script is spending does not have a 'ScriptDatum'.
+       -- All inputs guarded by Plutus scripts need to have been created with
+       -- a 'ScriptDatum'.
+     | ScriptErrorTxInWithoutDatum TxIn
+
+       -- | The 'ScriptDatum' provided does not match the one from the 'UTxO'.
+       -- This means the wrong 'ScriptDatum' value has been provided.
+       --
+     | ScriptErrorWrongDatum (Hash ScriptData)
+
+       -- | The script evaluation failed. This usually means it evaluated to an
+       -- error value. This is not a case of running out of execution units
+       -- (which is not possible for 'evaluateTransactionExecutionUnits' since 
+       -- the whole point of it is to discover how many execution units are
+       -- needed).
+       --
+     | ScriptErrorEvaluationFailed Plutus.EvaluationError
+
+       -- | The execution units overflowed a 64bit word. Congratulations if
+       -- you encounter this error. With the current style of cost model this
+       -- would need a script to run for over 7 months, which is somewhat more
+       -- than the expected maximum of a few milliseconds.
+       --
+     | ScriptErrorExecutionUnitsOverflow
+  deriving Show
+
+instance Error ScriptExecutionError where
+  displayError (ScriptErrorMissingTxIn txin) =
+      "The supplied UTxO is missing the txin " ++ Text.unpack (renderTxIn txin)
+
+  displayError (ScriptErrorTxInWithoutDatum txin) =
+      "The Plutus script witness for the txin does not have a script datum "
+   ++ "(according to the UTxO). The txin in question is "
+   ++ Text.unpack (renderTxIn txin)
+
+  displayError (ScriptErrorWrongDatum dh) =
+      "The Plutus script witness has the wrong datum (according to the UTxO). "
+   ++ "The expected datum value has hash " ++ show dh
+
+  displayError (ScriptErrorEvaluationFailed evalErr) =
+      "The Plutus script evaluation failed: " ++ pp evalErr
+    where
+      pp :: PP.Pretty p => p -> String
+      pp = PP.renderString
+         . PP.layoutPretty PP.defaultLayoutOptions
+         . PP.pretty
+
+  displayError ScriptErrorExecutionUnitsOverflow =
+      "The execution units required by this Plutus script overflows a 64bit "
+   ++ "word. In a properly configured chain this should be practically "
+   ++ "impossible. So this probably indicates a chain configuration problem, "
+   ++ "perhaps with the values in the cost model."
+
+
+-- | The transaction validity interval is too far into the future.
+--
+-- Transactions with Plutus scripts need to have a validity interval that is
+-- not so far in the future that we cannot reliably determine the UTC time
+-- corresponding to the validity interval expressed in slot numbers.
+--
+-- This is because the Plutus scripts get given the transaction validity
+-- interval in UTC time, so that they are not sensitive to slot lengths.
+--
+-- If either end of the validity interval is beyond the so called \"time
+-- horizon\" then the consensus algorithm is not able to reliably determine
+-- the relationship between slots and time. This is this situation in which
+-- this error is reported. For the Cardano mainnet the time horizon is 36
+-- hours beyond the current time. This effectively means we cannot submit
+-- check or submit transactions that use Plutus scripts that have the end
+-- of their validity interval more than 36 hours into the future.
+--
+newtype TransactionValidityIntervalError =
+          TransactionValidityIntervalError Consensus.PastHorizonException
+  deriving Show
+
+instance Error TransactionValidityIntervalError where
+  displayError (TransactionValidityIntervalError pastTimeHorizon) =
+      "The transaction validity interval is too far in the future. "
+   ++ "For this network it must not be more than "
+   ++ show (timeHorizonSlots pastTimeHorizon)
+   ++ "slots ahead of the current time slot. "
+   ++ "(Transactions with Plutus scripts must have validity intervals that "
+   ++ "are close enough in the future that we can reliably turn the slot "
+   ++ "numbers into UTC wall clock times.)"
+    where
+      timeHorizonSlots :: Consensus.PastHorizonException -> Word
+      timeHorizonSlots Consensus.PastHorizon{Consensus.pastHorizonSummary}
+        | eraSummaries@(_:_) <- pastHorizonSummary
+        , Consensus.StandardSafeZone slots <-
+            (Consensus.eraSafeZone . Consensus.eraParams . last) eraSummaries
+        = fromIntegral slots
+
+        | otherwise
+        = 0 -- This should be impossible.
+
+
+
+-- | Compute the 'ExecutionUnits' needed for each script in the transaction.
+--
+-- This works by running all the scripts and counting how many execution units
+-- are actually used.
+--
+evaluateTransactionExecutionUnits
+  :: forall era mode.
+     EraInMode era mode
+  -> SystemStart
+  -> EraHistory mode
+  -> ProtocolParameters
+  -> UTxO era
+  -> TxBody era
+  -> Either TransactionValidityIntervalError
+            (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
+evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo txbody =
+    case makeSignedTransaction [] txbody of
+      ByronTx {}                 -> evalPreAlonzo
+      ShelleyTx era tx' ->
+        case era of
+          ShelleyBasedEraShelley -> evalPreAlonzo
+          ShelleyBasedEraAllegra -> evalPreAlonzo
+          ShelleyBasedEraMary    -> evalPreAlonzo
+          ShelleyBasedEraAlonzo  -> evalAlonzo era tx'
+  where
+    -- Pre-Alonzo eras do not support languages with execution unit accounting.
+    evalPreAlonzo :: Either TransactionValidityIntervalError
+                            (Map ScriptWitnessIndex
+                                 (Either ScriptExecutionError ExecutionUnits))
+    evalPreAlonzo = Right Map.empty
+
+    evalAlonzo :: forall ledgerera.
+                  ShelleyLedgerEra era ~ ledgerera
+               => ledgerera ~ Alonzo.AlonzoEra Ledger.StandardCrypto
+               => LedgerEraConstraints ledgerera
+               => ShelleyBasedEra era
+               -> Ledger.Tx ledgerera
+               -> Either TransactionValidityIntervalError
+                         (Map ScriptWitnessIndex
+                              (Either ScriptExecutionError ExecutionUnits))
+    evalAlonzo era tx =
+      case Alonzo.evaluateTransactionExecutionUnits
+             tx
+             (toLedgerUTxO era utxo)
+             (toLedgerEpochInfo history)
+             systemstart
+             (toAlonzoCostModels (protocolParamCostModels pparams))
+        of Left  err   -> Left err
+           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+
+    toLedgerEpochInfo :: EraHistory mode
+                      -> EpochInfo (Either TransactionValidityIntervalError)
+    toLedgerEpochInfo (EraHistory _ interpreter) =
+        hoistEpochInfo (first TransactionValidityIntervalError . runExcept) $
+          Consensus.interpreterToEpochInfo interpreter
+
+    toAlonzoCostModels :: Map AnyPlutusScriptVersion CostModel
+                       -> Array.Array Alonzo.Language Alonzo.CostModel
+    toAlonzoCostModels costmodels =
+      Array.array
+        (minBound, maxBound)
+        [ (toAlonzoLanguage lang, toAlonzoCostModel costmodel)
+        | (lang, costmodel) <- Map.toList costmodels ]
+
+    fromLedgerScriptExUnitsMap
+      :: Map Alonzo.RdmrPtr (Either (Alonzo.ScriptFailure Ledger.StandardCrypto)
+                                    Alonzo.ExUnits)
+      -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
+    fromLedgerScriptExUnitsMap exmap =
+      Map.fromList
+        [ (fromAlonzoRdmrPtr rdmrptr,
+           bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
+        | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
+
+    fromAlonzoScriptExecutionError :: Alonzo.ScriptFailure Ledger.StandardCrypto
+                                   -> ScriptExecutionError
+    fromAlonzoScriptExecutionError failure =
+      case failure of
+        Alonzo.UnknownTxIn     txin -> ScriptErrorMissingTxIn txin'
+                                         where txin' = fromShelleyTxIn txin
+        Alonzo.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'
+                                         where txin' = fromShelleyTxIn txin
+        Alonzo.MissingDatum      dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
+        Alonzo.ValidationFailed err -> ScriptErrorEvaluationFailed err
+        Alonzo.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
+
+        -- Some of the errors are impossible by construction, given the way we
+        -- build transactions in the API:
+        Alonzo.RedeemerNotNeeded rdmrPtr ->
+          impossible ("RedeemerNotNeeded " ++ show (fromAlonzoRdmrPtr rdmrPtr))
+
+        Alonzo.MissingScript rdmrPtr ->
+          impossible ("MissingScript " ++ show (fromAlonzoRdmrPtr rdmrPtr))
+
+    impossible detail = error $ "evaluateTransactionExecutionUnits: "
+                             ++ "the impossible happened: " ++ detail
 
 
 -- ----------------------------------------------------------------------------

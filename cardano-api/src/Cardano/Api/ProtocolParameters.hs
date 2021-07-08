@@ -46,6 +46,10 @@ module Cardano.Api.ProtocolParameters (
     fromShelleyPParams,
     toAlonzoPrices,
     fromAlonzoPrices,
+    toAlonzoScriptLanguage,
+    fromAlonzoScriptLanguage,
+    toAlonzoCostModel,
+    fromAlonzoCostModel,
 
     -- * Data family instances
     AsType(..)

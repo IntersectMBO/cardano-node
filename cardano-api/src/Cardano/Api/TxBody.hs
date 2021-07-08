@@ -107,12 +107,11 @@ module Cardano.Api.TxBody (
     fromShelleyTxOut,
     toAlonzoRdmrPtr,
     fromAlonzoRdmrPtr,
+    fromByronTxIn,
+    renderTxIn,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
-
-    -- * Conversion functions
-    fromByronTxIn,
   ) where
 
 import           Prelude

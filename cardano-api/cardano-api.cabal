@@ -94,6 +94,7 @@ library
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
                       , attoparsec
+                      , array
                       , base16-bytestring >= 1.0
                       , base58-bytestring
                       , bech32 >= 1.1.0
@@ -127,6 +128,7 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , plutus-ledger-api
+                      , prettyprinter
                       , scientific
                       , shelley-spec-ledger
                       , small-steps
