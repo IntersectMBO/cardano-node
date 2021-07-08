@@ -44,7 +44,7 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError, nothingThrowE, hushM)
+import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError, hushM)
 import           Cardano.CLI.Mary.RenderValue (defaultRenderValueOptions, renderValue)
 import           Cardano.CLI.Shelley.Orphans ()
 import qualified Cardano.CLI.Shelley.Output as O
@@ -227,7 +227,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
               Left e -> throwE (ShelleyQueryCmdPastHorizon e)
               Right (epochNo, _, _) -> do
                 syncProgressResult <- runExceptT $ do
-                  systemStart <- fmap getSystemStart mSystemStart & nothingThrowE ShelleyQueryCmdSystemStartUnavailable
+                  systemStart <- fmap getSystemStart mSystemStart & hoistMaybe ShelleyQueryCmdSystemStartUnavailable
                   nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
                   tipTimeResult <- getProgress tipSlotNo eraHistory & bimap ShelleyQueryCmdPastHorizon fst & except
 

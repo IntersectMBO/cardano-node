@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
@@ -11,7 +10,6 @@ module Cardano.CLI.Helpers
   , renderHelpersError
   , textShow
   , validateCBOR
-  , nothingThrowE
   , hushM
   ) where
 
@@ -110,13 +108,9 @@ validateCBOR cborObject bs =
 textShow :: Show a => a -> Text
 textShow = Text.pack . show
 
--- | Return the value in Just or throw the specified error value.
-nothingThrowE :: Monad m => e -> Maybe a -> ExceptT e m a
-nothingThrowE e = maybe (throwE e) return
-
--- | Convert an Either to a Maybe and executed the supplied handler
+-- | Convert an Either to a Maybe and execute the supplied handler
 -- in the Left case.
-hushM :: forall e m a. MonadIO m => Either e a -> (e -> m ()) -> m (Maybe a)
+hushM :: forall e m a. Monad m => Either e a -> (e -> m ()) -> m (Maybe a)
 hushM r f = case r of
   Right a -> return (Just a)
   Left e -> f e >> return Nothing
