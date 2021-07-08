@@ -32,10 +32,11 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as Text
+import           Data.Time.Clock
 import qualified Data.Vector as Vector
 import           Numeric (showEFloat)
-import           Data.Time.Clock
 
+import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 
 import           Cardano.Api
@@ -43,7 +44,7 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError, hushM)
 import           Cardano.CLI.Mary.RenderValue (defaultRenderValueOptions, renderValue)
 import           Cardano.CLI.Shelley.Orphans ()
 import qualified Cardano.CLI.Shelley.Output as O
@@ -59,7 +60,8 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import qualified Cardano.Ledger.Shelley.Constraints as Ledger
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..), SystemStart (..), toRelativeTime)
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
+                   SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -68,11 +70,14 @@ import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
-import           Text.Printf(printf)
+import           Text.Printf (printf)
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
+
+import qualified Data.Text.IO as T
+import qualified System.IO as IO
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -88,6 +93,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdEraMismatch !EraMismatch
   | ShelleyQueryCmdUnsupportedMode !AnyConsensusMode
   | ShelleyQueryCmdPastHorizon !Qry.PastHorizonException
+  | ShelleyQueryCmdSystemStartUnavailable
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -108,6 +114,7 @@ renderShelleyQueryCmdError err =
       "\nCurrent ledger era: " <> ledgerEra
     ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e
+    ShelleyQueryCmdSystemStartUnavailable -> "System start unavailable"
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -215,54 +222,57 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
         eResult <- liftIO $ queryEraHistoryAndSystemStart localNodeConnInfo Nothing
         case eResult of
           Left acqFail -> left (ShelleyQueryCmdAcquireFailure acqFail)
-          Right (eraHistory, systemStart') ->
+          Right (eraHistory, mSystemStart) ->
             case slotToEpoch tipSlotNo eraHistory of
               Left e -> throwE (ShelleyQueryCmdPastHorizon e)
               Right (epochNo, _, _) -> do
-                let tipTimeResult = first toJsonPastHorizonException $
-                                fst <$> getProgress tipSlotNo eraHistory
+                syncProgressResult <- runExceptT $ do
+                  systemStart <- fmap getSystemStart mSystemStart & hoistMaybe ShelleyQueryCmdSystemStartUnavailable
+                  nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
+                  tipTimeResult <- getProgress tipSlotNo eraHistory & bimap ShelleyQueryCmdPastHorizon fst & except
 
-                let systemStart = getSystemStart systemStart'
+                  let tolerance = RelativeTime (secondsToNominalDiffTime 600)
+                  return $ flip (percentage tolerance) nowSeconds tipTimeResult
 
-                nowSeconds <- toRelativeTime (SystemStart systemStart) <$> liftIO getCurrentTime
-
-                let tolerance = RelativeTime (secondsToNominalDiffTime 600)
-                let jsonSyncProgress = fmap (flip (percentage tolerance) nowSeconds) tipTimeResult
+                mSyncProgress <- hushM syncProgressResult $ \e -> do
+                  liftIO . T.hPutStrLn IO.stderr $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
 
                 let output = encodePretty $ O.QueryTipOutput
                       { O.chainTip = tip
                       , O.era = anyEra
                       , O.epoch = epochNo
-                      , O.syncProgress = jsonSyncProgress
+                      , O.syncProgress = mSyncProgress
                       }
 
                 case mOutFile of
                   Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath output
                   Nothing                 -> liftIO $ LBS.putStrLn        output
-
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
 
 queryEraHistoryAndSystemStart
   :: LocalNodeConnectInfo CardanoMode
   -> Maybe ChainPoint
-  -> IO (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
+  -> IO (Either Net.Query.AcquireFailure (EraHistory CardanoMode, Maybe SystemStart))
 queryEraHistoryAndSystemStart connctInfo mpoint = do
     resultVar <- newEmptyTMVarIO
-    connectToLocalNode
+    connectToLocalNodeWithVersion
       connctInfo
-      LocalNodeClientProtocols
-      { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just (singleQuery mpoint resultVar)
-      , localTxSubmissionClient = Nothing
-      }
+      (\ntcVersion ->
+        LocalNodeClientProtocols
+        { localChainSyncClient    = NoLocalChainSyncClient
+        , localStateQueryClient   = Just (singleQuery mpoint resultVar ntcVersion)
+        , localTxSubmissionClient = Nothing
+        }
+      )
     atomically (takeTMVar resultVar)
   where
     singleQuery
       :: Maybe ChainPoint
-      -> TMVar (Either Net.Query.AcquireFailure (EraHistory CardanoMode, SystemStart))
+      -> TMVar (Either Net.Query.AcquireFailure (EraHistory CardanoMode, Maybe SystemStart))
+      -> NodeToClientVersion
       -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint
                                          (QueryInMode CardanoMode) IO ()
-    singleQuery mPointVar' resultVar' =
+    singleQuery mPointVar' resultVar' ntcVersion =
       LocalStateQueryClient $ do
       pure . Net.Query.SendMsgAcquire mPointVar' $
         Net.Query.ClientStAcquiring
@@ -270,26 +280,24 @@ queryEraHistoryAndSystemStart connctInfo mpoint = do
           pure $ Net.Query.SendMsgQuery (QueryEraHistory CardanoModeIsMultiEra) $
             Net.Query.ClientStQuerying
             { Net.Query.recvMsgResult = \result1 -> do
-              pure $ Net.Query.SendMsgQuery QuerySystemStart $
-                Net.Query.ClientStQuerying
-                { Net.Query.recvMsgResult = \result2 -> do
-                  atomically $ putTMVar resultVar' (Right (result1, result2))
+              if ntcVersion >= NodeToClientV_9
+                then do
+                  pure $ Net.Query.SendMsgQuery QuerySystemStart $
+                    Net.Query.ClientStQuerying
+                    { Net.Query.recvMsgResult = \result2 -> do
+                      atomically $ putTMVar resultVar' (Right (result1, Just result2))
+
+                      pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+                    }
+                else do
+                  atomically $ putTMVar resultVar' (Right (result1, Nothing))
 
                   pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
-                }
             }
         , Net.Query.recvMsgFailure = \failure -> do
             atomically $ putTMVar resultVar' (Left failure)
             pure $ Net.Query.SendMsgDone ()
         }
-
-toJsonPastHorizonException :: Qry.PastHorizonException -> Aeson.Value
-toJsonPastHorizonException e = Aeson.object
-  [ "error" .= Aeson.String "Past Horizon"
-  , "callStack" .= toJSON @String (show (Qry.pastHorizonCallStack e))
-  , "expression" .= toJSON @String (show (Qry.pastHorizonExpression e))
-  , "summary" .= toJSON @String (show (Qry.pastHorizonSummary e))
-  ]
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
