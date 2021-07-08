@@ -36,6 +36,11 @@ if [[ -z $CARDANO_PORT ]]; then
   CARDANO_PORT=3001
 fi
 
+if [[ -z $CARDANO_RTS_OPTS ]]; then
+  # See: nix/nixos/cardano-node-service.nix#L401
+  CARDANO_RTS_OPTS="-N2 -A16m -qg -qb --disable-delayed-os-memory-return"
+fi
+
 if [[ -z $CARDANO_BLOCK_PRODUCER ]]; then
   CARDANO_BLOCK_PRODUCER=false
 fi
@@ -54,6 +59,7 @@ printRunEnv () {
   echo "CARDANO_PORT=$CARDANO_PORT"
   echo "CARDANO_SOCKET_PATH=$CARDANO_SOCKET_PATH"
   echo "CARDANO_TOPOLOGY=$CARDANO_TOPOLOGY"
+  echo "CARDANO_RTS_OPTS=$CARDANO_RTS_OPTS"
 
   if [[ ${CARDANO_BLOCK_PRODUCER} == true ]]; then
 
@@ -122,6 +128,7 @@ runRelayNode () {
     --port $CARDANO_PORT)
 
   effopts+=(${options[@]})
+  effopts+=("+RTS" ${rtsopts[@]} "-RTS")
 
   echo "cardano-node run ${effopts[@]}"
   exec /usr/local/bin/cardano-node run ${effopts[@]}
@@ -144,6 +151,7 @@ runBlockProducerNode () {
     --shelley-operational-certificate $CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE)
 
   effopts+=(${options[@]})
+  effopts+=("+RTS" ${rtsopts[@]} "-RTS")
 
   echo "cardano-node run ${effopts[@]}"
   exec /usr/local/bin/cardano-node run ${effopts[@]}
@@ -182,6 +190,9 @@ do
       options[j]="";
     fi
 done
+
+# Read the RTS options into an array
+read -ra rtsopts <<< ${CARDANO_RTS_OPTS}
 
 printRunEnv
 writeRootEnv
