@@ -16,6 +16,7 @@ module Cardano.Api.Fees (
     -- * Transaction fees
     transactionFee,
     estimateTransactionFee,
+    evaluateTransactionFee,
 
     -- * Transaction balance
     evaluateTransactionBalance,
@@ -41,7 +42,7 @@ import qualified Cardano.Ledger.Crypto as Ledger
 
 import qualified Shelley.Spec.Ledger.API as Ledger (CLI, TxIn, DCert, Wdrl)
 import qualified Shelley.Spec.Ledger.API.Wallet as Ledger
-                   (evaluateTransactionBalance)
+                   (evaluateTransactionBalance, evaluateTransactionFee)
 
 import           Shelley.Spec.Ledger.PParams (PParams'(..))
 import qualified Cardano.Ledger.Mary.Value as Mary
@@ -156,6 +157,55 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx era tx) =
 -- and remove the IsShelleyBasedEra constraint.
 estimateTransactionFee _ _ _ (ByronTx _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
+
+
+-- | Compute the transaction fee for a proposed transaction, with the
+-- assumption that there will be the given number of key witnesses (i.e.
+-- signatures).
+--
+-- TODO: we need separate args for Shelley vs Byron key sigs
+--
+evaluateTransactionFee :: forall era.
+                          IsShelleyBasedEra era
+                       => ProtocolParameters
+                       -> TxBody era
+                       -> Word  -- ^ The number of Shelley key witnesses
+                       -> Word  -- ^ The number of Byron key witnesses
+                       -> Lovelace
+evaluateTransactionFee _ _ _ byronwitcount | byronwitcount > 0 =
+  error "evaluateTransactionFee: TODO support Byron key witnesses"
+
+evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
+    case makeSignedTransaction [] txbody of
+      ByronTx{} -> case shelleyBasedEra :: ShelleyBasedEra era of {}
+      --TODO: we could actually support Byron here, it'd be different but simpler
+
+      ShelleyTx era tx -> withLedgerConstraints era (evalShelleyBasedEra era tx)
+  where
+    evalShelleyBasedEra :: forall ledgerera.
+                           ShelleyLedgerEra era ~ ledgerera
+                        => Ledger.CLI ledgerera
+                        => ShelleyBasedEra era
+                        -> Ledger.Tx ledgerera
+                        -> Lovelace
+    evalShelleyBasedEra era tx =
+      fromShelleyLovelace $
+        Ledger.evaluateTransactionFee
+          (toLedgerPParams era pparams)
+          tx
+          keywitcount
+
+    -- Conjur up all the necessary class instances and evidence
+    withLedgerConstraints
+      :: ShelleyLedgerEra era ~ ledgerera
+      => ShelleyBasedEra era
+      -> (   Ledger.CLI ledgerera
+          => a)
+      -> a
+    withLedgerConstraints ShelleyBasedEraShelley f = f
+    withLedgerConstraints ShelleyBasedEraAllegra f = f
+    withLedgerConstraints ShelleyBasedEraMary    f = f
+    withLedgerConstraints ShelleyBasedEraAlonzo  f = f
 
 
 -- ----------------------------------------------------------------------------

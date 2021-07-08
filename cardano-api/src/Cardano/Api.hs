@@ -242,6 +242,7 @@ module Cardano.Api (
     -- * Fee calculation
     transactionFee,
     estimateTransactionFee,
+    evaluateTransactionFee,
     evaluateTransactionBalance,
 
     -- * Transaction metadata
