@@ -21,7 +21,7 @@ ls -al "$CARDANO_NODE_SOCKET_PATH"
 
 if [ "$1" == "guessinggame" ]; then
  # NB: This plutus script uses a "typed" redeemer and "typed" datum.
- plutusscriptinuse="$BASE/scripts/plutus/scripts/typed-guessing-game-redeemer-42-datum-42.plutus"
+ plutusscriptinuse="$BASE/scripts/plutus/scripts/custom-guess-42-datum-42.plutus"
  # This datum hash is the hash of the typed 42
  scriptdatumhash="e68306b4087110b0191f5b70638b9c6fc1c3eb335275e40d110779d71aa86083"
  plutusrequiredspace=700000000
