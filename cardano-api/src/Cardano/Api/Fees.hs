@@ -27,10 +27,15 @@ module Cardano.Api.Fees (
 
     -- * Transaction balance
     evaluateTransactionBalance,
+
+    -- * Automated transaction building
+    makeTransactionBodyAutoBalance,
+    TxBodyErrorAutoBalance(..),
   ) where
 
 import           Prelude
 
+import           Data.Maybe (fromMaybe)
 import qualified Data.ByteString as BS
 import           Data.Bifunctor (bimap, first)
 import qualified Data.Array as Array
@@ -76,6 +81,7 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
+import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -607,3 +613,251 @@ type LedgerTxBodyConstraints ledgerera =
                            (Set (Ledger.TxIn Ledger.StandardCrypto))
        , HasField "wdrls" (Ledger.TxBody ledgerera) (Ledger.Wdrl Ledger.StandardCrypto)
        )
+
+
+-- ----------------------------------------------------------------------------
+-- Automated transaction building
+--
+
+-- | The possible errors that can arise from 'makeTransactionBodyAutoBalance'.
+--
+data TxBodyErrorAutoBalance era =
+
+       -- | The same errors that can arise from 'makeTransactionBody'.
+       TxBodyError (TxBodyError era)
+
+       -- | One or more of the scripts fails to execute correctly.
+     | TxBodyScriptExecutionError [(ScriptWitnessIndex, ScriptExecutionError)]
+
+       -- | The balance of the non-ada assets is not zero. The 'Value' here is
+       -- that residual non-zero balance. The 'makeTransactionBodyAutoBalance'
+       -- function only automatically balances ada, not other assets.
+     | TxBodyErrorAssetBalanceWrong Value
+
+       -- | There is not enough ada to cover both the outputs and the fees.
+       -- The transaction should be changed to provide more input ada, or
+       -- otherwise adjusted to need less (e.g. outputs, script etc).
+       --
+     | TxBodyErrorAdaBalanceNegative Lovelace
+
+       -- | There is enough ada to cover both the outputs and the fees, but the
+       -- resulting change is too small: it is under the minimum value for
+       -- new UTxO entries. The transaction should be changed to provide more
+       -- input ada.
+       --
+     | TxBodyErrorAdaBalanceTooSmall Lovelace
+
+       -- | 'makeTransactionBodyAutoBalance' does not yet support the Byron era.
+     | TxBodyErrorByronEraNotSupported
+
+       -- | The 'ProtocolParameters' must provide the value for the min utxo
+       -- parameter, for eras that use this parameter.
+     | TxBodyErrorMissingParamMinUTxO
+
+       -- | The 'ProtocolParameters' must provide the value for the cost per
+       -- word parameter, for eras that use this parameter.
+     | TxBodyErrorMissingParamCostPerWord
+
+       -- The transaction validity interval is too far into the future.
+       -- See 'TransactionValidityIntervalError' for details.
+     | TxBodyErrorValidityInterval TransactionValidityIntervalError
+  deriving Show
+
+
+instance Error (TxBodyErrorAutoBalance era) where
+  displayError (TxBodyError err) = displayError err
+
+  displayError (TxBodyScriptExecutionError failures) =
+      "The following scripts have execution failures:\n"
+   ++ unlines [ "the script for " ++ renderScriptWitnessIndex index
+                ++ " failed with " ++ displayError failure
+              | (index, failure) <- failures ]
+
+  displayError (TxBodyErrorAssetBalanceWrong _value) =
+      "The transaction does not correctly balance in its non-ada assets. "
+   ++ "The balance between inputs and outputs should sum to zero. "
+   ++ "The actual balance is: "
+   ++ "TODO: move the Value renderer and parser from the CLI into the API and use them here"
+   -- TODO: do this ^^
+
+  displayError (TxBodyErrorAdaBalanceNegative lovelace) =
+      "The transaction does not balance in its use of ada. The net balance "
+   ++ "of the transaction is negative: " ++ show lovelace ++ " lovelace. "
+   ++ "The usual solution is to provide more inputs, or inputs with more ada."
+
+  displayError (TxBodyErrorAdaBalanceTooSmall lovelace) =
+      "The transaction does balance in its use of ada, however the net "
+   ++ "balance (that would be used for a change output) is smaller than the "
+   ++ "permitted value for new UTxO entries: " ++ show lovelace ++ " lovelace. "
+   ++ "The usual solution is to provide more inputs, or inputs with more ada."
+
+  displayError TxBodyErrorByronEraNotSupported =
+      "The Byron era is not yet supported by makeTransactionBodyAutoBalance"
+
+  displayError TxBodyErrorMissingParamMinUTxO =
+      "The minUTxOValue protocol parameter is required but missing"
+
+  displayError TxBodyErrorMissingParamCostPerWord =
+      "The utxoCostPerWord protocol parameter is required but missing"
+
+  displayError (TxBodyErrorValidityInterval err) =
+      displayError err
+
+
+-- | This is much like 'makeTransactionBody' but with greater automation to
+-- calculate suitable values for several things.
+--
+-- In particular:
+--
+-- * It calculates the correct script 'ExecutionUnits' (ignoring the provided
+--   values, which can thus be zero).
+--
+-- * It calculates the transaction fees, based on the script 'ExecutionUnits',
+--   the current 'ProtocolParameters', and an estimate of the number of
+--   key witnesses (i.e. signatures). There is an override for the number of
+--   key witnesses.
+--
+-- * It accepts a change address, calculates the balance of the transaction
+--   and puts the excess change into the change output.
+--
+-- * It also checks that the balance is positive and the change is above the
+--   minimum threshold.
+--
+-- To do this it needs more information than 'makeTransactionBody', all of
+-- which can be queried from a local node.
+--
+makeTransactionBodyAutoBalance
+  :: forall era mode.
+     IsShelleyBasedEra era
+  => EraInMode era mode
+  -> SystemStart
+  -> EraHistory mode
+  -> ProtocolParameters
+  -> Set PoolId       -- ^ The set of registered stake pools
+  -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
+  -> TxBodyContent BuildTx era
+  -> AddressInEra era -- ^ Change address
+  -> Maybe Word       -- ^ Override key witnesses
+  -> Either (TxBodyErrorAutoBalance era)
+            (TxBody era)
+makeTransactionBodyAutoBalance eraInMode systemstart history pparams
+                            poolids utxo txbodycontent changeaddr mnkeys = do
+
+    -- Our strategy is to:
+    -- 1. evaluate all the scripts to get the exec units, update with ex units
+    -- 2. figure out the overall min fees
+    -- 3. update tx with fees
+    -- 4. balance the transaction and update tx change output
+
+    txbody0 <- first TxBodyError $
+                 makeTransactionBody txbodycontent
+
+    exUnitsMap <- first TxBodyErrorValidityInterval $
+                    evaluateTransactionExecutionUnits
+                      eraInMode
+                      systemstart history
+                      pparams utxo
+                      txbody0
+
+    exUnitsMap' <- case Map.mapEither id exUnitsMap of
+                     (failures, exUnitsMap')
+                       | Map.null failures -> return exUnitsMap'
+                       | otherwise         -> Left (TxBodyScriptExecutionError
+                                                     (Map.toList failures))
+
+    let txbodycontent1 = substituteExecutionUnits exUnitsMap' txbodycontent
+
+    explicitTxFees <- first (const TxBodyErrorByronEraNotSupported) $
+                        txFeesExplicitInEra era'
+
+    -- Insert change address and set tx fee to 0
+    txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
+               makeTransactionBody txbodycontent1 {
+                 txFee  = TxFeeExplicit explicitTxFees 0,
+                 txOuts = TxOut changeaddr
+                                (lovelaceToTxOutValue 0)
+                                TxOutDatumHashNone
+                        : txOuts txbodycontent
+                 --TODO: think about the size of the change output
+                 -- 1,2,4 or 8 bytes?
+               }
+
+    let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
+                          mnkeys
+        fee   = evaluateTransactionFee pparams txbody1 nkeys 0 --TODO: byron keys
+
+    txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
+               makeTransactionBody txbodycontent1 {
+                 txFee = TxFeeExplicit explicitTxFees fee
+               }
+
+    let balance = evaluateTransactionBalance pparams poolids utxo txbody2
+    -- check if the balance is positive or negative
+    -- in one case we can produce change, in the other the inputs are insufficient
+    minUTxOValue <- getMinUTxOValue pparams
+    case balance of
+      TxOutAdaOnly _ l -> balanceCheck minUTxOValue l
+      TxOutValue _ v   ->
+        case valueToLovelace v of
+          Nothing -> Left $ error "TODO: non-ada assets not balanced"
+          Just c -> balanceCheck minUTxOValue c
+
+    --TODO: we could add the extra fee for the CBOR encoding of the change,
+    -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
+
+    txbody3 <- first TxBodyError $ -- TODO: impossible to fail now
+               makeTransactionBody txbodycontent {
+                 txFee  = TxFeeExplicit explicitTxFees fee,
+                 txOuts = TxOut changeaddr balance TxOutDatumHashNone
+                        : txOuts txbodycontent
+               }
+
+    return txbody3
+ where
+   era :: ShelleyBasedEra era
+   era = shelleyBasedEra
+
+   era' :: CardanoEra era
+   era' = cardanoEra
+
+   balanceCheck :: Lovelace -> Lovelace -> Either (TxBodyErrorAutoBalance era) ()
+   balanceCheck minUTxOValue balance
+    | balance < 0            = Left (TxBodyErrorAdaBalanceNegative balance)
+      -- check the change is over the min utxo threshold
+    | balance < minUTxOValue = Left (TxBodyErrorAdaBalanceTooSmall balance)
+    | otherwise              = return ()
+
+   getMinUTxOValue :: ProtocolParameters
+                   -> Either (TxBodyErrorAutoBalance era) Lovelace
+   getMinUTxOValue pparams' =
+     case era of
+       ShelleyBasedEraShelley -> minUTxOHelper pparams'
+       ShelleyBasedEraAllegra -> minUTxOHelper pparams'
+       ShelleyBasedEraMary    -> minUTxOHelper pparams'
+       ShelleyBasedEraAlonzo  ->
+         case protocolParamUTxOCostPerWord pparams' of
+           Just minUtxo -> Right minUtxo
+           Nothing      -> Left TxBodyErrorMissingParamCostPerWord
+
+   minUTxOHelper :: ProtocolParameters
+                 -> Either (TxBodyErrorAutoBalance era) Lovelace
+   minUTxOHelper pparams' = case protocolParamMinUTxOValue pparams' of
+                             Just minUtxo -> Right minUtxo
+                             Nothing -> Left TxBodyErrorMissingParamMinUTxO
+
+
+substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
+                         -> TxBodyContent BuildTx era
+                         -> TxBodyContent BuildTx era
+substituteExecutionUnits exUnitsMap =
+    mapTxScriptWitnesses f
+  where
+    f :: ScriptWitnessIndex
+      -> ScriptWitness witctx era
+      -> ScriptWitness witctx era
+    f _   wit@SimpleScriptWitness{} = wit
+    f idx wit@(PlutusScriptWitness langInEra version script datum redeemer _) =
+      case Map.lookup idx exUnitsMap of
+        Nothing      -> wit
+        Just exunits -> PlutusScriptWitness langInEra version script
+                                            datum redeemer exunits
