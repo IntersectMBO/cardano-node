@@ -24,18 +24,23 @@ import           Data.Ord
 import           Data.Semigroup
 import           Data.String
 import           GHC.Num
+import           GHC.Real
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
 import           Text.Show
 
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Data.Time.Clock as DTC
-import qualified Data.Vector as V
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
@@ -93,38 +98,38 @@ rewriteParams testnetOptions = rewriteObject
   $ HM.insert "slotDuration" (J.toJSON @String (show @Int (slotDuration testnetOptions)))
 
 mkTopologyConfig :: Int -> Int -> [Int] -> Bool -> ByteString
-mkTopologyConfig i numBftNodes allPorts False =
-  J.encode
-  $ J.object
-    [ ( "Producers"
-      , J.toJSON (flip fmap ([0 .. numBftNodes - 1] L.\\ [i]) (\j -> J.object
-        [ ("addr", "127.0.0.1")
-        , ("valency", J.toJSON @Int 1)
-        , ("port", J.toJSON (allPorts L.!! j))
-        ]))
-      )
-    ]
-mkTopologyConfig i numBftNodes allPorts True =
-  J.encode
-  $ J.object
-    [ "LocalRoots" .= J.object
-      [ "groups" .= J.toJSON
-        [ J.object
-          [ "localRoots" .= J.object
-            [ "addrs" .= J.toJSON
-              (flip fmap ([0 .. numBftNodes - 1] L.\\ [i]) (\j ->
-                J.object
-                  [ ("addr", "127.0.0.1")
-                  , ("port",  J.toJSON (allPorts L.!! j))
-                  ]))
-            , "advertise" .= J.toJSON @Bool False
-            ]
-          , "valency" .= J.toJSON @Int (numBftNodes - 1)
-          ]
+mkTopologyConfig i numBftNodes allPorts False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        $ flip fmap ([0 .. numBftNodes - 1] L.\\ [i])
+        $ \j -> NonP2P.RemoteAddress "127.0.0.1"
+                                    (fromIntegral $ allPorts L.!! j)
+                                    1
+mkTopologyConfig i numBftNodes allPorts True = J.encode topologyP2P
+  where
+    rootAddress :: P2P.RootAddress
+    rootAddress =
+      P2P.RootAddress
+        (flip fmap ([0 .. numBftNodes - 1] L.\\ [i])
+        $ \j -> RelayAddress "127.0.0.1"
+                            (fromIntegral $ allPorts L.!! j)
+        )
+        P2P.DoNotAdvertisePeer
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeers rootAddress
+                             (numBftNodes - 1)
         ]
-      ]
-    , "PublicRoots" .= J.Array V.empty
-    ]
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
+
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
