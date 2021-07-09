@@ -22,6 +22,7 @@ module Cardano.Api (
     AnyCardanoEra(..),
     anyCardanoEra,
     InAnyCardanoEra(..),
+    shelleyBasedToCardanoEra,
 
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
@@ -240,8 +241,10 @@ module Cardano.Api (
     makeShelleyBootstrapWitness,
 
     -- * Fee calculation
+    BalanceTxBodyError(..),
     transactionFee,
     estimateTransactionFee,
+    makeTransactionBodyAutoBalance,
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
