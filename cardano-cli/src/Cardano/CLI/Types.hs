@@ -5,7 +5,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.CLI.Types
-  ( CBORObject (..)
+  ( BalanceTxExecUnits (..)
+  , CBORObject (..)
   , CertificateFile (..)
   , GenesisFile (..)
   , OutputFormat (..)
@@ -204,3 +205,4 @@ data TxOutAnyEra = TxOutAnyEra
 newtype TxOutChangeAddress = TxOutChangeAddress AddressAny
   deriving (Eq, Show)
 
+data BalanceTxExecUnits = AutoBalance | ManualBalance

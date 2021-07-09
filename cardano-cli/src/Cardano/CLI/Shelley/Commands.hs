@@ -188,7 +188,9 @@ data TransactionCmd
 
     -- | Like 'TxBuildRaw' but without the fee, and with a change output.
   | TxBuild
-      AnyCardanoEra
+      AnyCardanoEra -- TODO: We can potentially remove this
+      AnyConsensusModeParams
+      NetworkId
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
@@ -206,6 +208,7 @@ data TransactionCmd
       [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
       -- ^ Certificates with potential script witness
       [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
+      -- ^ Withdrawals with potential script witness
       TxMetadataJsonSchema
       [ScriptFile]
       -- ^ Auxillary scripts

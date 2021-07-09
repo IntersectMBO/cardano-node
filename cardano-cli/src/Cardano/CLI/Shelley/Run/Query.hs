@@ -13,9 +13,12 @@
 
 module Cardano.CLI.Shelley.Run.Query
   ( ShelleyQueryCmdError
+  , ShelleyQueryCmdLocalStateQueryError (..)
   , renderShelleyQueryCmdError
+  , renderLocalStateQueryError
   , runQueryCmd
   , percentage
+  , executeQuery
   ) where
 
 import           Cardano.Prelude hiding (atomically)
@@ -103,7 +106,7 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdLocalStateQueryError lsqErr -> renderLocalStateQueryError lsqErr
     ShelleyQueryCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyQueryCmdHelpersError helpersErr -> renderHelpersError helpersErr
-    ShelleyQueryCmdAcquireFailure aqFail -> Text.pack $ show aqFail
+    ShelleyQueryCmdAcquireFailure acquireFail -> Text.pack $ show acquireFail
     ShelleyQueryCmdByronEra -> "This query cannot be used for the Byron era"
     ShelleyQueryCmdPoolIdError poolId -> "The pool id does not exist: " <> show poolId
     ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) (AnyCardanoEra era) ->
