@@ -9,6 +9,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -39,6 +40,7 @@ module Cardano.Api.TxBody (
     -- * Transaction outputs
     TxOut(..),
     TxOutValue(..),
+    lovelaceToTxOutValue,
     serialiseAddressForTxOut,
     TxOutDatumHash(..),
 
@@ -97,6 +99,7 @@ module Cardano.Api.TxBody (
     AnyScriptWitness(..),
     ScriptWitnessIndex(..),
     collectTxBodyScriptWitnesses,
+    mapTxScriptWitnesses,
 
     -- * Internal conversion functions & types
     toShelleyTxId,
@@ -109,6 +112,7 @@ module Cardano.Api.TxBody (
     fromAlonzoRdmrPtr,
     fromByronTxIn,
     renderTxIn,
+    renderScriptWitnessIndex,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
@@ -844,6 +848,13 @@ deriving instance Generic (TxOutValue era)
 instance ToJSON (TxOutValue era) where
   toJSON (TxOutAdaOnly _ ll) = toJSON ll
   toJSON (TxOutValue _ val) = toJSON val
+
+
+lovelaceToTxOutValue :: IsCardanoEra era => Lovelace -> TxOutValue era
+lovelaceToTxOutValue l =
+    case multiAssetSupportedInEra cardanoEra of
+      Left adaOnly     -> TxOutAdaOnly adaOnly  l
+      Right multiAsset -> TxOutValue multiAsset (lovelaceToValue l)
 
 
 -- ----------------------------------------------------------------------------
@@ -2238,6 +2249,16 @@ data ScriptWitnessIndex =
    | ScriptWitnessIndexWithdrawal !Word
   deriving (Eq, Ord, Show)
 
+renderScriptWitnessIndex :: ScriptWitnessIndex -> String
+renderScriptWitnessIndex (ScriptWitnessIndexTxIn index) =
+  "transaction input " <> show index <> " (in the order of the TxIds)"
+renderScriptWitnessIndex (ScriptWitnessIndexMint index) =
+  "policyId " <> show index <> " (in the order of the PolicyIds)"
+renderScriptWitnessIndex (ScriptWitnessIndexCertificate index) =
+  "certificate " <> show index <> " (in the list order of the certificates)"
+renderScriptWitnessIndex (ScriptWitnessIndexWithdrawal index) =
+  "withdrawal " <> show index <> " (in the order of the StakeAddresses)"
+
 toAlonzoRdmrPtr :: ScriptWitnessIndex -> Alonzo.RdmrPtr
 toAlonzoRdmrPtr widx =
     case widx of
@@ -2253,6 +2274,88 @@ fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
       Alonzo.Mint  -> ScriptWitnessIndexMint        (fromIntegral n)
       Alonzo.Cert  -> ScriptWitnessIndexCertificate (fromIntegral n)
       Alonzo.Rewrd -> ScriptWitnessIndexWithdrawal  (fromIntegral n)
+
+
+mapTxScriptWitnesses :: forall era.
+                        (forall witctx. ScriptWitnessIndex
+                                     -> ScriptWitness witctx era
+                                     -> ScriptWitness witctx era)
+                     -> TxBodyContent BuildTx era
+                     -> TxBodyContent BuildTx era
+mapTxScriptWitnesses f txbodycontent@TxBodyContent {
+                         txIns,
+                         txWithdrawals,
+                         txCertificates,
+                         txMintValue
+                       } =
+    txbodycontent {
+      txIns          = mapScriptWitnessesTxIns        txIns
+    , txMintValue    = mapScriptWitnessesMinting      txMintValue
+    , txCertificates = mapScriptWitnessesCertificates txCertificates
+    , txWithdrawals  = mapScriptWitnessesWithdrawals  txWithdrawals
+    }
+  where
+    mapScriptWitnessesTxIns
+      :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+      -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+    mapScriptWitnessesTxIns txins =
+        [ (txin, BuildTxWith (ScriptWitness ctx witness'))
+          -- The tx ins are indexed in the map order by txid
+        | (ix, (txin, BuildTxWith (ScriptWitness ctx witness)))
+            <- zip [0..] (orderTxIns txins)
+        , let witness' = f (ScriptWitnessIndexTxIn ix) witness
+        ]
+
+    mapScriptWitnessesWithdrawals
+      :: TxWithdrawals BuildTx era
+      -> TxWithdrawals BuildTx era
+    mapScriptWitnessesWithdrawals  TxWithdrawalsNone = TxWithdrawalsNone
+    mapScriptWitnessesWithdrawals (TxWithdrawals supported withdrawals) =
+      TxWithdrawals supported
+        [ (addr, withdrawal, BuildTxWith (ScriptWitness ctx witness'))
+          -- The withdrawals are indexed in the map order by stake credential
+        | (ix, (addr, withdrawal, BuildTxWith (ScriptWitness ctx witness)))
+             <- zip [0..] (orderStakeAddrs withdrawals)
+        , let witness' = f (ScriptWitnessIndexWithdrawal ix) witness
+        ]
+
+    mapScriptWitnessesCertificates
+      :: TxCertificates BuildTx era
+      -> TxCertificates BuildTx era
+    mapScriptWitnessesCertificates  TxCertificatesNone = TxCertificatesNone
+    mapScriptWitnessesCertificates (TxCertificates supported certs
+                                                   (BuildTxWith witnesses)) =
+      TxCertificates supported certs $ BuildTxWith $ Map.fromList
+        [ (stakecred, ScriptWitness ctx witness')
+          -- The certs are indexed in list order
+        | (ix, cert) <- zip [0..] certs
+        , stakecred  <- maybeToList (selectStakeCredential cert)
+        , ScriptWitness ctx witness
+                     <- maybeToList (Map.lookup stakecred witnesses)
+        , let witness' = f (ScriptWitnessIndexCertificate ix) witness
+        ]
+
+    selectStakeCredential cert =
+      case cert of
+        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
+        StakeAddressDelegationCertificate     stakecred _ -> Just stakecred
+        _                                                 -> Nothing
+
+    mapScriptWitnessesMinting
+      :: TxMintValue BuildTx era
+      -> TxMintValue BuildTx era
+    mapScriptWitnessesMinting  TxMintNone = TxMintNone
+    mapScriptWitnessesMinting (TxMintValue supported value
+                                           (BuildTxWith witnesses)) =
+      TxMintValue supported value $ BuildTxWith $ Map.fromList
+        [ (policyid, witness')
+          -- The minting policies are indexed in policy id order in the value
+        | let ValueNestedRep bundle = valueToNestedRep value
+        , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
+        , witness <- maybeToList (Map.lookup policyid witnesses)
+        , let witness' = f (ScriptWitnessIndexMint ix) witness
+        ]
+
 
 collectTxBodyScriptWitnesses :: forall era.
                                 TxBodyContent BuildTx era
