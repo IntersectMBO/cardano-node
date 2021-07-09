@@ -44,12 +44,16 @@ import           System.FilePath.Posix ((</>))
 import           Text.Read
 import           Text.Show
 
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
-import qualified Data.Vector as V
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.File as IO
@@ -110,40 +114,38 @@ ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
-mkTopologyConfig numBftNodes allPorts port False =
-  J.encode
-  $ J.object
-      [ "Producers" .= J.toJSON
-        [ J.object
-          [ "addr" .= J.toJSON @String ifaceAddress
-          , "port" .= J.toJSON @Int peerPort
-          , "valency" .= J.toJSON @Int (numBftNodes - 1)
-          ]
+mkTopologyConfig numNodes allPorts port False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        [ NonP2P.RemoteAddress (fromString ifaceAddress)
+                               (fromIntegral peerPort)
+                               (numNodes - 1)
         | peerPort <- allPorts \\ [port]
         ]
-      ]
-mkTopologyConfig numBftNodes allPorts port True =
-  J.encode
-  $ J.object
-      [ "LocalRoots" .= J.object
-        [ "groups" .= J.toJSON
-          [ J.object
-            [ "localRoots" .= J.object
-              [ "addrs" .= J.toJSON
-                [ J.object
-                  [ "addr" .= J.toJSON @String ifaceAddress
-                  , "port" .= J.toJSON @Int peerPort
-                  ]
-                | peerPort <- allPorts \\ [port]
-                ]
-              , "advertise" .= J.toJSON @Bool False
-              ]
-            , "valency" .= J.toJSON @Int (numBftNodes - 1)
-            ]
-          ]
+mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
+  where
+    rootAddress :: P2P.RootAddress
+    rootAddress =
+      P2P.RootAddress
+        [ RelayAddress (fromString ifaceAddress)
+                       (fromIntegral peerPort)
+        | peerPort <- allPorts \\ [port]
         ]
-      , "PublicRoots" .= J.Array V.empty
-      ]
+        P2P.DoNotAdvertisePeer
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeers rootAddress
+                             (numNodes - 1)
+        ]
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
 
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
@@ -213,7 +215,9 @@ testnet testnetOptions H.Conf {..} = do
     AtEpoch n -> ["TestShelleyHardForkAtEpoch: " <> show @Int n]
 
   H.readFile (base </> "configuration/chairman/byron-shelley/configuration.yaml")
-    <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions)) . (<> forkMethod) . L.lines
+    <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions))
+                  . (<> forkMethod)
+                  . L.lines
     >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   forM_ allNodes $ \node -> do
@@ -225,7 +229,7 @@ testnet testnetOptions H.Conf {..} = do
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
-      mkTopologyConfig (numBftNodes testnetOptions) allPorts port (enableP2P testnetOptions)
+      mkTopologyConfig (numBftNodes testnetOptions + numPoolNodes testnetOptions) allPorts port (enableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 

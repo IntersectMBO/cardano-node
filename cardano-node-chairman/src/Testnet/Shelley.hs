@@ -35,13 +35,19 @@ import           Data.List ((\\))
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
-import           Data.String (String)
+import           Data.String (String, fromString)
 import           Data.Time.Clock
 import           GHC.Float
+import           GHC.Real
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.FilePath.Posix ((</>))
 import           Text.Show
+
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Control.Concurrent as IO
 import qualified Data.Aeson as J
@@ -49,7 +55,6 @@ import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
-import qualified Data.Vector as V
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
@@ -121,40 +126,38 @@ rewriteGenesisSpec testnetOptions startTime =
       )
 
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
-mkTopologyConfig numPraosNodes allPorts port False =
-  J.encode
-  $ J.object
-      [ "Producers" .= J.toJSON
-        [ J.object
-          [ "addr" .= J.toJSON @String ifaceAddress
-          , "port" .= J.toJSON @Int peerPort
-          , "valency" .= J.toJSON @Int (numPraosNodes - 1)
-          ]
+mkTopologyConfig numPraosNodes allPorts port False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        [ NonP2P.RemoteAddress (fromString ifaceAddress)
+                               (fromIntegral peerPort)
+                               (numPraosNodes - 1)
         | peerPort <- allPorts \\ [port]
         ]
-      ]
-mkTopologyConfig numPraosNodes allPorts port True =
-  J.encode
-  $ J.object
-      [ "LocalRoots" .= J.object
-        [ "groups" .= J.toJSON
-          [ J.object
-            [ "localRoots" .= J.object
-              [ "addrs" .= J.toJSON
-                [ J.object
-                  [ "addr" .= J.toJSON @String ifaceAddress
-                  , "port" .= J.toJSON @Int peerPort
-                  ]
-                | peerPort <- allPorts \\ [port]
-                ]
-              , "advertise" .= J.toJSON @Bool False
-              ]
-            , "valency" .= J.toJSON @Int (numPraosNodes - 1)
-            ]
-          ]
+mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
+  where
+    rootAddress :: P2P.RootAddress
+    rootAddress =
+      P2P.RootAddress
+        [ RelayAddress (fromString ifaceAddress)
+                       (fromIntegral peerPort)
+        | peerPort <- allPorts \\ [port]
         ]
-      , "PublicRoots" .= J.Array V.empty
-      ]
+        P2P.DoNotAdvertisePeer
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeers rootAddress
+                             (numPraosNodes - 1)
+        ]
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
