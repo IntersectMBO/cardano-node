@@ -110,8 +110,8 @@ package cardano-ledger-alonzo-test
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: 7ffbd217bb969d7c01f1e70cf58535df06e5d9a8
-  --sha256: 0sjlk19v0dg63v8dawg844y3wzm1nmq0qxpvhip81x5yi091jjmm
+  tag: f7adf144bbd6da1aae9a668f40a1f8fdf69c9135
+  --sha256: 0f411zwlraqrp3f68vmif80kqdw18ddr0lqc9bfq83mv277gcb4k
 
 source-repository-package
   type: git

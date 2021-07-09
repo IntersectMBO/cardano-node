@@ -10,15 +10,17 @@ module Spec.Plutus.Direct.TxInLockingPlutus
 
 import           Control.Applicative
 import           Control.Monad
-import           Control.Lens
-import           Data.Aeson (Value)
+import           Data.Aeson (FromJSON(..), Value, (.:))
 import           Data.Bool (not)
+import           Data.Eq
 import           Data.Function
+import           Data.Functor ((<&>))
+import           Data.HashMap.Lazy (HashMap)
 import           Data.Int
 import           Data.List ((!!))
 import           Data.Maybe
-import           Data.Monoid
-import           Data.String
+import           Data.Monoid (Last(..), (<>))
+import           Data.Text (Text)
 import           GHC.Real
 import           GHC.Num
 import           Hedgehog (Property, (===))
@@ -26,8 +28,7 @@ import           Prelude (head)
 import           System.FilePath ((</>))
 import           Text.Show (Show(..))
 
-import qualified Control.Lens as CL
-import qualified Data.Aeson.Lens as CL
+import qualified Data.Aeson as J
 import qualified Data.List as L
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.Text as T
@@ -42,8 +43,19 @@ import qualified Test.Process as H
 import qualified Testnet.Cardano as H
 import qualified Testnet.Conf as H
 
+{- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use let" -}
+
+data Utxo = Utxo
+  { address :: Text
+  , value :: HashMap Text Integer
+  } deriving (Eq, Show)
+
+instance FromJSON Utxo where
+  parseJSON = J.withObject "Utxo" $ \v -> Utxo
+    <$> v .: "address"
+    <*> v .: "value"
 
 hprop_plutus :: Property
 hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
@@ -51,8 +63,6 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
 
   H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
-
-  -- path <- H.noteIO $ fromMaybe "" <$> IO.lookupEnv "PATH"
 
   execConfig <- H.noteShow H.ExecConfig
         { H.execConfigEnv = Last $ Just
@@ -69,9 +79,10 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   plutusScriptFileInUse <- H.note $ base </> "scripts/plutus/scripts/always-succeeds-spending.plutus"
 
   -- This datum hash is the hash of the untyped 42
-  scriptDatumHash <- pure "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
-  plutusRequiredSpace <- pure @_ @Integer 70000000
-  plutusRequiredTime <- pure @_ @Integer 70000000
+  let scriptDatumHash = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
+  let plutusRequiredSpace = id @Integer 70000000
+  let plutusRequiredTime = id @Integer 70000000
+
   datumFile <- H.note $ base </> "scripts/plutus/data/42.datum"
   redeemerFile <- H.note $ base </> "scripts/plutus/data/42.redeemer"
 
@@ -87,8 +98,6 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
     , "--payment-script-file", plutusScriptFileInUse
     , "--testnet-magic", show @Int testnetMagic
     ]
-
-  -- mkdir -p $WORK
 
   utxoAddr <- H.execCli
     [ "address", "build"
@@ -107,15 +116,16 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   H.cat $ work </> "utxo-1.json"
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  txin <- H.noteShow $ utxo1Json ^. CL._Object . CL.to HM.keys . CL.ix 0 . to T.unpack
-  lovelaceAtTxin <- H.nothingFailM . H.noteShow $ utxo1Json ^? CL.key (T.pack txin) . CL.key "value" . CL.key "lovelace" . CL._Integer
+  utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo1Json
+  txin <- H.noteShow $ head $ HM.keys utxo1
+  lovelaceAtTxin <- H.nothingFailM . H.noteShow $ utxo1 & HM.lookup txin <&> value >>= HM.lookup "lovelace"
   lovelaceAtTxinDiv2 <- H.noteShow $ lovelaceAtTxin `div` 2
 
   void $ H.execCli
     [ "transaction", "build-raw"
     , "--alonzo-era"
     , "--fee", "0"
-    , "--tx-in", txin
+    , "--tx-in", T.unpack txin
     , "--tx-out", plutusScriptAddr <> "+" <> show @Integer lovelaceAtTxinDiv2
     , "--tx-out-datum-hash", scriptDatumHash
     , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv2
@@ -138,8 +148,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   H.threadDelay 5000000
 
-  -- After "locking" the tx output at the script address, we can now can attempt to spend
-  -- the "locked" tx output below.
+  -- With the tx ouput at the script address we can now attempt to spend it.
 
   void $ H.execCli' execConfig
     [ "query", "utxo"
@@ -151,8 +160,8 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   H.cat $ work </> "plutusutxo.json"
 
   plutusUtxoJson <- H.leftFailM . H.readJsonFile $ work </> "plutusutxo.json"
-
-  plutusUtxoTxIn <- H.noteShow $ plutusUtxoJson ^. CL._Object . CL.to HM.keys . CL.ix 0 . to T.unpack
+  plutusUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) plutusUtxoJson
+  plutusUtxoTxIn <- H.noteShow $ head $ HM.keys plutusUtxo
 
   void $ H.execCli' execConfig
     [ "query", "utxo"
@@ -165,8 +174,8 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   H.cat $ work </> "utxo-2.json"
 
   utxo2Json :: Value <- H.leftFailM $ H.readJsonFile $ work </> "utxo-2.json"
-
-  txinCollateral <- H.noteShow $ utxo2Json ^. CL._Object . CL.to HM.keys . CL.ix 0 . to T.unpack
+  utxo2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo2Json
+  txinCollateral <- H.noteShow $ head $ HM.keys utxo2
 
   void $ H.execCli' execConfig
     [ "query", "protocol-parameters"
@@ -176,7 +185,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   let dummyaddress = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
 
-  lovelaceAtplutusScriptAddr <- H.nothingFailM . H.noteShow $ plutusUtxoJson ^? CL.key (T.pack plutusUtxoTxIn) . CL.key "value" . CL.key "lovelace" . CL._Integer
+  lovelaceAtplutusScriptAddr <- H.nothingFailM . H.noteShow $ plutusUtxo & HM.lookup plutusUtxoTxIn <&> value >>= HM.lookup "lovelace"
 
   txFee <- H.noteShow $ plutusRequiredTime + plutusRequiredSpace
   spendable <- H.noteShow $ lovelaceAtplutusScriptAddr - plutusRequiredTime - plutusRequiredSpace
@@ -185,8 +194,8 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
     [ "transaction", "build-raw"
     , "--alonzo-era"
     , "--fee", show @Integer txFee
-    , "--tx-in", plutusUtxoTxIn
-    , "--tx-in-collateral", txinCollateral
+    , "--tx-in", T.unpack plutusUtxoTxIn
+    , "--tx-in-collateral", T.unpack txinCollateral
     , "--tx-out", dummyaddress <> "+" <> show @Integer spendable
     , "--tx-in-script-file", plutusScriptFileInUse
     , "--tx-in-datum-file", datumFile
