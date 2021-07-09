@@ -302,7 +302,7 @@ sed -i shelley/genesis.spec.json \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
     -e 's/"epochLength": 432000/"epochLength": 1500/' \
     -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000000/' \
-    -e 's/"decentralisationParam": 1/"decentralisationParam": 0.7/' \
+    -e 's/"decentralisationParam": 1.0/"decentralisationParam": 0.7/' \
     -e 's/"major": 0/"major": 2/' \
     -e 's/"updateQuorum": 5/"updateQuorum": 2/'
 
