@@ -94,6 +94,7 @@ import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
+{- HLINT ignore "Redundant return" -}
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees
