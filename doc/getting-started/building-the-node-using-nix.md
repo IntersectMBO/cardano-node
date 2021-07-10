@@ -26,7 +26,7 @@ Once Nix is installed, log out and then log back in then:
 git clone https://github.com/input-output-hk/cardano-node
 cd cardano-node
 nix-build -A scripts.mainnet.node -o mainnet-node-local
-./mainnet-node-local
+./mainnet-node-local/bin/cardano-node-mainnet
 ```
 
 [nix]: https://nixos.org/nix/
