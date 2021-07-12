@@ -12,6 +12,7 @@ export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/n
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
 export UTXO_VKEY="${UTXO_VKEY:-example/shelley/utxo-keys/utxo1.vkey}"
 export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
+export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
 echo "Socket path: $(pwd)"
@@ -129,5 +130,5 @@ sleep 5
 echo ""
 echo "Querying UTxO at $dummyaddress. If there is ADA at the address the Plutus script successfully executed!"
 echo ""
-$CARDANO_CLI query utxo --address "$dummyaddress"  --testnet-magic "$TESTNET_MAGIC"
-
+$CARDANO_CLI query utxo --address "$dummyaddress"  --testnet-magic "$TESTNET_MAGIC" \
+  | tee "$RESULT_FILE"

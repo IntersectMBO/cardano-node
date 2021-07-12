@@ -1,24 +1,31 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Plutus
+module Spec.Plutus.Script.TxInLockingPlutus
   ( hprop_plutus
   ) where
 
 import           Control.Monad
+import           Data.Bool (not)
 import           Data.Function
 import           Data.Functor ((<$>))
 import           Data.Int
+import           Data.List ((!!))
 import           Data.Maybe
-import           Hedgehog (Property)
+import           Data.Monoid
+import           Hedgehog (Property, (===))
 import           Prelude (head)
 import           System.FilePath ((</>))
 import           Text.Show (Show(..))
 
+import qualified Data.List as L
+import qualified Data.Text as T
 import qualified Hedgehog.Internal.Property as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
@@ -31,6 +38,8 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   projectBase <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
 
+  resultFile <- H.noteTempFile tempAbsPath "result.out"
+
   H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
 
   cardanoCli <- H.binFlex "cardano-cli" "CARDANO_CLI"
@@ -38,7 +47,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   path <- H.evalIO $ fromMaybe "" <$> IO.lookupEnv "PATH"
 
   let execConfig = H.ExecConfig
-        { H.execConfigEnv = Just
+        { H.execConfigEnv = Last $ Just
           [ ("CARDANO_CLI", cardanoCli)
           , ("BASE", projectBase)
           , ("WORK", tempAbsPath)
@@ -47,8 +56,9 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
           , ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           , ("TESTNET_MAGIC", show @Int testnetMagic)
           , ("PATH", path)
+          , ("RESULT_FILE", resultFile)
           ]
-        , H.execConfigCwd = Just tempBaseAbsPath
+        , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
   scriptPath <- H.eval $ projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"
@@ -58,4 +68,6 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
     , scriptPath
     ]
 
-  return ()
+  result <- T.pack <$> H.readFile resultFile
+
+  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "360000000"

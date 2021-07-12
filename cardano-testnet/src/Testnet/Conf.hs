@@ -36,6 +36,6 @@ mkConf tempAbsPath maybeMagic = do
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
   socketDir <- H.noteShow $ tempRelPath </> "socket"
-  logDir <- H.noteTempFile tempAbsPath "/logs"
+  logDir <- H.noteTempFile tempAbsPath "logs"
 
   return $ Conf {..}

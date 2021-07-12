@@ -95,15 +95,19 @@ test-suite cardano-testnet-tests
 
   type:                 exitcode-stdio-1.0
 
-  build-depends:        cardano-testnet
+  build-depends:        aeson
+                      , cardano-testnet
                       , directory
                       , hedgehog
                       , hedgehog-extras
                       , filepath
                       , tasty
                       , tasty-hedgehog
+                      , text
+                      , unordered-containers
 
-  other-modules:        Spec.Plutus
+  other-modules:        Spec.Plutus.Direct.TxInLockingPlutus
+                        Spec.Plutus.Script.TxInLockingPlutus
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
