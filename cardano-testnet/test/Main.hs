@@ -13,6 +13,7 @@ import qualified Test.Tasty.Hedgehog as H
 
 import qualified Spec.Plutus.Direct.TxInLockingPlutus
 import qualified Spec.Plutus.Script.TxInLockingPlutus
+import qualified Spec.Plutus.SubmitApi.TxInLockingPlutus
 
 tests :: IO T.TestTree
 tests = do
@@ -20,6 +21,7 @@ tests = do
     [ T.testGroup "Spec"
       [ H.testProperty "Spec.Plutus.Direct.TxInLockingPlutus" Spec.Plutus.Direct.TxInLockingPlutus.hprop_plutus
       , H.testProperty "Spec.Plutus.Script.TxInLockingPlutus" Spec.Plutus.Script.TxInLockingPlutus.hprop_plutus
+      , H.testProperty "Spec.Plutus.SubmitApi.TxInLockingPlutus" Spec.Plutus.SubmitApi.TxInLockingPlutus.hprop_plutus
       ]
     ]
 

@@ -3,6 +3,7 @@ module Test.Process
   , execCli'
   , procCli
   , procNode
+  , procSubmitApi
   , procChairman
   ) where
 
@@ -52,6 +53,16 @@ procNode
   -> m CreateProcess
   -- ^ Captured stdout
 procNode = GHC.withFrozenCallStack $ H.procFlex "cardano-node" "CARDANO_NODE"
+
+-- | Create a 'CreateProcess' describing how to start the cardano-submit-api process
+-- and an argument list.
+procSubmitApi
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => [String]
+  -- ^ Arguments to the CLI command
+  -> m CreateProcess
+  -- ^ Captured stdout
+procSubmitApi = GHC.withFrozenCallStack $ H.procFlex "cardano-submit-api" "CARDANO_SUBMIT_API"
 
 -- | Create a 'CreateProcess' describing how to start the cardano-node-chairman process
 -- and an argument list.

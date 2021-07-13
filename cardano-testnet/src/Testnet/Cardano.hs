@@ -113,7 +113,8 @@ defaultTestnetOptions = TestnetOptions
   }
 
 data TestnetRuntime = TestnetRuntime
-  { testnetMagic :: Int
+  { configurationFile :: FilePath
+  , testnetMagic :: Int
   , allNodes :: [String]
   , bftSprockets :: [Sprocket]
   , wallets :: [Wallet]
@@ -133,11 +134,13 @@ testnet testnetOptions H.Conf {..} = do
   env <- H.evalIO IO.getEnvironment
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
 
   let bftNodesN = [1 .. numBftNodes testnetOptions]
   let poolNodesN = [1 .. numPoolNodes testnetOptions]
   let bftNodes = ("node-bft" <>) . show @Int <$> bftNodesN
-  let poolNodes = ("node-pool" <> ) . show @Int <$> poolNodesN
+  let poolNodes = ("node-pool" <>) . show @Int <$> poolNodesN
   let allNodes = bftNodes <> poolNodes
   let initSupply = 1000000000
   let maxSupply = 1000000000
@@ -152,8 +155,7 @@ testnet testnetOptions H.Conf {..} = do
 
   H.createDirectoryIfMissing logDir
 
-  H.readFile (base </> "configuration/defaults/byron-mainnet/configuration.yaml")
-    >>= H.writeFile (tempAbsPath </> "configuration.yaml")
+  H.readFile configurationTemplate >>= H.writeFile configurationFile
 
   forkOptions <- pure $ id
     . HM.insert "EnableLogMetrics" (J.toJSON False)
@@ -756,7 +758,8 @@ testnet testnetOptions H.Conf {..} = do
   H.noteShowIO_ DTC.getCurrentTime
 
   return TestnetRuntime
-    { testnetMagic
+    { configurationFile
+    , testnetMagic
     , allNodes
     , bftSprockets
     , wallets

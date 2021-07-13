@@ -34,12 +34,16 @@ library
                       , maybe-unix
 
   build-depends:        aeson
+                      , base16-bytestring
+                      , bytestring
                       , containers
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , http-client
+                      , http-types
                       , process
                       , random
                       , resourcet
@@ -56,6 +60,7 @@ library
                         Testnet.Conf
                         Testnet.List
                         Testnet.Shelley
+                        Testnet.SubmitApi
 
 executable cardano-testnet
   import:               base, project-config
@@ -108,6 +113,7 @@ test-suite cardano-testnet-tests
 
   other-modules:        Spec.Plutus.Direct.TxInLockingPlutus
                         Spec.Plutus.Script.TxInLockingPlutus
+                        Spec.Plutus.SubmitApi.TxInLockingPlutus
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
