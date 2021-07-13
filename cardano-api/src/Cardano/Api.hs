@@ -221,6 +221,24 @@ module Cardano.Api (
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
 
+    -- ** Fee calculation
+    transactionFee,
+    estimateTransactionFee,
+    evaluateTransactionFee,
+    estimateTransactionKeyWitnessCount,
+
+    -- ** Script execution units
+    evaluateTransactionExecutionUnits,
+    ScriptExecutionError(..),
+    TransactionValidityIntervalError,
+
+    -- ** Transaction balance
+    evaluateTransactionBalance,
+
+    -- ** Building transactions with automated fees and balancing
+    makeTransactionBodyAutoBalance,
+    TxBodyErrorAutoBalance(..),
+
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(Tx),
@@ -238,10 +256,6 @@ module Cardano.Api (
     ShelleyWitnessSigningKey(..),
     makeShelleyKeyWitness,
     makeShelleyBootstrapWitness,
-
-    -- * Fee calculation
-    transactionFee,
-    estimateTransactionFee,
 
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.

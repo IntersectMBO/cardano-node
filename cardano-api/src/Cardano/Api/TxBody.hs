@@ -9,6 +9,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -39,6 +40,7 @@ module Cardano.Api.TxBody (
     -- * Transaction outputs
     TxOut(..),
     TxOutValue(..),
+    lovelaceToTxOutValue,
     serialiseAddressForTxOut,
     TxOutDatumHash(..),
 
@@ -93,6 +95,12 @@ module Cardano.Api.TxBody (
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
 
+    -- * Inspecting 'ScriptWitnesses'
+    AnyScriptWitness(..),
+    ScriptWitnessIndex(..),
+    collectTxBodyScriptWitnesses,
+    mapTxScriptWitnesses,
+
     -- * Internal conversion functions & types
     toShelleyTxId,
     toShelleyTxIn,
@@ -100,13 +108,14 @@ module Cardano.Api.TxBody (
     fromShelleyTxId,
     fromShelleyTxIn,
     fromShelleyTxOut,
-    fromTxOut,
+    toAlonzoRdmrPtr,
+    fromAlonzoRdmrPtr,
+    fromByronTxIn,
+    renderTxIn,
+    renderScriptWitnessIndex,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
-
-    -- * Conversion functions
-    fromByronTxIn,
   ) where
 
 import           Prelude
@@ -119,7 +128,8 @@ import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (toList)
-import           Data.List (intercalate)
+import           Data.Function (on)
+import           Data.List (intercalate, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -360,35 +370,32 @@ toByronTxOut (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
 
 
 toShelleyTxOut :: forall era ledgerera.
-                 (ShelleyLedgerEra era ~ ledgerera,
-                  IsShelleyBasedEra era, Ledger.ShelleyBased ledgerera)
-               => TxOut era -> Ledger.TxOut ledgerera
-toShelleyTxOut (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
-    case shelleyBasedEra :: ShelleyBasedEra era of {}
+                  ShelleyLedgerEra era ~ ledgerera
+               => ShelleyBasedEra era
+               -> TxOut era
+               -> Ledger.TxOut ledgerera
+toShelleyTxOut era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
+    case era of {}
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
 
-fromShelleyTxOut :: Shelley.TxOut StandardShelley -> TxOut ShelleyEra
-fromShelleyTxOut = fromTxOut ShelleyBasedEraShelley
-
-fromTxOut
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> Core.TxOut ledgerera
-  -> TxOut era
-fromTxOut shelleyBasedEra' ledgerTxOut =
-  case shelleyBasedEra' of
+fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
+                 => ShelleyBasedEra era
+                 -> Core.TxOut ledgerera
+                 -> TxOut era
+fromShelleyTxOut era ledgerTxOut =
+  case era of
     ShelleyBasedEraShelley ->
         TxOut (fromShelleyAddr addr)
               (TxOutAdaOnly AdaOnlyInShelleyEra
@@ -841,6 +848,13 @@ deriving instance Generic (TxOutValue era)
 instance ToJSON (TxOutValue era) where
   toJSON (TxOutAdaOnly _ ll) = toJSON ll
   toJSON (TxOutValue _ val) = toJSON val
+
+
+lovelaceToTxOutValue :: IsCardanoEra era => Lovelace -> TxOutValue era
+lovelaceToTxOutValue l =
+    case multiAssetSupportedInEra cardanoEra of
+      Left adaOnly     -> TxOutAdaOnly adaOnly  l
+      Right multiAsset -> TxOutValue multiAsset (lovelaceToValue l)
 
 
 -- ----------------------------------------------------------------------------
@@ -1475,7 +1489,7 @@ fromLedgerTxInsCollateral era body =
 fromLedgerTxOuts
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> [TxOut era]
 fromLedgerTxOuts era body =
-  fromTxOut era <$>
+  fromShelleyTxOut era <$>
   case era of
     ShelleyBasedEraShelley -> toList $ Shelley._outputs body
     ShelleyBasedEraAllegra -> toList $ Allegra.outputs' body
@@ -1848,7 +1862,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
       ShelleyTxBody era
         (Shelley.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -1914,7 +1928,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
       ShelleyTxBody era
         (Allegra.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -2000,7 +2014,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
       ShelleyTxBody era
         (Allegra.TxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -2104,7 +2118,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (case txInsCollateral of
              TxInsCollateralNone     -> Set.empty
              TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins))
-          (Seq.fromList (map toShelleyTxOut txOuts))
+          (Seq.fromList (map (toShelleyTxOut era) txOuts))
           (case txCertificates of
              TxCertificatesNone    -> Seq.empty
              TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs))
@@ -2148,7 +2162,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
         txAuxData
   where
-    witnesses :: [(Alonzo.RdmrPtr, AnyScriptWitness AlonzoEra)]
+    witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardAlonzo]
@@ -2178,8 +2192,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     redeemers =
       Alonzo.Redeemers $
         Map.fromList
-          [ (ptr, (toAlonzoData d, toAlonzoExUnits e))
-          | (ptr, AnyScriptWitness
+          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+          | (idx, AnyScriptWitness
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
 
@@ -2204,12 +2218,148 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                TxAuxScripts _ ss' -> ss'
 
 
+-- ----------------------------------------------------------------------------
+-- Script witnesses within the tx body
+--
+
+-- | A 'ScriptWitness' in any 'WitCtx'. This lets us handle heterogeneous
+-- collections of script witnesses from multiple contexts.
+--
 data AnyScriptWitness era where
      AnyScriptWitness :: ScriptWitness witctx era -> AnyScriptWitness era
 
+-- | Identify the location of a 'ScriptWitness' within the context of a
+-- 'TxBody'. These are indexes of the objects within the transaction that
+-- need or can use script witnesses: inputs, minted assets, withdrawals and
+-- certificates. These are simple numeric indices, enumerated from zero.
+-- Thus the indices are not stable if the transaction body is modified.
+--
+data ScriptWitnessIndex =
+
+     -- | The n'th transaction input, in the order of the 'TxId's.
+     ScriptWitnessIndexTxIn !Word
+
+     -- | The n'th minting 'PolicyId', in the order of the 'PolicyId's.
+   | ScriptWitnessIndexMint !Word
+
+     -- | The n'th certificate, in the list order of the certificates.
+   | ScriptWitnessIndexCertificate !Word
+
+     -- | The n'th withdrawal, in the order of the 'StakeAddress's.
+   | ScriptWitnessIndexWithdrawal !Word
+  deriving (Eq, Ord, Show)
+
+renderScriptWitnessIndex :: ScriptWitnessIndex -> String
+renderScriptWitnessIndex (ScriptWitnessIndexTxIn index) =
+  "transaction input " <> show index <> " (in the order of the TxIds)"
+renderScriptWitnessIndex (ScriptWitnessIndexMint index) =
+  "policyId " <> show index <> " (in the order of the PolicyIds)"
+renderScriptWitnessIndex (ScriptWitnessIndexCertificate index) =
+  "certificate " <> show index <> " (in the list order of the certificates)"
+renderScriptWitnessIndex (ScriptWitnessIndexWithdrawal index) =
+  "withdrawal " <> show index <> " (in the order of the StakeAddresses)"
+
+toAlonzoRdmrPtr :: ScriptWitnessIndex -> Alonzo.RdmrPtr
+toAlonzoRdmrPtr widx =
+    case widx of
+      ScriptWitnessIndexTxIn        n -> Alonzo.RdmrPtr Alonzo.Spend (fromIntegral n)
+      ScriptWitnessIndexMint        n -> Alonzo.RdmrPtr Alonzo.Mint  (fromIntegral n)
+      ScriptWitnessIndexCertificate n -> Alonzo.RdmrPtr Alonzo.Cert  (fromIntegral n)
+      ScriptWitnessIndexWithdrawal  n -> Alonzo.RdmrPtr Alonzo.Rewrd (fromIntegral n)
+
+fromAlonzoRdmrPtr :: Alonzo.RdmrPtr -> ScriptWitnessIndex
+fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
+    case tag of
+      Alonzo.Spend -> ScriptWitnessIndexTxIn        (fromIntegral n)
+      Alonzo.Mint  -> ScriptWitnessIndexMint        (fromIntegral n)
+      Alonzo.Cert  -> ScriptWitnessIndexCertificate (fromIntegral n)
+      Alonzo.Rewrd -> ScriptWitnessIndexWithdrawal  (fromIntegral n)
+
+
+mapTxScriptWitnesses :: forall era.
+                        (forall witctx. ScriptWitnessIndex
+                                     -> ScriptWitness witctx era
+                                     -> ScriptWitness witctx era)
+                     -> TxBodyContent BuildTx era
+                     -> TxBodyContent BuildTx era
+mapTxScriptWitnesses f txbodycontent@TxBodyContent {
+                         txIns,
+                         txWithdrawals,
+                         txCertificates,
+                         txMintValue
+                       } =
+    txbodycontent {
+      txIns          = mapScriptWitnessesTxIns        txIns
+    , txMintValue    = mapScriptWitnessesMinting      txMintValue
+    , txCertificates = mapScriptWitnessesCertificates txCertificates
+    , txWithdrawals  = mapScriptWitnessesWithdrawals  txWithdrawals
+    }
+  where
+    mapScriptWitnessesTxIns
+      :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+      -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+    mapScriptWitnessesTxIns txins =
+        [ (txin, BuildTxWith (ScriptWitness ctx witness'))
+          -- The tx ins are indexed in the map order by txid
+        | (ix, (txin, BuildTxWith (ScriptWitness ctx witness)))
+            <- zip [0..] (orderTxIns txins)
+        , let witness' = f (ScriptWitnessIndexTxIn ix) witness
+        ]
+
+    mapScriptWitnessesWithdrawals
+      :: TxWithdrawals BuildTx era
+      -> TxWithdrawals BuildTx era
+    mapScriptWitnessesWithdrawals  TxWithdrawalsNone = TxWithdrawalsNone
+    mapScriptWitnessesWithdrawals (TxWithdrawals supported withdrawals) =
+      TxWithdrawals supported
+        [ (addr, withdrawal, BuildTxWith (ScriptWitness ctx witness'))
+          -- The withdrawals are indexed in the map order by stake credential
+        | (ix, (addr, withdrawal, BuildTxWith (ScriptWitness ctx witness)))
+             <- zip [0..] (orderStakeAddrs withdrawals)
+        , let witness' = f (ScriptWitnessIndexWithdrawal ix) witness
+        ]
+
+    mapScriptWitnessesCertificates
+      :: TxCertificates BuildTx era
+      -> TxCertificates BuildTx era
+    mapScriptWitnessesCertificates  TxCertificatesNone = TxCertificatesNone
+    mapScriptWitnessesCertificates (TxCertificates supported certs
+                                                   (BuildTxWith witnesses)) =
+      TxCertificates supported certs $ BuildTxWith $ Map.fromList
+        [ (stakecred, ScriptWitness ctx witness')
+          -- The certs are indexed in list order
+        | (ix, cert) <- zip [0..] certs
+        , stakecred  <- maybeToList (selectStakeCredential cert)
+        , ScriptWitness ctx witness
+                     <- maybeToList (Map.lookup stakecred witnesses)
+        , let witness' = f (ScriptWitnessIndexCertificate ix) witness
+        ]
+
+    selectStakeCredential cert =
+      case cert of
+        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
+        StakeAddressDelegationCertificate     stakecred _ -> Just stakecred
+        _                                                 -> Nothing
+
+    mapScriptWitnessesMinting
+      :: TxMintValue BuildTx era
+      -> TxMintValue BuildTx era
+    mapScriptWitnessesMinting  TxMintNone = TxMintNone
+    mapScriptWitnessesMinting (TxMintValue supported value
+                                           (BuildTxWith witnesses)) =
+      TxMintValue supported value $ BuildTxWith $ Map.fromList
+        [ (policyid, witness')
+          -- The minting policies are indexed in policy id order in the value
+        | let ValueNestedRep bundle = valueToNestedRep value
+        , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
+        , witness <- maybeToList (Map.lookup policyid witnesses)
+        , let witness' = f (ScriptWitnessIndexMint ix) witness
+        ]
+
+
 collectTxBodyScriptWitnesses :: forall era.
                                 TxBodyContent BuildTx era
-                             -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+                             -> [(ScriptWitnessIndex, AnyScriptWitness era)]
 collectTxBodyScriptWitnesses TxBodyContent {
                                txIns,
                                txWithdrawals,
@@ -2225,42 +2375,31 @@ collectTxBodyScriptWitnesses TxBodyContent {
   where
     scriptWitnessesTxIns
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesTxIns txins =
-        [ (Alonzo.RdmrPtr Alonzo.Spend ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexTxIn ix, AnyScriptWitness witness)
           -- The tx ins are indexed in the map order by txid
-        | (ix, BuildTxWith (ScriptWitness _ witness)) <- zip [0..] (orderTxIns txins)
+        | (ix, (_, BuildTxWith (ScriptWitness _ witness)))
+            <- zip [0..] (orderTxIns txins)
         ]
-
-    -- This relies on the TxId Ord instance being consistent with the
-    -- Shelley.TxId Ord instance via the toShelleyTxId conversion
-    -- This is checked by prop_ord_distributive_TxId
-    orderTxIns :: Ord k => [(k, v)] -> [v]
-    orderTxIns = Map.elems . Map.fromList
 
     scriptWitnessesWithdrawals
       :: TxWithdrawals BuildTx era
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesWithdrawals  TxWithdrawalsNone = []
     scriptWitnessesWithdrawals (TxWithdrawals _ withdrawals) =
-        [ (Alonzo.RdmrPtr Alonzo.Rewrd ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexWithdrawal ix, AnyScriptWitness witness)
           -- The withdrawals are indexed in the map order by stake credential
-        | (ix, BuildTxWith (ScriptWitness _ witness))
+        | (ix, (_, _, BuildTxWith (ScriptWitness _ witness)))
              <- zip [0..] (orderStakeAddrs withdrawals)
         ]
 
-    -- This relies on the StakeAddress Ord instance being consistent with the
-    -- Shelley.RewardAcnt Ord instance via the toShelleyStakeAddr conversion
-    -- This is checked by prop_ord_distributive_StakeAddress
-    orderStakeAddrs :: Ord k => [(k, x, v)] -> [v]
-    orderStakeAddrs = Map.elems . Map.fromList . map (\(k, _, v) -> (k, v))
-
     scriptWitnessesCertificates
       :: TxCertificates BuildTx era
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesCertificates  TxCertificatesNone = []
     scriptWitnessesCertificates (TxCertificates _ certs (BuildTxWith witnesses)) =
-        [ (Alonzo.RdmrPtr Alonzo.Cert ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexCertificate ix, AnyScriptWitness witness)
           -- The certs are indexed in list order
         | (ix, cert) <- zip [0..] certs
         , ScriptWitness _ witness <- maybeToList $ do
@@ -2276,15 +2415,27 @@ collectTxBodyScriptWitnesses TxBodyContent {
 
     scriptWitnessesMinting
       :: TxMintValue BuildTx era
-      -> [(Alonzo.RdmrPtr, AnyScriptWitness era)]
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesMinting  TxMintNone = []
     scriptWitnessesMinting (TxMintValue _ value (BuildTxWith witnesses)) =
-        [ (Alonzo.RdmrPtr Alonzo.Mint ix, AnyScriptWitness witness)
+        [ (ScriptWitnessIndexMint ix, AnyScriptWitness witness)
           -- The minting policies are indexed in policy id order in the value
         | let ValueNestedRep bundle = valueToNestedRep value
         , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
         , witness <- maybeToList (Map.lookup policyid witnesses)
         ]
+
+-- This relies on the TxId Ord instance being consistent with the
+-- Shelley.TxId Ord instance via the toShelleyTxId conversion
+-- This is checked by prop_ord_distributive_TxId
+orderTxIns :: [(TxIn, v)] -> [(TxIn, v)]
+orderTxIns = sortBy (compare `on` fst)
+
+-- This relies on the StakeAddress Ord instance being consistent with the
+-- Shelley.RewardAcnt Ord instance via the toShelleyStakeAddr conversion
+-- This is checked by prop_ord_distributive_StakeAddress
+orderStakeAddrs :: [(StakeAddress, x, v)] -> [(StakeAddress, x, v)]
+orderStakeAddrs = sortBy (compare `on` (\(k, _, _) -> k))
 
 
 toShelleyWithdrawal :: [(StakeAddress, Lovelace, a)] -> Shelley.Wdrl StandardCrypto
