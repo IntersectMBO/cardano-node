@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
@@ -2558,15 +2559,15 @@ pExecutionUnitPrices :: Parser ExecutionUnitPrices
 pExecutionUnitPrices = ExecutionUnitPrices
   <$> Opt.option readRational
       (  Opt.long "price-execution-steps"
-      <> Opt.metavar "LOVELACE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Step price of execution units for script languages that use \
-                  \them (from Alonzo era)."
+                  \them (from Alonzo era).  (Examples: '1.1', '11/10')"
       )
   <*> Opt.option readRational
       (  Opt.long "price-execution-memory"
-      <> Opt.metavar "LOVELACE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Memory price of execution units for script languages that \
-                  \use them (from Alonzo era)."
+                  \use them (from Alonzo era).  (Examples: '1.1', '11/10')"
       )
 
 pMaxTxExecutionUnits :: Parser ExecutionUnits
@@ -2779,8 +2780,15 @@ readRationalUnitInterval = readRational >>= checkUnitInterval
      | q >= 0 && q <= 1 = return q
      | otherwise        = fail "Please enter a value in the range [0,1]"
 
+readFractionAsRational :: Opt.ReadM Rational
+readFractionAsRational = readerFromAttoParser fractionalAsRational
+  where fractionalAsRational :: Atto.Parser Rational
+        fractionalAsRational = (%) <$> (Atto.decimal @Integer <* Atto.char '/') <*> Atto.decimal @Integer
+
 readRational :: Opt.ReadM Rational
-readRational = toRational <$> readerFromAttoParser Atto.scientific
+readRational =
+      (toRational <$> readerFromAttoParser Atto.scientific)
+  <|> readFractionAsRational
 
 readerJSON :: Opt.ReadM Aeson.Value
 readerJSON = readerFromAttoParser Aeson.Parser.json
