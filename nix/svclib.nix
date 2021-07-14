@@ -23,19 +23,16 @@ let
     , configScriptPreambleFn
     , traceServiceStartup ? false
     }:
-    let cmd = map normaliseCmdArg ([
-          config.executable
-        ] ++ configExeArgsFn config);
+    let cmd = map normaliseCmdArg
+                  ([config.executable] ++ configExeArgsFn config);
         normaliseCmdArg = x:
-          ({ int = toString; float = toString; string = id;
-             ## TODO: ugh, why oh why:
-             ## while evaluating 'normaliseCmdArg' at svclib.nix:32:27:
-             ## while evaluating anonymous function at tx-generator-service.nix:98:16:
-             ## file '/dev/null' has an unsupported type
-
-             path = x: "${x}";
-           }."${__typeOf x}" or
-            (_: throw "\nWhile processing service declaration for '${svcName}':  Unsupported type of command arg: ${__typeOf x}\n")) x;
+          __trace "normaliseCmdArg on ${__typeOf x}"
+            (({ float  = toString;
+                int    = toString;
+                path   = toString;
+                string = toString;
+              }."${__typeOf x}" or
+              (_: throw "\nWhile processing service declaration for '${svcName}':  Unsupported type of command arg: ${__typeOf x}\n")) x);
     in  ''
         ${if traceServiceStartup then "set -x" else ""}
         ${configScriptPreambleFn config}
@@ -179,6 +176,7 @@ let
     intOpt  = opt types.int;
     pathOpt = opt (types.or types.path types.str);
     strOpt  = opt types.str;
+    boolOpt = opt types.bool;
     attrOpt = opt types.attrs;
     listOpt = opt (types.listOf types.attrs);
     enumOpt = set: default: description:

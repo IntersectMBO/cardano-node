@@ -218,6 +218,7 @@ let
       [ (let svc = profile.generator-service;
          in
           ''
+          cp -f ${svc.runScript.JSON}     ${runDir}/generator/run-script.json
           cp -f ${svc.serviceConfig.JSON} ${runDir}/generator/service-config.json
           cp -f ${svc.nodeConfig.JSON}    ${runDir}/generator/config.json
           cp -f ${svc.startupScript}      ${runDir}/generator/start.sh

@@ -72,6 +72,7 @@ let
           ({
             sigKey         = "../genesis/utxo-keys/utxo1.skey";
             nodeConfigFile = "config.json";
+            runScriptFile  = "run-script.json";
           } // optionalAttrs useCabalRun {
             executable     = "cabal run exe:tx-generator --";
           });

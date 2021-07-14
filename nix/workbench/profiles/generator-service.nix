@@ -19,6 +19,36 @@ let
   exemplarNode = profile.node-services."node-0";
 
   ##
+  ## mkGeneratorRunScript :: ServiceConfig -> GeneratorRunScript
+  ##
+  mkGeneratorRunScript =
+    cfg: with cfg;
+    [
+      { setNumberOfInputsPerTx   = 2; } ## XXX: inputs_per_tx
+      { setNumberOfOutputsPerTx  = 2; } ## XXX: outputs_per_tx
+      { setNumberOfTxs           = tx_count; }
+      { setTxAdditionalSize      = 0; } ## XXX: add_tx_size
+      { setFee                   = tx_fee; }
+      { setTTL                   = 1000000; }
+      { startProtocol            = nodeConfigFile; }
+      { setEra                   = "Mary"; } ## XXX: era
+      { setTargets =
+           __attrValues
+             (__mapAttrs (name: { ip, port }:
+                            { addr = ip; port = port; })
+                         targetNodes);
+      }
+      { setLocalSocket    = localNodeSocketPath; }
+      { readSigningKey    = "pass-partout"; filePath = sigKey; }
+      { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
+      { delay             = init_cooldown; }
+      { createChange      = 1000; count = tx_count * 2; }
+      { runBenchmark      = "walletBasedBenchmark";
+                               txCount = tx_count; tps = tps; }
+      { waitBenchmark     = "walletBasedBenchmark"; }
+    ];
+
+  ##
   ## generatorServiceConfig :: Map NodeId NodeSpec -> ServiceConfig
   ##
   generatorServiceConfig =
@@ -30,53 +60,55 @@ let
                Protocol
                ShelleyGenesisFile ByronGenesisFile;
            };
-    in
-    backend.finaliseGeneratorService
-    {
-      enable = true;
-
-      era = profile.value.era;
-
-      targetNodes = __mapAttrs
-        (name: { name, port, ...}@nodeSpec:
-          { inherit port;
-            ip = let ip = backend.nodePublicIP nodeSpec; # getPublicIp resources nodes name
-                 in __trace "generator target:  ${name}/${ip}:${toString port}" ip;
-          })
-        nodeSpecs;
-
-      ## path to the socket of the locally running node.
-      localNodeSocketPath = "../node-0/node.socket";
-
-      ## nodeConfig of the locally running node.
-      localNodeConf = exemplarNode.serviceConfig.value;
-
-      ## The nodeConfig of the Tx generator itself.
-      nodeConfig =
-        backend.finaliseGeneratorConfig
-        (recursiveUpdate generatorNodeConfigDefault
+      configValue =
+        backend.finaliseGeneratorService
         {
-          minSeverity = "Debug";
-          TracingVerbosity = "MaximalVerbosity";
-          defaultScribes = [
-            [ "StdoutSK" "stdout" ]
-            [ "FileSK"   "logs/generator.json" ]
-          ];
-          setupScribes = [
-            { scKind = "StdoutSK"; scName = "stdout"; scFormat = "ScJson"; }
-            { scKind = "FileSK"; scName = "logs/generator.json"; scFormat = "ScJson";
-              scRotation = {
-                rpLogLimitBytes = 300000000;
-                rpMaxAgeHours   = 24;
-                rpKeepFilesNum  = 20;
-              }; }
-          ];
-        });
+          era = profile.value.era;
 
-      dsmPassthrough = {
-        # rtsOpts = ["-xc"];
+          targetNodes = __mapAttrs
+            (name: { name, port, ...}@nodeSpec:
+              { inherit port;
+                ip = let ip = backend.nodePublicIP nodeSpec; # getPublicIp resources nodes name
+                     in __trace "generator target:  ${name}/${ip}:${toString port}" ip;
+              })
+            nodeSpecs;
+
+          ## path to the socket of the locally running node.
+          localNodeSocketPath = "../node-0/node.socket";
+
+          ## nodeConfig of the locally running node.
+          localNodeConf = exemplarNode.serviceConfig.value;
+
+          ## The nodeConfig of the Tx generator itself.
+          nodeConfig =
+            backend.finaliseGeneratorConfig
+            (recursiveUpdate generatorNodeConfigDefault
+            {
+              minSeverity = "Debug";
+              TracingVerbosity = "MaximalVerbosity";
+              defaultScribes = [
+                [ "StdoutSK" "stdout" ]
+                [ "FileSK"   "logs/generator.json" ]
+              ];
+              setupScribes = [
+                { scKind = "StdoutSK"; scName = "stdout"; scFormat = "ScJson"; }
+                { scKind = "FileSK"; scName = "logs/generator.json"; scFormat = "ScJson";
+                  scRotation = {
+                    rpLogLimitBytes = 300000000;
+                    rpMaxAgeHours   = 24;
+                    rpKeepFilesNum  = 20;
+                  }; }
+              ];
+            });
+
+          dsmPassthrough = {
+            # rtsOpts = ["-xc"];
+          };
+        } // profile.value.generator;
+    in
+      configValue //
+      { runScript = mkGeneratorRunScript configValue;
       };
-    } // profile.value.generator;
 
   ## Given an env config, evaluate it and produce the node service.
   ## Call the given function on this service.
@@ -138,6 +170,14 @@ let
                   '' "$x";
       };
 
+      runScript = {
+        value = service.runScript;
+        JSON  = runJq "generator-run-script.json"
+                  ''--null-input
+                    --argjson x '${__toJSON service.runScript}'
+                  '' "$x";
+      };
+
       startupScript =
         pkgs.writeScript "startup-generator.sh"
           ''
@@ -149,5 +189,5 @@ let
     profile.node-specs.value;
 in
 {
-  inherit generator-service;
+  inherit generator-service mkGeneratorScript;
 }
