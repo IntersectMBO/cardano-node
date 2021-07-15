@@ -42,7 +42,8 @@ case "$op" in
         locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
 
         ## 1. enumerate logs, filter by keyfile & consolidate
-        local logdirs=("$dir"/node-*/ "$dir"/analysis/node-*/)
+        local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null) $(ls -d "$dir"/analysis/node-*/ 2>/dev/null))
+        # "$dir"/node-*/ "$dir"/analysis/node-*/
 
         if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-node-*.flt.json 2>/dev/null)"
         then
@@ -55,14 +56,17 @@ case "$op" in
                 '"$(wb backend lostream-fixup-jqexpr)"
             )
             for d in "${logdirs[@]}"
-            do local logfiles="$(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null)"
+            do throttle_shell_job_spawns
+               local logfiles="$(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null)"
                if test -z "$logfiles"
                then msg "no logs in $d, skipping.."; fi
+               local output="$adir"/logs-$(basename "$d").flt.json
                grep -hFf "$keyfile" $logfiles |
                jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")" \
-                 > "$adir"/logs-$(basename "$d").flt.json &
+                 > "$output" &
             done
             wait
+            msg "analysis block-propagation:  All done."
         fi
 
         msg "log sizes:  (files: $(ls "$adir"/*.flt.json 2>/dev/null | wc -l), lines: $(cat "$adir"/*.flt.json | wc -l))"
@@ -131,13 +135,8 @@ case "$op" in
         then local machs=($(wb run list-hosts $name))
         else local machs=($mach); fi
 
-        local num_jobs="\j"
-        local num_threads=$(grep processor /proc/cpuinfo | wc -l)
         for mach in ${machs[*]}
-        do ## Limit parallelism:
-           sleep 0.5s
-           while ((${num_jobs@P} >= num_threads - 4))
-           do wait -n; sleep 0.$(((RANDOM % 5) + 1))s; done
+        do throttle_shell_job_spawns
            (
            ## 1. enumerate logs, filter by keyfile & consolidate
            local logs=($(ls "$dir"/$mach/stdout* 2>/dev/null | tac) $(ls "$dir"/$mach/node-*.json 2>/dev/null) $(ls "$dir"/analysis/$mach/node-*.json 2>/dev/null)) consolidated="$adir"/logs-$mach.json
@@ -174,4 +173,13 @@ case "$op" in
         msg "analysis machine-timeline:  All done.";;
 
     * ) usage_analyse;; esac
+}
+
+num_jobs="\j"
+num_threads=$(grep processor /proc/cpuinfo | wc -l)
+
+throttle_shell_job_spawns() {
+    sleep 0.5s
+    while ((${num_jobs@P} >= num_threads - 4))
+    do wait -n; sleep 0.$(((RANDOM % 5) + 1))s; done
 }

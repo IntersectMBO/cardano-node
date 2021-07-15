@@ -207,6 +207,9 @@ case "$op" in
            jq '.["'"$node"'"]' "$dir"/node-specs.json > "$node_dir"/node-spec.json
         done
 
+        gen_dir="$dir"/generator
+        mkdir -p "$gen_dir"
+
         run     describe "$tag"
         profile describe "$dir"/profile.json
 
@@ -220,7 +223,9 @@ case "$op" in
         local tag=${1:?$usage}
         local dir=$global_rundir/$tag
 
-        jq '.hostname | keys | .[]' -r "$dir"/meta.json;;
+        if test -f "$dir"/node-specs.json
+        then jq             'keys | .[]' -r "$dir"/node-specs.json
+        else jq '.hostname | keys | .[]' -r "$dir"/meta.json; fi;;
 
     describe )
         local usage="USAGE: wb run $op TAG"

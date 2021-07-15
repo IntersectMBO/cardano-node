@@ -50,6 +50,8 @@ def add_derived_params:
 | .tolerances                                as $tolr
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
 | ($epoch_duration * $gtor.epochs)           as $duration
+| ($gtor.tx_count // ($duration * $gtor.tps))
+                                             as $tx_count
 | (if $compo.dense_pool_density > 1
    then { singular:  $compo.n_singular_hosts
         , dense:     $compo.n_dense_hosts }
@@ -94,7 +96,7 @@ def add_derived_params:
            }
          }
      , generator:
-         { tx_count:              ($duration * ([$gtor.tps, 7] | min))
+         { tx_count:              $tx_count
          }
      , node:
          {

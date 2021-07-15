@@ -33,6 +33,10 @@ let
            then "topology for-local-node     ${toString i}   ${profile.topology.files} ${toString basePort}"
            else "topology for-local-observer ${profile.name} ${profile.topology.files} ${toString basePort}");
 
+      nodePublicIP =
+        { i, name, ... }@nodeSpec:
+        "127.0.0.1";
+
       finaliseNodeService =
         { name, i, isProducer, ... }: svc: recursiveUpdate svc
           ({
@@ -63,6 +67,24 @@ let
             ];
           });
 
+      finaliseGeneratorService =
+        svc: recursiveUpdate svc
+          ({
+            sigKey         = "../genesis/utxo-keys/utxo1.skey";
+            nodeConfigFile = "config.json";
+            runScriptFile  = "run-script.json";
+          } // optionalAttrs useCabalRun {
+            executable     = "cabal run exe:tx-generator --";
+          });
+
+      finaliseGeneratorConfig =
+        cfg: recursiveUpdate cfg
+          ({
+            AlonzoGenesisFile    = "../genesis/alonzo-genesis.json";
+            ShelleyGenesisFile   = "../genesis.json";
+            ByronGenesisFile     = "../genesis/byron/genesis.json";
+          });
+
       ## Backend-specific Nix bits:
       supervisord =
         {
@@ -75,7 +97,7 @@ let
           mkSupervisorConf =
             profile:
             pkgs.callPackage ./supervisor-conf.nix
-            { inherit (profile) node-services;
+            { inherit (profile) node-services generator-service;
               inherit
                 pkgs lib stateDir
                 basePort

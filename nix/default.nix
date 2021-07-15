@@ -44,6 +44,7 @@ let
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
         commonLib = with pkgs; lib // cardanoLib // iohk-nix.lib
           // import ./util.nix { inherit haskell-nix; }
+          // import ./svclib.nix { inherit pkgs; }
           # also expose our sources, nixpkgs and overlays
           // { inherit overlays sources nixpkgs; };
       })
