@@ -12,6 +12,7 @@ packages:
     nix/workbench/cardano-topology
     bench/tx-generator
     nix/workbench/locli
+    optparse-applicative
 
 package cardano-api
   ghc-options: -Werror
@@ -106,12 +107,6 @@ package cardano-ledger-alonzo-test
 -- when using the "cabal" wrapper script provided by nix-shell.
 -- --------------------------- 8< --------------------------
 -- Please do not put any `source-repository-package` clause above this line.
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/optparse-applicative
-  tag: 4ea7cbe775a508ced55d128c7baf781cfc8b7626
-  --sha256: 0aldm5n885qmb07mf19znd9qiznik59gbrf192x8jpzckn69h8b5
 
 source-repository-package
   type: git
