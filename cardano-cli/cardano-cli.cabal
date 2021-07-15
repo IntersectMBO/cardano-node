@@ -125,7 +125,7 @@ library
                       , formatting
                       , iproute
                       , network
-                      , optparse-applicative
+                      , optparse-applicative-alt
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
@@ -157,7 +157,7 @@ executable cardano-cli
   build-depends:        cardano-cli
                       , cardano-crypto-class
                       , cardano-prelude
-                      , optparse-applicative
+                      , optparse-applicative-alt
                       , transformers-except
 
 test-suite cardano-cli-test

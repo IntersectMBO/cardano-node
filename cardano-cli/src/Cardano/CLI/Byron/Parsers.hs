@@ -35,8 +35,8 @@ import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Formatting (build, sformat)
 
-import           Options.Applicative
-import qualified Options.Applicative as Opt
+import           Options.ApplicativeAlt
+import qualified Options.ApplicativeAlt as Opt
 
 import           Cardano.Binary (Annotated (..))
 
@@ -66,19 +66,19 @@ import           Cardano.CLI.Run (ClientCommand (ByronCommand))
 import           Cardano.CLI.Shelley.Commands (ByronKeyFormat (..))
 import           Cardano.CLI.Types
 
-command' :: String -> String -> Parser a -> Mod CommandFields a
+command' :: String -> String -> Parser ann a -> Mod ann (CommandFields ann) a
 command' c descr p =
     command c $ info (p <**> helper)
               $ mconcat [ progDesc descr ]
 
-backwardsCompatibilityCommands :: Parser ClientCommand
+backwardsCompatibilityCommands :: Parser ann ClientCommand
 backwardsCompatibilityCommands =
   asum hiddenCmds
  where
-  convertToByronCommand :: Mod CommandFields ByronCommand -> Parser ClientCommand
+  convertToByronCommand :: Mod ann (CommandFields ann) ByronCommand -> Parser ann ClientCommand
   convertToByronCommand p = ByronCommand <$> Opt.subparser (p <> Opt.internal)
 
-  hiddenCmds :: [Parser ClientCommand]
+  hiddenCmds :: [Parser ann ClientCommand]
   hiddenCmds = map convertToByronCommand [ parseGenesisRelatedValues
                                          , parseKeyRelatedValues
                                          , parseTxRelatedValues
@@ -88,7 +88,7 @@ backwardsCompatibilityCommands =
 
 -- Implemented with asum so all commands don't get hidden when trying to hide
 -- the 'pNodeCmdBackwardCompatible' parser.
-parseByronCommands :: Parser ByronCommand
+parseByronCommands :: Parser ann ByronCommand
 parseByronCommands = asum
   [ subParser "key" (Opt.info (Opt.subparser parseKeyRelatedValues)
       $ Opt.progDesc "Byron key utility commands")
@@ -105,13 +105,13 @@ parseByronCommands = asum
   , NodeCmd <$> pNodeCmdBackwardCompatible
   ]
  where
-   subParser :: String -> ParserInfo ByronCommand -> Parser ByronCommand
+   subParser :: String -> ParserInfo ann ByronCommand -> Parser ann ByronCommand
    subParser name pInfo = Opt.subparser $ Opt.command name pInfo <> Opt.metavar name
 
-pNodeCmdBackwardCompatible :: Parser NodeCmd
+pNodeCmdBackwardCompatible :: Parser ann NodeCmd
 pNodeCmdBackwardCompatible = Opt.subparser $ pNodeCmd <> Opt.internal
 
-parseCBORObject :: Parser CBORObject
+parseCBORObject :: Parser ann CBORObject
 parseCBORObject = asum
   [ CBORBlockByron <$> option auto
       (  long "byron-block"
@@ -139,7 +139,7 @@ parseCBORObject = asum
   ]
 
 -- | Values required to create genesis.
-parseGenesisParameters :: Parser GenesisParameters
+parseGenesisParameters :: Parser ann GenesisParameters
 parseGenesisParameters =
   GenesisParameters
     <$> parseUTCTime
@@ -163,7 +163,7 @@ parseGenesisParameters =
             "Optionally specify the seed of generation."
         )
 
-parseGenesisRelatedValues :: Mod CommandFields ByronCommand
+parseGenesisRelatedValues :: Mod ann (CommandFields ann) ByronCommand
 parseGenesisRelatedValues =
   mconcat
     [ command' "genesis" "Create genesis."
@@ -179,7 +179,7 @@ parseGenesisRelatedValues =
 
 -- | Values required to create keys and perform
 -- transformation on keys.
-parseKeyRelatedValues :: Mod CommandFields ByronCommand
+parseKeyRelatedValues :: Mod ann (CommandFields ann) ByronCommand
 parseKeyRelatedValues =
     mconcat
         [ command' "keygen" "Generate a signing key."
@@ -219,7 +219,7 @@ parseKeyRelatedValues =
                 <*> parseNewSigningKeyFile "to"
         ]
 
-parseLocalNodeQueryValues :: Mod CommandFields ByronCommand
+parseLocalNodeQueryValues :: Mod ann (CommandFields ann) ByronCommand
 parseLocalNodeQueryValues =
     mconcat
         [ command' "get-tip" "Get the tip of your local node's blockchain"
@@ -227,7 +227,7 @@ parseLocalNodeQueryValues =
                 <$> pNetworkId
         ]
 
-parseMiscellaneous :: Mod CommandFields ByronCommand
+parseMiscellaneous :: Mod ann (CommandFields ann) ByronCommand
 parseMiscellaneous = mconcat
   [ command'
       "validate-cbor"
@@ -244,7 +244,7 @@ parseMiscellaneous = mconcat
 
 
 
-parseTestnetBalanceOptions :: Parser TestnetBalanceOptions
+parseTestnetBalanceOptions :: Parser ann TestnetBalanceOptions
 parseTestnetBalanceOptions =
   TestnetBalanceOptions
     <$> parseIntegral
@@ -260,7 +260,7 @@ parseTestnetBalanceOptions =
           "delegate-share"
           "Portion of stake owned by all delegates together."
 
-parseTxIn :: Parser TxIn
+parseTxIn :: Parser ann TxIn
 parseTxIn =
   option
   (readerFromAttoParser parseTxInAtto)
@@ -284,7 +284,7 @@ parseTxIdAtto = (<?> "Transaction ID (hexadecimal)") $ do
 parseTxIxAtto :: Atto.Parser TxIx
 parseTxIxAtto = toEnum <$> Atto.decimal
 
-parseTxOut :: Parser (TxOut ByronEra)
+parseTxOut :: Parser ann (TxOut ByronEra)
 parseTxOut =
   option
     ( (\(addr, lovelace) -> TxOut (pAddressInEra addr)
@@ -308,11 +308,11 @@ parseTxOut =
     then panic $ show l <> " lovelace exceeds the Word64 upper bound"
     else TxOutAdaOnly AdaOnlyInByronEra . Lovelace $ toInteger l
 
-readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
+readerFromAttoParser :: Atto.Parser a -> Opt.ReadM ann a
 readerFromAttoParser p =
   Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
 
-parseTxRelatedValues :: Mod CommandFields ByronCommand
+parseTxRelatedValues :: Mod ann (CommandFields ann) ByronCommand
 parseTxRelatedValues =
   mconcat
     [ command'
@@ -357,7 +357,7 @@ parseTxRelatedValues =
             <$> parseTxFile "tx"
     ]
 
-pNodeCmd :: Mod CommandFields NodeCmd
+pNodeCmd :: Mod ann (CommandFields ann) NodeCmd
 pNodeCmd =
     mconcat
       [ Opt.command "create-update-proposal"
@@ -373,7 +373,7 @@ pNodeCmd =
           (Opt.info parseByronVoteSubmission $ Opt.progDesc "Submit a proposal vote.")
       ]
 
-parseByronUpdateProposal :: Parser NodeCmd
+parseByronUpdateProposal :: Parser ann NodeCmd
 parseByronUpdateProposal = do
   UpdateProposal
     <$> pNetworkId
@@ -385,14 +385,14 @@ parseByronUpdateProposal = do
     <*> parseFilePath "filepath" "Byron proposal output filepath."
     <*> pByronProtocolParametersUpdate
 
-parseByronVoteSubmission :: Parser NodeCmd
+parseByronVoteSubmission :: Parser ann NodeCmd
 parseByronVoteSubmission = do
   SubmitVote
     <$> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal vote."
 
 
-pByronProtocolParametersUpdate :: Parser ByronProtocolParametersUpdate
+pByronProtocolParametersUpdate :: Parser ann ByronProtocolParametersUpdate
 pByronProtocolParametersUpdate =
   ByronProtocolParametersUpdate
     <$> optional parseScriptVersion
@@ -410,14 +410,14 @@ pByronProtocolParametersUpdate =
     <*> optional parseTxFeePolicy
     <*> optional parseUnlockStakeEpoch
 
-parseByronUpdateProposalSubmission :: Parser NodeCmd
+parseByronUpdateProposalSubmission :: Parser ann NodeCmd
 parseByronUpdateProposalSubmission =
   SubmitUpdateProposal
     <$> pNetworkId
     <*> parseFilePath "filepath" "Filepath of Byron update proposal."
 
 
-parseByronVote :: Parser NodeCmd
+parseByronVote :: Parser ann NodeCmd
 parseByronVote =
   CreateVote
     <$> pNetworkId
@@ -430,7 +430,7 @@ parseByronVote =
 -- CLI Parsers
 --------------------------------------------------------------------------------
 
-parseScriptVersion :: Parser Word16
+parseScriptVersion :: Parser ann Word16
 parseScriptVersion =
   option auto
     ( long "script-version"
@@ -438,7 +438,7 @@ parseScriptVersion =
     <> help "Proposed script version."
     )
 
-parseSlotDuration :: Parser Natural
+parseSlotDuration :: Parser ann Natural
 parseSlotDuration =
   option auto
     ( long "slot-duration"
@@ -446,7 +446,7 @@ parseSlotDuration =
     <> help "Proposed slot duration."
     )
 
-parseSystemTag :: Parser SystemTag
+parseSystemTag :: Parser ann SystemTag
 parseSystemTag = option (eitherReader checkSysTag)
                    ( long "system-tag"
                    <> metavar "STRING"
@@ -460,7 +460,7 @@ parseSystemTag = option (eitherReader checkSysTag)
          Left err -> Left . toS $ sformat build err
          Right () -> Right tag
 
-parseInstallerHash :: Parser InstallerHash
+parseInstallerHash :: Parser ann InstallerHash
 parseInstallerHash =
   InstallerHash .  hashRaw . C8.pack
     <$> strOption ( long "installer-hash"
@@ -468,7 +468,7 @@ parseInstallerHash =
                   <> help "Software hash."
                   )
 
-parseMaxBlockSize :: Parser Natural
+parseMaxBlockSize :: Parser ann Natural
 parseMaxBlockSize =
   option auto
     ( long "max-block-size"
@@ -476,7 +476,7 @@ parseMaxBlockSize =
     <> help "Proposed max block size."
     )
 
-parseMaxHeaderSize :: Parser Natural
+parseMaxHeaderSize :: Parser ann Natural
 parseMaxHeaderSize =
   option auto
     ( long "max-header-size"
@@ -484,7 +484,7 @@ parseMaxHeaderSize =
     <> help "Proposed max block header size."
     )
 
-parseMaxTxSize :: Parser Natural
+parseMaxTxSize :: Parser ann Natural
 parseMaxTxSize =
   option auto
     ( long "max-tx-size"
@@ -492,7 +492,7 @@ parseMaxTxSize =
     <> help "Proposed max transaction size."
     )
 
-parseMaxProposalSize :: Parser  Natural
+parseMaxProposalSize :: Parser ann  Natural
 parseMaxProposalSize =
   option auto
     ( long "max-proposal-size"
@@ -500,33 +500,33 @@ parseMaxProposalSize =
     <> help "Proposed max update proposal size."
     )
 
-parseMpcThd :: Parser Byron.LovelacePortion
+parseMpcThd :: Parser ann Byron.LovelacePortion
 parseMpcThd =
   rationalToLovelacePortion
     <$> parseFraction "max-mpc-thd" "Proposed max mpc threshold."
 
-parseProtocolVersion :: Parser ProtocolVersion
+parseProtocolVersion :: Parser ann ProtocolVersion
 parseProtocolVersion =
-  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol verson major." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-minor" "Protocol verson minor." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-alt" "Protocol verson alt." "WORD8" :: Parser Word8)
+  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol verson major." "WORD16" :: Parser ann Word16)
+                  <*> (parseWord "protocol-version-minor" "Protocol verson minor." "WORD16" :: Parser ann Word16)
+                  <*> (parseWord "protocol-version-alt" "Protocol verson alt." "WORD8" :: Parser ann Word8)
 
-parseHeavyDelThd :: Parser Byron.LovelacePortion
+parseHeavyDelThd :: Parser ann Byron.LovelacePortion
 parseHeavyDelThd =
   rationalToLovelacePortion
     <$> parseFraction "heavy-del-thd" "Proposed heavy delegation threshold."
 
-parseUpdateVoteThd :: Parser Byron.LovelacePortion
+parseUpdateVoteThd :: Parser ann Byron.LovelacePortion
 parseUpdateVoteThd =
   rationalToLovelacePortion
     <$> parseFraction "update-vote-thd" "Propose update vote threshold."
 
-parseUpdateProposalThd :: Parser Byron.LovelacePortion
+parseUpdateProposalThd :: Parser ann Byron.LovelacePortion
 parseUpdateProposalThd =
   rationalToLovelacePortion
     <$> parseFraction "update-proposal-thd" "Propose update proposal threshold."
 
-parseUpdateProposalTTL :: Parser SlotNumber
+parseUpdateProposalTTL :: Parser ann SlotNumber
 parseUpdateProposalTTL =
   SlotNumber
     <$> option auto
@@ -535,7 +535,7 @@ parseUpdateProposalTTL =
           <> help "Proposed time for an update proposal to live."
           )
 
-parseSoftforkRule :: Parser SoftforkRule
+parseSoftforkRule :: Parser ann SoftforkRule
 parseSoftforkRule =
   SoftforkRule
     <$> (rationalToLovelacePortion <$> parseFraction "softfork-init-thd" "Propose initial threshold (right after proposal is confirmed).")
@@ -543,11 +543,11 @@ parseSoftforkRule =
     <*> (rationalToLovelacePortion <$> parseFraction "softfork-thd-dec" "Propose threshold decrement (threshold will decrease by this amount after each epoch).")
 
 
-parseSoftwareVersion :: Parser SoftwareVersion
+parseSoftwareVersion :: Parser ann SoftwareVersion
 parseSoftwareVersion =
   SoftwareVersion <$> parseApplicationName <*> parseNumSoftwareVersion
 
-parseApplicationName :: Parser ApplicationName
+parseApplicationName :: Parser ann ApplicationName
 parseApplicationName = option (eitherReader checkAppNameLength)
        (  long "application-name"
        <> metavar "STRING"
@@ -561,25 +561,25 @@ parseApplicationName = option (eitherReader checkAppNameLength)
          Left err -> Left . toS $ sformat build err
          Right () -> Right appName
 
-parseNumSoftwareVersion :: Parser NumSoftwareVersion
+parseNumSoftwareVersion :: Parser ann NumSoftwareVersion
 parseNumSoftwareVersion =
   parseWord
     "software-version-num"
     "Numeric software version associated with application name."
     "WORD32"
 
-parseTxFeePolicy :: Parser TxFeePolicy
+parseTxFeePolicy :: Parser ann TxFeePolicy
 parseTxFeePolicy =
   TxFeePolicyTxSizeLinear
     <$> ( TxSizeLinear <$> parseLovelace "tx-fee-a-constant" "Propose the constant a for txfee = a + b*s where s is the size."
                        <*> parseFraction "tx-fee-b-constant" "Propose the constant b for txfee = a + b*s where s is the size."
         )
 
-parseVoteBool :: Parser Bool
+parseVoteBool :: Parser ann Bool
 parseVoteBool = flag' True (long "vote-yes" <> help "Vote yes with respect to an update proposal.")
             <|> flag' False (long "vote-no" <> help "Vote no with respect to an update proposal.")
 
-parseUnlockStakeEpoch :: Parser EpochNumber
+parseUnlockStakeEpoch :: Parser ann EpochNumber
 parseUnlockStakeEpoch =
   EpochNumber
     <$> option auto
@@ -589,18 +589,18 @@ parseUnlockStakeEpoch =
       )
 
 
-parseWord :: Integral a => String -> String -> String -> Parser a
+parseWord :: Integral a => String -> String -> String -> Parser ann a
 parseWord optname desc metvar = option (fromInteger <$> auto)
   $ long optname <> metavar metvar <> help desc
 
 
 
-parseAddress :: String -> String -> Parser (Address ByronAddr)
+parseAddress :: String -> String -> Parser ann (Address ByronAddr)
 parseAddress opt desc =
   option (cliParseBase58Address <$> str)
     $ long opt <> metavar "ADDR" <> help desc
 
-parseByronKeyFormat :: Parser ByronKeyFormat
+parseByronKeyFormat :: Parser ann ByronKeyFormat
 parseByronKeyFormat = asum
   [ flag' LegacyByronKeyFormat $
         long "byron-legacy-formats"
@@ -619,25 +619,25 @@ parseByronKeyFormat = asum
   ]
 
 
-parseFakeAvvmOptions :: Parser FakeAvvmOptions
+parseFakeAvvmOptions :: Parser ann FakeAvvmOptions
 parseFakeAvvmOptions =
   FakeAvvmOptions
     <$> parseIntegral "avvm-entry-count" "Number of AVVM addresses."
     <*> parseLovelace "avvm-entry-balance" "AVVM address."
 
-parseK :: Parser BlockCount
+parseK :: Parser ann BlockCount
 parseK =
   BlockCount
     <$> parseIntegral "k" "The security parameter of the Ouroboros protocol."
 
-parseNewDirectory :: String -> String -> Parser NewDirectory
+parseNewDirectory :: String -> String -> Parser ann NewDirectory
 parseNewDirectory opt desc = NewDirectory <$> parseFilePath opt desc
 
 parseFractionWithDefault
   :: String
   -> String
   -> Double
-  -> Parser Rational
+  -> Parser ann Rational
 parseFractionWithDefault optname desc w =
   toRational <$> option readDouble
     ( long optname
@@ -646,18 +646,18 @@ parseFractionWithDefault optname desc w =
     <> value w
     )
 
-pNetworkId :: Parser NetworkId
+pNetworkId :: Parser ann NetworkId
 pNetworkId =
   pMainnet' <|> fmap Testnet pTestnetMagic
  where
-   pMainnet' :: Parser NetworkId
+   pMainnet' :: Parser ann NetworkId
    pMainnet' =
     Opt.flag' Mainnet
       (  Opt.long "mainnet"
       <> Opt.help "Use the mainnet magic id."
       )
 
-pTestnetMagic :: Parser NetworkMagic
+pTestnetMagic :: Parser ann NetworkMagic
 pTestnetMagic =
   NetworkMagic <$>
     Opt.option Opt.auto
@@ -666,37 +666,37 @@ pTestnetMagic =
       <> Opt.help "Specify a testnet magic id."
       )
 
-parseNewSigningKeyFile :: String -> Parser NewSigningKeyFile
+parseNewSigningKeyFile :: String -> Parser ann NewSigningKeyFile
 parseNewSigningKeyFile opt =
   NewSigningKeyFile
     <$> parseFilePath opt "Non-existent file to write the signing key to."
 
-parseNewTxFile :: String -> Parser NewTxFile
+parseNewTxFile :: String -> Parser ann NewTxFile
 parseNewTxFile opt =
   NewTxFile
     <$> parseFilePath opt "Non-existent file to write the signed transaction to."
 
-parseNewVerificationKeyFile :: String -> Parser NewVerificationKeyFile
+parseNewVerificationKeyFile :: String -> Parser ann NewVerificationKeyFile
 parseNewVerificationKeyFile opt =
   NewVerificationKeyFile
     <$> parseFilePath opt "Non-existent file to write the verification key to."
 
-parseProtocolMagicId :: String -> Parser ProtocolMagicId
+parseProtocolMagicId :: String -> Parser ann ProtocolMagicId
 parseProtocolMagicId arg =
   ProtocolMagicId
     <$> parseIntegral arg "The magic number unique to any instance of Cardano."
 
-parseProtocolMagic :: Parser ProtocolMagic
+parseProtocolMagic :: Parser ann ProtocolMagic
 parseProtocolMagic =
   flip AProtocolMagic RequiresMagic . flip Annotated ()
     <$> parseProtocolMagicId "protocol-magic"
 
-parseTxFile :: String -> Parser TxFile
+parseTxFile :: String -> Parser ann TxFile
 parseTxFile opt =
   TxFile
     <$> parseFilePath opt "File containing the signed transaction."
 
-parseUTCTime :: String -> String -> Parser UTCTime
+parseUTCTime :: String -> String -> Parser ann UTCTime
 parseUTCTime optname desc =
   option (posixSecondsToUTCTime . fromInteger <$> auto)
     $ long optname <> metavar "POSIXSECONDS" <> help desc
@@ -707,18 +707,18 @@ cliParseBase58Address t =
     Left err -> panic $ "Bad Base58 address: " <> Text.pack (show err)
     Right byronAddress -> ByronAddress byronAddress
 
-parseFraction :: String -> String -> Parser Rational
+parseFraction :: String -> String -> Parser ann Rational
 parseFraction optname desc =
   option (toRational <$> readDouble) $
       long optname
    <> metavar "DOUBLE"
    <> help desc
 
-parseIntegral :: Integral a => String -> String -> Parser a
+parseIntegral :: Integral a => String -> String -> Parser ann a
 parseIntegral optname desc = option (fromInteger <$> auto)
   $ long optname <> metavar "INT" <> help desc
 
-parseLovelace :: String -> String -> Parser Byron.Lovelace
+parseLovelace :: String -> String -> Parser ann Byron.Lovelace
 parseLovelace optname desc =
   Opt.option (readerFromAttoParser parseLovelaceAtto)
     (  long optname
@@ -735,14 +735,14 @@ parseLovelace optname desc =
            Just byronLovelace -> return byronLovelace
            Nothing -> panic $ "Error converting lovelace: " <> Text.pack (show i)
 
-readDouble :: ReadM Double
+readDouble :: ReadM ann Double
 readDouble = do
   f <- auto
   when (f < 0) $ readerError "fraction must be >= 0"
   when (f > 1) $ readerError "fraction must be <= 1"
   return f
 
-parseFilePath :: String -> String -> Parser FilePath
+parseFilePath :: String -> String -> Parser ann FilePath
 parseFilePath optname desc =
   strOption
     ( long optname
@@ -751,11 +751,11 @@ parseFilePath optname desc =
     <> completer (bashCompleter "file")
     )
 
-parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
+parseSigningKeyFile :: String -> String -> Parser ann SigningKeyFile
 parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
 
 
-parseGenesisFile :: String -> Parser GenesisFile
+parseGenesisFile :: String -> Parser ann GenesisFile
 parseGenesisFile opt =
   GenesisFile <$> parseFilePath opt "Genesis JSON file."
 

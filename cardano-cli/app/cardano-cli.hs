@@ -8,7 +8,7 @@
 import           Cardano.Prelude hiding (option)
 
 import           Control.Monad.Trans.Except.Exit (orDie)
-import qualified Options.Applicative as Opt
+import qualified Options.ApplicativeAlt as Opt
 
 import           Cardano.CLI.Parsers (opts, pref)
 import           Cardano.CLI.Run (renderClientCommandError, runClientCommand)

@@ -6,19 +6,19 @@ module Cardano.CLI.Parsers
 import           Cardano.Prelude
 import           Prelude (String)
 
-import           Options.Applicative
-import qualified Options.Applicative as Opt
+import           Options.ApplicativeAlt
+import qualified Options.ApplicativeAlt as Opt
 
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 
-command' :: String -> String -> Parser a -> Mod CommandFields a
+command' :: String -> String -> Parser ann a -> Mod ann (CommandFields ann) a
 command' c descr p =
     command c $ info (p <**> helper)
               $ mconcat [ progDesc descr ]
 
-opts :: ParserInfo ClientCommand
+opts :: ParserInfo ann ClientCommand
 opts =
   Opt.info (parseClientCommand <**> Opt.helper)
     ( Opt.fullDesc
@@ -31,7 +31,7 @@ opts =
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> helpHangUsageOverflow 10
 
-parseClientCommand :: Parser ClientCommand
+parseClientCommand :: Parser ann ClientCommand
 parseClientCommand =
   asum
     -- There are name clashes between Shelley commands and the Byron backwards
@@ -44,7 +44,7 @@ parseClientCommand =
     , parseDisplayVersion
     ]
 
-parseByron :: Parser ClientCommand
+parseByron :: Parser ann ClientCommand
 parseByron =
   fmap ByronCommand $
   subparser $ mconcat
@@ -57,7 +57,7 @@ parseByron =
     ]
 
 -- | Parse Shelley-related commands at the top level of the CLI.
-parseShelley :: Parser ClientCommand
+parseShelley :: Parser ann ClientCommand
 parseShelley = ShelleyCommand <$> parseShelleyCommands
 
 -- | Parse Shelley-related commands under the now-deprecated \"shelley\"
@@ -65,7 +65,7 @@ parseShelley = ShelleyCommand <$> parseShelleyCommands
 --
 -- Note that this subcommand is 'internal' and is therefore hidden from the
 -- help text.
-parseDeprecatedShelleySubcommand :: Parser ClientCommand
+parseDeprecatedShelleySubcommand :: Parser ann ClientCommand
 parseDeprecatedShelleySubcommand =
   subparser $ mconcat
     [ commandGroup "Shelley specific commands (deprecated)"
@@ -78,7 +78,7 @@ parseDeprecatedShelleySubcommand =
     ]
 
 -- Yes! A --version flag or version command. Either guess is right!
-parseDisplayVersion :: Parser ClientCommand
+parseDisplayVersion :: Parser ann ClientCommand
 parseDisplayVersion =
       subparser
         (mconcat

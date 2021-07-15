@@ -31,7 +31,7 @@ import           Control.Monad.Fail (fail)
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
 import           Network.Socket (PortNumber)
-import           Options.Applicative hiding (help, str)
+import           Options.ApplicativeAlt hiding (help, str)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
 import qualified Data.ByteString.Base16 as B16
@@ -45,7 +45,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Parser as Aeson.Parser
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import qualified Options.Applicative as Opt
+import qualified Options.ApplicativeAlt as Opt
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.Language as Parsec
@@ -60,7 +60,7 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 -- Shelley CLI command parsers
 --
 
-parseShelleyCommands :: Parser ShelleyCommand
+parseShelleyCommands :: Parser ann ShelleyCommand
 parseShelleyCommands =
   Opt.hsubparser $
     mconcat
@@ -99,7 +99,7 @@ parseShelleyCommands =
 
       ]
 
-pTextViewCmd :: Parser TextViewCmd
+pTextViewCmd :: Parser ann TextViewCmd
 pTextViewCmd =
   asum
     [ subParser "decode-cbor"
@@ -108,7 +108,7 @@ pTextViewCmd =
           )
     ]
 
-pCBORInFile :: Parser FilePath
+pCBORInFile :: Parser ann FilePath
 pCBORInFile =
   Opt.strOption
     (  Opt.long "in-file"
@@ -122,7 +122,7 @@ pCBORInFile =
     <> Opt.internal
     )
 
-pAddressCmd :: Parser AddressCmd
+pAddressCmd :: Parser ann AddressCmd
 pAddressCmd =
    asum
      [ subParser "key-gen"
@@ -137,53 +137,53 @@ pAddressCmd =
          (Opt.info pAddressInfo $ Opt.progDesc "Print information about an address.")
      ]
   where
-    pAddressKeyGen :: Parser AddressCmd
+    pAddressKeyGen :: Parser ann AddressCmd
     pAddressKeyGen = AddressKeyGen <$> pAddressKeyType
                                    <*> pVerificationKeyFile Output
                                    <*> pSigningKeyFile Output
 
-    pAddressKeyHash :: Parser AddressCmd
+    pAddressKeyHash :: Parser ann AddressCmd
     pAddressKeyHash =
       AddressKeyHash
         <$> pPaymentVerificationKeyTextOrFile
         <*> pMaybeOutputFile
 
-    pAddressBuild :: Parser AddressCmd
+    pAddressBuild :: Parser ann AddressCmd
     pAddressBuild = AddressBuild
       <$> pPaymentVerifier
       <*> Opt.optional pStakeVerifier
       <*> pNetworkId
       <*> pMaybeOutputFile
 
-    pAddressBuildScript :: Parser AddressCmd
+    pAddressBuildScript :: Parser ann AddressCmd
     pAddressBuildScript = AddressBuildMultiSig
       <$> pScript
       <*> pNetworkId
       <*> pMaybeOutputFile
 
-    pAddressInfo :: Parser AddressCmd
+    pAddressInfo :: Parser ann AddressCmd
     pAddressInfo = AddressInfo <$> pAddress <*> pMaybeOutputFile
 
-pPaymentVerifier :: Parser PaymentVerifier
+pPaymentVerifier :: Parser ann PaymentVerifier
 pPaymentVerifier =
         PaymentVerifierKey <$> pPaymentVerificationKeyTextOrFile
     <|> PaymentVerifierScriptFile <$>
           pScriptFor "payment-script-file" Nothing
                      "Filepath of the payment script."
 
-pStakeVerifier :: Parser StakeVerifier
+pStakeVerifier :: Parser ann StakeVerifier
 pStakeVerifier =
         StakeVerifierKey <$> pStakeVerificationKeyOrFile
     <|> StakeVerifierScriptFile <$>
           pScriptFor "stake-script-file" Nothing
                      "Filepath of the staking script."
 
-pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
+pPaymentVerificationKeyTextOrFile :: Parser ann VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
         VktofVerificationKeyText <$> pPaymentVerificationKeyText
     <|> VktofVerificationKeyFile <$> pPaymentVerificationKeyFile
 
-pPaymentVerificationKeyText :: Parser Text
+pPaymentVerificationKeyText :: Parser ann Text
 pPaymentVerificationKeyText =
   Text.pack <$>
     Opt.strOption
@@ -192,7 +192,7 @@ pPaymentVerificationKeyText =
       <> Opt.help "Payment verification key (Bech32-encoded)"
       )
 
-pPaymentVerificationKeyFile :: Parser VerificationKeyFile
+pPaymentVerificationKeyFile :: Parser ann VerificationKeyFile
 pPaymentVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
@@ -208,10 +208,10 @@ pPaymentVerificationKeyFile =
         )
     )
 
-pScript :: Parser ScriptFile
+pScript :: Parser ann ScriptFile
 pScript = pScriptFor "script-file" Nothing "Filepath of the script."
 
-pScriptFor :: String -> Maybe String -> String -> Parser ScriptFile
+pScriptFor :: String -> Maybe String -> String -> Parser ann ScriptFile
 pScriptFor name Nothing help =
   ScriptFile <$> Opt.strOption
     (  Opt.long name
@@ -227,12 +227,12 @@ pScriptFor name (Just deprecated) help =
         <> Opt.internal
         )
 
-pScriptWitnessFiles :: forall witctx.
+pScriptWitnessFiles :: forall witctx ann.
                        WitCtx witctx
                     -> String
                     -> Maybe String
                     -> String
-                    -> Parser (ScriptWitnessFiles witctx)
+                    -> Parser ann (ScriptWitnessFiles witctx)
 pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
     toScriptWitnessFiles
       <$> pScriptFor (scriptFlagPrefix ++ "-script-file")
@@ -250,7 +250,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
     toScriptWitnessFiles sf Nothing        = SimpleScriptWitnessFile  sf
     toScriptWitnessFiles sf (Just (d,r,e)) = PlutusScriptWitnessFiles sf d r e
 
-    pScriptDatumOrFile :: Parser (ScriptDatumOrFile witctx)
+    pScriptDatumOrFile :: Parser ann (ScriptDatumOrFile witctx)
     pScriptDatumOrFile =
       case witctx of
         WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$>
@@ -258,10 +258,10 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
         WitCtxMint  -> pure NoScriptDatumOrFileForMint
         WitCtxStake -> pure NoScriptDatumOrFileForStake
 
-    pScriptRedeemerOrFile :: Parser ScriptDataOrFile
+    pScriptRedeemerOrFile :: Parser ann ScriptDataOrFile
     pScriptRedeemerOrFile = pScriptDataOrFile (scriptFlagPrefix ++ "-redeemer")
 
-    pExecutionUnits :: Parser ExecutionUnits
+    pExecutionUnits :: Parser ann ExecutionUnits
     pExecutionUnits =
       uncurry ExecutionUnits <$>
       Opt.option Opt.auto
@@ -270,7 +270,7 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
         <> Opt.help "The time and space units needed by the script."
         )
 
-pScriptDataOrFile :: String -> Parser ScriptDataOrFile
+pScriptDataOrFile :: String -> Parser ann ScriptDataOrFile
 pScriptDataOrFile dataFlagPrefix =
       ScriptDataFile  <$> pScriptDataFile
   <|> ScriptDataValue <$> pScriptDataValue
@@ -296,7 +296,7 @@ pScriptDataOrFile dataFlagPrefix =
         Right sd -> return sd
 
 
-pStakeAddressCmd :: Parser StakeAddressCmd
+pStakeAddressCmd :: Parser ann StakeAddressCmd
 pStakeAddressCmd =
     asum
       [ subParser "key-gen"
@@ -313,36 +313,36 @@ pStakeAddressCmd =
           (Opt.info pStakeAddressDelegationCert $ Opt.progDesc "Create a stake address delegation certificate")
       ]
   where
-    pStakeAddressKeyGen :: Parser StakeAddressCmd
+    pStakeAddressKeyGen :: Parser ann StakeAddressCmd
     pStakeAddressKeyGen = StakeAddressKeyGen
                             <$> pVerificationKeyFile Output
                             <*> pSigningKeyFile Output
 
-    pStakeAddressKeyHash :: Parser StakeAddressCmd
+    pStakeAddressKeyHash :: Parser ann StakeAddressCmd
     pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyOrFile <*> pMaybeOutputFile
 
-    pStakeAddressBuild :: Parser StakeAddressCmd
+    pStakeAddressBuild :: Parser ann StakeAddressCmd
     pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyOrFile
                                            <*> pNetworkId
                                            <*> pMaybeOutputFile
 
-    pStakeAddressRegistrationCert :: Parser StakeAddressCmd
+    pStakeAddressRegistrationCert :: Parser ann StakeAddressCmd
     pStakeAddressRegistrationCert = StakeRegistrationCert
                                       <$> pStakeVerifier
                                       <*> pOutputFile
 
-    pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
+    pStakeAddressDeregistrationCert :: Parser ann StakeAddressCmd
     pStakeAddressDeregistrationCert = StakeCredentialDeRegistrationCert
                                         <$> pStakeVerifier
                                         <*> pOutputFile
 
-    pStakeAddressDelegationCert :: Parser StakeAddressCmd
+    pStakeAddressDelegationCert :: Parser ann StakeAddressCmd
     pStakeAddressDelegationCert = StakeCredentialDelegationCert
                                     <$> pStakeVerifier
                                     <*> pStakePoolVerificationKeyOrHashOrFile
                                     <*> pOutputFile
 
-pKeyCmd :: Parser KeyCmd
+pKeyCmd :: Parser ann KeyCmd
 pKeyCmd =
   asum
     [ subParser "verification-key" $
@@ -385,19 +385,19 @@ pKeyCmd =
                       ++ "to a corresponding Shelley-format key."
     ]
   where
-    pKeyGetVerificationKey :: Parser KeyCmd
+    pKeyGetVerificationKey :: Parser ann KeyCmd
     pKeyGetVerificationKey =
       KeyGetVerificationKey
         <$> pSigningKeyFile      Input
         <*> pVerificationKeyFile Output
 
-    pKeyNonExtendedKey :: Parser KeyCmd
+    pKeyNonExtendedKey :: Parser ann KeyCmd
     pKeyNonExtendedKey =
       KeyNonExtendedKey
         <$> pExtendedVerificationKeyFile Input
         <*> pVerificationKeyFile Output
 
-    pKeyConvertByronKey :: Parser KeyCmd
+    pKeyConvertByronKey :: Parser ann KeyCmd
     pKeyConvertByronKey =
       KeyConvertByronKey
         <$> optional pPassword
@@ -405,14 +405,14 @@ pKeyCmd =
         <*> pByronKeyFile
         <*> pOutputFile
 
-    pPassword :: Parser Text
+    pPassword :: Parser ann Text
     pPassword = Opt.strOption
                   (  Opt.long "password"
                   <> Opt.metavar "TEXT"
                   <> Opt.help "Password for signing key (if applicable)."
                   )
 
-    pByronKeyType :: Parser ByronKeyType
+    pByronKeyType :: Parser ann ByronKeyType
     pByronKeyType =
           Opt.flag' (ByronPaymentKey NonLegacyByronKeyFormat)
             (  Opt.long "byron-payment-key-type"
@@ -439,12 +439,12 @@ pKeyCmd =
             <> Opt.help "Use a Byron-era genesis delegate key, in legacy SL format."
             )
 
-    pByronKeyFile :: Parser SomeKeyFile
+    pByronKeyFile :: Parser ann SomeKeyFile
     pByronKeyFile =
           (ASigningKeyFile      <$> pByronSigningKeyFile)
       <|> (AVerificationKeyFile <$> pByronVerificationKeyFile)
 
-    pByronSigningKeyFile :: Parser SigningKeyFile
+    pByronSigningKeyFile :: Parser ann SigningKeyFile
     pByronSigningKeyFile =
       SigningKeyFile <$>
         Opt.strOption
@@ -454,7 +454,7 @@ pKeyCmd =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
-    pByronVerificationKeyFile :: Parser VerificationKeyFile
+    pByronVerificationKeyFile :: Parser ann VerificationKeyFile
     pByronVerificationKeyFile =
       VerificationKeyFile <$>
         Opt.strOption
@@ -464,13 +464,13 @@ pKeyCmd =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
-    pKeyConvertByronGenesisVKey :: Parser KeyCmd
+    pKeyConvertByronGenesisVKey :: Parser ann KeyCmd
     pKeyConvertByronGenesisVKey =
       KeyConvertByronGenesisVKey
         <$> pByronGenesisVKeyBase64
         <*> pOutputFile
 
-    pByronGenesisVKeyBase64 :: Parser VerificationKeyBase64
+    pByronGenesisVKeyBase64 :: Parser ann VerificationKeyBase64
     pByronGenesisVKeyBase64 =
       VerificationKeyBase64 <$>
         Opt.strOption
@@ -479,29 +479,29 @@ pKeyCmd =
           <> Opt.help "Base64 string for the Byron genesis verification key."
           )
 
-    pKeyConvertITNKey :: Parser KeyCmd
+    pKeyConvertITNKey :: Parser ann KeyCmd
     pKeyConvertITNKey =
       KeyConvertITNStakeKey
         <$> pITNKeyFIle
         <*> pOutputFile
 
-    pKeyConvertITNExtendedKey :: Parser KeyCmd
+    pKeyConvertITNExtendedKey :: Parser ann KeyCmd
     pKeyConvertITNExtendedKey =
       KeyConvertITNExtendedToStakeKey
         <$> pITNSigningKeyFile
         <*> pOutputFile
 
-    pKeyConvertITNBip32Key :: Parser KeyCmd
+    pKeyConvertITNBip32Key :: Parser ann KeyCmd
     pKeyConvertITNBip32Key =
       KeyConvertITNBip32ToStakeKey
         <$> pITNSigningKeyFile
         <*> pOutputFile
 
-    pITNKeyFIle :: Parser SomeKeyFile
+    pITNKeyFIle :: Parser ann SomeKeyFile
     pITNKeyFIle = pITNSigningKeyFile
               <|> pITNVerificationKeyFile
 
-    pITNSigningKeyFile :: Parser SomeKeyFile
+    pITNSigningKeyFile :: Parser ann SomeKeyFile
     pITNSigningKeyFile =
       ASigningKeyFile . SigningKeyFile <$>
         Opt.strOption
@@ -511,7 +511,7 @@ pKeyCmd =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
-    pITNVerificationKeyFile :: Parser SomeKeyFile
+    pITNVerificationKeyFile :: Parser ann SomeKeyFile
     pITNVerificationKeyFile =
       AVerificationKeyFile . VerificationKeyFile <$>
         Opt.strOption
@@ -521,14 +521,14 @@ pKeyCmd =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
-    pKeyConvertCardanoAddressSigningKey :: Parser KeyCmd
+    pKeyConvertCardanoAddressSigningKey :: Parser ann KeyCmd
     pKeyConvertCardanoAddressSigningKey =
       KeyConvertCardanoAddressSigningKey
         <$> pCardanoAddressKeyType
         <*> pSigningKeyFile Input
         <*> pOutputFile
 
-    pCardanoAddressKeyType :: Parser CardanoAddressKeyType
+    pCardanoAddressKeyType :: Parser ann CardanoAddressKeyType
     pCardanoAddressKeyType =
           Opt.flag' CardanoAddressShelleyPaymentKey
             (  Opt.long "shelley-payment-key"
@@ -547,7 +547,7 @@ pKeyCmd =
             <> Opt.help "Use a Byron-era extended payment key formatted in the deprecated Byron style."
             )
 
-pTransaction :: Parser TransactionCmd
+pTransaction :: Parser ann TransactionCmd
 pTransaction =
   asum
     [ subParser "build-raw"
@@ -582,17 +582,17 @@ pTransaction =
         Opt.info pTransactionView $ Opt.progDesc "Print a transaction"
     ]
  where
-  assembleInfo :: ParserInfo TransactionCmd
+  assembleInfo :: ParserInfo ann TransactionCmd
   assembleInfo =
     Opt.info pTransactionAssembleTxBodyWit
       $ Opt.progDesc "Assemble a tx body and witness(es) to form a transaction"
 
-  pSignWitnessBackwardCompatible :: Parser TransactionCmd
+  pSignWitnessBackwardCompatible :: Parser ann TransactionCmd
   pSignWitnessBackwardCompatible =
     Opt.subparser
       $ Opt.command "sign-witness" assembleInfo <> Opt.internal
 
-  pTransactionBuild :: Parser TransactionCmd
+  pTransactionBuild :: Parser ann TransactionCmd
   pTransactionBuild = TxBuildRaw <$> pCardanoEra
                                  <*> some pTxIn
                                  <*> many pTxInCollateral
@@ -613,34 +613,34 @@ pTransaction =
                                  <*> optional pUpdateProposalFile
                                  <*> pTxBodyFile Output
 
-  pTransactionSign  :: Parser TransactionCmd
+  pTransactionSign  :: Parser ann TransactionCmd
   pTransactionSign = TxSign <$> pTxBodyFile Input
                             <*> pSomeWitnessSigningData
                             <*> optional pNetworkId
                             <*> pTxFile Output
 
-  pTransactionCreateWitness :: Parser TransactionCmd
+  pTransactionCreateWitness :: Parser ann TransactionCmd
   pTransactionCreateWitness = TxCreateWitness
                                 <$> pTxBodyFile Input
                                 <*> pWitnessSigningData
                                 <*> optional pNetworkId
                                 <*> pOutputFile
 
-  pTransactionAssembleTxBodyWit :: Parser TransactionCmd
+  pTransactionAssembleTxBodyWit :: Parser ann TransactionCmd
   pTransactionAssembleTxBodyWit = TxAssembleTxBodyWitness
                                     <$> pTxBodyFile Input
                                     <*> some pWitnessFile
                                     <*> pOutputFile
 
-  pTransactionSubmit :: Parser TransactionCmd
+  pTransactionSubmit :: Parser ann TransactionCmd
   pTransactionSubmit = TxSubmit <$> pConsensusModeParams
                                 <*> pNetworkId
                                 <*> pTxSubmitFile
 
-  pTransactionPolicyId :: Parser TransactionCmd
+  pTransactionPolicyId :: Parser ann TransactionCmd
   pTransactionPolicyId = TxMintedPolicyId <$> pScript
 
-  pTransactionCalculateMinFee :: Parser TransactionCmd
+  pTransactionCalculateMinFee :: Parser ann TransactionCmd
   pTransactionCalculateMinFee =
     TxCalculateMinFee
       <$> pTxBodyFile Input
@@ -651,12 +651,12 @@ pTransaction =
       <*> pTxShelleyWitnessCount
       <*> pTxByronWitnessCount
 
-  pTransactionCalculateMinValue :: Parser TransactionCmd
+  pTransactionCalculateMinValue :: Parser ann TransactionCmd
   pTransactionCalculateMinValue = TxCalculateMinValue
     <$> pProtocolParamsSourceSpec
     <*> pMultiAsset
 
-  pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
+  pProtocolParamsSourceSpec :: Parser ann ProtocolParamsSourceSpec
   pProtocolParamsSourceSpec =
     ParamsFromGenesis <$>
       pGenesisFile
@@ -664,16 +664,16 @@ pTransaction =
     <|>
     ParamsFromFile <$> pProtocolParamsFile
 
-  pTxHashScriptData :: Parser TransactionCmd
+  pTxHashScriptData :: Parser ann TransactionCmd
   pTxHashScriptData = TxHashScriptData <$> pScriptDataOrFile "script-data"
 
-  pTransactionId  :: Parser TransactionCmd
+  pTransactionId  :: Parser ann TransactionCmd
   pTransactionId = TxGetTxId <$> pInputTxFile
 
-  pTransactionView :: Parser TransactionCmd
+  pTransactionView :: Parser ann TransactionCmd
   pTransactionView = TxView <$> pInputTxFile
 
-pNodeCmd :: Parser NodeCmd
+pNodeCmd :: Parser ann NodeCmd
 pNodeCmd =
   asum
     [ subParser "key-gen"
@@ -697,31 +697,31 @@ pNodeCmd =
            Opt.progDesc "Issue a node operational certificate")
     ]
   where
-    pKeyGenOperator :: Parser NodeCmd
+    pKeyGenOperator :: Parser ann NodeCmd
     pKeyGenOperator =
       NodeKeyGenCold <$> pColdVerificationKeyFile
                      <*> pColdSigningKeyFile
                      <*> pOperatorCertIssueCounterFile
 
-    pKeyGenKES :: Parser NodeCmd
+    pKeyGenKES :: Parser ann NodeCmd
     pKeyGenKES =
       NodeKeyGenKES <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
-    pKeyGenVRF :: Parser NodeCmd
+    pKeyGenVRF :: Parser ann NodeCmd
     pKeyGenVRF =
       NodeKeyGenVRF <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
-    pKeyHashVRF :: Parser NodeCmd
+    pKeyHashVRF :: Parser ann NodeCmd
     pKeyHashVRF =
       NodeKeyHashVRF <$> pVerificationKeyOrFile AsVrfKey <*> pMaybeOutputFile
 
-    pNewCounter :: Parser NodeCmd
+    pNewCounter :: Parser ann NodeCmd
     pNewCounter =
       NodeNewCounter <$> pColdVerificationKeyOrFile
                      <*> pCounterValue
                      <*> pOperatorCertIssueCounterFile
 
-    pCounterValue :: Parser Word
+    pCounterValue :: Parser ann Word
     pCounterValue =
         Opt.option Opt.auto
           (  Opt.long "counter-value"
@@ -729,7 +729,7 @@ pNodeCmd =
           <> Opt.help "The next certificate issue counter value to use."
           )
 
-    pIssueOpCert :: Parser NodeCmd
+    pIssueOpCert :: Parser ann NodeCmd
     pIssueOpCert =
       NodeIssueOpCert <$> pKesVerificationKeyOrFile
                       <*> pColdSigningKeyFile
@@ -738,7 +738,7 @@ pNodeCmd =
                       <*> pOutputFile
 
 
-pPoolCmd :: Parser PoolCmd
+pPoolCmd :: Parser ann PoolCmd
 pPoolCmd =
   asum
       [ subParser "registration-certificate"
@@ -752,14 +752,14 @@ pPoolCmd =
           (Opt.info pPoolMetadataHashSubCmd $ Opt.progDesc "Print the hash of pool metadata.")
       ]
   where
-    pId :: Parser PoolCmd
+    pId :: Parser ann PoolCmd
     pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
 
-    pPoolMetadataHashSubCmd :: Parser PoolCmd
+    pPoolMetadataHashSubCmd :: Parser ann PoolCmd
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
 
 
-pQueryCmd :: Parser QueryCmd
+pQueryCmd :: Parser ann QueryCmd
 pQueryCmd =
   asum
     [ subParser "protocol-parameters"
@@ -785,20 +785,20 @@ pQueryCmd =
         (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
     ]
   where
-    pQueryProtocolParameters :: Parser QueryCmd
+    pQueryProtocolParameters :: Parser ann QueryCmd
     pQueryProtocolParameters =
       QueryProtocolParameters'
         <$> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-    pQueryTip :: Parser QueryCmd
+    pQueryTip :: Parser ann QueryCmd
     pQueryTip = QueryTip
                   <$> pConsensusModeParams
                   <*> pNetworkId
                   <*> pMaybeOutputFile
 
-    pQueryUTxO :: Parser QueryCmd
+    pQueryUTxO :: Parser ann QueryCmd
     pQueryUTxO =
       QueryUTxO'
         <$> pConsensusModeParams
@@ -806,14 +806,14 @@ pQueryCmd =
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-    pQueryStakeDistribution :: Parser QueryCmd
+    pQueryStakeDistribution :: Parser ann QueryCmd
     pQueryStakeDistribution =
       QueryStakeDistribution'
         <$> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-    pQueryStakeAddressInfo :: Parser QueryCmd
+    pQueryStakeAddressInfo :: Parser ann QueryCmd
     pQueryStakeAddressInfo =
       QueryStakeAddressInfo
         <$> pConsensusModeParams
@@ -821,32 +821,32 @@ pQueryCmd =
         <*> pNetworkId
         <*> pMaybeOutputFile
 
-    pQueryLedgerState :: Parser QueryCmd
+    pQueryLedgerState :: Parser ann QueryCmd
     pQueryLedgerState = QueryDebugLedgerState'
                           <$> pConsensusModeParams
                           <*> pNetworkId
                           <*> pMaybeOutputFile
 
-    pQueryProtocolState :: Parser QueryCmd
+    pQueryProtocolState :: Parser ann QueryCmd
     pQueryProtocolState = QueryProtocolState'
                             <$> pConsensusModeParams
                             <*> pNetworkId
                             <*> pMaybeOutputFile
 
-    pQueryStakeSnapshot :: Parser QueryCmd
+    pQueryStakeSnapshot :: Parser ann QueryCmd
     pQueryStakeSnapshot = QueryStakeSnapshot'
       <$> pConsensusModeParams
       <*> pNetworkId
       <*> pStakePoolVerificationKeyHash
 
-    pQueryPoolParams :: Parser QueryCmd
+    pQueryPoolParams :: Parser ann QueryCmd
     pQueryPoolParams = QueryPoolParams'
       <$> pConsensusModeParams
       <*> pNetworkId
       <*> pStakePoolVerificationKeyHash
 
 
-pGovernanceCmd :: Parser GovernanceCmd
+pGovernanceCmd :: Parser ann GovernanceCmd
 pGovernanceCmd =
  asum
    [ subParser "create-mir-certificate"
@@ -860,7 +860,7 @@ pGovernanceCmd =
          Opt.progDesc "Create an update proposal")
    ]
   where
-    mirCertParsers :: Parser GovernanceCmd
+    mirCertParsers :: Parser ann GovernanceCmd
     mirCertParsers = asum
       [ subParser "stake-addresses" (Opt.info pMIRPayStakeAddresses $
           Opt.progDesc "Create an MIR certificate to pay stake addresses")
@@ -872,26 +872,26 @@ pGovernanceCmd =
                        \ to the reserves pot")
       ]
 
-    pMIRPayStakeAddresses :: Parser GovernanceCmd
+    pMIRPayStakeAddresses :: Parser ann GovernanceCmd
     pMIRPayStakeAddresses = GovernanceMIRPayStakeAddressesCertificate
                               <$> pMIRPot
                               <*> some pStakeAddress
                               <*> some pRewardAmt
                               <*> pOutputFile
 
-    pMIRTransferToTreasury :: Parser GovernanceCmd
+    pMIRTransferToTreasury :: Parser ann GovernanceCmd
     pMIRTransferToTreasury = GovernanceMIRTransfer
                                <$> pTransferAmt
                                <*> pOutputFile
                                <*> pure TransferToTreasury
 
-    pMIRTransferToReserves :: Parser GovernanceCmd
+    pMIRTransferToReserves :: Parser ann GovernanceCmd
     pMIRTransferToReserves = GovernanceMIRTransfer
                                <$> pTransferAmt
                                <*> pOutputFile
                                <*> pure TransferToReserves
 
-    pGovernanceGenesisKeyDelegationCertificate :: Parser GovernanceCmd
+    pGovernanceGenesisKeyDelegationCertificate :: Parser ann GovernanceCmd
     pGovernanceGenesisKeyDelegationCertificate =
       GovernanceGenesisKeyDelegationCertificate
         <$> pGenesisVerificationKeyOrHashOrFile
@@ -899,7 +899,7 @@ pGovernanceCmd =
         <*> pVrfVerificationKeyOrHashOrFile
         <*> pOutputFile
 
-    pMIRPot :: Parser Shelley.MIRPot
+    pMIRPot :: Parser ann Shelley.MIRPot
     pMIRPot =
           Opt.flag' Shelley.ReservesMIR
             (  Opt.long "reserves"
@@ -910,14 +910,14 @@ pGovernanceCmd =
             <> Opt.help "Use the treasury pot."
             )
 
-    pUpdateProposal :: Parser GovernanceCmd
+    pUpdateProposal :: Parser ann GovernanceCmd
     pUpdateProposal = GovernanceUpdateProposal
                         <$> pOutputFile
                         <*> pEpochNoUpdateProp
                         <*> some pGenesisVerificationKeyFile
                         <*> pProtocolParametersUpdate
 
-pTransferAmt :: Parser Lovelace
+pTransferAmt :: Parser ann Lovelace
 pTransferAmt =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "transfer"
@@ -925,7 +925,7 @@ pTransferAmt =
       <> Opt.help "The amount to transfer."
       )
 
-pRewardAmt :: Parser Lovelace
+pRewardAmt :: Parser ann Lovelace
 pRewardAmt =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "reward"
@@ -933,7 +933,7 @@ pRewardAmt =
       <> Opt.help "The reward for the relevant reward account."
       )
 
-pGenesisCmd :: Parser GenesisCmd
+pGenesisCmd :: Parser ann GenesisCmd
 pGenesisCmd =
   asum
     [ subParser "key-gen-genesis"
@@ -970,37 +970,37 @@ pGenesisCmd =
            Opt.progDesc "Compute the hash of a genesis file")
     ]
   where
-    pGenesisKeyGen :: Parser GenesisCmd
+    pGenesisKeyGen :: Parser ann GenesisCmd
     pGenesisKeyGen =
       GenesisKeyGenGenesis <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
-    pGenesisDelegateKeyGen :: Parser GenesisCmd
+    pGenesisDelegateKeyGen :: Parser ann GenesisCmd
     pGenesisDelegateKeyGen =
       GenesisKeyGenDelegate <$> pVerificationKeyFile Output
                             <*> pSigningKeyFile Output
                             <*> pOperatorCertIssueCounterFile
 
-    pGenesisUTxOKeyGen :: Parser GenesisCmd
+    pGenesisUTxOKeyGen :: Parser ann GenesisCmd
     pGenesisUTxOKeyGen =
       GenesisKeyGenUTxO <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
-    pGenesisKeyHash :: Parser GenesisCmd
+    pGenesisKeyHash :: Parser ann GenesisCmd
     pGenesisKeyHash =
       GenesisCmdKeyHash <$> pVerificationKeyFile Input
 
-    pGenesisVerKey :: Parser GenesisCmd
+    pGenesisVerKey :: Parser ann GenesisCmd
     pGenesisVerKey =
       GenesisVerKey <$> pVerificationKeyFile Output <*> pSigningKeyFile Output
 
-    pGenesisAddr :: Parser GenesisCmd
+    pGenesisAddr :: Parser ann GenesisCmd
     pGenesisAddr =
       GenesisAddr <$> pVerificationKeyFile Input <*> pNetworkId <*> pMaybeOutputFile
 
-    pGenesisTxIn :: Parser GenesisCmd
+    pGenesisTxIn :: Parser ann GenesisCmd
     pGenesisTxIn =
       GenesisTxIn <$> pVerificationKeyFile Input <*> pNetworkId <*> pMaybeOutputFile
 
-    pGenesisCreate :: Parser GenesisCmd
+    pGenesisCreate :: Parser ann GenesisCmd
     pGenesisCreate =
       GenesisCreate <$> pGenesisDir
                     <*> pGenesisNumGenesisKeys
@@ -1009,7 +1009,7 @@ pGenesisCmd =
                     <*> pInitialSupplyNonDelegated
                     <*> pNetworkId
 
-    pGenesisCreateStaked :: Parser GenesisCmd
+    pGenesisCreateStaked :: Parser ann GenesisCmd
     pGenesisCreateStaked =
       GenesisCreateStaked
         <$> pGenesisDir
@@ -1025,11 +1025,11 @@ pGenesisCmd =
         <*> pBulkPoolsPerFile
         <*> pStuffedUtxoCount
 
-    pGenesisHash :: Parser GenesisCmd
+    pGenesisHash :: Parser ann GenesisCmd
     pGenesisHash =
       GenesisHashFile <$> pGenesisFile "The genesis file."
 
-    pGenesisDir :: Parser GenesisDir
+    pGenesisDir :: Parser ann GenesisDir
     pGenesisDir =
       GenesisDir <$>
         Opt.strOption
@@ -1038,7 +1038,7 @@ pGenesisCmd =
           <> Opt.help "The genesis directory containing the genesis template and required genesis/delegation/spending keys."
           )
 
-    pMaybeSystemStart :: Parser (Maybe SystemStart)
+    pMaybeSystemStart :: Parser ann (Maybe SystemStart)
     pMaybeSystemStart =
       Opt.optional $
         SystemStart . convertTime <$>
@@ -1048,7 +1048,7 @@ pGenesisCmd =
             <> Opt.help "The genesis start time in YYYY-MM-DDThh:mm:ssZ format. If unspecified, will be the current time +30 seconds."
             )
 
-    pGenesisNumGenesisKeys :: Parser Word
+    pGenesisNumGenesisKeys :: Parser ann Word
     pGenesisNumGenesisKeys =
         Opt.option Opt.auto
           (  Opt.long "gen-genesis-keys"
@@ -1057,7 +1057,7 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
-    pGenesisNumUTxOKeys :: Parser Word
+    pGenesisNumUTxOKeys :: Parser ann Word
     pGenesisNumUTxOKeys =
         Opt.option Opt.auto
           (  Opt.long "gen-utxo-keys"
@@ -1066,7 +1066,7 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
-    pGenesisNumPools :: Parser Word
+    pGenesisNumPools :: Parser ann Word
     pGenesisNumPools =
         Opt.option Opt.auto
           (  Opt.long "gen-pools"
@@ -1075,7 +1075,7 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
-    pGenesisNumStDelegs :: Parser Word
+    pGenesisNumStDelegs :: Parser ann Word
     pGenesisNumStDelegs =
         Opt.option Opt.auto
           (  Opt.long "gen-stake-delegs"
@@ -1084,7 +1084,7 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
-    pStuffedUtxoCount :: Parser Word
+    pStuffedUtxoCount :: Parser ann Word
     pStuffedUtxoCount =
         Opt.option Opt.auto
           (  Opt.long "num-stuffed-utxo"
@@ -1097,7 +1097,7 @@ pGenesisCmd =
     convertTime =
       parseTimeOrError False defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%SZ")
 
-    pInitialSupplyNonDelegated :: Parser (Maybe Lovelace)
+    pInitialSupplyNonDelegated :: Parser ann (Maybe Lovelace)
     pInitialSupplyNonDelegated =
       Opt.optional $
       Lovelace <$>
@@ -1107,7 +1107,7 @@ pGenesisCmd =
           <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial, non-delegating stake holders."
           )
 
-    pInitialSupplyDelegated :: Parser Lovelace
+    pInitialSupplyDelegated :: Parser ann Lovelace
     pInitialSupplyDelegated =
       fmap (Lovelace . fromMaybe 0) $ Opt.optional $
         Opt.option Opt.auto
@@ -1117,7 +1117,7 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
-    pBulkPoolCredFiles :: Parser Word
+    pBulkPoolCredFiles :: Parser ann Word
     pBulkPoolCredFiles =
         Opt.option Opt.auto
           (  Opt.long "bulk-pool-cred-files"
@@ -1126,7 +1126,7 @@ pGenesisCmd =
           <> Opt.value 0
           )
 
-    pBulkPoolsPerFile :: Parser Word
+    pBulkPoolsPerFile :: Parser ann Word
     pBulkPoolsPerFile =
         Opt.option Opt.auto
           (  Opt.long "bulk-pools-per-file"
@@ -1145,7 +1145,7 @@ data FileDirection
   | Output
   deriving (Eq, Show)
 
-pAddressKeyType :: Parser AddressKeyType
+pAddressKeyType :: Parser ann AddressKeyType
 pAddressKeyType =
     Opt.flag' AddressKeyShelley
       (  Opt.long "normal-key"
@@ -1165,7 +1165,7 @@ pAddressKeyType =
     pure AddressKeyShelley
 
 
-pProtocolParamsFile :: Parser ProtocolParamsFile
+pProtocolParamsFile :: Parser ann ProtocolParamsFile
 pProtocolParamsFile =
   ProtocolParamsFile <$>
     Opt.strOption
@@ -1175,7 +1175,7 @@ pProtocolParamsFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pCertificateFile :: Parser (CertificateFile,
+pCertificateFile :: Parser ann (CertificateFile,
                             Maybe (ScriptWitnessFiles WitCtxStake))
 pCertificateFile =
   (,) <$> (CertificateFile
@@ -1200,7 +1200,7 @@ pCertificateFile =
 
 
 
-pPoolMetadataFile :: Parser PoolMetadataFile
+pPoolMetadataFile :: Parser ann PoolMetadataFile
 pPoolMetadataFile =
   PoolMetadataFile <$>
     Opt.strOption
@@ -1210,7 +1210,7 @@ pPoolMetadataFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pTxMetadataJsonSchema :: Parser TxMetadataJsonSchema
+pTxMetadataJsonSchema :: Parser ann TxMetadataJsonSchema
 pTxMetadataJsonSchema =
     (  Opt.flag' ()
         (  Opt.long "json-metadata-no-schema"
@@ -1229,7 +1229,7 @@ pTxMetadataJsonSchema =
     -- Default to the no-schema conversion.
     pure TxMetadataJsonNoSchema
 
-pMetadataFile :: Parser MetadataFile
+pMetadataFile :: Parser ann MetadataFile
 pMetadataFile =
       MetadataFileJSON <$>
         ( Opt.strOption
@@ -1253,7 +1253,7 @@ pMetadataFile =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
-pWithdrawal :: Parser (StakeAddress,
+pWithdrawal :: Parser ann (StakeAddress,
                        Lovelace,
                        Maybe (ScriptWitnessFiles WitCtxStake))
 pWithdrawal =
@@ -1278,7 +1278,7 @@ pWithdrawal =
      (,) <$> parseStakeAddress <* Parsec.char '+' <*> parseLovelace
 
 
-pUpdateProposalFile :: Parser UpdateProposalFile
+pUpdateProposalFile :: Parser ann UpdateProposalFile
 pUpdateProposalFile =
   UpdateProposalFile <$>
   ( Opt.strOption
@@ -1295,7 +1295,7 @@ pUpdateProposalFile =
   )
 
 
-pColdSigningKeyFile :: Parser SigningKeyFile
+pColdSigningKeyFile :: Parser ann SigningKeyFile
 pColdSigningKeyFile =
   SigningKeyFile <$>
     ( Opt.strOption
@@ -1311,7 +1311,7 @@ pColdSigningKeyFile =
       )
     )
 
-pSomeWitnessSigningData :: Parser [WitnessSigningData]
+pSomeWitnessSigningData :: Parser ann [WitnessSigningData]
 pSomeWitnessSigningData =
   some $
       KeyWitnessSigningData
@@ -1327,7 +1327,7 @@ pSomeWitnessSigningData =
         <*>
           optional pByronAddress
 
-pSigningKeyFile :: FileDirection -> Parser SigningKeyFile
+pSigningKeyFile :: FileDirection -> Parser ann SigningKeyFile
 pSigningKeyFile fdir =
   SigningKeyFile <$>
     Opt.strOption
@@ -1337,7 +1337,7 @@ pSigningKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pWitnessSigningData :: Parser WitnessSigningData
+pWitnessSigningData :: Parser ann WitnessSigningData
 pWitnessSigningData =
     KeyWitnessSigningData
       <$>
@@ -1352,7 +1352,7 @@ pWitnessSigningData =
       <*>
         optional pByronAddress
 
-pKesPeriod :: Parser KESPeriod
+pKesPeriod :: Parser ann KESPeriod
 pKesPeriod =
   KESPeriod <$>
     Opt.option Opt.auto
@@ -1361,7 +1361,7 @@ pKesPeriod =
       <> Opt.help "The start of the KES key validity period."
       )
 
-pEpochNo :: Parser EpochNo
+pEpochNo :: Parser ann EpochNo
 pEpochNo =
   EpochNo <$>
     Opt.option Opt.auto
@@ -1371,7 +1371,7 @@ pEpochNo =
       )
 
 
-pEpochNoUpdateProp :: Parser EpochNo
+pEpochNoUpdateProp :: Parser ann EpochNo
 pEpochNoUpdateProp =
   EpochNo <$>
     Opt.option Opt.auto
@@ -1380,7 +1380,7 @@ pEpochNoUpdateProp =
       <> Opt.help "The epoch number in which the update proposal is valid."
       )
 
-pGenesisFile :: String -> Parser GenesisFile
+pGenesisFile :: String -> Parser ann GenesisFile
 pGenesisFile desc =
   GenesisFile <$>
     Opt.strOption
@@ -1390,7 +1390,7 @@ pGenesisFile desc =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pOperatorCertIssueCounterFile :: Parser OpCertCounterFile
+pOperatorCertIssueCounterFile :: Parser ann OpCertCounterFile
 pOperatorCertIssueCounterFile =
   OpCertCounterFile <$>
     ( Opt.strOption
@@ -1407,7 +1407,7 @@ pOperatorCertIssueCounterFile =
     )
 
 
-pOutputFormat :: Parser OutputFormat
+pOutputFormat :: Parser ann OutputFormat
 pOutputFormat =
   Opt.option readOutputFormat
     (  Opt.long "output-format"
@@ -1418,7 +1418,7 @@ pOutputFormat =
     )
 
 
-pMaybeOutputFile :: Parser (Maybe OutputFile)
+pMaybeOutputFile :: Parser ann (Maybe OutputFile)
 pMaybeOutputFile =
   optional $
     OutputFile <$>
@@ -1429,7 +1429,7 @@ pMaybeOutputFile =
         <> Opt.completer (Opt.bashCompleter "file")
         )
 
-pOutputFile :: Parser OutputFile
+pOutputFile :: Parser ann OutputFile
 pOutputFile =
   OutputFile <$>
     Opt.strOption
@@ -1439,13 +1439,13 @@ pOutputFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pColdVerificationKeyOrFile :: Parser ColdVerificationKeyOrFile
+pColdVerificationKeyOrFile :: Parser ann ColdVerificationKeyOrFile
 pColdVerificationKeyOrFile =
   ColdStakePoolVerificationKey <$> pStakePoolVerificationKey
     <|> ColdGenesisDelegateVerificationKey <$> pGenesisDelegateVerificationKey
     <|> ColdVerificationKeyFile <$> pColdVerificationKeyFile
 
-pColdVerificationKeyFile :: Parser VerificationKeyFile
+pColdVerificationKeyFile :: Parser ann VerificationKeyFile
 pColdVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
@@ -1462,9 +1462,10 @@ pColdVerificationKeyFile =
     )
 
 pVerificationKey
-  :: forall keyrole. SerialiseAsBech32 (VerificationKey keyrole)
+  :: forall keyrole ann.
+     SerialiseAsBech32 (VerificationKey keyrole)
   => AsType keyrole
-  -> Parser (VerificationKey keyrole)
+  -> Parser ann (VerificationKey keyrole)
 pVerificationKey asType =
   Opt.option
     (readVerificationKey asType)
@@ -1476,12 +1477,12 @@ pVerificationKey asType =
 pVerificationKeyOrFile
   :: SerialiseAsBech32 (VerificationKey keyrole)
   => AsType keyrole
-  -> Parser (VerificationKeyOrFile keyrole)
+  -> Parser ann (VerificationKeyOrFile keyrole)
 pVerificationKeyOrFile asType =
   VerificationKeyValue <$> pVerificationKey asType
     <|> VerificationKeyFilePath <$> pVerificationKeyFile Input
 
-pVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
+pVerificationKeyFile :: FileDirection -> Parser ann VerificationKeyFile
 pVerificationKeyFile fdir =
   VerificationKeyFile <$>
     Opt.strOption
@@ -1491,7 +1492,7 @@ pVerificationKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pExtendedVerificationKeyFile :: FileDirection -> Parser VerificationKeyFile
+pExtendedVerificationKeyFile :: FileDirection -> Parser ann VerificationKeyFile
 pExtendedVerificationKeyFile fdir =
   VerificationKeyFile <$>
     Opt.strOption
@@ -1501,7 +1502,7 @@ pExtendedVerificationKeyFile fdir =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pGenesisVerificationKeyFile :: Parser VerificationKeyFile
+pGenesisVerificationKeyFile :: Parser ann VerificationKeyFile
 pGenesisVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
@@ -1511,7 +1512,7 @@ pGenesisVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pGenesisVerificationKeyHash :: Parser (Hash GenesisKey)
+pGenesisVerificationKeyHash :: Parser ann (Hash GenesisKey)
 pGenesisVerificationKeyHash =
     Opt.option
       (Opt.eitherReader deserialiseFromHex)
@@ -1526,7 +1527,7 @@ pGenesisVerificationKeyHash =
         . deserialiseFromRawBytesHex (AsHash AsGenesisKey)
         . BSC.pack
 
-pGenesisVerificationKey :: Parser (VerificationKey GenesisKey)
+pGenesisVerificationKey :: Parser ann (VerificationKey GenesisKey)
 pGenesisVerificationKey =
     Opt.option
       (Opt.eitherReader deserialiseFromHex)
@@ -1541,17 +1542,17 @@ pGenesisVerificationKey =
         . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisKey)
         . BSC.pack
 
-pGenesisVerificationKeyOrFile :: Parser (VerificationKeyOrFile GenesisKey)
+pGenesisVerificationKeyOrFile :: Parser ann (VerificationKeyOrFile GenesisKey)
 pGenesisVerificationKeyOrFile =
   VerificationKeyValue <$> pGenesisVerificationKey
     <|> VerificationKeyFilePath <$> pGenesisVerificationKeyFile
 
-pGenesisVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile GenesisKey)
+pGenesisVerificationKeyOrHashOrFile :: Parser ann (VerificationKeyOrHashOrFile GenesisKey)
 pGenesisVerificationKeyOrHashOrFile =
   VerificationKeyOrFile <$> pGenesisVerificationKeyOrFile
     <|> VerificationKeyHash <$> pGenesisVerificationKeyHash
 
-pGenesisDelegateVerificationKeyFile :: Parser VerificationKeyFile
+pGenesisDelegateVerificationKeyFile :: Parser ann VerificationKeyFile
 pGenesisDelegateVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
@@ -1561,7 +1562,7 @@ pGenesisDelegateVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pGenesisDelegateVerificationKeyHash :: Parser (Hash GenesisDelegateKey)
+pGenesisDelegateVerificationKeyHash :: Parser ann (Hash GenesisDelegateKey)
 pGenesisDelegateVerificationKeyHash =
     Opt.option
       (Opt.eitherReader deserialiseFromHex)
@@ -1576,7 +1577,7 @@ pGenesisDelegateVerificationKeyHash =
         . deserialiseFromRawBytesHex (AsHash AsGenesisDelegateKey)
         . BSC.pack
 
-pGenesisDelegateVerificationKey :: Parser (VerificationKey GenesisDelegateKey)
+pGenesisDelegateVerificationKey :: Parser ann (VerificationKey GenesisDelegateKey)
 pGenesisDelegateVerificationKey =
     Opt.option
       (Opt.eitherReader deserialiseFromHex)
@@ -1594,23 +1595,23 @@ pGenesisDelegateVerificationKey =
         . BSC.pack
 
 pGenesisDelegateVerificationKeyOrFile
-  :: Parser (VerificationKeyOrFile GenesisDelegateKey)
+  :: Parser ann (VerificationKeyOrFile GenesisDelegateKey)
 pGenesisDelegateVerificationKeyOrFile =
   VerificationKeyValue <$> pGenesisDelegateVerificationKey
     <|> VerificationKeyFilePath <$> pGenesisDelegateVerificationKeyFile
 
 pGenesisDelegateVerificationKeyOrHashOrFile
-  :: Parser (VerificationKeyOrHashOrFile GenesisDelegateKey)
+  :: Parser ann (VerificationKeyOrHashOrFile GenesisDelegateKey)
 pGenesisDelegateVerificationKeyOrHashOrFile =
   VerificationKeyOrFile <$> pGenesisDelegateVerificationKeyOrFile
     <|> VerificationKeyHash <$> pGenesisDelegateVerificationKeyHash
 
-pKesVerificationKeyOrFile :: Parser (VerificationKeyOrFile KesKey)
+pKesVerificationKeyOrFile :: Parser ann (VerificationKeyOrFile KesKey)
 pKesVerificationKeyOrFile =
   VerificationKeyValue <$> pKesVerificationKey
     <|> VerificationKeyFilePath <$> pKesVerificationKeyFile
 
-pKesVerificationKey :: Parser (VerificationKey KesKey)
+pKesVerificationKey :: Parser ann (VerificationKey KesKey)
 pKesVerificationKey =
     Opt.option
       (Opt.eitherReader deserialiseVerKey)
@@ -1639,7 +1640,7 @@ pKesVerificationKey =
             Just res' -> Right res'
             Nothing -> Left "Invalid stake pool verification key."
 
-pKesVerificationKeyFile :: Parser VerificationKeyFile
+pKesVerificationKeyFile :: Parser ann VerificationKeyFile
 pKesVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
@@ -1655,18 +1656,18 @@ pKesVerificationKeyFile =
         )
     )
 
-pNetworkId :: Parser NetworkId
+pNetworkId :: Parser ann NetworkId
 pNetworkId =
   pMainnet <|> fmap Testnet pTestnetMagic
  where
-   pMainnet :: Parser NetworkId
+   pMainnet :: Parser ann NetworkId
    pMainnet =
     Opt.flag' Mainnet
       (  Opt.long "mainnet"
       <> Opt.help "Use the mainnet magic id."
       )
 
-pTestnetMagic :: Parser NetworkMagic
+pTestnetMagic :: Parser ann NetworkMagic
 pTestnetMagic =
   NetworkMagic <$>
     Opt.option Opt.auto
@@ -1675,7 +1676,7 @@ pTestnetMagic =
       <> Opt.help "Specify a testnet magic id."
       )
 
-pTxSubmitFile :: Parser FilePath
+pTxSubmitFile :: Parser ann FilePath
 pTxSubmitFile =
   Opt.strOption
     (  Opt.long "tx-file"
@@ -1684,7 +1685,7 @@ pTxSubmitFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pCardanoEra :: Parser AnyCardanoEra
+pCardanoEra :: Parser ann AnyCardanoEra
 pCardanoEra = asum
   [ Opt.flag' (AnyCardanoEra ByronEra)
       (  Opt.long "byron-era"
@@ -1711,7 +1712,7 @@ pCardanoEra = asum
   , pure (AnyCardanoEra MaryEra)
   ]
 
-pTxIn :: Parser (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))
+pTxIn :: Parser ann (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))
 pTxIn =
      (,) <$> Opt.option (readerFromParsecParser parseTxIn)
                (  Opt.long "tx-in"
@@ -1723,7 +1724,7 @@ pTxIn =
                          "tx-in" (Just "txin")
                          "the spending of the transaction input.")
 
-pTxInCollateral :: Parser TxIn
+pTxInCollateral :: Parser ann TxIn
 pTxInCollateral =
     Opt.option (readerFromParsecParser parseTxIn)
       (  Opt.long "tx-in-collateral"
@@ -1753,7 +1754,7 @@ parseTxIx :: Parsec.Parser TxIx
 parseTxIx = TxIx . fromIntegral <$> decimal
 
 
-pTxOut :: Parser TxOutAnyEra
+pTxOut :: Parser ann TxOutAnyEra
 pTxOut =
         Opt.option (readerFromParsecParser parseTxOutAnyEra)
           (  Opt.long "tx-out"
@@ -1766,7 +1767,7 @@ pTxOut =
     <*> optional pDatumHash
 
 
-pDatumHash :: Parser (Hash ScriptData)
+pDatumHash :: Parser ann (Hash ScriptData)
 pDatumHash  =
   Opt.option (readerFromParsecParser parseHashScriptData)
     (  Opt.long "tx-out-datum-hash"
@@ -1783,7 +1784,7 @@ pDatumHash  =
         Nothing  -> fail $ "Invalid datum hash: " ++ show str
 
 
-pMultiAsset :: Parser Value
+pMultiAsset :: Parser ann Value
 pMultiAsset =
   Opt.option
     (readerFromParsecParser parseValue)
@@ -1792,7 +1793,7 @@ pMultiAsset =
       <> Opt.help "Multi-asset value(s) with the multi-asset cli syntax"
       )
 
-pMintMultiAsset :: Parser (Value, [ScriptWitnessFiles WitCtxMint])
+pMintMultiAsset :: Parser ann (Value, [ScriptWitnessFiles WitCtxMint])
 pMintMultiAsset =
   (,) <$> Opt.option
             (readerFromParsecParser parseValue)
@@ -1809,7 +1810,7 @@ pMintMultiAsset =
    helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
                \You must specifiy a script witness."
 
-pInvalidBefore :: Parser SlotNo
+pInvalidBefore :: Parser ann SlotNo
 pInvalidBefore =
   SlotNo <$>
     ( Opt.option Opt.auto
@@ -1827,7 +1828,7 @@ pInvalidBefore =
         )
     )
 
-pInvalidHereafter :: Parser SlotNo
+pInvalidHereafter :: Parser ann SlotNo
 pInvalidHereafter =
   SlotNo <$>
     ( Opt.option Opt.auto
@@ -1852,7 +1853,7 @@ pInvalidHereafter =
         )
     )
 
-pTxFee :: Parser Lovelace
+pTxFee :: Parser ann Lovelace
 pTxFee =
   Lovelace . (fromIntegral :: Natural -> Integer) <$>
     Opt.option Opt.auto
@@ -1861,7 +1862,7 @@ pTxFee =
       <> Opt.help "The fee amount in Lovelace."
       )
 
-pWitnessFile :: Parser WitnessFile
+pWitnessFile :: Parser ann WitnessFile
 pWitnessFile =
   WitnessFile <$>
     Opt.strOption
@@ -1871,7 +1872,7 @@ pWitnessFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pTxBodyFile :: FileDirection -> Parser TxBodyFile
+pTxBodyFile :: FileDirection -> Parser ann TxBodyFile
 pTxBodyFile fdir =
     TxBodyFile <$>
       (  Opt.strOption
@@ -1893,7 +1894,7 @@ pTxBodyFile fdir =
         Output -> "out-file"
 
 
-pTxFile :: FileDirection -> Parser TxFile
+pTxFile :: FileDirection -> Parser ann TxFile
 pTxFile fdir =
     TxFile <$>
       (  Opt.strOption
@@ -1914,11 +1915,11 @@ pTxFile fdir =
         Input -> "tx-file"
         Output -> "out-file"
 
-pInputTxFile :: Parser InputTxFile
+pInputTxFile :: Parser ann InputTxFile
 pInputTxFile =
   InputTxBodyFile <$> pTxBodyFile Input <|> InputTxFile <$> pTxFile Input
 
-pTxInCount :: Parser TxInCount
+pTxInCount :: Parser ann TxInCount
 pTxInCount =
   TxInCount <$>
     Opt.option Opt.auto
@@ -1927,7 +1928,7 @@ pTxInCount =
       <> Opt.help "The number of transaction inputs."
       )
 
-pTxOutCount :: Parser TxOutCount
+pTxOutCount :: Parser ann TxOutCount
 pTxOutCount =
   TxOutCount <$>
     Opt.option Opt.auto
@@ -1936,7 +1937,7 @@ pTxOutCount =
       <> Opt.help "The number of transaction outputs."
       )
 
-pTxShelleyWitnessCount :: Parser TxShelleyWitnessCount
+pTxShelleyWitnessCount :: Parser ann TxShelleyWitnessCount
 pTxShelleyWitnessCount =
   TxShelleyWitnessCount <$>
     Opt.option Opt.auto
@@ -1945,7 +1946,7 @@ pTxShelleyWitnessCount =
       <> Opt.help "The number of Shelley key witnesses."
       )
 
-pTxByronWitnessCount :: Parser TxByronWitnessCount
+pTxByronWitnessCount :: Parser ann TxByronWitnessCount
 pTxByronWitnessCount =
   TxByronWitnessCount <$>
     Opt.option Opt.auto
@@ -1955,7 +1956,7 @@ pTxByronWitnessCount =
       <> Opt.value 0
       )
 
-pQueryUTxOFilter :: Parser QueryUTxOFilter
+pQueryUTxOFilter :: Parser ann QueryUTxOFilter
 pQueryUTxOFilter =
       pQueryUTxOWhole
   <|> pQueryUTxOByAddress
@@ -1967,10 +1968,10 @@ pQueryUTxOFilter =
         <> Opt.help "Return the whole UTxO (only appropriate on small testnets)."
         )
 
-    pQueryUTxOByAddress :: Parser QueryUTxOFilter
+    pQueryUTxOByAddress :: Parser ann QueryUTxOFilter
     pQueryUTxOByAddress = QueryUTxOByAddress . Set.fromList <$> some pByAddress
 
-    pByAddress :: Parser AddressAny
+    pByAddress :: Parser ann AddressAny
     pByAddress =
         Opt.option (readerFromParsecParser parseAddressAny)
           (  Opt.long "address"
@@ -1978,10 +1979,10 @@ pQueryUTxOFilter =
           <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
           )
 
-    pQueryUTxOByTxIn :: Parser QueryUTxOFilter
+    pQueryUTxOByTxIn :: Parser ann QueryUTxOFilter
     pQueryUTxOByTxIn = QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
 
-    pByTxIn :: Parser TxIn
+    pByTxIn :: Parser ann TxIn
     pByTxIn =
       Opt.option (readerFromParsecParser parseTxIn)
         (  Opt.long "tx-in"
@@ -1989,7 +1990,7 @@ pQueryUTxOFilter =
         <> Opt.help "Filter by transaction input (TxId#TxIx)."
         )
 
-pFilterByStakeAddress :: Parser StakeAddress
+pFilterByStakeAddress :: Parser ann StakeAddress
 pFilterByStakeAddress =
     Opt.option (readerFromParsecParser parseStakeAddress)
       (  Opt.long "address"
@@ -1997,7 +1998,7 @@ pFilterByStakeAddress =
       <> Opt.help "Filter by Cardano stake address (Bech32-encoded)."
       )
 
-pByronAddress :: Parser (Address ByronAddr)
+pByronAddress :: Parser ann (Address ByronAddr)
 pByronAddress =
     Opt.option
       (Opt.eitherReader deserialise)
@@ -2012,7 +2013,7 @@ pByronAddress =
         . deserialiseAddress AsByronAddress
         . Text.pack
 
-pAddress :: Parser Text
+pAddress :: Parser ann Text
 pAddress =
   Text.pack <$>
     Opt.strOption
@@ -2021,7 +2022,7 @@ pAddress =
       <> Opt.help "A Cardano address"
       )
 
-pStakeAddress :: Parser StakeAddress
+pStakeAddress :: Parser ann StakeAddress
 pStakeAddress =
     Opt.option (readerFromParsecParser parseStakeAddress)
       (  Opt.long "stake-address"
@@ -2029,12 +2030,12 @@ pStakeAddress =
       <> Opt.help "Target stake address (bech32 format)."
       )
 
-pStakeVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pStakeVerificationKeyOrFile :: Parser ann (VerificationKeyOrFile StakeKey)
 pStakeVerificationKeyOrFile =
   VerificationKeyValue <$> pStakeVerificationKey
     <|> VerificationKeyFilePath <$> pStakeVerificationKeyFile
 
-pStakeVerificationKey :: Parser (VerificationKey StakeKey)
+pStakeVerificationKey :: Parser ann (VerificationKey StakeKey)
 pStakeVerificationKey =
   Opt.option
     (readVerificationKey AsStakeKey)
@@ -2043,7 +2044,7 @@ pStakeVerificationKey =
       <> Opt.help "Stake verification key (Bech32 or hex-encoded)."
       )
 
-pStakeVerificationKeyFile :: Parser VerificationKeyFile
+pStakeVerificationKeyFile :: Parser ann VerificationKeyFile
 pStakeVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
@@ -2060,7 +2061,7 @@ pStakeVerificationKeyFile =
     )
 
 
-pStakePoolVerificationKeyFile :: Parser VerificationKeyFile
+pStakePoolVerificationKeyFile :: Parser ann VerificationKeyFile
 pStakePoolVerificationKeyFile =
   VerificationKeyFile <$>
     (  Opt.strOption
@@ -2076,7 +2077,7 @@ pStakePoolVerificationKeyFile =
          )
     )
 
-pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
+pStakePoolVerificationKeyHash :: Parser ann (Hash StakePoolKey)
 pStakePoolVerificationKeyHash =
     Opt.option
       (Opt.maybeReader pBech32OrHexStakePoolId)
@@ -2100,7 +2101,7 @@ pStakePoolVerificationKeyHash =
         . deserialiseFromBech32 (AsHash AsStakePoolKey)
         . Text.pack
 
-pStakePoolVerificationKey :: Parser (VerificationKey StakePoolKey)
+pStakePoolVerificationKey :: Parser ann (VerificationKey StakePoolKey)
 pStakePoolVerificationKey =
   Opt.option
     (readVerificationKey AsStakePoolKey)
@@ -2110,18 +2111,18 @@ pStakePoolVerificationKey =
       )
 
 pStakePoolVerificationKeyOrFile
-  :: Parser (VerificationKeyOrFile StakePoolKey)
+  :: Parser ann (VerificationKeyOrFile StakePoolKey)
 pStakePoolVerificationKeyOrFile =
   VerificationKeyValue <$> pStakePoolVerificationKey
     <|> VerificationKeyFilePath <$> pStakePoolVerificationKeyFile
 
 pStakePoolVerificationKeyOrHashOrFile
-  :: Parser (VerificationKeyOrHashOrFile StakePoolKey)
+  :: Parser ann (VerificationKeyOrHashOrFile StakePoolKey)
 pStakePoolVerificationKeyOrHashOrFile =
   VerificationKeyOrFile <$> pStakePoolVerificationKeyOrFile
     <|> VerificationKeyHash <$> pStakePoolVerificationKeyHash
 
-pVrfVerificationKeyFile :: Parser VerificationKeyFile
+pVrfVerificationKeyFile :: Parser ann VerificationKeyFile
 pVrfVerificationKeyFile =
   VerificationKeyFile <$>
     Opt.strOption
@@ -2131,7 +2132,7 @@ pVrfVerificationKeyFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pVrfVerificationKeyHash :: Parser (Hash VrfKey)
+pVrfVerificationKeyHash :: Parser ann (Hash VrfKey)
 pVrfVerificationKeyHash =
     Opt.option
       (Opt.eitherReader deserialiseFromHex)
@@ -2146,7 +2147,7 @@ pVrfVerificationKeyHash =
         . deserialiseFromRawBytesHex (AsHash AsVrfKey)
         . BSC.pack
 
-pVrfVerificationKey :: Parser (VerificationKey VrfKey)
+pVrfVerificationKey :: Parser ann (VerificationKey VrfKey)
 pVrfVerificationKey =
   Opt.option
     (readVerificationKey AsVrfKey)
@@ -2155,17 +2156,17 @@ pVrfVerificationKey =
       <> Opt.help "VRF verification key (Bech32 or hex-encoded)."
       )
 
-pVrfVerificationKeyOrFile :: Parser (VerificationKeyOrFile VrfKey)
+pVrfVerificationKeyOrFile :: Parser ann (VerificationKeyOrFile VrfKey)
 pVrfVerificationKeyOrFile =
   VerificationKeyValue <$> pVrfVerificationKey
     <|> VerificationKeyFilePath <$> pVrfVerificationKeyFile
 
-pVrfVerificationKeyOrHashOrFile :: Parser (VerificationKeyOrHashOrFile VrfKey)
+pVrfVerificationKeyOrHashOrFile :: Parser ann (VerificationKeyOrHashOrFile VrfKey)
 pVrfVerificationKeyOrHashOrFile =
   VerificationKeyOrFile <$> pVrfVerificationKeyOrFile
     <|> VerificationKeyHash <$> pVrfVerificationKeyHash
 
-pRewardAcctVerificationKeyFile :: Parser VerificationKeyFile
+pRewardAcctVerificationKeyFile :: Parser ann VerificationKeyFile
 pRewardAcctVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
@@ -2181,7 +2182,7 @@ pRewardAcctVerificationKeyFile =
         )
     )
 
-pRewardAcctVerificationKey :: Parser (VerificationKey StakeKey)
+pRewardAcctVerificationKey :: Parser ann (VerificationKey StakeKey)
 pRewardAcctVerificationKey =
   Opt.option
     (readVerificationKey AsStakeKey)
@@ -2190,12 +2191,12 @@ pRewardAcctVerificationKey =
       <> Opt.help "Reward account stake verification key (Bech32 or hex-encoded)."
       )
 
-pRewardAcctVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pRewardAcctVerificationKeyOrFile :: Parser ann (VerificationKeyOrFile StakeKey)
 pRewardAcctVerificationKeyOrFile =
   VerificationKeyValue <$> pRewardAcctVerificationKey
     <|> VerificationKeyFilePath <$> pRewardAcctVerificationKeyFile
 
-pPoolOwnerVerificationKeyFile :: Parser VerificationKeyFile
+pPoolOwnerVerificationKeyFile :: Parser ann VerificationKeyFile
 pPoolOwnerVerificationKeyFile =
   VerificationKeyFile <$>
     ( Opt.strOption
@@ -2211,7 +2212,7 @@ pPoolOwnerVerificationKeyFile =
           )
     )
 
-pPoolOwnerVerificationKey :: Parser (VerificationKey StakeKey)
+pPoolOwnerVerificationKey :: Parser ann (VerificationKey StakeKey)
 pPoolOwnerVerificationKey =
   Opt.option
     (readVerificationKey AsStakeKey)
@@ -2220,12 +2221,12 @@ pPoolOwnerVerificationKey =
       <> Opt.help "Pool owner stake verification key (Bech32 or hex-encoded)."
       )
 
-pPoolOwnerVerificationKeyOrFile :: Parser (VerificationKeyOrFile StakeKey)
+pPoolOwnerVerificationKeyOrFile :: Parser ann (VerificationKeyOrFile StakeKey)
 pPoolOwnerVerificationKeyOrFile =
   VerificationKeyValue <$> pPoolOwnerVerificationKey
     <|> VerificationKeyFilePath <$> pPoolOwnerVerificationKeyFile
 
-pPoolPledge :: Parser Lovelace
+pPoolPledge :: Parser ann Lovelace
 pPoolPledge =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "pool-pledge"
@@ -2234,7 +2235,7 @@ pPoolPledge =
       )
 
 
-pPoolCost :: Parser Lovelace
+pPoolCost :: Parser ann Lovelace
 pPoolCost =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "pool-cost"
@@ -2242,7 +2243,7 @@ pPoolCost =
       <> Opt.help "The stake pool's cost."
       )
 
-pPoolMargin :: Parser Rational
+pPoolMargin :: Parser ann Rational
 pPoolMargin =
     Opt.option readRationalUnitInterval
       (  Opt.long "pool-margin"
@@ -2250,14 +2251,14 @@ pPoolMargin =
       <> Opt.help "The stake pool's margin."
       )
 
-pPoolRelay :: Parser StakePoolRelay
+pPoolRelay :: Parser ann StakePoolRelay
 pPoolRelay = pSingleHostAddress <|> pSingleHostName <|> pMultiHostName
 
-pMultiHostName :: Parser StakePoolRelay
+pMultiHostName :: Parser ann StakePoolRelay
 pMultiHostName =
   StakePoolRelayDnsSrvRecord <$> pDNSName
  where
-  pDNSName :: Parser ByteString
+  pDNSName :: Parser ann ByteString
   pDNSName = Opt.option (Opt.eitherReader eDNSName)
                (  Opt.long "multi-host-pool-relay"
                <> Opt.metavar "STRING"
@@ -2265,11 +2266,11 @@ pMultiHostName =
                             \an SRV DNS record"
                )
 
-pSingleHostName :: Parser StakePoolRelay
+pSingleHostName :: Parser ann StakePoolRelay
 pSingleHostName =
   StakePoolRelayDnsARecord <$> pDNSName <*> optional pPort
  where
-  pDNSName :: Parser ByteString
+  pDNSName :: Parser ann ByteString
   pDNSName = Opt.option (Opt.eitherReader eDNSName)
                (  Opt.long "single-host-pool-relay"
                <> Opt.metavar "STRING"
@@ -2284,7 +2285,7 @@ eDNSName str =
     Nothing -> Left "DNS name is more than 64 bytes"
     Just dnsName -> Right . Text.encodeUtf8 . Shelley.dnsToText $ dnsName
 
-pSingleHostAddress :: Parser StakePoolRelay
+pSingleHostAddress :: Parser ann StakePoolRelay
 pSingleHostAddress = singleHostAddress
   <$> optional pIpV4
   <*> optional pIpV6
@@ -2304,35 +2305,35 @@ pSingleHostAddress = singleHostAddress
 
 
 
-pIpV4 :: Parser IP.IPv4
-pIpV4 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv4)
+pIpV4 :: Parser ann IP.IPv4
+pIpV4 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM ann IP.IPv4)
           (  Opt.long "pool-relay-ipv4"
           <> Opt.metavar "STRING"
           <> Opt.help "The stake pool relay's IPv4 address"
           )
 
-pIpV6 :: Parser IP.IPv6
-pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM IP.IPv6)
+pIpV6 :: Parser ann IP.IPv6
+pIpV6 = Opt.option (Opt.maybeReader readMaybe :: Opt.ReadM ann IP.IPv6)
            (  Opt.long "pool-relay-ipv6"
            <> Opt.metavar "STRING"
            <> Opt.help "The stake pool relay's IPv6 address"
            )
 
-pPort :: Parser PortNumber
+pPort :: Parser ann PortNumber
 pPort = Opt.option (fromInteger <$> Opt.eitherReader readEither)
            (  Opt.long "pool-relay-port"
            <> Opt.metavar "INT"
            <> Opt.help "The stake pool relay's port"
            )
 
-pStakePoolMetadataReference :: Parser (Maybe StakePoolMetadataReference)
+pStakePoolMetadataReference :: Parser ann (Maybe StakePoolMetadataReference)
 pStakePoolMetadataReference =
   optional $
     StakePoolMetadataReference
       <$> pStakePoolMetadataUrl
       <*> pStakePoolMetadataHash
 
-pStakePoolMetadataUrl :: Parser Text
+pStakePoolMetadataUrl :: Parser ann Text
 pStakePoolMetadataUrl =
   Opt.option (readURIOfMaxLength 64)
     (  Opt.long "metadata-url"
@@ -2340,7 +2341,7 @@ pStakePoolMetadataUrl =
     <> Opt.help "Pool metadata URL (maximum length of 64 characters)."
     )
 
-pStakePoolMetadataHash :: Parser (Hash StakePoolMetadata)
+pStakePoolMetadataHash :: Parser ann (Hash StakePoolMetadata)
 pStakePoolMetadataHash =
     Opt.option
       (Opt.maybeReader metadataHash)
@@ -2353,7 +2354,7 @@ pStakePoolMetadataHash =
     metadataHash = deserialiseFromRawBytesHex (AsHash AsStakePoolMetadata)
                  . BSC.pack
 
-pStakePoolRegistrationCert :: Parser PoolCmd
+pStakePoolRegistrationCert :: Parser ann PoolCmd
 pStakePoolRegistrationCert =
   PoolRegistrationCert
     <$> pStakePoolVerificationKeyOrFile
@@ -2368,7 +2369,7 @@ pStakePoolRegistrationCert =
     <*> pNetworkId
     <*> pOutputFile
 
-pStakePoolRetirementCert :: Parser PoolCmd
+pStakePoolRetirementCert :: Parser ann PoolCmd
 pStakePoolRetirementCert =
   PoolRetirementCert
     <$> pStakePoolVerificationKeyOrFile
@@ -2376,7 +2377,7 @@ pStakePoolRetirementCert =
     <*> pOutputFile
 
 
-pProtocolParametersUpdate :: Parser ProtocolParametersUpdate
+pProtocolParametersUpdate :: Parser ann ProtocolParametersUpdate
 pProtocolParametersUpdate =
   ProtocolParametersUpdate
     <$> optional pProtocolVersion
@@ -2405,7 +2406,7 @@ pProtocolParametersUpdate =
     <*> optional pCollateralPercent
     <*> optional pMaxCollateralInputs
 
-pMinFeeLinearFactor :: Parser Natural
+pMinFeeLinearFactor :: Parser ann Natural
 pMinFeeLinearFactor =
     Opt.option Opt.auto
       (  Opt.long "min-fee-linear"
@@ -2413,7 +2414,7 @@ pMinFeeLinearFactor =
       <> Opt.help "The linear factor for the minimum fee calculation."
       )
 
-pMinFeeConstantFactor :: Parser Natural
+pMinFeeConstantFactor :: Parser ann Natural
 pMinFeeConstantFactor =
     Opt.option Opt.auto
       (  Opt.long "min-fee-constant"
@@ -2421,7 +2422,7 @@ pMinFeeConstantFactor =
       <> Opt.help "The constant factor for the minimum fee calculation."
       )
 
-pMinUTxOValue :: Parser Lovelace
+pMinUTxOValue :: Parser ann Lovelace
 pMinUTxOValue =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "min-utxo-value"
@@ -2429,7 +2430,7 @@ pMinUTxOValue =
       <> Opt.help "The minimum allowed UTxO value (Shelley to Mary eras)."
       )
 
-pMinPoolCost :: Parser Lovelace
+pMinPoolCost :: Parser ann Lovelace
 pMinPoolCost =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "min-pool-cost"
@@ -2437,7 +2438,7 @@ pMinPoolCost =
       <> Opt.help "The minimum allowed cost parameter for stake pools."
       )
 
-pMaxBodySize :: Parser Natural
+pMaxBodySize :: Parser ann Natural
 pMaxBodySize =
     Opt.option Opt.auto
       (  Opt.long "max-block-body-size"
@@ -2445,7 +2446,7 @@ pMaxBodySize =
       <> Opt.help "Maximal block body size."
       )
 
-pMaxTransactionSize :: Parser Natural
+pMaxTransactionSize :: Parser ann Natural
 pMaxTransactionSize =
     Opt.option Opt.auto
       (  Opt.long "max-tx-size"
@@ -2453,7 +2454,7 @@ pMaxTransactionSize =
       <> Opt.help "Maximum transaction size."
       )
 
-pMaxBlockHeaderSize :: Parser Natural
+pMaxBlockHeaderSize :: Parser ann Natural
 pMaxBlockHeaderSize =
     Opt.option Opt.auto
       (  Opt.long "max-block-header-size"
@@ -2461,7 +2462,7 @@ pMaxBlockHeaderSize =
       <> Opt.help "Maximum block header size."
       )
 
-pKeyRegistDeposit :: Parser Lovelace
+pKeyRegistDeposit :: Parser ann Lovelace
 pKeyRegistDeposit =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "key-reg-deposit-amt"
@@ -2469,7 +2470,7 @@ pKeyRegistDeposit =
       <> Opt.help "Key registration deposit amount."
       )
 
-pPoolDeposit :: Parser Lovelace
+pPoolDeposit :: Parser ann Lovelace
 pPoolDeposit =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "pool-reg-deposit"
@@ -2477,7 +2478,7 @@ pPoolDeposit =
       <> Opt.help "The amount of a pool registration deposit."
       )
 
-pEpochBoundRetirement :: Parser EpochNo
+pEpochBoundRetirement :: Parser ann EpochNo
 pEpochBoundRetirement =
     EpochNo <$>
     Opt.option Opt.auto
@@ -2486,7 +2487,7 @@ pEpochBoundRetirement =
       <> Opt.help "Epoch bound on pool retirement."
       )
 
-pNumberOfPools :: Parser Natural
+pNumberOfPools :: Parser ann Natural
 pNumberOfPools =
     Opt.option Opt.auto
       (  Opt.long "number-of-pools"
@@ -2494,7 +2495,7 @@ pNumberOfPools =
       <> Opt.help "Desired number of pools."
       )
 
-pPoolInfluence :: Parser Rational
+pPoolInfluence :: Parser ann Rational
 pPoolInfluence =
     Opt.option readRational
       (  Opt.long "pool-influence"
@@ -2502,7 +2503,7 @@ pPoolInfluence =
       <> Opt.help "Pool influence."
       )
 
-pTreasuryExpansion :: Parser Rational
+pTreasuryExpansion :: Parser ann Rational
 pTreasuryExpansion =
     Opt.option readRationalUnitInterval
       (  Opt.long "treasury-expansion"
@@ -2510,7 +2511,7 @@ pTreasuryExpansion =
       <> Opt.help "Treasury expansion."
       )
 
-pMonetaryExpansion :: Parser Rational
+pMonetaryExpansion :: Parser ann Rational
 pMonetaryExpansion =
     Opt.option readRationalUnitInterval
       (  Opt.long "monetary-expansion"
@@ -2518,7 +2519,7 @@ pMonetaryExpansion =
       <> Opt.help "Monetary expansion."
       )
 
-pDecentralParam :: Parser Rational
+pDecentralParam :: Parser ann Rational
 pDecentralParam =
     Opt.option readRationalUnitInterval
       (  Opt.long "decentralization-parameter"
@@ -2526,7 +2527,7 @@ pDecentralParam =
       <> Opt.help "Decentralization parameter."
       )
 
-pExtraEntropy :: Parser (Maybe PraosNonce)
+pExtraEntropy :: Parser ann (Maybe PraosNonce)
 pExtraEntropy =
       Opt.option (Just <$> readerFromParsecParser parsePraosNonce)
         (  Opt.long "extra-entropy"
@@ -2546,7 +2547,7 @@ pExtraEntropy =
                       . B16.decode . BSC.pack
                     =<< Parsec.many1 Parsec.hexDigit
 
-pUTxOCostPerWord :: Parser Lovelace
+pUTxOCostPerWord :: Parser ann Lovelace
 pUTxOCostPerWord =
     Opt.option (readerFromParsecParser parseLovelace)
       (  Opt.long "utxo-cost-per-word"
@@ -2554,7 +2555,7 @@ pUTxOCostPerWord =
       <> Opt.help "Cost in lovelace per unit of UTxO storage (from Alonzo era)."
       )
 
-pExecutionUnitPrices :: Parser ExecutionUnitPrices
+pExecutionUnitPrices :: Parser ann ExecutionUnitPrices
 pExecutionUnitPrices = ExecutionUnitPrices
   <$> Opt.option readRational
       (  Opt.long "price-execution-steps"
@@ -2569,7 +2570,7 @@ pExecutionUnitPrices = ExecutionUnitPrices
                   \use them (from Alonzo era)."
       )
 
-pMaxTxExecutionUnits :: Parser ExecutionUnits
+pMaxTxExecutionUnits :: Parser ann ExecutionUnits
 pMaxTxExecutionUnits =
   uncurry ExecutionUnits <$>
   Opt.option Opt.auto
@@ -2579,7 +2580,7 @@ pMaxTxExecutionUnits =
                 \(from Alonzo era)."
     )
 
-pMaxBlockExecutionUnits :: Parser ExecutionUnits
+pMaxBlockExecutionUnits :: Parser ann ExecutionUnits
 pMaxBlockExecutionUnits =
   uncurry ExecutionUnits <$>
   Opt.option Opt.auto
@@ -2589,7 +2590,7 @@ pMaxBlockExecutionUnits =
                 \(from Alonzo era)."
     )
 
-pMaxValueSize :: Parser Natural
+pMaxValueSize :: Parser ann Natural
 pMaxValueSize =
   Opt.option Opt.auto
     (  Opt.long "max-value-size"
@@ -2598,7 +2599,7 @@ pMaxValueSize =
                 \era)."
     )
 
-pCollateralPercent :: Parser Natural
+pCollateralPercent :: Parser ann Natural
 pCollateralPercent =
   Opt.option Opt.auto
     (  Opt.long "collateral-percent"
@@ -2608,7 +2609,7 @@ pCollateralPercent =
                 \scripts (from Alonzo era)."
     )
 
-pMaxCollateralInputs :: Parser Natural
+pMaxCollateralInputs :: Parser ann Natural
 pMaxCollateralInputs =
   Opt.option Opt.auto
     (  Opt.long "max-collateral-inputs"
@@ -2617,7 +2618,7 @@ pMaxCollateralInputs =
                 \transaction (from Alonzo era)."
     )
 
-pConsensusModeParams :: Parser AnyConsensusModeParams
+pConsensusModeParams :: Parser ann AnyConsensusModeParams
 pConsensusModeParams = asum
   [ Opt.flag' (AnyConsensusModeParams ShelleyModeParams)
       (  Opt.long "shelley-mode"
@@ -2637,15 +2638,15 @@ pConsensusModeParams = asum
     pure . AnyConsensusModeParams . CardanoModeParams $ EpochSlots defaultByronEpochSlots
   ]
  where
-   pCardanoConsensusMode :: Parser AnyConsensusModeParams
+   pCardanoConsensusMode :: Parser ann AnyConsensusModeParams
    pCardanoConsensusMode = AnyConsensusModeParams . CardanoModeParams <$> pEpochSlots
-   pByronConsensusMode :: Parser AnyConsensusModeParams
+   pByronConsensusMode :: Parser ann AnyConsensusModeParams
    pByronConsensusMode = AnyConsensusModeParams . ByronModeParams <$> pEpochSlots
 
 defaultByronEpochSlots :: Word64
 defaultByronEpochSlots = 21600
 
-pEpochSlots :: Parser EpochSlots
+pEpochSlots :: Parser ann EpochSlots
 pEpochSlots =
   EpochSlots <$>
     Opt.option Opt.auto
@@ -2656,7 +2657,7 @@ pEpochSlots =
       <> Opt.showDefault
       )
 
-pProtocolVersion :: Parser (Natural, Natural)
+pProtocolVersion :: Parser ann (Natural, Natural)
 pProtocolVersion =
     (,) <$> pProtocolMajorVersion <*> pProtocolMinorVersion
   where
@@ -2729,9 +2730,10 @@ Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
 
 -- | Read a Bech32 or hex-encoded verification key.
 readVerificationKey
-  :: forall keyrole. SerialiseAsBech32 (VerificationKey keyrole)
+  :: forall keyrole ann.
+     SerialiseAsBech32 (VerificationKey keyrole)
   => AsType keyrole
-  -> Opt.ReadM (VerificationKey keyrole)
+  -> Opt.ReadM ann (VerificationKey keyrole)
 readVerificationKey asType =
     Opt.eitherReader deserialiseFromBech32OrHex
   where
@@ -2745,7 +2747,7 @@ readVerificationKey asType =
       first (Text.unpack . renderInputDecodeError) $
         deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
 
-readOutputFormat :: Opt.ReadM OutputFormat
+readOutputFormat :: Opt.ReadM ann OutputFormat
 readOutputFormat = do
   s <- Opt.str
   case s of
@@ -2756,11 +2758,11 @@ readOutputFormat = do
         <> s
         <> "\". Accepted output formats are \"hex\" and \"bech32\"."
 
-readURIOfMaxLength :: Int -> Opt.ReadM Text
+readURIOfMaxLength :: Int -> Opt.ReadM ann Text
 readURIOfMaxLength maxLen =
   Text.pack <$> readStringOfMaxLength maxLen
 
-readStringOfMaxLength :: Int -> Opt.ReadM String
+readStringOfMaxLength :: Int -> Opt.ReadM ann String
 readStringOfMaxLength maxLen = do
   s <- Opt.str
   let strLen = length s
@@ -2771,25 +2773,25 @@ readStringOfMaxLength maxLen = do
         <> show strLen
         <> " characters."
 
-readRationalUnitInterval :: Opt.ReadM Rational
+readRationalUnitInterval :: Opt.ReadM ann Rational
 readRationalUnitInterval = readRational >>= checkUnitInterval
   where
-   checkUnitInterval :: Rational -> Opt.ReadM Rational
+   checkUnitInterval :: Rational -> Opt.ReadM ann Rational
    checkUnitInterval q
      | q >= 0 && q <= 1 = return q
      | otherwise        = fail "Please enter a value in the range [0,1]"
 
-readRational :: Opt.ReadM Rational
+readRational :: Opt.ReadM ann Rational
 readRational = toRational <$> readerFromAttoParser Atto.scientific
 
-readerJSON :: Opt.ReadM Aeson.Value
+readerJSON :: Opt.ReadM ann Aeson.Value
 readerJSON = readerFromAttoParser Aeson.Parser.json
 
-readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
+readerFromAttoParser :: Atto.Parser a -> Opt.ReadM ann a
 readerFromAttoParser p =
     Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
 
-readerFromParsecParser :: Parsec.Parser a -> Opt.ReadM a
+readerFromParsecParser :: Parsec.Parser a -> Opt.ReadM ann a
 readerFromParsecParser p =
     Opt.eitherReader (first formatError . Parsec.parse (p <* Parsec.eof) "")
   where
@@ -2800,6 +2802,6 @@ readerFromParsecParser p =
                                "expecting" "unexpected" "end of input"
                                (Parsec.errorMessages err)
 
-subParser :: String -> ParserInfo a -> Parser a
+subParser :: String -> ParserInfo ann a -> Parser ann a
 subParser availableCommand pInfo =
   Opt.hsubparser $ Opt.command availableCommand pInfo <> Opt.metavar availableCommand
