@@ -44,6 +44,7 @@ Get the complete list of available options with `cardano-node run --help`
   	                                specified slot
     -h,--help                       Show this help text
 
+**Note**: If you do not specify `--host-addr` nor `--host-ipv6-addr`, node will use the default IPv4 and IPv6 addresses (depending which addresses are available).  If one specifies one of them only that address will be used, in particular if you only provide an IPv4 address, the node will not connect over IPv6.
 To start a passive node:
 
      cardano-node run \
