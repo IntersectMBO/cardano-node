@@ -1,5 +1,96 @@
 # Changelog for cardano-node
 
+## 1.28 -- July 2
+
+### node changes
+
+- Initial support for running an Alonzo node. (#2642, #2649, #2657, #2738,
+  #2759)
+- Add a separate genesis file for Alonzo. This must be present when forking to
+  the Alonzo era. It provides initial configuration for new parameters required
+  in Alonzo, such as cost models and pricing for Plutus scripts. (#2743, #2765)
+- Added a configuration flag `TestEnableDevelopmentNetworkProtocols` which
+  allows the node to be configured to support in testing development protocols
+  which we do not want standard nodes to negotiate. (#2400)
+- Various documentation updates. (#2681, #2689, #2713, #2837, #2857, #2860,
+  #2870, #2874, #2914, #2933)
+- Various build, testing and benchmarking infrastructure improvements. (#2672,
+  #2676, #2682, #2705, #2719, #2722, #2730, #2737, #2748, #2766, #2768, #2777,
+  #2796, #2812, #2813, #2826, #2827, #2831, #2832, #2833, #2849, #2855, #2861,
+  #2864, #2865, #2866, #2879, #2887, #2888, #2894, #2900, #2902, #2909, #2912)
+- Miscellaneous internal improvements. (#2694, #2698, #2740, #2756, #2760,
+  #2799, #2800, #2804, #2807, #2817, #2819, #2824, #2834, #2867, #2925, #2930,
+  #2935)
+- Add the difference in chain length to the `AddedToCurrentChain` and
+  `SwitchedToAFork` traces. (#2678)
+- Add `cardano-tx-generator`. This is a testing utility. (#2603)
+- Additional block hashes added to `TraceBlockFetchServerSendBlock`,
+  `TraceForgedBlock`, `CompletedBlockFetch` events. (#2710)
+- The various `ChainSync` server traces provide additional fields that help in
+  debugging. Note that this entails a change to the log format. (#2746)
+
+### consensus changes
+
+- Introduce the Alonzo era. (#3131, #3138)
+- Additional testing in the Alonzo era. (#3191, #3210)
+- Allow the EpochInfo provided to the ledger to fail. This is necessary when the
+  ledger may be querying for time conversions outside of the forecast window.
+  (#3098)
+- The mempool now checks bounds on the capacity of execution units allowed when
+  forging a new block. This is needed to avoid trying to create invalid blocks
+  in Alonzo. (#3224)
+- Additionally, support overriding the maximum block capacity (in terms of
+  size/execution units) on a per-node basis. (#3238)
+- Update the mempool design for compatibility with Alonzo, which requires some
+  additional logic to deal with 2-phase validation. (#3066)
+- Miscellaneous internal improvements. (#3116, #3149, #3170, #3184, #3228)
+- Update consensus documentation. (#3071, #3155, #3195)
+- Updates to the io-sim testing infrastructure. (#3076, #3172, #3196, #3222)
+- Node to client queries are now wrapped in a top-level versioned `Query` type,
+  in preparation for adding new queries to the node. (#3106)
+- Support additional queries now exposed through the API/CLI. (#3220)
+
+### network changes
+
+- Work on the network-mux. (#2999, #3100, #3121, #3160, #3166, #3193, #3204)
+- Add an additional tracer to the BlockFetch protocol. (#3190)
+- Update network documentation. (#2887, #3071, #3089, #3126, #3217)
+- Miscellaneous internal improvements. (#3200, #3206, #3207, #3212, #3218,
+  #3219)
+
+### ledger changes
+
+- Work on implementing the Alonzo era. (#2260, #2264, #2265, #2270, #2273,
+  #2274, #2277, #2283, #2287, #2294, #2295, #2296, #2299, #2302, #2303, #2304,
+  #2305, #2306, #2317, #2320, #2322, #2324, #2328, #2329, #2335, #2342, #2345,
+  #2355, #2359)
+- Define the CDDL for Alonzo datatypes. (#2281, #2315, #2337, #2362)
+- Testing work for the Alonzo era. (#2259, #2261, #2263, #2272, #2275, #2279,
+  #2280, #2293, #2311, #2334, #2340, #2361)
+- Additional testing for serialisation of types which are depended on by
+  consensus. (#2298, #2323)
+- Add the ability to query the UTxO by TxIn, which is now used by the CLI.
+  (#2331)
+- Updated the Shelley spec with an image depicting the reward process and the
+  various phases it goes through. (#2282)
+- Add the ability to convert from slot time to UTC time within the forecast
+  window. This will be necessary for Plutus scripts. (#2297)
+- Add an errata to the Shelley spec, which addresses:
+  - Reward calculation & stake addresses registration timing.
+  - Add a note about Byron redeem addresses being returned to the reserves.
+  - Define precisely how reward aggregation works.
+  - A discrepancy in the use of the Stability window between the spec and the
+    implementation.
+  - The use of the incorrect reserve pot when creating the reward update.
+  (#2323)
+- Align the Shelley spec with code. (#2339)
+- Expanded benchmarks for performance critical functions. (#2262)
+- Miscellaneous internal improvements. (#2255, #2267, #2268, #2269, #2276,
+  #2285, #2286, #2290, #2301, #2314, #2318, #2319, #2321, #2336, #2343, #2349,
+  #2351, #2363, #2368)
+- Miscellaneous testing and infrastructure work. (#2288, #2310)
+- Continued updates to the Alonzo formal specification. (#2258, #2271, #2341)
+- Restrict the pool metadata hash to the correct size for such a hash. (#2358)
 ## 1.27 -- April 2021
 
 ### node changes
