@@ -30,6 +30,7 @@ import           Data.Maybe (catMaybes, mapMaybe, isNothing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import           Data.Text.Short (toText)
 import           Data.Tuple (swap)
 import           Data.Vector (Vector)
 import qualified Data.Vector as Vec
@@ -70,18 +71,18 @@ data BlockPropagation
 instance RenderDistributions BlockPropagation where
   rdFields =
     --  Width LeftPad
-    [ Field 6 0 "forged"        (f!!0) "Forge"   $ DDeltaT bpForgerForges
-    , Field 6 0 "fAdopted"      (f!!1) "Adopt"   $ DDeltaT bpForgerAdoptions
-    , Field 6 0 "fAnnounced"    (f!!2) "Announ"  $ DDeltaT bpForgerAnnouncements
-    , Field 6 0 "fSendStart"    (f!!3) "Sendin"  $ DDeltaT bpForgerSends
-    , Field 4 1 "noticedVal"    (p!!0) " Noti"   $ DDeltaT (fst . bpPeerNotices)
-    , Field 4 0 "noticedCoV"    (p!!1) "ced  "   $ DDeltaT (snd . bpPeerNotices)
-    , Field 4 1 "requestedVal"  (p!!2) "Reque"   $ DDeltaT (fst . bpPeerRequests)
-    , Field 4 0 "requestedVal"  (p!!3) "sted "   $ DDeltaT (snd . bpPeerRequests)
-    , Field 4 1 "fetchedVal"    (p!!4) " Fetc"   $ DDeltaT (fst . bpPeerFetches)
-    , Field 4 0 "fetchedCoV"    (p!!5) "hed  "   $ DDeltaT (snd . bpPeerFetches)
-    , Field 4 1 "pAdoptedVal"   (p!!6) " Adop"   $ DDeltaT (fst . bpPeerAdoptions)
-    , Field 4 0 "pAdoptedCoV"   (p!!7) "ted  "   $ DDeltaT (snd . bpPeerAdoptions)
+    [ Field 6 0 "forged"        (f!!0) "Forge"  $ DDeltaT bpForgerForges
+    , Field 6 0 "fAdopted"      (f!!1) "Adopt"  $ DDeltaT bpForgerAdoptions
+    , Field 6 0 "fAnnounced"    (f!!2) "Announ" $ DDeltaT bpForgerAnnouncements
+    , Field 6 0 "fSendStart"    (f!!3) "Sendin" $ DDeltaT bpForgerSends
+    , Field 4 1 "noticedVal"    (p!!0) " Noti"  $ DDeltaT (fst . bpPeerNotices)
+    , Field 4 0 "noticedCoV"    (p!!1) "ced  "  $ DDeltaT (snd . bpPeerNotices)
+    , Field 4 1 "requestedVal"  (p!!2) "Reque"  $ DDeltaT (fst . bpPeerRequests)
+    , Field 4 0 "requestedCoV"  (p!!3) "sted "  $ DDeltaT (snd . bpPeerRequests)
+    , Field 4 1 "fetchedVal"    (p!!4) " Fetc"  $ DDeltaT (fst . bpPeerFetches)
+    , Field 4 0 "fetchedCoV"    (p!!5) "hed  "  $ DDeltaT (snd . bpPeerFetches)
+    , Field 4 1 "pAdoptedVal"   (p!!6) " Adop"  $ DDeltaT (fst . bpPeerAdoptions)
+    , Field 4 0 "pAdoptedCoV"   (p!!7) "ted  "  $ DDeltaT (snd . bpPeerAdoptions)
     , Field 4 1 "pAnnouncedVal" (p!!8) "Annou"  $ DDeltaT (fst . bpPeerAnnouncements)
     , Field 4 0 "pAnnouncedCoV" (p!!9) "nced "  $ DDeltaT (snd . bpPeerAnnouncements)
     , Field 4 1 "pSendStartVal" (p!!10) " Send" $ DDeltaT (fst . bpPeerSends)
@@ -373,22 +374,40 @@ data BlockEvents
 instance RenderTimeline BlockEvents where
   rtFields =
     --  Width LeftPad
-    [ Field 5 0 "block"       "block" "no."    $ IWord64 (unBlockNo . beBlockNo)
-    , Field 5 0 "abs.slot"    "abs."  "slot#"  $ IWord64 (unSlotNo . beSlotNo)
-    , Field 6 0 "hash"        "block" "hash"   $ IText   (shortHash . beBlock)
-    , Field 6 0 "hashPrev"    "prev"  "hash"   $ IText   (shortHash . beBlockPrev)
-    , Field 5 0 "valid.observ" "valid" "obsrv" $ IInt    (length . beValidObservs)
-    , Field 5 0 "errors"      "all"   "errs"   $ IInt    (length . beErrors)
-    , Field 5 0 "forks"       ""      "forks"  $ IInt    (count bpeIsFork . beErrors)
-    , Field 5 0 "missAdopt"   (m!!0) "adopt"   $ IInt    (count (bpeIsMissing Adopt) . beErrors)
-    , Field 5 0 "missAnnou"   (m!!1) "annou"   $ IInt    (count (bpeIsMissing Announce) . beErrors)
-    , Field 5 0 "missSend"    (m!!2) "send"    $ IInt    (count (bpeIsMissing Send) . beErrors)
-    , Field 5 0 "negAnnou"    (n!!0) "annou"   $ IInt    (count (bpeIsNegative Announce) . beErrors)
-    , Field 5 0 "negSend"     (n!!1) "send"    $ IInt    (count (bpeIsNegative Send) . beErrors)
+    [ Field 5 0 "block"        "block" "no."    $ IWord64 (unBlockNo . beBlockNo)
+    , Field 5 0 "abs.slot"     "abs."  "slot#"  $ IWord64 (unSlotNo . beSlotNo)
+    , Field 6 0 "hash"         "block" "hash"   $ IText   (shortHash . beBlock)
+    , Field 6 0 "hashPrev"     "prev"  "hash"   $ IText   (shortHash . beBlockPrev)
+    , Field 6 0 "forger"       "forger" "host"  $ IText  (toText . unHost . beForger)
+    , Field 6 0 "forged"        (f!!0) "Forge"  $ IDeltaT beForged
+    , Field 6 0 "fAdopted"      (f!!1) "Adopt"  $ IDeltaT beAdopted
+    , Field 6 0 "fAnnounced"    (f!!2) "Announ" $ IDeltaT beAnnounced
+    , Field 6 0 "fSendStart"    (f!!3) "Sendin" $ IDeltaT beSending
+    , Field 5 0 "valid.observ"  "valid" "obsrv" $ IInt    (length . beValidObservs)
+    , Field 5 0 "noticedVal"    (p!!0) "Notic"  $ IDeltaT (af boNoticed . beValidObservs)
+    , Field 5 0 "requestedVal"  (p!!1) "Requd"  $ IDeltaT (af boRequested . beValidObservs)
+    , Field 5 0 "fetchedVal"    (p!!2) "Fetch"  $ IDeltaT (af boFetched . beValidObservs)
+    , Field 5 0 "pAdoptedVal"   (p!!3) "Adopt"  $ IDeltaT (af' boAdopted . beValidObservs)
+    , Field 5 0 "pAnnouncedVal" (p!!4) "Annou"  $ IDeltaT (af' boAnnounced . beValidObservs)
+    , Field 5 0 "pSendStartVal" (p!!5) "Send"   $ IDeltaT (af' boSending . beValidObservs)
+    , Field 5 0 "errors"        "all"  "errs"   $ IInt    (length . beErrors)
+    , Field 5 0 "forks"         ""     "forks"  $ IInt   (count bpeIsFork . beErrors)
+    , Field 5 0 "missAdopt"     (m!!0) "adopt"  $ IInt    (count (bpeIsMissing Adopt) . beErrors)
+    , Field 5 0 "missAnnou"     (m!!1) "annou"  $ IInt    (count (bpeIsMissing Announce) . beErrors)
+    , Field 5 0 "missSend"      (m!!2) "send"   $ IInt    (count (bpeIsMissing Send) . beErrors)
+    , Field 5 0 "negAnnou"      (n!!0) "annou"  $ IInt    (count (bpeIsNegative Announce) . beErrors)
+    , Field 5 0 "negSend"       (n!!1) "send"   $ IInt    (count (bpeIsNegative Send) . beErrors)
     ]
    where
+     f = nChunksEachOf 4 7 "Forger event Δt:"
+     p = nChunksEachOf 6 6 "Peer event Δt:"
      m = nChunksEachOf 3 6 "Missing phase"
      n = nChunksEachOf 2 6 "Negative phase"
+     af  f = avg . fmap f
+     af' f = avg . mapMaybe f
+     avg :: [NominalDiffTime] -> NominalDiffTime
+     avg [] = 0
+     avg xs =  (/ fromInteger (fromIntegral $ length xs)) $ sum xs
      count :: (a -> Bool) -> [a] -> Int
      count f = length . filter f
   rtCommentary BlockEvents{..} = ("    " <>) . T.pack . show <$> beErrors
