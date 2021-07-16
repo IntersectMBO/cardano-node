@@ -22,11 +22,20 @@ let
     # the Haskell.nix package set, reduced to local packages.
     (selectProjectPackages cardanoNodeHaskellPackages);
 
+
+  shell = import ./shell.nix {
+    inherit pkgs;
+    withHoogle = true;
+  };
+
   packages = {
-    inherit haskellPackages
+    inherit haskellPackages shell
       cardano-node cardano-node-profiled cardano-node-eventlogged
       cardano-cli db-converter cardano-ping tx-generator
       scripts environments dockerImage submitApiDockerImage bech32;
+
+    devopsShell = shell.devops;
+
     nixosTests = recRecurseIntoAttrs nixosTests;
 
     # so that eval time gc roots are cached (nix-tools stuff)
@@ -50,9 +59,5 @@ let
       };
     };
 
-    shell = import ./shell.nix {
-      inherit pkgs;
-      withHoogle = true;
-    };
 };
 in packages
