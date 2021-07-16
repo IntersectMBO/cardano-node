@@ -151,8 +151,11 @@ let
 
   devops =
     let cluster = mkCluster { useCabalRun = false; };
-    in stdenv.mkDerivation {
+    in cardanoNodeProject.shellFor {
     name = "devops-shell";
+
+    packages = lib.attrVals cardanoNodeProject.projectPackages;
+
     nativeBuildInputs = [
       nixWrapped
       cardano-cli
@@ -165,6 +168,11 @@ let
       cardanolib-py
       cluster.workbench.workbench
     ];
+
+    # Prevents cabal from choosing alternate plans, so that
+    # *all* dependencies are provided by Nix.
+    exactDeps = true;
+
     shellHook = ''
       echo "DevOps Tools" \
       | ${figlet}/bin/figlet -f banner -c \
