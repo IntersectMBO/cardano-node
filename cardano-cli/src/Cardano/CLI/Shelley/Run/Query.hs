@@ -11,6 +11,12 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+
+-- TODO
+{-# OPTIONS_GHC -Wmissing-signatures #-}
+{-# OPTIONS_GHC -Wunused-matches #-}
+{-# OPTIONS_GHC -Wdeprecations #-}
+
 module Cardano.CLI.Shelley.Run.Query
   ( ShelleyQueryCmdError
   , renderShelleyQueryCmdError
@@ -277,7 +283,13 @@ queryChainTipAndEraHistoryAndSystemStart connectInfo mpoint = do
       (\ntcVersion ->
         LocalNodeClientProtocols
         { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult resultVarChainTip
-        , localStateQueryClient   = Just (singleQuery waitResult mpoint resultVarEraHistoryAndSystemStart ntcVersion)
+        , localStateQueryClient   = Just $ setupLocalStateQueryScript waitResult mpoint ntcVersion resultVarEraHistoryAndSystemStart $ do
+            era <- sendMsgQuery (QueryCurrentEra CardanoModeIsMultiEra)
+            eraHistory <- sendMsgQuery (QueryEraHistory CardanoModeIsMultiEra)
+            mSystemStart <- if ntcVersion >= NodeToClientV_9
+              then Just <$> sendMsgQuery QuerySystemStart
+              else return Nothing
+            return (era, eraHistory, mSystemStart)
         , localTxSubmissionClient = Nothing
         }
       )
@@ -308,50 +320,57 @@ queryChainTipAndEraHistoryAndSystemStart connectInfo mpoint = do
               pure $ Net.Sync.SendMsgDone ()
           }
 
-    singleQuery
-      :: STM a
-      -> Maybe ChainPoint
-      -> TMVar (Maybe (Either Net.Query.AcquireFailure (AnyCardanoEra, EraHistory CardanoMode, Maybe SystemStart)))
-      -> NodeToClientVersion
-      -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint
-                                         (QueryInMode CardanoMode) IO ()
-    singleQuery waitDone mPointVar' resultVar' ntcVersion =
-      LocalStateQueryClient $
-        if ntcVersion >= NodeToClientV_8
-          then do
-            pure . Net.Query.SendMsgAcquire mPointVar' $
-              Net.Query.ClientStAcquiring
-              { Net.Query.recvMsgAcquired =
-                pure $ Net.Query.SendMsgQuery (QueryCurrentEra CardanoModeIsMultiEra) $
-                  Net.Query.ClientStQuerying
-                  { Net.Query.recvMsgResult = \result1 -> do
-                    pure $ Net.Query.SendMsgQuery (QueryEraHistory CardanoModeIsMultiEra) $
-                      Net.Query.ClientStQuerying
-                      { Net.Query.recvMsgResult = \result2 -> do
-                        if ntcVersion >= NodeToClientV_9
-                          then do
-                            pure $ Net.Query.SendMsgQuery QuerySystemStart $
-                              Net.Query.ClientStQuerying
-                              { Net.Query.recvMsgResult = \result3 -> do
-                                atomically $ putTMVar resultVar' (Just (Right (result1, result2, Just result3)))
-                                void $ atomically waitDone
-                                pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
-                              }
-                          else do
-                            atomically $ putTMVar resultVar' (Just (Right (result1, result2, Nothing)))
-                            void $ atomically waitDone
-                            pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
-                      }
-                  }
-              , Net.Query.recvMsgFailure = \failure -> do
-                  atomically $ putTMVar resultVar' (Just (Left failure))
-                  void $ atomically waitDone
-                  pure $ Net.Query.SendMsgDone ()
-              }
-          else do
-            atomically $ putTMVar resultVar' Nothing
-            void $ atomically waitDone
-            pure $ Net.Query.SendMsgDone ()
+newtype LocalStateQueryScript block point query r m a = LocalStateQueryScript
+  { runLocalStateQueryScript :: (a -> m (Net.Query.ClientStAcquired block point query m r))
+                 -> m (Net.Query.ClientStAcquired block point query m r)
+  }
+
+instance Functor (LocalStateQueryScript block point query r m) where
+  fmap f (LocalStateQueryScript axx) = LocalStateQueryScript (\bx -> axx (bx . f))
+
+instance Applicative (LocalStateQueryScript block point query r m) where
+  pure x  = LocalStateQueryScript ($ x)
+  f <*> v = LocalStateQueryScript $ \c -> runLocalStateQueryScript f $ \g -> runLocalStateQueryScript v (c . g)
+
+instance Monad (LocalStateQueryScript block point query r m) where
+  return x = LocalStateQueryScript ($ x)
+  m >>= k  = LocalStateQueryScript $ \c -> runLocalStateQueryScript m (\x -> runLocalStateQueryScript (k x) c)
+
+sendMsgQuery :: Monad m => query a -> LocalStateQueryScript block point query r m a
+sendMsgQuery q = LocalStateQueryScript $ \f -> pure $
+  Net.Query.SendMsgQuery q $
+    Net.Query.ClientStQuerying
+    { Net.Query.recvMsgResult = f
+    }
+
+setupLocalStateQueryScript ::
+     STM x
+  -> Maybe ChainPoint
+  -> NodeToClientVersion
+  -> TMVar (Maybe (Either Net.Query.AcquireFailure a))
+  -> LocalStateQueryScript (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) () IO a
+  -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) IO ()
+setupLocalStateQueryScript waitDone mPointVar' ntcVersion resultVar' moo =
+  LocalStateQueryClient $
+    if ntcVersion >= NodeToClientV_8
+      then do
+        pure . Net.Query.SendMsgAcquire mPointVar' $
+          Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired = runLocalStateQueryScript moo $ \result -> do
+              atomically $ putTMVar resultVar' (Just (Right result))
+              void $ atomically waitDone
+              pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+
+          , Net.Query.recvMsgFailure = \failure -> do
+              atomically $ putTMVar resultVar' (Just (Left failure))
+              void $ atomically waitDone
+              pure $ Net.Query.SendMsgDone ()
+          }
+      else do
+        atomically $ putTMVar resultVar' Nothing
+        void $ atomically waitDone
+        pure $ Net.Query.SendMsgDone ()
+
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
