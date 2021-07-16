@@ -176,7 +176,7 @@ case "$op" in
 }
 
 num_jobs="\j"
-num_threads=$(grep processor /proc/cpuinfo | wc -l)
+num_threads=$(grep processor /proc/cpuinfo 2>/dev/null || echo -e '\n\n\n' | wc -l)
 
 throttle_shell_job_spawns() {
     sleep 0.5s

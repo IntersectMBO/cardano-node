@@ -130,7 +130,7 @@ let
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [
-    ["shell"] ["cardano-ping"] ["roots"]
+    ["shell"] ["devopsShell"] ["cardano-ping"] ["roots"]
     [ "haskellPackages" "cardano-testnet" ]
     [ "checks" "tests" "cardano-testnet" ]
     [ "tests" "cardano-testnet" ]
@@ -195,6 +195,8 @@ let
       (collectJobs jobs.linux.native.nixosTests)
       (collectJobs jobs.linux.native.benchmarks)
       (collectJobs jobs.linux.native.exes)
+      (collectJobs jobs.linux.native.shell)
+      (collectJobs jobs.linux.native.devopsShell)
       [ jobs.cardano-node-linux ]
     ]))
     # macOS builds:
