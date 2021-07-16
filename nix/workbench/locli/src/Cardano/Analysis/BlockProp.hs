@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -18,6 +19,7 @@ import           Prelude (String, (!!), error, head, id, show, tail)
 import           Cardano.Prelude hiding (head, show)
 
 import           Control.Arrow ((***), (&&&))
+import Control.DeepSeq qualified as DS
 import           Control.Concurrent.Async (mapConcurrently)
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson as AE
@@ -119,7 +121,7 @@ data BPError
   , eLO    :: !(Maybe LogObject)
   , eDesc  :: !BPErrorKind
   }
-  deriving (FromJSON, Generic, Show, ToJSON)
+  deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
 data BPErrorKind
   = BPEBefore                !Phase !Phase
@@ -130,7 +132,7 @@ data BPErrorKind
   | BPEMissingPhase          !Phase
   | BPENegativePhase         !Phase !NominalDiffTime
   | BPEFork                  !Hash
-  deriving (FromJSON, Generic, Show, ToJSON)
+  deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
 bpeIsFork, bpeIsMissingAny, bpeIsNegativeAny  :: BPError -> Bool
 bpeIsFork BPError{eDesc=BPEFork{}} = True
@@ -155,7 +157,7 @@ data Phase
   | Adopt
   | Announce
   | Send
-  deriving (FromJSON, Eq, Generic, Ord, Show, ToJSON)
+  deriving (FromJSON, Eq, Generic, NFData, Ord, Show, ToJSON)
 
 -- | Block's events, as seen by its forger.
 data ForgerEvents a
@@ -173,7 +175,7 @@ data ForgerEvents a
   , bfeSending    :: !(Maybe a)
   , bfeErrs       :: [BPError]
   }
-  deriving (Generic, AE.FromJSON, AE.ToJSON, Show)
+  deriving (Generic, NFData, AE.FromJSON, AE.ToJSON, Show)
 
 type ForgerEventsAbs = ForgerEvents UTCTime
 type ForgerEventsRel = ForgerEvents NominalDiffTime
@@ -200,7 +202,7 @@ data ObserverEvents a
   , boeSending    :: !(Maybe a)
   , boeErrs       :: [BPError]
   }
-  deriving (Generic, AE.FromJSON, AE.ToJSON, Show)
+  deriving (Generic, NFData, AE.FromJSON, AE.ToJSON, Show)
 
 type ObserverEventsAbs = ObserverEvents UTCTime
 type ObserverEventsRel = ObserverEvents NominalDiffTime
@@ -227,6 +229,7 @@ data MachBlockEvents a
   = MFE (ForgerEvents a)
   | MOE (ObserverEvents a)
   | MBE  BPError
+  deriving (Generic, NFData)
 
 mbeForgP, mbeObsvP, mbeErrP :: MachBlockEvents a -> Bool
 mbeForgP = \case
@@ -460,9 +463,12 @@ isValidBlockObservation BlockObservation{..} =
 blockProp :: ChainInfo -> [(JsonLogfile, [LogObject])] -> IO BlockPropagation
 blockProp ci xs = do
   putStrLn ("blockProp: recovering block event maps" :: String)
-  doBlockProp =<< mapConcurrently (pure
-                                   . fmap deltifyEvents
-                                   . blockEventMapsFromLogObjects ci) xs
+  doBlockProp =<< mapConcurrently
+    (\x ->
+        evaluate $ DS.force $
+        fmap deltifyEvents $
+        blockEventMapsFromLogObjects ci x)
+    xs
 
 doBlockProp :: [MachBlockMap NominalDiffTime] -> IO BlockPropagation
 doBlockProp eventMaps = do
