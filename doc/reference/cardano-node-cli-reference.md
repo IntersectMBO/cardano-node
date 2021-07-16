@@ -61,7 +61,7 @@ The `stake-pool` command contains the following sub commands:
 
 *cardano-cli query*
 The `query` command contains the following sub commands:
-* `protocol-parameters` (advanced): retrieves the node’s current pool parameters (a raw dump of `Ledger.ChainDepState`). This
+* `protocol-parameters` (advanced): retrieves the node’s current pool parameters (a raw dump of `Ledger.ChainDepState`).
 * `tip`: gets the node’s current tip (slot number, hash, and block number)
 * `utxo`: retrieves the node’s current UTxO, filtered by address
 * `ledger-state` (advanced):  dumps the current state of the node (a raw dump of `Ledger.NewEpochState`)
