@@ -26,7 +26,6 @@ let
     let cmd = map normaliseCmdArg
                   ([config.executable] ++ configExeArgsFn config);
         normaliseCmdArg = x:
-          __trace "normaliseCmdArg on ${__typeOf x}"
             (({ float  = toString;
                 int    = toString;
                 path   = toString;
@@ -129,8 +128,10 @@ let
           };
           executable = mkOption {
             type = types.str;
-            default = "${svcConfig.package.components.exes.${exeName}}/bin/${exeName}" or
-              (throw "the package for ${svcName} not have the components.exes.${exeName} attribute -- please adjust service configuration.");
+            default ="${if __hasAttr "components" svcConfig.package
+                        then svcConfig.package.components.exes.${exeName} or
+                          (throw "the package for ${svcName} not have the 'components.exes.${exeName}' attribute -- please set service 'executable'.")
+                        else svcConfig.package}/bin/${exeName}";
             description = ''The executable for ${svcName} that should be used.'';
           };
           script = mkOption { type = types.str;  default =
