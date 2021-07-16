@@ -22,7 +22,7 @@ golden_shelleyStakeAddressDeregistrationCertificate = propertyOnce . H.moduleWor
   verificationKeyFile <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
   deregistrationCertFile <- noteTempFile tempDir "deregistrationCertFile"
   scriptDeregistrationCertFile <- noteTempFile tempDir "scripDeregistrationCertFile"
-  exampleScript <- noteInputFile $ base </> "scripts/plutus/scripts/typed-guessing-game-redeemer-42-datum-42.plutus"
+  exampleScript <- noteInputFile $ base </> "scripts/plutus/scripts/custom-guess-42-datum-42.plutus"
 
   void $ execCardanoCLI
     [ "stake-address","deregistration-certificate"
