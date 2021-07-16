@@ -11,7 +11,7 @@ We also assume a Linux system, though it should work fine on OSX too.
 
 ```bash
 $ cardano-cli version
-cardano-cli 1.21.1 - linux-x86_64 - ghc-8.6
+cardano-cli 1.27.0 - linux-x86_64 - ghc-8.10
 ```
 
 Everything will be done in the Shelley era.
@@ -82,7 +82,7 @@ This gives us
 
 ```bash
 $ ls example/*
-example/genesis.json  example/genesis.spec.json
+example/genesis.json  example/genesis.spec.json example/genesis.alonzo.json
 
 example/delegate-keys:
 
@@ -216,17 +216,17 @@ Let's make two genesis delegate key pairs, to use with our two genesis keys
 $ cardano-cli genesis key-gen-delegate \
     --verification-key-file example/delegate-keys/delegate1.vkey \
     --signing-key-file example/delegate-keys/delegate1.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert1.counter
+    --operational-certificate-issue-counter example/delegate-keys/delegate1.counter
 $ cardano-cli genesis key-gen-delegate \
     --verification-key-file example/delegate-keys/delegate2.vkey \
     --signing-key-file example/delegate-keys/delegate2.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert2.counter
+    --operational-certificate-issue-counter example/delegate-keys/delegate2.counter
 ```
 
 Let's see what's in that counter file
 
 ```json
-$ cat example/delegate-keys/delegate-opcert1.counter
+$ cat example/delegate-keys/delegate1.counter
 {
     "type": "NodeOperationalCertificateIssueCounter",
     "description": "Next certificate issue number: 0",
@@ -1001,14 +1001,14 @@ using use the genesis delegate keys we created earlier.
 $ cardano-cli node issue-op-cert \
     --kes-verification-key-file example/node1/kes.vkey \
     --cold-signing-key-file example/delegate-keys/delegate1.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert1.counter \
+    --operational-certificate-issue-counter example/delegate-keys/delegate1.counter \
     --kes-period 0 \
     --out-file example/node1/cert
 
 $ cardano-cli node issue-op-cert \
     --kes-verification-key-file example/node2/kes.vkey \
     --cold-signing-key-file example/delegate-keys/delegate2.skey \
-    --operational-certificate-issue-counter example/delegate-keys/delegate-opcert2.counter \
+    --operational-certificate-issue-counter example/delegate-keys/delegate2.counter \
     --kes-period 0 \
     --out-file example/node2/cert
 ```
