@@ -12,8 +12,9 @@ usage_run() {
                           A unique name would be allocated for this run,
                             and a run alias 'current' will be created for it.
 
-    start-run TAG BACKEND-ARGS..
-                          Start the named run, passing thru any extra backend args
+    start [--no-generator] TAG BACKEND-ARGS..
+                          Start the named run, passing thru any extra backend args.
+                            --no-generator disables automatic tx-generator startup
 
   Options:
 
@@ -271,7 +272,15 @@ EOF
                }' "${compat_args[@]}";;
 
     start )
-        local usage="USAGE: wb run $op TAG BACKEND-ARGS.."
+        local usage="USAGE: wb run $op [--no-generator] TAG BACKEND-ARGS.."
+
+        local no_generator=
+        while test $# -gt 0
+        do case "$1" in
+               --no-generator | --no-gen )  no_generator='true';;
+               --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
+               * ) break;; esac; shift; done
+
         local tag=${1:-?$usage}; shift
         local dir=$(run get "$tag")
 
@@ -289,7 +298,12 @@ EOF
         )
         genesis prepare "${genesis_args[@]}"
 
-        backend start-run "$dir" "$@"
+        ## Record genesis.
+        cp "$dir"/genesis/genesis.json "$dir"/genesis.json
+
+        backend start-cluster "$dir" "$@"
+        test -z "$no_generator" &&
+            backend start-generator "$dir"
 
         run compat-meta-fixups "$tag"
         ;;
