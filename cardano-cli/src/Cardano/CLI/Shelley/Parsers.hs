@@ -558,6 +558,8 @@ pTransaction =
   asum
     [ subParser "build-raw"
         (Opt.info pTransactionBuildRaw $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
+    , subParser "build"
+        (Opt.info pTransactionBuild $ Opt.progDesc "Build a balanced transaction (automatically calculates fees)")
     , subParser "sign"
         (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
     , subParser "witness"
@@ -597,6 +599,39 @@ pTransaction =
   pSignWitnessBackwardCompatible =
     Opt.subparser
       $ Opt.command "sign-witness" assembleInfo <> Opt.internal
+
+  pTransactionBuild :: Parser TransactionCmd
+  pTransactionBuild =
+    TxBuild <$> pCardanoEra
+            <*> pConsensusModeParams
+            <*> pNetworkId
+            <*> some (pTxIn AutoBalance)
+            <*> many pTxInCollateral
+            <*> many pTxOut
+            <*> pChangeAddress
+            <*> optional (pMintMultiAsset AutoBalance)
+            <*> optional pInvalidBefore
+            <*> optional pInvalidHereafter
+            <*> many (pCertificateFile AutoBalance)
+            <*> many (pWithdrawal AutoBalance)
+            <*> pTxMetadataJsonSchema
+            <*> many (pScriptFor
+                        "auxiliary-script-file"
+                        Nothing
+                        "Filepath of auxiliary script(s)")
+            <*> many pMetadataFile
+            <*> optional pProtocolParamsSourceSpec
+            <*> optional pUpdateProposalFile
+            <*> pTxBodyFile Output
+
+  pChangeAddress :: Parser TxOutChangeAddress
+  pChangeAddress =
+    TxOutChangeAddress <$>
+      Opt.option (readerFromParsecParser parseAddressAny)
+        (  Opt.long "change-address"
+        <> Opt.metavar "ADDRESS"
+        <> Opt.help "Address where ADA in excess of the tx fee will go to."
+        )
 
   pTransactionBuildRaw :: Parser TransactionCmd
   pTransactionBuildRaw =
