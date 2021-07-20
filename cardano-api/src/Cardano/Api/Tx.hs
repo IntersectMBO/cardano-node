@@ -394,7 +394,7 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
         AlonzoEra  -> "TxWitness AlonzoEra"
 
 
-pattern Tx :: Ledger.Era era => TxBody era -> [KeyWitness era] -> Tx era
+pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
   where
     Tx txbody ws = makeSignedTransaction ws txbody
@@ -754,9 +754,10 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _) =
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
   where
-    makeShelleyBasedKeyWitness :: Shelley.ShelleyBased ledgerera
-                               => ShelleyLedgerEra era ~ ledgerera
-                               => Ledger.TxBody ledgerera
+    makeShelleyBasedKeyWitness :: Shelley.ShelleyBased (ShelleyLedgerEra era)
+                               => Ledger.Crypto (ShelleyLedgerEra era)
+                                    ~ StandardCrypto
+                               => Ledger.TxBody (ShelleyLedgerEra era)
                                -> ShelleyWitnessSigningKey
                                -> KeyWitness era
     makeShelleyBasedKeyWitness txbody' =
