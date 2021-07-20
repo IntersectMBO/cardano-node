@@ -1,5 +1,7 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -7,6 +9,8 @@
 
 module Cardano.Node.Configuration.POM
   ( NodeConfiguration (..)
+  , NetworkP2PMode (..)
+  , SomeNetworkP2PMode (..)
   , PartialNodeConfiguration(..)
   , defaultPartialNodeConfiguration
   , lastOption
@@ -19,9 +23,11 @@ where
 
 import           Cardano.Prelude
 import           Prelude (String)
+import qualified GHC.Show as Show
 
 import           Control.Monad (fail)
 import           Data.Aeson
+import qualified Data.Aeson.Types as Aeson
 import           Data.Time.Clock (DiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
@@ -39,9 +45,29 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytesOverride (
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Consensus.Node ( NetworkP2PMode (..) )
+import qualified Ouroboros.Consensus.Node as Consensus ( NetworkP2PMode (..) )
 
-import qualified Data.Aeson.Types as Aeson
+data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
+  deriving (Eq, Show, Generic)
+
+data SomeNetworkP2PMode where
+    SomeNetworkP2PMode :: forall p2p.
+                          Consensus.NetworkP2PMode p2p
+                       -> SomeNetworkP2PMode
+
+instance Eq SomeNetworkP2PMode where
+    (==) (SomeNetworkP2PMode Consensus.EnabledP2PMode)
+         (SomeNetworkP2PMode Consensus.EnabledP2PMode)
+       = True
+    (==) (SomeNetworkP2PMode Consensus.DisabledP2PMode)
+         (SomeNetworkP2PMode Consensus.DisabledP2PMode)
+       = True
+    (==) _ _
+       = False
+
+instance Show SomeNetworkP2PMode where
+    show (SomeNetworkP2PMode mode@Consensus.EnabledP2PMode)  = show mode
+    show (SomeNetworkP2PMode mode@Consensus.DisabledP2PMode) = show mode
 
 data NodeConfiguration
   = NodeConfiguration
@@ -110,7 +136,7 @@ data NodeConfiguration
        , ncTargetNumberOfActivePeers      :: Int
 
          -- Enable experimental P2P mode
-       , ncEnableP2P :: NetworkP2PMode
+       , ncEnableP2P :: SomeNetworkP2PMode
        } deriving (Eq, Show)
 
 
@@ -186,7 +212,7 @@ instance FromJSON PartialNodeConfiguration where
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
-      pncTestEnableDevelopmentNetworkProtocols'
+      pncTestEnableDevelopmentNetworkProtocols
         <- Last <$> v .:? "TestEnableDevelopmentNetworkProtocols"
 
       -- Blockfetch parameters
@@ -234,17 +260,16 @@ instance FromJSON PartialNodeConfiguration where
               Just True  -> Last $ Just EnabledP2PMode
 
       pure PartialNodeConfiguration {
-             pncProtocolConfig = pncProtocolConfig'
-           , pncSocketPath = pncSocketPath'
-           , pncDiffusionMode = pncDiffusionMode'
-           , pncSnapshotInterval = pncSnapshotInterval'
-           , pncTestEnableDevelopmentNetworkProtocols =
-              pncTestEnableDevelopmentNetworkProtocols'
-           , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
-           , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
-           , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
-           , pncLogMetrics = pncLogMetrics'
-           , pncTraceConfig = pncTraceConfig'
+             pncProtocolConfig
+           , pncSocketPath
+           , pncDiffusionMode
+           , pncSnapshotInterval
+           , pncTestEnableDevelopmentNetworkProtocols
+           , pncMaxConcurrencyBulkSync
+           , pncMaxConcurrencyDeadline
+           , pncLoggingSwitch
+           , pncLogMetrics
+           , pncTraceConfig
            , pncNodeIPv4Addr = mempty
            , pncNodeIPv6Addr = mempty
            , pncNodePortNumber = mempty
@@ -428,10 +453,6 @@ makeNodeConfiguration pnc = do
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
 
-  testEnableDevelopmentNetworkProtocols <-
-    lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
-      pncTestEnableDevelopmentNetworkProtocols pnc
-
   ncTargetNumberOfRootPeers <-
     lastToEither "Missing TargetNumberOfRootPeers"
     $ pncTargetNumberOfRootPeers pnc
@@ -450,7 +471,7 @@ makeNodeConfiguration pnc = do
   ncTimeWaitTimeout <-
     lastToEither "Missing TimeWaitTimeout"
     $ pncTimeWaitTimeout pnc
-  ncEnableP2P <-
+  enableP2P <-
     lastToEither "Missing EnableP2P"
     $ pncEnableP2P pnc
 
@@ -486,7 +507,9 @@ makeNodeConfiguration pnc = do
              , ncTargetNumberOfKnownPeers
              , ncTargetNumberOfEstablishedPeers
              , ncTargetNumberOfActivePeers
-             , ncEnableP2P
+             , ncEnableP2P = case enableP2P of
+                 EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
+                 DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
