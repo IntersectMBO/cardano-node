@@ -17,7 +17,6 @@ module Cardano.Api.Orphans () where
 import           Prelude
 
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -25,7 +24,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
-import qualified Data.Aeson.Types as Aeson
 
 import           Control.Applicative
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
@@ -326,24 +324,25 @@ instance FromJSON Alonzo.Prices where
 deriving newtype instance FromJSON Alonzo.CostModel
 deriving newtype instance ToJSON Alonzo.CostModel
 
+
+languageToText :: Alonzo.Language -> Text
+languageToText Alonzo.PlutusV1 = "PlutusV1"
+
+languageFromText :: MonadFail m => Text -> m Alonzo.Language
+languageFromText "PlutusV1" = pure Alonzo.PlutusV1
+languageFromText lang = fail $ "Error decoding Language: " ++ show lang
+
 instance FromJSON Alonzo.Language where
-  parseJSON v = case v of
-    Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
-    wrong -> fail $ "Error decoding Language. Expected a JSON string but got: " <> show wrong
+  parseJSON = Aeson.withText "Language" languageFromText
+
 instance ToJSON Alonzo.Language where
-  toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
+  toJSON = Aeson.String . languageToText
 
 instance ToJSONKey Alonzo.Language where
-  toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
+  toJSONKey = toJSONKeyText languageToText
 
 instance FromJSONKey Alonzo.Language where
-  fromJSONKey = Aeson.FromJSONKeyTextParser parseLang
-   where
-     parseLang :: Text -> Aeson.Parser Alonzo.Language
-     parseLang lang =
-       case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
-         Left err -> fail (show err)
-         Right lang' -> return lang'
+  fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
 -- We defer parsing of the cost model so that we can
 -- read it as a filepath. This is to reduce further pollution
