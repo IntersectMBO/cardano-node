@@ -1,5 +1,34 @@
 # Changelog for cardano-api
 
+## 1.28 -- July 2021
+
+- Support for the upcoming Alonzo era, including protocol parameters, Plutus
+  scripts and collateral inputs. (#2784, #2798, #2808, #2810, #2815, #2818,
+  #2823, #2828)
+- Add a function 'getTransactionBodyContent'. This extracts a general view of
+  the TxBody from the era-specific bodies. (#2663)
+- Add API support for new node queries:
+  - `QuerySystemStart` gets the system start time.
+  - `QueryStakePools` and `QueryStakePoolParameters` can be used to get details
+    on the currently known stake pools.
+  - `QueryUTxOFilter` provides various ways to query a filtered subset of the
+    UTxO.
+  (#2843)
+- Added functions to the API to assist in automated transaction building:
+  - `evaluateTransactionBalance` computes the current balance of a (partial)
+    transaction, which is helpful for determining what needs to be done to
+    correctly balance it (such that value produced equals value consumed).
+  - `evaluateTransactionExecutionUnits` computes how many ExUnits will be needed
+    by all the scripts in a (partial) transaction.
+  - `evaluateTransactionFee` computes the fee for a (partial) transaction,
+    assuming a given number of VKey witnesses (corresponding to inputs).
+  - `estimateTransactionKeyWitnessCount` attempts to estimate the number of VKey
+    witnesses needed.
+  - `makeTransactionBodyAutoBalance` attempts to create and automatically
+    balance a transaction body, using the above tools.
+  (#2906)
+- Miscellaneous internal improvements. (#2836, #2840)
+
 ## 1.27 -- April 2021
 
 - Add initial support for the ledger state and folding over blocks to the API.

@@ -1,5 +1,29 @@
 # Changelog for cardano-cli
 
+## 1.28 -- July 2021
+
+- The query tip command is now tidier and shows various additional pieces of
+  information:
+  - The epoch number is now shown during the Byron era.  Previously this worked
+    only in the Shelley and subsequent eras. (#2688)
+  - The sync progress of the node. This will only be available with new network
+    protocols (not yet in this release.) (#2842, #2899)
+  (#2885)
+- Attempting to use an IPv6/IPv4 address where the other is expected will now
+  give a more helpful error message. (#2691)
+- Queries should now work during the Alonzo era. (#2727, #2755)
+- Support for submitting transactions during the Alonzo era. (#2774, #2798,
+  #2806, #2811, #2823, #2863, #2848)
+- `cardano-cli genesis create` now also creates the new Alonzo genesis file.
+  (#2743)
+- The UTxO CLI query now allows an additional `--tx-in` flag which allows
+  filtering the UTxO by TxIn, and requires the addition of the `--whole-utxo`
+  flag to return the complete UTxO set (which was previously the default).
+  Returning the whole UTxO set is an expensive operation only useful in small
+  testnets, so we don't want it as the default option. (#2843, #2854)
+- The parser for rational units (as used in for example execution unit prices)
+  now supports rational syntax (e.g. 1/2). (#2922)
+
 ## 1.27 -- April 2021
 
 - The query tip now also returns the era (e.g. Shelley, Allegra, Alonzo).
