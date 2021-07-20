@@ -15,7 +15,10 @@ usage_backend() {
     lostream-fixup-jqargs RUNDIR
     lostream-fixup-jqexpr
 
-    start-run RUNDIR Start an allocated run
+    start-cluster RUNDIR
+                     Start the cluster nodes
+    start-generator RUNDIR
+                     Start generator
 
     assert-is BACKEND-NAME
                      Check that the current backend is as expected
@@ -33,8 +36,8 @@ case "${op}" in
     record-extended-env-config ) $WORKBENCH_BACKEND "$@";;
     describe-run )               $WORKBENCH_BACKEND "$@";;
     pre-run-hook )               $WORKBENCH_BACKEND "$@";;
-    start-run )                  cp "$2"/genesis/genesis.json "$2"/genesis.json
-                                 $WORKBENCH_BACKEND "$@";;
+    start-cluster )              $WORKBENCH_BACKEND "$@";;
+    start-generator )            $WORKBENCH_BACKEND "$@";;
     lostream-fixup-jqargs )      $WORKBENCH_BACKEND "$@";;
     lostream-fixup-jqexpr )      $WORKBENCH_BACKEND "$@";;
 

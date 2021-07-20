@@ -16,7 +16,8 @@ usage_supervisor() {
 
     describe-run RUN-DIR
     pre-run-hook RUN-DIR
-    start-run RUN-DIR
+    start-cluster RUN-DIR
+    start-generator RUN-DIR
 
     Supervisor-specific:
 
@@ -121,7 +122,7 @@ EOF
         msg "supervisor:  node pid maps: $mapn2p $mapp2n"
         ;;
 
-    start-run )
+    start-cluster )
         usage="USAGE: wb supervisor $op RUN-DIR"
         dir=${1:?$usage}; shift
 
@@ -147,9 +148,18 @@ EOF
            sleep 5
         done
 
-        supervisorctl start generator
-
         $0 save-pids "$dir";;
+
+    start-generator )
+        usage="USAGE: wb supervisor $op RUN-DIR"
+        dir=${1:?$usage}; shift
+
+        while test $# -gt 0
+        do case "$1" in
+               --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
+               * ) break;; esac; shift; done
+
+        supervisorctl start generator;;
 
     lostream-fixup-jqargs )
         usage="USAGE: wb supervisor $op RUN-DIR"

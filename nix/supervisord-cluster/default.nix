@@ -134,19 +134,40 @@ let
     ++ optionals (!workbenchDevMode)
     [ workbench.workbench ];
 
+  startClusterUsage = ''
+Usage:
+   start-cluster [FLAGS..]
+
+   Flags:
+
+      --batch-name NAME               Override the batch name (default: ${batchName})
+      --no-generator | --no-gen       Don't auto-start the tx-generator
+
+      --trace | --debug               Trace the start-cluster script
+      --trace-wb | --trace-workbench  Trace the workbench script
+      --help                          This help message
+'';
+
   start = pkgs.writeScriptBin "start-cluster" ''
     set -euo pipefail
 
-    workbench-prebuild-executables
-
     batch_name=${batchName}
+    run_start_flags=()
 
     while test $# -gt 0
     do case "$1" in
-        --batch-name ) batch_name=$2; shift;;
-        --trace | --debug ) set -x;;
+        --batch-name )                   batch_name=$2; shift;;
+        --no-generator | --no-gen )      run_start_flags+=($1);;
+
+        --trace | --debug )              set -x;;
         --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --help )                         cat <<EOF
+${startClusterUsage}
+EOF
+                                         exit 1;;
         * ) break;; esac; shift; done
+
+    workbench-prebuild-executables
 
     export PATH=$PATH:${path}
 
@@ -170,7 +191,7 @@ let
     wb_run_start_args=(
         --supervisor-conf      "${backend.supervisord.mkSupervisorConf profile}"
       )
-    wb run start $(wb run current-tag) "''${wb_run_start_args[@]}"
+    wb run start "''${run_start_flags[@]}" $(wb run current-tag) "''${wb_run_start_args[@]}"
 
     echo 'workbench:  cluster started. Run `stop-cluster` to stop'
   '';
