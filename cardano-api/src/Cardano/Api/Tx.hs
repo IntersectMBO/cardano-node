@@ -394,7 +394,7 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
         AlonzoEra  -> "TxWitness AlonzoEra"
 
 
-pattern Tx :: Ledger.Era era => TxBody era -> [KeyWitness era] -> Tx era
+pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
   where
     Tx txbody ws = makeSignedTransaction ws txbody
