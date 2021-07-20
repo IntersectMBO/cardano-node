@@ -20,13 +20,14 @@ import           Prelude (String, show, id)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Aeson (Value (..))
+import           Data.Aeson.Types (listValue)
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
 import qualified Data.IP as IP
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import           Data.Text (pack)
 
+import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Network.TypedProtocol.Core (ClientHasAgency,
                      PeerHasAgency (..), ServerHasAgency)
 
@@ -55,14 +56,14 @@ import           Ouroboros.Network.ConnectionManager.Types ( AbstractState(..),
                     ConnectionManagerTrace(..) , ConnectionManagerCounters(..),
                     AbstractState(..) , ConnectionManagerCounters(..) , OperationResult(..))
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace(..))
-import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.NodeToClient (NodeToClientVersionData(..), NodeToClientVersion)
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
-                     WithAddr (..), NodeToNodeVersionData (..), NodeToNodeVersion)
+                     WithAddr (..), NodeToNodeVersionData (..), NodeToNodeVersion,
+                     RemoteAddress)
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor ( PeerSelectionState (..),
                      PeerSelectionTargets (..), DebugPeerSelection (..),
@@ -86,8 +87,6 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuer
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
-import           Ouroboros.Network.Protocol.Trans.Hello.Type (ClientHasAgency (..), Message (..),
-                   ServerHasAgency (..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
@@ -116,17 +115,17 @@ import qualified Ouroboros.Network.Diffusion as ND
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance HasPrivacyAnnotation ND.DiffusionInitializationTracer
-instance HasSeverityAnnotation ND.DiffusionInitializationTracer where
+instance HasPrivacyAnnotation (ND.InitializationTracer ntnAddr ntcAddr)
+instance HasSeverityAnnotation (ND.InitializationTracer ntnAddr ntcAddr) where
   getSeverityAnnotation _ = Info
 
-instance HasPrivacyAnnotation NtC.HandshakeTr
-instance HasSeverityAnnotation NtC.HandshakeTr where
+instance HasPrivacyAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion)
+instance HasSeverityAnnotation (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
   getSeverityAnnotation _ = Info
 
 
-instance HasPrivacyAnnotation NtN.HandshakeTr
-instance HasSeverityAnnotation NtN.HandshakeTr where
+instance HasPrivacyAnnotation (NtN.HandshakeTr RemoteAddress NodeToNodeVersion)
+instance HasSeverityAnnotation (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
   getSeverityAnnotation _ = Info
 
 
@@ -370,8 +369,8 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceShutdown -> Debug
     MuxTraceTerminating {} -> Debug
 
-instance HasPrivacyAnnotation (TraceLocalRootPeers exception)
-instance HasSeverityAnnotation (TraceLocalRootPeers exception) where
+instance HasPrivacyAnnotation (TraceLocalRootPeers RemoteAddress exception)
+instance HasSeverityAnnotation (TraceLocalRootPeers RemoteAddress exception) where
   getSeverityAnnotation _ = Info
 
 instance HasPrivacyAnnotation TracePublicRootPeers
@@ -495,20 +494,20 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
-instance Transformable Text IO ND.DiffusionInitializationTracer where
+instance Transformable Text IO (ND.InitializationTracer RemoteAddress LocalAddress) where
   trTransformer = trStructuredText
-instance HasTextFormatter ND.DiffusionInitializationTracer where
+instance HasTextFormatter (ND.InitializationTracer RemoteAddress LocalAddress) where
   formatText a _ = pack (show a)
 
-instance Transformable Text IO NtN.HandshakeTr where
+instance Transformable Text IO (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
   trTransformer = trStructuredText
-instance HasTextFormatter NtN.HandshakeTr where
+instance HasTextFormatter (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
   formatText a _ = pack (show a)
 
 
-instance Transformable Text IO NtC.HandshakeTr where
+instance Transformable Text IO (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
   trTransformer = trStructuredText
-instance HasTextFormatter NtC.HandshakeTr where
+instance HasTextFormatter (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
   formatText a _ = pack (show a)
 
 
@@ -597,9 +596,9 @@ instance (Show peer)
      <> " event: " <> pack (show ev)
 
 
-instance Show exception => Transformable Text IO (TraceLocalRootPeers exception) where
+instance Show exception => Transformable Text IO (TraceLocalRootPeers RemoteAddress exception) where
   trTransformer = trStructuredText
-instance Show exception => HasTextFormatter (TraceLocalRootPeers exception) where
+instance Show exception => HasTextFormatter (TraceLocalRootPeers RemoteAddress exception) where
     formatText a _ = pack (show a)
 
 instance Transformable Text IO TracePublicRootPeers where
@@ -855,13 +854,6 @@ instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
                  , "remoteAddress" .= toJSON remoteAddress
                  ]
 
-instance ToJSON peerAddr => ToObject (ConnectionId peerAddr) where
-  toObject _verb connId =
-    mkObject
-      [ "kind" .= String "ConnectionId"
-      , "connectionId" .= toJSON connId
-      ]
-
 instance Aeson.ToJSON ConnectionManagerCounters where
   toJSON ConnectionManagerCounters { prunableConns
                                    , duplexConns
@@ -887,7 +879,8 @@ instance ToObject (FetchDecision [Point header]) where
              , "length" .= String (pack $ show $ length results)
              ]
 
-instance ToObject ND.DiffusionInitializationTracer where
+-- TODO: use 'ToJSON' constraints
+instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.InitializationTracer ntnAddr ntcAddr) where
   toObject _verb (ND.RunServer sockAddr) = mkObject
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
@@ -897,32 +890,32 @@ instance ToObject ND.DiffusionInitializationTracer where
     [ "kind" .= String "RunLocalServer"
     , "localAddress" .= String (pack (show localAddress))
     ]
-  toObject _verb (ND.UsingSystemdSocket path) = mkObject
+  toObject _verb (ND.UsingSystemdSocket localAddress) = mkObject
     [ "kind" .= String "UsingSystemdSocket"
-    , "path" .= String (pack path)
+    , "path" .= String (pack . show $ localAddress)
     ]
 
-  toObject _verb (ND.CreateSystemdSocketForSnocketPath path) = mkObject
+  toObject _verb (ND.CreateSystemdSocketForSnocketPath localAddress) = mkObject
     [ "kind" .= String "CreateSystemdSocketForSnocketPath"
-    , "path" .= String (pack path)
+    , "path" .= String (pack . show $ localAddress)
     ]
-  toObject _verb (ND.CreatedLocalSocket path) = mkObject
+  toObject _verb (ND.CreatedLocalSocket localAddress) = mkObject
     [ "kind" .= String "CreatedLocalSocket"
-    , "path" .= String (pack path)
+    , "path" .= String (pack . show $ localAddress)
     ]
-  toObject _verb (ND.ConfiguringLocalSocket path socket) = mkObject
+  toObject _verb (ND.ConfiguringLocalSocket localAddress socket) = mkObject
     [ "kind" .= String "ConfiguringLocalSocket"
-    , "path" .= String (pack path)
+    , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.ListeningLocalSocket path socket) = mkObject
+  toObject _verb (ND.ListeningLocalSocket localAddress socket) = mkObject
     [ "kind" .= String "ListeningLocalSocket"
-    , "path" .= String (pack path)
+    , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  toObject _verb (ND.LocalSocketUp path fd) = mkObject
+  toObject _verb (ND.LocalSocketUp localAddress fd) = mkObject
     [ "kind" .= String "LocalSocketUp"
-    , "path" .= String (pack path)
+    , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show fd))
     ]
   toObject _verb (ND.CreatingServerSocket socket) = mkObject
@@ -953,25 +946,18 @@ instance ToObject ND.DiffusionInitializationTracer where
     , "path" .= String (pack (show exception))
     ]
 
-instance ToObject NtC.HandshakeTr where
+instance ToObject (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
   toObject _verb (WithMuxBearer b ev) =
     mkObject [ "kind" .= String "LocalHandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
 
 
-instance ToObject NtN.HandshakeTr where
+instance ToObject (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
   toObject _verb (WithMuxBearer b ev) =
     mkObject [ "kind" .= String "HandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
-
-
-instance ToObject LocalAddress where
-    toObject _verb addr =
-      mkObject [ "kind" .= String "LocalAddress"
-               , "path" .= toJSON addr
-               ]
 
 instance ToJSON LocalAddress where
     toJSON (LocalAddress path) = String (pack path)
@@ -1100,21 +1086,6 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
 
 
 instance Aeson.ToJSONKey SockAddr where
-
--- TODO: ouroboros-network should provide a newtype wrapper for 'SockAddr'.
-instance ToObject SockAddr where
-    toObject _verb (SockAddrInet port addr) =
-        let ip = IP.fromHostAddress addr in
-        mkObject [ "address" .= toJSON ip
-                 , "port" .= show port
-                 ]
-    toObject _verb (SockAddrInet6 port _ addr _) =
-        let ip = IP.fromHostAddress6 addr in
-        mkObject [ "address" .= toJSON ip
-                 , "port" .= show port
-                 ]
-    toObject _verb (SockAddrUnix path) =
-        mkObject [ "path" .= show path ]
 
 instance Aeson.ToJSON SockAddr where
     toJSON (SockAddrInet port addr) =
@@ -1262,7 +1233,7 @@ instance (ToObject peer) => ToObject (WithMuxBearer peer MuxTrace) where
 
 instance Aeson.ToJSONKey RelayAddress where
 
-instance Show exception => ToObject (TraceLocalRootPeers exception) where
+instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
     mkObject [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
@@ -1818,7 +1789,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrState cmState ->
         mkObject
           [ "kind"  .= String "ConnectionManagerState"
-          , "state" .= Aeson.listValue (\(addr, connState) ->
+          , "state" .= listValue (\(addr, connState) ->
                                          Aeson.object
                                            [ "remoteAddress"   .= toJSON addr
                                            , "connectionState" .= toJSON connState
