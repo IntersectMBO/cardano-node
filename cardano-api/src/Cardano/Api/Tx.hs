@@ -754,9 +754,10 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _) =
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
   where
-    makeShelleyBasedKeyWitness :: Shelley.ShelleyBased ledgerera
-                               => ShelleyLedgerEra era ~ ledgerera
-                               => Ledger.TxBody ledgerera
+    makeShelleyBasedKeyWitness :: Shelley.ShelleyBased (ShelleyLedgerEra era)
+                               => Ledger.Crypto (ShelleyLedgerEra era)
+                                    ~ StandardCrypto
+                               => Ledger.TxBody (ShelleyLedgerEra era)
                                -> ShelleyWitnessSigningKey
                                -> KeyWitness era
     makeShelleyBasedKeyWitness txbody' =
