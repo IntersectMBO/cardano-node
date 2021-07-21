@@ -807,7 +807,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
 
     txbody3 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent {
+               makeTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees fee,
                  txOuts = TxOut changeaddr balance TxOutDatumHashNone
                         : txOuts txbodycontent
