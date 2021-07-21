@@ -43,6 +43,8 @@ module Cardano.Api.TxBody (
     lovelaceToTxOutValue,
     serialiseAddressForTxOut,
     TxOutDatumHash(..),
+    TxOutInAnyEra(..),
+    txOutInAnyEra,
 
     -- * Other transaction body types
     TxInsCollateral(..),
@@ -330,6 +332,17 @@ data TxOut era = TxOut (AddressInEra era)
 
 deriving instance Eq   (TxOut era)
 deriving instance Show (TxOut era)
+
+data TxOutInAnyEra where
+     TxOutInAnyEra :: CardanoEra era
+                   -> TxOut era
+                   -> TxOutInAnyEra
+
+deriving instance Show TxOutInAnyEra
+
+-- | Convenience constructor for 'TxOutInAnyEra'
+txOutInAnyEra :: IsCardanoEra era => TxOut era -> TxOutInAnyEra
+txOutInAnyEra = TxOutInAnyEra cardanoEra
 
 instance IsCardanoEra era => ToJSON (TxOut era) where
   toJSON (TxOut addr val TxOutDatumHashNone) =
