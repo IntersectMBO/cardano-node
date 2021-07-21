@@ -6,17 +6,12 @@ module Cardano.CLI.Parsers
   ) where
 
 import           Cardano.Prelude
-import           Data.Function (id)
 import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, parseByronCommands)
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 import           Options.Applicative
-import           Options.Applicative.Help.Types (helpText)
 import           Prelude (String)
-import           Prettyprinter
-import           Prettyprinter.Render.Util.SimpleDocTree
 
-import qualified Data.Text as T
 import qualified Options.Applicative as Opt
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
@@ -38,22 +33,6 @@ pref :: ParserPrefs
 pref = Opt.prefs $ mempty
   <> showHelpOnEmpty
   <> helpHangUsageOverflow 10
-  <> helpRenderHelp customRenderHelp
-
--- | Convert a help text to 'String'.
-customRenderHelp :: Int -> ParserHelp -> String
-customRenderHelp cols
-  = T.unpack
-  . ("<html>\n" <>)
-  . ("<body>\n" <>)
-  . ("<pre>\n" <>)
-  . (<> "\n</html>")
-  . (<> "\n</body>")
-  . (<> "\n</pre>")
-  . renderSimplyDecorated id (flip const)
-  . treeForm
-  . layoutSmart (LayoutOptions (AvailablePerLine cols 1.0))
-  . helpText
 
 parseClientCommand :: Parser ClientCommand
 parseClientCommand =
