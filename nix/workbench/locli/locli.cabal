@@ -55,6 +55,7 @@ library
                      , optparse-generic
                      , ouroboros-network
                      , process
+                     , quiet
                      , scientific
                      , split
                      , statistics

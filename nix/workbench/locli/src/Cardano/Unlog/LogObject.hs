@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -25,6 +26,7 @@ import           Data.Text.Short (ShortText, fromText, toText)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Map as Map
 import           Data.Vector (Vector)
+import           Quiet (Quiet (..))
 
 import           Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 
@@ -96,9 +98,10 @@ instance Print ShortText where
   hPutStrLn h = hPutStrLn h . toText
 
 newtype TId = TId { unTId :: ShortText }
-  deriving (Eq, Generic, Ord, Show)
+  deriving (Eq, Generic, Ord)
   deriving newtype (FromJSON, ToJSON)
   deriving anyclass NFData
+  deriving Show via Quiet TId
 
 newtype Hash = Hash { unHash :: ShortText }
   deriving (Eq, Generic, Ord)
@@ -114,9 +117,10 @@ instance AE.ToJSONKey Hash where
   toJSONKey = AE.toJSONKeyText (toText . unHash)
 
 newtype Host = Host { unHost :: ShortText }
-  deriving (Eq, Generic, Ord, Show)
+  deriving (Eq, Generic, Ord)
   deriving newtype (IsString, FromJSON, ToJSON)
   deriving anyclass NFData
+  deriving Show via Quiet Host
 
 instance FromJSON BlockNo where
   parseJSON o = BlockNo <$> parseJSON o
