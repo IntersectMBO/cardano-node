@@ -750,7 +750,14 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 4. balance the transaction and update tx change output
 
     txbody0 <- first TxBodyError $
-                 makeTransactionBody txbodycontent
+               makeTransactionBody txbodycontent {
+                 txOuts = TxOut changeaddr
+                                (lovelaceToTxOutValue 0)
+                                TxOutDatumHashNone
+                        : txOuts txbodycontent
+                                --TODO: think about the size of the change output
+                                -- 1,2,4 or 8 bytes?
+               }
 
     exUnitsMap <- first TxBodyErrorValidityInterval $
                     evaluateTransactionExecutionUnits
@@ -773,13 +780,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- Insert change address and set tx fee to 0
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                makeTransactionBody txbodycontent1 {
-                 txFee  = TxFeeExplicit explicitTxFees 0,
-                 txOuts = TxOut changeaddr
-                                (lovelaceToTxOutValue 0)
-                                TxOutDatumHashNone
-                        : txOuts txbodycontent
-                 --TODO: think about the size of the change output
-                 -- 1,2,4 or 8 bytes?
+                 txFee = TxFeeExplicit explicitTxFees 0
                }
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
