@@ -2322,11 +2322,14 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
       -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
     mapScriptWitnessesTxIns txins =
-        [ (txin, BuildTxWith (ScriptWitness ctx witness'))
+        [ (txin, BuildTxWith wit')
           -- The tx ins are indexed in the map order by txid
-        | (ix, (txin, BuildTxWith (ScriptWitness ctx witness)))
-            <- zip [0..] (orderTxIns txins)
-        , let witness' = f (ScriptWitnessIndexTxIn ix) witness
+        | (ix, (txin, BuildTxWith wit)) <- zip [0..] (orderTxIns txins)
+        , let wit' = case wit of
+                       KeyWitness{}              -> wit
+                       ScriptWitness ctx witness -> ScriptWitness ctx witness'
+                         where
+                           witness' = f (ScriptWitnessIndexTxIn ix) witness
         ]
 
     mapScriptWitnessesWithdrawals
