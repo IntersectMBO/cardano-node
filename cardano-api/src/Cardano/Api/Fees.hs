@@ -622,10 +622,10 @@ type LedgerTxBodyConstraints ledgerera =
 
 -- | The possible errors that can arise from 'makeTransactionBodyAutoBalance'.
 --
-data TxBodyErrorAutoBalance era =
+data TxBodyErrorAutoBalance =
 
        -- | The same errors that can arise from 'makeTransactionBody'.
-       TxBodyError (TxBodyError era)
+       TxBodyError TxBodyError
 
        -- | One or more of the scripts fails to execute correctly.
      | TxBodyScriptExecutionError [(ScriptWitnessIndex, ScriptExecutionError)]
@@ -665,7 +665,7 @@ data TxBodyErrorAutoBalance era =
   deriving Show
 
 
-instance Error (TxBodyErrorAutoBalance era) where
+instance Error TxBodyErrorAutoBalance where
   displayError (TxBodyError err) = displayError err
 
   displayError (TxBodyScriptExecutionError failures) =
@@ -739,8 +739,7 @@ makeTransactionBodyAutoBalance
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
-  -> Either (TxBodyErrorAutoBalance era)
-            (TxBody era)
+  -> Either TxBodyErrorAutoBalance (TxBody era)
 makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                             poolids utxo txbodycontent changeaddr mnkeys = do
 
@@ -821,7 +820,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
    era' :: CardanoEra era
    era' = cardanoEra
 
-   balanceCheck :: Lovelace -> Lovelace -> Either (TxBodyErrorAutoBalance era) ()
+   balanceCheck :: Lovelace -> Lovelace -> Either TxBodyErrorAutoBalance ()
    balanceCheck minUTxOValue balance
     | balance < 0            = Left (TxBodyErrorAdaBalanceNegative balance)
       -- check the change is over the min utxo threshold
@@ -829,7 +828,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     | otherwise              = return ()
 
    getMinUTxOValue :: ProtocolParameters
-                   -> Either (TxBodyErrorAutoBalance era) Lovelace
+                   -> Either TxBodyErrorAutoBalance Lovelace
    getMinUTxOValue pparams' =
      case era of
        ShelleyBasedEraShelley -> minUTxOHelper pparams'
@@ -841,7 +840,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
            Nothing      -> Left TxBodyErrorMissingParamCostPerWord
 
    minUTxOHelper :: ProtocolParameters
-                 -> Either (TxBodyErrorAutoBalance era) Lovelace
+                 -> Either TxBodyErrorAutoBalance Lovelace
    minUTxOHelper pparams' = case protocolParamMinUTxOValue pparams' of
                              Just minUtxo -> Right minUtxo
                              Nothing -> Left TxBodyErrorMissingParamMinUTxO
