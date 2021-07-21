@@ -98,7 +98,7 @@ genTx :: forall era. IsShelleyBasedEra era
   -> [Lovelace]
   -> Either String (Tx era, TxId)
 genTx key networkId inFunds outValues
-  = case makeTransactionBody txBodyContent of
+  = case validateTransactionBody txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
                        , getTxId b

@@ -23,8 +23,8 @@ module Cardano.Api.TxBody (
 
     -- * Transaction bodies
     TxBody(.., TxBody),
-    makeTransactionBody,
-    unsafeMakeShelleyTransactionBody,
+    validateTransactionBody,
+    makeShelleyTransactionBody,
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyScriptData(..),
@@ -1401,15 +1401,15 @@ instance Error (TxBodyError era) where
       "Transaction uses Plutus scripts but does not provide the protocol " ++
       "parameters to hash"
 
-
-makeTransactionBody :: forall era.
+-- | Validate a transaction body
+validateTransactionBody :: forall era.
                        IsCardanoEra era
-                    => TxBodyContent BuildTx era
-                    -> Either (TxBodyError era) (TxBody era)
-makeTransactionBody =
+                    => TxBodyContent BuildTx era -- ^ Transaction body content to validate
+                    -> Either (TxBodyError era) (TxBody era) -- ^ The valid transaction body or a validation error
+validateTransactionBody =
     case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
-      ShelleyBasedEra era -> makeShelleyTransactionBody era
+      ShelleyBasedEra era -> validateShelleyTransactionBody era
 
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
@@ -1835,10 +1835,10 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
     }
 
 -- | Create a Shelly era transaction body without performing any validity checks
-unsafeMakeShelleyTransactionBody :: ShelleyBasedEra era
+makeShelleyTransactionBody :: ShelleyBasedEra era
                            -> TxBodyContent BuildTx era
                            -> TxBody era
-unsafeMakeShelleyTransactionBody era@ShelleyBasedEraShelley
+makeShelleyTransactionBody era@ShelleyBasedEraShelley
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -1890,7 +1890,7 @@ unsafeMakeShelleyTransactionBody era@ShelleyBasedEraShelley
                TxMetadataNone                     -> Map.empty
                TxMetadataInEra _ (TxMetadata ms') -> ms'
 
-unsafeMakeShelleyTransactionBody era@ShelleyBasedEraAllegra
+makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -1953,7 +1953,7 @@ unsafeMakeShelleyTransactionBody era@ShelleyBasedEraAllegra
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
 
-unsafeMakeShelleyTransactionBody era@ShelleyBasedEraMary
+makeShelleyTransactionBody era@ShelleyBasedEraMary
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -2019,7 +2019,7 @@ unsafeMakeShelleyTransactionBody era@ShelleyBasedEraMary
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
 
-unsafeMakeShelleyTransactionBody era@ShelleyBasedEraAlonzo
+makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                            txbodycontent@TxBodyContent {
                              txIns,
                              txInsCollateral,
@@ -2142,10 +2142,10 @@ unsafeMakeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                TxAuxScripts _ ss' -> ss'
 
 
-makeShelleyTransactionBody :: ShelleyBasedEra era
+validateShelleyTransactionBody :: ShelleyBasedEra era
                            -> TxBodyContent BuildTx era
                            -> Either (TxBodyError era) (TxBody era)
-makeShelleyTransactionBody era@ShelleyBasedEraShelley
+validateShelleyTransactionBody era@ShelleyBasedEraShelley
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -2162,9 +2162,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
       TxMetadataNone      -> return ()
       TxMetadataInEra _ m -> first TxBodyMetadataError (validateTxMetadata m)
 
-    pure (unsafeMakeShelleyTransactionBody era txbodycontent)
+    pure (makeShelleyTransactionBody era txbodycontent)
 
-makeShelleyTransactionBody era@ShelleyBasedEraAllegra
+validateShelleyTransactionBody era@ShelleyBasedEraAllegra
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -2182,9 +2182,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
       TxMetadataNone      -> return ()
       TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
 
-    pure (unsafeMakeShelleyTransactionBody era txbodycontent)
+    pure (makeShelleyTransactionBody era txbodycontent)
 
-makeShelleyTransactionBody era@ShelleyBasedEraMary
+validateShelleyTransactionBody era@ShelleyBasedEraMary
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -2212,9 +2212,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
       TxMintNone        -> return ()
       TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
 
-    pure (unsafeMakeShelleyTransactionBody era txbodycontent)
+    pure (makeShelleyTransactionBody era txbodycontent)
 
-makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
+validateShelleyTransactionBody era@ShelleyBasedEraAlonzo
                            txbodycontent@TxBodyContent {
                              txIns,
                              txInsCollateral,
@@ -2253,7 +2253,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
       _ -> return () --TODO alonzo: validate protocol params for the Alonzo era.
                      --             All the necessary params must be provided.
 
-    pure (unsafeMakeShelleyTransactionBody era txbodycontent)
+    pure (makeShelleyTransactionBody era txbodycontent)
   where
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent

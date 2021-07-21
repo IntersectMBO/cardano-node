@@ -316,7 +316,7 @@ runTxBuildRaw (AnyCardanoEra era)
 
     txBody <-
       firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError) . hoistEither $
-        makeTransactionBody txBodyContent
+        validateTransactionBody txBodyContent
 
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody

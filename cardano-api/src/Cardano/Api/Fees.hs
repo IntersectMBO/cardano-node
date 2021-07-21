@@ -624,7 +624,7 @@ type LedgerTxBodyConstraints ledgerera =
 --
 data TxBodyErrorAutoBalance era =
 
-       -- | The same errors that can arise from 'makeTransactionBody'.
+       -- | The same errors that can arise from 'validateTransactionBody'.
        TxBodyError (TxBodyError era)
 
        -- | One or more of the scripts fails to execute correctly.
@@ -705,7 +705,7 @@ instance Error (TxBodyErrorAutoBalance era) where
       displayError err
 
 
--- | This is much like 'makeTransactionBody' but with greater automation to
+-- | This is much like 'validateTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
 --
 -- In particular:
@@ -724,7 +724,7 @@ instance Error (TxBodyErrorAutoBalance era) where
 -- * It also checks that the balance is positive and the change is above the
 --   minimum threshold.
 --
--- To do this it needs more information than 'makeTransactionBody', all of
+-- To do this it needs more information than 'validateTransactionBody', all of
 -- which can be queried from a local node.
 --
 makeTransactionBodyAutoBalance
@@ -751,7 +751,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 4. balance the transaction and update tx change output
 
     txbody0 <- first TxBodyError $
-                 makeTransactionBody txbodycontent
+                 validateTransactionBody txbodycontent
 
     exUnitsMap <- first TxBodyErrorValidityInterval $
                     evaluateTransactionExecutionUnits
@@ -773,7 +773,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     -- Insert change address and set tx fee to 0
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               validateTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees 0,
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue 0)
@@ -788,7 +788,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         fee   = evaluateTransactionFee pparams txbody1 nkeys 0 --TODO: byron keys
 
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               validateTransactionBody txbodycontent1 {
                  txFee = TxFeeExplicit explicitTxFees fee
                }
 
@@ -807,7 +807,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
 
     txbody3 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent {
+               validateTransactionBody txbodycontent {
                  txFee  = TxFeeExplicit explicitTxFees fee,
                  txOuts = TxOut changeaddr balance TxOutDatumHashNone
                         : txOuts txbodycontent

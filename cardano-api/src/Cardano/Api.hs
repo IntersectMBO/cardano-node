@@ -150,7 +150,8 @@ module Cardano.Api (
 
     -- ** Transaction bodies
     TxBody(TxBody),
-    makeTransactionBody,
+    validateTransactionBody,
+    makeShelleyTransactionBody,
     TxBodyContent(..),
     TxBodyError(..),
 
