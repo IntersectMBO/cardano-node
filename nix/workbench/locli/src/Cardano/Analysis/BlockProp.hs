@@ -104,8 +104,8 @@ instance AE.ToJSON BlockPropagation where
 
 data BPError
   = BPError
-  { eBlock :: !Hash
-  , eFile  :: !(Maybe FilePath)
+  { eHost  :: !Host
+  , eBlock :: !Hash
   , eLO    :: !(Maybe LogObject)
   , eDesc  :: !BPErrorKind
   }
@@ -302,6 +302,9 @@ mbeAdopted   = mapMbe bfeAdopted       boeAdopted   (const Nothing)
 mbeAnnounced = mapMbe bfeAnnounced     boeAnnounced (const Nothing)
 mbeSending   = mapMbe bfeSending       boeSending   (const Nothing)
 
+mbeHost :: MachBlockEvents a -> Host
+mbeHost = mapMbe bfeHost boeHost eHost
+
 mbeBlock :: MachBlockEvents a -> Hash
 mbeBlock = mapMbe bfeBlock boeBlock eBlock
 
@@ -391,7 +394,7 @@ instance RenderTimeline BlockEvents where
     ]
    where
      f = nChunksEachOf 4 7 "Forger event Δt:"
-     p = nChunksEachOf 6 6 "Peer event Δt:"
+     p = nChunksEachOf 6 6 "Peer event Δt averages:"
      m = nChunksEachOf 3 6 "Missing phase"
      n = nChunksEachOf 2 6 "Negative phase"
      af  f = avg . fmap f
@@ -519,9 +522,9 @@ doBlockProp eventMaps = do
                 go (bfePrevBlock forgerEv) (liftBlockEvents forgerEv oEvs ers : acc)
 
    liftBlockEvents :: ForgerEventsRel -> [ObserverEvents NominalDiffTime] -> [BPError] -> BlockEvents
-   liftBlockEvents ForgerEvents{..} os errs =
+   liftBlockEvents ForgerEvents{bfeHost=host, ..} os errs =
      BlockEvents
-     { beForger     = bfeHost
+     { beForger     = host
      , beBlock      = bfeBlock
      , beBlockPrev  = bfeBlockPrev
      , beBlockNo    = bfeBlockNo
@@ -537,7 +540,9 @@ doBlockProp eventMaps = do
      , beOtherBlocks = otherBlocks
      , beErrors =
          errs
-         <> (fail' bfeBlock . BPEFork <$> otherBlocks)
+         <> (otherBlocks <&>
+             \blk ->
+               fail' (findForger blk) bfeBlock $ BPEFork blk)
          <> bfeErrs
          <> concatMap boeErrs os
      }
@@ -560,13 +565,19 @@ doBlockProp eventMaps = do
                     & handleMiss "height map"
                     & Set.delete bfeBlock
                     & Set.toList
-      fail' :: Hash -> BPErrorKind -> BPError
-      fail' hash desc = BPError hash Nothing Nothing desc
+      findForger :: Hash -> Host
+      findForger hash =
+        mapMaybe (Map.lookup hash) eventMaps
+        & find mbeForgP
+        & fmap (mapMbe bfeHost (error "Invariant failed") (error "Invariant failed"))
+        & fromMaybe (Host "?")
+      fail' :: Host -> Hash -> BPErrorKind -> BPError
+      fail' host hash desc = BPError host hash Nothing desc
 
       handleMiss :: String -> Maybe a -> a
       handleMiss slotDesc = fromMaybe $ error $ mconcat
        [ "While processing ", show bfeBlockNo, " hash ", show bfeBlock
-       , " forged by ", show bfeHost
+       , " forged by ", show (unHost host)
        , " -- missing: ", slotDesc
        ]
 
@@ -596,20 +607,20 @@ blockPropMachEventsStep ci (JsonLogfile fp) bMap lo = case lo of
   -- 1. Request (observer only)
   LogObject{loAt, loHost, loBody=LOBlockFetchClientRequested{loBlock,loLength}} ->
     let mbe0 = Map.lookup loBlock bMap
-               & fromMaybe (fail loBlock $ BPEUnexpectedAsFirst Request)
+               & fromMaybe (fail loHost loBlock $ BPEUnexpectedAsFirst Request)
     in if isJust (mbeRequested mbe0) then bMap else
       bimapMbe'
-      (const . Left $ fail' loBlock $ BPEUnexpectedForForger Request)
+      (const . Left $ fail' loHost loBlock $ BPEUnexpectedForForger Request)
       (\x -> Right x { boeRequested=Just loAt, boeChainDelta=loLength `max` boeChainDelta x })
       mbe0
       & doInsert loBlock
   -- 2. Acquire:Fetch (observer only)
   LogObject{loAt, loHost, loBody=LOBlockFetchClientCompletedFetch{loBlock}} ->
     let mbe0 = Map.lookup loBlock bMap
-               & fromMaybe (fail loBlock $ BPEUnexpectedAsFirst Fetch)
+               & fromMaybe (fail loHost loBlock $ BPEUnexpectedAsFirst Fetch)
     in if isJust (mbeAcquired mbe0) then bMap else
       bimapMbe'
-      (const . Left $ fail' loBlock (BPEUnexpectedForForger Fetch))
+      (const . Left $ fail' loHost loBlock (BPEUnexpectedForForger Fetch))
       (\x -> Right x { boeFetched=Just loAt })
       mbe0
       & doInsert loBlock
@@ -618,9 +629,9 @@ blockPropMachEventsStep ci (JsonLogfile fp) bMap lo = case lo of
     Map.lookup loBlock bMap
     <&> bimapMbe'
           (const.Left $
-           BPError loBlock (Just fp) (Just lo) BPEDuplicateForge)
+           BPError loHost loBlock (Just lo) BPEDuplicateForge)
           (const.Left $
-           BPError loBlock (Just fp) (Just lo) (BPEUnexpectedForObserver Forge))
+           BPError loHost loBlock (Just lo) (BPEUnexpectedForObserver Forge))
     & fromMaybe
       (MFE $ ForgerEvents
         loHost loBlock loPrev loBlockNo loSlotNo
@@ -630,7 +641,7 @@ blockPropMachEventsStep ci (JsonLogfile fp) bMap lo = case lo of
   -- 3. Adopt
   LogObject{loAt, loHost, loBody=LOBlockAddedToCurrentChain{loBlock,loLength}} ->
     let mbe0 = Map.lookup loBlock bMap
-               & fromMaybe (fail loBlock $ BPEUnexpectedAsFirst Adopt)
+               & fromMaybe (fail loHost loBlock $ BPEUnexpectedAsFirst Adopt)
     in if isJust (mbeAdopted mbe0) then bMap else
       bimapMbe
       (\x -> x { bfeAdopted=Just loAt, bfeChainDelta=loLength })
@@ -640,7 +651,7 @@ blockPropMachEventsStep ci (JsonLogfile fp) bMap lo = case lo of
   -- 4. Announce
   LogObject{loAt, loHost, loBody=LOChainSyncServerSendHeader{loBlock}} ->
     let mbe0 = Map.lookup loBlock bMap
-               & fromMaybe (fail loBlock $ BPEUnexpectedAsFirst Announce)
+               & fromMaybe (fail loHost loBlock $ BPEUnexpectedAsFirst Announce)
     in if isJust (mbeAnnounced mbe0) then bMap else
       bimapMbe
       (\x -> x { bfeAnnounced=Just loAt })
@@ -650,7 +661,7 @@ blockPropMachEventsStep ci (JsonLogfile fp) bMap lo = case lo of
   -- 5. Sending started
   LogObject{loAt, loHost, loBody=LOBlockFetchServerSending{loBlock}} ->
     let mbe0 = Map.lookup loBlock bMap
-               & fromMaybe (fail loBlock $ BPEUnexpectedAsFirst Send)
+               & fromMaybe (fail loHost loBlock $ BPEUnexpectedAsFirst Send)
     in if isJust (mbeSending mbe0) then bMap else
       bimapMbe
       (\x -> x { bfeSending=Just loAt })
@@ -659,11 +670,11 @@ blockPropMachEventsStep ci (JsonLogfile fp) bMap lo = case lo of
       & doInsert loBlock
   _ -> bMap
  where
-   fail' :: Hash -> BPErrorKind -> BPError
-   fail' hash desc = BPError hash (Just fp) (Just lo) desc
+   fail' :: Host -> Hash -> BPErrorKind -> BPError
+   fail' host hash desc = BPError host hash (Just lo) desc
 
-   fail :: Hash -> BPErrorKind -> MachBlockEvents a
-   fail hash desc = MBE $ fail' hash desc
+   fail :: Host -> Hash -> BPErrorKind -> MachBlockEvents a
+   fail host hash desc = MBE $ fail' host hash desc
 
    doInsert :: Hash -> MachBlockEvents UTCTime -> MachBlockMap UTCTime
    doInsert k x = Map.insert k x bMap
@@ -695,7 +706,7 @@ deltifyEvents (MOE x@ObserverEvents{..}) =
 
 collectEventErrors :: MachBlockEvents NominalDiffTime -> [Phase] -> [BPError]
 collectEventErrors mbe phases =
-  [ BPError (mbeBlock mbe) Nothing Nothing $
+  [ BPError (mbeHost mbe) (mbeBlock mbe) Nothing $
     case (miss, proj) of
       (,) True _       -> BPEMissingPhase phase
       (,) _ (Just neg) -> BPENegativePhase phase neg
