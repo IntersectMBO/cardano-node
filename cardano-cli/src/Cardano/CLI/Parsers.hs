@@ -11,7 +11,6 @@ import           Cardano.CLI.Byron.Parsers (backwardsCompatibilityCommands, pars
 import           Cardano.CLI.Run (ClientCommand (..))
 import           Cardano.CLI.Shelley.Parsers (parseShelleyCommands)
 import           Options.Applicative
-import           Options.Applicative.Help.Ann
 import           Options.Applicative.Help.Types (helpText)
 import           Prelude (String)
 import           Prettyprinter
@@ -51,7 +50,7 @@ customRenderHelp cols
   . (<> "\n</html>")
   . (<> "\n</body>")
   . (<> "\n</pre>")
-  . renderSimplyDecorated id (\(AnnTrace _ name) x -> "<span name=" <> show name <> ">" <> x <> "</span>")
+  . renderSimplyDecorated id (flip const)
   . treeForm
   . layoutSmart (LayoutOptions (AvailablePerLine cols 1.0))
   . helpText

@@ -5,26 +5,12 @@ module Cardano.CLI.Render
   ) where
 
 import Data.Function
-import Data.Ord
-import Options.Applicative.Help.Ann
 import Prettyprinter
 import Prettyprinter.Render.Util.Panic
 import Text.Show
 
 import qualified Data.List as L
 import qualified Data.Text as T
-
-renderOpenAnn :: Ann -> ShowS
-renderOpenAnn ann = case ann of
-  AnnTrace _ s -> id
-    . ("<span trace=" <>)
-    . (show s <>)
-    . (">" <>)
-
-renderCloseAnn :: Ann -> ShowS
-renderCloseAnn ann = case ann of
-  AnnTrace _ _ -> id
-    . (<> "</span>")
 
 -- | Render a 'SimpleDocStream' to a 'ShowS', useful to write 'Show' instances
 -- based on the prettyprinter.
@@ -33,7 +19,7 @@ renderCloseAnn ann = case ann of
 -- instance 'Show' MyType where
 --     'showsPrec' _ = 'renderHtmlShowS' . 'layoutPretty' 'defaultLayoutOptions' . 'pretty'
 -- @
-renderHtmlShowS :: SimpleDocStream Ann -> ShowS
+renderHtmlShowS :: SimpleDocStream () -> ShowS
 renderHtmlShowS ds = id
   . ("<html>\n" <>)
   . ("<body>\n" <>)
@@ -41,18 +27,14 @@ renderHtmlShowS ds = id
   . (<> "\n</pre>")
   . (<> "\n</body>")
   . (<> "\n</html>")
-  . go [] ds
+  . go ds
   where
-    go :: [Ann] -> SimpleDocStream Ann -> ShowS
-    go anns sds = case sds of
+    go :: SimpleDocStream () -> ShowS
+    go sds = case sds of
       SFail           -> panicUncaughtFail
       SEmpty          -> id
-      SChar c x       -> showChar c . go anns x
-      SText _l t x    -> showString (T.unpack t) . go anns x
-      SLine i x       -> showString ('\n' : L.replicate i ' ') . go anns x
-      SAnnPush ann x  -> onLevel ann (renderOpenAnn ann) . go (ann:anns) x
-      SAnnPop x       -> case anns of
-        (a:as) -> go as x . onLevel a (renderCloseAnn a)
-        [] -> go [] x
-    onLevel :: Ann -> ShowS -> ShowS
-    onLevel (AnnTrace n _) f = if n >= 2 then f else id
+      SChar c x       -> showChar c . go x
+      SText _l t x    -> showString (T.unpack t) . go x
+      SLine i x       -> showString ('\n' : L.replicate i ' ') . go x
+      SAnnPush _ x    -> go x
+      SAnnPop x       -> go x
