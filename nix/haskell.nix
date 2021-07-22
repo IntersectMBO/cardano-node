@@ -74,9 +74,9 @@ let
       }
       {
         # Use the VRF fork of libsodium
-        packages = lib.genAttrs [ "cardano-crypto-praos" "cardano-crypto-class" ] (_:
+        packages = lib.genAttrs [ "cardano-crypto-praos" "cardano-crypto-class" ] (_: {
           components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
-        );
+        });
       }
       {
         # make sure that libsodium DLLs are available for windows binaries:
