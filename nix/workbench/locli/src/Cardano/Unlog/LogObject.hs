@@ -204,11 +204,13 @@ interpreters = Map.fromList
   , (,) "TraceAddBlockEvent.AddedToCurrentChain" $
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
+            <*> pure Nothing
             <*> v .: "chainLengthDelta"
   -- TODO: we should clarify the distinction between the two cases (^ and v).
   , (,) "TraceAdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
+            <*> ((v .: "blockSize") <&> Just)
             <*> pure 1
   , (,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" $
     \v -> LOChainSyncServerSendHeader
@@ -265,6 +267,7 @@ data LOBody
     }
   | LOBlockAddedToCurrentChain
     { loBlock            :: !Hash
+    , loSize             :: !(Maybe Int)
     , loLength           :: !Int
     }
   | LOChainSyncServerSendHeader

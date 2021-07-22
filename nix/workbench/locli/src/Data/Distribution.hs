@@ -30,7 +30,7 @@ import Prelude (String, (!!), head, last, show)
 import Cardano.Prelude hiding (head, show)
 
 import Control.Arrow
-import Data.Aeson (ToJSON(..))
+import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.Foldable qualified as F
 import Data.List (span)
 import Data.Vector (Vector)
@@ -46,9 +46,13 @@ data Distribution a b =
   }
   deriving (Functor, Generic, Show)
 
-instance (ToJSON a, ToJSON b) => ToJSON (Distribution a b)
+instance (FromJSON a, FromJSON b) => FromJSON (Distribution a b)
+instance (  ToJSON a,   ToJSON b) => ToJSON   (Distribution a b)
 
 newtype PercSpec a = Perc { psFrac :: a } deriving (Generic, Show)
+
+instance (FromJSON a) => FromJSON (PercSpec a)
+instance (  ToJSON a) => ToJSON   (PercSpec a)
 
 dPercIx :: Distribution a b -> Int -> b
 dPercIx d = pctSample . (dPercentiles d !!)
@@ -64,6 +68,9 @@ data Percentile a b =
   }
   deriving (Functor, Generic, Show)
 
+instance (FromJSON a, FromJSON b) => FromJSON (Percentile a b)
+instance (  ToJSON a,   ToJSON b) => ToJSON   (Percentile a b)
+
 pctFrac :: Percentile a b -> a
 pctFrac = psFrac . pctSpec
 
@@ -78,9 +85,6 @@ stdPercentiles =
   , Perc 0.995, Perc 0.997, Perc 0.998, Perc 0.999
   , Perc 0.9995, Perc 0.9997, Perc 0.9998, Perc 0.9999
   ]
-
-instance (ToJSON a) => ToJSON (PercSpec a)
-instance (ToJSON a, ToJSON b) => ToJSON (Percentile a b)
 
 zeroDistribution :: Num a => Distribution a b
 zeroDistribution =

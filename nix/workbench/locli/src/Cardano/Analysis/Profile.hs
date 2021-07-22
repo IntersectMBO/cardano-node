@@ -130,6 +130,9 @@ slotStart CInfo{..} =
 sinceSlot :: UTCTime -> SlotStart -> NominalDiffTime
 sinceSlot t (SlotStart start) = Time.diffUTCTime t start
 
+afterSlot :: NominalDiffTime -> SlotStart -> UTCTime
+afterSlot t (SlotStart start) = Time.addUTCTime t start
+
 -- pChainParams :: Parser ChainParams
 -- pChainParams =
 --   ChainParams
