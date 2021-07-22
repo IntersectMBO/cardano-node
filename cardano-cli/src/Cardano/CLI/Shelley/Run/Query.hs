@@ -23,7 +23,7 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 import           Cardano.Binary (decodeFull)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Helpers (HelpersError (..), pPrintCBOR, renderHelpersError, hushM)
+import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Mary.RenderValue (defaultRenderValueOptions, renderValue)
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
@@ -41,7 +41,8 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.List (nub)
 import           Data.Time.Clock
 import           Numeric (showEFloat)
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..), SystemStart (..), toRelativeTime)
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
+                   SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
@@ -51,19 +52,19 @@ import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
 import           Shelley.Spec.Ledger.Scripts ()
 import           Text.Printf (printf)
 
+import qualified Cardano.CLI.Shelley.Output as O
+import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Ledger.Era as Era
+import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
-import qualified Cardano.CLI.Shelley.Output as O
-import qualified Cardano.Ledger.Crypto as Crypto
-import qualified Cardano.Ledger.Era as Era
-import qualified Cardano.Ledger.Shelley.Constraints as Ledger
-import qualified Data.Text.IO as T
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -232,7 +233,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
             mSyncProgress <- hushM syncProgressResult $ \e -> do
               liftIO . T.hPutStrLn IO.stderr $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
-            
+
             return $ Just $ O.QueryTipLocalStateOutput
               { O.mEra = Just (O.era localState)
               , O.mEpoch = Just epochNo
