@@ -18,15 +18,15 @@ import           Data.Monoid
 import           Hedgehog (Property, (===))
 import           Prelude (head)
 import           System.FilePath ((</>))
-import           Text.Show (Show(..))
+import           Text.Show (Show (..))
 
 import qualified Data.List as L
 import qualified Data.Text as T
-import qualified Hedgehog.Internal.Property as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
+import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified Test.Base as H
@@ -70,4 +70,4 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   result <- T.pack <$> H.readFile resultFile
 
-  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "360000000"
+  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "1000000"

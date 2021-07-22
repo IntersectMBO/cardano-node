@@ -10,7 +10,7 @@ module Spec.Plutus.Direct.TxInLockingPlutus
 
 import           Control.Applicative
 import           Control.Monad
-import           Data.Aeson (FromJSON(..), Value, (.:))
+import           Data.Aeson (FromJSON (..), Value, (.:))
 import           Data.Bool (not)
 import           Data.Eq
 import           Data.Function
@@ -19,14 +19,14 @@ import           Data.HashMap.Lazy (HashMap)
 import           Data.Int
 import           Data.List ((!!))
 import           Data.Maybe
-import           Data.Monoid (Last(..), (<>))
+import           Data.Monoid (Last (..), (<>))
 import           Data.Text (Text)
 import           GHC.Num
 import           GHC.Real
 import           Hedgehog (Property, (===))
 import           Prelude (head)
 import           System.FilePath ((</>))
-import           Text.Show (Show(..))
+import           Text.Show (Show (..))
 
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
@@ -192,13 +192,14 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   lovelaceAtplutusScriptAddr <- H.nothingFailM . H.noteShow $ plutusUtxo & HM.lookup plutusUtxoTxIn <&> value >>= HM.lookup "lovelace"
 
-  txFee <- H.noteShow $ plutusRequiredTime + plutusRequiredSpace
   spendable <- H.noteShow $ lovelaceAtplutusScriptAddr - plutusRequiredTime - plutusRequiredSpace
 
-  void $ H.execCli
-    [ "transaction", "build-raw"
+  void $ H.execCli' execConfig
+    [ "transaction", "build"
     , "--alonzo-era"
-    , "--fee", show @Integer txFee
+    , "--cardano-mode"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--change-address", dummyaddress
     , "--tx-in", T.unpack plutusUtxoTxIn
     , "--tx-in-collateral", T.unpack txinCollateral
     , "--tx-out", dummyaddress <> "+" <> show @Integer spendable
@@ -206,7 +207,6 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
     , "--tx-in-datum-file", datumFile
     , "--protocol-params-file", work </> "pparams.json"
     , "--tx-in-redeemer-file", redeemerFile
-    , "--tx-in-execution-units", show @(Integer, Integer) (plutusRequiredTime, plutusRequiredSpace)
     , "--out-file", work </> "test-alonzo.body"
     ]
 
@@ -225,13 +225,13 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
     ]
 
   H.threadDelay 5000000
-  
+
   -- Querying UTxO at $dummyaddress. If there is ADA at the address the Plutus script successfully executed!
-  
+
   result <- T.pack <$> H.execCli' execConfig
     [ "query", "utxo"
     , "--address", dummyaddress
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "360000000"
+  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "139837584"

@@ -107,7 +107,7 @@ echo "$txinCollateral"
 $CARDANO_CLI transaction build \
   --alonzo-era \
   --cardano-mode \
-  --testnet-magic 42 \
+  --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in $plutusutxotxin \
   --tx-in-collateral $txinCollateral \

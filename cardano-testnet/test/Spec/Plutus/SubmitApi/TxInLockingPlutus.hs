@@ -10,7 +10,7 @@ module Spec.Plutus.SubmitApi.TxInLockingPlutus
 
 import           Control.Applicative
 import           Control.Monad
-import           Data.Aeson (FromJSON(..), Value, (.:))
+import           Data.Aeson (FromJSON (..), Value, (.:))
 import           Data.Bool (not)
 import           Data.Eq
 import           Data.Function
@@ -19,24 +19,25 @@ import           Data.HashMap.Lazy (HashMap)
 import           Data.Int
 import           Data.List ((!!))
 import           Data.Maybe
-import           Data.Monoid (Last(..), (<>))
+import           Data.Monoid (Last (..), (<>))
 import           Data.Text (Text)
-import           GHC.Real
 import           GHC.Num
+import           GHC.Real
 import           Hedgehog (Property, (===))
 import           Prelude (head)
 import           System.FilePath ((</>))
-import           Text.Show (Show(..))
+import           Text.Show (Show (..))
 
 import qualified Data.Aeson as J
-import qualified Data.List as List
 import qualified Data.HashMap.Lazy as HM
+import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test as HE
 import qualified System.Directory as IO
 import qualified Test.Base as Test
+import qualified Test.Process as H
 import qualified Test.Process as Test
 import qualified Testnet.Cardano as TN
 import qualified Testnet.Conf as TN
@@ -200,13 +201,14 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
 
   lovelaceAtplutusScriptAddr <- HE.nothingFailM . HE.noteShow $ plutusUtxo & HM.lookup plutusUtxoTxIn <&> value >>= HM.lookup "lovelace"
 
-  txFee <- HE.noteShow $ plutusRequiredTime + plutusRequiredSpace
   spendable <- HE.noteShow $ lovelaceAtplutusScriptAddr - plutusRequiredTime - plutusRequiredSpace
 
-  void $ Test.execCli
-    [ "transaction", "build-raw"
+  void $ H.execCli' execConfig
+    [ "transaction", "build"
     , "--alonzo-era"
-    , "--fee", show @Integer txFee
+    , "--cardano-mode"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--change-address", dummyaddress
     , "--tx-in", Text.unpack plutusUtxoTxIn
     , "--tx-in-collateral", Text.unpack txinCollateral
     , "--tx-out", dummyaddress <> "+" <> show @Integer spendable
@@ -214,7 +216,6 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
     , "--tx-in-datum-file", datumFile
     , "--protocol-params-file", work </> "pparams.json"
     , "--tx-in-redeemer-file", redeemerFile
-    , "--tx-in-execution-units", show @(Integer, Integer) (plutusRequiredTime, plutusRequiredSpace)
     , "--out-file", work </> "test-alonzo.body"
     ]
 
@@ -231,7 +232,7 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
   HE.threadDelay 5000000
 
   -- Querying UTxO at $dummyaddress. If there is ADA at the address the Plutus script successfully executed!
-  
+
   result <- H.evalM $ Text.pack <$> Test.execCli' execConfig
     [ "query", "utxo"
     , "--address", dummyaddress
@@ -240,4 +241,4 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
 
   HE.note_ $ Text.unpack result
 
-  List.filter (not . Text.null) (Text.splitOn " " (Text.lines result !! 2)) !! 2 === "360000000"
+  List.filter (not . Text.null) (Text.splitOn " " (Text.lines result !! 2)) !! 2 === "139837584"
