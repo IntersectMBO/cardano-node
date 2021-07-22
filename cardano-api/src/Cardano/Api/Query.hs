@@ -24,6 +24,7 @@ module Cardano.Api.Query (
     QueryInShelleyBasedEra(..),
     QueryUTxOFilter(..),
     UTxO(..),
+    UTxOInAnyEra(..),
 
     -- * Internal conversion functions
     toConsensusQuery,
@@ -240,6 +241,14 @@ newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
 
 newtype UTxO era = UTxO (Map TxIn (TxOut era))
+  deriving (Eq, Show)
+
+data UTxOInAnyEra where
+  UTxOInAnyEra :: CardanoEra era
+               -> UTxO era
+               -> UTxOInAnyEra
+
+deriving instance Show UTxOInAnyEra
 
 instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m

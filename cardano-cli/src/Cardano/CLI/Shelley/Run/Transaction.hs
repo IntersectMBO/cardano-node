@@ -2,7 +2,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
@@ -83,7 +82,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxSubmitErrorMary !(ApplyTxErr (ShelleyBlock StandardMary))
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxCmdTxFeatureMismatch AnyCardanoEra TxFeature
-  | ShelleyTxCmdTxBodyError SomeTxBodyError
+  | ShelleyTxCmdTxBodyError TxBodyError
   | ShelleyTxCmdNotImplemented Text
   | ShelleyTxCmdWitnessEraMismatch AnyCardanoEra AnyCardanoEra WitnessFile
   | ShelleyTxCmdScriptLanguageNotSupportedInEra AnyScriptLanguage AnyCardanoEra
@@ -93,11 +92,6 @@ data ShelleyTxCmdError
   | ShelleyTxCmdPolicyIdsMissing [PolicyId]
   | ShelleyTxCmdPolicyIdsExcess  [PolicyId]
   deriving Show
-
-data SomeTxBodyError where
-     SomeTxBodyError :: TxBodyError era -> SomeTxBodyError
-
-deriving instance Show SomeTxBodyError
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -165,7 +159,7 @@ renderShelleyTxCmdError err =
       renderFeature feature <> " cannot be used for " <> renderEra era <>
       " era transactions."
 
-    ShelleyTxCmdTxBodyError (SomeTxBodyError err') ->
+    ShelleyTxCmdTxBodyError err' ->
       "Transaction validaton error: " <> Text.pack (displayError err')
 
     ShelleyTxCmdNotImplemented msg ->
@@ -315,7 +309,7 @@ runTxBuildRaw (AnyCardanoEra era)
         <*> validateTxMintValue      era mValue
 
     txBody <-
-      firstExceptT (ShelleyTxCmdTxBodyError . SomeTxBodyError) . hoistEither $
+      firstExceptT ShelleyTxCmdTxBodyError . hoistEither $
         makeTransactionBody txBodyContent
 
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
