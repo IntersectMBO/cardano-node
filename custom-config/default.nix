@@ -1,5 +1,6 @@
 self: {
   withHoogle = true;
+  withR = false;
   localCluster = {
     cacheDir    = "${self.localCluster.stateDir}/.cache";
     stateDir    = "state-cluster";

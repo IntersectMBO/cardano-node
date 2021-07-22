@@ -41,7 +41,8 @@
           gitrev = self.rev or "dirty";
           commonLib = lib
             // iohkNix.lib
-            // final.cardanoLib;
+            // final.cardanoLib
+            // import ./nix/svclib.nix { inherit (final) pkgs; };
         })
         (import ./nix/pkgs.nix)
       ];
