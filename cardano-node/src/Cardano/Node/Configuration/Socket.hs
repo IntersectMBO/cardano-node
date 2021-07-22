@@ -23,6 +23,8 @@ import qualified Network.Socket as Socket
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
+import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
+
 #if !defined(mingw32_HOST_OS)
 import           System.Directory (removeFile)
 import           System.IO.Error (isDoesNotExistError)
@@ -111,9 +113,9 @@ renderSocketConfigError (GetAddrInfoError addr port ex) =
 --
 gatherConfiguredSockets :: NodeConfiguration
                         -> ExceptT SocketConfigError IO
-                                   (Maybe (SocketOrSocketInfo Socket SockAddr),
-                                    Maybe (SocketOrSocketInfo Socket SockAddr),
-                                    Maybe (SocketOrSocketInfo Socket SocketPath))
+                                   (Maybe (SocketOrSocketInfo Socket      SockAddr),
+                                    Maybe (SocketOrSocketInfo Socket      SockAddr),
+                                    Maybe (SocketOrSocketInfo LocalSocket LocalAddress))
 gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
                                             ncNodeIPv6Addr,
                                             ncNodePortNumber,
@@ -176,7 +178,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
 
     -- Select the socket or path for local node-to-client comms
     --
-    let firstUnixSocket :: Maybe Socket
+    let firstUnixSocket :: Maybe LocalSocket
         firstUnixSocket = join $ listToMaybe . (\(_, _, a) -> a) <$> systemDSockets
 
     -- only when 'ncSocketpath' is specified or a unix socket is passed through
@@ -185,8 +187,9 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
       (Nothing, Nothing)    -> return Nothing
       (Just _, Just _)      -> throwError ClashingLocalSocketGiven
       (Nothing, Just sock)  -> return . Just $ ActualSocket sock
-      (Just path, Nothing)  -> removeStaleLocalSocket path
-                            $> Just (SocketInfo path)
+      (Just (SocketPath path), Nothing)
+                            -> removeStaleLocalSocket path
+                            $> Just (SocketInfo (LocalAddress path))
 
     return (ipv4', ipv6', local)
 
@@ -194,12 +197,12 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
 -- | Binding a local unix domain socket always expects to create it, and fails
 -- if it exists already. So we delete it first if it exists. But only on unix.
 --
-removeStaleLocalSocket :: SocketPath -> ExceptT SocketConfigError IO ()
+removeStaleLocalSocket :: FilePath -> ExceptT SocketConfigError IO ()
 #if defined(mingw32_HOST_OS)
 removeStaleLocalSocket _ =
     return ()
 #else
-removeStaleLocalSocket (SocketPath path) =
+removeStaleLocalSocket path =
     handleIOExceptT (LocalSocketError path) $
       removeFile path `catch` \e ->
         if isDoesNotExistError e then return ()
@@ -225,7 +228,7 @@ nodeAddressInfo mbHostAddr mbPort =
 -- | Possibly return systemd-activated sockets.  Splits the sockets into three
 -- groups:'AF_INET' and 'AF_INET6', 'AF_UNIX'.
 --
-getSystemdSockets :: IO (Maybe ([Socket], [Socket], [Socket]))
+getSystemdSockets :: IO (Maybe ([Socket], [Socket], [LocalSocket]))
 #ifdef SYSTEMD
 getSystemdSockets = do
   sds_m <- getActivatedSockets
@@ -235,10 +238,13 @@ getSystemdSockets = do
          Just <$>
           foldM (\(ipv4s, ipv6s, unixs) sock -> do
                   addr <- Socket.getSocketName sock
-                  case addr of
-                    Socket.SockAddrInet {}  -> return (sock : ipv4s,        ipv6s,        unixs)
-                    Socket.SockAddrInet6 {} -> return (       ipv4s, sock : ipv6s,        unixs)
-                    Socket.SockAddrUnix {}  -> return (       ipv4s,        ipv6s, sock : unixs))
+                  return $ case addr of
+                    Socket.SockAddrInet {}  ->
+                      (sock : ipv4s,        ipv6s,                    unixs)
+                    Socket.SockAddrInet6 {} ->
+                      (       ipv4s, sock : ipv6s,                    unixs)
+                    Socket.SockAddrUnix {}  ->
+                      (       ipv4s,        ipv6s, LocalSocket sock : unixs))
                 ([], [], [])
                 socks
 #else
