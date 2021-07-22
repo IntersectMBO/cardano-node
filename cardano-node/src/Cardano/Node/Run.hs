@@ -281,13 +281,9 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                 Nothing                    -> Nothing
           , Diffusion.daLocalAddress =
               case localSocketOrPath of  -- TODO allow expressing the Nothing case in the config
-#if defined(UNIX)
-                Just (ActualSocket socket)          -> Just (Left  $ LocalSocket socket)
-#else
-                Just  ActualSocket{}                -> Nothing
-#endif
-                Just (SocketInfo (SocketPath path)) -> Just (Right $ LocalAddress path)
-                Nothing                             -> Nothing
+                Just (ActualSocket localSocket)  -> Just (Left  localSocket)
+                Just (SocketInfo localAddr)      -> Just (Right localAddr)
+                Nothing                          -> Nothing
           , Diffusion.daAcceptedConnectionsLimit =
               AcceptedConnectionsLimit
                 { acceptedConnectionsHardLimit = 512
