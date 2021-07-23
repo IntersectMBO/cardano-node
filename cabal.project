@@ -12,6 +12,7 @@ packages:
     bench/cardano-topology
     bench/locli
     bench/tx-generator
+    trace-forward
 
 package cardano-api
   ghc-options: -Werror
@@ -58,6 +59,9 @@ package cardano-node-chairman
   tests: True
 
 package cardano-testnet
+  tests: True
+
+package trace-forward
   tests: True
 
 -- The following is needed because Nix is doing something crazy.

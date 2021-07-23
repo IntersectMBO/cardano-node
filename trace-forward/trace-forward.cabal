@@ -1,0 +1,93 @@
+cabal-version:       2.4
+name:                trace-forward
+version:             0.1.0
+synopsis:            See README for more info
+description:         See README for more info
+license:             Apache-2.0
+license-file:        LICENSE
+copyright:           2021 Input Output (Hong Kong) Ltd.
+author:              IOHK
+maintainer:          operations@iohk.io
+build-type:          Simple
+extra-doc-files:     README.md
+                     CHANGELOG.md
+
+common base            { build-depends: base >= 4.14 && < 4.15 }
+
+common project-config
+  default-language:    Haskell2010
+
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wno-unticked-promoted-constructors
+                       -Wno-orphans
+                       -Wpartial-fields
+                       -Wredundant-constraints
+                       -Wunused-packages
+
+library
+  import:              base, project-config
+  hs-source-dirs:      src
+
+  exposed-modules:     Trace.Forward.Acceptor
+                       Trace.Forward.Configuration
+                       Trace.Forward.Forwarder
+                       Trace.Forward.Queue
+
+                       Trace.Forward.Network.Acceptor
+                       Trace.Forward.Network.Forwarder
+
+                       Trace.Forward.Protocol.Acceptor
+                       Trace.Forward.Protocol.Codec
+                       Trace.Forward.Protocol.Forwarder
+                       Trace.Forward.Protocol.Type
+
+  other-modules:       Trace.Forward.Utils
+
+  build-depends:         async
+                       , bytestring
+                       , cborg
+                       , contra-tracer
+                       , extra
+                       , io-classes
+                       , network
+                       , ouroboros-network-framework
+                       , serialise
+                       , stm
+                       , text
+                       , time
+                       , typed-protocols
+
+test-suite test
+  import:              base, project-config
+  type:                exitcode-stdio-1.0
+  main-is:             Main.hs
+  hs-source-dirs:      test
+
+  other-modules:       Test.Trace.Forward.Protocol.Codec
+                       Test.Trace.Forward.Protocol.Tests
+                       Test.Trace.Forward.Protocol.TraceItem
+                       Test.Trace.Forward.Demo.Configs
+                       Test.Trace.Forward.Demo.Tests
+
+  build-depends:         async
+                       , contra-tracer
+                       , directory
+                       , extra
+                       , filepath
+                       , ouroboros-network-framework
+                       , trace-forward
+                       , QuickCheck
+                       , serialise
+                       , stm
+                       , tasty
+                       , tasty-quickcheck
+                       , typed-protocols
+                       , typed-protocols-examples
+                       , text
+                       , time
+
+  ghc-options:         -rtsopts
+                       -threaded

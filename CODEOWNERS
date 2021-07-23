@@ -23,6 +23,7 @@ bench/tx-generator                                            @deepfire @MarcFon
 bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
+trace-forward                                                 @deepfire @denisshevchenko @jutaro
 Makefile                                                      @deepfire
 
 .buildkite                                                    @devops
