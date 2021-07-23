@@ -550,6 +550,8 @@ module Cardano.Api (
     QueryUTxOFilter(..),
     UTxO(..),
     queryNodeLocalState,
+    QueryError(..),
+    MinNodeToClientVersion,
 
     EraHistory(..),
     getProgress,
@@ -616,12 +618,13 @@ module Cardano.Api (
     LocalStateQueryExpr,
     executeLocalStateQueryExpr,
     queryExpr,
+    maybeQueryExpr,
     determineEraExpr,
+    getNtcVersion,
 
     chainPointToSlotNo,
     chainPointToHeaderHash,
     makeChainTip
-
   ) where
 
 import           Cardano.Api.Address

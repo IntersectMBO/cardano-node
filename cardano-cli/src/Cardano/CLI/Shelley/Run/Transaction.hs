@@ -113,6 +113,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxInsDoNotExist ![TxIn]
   | ShelleyTxCmdMinimumUTxOErr !MinimumUTxOError
   | ShelleyTxCmdPParamsErr !ProtocolParametersError
+  | ShelleyTxCmdUnsupportedVersion !MinNodeToClientVersion !NodeToClientVersion
+
   deriving Show
 
 
@@ -243,6 +245,10 @@ renderShelleyTxCmdError err =
       Text.intercalate (Text.singleton '\n') (map renderTxIn txins)
     ShelleyTxCmdMinimumUTxOErr err' -> Text.pack $ displayError err'
     ShelleyTxCmdPParamsErr err' -> Text.pack $ displayError err'
+    ShelleyTxCmdUnsupportedVersion minNtcVersion ntcVersion ->
+      "Unsupported feature for the node-to-client protocol version.\n\
+      \This transaction requires at least " <> show minNtcVersion <> " but the node negotiated " <> show ntcVersion <> ".\n\
+      \Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -372,6 +378,11 @@ runTxBuildRaw (AnyCardanoEra era)
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
 
+queryErrorToShelleyTxCmdError :: QueryError ShelleyTxCmdError -> ShelleyTxCmdError
+queryErrorToShelleyTxCmdError (QueryErrorOf e) = e
+queryErrorToShelleyTxCmdError (QueryErrorAcquireFailure a) = ShelleyTxCmdAcquireFailure a
+queryErrorToShelleyTxCmdError (QueryErrorUnsupportedVersion minNtcVersion mtcVersion) = ShelleyTxCmdUnsupportedVersion minNtcVersion mtcVersion
+
 runTxBuild
   :: AnyCardanoEra
   -> AnyConsensusModeParams
@@ -442,8 +453,8 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
       (utxo, pparams, eraHistory, systemStart, stakePools) <-
-        newExceptT . fmap (join . first ShelleyTxCmdAcquireFailure) $
-          executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
+        newExceptT . fmap (join . first queryErrorToShelleyTxCmdError) $
+          executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
             unless (null txinsc) $ do
               collateralUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
                 $ QueryInEra eInMode
@@ -463,7 +474,6 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
             eraHistory <- lift . queryExpr $ QueryEraHistory CardanoModeIsMultiEra
 
             systemStart <- lift $ queryExpr QuerySystemStart
-
 
             stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT $
               queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools

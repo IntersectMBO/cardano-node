@@ -249,7 +249,8 @@ queryEra :: ActionM AnyCardanoEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) $ QueryCurrentEra CardanoModeIsMultiEra
+  ret <- liftIO $ executeLocalStateQueryExpr @() localNodeConnectInfo (Just $ chainTipToChainPoint chainTip)
+    $ queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
   case ret of
     Right era -> return era
     Left err -> throwE $ ApiError $ show err
@@ -258,8 +259,8 @@ queryProtocolParameters :: ActionM ProtocolParameters
 queryProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip)
-                    $ QueryInEra AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
+  ret <- liftIO $ executeLocalStateQueryExpr @() localNodeConnectInfo (Just $ chainTipToChainPoint chainTip)
+    $ queryExpr $ QueryInEra AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
   case ret of
     Right (Right pp) -> return pp
     Right (Left err) -> throwE $ ApiError $ show err

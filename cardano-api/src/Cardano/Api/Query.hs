@@ -85,6 +85,7 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised)
+import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 
 import           Cardano.Binary
 import           Cardano.Slotting.Slot (WithOrigin (..))
@@ -102,6 +103,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
+import           Cardano.Api.IPC.NtcVersionOf (NtcVersionOf (..))
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
@@ -140,6 +142,14 @@ data QueryInMode mode result where
     :: ConsensusMode mode
     -> QueryInMode mode ChainPoint
 
+instance NtcVersionOf (QueryInMode mode result) where
+  ntcVersionOf (QueryCurrentEra _) = NodeToClientV_1
+  ntcVersionOf (QueryInEra _ q) = ntcVersionOf q
+  ntcVersionOf (QueryEraHistory _) = NodeToClientV_1
+  ntcVersionOf QuerySystemStart = NodeToClientV_9
+  ntcVersionOf QueryChainBlockNo = NodeToClientV_10
+  ntcVersionOf (QueryChainPoint _) = NodeToClientV_10
+
 data EraHistory mode where
   EraHistory
     :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
@@ -172,6 +182,10 @@ data QueryInEra era result where
      QueryInShelleyBasedEra :: ShelleyBasedEra era
                             -> QueryInShelleyBasedEra era result
                             -> QueryInEra era result
+
+instance NtcVersionOf (QueryInEra era result) where
+  ntcVersionOf QueryByronUpdateState = NodeToClientV_1
+  ntcVersionOf (QueryInShelleyBasedEra _ q) = ntcVersionOf q
 
 deriving instance Show (QueryInEra era result)
 
@@ -220,6 +234,19 @@ data QueryInShelleyBasedEra era result where
      QueryProtocolState
        :: QueryInShelleyBasedEra era (ProtocolState era)
 
+instance NtcVersionOf (QueryInShelleyBasedEra era result) where
+  ntcVersionOf QueryEpoch = NodeToClientV_1
+  ntcVersionOf QueryGenesisParameters = NodeToClientV_1
+  ntcVersionOf QueryProtocolParameters = NodeToClientV_1
+  ntcVersionOf QueryProtocolParametersUpdate = NodeToClientV_1
+  ntcVersionOf QueryStakeDistribution = NodeToClientV_1
+  ntcVersionOf (QueryUTxO f) = ntcVersionOf f
+  ntcVersionOf (QueryStakeAddresses _ _) = NodeToClientV_1
+  ntcVersionOf QueryStakePools = NodeToClientV_1
+  ntcVersionOf (QueryStakePoolParameters _) = NodeToClientV_1
+  ntcVersionOf QueryDebugLedgerState = NodeToClientV_1
+  ntcVersionOf QueryProtocolState = NodeToClientV_1
+
 deriving instance Show (QueryInShelleyBasedEra era result)
 
 
@@ -245,7 +272,10 @@ data QueryUTxOFilter =
    | QueryUTxOByTxIn (Set TxIn)
   deriving (Eq, Show)
 
---TODO: provide appropriate instances for these types as needed, e.g. JSON
+instance NtcVersionOf QueryUTxOFilter where
+  ntcVersionOf QueryUTxOWhole = NodeToClientV_1
+  ntcVersionOf (QueryUTxOByAddress _) = NodeToClientV_1
+  ntcVersionOf (QueryUTxOByTxIn _) = NodeToClientV_9
 
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show

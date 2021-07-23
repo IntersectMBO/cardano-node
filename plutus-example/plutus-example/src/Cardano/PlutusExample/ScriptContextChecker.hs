@@ -243,6 +243,7 @@ data ScriptContextError = NoScriptsInByronEra
                         | QueryError ShelleyQueryCmdError
                         | ConsensusModeMismatch AnyConsensusMode AnyCardanoEra
                         | EraMismatch !Consensus.EraMismatch
+                        | ScriptContextUnsupportedVersion !MinNodeToClientVersion !MinNodeToClientVersion
                         deriving Show
 
 txToCustomRedeemer
@@ -304,6 +305,11 @@ obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 testScriptContextToScriptData :: MyCustomRedeemer -> ScriptData
 testScriptContextToScriptData = fromPlutusData . PlutusTx.builtinDataToData . toBuiltinData
 
+queryErrorToScriptContextError :: QueryError ScriptContextError -> ScriptContextError
+queryErrorToScriptContextError (QueryErrorOf e) = e
+queryErrorToScriptContextError (QueryErrorAcquireFailure a) = AcquireFail a
+queryErrorToScriptContextError (QueryErrorUnsupportedVersion minNtcVersion mtcVersion) = ScriptContextUnsupportedVersion minNtcVersion mtcVersion
+
 readCustomRedeemerFromTx
   :: FilePath
   -> AnyConsensusModeParams
@@ -327,20 +333,15 @@ readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
                    (ConsensusModeMismatch (AnyConsensusMode CardanoMode) (AnyCardanoEra cEra))
                    $ toEraInMode cEra CardanoMode
 
-      eResult <-
-        liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing
-          $ \ntcVersion -> do
-              (EraHistory _ interpreter) <- queryExpr $ QueryEraHistory CardanoModeIsMultiEra
-              mSystemStart <-
-                if ntcVersion Prelude.>= NodeToClientV_9
-                then Just Prelude.<$> queryExpr QuerySystemStart
-                else return Nothing
-              let eInfo = hoistEpochInfo (first TransactionValidityIntervalError . runExcept)
-                            $ Consensus.interpreterToEpochInfo interpreter
-              ppResult <- queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
-              return (eInfo, mSystemStart, ppResult)
+      eResult <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ do
+        (EraHistory _ interpreter) <- queryExpr $ QueryEraHistory CardanoModeIsMultiEra
+        mSystemStart <- maybeQueryExpr QuerySystemStart
+        let eInfo = hoistEpochInfo (first TransactionValidityIntervalError . runExcept)
+                      $ Consensus.interpreterToEpochInfo interpreter
+        ppResult <- queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+        return (eInfo, mSystemStart, ppResult)
 
-      (eInfo, mSystemStart, ePParams) <- firstExceptT AcquireFail $ hoistEither eResult
+      (eInfo, mSystemStart, ePParams) <- firstExceptT queryErrorToScriptContextError $ hoistEither eResult
       pparams <- firstExceptT EraMismatch $ hoistEither ePParams
       sStart <- hoistMaybe NoSystemStartTimeError mSystemStart
 
@@ -349,12 +350,8 @@ readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
           utxoQinMode = case toEraInMode cEra CardanoMode of
                           Just eInMode' -> QueryInEra eInMode' utxoQ
                           Nothing -> Prelude.error "Cannot determine era in mode"
-      utxo <- firstExceptT QueryError
-                $ executeQuery
-                    cEra
-                    cModeParams
-                    localNodeConnInfo
-                    utxoQinMode
+      utxo <- firstExceptT QueryError $ executeQuery cEra cModeParams localNodeConnInfo utxoQinMode
+
       hoistEither $ txToCustomRedeemer sbe pparams
                                        utxo eInfo sStart alonzoTx
     _ -> Prelude.error "Please specify --cardano-mode on cli."
