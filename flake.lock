@@ -2,7 +2,7 @@
   "nodes": {
     "customConfig": {
       "locked": {
-        "narHash": "sha256-NdBgwn6xJOM5j+T4ViTq+7FToInEbzvKcdOBpjQvILw=",
+        "narHash": "sha256-20IMxcG6HWg3y8rW459+m+Wlc5NnvrFZz7yKYjbHYyk=",
         "path": "./custom-config",
         "type": "path"
       },
@@ -21,11 +21,11 @@
         "nixpkgs-unstable": "nixpkgs-unstable"
       },
       "locked": {
-        "lastModified": 1626657157,
-        "narHash": "sha256-4TPqLokSoDVUVqYrpnXvX0aSb+v6jLezonPgs4zR/OU=",
+        "lastModified": 1627021000,
+        "narHash": "sha256-QQPTwwwonOkf3gIl67h7G0gGTFZ/CMT44Wro0VTFOpY=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "f9d261d6d90d4aebd97f7ae60c951fc9e1d98493",
+        "rev": "755f3cd8484de242532f8f84b01b1d576565b243",
         "type": "github"
       },
       "original": {
