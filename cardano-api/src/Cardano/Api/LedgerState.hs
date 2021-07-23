@@ -49,6 +49,7 @@ import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.IORef
+import           Data.SOP.Strict (NP (..))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Text (Text)
@@ -65,10 +66,10 @@ import           Cardano.Api.IPC (ConsensusModeParams (CardanoModeParams), Epoch
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
 import           Cardano.Api.Modes (CardanoMode)
-import           Cardano.Api.NetworkId (NetworkId)
+import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
-import qualified Cardano.Crypto
+import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
@@ -86,6 +87,7 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import qualified Ouroboros.Consensus.Config as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
@@ -204,8 +206,6 @@ foldBlocks
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> FilePath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
-  -> NetworkId
-  -- ^ The network ID.
   -> Bool
   -- ^ True to enable validation. Under the hood this will use @applyBlock@
   -- instead of @reapplyBlock@ from the @ApplyBlock@ type class.
@@ -227,7 +227,7 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> ExceptT FoldBlocksError IO a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath networkId enableValidation state0 accumulate = do
+foldBlocks nodeConfigFilePath socketPath enableValidation state0 accumulate = do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -241,7 +241,33 @@ foldBlocks nodeConfigFilePath socketPath networkId enableValidation state0 accum
   errorIORef <- lift $ newIORef Nothing
   stateIORef <- lift $ newIORef state0
 
+  -- Derive the NetworkId as described in network-magic.md from the
+  -- cardano-ledger-specs repo.
+  let byronConfig
+        = (\(Consensus.WrapPartialLedgerConfig (Consensus.ByronPartialLedgerConfig bc _) :* _) -> bc)
+        . HFC.getPerEraLedgerConfig
+        . HFC.hardForkLedgerConfigPerEra
+        $ envLedgerConfig env
+
+      networkMagic
+        = NetworkMagic
+        $ unProtocolMagicId
+        $ Cardano.Chain.Genesis.gdProtocolMagicId
+        $ Cardano.Chain.Genesis.configGenesisData byronConfig
+
+      networkId = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
+        RequiresNoMagic -> Mainnet
+        RequiresMagic -> Testnet networkMagic
+
   -- Connect to the node.
+  let connectInfo :: LocalNodeConnectInfo CardanoMode
+      connectInfo =
+          LocalNodeConnectInfo {
+            localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
+            localNodeNetworkId       = networkId,
+            localNodeSocketPath      = socketPath
+          }
+
   lift $ connectToLocalNode
     connectInfo
     (protocols stateIORef errorIORef env ledgerState)
@@ -250,13 +276,6 @@ foldBlocks nodeConfigFilePath socketPath networkId enableValidation state0 accum
     Just err -> throwE (FoldBlocksApplyBlockError err)
     Nothing -> lift $ readIORef stateIORef
   where
-    connectInfo :: LocalNodeConnectInfo CardanoMode
-    connectInfo =
-        LocalNodeConnectInfo {
-          localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
-          localNodeNetworkId       = networkId,
-          localNodeSocketPath      = socketPath
-        }
 
     protocols :: IORef a -> IORef (Maybe Text) -> Env -> LedgerState -> LocalNodeClientProtocolsInMode CardanoMode
     protocols stateIORef errorIORef env ledgerState =

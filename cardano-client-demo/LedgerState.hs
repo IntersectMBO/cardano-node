@@ -34,7 +34,6 @@ main = do
   blockCount <- fmap (either (error . T.unpack . renderFoldBlocksError) id) $ runExceptT $ foldBlocks
     configFilePath
     socketPath
-    Mainnet
     True -- enable validation?
     (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env
