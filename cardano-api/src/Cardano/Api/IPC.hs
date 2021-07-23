@@ -483,13 +483,14 @@ queryNodeLocalState :: forall mode result.
                     -> IO (Either Net.Query.AcquireFailure result)
 queryNodeLocalState connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO
-    connectToLocalNode
+    connectToLocalNodeWithVersion
       connctInfo
-      LocalNodeClientProtocols {
-        localChainSyncClient    = NoLocalChainSyncClient,
-        localStateQueryClient   = Just (singleQuery mpoint resultVar),
-        localTxSubmissionClient = Nothing
-      }
+      ( \_ntcVersion -> LocalNodeClientProtocols
+        { localChainSyncClient    = NoLocalChainSyncClient
+        , localStateQueryClient   = Just (singleQuery mpoint resultVar)
+        , localTxSubmissionClient = Nothing
+        }
+      )
     atomically (takeTMVar resultVar)
   where
     singleQuery
@@ -522,13 +523,14 @@ submitTxToNodeLocal :: forall mode.
                     -> IO (Net.Tx.SubmitResult (TxValidationErrorInMode mode))
 submitTxToNodeLocal connctInfo tx = do
     resultVar <- newEmptyTMVarIO
-    connectToLocalNode
+    connectToLocalNodeWithVersion
       connctInfo
-      LocalNodeClientProtocols {
-        localChainSyncClient    = NoLocalChainSyncClient,
-        localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar),
-        localStateQueryClient   = Nothing
-      }
+      ( \_ntcVersion -> LocalNodeClientProtocols
+        { localChainSyncClient    = NoLocalChainSyncClient
+        , localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar)
+        , localStateQueryClient   = Nothing
+        }
+      )
     atomically (takeTMVar resultVar)
   where
     localTxSubmissionClientSingle
@@ -550,13 +552,14 @@ submitTxToNodeLocal connctInfo tx = do
 getLocalChainTip :: LocalNodeConnectInfo mode -> IO ChainTip
 getLocalChainTip localNodeConInfo = do
     resultVar <- newEmptyTMVarIO
-    connectToLocalNode
+    connectToLocalNodeWithVersion
       localNodeConInfo
-      LocalNodeClientProtocols
+      ( \_ntcVersion -> LocalNodeClientProtocols
         { localChainSyncClient = LocalChainSyncClient $ chainSyncGetCurrentTip resultVar
         , localTxSubmissionClient = Nothing
         , localStateQueryClient = Nothing
         }
+      )
     atomically $ takeTMVar resultVar
 
 chainSyncGetCurrentTip
