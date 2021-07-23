@@ -5,7 +5,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.CLI.Types
-  ( CBORObject (..)
+  ( BalanceTxExecUnits (..)
+  , CBORObject (..)
   , CertificateFile (..)
   , GenesisFile (..)
   , OutputFormat (..)
@@ -191,4 +192,8 @@ data TxOutAnyEra = TxOutAnyEra
                      Value
                      (Maybe (Hash ScriptData))
   deriving (Eq, Show)
+
+-- | A flag that differentiates between automatically
+-- and manually balancing a tx.
+data BalanceTxExecUnits = AutoBalance | ManualBalance
 
