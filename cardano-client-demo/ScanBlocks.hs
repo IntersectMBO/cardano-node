@@ -31,9 +31,9 @@ main = do
 
   -- Connect to the node.
   putStrLn $ "Connecting to socket: " <> socketPath
-  connectToLocalNode
+  connectToLocalNodeWithVersion
     (connectInfo socketPath)
-    protocols
+    (\_ntcVersion -> protocols)
   where
   connectInfo :: FilePath -> LocalNodeConnectInfo CardanoMode
   connectInfo socketPath =
