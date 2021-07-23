@@ -70,7 +70,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
-                   LocalNodeConnectInfo (..), connectToLocalNode)
+                   LocalNodeConnectInfo (..), connectToLocalNodeWithVersion)
 import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
 import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
@@ -284,9 +284,9 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
             localNodeSocketPath      = socketPath
           }
 
-  lift $ connectToLocalNode
+  lift $ connectToLocalNodeWithVersion
     connectInfo
-    (protocols stateIORef errorIORef env ledgerState)
+    (\_ntcVersion -> protocols stateIORef errorIORef env ledgerState)
 
   lift (readIORef errorIORef) >>= \case
     Just err -> throwE (FoldBlocksApplyBlockError err)
