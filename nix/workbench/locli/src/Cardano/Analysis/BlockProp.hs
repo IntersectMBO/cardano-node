@@ -14,129 +14,47 @@
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Avoid lambda" -}
-module Cardano.Analysis.BlockProp (module Cardano.Analysis.BlockProp) where
+module Cardano.Analysis.BlockProp
+  (blockProp)
+where
 
-import           Prelude (String, (!!), error, head, id, show, tail)
-import           Cardano.Prelude hiding (head, show)
+import Prelude                  (String, (!!), error, head, id, show, tail)
+import Cardano.Prelude          hiding (head, show)
 
-import           Control.Arrow ((***), (&&&))
-import Control.DeepSeq qualified as DS
-import           Control.Concurrent.Async (mapConcurrently)
-import           Data.Aeson (ToJSON(..), FromJSON(..))
-import qualified Data.Aeson as AE
-import           Data.Bifunctor
-import           Data.Function (on)
-import           Data.List (dropWhileEnd, intercalate)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, mapMaybe, isNothing)
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import qualified Data.Text as T
-import           Data.Text.Short (toText)
-import           Data.Tuple (swap)
-import           Data.Vector (Vector)
-import qualified Data.Vector as Vec
+import Control.Arrow            ((***), (&&&))
+import Control.DeepSeq          qualified as DS
+import Control.Concurrent.Async (mapConcurrently)
+import Data.Aeson               (ToJSON(..), FromJSON(..))
+import Data.Bifunctor
+import Data.Function            (on)
+import Data.List                (dropWhileEnd, intercalate)
+import Data.Map.Strict          (Map)
+import Data.Map.Strict          qualified as Map
+import Data.Maybe               (catMaybes, mapMaybe, isNothing)
+import Data.Set                 (Set)
+import Data.Set                 qualified as Set
+import Data.Text                qualified as T
+import Data.Text.Short          (toText)
+import Data.Tuple               (swap)
+import Data.Vector              (Vector)
+import Data.Vector              qualified as Vec
 
-import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
+import Data.Time.Clock          (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
 
-import           Text.Printf (printf)
+import Text.Printf              (printf)
 
-import           Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
+import Ouroboros.Network.Block  (BlockNo(..), SlotNo(..))
 
-import           Data.Accum
-import           Data.Distribution
-import           Cardano.Analysis.Profile
-import           Cardano.Unlog.LogObject hiding (Text)
-import           Cardano.Unlog.Render
-import           Cardano.Unlog.Resources
-import           Cardano.Unlog.SlotStats
+import Data.Accum
+import Data.Distribution
 
-import qualified Debug.Trace as D
+import Cardano.Analysis.API
+import Cardano.Analysis.Profile
+import Cardano.Unlog.LogObject  hiding (Text)
+import Cardano.Unlog.Render
+import Cardano.Unlog.Resources
+import Cardano.Unlog.SlotStats
 
-
-data BlockPropagation
-  = BlockPropagation
-    { bpForgerForges        :: !(Distribution Float NominalDiffTime)
-    , bpForgerAdoptions     :: !(Distribution Float NominalDiffTime)
-    , bpForgerAnnouncements :: !(Distribution Float NominalDiffTime)
-    , bpForgerSends         :: !(Distribution Float NominalDiffTime)
-    , bpPeerNotices         :: !(Distribution Float NominalDiffTime)
-    , bpPeerRequests        :: !(Distribution Float NominalDiffTime)
-    , bpPeerFetches         :: !(Distribution Float NominalDiffTime)
-    , bpPeerAdoptions       :: !(Distribution Float NominalDiffTime)
-    , bpPeerAnnouncements   :: !(Distribution Float NominalDiffTime)
-    , bpPeerSends           :: !(Distribution Float NominalDiffTime)
-    , bpPropagation         :: !(Distribution Float NominalDiffTime)
-    , bpSizes               :: !(Distribution Float Int)
-    , bpChainBlockEvents    :: [BlockEvents]
-    }
-  deriving (Generic, AE.FromJSON, AE.ToJSON, Show)
-
-instance RenderDistributions BlockPropagation where
-  rdFields =
-    --  Width LeftPad
-    [ Field 6 0 "forged"        (f!!0) "Forge"  $ DDeltaT bpForgerForges
-    , Field 6 0 "fAdopted"      (f!!1) "Adopt"  $ DDeltaT bpForgerAdoptions
-    , Field 6 0 "fAnnounced"    (f!!2) "Announ" $ DDeltaT bpForgerAnnouncements
-    , Field 6 0 "fSendStart"    (f!!3) "Sendin" $ DDeltaT bpForgerSends
-    , Field 4 1 "noticedVal"    (p!!0) "Notic"  $ DDeltaT bpPeerNotices
-    , Field 4 1 "requestedVal"  (p!!1) "Reque"  $ DDeltaT bpPeerRequests
-    , Field 4 1 "fetchedVal"    (p!!2) "Fetch"  $ DDeltaT bpPeerFetches
-    , Field 4 1 "pAdoptedVal"   (p!!3) "Adopt"  $ DDeltaT bpPeerAdoptions
-    , Field 4 1 "pAnnouncedVal" (p!!4) "Annou"  $ DDeltaT bpPeerAnnouncements
-    , Field 4 1 "pSendStartVal" (p!!5) "Send"   $ DDeltaT bpPeerSends
-    , Field 4 1 "propagation"   "Propa" "gatio" $ DDeltaT bpPropagation
-    , Field 4 1 "sizes"         "Size"  "kB"    $ DInt    bpSizes
-    ]
-   where
-     f = nChunksEachOf 4 7 "Forger event Δt:"
-     p = nChunksEachOf 6 5 "Peer event Δt:"
-
-data BPError
-  = BPError
-  { eHost  :: !Host
-  , eBlock :: !Hash
-  , eLO    :: !(Maybe LogObject)
-  , eDesc  :: !BPErrorKind
-  }
-  deriving (FromJSON, Generic, NFData, Show, ToJSON)
-
-data BPErrorKind
-  = BPEBefore                !Phase !Phase
-  | BPEUnexpectedForObserver !Phase
-  | BPEUnexpectedForForger   !Phase
-  | BPEUnexpectedAsFirst     !Phase
-  | BPEDuplicateForge
-  | BPEMissingPhase          !Phase
-  | BPENegativePhase         !Phase !NominalDiffTime
-  | BPEFork                  !Hash
-  deriving (FromJSON, Generic, NFData, Show, ToJSON)
-
-bpeIsFork, bpeIsMissingAny, bpeIsNegativeAny  :: BPError -> Bool
-bpeIsFork BPError{eDesc=BPEFork{}} = True
-bpeIsFork _ = False
-bpeIsMissingAny BPError{eDesc=BPEMissingPhase{}} = True
-bpeIsMissingAny _ = False
-bpeIsNegativeAny BPError{eDesc=BPENegativePhase{}} = True
-bpeIsNegativeAny _ = False
-
-bpeIsMissing, bpeIsNegative  :: Phase -> BPError -> Bool
-bpeIsMissing  p BPError{eDesc=BPEMissingPhase p'} = p == p'
-bpeIsMissing  _ _ = False
-bpeIsNegative p BPError{eDesc=BPENegativePhase p' _} = p == p'
-bpeIsNegative _ _ = False
-
-data Phase
-  = Notice
-  | Request
-  | Fetch
-  | Forge
-  | Acquire
-  | Adopt
-  | Announce
-  | Send
-  deriving (FromJSON, Eq, Generic, NFData, Ord, Show, ToJSON)
 
 -- | Block's events, as seen by its forger.
 data ForgerEvents a
@@ -155,10 +73,7 @@ data ForgerEvents a
   , bfeSending      :: !(Maybe a)
   , bfeErrs         :: [BPError]
   }
-  deriving (Generic, NFData, AE.FromJSON, AE.ToJSON, Show)
-
-type ForgerEventsAbs = ForgerEvents UTCTime
-type ForgerEventsRel = ForgerEvents NominalDiffTime
+  deriving (Generic, NFData, FromJSON, ToJSON, Show)
 
 bfePrevBlock :: ForgerEvents a -> Maybe Hash
 bfePrevBlock x = case bfeBlockNo x of
@@ -182,10 +97,7 @@ data ObserverEvents a
   , boeSending    :: !(Maybe a)
   , boeErrs       :: [BPError]
   }
-  deriving (Generic, NFData, AE.FromJSON, AE.ToJSON, Show)
-
-type ObserverEventsAbs = ObserverEvents UTCTime
-type ObserverEventsRel = ObserverEvents NominalDiffTime
+  deriving (Generic, NFData, FromJSON, ToJSON, Show)
 
 mbePhaseIndex :: Map Phase (MachBlockEvents a -> Maybe a)
 mbePhaseIndex = Map.fromList
@@ -211,15 +123,12 @@ data MachBlockEvents a
   | MBE  BPError
   deriving (Generic, NFData)
 
-mbeForgP, mbeObsvP, mbeErrP :: MachBlockEvents a -> Bool
+mbeForgP, mbeObsvP :: MachBlockEvents a -> Bool
 mbeForgP = \case
   MFE{} -> True
   _ -> False
 mbeObsvP = \case
   MOE{} -> True
-  _ -> False
-mbeErrP = \case
-  MBE{} -> True
   _ -> False
 
 mapMbe :: (ForgerEvents a -> b) -> (ObserverEvents a -> b) -> (BPError -> b)
@@ -228,11 +137,6 @@ mapMbe f o e = \case
   MFE x -> f x
   MOE x -> o x
   MBE x -> e x
-
-mapMbeErrs :: ([BPError] -> [BPError]) -> MachBlockEvents a -> MachBlockEvents a
-mapMbeErrs f = mapMbe (\x -> MFE x { bfeErrs=f $ bfeErrs x } )
-                      (\x -> MOE x { boeErrs=f $ boeErrs x } )
-                      MBE
 
 partitionMbes :: [MachBlockEvents a] -> ([ForgerEvents a], [ObserverEvents a], [BPError])
 partitionMbes = go [] [] []
@@ -283,9 +187,6 @@ ordBlockEv l r
   | mbeObsvP r = LT
   | otherwise  = EQ
 
-mbeSlotStart :: MachBlockEvents a -> SlotStart
-mbeSlotStart = mapMbe bfeSlotStart boeSlotStart (SlotStart . const zeroUTCTime)
-
 mbeNoticed, mbeRequested, mbeAcquired, mbeAdopted, mbeAnnounced, mbeSending :: MachBlockEvents a -> Maybe a
 mbeNoticed   = mapMbe (const Nothing)  boeNoticed   (const Nothing)
 mbeRequested = mapMbe (const Nothing)  boeRequested (const Nothing)
@@ -306,12 +207,6 @@ mbeBlock = mapMbe bfeBlock boeBlock eBlock
 mbeBlockNo :: MachBlockEvents a -> BlockNo
 mbeBlockNo = mapMbe bfeBlockNo boeBlockNo (const (-1))
 
-mbeError :: MachBlockEvents a -> Maybe BPError
-mbeError = mapMbe (const Nothing) (const Nothing) Just
-
-mbeFailed :: MachBlockEvents a -> Bool
-mbeFailed = isJust . mbeError
-
 -- | Machine's private view of all the blocks.
 type MachBlockMap a
   =  Map.Map Hash (MachBlockEvents a)
@@ -319,103 +214,9 @@ type MachBlockMap a
 blockMapMaxBlock :: MachBlockMap a -> MachBlockEvents a
 blockMapMaxBlock = maximumBy ordBlockEv . Map.elems
 
-blockMapBlock :: Hash -> MachBlockMap a -> MachBlockEvents a
-blockMapBlock h =
-  fromMaybe (error $ "Invariant failed:  missing hash " <> show h) . Map.lookup h
-
-data BlockForge
-  =  BlockForge
-  { bfForger       :: !Host
-  , bfSlotStart    :: !SlotStart
-  , bfBlockGap     :: !NominalDiffTime
-  , bfBlockSize    :: !Int
-  , bfForged       :: !NominalDiffTime
-  , bfAdopted      :: !NominalDiffTime
-  , bfChainDelta   :: !Int -- ^ ChainDelta during adoption
-  , bfAnnounced    :: !NominalDiffTime
-  , bfSending      :: !NominalDiffTime
-  }
-  deriving (Generic, AE.FromJSON, AE.ToJSON, Show)
-
--- | A completed, compactified version of ObserverEvents.
-data BlockObservation
-  =  BlockObservation
-  { boObserver   :: !Host
-  , boSlotStart  :: !SlotStart
-  , boNoticed    :: !NominalDiffTime
-  , boRequested  :: !NominalDiffTime
-  , boFetched    :: !NominalDiffTime
-  , boAdopted    :: !(Maybe NominalDiffTime)
-  , boChainDelta :: !Int -- ^ ChainDelta during adoption
-  , boAnnounced  :: !(Maybe NominalDiffTime)
-  , boSending    :: !(Maybe NominalDiffTime)
-  , boErrors     :: [BPError]
-  }
-  deriving (Generic, AE.FromJSON, AE.ToJSON, Show)
-
--- | All events related to a block.
-data BlockEvents
-  =  BlockEvents
-  { beBlock        :: !Hash
-  , beBlockPrev    :: !Hash
-  , beBlockNo      :: !BlockNo
-  , beSlotNo       :: !SlotNo
-  , beForge        :: !BlockForge
-  , beObservations :: [BlockObservation]
-  , bePropagation  :: !NominalDiffTime -- ^ Slot start to final adoption
-  , beOtherBlocks  :: [Hash]
-  , beErrors       :: [BPError]
-  }
-  deriving (Generic, AE.FromJSON, AE.ToJSON, Show)
-
 beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
-
-instance RenderTimeline BlockEvents where
-  rtFields =
-    --  Width LeftPad
-    [ Field 5 0 "block"        "block" "no."    $ IWord64 (unBlockNo . beBlockNo)
-    , Field 5 0 "abs.slot"     "abs."  "slot#"  $ IWord64 (unSlotNo  . beSlotNo)
-    , Field 6 0 "hash"         "block" "hash"   $ IText   (shortHash . beBlock)
-    , Field 6 0 "hashPrev"     "prev"  "hash"   $ IText   (shortHash . beBlockPrev)
-    , Field 7 0 "forger"       "forger" "host"  $ IText  (toText . unHost . bfForger . beForge)
-    , Field 6 0 "blockSize"    "size"  "kB"     $ IInt    ((`div` 1024) . bfBlockSize . beForge)
-    , Field 7 0 "blockGap"     "block" "gap"    $ IDeltaT (bfBlockGap  . beForge)
-    , Field 6 0 "forged"        (f!!0) "Forge"  $ IDeltaT (bfForged    . beForge)
-    , Field 6 0 "fAdopted"      (f!!1) "Adopt"  $ IDeltaT (bfAdopted   . beForge)
-    , Field 6 0 "fAnnounced"    (f!!2) "Announ" $ IDeltaT (bfAnnounced . beForge)
-    , Field 6 0 "fSendStart"    (f!!3) "Sendin" $ IDeltaT (bfSending   . beForge)
-    , Field 5 0 "valid.observ"  "valid" "obsrv" $ IInt    (length          . valids)
-    , Field 5 0 "noticedVal"    (p!!0) "Notic"  $ IDeltaT (af  boNoticed   . valids)
-    , Field 5 0 "requestedVal"  (p!!1) "Requd"  $ IDeltaT (af  boRequested . valids)
-    , Field 5 0 "fetchedVal"    (p!!2) "Fetch"  $ IDeltaT (af  boFetched   . valids)
-    , Field 5 0 "pAdoptedVal"   (p!!3) "Adopt"  $ IDeltaT (af' boAdopted   . valids)
-    , Field 5 0 "pAnnouncedVal" (p!!4) "Annou"  $ IDeltaT (af' boAnnounced . valids)
-    , Field 5 0 "pSendStartVal" (p!!5) "Send"   $ IDeltaT (af' boSending   . valids)
-    , Field 5 0 "pPropagation" "Propa" "gation" $ IDeltaT bePropagation
-    , Field 5 0 "errors"        "all"  "errs"   $ IInt    (length . beErrors)
-    , Field 5 0 "forks"         ""     "forks"  $ IInt   (count bpeIsFork . beErrors)
-    , Field 5 0 "missAdopt"     (m!!0) "adopt"  $ IInt    (count (bpeIsMissing Adopt) . beErrors)
-    , Field 5 0 "missAnnou"     (m!!1) "annou"  $ IInt    (count (bpeIsMissing Announce) . beErrors)
-    , Field 5 0 "missSend"      (m!!2) "send"   $ IInt    (count (bpeIsMissing Send) . beErrors)
-    , Field 5 0 "negAnnou"      (n!!0) "annou"  $ IInt    (count (bpeIsNegative Announce) . beErrors)
-    , Field 5 0 "negSend"       (n!!1) "send"   $ IInt    (count (bpeIsNegative Send) . beErrors)
-    ]
-   where
-     valids = filter isValidBlockObservation . beObservations
-     f = nChunksEachOf 4 7 "Forger event Δt:"
-     p = nChunksEachOf 6 6 "Peer event Δt averages:"
-     m = nChunksEachOf 3 6 "Missing phase"
-     n = nChunksEachOf 2 6 "Negative phase"
-     af  f = avg . fmap f
-     af' f = avg . mapMaybe f
-     avg :: [NominalDiffTime] -> NominalDiffTime
-     avg [] = 0
-     avg xs =  (/ fromInteger (fromIntegral $ length xs)) $ sum xs
-     count :: (a -> Bool) -> [a] -> Int
-     count f = length . filter f
-  rtCommentary BlockEvents{..} = ("    " <>) . T.pack . show <$> beErrors
 
 mapChainToBlockEventCDF ::
   (Real a, ToRealFrac a Float)
@@ -444,17 +245,6 @@ mapChainToPeerBlockObservationCDF percs chainBlockEvents proj desc =
    blockObservations :: BlockEvents -> [NominalDiffTime]
    blockObservations be =
      proj `mapMaybe` beObservations be
-
-isValidBlockEvent :: BlockEvents -> Bool
-isValidBlockEvent BlockEvents{..} = (== 1) . bfChainDelta $ beForge
-
-isValidBlockObservation :: BlockObservation -> Bool
-isValidBlockObservation BlockObservation{..} =
-  -- 1. All phases are present
-  null boErrors
-  &&
-  -- 2. All timings account for processing of a single block
-  boChainDelta == 1
 
 blockProp :: ChainInfo -> [(JsonLogfile, [LogObject])] -> IO BlockPropagation
 blockProp ci xs = do
@@ -550,7 +340,7 @@ doBlockProp eventMaps = do
       step prevForge x@(beForgedAt -> at) =
         (at, x { beForge = (beForge x) { bfBlockGap = at `diffUTCTime` prevForge } })
 
-   liftBlockEvents :: ForgerEventsRel -> [ObserverEvents NominalDiffTime] -> [BPError] -> BlockEvents
+   liftBlockEvents :: ForgerEvents NominalDiffTime -> [ObserverEvents NominalDiffTime] -> [BPError] -> BlockEvents
    liftBlockEvents ForgerEvents{bfeHost=host, ..} os errs =
      BlockEvents
      { beBlock      = bfeBlock
@@ -570,19 +360,19 @@ doBlockProp eventMaps = do
        , bfSending    = bfeSending   & handleMiss "Δt Sending (forger)"
        }
      , beObservations =
-         os <&> \ObserverEvents{..} ->
+         catMaybes $
+         os <&> \ObserverEvents{..}->
            BlockObservation
-           { boObserver   = boeHost
-           , boSlotStart  = bfeSlotStart
-           , boNoticed    = boeNoticed   & handleMiss "Δt Noticed (peer)"
-           , boRequested  = boeRequested & handleMiss "Δt Requested (peer)"
-           , boFetched    = boeFetched   & handleMiss "Δt Fetched (peer)"
-           , boAdopted    = boeAdopted
-           , boChainDelta = boeChainDelta
-           , boAnnounced  = boeAnnounced
-           , boSending    = boeSending
-           , boErrors     = boeErrs
-           }
+             <$> Just boeHost
+             <*> Just bfeSlotStart
+             <*> boeNoticed
+             <*> boeRequested
+             <*> boeFetched
+             <*> Just boeAdopted
+             <*> Just boeChainDelta
+             <*> Just boeAnnounced
+             <*> Just boeSending
+             <*> Just boeErrs
      , bePropagation  = lastAdoption `sinceSlot` bfeSlotStart
      , beOtherBlocks  = otherBlocks
      , beErrors =
@@ -603,10 +393,11 @@ doBlockProp eventMaps = do
 
       findForger :: Hash -> Host
       findForger hash =
-        mapMaybe (Map.lookup hash) eventMaps
-        & find mbeForgP
-        & fmap (mapMbe bfeHost (error "Invariant failed") (error "Invariant failed"))
-        & fromMaybe (Host "?")
+        maybe
+          (Host "?")
+          (mapMbe bfeHost (error "Invariant failed") (error "Invariant failed"))
+          (mapMaybe (Map.lookup hash) eventMaps
+           & find mbeForgP)
 
       fail' :: Host -> Hash -> BPErrorKind -> BPError
       fail' host hash desc = BPError host hash Nothing desc

@@ -9,7 +9,6 @@ usage_analyse() {
     Options of 'analyse' command:
 
        --reanalyse        Skip the preparatory steps and launch 'locli' directly
-       --time             Time the 'locli' executable runs
 EOF
 }
 
@@ -19,7 +18,6 @@ while test $# -gt 0
 do case "$1" in
        --reanalyse | --re ) skip_preparation='true'; args+=($1);;
        --dump-logobjects )  dump_logobjects='true';  args+=($1);;
-       --time )             time='eval time';        args+=($1);;
        * ) break;; esac; shift; done
 
 local op=${1:-$(usage_analyse)}; shift
@@ -82,8 +80,8 @@ case "$op" in
         if test -n "$dump_logobjects"; then
             locli_args+=(--logobjects-json "$adir"/logs-cluster.logobjects.json); fi
 
-        ${time} locli 'analyse' 'block-propagation' \
-                "${locli_args[@]}" "$adir"/*.flt.json
+        time locli 'analyse' 'block-propagation' \
+             "${locli_args[@]}" "$adir"/*.flt.json
 
         ## More than one run passed?
         test $# -gt 0 && analyse ${args[*]} block-propagation "$@";;
@@ -167,8 +165,8 @@ case "$op" in
            if test -n "$dump_logobjects"; then
                locli_args+=(--logobjects-json "$adir"/logs-$mach.logobjects.json); fi
 
-           ${time} locli 'analyse' 'machine-timeline' \
-                   "${locli_args[@]}" "$consolidated"
+           time locli 'analyse' 'machine-timeline' \
+                "${locli_args[@]}" "$consolidated"
            ) &
         done
 
