@@ -68,7 +68,6 @@ import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Shelley.Spec.Ledger.BlockChain as Ledger
-import qualified Shelley.Spec.Ledger.API.Mempool as Ledger
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -158,8 +157,8 @@ getShelleyBlockTxs :: forall era ledgerera.
                    -> Ledger.Block ledgerera
                    -> [Tx era]
 getShelleyBlockTxs era (Ledger.Block _header txs) =
-    [ ShelleyTx era (Ledger.extractTx txinblock)
-    | txinblock <- toList (Ledger.fromTxSeq @ledgerera txs) ]
+  [ ShelleyTx era txinblock
+  | txinblock <- toList (Ledger.fromTxSeq @ledgerera txs) ]
 
 obtainConsensusShelleyBasedEra
   :: forall era ledgerera a.

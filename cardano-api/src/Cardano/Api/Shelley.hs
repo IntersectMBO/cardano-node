@@ -109,6 +109,8 @@ module Cardano.Api.Shelley
     fromAlonzoPrices,
     toAlonzoExUnits,
     fromAlonzoExUnits,
+    toAlonzoRdmrPtr,
+    fromAlonzoRdmrPtr,
 
     -- * Certificates
     Certificate (..),

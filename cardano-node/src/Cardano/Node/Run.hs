@@ -56,6 +56,7 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESInfo (..), HasKESMetricsData (..))
 
+import           Ouroboros.Consensus.Block.Forging (MaxTxCapacityOverride (NoMaxTxCapacityOverride))
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
 import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
@@ -292,6 +293,8 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
        , srnDiffusionTracers            = diffusionTracers
        , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
        , srnTraceChainDB                = chainDBTracer nodeTracers
+       -- TODO: Add CLI flag that defaults to NoMaxTxCapacityOverride
+       , srnMaxTxCapacityOverride       = NoMaxTxCapacityOverride
        }
  where
   createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk

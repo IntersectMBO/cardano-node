@@ -339,6 +339,7 @@ module Cardano.Api (
     ScriptDatum(..),
     ScriptRedeemer,
     scriptWitnessScript,
+    renderScriptWitnessIndex,
 
     -- *** Languages supported in each era
     ScriptLanguageInEra(..),

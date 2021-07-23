@@ -116,12 +116,22 @@ transactionFee txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in case tx of
-       ShelleyTx _ tx' -> let x = getField @"txsize" tx'
+       ShelleyTx _ tx' -> let x = obtainHasField shelleyBasedEra $ getField @"txsize" tx'
                           in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
        ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
-
+ where
+  obtainHasField
+    :: ShelleyLedgerEra era ~ ledgerera
+    => ShelleyBasedEra era
+    -> ( HasField "txsize" (Ledger.Tx (ShelleyLedgerEra era)) Integer
+        => a)
+    -> a
+  obtainHasField ShelleyBasedEraShelley f = f
+  obtainHasField ShelleyBasedEraAllegra f = f
+  obtainHasField ShelleyBasedEraMary    f = f
+  obtainHasField ShelleyBasedEraAlonzo  f = f
 
 --TODO: in the Byron case the per-byte is non-integral, would need different
 -- parameters. e.g. a new data type for fee params, Byron vs Shelley

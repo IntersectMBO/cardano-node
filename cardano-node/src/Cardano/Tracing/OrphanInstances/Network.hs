@@ -28,8 +28,7 @@ import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), getHeader)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), txForgetValidated,
-                   txId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxs (..), txId)
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import qualified Ouroboros.Network.AnchoredSeq as AS
@@ -430,7 +429,7 @@ instance ( ConvertTxId blk
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             , "txIds" .= toJSON (presentTx <$> map txForgetValidated (extractTxs blk))
+             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
              ]
       where
         presentTx :: GenTx blk -> Value

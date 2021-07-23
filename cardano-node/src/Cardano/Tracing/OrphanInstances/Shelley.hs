@@ -327,6 +327,10 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
              , "disallowed" .= Set.toList disallowed
              , "acceptable" .= Set.toList acceptable
              ]
+  toObject _ (ExtraRedeemers rdmrs) =
+    mkObject [ "kind" .= String "ExtraRedeemers"
+             , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
+             ]
 
 renderWitnessPPDataHash :: Maybe (Alonzo.WitnessPPDataHash StandardCrypto) -> Aeson.Value
 renderWitnessPPDataHash (Just witPPDataHash) =
