@@ -114,6 +114,7 @@ import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Query
 import           Cardano.Api.TxInMode
 
+import qualified System.IO as IO
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
@@ -485,25 +486,25 @@ queryNodeLocalState connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNodeWithVersion
       connctInfo
-      ( \_ntcVersion -> LocalNodeClientProtocols
+      ( \ntcVersion -> LocalNodeClientProtocols
         { localChainSyncClient    = NoLocalChainSyncClient
-        , localStateQueryClient   = Just (singleQuery mpoint resultVar)
+        , localStateQueryClient   = Just (singleQuery ntcVersion mpoint resultVar)
         , localTxSubmissionClient = Nothing
         }
       )
     atomically (takeTMVar resultVar)
   where
     singleQuery
-      :: Maybe ChainPoint
+      :: NodeToClientVersion
+      -> Maybe ChainPoint
       -> TMVar (Either Net.Query.AcquireFailure result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
-    singleQuery mPointVar' resultVar' =
-      LocalStateQueryClient $ do
-      pure $
-        Net.Query.SendMsgAcquire mPointVar' $
-        Net.Query.ClientStAcquiring
-          { Net.Query.recvMsgAcquired =
+    singleQuery ntcVersion mPointVar' resultVar' =
+      LocalStateQueryClient . pure $ do
+        Net.Query.SendMsgAcquire mPointVar' $ Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired = do
+              IO.putStrLn $ "Version: " <> show ntcVersion <> " " <> show query
               pure $ Net.Query.SendMsgQuery query $
                 Net.Query.ClientStQuerying
                   { Net.Query.recvMsgResult = \result -> do
