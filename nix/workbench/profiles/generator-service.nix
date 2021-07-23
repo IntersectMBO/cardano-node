@@ -132,7 +132,10 @@ let
       };
     in evalModules {
       prefix = [];
-      modules = import ../../nixos/module-list.nix ++ [ systemdCompat extra ];
+      modules = import ../../nixos/module-list.nix ++ [
+        (import ../../nixos/tx-generator-service.nix pkgs)
+        systemdCompat extra
+      ];
       args = { inherit pkgs; };
     };
     in eval.config.services.tx-generator;

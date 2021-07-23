@@ -19,12 +19,11 @@ in
 , pkgs ? import ./nix {
     inherit config sourcesOverride customConfig;
   }
-, origPkgs ? import (builtins.getFlake (toString ./.)).inputs.nixpkgs {}
 }:
 with pkgs;
 let
   inherit (pkgs) customConfig;
-  inherit (customConfig) withHoogle localCluster;
+  inherit (customConfig) withHoogle localCluster withR;
   inherit (localCluster) autoStartCluster workbenchDevMode;
   commandHelp =
     ''
@@ -58,12 +57,12 @@ let
     { useCabalRun }:
     callPackage ./nix/supervisord-cluster
       { inherit useCabalRun;
-        profileName = clusterProfile;
+        inherit (localCluster) profileName;
         workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
       };
 
   rstudio = pkgs.rstudioWrapper.override {
-    packages = with origPkgs.rPackages; [ car dplyr ggplot2 reshape2 ];
+    packages = with pkgs.rPackages; [ car dplyr ggplot2 reshape2 ];
   };
 
   shell =

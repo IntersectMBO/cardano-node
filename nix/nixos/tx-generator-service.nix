@@ -1,4 +1,4 @@
-(import ../. {}).commonLib.defServiceModule
+pkgs: pkgs.commonLib.defServiceModule
   (lib: with lib;
     { svcName = "tx-generator";
       svcDesc = "configurable transaction generator";

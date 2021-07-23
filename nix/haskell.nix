@@ -16,7 +16,7 @@
 , assertedPackages ? []
 # Version info, to be passed when not building from a git work tree
 , gitrev ? null
-, libsodium ? pkgs.libsodium
+, libsodium-vrf ? pkgs.libsodium-vrf
 , src ? (haskell-nix.haskellLib.cleanGit {
       name = "cardano-node-src";
       src = ../.;
@@ -71,6 +71,12 @@ let
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
         packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
           lib.mkForce [buildPackages.jq buildPackages.coreutils buildPackages.shellcheck];
+      }
+      {
+        # Use the VRF fork of libsodium
+        packages = lib.genAttrs [ "cardano-crypto-praos" "cardano-crypto-class" ] (_: {
+          components.library.pkgconfig = lib.mkForce [ [ libsodium-vrf ] ];
+        });
       }
       {
         # make sure that libsodium DLLs are available for windows binaries:
@@ -203,7 +209,7 @@ let
   # the revision is sourced from the local git work tree.
   setGitRev = ''${buildPackages.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*'';
   # package with libsodium:
-  setLibSodium = "ln -s ${libsodium}/bin/libsodium-23.dll $out/bin/libsodium-23.dll";
+  setLibSodium = "ln -s ${libsodium-vrf}/bin/libsodium-23.dll $out/bin/libsodium-23.dll";
 in
   pkgSet // {
     inherit projectPackages;
