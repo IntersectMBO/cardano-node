@@ -576,8 +576,11 @@ module Cardano.Api (
 
     -- ** Monadic queries
     LocalStateQueryScript,
+    queryLocalState,
+    localChainSync,
     sendMsgQuery,
-    setupLocalStateQueryScript
+    setupLocalStateQueryScript,
+    runNtcProgram
   ) where
 
 import           Cardano.Api.Address

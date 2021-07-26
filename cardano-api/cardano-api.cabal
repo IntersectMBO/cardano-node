@@ -118,6 +118,7 @@ library
                       , directory
                       , filepath
                       , formatting
+                      , free
                       , iproute
                       , memory
                       , network
