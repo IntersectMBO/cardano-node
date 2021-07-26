@@ -21,14 +21,15 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 
 import qualified Plutus.V1.Ledger.Scripts as Plutus
-import           PlutusTx (Data (..))
+import           PlutusTx (toBuiltinData)
 import qualified PlutusTx
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: Data -> Data -> Data -> ()
+mkValidator :: BuiltinData -> BuiltinData -> BuiltinData  -> ()
 mkValidator datum redeemer _txContext
-  | datum == PlutusTx.I 42 && redeemer == PlutusTx.I 42 = ()
+  |    datum    == toBuiltinData (42 :: Integer)
+    && redeemer == toBuiltinData (42 :: Integer) = ()
   | otherwise = traceError "Incorrect datum. Expected 42."
 
 validator :: Plutus.Validator

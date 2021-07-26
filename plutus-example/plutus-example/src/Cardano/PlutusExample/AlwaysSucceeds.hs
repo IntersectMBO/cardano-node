@@ -26,7 +26,7 @@ import qualified PlutusTx
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: Data -> Data -> Data -> ()
+mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkValidator _ _ _ = ()
 
 validator :: Plutus.Validator
