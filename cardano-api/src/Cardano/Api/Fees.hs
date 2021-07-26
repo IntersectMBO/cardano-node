@@ -133,6 +133,9 @@ transactionFee txFeeFixed txFeePerByte tx =
   obtainHasField ShelleyBasedEraMary    f = f
   obtainHasField ShelleyBasedEraAlonzo  f = f
 
+{-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
+
+
 --TODO: in the Byron case the per-byte is non-integral, would need different
 -- parameters. e.g. a new data type for fee params, Byron vs Shelley
 
@@ -204,6 +207,9 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx era tx) =
 -- and remove the IsShelleyBasedEra constraint.
 estimateTransactionFee _ _ _ (ByronTx _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
+
+--TODO: also deprecate estimateTransactionFee:
+--{-# DEPRECATED estimateTransactionFee "Use 'evaluateTransactionFee' instead" #-}
 
 
 -- | Compute the transaction fee for a proposed transaction, with the
