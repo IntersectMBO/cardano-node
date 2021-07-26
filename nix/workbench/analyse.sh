@@ -133,7 +133,7 @@ case "$op" in
         locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
 
         if test "$mach" = 'all'
-        then local machs=($(wb run list-hosts $name))
+        then local machs=($(run list-hosts $name))
         else local machs=($mach); fi
 
         for mach in ${machs[*]}

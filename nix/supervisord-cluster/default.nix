@@ -172,54 +172,64 @@ EOF
     export PATH=$PATH:${path}
 
     wb backend assert-is supervisor
-    wb backend pre-run-hook    "${stateDir}"
+    wb backend assert-stopped
 
     wb_run_allocate_args=(
         --cache-dir            "${cacheDir}"
         --base-port             ${toString basePort}
         --stagger-ports
+        --
         --port-shift-ekg        100
         --port-shift-prometheus 200
+        --supervisor-conf      "${backend.supervisord.mkSupervisorConf profile}"
       )
     wb run allocate $batch_name ${profile.name} "''${wb_run_allocate_args[@]}"
-    rm -f                      "${stateDir}"
-    ln -sf         run/current "${stateDir}"
 
     current_run_path=$(wb run current-path)
     ${workbench.initialiseProfileRunDirShellScript profile "$current_run_path"}
 
-    wb_run_start_args=(
-        --supervisor-conf      "${backend.supervisord.mkSupervisorConf profile}"
-      )
-    wb run start "''${run_start_flags[@]}" $(wb run current-tag) "''${wb_run_start_args[@]}"
+    wb run start "''${run_start_flags[@]}" $(wb run current-tag)
 
     echo 'workbench:  cluster started. Run `stop-cluster` to stop'
   '';
+
   stop = pkgs.writeScriptBin "stop-cluster" ''
     set -euo pipefail
 
     while test $# -gt 0
     do case "$1" in
-        --trace | --debug ) set -x;;
+        --trace | --debug )              set -x;;
+        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
         * ) break;; esac; shift; done
 
-    ${pkgs.python3Packages.supervisor}/bin/supervisorctl stop all
-    if wb backend is-running
-    then
-      if test -f "${stateDir}/supervisor/cardano-node.pids"
-      then kill $(<${stateDir}/supervisor/supervisord.pid) $(<${stateDir}/supervisor/cardano-node.pids)
-      else pkill supervisord
-      fi
-      echo "workbench:  cluster terminated"
-      rm -f ${stateDir}/supervisor/supervisord.pid ${stateDir}/supervisor/cardano-node.pids
-    else
-      echo "workbench:  cluster is not running"
-    fi
+    wb run stop $(wb run current-tag)
+  '';
+
+  restart = pkgs.writeScriptBin "restart-cluster" ''
+    set -euo pipefail
+
+    wb_flags=()
+    wb_run_restart_flags=()
+
+    while test $# -gt 0
+    do case "$1" in
+        --no-generator | --no-gen )      wb_run_restart_flags+=($1);;
+        --trace | --debug | --trace-wb | --trace-workbench )
+                                         wb_flags+=(--trace);;
+        --help )                         cat <<EOF
+${startClusterUsage}
+EOF
+                                         exit 1;;
+        * ) break;; esac; shift; done
+
+    wb "''${wb_flags[@]}" run restart "''${wb_run_restart_flags[@]}"
+
+    echo "workbench:  alternate command for this action:  wb run restart"
   '';
 
 in
 {
   inherit workbench;
   inherit (workbenchProfiles) profilesJSON;
-  inherit profile stateDir start stop;
+  inherit profile stateDir start stop restart;
 }
