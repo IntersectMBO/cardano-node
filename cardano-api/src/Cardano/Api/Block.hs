@@ -6,7 +6,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -158,7 +157,7 @@ getShelleyBlockTxs :: forall era ledgerera.
                    -> [Tx era]
 getShelleyBlockTxs era (Ledger.Block _header txs) =
   [ ShelleyTx era txinblock
-  | txinblock <- toList (Ledger.fromTxSeq @ledgerera txs) ]
+  | txinblock <- toList (Ledger.fromTxSeq txs) ]
 
 obtainConsensusShelleyBasedEra
   :: forall era ledgerera a.

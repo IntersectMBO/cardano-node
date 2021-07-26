@@ -12,7 +12,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -274,7 +273,7 @@ getTxId (ShelleyTxBody era tx _ _ _) =
         TxId
       . Crypto.castHash
       . (\(Shelley.TxId txhash) -> SafeHash.extractHash txhash)
-      . (Shelley.txid @(ShelleyLedgerEra era))
+      . Shelley.txid
 
 
 -- ----------------------------------------------------------------------------
@@ -1896,7 +1895,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toLedgerUpdate era p))
           (maybeToStrictMaybe
-            (Ledger.hashAuxiliaryData @StandardShelley <$> txAuxData)))
+            (Ledger.hashAuxiliaryData <$> txAuxData)))
         scripts
         TxBodyNoScriptData
         txAuxData
@@ -1969,7 +1968,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toLedgerUpdate era p))
           (maybeToStrictMaybe
-            (Ledger.hashAuxiliaryData @StandardAllegra <$> txAuxData))
+            (Ledger.hashAuxiliaryData <$> txAuxData))
           mempty) -- No minting in Allegra, only Mary
         scripts
         TxBodyNoScriptData
@@ -2057,7 +2056,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
              TxUpdateProposalNone -> SNothing
              TxUpdateProposal _ p -> SJust (toLedgerUpdate era p))
           (maybeToStrictMaybe
-            (Ledger.hashAuxiliaryData @StandardMary <$> txAuxData))
+            (Ledger.hashAuxiliaryData <$> txAuxData))
           (case txMintValue of
              TxMintNone        -> mempty
              TxMintValue _ v _ -> toMaryValue v))
@@ -2179,7 +2178,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                  redeemers
                  datums)
           (maybeToStrictMaybe
-            (Ledger.hashAuxiliaryData @StandardAlonzo <$> txAuxData))
+            (Ledger.hashAuxiliaryData <$> txAuxData))
           SNothing) -- TODO alonzo: support optional network id in TxBodyContent
         scripts
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
