@@ -329,7 +329,7 @@ module Cardano.Api (
     toScriptInEra,
     eraOfScriptInEra,
 
-    -- * Use of a script in an era as a witness
+    -- ** Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
     WitCtx(..),
     ScriptWitness(..),
@@ -339,9 +339,15 @@ module Cardano.Api (
     ScriptDatum(..),
     ScriptRedeemer,
     scriptWitnessScript,
-    renderScriptWitnessIndex,
 
-    -- *** Languages supported in each era
+    -- ** Inspecting 'ScriptWitness'es
+    AnyScriptWitness(..),
+    ScriptWitnessIndex(..),
+    renderScriptWitnessIndex,
+    collectTxBodyScriptWitnesses,
+    mapTxScriptWitnesses,
+
+    -- ** Languages supported in each era
     ScriptLanguageInEra(..),
     scriptLanguageSupportedInEra,
     languageOfScriptLanguageInEra,
@@ -359,7 +365,7 @@ module Cardano.Api (
     examplePlutusScriptAlwaysSucceeds,
     examplePlutusScriptAlwaysFails,
 
-    -- * Script data
+    -- ** Script data
     ScriptData(..),
     hashScriptData,
 
@@ -374,7 +380,7 @@ module Cardano.Api (
     ScriptDataJsonError (..),
     ScriptDataJsonSchemaError (..),
 
-    -- * Script execution units
+    -- ** Script execution units
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
     CostModel(..),

@@ -97,9 +97,10 @@ module Cardano.Api.TxBody (
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
 
-    -- * Inspecting 'ScriptWitnesses'
+    -- * Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),
     ScriptWitnessIndex(..),
+    renderScriptWitnessIndex,
     collectTxBodyScriptWitnesses,
     mapTxScriptWitnesses,
 
@@ -114,7 +115,6 @@ module Cardano.Api.TxBody (
     fromAlonzoRdmrPtr,
     fromByronTxIn,
     renderTxIn,
-    renderScriptWitnessIndex,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
