@@ -9,9 +9,9 @@ packages:
     cardano-node-chairman
     cardano-submit-api
     cardano-testnet
-    nix/workbench/cardano-topology
+    bench/cardano-topology
+    bench/locli
     bench/tx-generator
-    nix/workbench/locli
 
 package cardano-api
   ghc-options: -Werror
