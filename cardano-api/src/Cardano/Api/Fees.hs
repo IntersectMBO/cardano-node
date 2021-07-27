@@ -116,11 +116,24 @@ transactionFee txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in case tx of
-       ShelleyTx _ tx' -> let x = getField @"txsize" tx'
+       ShelleyTx _ tx' -> let x = obtainHasField shelleyBasedEra $ getField @"txsize" tx'
                           in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
        ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
+ where
+  obtainHasField
+    :: ShelleyLedgerEra era ~ ledgerera
+    => ShelleyBasedEra era
+    -> ( HasField "txsize" (Ledger.Tx (ShelleyLedgerEra era)) Integer
+        => a)
+    -> a
+  obtainHasField ShelleyBasedEraShelley f = f
+  obtainHasField ShelleyBasedEraAllegra f = f
+  obtainHasField ShelleyBasedEraMary    f = f
+  obtainHasField ShelleyBasedEraAlonzo  f = f
+
+{-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
 
 --TODO: in the Byron case the per-byte is non-integral, would need different
@@ -194,6 +207,9 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx era tx) =
 -- and remove the IsShelleyBasedEra constraint.
 estimateTransactionFee _ _ _ (ByronTx _) =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
+
+--TODO: also deprecate estimateTransactionFee:
+--{-# DEPRECATED estimateTransactionFee "Use 'evaluateTransactionFee' instead" #-}
 
 
 -- | Compute the transaction fee for a proposed transaction, with the

@@ -32,14 +32,13 @@ import qualified Data.ByteString.Short as SBS
 import           Ledger hiding (singleton)
 import qualified Ledger.Typed.Scripts as Scripts
 import qualified PlutusTx
-import           PlutusTx (Data)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 
 
 {- HLINT ignore "Avoid lambda" -}
 
 {-# INLINABLE mkPolicy #-}
-mkPolicy :: Data -> ScriptContext -> Bool
+mkPolicy :: BuiltinData -> ScriptContext -> Bool
 mkPolicy _redeemer _ctx = True
 
 

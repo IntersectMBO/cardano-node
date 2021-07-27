@@ -95,6 +95,7 @@ import qualified Cardano.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import           Cardano.Api.Address
@@ -418,7 +419,7 @@ getTxBody (ShelleyTx era tx) =
                         ShelleyLedgerEra era ~ ledgerera
                      => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
                      => Shelley.ShelleyBased ledgerera
-                     => Ledger.Tx ledgerera
+                     => Shelley.Tx ledgerera
                      -> TxBody era
     getShelleyTxBody Shelley.Tx {
                        Shelley.body       = txbody,
@@ -435,21 +436,19 @@ getTxBody (ShelleyTx era tx) =
 
     getAlonzoTxBody :: forall ledgerera.
                        ShelleyLedgerEra era ~ ledgerera
-                    => Ledger.Witnesses ledgerera ~ Alonzo.TxWitness ledgerera
-                    => Shelley.ShelleyBased ledgerera
                     => ScriptDataSupportedInEra era
-                    -> Ledger.Tx ledgerera
+                    -> Alonzo.ValidatedTx ledgerera
                     -> TxBody era
     getAlonzoTxBody scriptDataInEra
-                    Shelley.Tx {
-                      Shelley.body = txbody,
-                      Shelley.wits = Alonzo.TxWitness'
+                    Alonzo.ValidatedTx {
+                      Alonzo.body = txbody,
+                      Alonzo.wits = Alonzo.TxWitness'
                                      _addrWits
                                      _bootWits
                                      txscripts
                                      txdats
                                      redeemers,
-                      Shelley.auxiliaryData = auxiliaryData
+                      Alonzo.auxiliaryData = auxiliaryData
                     } =
       ShelleyTxBody era txbody
                     (Map.elems txscripts)
@@ -476,7 +475,7 @@ getTxWitnesses (ShelleyTx era tx) =
                           => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
                           => ToCBOR (Ledger.Witnesses ledgerera)
                           => Shelley.ShelleyBased ledgerera
-                          => Ledger.Tx ledgerera
+                          => Shelley.Tx ledgerera
                           -> [KeyWitness era]
     getShelleyTxWitnesses Shelley.Tx {
                             Shelley.wits =
@@ -490,12 +489,10 @@ getTxWitnesses (ShelleyTx era tx) =
 
     getAlonzoTxWitnesses :: forall ledgerera.
                             Ledger.Crypto ledgerera ~ StandardCrypto
-                         => Ledger.Witnesses ledgerera ~ Alonzo.TxWitness ledgerera
-                         => Shelley.ShelleyBased ledgerera
-                         => Ledger.Tx ledgerera
+                         => Alonzo.ValidatedTx ledgerera
                          -> [KeyWitness era]
-    getAlonzoTxWitnesses Shelley.Tx {
-                           Shelley.wits =
+    getAlonzoTxWitnesses Alonzo.ValidatedTx {
+                           Alonzo.wits =
                              Alonzo.TxWitness'
                                addrWits
                                bootWits
@@ -533,6 +530,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
          ShelleyLedgerEra era ~ ledgerera
       => Ledger.Crypto ledgerera ~ StandardCrypto
       => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
+      => Ledger.Tx ledgerera ~ Shelley.Tx ledgerera
       => ToCBOR (Ledger.Witnesses ledgerera)
       => Shelley.ShelleyBased ledgerera
       => Shelley.ValidateScript ledgerera
@@ -553,7 +551,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
       :: forall ledgerera.
          ShelleyLedgerEra era ~ ledgerera
       => Ledger.Crypto ledgerera ~ StandardCrypto
-      => Ledger.Witnesses ledgerera ~ Alonzo.TxWitness ledgerera
+      => Ledger.Tx ledgerera ~ Alonzo.ValidatedTx ledgerera
       => Ledger.Script ledgerera ~ Alonzo.Script ledgerera
       => Shelley.ShelleyBased ledgerera
       => Shelley.ValidateScript ledgerera
@@ -561,7 +559,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
       -> Tx era
     makeAlonzoSignedTransaction txbody' =
       ShelleyTx era $
-        Shelley.Tx
+        Alonzo.ValidatedTx
           txbody'
           (Alonzo.TxWitness
             (Set.fromList [ w | ShelleyKeyWitness _ w <- witnesses ])
@@ -570,6 +568,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
                           | sw <- txscripts ])
             datums
             redeemers)
+          (Alonzo.IsValidating True) --TODO: expose this in the API
           (maybeToStrictMaybe txmetadata)
       where
         (datums, redeemers) =
