@@ -15,8 +15,9 @@ GenesisFile: genesis.json
 ##### Core protocol parameters #####
 
 # This is the instance of the Ouroboros family that we are running.
-# "RealPBFT" is the real (permissive) OBFT protocol, which is what we use on
-# mainnet in Byron era.
+# The node also supports various test and mock instances.
+# "RealPBFT" is the real (ie not mock) (permissive) OBFT protocol, which
+# is what we use on mainnet in Byron era.
 Protocol: RealPBFT
 
 # The mainnet does not include the network magic into addresses. Testnets do.
@@ -25,8 +26,8 @@ RequiresNetworkMagic: RequiresNoMagic
 
 ##### Update system parameters #####
 
-# This protocol version number gets used by block producing nodes as part
-# of the system for agreeing on and synchronising protocol updates.
+# This protocol version number gets used by by block producing nodes as part
+# part of the system for agreeing on and synchronising protocol updates.
 LastKnownBlockVersion-Major: 0
 LastKnownBlockVersion-Minor: 2
 LastKnownBlockVersion-Alt: 0
@@ -39,7 +40,12 @@ ApplicationVersion: 1
 
 ##### Logging configuration #####
 
-# Enable or disable logging overall
+# The node can run in either the SimpleView or LiveView. The SimpleView just
+# uses standard output, optionally with log output. The LiveView is a text
+# console with a live view of various node metrics.
+ViewMode: SimpleView
+
+# Enble or disable logging overall
 TurnOnLogging: True
 
 # Enable the collection of various OS metrics such as memory and CPU use.
@@ -55,7 +61,7 @@ minSeverity: Notice
 TracingVerbosity: NormalVerbosity
 
 # The system supports a number of backends for logging and monitoring.
-# This setting lists the backends that will be available to use in the
+# This setting lists the the backends that will be available to use in the
 # configuration below. The logging backend is called Katip. Also enable the EKG
 # backend if you want to use the EKG or Prometheus monitoring interfaces.
 setupBackends:
@@ -86,7 +92,7 @@ defaultBackends:
 # be specified in the defaults below or overidden on a per-scribe basis here.
 setupScribes:
   - scKind: FileSK
-    scName: "logs/mainnet-via-fetcher.log"
+    scName: "logs/mainnet-benchmark.log"
     scFormat: ScText
 
   - scKind: StdoutSK
@@ -98,7 +104,7 @@ setupScribes:
 # output is sent to if it is not configured to be sent to other scribes.
 defaultScribes:
   - - FileSK
-    - "logs/mainnet-via-fetcher.log"
+    - "logs/mainnet-benchmark.log"
 
   - - StdoutSK
     - stdout
@@ -132,9 +138,6 @@ TraceBlockFetchProtocolSerialised: False
 # Trace BlockFetch server.
 TraceBlockFetchServer: False
 
-# Trace BlockchainTime.
-TraceBlockchainTime: False
-
 # Verbose tracer of ChainDB
 TraceChainDb: True
 
@@ -144,7 +147,7 @@ TraceChainSyncClient: False
 # Trace ChainSync server (blocks).
 TraceChainSyncBlockServer: False
 
-# Trace ChainSync server (headers).
+# Trace ChainSync server (headers)
 TraceChainSyncHeaderServer: False
 
 # Trace ChainSync protocol messages.
@@ -186,7 +189,7 @@ TraceLocalTxSubmissionServer: False
 # Trace mempool.
 TraceMempool: True
 
-# Trace Mux Events.
+# Trace Mux Events
 TraceMux: False
 
 # Trace TxSubmission server (inbound transactions).
@@ -210,8 +213,39 @@ options:
 
   # This routes metrics matching specific names to particular backends.
   # This overrides the defaultBackends listed above. And note that it is
-  # an override and not an extension so anything matched here will not
+  # and override and not an extension so anything matched here will not
   # go to the default backend, only to the explicitly listed backends.
   mapBackends:
+    cardano.node.ChainDB.metrics:
+      - EKGViewBK
     cardano.node.metrics:
       - EKGViewBK
+    cardano.node-metrics:
+      - EKGViewBK
+
+  # This section is more expressive still, and needs to be properly documented.
+  mapSubtrace:
+    benchmark:
+      contents:
+        - GhcRtsStats
+        - MonotonicClock
+      subtrace: ObservableTrace
+    '#ekgview':
+      contents:
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: .monoclock.basic.
+      - - tag: Contains
+          contents: 'cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.cpuNs.timed.
+      - - tag: StartsWith
+          contents: '#ekgview.#aggregation.cardano.epoch-validation.benchmark'
+        - - tag: Contains
+            contents: diff.RTS.gcNum.timed.
+      subtrace: FilterTrace
+    'cardano.epoch-validation.utxo-stats':
+      # Change the `subtrace` value to `Neutral` in order to log
+      # `UTxO`-related messages during epoch validation.
+      subtrace: NoTrace
