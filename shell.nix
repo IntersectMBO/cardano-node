@@ -7,6 +7,7 @@ in
 , withHoogle ? defaultCustomConfig.withHoogle
 , clusterProfile ? defaultCustomConfig.localCluster.profileName
 , autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
+, autoStartClusterArgs ? ""
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , withR ? false
 , customConfig ? {
@@ -34,6 +35,8 @@ let
           * wb - cluster workbench
           * start-cluster - start a local development cluster
           * stop-cluster - stop a local development cluster
+          * restart-cluster - restart the last cluster run (in 'run/current')
+                              (WARNING: logs & node DB will be wiped clean)
 
       "
     '';
@@ -115,6 +118,7 @@ let
     [
       cluster.start
       cluster.stop
+      cluster.restart
     ];
 
     # Prevents cabal from choosing alternate plans, so that
@@ -141,7 +145,7 @@ let
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
-      start-cluster
+      start-cluster ${autoStartClusterArgs}
       ''}
 
       ${commandHelp}
@@ -166,6 +170,7 @@ let
       python3Packages.ipython
       cluster.start
       cluster.stop
+      cluster.restart
       cardanolib-py
       cluster.workbench.workbench
     ];

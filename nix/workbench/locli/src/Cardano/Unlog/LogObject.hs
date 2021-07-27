@@ -1,6 +1,9 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-partial-fields -Wno-orphans #-}
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
@@ -22,6 +25,7 @@ import           Data.Text.Short (ShortText, fromText, toText)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Map as Map
 import           Data.Vector (Vector)
+import           Quiet (Quiet (..))
 
 import           Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 
@@ -78,6 +82,7 @@ data LogObject
     , loBody :: !LOBody
     }
   deriving (Generic, Show)
+  deriving anyclass NFData
 
 instance ToJSON LogObject
 
@@ -92,10 +97,15 @@ instance Print ShortText where
   hPutStrLn h = hPutStrLn h . toText
 
 newtype TId = TId { unTId :: ShortText }
-  deriving (Eq, Ord, Show, FromJSON, ToJSON)
+  deriving (Eq, Generic, Ord)
+  deriving newtype (FromJSON, ToJSON)
+  deriving anyclass NFData
+  deriving Show via Quiet TId
 
 newtype Hash = Hash { unHash :: ShortText }
-  deriving (Eq, Ord, FromJSON, ToJSON)
+  deriving (Eq, Generic, Ord)
+  deriving newtype (FromJSON, ToJSON)
+  deriving anyclass NFData
 
 shortHash :: Hash -> LText.Text
 shortHash = toText . Text.take 6 . unHash
@@ -106,12 +116,18 @@ instance AE.ToJSONKey Hash where
   toJSONKey = AE.toJSONKeyText (toText . unHash)
 
 newtype Host = Host { unHost :: ShortText }
-  deriving (Eq, IsString, Ord, Show, FromJSON, ToJSON)
+  deriving (Eq, Generic, Ord)
+  deriving newtype (IsString, FromJSON, ToJSON)
+  deriving anyclass NFData
+  deriving Show via Quiet Host
 
 instance FromJSON BlockNo where
   parseJSON o = BlockNo <$> parseJSON o
 instance ToJSON BlockNo where
   toJSON (BlockNo x) = toJSON x
+
+deriving anyclass instance NFData BlockNo
+deriving instance NFData a => NFData (Resources a)
 
 --
 -- LogObject stream interpretation
@@ -187,11 +203,13 @@ interpreters = Map.fromList
   , (,) "TraceAddBlockEvent.AddedToCurrentChain" $
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
+            <*> pure Nothing
             <*> v .: "chainLengthDelta"
   -- TODO: we should clarify the distinction between the two cases (^ and v).
   , (,) "TraceAdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
+            <*> ((v .: "blockSize") <&> Just)
             <*> pure 1
   , (,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" $
     \v -> LOChainSyncServerSendHeader
@@ -248,6 +266,7 @@ data LOBody
     }
   | LOBlockAddedToCurrentChain
     { loBlock            :: !Hash
+    , loSize             :: !(Maybe Int)
     , loLength           :: !Int
     }
   | LOChainSyncServerSendHeader
@@ -273,6 +292,7 @@ data LOBody
   | LOAny !Object
   | LODecodeError !String
   deriving (Generic, Show)
+  deriving anyclass NFData
 
 instance ToJSON LOBody
 

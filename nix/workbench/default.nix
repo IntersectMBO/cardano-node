@@ -88,7 +88,7 @@ let
     else "nix-exes+checkout-wb";
 
   shellHook = ''
-    export WORKBENCH_BACKEND=${./.}/supervisor.sh
+    export WORKBENCH_BACKEND=supervisor
 
       ${optionalString workbenchDevMode
     ''

@@ -20,6 +20,7 @@ library
                        Cardano.Analysis.Profile
                        Cardano.Analysis.TopHandler
 
+                       Cardano.Analysis.API
                        Cardano.Analysis.BlockProp
                        Cardano.Analysis.Driver
                        Cardano.Analysis.MachTimeline
@@ -44,6 +45,7 @@ library
                      , cardano-config
                      , cardano-prelude
                      , containers
+                     , deepseq
                      , directory
                      , filepath
                      , file-embed
@@ -54,6 +56,7 @@ library
                      , optparse-generic
                      , ouroboros-network
                      , process
+                     , quiet
                      , scientific
                      , split
                      , statistics
@@ -87,7 +90,7 @@ executable locli
   ghc-options:         -threaded
                        -Wall
                        -rtsopts
-                       "-with-rtsopts=-T"
+                       "-with-rtsopts=-T -N4 -A8m"
   build-depends:       base
                      , cardano-prelude
                      , locli

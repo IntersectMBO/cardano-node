@@ -43,14 +43,12 @@ CLUSTER_PROFILE    ?= default-alzo
 CLUSTER_ARGS_EXTRA ?=
 
 cluster-shell:
-	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true ${CLUSTER_ARGS_EXTRA}
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true ${CLUSTER_ARGS_EXTRA}
 
-cluster-shell-dev:               CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true
-cluster-shell-trace:             CLUSTER_ARGS_EXTRA += --trace
-large-state-cluster-shell-trace: CLUSTER_ARGS_EXTRA += --trace
-large-state-cluster-shell:       CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
-large-state-cluster-shell-trace: CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
-cluster-shell-dev cluster-shell-trace large-state-cluster-shell large-state-cluster-shell-trace: cluster-shell
+cluster-shell-dev:       CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true
+cluster-shell-trace:     CLUSTER_ARGS_EXTRA += --argstr 'autoStartClusterArgs' '--trace --trace-workbench'
+cluster-shell-dev-trace: CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench'
+cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace: cluster-shell
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@

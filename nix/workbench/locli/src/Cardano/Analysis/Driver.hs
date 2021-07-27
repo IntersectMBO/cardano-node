@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -11,32 +12,33 @@ module Cardano.Analysis.Driver
   , runAnalysisCommand
   ) where
 
-import           Prelude (String, error)
-import           Cardano.Prelude
+import Prelude                          (String, error)
+import Cardano.Prelude
 
-import           Control.Arrow ((&&&))
-import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import           Control.Concurrent.Async (mapConcurrently)
+import Control.Arrow                    ((&&&))
+import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import Control.Concurrent.Async         (mapConcurrently)
 
-import qualified Data.Aeson as AE
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.Aeson                       qualified as AE
+import Data.ByteString.Lazy.Char8       qualified as LBS
+import Data.Text                        qualified as T
+import Data.Text.IO                     qualified as T
 
-import qualified System.FilePath as F
+import System.FilePath                  qualified as F
 
-import qualified Graphics.Histogram as Hist
-import qualified Graphics.Gnuplot.Frame.OptionSet as Opts
+import Graphics.Histogram               qualified as Hist
+import Graphics.Gnuplot.Frame.OptionSet qualified as Opts
 
-import           Text.Printf
+import Text.Printf
 
-import           Cardano.Analysis.BlockProp
-import           Cardano.Analysis.MachTimeline
-import           Cardano.Analysis.Profile
-import           Cardano.Unlog.Commands
-import           Cardano.Unlog.LogObject hiding (Text)
-import           Cardano.Unlog.Render
-import           Cardano.Unlog.SlotStats
+import Cardano.Analysis.API
+import Cardano.Analysis.BlockProp
+import Cardano.Analysis.MachTimeline
+import Cardano.Analysis.Profile
+import Cardano.Unlog.Commands
+import Cardano.Unlog.LogObject          hiding (Text)
+import Cardano.Unlog.Render
+import Cardano.Unlog.SlotStats
 
 
 data AnalysisCmdError

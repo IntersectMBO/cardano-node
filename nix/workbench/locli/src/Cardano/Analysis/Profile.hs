@@ -117,7 +117,7 @@ instance FromJSON Profile where
 
 newtype SlotStart =
   SlotStart { unSlotStart :: UTCTime }
-  deriving (Eq, Aeson.FromJSON, Generic, Show, Aeson.ToJSON)
+  deriving (Eq, Aeson.FromJSON, Generic, NFData, Show, Aeson.ToJSON)
 
 slotStart :: ChainInfo -> SlotNo -> SlotStart
 slotStart CInfo{..} =
@@ -129,6 +129,9 @@ slotStart CInfo{..} =
 
 sinceSlot :: UTCTime -> SlotStart -> NominalDiffTime
 sinceSlot t (SlotStart start) = Time.diffUTCTime t start
+
+afterSlot :: NominalDiffTime -> SlotStart -> UTCTime
+afterSlot t (SlotStart start) = Time.addUTCTime t start
 
 -- pChainParams :: Parser ChainParams
 -- pChainParams =

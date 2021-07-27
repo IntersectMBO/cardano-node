@@ -29,6 +29,18 @@ def genesis_profile_variants:
     , generator: { tps: 5 } }
   , { genesis: { utxo: 4000000, delegators: 1000000 }
     , generator: { tps: 10 } }
+
+  ## Calibration:
+  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size:  128000 }
+    , generator: { tps:  16 } }
+  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size:  256000 }
+    , generator: { tps:  32 } }
+  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size:  512000 }
+    , generator: { tps:  64 } }
+  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size: 1024000 }
+    , generator: { tps: 128 } }
+  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size: 2048000 }
+    , generator: { tps: 256 } }
   ];
 
 def generator_profile_variants:

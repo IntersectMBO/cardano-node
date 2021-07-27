@@ -12,9 +12,14 @@ usage_run() {
                           A unique name would be allocated for this run,
                             and a run alias 'current' will be created for it.
 
-    start [--no-generator] TAG BACKEND-ARGS..
-                          Start the named run, passing thru any extra backend args.
+    start [--no-generator] TAG
+                          Start the named run.
                             --no-generator disables automatic tx-generator startup
+
+    stop TAG              Stop the named run
+
+    restart [--no-generator] BACKEND-START-ARGS..
+                          Stop and restart the current run (without a new allocation)
 
   Options:
 
@@ -123,7 +128,7 @@ case "$op" in
         jq '.' "$(run current-path)"/profile.json;;
 
     allocate )
-        local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ENV-CONFIG-OPTS..]"
+        local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
         local batch=${1:?$usage}; shift
         local  prof=${1:?$usage}; shift
 
@@ -132,7 +137,8 @@ case "$op" in
         do case "$1" in
                --cache-dir )     cacheDir=$2; shift;;
                --base-port )     basePort=$2; shift;;
-               --stagger-ports ) staggerPorts=true; shift;;
+               --stagger-ports ) staggerPorts=true;;
+               -- ) shift; break;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
@@ -211,6 +217,8 @@ case "$op" in
         gen_dir="$dir"/generator
         mkdir -p "$gen_dir"
 
+        backend allocate-run "$dir"
+
         run     describe "$tag"
         profile describe "$dir"/profile.json
 
@@ -272,7 +280,7 @@ EOF
                }' "${compat_args[@]}";;
 
     start )
-        local usage="USAGE: wb run $op [--no-generator] TAG BACKEND-ARGS.."
+        local usage="USAGE: wb run $op [--no-generator] TAG"
 
         local no_generator=
         while test $# -gt 0
@@ -291,8 +299,7 @@ EOF
 
         local genesis_args=(
             ## Positionals:
-            "$cacheDir"/genesis
-            "$dir"/profile.json
+            "$cacheDir"/gene            "$dir"/profile.json
             "$dir"/topology
             "$dir"/genesis
         )
@@ -301,11 +308,38 @@ EOF
         ## Record genesis.
         cp "$dir"/genesis/genesis.json "$dir"/genesis.json
 
-        backend start-cluster "$dir" "$@"
+        backend start-cluster "$dir"
         test -z "$no_generator" &&
             backend start-generator "$dir"
 
         run compat-meta-fixups "$tag"
+        ;;
+
+    stop )
+        local tag=${1:-current}
+        local dir=$(run get "$tag")
+
+        if backend is-running "$dir"
+        then backend stop-cluster "$dir"
+             msg "cluster stopped"
+        fi
+        ;;
+
+    restart )
+        local tag=$(run current-tag)
+        local dir=$(run get "$tag")
+
+        msg "restarting cluster in the same run directory: $dir"
+
+        run stop                "$tag"
+        jq_fmutate "$dir"/meta.json '
+          { modifiers: { wiped_and_restarted: true }
+          } * .
+        '
+        backend cleanup-cluster "$dir"
+        run start          "$@" "$tag"
+
+        msg "cluster re-started in the same run directory: $dir"
         ;;
 
     * ) usage_run;; esac
