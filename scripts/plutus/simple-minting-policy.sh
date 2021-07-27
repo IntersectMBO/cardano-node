@@ -70,26 +70,21 @@ lovelaceatplutusscriptaddr=$(jq -r ".[\"$scriptownertxin\"].value.lovelace" "$wo
 
 cardano-cli query protocol-parameters --testnet-magic 42 --out-file example/pparams.json
 
-plutusrequiredspace=700000000
-plutusrequiredtime=700000000
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
-txfee=$(expr $plutusrequiredspace + $plutusrequiredtime)
-spendable=$(expr $lovelaceatplutusscriptaddr - $plutusrequiredspace - $plutusrequiredtime)
 
 echo "Lovelace at address: $lovelaceatplutusscriptaddr"
-echo "Spendable:           $spendable"
-echo "Fee:                 $txfee"
 
 
-cardano-cli transaction build-raw \
+cardano-cli transaction build \
   --alonzo-era \
-  --fee "$txfee" \
+  --cardano-mode \
+  --testnet-magic 42 \
+  --change-address "$utxoaddr" \
   --tx-in "$scriptownertxin" \
   --tx-in-collateral "$scriptownerCollateral" \
   --mint-script-file "$plutusscriptinuse" \
   --mint-redeemer-file "$redeemer" \
-  --mint-execution-units "($plutusrequiredspace, $plutusrequiredtime)" \
-  --tx-out "$dummyaddress+$spendable + 5 $policyid.MillarCoin" \
+  --tx-out "$dummyaddress+1000000 + 5 $policyid.MillarCoin" \
   --mint "5 $policyid.MillarCoin" \
   --protocol-params-file example/pparams.json \
   --out-file "$work/plutusmint.body"

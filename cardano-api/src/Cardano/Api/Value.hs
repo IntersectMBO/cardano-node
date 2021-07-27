@@ -37,6 +37,10 @@ module Cardano.Api.Value
   , valueToNestedRep
   , valueFromNestedRep
 
+    -- ** Rendering
+  , renderValue
+  , renderValuePretty
+
     -- * Internal conversion functions
   , toByronLovelace
   , fromByronLovelace
@@ -354,9 +358,6 @@ instance ToJSON ValueNestedRep where
      toPair (ValueNestedBundleAda q) = ("lovelace", toJSON q)
      toPair (ValueNestedBundle pid assets) = (renderPolicyId pid, toJSON assets)
 
-     renderPolicyId :: PolicyId -> Text
-     renderPolicyId (PolicyId sh) = serialiseToRawBytesHexText sh
-
 instance FromJSON ValueNestedRep where
   parseJSON =
       withObject "ValueNestedRep" $ \obj ->
@@ -370,3 +371,41 @@ instance FromJSON ValueNestedRep where
           Just sHash -> ValueNestedBundle (PolicyId sHash) <$> parseJSON q
           Nothing -> fail $ "Failure when deserialising PolicyId: "
                          <> Text.unpack pid
+
+-- ----------------------------------------------------------------------------
+-- Printing and pretty-printing
+--
+
+-- | Render a textual representation of a 'Value'.
+--
+renderValue :: Value -> Text
+renderValue  v =
+    Text.intercalate
+      " + "
+      (map renderAssetIdQuantityPair vals)
+  where
+    vals :: [(AssetId, Quantity)]
+    vals = valueToList v
+
+-- | Render a \"prettified\" textual representation of a 'Value'.
+renderValuePretty :: Value -> Text
+renderValuePretty v =
+    Text.intercalate
+      ("\n" <> Text.replicate 4 " " <> "+ ")
+      (map renderAssetIdQuantityPair vals)
+  where
+    vals :: [(AssetId, Quantity)]
+    vals = valueToList v
+
+renderAssetIdQuantityPair :: (AssetId, Quantity) -> Text
+renderAssetIdQuantityPair (aId, quant) =
+  Text.pack (show quant) <> " " <> renderAssetId aId
+
+renderPolicyId :: PolicyId -> Text
+renderPolicyId (PolicyId scriptHash) = serialiseToRawBytesHexText scriptHash
+
+renderAssetId :: AssetId -> Text
+renderAssetId AdaAssetId = "lovelace"
+renderAssetId (AssetId polId (AssetName assetName))
+  | BS.null assetName = renderPolicyId polId
+  | otherwise         = renderPolicyId polId <> "." <> Text.decodeUtf8 assetName

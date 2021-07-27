@@ -4,12 +4,12 @@ module Main
   ( main
   ) where
 
-import Prelude
+import           Prelude
 
 import qualified System.Environment as E
 import qualified Test.Tasty as T
-import qualified Test.Tasty.Ingredients as T
 import qualified Test.Tasty.Hedgehog as H
+import qualified Test.Tasty.Ingredients as T
 
 import qualified Spec.Plutus.Direct.TxInLockingPlutus
 import qualified Spec.Plutus.Script.TxInLockingPlutus
