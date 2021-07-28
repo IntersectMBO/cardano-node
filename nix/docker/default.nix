@@ -105,6 +105,7 @@ let
   # Mainnet configuration used by the 'run' option
   mainnetConfigFile = builtins.toFile "mainnet-config.json"
     (builtins.toJSON commonLib.environments.mainnet.nodeConfig);
+  mainnetTopologyFile = commonLib.mkEdgeTopology { edgeNodes = [ commonLib.environments.mainnet.relaysNew ]; valency = 2; };
 
 in
   dockerTools.buildImage {
@@ -125,7 +126,8 @@ in
       mkdir -p opt/cardano/ipc
       mkdir -p opt/cardano/logs
       mkdir -p usr/local/bin
-      cp ${mainnetConfigFile} opt/cardano/config/mainnet-config.json
+      ln -s ${mainnetConfigFile} opt/cardano/config/mainnet-config.json
+      ln -s ${mainnetTopologyFile} opt/cardano/config/mainnet-topology.json
       cp ${runNetwork}/bin/* usr/local/bin
       cp ${context}/bin/* usr/local/bin
       ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
