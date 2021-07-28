@@ -88,7 +88,6 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdUnsupportedMode !AnyConsensusMode
   | ShelleyQueryCmdPastHorizon !Qry.PastHorizonException
   | ShelleyQueryCmdSystemStartUnavailable
-  | ShelleyQueryCmdResultUnavailable -- TODO Remove
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -110,7 +109,6 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e
     ShelleyQueryCmdSystemStartUnavailable -> "System start unavailable"
-    ShelleyQueryCmdResultUnavailable -> "Result unavailable"
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -153,8 +151,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
         let cMode = consensusModeOnly cModeParams
         case toEraInMode era cMode of
           Just eInMode -> do
-            ppResult :: Either EraMismatch ProtocolParameters <- sendMsgQuery $
-              QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+            ppResult <- sendMsgQuery $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
             case ppResult of
               Right pp -> return (Right pp)
               Left e -> return (Left (ShelleyQueryCmdEraMismatch e))

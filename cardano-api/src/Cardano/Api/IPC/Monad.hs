@@ -25,10 +25,17 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
--- | Monadic type for constructing local state queries.
+-- | Monadic type for constructing local state query expressions.
 --
 -- Use 'sendMsgQuery' in a do block to construct queries of this type and convert
 -- the expression to a 'Net.Query.LocalStateQueryClient' with 'setupLocalStateQueryExpr'.
+--
+-- Some consideration was made to use Applicative instead of Monad as the abstraction in
+-- order to support pipelining, but we actually have a fair amount of code where the next
+-- query depends on the result of the former and therefore actually need Monad.
+--
+-- In order to make pipelining still possible we can explore the use of Selective Functors
+-- which would allow us to straddle both worlds.
 newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
   { runLocalStateQueryExpr :: ContT (Net.Query.ClientStAcquired block point query m r) m a
   } deriving (Functor, Applicative, Monad, MonadIO)
