@@ -29,6 +29,7 @@ data Tag v where
   TNumberOfOutputsPerTx :: Tag NumberOfOutputsPerTx
   TNumberOfTxs          :: Tag NumberOfTxs
   TFee                  :: Tag Lovelace
+  TMinValuePerUTxO      :: Tag Lovelace
   TTTL                  :: Tag SlotNo
   TTxAdditionalSize     :: Tag TxAdditionalSize
   TLocalSocket          :: Tag String
@@ -48,6 +49,7 @@ data Sum where
   SNumberOfOutputsPerTx :: !NumberOfOutputsPerTx -> Sum
   SNumberOfTxs          :: !NumberOfTxs          -> Sum
   SFee                  :: !Lovelace             -> Sum
+  SMinValuePerUTxO      :: !Lovelace             -> Sum
   STTL                  :: !SlotNo               -> Sum
   STxAdditionalSize     :: !TxAdditionalSize     -> Sum
   SLocalSocket          :: !String               -> Sum
@@ -61,6 +63,7 @@ taggedToSum x = case x of
   (TNumberOfOutputsPerTx :=> v) -> SNumberOfOutputsPerTx <$> v
   (TNumberOfTxs          :=> v) -> SNumberOfTxs          <$> v
   (TFee                  :=> v) -> SFee                  <$> v
+  (TMinValuePerUTxO      :=> v) -> SMinValuePerUTxO      <$> v
   (TTTL                  :=> v) -> STTL                  <$> v
   (TTxAdditionalSize     :=> v) -> STxAdditionalSize     <$> v
   (TLocalSocket          :=> v) -> SLocalSocket          <$> v
@@ -73,6 +76,7 @@ sumToTaggged x = case x of
   SNumberOfOutputsPerTx v -> TNumberOfOutputsPerTx ==> v
   SNumberOfTxs          v -> TNumberOfTxs          ==> v
   SFee                  v -> TFee                  ==> v
+  SMinValuePerUTxO      v -> TMinValuePerUTxO      ==> v
   STTL                  v -> TTTL                  ==> v
   STxAdditionalSize     v -> TTxAdditionalSize     ==> v
   SLocalSocket          v -> TLocalSocket          ==> v

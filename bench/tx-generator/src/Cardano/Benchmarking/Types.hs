@@ -76,8 +76,7 @@ instance ToJSON NumberOfTxs where
   toEncoding = genericToEncoding myJsonOptions
 instance FromJSON NumberOfTxs where parseJSON = genericParseJSON myJsonOptions
 
-
-newtype TPSRate =
+newtype TPSRate=
   TPSRate Double
   deriving newtype (Eq, Ord, Num, Show)
 deriving stock instance Generic TPSRate

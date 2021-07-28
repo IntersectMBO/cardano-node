@@ -43,7 +43,7 @@ import           Cardano.Api ( AlonzoEra, AsType(..), CardanoEra(..), InAnyCarda
 import           Cardano.Api.Shelley ( ProtocolParameters)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
-import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), Variant(..), liftAnyEra )
+import           Cardano.Benchmarking.FundSet (AllowRecycle(..), FundInEra(..), Validity(..), Variant(..), liftAnyEra )
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx
                    (asyncBenchmark, waitBenchmark, walletBenchmark
                    , readSigningKey, secureGenesisFund, splitFunds, txGenerator)
@@ -53,7 +53,7 @@ import           Cardano.Benchmarking.GeneratorTx as GeneratorTx
 import           Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition as Core (startProtocol)
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient, benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, txInModeCardano)
+import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
 
 import           Cardano.Benchmarking.OuroborosImports as Core
                    (LocalSubmitTx, SigningKeyFile
@@ -62,8 +62,10 @@ import           Cardano.Benchmarking.PlutusExample as PlutusExample
 import           Cardano.Benchmarking.Tracer as Core
                    ( TraceBenchTxSubmit (..)
                    , createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
-import           Cardano.Benchmarking.Types as Core (NumberOfTxs(..), SubmissionErrorPolicy(..), TPSRate, TxAdditionalSize(..))
-import           Cardano.Benchmarking.Wallet
+import           Cardano.Benchmarking.Types as Core
+                   (NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
+                   , TPSRate, TxAdditionalSize(..))
+import           Cardano.Benchmarking.Wallet as Wallet
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Setters
@@ -327,13 +329,30 @@ runBenchmark threadName txCount tps
 runBenchmarkInEra :: forall era. IsShelleyBasedEra era => ThreadName -> NumberOfTxs -> TPSRate -> AsType era -> ActionM ()
 runBenchmarkInEra (ThreadName threadName) txCount tps era = do
   tracers  <- get BenchTracers
+  networkId <- get NetworkId
+  fundKey <- getName $ KeyName "pass-partout" -- should be walletkey
   targets  <- getUser TTargets
+  (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
+  (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
+  fee <- getUser TFee
+  minValuePerUTxO <- getUser TMinValuePerUTxO
   walletRef <- get GlobalWallet
   metadata <- makeMetadata
   connectClient <- getConnectClient
   let
+    minTxValue :: Lovelace
+    minTxValue = fromIntegral numOutputs * minValuePerUTxO + fee
+
+    selector :: FundSet.Target -> FundSet.FundSelector
+    selector = FundSet.selectInputs ReuseAny numInputs minTxValue PlainOldFund
+
+    inToOut :: [Lovelace] -> [Lovelace]
+    inToOut = FundSet.inputsToOutputsWithFee fee numOutputs
+
+    txGenerator = genTx fundKey networkId (mkFee fee) metadata
+
     walletScript :: FundSet.Target -> WalletScript era
-    walletScript = benchmarkWalletScript walletRef metadata txCount 2
+    walletScript = benchmarkWalletScript walletRef txGenerator txCount selector inToOut
 
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
     coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
@@ -420,34 +439,40 @@ localCreateScriptFunds value count = do
   walletRef <- get GlobalWallet
   networkId <- get NetworkId
   fundKey <- getName $ KeyName "pass-partout"
+  fee <- getUser TFee  
   let scriptData = PlutusExample.toScriptHash "e88bd757ad5b9bedf372d8d3f0cf6c962a469db61a265f6418e1ffed86da29ec"
   script <- liftIO $ PlutusExample.readScript "bench/script/sum1ToN.plutus"
-
   let
     createCoins coins = do
-      tx <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (PlutusExample.payToScript fundKey (script, scriptData) networkId) coins)
+      let
+        selector :: FundSet.FundSelector
+        selector = FundSet.selectMinValue $ sum coins + fee
+        inOut :: [Lovelace] -> [Lovelace]
+        inOut = Wallet.includeChange fee coins        
+      tx <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (PlutusExample.payToScript fundKey (script, scriptData) networkId) selector inOut)
       return $ fmap txInModeCardano tx
   createChangeGeneric createCoins value count
 
 createChange :: Lovelace -> Int -> ActionM ()
-createChange value count = do
+createChange value count = withEra $ createChangeInEra value count
+
+createChangeInEra :: forall era. IsShelleyBasedEra era => Lovelace -> Int -> AsType era -> ActionM ()
+createChangeInEra value count _proxy = do
   networkId <- get NetworkId
   fundKey <- getName $ KeyName "pass-partout"
+  fee <- getUser TFee
   walletRef <- get GlobalWallet
-  era <- get $ User TEra
   let
-    createCoinsGen :: forall era. IsShelleyBasedEra era => AsType era -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
-    createCoinsGen _proxy coins = do
-      (tx :: Either String (Tx era)) <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (genTx fundKey networkId TxMetadataNone) coins)
+    createCoins :: [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
+    createCoins coins = do
+      let
+        selector :: FundSet.FundSelector
+        selector = FundSet.selectMinValue $ sum coins + fee
+        inOut :: [Lovelace] -> [Lovelace]
+        inOut = Wallet.includeChange fee coins
+        
+      (tx :: Either String (Tx era)) <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (genTx fundKey networkId (mkFee fee) TxMetadataNone) selector inOut)
       return $ fmap txInModeCardano tx
-
-    createCoins :: ([Lovelace] -> ActionM (Either String (TxInMode CardanoMode)))
-    createCoins = case era of
-      AnyCardanoEra AlonzoEra  -> createCoinsGen AsAlonzoEra
-      AnyCardanoEra MaryEra    -> createCoinsGen AsMaryEra
-      AnyCardanoEra AllegraEra -> createCoinsGen AsAllegraEra
-      AnyCardanoEra ShelleyEra -> createCoinsGen AsShelleyEra
-      AnyCardanoEra ByronEra   -> error "byron not supported"
   createChangeGeneric createCoins value count
 
 createChangeGeneric :: ([Lovelace] -> ActionM (Either String (TxInMode CardanoMode))) -> Lovelace -> Int -> ActionM ()
