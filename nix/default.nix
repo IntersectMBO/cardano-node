@@ -22,6 +22,8 @@ let
   # IMPORTANT: report any change to nixpkgs channel in flake.nix:
   nixpkgs = haskellNix.sources.nixpkgs-2105;
   iohkNix = import sources.iohk-nix { inherit system; };
+  cardanoOps = import sources.cardano-ops
+    { inherit system;  deploymentGlobalsFn = pkgs: {}; };
   # for inclusion in pkgs:
   overlays =
     # Haskell.nix (https://github.com/input-output-hk/haskell.nix)
@@ -32,6 +34,8 @@ let
     # iohkNix: nix utilities:
     ++ iohkNix.overlays.iohkNix
     ++ iohkNix.overlays.utils
+    # cardanoOps: deployment capability:
+    ++ cardanoOps.overlays
     # our own overlays:
     ++ [
       (pkgs: _: {
