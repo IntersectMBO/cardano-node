@@ -35,7 +35,6 @@ import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Prelude hiding (atomically)
-import           Control.Concurrent.STM
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 import           Data.Aeson (ToJSON (..), (.=))
@@ -68,7 +67,6 @@ import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
-import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import qualified System.IO as IO
@@ -208,7 +206,18 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
     CardanoMode -> do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-      (chainTip, emLocalState) <- liftIO $ queryQueryTip localNodeConnInfo Nothing
+      (chainTip, emLocalState) <- liftIO $
+        executeQueryLocalStateWithChainSync localNodeConnInfo Nothing $ \ntcVersion -> do
+          era <- sendMsgQuery (QueryCurrentEra CardanoModeIsMultiEra)
+          eraHistory <- sendMsgQuery (QueryEraHistory CardanoModeIsMultiEra)
+          mSystemStart <- if ntcVersion >= NodeToClientV_9
+            then Just <$> sendMsgQuery QuerySystemStart
+            else return Nothing
+          return O.QueryTipLocalState
+            { O.era = era
+            , O.eraHistory = eraHistory
+            , O.mSystemStart = mSystemStart
+            }
 
       mLocalState <- fmap join . hushM emLocalState $ \e -> do
         liftIO . T.hPutStrLn IO.stderr $
@@ -253,81 +262,6 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
         Nothing                 -> liftIO $ LBS.putStrLn        jsonOutput
 
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
-
-queryQueryTip
-  :: LocalNodeConnectInfo CardanoMode
-  -> Maybe ChainPoint
-  -> IO (ChainTip, Either AcquireFailure (Maybe O.QueryTipLocalState))
-queryQueryTip connectInfo mpoint = do
-  resultVarChainTip <- newEmptyTMVarIO
-
-  let waitChainTip = readTMVar resultVarChainTip
-
-  connectToLocalNodeWithVersion
-    connectInfo
-    (\_ntcVersion ->
-      LocalNodeClientProtocols
-      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitChainTip resultVarChainTip
-      , localStateQueryClient   = Nothing
-      , localTxSubmissionClient = Nothing
-      }
-    )
-
-  a <- atomically waitChainTip
-
-  resultVarQueryTipLocalState <- newEmptyTMVarIO
-
-  let waitQueryTipLocalState = readTMVar resultVarQueryTipLocalState
-
-  connectToLocalNodeWithVersion
-    connectInfo
-    (\ntcVersion ->
-      LocalNodeClientProtocols
-      { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryScript waitQueryTipLocalState mpoint ntcVersion resultVarQueryTipLocalState $ do
-          era <- sendMsgQuery (QueryCurrentEra CardanoModeIsMultiEra)
-          eraHistory <- sendMsgQuery (QueryEraHistory CardanoModeIsMultiEra)
-          mSystemStart <- if ntcVersion >= NodeToClientV_9
-            then Just <$> sendMsgQuery QuerySystemStart
-            else return Nothing
-          return O.QueryTipLocalState
-            { O.era = era
-            , O.eraHistory = eraHistory
-            , O.mSystemStart = mSystemStart
-            }
-
-      , localTxSubmissionClient = Nothing
-      }
-    )
-
-  b <- atomically waitQueryTipLocalState
-
-  return (a, sequence b)
-
-  where
-    chainSyncGetCurrentTip
-      :: forall mode a
-      .  STM a
-      -> TMVar  ChainTip
-      -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
-    chainSyncGetCurrentTip waitDone tipVar =
-      ChainSyncClient $ pure clientStIdle
-      where
-        clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
-        clientStIdle =
-          Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
-
-        clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
-        clientStNext = Net.Sync.ClientStNext
-          { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
-              void . atomically $ putTMVar tipVar tip
-              void $ atomically waitDone
-              pure $ Net.Sync.SendMsgDone ()
-          , Net.Sync.recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
-              void . atomically $ putTMVar tipVar tip
-              void $ atomically waitDone
-              pure $ Net.Sync.SendMsgDone ()
-          }
 
 -- | Query the UTxO, filtered by a given set of addresses, from a Shelley node
 -- via the local state query protocol.
