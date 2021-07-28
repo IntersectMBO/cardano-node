@@ -1,20 +1,26 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.Api.IPC.Monad
   ( LocalStateQueryExpr
-  , sendMsgQuery
   , executeQueryLocalState
   , executeQueryLocalStateWithChainSync
+  , queryExpr
+  , determineEraExpr
   ) where
 
 import Cardano.Api.Block
+import Cardano.Api.Eras
 import Cardano.Api.IPC
+import Cardano.Api.Modes
 import Control.Applicative
 import Control.Concurrent.STM
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
+import Control.Monad.Trans.Except
+import Data.Bifunctor
 import Data.Either
 import Data.Function
 import Data.Maybe
@@ -25,9 +31,11 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
+{- HLINT ignore "Use let" -}
+
 -- | Monadic type for constructing local state query expressions.
 --
--- Use 'sendMsgQuery' in a do block to construct queries of this type and convert
+-- Use 'queryExpr' in a do block to construct queries of this type and convert
 -- the expression to a 'Net.Query.LocalStateQueryClient' with 'setupLocalStateQueryExpr'.
 --
 -- Some consideration was made to use Applicative instead of Monad as the abstraction in
@@ -40,61 +48,55 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
   { runLocalStateQueryExpr :: ContT (Net.Query.ClientStAcquired block point query m r) m a
   } deriving (Functor, Applicative, Monad, MonadIO)
 
--- | Use 'sendMsgQuery' in a do block to construct monadic local state queries.
-sendMsgQuery :: Monad m => query a -> LocalStateQueryExpr block point query r m a
-sendMsgQuery q = LocalStateQueryExpr . ContT $ \f -> pure $
-  Net.Query.SendMsgQuery q $
-    Net.Query.ClientStQuerying
-    { Net.Query.recvMsgResult = f
-    }
-
 -- | Execute a local state query expression.
 executeQueryLocalState
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
-  -> IO (Either AcquireFailure a)
-executeQueryLocalState connectInfo mpoint f = do
-  resultVarQueryTipLocalState <- newEmptyTMVarIO
-  waitResult <- pure $ readTMVar resultVarQueryTipLocalState
+  -> (AcquireFailure -> e)
+  -> (NodeToClientVersion -> ExceptT e (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a)
+  -> IO (Either e a)
+executeQueryLocalState connectInfo mpoint mapError f = do
+  tmvResultLocalState <- newEmptyTMVarIO
+  let waitResult = readTMVar tmvResultLocalState
 
   connectToLocalNodeWithVersion
     connectInfo
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint resultVarQueryTipLocalState (f ntcVersion)
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (runExceptT (f ntcVersion))
       , localTxSubmissionClient = Nothing
       }
     )
 
-  atomically waitResult
+  join . first mapError <$> atomically waitResult
 
 -- | Execute a local state query expression concurrently with a chain sync.
 executeQueryLocalStateWithChainSync
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
-  -> IO (ChainTip, Either AcquireFailure a)
-executeQueryLocalStateWithChainSync connectInfo mpoint f = do
-  resultVarQueryTipLocalState <- newEmptyTMVarIO
-  resultVarChainTip <- newEmptyTMVarIO
+  -> (AcquireFailure -> e)
+  -> (NodeToClientVersion -> ExceptT e (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a)
+  -> IO (ChainTip, Either e a)
+executeQueryLocalStateWithChainSync connectInfo mpoint mapError f = do
+  tmvResultLocalState <- newEmptyTMVarIO
+  tmvResultChainTip <- newEmptyTMVarIO
 
-  waitResult <- pure $ (,)
-    <$> readTMVar resultVarChainTip
-    <*> readTMVar resultVarQueryTipLocalState
+  let waitResult = (,)
+        <$> readTMVar tmvResultChainTip
+        <*> readTMVar tmvResultLocalState
 
   connectToLocalNodeWithVersion
     connectInfo
     (\ntcVersion ->
       LocalNodeClientProtocols
-      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult resultVarChainTip
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint resultVarQueryTipLocalState (f ntcVersion)
+      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult tmvResultChainTip
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (runExceptT (f ntcVersion))
       , localTxSubmissionClient = Nothing
       }
     )
 
-  atomically waitResult
+  fmap (join . first mapError) <$> atomically waitResult
 
   where
     chainSyncGetCurrentTip
@@ -120,7 +122,7 @@ executeQueryLocalStateWithChainSync connectInfo mpoint f = do
               pure $ Net.Sync.SendMsgDone ()
           }
 
--- | Use 'sendMsgQuery' in a do block to construct monadic local state queries.
+-- | Use 'queryExpr' in a do block to construct monadic local state queries.
 setupLocalStateQueryExpr ::
      STM x
   -> Maybe ChainPoint
@@ -140,3 +142,23 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' f =
         void $ atomically waitDone
         pure $ Net.Query.SendMsgDone ()
     }
+
+-- | Use 'queryExpr' in a do block to construct monadic local state queries.
+queryExpr :: Monad m => query a -> ExceptT e (LocalStateQueryExpr block point query r m) a
+queryExpr q = ExceptT $ do
+  r <- LocalStateQueryExpr . ContT $ \f -> pure $
+    Net.Query.SendMsgQuery q $
+      Net.Query.ClientStQuerying
+      { Net.Query.recvMsgResult = f
+      }
+  return (Right r)
+
+-- | A monad expresion that determines what era the node is in.
+determineEraExpr :: Monad m
+  => ConsensusModeParams mode
+  -> ExceptT e (LocalStateQueryExpr block point (QueryInMode mode) r m) AnyCardanoEra
+determineEraExpr cModeParams =
+  case consensusModeOnly cModeParams of
+    ByronMode -> return $ AnyCardanoEra ByronEra
+    ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+    CardanoMode -> queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
