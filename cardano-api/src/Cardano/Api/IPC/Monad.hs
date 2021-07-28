@@ -44,9 +44,9 @@ sendMsgQuery q = LocalStateQueryExpr . ContT $ \f -> pure $
 
 -- | Execute a local state query expression.
 executeQueryLocalState
-  :: LocalNodeConnectInfo CardanoMode
+  :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) () IO a)
+  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
   -> IO (Either AcquireFailure (Maybe a))
 executeQueryLocalState connectInfo mpoint f = do
   resultVarQueryTipLocalState <- newEmptyTMVarIO
@@ -66,9 +66,9 @@ executeQueryLocalState connectInfo mpoint f = do
 
 -- | Execute a local state query expression concurrently with a chain sync.
 executeQueryLocalStateWithChainSync
-  :: LocalNodeConnectInfo CardanoMode
+  :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) () IO a)
+  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
   -> IO (ChainTip, Either AcquireFailure (Maybe a))
 executeQueryLocalStateWithChainSync connectInfo mpoint f = do
   resultVarQueryTipLocalState <- newEmptyTMVarIO
@@ -120,8 +120,8 @@ setupLocalStateQueryExpr ::
   -> Maybe ChainPoint
   -> NodeToClientVersion
   -> TMVar (Maybe (Either Net.Query.AcquireFailure a))
-  -> LocalStateQueryExpr (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) () IO a
-  -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) IO ()
+  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a
+  -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
 setupLocalStateQueryExpr waitDone mPointVar' ntcVersion resultVar' f =
   LocalStateQueryClient $
     if ntcVersion >= NodeToClientV_8

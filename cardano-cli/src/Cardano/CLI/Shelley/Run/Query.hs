@@ -87,6 +87,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdUnsupportedMode !AnyConsensusMode
   | ShelleyQueryCmdPastHorizon !Qry.PastHorizonException
   | ShelleyQueryCmdSystemStartUnavailable
+  | ShelleyQueryCmdResultUnavailable -- TODO Remove
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -108,6 +109,7 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e
     ShelleyQueryCmdSystemStartUnavailable -> "System start unavailable"
+    ShelleyQueryCmdResultUnavailable -> "Result unavailable"
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -141,21 +143,27 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
                            readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-  anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
+  result <- liftIO $ executeQueryLocalState localNodeConnInfo Nothing $ \_ntcVersion -> do
+    anyE@(AnyCardanoEra era) <- determineEra2 cModeParams
 
-  case toEraInMode era cMode of
-    Just eInMode -> do
-      let query = QueryInEra eInMode
-                    $ QueryInShelleyBasedEra sbe QueryProtocolParameters
-      result <- executeQuery
-                  era
-                  cModeParams
-                  localNodeConnInfo
-                  query
-      writeProtocolParameters mOutFile result
-    Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
+    case cardanoEraStyle era of
+      LegacyByronEra -> return $ Left ShelleyQueryCmdByronEra
+      ShelleyBasedEra sbe -> do
+        let cMode = consensusModeOnly cModeParams
+        case toEraInMode era cMode of
+          Just eInMode -> do
+            ppResult :: Either EraMismatch ProtocolParameters <- sendMsgQuery $
+              QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+            case ppResult of
+              Right pp -> return (Right pp)
+              Left e -> return (Left (ShelleyQueryCmdEraMismatch e))
+          Nothing -> return $ Left (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+
+  case result of
+    Right (Just (Right a)) -> writeProtocolParameters mOutFile a
+    Right (Just (Left e)) -> left e
+    Right Nothing -> left ShelleyQueryCmdResultUnavailable
+    Left e -> left (ShelleyQueryCmdAcquireFailure e)
  where
   writeProtocolParameters
     :: Maybe OutputFile
@@ -777,6 +785,15 @@ determineEra cModeParams localNodeConnInfo =
       case eraQ of
         Left acqFail -> left $ ShelleyQueryCmdAcquireFailure acqFail
         Right anyCarEra -> return anyCarEra
+
+determineEra2 :: Monad m
+  => ConsensusModeParams mode
+  -> LocalStateQueryExpr block point (QueryInMode mode) r m AnyCardanoEra
+determineEra2 cModeParams =
+  case consensusModeOnly cModeParams of
+    ByronMode -> return $ AnyCardanoEra ByronEra
+    ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+    CardanoMode -> sendMsgQuery $ QueryCurrentEra CardanoModeIsMultiEra
 
 executeQuery
   :: forall result era mode. CardanoEra era
