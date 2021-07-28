@@ -55,6 +55,8 @@ data Error where
   CliError    :: !CliError   -> Error
   ApiError    :: !String     -> Error
   UserError   :: !String     -> Error
+  WalletError :: !String     -> Error
+  MetadataError :: !String   -> Error
 
 deriving instance Show Error
 
