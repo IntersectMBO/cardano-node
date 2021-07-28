@@ -18,7 +18,6 @@ import Control.Monad.Trans.Cont
 import Data.Either
 import Data.Function
 import Data.Maybe
-import Data.Ord
 import Shelley.Spec.Ledger.Scripts ()
 import System.IO
 
@@ -47,17 +46,17 @@ executeQueryLocalState
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
   -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
-  -> IO (Either AcquireFailure (Maybe a))
+  -> IO (Either AcquireFailure a)
 executeQueryLocalState connectInfo mpoint f = do
   resultVarQueryTipLocalState <- newEmptyTMVarIO
-  waitResult <- pure $ sequence <$> readTMVar resultVarQueryTipLocalState
+  waitResult <- pure $ readTMVar resultVarQueryTipLocalState
 
   connectToLocalNodeWithVersion
     connectInfo
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint ntcVersion resultVarQueryTipLocalState (f ntcVersion)
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint resultVarQueryTipLocalState (f ntcVersion)
       , localTxSubmissionClient = Nothing
       }
     )
@@ -69,21 +68,21 @@ executeQueryLocalStateWithChainSync
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
   -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
-  -> IO (ChainTip, Either AcquireFailure (Maybe a))
+  -> IO (ChainTip, Either AcquireFailure a)
 executeQueryLocalStateWithChainSync connectInfo mpoint f = do
   resultVarQueryTipLocalState <- newEmptyTMVarIO
   resultVarChainTip <- newEmptyTMVarIO
 
   waitResult <- pure $ (,)
     <$> readTMVar resultVarChainTip
-    <*> (sequence <$> readTMVar resultVarQueryTipLocalState)
+    <*> readTMVar resultVarQueryTipLocalState
 
   connectToLocalNodeWithVersion
     connectInfo
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult resultVarChainTip
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint ntcVersion resultVarQueryTipLocalState (f ntcVersion)
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint resultVarQueryTipLocalState (f ntcVersion)
       , localTxSubmissionClient = Nothing
       }
     )
@@ -118,27 +117,19 @@ executeQueryLocalStateWithChainSync connectInfo mpoint f = do
 setupLocalStateQueryExpr ::
      STM x
   -> Maybe ChainPoint
-  -> NodeToClientVersion
-  -> TMVar (Maybe (Either Net.Query.AcquireFailure a))
+  -> TMVar (Either Net.Query.AcquireFailure a)
   -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a
   -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
-setupLocalStateQueryExpr waitDone mPointVar' ntcVersion resultVar' f =
-  LocalStateQueryClient $
-    if ntcVersion >= NodeToClientV_8
-      then do
-        pure . Net.Query.SendMsgAcquire mPointVar' $
-          Net.Query.ClientStAcquiring
-          { Net.Query.recvMsgAcquired = runContT (runLocalStateQueryExpr f) $ \result -> do
-              atomically $ putTMVar resultVar' (Just (Right result))
-              void $ atomically waitDone
-              pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+setupLocalStateQueryExpr waitDone mPointVar' resultVar' f =
+  LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
+    Net.Query.ClientStAcquiring
+    { Net.Query.recvMsgAcquired = runContT (runLocalStateQueryExpr f) $ \result -> do
+        atomically $ putTMVar resultVar' (Right result)
+        void $ atomically waitDone
+        pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
 
-          , Net.Query.recvMsgFailure = \failure -> do
-              atomically $ putTMVar resultVar' (Just (Left failure))
-              void $ atomically waitDone
-              pure $ Net.Query.SendMsgDone ()
-          }
-      else do
-        atomically $ putTMVar resultVar' Nothing
+    , Net.Query.recvMsgFailure = \failure -> do
+        atomically $ putTMVar resultVar' (Left failure)
         void $ atomically waitDone
         pure $ Net.Query.SendMsgDone ()
+    }
