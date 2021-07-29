@@ -984,17 +984,38 @@ prettyRenderTxOut (TxOutInAnyEra _ (TxOut (AddressInEra _ addr) txOutVal _)) =
 -- Transaction output datum (era-dependent)
 --
 
-data TxOutDatumHash era where
+data TxOutDatum ctx era where
 
-     TxOutDatumHashNone :: TxOutDatumHash era
+     TxOutDatumNone :: TxOutDatum ctx era
 
-     TxOutDatumHash     :: ScriptDataSupportedInEra era
-                        -> Hash ScriptData
-                        -> TxOutDatumHash era
+     -- | A transaction output that only specifies the hash of the datum, but
+     -- not the full datum value.
+     --
+     TxOutDatumHash :: ScriptDataSupportedInEra era
+                    -> Hash ScriptData
+                    -> TxOutDatum ctx era
 
-deriving instance Eq   (TxOutDatumHash era)
-deriving instance Show (TxOutDatumHash era)
-deriving instance Generic (TxOutDatumHash era)
+     -- | A transaction output that specifies the whole datum value. This can
+     -- only be used in the context of the transaction body, and does not occur
+     -- in the UTxO. The UTxO only contains the datum hash.
+     --
+     TxOutDatum'    :: ScriptDataSupportedInEra era
+                    -> Hash ScriptData
+                    -> ScriptData
+                    -> TxOutDatum CtxTx era
+
+deriving instance Eq   (TxOutDatum ctx era)
+deriving instance Show (TxOutDatum ctx era)
+
+pattern TxOutDatum :: ScriptDataSupportedInEra era
+                   -> ScriptData
+                   -> TxOutDatum CtxTx era
+pattern TxOutDatum s d  <- TxOutDatum' s _ d
+  where
+    TxOutDatum s d = TxOutDatum' s (hashScriptData d) d
+
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum' #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum  #-}
 
 
 -- ----------------------------------------------------------------------------
