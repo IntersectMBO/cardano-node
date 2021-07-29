@@ -341,7 +341,6 @@ runTxBuildRaw (AnyCardanoEra era)
                  <*> validateTxValidityUpperBound era mUpperBound)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
         <*> validateTxAuxScripts     era scriptFiles
-        <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
         <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
         <*> validateProtocolParameters era mpparams
         <*> validateTxWithdrawals    era withdrawals
@@ -405,7 +404,6 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId tx
                    <*> validateTxValidityUpperBound era mUpperBound)
           <*> validateTxMetadataInEra     era metadataSchema metadataFiles
           <*> validateTxAuxScripts        era scriptFiles
-          <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
           <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
           <*> validateProtocolParameters  era mpparams
           <*> validateTxWithdrawals       era withdrawals
@@ -560,26 +558,25 @@ validateTxInsCollateral era txins =
 validateTxOuts :: forall era.
                   CardanoEra era
                -> [TxOutAnyEra]
-               -> ExceptT ShelleyTxCmdError IO [TxOut era]
-validateTxOuts era = mapM toTxOutInAnyEra
+               -> ExceptT ShelleyTxCmdError IO [TxOut CtxTx era]
+validateTxOuts era = mapM toTxOut
   where
-    toTxOutInAnyEra :: TxOutAnyEra
-                    -> ExceptT ShelleyTxCmdError IO (TxOut era)
-    toTxOutInAnyEra (TxOutAnyEra addr val mDatumHash) =
+    toTxOut :: TxOutAnyEra -> ExceptT ShelleyTxCmdError IO (TxOut CtxTx era)
+    toTxOut (TxOutAnyEra addr val mDatumHash) =
       case (scriptDataSupportedInEra era, mDatumHash) of
         (_, Nothing) ->
-          TxOut <$> toAddressInAnyEra addr
-                <*> toTxOutValueInAnyEra val
-                <*> pure TxOutDatumHashNone
-        (Just supported, Just dh) ->
-          TxOut <$> toAddressInAnyEra addr
-                <*> toTxOutValueInAnyEra val
-                <*> pure (TxOutDatumHash supported dh)
+          TxOut <$> toAddressInEra addr
+                <*> toTxOutValue val
+                <*> pure TxOutDatumNone
+        (Just supported, Just d) ->
+          TxOut <$> toAddressInEra addr
+                <*> toTxOutValue val
+                <*> toTxOutDatum supported d
         (Nothing, Just _) ->
           txFeatureMismatch era TxFeatureTxOutDatum
 
-    toAddressInAnyEra :: AddressAny -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
-    toAddressInAnyEra addrAny =
+    toAddressInEra :: AddressAny -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
+    toAddressInEra addrAny =
       case addrAny of
         AddressByron   bAddr -> return (AddressInEra ByronAddressInAnyEra bAddr)
         AddressShelley sAddr ->
@@ -589,14 +586,26 @@ validateTxOuts era = mapM toTxOutInAnyEra
             ShelleyBasedEra era' ->
               return (AddressInEra (ShelleyAddressInEra era') sAddr)
 
-    toTxOutValueInAnyEra :: Value -> ExceptT ShelleyTxCmdError IO (TxOutValue era)
-    toTxOutValueInAnyEra val =
+    toTxOutValue :: Value -> ExceptT ShelleyTxCmdError IO (TxOutValue era)
+    toTxOutValue val =
       case multiAssetSupportedInEra era of
         Left adaOnlyInEra ->
           case valueToLovelace val of
             Just l  -> return (TxOutAdaOnly adaOnlyInEra l)
             Nothing -> txFeatureMismatch era TxFeatureMultiAssetOutputs
         Right multiAssetInEra -> return (TxOutValue multiAssetInEra val)
+
+    toTxOutDatum :: ScriptDataSupportedInEra era
+                 -> TxOutDatumAnyEra
+                 -> ExceptT ShelleyTxCmdError IO (TxOutDatum CtxTx era)
+    toTxOutDatum supported (TxOutDatumByHashOnly dh) =
+      pure (TxOutDatumHash supported dh)
+
+    toTxOutDatum supported (TxOutDatumByHashOf df) =
+      TxOutDatumHash supported . hashScriptData <$> readScriptDataOrFile df
+
+    toTxOutDatum supported (TxOutDatumByValue df) =
+      TxOutDatum supported  <$> readScriptDataOrFile df
 
 
 validateTxFee :: CardanoEra era
